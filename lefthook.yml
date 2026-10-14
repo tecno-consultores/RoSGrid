@@ -1,0 +1,62 @@
+# ==============================================================================
+# LEFTHOOK - BARRERA DE ENTRADA (Pre-commit, Commit-msg & Pre-push)
+# ==============================================================================
+# Esta configuración intercepta los comandos de Git y obliga a ejecutar validaciones
+# efímeras en Docker ANTES de permitir que el código entre al historial de Git
+# o sea enviado al repositorio remoto.
+
+pre-commit:
+  parallel: true
+  commands:
+    # --------------------------------------------------------------------------
+    # ECOSISTEMA PYTHON & FASTAPI
+    # --------------------------------------------------------------------------
+    python-lint:
+      glob: "{python,fastapi}/**/*.py"
+      # Usa --check para rechazar el commit si el código no está formateado.
+      # El desarrollador deberá correr `make qa-lint` manualmente.
+      run: docker compose -f {1}/docker-compose.qa.yml run --rm qa-backend bash -c "uv sync -q && ruff check {staged_files} && ruff format --check {staged_files}"
+
+    # --------------------------------------------------------------------------
+    # ECOSISTEMA JAVASCRIPT (NODE, VUE3 & REACT)
+    # --------------------------------------------------------------------------
+    node-vue-react-lint:
+      glob: "{node-backend,vue3,react-frontend}/**/*.{js,ts,vue,tsx}"
+      # Levanta el entorno efímero para correr ESLint y Prettier.
+      run: docker compose -f {1}/docker-compose.qa.yml run --rm {1}-qa-frontend bash -c "pnpm install --silent && npx prettier --check {staged_files} && npx eslint {staged_files}"
+
+    # --------------------------------------------------------------------------
+    # ECOSISTEMA BASH (DEVOPS)
+    # --------------------------------------------------------------------------
+    bash-lint:
+      glob: "bash-scripts/**/*.sh"
+      # shellCheck evalúa vulnerabilidades POSIX, shfmt verifica la estética (-d es modo dry-run/check)
+      run: docker compose -f bash-scripts/docker-compose.qa.yml run --rm test bash -c "shellcheck {staged_files} && shfmt -d {staged_files}"
+
+    # --------------------------------------------------------------------------
+    # PROTECCIÓN DE SECRETOS (Global)
+    # --------------------------------------------------------------------------
+    leaks-check:
+      glob: "**/*"
+      # Busca patrones comunes de contraseñas y tokens en archivos antes del commit
+      run: if grep -qiE "(password|secret|api_key|token)[=:] *[\"'][a-zA-Z0-9]{8,}[\"']" {staged_files}; then echo "🚨 ERROR: Posible secreto hardcodeado detectado."; exit 1; fi
+
+commit-msg:
+  commands:
+    # --------------------------------------------------------------------------
+    # AUDITORÍA DE CONVENCIONES DE GIT (Commitlint)
+    # --------------------------------------------------------------------------
+    conventional-commits:
+      # Exige que el mensaje de commit respete el commitlint.config.js
+      # Se ejecuta usando npx al vuelo para no requerir instalación global
+      run: npx --no-install commitlint --edit {1}
+
+pre-push:
+  commands:
+    # --------------------------------------------------------------------------
+    # AUDITORÍA DE INFRAESTRUCTURA (IaC) ANTES DE SUBIR
+    # --------------------------------------------------------------------------
+    trivy-iac-scan:
+      # Bloquea el `git push` si hay puertos expuestos, contenedores en modo root
+      # o vulnerabilidades críticas en dependencias (File System).
+      run: ./auditar-infra.sh
