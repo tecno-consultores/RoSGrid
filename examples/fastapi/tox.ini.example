@@ -1,0 +1,17 @@
+[tox]
+env_list = py310, py311, py312, py313
+isolated_build = True
+
+[testenv]
+description = Instala dependencias con uv y ejecuta QA, complejidad, auditoría de seguridad y pruebas de la API
+deps = 
+    .[dev]
+commands =
+    ruff check src/ tests/
+    ruff format --check src/ tests/
+    mypy --strict src/
+    radon cc --min C src/
+    radon mi --min B src/
+    uv pip audit
+    bandit -c pyproject.toml -r src/
+    pytest --cov=src/ --cov-fail-under=95 --cov-report=term-missing

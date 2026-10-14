@@ -1,0 +1,37 @@
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+
+export default defineConfig({
+  plugins: [vue()],
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    
+    // TOOL BOUNDARY ESTRICTO: Vitest solo ejecuta archivos unitarios.
+    include: ['src/**/*.unit.{ts,tsx}', 'src/**/*.spec.{ts,tsx}'],
+    
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html'],
+      // Exigencia corporativa: Falla el pipeline si no se cumple el 95%
+      thresholds: {
+        lines: 95,
+        functions: 95,
+        branches: 95,
+        statements: 95
+      },
+      exclude: [
+        'coverage/**',
+        'dist/**',
+        'playwright-report/**',
+        'lhci-reports/**',
+        '.stryker-tmp/**',
+        'e2e/**',
+        'test/**',
+        '**/*.d.ts',
+        '*.config.ts',
+        '*.config.js'
+      ]
+    }
+  }
+});

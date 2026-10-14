@@ -1,0 +1,43 @@
+import { defineConfig, devices } from '@playwright/test';
+
+export default defineConfig({
+  testDir: './e2e',
+  
+  // TOOL BOUNDARY ESTRICTO: Playwright solo ejecuta archivos explícitamente marcados como E2E.
+  testMatch: '**/*.e2e.ts',
+  
+  fullyParallel: true,
+  // En CI, prohibimos test.only() para evitar que un desarrollador se salte la suite
+  forbidOnly: !!process.env.CI,
+  // Reintentos agresivos en CI para lidiar con la inestabilidad de la red
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  // Reporte HTML detallado y retención de rastros (Traces) para depurar el DOM si falla
+  reporter: [['html', { open: 'never' }], ['list']],
+  use: {
+    // Apunta al servidor Nginx de producción que levantó docker-compose
+    baseURL: 'http://ui-prod:80',
+    trace: 'retain-on-failure',
+    video: 'retain-on-failure',
+    screenshot: 'only-on-failure',
+    // Establecer un timezone estático evita falsos positivos en componentes de fecha/hora
+    timezoneId: 'America/Caracas',
+    locale: 'es-VE',
+  },
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+    }
+  ],
+  expect: {
+    // Tolerancias corporativas para las pruebas de regresión visual de accessibility.spec.ts
+    toHaveScreenshot: {
+      maxDiffPixelRatio: 0.01,
+      // CRÍTICO: Congela los <transition> de Vue, GIFs y CSS animations para evitar diferencias por milisegundos
+      animations: 'disabled',
+      // Umbral estricto de diferencia de color
+      threshold: 0.1,
+    },
+  },
+});

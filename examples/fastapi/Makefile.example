@@ -1,0 +1,24 @@
+.PHONY: qa-lint qa-unit qa-mutation qa-all clean-cache
+
+# Variables
+COMPOSE_FILE = docker-compose.qa.yml
+SERVICE_NAME = qa-backend
+
+qa-lint:
+	@echo "🔍 Ejecutando Mypy y Ruff..."
+	docker compose -f $(COMPOSE_FILE) run --rm $(SERVICE_NAME) bash -c "uv sync && uv run ruff check . && uv run mypy ."
+
+qa-unit:
+	@echo "🧪 Ejecutando Pruebas Unitarias y Cobertura (Pytest)..."
+	docker compose -f $(COMPOSE_FILE) run --rm $(SERVICE_NAME) bash -c "uv sync && uv run pytest --cov=src --cov-fail-under=95"
+
+qa-mutation:
+	@echo "👽 Ejecutando Pruebas de Mutación (Mutmut)..."
+	docker compose -f $(COMPOSE_FILE) run --rm $(SERVICE_NAME) bash -c "uv sync && uv run mutmut run"
+
+qa-all: qa-lint qa-unit qa-mutation
+	@echo "✅ Pipeline QA Backend completado."
+
+clean-cache:
+	@echo "🧹 Limpiando volúmenes de caché de uv..."
+	docker compose -f $(COMPOSE_FILE) down -v

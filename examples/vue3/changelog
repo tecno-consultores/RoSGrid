@@ -1,0 +1,1981 @@
+* commit 8f06e5c69181497373da4cf46e045e75f15ce7ab (HEAD -> main, origin/main, origin/HEAD)
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Sat Oct 10 20:06:09 2026 -0400
+| 
+|     Actualizacion automatica
+| 
+* commit 1e5ea9e781ad43fd7cf92ee6aca59fa523ab46c1
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Sat Oct 10 20:00:43 2026 -0400
+| 
+|     * changelog
+| 
+* commit 13a8a3c6e5d69991654b983e769a639c15ba7d7c
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Sat Oct 10 20:00:41 2026 -0400
+| 
+|     Actualizacion automatica
+| 
+* commit b2f155c4c29828d3cb81a8c1fdc3b0a3bf8fe748
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Sat Oct 10 19:51:25 2026 -0400
+| 
+|     * changelog
+| 
+* commit c94119ed5a931f460a54b960f084fae9f3b83c59
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Sat Oct 10 19:51:23 2026 -0400
+| 
+|     Actualizacion automatica
+| 
+* commit 62d388e9dcffab503803402a99f2b943b869ca98
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Sat Oct 10 09:57:40 2026 -0400
+| 
+|     Actualizacion automatica
+| 
+* commit 920ebb4c97cca0eff22976e366dbcded6af875b8 (tag: 2.4.0)
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 8 11:21:30 2026 -0400
+| 
+|     Actualiza CHANGELOG para la versión 2.4.0
+|     
+|     Se documentan los cambios significativos en la versión 2.4.0, incluyendo nuevas integraciones y mejoras en la documentación y pruebas.
+| 
+* commit 88b87d8f070550bde1db59e7359f984f94f5cea2
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 8 11:18:56 2026 -0400
+| 
+|     Update feature description for React interface
+| 
+* commit 222fc5b8d8d84c2c5bab9248632b110147e1ccfc
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 8 11:18:22 2026 -0400
+| 
+|     Correct comment for React rendering in test
+|     
+|     Updated comment to reflect React instead of Vue.
+| 
+* commit 40f05a55baeaec7de20133bdd07b86dbe86fef14
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 8 11:15:57 2026 -0400
+| 
+|     Remove vueIndentScriptAndStyle from Prettier config
+| 
+* commit 6d64340b36203672fefca307acc8163577e8fd24
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 8 11:15:15 2026 -0400
+| 
+|     Fix comment for CSSTransition in Playwright config
+|     
+|     Updated comment to reflect React's CSSTransition instead of Vue.
+| 
+* commit 152e5a556caaddecd37cbbd1b775c7da5e62d82f
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 8 11:08:44 2026 -0400
+| 
+|     Fix formatting in React section of README
+| 
+* commit 8879334adb74327d78d7fb675ce0363f757d27f8
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 8 11:07:39 2026 -0400
+| 
+|     Fix formatting in React section of README
+| 
+* commit d6c8a81e21e65e9dcc98fd0357944700e1bc2492
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 8 11:05:23 2026 -0400
+| 
+|     Add ESLint configuration for React and TypeScript
+| 
+* commit 03d635fb3a6d9fe12ad502396c4bd371c723bda2
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 8 11:04:10 2026 -0400
+| 
+|     Add example browserslist configuration file
+| 
+* commit 7925c8eb80e66d528d1d82de2807a6f91b8aa02f
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 8 11:02:58 2026 -0400
+| 
+|     Add example Prettier configuration file
+| 
+* commit a84412455834e507a9f97d8aa04f92d89a1ee1f0
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 8 11:02:24 2026 -0400
+| 
+|     Create lighthouserc.js.example for CI setup
+|     
+|     Add Lighthouse CI configuration for performance testing.
+| 
+* commit e01b695038040ea3dcb265f23a59361101a52106
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 8 11:01:41 2026 -0400
+| 
+|     Add UI business flow feature for dashboard navigation
+| 
+* commit 51daff967fa512637fc422877dfc5c80ad1fe830
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 8 11:00:18 2026 -0400
+| 
+|     Add accessibility tests for critical application routes
+|     
+|     Implement accessibility testing for critical routes using Playwright and Axe.
+| 
+* commit 78b6d7464e83336af9a27db7adbc6fca567ca427
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 8 10:59:17 2026 -0400
+| 
+|     Create playwright.config.ts.example for E2E tests
+|     
+|     Add Playwright configuration for end-to-end testing with custom settings.
+| 
+* commit e9b0bd60837c5905c893eeac3958029486164851
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 8 10:57:23 2026 -0400
+| 
+|     Add example .gitignore for React frontend
+| 
+* commit 937cff175801c0f9802def6741cb265956c1ea56
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 8 10:56:05 2026 -0400
+| 
+|     Add limpieza.sh for QA environment cleanup
+|     
+|     This script performs a comprehensive cleanup of the QA environment for a React project, removing various build artifacts, test results, and Docker containers.
+| 
+* commit ecfdd4d0de7ab055964bc77166a11ea648af8244
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 8 10:55:34 2026 -0400
+| 
+|     Add Stryker configuration example for mutation testing
+| 
+* commit 08312b0d698fdd609d4271de14217c8e736285da
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 8 10:55:11 2026 -0400
+| 
+|     Add vitest.setup.ts.example for testing setup
+| 
+* commit 059986e4e3fcaba319d9966fba058c9cd72dd117
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 8 10:54:34 2026 -0400
+| 
+|     Create vitest.config.ts.example for React testing
+|     
+|     Add Vitest configuration for testing React components with coverage thresholds.
+| 
+* commit d4b8e12539adc0b4981f78f9672021e86ebe5dbd
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 8 10:54:03 2026 -0400
+| 
+|     Create package.json.example for React project
+|     
+|     Added a sample package.json for the React project with scripts and dependencies.
+| 
+* commit 6a67c561b46c03af8f4adb2c265d34ef5a368741
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 8 10:53:27 2026 -0400
+| 
+|     Add docker-compose configuration for QA environment
+| 
+* commit 212b1d15b987ffe53f236908f661a7cd4c10058c
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 8 10:52:30 2026 -0400
+| 
+|     Agregar guía de pruebas y QA para React/Vite
+|     
+|     Se agregó una guía de pruebas y QA para el frontend utilizando React y Vite, incluyendo reglas estrictas de ejecución, pila tecnológica, y comandos de ejecución local.
+| 
+* commit a2fd5fb6f3a1a350bbc184f58cca656209c6aa02
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 8 10:50:30 2026 -0400
+| 
+|     Update AI_MASTER_PROMPT.md
+| 
+* commit 8e6ff785acecec983f8d4e8397a573e955b31d72
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 8 10:47:40 2026 -0400
+| 
+|     Refactor README for clarity and structure
+| 
+* commit 5c13e3b3481fc43221c2466ed4c11f94c8cf1a3d (tag: 2.3.1)
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Wed Oct 7 10:19:26 2026 -0400
+| 
+|     Actualiza CHANGELOG para la versión 2.3.1
+|     
+|     Se documentan cambios significativos en la versión 2.3.1, incluyendo adiciones, modificaciones y correcciones en varios archivos relacionados con la infraestructura y la documentación del proyecto.
+| 
+* commit 0a84d88f00832ce296a56e304c345e8df36c848e
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Wed Oct 7 10:14:02 2026 -0400
+| 
+|     Update README with observability and Docker instructions
+|     
+|     Clarified requirements for instrumenting scripts for observability, including details for continuous and ephemeral scripts. Updated Docker Compose commands for running tests and Prometheus.
+| 
+* commit 7bc17325e305c240d51e1d0afb761fc41f6038a2
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Wed Oct 7 10:11:27 2026 -0400
+| 
+|     Add pushgateway service to docker-compose.qa.yml
+| 
+* commit e646b7238beff07f54572c16408e0d64642eb91a
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Wed Oct 7 09:57:06 2026 -0400
+| 
+|     Enhance metrics exposure with Pushgateway support
+|     
+|     Added support for asynchronous metric exposure via Pushgateway for scripts.
+| 
+* commit 7c81de1ea7b79dfdc08d5b3bf2c80ad6b9da5c7c
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Wed Oct 7 09:55:02 2026 -0400
+| 
+|     Update CI/CD pipeline documentation with chaos profile notes
+|     
+|     Added notes for chaos engineering and observability profile in CI/CD pipeline.
+| 
+* commit 4f8ad866dd36db14bc2b9c886923e1e5216cc10f
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Wed Oct 7 09:52:53 2026 -0400
+| 
+|     Fix formatting and update architecture documentation
+| 
+* commit a029742ecf9c170d8075d337c1a9b5566b09e047
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Wed Oct 7 09:51:12 2026 -0400
+| 
+|     Update FAQ with note on Prometheus middleware usage
+|     
+|     Added note about using command injections for ephemeral tasks instead of middlewares.
+| 
+* commit 86924bd5ae287127699e47e3d2a9f94ba8d66bc7
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Wed Oct 7 09:49:34 2026 -0400
+| 
+|     Revise observability guidelines for stress tests
+|     
+|     Updated observability requirements for stress testing and metrics exposure.
+| 
+* commit 68440feb14ce0c7a6e1489c00ca85680ecb7f9f6
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Wed Oct 7 09:43:03 2026 -0400
+| 
+|     Enhance limpieza.sh to include Docker cleanup
+|     
+|     Added command to bring down Docker observability profile and remove volumes during cleanup.
+| 
+* commit e5216dad1324d02802aed4bb011e97bbd91b77a8
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Wed Oct 7 09:35:47 2026 -0400
+| 
+|     Fix formatting issues in AI_MASTER_PROMPT.md
+| 
+* commit 5fae229dffff6a4d22ecd66bd602a4edff538529
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Wed Oct 7 09:31:59 2026 -0400
+| 
+|     Add Docker Hub links to README
+|     
+|     Updated README to include links to Docker Hub images.
+| 
+* commit be863fd78f14af06bfe3ccf0dbec48f369ae9b9c
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Wed Oct 7 09:30:28 2026 -0400
+| 
+|     Update README.md
+| 
+* commit 219f3f158296b2e6b9ece7209d6a981999c6127a
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 22:17:56 2026 -0400
+| 
+|     Actualizacion automatica
+| 
+* commit 1f89ac8cdec49fd4b02eb1f03763a44ada91efc2
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 22:16:52 2026 -0400
+| 
+|     Actualizacion automatica
+| 
+* commit f683439684cb9e80a64bddd48d4a4e664c27a275
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 22:08:01 2026 -0400
+| 
+|     * changelog
+| 
+* commit ef4f0fd8607f5a6f4f6b9ded4255cbf1a9476e36
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 22:07:59 2026 -0400
+| 
+|     Actualizacion automatica
+| 
+* commit 51bb5cdc625e41b16cfb17f6d0ffc2a882d0caf0
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 22:04:10 2026 -0400
+| 
+|     * changelog
+| 
+* commit 8b4522c1afad984e3ac821dbce2d9cbd60ab0003
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 22:04:08 2026 -0400
+| 
+|     Actualizacion automatica
+| 
+* commit 912042d8585923f8c840d3c48f7d9b996dcf502c
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 21:59:55 2026 -0400
+| 
+|     * changelog
+| 
+* commit 6357b7e67b350b2f155889ac411bfa1ad25afa7a
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 21:59:53 2026 -0400
+| 
+|     Actualizacion automatica
+| 
+* commit 708074c4d256b1bb75b6f76800cfeeab75738275
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 21:57:29 2026 -0400
+| 
+|     * changelog
+| 
+* commit c15ea36b7a764d18dfaf8148c7b91e15e1ba6517
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 21:57:28 2026 -0400
+| 
+|     Actualizacion automatica
+| 
+* commit bd9effbfda6f093a88ed985e579c61400ff35ea6
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 21:50:20 2026 -0400
+| 
+|     * changelog
+| 
+* commit 219caa18585e451706a2520c6a6485c655599f17
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 21:50:18 2026 -0400
+| 
+|     Actualizacion automatica
+| 
+* commit 27a90ebb8550bd9c4d17aeb233e8d9f7c78a12a3
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 21:47:24 2026 -0400
+| 
+|     * changelog
+| 
+* commit 77bb83abf7ca7ed691105456485de10e5bab3125
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 21:47:23 2026 -0400
+| 
+|     Actualizacion automatica
+| 
+* commit d5f0a15450fe9eaeb7f56180eb9e35d9981b26f6
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 21:44:33 2026 -0400
+| 
+|     * changelog
+| 
+* commit 91417b587c23f658ba554a31d853165ac8f85613
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 21:44:31 2026 -0400
+| 
+|     Actualizacion automatica
+| 
+* commit 6a1d33999c4ca3645e0563153784a059bd5c981d
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 21:42:44 2026 -0400
+| 
+|     * changelog
+| 
+* commit 74c290b20d2882cd8d94c15e7779f68aeae27389
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 21:42:42 2026 -0400
+| 
+|     Actualizacion automatica
+| 
+* commit 5bc87a5a08a4e9ca426f1fbf3308a97e52e078b7
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 21:39:21 2026 -0400
+| 
+|     * changelog
+| 
+* commit d3068358f8d149f8679e33fc78e173a526f02dea
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 21:39:20 2026 -0400
+| 
+|     Actualizacion automatica
+| 
+* commit 46eb8dfccd6841fd5d810ab2c34a250f96e53c1c
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 21:34:23 2026 -0400
+| 
+|     * changelog
+| 
+* commit 96f1c2ba4a19251b3102f990c0ffbe502880a1b1
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 21:34:21 2026 -0400
+| 
+|     Actualizacion automatica
+| 
+* commit 5174c249900abefbaf386ec589f098a3a0ff91bb
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 21:29:57 2026 -0400
+| 
+|     * changelog
+| 
+* commit 1e161d00a88e759d05c06523955a6e20ae0edcb3
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 21:29:55 2026 -0400
+| 
+|     Actualizacion automatica
+| 
+* commit 69f9af9ecdf2b0e7c95bcaa6da34923c5750e594
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 21:25:35 2026 -0400
+| 
+|     * changelog
+| 
+* commit b911c2cbfb8c7785d9d7c31a9b6615e60de763e1
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 21:25:34 2026 -0400
+| 
+|     Actualizacion automatica
+| 
+* commit 11670a70c9333c575bf20db8608800d23d0784c7
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 21:09:05 2026 -0400
+| 
+|     * changelog
+| 
+* commit 04435682e066de86056ea2449eb1419152d7d5f3
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 21:09:03 2026 -0400
+| 
+|     Actualizacion automatica
+| 
+* commit 85972da829c68c9d24bbfee13892b110e0911f40
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 21:04:38 2026 -0400
+| 
+|     * changelog
+| 
+* commit 4841165f3f1e7a221690c3f977e6e8aba56e3247
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 21:04:36 2026 -0400
+| 
+|     Actualizacion automatica
+| 
+* commit 9ac2918b2ed4ecdd7ae98699f53c5e418bec06f4
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 21:00:30 2026 -0400
+| 
+|     * changelog
+| 
+* commit 6cb0395166f08441bc6f73ce10f66eff11904818
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 21:00:28 2026 -0400
+| 
+|     Actualizacion automatica
+| 
+* commit 06e4a4a13e6b3eae7cc03b0c54a3bb4db53dfc89
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 20:57:42 2026 -0400
+| 
+|     * changelog
+| 
+* commit 55959b83e03d4fc530a18e7c891628a82f7f1ea6
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 20:57:40 2026 -0400
+| 
+|     Actualizacion automatica
+| 
+* commit d74616c93d7e7bd6be47ff7fa93310b865654662
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 20:52:26 2026 -0400
+| 
+|     * changelog
+| 
+* commit bb541a6bf50a8a88c9c2fb4fcac0a76352901150
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 20:52:25 2026 -0400
+| 
+|     Actualizacion automatica
+| 
+* commit 6ab9d5a05561d2f32dba948d2a73611d6d43a1b3
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 20:48:34 2026 -0400
+| 
+|     * changelog
+| 
+* commit a81f690943c993db70df8f6c6796fa9ce0aa9f7f
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 20:48:32 2026 -0400
+| 
+|     Actualizacion automatica
+| 
+* commit 03c16cb8145746995fdebafa4cef762841deada0
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 20:39:14 2026 -0400
+| 
+|     * changelog
+| 
+* commit 4b88bf539e0daba70ae6906824208bd4ddf549ce
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 20:39:13 2026 -0400
+| 
+|     Actualizacion automatica
+| 
+* commit 64796dfc2a72230beb67bdc10e7cf24eb1ac8122
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 20:34:42 2026 -0400
+| 
+|     * changelog
+| 
+* commit 79a9453330c439b6826cbe4375e314dd9693834c
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Tue Oct 6 20:34:40 2026 -0400
+| 
+|     Actualizacion automatica
+| 
+* commit a1b002d6c3ad95cd0c98765c4a1602171f30650e (tag: 2.3.0)
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:59:26 2026 -0400
+| 
+|     Update CHANGELOG.md
+| 
+* commit c988de8ab381a06ba8a8223ea2b414c38e16bce6
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:55:38 2026 -0400
+| 
+|     Update pruebas-script-bash.md
+| 
+* commit f1e739663d6d5dd25905072882a6dda2317bd518
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:55:03 2026 -0400
+| 
+|     Add Prometheus and Pushgateway services to QA setup
+| 
+* commit faa82071dac3f40fdfd7cc49d53a8707ebdf7658
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:53:23 2026 -0400
+| 
+|     Refine testing tools matrix in README
+|     
+|     Updated the testing tools matrix in the README to remove unnecessary formatting and clarify the tools used for various environments.
+| 
+* commit 11a14960257fa1ba05272d0368f31cb0852b7996
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:50:37 2026 -0400
+| 
+|     Update CONTRIBUTING.md with sidecar image note
+|     
+|     Added note about using official consolidated images for peripheral sidecars.
+| 
+* commit e352fb25decb80b16ae1073e632510e4feb69163
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:50:03 2026 -0400
+| 
+|     Add FAQ entry on Prometheus middleware injection
+|     
+|     Added a new FAQ entry about the necessity of injecting a Prometheus middleware for Chaos Engineering practices.
+| 
+* commit 35708f394053102907602b594f7db401afd71cb8
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:49:28 2026 -0400
+| 
+|     Update guidelines for testing and security protocols
+| 
+* commit a1ddf08890553914fa46de0a44c5570df8ce9bc5
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:46:36 2026 -0400
+| 
+|     Introduce Universal Observability section
+|     
+|     Added section on Universal Observability with RED metrics.
+| 
+* commit 4022352b2136bfe2fb692359ea017a1800504dc7
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:46:00 2026 -0400
+| 
+|     Enhance Docker troubleshooting documentation
+|     
+|     Updated troubleshooting documentation for Docker to include additional details on symptoms, causes, and solutions for various issues, including port conflicts and permission errors.
+| 
+* commit 6f070411214bd2a1925284a968c41067cafcc881
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:45:25 2026 -0400
+| 
+|     Revise CI/CD pipeline steps and descriptions
+|     
+|     Updated CI/CD pipeline documentation to enhance clarity and detail.
+| 
+* commit 8412990c25736e0fae76017676e4cd97911cad19
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:44:49 2026 -0400
+| 
+|     Update architecture document with new security layers
+| 
+* commit fb02521d24366bde203183246d014455e5e0cd56
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:44:12 2026 -0400
+| 
+|     Enhance Autonomous Loop description with observability
+|     
+|     Updated the description of the Autonomous Loop to include observability aspects and specific metrics.
+| 
+* commit 3d419e9799cec5e53bdecaf954a1196d12ba89ef
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:39:56 2026 -0400
+| 
+|     Enhance limpieza.sh to remove prometheus_data
+|     
+|     Added removal of prometheus_data directory during cleanup.
+| 
+* commit f7e4bb89be81faf20ffc5b04527ee4c280a3a482
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:39:33 2026 -0400
+| 
+|     Add prometheus_data and sw? patterns to .gitignore
+| 
+* commit ca73c537a84a9b244b5c34c1138e2b6740b12705
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:39:07 2026 -0400
+| 
+|     Enhance observability and context optimization instructions
+|     
+|     Added observability details and updated context optimization sections.
+| 
+* commit 61a102673bb870a1141bb9f508f7b15e67332a6c
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:38:16 2026 -0400
+| 
+|     Add nginx-exporter and prometheus to docker-compose
+|     
+|     Added nginx-exporter and prometheus services for observability.
+| 
+* commit 12e297b7b20143593eec11bd98ab2a80a2c30d91
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:34:14 2026 -0400
+| 
+|     Enhance limpieza.sh for additional cleanup tasks
+|     
+|     Added commands to remove prometheus_data and bring down observability services.
+| 
+* commit 5f6051da41241b61683881138fd81b373d26126c
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:33:46 2026 -0400
+| 
+|     Add 'prometheus_data/' and reorder .DS_Store entry
+| 
+* commit ae80f9b7d2f224507a14262eb43cf716779b2a81
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:33:19 2026 -0400
+| 
+|     Enhance testing guidelines and add observability section
+|     
+|     Added observability requirements and updated testing structure.
+| 
+* commit f74f7d86d1804376eb7e1ca71b3cf779bacd903a
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:32:48 2026 -0400
+| 
+|     Add Prometheus service to docker-compose configuration
+| 
+* commit df467d72246ad92213d860ae37c6247df5c69c52
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:32:08 2026 -0400
+| 
+|     Update project description and dependencies for version 11X
+| 
+* commit aaf1a8963733a349ab8fc644b4fbf6e856b0c42a
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:28:51 2026 -0400
+| 
+|     Add removal of prometheus_data in limpieza.sh
+|     
+|     Remove prometheus_data directory during cleanup.
+| 
+* commit 394fe4b429c485ea4c256c88e8f84e88fba839c1
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:28:24 2026 -0400
+| 
+|     Update .gitignore to include prometheus_data and *.sln
+| 
+* commit 8377cd11375204624bff1d5d190354cdbf03ce1d
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:27:48 2026 -0400
+| 
+|     Enhance chaos engineering and observability instructions
+|     
+|     Updated the documentation to include Prometheus for observability and clarified steps for chaos engineering.
+| 
+* commit bfce519b27d3bd48da42cf4a46905873769c50a1
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:27:08 2026 -0400
+| 
+|     Add Prometheus service to docker-compose for monitoring
+|     
+|     Added Prometheus service for monitoring with a custom configuration that scrapes metrics from the Node API every 2 seconds.
+| 
+* commit 0a64f65c39244dd6d889781614a9226925289693
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:26:39 2026 -0400
+| 
+|     Add express-prom-bundle and prom-client dependencies
+| 
+* commit 840a1f2febe1fa7ef87fafc1c5b3af696fb6d750
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:22:55 2026 -0400
+| 
+|     Enhance FastAPI testing documentation with observability
+|     
+|     Updated the FastAPI testing guidelines to include observability requirements and additional validation layers.
+| 
+* commit 52e8f4e1c2eb97c73903ed1ad284fbb25d3ee323
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:20:36 2026 -0400
+| 
+|     Enhance limpieza.sh for additional cleanup tasks
+|     
+|     Added commands to remove Prometheus data and stop specific Docker profiles before cleanup.
+| 
+* commit b3317c3b2ee8caeaa244fa1b2fa08ca48830b027
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:20:07 2026 -0400
+| 
+|     Add prometheus_data to gitignore
+| 
+* commit 6f9a1fe6c5aae83dd58c4b094b182121c01294d7
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:18:47 2026 -0400
+| 
+|     Add Prometheus service to docker-compose for QA
+|     
+|     Added Prometheus service for monitoring with a 2s scrape interval.
+| 
+* commit a5eefdeaa7de811f306b5c5655ecfc04cff339de
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:18:01 2026 -0400
+| 
+|     Fix formatting in pyproject.toml.example
+| 
+* commit 6996d49558c83788be97bea32d62f09f79f38543
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 15:09:04 2026 -0400
+| 
+|     Update testing stack with observability tools
+|     
+|     Added observability tools to testing stack for various environments.
+| 
+* commit cba5f9622e023888f490a96e69943d41bc99f48f (tag: 2.2.0)
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:59:26 2026 -0400
+| 
+|     se agrega graphify
+|     
+|     Se documentan cambios significativos en la versión 2.2.0, incluyendo nuevas características y modificaciones en la infraestructura y documentación del proyecto.
+| 
+* commit 4ba6609020d03b04004b76d984120b7ae751fd99
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:57:33 2026 -0400
+| 
+|     Update CI/CD pipeline commands to use 'test' service
+| 
+* commit 3326fcc988fb21a6dbd9a1fbc7bf97974211841d
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:56:43 2026 -0400
+| 
+|     Revise contribution guidelines for version 11X
+|     
+|     Updated the Golden Rules for Contribution to version 11X and added a new rule regarding strict IPv4 configuration.
+| 
+* commit 2b6285f1f53eebad8f4c23cee41820948208f77e
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:56:01 2026 -0400
+| 
+|     Add remote-graphify image for AI context optimization
+| 
+* commit dba2e83921ce500600da9c2b71f9a47148c346e7
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:55:17 2026 -0400
+| 
+|     Fix formatting and citation issues in architecture document
+| 
+* commit ce8e9d836c25bcbd71e271860f9c1ed1d1859c11
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:54:46 2026 -0400
+| 
+|     Revise MCP integration examples in ai-integration.md
+|     
+|     Updated examples and concepts related to MCP server integration and agent orchestration.
+| 
+* commit c8dc937850ef4f021783fb7d6dff273eaa13ded2
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:53:51 2026 -0400
+| 
+|     Add citations to architecture documentation
+|     
+|     Added citations to various sections to enhance documentation clarity and reference.
+| 
+* commit f847d62ca376f8c9de7361be9d84f12c2db2e354
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:50:49 2026 -0400
+| 
+|     Revise architectural rules for QA automation in Vue 3
+|     
+|     Updated architectural constraints for QA automation in Vue 3, including new rules for AI context optimization and Docker usage.
+| 
+* commit 96e58b55e3a52252a311e23bd07af8e4e0b6bba2
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:49:45 2026 -0400
+| 
+|     Update gitignore.example
+| 
+* commit 3102488304d51a9f84e74586581673d7c1e4d9b0
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:49:08 2026 -0400
+| 
+|     Update limpieza.sh for enhanced QA environment cleanup
+| 
+* commit bb64dc20f5121bb5d8ffef9778b7c1286f5972f7
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:48:39 2026 -0400
+| 
+|     Add graphify service to docker-compose configuration
+|     
+|     Added a new service 'graphify' for serving graph data.
+| 
+* commit 87438a9039fcf2b02b27a2e99445b61e2aa32ce1
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:45:25 2026 -0400
+| 
+|     Update pruebas-script-python.md
+| 
+* commit 145bacf450219772ca5f47aebff0fe44bf1c13bb
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:44:55 2026 -0400
+| 
+|     Update .gitignore to include and exclude specific files
+| 
+* commit ad79c00defae28898c755b36ef8b2dc68c4afe69
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:44:14 2026 -0400
+| 
+|     Enhance limpieza.sh with new messages and commands
+|     
+|     Updated the cleanup script to include additional messages and commands for better clarity and functionality.
+| 
+* commit b22b0919fb6a1bb05ce3f12fc835c537267b0e21
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:43:42 2026 -0400
+| 
+|     Update docker-compose.qa.yml
+| 
+* commit 0add393cf8fb9193f9b0e13272b223d31235165c
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:41:43 2026 -0400
+| 
+|     Add removal of graphify-out directory in limpieza.sh
+|     
+|     Remove graphify-out directory during cleanup.
+| 
+* commit 299490d9f0d435686a17b89b529326b0dd6dee1a
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:41:19 2026 -0400
+| 
+|     Enhance limpieza.sh to clean graphify outputs
+|     
+|     Added removal of graphify output directory and docker down command for graphify profile.
+| 
+* commit 64bc83f222e0637544ed4eab372aeef2f1f88976
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:40:46 2026 -0400
+| 
+|     Update gitignore.example
+| 
+* commit f2f3c2740e6d65e22a98c5cc384b846dc9d3ce38
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:38:59 2026 -0400
+| 
+|     Enhance documentation with IA Context Optimization
+|     
+|     Added section on IA Context Optimization and commands for local execution.
+| 
+* commit 4a729090aeae91892c88b26d4858294a39011407
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:38:26 2026 -0400
+| 
+|     Update .gitignore to include graphify-out directory
+| 
+* commit cae6a1c93e7ff7df740a7e7110e04427f740f908
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:36:14 2026 -0400
+| 
+|     Enhance documentation with AI context optimization steps
+|     
+|     Added instructions for AI context optimization and local execution commands.
+| 
+* commit 114bb0bd6420851aa03f6947f458d43cfcbc5323
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:33:38 2026 -0400
+| 
+|     Refactor limpieza.sh to simplify cleanup process
+|     
+|     Removed commented lines for cleaning reports and Docker permissions.
+| 
+* commit 7fd71bba01d3856e21677b9105090bd9fa126ccc
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:33:08 2026 -0400
+| 
+|     Simplify gitignore.example by removing sections
+|     
+|     Removed unnecessary sections and comments from the gitignore example file.
+| 
+* commit ec1a5f041c994dff0b394feb07b2fb5dbbeb939f
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:31:57 2026 -0400
+| 
+|     Clean up comments in tox.ini.example
+|     
+|     Removed commented sections from tox.ini.example for clarity.
+| 
+* commit 37283123fddb955c57c811708c4b98e6e24765ed
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:30:45 2026 -0400
+| 
+|     Refactor limpieza.sh for improved cleanup process
+|     
+|     Removed temporary dependencies and cache cleanup commands, and added Docker cleanup commands.
+| 
+* commit 9d1f73e2c7d142afdff85390b37ee4922d89624c
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:30:11 2026 -0400
+| 
+|     Clean up gitignore by removing unnecessary sections
+|     
+|     Removed sections related to secrets, testing, and various tools from the gitignore file.
+| 
+* commit 37af215cb9dc85a07a7410dcb4069952c93faf4a
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:29:29 2026 -0400
+| 
+|     Clean up docker-compose.qa.yml by removing comments
+|     
+|     Removed commented sections and unnecessary comments from the docker-compose file for clarity.
+| 
+* commit 05c4d89a078cf545720257e991469bc680717b4c
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:27:56 2026 -0400
+| 
+|     Refactor limpieza.sh to simplify cleanup process
+|     
+|     Removed cleanup commands for coverage reports and logs.
+| 
+* commit 707766bd5feeba30b573845329986b70790fbfd4
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:27:33 2026 -0400
+| 
+|     Uncomment command for QA Bash container
+| 
+* commit 09c4af28fcc0ec0e782e1e6bc0f2f0535e469d9b
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:27:11 2026 -0400
+| 
+|     Update docker-compose.qa.yml
+| 
+* commit 9441242f8686cc3d31aa0a1e93823537948b656f
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:22:55 2026 -0400
+| 
+|     Revise docker-compose for QA testing environment
+|     
+|     Updated QA testing blueprints for Node.js with detailed service configurations and commands for Docker containers.
+| 
+* commit 3205d8c44ef0b836415f09ee1a0a861a32b4d692
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:21:47 2026 -0400
+| 
+|     Update pruebas-backend-node.md
+| 
+* commit 0dea5a8858199e3e64866bb5e7cd5cff49741958
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:11:29 2026 -0400
+| 
+|     Change graphify container name and network configuration
+|     
+|     Updated container name for graphify service and modified network settings.
+| 
+* commit 95e962da1d4af7bf8131eaa20ec6c1df9429dd06
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:08:39 2026 -0400
+| 
+|     Enhance docker-compose.qa.yml for FastAPI QA setup
+|     
+|     Se actualizó el archivo docker-compose.qa.yml para incluir un entorno de pruebas más robusto y detallado para FastAPI, incluyendo configuraciones para servicios de QA, DAST y Chaos Engineering.
+| 
+* commit 32d5f7cbc807316cb743484d83e6d8a542ba8419
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 14:07:26 2026 -0400
+| 
+|     Revisar y actualizar la guía de pruebas para FastAPI
+|     
+|     Actualiza las reglas y requisitos para la ejecución de pruebas automatizadas en APIs construidas con FastAPI, enfatizando el uso de Docker efímero y herramientas de validación. Se añaden detalles sobre la arquitectura de pruebas y comandos de ejecución.
+| 
+* commit be31c8abe9ca9000b41786fbf425db7e8138d73f
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 13:43:46 2026 -0400
+| 
+|     Update testing documentation requirements
+| 
+* commit 094872c95acff8adebd658b088040450ab233f90
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 13:38:24 2026 -0400
+| 
+|     Add documentation trail requirement for testing
+|     
+|     Added a new guideline for maintaining a documentation trail for testing procedures.
+| 
+* commit cc7631eb5ecd3e39dc01633d1333497ffdc17e6c
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 13:09:15 2026 -0400
+| 
+|     Correct prompt path in README instructions
+|     
+|     Updated prompt reference in README for clarity.
+| 
+* commit 8d58e2608603a188394f64b027bb89937e3ac6ff
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 12:49:53 2026 -0400
+| 
+|     Revise AI integration instructions in README
+|     
+|     Updated integration instructions for AI assistants to ensure safe project merging and file handling.
+| 
+* commit 248a92b9e8e04615a1385e4627da6c2d83df94e5
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 12:29:56 2026 -0400
+| 
+|     Update sections and protocols in AI_MASTER_PROMPT.md
+| 
+* commit e235c3a5b0c4a2d5106eec939f8a6ec8149be07d
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 12:29:28 2026 -0400
+| 
+|     Revise AI integration instructions in README
+|     
+|     Updated the README to clarify the integration process with AI tools and made minor formatting adjustments.
+| 
+* commit aad1371db57adec75f5673ca1f29a9494ced9cfc
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 11:44:12 2026 -0400
+| 
+|     Create AI master prompt for QA and DevOps standards
+|     
+|     Added a master prompt for AI agents outlining QA automation and DevOps guidelines in Spanish.
+| 
+* commit 61291e7a65ea8d5b5efffddd1c352fd0809ed05d (tag: 2.1.0)
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 11:40:48 2026 -0400
+| 
+|     Update CHANGELOG for version 2.1.0
+|     
+|     Added new features for Dynamic Security, Chaos Engineering, Docker Profiles, and bilingual system directives. Updated documentation and CI/CD pipelines to reflect architectural evolution.
+| 
+* commit ac1f27569fc04afb836e68c7c4aba844fc6a76d4
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 10:34:53 2026 -0400
+| 
+|     Update README.md
+| 
+* commit 791b7d12c9f587bf8ad44a7c3efc5faaf57e4381
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 10:33:03 2026 -0400
+| 
+|     Revise QA Philosophy document structure and content
+|     
+|     Renumber sections, update descriptions, and enhance clarity.
+| 
+* commit 4c5fcfb026387094351f74076bfe8e24d6f9d592
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 10:32:15 2026 -0400
+| 
+|     Enhance Docker troubleshooting documentation
+|     
+|     Added troubleshooting steps for Lefthook and ZAP issues, including solutions for command not found and permission errors.
+| 
+* commit e4e339a5f3b88465fb4aff2bfac3158c00374895
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 10:31:41 2026 -0400
+| 
+|     Update ci-cd-pipelines.md
+| 
+* commit 233dcd5ab485b210260d223b3b25d6757352773c
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 10:29:58 2026 -0400
+| 
+|     Update FAQ.md
+| 
+* commit 00b59200a1fe9c55cb382e65a7adb7fddb76a5be
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 10:27:02 2026 -0400
+| 
+|     Revise CI/CD pipelines documentation for clarity
+|     
+|     Updated CI/CD documentation to reflect changes in coverage requirements and pipeline steps.
+| 
+* commit c12d337b83fcafac960e09b2e604585db8638a7f
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 10:26:08 2026 -0400
+| 
+|     Revise QA philosophy document structure and content
+|     
+|     Reorganize QA philosophy sections and update titles for clarity.
+| 
+* commit 0a9d9b9a848d320590742391777dbfb661f63a38
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 10:25:19 2026 -0400
+| 
+|     Update ARCHITECTURE_C4.md
+| 
+* commit 792d10b7f7b0e6810ff9fbf6d70c6b8b66e83a89
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 10:22:31 2026 -0400
+| 
+|     Enhance limpieza.sh with additional cleanup steps
+| 
+* commit 872ad8ebb47766ab3e6b4e2aa134aa1d4f6a81f8
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 10:22:04 2026 -0400
+| 
+|     Update gitignore for dynamic security and chaos engineering
+| 
+* commit 28a13bbe7428632e3b9e91f8c155af6a8d70e3f1
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 10:21:33 2026 -0400
+| 
+|     Remove QA Docker Compose configuration
+|     
+|     Elimina la configuración de servicios de Docker Compose para QA, incluyendo la API, entornos de prueba, Karate Labs, ZAP y Pumba, junto con sus respectivas instrucciones y comentarios.
+| 
+* commit 28e2fe7b129e0c2021e3e2321f4780c3d72e7403
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 10:19:58 2026 -0400
+| 
+|     Integrate chaos engineering services in docker-compose.qa.yml
+|     
+|     Added chaos engineering services for Pumba and Artillery to the QA Docker Compose setup.
+| 
+* commit a0683a969e8949bf793e0c802ad45f1fdf8c0b3e
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 10:14:59 2026 -0400
+| 
+|     Enhance limpieza.sh with detailed error messages
+| 
+* commit 0294d147e54f2824f5b0f27db377d74079cbde09
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 10:14:32 2026 -0400
+| 
+|     Modify gitignore for DAST and chaos engineering
+|     
+|     Updated the gitignore file to reflect changes in dynamic security and chaos engineering, and removed some commented sections.
+| 
+* commit a08ac4584bf958401311a1e6fe18517ff9a20129
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 10:13:54 2026 -0400
+| 
+|     Añadir directivas y reglas para pruebas de FastAPI
+|     
+|     Se han agregado directivas y reglas arquitectónicas para la ejecución de pruebas automatizadas en APIs de FastAPI, incluyendo entornos de prueba, seguridad y estrés. Se especifican imágenes de Docker y comandos para la validación de calidad y seguridad.
+| 
+* commit 3ff5f679e66ff84e87e013f818195f2b7f03a5b2
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 10:13:15 2026 -0400
+| 
+|     Update docker-compose.qa.yml
+| 
+* commit a744325f617fbd6a64be620e62450c3dc082c08b
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 10:10:19 2026 -0400
+| 
+|     Refactor comments and commands in docker-compose.qa.yml
+|     
+|     Updated comments and commands for clarity in docker-compose.qa.yml.
+| 
+* commit 58e41a4283ee9001e1097a0d708e76d96f923514
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 09:55:54 2026 -0400
+| 
+|     Update README.md with N/A for missing tests
+| 
+* commit 248b3348671ee70530a3e1f7c42ccf46bbf2a2ed
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 09:55:28 2026 -0400
+| 
+|     Update validation stack in README
+|     
+|     Removed asterisks from implemented tools and updated the security tools for Python, FastAPI, Node, and Vue3.
+| 
+* commit c7936f6787e5ac8b13e10e68696efab1bb170e32
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 09:25:04 2026 -0400
+| 
+|     Enhance limpieza.sh to include DAST report removal
+|     
+|     Updated cleanup script to remove DAST (ZAP) report.
+| 
+* commit 0af20bc45918e4b221bcc9ca6f08f9b164b571fb
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 09:24:41 2026 -0400
+| 
+|     Update .gitignore to include zap-report.html
+| 
+* commit 60e0e9e093930d21e65ec04e7f2d2b2c7ec7daa1
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 09:24:13 2026 -0400
+| 
+|     Actualiza reglas arquitectónicas y comandos de ejecución
+|     
+|     Se actualizó el contexto para la IA y se añadieron nuevas reglas sobre seguridad dinámica y comandos de ejecución local.
+| 
+* commit d86509f6d8598dc67cac270b93f2f713849a266b
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 09:23:34 2026 -0400
+| 
+|     Add OWASP ZAP service to docker-compose for security
+| 
+* commit 21747eaf86c14e952fce7f612caeb35cfb1783b6
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 09:18:52 2026 -0400
+| 
+|     Update limpieza.sh to remove DAST report
+| 
+* commit 593fd6106b2a0ddce109cca7dabb8e3dc3b1fcea
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 09:18:07 2026 -0400
+| 
+|     Update gitignore to include additional patterns
+|     
+|     Added entries for DAST, secrets, testing, and Karate Labs.
+| 
+* commit 2b81ac364c6303bb323f89817994bb683eec2d02
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 09:17:29 2026 -0400
+| 
+|     Mejora la documentación de pruebas para FastAPI
+|     
+|     Actualiza la guía de pruebas y validación para API en FastAPI, incluyendo reglas estrictas de ejecución, pila tecnológica requerida y comandos de ejecución local.
+| 
+* commit d53c4d0634373750537dc8dbffc0e5958a780c26
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 09:16:51 2026 -0400
+| 
+|     Add OWASP ZAP service for dynamic security testing
+| 
+* commit 00fec9bc5cedcc2884c425800ac13abbbd9c1500
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 09:13:20 2026 -0400
+| 
+|     Update CHANGELOG with new features and improvements
+|     
+|     Added strict pre-commit hook with Lefthook to enforce semantic commits and code style validation. Integrated Trivy for vulnerability scanning and added regex to block commits with plaintext secrets.
+| 
+* commit 30ff1e6e3a7d3ff84c6cf81dbc1c0fa303038cfb
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 09:12:46 2026 -0400
+| 
+|     Update contribution guidelines for security hooks
+|     
+|     Added instructions to install local security hooks after forking the repository.
+| 
+* commit ae710877377fbe90c32a18798b29cf7b8e39da99
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Fri Oct 2 09:11:29 2026 -0400
+| 
+|     Fix formatting in README.md
+| 
+* commit 1c58a6cd47d3544c44078775d1f19ae5ee15fe58
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 14:43:07 2026 -0400
+| 
+|     Fix formatting issues in README.md
+| 
+* commit f712ec2f7cbd2d07f55be3c9104b74b74ea3e028
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 14:42:10 2026 -0400
+| 
+|     Enhance security guidelines with auditing and leak prevention
+|     
+|     Added section on infrastructure auditing and leak prevention measures, including mandatory IaC scanning and pre-commit hooks.
+| 
+* commit bdb9494536a82487bb2c90cb1c2b0fe24102d3c0
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 14:41:42 2026 -0400
+| 
+|     Add citations to README for clarity
+|     
+|     Added citations to various sections for better reference.
+| 
+* commit 7dc42340a066d072cf666e9a339151498011286d
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 14:38:33 2026 -0400
+| 
+|     Add auditar-infra.sh for IaC security auditing
+|     
+|     Script for ephemeral Infrastructure as Code (IaC) auditing using Trivy.
+| 
+* commit 33cb80ca8dfbdc1eef7eb9534af765c0e1477397
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 14:37:56 2026 -0400
+| 
+|     Add IaC audit workflow with Trivy scanning
+| 
+* commit 6deec20a332216d832203da9b9bb29d24450a719
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 14:35:03 2026 -0400
+| 
+|     Change security contact email to soporte@tecnoconsultores.net
+|     
+|     Updated contact email for security vulnerability reports.
+| 
+* commit 0ceec8953fae9db964212a6802c71f7a10daf879
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 14:34:01 2026 -0400
+| 
+|     Change security report email address
+|     
+|     Updated the contact email for security reports.
+| 
+* commit 3e40f59a7e42cdc7ac0c0fb5f771320f4f772e4b
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 14:32:16 2026 -0400
+| 
+|     Change security report email address
+|     
+|     Updated the contact email for security reports to a new domain.
+| 
+* commit 47e1e86be7b0b5f70f98d0b1d877393e4b820aaa
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 12:46:46 2026 -0400
+| 
+|     Add script to initialize Lefthook for QA testing
+|     
+|     This script sets up Lefthook for QA Testing Blueprints locally, checking for NPM and installing accordingly.
+| 
+* commit c070d9a8e856d1668f38f9267e0ed0dcfca62a3e
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 12:46:07 2026 -0400
+| 
+|     Add Lefthook configuration for pre-commit hooks
+|     
+|     Added Lefthook configuration for pre-commit and commit-msg hooks, including linting for Python, JavaScript, Bash, and secret checks.
+| 
+* commit a4338246ddd452bffee676700cfc59ccd08fbbd3
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 12:38:25 2026 -0400
+| 
+|     Update architectural guidelines for QA in Vue 3
+|     
+|     Added system directive for AI agents regarding architectural constraints and testing rules.
+| 
+* commit 13da9b13e32681b5ecc8970e71e1af137b1fbbb9
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 12:37:24 2026 -0400
+| 
+|     Update guidelines for Python script testing
+|     
+|     Added system directive for AI agents to enforce architectural constraints in Spanish.
+| 
+* commit 254158b037d2b9a934db9e5fe795e28b6b1f9609
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 12:36:58 2026 -0400
+| 
+|     Update pruebas-backend-node.md with AI directives
+|     
+|     Added system directive for AI agents and context for QA.
+| 
+* commit 57891889ca1a265282221540347c84a1251bddad
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 12:36:16 2026 -0400
+| 
+|     Update pruebas-api-fastapi.md with system directive
+|     
+|     Added system directive for AI agents to enforce architectural constraints in Spanish.
+| 
+* commit 12c81c80716caa8b68282ba1a3f2b15d4258c3ef
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 12:35:44 2026 -0400
+| 
+|     Update pruebas-script-bash.md with system directive
+|     
+|     Added system directive for AI agents and context for QA automation.
+| 
+* commit be73ce8bc27a5c8d8d183152e867e1b736bd4add
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:59:06 2026 -0400
+| 
+|     Revise testing tools and documentation in README
+|     
+|     Updated the testing tools matrix and instructions in the README.
+| 
+* commit 478e862840c0f71302f70dd38550e7d09b573ded
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:53:53 2026 -0400
+| 
+|     Refactor relationships and links syntax in documentation
+| 
+* commit 2c15ef9edf38e6e79b8d0fdb0a9c4560543606ce
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:52:09 2026 -0400
+| 
+|     Add C4 Architecture Document for QA Testing
+|     
+|     This document graphically describes how tools, containers, and networks interact within QA Testing Blueprints using a C4 model adapted for ephemeral infrastructure.
+| 
+* commit 07c83ae1c7fdd1c86df767ee64059eded0ac76a4
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:49:58 2026 -0400
+| 
+|     Add corporate pull request template for QA Testing
+|     
+|     Added a corporate pull request template for QA Testing Blueprints, including sections for change description, PR type, quality checklist, and execution evidence.
+| 
+* commit 8133c88d1c128f229d4fcaffc98c8d11ac422ef1
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:47:52 2026 -0400
+| 
+|     Add tool proposal issue template
+| 
+* commit 46798ba5dc3391213686f34f15fd54bfb13cef6a
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:47:15 2026 -0400
+| 
+|     Create bug report template for issue tracking
+|     
+|     Added a bug report template for GitHub issues.
+| 
+* commit 0f14f9f45215ea092765727e9772a40e4a6b9c92
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:46:38 2026 -0400
+| 
+|     Add security vulnerability reporting contact link
+| 
+* commit 5041f066ee5b3f87f7b0075985cd35989b99f0bf
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:44:16 2026 -0400
+| 
+|     Create commitlint.config.js for commit message rules
+|     
+|     Add commitlint configuration to enforce commit message standards.
+| 
+* commit 86c45f6bb7bf11effacf8364fc9254ef17ca7a82
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:42:55 2026 -0400
+| 
+|     Add Spanish Code of Conduct
+|     
+|     Added a comprehensive Code of Conduct in Spanish outlining community standards, responsibilities, and reporting procedures.
+| 
+* commit bb4f33bac80fb4af8dacf4c00950f4080ee58845 (tag: 2.0.0)
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:33:49 2026 -0400
+| 
+|     Delete changelog
+| 
+* commit 7f697219e1266324e19058c66fcefaaad1d6a089
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:33:29 2026 -0400
+| 
+|     Add changelog for version 2.0.0
+|     
+|     Documented notable changes in the project, including added features, modifications, and updates to various files.
+| 
+* commit 1ff3c37f9a5814199dd99a1baddce327747b3cb4
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:31:54 2026 -0400
+| 
+|     Add SECURITY.md with security policy and guidelines
+|     
+|     Added a comprehensive security policy document outlining best practices, vulnerability reporting procedures, and supported versions for the QA Testing Blueprints repository.
+| 
+* commit 1192453bb06cf5e55beb636c21c44d923243c03b
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:19:21 2026 -0400
+| 
+|     Update FAQ.md
+| 
+* commit 6ad2909eed51f38a65596a431fbfe9f410f5de32
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:18:41 2026 -0400
+| 
+|     Revise contribution guidelines for clarity and standards
+|     
+|     Updated contribution guidelines to clarify standards and requirements.
+| 
+* commit 5427c1acf7cceda5250ef6cc638f5660c3901488
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:17:58 2026 -0400
+| 
+|     Revise testing philosophy and tool stack in README
+|     
+|     Updated the README to reflect changes in testing philosophy, objectives, and tool stack across various ecosystems. Removed asterisks from implemented tools and clarified instructions for integrating the QA blueprint.
+| 
+* commit 230b90f03fc1d11a4b906557aaf955a1b057b7e4
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:14:19 2026 -0400
+| 
+|     Update playwright.config.ts.example
+| 
+* commit 11d1aa5e7674568d7fd6cd3e0d54e4a7f112b9a7
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:13:49 2026 -0400
+| 
+|     Enhance accessibility tests for critical routes
+| 
+* commit 59507afa6c87f5f91ddc0b408c7c469bae7ef585
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:11:59 2026 -0400
+| 
+|     Add root check with error message in limpieza.sh
+|     
+|     Added error message for non-root execution.
+| 
+* commit ca4976d3de0e96c95309920211d65f36063df1c8
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:11:39 2026 -0400
+| 
+|     Enhance Vitest config with coverage thresholds
+|     
+|     Added coverage thresholds and exclusions to the Vitest configuration.
+| 
+* commit aa82410709c90b2f9a994419ed0bf6411596b943
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:11:21 2026 -0400
+| 
+|     Add example browserslist configuration file
+| 
+* commit eaee9a2c3587d83576db13887fa828a17a11dd66
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:10:58 2026 -0400
+| 
+|     Create lighthouserc.js.example for CI setup
+|     
+|     Add Lighthouse CI configuration for performance auditing.
+| 
+* commit 06fc71c9b8492a57d77e91c36c493fc27e2a0f74
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:10:17 2026 -0400
+| 
+|     Create stryker.conf.json.example file
+|     
+|     Add example configuration for Stryker mutation testing
+| 
+* commit 2efc8fed5cd3ca5a96fc2b2d93fc9b08748d1850
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:09:43 2026 -0400
+| 
+|     Add Prettier configuration example file
+| 
+* commit 17537c25cd6d83e1938df77ea41f67ea7589c8b2
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:09:16 2026 -0400
+| 
+|     Update ESLint configuration with additional plugins
+|     
+|     Added security and sonarjs plugins to ESLint configuration.
+| 
+* commit 7b9fe3a1f21239343ef5e976dc2460c77963abe4
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:08:55 2026 -0400
+| 
+|     Update package.json for version and scripts
+|     
+|     Updated version to 2.0.0 and added new scripts for formatting and linting.
+| 
+* commit 1757b921606ca50b8075de595b6f22000e7f8143
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:08:24 2026 -0400
+| 
+|     Revise QA guidelines for Vue 3 testing strategies
+|     
+|     Updated the QA guidelines for Vue 3 to include new architectural rules and testing strategies, ensuring clarity on tool usage and execution commands.
+| 
+* commit fa24cf45fa9f96d5a10ba04f6ff09ae922105d14
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:02:43 2026 -0400
+| 
+|     Update .gitignore to streamline ignored files
+|     
+|     Removed unnecessary environment variable backups and cleaned up ignored files.
+| 
+* commit ad6beead39bb14ae1bf707e3533e545a22787054
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:02:06 2026 -0400
+| 
+|     Enhance limpieza.sh for comprehensive cleanup
+|     
+|     Added checks and commands for cleaning up Python environment and Docker infrastructure.
+| 
+* commit a544e8cb260449c999297e0c9514d328d0cbe564
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:01:36 2026 -0400
+| 
+|     Enhance tox.ini with complexity analysis and updates
+|     
+|     Updated the description and added complexity analysis steps to the test environment commands.
+| 
+* commit f01052c51ca5daea8539ea962a1e841b625a4c7c
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:01:14 2026 -0400
+| 
+|     Bump version to 0.2.0 and enhance project details
+|     
+|     Updated project version and description. Added new dependencies for testing, BDD, and profiling.
+| 
+* commit e341c72375b18edfb36a719acc15abf95860e2ec
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:00:39 2026 -0400
+| 
+|     Add SYS_PTRACE capability and security options
+|     
+|     Added critical privileges for memory reading in the container.
+| 
+* commit 37ce5b6cd3b799eb0474c9ec2c4fa7f0338c7af4
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 11:00:01 2026 -0400
+| 
+|     Enhance testing guidelines for Python scripts
+|     
+|     Added detailed guidelines for testing and validation of Python scripts, including new sections on BDD, benchmarking, and cyclomatic complexity.
+| 
+* commit 36f5b4d5c75238a0cde1828e57603b3f79b07998
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 10:56:48 2026 -0400
+| 
+|     Enhance limpieza.sh for better cleanup and messaging
+|     
+|     Updated script to enhance cleanup messages and added Docker volume pruning.
+| 
+* commit 2992087541d6cb33226680a19d2987517987a359
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 10:56:21 2026 -0400
+| 
+|     Add example Prettier configuration file
+| 
+* commit 0ef48f5246e25e639a2cb9d83285e8501b59c4d5
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 10:55:52 2026 -0400
+| 
+|     Add sonarjs plugin and related rules to ESLint config
+| 
+* commit 1ea8796cf2ec019b8187d5c276731e360fb3a3ee
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 10:55:28 2026 -0400
+| 
+|     Update package.json.example for version and description
+| 
+* commit 5b44b0d395dfd18539e38a75bebc13da4734e155
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 10:54:39 2026 -0400
+| 
+|     Enhance docker-compose.qa.yml with Clinic support
+|     
+|     Updated comments to include Clinic in relevant sections and added critical privileges for the Node containers.
+| 
+* commit 311485879d595e28219cb7e407e5f2aba3c83773
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 10:53:55 2026 -0400
+| 
+|     Update pruebas-backend-node.md
+| 
+* commit df5f17223297f027fb886ba4f70e1fa40fcff6dd
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 10:48:35 2026 -0400
+| 
+|     Enhance BDD validation with error handling scenarios
+|     
+|     Updated feature file to include error handling scenarios and validation checks for the FastAPI.
+| 
+* commit c9f2e09138b1f6ffc1f7da7c26222ec0b6b84ff4
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 10:48:10 2026 -0400
+| 
+|     Enhance limpieza.sh for comprehensive environment cleanup
+|     
+|     Added detailed cleaning steps for Docker volumes and cache.
+| 
+* commit 4d4c5b195c3bc85eea9d97c21dc673e61670b12a
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 10:47:35 2026 -0400
+| 
+|     Enhance locustfile with authentication and headers
+|     
+|     Added authentication simulation and improved health check task with headers. Enhanced login attempt task with additional payload.
+| 
+* commit 03a21835a13f7df3bcead126c2dcac7ca0bcf944
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 10:46:55 2026 -0400
+| 
+|     Enhance tox.ini.example with complexity analysis
+|     
+|     Updated the description and commands in tox.ini.example to include complexity analysis and additional tools.
+| 
+* commit 031c6bbef77cffda7af2b1f0dff803fe580b5c89
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 10:46:32 2026 -0400
+| 
+|     Update version and enhance dependencies in pyproject.toml.example
+|     
+|     Updated project version and description in pyproject.toml.example. Added new optional dependencies for testing, linting, QA automation, security, and profiling.
+| 
+* commit 625e234d6d4ef4fc14ef4e3d8f12a814b22645a3
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 10:45:59 2026 -0400
+| 
+|     Update docker-compose.qa.yml for py-spy and radon
+| 
+* commit c0e0cd3af617617b20570319036df0de51a5cfc4
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 10:45:21 2026 -0400
+| 
+|     Update pruebas-api-fastapi.md
+| 
+* commit 2bf3fb8c5dffd70fbd615115c7e6c3c70dec9a5a
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 10:40:24 2026 -0400
+| 
+|     Update qa-philosophy.md
+| 
+* commit f60e07b5e84ea83b38135e81ddacc8883023e9fe
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 10:39:19 2026 -0400
+| 
+|     Revise Docker troubleshooting documentation
+|     
+|     Updated troubleshooting steps for Docker issues, including solutions for common symptoms like 'no space left on device', permission errors, and memory issues.
+| 
+* commit 191957c5feb8482f606818826c9d129f024db317
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 10:38:31 2026 -0400
+| 
+|     Revise CI/CD pipelines documentation for clarity
+|     
+|     Updated CI/CD pipelines documentation to clarify execution steps and improve coverage requirements.
+| 
+* commit 4e54bd7e06d34154cb166a2a2ae8ae0be8f6b0a6
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 10:37:32 2026 -0400
+| 
+|     Refactorizar documento de integración de IA
+| 
+* commit 76be3e88ed49d66be86c8cb3db4213677e752a77
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 10:29:31 2026 -0400
+| 
+|     Revise testing stack and documentation instructions
+|     
+|     Updated the README to reflect changes in the testing stack and documentation instructions.
+| 
+* commit 1eeb80a9eff901bb6021f47058075e6f089b68db
+| Author: Sinfallas <sinfallas@gmail.com>
+| Date:   Thu Oct 1 10:19:34 2026 -0400
+| 
+|     Update README.md
+| 
+* commit 1f5e730176488f103e14d354462099684ad8ebf6 (tag: 0.1.3)
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Sat Sep 26 11:12:12 2026 -0400
+| 
+|     * changelog
+| 
+* commit c4d2b4ae9c9e1da4ef43f8b0d7d488d60df837a0
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Sat Sep 26 11:12:10 2026 -0400
+| 
+|     * bugfix
+| 
+* commit 752f8b1af6168217574bdbd64c034293fa8436fb
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Sat Sep 26 10:48:37 2026 -0400
+| 
+|     * changelog
+| 
+* commit 911790dacfc0a2af5d077482a8454173c47ac4a1
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Sat Sep 26 10:48:35 2026 -0400
+| 
+|     * bugfix
+| 
+* commit a01331cc9291e393db3114cd3cde7f62fd26371f
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Sat Sep 26 10:40:24 2026 -0400
+| 
+|     * changelog
+| 
+* commit 004afd306b26e13365d047665d9225cde84b1a68
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Sat Sep 26 10:40:22 2026 -0400
+| 
+|     * bugfix
+| 
+* commit f84fb19caf6eb20090be21ed575f147784bc7886 (tag: 0.1.2)
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Fri Sep 25 20:59:49 2026 -0400
+| 
+|     * changelog
+| 
+* commit f1b4a58ba30206c940c84756089d3941cb794942
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Fri Sep 25 20:59:47 2026 -0400
+| 
+|     * bugfix
+| 
+* commit ca6d562b9bc8286fae9f399a624958cab20a485c
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Fri Sep 25 20:53:38 2026 -0400
+| 
+|     * changelog
+| 
+* commit c0ace9c233bc7da58b81292a0b6ccb84b36b3179
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Fri Sep 25 20:53:36 2026 -0400
+| 
+|     * docs
+| 
+* commit 3a707509721dc3cccd252916b073c24fca00f51a (tag: 0.1.1)
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Fri Sep 25 20:49:55 2026 -0400
+| 
+|     * changelog
+| 
+* commit c113323a1c73fd18a10cba18c8b9cf68900c41a7
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Fri Sep 25 20:49:54 2026 -0400
+| 
+|     * docs
+| 
+* commit ca8b4d3efff60b0e00283a498094b22340d0cfb8
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Fri Sep 25 20:42:19 2026 -0400
+| 
+|     * changelog
+| 
+* commit c6bdaaf935a653bc06f2da680ff6b06b0b16c756
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Fri Sep 25 20:42:17 2026 -0400
+| 
+|     * docs
+| 
+* commit ff97212aebbc8eb455ecb2e5e93bd4ed99fa00a9
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Fri Sep 25 20:34:34 2026 -0400
+| 
+|     * changelog
+| 
+* commit 315c21c85506ccd54206c54ab7ff8321e5b9293c
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Fri Sep 25 20:34:32 2026 -0400
+| 
+|     * docs
+| 
+* commit 2897236a088e7863c3f207295bf94a9b41b29de8
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Fri Sep 25 20:18:02 2026 -0400
+| 
+|     * changelog
+| 
+* commit e5392143ce265255c97bc36439fdbc024c7ed029
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Fri Sep 25 20:18:00 2026 -0400
+| 
+|     * bugfix
+| 
+* commit 3e1da7af66ce416fcb6c0440de065f5751a15fac
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Fri Sep 25 20:16:05 2026 -0400
+| 
+|     * changelog
+| 
+* commit 4e00d33d0cc83faea7446dc8f283a020d152b394
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Fri Sep 25 20:16:03 2026 -0400
+| 
+|     * faq
+| 
+* commit df30621916400128a57a838af7ddcb74f54f51a5
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Fri Sep 25 20:08:32 2026 -0400
+| 
+|     * changelog
+| 
+* commit 3c5fab552e2dbf5e1ce45f992a0275995c849fcf
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Fri Sep 25 20:08:30 2026 -0400
+| 
+|     * bugfix
+| 
+* commit cf5902e58d3626ca021be61a589bc2cd22776f29
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Fri Sep 25 20:06:37 2026 -0400
+| 
+|     * changelog
+| 
+* commit 1dd569c7a6211906340bc8905c10f8cffb44d38d
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Fri Sep 25 20:06:35 2026 -0400
+| 
+|     * docs
+| 
+* commit 1397febe6d9784018e9af07b99cb8fb42fd17c71 (tag: 0.1.0)
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Fri Sep 25 19:24:27 2026 -0400
+| 
+|     * changelog
+| 
+* commit 508a79efe8bbad37891aa2afbc0c1002cdd5816e
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Fri Sep 25 19:24:25 2026 -0400
+| 
+|     * bash
+| 
+* commit e291c0c373597dd3ff15dd57c634ce2aa5eeb38b
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Fri Sep 25 18:45:46 2026 -0400
+| 
+|     * changelog
+| 
+* commit b63994688b7b2af02ef3b00e1ad82542bd081e13
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Fri Sep 25 18:45:44 2026 -0400
+| 
+|     * node
+| 
+* commit aa9158a1670d42b623082ee35d2f6cff0ddf567f
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Fri Sep 25 18:11:30 2026 -0400
+| 
+|     * changelog
+| 
+* commit 93ca1ff2ac8cebcdd8a38897bb4a188fea536a1d
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Fri Sep 25 18:11:28 2026 -0400
+| 
+|     * bugfix
+| 
+* commit 48266ea2538aace96fd212f150068eab83a8ffe8
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Fri Sep 25 18:05:58 2026 -0400
+| 
+|     * changelog
+| 
+* commit f5c3012b8f7e2b366f363aa4d6d46ca10c340415
+| Author: Jesus Palencia <sinfallas@gmail.com>
+| Date:   Fri Sep 25 18:05:57 2026 -0400
+| 
+|     * primer commit
+| 
+* commit e2b8a5ca175d041e6f94549edf36be9f1d336056
+  Author: Sinfallas <sinfallas@yahoo.com>
+  Date:   Fri Sep 25 17:30:51 2026 -0400
+  
+      Initial commit

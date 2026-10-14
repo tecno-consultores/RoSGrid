@@ -1,0 +1,16 @@
+# Forzar el uso estricto de versiones bloqueadas
+engine-strict=true
+
+# Evitar que dependencias arbitrarias ejecuten scripts de post-instalación por defecto (Zero-Trust)
+ignore-scripts=true
+
+# Nota: En pnpm v9+, las excepciones a ignore-scripts (como esbuild o playwright) 
+# se deben declarar en el package.json bajo pnpm.onlyBuiltDependencies.
+# Ejemplo a añadir en tu package.json:
+# "pnpm": {
+#   "onlyBuiltDependencies": ["esbuild", "playwright", "@playwright/test"]
+# }
+
+# Optimización de red y CI
+fetch-retries=3
+strict-peer-dependencies=false

@@ -1,0 +1,146 @@
+services:
+  api:
+    image: sinfallas/base-python-uv:3.13
+    container_name: fastapi_api
+    hostname: fastapi_api
+    pull_policy: always
+    environment:
+      TZ: 'America/Caracas'
+      UV_CACHE_DIR: /root/.cache/uv
+    volumes:
+      - .:/app
+      - uv-cache:/root/.cache/uv
+    working_dir: /app
+    ports:
+      - "8000:8000"
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+    command: bash -c "uv pip install --system -e '.[dev]' && uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  qa-backend:
+    image: sinfallas/base-python-uv:3.13
+    container_name: fastapi_qa_backend
+    hostname: fastapi_qa_backend
+    pull_policy: always
+    environment:
+      TZ: 'America/Caracas'
+      UV_PYTHON_DOWNLOADS: 'true'
+      UV_CACHE_DIR: /root/.cache/uv
+    volumes:
+      - .:/app
+      - uv-cache:/root/.cache/uv
+    working_dir: /app
+    cap_add:
+      - SYS_PTRACE
+    command: bash -c "echo 'Contenedor QA Backend (Python) listo para Lint, Pytest y Mutmut'; sleep infinity"
+
+  karatelabs:
+    image: sinfallas/karatelabs:latest
+    container_name: fastapi_karate
+    hostname: fastapi_karate
+    pull_policy: always
+    depends_on:
+      - api
+    volumes:
+      - ./test:/app/src/test/java/examples/test
+    command: bash -c "echo 'Contenedor Karate listo. Usa docker compose run --rm karatelabs mvn clean test'; sleep infinity"
+
+  zap:
+    image: owasp/zap2docker-stable:latest
+    container_name: fastapi_zap
+    hostname: fastapi_zap
+    pull_policy: always
+    depends_on:
+      - api
+    user: root 
+    volumes:
+      - .:/zap/wrk/:rw
+    command: bash -c "echo 'Contenedor ZAP listo. Usa docker compose run --rm zap zap-baseline.py -t http://api:8000 -r zap-report.html'; sleep infinity"
+
+  pumba:
+    image: gaiaadm/pumba:latest
+    container_name: fastapi_pumba
+    hostname: fastapi_pumba
+    profiles:
+      - chaos
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - api
+    command: netem --tc-image gaiadocker/iproute2 --duration 1m delay --time 500 --jitter 50 re2:^fastapi_api$
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: fastapi_prometheus
+    hostname: fastapi_prometheus
+    profiles:
+      - chaos
+    # Inyección de configuración inline (raspa la API cada 2s para ver el impacto en vivo de Pumba)
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        echo "
+        global:
+          scrape_interval: 2s
+        scrape_configs:
+          - job_name: 'fastapi_qa'
+            metrics_path: '/metrics'
+            static_configs:
+              - targets: ['api:8000']
+        " > /tmp/prometheus.yml
+        /bin/prometheus --config.file=/tmp/prometheus.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - api
+
+  stress_test:
+    image: sinfallas/base-python-uv:3.13
+    container_name: fastapi_chaos_locust
+    hostname: fastapi_chaos_locust
+    profiles:
+      - chaos
+    depends_on:
+      - api
+    environment:
+      UV_CACHE_DIR: /root/.cache/uv
+    volumes:
+      - .:/app
+      - uv-cache:/root/.cache/uv
+    working_dir: /app
+    command: bash -c "uv pip install --system -e '.[dev]' && echo 'Esperando asimilación del caos...' && sleep 5 && locust -f locustfile.py --headless -u 200 -r 20 -t 1m --host http://api:8000 --html chaos-report.html"
+
+  graphify:
+    image: sinfallas/remote-graphify:latest
+    container_name: fastapi_graphify
+    hostname: fastapi_graphify
+    profiles:
+      - graphify
+    restart: always
+    command: uvx --from graphifyy python -m graphify.serve /app/graphify-out/graph.json --transport http --host 0.0.0.0 --port 8080
+    ports:
+      - "8080:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      # Configuración local para OmniRoute o Llama
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - GRAPHIFY_OLLAMA_KEEP_ALIVE=10
+    volumes:
+      - .:/app
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
+
+networks:
+  default:
+    driver: bridge
+
+volumes:
+  uv-cache:
+    name: fastapi_uv_cache

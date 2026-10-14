@@ -1,0 +1,69 @@
+[project]
+name = "fastapi-qa-blueprint"
+version = "0.2.0"
+description = "Plantilla base para APIs en FastAPI con auditoría profunda, mocking, profiling y BDD"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.27.0",
+    "python-dotenv>=1.0.0",
+    "httpx>=0.27.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    # Core Testing & Coverage
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.5",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.14.0",
+    
+    # Linting & Typing
+    "ruff>=0.3.0",
+    "mypy>=1.9.0",
+    
+    # QA Automation Matrices
+    "tox>=4.14.0",
+    "tox-uv>=1.16.0",
+    
+    # Security, Vulnerability & Mutation
+    "bandit>=1.7.8",
+    "mutmut>=2.4.5",
+    
+    # Complexity & Profiling (Nuevas Herramientas 10X)
+    "radon>=6.0.1",
+    "py-spy>=0.3.14",
+    
+    # Contracts & Load Testing
+    "schemathesis>=3.25.0",
+    "locust>=2.24.0",
+    
+    # Observability & Metrics (Nivel 11X)
+    "prometheus-fastapi-instrumentator>=7.0.0",
+    "prometheus-client>=0.20.0"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "--strict-markers --cov=src/ --cov-report=html --cov-report=term-missing"
+markers = [
+    "integration: Pruebas internas que requieren conexión a internet o bases de datos (deseleccionar con '-m \"not integration\"')",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.mypy]
+strict = true
+
+[tool.mutmut]
+paths_to_mutate = "src/"
+backup = false
+runner = "python -m pytest -x"
+tests_dir = "tests/"
