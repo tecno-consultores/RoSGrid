@@ -137,6 +137,25 @@ async def create_rule(
         )
 
 
+def _build_firewall_patch_data(payload: FirewallRuleUpdateRequest) -> dict[str, Any]:
+    mapping: dict[str, Any] = {
+        "chain": payload.chain,
+        "action": payload.action,
+        "src-address": payload.src_address,
+        "dst-address": payload.dst_address,
+        "protocol": payload.protocol,
+        "src-port": payload.src_port,
+        "dst-port": payload.dst_port,
+        "in-interface": payload.in_interface,
+        "out-interface": payload.out_interface,
+        "comment": payload.comment,
+        "disabled": payload.disabled,
+    }
+    patch_data = {k: v for k, v in mapping.items() if v is not None}
+    patch_data.update(payload.extra_params)
+    return patch_data
+
+
 @router.patch("/{proto}/{table_type}/{rule_id}")
 async def update_rule(
     router_id: uuid.UUID,
@@ -160,30 +179,7 @@ async def update_rule(
     _check_input_chain_permission(payload.chain, claims.get("rol", ""))
 
     _, client = await get_router_and_client(router_id, claims, db)
-    patch_data: dict[str, Any] = {}
-    if payload.chain:
-        patch_data["chain"] = payload.chain
-    if payload.action:
-        patch_data["action"] = payload.action
-    if payload.src_address:
-        patch_data["src-address"] = payload.src_address
-    if payload.dst_address:
-        patch_data["dst-address"] = payload.dst_address
-    if payload.protocol:
-        patch_data["protocol"] = payload.protocol
-    if payload.src_port:
-        patch_data["src-port"] = payload.src_port
-    if payload.dst_port:
-        patch_data["dst-port"] = payload.dst_port
-    if payload.in_interface:
-        patch_data["in-interface"] = payload.in_interface
-    if payload.out_interface:
-        patch_data["out-interface"] = payload.out_interface
-    if payload.comment is not None:
-        patch_data["comment"] = payload.comment
-    if payload.disabled is not None:
-        patch_data["disabled"] = payload.disabled
-    patch_data.update(payload.extra_params)
+    patch_data = _build_firewall_patch_data(payload)
 
     menu = f"{proto}/firewall/{table_type}"
     async with client:
@@ -392,9 +388,7 @@ async def list_connections(
     redis = get_redis_client()
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
-        return await cached_mikrotik_get(
-            redis, tenant_id, router_id, "/ip/firewall/connection", client, refresh
-        )
+        return await cached_mikrotik_get(redis, tenant_id, router_id, "/ip/firewall/connection", client, refresh)
 
 
 @router.delete("/connections/{conn_id}")

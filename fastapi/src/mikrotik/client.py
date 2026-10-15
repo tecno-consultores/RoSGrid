@@ -52,7 +52,7 @@ class MikrotikRestClient:
         host: str,
         port: int = 443,
         username: str = "admin",
-        password: str = "",
+        password: str = "",  # nosec B107
         previous_password: str | None = None,
         ssl_pinned_fingerprint: str | None = None,
         timeout: float = 10.0,
@@ -89,9 +89,7 @@ class MikrotikRestClient:
             timeout=self.timeout,
         )
         trust_status = (
-            SSLTrustStatus.TRUSTED_PINNED.value
-            if self.ssl_pinned_fingerprint
-            else SSLTrustStatus.PENDING_TOFU.value
+            SSLTrustStatus.TRUSTED_PINNED.value if self.ssl_pinned_fingerprint else SSLTrustStatus.PENDING_TOFU.value
         )
         fp, _, _ = evaluate_ssl_fingerprint(
             observed_fp=observed,

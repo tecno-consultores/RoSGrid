@@ -43,9 +43,7 @@ def _apply_window_filters(
                 MaintenanceWindow.is_cancelled.is_(False),
             )
         else:
-            query = query.where(
-                (MaintenanceWindow.ends_at < now_utc) | (MaintenanceWindow.is_cancelled.is_(True))
-            )
+            query = query.where((MaintenanceWindow.ends_at < now_utc) | (MaintenanceWindow.is_cancelled.is_(True)))
     return query
 
 

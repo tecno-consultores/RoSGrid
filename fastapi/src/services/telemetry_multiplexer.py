@@ -45,7 +45,10 @@ async def _fetch_raw_telemetry(
     res_task = client.get("system/resource")
     health_task = client.get("system/health")
     iface_task = client.get("interface?.proplist=.id,name,type,running,disabled,rx-byte,tx-byte,rx-packet,tx-packet")
-    res_raw, health_raw, iface_raw = await asyncio.gather(res_task, health_task, iface_task, return_exceptions=True)
+    results = await asyncio.gather(res_task, health_task, iface_task, return_exceptions=True)
+    res_raw: Any = results[0]
+    health_raw: Any = results[1]
+    iface_raw: Any = results[2]
 
     res_dict = res_raw if isinstance(res_raw, dict) else {}
     health_dict = health_raw if isinstance(health_raw, dict) else {}

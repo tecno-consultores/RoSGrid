@@ -1,7 +1,13 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 RoSGrid Contributors
 
+"""Catálogo de respuestas simuladas deterministas de la REST API de RouterOS v7."""
+
 from typing import Any
+
+MOCK_SYSTEM_IDENTITY: dict[str, Any] = {
+    "name": "RoSGrid-Core-GW01",
+}
 
 MOCK_SYSTEM_RESOURCE: dict[str, Any] = {
     "uptime": "14d06h22m15s",
@@ -54,3 +60,147 @@ MOCK_SFP_MONITOR: list[dict[str, str]] = [
         "sfp-rx-power": "-6.45",
     }
 ]
+
+MOCK_INTERFACES: list[dict[str, Any]] = [
+    {
+        ".id": "*1",
+        "name": "ether1",
+        "type": "ether",
+        "mtu": "1500",
+        "actual-mtu": "1500",
+        "running": "true",
+        "disabled": "false",
+        "comment": "Uplink WAN",
+        "mac-address": "CC:2D:E0:11:22:33",
+    },
+    {
+        ".id": "*2",
+        "name": "ether2",
+        "type": "ether",
+        "mtu": "1500",
+        "actual-mtu": "1500",
+        "running": "true",
+        "disabled": "false",
+        "comment": "LAN Local",
+        "mac-address": "CC:2D:E0:11:22:34",
+    },
+]
+
+MOCK_IP_ADDRESSES: list[dict[str, Any]] = [
+    {
+        ".id": "*1",
+        "address": "192.168.88.1/24",
+        "network": "192.168.88.0",
+        "interface": "ether2",
+        "disabled": "false",
+        "dynamic": "false",
+        "comment": "default defconf",
+    },
+    {
+        ".id": "*2",
+        "address": "203.0.113.10/29",
+        "network": "203.0.113.8",
+        "interface": "ether1",
+        "disabled": "false",
+        "dynamic": "false",
+        "comment": "WAN Public",
+    },
+]
+
+MOCK_IP_ROUTES: list[dict[str, Any]] = [
+    {
+        ".id": "*1",
+        "dst-address": "0.0.0.0/0",
+        "gateway": "203.0.113.9",
+        "distance": "1",
+        "scope": "30",
+        "target-scope": "10",
+        "active": "true",
+        "disabled": "false",
+    }
+]
+
+MOCK_FIREWALL_FILTER_RULES: list[dict[str, str]] = [
+    {
+        ".id": "*1",
+        "chain": "input",
+        "action": "accept",
+        "connection-state": "established,related,untracked",
+        "bytes": "98451200",
+        "packets": "124500",
+        "dynamic": "false",
+        "invalid": "false",
+        "disabled": "false",
+        "comment": "Accept established/related",
+    },
+    {
+        ".id": "*2",
+        "chain": "input",
+        "action": "drop",
+        "connection-state": "invalid",
+        "bytes": "14200",
+        "packets": "310",
+        "dynamic": "false",
+        "invalid": "false",
+        "disabled": "false",
+        "comment": "Drop invalid",
+    },
+]
+
+MOCK_BGP_SESSIONS: list[dict[str, str]] = [
+    {
+        ".id": "*3000001",
+        "name": "ISP-Carrier-1-1",
+        "remote.address": "186.10.20.1",
+        "remote.as": "65001",
+        "local.address": "186.10.20.2",
+        "local.as": "65500",
+        "established": "true",
+        "uptime": "2w4d10h12m",
+        "prefix-count": "942100",
+    }
+]
+
+MOCK_PPP_SECRETS: list[dict[str, Any]] = [
+    {
+        ".id": "*1",
+        "name": "client_pppoe_101",
+        "service": "pppoe",
+        "profile": "default-encryption",
+        "local-address": "10.10.10.1",
+        "remote-address": "10.10.10.101",
+        "disabled": "false",
+        "comment": "Customer 101",
+    }
+]
+
+MOCK_SIMPLE_QUEUES: list[dict[str, Any]] = [
+    {
+        ".id": "*1",
+        "name": "queue_client_101",
+        "target": "10.10.10.101/32",
+        "max-limit": "50M/100M",
+        "burst-limit": "0/0",
+        "disabled": "false",
+        "comment": "50M upload / 100M download",
+    }
+]
+
+MOCK_PACKAGE_UPDATE: dict[str, Any] = {
+    "channel": "stable",
+    "installed-version": "7.16.1",
+    "latest-version": "7.17.0",
+    "status": "New version is available",
+}
+
+MOCK_BACKUP_RSC_CONTENT: str = """# 2026-10-15 10:00:00 by RouterOS 7.16.1
+# software id = TEST-1234
+#
+# model = RB4011iGS+
+/interface ethernet
+set [ find default-name=ether1 ] comment="Uplink WAN"
+/ip address
+add address=192.168.88.1/24 interface=ether2 network=192.168.88.0
+/system identity
+set name=RoSGrid-Core-GW01
+"""

@@ -10,19 +10,17 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import desc, func, select
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
-from src.api.deps import get_current_user_claims, require_roles
+from src.api.deps import require_roles
 from src.api.v1.webfig_common import get_router_and_client
-from src.core.audit import write_audit_log
 from src.core.crypto import encrypt_aes_gcm
 from src.db.session import get_tenant_db_session
 from src.mikrotik.client import MikrotikRestClient
 from src.models.core import SystemRoleEnum
-from src.models.inventory import Router, RouterNetworkRoleEnum, RouterTag
+from src.models.inventory import Router, RouterTag
 from src.models.operations import (
     ApprovalRequest,
     ApprovalStatusEnum,
@@ -39,7 +37,6 @@ from src.schemas.bulk_and_updates import (
     BulkJobItemResponse,
     ConfigTemplateCreateRequest,
     ConfigTemplateResponse,
-    ConfigTemplateUpdateRequest,
     RosFleetUpdateStatusResponse,
     RosUpdateExecuteRequest,
     RosUpdateExecuteResponse,
@@ -117,7 +114,7 @@ async def _perform_pre_upgrade_backup(
         cleaned = "\n".join(lines).strip()
         rsc_hash = hashlib.sha256(cleaned.encode("utf-8")).hexdigest()
 
-        aad = f"{tenant_id}:{router_obj.id}".encode("utf-8")
+        aad = f"{tenant_id}:{router_obj.id}".encode()
         ct, iv, tag = encrypt_aes_gcm(cleaned.encode("utf-8"), aad)
         now_utc = datetime.now(UTC)
 
@@ -378,9 +375,12 @@ async def get_fleet_updates_status(
 
     for r in routers:
         has_update = False
-        if r.update_available_version and r.update_available_version != r.ros_version:
-            has_update = True
-        elif r.upgrade_firmware_version and r.upgrade_firmware_version != r.firmware_version:
+        if (
+            r.update_available_version
+            and r.update_available_version != r.ros_version
+            or r.upgrade_firmware_version
+            and r.upgrade_firmware_version != r.firmware_version
+        ):
             has_update = True
 
         if has_update:

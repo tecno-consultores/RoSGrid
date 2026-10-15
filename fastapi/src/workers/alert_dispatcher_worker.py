@@ -11,7 +11,7 @@ import logging
 import smtplib
 import uuid
 from email.message import EmailMessage
-from typing import Any
+from typing import Any, cast
 
 import httpx
 from sqlalchemy import select
@@ -25,9 +25,9 @@ logger = logging.getLogger(__name__)
 
 
 def _decrypt_config(tenant_id: uuid.UUID, ch: NotificationChannel) -> dict[str, Any]:
-    aad = f"{tenant_id}:{ch.id}".encode("utf-8")
+    aad = f"{tenant_id}:{ch.id}".encode()
     raw = decrypt_aes_gcm(ch.config_ciphertext, ch.config_iv, ch.config_tag, aad)
-    return json.loads(raw.decode("utf-8"))
+    return cast(dict[str, Any], json.loads(raw.decode("utf-8")))
 
 
 async def _dispatch_telegram(config: dict[str, Any], alert: dict[str, Any]) -> None:
@@ -118,9 +118,8 @@ async def _process_alert_payload(tenant_id_str: str, raw_alert: str) -> None:
         return
 
     async with async_session_maker() as session:
-        stmt = (
-            select(NotificationChannel)
-            .where(NotificationChannel.tenant_id == tenant_id, NotificationChannel.is_enabled.is_(True))
+        stmt = select(NotificationChannel).where(
+            NotificationChannel.tenant_id == tenant_id, NotificationChannel.is_enabled.is_(True)
         )
         channels = (await session.execute(stmt)).scalars().all()
         for ch in channels:

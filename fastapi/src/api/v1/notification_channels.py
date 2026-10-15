@@ -6,7 +6,7 @@
 import json
 import logging
 import uuid
-from typing import Any
+from typing import Any, cast
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -41,15 +41,15 @@ def _encrypt_channel_config(
     channel_id: uuid.UUID,
     config: dict[str, Any],
 ) -> tuple[bytes, bytes, bytes]:
-    aad = f"{tenant_id}:{channel_id}".encode("utf-8")
+    aad = f"{tenant_id}:{channel_id}".encode()
     raw_json = json.dumps(config).encode("utf-8")
     return encrypt_aes_gcm(raw_json, aad)
 
 
 def _decrypt_channel_config(tenant_id: uuid.UUID, ch: NotificationChannel) -> dict[str, Any]:
-    aad = f"{tenant_id}:{ch.id}".encode("utf-8")
+    aad = f"{tenant_id}:{ch.id}".encode()
     decrypted = decrypt_aes_gcm(ch.config_ciphertext, ch.config_iv, ch.config_tag, aad)
-    return json.loads(decrypted.decode("utf-8"))
+    return cast(dict[str, Any], json.loads(decrypted.decode("utf-8")))
 
 
 # ============================================================================
@@ -65,9 +65,7 @@ async def list_channels(
     """Lista todos los canales de notificación configurados para el Tenant."""
     tenant_id = uuid.UUID(claims["tid"])
     stmt = (
-        select(NotificationChannel)
-        .where(NotificationChannel.tenant_id == tenant_id)
-        .order_by(NotificationChannel.name)
+        select(NotificationChannel).where(NotificationChannel.tenant_id == tenant_id).order_by(NotificationChannel.name)
     )
     records = (await db.execute(stmt)).scalars().all()
     return [

@@ -67,7 +67,8 @@ line-length = 120
 target-version = "py313"
 
 [tool.ruff.lint]
-ignore = ["B008"]
+select = ["E", "F", "W", "I", "B"]
+ignore = ["B008", "E501"]
 
 [tool.mypy]
 strict = true

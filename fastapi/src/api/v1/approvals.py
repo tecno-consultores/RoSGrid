@@ -158,6 +158,61 @@ async def list_approvals(
     return ApprovalListResponse(total=total, items=items)
 
 
+async def _execute_approval_lifecycle(
+    client: MikrotikRestClient | None,
+    approval: ApprovalRequest,
+    now_utc: datetime,
+) -> tuple[str, int]:
+    try:
+        if client:
+            exec_res = await _execute_deferred_operation(client, approval)
+            approval.execution_result = exec_res if isinstance(exec_res, dict) else {"response": exec_res}
+        approval.status = ApprovalStatusEnum.APPROVED_AND_EXECUTED
+        approval.executed_at = now_utc
+        return "MAKER_CHECKER_APPROVED_AND_EXECUTED", 200
+    except Exception as exc:
+        logger.error("Error al ejecutar cambio diferido aprobado: %s", exc)
+        approval.status = ApprovalStatusEnum.APPROVED_EXECUTION_FAILED
+        approval.execution_result = {"error": str(exc)}
+        return "MAKER_CHECKER_EXECUTION_FAILED", 500
+
+
+async def _log_approval_audit(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    claims: dict[str, Any],
+    request: Request,
+    checker_user_id: uuid.UUID,
+    approval: ApprovalRequest,
+    router_name: str | None,
+    event_action: str,
+    stat_code: int,
+) -> None:
+    err_msg = (
+        str(approval.execution_result.get("error"))
+        if (stat_code == 500 and approval.execution_result is not None)
+        else None
+    )
+    await write_audit_log(
+        session=db,
+        tenant_id=tenant_id,
+        actor_username=claims.get("preferred_username", "checker"),
+        actor_role=claims.get("rol", SystemRoleEnum.SUPPORT_L3.value),
+        actor_ip=request.client.host if request.client else "127.0.0.1",
+        event_category="MAKER_CHECKER",
+        event_action=event_action,
+        actor_user_id=checker_user_id,
+        router_id=approval.router_id,
+        router_display_name=router_name,
+        ros_rest_method=approval.ros_rest_method,
+        ros_rest_endpoint=approval.ros_rest_path,
+        before_state=approval.previous_state_snapshot,
+        after_state=approval.request_payload,
+        status_code=stat_code,
+        error_message=err_msg,
+    )
+
+
 @router.post("/{approval_id}/approve", response_model=ApprovalRequestResponse)
 async def approve_request(
     approval_id: uuid.UUID,
@@ -194,38 +249,10 @@ async def approve_request(
     approval.reviewed_at = now_utc
     approval.review_comment = payload.review_comment
 
-    try:
-        if client:
-            exec_res = await _execute_deferred_operation(client, approval)
-            approval.execution_result = exec_res if isinstance(exec_res, dict) else {"response": exec_res}
-        approval.status = ApprovalStatusEnum.APPROVED_AND_EXECUTED
-        approval.executed_at = now_utc
-        event_action = "MAKER_CHECKER_APPROVED_AND_EXECUTED"
-        stat_code = 200
-    except Exception as exc:
-        logger.error("Error al ejecutar cambio diferido aprobado: %s", exc)
-        approval.status = ApprovalStatusEnum.APPROVED_EXECUTION_FAILED
-        approval.execution_result = {"error": str(exc)}
-        event_action = "MAKER_CHECKER_EXECUTION_FAILED"
-        stat_code = 500
+    event_action, stat_code = await _execute_approval_lifecycle(client, approval, now_utc)
 
-    await write_audit_log(
-        session=db,
-        tenant_id=tenant_id,
-        actor_username=claims.get("preferred_username", "checker"),
-        actor_role=claims.get("rol", SystemRoleEnum.SUPPORT_L3.value),
-        actor_ip=request.client.host if request.client else "127.0.0.1",
-        event_category="MAKER_CHECKER",
-        event_action=event_action,
-        actor_user_id=checker_user_id,
-        router_id=approval.router_id,
-        router_display_name=router_name,
-        ros_rest_method=approval.ros_rest_method,
-        ros_rest_endpoint=approval.ros_rest_path,
-        before_state=approval.previous_state_snapshot,
-        after_state=approval.request_payload,
-        status_code=stat_code,
-        error_message=str(approval.execution_result.get("error")) if stat_code == 500 else None,
+    await _log_approval_audit(
+        db, tenant_id, claims, request, checker_user_id, approval, router_name, event_action, stat_code
     )
     await db.commit()
     await db.refresh(approval)

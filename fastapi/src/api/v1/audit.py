@@ -12,7 +12,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -93,31 +93,35 @@ def _verify_single_audit_record(record: AuditLog, expected_prev: str) -> bool:
 def _build_export_csv(records: list[AuditLog]) -> str:
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow([
-        "id",
-        "created_at",
-        "actor_username",
-        "actor_role",
-        "actor_ip",
-        "event_category",
-        "event_action",
-        "router_display_name",
-        "status_code",
-        "record_sha256_hash",
-    ])
+    writer.writerow(
+        [
+            "id",
+            "created_at",
+            "actor_username",
+            "actor_role",
+            "actor_ip",
+            "event_category",
+            "event_action",
+            "router_display_name",
+            "status_code",
+            "record_sha256_hash",
+        ]
+    )
     for r in records:
-        writer.writerow([
-            str(r.id),
-            r.created_at.isoformat(),
-            r.actor_username,
-            r.actor_role.value if hasattr(r.actor_role, "value") else str(r.actor_role),
-            r.actor_ip,
-            r.event_category,
-            r.event_action,
-            r.router_display_name or "",
-            r.status_code,
-            r.record_sha256_hash,
-        ])
+        writer.writerow(
+            [
+                str(r.id),
+                r.created_at.isoformat(),
+                r.actor_username,
+                r.actor_role.value if hasattr(r.actor_role, "value") else str(r.actor_role),
+                r.actor_ip,
+                r.event_category,
+                r.event_action,
+                r.router_display_name or "",
+                r.status_code,
+                r.record_sha256_hash,
+            ]
+        )
     return output.getvalue()
 
 
@@ -189,9 +193,7 @@ async def verify_audit_integrity(
     """Verifica matemáticamente la integridad de la cadena WORM encadenada por SHA-256."""
     tenant_id = uuid.UUID(claims["tid"])
     stmt = (
-        select(AuditLog)
-        .where(AuditLog.tenant_id == tenant_id)
-        .order_by(AuditLog.created_at.asc(), AuditLog.id.asc())
+        select(AuditLog).where(AuditLog.tenant_id == tenant_id).order_by(AuditLog.created_at.asc(), AuditLog.id.asc())
     )
     records = (await db.execute(stmt)).scalars().all()
 

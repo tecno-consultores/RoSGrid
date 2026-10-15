@@ -31,9 +31,9 @@ from src.mikrotik.safemode import (
     verify_connectivity,
 )
 from src.mikrotik.ssl_tofu import (
-    SSLTrustStatus,
     MikrotikSSLError,
     MikrotikSSLFingerprintMismatchError,
+    SSLTrustStatus,
     compute_der_sha256_fingerprint,
     create_tofu_ssl_context,
     evaluate_ssl_fingerprint,

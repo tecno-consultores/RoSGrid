@@ -1,0 +1,284 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright (C) 2026 RoSGrid Contributors
+
+"""Pruebas unitarias para Inventario MikroTik, CSV Onboarding, Bóveda Criptográfica y Ventanas de Mantenimiento."""
+
+import uuid
+from datetime import UTC, date, datetime, timedelta
+from decimal import Decimal
+from typing import Any
+from unittest.mock import AsyncMock
+
+import pyotp
+import pytest
+from fastapi import HTTPException
+
+from src.api.v1.inventory_helpers import (
+    apply_router_scalar_updates,
+    build_router_from_csv,
+    build_router_response,
+    enrich_router_telemetry,
+    perform_discovery,
+    validate_single_csv_row,
+)
+from src.core.crypto import decrypt_aes_gcm, encrypt_aes_gcm
+from src.models.core import User
+from src.models.inventory import (
+    MaintenanceWindow,
+    Router,
+    RouterAdminStateEnum,
+    RouterCredentialsVault,
+    RouterNetworkRoleEnum,
+    RouterTag,
+    SSLTrustStatusEnum,
+)
+from src.schemas.inventory import (
+    CsvCommitRowItem,
+    UpdateRouterRequest,
+)
+
+
+@pytest.fixture
+def test_tenant_id() -> uuid.UUID:
+    return uuid.uuid4()
+
+
+@pytest.fixture
+def test_user_id() -> uuid.UUID:
+    return uuid.uuid4()
+
+
+@pytest.fixture
+def test_router(test_tenant_id: uuid.UUID, test_user_id: uuid.UUID) -> Router:
+    r = Router(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant_id,
+        display_name="Edge-Router-01",
+        api_base_url="https://192.168.88.1:443",
+        api_port=443,
+        network_role=RouterNetworkRoleEnum.CORE,
+        admin_state=RouterAdminStateEnum.PRODUCTION,
+        physical_location="Datacenter Room 1",
+        latitude=Decimal("10.4806"),
+        longitude=Decimal("-66.9036"),
+        online_since_date=date.today(),
+        serial_number="SN123456789",
+        is_reachable=True,
+        ssl_trust_status=SSLTrustStatusEnum.TRUSTED_PINNED,
+        ssl_sha256_fingerprint="a" * 64,
+        created_by=test_user_id,
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    r.tags = [RouterTag(id=uuid.uuid4(), tenant_id=test_tenant_id, router_id=r.id, tag_name="core")]
+    return r
+
+
+@pytest.fixture
+def test_vault(test_tenant_id: uuid.UUID, test_router: Router, test_user_id: uuid.UUID) -> RouterCredentialsVault:
+    aad = f"{test_tenant_id}:{test_router.id}".encode()
+    ct, iv, tag = encrypt_aes_gcm(b"SecretPass123", aad)
+    prev_ct, prev_iv, prev_tag = encrypt_aes_gcm(b"OldPass123", aad)
+    vault = RouterCredentialsVault(
+        router_id=test_router.id,
+        tenant_id=test_tenant_id,
+        api_username="admin",
+        current_password_ciphertext=ct,
+        current_password_iv=iv,
+        current_password_tag=tag,
+        previous_password_ciphertext=prev_ct,
+        previous_password_iv=prev_iv,
+        previous_password_tag=prev_tag,
+        auto_rotate_enabled=True,
+        rotation_interval_days=30,
+        updated_by=test_user_id,
+    )
+    test_router.vault = vault
+    return vault
+
+
+# ============================================================================
+# INVENTORY HELPERS TESTS
+# ============================================================================
+
+
+@pytest.mark.asyncio
+async def test_enrich_router_telemetry_online_and_offline() -> None:
+    fake_redis = AsyncMock()
+    fake_redis.hgetall.return_value = {"state": "ONLINE", "cpu": "25", "ram": "40"}
+    res = await enrich_router_telemetry(fake_redis, uuid.uuid4(), uuid.uuid4())
+    assert res["operational_status"] == "ONLINE"
+    assert res["cpu_load_percent"] == 25
+    assert res["memory_used_percent"] == 40
+
+    fake_redis.hgetall.return_value = {}
+    res_off = await enrich_router_telemetry(fake_redis, uuid.uuid4(), uuid.uuid4())
+    assert res_off["operational_status"] == "OFFLINE"
+    assert res_off["cpu_load_percent"] is None
+
+
+@pytest.mark.asyncio
+async def test_perform_discovery(test_router: Router) -> None:
+    client = AsyncMock()
+    client.ensure_ssl_verified.return_value = "b" * 64
+    client.get.side_effect = [
+        {"name": "DiscoveredIdentity"},
+        {"version": "7.16.1", "board-name": "RB4011", "architecture-name": "arm64"},
+        {"model": "RB4011iGS+", "current-firmware": "7.16.1", "serial-number": "SN987"},
+    ]
+
+    ok = await perform_discovery(client, test_router)
+    assert ok is True
+    assert test_router.is_reachable is True
+    assert test_router.ros_identity == "DiscoveredIdentity"
+    assert test_router.board_name == "RB4011"
+
+
+def test_build_router_response(test_router: Router) -> None:
+    telemetry = {"operational_status": "ONLINE", "cpu_load_percent": 15, "memory_used_percent": 30}
+    resp = build_router_response(test_router, telemetry)
+    assert resp.display_name == test_router.display_name
+    assert resp.operational_status == "ONLINE"
+    assert resp.tags == ["core"]
+
+
+def test_apply_router_scalar_updates(test_router: Router) -> None:
+    payload = UpdateRouterRequest(
+        display_name=" New-Name ",
+        latitude=Decimal("10.5"),
+        longitude=Decimal("-66.9"),
+    )
+    apply_router_scalar_updates(test_router, payload)
+    assert test_router.display_name == "New-Name"
+    assert test_router.latitude == Decimal("10.5")
+    assert test_router.longitude == Decimal("-66.9")
+
+
+def test_validate_single_csv_row() -> None:
+    existing = {"SN_EXISTING"}
+    seen: set[str] = set()
+
+    # Valid
+    valid_row = {
+        "display_name": "R1",
+        "api_base_url": "https://10.0.0.1",
+        "serial_number": "SN_NEW",
+        "api_password": "pass",
+    }
+    is_valid, errors = validate_single_csv_row(valid_row, existing, seen)
+    assert is_valid is True
+    assert len(errors) == 0
+
+    # Duplicate in seen
+    is_valid2, errors2 = validate_single_csv_row(valid_row, existing, seen)
+    assert is_valid2 is False
+    assert any("duplicado" in e for e in errors2)
+
+    # In existing
+    bad_row = {
+        "display_name": "R2",
+        "api_base_url": "http://invalid",
+        "serial_number": "SN_EXISTING",
+        "api_password": "",
+    }
+    is_valid3, errors3 = validate_single_csv_row(bad_row, existing, seen)
+    assert is_valid3 is False
+    assert len(errors3) >= 3
+
+
+def test_build_router_from_csv(test_tenant_id: uuid.UUID, test_user_id: uuid.UUID) -> None:
+    item = CsvCommitRowItem(
+        display_name="CSV-Router",
+        api_base_url="https://10.10.10.1",
+        api_port=443,
+        network_role=RouterNetworkRoleEnum.DISTRIBUTION_SWITCH,
+        admin_state=RouterAdminStateEnum.STAGING_LAB,
+        physical_location="Rack 4",
+        online_since_date=date.today(),
+        serial_number="CSV-SN-123",
+        api_username="admin",
+        api_password="SuperSecretPassword",
+        tags=["edge", "distribution"],
+    )
+    r, tags, vault = build_router_from_csv(item, test_tenant_id, test_user_id)
+    assert r.display_name == "CSV-Router"
+    assert len(tags) == 2
+    assert vault.api_username == "admin"
+    aad = f"{test_tenant_id}:{r.id}".encode()
+    plain = decrypt_aes_gcm(
+        vault.current_password_ciphertext,
+        vault.current_password_iv,
+        vault.current_password_tag,
+        aad,
+    ).decode("utf-8")
+    assert plain == "SuperSecretPassword"
+
+
+# ============================================================================
+# VAULT ENDPOINTS AND LOGIC
+# ============================================================================
+
+
+def test_generate_safe_ros_password() -> None:
+    from src.api.v1.vault import _generate_safe_ros_password
+
+    pwd = _generate_safe_ros_password(32)
+    assert len(pwd) == 32
+    # Ensure variety
+    assert any(c.isupper() for c in pwd)
+    assert any(c.islower() for c in pwd)
+
+
+@pytest.mark.asyncio
+async def test_decrypt_vault_passwords(
+    test_tenant_id: uuid.UUID, test_router: Router, test_vault: RouterCredentialsVault
+) -> None:
+    from src.api.v1.vault import _decrypt_vault_passwords
+
+    cur, prev = _decrypt_vault_passwords(test_vault, test_tenant_id, test_router.id)
+    assert cur == "SecretPass123"
+    assert prev == "OldPass123"
+
+
+@pytest.mark.asyncio
+async def test_verify_admin_totp(test_tenant_id: uuid.UUID) -> None:
+    from src.api.v1.vault import _verify_admin_totp
+
+    totp_secret = pyotp.random_base32()
+    u = User(id=uuid.uuid4(), tenant_id=test_tenant_id, totp_enabled=True)
+    aad = f"{test_tenant_id}:{u.id}".encode()
+    ct, iv, tag = encrypt_aes_gcm(totp_secret.encode(), aad)
+    u.totp_secret_ciphertext = ct
+    u.totp_secret_iv = iv
+    u.totp_secret_tag = tag
+
+    db = AsyncMock()
+    db.get.return_value = u
+
+    # Valid code
+    valid_code = pyotp.TOTP(totp_secret).now()
+    user_res = await _verify_admin_totp(db, test_tenant_id, u.id, valid_code)
+    assert user_res.id == u.id
+
+    # Invalid code
+    with pytest.raises(HTTPException) as exc_info:
+        await _verify_admin_totp(db, test_tenant_id, u.id, "000000")
+    assert exc_info.value.status_code == 401
+
+    # User missing TOTP
+    u.totp_enabled = False
+    with pytest.raises(HTTPException) as exc_info2:
+        await _verify_admin_totp(db, test_tenant_id, u.id, valid_code)
+    assert exc_info2.value.status_code == 400
+
+
+def test_maintenance_window_filters(test_router: Router) -> None:
+    from sqlalchemy import select
+    from src.api.v1.maintenance import _apply_window_filters
+
+    q = select(MaintenanceWindow)
+    filtered_q = _apply_window_filters(q, router_id=test_router.id, is_active=True, is_cancelled=False)
+    assert filtered_q is not None
+
+    filtered_inactive = _apply_window_filters(q, router_id=test_router.id, is_active=False, is_cancelled=True)
+    assert filtered_inactive is not None

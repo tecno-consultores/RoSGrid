@@ -51,7 +51,7 @@ def _sanitize_secrets(raw_list: Any, role: str) -> Any:
         if isinstance(item, dict):
             copy_item = dict(item)
             if "password" in copy_item:
-                copy_item["password"] = "[REDACTED]"
+                copy_item["password"] = "[REDACTED]"  # nosec B105
             sanitized.append(copy_item)
         else:
             sanitized.append(item)
@@ -257,9 +257,7 @@ async def list_pppoe_servers(
     redis = get_redis_client()
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
-        return await cached_mikrotik_get(
-            redis, tenant_id, router_id, "/interface/pppoe-server/server", client, refresh
-        )
+        return await cached_mikrotik_get(redis, tenant_id, router_id, "/interface/pppoe-server/server", client, refresh)
 
 
 @router.post("/pppoe-servers", status_code=status.HTTP_201_CREATED)
@@ -300,6 +298,4 @@ async def list_ipsec_peers(
     redis = get_redis_client()
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
-        return await cached_mikrotik_get(
-            redis, tenant_id, router_id, "/ip/ipsec/active-peers", client, refresh
-        )
+        return await cached_mikrotik_get(redis, tenant_id, router_id, "/ip/ipsec/active-peers", client, refresh)

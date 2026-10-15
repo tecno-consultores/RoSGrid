@@ -6,7 +6,8 @@
 import asyncio
 import logging
 import uuid
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from src.mikrotik.client import MikrotikClientError, MikrotikRestClient
 from src.mikrotik.normalizers import format_routeros_duration
@@ -92,10 +93,7 @@ def build_scheduler_payload(
 ) -> dict[str, Any]:
     """Genera el payload para crear el /system/scheduler de reversión automática."""
     interval_str = format_routeros_duration(interval_seconds)
-    on_event = (
-        f":do {{ {rollback_cli} }} on-error={{}}; "
-        f'/system/scheduler/remove [find name="{job_name}"]'
-    )
+    on_event = f':do {{ {rollback_cli} }} on-error={{}}; /system/scheduler/remove [find name="{job_name}"]'
     return {
         "name": job_name,
         "start-time": "startup",
@@ -174,9 +172,7 @@ async def execute_with_safemode(
 
     is_alive = await verify_connectivity(client)
     if not is_alive:
-        logger.critical(
-            "Pérdida de conectividad tras cambio. Dejando expirar scheduler '%s'", name
-        )
+        logger.critical("Pérdida de conectividad tras cambio. Dejando expirar scheduler '%s'", name)
         raise SafeModeRollbackTriggeredError(name, interval_seconds)
 
     await remove_deadmans_switch(client, name)

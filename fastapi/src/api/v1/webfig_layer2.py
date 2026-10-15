@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, s
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.deps import get_current_user_claims, require_roles
+from src.api.deps import get_current_user_claims
 from src.api.v1.webfig_common import (
     cached_mikrotik_get,
     execute_safe_mutation,
@@ -20,7 +20,6 @@ from src.api.v1.webfig_common import (
 )
 from src.core.audit import write_audit_log
 from src.db.session import get_tenant_db_session
-from src.mikrotik.client import MikrotikRestClient
 from src.models.core import SystemRoleEnum, UserRouterPermission
 from src.schemas.webfig_layer2 import (
     CatalogMenuGroup,
@@ -154,7 +153,9 @@ def _build_catalog_groups(packages: list[str]) -> list[CatalogMenuGroup]:
                 group="ZeroTier",
                 items=[
                     CatalogMenuItem(label="ZeroTier Instances", ros_path="zerotier", supports_safe_mode=True),
-                    CatalogMenuItem(label="ZeroTier Interfaces", ros_path="zerotier/interface", supports_safe_mode=True),
+                    CatalogMenuItem(
+                        label="ZeroTier Interfaces", ros_path="zerotier/interface", supports_safe_mode=True
+                    ),
                 ],
             )
         )

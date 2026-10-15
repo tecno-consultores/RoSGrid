@@ -77,7 +77,15 @@ async def list_ip_addresses(
 async def create_ip_address(
     router_id: uuid.UUID,
     payload: IpAddressCreateRequest,
-    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN, SystemRoleEnum.SUPERVISOR, SystemRoleEnum.SUPPORT_L3, SystemRoleEnum.SUPPORT_L2)),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Asigna una nueva dirección IP a una interfaz bajo Safe Mode."""
@@ -106,7 +114,14 @@ async def update_ip_address(
     router_id: uuid.UUID,
     item_id: str,
     payload: IpAddressUpdateRequest,
-    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN, SystemRoleEnum.SUPERVISOR, SystemRoleEnum.SUPPORT_L3)),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Modifica una dirección IP existente bajo Safe Mode."""
@@ -139,7 +154,14 @@ async def update_ip_address(
 async def delete_ip_address(
     router_id: uuid.UUID,
     item_id: str,
-    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN, SystemRoleEnum.SUPERVISOR, SystemRoleEnum.SUPPORT_L3)),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Elimina una dirección IP existente bajo Safe Mode."""
@@ -180,7 +202,15 @@ async def list_routes(
 async def create_route(
     router_id: uuid.UUID,
     payload: IpRouteCreateRequest,
-    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN, SystemRoleEnum.SUPERVISOR, SystemRoleEnum.SUPPORT_L3, SystemRoleEnum.SUPPORT_L2)),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Crea una ruta estática o balanceada ECMP bajo Safe Mode."""
@@ -209,7 +239,15 @@ async def update_route(
     router_id: uuid.UUID,
     item_id: str,
     payload: IpRouteUpdateRequest,
-    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN, SystemRoleEnum.SUPERVISOR, SystemRoleEnum.SUPPORT_L3, SystemRoleEnum.SUPPORT_L2)),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Modifica una ruta existente bajo Safe Mode."""
@@ -244,7 +282,15 @@ async def update_route(
 async def delete_route(
     router_id: uuid.UUID,
     item_id: str,
-    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN, SystemRoleEnum.SUPERVISOR, SystemRoleEnum.SUPPORT_L3, SystemRoleEnum.SUPPORT_L2)),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Elimina una ruta bajo Safe Mode."""
@@ -285,7 +331,15 @@ async def list_arp(
 async def create_arp(
     router_id: uuid.UUID,
     payload: IpArpCreateRequest,
-    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN, SystemRoleEnum.SUPERVISOR, SystemRoleEnum.SUPPORT_L3, SystemRoleEnum.SUPPORT_L2)),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Crea un amarre ARP estático."""
@@ -338,7 +392,15 @@ async def list_pools(
 async def create_pool(
     router_id: uuid.UUID,
     payload: IpPoolCreateRequest,
-    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN, SystemRoleEnum.SUPERVISOR, SystemRoleEnum.SUPPORT_L3, SystemRoleEnum.SUPPORT_L2)),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Crea un nuevo pool de direcciones IP."""
@@ -388,7 +450,15 @@ async def update_dhcp_lease(
     router_id: uuid.UUID,
     item_id: str,
     payload: DhcpLeaseUpdateRequest,
-    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN, SystemRoleEnum.SUPERVISOR, SystemRoleEnum.SUPPORT_L3, SystemRoleEnum.SUPPORT_L2)),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Modifica una reservación estática DHCP."""
@@ -491,7 +561,14 @@ async def update_service(
     router_id: uuid.UUID,
     item_id: str,
     payload: IpServiceUpdateRequest,
-    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN, SystemRoleEnum.SUPERVISOR, SystemRoleEnum.SUPPORT_L3)),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Modifica puerto o IPs permitidas de un servicio con regla anti-suicidio en www-ssl."""

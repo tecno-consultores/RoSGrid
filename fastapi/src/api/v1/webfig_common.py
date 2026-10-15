@@ -7,7 +7,8 @@ import hashlib
 import json
 import logging
 import uuid
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -61,7 +62,7 @@ def _create_client_from_vault(r: Router, tenant_id: uuid.UUID) -> MikrotikRestCl
     if not r.vault:
         raise HTTPException(status_code=400, detail="El router no tiene credenciales en bóveda")
 
-    aad = f"{tenant_id}:{r.id}".encode("utf-8")
+    aad = f"{tenant_id}:{r.id}".encode()
     cur_pass = decrypt_aes_gcm(
         r.vault.current_password_ciphertext,
         r.vault.current_password_iv,
@@ -101,7 +102,9 @@ async def get_router_and_client(
 
     await _check_router_permission(db, tenant_id, user_id, router_id, claims)
 
-    query = select(Router).options(selectinload(Router.vault)).where(Router.id == router_id, Router.tenant_id == tenant_id)
+    query = (
+        select(Router).options(selectinload(Router.vault)).where(Router.id == router_id, Router.tenant_id == tenant_id)
+    )
     r = (await db.execute(query)).scalar_one_or_none()
     if not r:
         raise HTTPException(status_code=404, detail="Router no encontrado")
@@ -120,7 +123,7 @@ async def cached_mikrotik_get(
     ttl_seconds: int = 5,
 ) -> Any:
     """Ejecuta una petición GET con caché corto en Redis de 5s para evitar sobrecarga del router."""
-    ep_hash = hashlib.md5(endpoint.encode("utf-8")).hexdigest()
+    ep_hash = hashlib.sha256(endpoint.encode("utf-8")).hexdigest()[:16]
     cache_key = f"rg:{tenant_id}:rcache:{router_id}:{ep_hash}"
 
     if not refresh:
@@ -128,8 +131,8 @@ async def cached_mikrotik_get(
         if raw_cached:
             try:
                 return json.loads(raw_cached)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Error al deserializar caché: %s", exc)
 
     data = await client.get(endpoint)
     if data is not None:

@@ -23,7 +23,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.api.deps import get_current_user_claims, require_roles
+from src.api.deps import require_roles
 from src.core.audit import write_audit_log
 from src.core.crypto import decrypt_aes_gcm, encrypt_aes_gcm
 from src.db.session import get_tenant_db_session
@@ -45,12 +45,18 @@ _SAFE_ROS_CHARACTERS = string.ascii_letters + string.digits + "!#$%&*+-.:;=?@^_~
 
 async def _verify_admin_totp(db: AsyncSession, tenant_id: uuid.UUID, user_id: uuid.UUID, totp_code: str) -> User:
     user = await db.get(User, user_id)
-    if not user or not user.totp_enabled:
+    if (
+        not user
+        or not user.totp_enabled
+        or not user.totp_secret_ciphertext
+        or not user.totp_secret_iv
+        or not user.totp_secret_tag
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="El usuario no tiene configurado 2FA TOTP para Step-Up Auth",
         )
-    aad = f"{tenant_id}:{user.id}".encode("utf-8")
+    aad = f"{tenant_id}:{user.id}".encode()
     secret = decrypt_aes_gcm(
         user.totp_secret_ciphertext,
         user.totp_secret_iv,
@@ -75,7 +81,7 @@ def _decrypt_vault_passwords(
     tenant_id: uuid.UUID,
     router_id: uuid.UUID,
 ) -> tuple[str, str | None]:
-    aad = f"{tenant_id}:{router_id}".encode("utf-8")
+    aad = f"{tenant_id}:{router_id}".encode()
     cur_pass = decrypt_aes_gcm(
         vault.current_password_ciphertext,
         vault.current_password_iv,
@@ -113,7 +119,9 @@ async def reveal_credentials(
     user_id = uuid.UUID(claims["sub"])
     admin_user = await _verify_admin_totp(db, tenant_id, user_id, payload.totp_code)
 
-    query = select(Router).options(selectinload(Router.vault)).where(Router.id == router_id, Router.tenant_id == tenant_id)
+    query = (
+        select(Router).options(selectinload(Router.vault)).where(Router.id == router_id, Router.tenant_id == tenant_id)
+    )
     r = (await db.execute(query)).scalar_one_or_none()
     if not r or not r.vault:
         raise HTTPException(status_code=404, detail="Router o registro en bóveda no encontrado")
@@ -201,7 +209,9 @@ async def rotate_now(
     tenant_id = uuid.UUID(claims["tid"])
     user_id = uuid.UUID(claims["sub"])
 
-    query = select(Router).options(selectinload(Router.vault)).where(Router.id == router_id, Router.tenant_id == tenant_id)
+    query = (
+        select(Router).options(selectinload(Router.vault)).where(Router.id == router_id, Router.tenant_id == tenant_id)
+    )
     r = (await db.execute(query)).scalar_one_or_none()
     if not r or not r.vault:
         raise HTTPException(status_code=404, detail="Router o credenciales no encontradas")
@@ -211,7 +221,7 @@ async def rotate_now(
 
     await _rotate_on_device(r, r.vault, cur_pass, new_pass)
 
-    aad = f"{tenant_id}:{r.id}".encode("utf-8")
+    aad = f"{tenant_id}:{r.id}".encode()
     new_ct, new_iv, new_tag = encrypt_aes_gcm(new_pass.encode("utf-8"), aad)
 
     r.vault.previous_password_ciphertext = r.vault.current_password_ciphertext

@@ -163,6 +163,25 @@ class FakeAsyncRedis:
     async def smembers(self, name: str) -> set[str]:
         return set(self.sets.get(name, set()))
 
+    async def scard(self, name: str) -> int:
+        return len(self.sets.get(name, set()))
+
+    def pubsub(self) -> Any:
+        class FakePubSub:
+            async def subscribe(self, *channels: str) -> None:
+                pass
+
+            async def unsubscribe(self, *channels: str) -> None:
+                pass
+
+            async def get_message(self, *args: Any, **kwargs: Any) -> dict[str, Any] | None:
+                return None
+
+            async def close(self) -> None:
+                pass
+
+        return FakePubSub()
+
     async def zadd(self, name: str, mapping: dict[Any, float]) -> int:
         if name not in self.zsets:
             self.zsets[name] = {}
@@ -212,6 +231,9 @@ def fake_redis(monkeypatch: pytest.MonkeyPatch) -> FakeAsyncRedis:
     monkeypatch.setattr("src.api.deps.get_redis_client", lambda: fake)
     monkeypatch.setattr("src.api.v1.auth.get_redis_client", lambda: fake)
     monkeypatch.setattr("src.api.v1.sessions.get_redis_client", lambda: fake)
+    monkeypatch.setattr("src.api.v1.inventory.get_redis_client", lambda: fake)
+    monkeypatch.setattr("src.api.v1.websockets.get_redis_client", lambda: fake)
+    monkeypatch.setattr("src.services.telemetry_multiplexer.get_redis_client", lambda: fake)
     return fake
 
 

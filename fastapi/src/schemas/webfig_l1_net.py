@@ -3,8 +3,6 @@
 
 """Esquemas Pydantic v2 para Interfaces WebFig Capa 1 y Red IP/IPv6."""
 
-from typing import Any
-
 from pydantic import BaseModel, ConfigDict, Field
 
 

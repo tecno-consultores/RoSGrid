@@ -6,7 +6,9 @@
 import re
 from typing import Any
 
-_DURATION_REGEX = re.compile(r"((?P<weeks>\d+)w)?((?P<days>\d+)d)?((?P<hours>\d+)h)?((?P<minutes>\d+)m)?((?P<seconds>\d+)s)?")
+_DURATION_REGEX = re.compile(
+    r"((?P<weeks>\d+)w)?((?P<days>\d+)d)?((?P<hours>\d+)h)?((?P<minutes>\d+)m)?((?P<seconds>\d+)s)?"
+)
 _BYTES_MULTIPLIERS = {
     "k": 1024,
     "m": 1024**2,
@@ -55,7 +57,7 @@ def _parse_time_unit_format(val: str) -> int:
     return w * 604800 + d * 86400 + h * 3600 + m * 60 + s
 
 
-def parse_routeros_duration(val: str | int | float | None) -> int:
+def parse_routeros_duration(val: str | float | None) -> int:
     """Parsea representaciones de tiempo de RouterOS (ej. '00:01:00', '1h30m', '10s') a segundos."""
     if val is None:
         return 0
@@ -80,7 +82,7 @@ def format_routeros_duration(seconds: int) -> str:
     return f"{h:02d}:{m:02d}:{s:02d}"
 
 
-def parse_routeros_bytes(val: str | int | float | None) -> int:
+def parse_routeros_bytes(val: str | float | None) -> int:
     """Parsea tamaños y capacidades con sufijos ('100M', '1G', '512k') a bytes enteros."""
     if val is None:
         return 0

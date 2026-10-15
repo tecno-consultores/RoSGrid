@@ -280,12 +280,8 @@ async def get_bgp_sessions(
     redis = get_redis_client()
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
-        raw_sessions = await cached_mikrotik_get(
-            redis, tenant_id, router_id, "/routing/bgp/session", client, refresh
-        )
-        raw_conns = await cached_mikrotik_get(
-            redis, tenant_id, router_id, "/routing/bgp/connection", client, refresh
-        )
+        raw_sessions = await cached_mikrotik_get(redis, tenant_id, router_id, "/routing/bgp/session", client, refresh)
+        raw_conns = await cached_mikrotik_get(redis, tenant_id, router_id, "/routing/bgp/connection", client, refresh)
         return _build_bgp_summary(raw_sessions, raw_conns)
 
 
@@ -301,9 +297,7 @@ async def get_bgp_advertisements(
     redis = get_redis_client()
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
-        return await cached_mikrotik_get(
-            redis, tenant_id, router_id, "/routing/bgp/advertisements", client, refresh
-        )
+        return await cached_mikrotik_get(redis, tenant_id, router_id, "/routing/bgp/advertisements", client, refresh)
 
 
 # ============================================================================

@@ -24,6 +24,8 @@ from src.api.v1.webfig_queues import router as webfig_queues_router
 from src.api.v1.webfig_routing import router as webfig_routing_router
 from src.api.v1.webfig_system_tools import (
     system_router as webfig_system_router,
+)
+from src.api.v1.webfig_system_tools import (
     tools_router as webfig_tools_router,
 )
 

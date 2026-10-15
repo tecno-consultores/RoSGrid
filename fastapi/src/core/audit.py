@@ -65,6 +65,7 @@ async def write_audit_log(
 ) -> Any:
     """Registra de forma inmutable un evento de auditoría en PostgreSQL calculando el hash WORM encadenado."""
     from sqlalchemy import select
+
     from src.models.operations import AuditLog
 
     stmt = (
@@ -115,4 +116,3 @@ async def write_audit_log(
     )
     session.add(log_entry)
     return log_entry
-

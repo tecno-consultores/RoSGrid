@@ -10,7 +10,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import delete, desc, select
+from sqlalchemy import desc, select
 from sqlalchemy.orm import selectinload
 
 from src.api.v1.backups import clean_rsc_export_comments
@@ -77,7 +77,7 @@ async def _backup_single_router(session: Any, r: Router) -> None:
             latest.last_verified_identical_at = now_utc
             return
 
-        aad = f"{r.tenant_id}:{r.id}".encode("utf-8")
+        aad = f"{r.tenant_id}:{r.id}".encode()
         ct, iv, tag = encrypt_aes_gcm(cleaned_rsc.encode("utf-8"), aad)
 
         backup = RouterBackup(

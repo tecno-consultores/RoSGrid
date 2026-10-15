@@ -178,6 +178,26 @@ async def create_system_user(
         )
 
 
+def _build_user_patch_data(payload: SystemUserUpdateRequest) -> dict[str, Any]:
+    mapping: dict[str, Any] = {
+        "password": payload.password,
+        "group": payload.group,
+        "address": payload.address,
+        "comment": payload.comment,
+        "disabled": payload.disabled,
+    }
+    return {k: v for k, v in mapping.items() if v is not None}
+
+
+def _check_disabling_api_user(router_obj: Any, before: Any, disabled: bool | None) -> None:
+    if isinstance(before, dict) and router_obj.vault:
+        if before.get("name") == router_obj.vault.api_username and disabled is True:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Operación bloqueada: No puedes deshabilitar el usuario API de RoSGrid.",
+            )
+
+
 @system_router.patch("/users/{item_id}")
 async def update_system_user(
     router_id: uuid.UUID,
@@ -188,26 +208,11 @@ async def update_system_user(
 ) -> Any:
     """Modifica permisos o clave de un usuario interno bajo Safe Mode."""
     router_obj, client = await get_router_and_client(router_id, claims, db)
-    patch_data: dict[str, Any] = {}
-    if payload.password:
-        patch_data["password"] = payload.password
-    if payload.group:
-        patch_data["group"] = payload.group
-    if payload.address:
-        patch_data["address"] = payload.address
-    if payload.comment is not None:
-        patch_data["comment"] = payload.comment
-    if payload.disabled is not None:
-        patch_data["disabled"] = payload.disabled
+    patch_data = _build_user_patch_data(payload)
 
     async with client:
         before = await client.get(f"/user/{item_id}")
-        if isinstance(before, dict) and router_obj.vault:
-            if before.get("name") == router_obj.vault.api_username and payload.disabled is True:
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail="Operación bloqueada: No puedes deshabilitar el usuario API de RoSGrid.",
-                )
+        _check_disabling_api_user(router_obj, before, payload.disabled)
         return await execute_safe_mutation(
             client=client,
             menu="user",
@@ -288,8 +293,8 @@ async def list_packages(
         update_info = None
         try:
             update_info = await client.post("/system/package/update/check-for-updates")
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Error check-for-updates: %s", exc)
         return {
             "packages": packages if isinstance(packages, list) else [],
             "update_check": update_info if isinstance(update_info, (dict, list)) else {},
@@ -372,7 +377,12 @@ async def run_traceroute(
 ) -> Any:
     """Ejecuta Traceroute desde el MikroTik hacia un destino."""
     _, client = await get_router_and_client(router_id, claims, db)
-    body = {"address": payload.address, "count": payload.count, "max-hops": payload.max_hops, "timeout": payload.timeout}
+    body = {
+        "address": payload.address,
+        "count": payload.count,
+        "max-hops": payload.max_hops,
+        "timeout": payload.timeout,
+    }
     async with client:
         return await client.post("/tool/traceroute", json_data=body)
 

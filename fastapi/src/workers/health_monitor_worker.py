@@ -69,13 +69,15 @@ async def _publish_alert_and_event(
     await redis.publish(f"rg:pubsub:alerts:{tenant_id}", json.dumps(payload))
     await redis.publish(
         f"rg:pubsub:events:{tenant_id}",
-        json.dumps({
-            "type": "ROUTER_STATE_CHANGED",
-            "tenant_id": str(tenant_id),
-            "timestamp_iso": now_iso,
-            "event_name": alert_name,
-            "payload": payload,
-        }),
+        json.dumps(
+            {
+                "type": "ROUTER_STATE_CHANGED",
+                "tenant_id": str(tenant_id),
+                "timestamp_iso": now_iso,
+                "event_name": alert_name,
+                "payload": payload,
+            }
+        ),
     )
 
 

@@ -122,7 +122,15 @@ async def update_interface(
     router_id: uuid.UUID,
     item_id: str,
     payload: UpdateInterfaceRequest,
-    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN, SystemRoleEnum.SUPERVISOR, SystemRoleEnum.SUPPORT_L3, SystemRoleEnum.SUPPORT_L2)),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Modifica MTU, comentario o estado disabled de una interfaz bajo Safe Mode."""
@@ -204,7 +212,15 @@ async def list_vlans(
 async def create_vlan(
     router_id: uuid.UUID,
     payload: VlanCreateRequest,
-    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN, SystemRoleEnum.SUPERVISOR, SystemRoleEnum.SUPPORT_L3, SystemRoleEnum.SUPPORT_L2)),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Crea una nueva VLAN 802.1Q con protección Safe Mode."""
@@ -229,7 +245,15 @@ async def update_vlan(
     router_id: uuid.UUID,
     item_id: str,
     payload: VlanUpdateRequest,
-    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN, SystemRoleEnum.SUPERVISOR, SystemRoleEnum.SUPPORT_L3, SystemRoleEnum.SUPPORT_L2)),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Modifica parámetros de una VLAN existente protegida por Safe Mode."""
@@ -264,7 +288,14 @@ async def update_vlan(
 async def delete_vlan(
     router_id: uuid.UUID,
     item_id: str,
-    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN, SystemRoleEnum.SUPERVISOR, SystemRoleEnum.SUPPORT_L3)),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Elimina una VLAN bajo Safe Mode con deshabilitación preventiva."""
@@ -300,7 +331,15 @@ async def list_bridges(
 async def create_bridge(
     router_id: uuid.UUID,
     payload: BridgeCreateRequest,
-    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN, SystemRoleEnum.SUPERVISOR, SystemRoleEnum.SUPPORT_L3, SystemRoleEnum.SUPPORT_L2)),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Crea un nuevo Bridge bajo Safe Mode."""
@@ -325,7 +364,14 @@ async def update_bridge(
     router_id: uuid.UUID,
     item_id: str,
     payload: BridgeUpdateRequest,
-    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN, SystemRoleEnum.SUPERVISOR, SystemRoleEnum.SUPPORT_L3)),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Modifica parámetros de un Bridge bajo Safe Mode (ej. activar vlan-filtering)."""
@@ -373,7 +419,15 @@ async def list_bridge_ports(
 async def create_bridge_port(
     router_id: uuid.UUID,
     payload: BridgePortCreateRequest,
-    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN, SystemRoleEnum.SUPERVISOR, SystemRoleEnum.SUPPORT_L3, SystemRoleEnum.SUPPORT_L2)),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Agrega un puerto a un Bridge bajo Safe Mode."""
@@ -445,7 +499,15 @@ async def list_wireguard(
 async def create_wireguard(
     router_id: uuid.UUID,
     payload: WireGuardCreateRequest,
-    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN, SystemRoleEnum.SUPERVISOR, SystemRoleEnum.SUPPORT_L3, SystemRoleEnum.SUPPORT_L2)),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Crea una interfaz túnel WireGuard bajo Safe Mode."""
@@ -484,7 +546,15 @@ async def list_wireguard_peers(
 async def create_wireguard_peer(
     router_id: uuid.UUID,
     payload: WireGuardPeerCreateRequest,
-    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN, SystemRoleEnum.SUPERVISOR, SystemRoleEnum.SUPPORT_L3, SystemRoleEnum.SUPPORT_L2)),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Registra un nuevo Peer WireGuard bajo Safe Mode."""

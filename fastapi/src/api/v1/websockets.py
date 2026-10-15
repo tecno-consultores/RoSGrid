@@ -10,7 +10,7 @@ import uuid
 from typing import Any
 
 import jwt
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from sqlalchemy import select
 
 from src.core.config import settings
@@ -91,8 +91,8 @@ async def _handle_telemetry_msg(ws: WebSocket, channel: str, raw_data: str, sid:
                 if p.get("target_session_id") == sid or p.get("target_user_id") == uid:
                     await ws.close(code=4401, reason="Sesión revocada por Kill-Switch")
                     return False
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Error processing telemetry websocket event: %s", exc)
         return True
 
     await ws.send_text(raw_data)
@@ -138,7 +138,7 @@ async def router_live_telemetry_ws(ws: WebSocket, router_id: uuid.UUID) -> None:
                     break
             await asyncio.sleep(0.01)
     except WebSocketDisconnect:
-        pass
+        logger.debug("WebSocket live-telemetry disconnected: conn=%s", conn_id)
     finally:
         await pubsub.unsubscribe(telem_ch, event_ch)
         await pubsub.close()
@@ -176,12 +176,12 @@ async def tenant_events_ws(ws: WebSocket) -> None:
                         if p.get("target_session_id") == session_id or p.get("target_user_id") == user_id:
                             await ws.close(code=4401, reason="Sesión revocada por Kill-Switch")
                             break
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.debug("Error checking kill switch event: %s", exc)
                 await ws.send_text(raw_str)
             await asyncio.sleep(0.01)
     except WebSocketDisconnect:
-        pass
+        logger.debug("WebSocket tenant_events disconnected: session=%s", session_id)
     finally:
         await pubsub.unsubscribe(event_ch)
         await pubsub.close()

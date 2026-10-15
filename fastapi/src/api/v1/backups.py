@@ -6,16 +6,15 @@
 import difflib
 import hashlib
 import logging
-import re
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.deps import get_current_user_claims, require_roles
+from src.api.deps import require_roles
 from src.api.v1.webfig_common import get_router_and_client
 from src.core.audit import write_audit_log
 from src.core.crypto import decrypt_aes_gcm, encrypt_aes_gcm
@@ -101,7 +100,7 @@ def _build_side_by_side_hunks(diff_lines: list[str]) -> list[BackupDiffHunk]:
 
 
 def _decrypt_backup_rsc(backup: RouterBackup, tenant_id: uuid.UUID) -> str:
-    aad = f"{tenant_id}:{backup.router_id}".encode("utf-8")
+    aad = f"{tenant_id}:{backup.router_id}".encode()
     decrypted_bytes = decrypt_aes_gcm(backup.rsc_ciphertext, backup.rsc_iv, backup.rsc_tag, aad)
     return decrypted_bytes.decode("utf-8")
 
@@ -188,7 +187,7 @@ async def trigger_backup(
         old_text = clean_rsc_export_comments(_decrypt_backup_rsc(latest_backup, tenant_id))
         lines_added, lines_removed, _ = _compute_diff_stats(old_text.splitlines(), cleaned_rsc.splitlines())
 
-    aad = f"{tenant_id}:{router_id}".encode("utf-8")
+    aad = f"{tenant_id}:{router_id}".encode()
     ct, iv, tag = encrypt_aes_gcm(cleaned_rsc.encode("utf-8"), aad)
 
     new_backup = RouterBackup(

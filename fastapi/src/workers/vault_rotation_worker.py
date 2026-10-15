@@ -42,7 +42,7 @@ async def _rotate_single_vault(
         await client.patch(f"user/{vault.api_username}", {"password": new_password})
 
         # 2. Respaldar actual como previa y cifrar nueva contraseña
-        aad = f"{router_obj.tenant_id}:{router_obj.id}".encode("utf-8")
+        aad = f"{router_obj.tenant_id}:{router_obj.id}".encode()
         ct, iv, tag = encrypt_aes_gcm(new_password.encode("utf-8"), aad)
 
         vault.previous_password_ciphertext = vault.current_password_ciphertext
