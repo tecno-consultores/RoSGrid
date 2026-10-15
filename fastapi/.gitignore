@@ -31,3 +31,5 @@ prometheus_data/
 .vscode/
 .idea/
 .DS_Store
+mutants/
+.mutmut-cache/
