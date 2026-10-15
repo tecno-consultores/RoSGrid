@@ -45,12 +45,14 @@ Para lograr un **Score >= 95 en Lighthouse Performance** y evitar *Cumulative La
 
 Para evitar duplicación de código y mantener complejidad cognitiva baja en SonarJS, Antigravity DEBE construir estos 5 componentes base:
 
-### 2.1 `RgDataTable.vue` (Tabla Técnica Estilo WinBox con Densidad Dual Adaptativa y Drag & Drop)
+### 2.1 `RgDataTable.vue` (Tabla Técnica Estilo WinBox con Densidad Dual, Virtual Scrolling y Drag & Drop)
 
 - **Densidad Dual Adaptativa (`compact` vs `comfortable`):**
   - Conectada a `useThemeAndLayoutStore.effectiveTableDensity` e incluye en su barra de herramientas superior un botón conmutador accesible (`[≡ Compacta | ☰ Cómoda]`, `aria-label="Cambiar densidad de tabla"`).
-  - **Modo `compact` (Predeterminado en PC `>= 1024px`):** Altura de fila de `32px`, relleno compacto `4px 8px`, bordes de cuadrícula `1px solid var(--rg-border-grid)` visibles al estilo WinBox y resaltado de fila activa con borde izquierdo cian (`2px solid #06B6D4`).
+  - **Modo `compact` (Predeterminado en PC `>= 1024px`):** Altura de fila determinista de `32px`, relleno compacto `4px 8px`, bordes de cuadrícula `1px solid var(--rg-border-grid)` visibles al estilo WinBox y resaltado de fila activa con borde izquierdo cian (`2px solid #06B6D4`).
   - **Modo `comfortable` (Automático en Móvil/Tablet `< 1024px`):** Altura mínima de fila y botones de `44px`, primera columna fija (`position: sticky; left: 0; z-index: 2`) y botón `+ Ver detalles` para desplegar las columnas secundarias en formato de tarjeta vertical sin exigir scroll horizontal excesivo.
+- **Virtual Scrolling Nativo de Alto Rendimiento (Sin Librerías Externas):**
+  - Aprovechando la altura determinista de fila (`32px` en modo `compact` y `44px` en modo `comfortable`), cuando el arreglo `rows` supere los `100` elementos, `RgDataTable.vue` activa automáticamente su ventana de virtualización (`startIndex`, `endIndex`, `overscan = 10`), renderizando en el DOM únicamente las ~30 filas visibles en el viewport más un espaciador superior/inferior para mantener 60 FPS constantes en PC y móviles incluso con 5,000 sesiones PPPoE o rutas BGP.
 - **Insignias de Estado Nativas de RouterOS (Flags Column):**
   - Soporta el renderizado estandarizado de banderas MikroTik al inicio de cada fila:
     * `[D]` (*Dynamic*) en cian informativo.

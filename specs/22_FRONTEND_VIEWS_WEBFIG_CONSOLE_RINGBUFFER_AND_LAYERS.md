@@ -1,6 +1,6 @@
 # 22 — CONSOLA WEBFIG EN VUE 3: GRÁFICAS EFÍMERAS EN RAM (RINGBUFFER ESTILO WINBOX), PESTAÑAS CON MEMORIA (KEEPALIVE), CAPA 1 Y MOTOR DINÁMICO CAPA 2 (RoSGrid)
 
-**[DIRECTIVA PARA ANTIGRAVITY]:** Este documento especifica la vista más importante para la operación técnica diaria: la **Consola Centralizada WebFig de un Equipo MikroTik** (`vue3/src/views/webfig/RouterWebFigLayout.vue`). Incluye la navegación multi-pestaña con memoria en RAM (`<KeepAlive :max="5">`) estilo sub-ventanas de WinBox, el diseño del buffer circular (`TelemetryRingBuffer`) para que las gráficas de CPU, RAM y tráfico de interfaces funcionen exactamente igual que en WinBox (acumulando datos mientras la consola del router permanezca abierta y reseteándose al salir, con cero almacenamiento en base de datos), las vistas especializadas de Capa 1 y el renderizador dinámico universal de Capa 2.
+**[DIRECTIVA PARA ANTIGRAVITY]:** Este documento especifica la vista más importante para la operación técnica diaria: la **Consola Centralizada WebFig de un Equipo MikroTik** (`vue3/src/views/webfig/RouterWebFigLayout.vue`). Incluye la navegación multi-pestaña con memoria en RAM (`<KeepAlive :max="5">`) estilo sub-ventanas de WinBox, el diseño del buffer circular (`TelemetryRingBuffer` con `shallowRef` y dibujo en `<canvas>` 2D) para que las gráficas de CPU, RAM y tráfico de interfaces funcionen exactamente igual que en WinBox (acumulando datos mientras la consola del router permanezca abierta y reseteándose al salir, con cero almacenamiento en base de datos), las vistas especializadas de Capa 1 y el renderizador dinámico universal de Capa 2.
 
 ---
 
@@ -31,7 +31,7 @@ Al entrar a `/routers/{router_id}/webfig/*`, la interfaz replica la ergonomía y
 
 ---
 
-## 2. Gráficas Efímeras en Memoria RAM Estilo WinBox (`RingBuffer` + SVG/Canvas Ligero)
+## 2. Gráficas Efímeras en Memoria RAM Estilo WinBox (`RingBuffer` + `<canvas>` 2D Acelerado)
 
 ### 2.1 Implementación de la Clase Pura `TelemetryRingBuffer<T>` (`vue3/src/composables/useTelemetryRingBuffer.ts`)
 
@@ -39,15 +39,18 @@ Para cumplir el requerimiento de que **"si dejas el navegador en ese router por 
 
 - **Capacidad para 3 Horas a 1 Tick cada 2 Segundos:**
   - $3 \text{ horas} = 10,800 \text{ segundos} \div 2\text{ s/tick} = 5,400 \text{ puntos máximos}$.
-  - El `TelemetryRingBuffer` pre-aloja un arreglo circular con capacidad máxima `MAX_POINTS = 5400` en la memoria RAM de la pestaña del navegador (~600 KB de RAM total).
+  - El `TelemetryRingBuffer` pre-aloja un arreglo circular con capacidad máxima `MAX_POINTS = 5400` en la memoria RAM de la pestaña del navegador (~600 KB de RAM total) expuesto mediante `shallowRef` para cero sobrecarga de Proxies reactivos.
   - Cada vez que llega un mensaje `TELEMETRY_TICK` por el WebSocket `/ws/v1/routers/{router_id}/live-telemetry`, inserta el punto en $O(1)$ (`head = (head + 1) % MAX_POINTS`).
 - **Selectores de Ventana Temporal en Vivo:**
   - El operador puede conmutar el zoom horizontal de la gráfica entre: `Últimos 2 min (60 pts)`, `Últimos 15 min (450 pts)`, `Última 1 hora (1800 pts)` y `Últimas 3 horas (5400 pts)`.
 - **Diferenciación entre Cambiar de Pestaña Interna vs. Salir del Router:**
   - El WebSocket `/ws/v1/routers/{router_id}/live-telemetry` se gestiona a nivel del contenedor padre `RouterWebFigLayout.vue`. Así, mientras el técnico salta entre las pestañas internas del mismo router (`Firewall`, `BGP`, `Interfaces`), la gráfica sigue recibiendo ticks en segundo plano sin perder ni un segundo de historial.
-  - Cuando el técnico **sale de la consola del router** (`onBeforeUnmount` en `RouterWebFigLayout.vue`) o **cambia a otro `router_id`**, se cierra inmediatamente el WebSocket (haciendo que el Backend detenga el poller si `SCARD == 0`), se invoca `liveTelemetryStore.resetChartsBuffer()` y `webFigStore.clearRouterWorkspace()`, vaciando por completo el arreglo en RAM. No se escribe absolutamente nada en `localStorage`, `IndexedDB` ni base de datos.
+  - Cuando el técnico **sale de la consola del router** (`onBeforeUnmount` en `RouterWebFigLayout.vue`) o **cambia a otro `router_id`**, se cierra inmediatamente el WebSocket (haciendo que el Backend detenga el poller si `SCARD == 0` en KeyDB), se invoca `liveTelemetryStore.resetChartsBuffer()` y `webFigStore.clearRouterWorkspace()`, vaciando por completo el arreglo en RAM. No se escribe absolutamente nada en `localStorage`, `IndexedDB` ni base de datos.
 
-### 2.2 Gráficas Incluidas en `RouterLiveDashboardView.vue`
+### 2.2 Gráficas Incluidas en `RouterLiveDashboardView.vue` y Motor `<canvas>` 2D
+
+- **Motor de Dibujo en `<canvas>` 2D con `requestAnimationFrame`:**
+  - Queda prohibido renderizar miles de nodos DOM/SVG para las curvas de tiempo real. Las gráficas del `TelemetryRingBuffer` (hasta 5,400 puntos) se dibujan sobre un elemento `<canvas>` HTML5 nativo utilizando `requestAnimationFrame` (y un modo estático determinista cuando `navigator.webdriver === true` para superar los snapshots visuales de Playwright con `maxDiffPixelRatio <= 0.01`).
 
 1. **Gráfica de Carga de CPU (%) e Historial Multi-Core** (trazo en Cian `#22D3EE` con relleno translúcido).
 2. **Gráfica de Uso de Memoria RAM (%) y Espacio en Disco.**
@@ -58,7 +61,7 @@ Para cumplir el requerimiento de que **"si dejas el navegador en ese router por 
 
 ## 3. Vistas Especializadas de la Capa 1 (`vue3/src/views/webfig/layer1/`)
 
-Todas las tablas de Capa 1 utilizan `RgDataTable.vue` con **Densidad Dual Adaptativa** (`32px` WinBox en PC / `44px` táctil en móvil) e insignias de estado `[D]`, `[X]`, `[I]`, `[R]`:
+Todas las tablas de Capa 1 utilizan `RgDataTable.vue` con **Densidad Dual Adaptativa** (`32px` WinBox en PC / `44px` táctil en móvil), **Virtual Scrolling** automático (`> 100` filas) e insignias de estado `[D]`, `[X]`, `[I]`, `[R]`:
 
 1. **`InterfacesAndSfpView.vue`:**
    - Sub-pestañas para `Todas`, `Ethernet`, `VLAN`, `Bridge`, `WireGuard` y `WiFi`.
@@ -84,5 +87,5 @@ Todas las tablas de Capa 1 utilizan `RgDataTable.vue` con **Densidad Dual Adapta
 Cuando un ingeniero de Soporte N3 o Administrador navega a cualquier ruta `/routers/{router_id}/webfig/layer2/{ros_path}`:
 
 1. Consulta `GET /api/v1/routers/{router_id}/webfig/layer2/resource/{ros_path}` y abre o enfoca su pestaña en `RouterWorkspaceTabsBar.vue`.
-2. Si `is_singleton === false`, construye automáticamente la tabla `RgDataTable.vue` a partir de `columns_schema` (respetando la densidad adaptativa `32px`/`44px`) y genera dinámicamente el modal de **Crear / Editar Registro** mapeando cada tipo de atributo (`string`, `integer`, `boolean_ros`).
+2. Si `is_singleton === false`, construye automáticamente la tabla `RgDataTable.vue` a partir de `columns_schema` (respetando la densidad adaptativa `32px`/`44px` y el *Virtual Scrolling*) y genera dinámicamente el modal de **Crear / Editar Registro** mapeando cada tipo de atributo (`string`, `integer`, `boolean_ros`).
 3. Si `is_singleton === true`, renderiza directamente el formulario de configuración del módulo con el switch **"Proteger cambio con Safe Mode (60s Rollback)"** activado por defecto.

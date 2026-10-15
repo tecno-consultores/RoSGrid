@@ -95,7 +95,7 @@ Queda **prohibido** guardar tokens JWT en `localStorage` o `sessionStorage`. El 
 
 ### 2.2 Interceptor 2: Generador Criptográfico de `Idempotency-Key` (`UUIDv7`)
 - En toda petición mutable (`POST`, `PUT`, `PATCH`, `DELETE`), si el llamador no proporcionó una llave explícita de reintento, el cliente genera automáticamente un `UUIDv7` ordenable por tiempo (`generateUuidV7()` usando `crypto.getRandomValues`) y lo inyecta en la cabecera `Idempotency-Key`.
-- Si ocurre un error de red transitorio (`TypeError: Failed to fetch` o HTTP `502`/`503`/`504`) y el usuario pulsa "Reintentar", el cliente **reutiliza exactamente la misma `Idempotency-Key`** para garantizar que FastAPI/Redis jamás aplique dos veces el cambio en el MikroTik.
+- Si ocurre un error de red transitorio (`TypeError: Failed to fetch` o HTTP `502`/`503`/`504`) y el usuario pulsa "Reintentar", el cliente **reutiliza exactamente la misma `Idempotency-Key`** para garantizar que FastAPI/KeyDB jamás aplique dos veces el cambio en el MikroTik.
 
 ### 2.3 Interceptor 3: Rotación Transparente de Refresh Token (`401 -> /api/v1/auth/refresh`)
 - Si una petición recibe HTTP `401 Unauthorized` y la ruta no es `/api/v1/auth/login`, `/api/v1/auth/2fa/verify` ni `/api/v1/auth/refresh`:
@@ -110,9 +110,11 @@ Queda **prohibido** guardar tokens JWT en `localStorage` o `sessionStorage`. El 
 
 ---
 
-## 3. Arquitectura de Stores en Pinia (`vue3/src/stores/`)
+## 3. Arquitectura de Stores en Pinia (`vue3/src/stores/`) y Optimización con `shallowRef`
 
 Cada store DEBE tener su archivo de pruebas unitarias correspondiente (`*.unit.ts`) cubriendo `>= 95%` de sus ramas:
+
+- **Regla de Rendimiento (`shallowRef` Obligatorio en Colecciones Masivas):** En `useInventoryStore`, `useWebFigStore` y `useLiveTelemetryStore`, todas las listas de objetos provenientes de RouterOS v7 (interfaces, reglas de Firewall, sesiones PPPoE, rutas BGP) y el `TelemetryRingBuffer` DEBEN declararse utilizando `shallowRef()` (y `triggerRef()` cuando corresponda) en lugar de `ref()` profundo, evitando la sobrecarga de Proxies anidados en memoria RAM.
 
 1. **`useAuthStore.ts`** — Estado del usuario autenticado, `tenant_slug`, rol actual (de los 11 roles), `csrf_token`, helpers reactivos `hasCapability(actionCode)` y método `forceKillSwitchLogout(reason)`.
 2. **`useThemeAndLayoutStore.ts`** — Control de:
@@ -121,12 +123,12 @@ Cada store DEBE tener su archivo de pruebas unitarias correspondiente (`*.unit.t
      * En modo `'auto'` (predeterminado), calcula reactivamente `effectiveTableDensity`: `'compact'` (`32px` estilo WinBox) cuando el viewport es `>= 1024px`, y `'comfortable'` (`44px` táctil de campo) cuando el viewport es `< 1024px`.
      * Expone `setTableDensityMode(mode)` para el conmutador rápido `[≡ Compacta | ☰ Cómoda]` en la cabecera de las tablas.
    - Estado del cajón lateral en móviles/tabletas (`isMobileDrawerOpen`) y del buscador global `Ctrl + K` (`isCommandPaletteOpen`).
-3. **`useInventoryStore.ts`** — Lista de MikroTiks del Tenant, filtros por rol de red/estado/etiqueta, coordenadas para el mapa OpenStreetMap y estado de ventanas de mantenimiento.
-4. **`useWebFigStore.ts`** — Estado activo del MikroTik seleccionado y **Gestor de Pestañas de Trabajo estilo WinBox/IDE (`openRouterTabs`)**:
-   - Mantiene hasta **5 pestañas activas en cola FIFO/LRU (`MAX_OPEN_TABS = 5`)** sincronizadas con `<KeepAlive :max="5">` (cada pestaña guarda `{ tabId, routeName, label, icon, params,closable }`).
+3. **`useInventoryStore.ts`** — Lista de MikroTiks del Tenant (en `shallowRef`), filtros por rol de red/estado/etiqueta, coordenadas para el mapa OpenStreetMap y estado de ventanas de mantenimiento.
+4. **`useWebFigStore.ts`** — Estado activo del MikroTik seleccionado, colecciones de recursos en `shallowRef` y **Gestor de Pestañas de Trabajo estilo WinBox/IDE (`openRouterTabs`)**:
+   - Mantiene hasta **5 pestañas activas en cola FIFO/LRU (`MAX_OPEN_TABS = 5`)** sincronizadas con `<KeepAlive :max="5">` (cada pestaña guarda `{ tabId, routeName, label, icon, params, closable }`).
    - La pestaña principal `Dashboard en Vivo` permanece fija al inicio; al abrir `Interfaces`, `Firewall`, `BGP` o `Ping/Tools`, se agrega o enfoca su pestaña sin perder los filtros aplicados en las demás.
    - Incluye estado del indicador **Safe Mode (Dead Man's Switch)** (`safeModeCountdownSeconds`, `isSafeModeActive`) y el método `clearRouterWorkspace()` que se invoca al cambiar de `router_id` o salir del equipo.
-5. **`useLiveTelemetryStore.ts`** — **Almacenamiento 100% en RAM (`RingBuffer`)** de los puntos recibidos por WebSocket para las gráficas estilo WinBox. Incluye el hook de limpieza automática `resetChartsBuffer()` al salir del router.
+5. **`useLiveTelemetryStore.ts`** — **Almacenamiento 100% en RAM (`RingBuffer` con `shallowRef`)** de los puntos recibidos por WebSocket para las gráficas estilo WinBox. Incluye el hook de limpieza automática `resetChartsBuffer()` al salir del router.
 6. **`useNocEventsStore.ts`** — Conexión al WebSocket global `/ws/v1/tenant/events`, cola de alertas sonoras/visuales del NOC, contador en vivo de solicitudes *Maker-Checker* pendientes y escucha activa del evento `SESSION_KILLED`.
 
 ---

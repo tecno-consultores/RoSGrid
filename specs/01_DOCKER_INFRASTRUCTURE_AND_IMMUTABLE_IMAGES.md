@@ -13,19 +13,20 @@ Toda la infraestructura de RoSGrid DEBE operar consumiendo exclusivamente las si
 
 | Componente | Imagen Oficial Obligatoria | Propósito en RoSGrid | Volumen de Caché / Datos |
 | :--- | :--- | :--- | :--- |
-| **Backend Base & QA** | `sinfallas/base-python-uv:3.13` | Base para `fastapi/Dockerfile`, ejecución local de FastAPI (Uvicorn), migraciones Alembic, workers asíncronos y suite QA Python | `rosgrid_uv_cache:/root/.cache/uv` |
+| **Backend Base & QA** | `sinfallas/base-python-uv:3.13` | Base para `fastapi/Dockerfile`, ejecución local de FastAPI (Uvicorn + `uvloop`), migraciones Alembic, workers asíncronos y suite QA Python | `rosgrid_uv_cache:/root/.cache/uv` |
 | **Frontend Builder & QA** | `sinfallas/base-node-ionic:22` *(o `node:20-bookworm-slim` en QA)* | Etapa builder de `vue3/Dockerfile`, compilación de activos estáticos Vite/Vue 3 (`dist/`), Linting, Vitest y Stryker | `rosgrid_pnpm_store:/pnpm` |
 | **Frontend Web Server** | `nginx:1.27-alpine` / `nginx:alpine` | Base runtime de `vue3/Dockerfile`, servidor HTTP de alta velocidad para el bundle compilado (`vue3/dist`) y proxy inverso | `rosgrid_nginx_logs:/var/log/nginx` |
 | **Imagen Producción Backend** | `sinfallas/rosgrid-backend:latest` | Imagen oficial inmutable de producción publicada en Docker Hub mediante `./build.sh` | `rosgrid_backups_storage:/var/lib/rosgrid/backups` |
 | **Imagen Producción Frontend** | `sinfallas/rosgrid-frontend:latest` | Imagen oficial inmutable de producción (Nginx + SPA compilada) publicada en Docker Hub mediante `./build.sh` | `rosgrid_nginx_logs:/var/log/nginx` |
-| **Base de Datos Relacional** | `postgres:17-alpine` | Almacenamiento transaccional Multi-Tenant con RLS, bóveda AES-256-GCM, backups `.rsc` y auditoría inmutable | `rosgrid_pg_data:/var/lib/postgresql/data` |
-| **Memoria & Estado Efímero** | `redis:7-alpine` | Idempotencia HTTP, sesiones activas (Kill-Switch), Pub/Sub de gráficas en vivo y estado del monitor | `rosgrid_redis_data:/data` |
+| **Base de Datos Relacional** | `postgres:17-alpine` | Almacenamiento transaccional Multi-Tenant con RLS, bóveda AES-256-GCM, backups `.rsc` y auditoría inmutable WORM con índice `BRIN` | `rosgrid_pg_data:/var/lib/postgresql/data` |
+| **Memoria & Estado Efímero (Predeterminado)** | `eqalpha/keydb:alpine` | Motor en memoria **Multi-Hilo (`--server-threads 2`)** para Idempotencia HTTP, sesiones activas (Kill-Switch), Pub/Sub de gráficas en vivo y pipelines del monitor (~35 MB RAM) | `rosgrid_redis_data:/data` |
+| **Memoria Alta Escala (Perfil Opcional ISP)** | `docker.dragonflydb.io/dragonflydb/dragonfly:latest` | Motor *Shared-Nothing* sobre `io_uring` opcional para flotas masivas (> 300–500 routers MikroTik en servidores de 16 GB+ RAM) | `rosgrid_redis_data:/data` |
 | **Pruebas E2E / Visuales** | Imagen oficial Playwright (`v1.43.0-jammy` definida en `vue3/docker-compose.qa.yml`) | Ejecución de Playwright, `@axe-core/playwright` y Lighthouse CI (solo en QA) | `rosgrid_pnpm_store:/pnpm` |
 | **Pruebas BDD Caja Negra** | `sinfallas/karatelabs:latest` | Escenarios funcionales Gherkin contra API y UI (solo en QA) | Bind mount `./test` |
 | **Seguridad Dinámica DAST** | `owasp/zap2docker-stable:latest` | Escaneo dinámico OWASP ZAP Baseline contra el backend vivo (solo en QA) | Bind mount `.:/zap/wrk/:rw` |
 | **Ingeniería del Caos** | `gaiaadm/pumba:latest` | Inyección de latencia y jitter a nivel kernel con `--profile chaos` (solo en QA) | Socket Docker `:ro` |
 | **Observabilidad** | `prom/prometheus:latest` + `nginx/nginx-prometheus-exporter:latest` | Recolección de métricas RED en `/metrics` (FastAPI) y `/stub_status` (Nginx) | Efímero |
-| **Contexto Semántico IA** | `sinfallas/remote-graphify:latest` | Servidor MCP en puerto 8080 bajo `--profile graphify` (solo en QA) | Bind mount `.:/app` |
+| **Contexto Semántico IA** | `sinfallas/remote-graphify:latest` | Extracción de grafos AST bajo `--profile graphify` (solo en QA) | Bind mount `.:/app` |
 
 ---
 
@@ -42,18 +43,18 @@ Para superar la barrera pre-push (`./auditar-infra.sh` con `aquasec/trivy:latest
 3. **Ejecución sin Privilegios (`USER non-root`) en `Dockerfile`:**
    - Tanto `fastapi/Dockerfile` como `vue3/Dockerfile` DEBEN declarar explícitamente un usuario sin privilegios (`USER rosgrid` / `USER nginx`) y una instrucción `HEALTHCHECK` para cumplir las reglas `DS002` y `DS026` de Trivy IaC.
 4. **Restricción de Puertos Expuestos en Producción:**
-   - En `docker-compose.yml` y `docker-compose.prod.yml`, ni `postgres` ni `redis` deben exponer puertos al host (`ports:`). Solo se comunican dentro de la red interna `rosgrid_internal_net`.
+   - En `docker-compose.yml` y `docker-compose.prod.yml`, ni `postgres` ni `rosgrid-redis` (KeyDB) deben exponer puertos al host (`ports:`). Solo se comunican dentro de la red interna `rosgrid_internal_net`.
    - Únicamente el contenedor frontal `rosgrid-ui` (Nginx) expone el puerto HTTP/HTTPS hacia el exterior, actuando como punto de entrada unificado.
 
 ---
 
-## 3. Mecanismo de Migraciones Automáticas con Bloqueo Atómico (`pg_advisory_lock`)
+## 3. Mecanismo de Migraciones Automáticas con Bloqueo Atómico (`pg_advisory_lock`) y Arranque `uvloop`
 
 Uno de los requisitos fundamentales de **RoSGrid** es que **las migraciones de base de datos se ejecuten automáticamente al reiniciar después de una actualización**, garantizando que si se levantan múltiples workers o contenedores concurrentes no corrompan el esquema de PostgreSQL.
 
 ### 3.1 Especificación de `fastapi/scripts/entrypoint.sh`
 
-Antigravity DEBE crear o actualizar el script `fastapi/scripts/entrypoint.sh` (validado con `shellcheck` y `shfmt`) con la siguiente lógica exacta (soportando tanto el modo de desarrollo con volúmenes como la imagen precompilada de producción `ROSGRID_IMAGE_PREBUILT=1`):
+Antigravity DEBE crear o actualizar el script `fastapi/scripts/entrypoint.sh` (validado con `shellcheck` y `shfmt`) con la siguiente lógica exacta (incluyendo `--loop uvloop --http httptools` en el arranque de Uvicorn):
 
 ~~~bash
 #!/usr/bin/env bash
@@ -107,19 +108,21 @@ else:
     sys.exit(1)
 PYEOF
 
-echo "[RoSGrid] Iniciando servidor ASGI Uvicorn..."
+echo "[RoSGrid] Iniciando servidor ASGI Uvicorn de alto rendimiento (uvloop + httptools)..."
 exec uvicorn src.main:app \
     --host 0.0.0.0 \
     --port 8000 \
+    --loop uvloop \
+    --http httptools \
     --proxy-headers \
     --forwarded-allow-ips="*"
 ~~~
 
 ---
 
-## 4. Especificación Completa de `docker-compose.yml` (Entorno Local / Laboratorio EVE-NG)
+## 4. Especificación Completa de `docker-compose.yml` (Entorno Local / Laboratorio EVE-NG con KeyDB Multi-Hilo)
 
-El archivo `docker-compose.yml` en la raíz del proyecto levanta la pila completa para desarrollo y pruebas de laboratorio montando los volúmenes locales:
+El archivo `docker-compose.yml` en la raíz del proyecto levanta la pila completa utilizando **KeyDB Multi-Hilo (`eqalpha/keydb:alpine`)** por defecto (manteniendo el nombre de servicio `rosgrid-redis` para transparencia con `ROSGRID_REDIS_URL`):
 
 ~~~yaml
 services:
@@ -136,7 +139,7 @@ services:
     volumes:
       - rosgrid_pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-rosgrid_user} -d$${POSTGRES_DB:-rosgrid}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-rosgrid_user} -d $${POSTGRES_DB:-rosgrid}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -144,23 +147,54 @@ services:
       - rosgrid_internal_net
 
   rosgrid-redis:
-    image: redis:7-alpine
+    image: eqalpha/keydb:alpine
     container_name: rosgrid_redis
     hostname: rosgrid_redis
     restart: unless-stopped
     environment:
       TZ: "America/Caracas"
     command: >
-      redis-server
-      --appendonly yes
+      keydb-server
+      --server-threads 2
+      --appendonly no
+      --save ""
       --maxmemory 512mb
       --maxmemory-policy volatile-lru
-      --requirepass "${REDIS_PASSWORD:?Debes definir REDIS_PASSWORD en .env}" volumes: - rosgrid_redis_data:/data healthcheck: test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
+      --requirepass "${REDIS_PASSWORD:?Debes definir REDIS_PASSWORD en .env}"
+    volumes:
+      - rosgrid_redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "keydb-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
       interval: 5s
       timeout: 3s
       retries: 10
     networks:
       - rosgrid_internal_net
+
+  # --- PERFIL OPCIONAL DE ALTO RENDIMIENTO PARA GRANDES FLOTAS ISP (>300 ROUTERS / 16GB+ RAM): DRAGONFLYDB ---
+  # Para activarlo en servidores dedicados, reemplaza el bloque rosgrid-redis anterior por:
+  # rosgrid-redis:
+  #   image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+  #   container_name: rosgrid_redis
+  #   hostname: rosgrid_redis
+  #   restart: unless-stopped
+  #   ulimits:
+  #     memlock: -1
+  #   command: >
+  #     dragonfly
+  #     --proactor_threads=4
+  #     --maxmemory=2gb
+  #     --requirepass=${REDIS_PASSWORD}
+  #     --alsologtostderr
+  #   volumes:
+  #     - rosgrid_redis_data:/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   networks:
+  #     - rosgrid_internal_net
 
   rosgrid-api:
     image: sinfallas/base-python-uv:3.13
@@ -285,7 +319,7 @@ volumes:
 
 ## 5. Plantilla Obligatoria `.env.example`
 
-Antigravity DEBE crear el archivo `.env.example` en la raíz del proyecto usando exclusivamente marcadores ficticios (para no activar jamás la regla `leaks-check` de `lefthook.yml`):
+Antigravity DEBE mantener el archivo `.env.example` en la raíz del proyecto usando exclusivamente marcadores ficticios (para no activar jamás la regla `leaks-check` de `lefthook.yml`):
 
 ~~~dotenv
 # ==============================================================================
@@ -302,7 +336,7 @@ POSTGRES_DB=rosgrid
 POSTGRES_USER=rosgrid_user
 POSTGRES_PASSWORD=cambiar_en_entorno_local
 
-# --- Redis 7 ---
+# --- KeyDB Multi-Hilo / DragonflyDB (Protocolo RESP) ---
 REDIS_PASSWORD=cambiar_en_entorno_local
 
 # --- Criptografía y Seguridad (Generar con: openssl rand -base64 32) ---
@@ -372,7 +406,7 @@ server {
 
     # Soporte de enrutamiento HTML5 History Mode para Vue Router
     location / {
-        try_files $uri$uri/ /index.html;
+        try_files $uri $uri/ /index.html;
     }
 }
 ~~~
@@ -423,7 +457,7 @@ USER rosgrid
 EXPOSE 8000
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -fsS [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health) || exit 1
+    CMD curl -fsS http://127.0.0.1:8000/health || exit 1
 
 ENTRYPOINT ["/usr/bin/env", "bash", "/app/scripts/entrypoint.sh"]
 ~~~
@@ -468,7 +502,7 @@ USER nginx
 EXPOSE 8080
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=5s --retries=3 \
-    CMD wget -q -O /dev/null [http://127.0.0.1:8080/](http://127.0.0.1:8080/) || exit 1
+    CMD wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
 ~~~
@@ -527,7 +561,7 @@ echo "finalizado..."
 exit 0
 ~~~
 
-### 7.4 `docker-compose.prod.yml` (Despliegue Directo desde Docker Hub)
+### 7.4 `docker-compose.prod.yml` (Despliegue Directo desde Docker Hub con KeyDB Multi-Hilo)
 
 Para que cualquier operador o ISP despliegue RoSGrid en producción descargando directamente las imágenes compiladas desde Docker Hub sin necesitar el código fuente:
 
@@ -554,23 +588,45 @@ services:
       - rosgrid_internal_net
 
   rosgrid-redis:
-    image: redis:7-alpine
+    image: eqalpha/keydb:alpine
     container_name: rosgrid_redis
     hostname: rosgrid_redis
     restart: unless-stopped
     environment:
       TZ: "America/Caracas"
     command: >
-      redis-server
-      --appendonly yes
+      keydb-server
+      --server-threads 2
+      --appendonly no
+      --save ""
       --maxmemory 512mb
       --maxmemory-policy volatile-lru
-      --requirepass "${REDIS_PASSWORD:?Debes definir REDIS_PASSWORD en .env}" volumes: - rosgrid_redis_data:/data healthcheck: test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
+      --requirepass "${REDIS_PASSWORD:?Debes definir REDIS_PASSWORD en .env}" volumes: - rosgrid_redis_data:/data healthcheck: test: ["CMD-SHELL", "keydb-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
       interval: 5s
       timeout: 3s
       retries: 10
     networks:
       - rosgrid_internal_net
+
+  # --- PERFIL OPCIONAL DE ALTO RENDIMIENTO PARA GRANDES FLOTAS ISP (>300 ROUTERS / 16GB+ RAM): DRAGONFLYDB ---
+  # Para activarlo en servidores dedicados, reemplaza el bloque rosgrid-redis anterior por:
+  # rosgrid-redis:
+  #   image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+  #   container_name: rosgrid_redis
+  #   hostname: rosgrid_redis
+  #   restart: unless-stopped
+  #   ulimits:
+  #     memlock: -1
+  #   command: >
+  #     dragonfly
+  #     --proactor_threads=4
+  #     --maxmemory=2gb
+  #     --requirepass=${REDIS_PASSWORD} #     --alsologtostderr #   volumes: #     - rosgrid_redis_data:/data #   healthcheck: #     test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   networks:
+  #     - rosgrid_internal_net
 
   rosgrid-api:
     image: sinfallas/rosgrid-backend:latest
