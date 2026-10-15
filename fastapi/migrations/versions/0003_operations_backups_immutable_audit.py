@@ -304,6 +304,12 @@ def upgrade() -> None:
     op.create_index("idx_audit_tenant_created", "audit_logs", ["tenant_id", "created_at"])
     op.create_index("idx_audit_tenant_actor", "audit_logs", ["tenant_id", "actor_user_id"])
     op.create_index("idx_audit_tenant_category", "audit_logs", ["tenant_id", "event_category"])
+    op.create_index(
+        "ix_audit_logs_created_at_brin",
+        "audit_logs",
+        ["created_at"],
+        postgresql_using="brin",
+    )
 
     # 9. Function & Trigger WORM para audit_logs
     op.execute("""

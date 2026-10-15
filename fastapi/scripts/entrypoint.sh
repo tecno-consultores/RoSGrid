@@ -53,5 +53,7 @@ echo "[RoSGrid] Iniciando servidor ASGI Uvicorn..."
 exec uvicorn src.main:app \
     --host 0.0.0.0 \
     --port 8000 \
+    --loop uvloop \
+    --http httptools \
     --proxy-headers \
     --forwarded-allow-ips="*"

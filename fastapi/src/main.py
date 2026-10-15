@@ -6,11 +6,13 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import Depends, FastAPI
+from fastapi.responses import ORJSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from src.api.deps import get_current_user_claims
 from src.api.router import api_v1_router
 from src.api.v1.websockets import router as websockets_router
+from src.core.config import settings
 from src.core.csrf import CSRFProtectionMiddleware
 from src.core.security_headers import SecurityHeadersMiddleware
 from src.redis_layer.client import close_redis_client
@@ -24,10 +26,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
 
 def create_app() -> FastAPI:
+    is_prod = settings.ROSGRID_ENV == "production"
     app = FastAPI(
         title="RoSGrid API",
         version="1.0.0",
         description="Plataforma Centralizada Multi-Tenant para Flotas MikroTik RouterOS v7+ (GPL-3.0-only)",
+        default_response_class=ORJSONResponse,
+        docs_url=None if is_prod else "/docs",
+        redoc_url=None if is_prod else "/redoc",
+        openapi_url=None if is_prod else "/openapi.json",
         lifespan=lifespan,
     )
 

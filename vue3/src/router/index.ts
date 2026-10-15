@@ -1,0 +1,238 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 RoSGrid Contributors
+
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
+import type { SystemRole } from '@/types';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { useWebFigStore } from '@/stores/useWebFigStore';
+
+const routes: RouteRecordRaw[] = [
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views/LoginView.vue'),
+    meta: {
+      requiresAuth: false,
+      title: 'Iniciar Sesión — RoSGrid',
+    },
+  },
+  {
+    path: '/',
+    redirect: '/inventory',
+  },
+  {
+    path: '/inventory',
+    name: 'RouterInventory',
+    component: () => import('@/views/RouterInventoryView.vue'),
+    meta: {
+      requiresAuth: true,
+      title: 'Inventario de Equipos MikroTik — RoSGrid',
+    },
+  },
+  {
+    path: '/routers/:routerId/webfig',
+    name: 'RouterWebFig',
+    component: () => import('@/views/RouterWebFigLayout.vue'),
+    meta: {
+      requiresAuth: true,
+      title: 'Consola WebFig — RoSGrid',
+    },
+    children: [
+      {
+        path: '',
+        redirect: (to) => `/routers/${to.params.routerId}/webfig/live`,
+      },
+      {
+        path: 'live',
+        name: 'RouterLiveDashboard',
+        component: () => import('@/views/RouterLiveDashboardView.vue'),
+        meta: {
+          requiresAuth: true,
+          title: 'Dashboard en Vivo — RoSGrid',
+          tabLabel: 'Dashboard en Vivo',
+          tabIcon: '📊',
+        },
+      },
+      {
+        path: 'interfaces',
+        name: 'InterfacesAndSfp',
+        component: () => import('@/views/InterfacesAndSfpView.vue'),
+        meta: {
+          requiresAuth: true,
+          title: 'Interfaces y SFP DDM — RoSGrid',
+          tabLabel: 'Interfaces & SFP',
+          tabIcon: '🔌',
+        },
+      },
+      {
+        path: 'firewall',
+        name: 'FirewallRules',
+        component: () => import('@/views/FirewallRulesView.vue'),
+        meta: {
+          requiresAuth: true,
+          title: 'Reglas de Firewall — RoSGrid',
+          tabLabel: 'Firewall',
+          tabIcon: '🛡️',
+        },
+      },
+      {
+        path: 'routing',
+        name: 'RoutingBgpOspf',
+        component: () => import('@/views/RoutingBgpOspfView.vue'),
+        meta: {
+          requiresAuth: true,
+          title: 'Routing v7 BGP / OSPF — RoSGrid',
+          tabLabel: 'Routing',
+          tabIcon: '🌐',
+        },
+      },
+      {
+        path: 'ppp',
+        name: 'PppAndQueues',
+        component: () => import('@/views/PppAndQueuesView.vue'),
+        meta: {
+          requiresAuth: true,
+          title: 'PPPoE y Colas — RoSGrid',
+          tabLabel: 'PPP & Colas',
+          tabIcon: '⚡',
+        },
+      },
+      {
+        path: 'tools',
+        name: 'LiveToolsDiagnostics',
+        component: () => import('@/views/LiveToolsDiagnosticsView.vue'),
+        meta: {
+          requiresAuth: true,
+          title: 'Herramientas y Diagnóstico — RoSGrid',
+          tabLabel: 'Herramientas',
+          tabIcon: '🛠️',
+        },
+      },
+    ],
+  },
+  {
+    path: '/approvals',
+    name: 'ApprovalsInbox',
+    component: () => import('@/views/ApprovalsInboxView.vue'),
+    meta: {
+      requiresAuth: true,
+      title: 'Bandeja Maker-Checker — RoSGrid',
+      allowedRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'SUPERVISOR', 'SUPPORT_L3'],
+    },
+  },
+  {
+    path: '/backups',
+    name: 'RscGitDiff',
+    component: () => import('@/views/RscGitDiffViewer.vue'),
+    meta: {
+      requiresAuth: true,
+      title: 'Respaldos y Comparador Diff — RoSGrid',
+    },
+  },
+  {
+    path: '/bulk-ops',
+    name: 'BulkOperations',
+    component: () => import('@/views/BulkOperationsAndUpdatesView.vue'),
+    meta: {
+      requiresAuth: true,
+      title: 'Operaciones Masivas y Actualizaciones — RoSGrid',
+      allowedRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'SUPERVISOR', 'SUPPORT_L3', 'SUPPORT_L2'],
+    },
+  },
+  {
+    path: '/noc-wallboard',
+    name: 'NocWallboard',
+    component: () => import('@/views/NocWallboardView.vue'),
+    meta: {
+      requiresAuth: true,
+      title: 'Wallboard NOC 24/7 — RoSGrid',
+    },
+  },
+  {
+    path: '/audit-logs',
+    name: 'ImmutableAuditLogs',
+    component: () => import('@/views/ImmutableAuditLogsView.vue'),
+    meta: {
+      requiresAuth: true,
+      title: 'Consola Forense WORM — RoSGrid',
+      allowedRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'AUDITOR', 'SECURITY_OFFICER'],
+    },
+  },
+  {
+    path: '/users',
+    name: 'UsersAndPermissions',
+    component: () => import('@/views/UsersAndPermissionsView.vue'),
+    meta: {
+      requiresAuth: true,
+      title: 'Usuarios y Matriz RBAC — RoSGrid',
+      allowedRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN'],
+    },
+  },
+  {
+    path: '/sessions',
+    name: 'ActiveSessionsKillSwitch',
+    component: () => import('@/views/ActiveSessionsKillSwitchView.vue'),
+    meta: {
+      requiresAuth: true,
+      title: 'Sesiones Activas y Kill-Switch — RoSGrid',
+      allowedRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'SUPERVISOR'],
+    },
+  },
+];
+
+export const router = createRouter({
+  history: createWebHistory(),
+  routes,
+});
+
+router.beforeEach((to, _from, next) => {
+  // 1. Actualización de título para WCAG 2.1 AA y SEO
+  if (to.meta.title && typeof document !== 'undefined') {
+    document.title = String(to.meta.title);
+  }
+
+  const authStore = useAuthStore();
+  const requiresAuth = to.meta.requiresAuth !== false;
+
+  // 2. Control de autenticación
+  if (requiresAuth && !authStore.isAuthenticated) {
+    return next({ path: '/login', query: { redirect: to.fullPath } });
+  }
+
+  if (to.path === '/login' && authStore.isAuthenticated) {
+    return next({ path: '/inventory' });
+  }
+
+  // 3. Reglas especiales RBAC por rol
+  const role = authStore.currentRole;
+  if (role === 'NOC_MONITOR' && to.path !== '/noc-wallboard') {
+    return next({ path: '/noc-wallboard' });
+  }
+
+  // 4. Verificación de allowedRoles declarados en la ruta
+  const allowed = to.meta.allowedRoles as SystemRole[] | undefined;
+  if (allowed && role && !allowed.includes(role)) {
+    return next({ path: '/inventory' });
+  }
+
+  // 5. Sincronización automática de pestañas de WebFig
+  if (to.path.includes('/webfig/') && to.name) {
+    const webFigStore = useWebFigStore();
+    const routerId = String(to.params.routerId || '');
+    const tabId = String(to.name);
+    const label = String(to.meta.tabLabel || to.name);
+    const icon = String(to.meta.tabIcon || '📄');
+    const isDashboard = tabId === 'RouterLiveDashboard';
+
+    webFigStore.openOrFocusTab({
+      tabId,
+      routeName: String(to.name),
+      label,
+      icon,
+      params: { routerId },
+      closable: !isDashboard,
+    });
+  }
+
+  next();
+});

@@ -20,22 +20,24 @@ services:
       - rosgrid_internal_net
 
   rosgrid-redis:
-    image: redis:7-alpine
+    image: eqalpha/keydb:alpine
     container_name: rosgrid_redis
-    hostname: rosgrid_redis
+    hostname: rosgrid-redis
     restart: unless-stopped
     environment:
       TZ: "America/Caracas"
     command: >
-      redis-server
-      --appendonly yes
+      keydb-server
+      --server-threads 2
+      --appendonly no
+      --save ""
       --maxmemory 512mb
       --maxmemory-policy volatile-lru
       --requirepass "${REDIS_PASSWORD:?Debes definir REDIS_PASSWORD en .env}"
     volumes:
       - rosgrid_redis_data:/data
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
+      test: ["CMD-SHELL", "keydb-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
       interval: 5s
       timeout: 3s
       retries: 10

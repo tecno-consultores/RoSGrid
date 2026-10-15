@@ -14,7 +14,7 @@ Toda la infraestructura de RoSGrid DEBE operar consumiendo exclusivamente las si
 | Componente | Imagen Oficial Obligatoria | Propósito en RoSGrid | Volumen de Caché / Datos |
 | :--- | :--- | :--- | :--- |
 | **Backend Base & QA** | `sinfallas/base-python-uv:3.13` | Base para `fastapi/Dockerfile`, ejecución local de FastAPI (Uvicorn + `uvloop`), migraciones Alembic, workers asíncronos y suite QA Python | `rosgrid_uv_cache:/root/.cache/uv` |
-| **Frontend Builder & QA** | `sinfallas/base-node-ionic:22` *(o `node:20-bookworm-slim` en QA)* | Etapa builder de `vue3/Dockerfile`, compilación de activos estáticos Vite/Vue 3 (`dist/`), Linting, Vitest y Stryker | `rosgrid_pnpm_store:/pnpm` |
+| **Frontend Builder & QA** | `sinfallas/base-node-ionic:22` | Etapa builder de `vue3/Dockerfile`, compilación de activos estáticos Vite/Vue 3 (`dist/`), Linting, Vitest y Stryker en `vue3/docker-compose.qa.yml` | `rosgrid_pnpm_store:/pnpm` |
 | **Frontend Web Server** | `nginx:1.27-alpine` / `nginx:alpine` | Base runtime de `vue3/Dockerfile`, servidor HTTP de alta velocidad para el bundle compilado (`vue3/dist`) y proxy inverso | `rosgrid_nginx_logs:/var/log/nginx` |
 | **Imagen Producción Backend** | `sinfallas/rosgrid-backend:latest` | Imagen oficial inmutable de producción publicada en Docker Hub mediante `./build.sh` | `rosgrid_backups_storage:/var/lib/rosgrid/backups` |
 | **Imagen Producción Frontend** | `sinfallas/rosgrid-frontend:latest` | Imagen oficial inmutable de producción (Nginx + SPA compilada) publicada en Docker Hub mediante `./build.sh` | `rosgrid_nginx_logs:/var/log/nginx` |
@@ -139,7 +139,7 @@ services:
     volumes:
       - rosgrid_pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-rosgrid_user} -d $${POSTGRES_DB:-rosgrid}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-rosgrid_user} -d$${POSTGRES_DB:-rosgrid}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -149,7 +149,7 @@ services:
   rosgrid-redis:
     image: eqalpha/keydb:alpine
     container_name: rosgrid_redis
-    hostname: rosgrid_redis
+    hostname: rosgrid-redis
     restart: unless-stopped
     environment:
       TZ: "America/Caracas"
@@ -160,11 +160,7 @@ services:
       --save ""
       --maxmemory 512mb
       --maxmemory-policy volatile-lru
-      --requirepass "${REDIS_PASSWORD:?Debes definir REDIS_PASSWORD en .env}"
-    volumes:
-      - rosgrid_redis_data:/data
-    healthcheck:
-      test: ["CMD-SHELL", "keydb-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
+      --requirepass "${REDIS_PASSWORD:?Debes definir REDIS_PASSWORD en .env}" volumes: - rosgrid_redis_data:/data healthcheck: test: ["CMD-SHELL", "keydb-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -176,7 +172,7 @@ services:
   # rosgrid-redis:
   #   image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
   #   container_name: rosgrid_redis
-  #   hostname: rosgrid_redis
+  #   hostname: rosgrid-redis
   #   restart: unless-stopped
   #   ulimits:
   #     memlock: -1
@@ -184,12 +180,7 @@ services:
   #     dragonfly
   #     --proactor_threads=4
   #     --maxmemory=2gb
-  #     --requirepass=${REDIS_PASSWORD}
-  #     --alsologtostderr
-  #   volumes:
-  #     - rosgrid_redis_data:/data
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
+  #     --requirepass=${REDIS_PASSWORD} #     --alsologtostderr #   volumes: #     - rosgrid_redis_data:/data #   healthcheck: #     test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
   #     interval: 10s
   #     timeout: 5s
   #     retries: 5
@@ -406,7 +397,7 @@ server {
 
     # Soporte de enrutamiento HTML5 History Mode para Vue Router
     location / {
-        try_files $uri $uri/ /index.html;
+        try_files $uri$uri/ /index.html;
     }
 }
 ~~~
@@ -590,7 +581,7 @@ services:
   rosgrid-redis:
     image: eqalpha/keydb:alpine
     container_name: rosgrid_redis
-    hostname: rosgrid_redis
+    hostname: rosgrid-redis
     restart: unless-stopped
     environment:
       TZ: "America/Caracas"
@@ -613,7 +604,7 @@ services:
   # rosgrid-redis:
   #   image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
   #   container_name: rosgrid_redis
-  #   hostname: rosgrid_redis
+  #   hostname: rosgrid-redis
   #   restart: unless-stopped
   #   ulimits:
   #     memlock: -1

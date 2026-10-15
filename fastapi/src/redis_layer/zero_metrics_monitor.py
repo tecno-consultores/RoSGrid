@@ -2,6 +2,7 @@
 # Copyright (C) 2026 RoSGrid Contributors
 
 import time
+from typing import Any
 
 STATUS_ONLINE = "ONLINE"
 STATUS_DEGRADED = "DEGRADED_HIGH_LOAD"
@@ -99,3 +100,24 @@ def evaluate_router_monitoring_cycle(
         }
     )
     return new_status, alert, state
+
+
+async def write_monitoring_state_pipeline(
+    redis: Any,
+    tenant_id: Any,
+    router_id: Any,
+    updated_state: dict[str, str],
+    ttl_seconds: int = 86400,
+) -> None:
+    """Escribe el estado del monitor en KeyDB mediante un pipeline atómico de alto rendimiento."""
+    state_key = f"rg:{tenant_id}:mon_state:{router_id}"
+    try:
+        pipe = redis.pipeline(transaction=False)
+        if hasattr(pipe, "hset") and callable(getattr(pipe, "hset", None)):
+            pipe.hset(state_key, mapping=updated_state)
+            pipe.expire(state_key, ttl_seconds)
+            await pipe.execute()
+            return
+    except Exception:  # nosec B110
+        pass
+    await redis.hset(state_key, mapping=updated_state)

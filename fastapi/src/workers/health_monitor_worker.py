@@ -18,7 +18,10 @@ from src.db.session import async_session_maker
 from src.mikrotik.client import MikrotikRestClient
 from src.models.inventory import MaintenanceWindow, Router, RouterAdminStateEnum
 from src.redis_layer.client import get_redis_client
-from src.redis_layer.zero_metrics_monitor import evaluate_router_monitoring_cycle
+from src.redis_layer.zero_metrics_monitor import (
+    evaluate_router_monitoring_cycle,
+    write_monitoring_state_pipeline,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +104,7 @@ async def _evaluate_single_router(session: Any, redis: Any, r: Router) -> None:
         in_maintenance=in_maint,
     )
 
-    await redis.hset(state_key, mapping=updated_state)
+    await write_monitoring_state_pipeline(redis, r.tenant_id, r.id, updated_state)
     r.is_reachable = is_reachable
     if is_reachable:
         r.last_seen_at = datetime.now(UTC)

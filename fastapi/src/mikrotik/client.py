@@ -103,9 +103,11 @@ class MikrotikRestClient:
     async def _get_client(self) -> httpx.AsyncClient:
         if self._client is None or self._client.is_closed:
             ssl_ctx = create_tofu_ssl_context() if self.use_ssl else None
+            limits = httpx.Limits(max_keepalive_connections=20, max_connections=100, keepalive_expiry=60.0)
             self._client = httpx.AsyncClient(
                 verify=ssl_ctx if ssl_ctx else False,
                 timeout=httpx.Timeout(self.timeout),
+                limits=limits,
                 headers={
                     "Accept": "application/json",
                     "Content-Type": "application/json",

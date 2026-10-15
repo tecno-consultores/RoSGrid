@@ -57,3 +57,23 @@ async def test_db_session_lifecycles() -> None:
         assert t_sess is mock_session
         with pytest.raises(StopAsyncIteration):
             await anext(t_gen)
+
+
+def test_create_app_configurations() -> None:
+    from fastapi.responses import ORJSONResponse
+
+    from src.main import create_app
+
+    with patch("src.main.settings.ROSGRID_ENV", "qa_test"):
+        app_dev = create_app()
+        assert app_dev.router.default_response_class is ORJSONResponse
+        assert app_dev.docs_url == "/docs"
+        assert app_dev.redoc_url == "/redoc"
+        assert app_dev.openapi_url == "/openapi.json"
+
+    with patch("src.main.settings.ROSGRID_ENV", "production"):
+        app_prod = create_app()
+        assert app_prod.router.default_response_class is ORJSONResponse
+        assert app_prod.docs_url is None
+        assert app_prod.redoc_url is None
+        assert app_prod.openapi_url is None

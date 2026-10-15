@@ -1,0 +1,6 @@
+dist/
+coverage/
+node_modules/
+playwright-report/
+lhci-reports/
+.stryker-tmp/

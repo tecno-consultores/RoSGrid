@@ -1,0 +1,206 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+/* Copyright (C) 2026 RoSGrid Contributors */
+
+:root,
+[data-theme="dark"] {
+  --rg-bg-canvas: #0B0F19;
+  --rg-bg-surface: #111827;
+  --rg-bg-elevated: #1E293B;
+  --rg-border-grid: #1E293B;
+  --rg-border-panel: #334155;
+
+  --rg-accent-cyan: #22D3EE;
+  --rg-accent-cyan-dark: #06B6D4;
+  --rg-cyan-glow: 0 0 12px rgba(6, 182, 212, 0.28);
+
+  --rg-text-primary: #F8FAFC;
+  --rg-text-secondary: #CBD5E1;
+  --rg-text-muted: #94A3B8;
+
+  --rg-status-online: #10B981;
+  --rg-status-online-text: #6EE7B7;
+  --rg-status-online-bg: #064E3B;
+
+  --rg-status-warning: #F59E0B;
+  --rg-status-warning-text: #FDE68A;
+  --rg-status-warning-bg: #78350F;
+
+  --rg-status-critical: #EF4444;
+  --rg-status-critical-text: #FCA5A5;
+  --rg-status-critical-bg: #7F1D1D;
+
+  --rg-status-info: #38BDF8;
+  --rg-status-info-text: #BAE6FD;
+  --rg-status-info-bg: #0C4A6E;
+
+  --rg-font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, sans-serif;
+  --rg-font-mono: 'JetBrains Mono', 'Ubuntu Mono', ui-monospace, SFMono-Regular, monospace;
+
+  --rg-row-height-compact: 32px;
+  --rg-row-height-comfortable: 44px;
+}
+
+[data-theme="light"] {
+  --rg-bg-canvas: #F8FAFC;
+  --rg-bg-surface: #FFFFFF;
+  --rg-bg-elevated: #F1F5F9;
+  --rg-border-grid: #E2E8F0;
+  --rg-border-panel: #CBD5E1;
+
+  --rg-accent-cyan: #0E7490;
+  --rg-accent-cyan-dark: #155E75;
+  --rg-cyan-glow: 0 0 8px rgba(14, 116, 144, 0.2);
+
+  --rg-text-primary: #0F172A;
+  --rg-text-secondary: #334155;
+  --rg-text-muted: #64748B;
+
+  --rg-status-online: #059669;
+  --rg-status-online-text: #065F46;
+  --rg-status-online-bg: #D1FAE5;
+
+  --rg-status-warning: #D97706;
+  --rg-status-warning-text: #92400E;
+  --rg-status-warning-bg: #FEF3C7;
+
+  --rg-status-critical: #DC2626;
+  --rg-status-critical-text: #991B1B;
+  --rg-status-critical-bg: #FEE2E2;
+
+  --rg-status-info: #0284C7;
+  --rg-status-info-text: #075985;
+  --rg-status-info-bg: #E0F2FE;
+}
+
+[data-theme="noc-high-contrast"] {
+  --rg-bg-canvas: #000000;
+  --rg-bg-surface: #0A0A0A;
+  --rg-bg-elevated: #171717;
+  --rg-border-grid: #06B6D4;
+  --rg-border-panel: #22D3EE;
+
+  --rg-accent-cyan: #38BDF8;
+  --rg-accent-cyan-dark: #0284C7;
+  --rg-cyan-glow: 0 0 16px rgba(56, 189, 248, 0.5);
+
+  --rg-text-primary: #FFFFFF;
+  --rg-text-secondary: #E2E8F0;
+  --rg-text-muted: #CBD5E1;
+
+  --rg-status-online: #34D399;
+  --rg-status-online-text: #FFFFFF;
+  --rg-status-online-bg: #064E3B;
+
+  --rg-status-warning: #FBBF24;
+  --rg-status-warning-text: #000000;
+  --rg-status-warning-bg: #F59E0B;
+
+  --rg-status-critical: #F87171;
+  --rg-status-critical-text: #FFFFFF;
+  --rg-status-critical-bg: #991B1B;
+
+  --rg-status-info: #38BDF8;
+  --rg-status-info-text: #000000;
+  --rg-status-info-bg: #38BDF8;
+}
+
+/* Global Reset & Box Sizing */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  background-color: var(--rg-bg-canvas);
+  color: var(--rg-text-primary);
+  font-family: var(--rg-font-ui);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Tabular Numbers for Technical/NOC Data */
+.tabular-nums,
+table,
+.rg-data,
+.rg-counter,
+.rg-metric {
+  font-family: var(--rg-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Accessibility: Skip Link */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 8px;
+  background: var(--rg-accent-cyan);
+  color: #000000;
+  padding: 8px 14px;
+  font-weight: 600;
+  z-index: 9999;
+  border-radius: 4px;
+  transition: top 0.2s ease;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: 8px;
+}
+
+/* RouterOS Standard Flags/Badges */
+.rg-flag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--rg-font-mono);
+  font-weight: 700;
+  font-size: 11px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 2px;
+  user-select: none;
+}
+
+.rg-flag--d {
+  background-color: var(--rg-status-info-bg);
+  color: var(--rg-status-info-text);
+  border: 1px solid var(--rg-status-info);
+}
+
+.rg-flag--x {
+  background-color: var(--rg-bg-elevated);
+  color: var(--rg-text-muted);
+  border: 1px solid var(--rg-border-panel);
+  font-style: italic;
+}
+
+.rg-flag--i {
+  background-color: var(--rg-status-critical-bg);
+  color: var(--rg-status-critical-text);
+  border: 1px solid var(--rg-status-critical);
+}
+
+.rg-flag--r {
+  background-color: var(--rg-status-online-bg);
+  color: var(--rg-status-online-text);
+  border: 1px solid var(--rg-status-online);
+}
+
+/* Disabled Row in WinBox Style */
+tr.rg-row--disabled {
+  opacity: 0.55;
+  font-style: italic;
+}
+
+/* Active Row Indicator */
+tr.rg-row--active {
+  border-left: 2px solid var(--rg-accent-cyan-dark);
+  background-color: var(--rg-bg-elevated);
+}

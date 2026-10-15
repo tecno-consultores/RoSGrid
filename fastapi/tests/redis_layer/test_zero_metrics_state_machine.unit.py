@@ -1,6 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 RoSGrid Contributors
 
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
 from src.redis_layer.zero_metrics_monitor import (
     ALERT_HIGH_CPU,
     ALERT_ROUTER_DOWN,
@@ -12,6 +16,7 @@ from src.redis_layer.zero_metrics_monitor import (
     STATUS_SSL_MISMATCH,
     evaluate_router_monitoring_cycle,
     get_default_monitor_state,
+    write_monitoring_state_pipeline,
 )
 
 
@@ -149,3 +154,16 @@ def test_ssl_mismatch_transition() -> None:
     )
     assert new_status == STATUS_SSL_MISMATCH
     assert alert is None
+
+
+@pytest.mark.asyncio
+async def test_write_monitoring_state_pipeline() -> None:
+    redis = MagicMock()
+    pipe = MagicMock()
+    pipe.execute = AsyncMock()
+    redis.pipeline.return_value = pipe
+    state = {"operational_status": "ONLINE"}
+    await write_monitoring_state_pipeline(redis, "tenant1", "router1", state, 3600)
+    pipe.hset.assert_called_once_with("rg:tenant1:mon_state:router1", mapping=state)
+    pipe.expire.assert_called_once_with("rg:tenant1:mon_state:router1", 3600)
+    pipe.execute.assert_awaited_once()

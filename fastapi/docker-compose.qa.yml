@@ -23,6 +23,24 @@ services:
       - seccomp:unconfined
     command: bash -c "uv pip install --system -e '.[dev]' && uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload"
 
+  rosgrid-redis:
+    image: eqalpha/keydb:alpine
+    container_name: fastapi_qa_redis
+    hostname: rosgrid-redis
+    restart: unless-stopped
+    command: >
+      keydb-server
+      --server-threads 2
+      --appendonly no
+      --save ""
+      --maxmemory 256mb
+      --maxmemory-policy volatile-lru
+    healthcheck:
+      test: ["CMD-SHELL", "keydb-cli ping | grep PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   qa-backend:
     image: sinfallas/base-python-uv:3.13
     container_name: fastapi_qa_backend

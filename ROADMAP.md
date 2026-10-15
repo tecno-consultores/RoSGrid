@@ -1,10 +1,10 @@
 # 🗺️ ROADMAP GRANULAR DE EJECUCIÓN (30 SPECS) — RoSGrid
 
 ## 📍 Punto de Control Actual (Checkpoint)
-- **Hito Actual en Curso:** Sub-tarea `10.6` (Optimización de Alto Rendimiento Backend con KeyDB Multi-Hilo) e inicio del Hito 11 (Frontend Vue 3 Base — Zero-Trust, Interceptores, Stores Pinia y Sistema de Diseño WCAG)
-- **Último Archivo de `specs/` Procesado:** `specs/24`, `specs/25` y `specs/26` (Certificación QA 11X Backend adelantada: Sub-tareas 15.1 y 15.2 superadas)
-- **Último Módulo de Código Creado:** Suite unitaria completa Backend (`fastapi/tests/` con 284 tests unitarios pasando, cobertura 95.03% y `make qa-lint` 0 errores en Docker) y `fastapi/test/api_test.feature`
-- **Siguiente Paso Inmediato:** Ejecutar Sub-tarea **10.6** (KeyDB Multi-Hilo, `ORJSONResponse`, `uvloop`, Pool TLS Keep-Alive, Pipelines KeyDB, índice `BRIN` en `audit_logs` y ocultamiento de Swagger en producción) y arrancar Sub-tarea **11.1** del Frontend (`specs/18` y `specs/19`)
+- **Hito Actual en Curso:** Hito 12 (Vistas Frontend - Parte A: Login 2FA, Usuarios/Matriz, Kill-Switch, Inventario OSM y Bóveda)
+- **Último Archivo de `specs/` Procesado:** `specs/18_FRONTEND_PHASE_1_SETUP_ZERO_TRUST_AND_INTERCEPTORS.md` y `specs/19_FRONTEND_DESIGN_SYSTEM_ACCESSIBILITY_AND_PERFORMANCE.md`
+- **Último Módulo de Código Creado:** Base Frontend Vue 3 (`vue3/` completa: TypeScript estricto, 4 interceptores, 6 stores Pinia con `shallowRef`, temas WCAG 2.1 AA, 5 componentes base WinBox/Táctil con Virtual Scrolling, 15 suites unitarias [103 tests, cobertura >95%] y bundle Vite verificado) + Sub-tarea 10.6 Backend (KeyDB Multi-Hilo, `orjson`, `uvloop`, pool keep-alive TLS, pipelines KeyDB y BRIN en PostgreSQL).
+- **Siguiente Paso Inmediato:** Iniciar Hito 12 (Sub-tareas **12.1** a **12.5** según `specs/20` y `specs/21`: Login 2FA, gestión de usuarios/roles, Kill-Switch, Inventario OSM Leaflet y Bóveda Step-Up).
 
 ---
 
@@ -113,7 +113,7 @@
 - [x] **10.3** Los 4 Workers en segundo plano (`src/workers/`): Monitor *Zero-Storage*, Despachador de Alertas Multi-Canal (Telegram Bot, Correo SMTP, Webhook HMAC-SHA256 y NOC), Worker de Backups Nocturnos y Worker de Rotación Automática de Bóveda.
 - [x] **10.4** **Cierre de Arquitectura Backend con Graphify (En Docker):** Ejecutar `docker compose -f docker-compose.qa.yml --profile graphify run --rm graphify` dentro de `./fastapi/` para generar `fastapi/graphify-out/GRAPH_REPORT.md` y el grafo AST completo del Backend (`specs/09`, `29`).
 - [x] **10.5** **Dockerfile Multi-Stage de Producción Backend (`fastapi/Dockerfile`):** Crear `fastapi/Dockerfile` basado en `sinfallas/base-python-uv:3.13` con soporte `ARG BUILD_DATE`, dependencias `--no-dev`, usuario sin privilegios (`non-root`) y `scripts/entrypoint.sh` (`specs/01`).
-- [ ] **10.6** **Paquete de Optimización de Alto Rendimiento Backend, DB y KeyDB Multi-Hilo:**
+- [x] **10.6** **Paquete de Optimización de Alto Rendimiento Backend, DB y KeyDB Multi-Hilo:**
   * Sustituir `redis:7-alpine` por `eqalpha/keydb:alpine` (`keydb-server --server-threads 2` y healthcheck `keydb-cli`) en `docker-compose.yml`, `fastapi/docker-compose.qa.yml` y `specs/01` (documentando `DragonflyDB` como perfil de alta escala).
   * Configurar `ORJSONResponse` como `default_response_class` en `fastapi/src/main.py`, serialización `orjson` en frames WebSocket, desactivación estricta de Swagger/ReDoc/OpenAPI cuando `ROSGRID_ENV == "production"` y activar `--loop uvloop --http httptools` en `fastapi/scripts/entrypoint.sh`.
   * Implementar reutilización de pool `Keep-Alive` TLS (`limits=httpx.Limits(max_keepalive_connections=20, keepalive_expiry=60.0)`) en `src/mikrotik/client.py` y ejecución por lotes con `pipeline()` hacia KeyDB en `src/redis_layer/zero_metrics_monitor.py`.
@@ -123,11 +123,11 @@
 
 ## 🎨 HITO 11: Frontend Vue 3 Base — Zero-Trust, Interceptores, Stores Pinia (`shallowRef`) y Sistema de Diseño WCAG (`Virtual Scroll`)
 > **Archivos Guía:** `specs/18_FRONTEND_PHASE_1_SETUP_ZERO_TRUST_AND_INTERCEPTORS.md` y `specs/19_FRONTEND_DESIGN_SYSTEM_ACCESSIBILITY_AND_PERFORMANCE.md`
-- [ ] **11.1** Configuración base de Vite, TypeScript (`tsconfig.json`), `index.html` y `public/manifest.webmanifest` PWA (`specs/18`, `19`).
-- [ ] **11.2** Cliente HTTP seguro (`vue3/src/api/httpClient.ts`) con los 4 interceptores: `X-CSRF-Token`, `Idempotency-Key` (`UUIDv7`), rotación transparente de Refresh Token y captura de `202 Accepted` (*Maker-Checker*) (`specs/18`).
-- [ ] **11.3** Los 6 Stores en Pinia (`useAuthStore`, `useThemeAndLayoutStore` con densidad dual adaptativa `auto`/`compact`/`comfortable`, `useInventoryStore`, `useWebFigStore` con cola de hasta 5 pestañas en RAM `openRouterTabs`, `useLiveTelemetryStore`, `useNocEventsStore`) usando **`shallowRef` para colecciones masivas y buffers de telemetría**, más Vue Router con Guards RBAC para los 11 roles (`specs/18`).
-- [ ] **11.4** Sistema de diseño de alta densidad (`themes.css` con tema predeterminado `dark` *Tactical NOC Cyan* `#0B0F19`/`#06B6D4`/`#22D3EE`, `light` y `noc-high-contrast` cumpliendo contraste WCAG 2.1 AA y fuentes nativas `tabular-nums`) (`specs/19`).
-- [ ] **11.5** Los 5 componentes base reutilizables: `RgDataTable.vue` (Densidad Dual `32px` WinBox en PC / `44px` táctil en móvil con **Virtual Scrolling nativo para tablas > 100 filas**, insignias `[D]`/`[X]`/`[I]`/`[R]`, conmutador rápido y Drag & Drop + teclado accesible), `RgCommandPalette.vue` (`Ctrl+K`), `RgSafeModeBanner.vue`, `RgStepUp2FAModal.vue` y `RgResponsiveShell.vue` (Doble contexto + Barra Inferior Fija en Móvil) (`specs/19`).
+- [x] **11.1** Configuración base de Vite, TypeScript (`tsconfig.json`), `index.html` y `public/manifest.webmanifest` PWA (`specs/18`, `19`).
+- [x] **11.2** Cliente HTTP seguro (`vue3/src/api/httpClient.ts`) con los 4 interceptores: `X-CSRF-Token`, `Idempotency-Key` (`UUIDv7`), rotación transparente de Refresh Token y captura de `202 Accepted` (*Maker-Checker*) (`specs/18`).
+- [x] **11.3** Los 6 Stores en Pinia (`useAuthStore`, `useThemeAndLayoutStore` con densidad dual adaptativa `auto`/`compact`/`comfortable`, `useInventoryStore`, `useWebFigStore` con cola de hasta 5 pestañas en RAM `openRouterTabs`, `useLiveTelemetryStore`, `useNocEventsStore`) usando **`shallowRef` para colecciones masivas y buffers de telemetría**, más Vue Router con Guards RBAC para los 11 roles (`specs/18`).
+- [x] **11.4** Sistema de diseño de alta densidad (`themes.css` con tema predeterminado `dark` *Tactical NOC Cyan* `#0B0F19`/`#06B6D4`/`#22D3EE`, `light` y `noc-high-contrast` cumpliendo contraste WCAG 2.1 AA y fuentes nativas `tabular-nums`) (`specs/19`).
+- [x] **11.5** Los 5 componentes base reutilizables: `RgDataTable.vue` (Densidad Dual `32px` WinBox en PC / `44px` táctil en móvil con **Virtual Scrolling nativo para tablas > 100 filas**, insignias `[D]`/`[X]`/`[I]`/`[R]`, conmutador rápido y Drag & Drop + teclado accesible), `RgCommandPalette.vue` (`Ctrl+K`), `RgSafeModeBanner.vue`, `RgStepUp2FAModal.vue` y `RgResponsiveShell.vue` (Doble contexto + Barra Inferior Fija en Móvil) (`specs/19`).
 
 ---
 
