@@ -1,0 +1,84 @@
+# ==============================================================================
+# RoSGrid - Global .gitignore
+# Licencia: GPL-3.0-only
+# ==============================================================================
+
+# Entornos y Secretos
+.env
+.env.*
+!.env.example
+
+# Python & FastAPI
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.tox/
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.uv/
+
+# Node.js & Vue 3
+node_modules/
+.pnp
+.pnp.js
+dist-ssr/
+coverage/
+.stryker-tmp/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+lhci-reports/
+.lhcache/
+
+# QA, BDD, Caos, Seguridad y Observabilidad
+target/
+test/target/
+*.log
+zap-report.html
+chaos-report.html
+profile.svg
+graphify-out/
+prometheus_data/
+
+# IDEs y Editores
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# Sistema Operativo
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

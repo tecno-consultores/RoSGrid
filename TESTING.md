@@ -2,7 +2,7 @@
 
 **Licencia:** GPL-3.0-only  
 **Estándar Aplicado:** QA Testing Blueprints (Nivel 11X)  
-**Estado Actual:** Fase de Especificación Completa (30 Documentos en specs/) — Listo para Ejecución del Hito 0 por AntiGravity.
+**Estado Actual:** Hito 0 Completado y Certificado con Gate 0 (Trivy IaC + FS Exit 0) — Listo para Ejecución del Hito 1 por AntiGravity.
 
 
 
@@ -219,7 +219,7 @@ make clean-cache
 
 | **Hito** | **Descripción** | **Cobertura Unitaria** | **Mutación** | **SAST / DAST / A11y** | **Estado** |
 | - | - | :-: | :-: | :-: | :-: |
-| **Hito 0** | Estructura Monorepo, Licencia GPLv3, Hooks y Fusión 11X | N/A | N/A | Trivy IaC Pendiente | ⏳ Pendiente |
+| **Hito 0** | Estructura Monorepo, Licencia GPLv3, Hooks y Fusión 11X | N/A | N/A | Trivy IaC + FS Aprobado (Exit 0) | ✅ Completado |
 | **Hito 1** | Núcleo Backend, PostgreSQL RLS, Redis, Auth 2FA, RBAC y Kill-Switch | \>= 95% | Mutmut | Bandit + Radon A | ⏳ Pendiente |
 | **Hito 2** | Conector RouterOS v7 (TOFU + Safe Mode), Inventario, Bóveda y WebFig L1/L2 | \>= 95% | Mutmut | Bandit + Radon A | ⏳ Pendiente |
 | **Hito 3** | Maker-Checker, Backups Diff Git, WebSockets, Alertas y Caos Backend | \>= 95% | Mutmut | ZAP + Pumba/Locust | ⏳ Pendiente |

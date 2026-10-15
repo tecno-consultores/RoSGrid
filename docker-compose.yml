@@ -1,0 +1,161 @@
+services:
+  rosgrid-db:
+    image: postgres:17-alpine
+    container_name: rosgrid_db
+    hostname: rosgrid_db
+    restart: unless-stopped
+    environment:
+      TZ: "America/Caracas"
+      POSTGRES_DB: "${POSTGRES_DB:-rosgrid}"
+      POSTGRES_USER: "${POSTGRES_USER:-rosgrid_user}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Debes definir POSTGRES_PASSWORD en .env}"
+    volumes:
+      - rosgrid_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-rosgrid_user} -d $${POSTGRES_DB:-rosgrid}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - rosgrid_internal_net
+
+  rosgrid-redis:
+    image: redis:7-alpine
+    container_name: rosgrid_redis
+    hostname: rosgrid_redis
+    restart: unless-stopped
+    environment:
+      TZ: "America/Caracas"
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 512mb
+      --maxmemory-policy volatile-lru
+      --requirepass "${REDIS_PASSWORD:?Debes definir REDIS_PASSWORD en .env}"
+    volumes:
+      - rosgrid_redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - rosgrid_internal_net
+
+  rosgrid-api:
+    image: sinfallas/base-python-uv:3.13
+    container_name: rosgrid_api
+    hostname: rosgrid_api
+    pull_policy: always
+    restart: unless-stopped
+    depends_on:
+      rosgrid-db:
+        condition: service_healthy
+      rosgrid-redis:
+        condition: service_healthy
+    environment:
+      TZ: "America/Caracas"
+      UV_CACHE_DIR: "/root/.cache/uv"
+      ROSGRID_ENV: "${ROSGRID_ENV:-production}"
+      ROSGRID_DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-rosgrid_user}:${POSTGRES_PASSWORD}@rosgrid_db:5432/${POSTGRES_DB:-rosgrid}"
+      ROSGRID_SYNC_DATABASE_URL: "postgresql://${POSTGRES_USER:-rosgrid_user}:${POSTGRES_PASSWORD}@rosgrid_db:5432/${POSTGRES_DB:-rosgrid}"
+      ROSGRID_REDIS_URL: "redis://:${REDIS_PASSWORD}@rosgrid_redis:6379/0"
+      ROSGRID_MASTER_VAULT_KEY: "${ROSGRID_MASTER_VAULT_KEY:?Debes definir ROSGRID_MASTER_VAULT_KEY (32 bytes base64)}"
+      ROSGRID_JWT_SECRET_KEY: "${ROSGRID_JWT_SECRET_KEY:?Debes definir ROSGRID_JWT_SECRET_KEY}"
+      ROSGRID_CSRF_HMAC_SECRET: "${ROSGRID_CSRF_HMAC_SECRET:?Debes definir ROSGRID_CSRF_HMAC_SECRET}"
+    volumes:
+      - ./fastapi:/app
+      - rosgrid_uv_cache:/root/.cache/uv
+      - rosgrid_backups_storage:/var/lib/rosgrid/backups
+    working_dir: /app
+    command: ["bash", "/app/scripts/entrypoint.sh"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rosgrid_internal_net
+
+  rosgrid-worker:
+    image: sinfallas/base-python-uv:3.13
+    container_name: rosgrid_worker
+    hostname: rosgrid_worker
+    pull_policy: always
+    restart: unless-stopped
+    depends_on:
+      rosgrid-api:
+        condition: service_healthy
+    environment:
+      TZ: "America/Caracas"
+      UV_CACHE_DIR: "/root/.cache/uv"
+      ROSGRID_ENV: "${ROSGRID_ENV:-production}"
+      ROSGRID_DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-rosgrid_user}:${POSTGRES_PASSWORD}@rosgrid_db:5432/${POSTGRES_DB:-rosgrid}"
+      ROSGRID_REDIS_URL: "redis://:${REDIS_PASSWORD}@rosgrid_redis:6379/0"
+      ROSGRID_MASTER_VAULT_KEY: "${ROSGRID_MASTER_VAULT_KEY}"
+    volumes:
+      - ./fastapi:/app
+      - rosgrid_uv_cache:/root/.cache/uv
+      - rosgrid_backups_storage:/var/lib/rosgrid/backups
+    working_dir: /app
+    command: ["bash", "-c", "uv pip install --system -e . && python3 -m src.workers.runner"]
+    networks:
+      - rosgrid_internal_net
+
+  rosgrid-ui-builder:
+    image: sinfallas/base-node-ionic:22
+    container_name: rosgrid_ui_builder
+    hostname: rosgrid_ui_builder
+    pull_policy: if_not_present
+    environment:
+      TZ: "America/Caracas"
+      PNPM_HOME: "/pnpm"
+    volumes:
+      - ./vue3:/app
+      - rosgrid_pnpm_store:/pnpm
+      - rosgrid_ui_dist:/app/dist
+    working_dir: /app
+    command: ["bash", "-c", "pnpm install --frozen-lockfile=false && pnpm run build"]
+    networks:
+      - rosgrid_internal_net
+
+  rosgrid-ui:
+    image: nginx:alpine
+    container_name: rosgrid_ui
+    hostname: rosgrid_ui
+    restart: unless-stopped
+    depends_on:
+      rosgrid-ui-builder:
+        condition: service_completed_successfully
+      rosgrid-api:
+        condition: service_healthy
+    environment:
+      TZ: "America/Caracas"
+    volumes:
+      - rosgrid_ui_dist:/usr/share/nginx/html:ro
+      - ./vue3/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - rosgrid_nginx_logs:/var/log/nginx
+    ports:
+      - "${ROSGRID_HTTP_PORT:-8080}:80"
+    networks:
+      - rosgrid_internal_net
+
+networks:
+  rosgrid_internal_net:
+    driver: bridge
+
+volumes:
+  rosgrid_pg_data:
+    name: rosgrid_pg_data
+  rosgrid_redis_data:
+    name: rosgrid_redis_data
+  rosgrid_uv_cache:
+    name: fastapi_uv_cache
+  rosgrid_pnpm_store:
+    name: vue3_pnpm_store_cache
+  rosgrid_ui_dist:
+    name: rosgrid_ui_dist
+  rosgrid_backups_storage:
+    name: rosgrid_backups_storage
+  rosgrid_nginx_logs:
+    name: rosgrid_nginx_logs

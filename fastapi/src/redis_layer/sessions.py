@@ -1,0 +1,179 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright (C) 2026 RoSGrid Contributors
+
+import hashlib
+import json
+import secrets
+import time
+
+from src.redis_layer.client import get_redis_client
+
+SESSION_TTL_SECONDS = 28800  # 8 horas
+
+
+def compute_token_hash(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+async def create_session(
+    tenant_id: str,
+    user_id: str,
+    username: str,
+    full_name: str,
+    role: str,
+    ip_address: str,
+    user_agent: str,
+) -> tuple[str, str, str]:
+    session_id = secrets.token_hex(16)
+    family_id = secrets.token_hex(16)
+    initial_rt = secrets.token_urlsafe(32)
+    initial_rt_hash = compute_token_hash(initial_rt)
+
+    redis = get_redis_client()
+    now_epoch = int(time.time())
+    now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now_epoch))
+
+    session_mapping = {
+        "session_id": session_id,
+        "user_id": user_id,
+        "username": username,
+        "full_name": full_name,
+        "role": role,
+        "ip_address": ip_address,
+        "user_agent": user_agent,
+        "current_router_id": "",
+        "current_router_name": "",
+        "current_view_path": "/dashboard",
+        "created_at": now_iso,
+        "last_activity_at": now_iso,
+        "refresh_family_id": family_id,
+    }
+
+    sess_key = f"rg:{tenant_id}:sess:{session_id}"
+    rt_key = f"rg:{tenant_id}:rt_family:{family_id}"
+    user_sess_key = f"rg:{tenant_id}:user_sessions:{user_id}"
+    active_sess_key = f"rg:{tenant_id}:active_sessions"
+
+    pipe = redis.pipeline()
+    pipe.hset(sess_key, mapping=session_mapping)  # type: ignore[arg-type]
+    pipe.expire(sess_key, SESSION_TTL_SECONDS)
+
+    pipe.hset(
+        rt_key,
+        mapping={
+            "current_rt_hash": initial_rt_hash,
+            "used_rt_hashes": json.dumps([]),
+            "user_id": user_id,
+            "session_id": session_id,
+        },
+    )
+    pipe.expire(rt_key, SESSION_TTL_SECONDS)
+
+    pipe.sadd(user_sess_key, session_id)
+    pipe.expire(user_sess_key, SESSION_TTL_SECONDS)
+
+    pipe.zadd(active_sess_key, {session_id: float(now_epoch)})
+    await pipe.execute()
+
+    return session_id, family_id, initial_rt
+
+
+async def get_session(tenant_id: str, session_id: str) -> dict[str, str] | None:
+    redis = get_redis_client()
+    sess_key = f"rg:{tenant_id}:sess:{session_id}"
+    data = await redis.hgetall(sess_key)
+    if not data:
+        return None
+    return {str(k): str(v) for k, v in data.items()}
+
+
+async def kill_session(
+    tenant_id: str, session_id: str, killed_by: str = "SYSTEM", reason: str = "Revocación manual"
+) -> bool:
+    redis = get_redis_client()
+    sess_key = f"rg:{tenant_id}:sess:{session_id}"
+    session_data = await redis.hgetall(sess_key)
+    if not session_data:
+        return False
+
+    user_id = str(session_data.get("user_id", ""))
+    family_id = str(session_data.get("refresh_family_id", ""))
+
+    pipe = redis.pipeline()
+    pipe.delete(sess_key)
+    if family_id:
+        pipe.delete(f"rg:{tenant_id}:rt_family:{family_id}")
+    if user_id:
+        pipe.srem(f"rg:{tenant_id}:user_sessions:{user_id}", session_id)
+    pipe.zrem(f"rg:{tenant_id}:active_sessions", session_id)
+
+    event_payload = json.dumps(
+        {
+            "event": "SESSION_KILLED",
+            "target_session_id": session_id,
+            "target_user_id": user_id,
+            "reason": reason,
+            "killed_by": killed_by,
+        }
+    )
+    pipe.publish(f"rg:pubsub:events:{tenant_id}", event_payload)
+    await pipe.execute()
+    return True
+
+
+async def kill_all_user_sessions(
+    tenant_id: str, user_id: str, killed_by: str = "SYSTEM", reason: str = "Kill-Switch global de usuario"
+) -> int:
+    redis = get_redis_client()
+    user_sess_key = f"rg:{tenant_id}:user_sessions:{user_id}"
+    session_ids = await redis.smembers(user_sess_key)
+    count = 0
+    for sid in session_ids:
+        if await kill_session(tenant_id, str(sid), killed_by=killed_by, reason=reason):
+            count += 1
+    return count
+
+
+async def rotate_refresh_token(
+    tenant_id: str, family_id: str, received_token: str
+) -> tuple[bool, str | None, str | None]:
+    redis = get_redis_client()
+    rt_key = f"rg:{tenant_id}:rt_family:{family_id}"
+    family_data = await redis.hgetall(rt_key)
+    if not family_data:
+        return False, "EXPIRED_FAMILY", None
+
+    received_hash = compute_token_hash(received_token)
+    current_hash = str(family_data.get("current_rt_hash", ""))
+    used_hashes_str = str(family_data.get("used_rt_hashes", "[]"))
+
+    try:
+        used_hashes = json.loads(used_hashes_str)
+    except json.JSONDecodeError:
+        used_hashes = []
+
+    if received_hash in used_hashes:
+        # ROBO DE TOKEN DETECTADO -> Kill Switch inmediato
+        session_id = str(family_data.get("session_id", ""))
+        await kill_session(tenant_id, session_id, killed_by="SECURITY_ROBOT", reason="Reúso de Refresh Token detectado")
+        return False, "REUSE_DETECTED", None
+
+    if received_hash != current_hash:
+        return False, "HASH_MISMATCH", None
+
+    new_token = secrets.token_urlsafe(32)
+    new_token_hash = compute_token_hash(new_token)
+    used_hashes.append(received_hash)
+
+    pipe = redis.pipeline()
+    pipe.hset(
+        rt_key,
+        mapping={
+            "current_rt_hash": new_token_hash,
+            "used_rt_hashes": json.dumps(used_hashes),
+        },
+    )
+    pipe.expire(rt_key, SESSION_TTL_SECONDS)
+    await pipe.execute()
+
+    return True, None, new_token
