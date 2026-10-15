@@ -78,3 +78,12 @@ source_paths = ["src/"]
 backup = false
 runner = "pytest -x -m 'not integration'"
 pytest_add_cli_args_test_selection = ["tests/"]
+
+[tool.pyrefly]
+project-includes = ["src", "tests"]
+search-path = ["."]
+disable-search-path-heuristics = true
+site-package-path = [".venv/lib/python3.13/site-packages"]
+
+[tool.pyrefly.errors]
+missing-import = false
