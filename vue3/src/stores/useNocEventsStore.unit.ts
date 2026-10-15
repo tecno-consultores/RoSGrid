@@ -6,7 +6,12 @@ import { setActivePinia, createPinia } from 'pinia';
 import { useNocEventsStore } from './useNocEventsStore';
 
 class MockWebSocket {
-  public static instances: MockWebSocket[] = [];
+  static instances: MockWebSocket[] = [];
+  static readonly CONNECTING = 0;
+  static readonly OPEN = 1;
+  static readonly CLOSING = 2;
+  static readonly CLOSED = 3;
+
   public readyState = 0; // CONNECTING
   public onopen: (() => void) | null = null;
   public onmessage: ((event: { data: string }) => void) | null = null;

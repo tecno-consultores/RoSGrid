@@ -21,9 +21,11 @@ import RouterWebFigLayout from './RouterWebFigLayout.vue';
 import RoutingBgpOspfView from './RoutingBgpOspfView.vue';
 import RscGitDiffViewer from './RscGitDiffViewer.vue';
 import UsersAndPermissionsView from './UsersAndPermissionsView.vue';
+import TenantsManagementView from './admin/TenantsManagementView.vue';
+import MaintenanceWindowsView from './MaintenanceWindowsView.vue';
 
 vi.mock('vue-router', () => ({
-  useRoute: () => ({ path: '/inventory', params: {} }),
+  useRoute: () => ({ path: '/inventory', params: {}, query: {} }),
   useRouter: () => ({ push: vi.fn() }),
   RouterView: { template: '<div>ROUTER_VIEW</div>' },
   RouterLink: { template: '<a><slot /></a>' },
@@ -51,6 +53,8 @@ describe('Views Base — Montaje y Accesibilidad WCAG', () => {
     { name: 'RoutingBgpOspfView', component: RoutingBgpOspfView },
     { name: 'RscGitDiffViewer', component: RscGitDiffViewer },
     { name: 'UsersAndPermissionsView', component: UsersAndPermissionsView },
+    { name: 'TenantsManagementView', component: TenantsManagementView },
+    { name: 'MaintenanceWindowsView', component: MaintenanceWindowsView },
   ];
 
   for (const v of views) {

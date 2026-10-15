@@ -30,6 +30,11 @@
     (e: 'reorder', payload: { fromIndex: number; toIndex: number; row: T }): void;
   }>();
 
+  defineSlots<{
+    default?(): unknown;
+    actions?(props: { row: T }): unknown;
+  }>();
+
   const themeStore = useThemeAndLayoutStore();
 
   // Virtual Scrolling Nativo (> 100 filas)
@@ -199,6 +204,7 @@
             >
               {{ col.label }}
             </th>
+            <th v-if="$slots.actions" class="col-custom-actions" scope="col">Acciones</th>
             <th
               v-if="themeStore.effectiveTableDensity === 'comfortable'"
               class="col-actions"
@@ -285,6 +291,11 @@
                 :style="{ textAlign: col.align || 'left' }"
               >
                 {{ col.formatter ? col.formatter(row) : (row[col.key] ?? '—') }}
+              </td>
+
+              <!-- Acciones Personalizadas -->
+              <td v-if="$slots.actions" class="col-custom-actions" @click.stop>
+                <slot name="actions" :row="row" />
               </td>
 
               <!-- Botón Móvil: Ver Detalles -->

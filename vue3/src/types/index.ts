@@ -109,3 +109,87 @@ export interface TableRowFlags {
   invalidReason?: string;
   running?: boolean; // [R]
 }
+
+export interface TenantItem {
+  id: string;
+  slug: string;
+  name: string;
+  tax_id?: string;
+  status: 'ACTIVE' | 'SUSPENDED';
+  max_routers_quota: number;
+  max_users_quota: number;
+  active_routers_count: number;
+  active_users_count: number;
+  default_safemode_seconds: number;
+  created_at?: string;
+}
+
+export interface UserManagementItem {
+  id: string;
+  username: string;
+  email: string;
+  full_name?: string;
+  role: SystemRole;
+  totp_enabled: boolean;
+  is_active: boolean;
+  allowed_cidr_list?: string[];
+  has_all_routers_access: boolean;
+  assigned_router_ids?: string[];
+  created_at?: string;
+}
+
+export interface RouterPermissionItem {
+  router_id: string;
+  router_name: string;
+  network_role?: string;
+  tag?: string;
+  can_read: boolean;
+  can_write_layer1: boolean;
+  can_write_layer2: boolean;
+  can_execute_diagnostics: boolean;
+  can_trigger_backup: boolean;
+  can_reboot: boolean;
+  bypass_maker_checker: boolean;
+}
+
+export interface ActiveSessionItem {
+  session_id: string;
+  user_id: string;
+  username: string;
+  full_name?: string;
+  role: SystemRole;
+  ip_address: string;
+  user_agent: string;
+  current_router_id?: string;
+  current_router_name?: string;
+  current_view_path?: string;
+  created_at: string;
+  last_active_at: string;
+  seconds_since_active: number;
+}
+
+export interface CsvDryRunRow {
+  line: number;
+  is_valid: boolean;
+  display_name: string;
+  ip_address: string;
+  serial_number: string;
+  error?: string;
+}
+
+export interface CsvDryRunResponse {
+  total_rows: number;
+  valid_rows_count: number;
+  invalid_rows_count: number;
+  rows: CsvDryRunRow[];
+}
+
+export interface VaultSecretData {
+  router_id: string;
+  api_username: string;
+  current_password?: string;
+  previous_password?: string;
+  last_rotated_at?: string;
+  next_rotation_due_at?: string;
+  auto_purge_seconds: number;
+}

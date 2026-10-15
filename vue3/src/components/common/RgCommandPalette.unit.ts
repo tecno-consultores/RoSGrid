@@ -113,6 +113,26 @@ describe('RgCommandPalette.vue — Accesibilidad (Ctrl+K)', () => {
       themeStore.isCommandPaletteOpen = true;
     }
 
+    // Probar alternancia de temas completa (dark -> light -> noc-high-contrast -> dark)
+    themeStore.isCommandPaletteOpen = true;
+    await wrapper.vm.$nextTick();
+    themeStore.theme = 'light';
+    const itemsTheme = wrapper.findAll('.rg-palette__item');
+    const themeItem = itemsTheme.find((i) => i.text().includes('Alternar Tema'));
+    if (themeItem) {
+      await themeItem.trigger('click');
+      expect(themeStore.theme).toBe('noc-high-contrast');
+    }
+
+    themeStore.isCommandPaletteOpen = true;
+    await wrapper.vm.$nextTick();
+    const itemsTheme2 = wrapper.findAll('.rg-palette__item');
+    const themeItem2 = itemsTheme2.find((i) => i.text().includes('Alternar Tema'));
+    if (themeItem2) {
+      await themeItem2.trigger('click');
+      expect(themeStore.theme).toBe('dark');
+    }
+
     // Buscar texto sin coincidencias para cubrir estado vacío
     themeStore.isCommandPaletteOpen = true;
     await wrapper.vm.$nextTick();

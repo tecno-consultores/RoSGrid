@@ -101,9 +101,13 @@ describe('useInventoryStore — Inventario Flota MikroTik (shallowRef)', () => {
     store.updateRouter(updated);
 
     expect(store.selectedRouter?.display_name).toBe('CCR2004-Core-Renamed');
+
+    // Seleccionar ID inexistente para probar fallback a null
+    store.selectRouter('r-inexistente');
+    expect(store.selectedRouter).toBeNull();
   });
 
-  it('administra ventanas de mantenimiento', () => {
+  it('administra ventanas de mantenimiento y carga routers vía fetchRouters', async () => {
     const store = useInventoryStore();
     const mw: MaintenanceWindowItem[] = [
       {
@@ -121,6 +125,25 @@ describe('useInventoryStore — Inventario Flota MikroTik (shallowRef)', () => {
     store.setMaintenanceWindows(mw);
     expect(store.maintenanceWindows.length).toBe(1);
     expect(store.maintenanceWindows[0].title).toBe('Upgrade RouterOS v7.16');
+
+    // Probar fetchRouters exitoso
+    const { http } = await import('@/api/httpClient');
+    const getSpy = vi.spyOn(http, 'get').mockResolvedValueOnce({
+      status: 200,
+      data: { items: sampleRouters },
+      headers: new Headers(),
+    });
+
+    await store.fetchRouters();
+    expect(store.routers.length).toBe(3);
+    getSpy.mockRestore();
+
+    // Probar fetchRouters en fallo (fallback a mocks)
+    store.clearInventory();
+    const failSpy = vi.spyOn(http, 'get').mockRejectedValueOnce(new Error('Network error'));
+    await store.fetchRouters();
+    expect(store.routers.length).toBeGreaterThan(0);
+    failSpy.mockRestore();
 
     store.clearInventory();
     expect(store.routers).toEqual([]);

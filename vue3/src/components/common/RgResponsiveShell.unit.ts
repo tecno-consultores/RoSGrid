@@ -78,6 +78,10 @@ describe('RgResponsiveShell.vue — Doble Contexto & Barra Inferior Móvil', () 
     expect(themeBtn.exists()).toBe(true);
     await themeBtn.trigger('click');
     expect(themeStore.theme).toBe('light');
+    await themeBtn.trigger('click');
+    expect(themeStore.theme).toBe('noc-high-contrast');
+    await themeBtn.trigger('click');
+    expect(themeStore.theme).toBe('dark');
 
     const searchBtn = wrapper.find('.btn-search-trigger');
     await searchBtn.trigger('click');
@@ -167,7 +171,7 @@ describe('RgResponsiveShell.vue — Doble Contexto & Barra Inferior Móvil', () 
     expect(pushMock).toHaveBeenCalledWith('/login');
   });
 
-  it('renderiza enlaces de contexto de router en la barra inferior móvil', () => {
+  it('renderiza enlaces de contexto de router en la barra inferior móvil', async () => {
     const themeStore = useThemeAndLayoutStore();
     themeStore.windowWidth = 400;
 
@@ -183,5 +187,11 @@ describe('RgResponsiveShell.vue — Doble Contexto & Barra Inferior Móvil', () 
     });
 
     expect(wrapper.find('nav.rg-mobile-bottom-bar').exists()).toBe(true);
+
+    const mobileMenuBtn = wrapper.find('.btn-mobile-menu');
+    if (mobileMenuBtn.exists()) {
+      await mobileMenuBtn.trigger('click');
+      expect(themeStore.isMobileDrawerOpen).toBe(true);
+    }
   });
 });

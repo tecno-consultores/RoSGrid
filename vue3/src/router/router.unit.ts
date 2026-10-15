@@ -110,4 +110,19 @@ describe('Router — Navigation Guards & RBAC 11 Roles', () => {
       }
     }
   });
+
+  it('gestiona rutas webfig sin tabLabel o tabIcon personalizados y con routerId vacío', async () => {
+    router.addRoute({
+      path: '/webfig/custom-tool',
+      name: 'CustomToolTab',
+      component: { template: '<div>custom</div>' },
+      meta: { requiresAuth: true },
+    });
+    const auth = useAuthStore();
+    auth.setAuth(adminUser);
+
+    await router.push('/webfig/custom-tool');
+    expect(router.currentRoute.value.path).toBe('/webfig/custom-tool');
+    expect(router.currentRoute.value.name).toBe('CustomToolTab');
+  });
 });

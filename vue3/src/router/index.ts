@@ -159,7 +159,27 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/inventory/maintenance-windows',
+    name: 'MaintenanceWindows',
+    component: () => import('@/views/MaintenanceWindowsView.vue'),
+    meta: {
+      requiresAuth: true,
+      title: 'Ventanas de Mantenimiento — RoSGrid',
+    },
+  },
+  {
+    path: '/admin/tenants',
+    name: 'TenantsManagement',
+    component: () => import('@/views/admin/TenantsManagementView.vue'),
+    meta: {
+      requiresAuth: true,
+      title: 'Administración de Empresas — RoSGrid',
+      allowedRoles: ['SUPERADMIN_GLOBAL'],
+    },
+  },
+  {
     path: '/users',
+    alias: '/admin/users',
     name: 'UsersAndPermissions',
     component: () => import('@/views/UsersAndPermissionsView.vue'),
     meta: {
@@ -170,6 +190,7 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/sessions',
+    alias: '/admin/active-sessions',
     name: 'ActiveSessionsKillSwitch',
     component: () => import('@/views/ActiveSessionsKillSwitchView.vue'),
     meta: {

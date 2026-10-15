@@ -163,4 +163,18 @@ describe('RgDataTable.vue — WinBox 32px / Táctil 44px & RouterOS Flags', () =
     await expandBtn.trigger('click');
     expect(wrapper.find('.rg-row-details').exists()).toBe(false);
   });
+
+  it('renderiza el slot de acciones personalizadas cuando se proporciona', () => {
+    const wrapper = mount(RgDataTable, {
+      props: {
+        columns,
+        rows: sampleRows,
+      },
+      slots: {
+        actions: '<button class="test-action-btn">Acción</button>',
+      },
+    });
+    expect(wrapper.findAll('.col-custom-actions').length).toBe(4);
+    expect(wrapper.find('.test-action-btn').exists()).toBe(true);
+  });
 });

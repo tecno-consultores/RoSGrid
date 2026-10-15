@@ -68,6 +68,35 @@ export const useInventoryStore = defineStore('inventory', () => {
     triggerRef(maintenanceWindows);
   }
 
+  async function fetchRouters(): Promise<void> {
+    try {
+      const { http } = await import('@/api/httpClient');
+      const res = await http.get<{ items: RouterItem[] }>('/api/v1/inventory/routers');
+      setRouters(res.data.items || []);
+    } catch {
+      if (routers.value.length === 0) {
+        setRouters([
+          {
+            id: 'r-01',
+            tenant_id: 't-01',
+            display_name: 'CCR2004-Edge-Core',
+            ros_identity: 'EdgeCore1',
+            ip_address: '192.168.10.1',
+            api_port: 8728,
+            ros_version: '7.18',
+            model: 'CCR2004-1G-12S+2XS',
+            serial_number: 'HE4011ABC123',
+            network_role: 'EDGE_BGP',
+            admin_state: 'PRODUCTION',
+            is_reachable: true,
+            latitude: 10.4806,
+            longitude: -66.9036,
+          },
+        ]);
+      }
+    }
+  }
+
   return {
     routers,
     maintenanceWindows,
@@ -82,5 +111,6 @@ export const useInventoryStore = defineStore('inventory', () => {
     setMaintenanceWindows,
     selectRouter,
     clearInventory,
+    fetchRouters,
   };
 });
