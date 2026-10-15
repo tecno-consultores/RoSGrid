@@ -47,7 +47,7 @@ Este Código de Conducta se aplica tanto dentro de los espacios del proyecto (re
 
 Los casos de comportamiento abusivo, acosador o inaceptable de otro modo podrán ser reportados a los mantenedores del proyecto responsables del cumplimiento a través del correo electrónico:
 
-* **Contacto de Mantenedores:** Sinfallas (`sinfallas@yahoo.com`)
+* **Contacto de Mantenedores:** soporte (`soporte@tecnoconsultores.net`)
 
 Todas las quejas serán revisadas e investigadas de manera puntual y justa. Todos los mantenedores del proyecto están obligados a respetar la privacidad y la seguridad de quienes reporten cualquier incidente.
 

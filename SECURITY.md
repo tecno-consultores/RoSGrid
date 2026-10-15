@@ -22,7 +22,7 @@ Actualmente reciben parches de seguridad activos las siguientes ramas e imágene
 Si descubres una vulnerabilidad de seguridad en el motor criptográfico, el aislamiento Multi-Tenant (RLS), el interceptor RBAC/Maker-Checker o el conector de RouterOS v7:
 
 1. **NO abras un Issue público en GitHub/GitLab** con el exploit o vector de ataque.
-2. Envía un reporte detallado por correo electrónico a: **Sinfallas (`sinfallas@yahoo.com`)** con el asunto `[SECURITY-ROSGRID] Descripción breve del hallazgo`.
+2. Envía un reporte detallado por correo electrónico a: **soporte (`soporte@tecnoconsultores.net`)** con el asunto `[SECURITY-ROSGRID] Descripción breve del hallazgo`.
 3. Incluye los pasos de reproducción, el componente afectado (`fastapi/` o `vue3/`) y el impacto potencial.
 4. Recibirás acuse de recibo en un máximo de **48 horas** y coordinaremos la publicación del parche antes de la divulgación pública.
 

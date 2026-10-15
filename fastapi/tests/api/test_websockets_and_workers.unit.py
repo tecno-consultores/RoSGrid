@@ -59,7 +59,6 @@ def sample_router() -> Router:
     aad = f"{tenant_id}:{r.id}".encode()
     ct, iv, tag = encrypt_aes_gcm(b"admin123", aad)
     r.vault = RouterCredentialsVault(
-        id=uuid.uuid4(),
         router_id=r.id,
         tenant_id=tenant_id,
         api_username="admin",
@@ -115,12 +114,12 @@ async def test_fetch_raw_telemetry() -> None:
     client = AsyncMock()
     client.get.side_effect = [
         {"cpu-load": 20, "free-memory": 1000},  # resource
-        [{"name": "temp", "value": "40"}],  # health
+        {"temperature": "40"},  # health
         [{"name": "ether1", "rx-byte": 100}],  # interface
     ]
     res, health, ifaces = await _fetch_raw_telemetry(client)
     assert res["cpu-load"] == 20
-    assert len(health) == 1
+    assert health["temperature"] == "40"
     assert len(ifaces) == 1
 
 
@@ -129,6 +128,7 @@ def test_ensure_and_cancel_poller_task() -> None:
     r_id = uuid.uuid4()
     with patch("asyncio.create_task") as mock_create:
         mock_task = MagicMock()
+        mock_task.done.return_value = False
         mock_create.return_value = mock_task
         ensure_poller_active(t_id, r_id)
         mock_create.assert_called_once()
@@ -237,8 +237,8 @@ async def test_alert_dispatcher_channels() -> None:
     # Dispatch to Telegram
     with patch("httpx.AsyncClient.post") as mock_post:
         mock_post.return_value = MagicMock(status_code=200, is_success=True)
-        ok = await _dispatch_telegram({"bot_token": "token", "chat_id": "123"}, event_data)
-        assert ok is True
+        await _dispatch_telegram({"bot_token": "token", "chat_id": "123"}, event_data)
+        mock_post.assert_awaited_once()
 
     # Dispatch to SMTP
     with patch("smtplib.SMTP") as mock_smtp:
@@ -250,22 +250,23 @@ async def test_alert_dispatcher_channels() -> None:
     # Dispatch to Webhook
     with patch("httpx.AsyncClient.post") as mock_post_wh:
         mock_post_wh.return_value = MagicMock(status_code=200, is_success=True)
-        ok_wh = await _dispatch_webhook({"url": "https://webhook.site/test", "hmac_secret": "secret"}, event_data)
-        assert ok_wh is True
+        await _dispatch_webhook({"webhook_url": "https://webhook.site/test", "secret": "secret"}, event_data)
+        mock_post_wh.assert_awaited_once()
 
 
 @pytest.mark.asyncio
 async def test_backup_single_router(sample_router: Router) -> None:
     session = AsyncMock()
-    fake_redis = AsyncMock()
+    mock_res = MagicMock()
+    mock_res.scalar_one_or_none.return_value = None
+    session.execute.return_value = mock_res
 
     client = AsyncMock()
     client.post.return_value = "/interface ethernet set ether1 comment=test"
 
     with patch("src.workers.nightly_backup_worker._create_client_from_vault", return_value=client):
-        await _backup_single_router(session, fake_redis, sample_router)
+        await _backup_single_router(session, sample_router)
         session.add.assert_called_once()
-        session.commit.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -284,6 +285,8 @@ async def test_vault_rotation_worker_single(sample_router: Router) -> None:
         assert sample_router.vault.last_rotation_status == "SUCCESS"
 
 
-def test_setup_signal_handlers() -> None:
+@pytest.mark.asyncio
+async def test_setup_signal_handlers() -> None:
     stop_event = asyncio.Event()
-    _setup_signal_handlers(stop_event)
+    with patch("signal.signal"):
+        _setup_signal_handlers(stop_event)

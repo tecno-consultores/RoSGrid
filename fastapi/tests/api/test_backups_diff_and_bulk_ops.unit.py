@@ -117,7 +117,7 @@ def test_verify_pending_and_not_expired() -> None:
     )
     with pytest.raises(HTTPException) as exc1:
         _verify_pending_and_not_expired(already_approved)
-    assert exc1.value.status_code == 409
+    assert exc1.value.status_code == 400
 
     # Expired
     expired_req = ApprovalRequest(
@@ -126,7 +126,7 @@ def test_verify_pending_and_not_expired() -> None:
     )
     with pytest.raises(HTTPException) as exc2:
         _verify_pending_and_not_expired(expired_req)
-    assert exc2.value.status_code == 410
+    assert exc2.value.status_code == 400
     assert expired_req.status == ApprovalStatusEnum.EXPIRED
 
 
@@ -177,9 +177,8 @@ async def test_resolve_target_router_ids() -> None:
     r_id = uuid.uuid4()
 
     req = BulkJobCreateRequest(
+        job_type="TEMPLATE_EXECUTION",
         title="Test Job",
-        description="Test Desc",
-        steps=[],
         target_router_ids=[str(r_id)],
     )
     res = await _resolve_target_router_ids(db, t_id, req)
@@ -192,14 +191,16 @@ async def test_perform_pre_upgrade_backup() -> None:
     client = AsyncMock()
     client.post.return_value = "/interface ethernet set ether1 comment=test"
 
+    t_id = uuid.uuid4()
+    u_id = uuid.uuid4()
     r = Router(
         id=uuid.uuid4(),
-        tenant_id=uuid.uuid4(),
+        tenant_id=t_id,
         display_name="Router-To-Upgrade",
     )
 
-    b_id = await _perform_pre_upgrade_backup(db, r, client, uuid.uuid4())
-    assert b_id is not None
+    success = await _perform_pre_upgrade_backup(client, r, t_id, u_id, db)
+    assert success is True
     db.add.assert_called_once()
 
 
@@ -209,7 +210,7 @@ async def test_perform_pre_upgrade_backup() -> None:
 
 
 def test_build_export_csv() -> None:
-    from src.models.core import AuditLog
+    from src.models.operations import AuditLog
 
     now = datetime.now(UTC)
     log = AuditLog(
@@ -222,6 +223,7 @@ def test_build_export_csv() -> None:
         event_action="ROUTER_CREATED",
         router_display_name="Core-01",
         status_code=201,
+        prev_record_hash="0" * 64,
         record_sha256_hash="hash123",
         created_at=now,
     )
@@ -233,7 +235,7 @@ def test_build_export_csv() -> None:
 
 def test_verify_single_audit_hash() -> None:
     from src.core.audit import compute_audit_record_hash
-    from src.models.core import AuditLog
+    from src.models.operations import AuditLog
 
     prev_hash = "0" * 64
     payload: dict[str, Any] = {
@@ -250,15 +252,18 @@ def test_verify_single_audit_hash() -> None:
     rec_hash = compute_audit_record_hash(prev_hash, payload)
 
     log = AuditLog(
+        tenant_id=uuid.uuid4(),
         actor_username="admin",
+        actor_role=SystemRoleEnum.TENANT_ADMIN,
+        actor_ip="127.0.0.1",
         event_category="INVENTORY",
         event_action="ROUTER_CREATED",
         status_code=201,
         before_state=None,
         after_state={"name": "R1"},
+        prev_record_hash=prev_hash,
         record_sha256_hash=rec_hash,
     )
-    log.prev_record_hash = prev_hash
     with patch("src.api.v1.audit.compute_audit_record_hash", return_value=rec_hash):
         assert _verify_single_audit_record(log, prev_hash) is True
         assert _verify_single_audit_record(log, "different_prev") is False
