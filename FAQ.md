@@ -15,14 +15,22 @@ RoSGrid se comunica exclusivamente a través de la **REST API nativa sobre HTTPS
 **No.** En redes privadas de gestión de un ISP o corporación, los routers suelen identificarse por direcciones IP privadas donde Let's Encrypt no es viable. RoSGrid implementa **SSL Pinning con *Trust On First Use* (TOFU)**:
 1. Generas un certificado autofirmado gratuito en el propio MikroTik y activas `www-ssl`.
 2. En el primer registro, RoSGrid captura y fija la huella criptográfica `SHA-256` del certificado (`TRUSTED_PINNED`).
-3. Todo el tráfico viaja cifrado con TLS y cualquier cambio posterior no autorizado de certificado es bloqueado como alerta de seguridad (`FINGERPRINT_MISMATCH`).
+3. Todo el tráfico viaja cifrado con TLS (reutilizando conexiones `Keep-Alive` para baja latencia) y cualquier cambio posterior no autorizado de certificado es bloqueado como alerta de seguridad (`FINGERPRINT_MISMATCH`).
 
 ### ¿Qué hago si renuevo legítimamente el certificado SSL de un MikroTik y aparece bloqueado por `FINGERPRINT_MISMATCH`?
 Un usuario con rol `SUPERADMIN_GLOBAL` o `TENANT_ADMIN` debe abrir el detalle del router en RoSGrid, seleccionar **"Autorizar Nuevo Certificado (Re-Pin SSL TOFU)"** e ingresar su código **2FA TOTP en vivo (*Step-Up Auth*)**. El cambio quedará asentado en la bitácora forense WORM.
 
 ---
 
-## 2. Arquitectura y Decisiones de Diseño
+## 2. Arquitectura, Rendimiento y Decisiones de Diseño
+
+### ¿Por qué RoSGrid usa KeyDB Multi-Hilo por defecto en lugar de Redis tradicional, y cuándo debo usar DragonflyDB?
+En RoSGrid, el motor en memoria gestiona el bus `Pub/Sub` de telemetría WebSocket (1 tick cada 2 segundos), las sesiones activas y los pipelines del monitor *Zero-Metrics*:
+- **KeyDB (`eqalpha/keydb:alpine` con `--server-threads 2`)** es nuestro motor predeterminado porque ofrece procesamiento **multi-hilo real** bajo licencia `BSD-3-Clause` consumiendo apenas **~35 MB de RAM en reposo**.
+- **Recomendación:** Mantén **KeyDB** a menos que operes una flota masiva (**más de 300 a 500 routers MikroTik con decenas de operadores simultáneos**) en un servidor dedicado con **16 GB+ de RAM**, caso en el cual puedes activar el perfil de **DragonflyDB** documentado en [INSTALL.md](./INSTALL.md).
+
+### ¿Por qué no encuentro `/docs` (Swagger) ni `/redoc` activos en la imagen de producción?
+Por seguridad (*Hardening*). Cuando `ROSGRID_ENV=production`, FastAPI desactiva completamente Swagger, ReDoc y `/openapi.json` para evitar exponer la estructura de la API. Toda la especificación de endpoints REST (`/api/v1/*`) y canales WebSocket (`/ws/v1/*`) se encuentra documentada en `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`.
 
 ### ¿Por qué RoSGrid NO tiene un botón de Terminal CLI / SSH interactiva como WebFig o WinBox?
 Es una **decisión de seguridad deliberada (ADR)**. Incluir una consola interactiva libre (SSH o Telnet) destruiría las garantías empresariales de RoSGrid:
@@ -34,9 +42,9 @@ Es una **decisión de seguridad deliberada (ADR)**. Incluir una consola interact
 
 ### ¿Por qué las gráficas de CPU, RAM y tráfico se reinician al salir del router (*Zero-Metrics Storage*)?
 Porque **RoSGrid no es un recolector histórico pesado como Zabbix o Prometheus**. Guardar métricas cada 2 segundos de cientos de routers e interfaces llenaría gigabytes de disco en PostgreSQL diariamente:
-- Cuando un operador entra a la consola de un router en RoSGrid, el Multiplexor WebSocket activa el sondeo en vivo de ese equipo y acumula los datos en un **`TelemetryRingBuffer` en la memoria RAM del navegador** (hasta **5,400 puntos = 3 horas continuas** a 1 tick cada 2 segundos).
+- Cuando un operador entra a la consola de un router en RoSGrid, el Multiplexor WebSocket activa el sondeo en vivo de ese equipo y acumula los datos en un **`TelemetryRingBuffer` en la memoria RAM del navegador** (hasta **5,400 puntos = 3 horas continuas** a 1 tick cada 2 segundos, dibujados sobre `<canvas>` 2D).
 - Mientras saltes entre las pestañas internas del mismo router (`Interfaces`, `Firewall`, `BGP`, `Ping`), la gráfica sigue acumulando datos gracias al contenedor padre y `<KeepAlive :max="5">`.
-- En el instante en que el último operador cierra o sale de ese router (`SCARD == 0` en Redis), el Backend detiene el sondeo inmediatamente (cero carga innecesaria al MikroTik) y el navegador libera la memoria RAM, exactamente igual que ocurre al cerrar WinBox.
+- En el instante en que el último operador cierra o sale de ese router (`SCARD == 0` en KeyDB), el Backend detiene el sondeo inmediatamente (cero carga innecesaria al MikroTik) y el navegador libera la memoria RAM, exactamente igual que ocurre al cerrar WinBox.
 
 ---
 

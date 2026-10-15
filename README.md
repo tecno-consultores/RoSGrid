@@ -1,7 +1,7 @@
 # 🌐 RoSGrid — Consola Centralizada Multi-Tenant para Flotas MikroTik RouterOS v7+
 
 **Licencia:** GNU General Public License v3.0 (GPL-3.0-only)  
-**Stack Principal:** FastAPI (Python 3.13) + Vue 3 (TypeScript / Pinia) + PostgreSQL 17 (RLS) + Redis 7  
+**Stack Principal:** FastAPI (Python 3.13 + `orjson` + `uvloop`) + Vue 3 (TypeScript / Pinia) + PostgreSQL 17 (RLS + BRIN) + KeyDB Multi-Hilo (Compatible DragonflyDB)  
 **Calidad y Seguridad:** Certificado bajo el Estándar Corporativo **[QA 11X](https://github.com/tecno-consultores/qa-testing-blueprints)**
 
 ---
@@ -15,7 +15,7 @@ El sistema traslada la experiencia operativa y técnica de **WinBox / WebFig** a
 **Principios de Diseño Operativo:**
 
 - **No es un sistema de facturación:** RoSGrid se enfoca 100% en la operación técnica de red, aprovisionamiento, seguridad y diagnóstico.
-- **Cero almacenamiento de métricas históricas en base de datos:** Para series históricas a largo plazo existen herramientas dedicadas como Zabbix o Prometheus. En RoSGrid, las gráficas de CPU, RAM y tráfico en vivo funcionan exactamente igual que en **WinBox**: se alimentan por WebSocket y se acumulan en memoria RAM del navegador (`RingBuffer` de hasta 3 horas) mientras el técnico mantiene la consola del router abierta, reiniciándose al salir sin consumir disco en PostgreSQL.
+- **Cero almacenamiento de métricas históricas en base de datos:** Para series históricas a largo plazo existen herramientas dedicadas como Zabbix o Prometheus. En RoSGrid, las gráficas de CPU, RAM y tráfico en vivo funcionan exactamente igual que en **WinBox**: se alimentan por WebSocket y se acumulan en memoria RAM del navegador (`RingBuffer` de hasta 3 horas renderizado en `<canvas>` 2D) mientras el técnico mantiene la consola del router abierta, reiniciándose al salir sin consumir disco en PostgreSQL.
 
 ---
 
@@ -26,8 +26,9 @@ El sistema traslada la experiencia operativa y técnica de **WinBox / WebFig** a
 - **Autenticación *Split-Credential* + 2FA TOTP Obligatorio:**
   - Inicio de sesión mediante Identificador de Empresa (`tenant_slug`) + Correo/Usuario + Contraseña (`Argon2id`) + Código 2FA TOTP.
   - Tokens de sesión encapsulados en cookies `__Host-` con banderas `HttpOnly; Secure; SameSite=Strict` (inmunes a exfiltración por XSS) y protección `X-CSRF-Token` firmada con HMAC-SHA256.
-  - Rotación estricta de Refresh Tokens en Redis con detección automática de robo por reúso (*Reuse Detection*).
-- **Control de Sesiones en Vivo (*Kill-Switch*):** Panel en tiempo real para que Administradores y Supervisores visualicen qué técnicos están conectados, desde qué IP/dispositivo y qué MikroTik están operando, con botón de expulsión instantánea en Redis y cierre forzoso de WebSockets.
+  - Rotación estricta de Refresh Tokens en KeyDB con detección automática de robo por reúso (*Reuse Detection*).
+- **Control de Sesiones en Vivo (*Kill-Switch*):** Panel en tiempo real para que Administradores y Supervisores visualicen qué técnicos están conectados, desde qué IP/dispositivo y qué MikroTik están operando, con botón de expulsión instantánea en KeyDB y cierre forzoso de WebSockets.
+- **Superficie de Ataque Cero en Producción:** En modo `ROSGRID_ENV=production`, la documentación interactiva Swagger/ReDoc/OpenAPI se desactiva por completo (consulta la especificación estática en `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`).
 
 ### 2. Bóveda de Credenciales AES-256-GCM, Rotación Automática y Pinning SSL (TOFU)
 - **Cifrado Autenticado con AAD:** Las credenciales de la REST API de cada MikroTik se almacenan cifradas con `AES-256-GCM` vinculadas criptográficamente al `tenant_id` y `router_id`.
@@ -35,14 +36,14 @@ El sistema traslada la experiencia operativa y técnica de **WinBox / WebFig** a
 - **Consulta Protegida con *Step-Up Auth* (30 Segundos):** Solo los 2 perfiles más altos (`SUPERADMIN_GLOBAL` y `TENANT_ADMIN`) pueden revelar una clave de la bóveda tras validar su código 2FA TOTP en vivo, dejando traza inmutable en auditoría y autodestruyendo la clave en memoria a los 30 segundos.
 - **Certificados SSL Autofirmados con TOFU (*Trust On First Use*):** Acepta certificados autofirmados de RouterOS v7 capturando su huella SHA-256 en la primera conexión y bloqueando cualquier cambio no autorizado de certificado (*MitM protection*).
 
-### 3. Consola Centralizada WebFig de Doble Capa (RouterOS v7+)
-- **Capa 1 — Módulos Nativos Especializados (con Pestañas en Memoria `KeepAlive` y Densidad Dual WinBox/Móvil):**
-  - **Dashboard en Vivo:** Gráficas efímeras estilo WinBox (CPU, RAM, Disco, Temperatura, Voltaje y Tráfico bps/pps por interfaz).
+### 3. Consola Centralizada WebFig de Doble Capa y Alto Rendimiento (RouterOS v7+)
+- **Capa 1 — Módulos Nativos Especializados (con Pestañas en Memoria `KeepAlive`, *Virtual Scrolling* y Densidad Dual WinBox/Móvil):**
+  - **Dashboard en Vivo:** Gráficas efímeras estilo WinBox sobre `<canvas>` 2D acelerado con `requestAnimationFrame` (CPU, RAM, Disco, Temperatura, Voltaje y Tráfico bps/pps por interfaz).
   - **Interfaces & Óptica SFP:** Ethernet, diagnóstico óptico **SFP/SFP+ DDM** (potencia láser TX/RX en dBm, temperatura y salud óptica), test de cables TDR, VLANs 802.1Q, Bridges, WireGuard y tabla de registro WiFi.
   - **IP & Servicios:** Addresses, Routes (incluyendo balanceo ECMP), ARP, Pools, DHCP Server Leases (conversión a estático en un clic), DNS, IP Neighbors (MNDP/LLDP/CDP) y `/ip/service` (con protección anti-suicidio del puerto `www-ssl`).
   - **Firewall Completo con *Drag & Drop*:** Reglas Filter, NAT, Mangle, RAW, Address-Lists y Connection Tracking, con reordenamiento visual y por teclado protegido por Safe Mode.
   - **Routing Avanzado v7:** Sesiones y peers BGP en vivo, prefijos anunciados, OSPF v2/v3, Routing Tables, Policy Rules, BFD y Routing Filters.
-  - **PPP, VPNs & Queues:** Sesiones PPPoE Active (con botón de reconexión rápida para Soporte N1), Secrets, Profiles, Simple Queues y Queue Tree.
+  - **PPP, VPNs & Queues:** Sesiones PPPoE Active (con botón de reconexión rápida para Soporte N1 y *Virtual Scrolling* para miles de sesiones simultáneas), Secrets, Profiles, Simple Queues y Queue Tree.
   - **System & Diagnóstico en Vivo:** Identity, usuarios del router, Scripts, Scheduler, Packages, Ping, Traceroute, Torch y visor de Log.
 - **Capa 2 — Motor Dinámico Universal:**
   - Renderizador automático de tablas y formularios para el **100% restante de submenús `/rest/*` de RouterOS v7** (MPLS, VXLAN, ZeroTier, Containers, CAPsMAN, User-Manager, RADIUS, SNMP, Certificates).
@@ -93,9 +94,16 @@ Una pregunta frecuente de colaboradores y operadores acostumbrados a WinBox/WebF
 rosgrid/
 ├── LICENSE                         # Licencia GNU GPLv3
 ├── README.md                       # Documentación principal del proyecto y ADR de seguridad
+├── INSTALL.md                      # Guía paso a paso de instalación, KeyDB vs DragonflyDB y MikroTik
+├── SECURITY.md                     # Política de seguridad, criptografía y reporte de vulnerabilidades
+├── RESOURCES.md                    # Catálogo de recursos, imágenes Docker y RFCs
+├── FAQ.md                          # Preguntas frecuentes técnicas y operativas
+├── CONTRIBUTING.md                 # Guía de contribución y umbrales del estándar QA 11X
+├── CODE_OF_CONDUCT.md              # Código de conducta de la comunidad (Contributor Covenant v2.1)
+├── CHANGELOG.md                    # Historial de versiones (Keep a Changelog / SemVer)
 ├── ROADMAP.md                      # Control granular de ejecución por hitos (Hitos 0 al 16)
 ├── TESTING.md                      # Bitácora Viva de certificación QA 11X
-├── docker-compose.yml              # Orquestador de entorno local / laboratorio EVE-NG
+├── docker-compose.yml              # Orquestador de entorno local / laboratorio EVE-NG (con KeyDB)
 ├── docker-compose.prod.yml         # Orquestador de producción (Imágenes oficiales en Docker Hub)
 ├── build.sh                        # Script multi-arquitectura buildx para publicación en Docker Hub
 ├── .env.example                    # Plantilla de configuración de entorno
@@ -105,16 +113,16 @@ rosgrid/
 ├── auditar-infra.sh                # Auditoría efímera Trivy (IaC + File System CVEs)
 ├── specs/                          # Enciclopedia de 30 especificaciones técnicas + Blueprints QA 11X
 ├── examples/                       # Plantillas de referencia de solo lectura (FastAPI y Vue 3)
-├── docs/                           # Manuales técnicos, operativos y de arquitectura de RoSGrid
-├── fastapi/                        # Ecosistema Backend (FastAPI + SQLAlchemy 2.0 + Alembic + Redis + QA 11X)
+├── docs/                           # Manuales técnicos, operativos y referencia completa de la API
+├── fastapi/                        # Ecosistema Backend (FastAPI + SQLAlchemy 2.0 + KeyDB + QA 11X)
 └── vue3/                           # Ecosistema Frontend (Vue 3 + TypeScript + Pinia + Leaflet + QA 11X)
 ~~~
 
 ---
 
-## 🚀 Despliegue con Docker Compose
+## 🚀 Despliegue Rápido con Docker Compose
 
-RoSGrid opera bajo el principio de **infraestructura inmutable** y ejecuta las migraciones de base de datos automáticamente al iniciar o actualizar contenedores (protegidas mediante `pg_advisory_lock` en PostgreSQL):
+RoSGrid opera bajo el principio de **infraestructura inmutable** y ejecuta las migraciones de base de datos automáticamente al iniciar o actualizar contenedores (protegidas mediante `pg_advisory_lock` en PostgreSQL). Consulta [INSTALL.md](./INSTALL.md) para ver los requisitos detallados y la configuración de **KeyDB** o **DragonflyDB**:
 
 ~~~bash
 # 1. Copiar la plantilla de variables de entorno y configurar secretos criptográficos

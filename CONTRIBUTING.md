@@ -24,7 +24,7 @@ Para garantizar reproducibilidad absoluta y proteger el sistema operativo anfitr
 
 ## 2. Límites Arquitectónicos Innegociables
 
-Antes de proponer una nueva funcionalidad, verifica que cumpla estas 5 reglas de arquitectura de RoSGrid:
+Antes de proponer una nueva funcionalidad, verifica que cumpla estas 6 reglas de arquitectura de RoSGrid:
 
 1. **Prohibición de Terminales Interactivas Libres (SSH / Telnet / CLI sin filtro):** No se aceptarán PRs que abran sesiones interactivas crudas hacia los equipos MikroTik que permitan evadir el modelo *Split-Credential*, el flujo *Maker-Checker*, el *Safe Mode* o la bitácora inmutable WORM. Toda operación nueva sobre RouterOS v7 debe pasar por Capa 1 o por el Motor Universal de Capa 2 (`/webfig/layer2/*`).
 2. **Aislamiento Multi-Tenant (`RLS`):** Cualquier tabla nueva en PostgreSQL 17 que almacene datos de un Tenant debe incluir `tenant_id` e implementar `ENABLE` y `FORCE ROW LEVEL SECURITY` en su migración de Alembic.
@@ -33,9 +33,12 @@ Antes de proponer una nueva funcionalidad, verifica que cumpla estas 5 reglas de
    SPDX-License-Identifier: GPL-3.0-only
    ~~~
 4. **Esquemas Estrictos y Tipado Total:**
-   - **Backend (`fastapi/`):** Todos los modelos de entrada en Pydantic v2 deben declarar `model_config = ConfigDict(extra="forbid")` y pasar `mypy --strict`.
+   - **Backend (`fastapi/`):** Todos los modelos de entrada en Pydantic v2 deben declarar `model_config = ConfigDict(extra="forbid")`, usar `ORJSONResponse` y pasar `mypy --strict`.
    - **Frontend (`vue3/`):** Tipado estricto en TypeScript (`vue-tsc --noEmit`). Queda prohibido el uso de `any`.
-5. **Accesibilidad (`WCAG 2.1 AA`) y Diseño de Alta Densidad:**
+5. **Reglas de Rendimiento Frontend (`shallowRef`, *Virtual Scroll* y `<canvas>` 2D):**
+   - Las colecciones masivas de RouterOS v7 y el `TelemetryRingBuffer` en Pinia deben declararse con `shallowRef()` para evitar sobrecarga de Proxies profundos.
+   - Toda tabla técnica debe usar `RgDataTable.vue` (que activa *Virtual Scrolling* nativo al superar 100 filas) y las gráficas en tiempo real deben renderizarse en `<canvas>` 2D con `requestAnimationFrame`.
+6. **Accesibilidad (`WCAG 2.1 AA`) y Diseño de Alta Densidad:**
    - Toda vista o componente en `vue3/` debe usar las variables CSS de `src/assets/themes.css` (soportando los temas `dark`, `light` y `noc-high-contrast` con ratio de contraste `>= 4.5:1`), respetar la **Densidad Dual Adaptativa (`32px` en PC / `44px` en móvil)** y aplicar `font-variant-numeric: tabular-nums` en columnas numéricas, IPs y contadores.
 
 ---
@@ -67,9 +70,9 @@ Todos los commits son validados automáticamente por `commitlint.config.js`. Uti
 - `feat`: Nueva característica en Backend o Frontend.
 - `fix`: Corrección de un error.
 - `security`: Mejora o parche de seguridad criptográfica, RBAC o RLS.
-- `perf`: Optimización de rendimiento (WebSockets, RingBuffer, consultas SQL).
+- `perf`: Optimización de rendimiento (WebSockets, RingBuffer, KeyDB, consultas SQL).
 - `test`: Adición o ajuste de pruebas unitarias, mutación, BDD o E2E.
-- `docs`: Cambios en `README.md`, `ROADMAP.md`, `TESTING.md` o manuales en `docs/`.
+- `docs`: Cambios en archivos raíz o manuales en `docs/`.
 - `refactor`: Refactorización de código para reducir complejidad ciclomática sin alterar funcionalidad.
 - `chore` / `ci`: Ajustes en `Makefile`, Docker o configuración de QA.
 

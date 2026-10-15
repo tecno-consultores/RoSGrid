@@ -6,27 +6,30 @@ Este documento centraliza las referencias técnicas, imágenes oficiales de Dock
 
 ## 1. Documentación Interna del Repositorio
 
-### Manuales Operativos y de Arquitectura (`docs/`)
-- `docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md` — Variables `.env`, generación de llaves criptográficas, despliegue Docker Compose, auto-migración con `pg_advisory_lock` y compilación con `./build.sh`.
+### Manuales Operativos, de Despliegue y Referencia de API (`docs/`)
+- `docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md` — Variables `.env`, generación de llaves criptográficas, motor **KeyDB Multi-Hilo** predeterminado vs. perfil **DragonflyDB** de alta escala, despliegue Docker Compose, auto-migración con `pg_advisory_lock` y compilación con `./build.sh`.
 - `docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md` — Configuración paso a paso de RouterOS v7.1+ (`www-ssl`, certificados autofirmados para TOFU, permisos API y funcionamiento del *Safe Mode*).
 - `docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md` — Gestión de empresas (Tenants), los 11 roles RBAC, matriz de permisos por router, Bóveda *Step-Up Auth* (30s) y *Kill-Switch*.
-- `docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md` — Operación de Capa 1 y Capa 2, gráficas efímeras `RingBuffer`, *Maker-Checker*, comparador Diff `.rsc` estilo Git, importador CSV y Wallboard NOC.
-- `docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md` — Guía del rol `AUDITOR`, verificación criptográfica WORM y diagramas de arquitectura AST generados con Graphify.
+- `docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md` — Operación de Capa 1 y Capa 2, gráficas efímeras `RingBuffer` sobre `<canvas>` 2D, *Maker-Checker*, comparador Diff `.rsc` estilo Git, importador CSV y Wallboard NOC.
+- `docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md` — Guía del rol `AUDITOR`, verificación criptográfica WORM, ADR sobre la exclusión deliberada de terminal CLI/SSH libre y diagramas de arquitectura AST generados con Graphify.
+- `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md` — Especificación completa de todos los endpoints `/api/v1/*` y canales `/ws/v1/*` (cabeceras `X-CSRF-Token`, `Idempotency-Key`, payloads JSON y uso de `SERVICE_ACCOUNT`), supliendo a Swagger/ReDoc en producción.
 
 ### Enciclopedia de Especificaciones (`specs/`)
-- `specs/00` a `specs/08` — Gobernanza 11X, infraestructura Docker inmutable, esquema PostgreSQL 17 RLS/WORM, Redis 7, criptografía, RBAC de 11 roles y cliente RouterOS v7 TOFU/Safe Mode.
-- `specs/09` a `specs/17` — Arquitectura Backend FastAPI, endpoints de Capa 1, motor universal de Capa 2, Maker-Checker, Backups Diff Git, WebSockets de telemetría efímera y Workers asíncronos.
-- `specs/18` a `specs/23` — Arquitectura Frontend Vue 3 Zero-Trust, sistema de diseño táctico NOC (`WCAG 2.1 AA`), mapa OpenStreetMap (`Leaflet`), consola WebFig con `<KeepAlive :max="5">` y `TelemetryRingBuffer`.
+- `specs/00` a `specs/08` — Gobernanza 11X, infraestructura Docker inmutable, esquema PostgreSQL 17 RLS/WORM/BRIN, KeyDB/RESP, criptografía, RBAC de 11 roles y cliente RouterOS v7 TOFU/Safe Mode con pool TLS Keep-Alive.
+- `specs/09` a `specs/17` — Arquitectura Backend FastAPI (`ORJSONResponse` + `uvloop`), endpoints de Capa 1, motor universal de Capa 2, Maker-Checker, Backups Diff Git, WebSockets de telemetría efímera y Workers asíncronos.
+- `specs/18` a `specs/23` — Arquitectura Frontend Vue 3 Zero-Trust (`shallowRef`), sistema de diseño táctico NOC (`WCAG 2.1 AA` + *Virtual Scrolling*), mapa OpenStreetMap (`Leaflet`), consola WebFig con `<KeepAlive :max="5">` y `TelemetryRingBuffer` sobre `<canvas>` 2D.
 - `specs/24` a `specs/29` — Suites de certificación del Estándar Corporativo **QA 11X**.
 
 ---
 
-## 2. Catálogo de Imágenes Oficiales en Docker Hub (`sinfallas/*`)
+## 2. Catálogo de Imágenes Oficiales y Motores en Memoria
 
-| Imagen en Docker Hub | Rol en el Ecosistema RoSGrid |
+| Imagen en Docker Hub / Registro | Rol en el Ecosistema RoSGrid |
 | :--- | :--- |
-| `sinfallas/rosgrid-backend:latest` | Imagen oficial inmutable de producción para `rosgrid-api` y `rosgrid-worker` (usuario no-root `10001`). |
+| `sinfallas/rosgrid-backend:latest` | Imagen oficial inmutable de producción para `rosgrid-api` y `rosgrid-worker` (usuario no-root `10001`, `uvloop` + `orjson`). |
 | `sinfallas/rosgrid-frontend:latest` | Imagen oficial inmutable de producción para `rosgrid-ui` sobre Nginx endurecido no-root (`8080`). |
+| `eqalpha/keydb:alpine` | Motor en memoria **Multi-Hilo predeterminado** (`--server-threads 2`, ~35 MB RAM, licencia BSD-3-Clause). |
+| `docker.dragonflydb.io/dragonflydb/dragonfly:latest` | Perfil opcional de **Alto Rendimiento** (*Shared-Nothing* `io_uring`) para flotas masivas ISP (> 300–500 routers). |
 | `sinfallas/base-python-uv:3.13` | Imagen base de Python 3.13 + `uv` para desarrollo, construcción multi-stage y suite QA Backend. |
 | `sinfallas/base-node-ionic:22` | Imagen base de Node 22 + `pnpm` para etapa builder de Frontend y validación estática/unitaria. |
 | `sinfallas/karatelabs:latest` | Ejecutor de pruebas funcionales BDD Gherkin de caja negra para API y UI. |

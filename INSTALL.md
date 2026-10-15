@@ -7,12 +7,12 @@ Este documento detalla los requisitos técnicos y el procedimiento paso a paso p
 ## 1. Requisitos del Sistema y Red
 
 ### 1.1 Requisitos del Servidor Anfitrión (Host Docker)
-| Recurso | Mínimo (Hasta 50 Routers) | Recomendado (Flotas de 50 a 500+ Routers) |
+| Recurso | Estándar con **KeyDB** (Hasta 300 Routers) | Alta Escala con **DragonflyDB** (300 a 2,000+ Routers) |
 | :--- | :--- | :--- |
-| **Sistema Operativo** | Linux 64-bit (Ubuntu 24.04 / 26.04 LTS, Debian 12+) | Ubuntu Server 24.04 / 26.04 LTS (Kernel 6.8+) |
-| **CPU** | 2 vCPU (`x86_64` / `amd64`) | 4 a 8 vCPU (`x86_64` / `amd64`) |
-| **Memoria RAM** | 4 GB RAM | 8 GB a 16 GB RAM |
-| **Almacenamiento** | 20 GB SSD (NVMe recomendado) | 60 GB+ NVMe (para retención de backups `.rsc` y bitácora WORM) |
+| **Sistema Operativo** | Linux 64-bit (Ubuntu 24.04 / 26.04 LTS, Debian 12+) | Ubuntu Server 24.04 / 26.04 LTS (Kernel `>= 6.2` con soporte `io_uring`) |
+| **CPU** | 2 a 4 vCPU (`x86_64` / `amd64`) | 8+ vCPU (`x86_64` / `amd64`) |
+| **Memoria RAM** | **4 GB a 8 GB RAM** (KeyDB consume ~35 MB en reposo) | **16 GB+ RAM** (DragonflyDB pre-reserva memoria por cada hilo de CPU) |
+| **Almacenamiento** | 20 GB SSD (NVMe recomendado) | 80 GB+ NVMe (para retención de backups `.rsc` y bitácora WORM con índice `BRIN`) |
 | **Motor de Contenedores** | Docker Engine `>= 24.0` + Docker Compose `v2.20+` | Docker Engine `>= 26.0` + Docker Compose `v2.27+` |
 
 ### 1.2 Requisitos en los Equipos MikroTik
@@ -48,7 +48,7 @@ chmod 600 .env
 ## 3. Modos de Instalación y Despliegue
 
 ### Opción A: Despliegue en Producción desde Docker Hub (Recomendado para ISP / NOC)
-Utiliza las imágenes oficiales precompiladas, inmutables y sin privilegios (`non-root`) publicadas en Docker Hub (`sinfallas/rosgrid-backend:latest` y `sinfallas/rosgrid-frontend:latest`). En este modo (`ROSGRID_ENV=production`), la documentación interactiva Swagger/ReDoc está **deshabilitada por seguridad**.
+Utiliza las imágenes oficiales precompiladas, inmutables y sin privilegios (`non-root`) publicadas en Docker Hub (`sinfallas/rosgrid-backend:latest` y `sinfallas/rosgrid-frontend:latest`). En este modo (`ROSGRID_ENV=production`), la documentación interactiva Swagger/ReDoc está **deshabilitada por seguridad** (consulta `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`).
 
 ~~~bash
 # 1. Descargar las imágenes oficiales más recientes
@@ -85,7 +85,40 @@ Si deseas construir tus propias imágenes de producción a partir del código fu
 
 ---
 
-## 4. Preparación Rápida de tus Equipos MikroTik (RouterOS v7.1+)
+## 4. Motor en Memoria: KeyDB Multi-Hilo (Predeterminado) vs. DragonflyDB (Alto Rendimiento)
+
+Para superar la limitación mono-hilo de Redis tradicional en el bus `Pub/Sub` de telemetría WebSocket y en los pipelines del monitor *Zero-Metrics*, RoSGrid utiliza **KeyDB (`eqalpha/keydb:alpine`) con `--server-threads 2`** como motor predeterminado.
+
+### ¿Por qué recomendamos usar KeyDB por defecto?
+1. **Eficiencia extrema de memoria RAM:** Consume apenas `~35 MB` en reposo, ideal para servidores VPS de 4 GB / 8 GB de RAM y laboratorios en EVE-NG.
+2. **Desempeño Multi-Hilo real:** Triplica el rendimiento de Redis tradicional en canales `Pub/Sub` y hashes efímeros sin exigir permisos especiales del kernel.
+3. **Licencia 100% Software Libre (`BSD-3-Clause`):** Totalmente compatible con la filosofía `GPL-3.0-only` de RoSGrid.
+
+### ¿Cuándo y cómo cambiar al Perfil de Alto Rendimiento con DragonflyDB?
+**Recomendación oficial:** Utiliza **KeyDB** a menos que tu entorno opere una flota masiva (**más de 300 a 500 routers MikroTik con decenas de operadores y pantallas NOC conectadas simultáneamente a gráficas en vivo**) sobre un servidor dedicado con **16 GB+ de RAM**.
+
+Si tu operación requiere el motor *Shared-Nothing* sobre `io_uring` de **DragonflyDB**, reemplaza el bloque del servicio `rosgrid-redis` en tu `docker-compose.prod.yml` por el siguiente perfil (no requiere ningún cambio en el código de FastAPI):
+
+~~~yaml
+  rosgrid-redis:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+    container_name: rosgrid_redis
+    restart: unless-stopped
+    ulimits:
+      memlock: -1
+    command: >
+      dragonfly
+      --proactor_threads=4
+      --maxmemory=2gb
+      --requirepass=${REDIS_PASSWORD} --alsologtostderr networks: - rosgrid_internal_net healthcheck: test: ["CMD-SHELL", "redis-cli -a $${REDIS_PASSWORD} ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+~~~
+
+---
+
+## 5. Preparación Rápida de tus Equipos MikroTik (RouterOS v7.1+)
 
 Antes de registrar un router en el inventario de RoSGrid (individualmente o por lote CSV), ejecuta estos comandos en la terminal del MikroTik para habilitar `www-ssl` con un certificado TLS para fijación **TOFU (*Trust On First Use*)**:
 
@@ -104,7 +137,7 @@ Antes de registrar un router en el inventario de RoSGrid (individualmente o por 
 
 ---
 
-## 5. Actualización de Versiones y Migraciones Automáticas
+## 6. Actualización de Versiones y Migraciones Automáticas
 
 RoSGrid incluye un mecanismo de auto-migración protegido por bloqueo atómico en PostgreSQL (`pg_advisory_lock` ID `948271605` en `entrypoint.sh`). Para actualizar tu instalación a una nueva versión sin corromper el esquema:
 
@@ -117,4 +150,4 @@ docker compose -f docker-compose.prod.yml pull
 docker compose -f docker-compose.prod.yml up -d
 ~~~
 
-El contenedor `rosgrid_api` adquirirá automáticamente el bloqueo en PostgreSQL 17, ejecutará `alembic upgrade head`, liberará el bloqueo e iniciará el servidor ASGI Uvicorn sin intervención manual.
+El contenedor `rosgrid_api` adquirirá automáticamente el bloqueo en PostgreSQL 17, ejecutará `alembic upgrade head`, liberará el bloqueo e iniciará el servidor ASGI Uvicorn (`--loop uvloop --http httptools`) sin intervención manual.

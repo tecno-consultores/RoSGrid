@@ -1,11 +1,10 @@
 # 🗺️ ROADMAP GRANULAR DE EJECUCIÓN (30 SPECS) — RoSGrid
 
 ## 📍 Punto de Control Actual (Checkpoint)
-- **Hito Actual en Curso:** Hito 11 — Frontend Vue 3 Base — Zero-Trust, Interceptores, Stores Pinia y Sistema de Diseño WCAG
+- **Hito Actual en Curso:** Sub-tarea `10.6` (Optimización de Alto Rendimiento Backend con KeyDB Multi-Hilo) e inicio del Hito 11 (Frontend Vue 3 Base — Zero-Trust, Interceptores, Stores Pinia y Sistema de Diseño WCAG)
 - **Último Archivo de `specs/` Procesado:** `specs/24`, `specs/25` y `specs/26` (Certificación QA 11X Backend adelantada: Sub-tareas 15.1 y 15.2 superadas)
 - **Último Módulo de Código Creado:** Suite unitaria completa Backend (`fastapi/tests/` con 284 tests unitarios pasando, cobertura 95.03% y `make qa-lint` 0 errores en Docker) y `fastapi/test/api_test.feature`
-- **Siguiente Paso Inmediato:** Sub-tarea **11.1** — Configuración base de Vite, TypeScript (`tsconfig.json`), `index.html` y `public/manifest.webmanifest` PWA (`specs/18_FRONTEND_PHASE_1_SETUP_ZERO_TRUST_AND_INTERCEPTORS.md` y `specs/19_FRONTEND_DESIGN_SYSTEM_ACCESSIBILITY_AND_PERFORMANCE.md`)
-
+- **Siguiente Paso Inmediato:** Ejecutar Sub-tarea **10.6** (KeyDB Multi-Hilo, `ORJSONResponse`, `uvloop`, Pool TLS Keep-Alive, Pipelines KeyDB, índice `BRIN` en `audit_logs` y ocultamiento de Swagger en producción) y arrancar Sub-tarea **11.1** del Frontend (`specs/18` y `specs/19`)
 
 ---
 
@@ -28,12 +27,12 @@
 
 ---
 
-## ✅ HITO 2: Capa Redis 7 — Idempotencia, Sesiones Kill-Switch, Pub/Sub y Monitor Zero-Metrics
+## ✅ HITO 2: Capa KeyDB Multi-Hilo (Compatible RESP) — Idempotencia, Sesiones Kill-Switch, Pub/Sub y Monitor Zero-Metrics
 > **Archivo Guía:** `specs/05_REDIS_KEYS_IDEMPOTENCY_AND_ZERO_METRICS.md`
-- [x] **2.1** Cliente y pool de conexión Redis 7 (`src/redis_layer/client.py`).
+- [x] **2.1** Cliente y pool de conexión asíncrono compatible con KeyDB / DragonflyDB (`src/redis_layer/client.py`).
 - [x] **2.2** Middleware y gestor de Idempotencia HTTP (`Idempotency-Key` UUIDv7 con estados `IN_PROGRESS` / `COMPLETED` y hash SHA-256 del body en `src/redis_layer/idempotency.py`).
 - [x] **2.3** Gestor de familias de Refresh Tokens (*Reuse Detection*), registro de sesiones activas e invocación del **Kill-Switch** (`src/redis_layer/sessions.py`).
-- [x] **2.4** Máquina de Estados Efímera *Zero-Metrics Storage* (~200 bytes/router en Redis para transiciones `ONLINE`/`OFFLINE`/`DEGRADED_HIGH_LOAD` en `src/redis_layer/zero_metrics_monitor.py`).
+- [x] **2.4** Máquina de Estados Efímera *Zero-Metrics Storage* (~200 bytes/router en memoria para transiciones `ONLINE`/`OFFLINE`/`DEGRADED_HIGH_LOAD` en `src/redis_layer/zero_metrics_monitor.py`).
 
 ---
 
@@ -107,23 +106,28 @@
 
 ---
 
-## ✅ HITO 10: Multiplexor WebSocket para Gráficas Efímeras (Estilo WinBox), Workers, Dockerfile y Graphify Backend
+## 🔄 HITO 10: Multiplexor WebSocket, Workers, Dockerfile, Graphify y Optimización de Alto Rendimiento Backend
 > **Archivos Guía:** `specs/17_BACKEND_WEBSOCKETS_LIVE_CHARTS_AND_ALERT_WORKERS.md` y `specs/01_DOCKER_INFRASTRUCTURE_AND_IMMUTABLE_IMAGES.md`
 - [x] **10.1** Multiplexor WebSocket `/ws/v1/routers/{router_id}/live-telemetry` (activa el poller cuando hay >= 1 operador viendo el router y se detiene al instante cuando `SCARD == 0`).
 - [x] **10.2** WebSocket global del Tenant `/ws/v1/tenant/events` (eventos NOC, progreso de trabajos masivos y orden `SESSION_KILLED`).
 - [x] **10.3** Los 4 Workers en segundo plano (`src/workers/`): Monitor *Zero-Storage*, Despachador de Alertas Multi-Canal (Telegram Bot, Correo SMTP, Webhook HMAC-SHA256 y NOC), Worker de Backups Nocturnos y Worker de Rotación Automática de Bóveda.
 - [x] **10.4** **Cierre de Arquitectura Backend con Graphify (En Docker):** Ejecutar `docker compose -f docker-compose.qa.yml --profile graphify run --rm graphify` dentro de `./fastapi/` para generar `fastapi/graphify-out/GRAPH_REPORT.md` y el grafo AST completo del Backend (`specs/09`, `29`).
 - [x] **10.5** **Dockerfile Multi-Stage de Producción Backend (`fastapi/Dockerfile`):** Crear `fastapi/Dockerfile` basado en `sinfallas/base-python-uv:3.13` con soporte `ARG BUILD_DATE`, dependencias `--no-dev`, usuario sin privilegios (`non-root`) y `scripts/entrypoint.sh` (`specs/01`).
+- [ ] **10.6** **Paquete de Optimización de Alto Rendimiento Backend, DB y KeyDB Multi-Hilo:**
+  * Sustituir `redis:7-alpine` por `eqalpha/keydb:alpine` (`keydb-server --server-threads 2` y healthcheck `keydb-cli`) en `docker-compose.yml`, `fastapi/docker-compose.qa.yml` y `specs/01` (documentando `DragonflyDB` como perfil de alta escala).
+  * Configurar `ORJSONResponse` como `default_response_class` en `fastapi/src/main.py`, serialización `orjson` en frames WebSocket, desactivación estricta de Swagger/ReDoc/OpenAPI cuando `ROSGRID_ENV == "production"` y activar `--loop uvloop --http httptools` en `fastapi/scripts/entrypoint.sh`.
+  * Implementar reutilización de pool `Keep-Alive` TLS (`limits=httpx.Limits(max_keepalive_connections=20, keepalive_expiry=60.0)`) en `src/mikrotik/client.py` y ejecución por lotes con `pipeline()` hacia KeyDB en `src/redis_layer/zero_metrics_monitor.py`.
+  * Añadir índice `BRIN` (`ix_audit_logs_created_at_brin` con `postgresql_using='brin'`) sobre `audit_logs(created_at)` en `0003_operations_backups_immutable_audit.py` y re-validar `make qa-lint && make qa-unit`.
 
 ---
 
-## 🎨 HITO 11: Frontend Vue 3 Base — Zero-Trust, Interceptores, Stores Pinia y Sistema de Diseño WCAG
+## 🎨 HITO 11: Frontend Vue 3 Base — Zero-Trust, Interceptores, Stores Pinia (`shallowRef`) y Sistema de Diseño WCAG (`Virtual Scroll`)
 > **Archivos Guía:** `specs/18_FRONTEND_PHASE_1_SETUP_ZERO_TRUST_AND_INTERCEPTORS.md` y `specs/19_FRONTEND_DESIGN_SYSTEM_ACCESSIBILITY_AND_PERFORMANCE.md`
 - [ ] **11.1** Configuración base de Vite, TypeScript (`tsconfig.json`), `index.html` y `public/manifest.webmanifest` PWA (`specs/18`, `19`).
 - [ ] **11.2** Cliente HTTP seguro (`vue3/src/api/httpClient.ts`) con los 4 interceptores: `X-CSRF-Token`, `Idempotency-Key` (`UUIDv7`), rotación transparente de Refresh Token y captura de `202 Accepted` (*Maker-Checker*) (`specs/18`).
-- [ ] **11.3** Los 6 Stores en Pinia (`useAuthStore`, `useThemeAndLayoutStore`, `useInventoryStore`, `useWebFigStore`, `useLiveTelemetryStore`, `useNocEventsStore`) y Vue Router con Guards RBAC para los 11 roles (`specs/18`).
-- [ ] **11.4** Sistema de diseño de alta densidad (`themes.css` con temas `dark`, `light`, `noc-high-contrast` cumpliendo contraste WCAG 2.1 AA y fuentes nativas `tabular-nums`) (`specs/19`).
-- [ ] **11.5** Los 5 componentes base reutilizables: `RgDataTable.vue` (con Drag & Drop + teclado accesible), `RgCommandPalette.vue` (`Ctrl+K`), `RgSafeModeBanner.vue`, `RgStepUp2FAModal.vue` y `RgResponsiveShell.vue` (Móvil/Tablet/PC) (`specs/19`).
+- [ ] **11.3** Los 6 Stores en Pinia (`useAuthStore`, `useThemeAndLayoutStore` con densidad dual adaptativa `auto`/`compact`/`comfortable`, `useInventoryStore`, `useWebFigStore` con cola de hasta 5 pestañas en RAM `openRouterTabs`, `useLiveTelemetryStore`, `useNocEventsStore`) usando **`shallowRef` para colecciones masivas y buffers de telemetría**, más Vue Router con Guards RBAC para los 11 roles (`specs/18`).
+- [ ] **11.4** Sistema de diseño de alta densidad (`themes.css` con tema predeterminado `dark` *Tactical NOC Cyan* `#0B0F19`/`#06B6D4`/`#22D3EE`, `light` y `noc-high-contrast` cumpliendo contraste WCAG 2.1 AA y fuentes nativas `tabular-nums`) (`specs/19`).
+- [ ] **11.5** Los 5 componentes base reutilizables: `RgDataTable.vue` (Densidad Dual `32px` WinBox en PC / `44px` táctil en móvil con **Virtual Scrolling nativo para tablas > 100 filas**, insignias `[D]`/`[X]`/`[I]`/`[R]`, conmutador rápido y Drag & Drop + teclado accesible), `RgCommandPalette.vue` (`Ctrl+K`), `RgSafeModeBanner.vue`, `RgStepUp2FAModal.vue` y `RgResponsiveShell.vue` (Doble contexto + Barra Inferior Fija en Móvil) (`specs/19`).
 
 ---
 
@@ -137,25 +141,27 @@
 
 ---
 
-## 📈 HITO 13: Vistas Frontend (Parte B) — Consola WebFig (`RingBuffer` WinBox), Diff Git, NOC, Auditor, Dockerfile y Graphify Frontend
+## 📈 HITO 13: Vistas Frontend (Parte B) — Consola WebFig (`RingBuffer` + `<canvas>` 2D + `KeepAlive`), Diff Git, NOC, Auditor, Dockerfile y Graphify
 > **Archivos Guía:** `specs/22_FRONTEND_VIEWS_WEBFIG_CONSOLE_RINGBUFFER_AND_LAYERS.md`, `specs/23_FRONTEND_VIEWS_APPROVALS_DIFF_BULK_NOC_AND_AUDITOR.md` y `specs/01_DOCKER_INFRASTRUCTURE_AND_IMMUTABLE_IMAGES.md`
-- [ ] **13.1** Clase `TelemetryRingBuffer<T>` en memoria RAM (`MAX_POINTS = 5400` para 3 horas a 1 tick/2s con limpieza total en `onBeforeUnmount`) (`specs/22`).
-- [ ] **13.2** Layout de Consola WebFig (`RouterWebFigLayout.vue`) y Dashboard de Gráficas Efímeras estilo WinBox (`RouterLiveDashboardView.vue`) (`specs/22`).
+- [ ] **13.1** Clase `TelemetryRingBuffer<T>` en memoria RAM (`MAX_POINTS = 5400` para 3 horas a 1 tick/2s con reactividad superficial `shallowRef` y limpieza total en `onBeforeUnmount` al salir del router) (`specs/22`).
+- [ ] **13.2** Layout de Consola WebFig (`RouterWebFigLayout.vue`), Barra de Pestañas de Trabajo con `<KeepAlive :max="5">` (`RouterWorkspaceTabsBar.vue`) y Dashboard de Gráficas Efímeras estilo WinBox (`RouterLiveDashboardView.vue`) renderizadas sobre **`<canvas>` 2D acelerado con `requestAnimationFrame`** (`specs/22`).
 - [ ] **13.3** Vistas especializadas de WebFig Capa 1 (`InterfacesAndSfpView.vue`, `FirewallRulesView.vue` con Drag & Drop + Safe Mode, `RoutingBgpOspfView.vue`, `PppAndQueuesView.vue`, `LiveToolsDiagnosticsView.vue`) y Renderizador Universal de Capa 2 (`DynamicLayer2ResourceView.vue`) (`specs/22`).
 - [ ] **13.4** Bandeja de Aprobaciones Maker-Checker (`ApprovalsInboxView.vue`), Historial de Backups (30 días) y Comparador Visual Lado a Lado estilo Git (`RscGitDiffViewer.vue`) (`specs/23`).
 - [ ] **13.5** Asistente de Plantillas, Acciones Masivas y Updates de RouterOS (`BulkOperationsAndUpdatesView.vue`), Pantalla Completa **Wallboard NOC (`NocWallboardView.vue`)** y Consola Forense del **Auditor (`ImmutableAuditLogsView.vue`)** (`specs/23`).
 - [ ] **13.6** **Cierre de Arquitectura Frontend con Graphify (En Docker):** Ejecutar `docker compose -f docker-compose.qa.yml --profile graphify run --rm graphify` dentro de `./vue3/` para generar `vue3/graphify-out/GRAPH_REPORT.md` y el grafo de componentes/stores del Frontend (`specs/18`, `29`).
-- [ ] **13.7** **Dockerfile Multi-Stage de Producción Frontend (`vue3/Dockerfile`) y Script `build.sh`:** Crear `vue3/Dockerfile` (builder `pnpm build` + runtime `nginx:1.27-alpine` no-root con `ARG BUILD_DATE` y `vue3/nginx/default.conf`) y el script `build.sh` en la raíz con `docker buildx` (`container-builder`, `tonistiigi/binfmt` y limpieza `prune -af`) (`specs/01`).
+- [ ] **13.7** **Dockerfile Multi-Stage de Producción Frontend (`vue3/Dockerfile`), `docker-compose.prod.yml` (con KeyDB Multi-Hilo) y Script `build.sh`:** Crear `vue3/Dockerfile` (builder `pnpm build` + runtime `nginx:1.27-alpine` no-root con `ARG BUILD_DATE` y `vue3/nginx/default.conf`), `docker-compose.prod.yml` (usando `eqalpha/keydb:alpine` por defecto y bloque comentado de `DragonflyDB` para alto rendimiento) y el script `build.sh` en la raíz con `docker buildx` (`container-builder`, `tonistiigi/binfmt` y limpieza `prune -af`) (`specs/01`).
 
 ---
 
-## 📚 HITO 14: Documentación Oficial del Proyecto en `docs/` (Basada en `GRAPH_REPORT.md`)
-> **Propósito:** Generar la documentación técnica, operativa y de despliegue de RoSGrid en español dentro de la carpeta `docs/`, tomando como referencia `fastapi/graphify-out/GRAPH_REPORT.md` y `vue3/graphify-out/GRAPH_REPORT.md`.
-- [ ] **14.1** `docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md`: Requisitos de infraestructura, configuración de variables `.env`, generación de llaves criptográficas (`AES-256-GCM`, `JWT`, `CSRF`), despliegue con `docker-compose.yml`, uso de `build.sh` y auto-migración con `pg_advisory_lock`.
+## 📚 HITO 14: Documentación Oficial del Proyecto en `docs/`, Referencia de API y Gobernanza Raíz (Basada en `GRAPH_REPORT.md`)
+> **Propósito:** Generar la documentación técnica, operativa, de despliegue (incluyendo KeyDB predeterminado vs. perfil de alto rendimiento DragonflyDB) y la especificación completa de la API (dado que Swagger/ReDoc están desactivados en producción) dentro de `docs/`, más la sincronización de los archivos de gobernanza de la raíz tomando como referencia `fastapi/graphify-out/GRAPH_REPORT.md` y `vue3/graphify-out/GRAPH_REPORT.md`.
+- [ ] **14.1** `docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md`: Requisitos de infraestructura, configuración de variables `.env`, generación de llaves criptográficas (`AES-256-GCM`, `JWT`, `CSRF`), arquitectura en memoria con **KeyDB Multi-Hilo por defecto** y guía de activación del **Perfil de Alto Rendimiento con DragonflyDB** para grandes flotas ISP, despliegue con `docker-compose.yml` / `docker-compose.prod.yml`, uso de `build.sh` y auto-migración con `pg_advisory_lock`.
 - [ ] **14.2** `docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md`: Guía paso a paso con comandos CLI de RouterOS v7.1+ para habilitar `/ip/service/www-ssl`, generar certificado autofirmado para pinning TOFU, permisos mínimos del usuario API y explicación del mecanismo *Safe Mode (Dead Man's Switch)* vía `/system/scheduler`.
 - [ ] **14.3** `docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md`: Administración de empresas (Tenants), detalle de los **11 roles RBAC**, uso de la matriz de asignación de routers por técnico, consulta de la Bóveda con *Step-Up Auth* (30s) y operación del *Kill-Switch* de sesiones en vivo.
-- [ ] **14.4** `docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md`: Uso diario de la consola WebFig (Capa 1 y Capa 2), gráficas efímeras en vivo estilo WinBox (`RingBuffer`), flujo de aprobaciones *Maker-Checker*, comparador Diff estilo Git de respaldos `.rsc`, importación masiva por CSV, ventanas de mantenimiento y modo **Wallboard NOC**.
-- [ ] **14.5** `docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md`: Guía exclusiva para el rol **Auditor**, verificación criptográfica de la cadena de custodia inmutable WORM (`audit_logs`) y diagramas de arquitectura en formato Mermaid extraídos de `graphify-out/GRAPH_REPORT.md`.
+- [ ] **14.4** `docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md`: Uso diario de la consola WebFig (Capa 1 y Capa 2 con pestañas `KeepAlive` y densidad adaptativa), gráficas efímeras en vivo estilo WinBox (`RingBuffer`), flujo de aprobaciones *Maker-Checker*, comparador Diff estilo Git de respaldos `.rsc`, importación masiva por CSV, ventanas de mantenimiento y modo **Wallboard NOC**.
+- [ ] **14.5** `docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md`: Guía exclusiva para el rol **Auditor**, verificación criptográfica de la cadena de custodia inmutable WORM (`audit_logs`), registro de decisión de arquitectura (ADR) sobre la exclusión deliberada de terminal CLI/SSH interactiva libre y diagramas de arquitectura en formato Mermaid extraídos de `graphify-out/GRAPH_REPORT.md`.
+- [ ] **14.6** `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`: Documentación exhaustiva de todos los endpoints REST (`/api/v1/*`) y canales WebSocket (`/ws/v1/*`) de RoSGrid (métodos HTTP, rutas, cabeceras obligatorias `X-CSRF-Token` / `Idempotency-Key`, esquemas JSON de entrada/salida, códigos de estado `200`/`202 Maker-Checker`/`401`/`403`/`409`/`422` y uso con `SERVICE_ACCOUNT`), reemplazando a Swagger/ReDoc que permanecen desactivados en producción (`ROSGRID_ENV=production`).
+- [ ] **14.7** **Sincronización de Archivos de Gobernanza en la Raíz:** Revisar y actualizar (asegurando que reflejen KeyDB por defecto, DragonflyDB como perfil opcional de alto rendimiento y las optimizaciones implementadas) los archivos `README.md`, `INSTALL.md`, `SECURITY.md`, `RESOURCES.md`, `FAQ.md`, `CONTRIBUTING.md` y `CODE_OF_CONDUCT.md`.
 
 ---
 
@@ -169,7 +175,8 @@
 
 ---
 
-## 📦 HITO 16: Auditoría Trivy de Imágenes y Publicación en Docker Hub (`build.sh`)
+## 📦 HITO 16: Cierre de `CHANGELOG.md`, Auditoría Trivy y Publicación en Docker Hub (`build.sh`)
 > **Archivo Guía:** `specs/01_DOCKER_INFRASTRUCTURE_AND_IMMUTABLE_IMAGES.md`
-- [ ] **16.1** Auditar los `Dockerfile` e infraestructura con `./auditar-infra.sh` y escaneo Trivy de imágenes (`CRITICAL,HIGH = 0`).
-- [ ] **16.2** Ejecutar `./build.sh` (como usuario no-root) con `docker buildx` (`container-builder` + `tonistiigi/binfmt`) para construir y publicar `sinfallas/rosgrid-backend:latest` (`:1.0.0`) y `sinfallas/rosgrid-frontend:latest` (`:1.0.0`) en Docker Hub y limpiar cachés con `prune -af`.
+- [ ] **16.1** Auditar los `Dockerfile`, `docker-compose*.yml` e infraestructura con `./auditar-infra.sh` y escaneo Trivy de imágenes (`CRITICAL,HIGH = 0`).
+- [ ] **16.2** Actualizar `CHANGELOG.md` consolidando los cambios de `[Unreleased]` dentro del lanzamiento oficial `[1.0.0]` con las métricas certificadas en `TESTING.md`.
+- [ ] **16.3** Ejecutar `./build.sh` (como usuario no-root) con `docker buildx` (`container-builder` + `tonistiigi/binfmt`) para construir y publicar `sinfallas/rosgrid-backend:latest` (`:1.0.0`) y `sinfallas/rosgrid-frontend:latest` (`:1.0.0`) en Docker Hub y limpiar cachés con `prune -af`.
