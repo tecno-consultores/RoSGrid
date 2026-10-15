@@ -84,7 +84,6 @@
 - [x] **7.3** Endpoints de VLAN 802.1Q, Bridges + Ports, WireGuard (Peers + llave pública) y tabla de registro WiFi/Wireless.
 - [x] **7.4** Endpoints de IPv4/IPv6 Addresses, Routes (incluyendo balanceo ECMP), ARP, Pools, DHCP Server Leases (con conversión a estático), DNS, IP Neighbors y `/ip/service` (con protección anti-suicidio del puerto `www-ssl`) (`src/api/v1/webfig_ip.py`).
 
-
 ---
 
 ## 🛡️ HITO 8: Endpoints WebFig Capa 1 (Partes B y C) — Firewall, BGP/OSPF, PPPoE, Queues, System y Tools
@@ -98,67 +97,4 @@
 ---
 
 ## ⚙️ HITO 9: Motor Universal WebFig Capa 2, Maker-Checker, Backups Diff Git y Acciones Masivas
-> **Archivos Guía:** `specs/15_BACKEND_ENDPOINTS_WEBFIG_L2_UNIVERSAL_ENGINE.md` y `specs/16_BACKEND_ENDPOINTS_MAKER_CHECKER_BACKUPS_BULK_UPDATES.md`
-- [ ] **9.1** Motor Dinámico Universal WebFig Capa 2 (`/webfig/layer2/catalog`, inspector de esquema dinámico, CRUD genérico y bloqueo de rutas prohibidas `FORBIDDEN_L2_PATHS`) (`src/api/v1/webfig_layer2.py` — `specs/15`).
-- [ ] **9.2** Endpoints de Bandeja de Aprobación **Maker-Checker** (listar, aprobar ejecutando cambio diferido con Safe Mode y rechazar, impidiendo auto-aprobación) (`src/api/v1/approvals.py` — `specs/16`).
-- [ ] **9.3** Motor de Backups `.rsc`/`.backup` con deduplicación SHA-256, retención de 30 días y comparador **Diff estilo Git (`unified_diff`)** entre backups o contra el estado `LIVE` (`src/api/v1/backups.py` — `specs/16`).
-- [ ] **9.4** Endpoints de Plantillas (*Golden Configs*), Acciones Masivas Multi-Router (`bulk-jobs`) y Actualizador Centralizado de RouterOS v7 con pre-backup obligatorio (`src/api/v1/bulk_and_updates.py` — `specs/16`).
-- [ ] **9.5** Endpoints de Consola Forense de Auditoría Inmutable y verificador criptográfico de integridad WORM (`src/api/v1/audit.py` — `specs/16`).
-
----
-
-## 📊 HITO 10: Multiplexor WebSocket para Gráficas Efímeras (Estilo WinBox) y Workers de Alerta
-> **Archivo Guía:** `specs/17_BACKEND_WEBSOCKETS_LIVE_CHARTS_AND_ALERT_WORKERS.md`
-- [ ] **10.1** Multiplexor WebSocket `/ws/v1/routers/{router_id}/live-telemetry` (activa el poller cuando hay >= 1 operador viendo el router y se detiene al instante cuando `SCARD == 0`).
-- [ ] **10.2** WebSocket global del Tenant `/ws/v1/tenant/events` (eventos NOC, progreso de trabajos masivos y orden `SESSION_KILLED`).
-- [ ] **10.3** Los 4 Workers en segundo plano (`src/workers/`): Monitor *Zero-Storage*, Despachador de Alertas Multi-Canal (Telegram Bot, Correo SMTP, Webhook HMAC-SHA256 y NOC), Worker de Backups Nocturnos y Worker de Rotación Automática de Bóveda.
-
----
-
-## 🎨 HITO 11: Frontend Vue 3 Base — Zero-Trust, Interceptores, Stores Pinia y Sistema de Diseño WCAG
-> **Archivos Guía:** `specs/18_FRONTEND_PHASE_1_SETUP_ZERO_TRUST_AND_INTERCEPTORS.md` y `specs/19_FRONTEND_DESIGN_SYSTEM_ACCESSIBILITY_AND_PERFORMANCE.md`
-- [ ] **11.1** Configuración base de Vite, TypeScript (`tsconfig.json`), `index.html` y `public/manifest.webmanifest` PWA (`specs/18`, `19`).
-- [ ] **11.2** Cliente HTTP seguro (`vue3/src/api/httpClient.ts`) con los 4 interceptores: `X-CSRF-Token`, `Idempotency-Key` (`UUIDv7`), rotación transparente de Refresh Token y captura de `202 Accepted` (*Maker-Checker*) (`specs/18`).
-- [ ] **11.3** Los 6 Stores en Pinia (`useAuthStore`, `useThemeAndLayoutStore`, `useInventoryStore`, `useWebFigStore`, `useLiveTelemetryStore`, `useNocEventsStore`) y Vue Router con Guards RBAC para los 11 roles (`specs/18`).
-- [ ] **11.4** Sistema de diseño de alta densidad (`themes.css` con temas `dark`, `light`, `noc-high-contrast` cumpliendo contraste WCAG 2.1 AA y fuentes nativas `tabular-nums`) (`specs/19`).
-- [ ] **11.5** Los 5 componentes base reutilizables: `RgDataTable.vue` (con Drag & Drop + teclado accesible), `RgCommandPalette.vue` (`Ctrl+K`), `RgSafeModeBanner.vue`, `RgStepUp2FAModal.vue` y `RgResponsiveShell.vue` (Móvil/Tablet/PC) (`specs/19`).
-
----
-
-## 🖥️ HITO 12: Vistas Frontend (Parte A) — Login 2FA, Usuarios/Matriz, Kill-Switch, Inventario OSM y Bóveda
-> **Archivos Guía:** `specs/20_FRONTEND_VIEWS_AUTH_USERS_PERMISSIONS_AND_SESSIONS.md` y `specs/21_FRONTEND_VIEWS_INVENTORY_OSM_MAP_CSV_AND_VAULT.md`
-- [ ] **12.1** Vista `LoginView.vue` en 2 etapas (`tenant_slug` + credenciales -> QR de enrolamiento local o desafío 2FA TOTP) (`specs/20`).
-- [ ] **12.2** Vistas de Administración de Tenants (`TenantsManagementView.vue`), Gestión de Usuarios de los 11 roles (`UsersAndPermissionsView.vue`) y Modal de Matriz de Asignación de Routers por Técnico (`UserRouterMatrixModal.vue`) (`specs/20`).
-- [ ] **12.3** Panel en vivo de Sesiones Activas y botón de expulsión **Kill-Switch** (`ActiveSessionsKillSwitchView.vue`) (`specs/20`).
-- [ ] **12.4** Vista de Inventario MikroTik (`RouterInventoryView.vue`) y componente de Mapa Interactivo 100% gratuito con **Leaflet + OpenStreetMap (`OsmRouterMap.vue`)** (`specs/21`).
-- [ ] **12.5** Asistente de Importación Masiva CSV en 2 pasos (`CsvOnboardingWizardModal.vue`), Modal de **Bóveda con Step-Up Auth y autodestrucción en memoria a los 30s (`VaultRevealModal.vue`)** y vista de Ventanas de Mantenimiento (`specs/21`).
-
----
-
-## 📈 HITO 13: Vistas Frontend (Parte B) — Consola WebFig (`RingBuffer` WinBox), Diff Git, NOC y Auditor
-> **Archivos Guía:** `specs/22_FRONTEND_VIEWS_WEBFIG_CONSOLE_RINGBUFFER_AND_LAYERS.md` y `specs/23_FRONTEND_VIEWS_APPROVALS_DIFF_BULK_NOC_AND_AUDITOR.md`
-- [ ] **13.1** Clase `TelemetryRingBuffer<T>` en memoria RAM (`MAX_POINTS = 5400` para 3 horas a 1 tick/2s con limpieza total en `onBeforeUnmount`) (`specs/22`).
-- [ ] **13.2** Layout de Consola WebFig (`RouterWebFigLayout.vue`) y Dashboard de Gráficas Efímeras estilo WinBox (`RouterLiveDashboardView.vue`) (`specs/22`).
-- [ ] **13.3** Vistas especializadas de WebFig Capa 1 (`InterfacesAndSfpView.vue`, `FirewallRulesView.vue` con Drag & Drop + Safe Mode, `RoutingBgpOspfView.vue`, `PppAndQueuesView.vue`, `LiveToolsDiagnosticsView.vue`) y Renderizador Universal de Capa 2 (`DynamicLayer2ResourceView.vue`) (`specs/22`).
-- [ ] **13.4** Bandeja de Aprobaciones Maker-Checker (`ApprovalsInboxView.vue`), Historial de Backups (30 días) y Comparador Visual Lado a Lado estilo Git (`RscGitDiffViewer.vue`) (`specs/23`).
-- [ ] **13.5** Asistente de Plantillas, Acciones Masivas y Updates de RouterOS (`BulkOperationsAndUpdatesView.vue`), Pantalla Completa **Wallboard NOC (`NocWallboardView.vue`)** y Consola Forense del **Auditor (`ImmutableAuditLogsView.vue`)** (`specs/23`).
-
----
-
-## 📚 HITO 14: Documentación Oficial del Proyecto en `docs/`
-> ** Propósito:** Generar la documentación técnica, operativa y de despliegue de RoSGrid en español dentro de la carpeta `docs/`.
-- [ ] **14.1** `docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md`: Requisitos de infraestructura, configuración de variables `.env`, generación de llaves criptográficas (`AES-256-GCM`, `JWT`, `CSRF`), despliegue con `docker-compose.yml` y auto-migración con `pg_advisory_lock`.
-- [ ] **14.2** `docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md`: Guía paso a paso con comandos CLI de RouterOS v7.1+ para habilitar `/ip/service/www-ssl`, generar certificado autofirmado para pinning TOFU, permisos mínimos del usuario API y explicación del mecanismo *Safe Mode (Dead Man's Switch)* vía `/system/scheduler`.
-- [ ] **14.3** `docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md`: Administración de empresas (Tenants), detalle de los **11 roles RBAC**, uso de la matriz de asignación de routers por técnico, consulta de la Bóveda con *Step-Up Auth* (30s) y operación del *Kill-Switch* de sesiones en vivo.
-- [ ] **14.4** `docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md`: Uso diario de la consola WebFig (Capa 1 y Capa 2), gráficas efímeras en vivo estilo WinBox (`RingBuffer`), flujo de aprobaciones *Maker-Checker*, comparador Diff estilo Git de respaldos `.rsc`, importación masiva por CSV, ventanas de mantenimiento y modo **Wallboard NOC**.
-- [ ] **14.5** `docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md`: Guía exclusiva para el rol **Auditor**, verificación criptográfica de la cadena de custodia inmutable WORM (`audit_logs`) y diagramas de arquitectura en formato Mermaid.
-
----
-
-## 🧪 HITO 15: Ejecución de Pruebas y Certificación Estándar QA 11X (Bajo Orden Explícita del Usuario)
-> **Archivos Guía:** `specs/24`, `specs/25`, `specs/26`, `specs/27`, `specs/28` y `specs/29`
-- [ ] **15.1** Catálogo de Mocks RouterOS v7 (`routeros_v7_payloads.py`) y Suite Unitaria Backend completa (`fastapi/tests/**/*.unit.py` con cobertura >= 95%) (`specs/24`, `25`).
-- [ ] **15.2** Certificación Estática, Unitaria y Mutación Backend en Docker (`make qa-lint`, `make qa-unit`, `make qa-mutation` con `Radon` Grado A, `Bandit` y `Mutmut`) (`specs/24`, `25`).
-- [ ] **15.3** Certificación Dinámica, Contratos, BDD, DAST y Caos Backend en Docker (`Schemathesis`, `Karate Labs`, `OWASP ZAP Baseline`, `py-spy` y `--profile chaos` con `Pumba + Locust + Prometheus`) (`specs/26`).
-- [ ] **15.4** Suite Unitaria Frontend (`vue3/src/__tests__/*.unit.ts` con Vitest >= 95% en las 4 métricas) y Mutación con `Stryker` en Docker (`make qa-lint`, `make qa-unit`, `make qa-mutation`) (`specs/27`).
-- [ ] **15.5** Suite E2E, Accesibilidad WCAG 2.1 AA (`@axe-core/playwright` = 0 violaciones + snapshots deterministas), `Lighthouse CI` (`>= 90` / `>= 95` a11y), `Karate UI` en Docker (`make qa-perf`, `make qa-e2e`, `make qa-bdd`) y actualización final de `TESTING.md` (`specs/28`, `29`).
+> **Archivos Guía:** `specs/15_BACKEND_ENDPOINTS_WEBFIG_L2_UNIVERSAL
