@@ -1,5 +1,5 @@
 # ==============================================================================
-# RoSGrid - Global .gitignore
+# RoSGrid - Global .gitignore (Estándar QA 11X)
 # Licencia: GPL-3.0-only
 # ==============================================================================
 
@@ -7,6 +7,16 @@
 .env
 .env.*
 !.env.example
+*.pem
+*.key
+*.crt
+
+# Artefactos de Dominio MikroTik (Evitar subir respaldos reales al repo)
+*.backup
+*.rsc
+*.db
+*.sqlite
+*.sqlite3
 
 # Python & FastAPI
 venv/
@@ -35,23 +45,39 @@ MANIFEST
 .tox/
 .coverage
 .coverage.*
+coverage.xml
+junit.xml
 htmlcov/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 .uv/
 
-# Node.js & Vue 3
+# Mutación Backend (mutmut v3+)
+mutants/
+.mutmut-cache
+mutmut-stats.json
+mutmut-cicd-stats.json
+*.meta
+*.spans
+
+# Node.js, TypeScript & Vue 3
 node_modules/
+.pnpm-store/
 .pnp
 .pnp.js
 dist-ssr/
+.vite/
+*.tsbuildinfo
+.eslintcache
 coverage/
 .stryker-tmp/
+reports/
 test-results/
 playwright-report/
 blob-report/
 playwright/.cache/
+.lighthouseci/
 lhci-reports/
 .lhcache/
 
@@ -60,14 +86,18 @@ target/
 test/target/
 *.log
 zap-report.html
+zap.yaml
 chaos-report.html
 profile.svg
 graphify-out/
 prometheus_data/
+.trivycache/
+trivy-results*
 
-# IDEs y Editores
+# IDEs, Editores y Agentes
 .vscode/
 .idea/
+.antigravity/
 *.swp
 *.swo
 *~

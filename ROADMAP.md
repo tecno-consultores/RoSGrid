@@ -1,10 +1,10 @@
 # 🗺️ ROADMAP GRANULAR DE EJECUCIÓN (30 SPECS) — RoSGrid
 
 ## 📍 Punto de Control Actual (Checkpoint)
-- **Hito Actual en Curso:** Hito 6 — Endpoints de Inventario MikroTik, Importador CSV, Bóveda Step-Up (30s) y Rotación
-- **Último Archivo de `specs/` Procesado:** `specs/08_MIKROTIK_REST_V7_CLIENT_TOFU_AND_SAFEMODE.md`
-- **Último Módulo de Código Creado:** `fastapi/src/mikrotik/__init__.py` (Hito 4 completado)
-- **Siguiente Paso Inmediato:** Sub-tarea **6.1** — Esquemas Pydantic v2 de Inventario, CSV, Bóveda y Ventanas de Mantenimiento (`src/schemas/inventory.py` — `specs/11_BACKEND_ENDPOINTS_INVENTORY_CSV_VAULT_AND_ROTATION.md`)
+- **Hito Actual en Curso:** Hito 7 — Endpoints WebFig Capa 1 (Parte A) — Interfaces, Óptica SFP DDM, VLAN, WireGuard e IP
+- **Último Archivo de `specs/` Procesado:** `specs/11_BACKEND_ENDPOINTS_INVENTORY_CSV_VAULT_AND_ROTATION.md`
+- **Último Módulo de Código Creado:** `fastapi/src/api/v1/maintenance.py` (Hito 6 completado)
+- **Siguiente Paso Inmediato:** Sub-tarea **7.1** — Esquemas Pydantic v2 para Interfaces e IP/IPv6 (`src/schemas/webfig_l1_net.py` — `specs/12_BACKEND_ENDPOINTS_WEBFIG_L1_INTERFACES_AND_IP.md`)
 
 ---
 
@@ -67,13 +67,14 @@
 
 ---
 
-## 🗂️ HITO 6: Endpoints de Inventario MikroTik, Importador CSV, Bóveda Step-Up (30s) y Rotación
+## ✅ HITO 6: Endpoints de Inventario MikroTik, Importador CSV, Bóveda Step-Up (30s) y Rotación
 > **Archivo Guía:** `specs/11_BACKEND_ENDPOINTS_INVENTORY_CSV_VAULT_AND_ROTATION.md`
-- [ ] **6.1** Esquemas Pydantic v2 de Inventario, CSV, Bóveda y Ventanas de Mantenimiento (`src/schemas/inventory.py`).
-- [ ] **6.2** Endpoints CRUD de Routers MikroTik con autodescubrimiento (`/rest/system/resource`, `routerboard`, `identity`, `package`) y coordenadas OpenStreetMap (`src/api/v1/inventory.py`).
-- [ ] **6.3** Importador Masivo por CSV en 2 pasos: validación `/import-csv/dry-run` y ejecución `/import-csv/commit`.
-- [ ] **6.4** Endpoints de Bóveda Criptográfica: revelación con **Step-Up Auth (2FA TOTP en vivo, exclusivo para `SUPERADMIN_GLOBAL` y `TENANT_ADMIN`)**, rotación transaccional de clave API y Re-Pin SSL TOFU (`src/api/v1/vault.py`).
-- [ ] **6.5** Endpoints de Ventanas de Mantenimiento Programadas (`src/api/v1/maintenance.py`).
+- [x] **6.1** Esquemas Pydantic v2 de Inventario, CSV, Bóveda y Ventanas de Mantenimiento (`src/schemas/inventory.py`).
+- [x] **6.2** Endpoints CRUD de Routers MikroTik con autodescubrimiento (`/rest/system/resource`, `routerboard`, `identity`, `package`) y coordenadas OpenStreetMap (`src/api/v1/inventory.py`).
+- [x] **6.3** Importador Masivo por CSV en 2 pasos: validación `/import-csv/dry-run` y ejecución `/import-csv/commit`.
+- [x] **6.4** Endpoints de Bóveda Criptográfica: revelación con **Step-Up Auth (2FA TOTP en vivo, exclusivo para `SUPERADMIN_GLOBAL` y `TENANT_ADMIN`)**, rotación transaccional de clave API y Re-Pin SSL TOFU (`src/api/v1/vault.py`).
+- [x] **6.5** Endpoints de Ventanas de Mantenimiento Programadas (`src/api/v1/maintenance.py`).
+
 
 ---
 
