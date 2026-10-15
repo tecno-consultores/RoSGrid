@@ -144,11 +144,20 @@
 
 ---
 
-## 🧪 HITO 14: Ejecución de Pruebas y Certificación Estándar QA 11X (Bajo Orden Explícita del Usuario)
+## 📚 HITO 14: Documentación Oficial del Proyecto en `docs/`
+> ** Propósito:** Generar la documentación técnica, operativa y de despliegue de RoSGrid en español dentro de la carpeta `docs/`.
+- [ ] **14.1** `docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md`: Requisitos de infraestructura, configuración de variables `.env`, generación de llaves criptográficas (`AES-256-GCM`, `JWT`, `CSRF`), despliegue con `docker-compose.yml` y auto-migración con `pg_advisory_lock`.
+- [ ] **14.2** `docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md`: Guía paso a paso con comandos CLI de RouterOS v7.1+ para habilitar `/ip/service/www-ssl`, generar certificado autofirmado para pinning TOFU, permisos mínimos del usuario API y explicación del mecanismo *Safe Mode (Dead Man's Switch)* vía `/system/scheduler`.
+- [ ] **14.3** `docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md`: Administración de empresas (Tenants), detalle de los **11 roles RBAC**, uso de la matriz de asignación de routers por técnico, consulta de la Bóveda con *Step-Up Auth* (30s) y operación del *Kill-Switch* de sesiones en vivo.
+- [ ] **14.4** `docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md`: Uso diario de la consola WebFig (Capa 1 y Capa 2), gráficas efímeras en vivo estilo WinBox (`RingBuffer`), flujo de aprobaciones *Maker-Checker*, comparador Diff estilo Git de respaldos `.rsc`, importación masiva por CSV, ventanas de mantenimiento y modo **Wallboard NOC**.
+- [ ] **14.5** `docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md`: Guía exclusiva para el rol **Auditor**, verificación criptográfica de la cadena de custodia inmutable WORM (`audit_logs`) y diagramas de arquitectura en formato Mermaid.
+
+---
+
+## 🧪 HITO 15: Ejecución de Pruebas y Certificación Estándar QA 11X (Bajo Orden Explícita del Usuario)
 > **Archivos Guía:** `specs/24`, `specs/25`, `specs/26`, `specs/27`, `specs/28` y `specs/29`
-- [ ] **14.1** Catálogo de Mocks RouterOS v7 (`routeros_v7_payloads.py`) y Suite Unitaria Backend completa (`fastapi/tests/**/*.unit.py` con cobertura >= 95%) (`specs/24`, `25`).
-- [ ] **14.2** Certificación Estática, Unitaria y Mutación Backend en Docker (`make qa-lint`, `make qa-unit`, `make qa-mutation` con `Radon` Grado A, `Bandit` y `Mutmut`) (`specs/24`, `25`).
-- [ ] **14.3** Certificación Dinámica, Contratos, BDD, DAST y Caos Backend en Docker (`Schemathesis`, `Karate Labs`, `OWASP ZAP Baseline`, `py-spy` y `--profile chaos` con `Pumba + Locust + Prometheus`) (`specs/26`).
-- [ ] **14.4** Suite Unitaria Frontend (`vue3/src/__tests__/*.unit.ts` con Vitest >= 95% en las 4 métricas) y Mutación con `Stryker` en Docker (`make qa-lint`, `make qa-unit`, `make qa-mutation`) (`specs/27`).
-- [ ] **14.5** Suite E2E, Accesibilidad WCAG 2.1 AA (`@axe-core/playwright` = 0 violaciones + snapshots deterministas), `Lighthouse CI` (`>= 90` / `>= 95` a11y) y `Karate UI` en Docker (`make qa-perf`, `make qa-e2e`, `make qa-bdd`) (`specs/28`).
-- [ ] **14.6** Actualización final de `TESTING.md` y generación de manuales de usuario y operación en `docs/` (`specs/29`).
+- [ ] **15.1** Catálogo de Mocks RouterOS v7 (`routeros_v7_payloads.py`) y Suite Unitaria Backend completa (`fastapi/tests/**/*.unit.py` con cobertura >= 95%) (`specs/24`, `25`).
+- [ ] **15.2** Certificación Estática, Unitaria y Mutación Backend en Docker (`make qa-lint`, `make qa-unit`, `make qa-mutation` con `Radon` Grado A, `Bandit` y `Mutmut`) (`specs/24`, `25`).
+- [ ] **15.3** Certificación Dinámica, Contratos, BDD, DAST y Caos Backend en Docker (`Schemathesis`, `Karate Labs`, `OWASP ZAP Baseline`, `py-spy` y `--profile chaos` con `Pumba + Locust + Prometheus`) (`specs/26`).
+- [ ] **15.4** Suite Unitaria Frontend (`vue3/src/__tests__/*.unit.ts` con Vitest >= 95% en las 4 métricas) y Mutación con `Stryker` en Docker (`make qa-lint`, `make qa-unit`, `make qa-mutation`) (`specs/27`).
+- [ ] **15.5** Suite E2E, Accesibilidad WCAG 2.1 AA (`@axe-core/playwright` = 0 violaciones + snapshots deterministas), `Lighthouse CI` (`>= 90` / `>= 95` a11y), `Karate UI` en Docker (`make qa-perf`, `make qa-e2e`, `make qa-bdd`) y actualización final de `TESTING.md` (`specs/28`, `29`).
