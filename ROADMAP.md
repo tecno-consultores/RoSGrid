@@ -1,10 +1,10 @@
-# 🗺️ ROADMAP GRANULAR DE EJECUCIÓN (30 SPECS) — RoSGrid
+# 🗺️ ROADMAP GRANULAR DE EJECUCIÓN (31 SPECS) — RoSGrid
 
 ## 📍 Punto de Control Actual (Checkpoint)
-- **Hito Actual en Curso:** Hito 12 (Vistas Frontend - Parte A: Login 2FA, Usuarios/Matriz, Kill-Switch, Inventario OSM y Bóveda)
-- **Último Archivo de `specs/` Procesado:** `specs/18_FRONTEND_PHASE_1_SETUP_ZERO_TRUST_AND_INTERCEPTORS.md` y `specs/19_FRONTEND_DESIGN_SYSTEM_ACCESSIBILITY_AND_PERFORMANCE.md`
-- **Último Módulo de Código Creado:** Base Frontend Vue 3 (`vue3/` completa: TypeScript estricto, 4 interceptores, 6 stores Pinia con `shallowRef`, temas WCAG 2.1 AA, 5 componentes base WinBox/Táctil con Virtual Scrolling, 15 suites unitarias [103 tests, cobertura >95%] y bundle Vite verificado) + Sub-tarea 10.6 Backend (KeyDB Multi-Hilo, `orjson`, `uvloop`, pool keep-alive TLS, pipelines KeyDB y BRIN en PostgreSQL).
-- **Siguiente Paso Inmediato:** Iniciar Hito 12 (Sub-tareas **12.1** a **12.5** según `specs/20` y `specs/21`: Login 2FA, gestión de usuarios/roles, Kill-Switch, Inventario OSM Leaflet y Bóveda Step-Up).
+- **Hito Actual en Curso:** Hito 13 (Vistas Frontend Parte B: Consola WebFig, RingBuffer + Canvas 2D, Diff Git, Wallboard NOC, Auditor, Endpoint MCP Protegido, Dockerfiles de Producción y Graphify)
+- **Último Archivo de `specs/` Procesado:** `specs/20_FRONTEND_VIEWS_AUTH_USERS_PERMISSIONS_AND_SESSIONS.md` y `specs/21_FRONTEND_VIEWS_INVENTORY_OSM_MAP_CSV_AND_VAULT.md`
+- **Último Módulo de Código Creado:** Vistas Frontend Hito 12 completas (`LoginView.vue` 2FA QR/TOTP, `TenantsManagementView.vue`, `UsersAndPermissionsView.vue`, `UserRouterMatrixModal.vue`, `ActiveSessionsKillSwitchView.vue`, `RouterInventoryView.vue`, `OsmRouterMap.vue` Leaflet, `CsvOnboardingWizardModal.vue`, `VaultRevealModal.vue` Step-Up 30s, `MaintenanceWindowsView.vue` + 25 suites / 152 tests unitarios con 99.99% líneas y 95.67% ramas).
+- **Siguiente Paso Inmediato:** Ejecutar Hito 13 completo (Sub-tareas **13.1** a **13.8** según `specs/22`, `specs/23`, `specs/01` y `specs/30`).
 
 ---
 
@@ -106,7 +106,7 @@
 
 ---
 
-## 🔄 HITO 10: Multiplexor WebSocket, Workers, Dockerfile, Graphify y Optimización de Alto Rendimiento Backend
+## ✅ HITO 10: Multiplexor WebSocket, Workers, Dockerfile, Graphify y Optimización de Alto Rendimiento Backend
 > **Archivos Guía:** `specs/17_BACKEND_WEBSOCKETS_LIVE_CHARTS_AND_ALERT_WORKERS.md` y `specs/01_DOCKER_INFRASTRUCTURE_AND_IMMUTABLE_IMAGES.md`
 - [x] **10.1** Multiplexor WebSocket `/ws/v1/routers/{router_id}/live-telemetry` (activa el poller cuando hay >= 1 operador viendo el router y se detiene al instante cuando `SCARD == 0`).
 - [x] **10.2** WebSocket global del Tenant `/ws/v1/tenant/events` (eventos NOC, progreso de trabajos masivos y orden `SESSION_KILLED`).
@@ -121,7 +121,7 @@
 
 ---
 
-## 🎨 HITO 11: Frontend Vue 3 Base — Zero-Trust, Interceptores, Stores Pinia (`shallowRef`) y Sistema de Diseño WCAG (`Virtual Scroll`)
+## ✅ HITO 11: Frontend Vue 3 Base — Zero-Trust, Interceptores, Stores Pinia (`shallowRef`) y Sistema de Diseño WCAG (`Virtual Scroll`)
 > **Archivos Guía:** `specs/18_FRONTEND_PHASE_1_SETUP_ZERO_TRUST_AND_INTERCEPTORS.md` y `specs/19_FRONTEND_DESIGN_SYSTEM_ACCESSIBILITY_AND_PERFORMANCE.md`
 - [x] **11.1** Configuración base de Vite, TypeScript (`tsconfig.json`), `index.html` y `public/manifest.webmanifest` PWA (`specs/18`, `19`).
 - [x] **11.2** Cliente HTTP seguro (`vue3/src/api/httpClient.ts`) con los 4 interceptores: `X-CSRF-Token`, `Idempotency-Key` (`UUIDv7`), rotación transparente de Refresh Token y captura de `202 Accepted` (*Maker-Checker*) (`specs/18`).
@@ -131,18 +131,18 @@
 
 ---
 
-## 🖥️ HITO 12: Vistas Frontend (Parte A) — Login 2FA, Usuarios/Matriz, Kill-Switch, Inventario OSM y Bóveda
+## ✅ HITO 12: Vistas Frontend (Parte A) — Login 2FA, Usuarios/Matriz, Kill-Switch, Inventario OSM y Bóveda
 > **Archivos Guía:** `specs/20_FRONTEND_VIEWS_AUTH_USERS_PERMISSIONS_AND_SESSIONS.md` y `specs/21_FRONTEND_VIEWS_INVENTORY_OSM_MAP_CSV_AND_VAULT.md`
-- [ ] **12.1** Vista `LoginView.vue` en 2 etapas (`tenant_slug` + credenciales -> QR de enrolamiento local o desafío 2FA TOTP) (`specs/20`).
-- [ ] **12.2** Vistas de Administración de Tenants (`TenantsManagementView.vue`), Gestión de Usuarios de los 11 roles (`UsersAndPermissionsView.vue`) y Modal de Matriz de Asignación de Routers por Técnico (`UserRouterMatrixModal.vue`) (`specs/20`).
-- [ ] **12.3** Panel en vivo de Sesiones Activas y botón de expulsión **Kill-Switch** (`ActiveSessionsKillSwitchView.vue`) (`specs/20`).
-- [ ] **12.4** Vista de Inventario MikroTik (`RouterInventoryView.vue`) y componente de Mapa Interactivo 100% gratuito con **Leaflet + OpenStreetMap (`OsmRouterMap.vue`)** (`specs/21`).
-- [ ] **12.5** Asistente de Importación Masiva CSV en 2 pasos (`CsvOnboardingWizardModal.vue`), Modal de **Bóveda con Step-Up Auth y autodestrucción en memoria a los 30s (`VaultRevealModal.vue`)** y vista de Ventanas de Mantenimiento (`specs/21`).
+- [x] **12.1** Vista `LoginView.vue` en 2 etapas (`tenant_slug` + credenciales -> QR de enrolamiento local o desafío 2FA TOTP) (`specs/20`).
+- [x] **12.2** Vistas de Administración de Tenants (`TenantsManagementView.vue`), Gestión de Usuarios de los 11 roles (`UsersAndPermissionsView.vue`) y Modal de Matriz de Asignación de Routers por Técnico (`UserRouterMatrixModal.vue`) (`specs/20`).
+- [x] **12.3** Panel en vivo de Sesiones Activas y botón de expulsión **Kill-Switch** (`ActiveSessionsKillSwitchView.vue`) (`specs/20`).
+- [x] **12.4** Vista de Inventario MikroTik (`RouterInventoryView.vue`) y componente de Mapa Interactivo 100% gratuito con **Leaflet + OpenStreetMap (`OsmRouterMap.vue`)** (`specs/21`).
+- [x] **12.5** Asistente de Importación Masiva CSV en 2 pasos (`CsvOnboardingWizardModal.vue`), Modal de **Bóveda con Step-Up Auth y autodestrucción en memoria a los 30s (`VaultRevealModal.vue`)** y vista de Ventanas de Mantenimiento (`specs/21`).
 
 ---
 
-## 📈 HITO 13: Vistas Frontend (Parte B) — Consola WebFig (`RingBuffer` + `<canvas>` 2D + `KeepAlive`), Diff Git, NOC, Auditor, Dockerfile y Graphify
-> **Archivos Guía:** `specs/22_FRONTEND_VIEWS_WEBFIG_CONSOLE_RINGBUFFER_AND_LAYERS.md`, `specs/23_FRONTEND_VIEWS_APPROVALS_DIFF_BULK_NOC_AND_AUDITOR.md` y `specs/01_DOCKER_INFRASTRUCTURE_AND_IMMUTABLE_IMAGES.md`
+## 📈 HITO 13: Vistas Frontend (Parte B), Endpoint MCP Protegido para IA (`Hermes`/`Claude`), Dockerfiles y Graphify
+> **Archivos Guía:** `specs/22_FRONTEND_VIEWS_WEBFIG_CONSOLE_RINGBUFFER_AND_LAYERS.md`, `specs/23_FRONTEND_VIEWS_APPROVALS_DIFF_BULK_NOC_AND_AUDITOR.md`, `specs/01_DOCKER_INFRASTRUCTURE_AND_IMMUTABLE_IMAGES.md` y `specs/30_BACKEND_MCP_PROTECTED_ENDPOINT.md`
 - [ ] **13.1** Clase `TelemetryRingBuffer<T>` en memoria RAM (`MAX_POINTS = 5400` para 3 horas a 1 tick/2s con reactividad superficial `shallowRef` y limpieza total en `onBeforeUnmount` al salir del router) (`specs/22`).
 - [ ] **13.2** Layout de Consola WebFig (`RouterWebFigLayout.vue`), Barra de Pestañas de Trabajo con `<KeepAlive :max="5">` (`RouterWorkspaceTabsBar.vue`) y Dashboard de Gráficas Efímeras estilo WinBox (`RouterLiveDashboardView.vue`) renderizadas sobre **`<canvas>` 2D acelerado con `requestAnimationFrame`** (`specs/22`).
 - [ ] **13.3** Vistas especializadas de WebFig Capa 1 (`InterfacesAndSfpView.vue`, `FirewallRulesView.vue` con Drag & Drop + Safe Mode, `RoutingBgpOspfView.vue`, `PppAndQueuesView.vue`, `LiveToolsDiagnosticsView.vue`) y Renderizador Universal de Capa 2 (`DynamicLayer2ResourceView.vue`) (`specs/22`).
@@ -150,18 +150,23 @@
 - [ ] **13.5** Asistente de Plantillas, Acciones Masivas y Updates de RouterOS (`BulkOperationsAndUpdatesView.vue`), Pantalla Completa **Wallboard NOC (`NocWallboardView.vue`)** y Consola Forense del **Auditor (`ImmutableAuditLogsView.vue`)** (`specs/23`).
 - [ ] **13.6** **Cierre de Arquitectura Frontend con Graphify (En Docker):** Ejecutar `docker compose -f docker-compose.qa.yml --profile graphify run --rm graphify` dentro de `./vue3/` para generar `vue3/graphify-out/GRAPH_REPORT.md` y el grafo de componentes/stores del Frontend (`specs/18`, `29`).
 - [ ] **13.7** **Dockerfile Multi-Stage de Producción Frontend (`vue3/Dockerfile`), `docker-compose.prod.yml` (con KeyDB Multi-Hilo) y Script `build.sh`:** Crear `vue3/Dockerfile` (builder `pnpm build` + runtime `nginx:1.27-alpine` no-root con `ARG BUILD_DATE` y `vue3/nginx/default.conf`), `docker-compose.prod.yml` (usando `eqalpha/keydb:alpine` por defecto y bloque comentado de `DragonflyDB` para alto rendimiento) y el script `build.sh` en la raíz con `docker buildx` (`container-builder`, `tonistiigi/binfmt` y limpieza `prune -af`) (`specs/01`).
+- [ ] **13.8** **Endpoint MCP Protegido (`POST /api/v1/mcp` JSON-RPC 2.0 Streamable HTTP) para Agentes IA (`Hermes Agent`, `Claude`):**
+  * Implementar `fastapi/src/schemas/mcp.py` y `fastapi/src/api/v1/mcp.py` conforme a `specs/30_BACKEND_MCP_PROTECTED_ENDPOINT.md`, controlado por `ROSGRID_MCP_ENABLED` (`false` por defecto) y `ROSGRID_MCP_RATE_LIMIT_PER_MIN` (`30` req/min en KeyDB), restringido exclusivamente al rol `SERVICE_ACCOUNT` con validación de lista blanca CIDR.
+  * Exponer las 8 Tools semánticas de diagnóstico y operación (`rosgrid_list_inventory`, `rosgrid_get_router_health`, `rosgrid_check_sfp_optical_ddm`, `rosgrid_inspect_routing_bgp_ospf`, `rosgrid_run_live_diagnostic`, `rosgrid_compare_config_diff`, `rosgrid_reconnect_pppoe_client` y `rosgrid_propose_network_change` con intercepción obligatoria **Maker-Checker** + **Safe Mode 60s** y registro en **WORM**).
+  * Crear suite unitaria `fastapi/tests/test_mcp_endpoint.unit.py` (`make qa-lint && make qa-unit` >= 95% de cobertura) y actualizar `fastapi/graphify-out/GRAPH_REPORT.md` con Graphify en Docker antes del Hito 14.
 
 ---
 
-## 📚 HITO 14: Documentación Oficial del Proyecto en `docs/`, Referencia de API y Gobernanza Raíz (Basada en `GRAPH_REPORT.md`)
-> **Propósito:** Generar la documentación técnica, operativa, de despliegue (incluyendo KeyDB predeterminado vs. perfil de alto rendimiento DragonflyDB) y la especificación completa de la API (dado que Swagger/ReDoc están desactivados en producción) dentro de `docs/`, más la sincronización de los archivos de gobernanza de la raíz tomando como referencia `fastapi/graphify-out/GRAPH_REPORT.md` y `vue3/graphify-out/GRAPH_REPORT.md`.
-- [ ] **14.1** `docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md`: Requisitos de infraestructura, configuración de variables `.env`, generación de llaves criptográficas (`AES-256-GCM`, `JWT`, `CSRF`), arquitectura en memoria con **KeyDB Multi-Hilo por defecto** y guía de activación del **Perfil de Alto Rendimiento con DragonflyDB** para grandes flotas ISP, despliegue con `docker-compose.yml` / `docker-compose.prod.yml`, uso de `build.sh` y auto-migración con `pg_advisory_lock`.
+## 📚 HITO 14: Documentación Oficial en `docs/`, Referencia de API, Guía de Integración IA (MCP) y Gobernanza Raíz (Basada en `GRAPH_REPORT.md`)
+> **Propósito:** Generar la documentación técnica, operativa, de despliegue, la especificación completa de la API y la guía detallada de integración del servidor MCP para agentes IA (`Hermes`, `Claude`) dentro de `docs/`, más la sincronización de los archivos de gobernanza de la raíz tomando como referencia `fastapi/graphify-out/GRAPH_REPORT.md` y `vue3/graphify-out/GRAPH_REPORT.md`.
+- [ ] **14.1** `docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md`: Requisitos de infraestructura, configuración de variables `.env` (incluyendo `ROSGRID_MCP_ENABLED`), generación de llaves criptográficas (`AES-256-GCM`, `JWT`, `CSRF`), arquitectura en memoria con **KeyDB Multi-Hilo por defecto** y guía de activación del **Perfil de Alto Rendimiento con DragonflyDB** para grandes flotas ISP, despliegue con `docker-compose.yml` / `docker-compose.prod.yml`, uso de `build.sh` y auto-migración con `pg_advisory_lock`.
 - [ ] **14.2** `docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md`: Guía paso a paso con comandos CLI de RouterOS v7.1+ para habilitar `/ip/service/www-ssl`, generar certificado autofirmado para pinning TOFU, permisos mínimos del usuario API y explicación del mecanismo *Safe Mode (Dead Man's Switch)* vía `/system/scheduler`.
 - [ ] **14.3** `docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md`: Administración de empresas (Tenants), detalle de los **11 roles RBAC**, uso de la matriz de asignación de routers por técnico, consulta de la Bóveda con *Step-Up Auth* (30s) y operación del *Kill-Switch* de sesiones en vivo.
 - [ ] **14.4** `docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md`: Uso diario de la consola WebFig (Capa 1 y Capa 2 con pestañas `KeepAlive` y densidad adaptativa), gráficas efímeras en vivo estilo WinBox (`RingBuffer`), flujo de aprobaciones *Maker-Checker*, comparador Diff estilo Git de respaldos `.rsc`, importación masiva por CSV, ventanas de mantenimiento y modo **Wallboard NOC**.
 - [ ] **14.5** `docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md`: Guía exclusiva para el rol **Auditor**, verificación criptográfica de la cadena de custodia inmutable WORM (`audit_logs`), registro de decisión de arquitectura (ADR) sobre la exclusión deliberada de terminal CLI/SSH interactiva libre y diagramas de arquitectura en formato Mermaid extraídos de `graphify-out/GRAPH_REPORT.md`.
-- [ ] **14.6** `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`: Documentación exhaustiva de todos los endpoints REST (`/api/v1/*`) y canales WebSocket (`/ws/v1/*`) de RoSGrid (métodos HTTP, rutas, cabeceras obligatorias `X-CSRF-Token` / `Idempotency-Key`, esquemas JSON de entrada/salida, códigos de estado `200`/`202 Maker-Checker`/`401`/`403`/`409`/`422` y uso con `SERVICE_ACCOUNT`), reemplazando a Swagger/ReDoc que permanecen desactivados en producción (`ROSGRID_ENV=production`).
-- [ ] **14.7** **Sincronización de Archivos de Gobernanza en la Raíz:** Revisar y actualizar (asegurando que reflejen KeyDB por defecto, DragonflyDB como perfil opcional de alto rendimiento y las optimizaciones implementadas) los archivos `README.md`, `INSTALL.md`, `SECURITY.md`, `RESOURCES.md`, `FAQ.md`, `CONTRIBUTING.md` y `CODE_OF_CONDUCT.md`.
+- [ ] **14.6** `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`: Documentación exhaustiva de todos los endpoints REST (`/api/v1/*`, incluyendo `/api/v1/mcp`) y canales WebSocket (`/ws/v1/*`) de RoSGrid (métodos HTTP, rutas, cabeceras obligatorias `X-CSRF-Token` / `Idempotency-Key`, esquemas JSON de entrada/salida, códigos de estado `200`/`202 Maker-Checker`/`401`/`403`/`409`/`422` y uso con `SERVICE_ACCOUNT`), reemplazando a Swagger/ReDoc que permanecen desactivados en producción (`ROSGRID_ENV=production`).
+- [ ] **14.7** `docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md`: Documentación técnica detallada del **Servidor MCP Protegido (`/api/v1/mcp`)** para conectar agentes autónomos e interactivos (**Hermes Agent**, **Claude Desktop / Claude Code** y clientes MCP compatibles): activación mediante `ROSGRID_MCP_ENABLED=true`, provisión de credenciales `SERVICE_ACCOUNT` con restricción CIDR y alcances por router, catálogo completo de las 8 Tools MCP con sus esquemas JSON-RPC 2.0 de entrada/salida, configuración paso a paso en Hermes Agent y Claude, recepción de Webhooks firmados (`HMAC-SHA256`) para diagnóstico NOC 24/7 y gobierno humano de cambios mediante *Maker-Checker* + *Safe Mode*.
+- [ ] **14.8** **Sincronización de Archivos de Gobernanza en la Raíz:** Revisar y actualizar (asegurando que reflejen KeyDB por defecto, DragonflyDB como perfil opcional de alto rendimiento, el conector MCP protegido y las optimizaciones implementadas) los archivos `README.md`, `INSTALL.md`, `SECURITY.md`, `RESOURCES.md`, `FAQ.md`, `CONTRIBUTING.md` y `CODE_OF_CONDUCT.md`.
 
 ---
 

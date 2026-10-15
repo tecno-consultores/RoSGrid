@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { setActivePinia, createPinia } from 'pinia';
 import TenantsManagementView from './TenantsManagementView.vue';
@@ -34,6 +34,18 @@ describe('TenantsManagementView.vue — Gestión de Empresas Multi-Tenant', () =
             active_routers_count: 5,
             active_users_count: 2,
             default_safemode_seconds: 60,
+          },
+          {
+            id: 't-11',
+            slug: 'isp-notax',
+            name: 'ISP Sin RIF',
+            tax_id: '',
+            status: 'ACTIVE',
+            max_routers_quota: 20,
+            max_users_quota: 5,
+            active_routers_count: 1,
+            active_users_count: 1,
+            default_safemode_seconds: 45,
           },
         ],
       },
@@ -73,7 +85,7 @@ describe('TenantsManagementView.vue — Gestión de Empresas Multi-Tenant', () =
     // Reabrir y enviar con error
     await wrapper.find('.btn-create').trigger('click');
     vi.spyOn(http, 'post').mockRejectedValueOnce({
-      message: 'Slug duplicado',
+      detail: 'Slug duplicado',
     });
 
     await wrapper.find('#tenant-name').setValue('ISP Error');
@@ -85,6 +97,20 @@ describe('TenantsManagementView.vue — Gestión de Empresas Multi-Tenant', () =
     await wrapper.find('.modal-form').trigger('submit');
     await flushPromises();
     expect(wrapper.find('.banner--error').text()).toContain('Slug duplicado');
+
+    // Error con message sin detail
+    vi.spyOn(http, 'post').mockRejectedValueOnce({
+      message: 'Fallo de conexión al crear empresa',
+    });
+    await wrapper.find('.modal-form').trigger('submit');
+    await flushPromises();
+    expect(wrapper.find('.banner--error').text()).toContain('Fallo de conexión al crear empresa');
+
+    // Error genérico sin detail ni message
+    vi.spyOn(http, 'post').mockRejectedValueOnce({});
+    await wrapper.find('.modal-form').trigger('submit');
+    await flushPromises();
+    expect(wrapper.find('.banner--error').text()).toContain('Error al crear la empresa.');
 
     // Enviar con éxito usando fallback
     vi.spyOn(http, 'post').mockResolvedValueOnce({
@@ -117,15 +143,31 @@ describe('TenantsManagementView.vue — Gestión de Empresas Multi-Tenant', () =
       await actionBtn.trigger('click');
       expect(wrapper.find('.banner--success').exists()).toBe(false);
 
-      // Confirmar pero con error
+      // Confirmar pero con error con detail
       vi.spyOn(window, 'confirm').mockReturnValue(true);
       vi.spyOn(http, 'patch').mockRejectedValueOnce({
-        message: 'Fallo al suspender empresa',
+        detail: 'Fallo al suspender empresa',
       });
 
       await actionBtn.trigger('click');
       await flushPromises();
       expect(wrapper.find('.banner--error').text()).toContain('Fallo al suspender');
+
+      // Error con message sin detail
+      vi.spyOn(http, 'patch').mockRejectedValueOnce({
+        message: 'Fallo de timeout en patch',
+      });
+      await actionBtn.trigger('click');
+      await flushPromises();
+      expect(wrapper.find('.banner--error').text()).toContain('Fallo de timeout en patch');
+
+      // Error genérico sin detail ni message
+      vi.spyOn(http, 'patch').mockRejectedValueOnce({});
+      await actionBtn.trigger('click');
+      await flushPromises();
+      expect(wrapper.find('.banner--error').text()).toContain(
+        'Error al cambiar estado de la empresa.',
+      );
 
       // Confirmar con éxito (suspender)
       vi.spyOn(http, 'patch').mockResolvedValueOnce({

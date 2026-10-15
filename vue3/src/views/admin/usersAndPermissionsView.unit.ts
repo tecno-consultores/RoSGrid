@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { setActivePinia, createPinia } from 'pinia';
 import UsersAndPermissionsView from '../UsersAndPermissionsView.vue';
@@ -48,7 +48,6 @@ describe('UsersAndPermissionsView.vue — Gestión de 11 Roles y Matriz RBAC', (
             id: 'u-11',
             username: 'inactivo.user',
             email: 'inactivo@isp.net',
-            full_name: 'Usuario Inactivo',
             role: 'SUPPORT_L1',
             totp_enabled: false,
             is_active: false,
@@ -95,6 +94,10 @@ describe('UsersAndPermissionsView.vue — Gestión de 11 Roles y Matriz RBAC', (
     await searchInput.setValue('carlos@isp.net');
     expect(wrapper.findAll('tbody tr').length).toBeGreaterThan(0);
 
+    // Búsqueda sin coincidencia
+    await searchInput.setValue('no_coincide_xyz_999');
+    expect(wrapper.find('.cell-empty').exists()).toBe(true);
+
     await searchInput.setValue('');
   });
 
@@ -123,10 +126,10 @@ describe('UsersAndPermissionsView.vue — Gestión de 11 Roles y Matriz RBAC', (
     await wrapper.find('.rg-modal-backdrop').trigger('click');
     expect(wrapper.find('.rg-modal-backdrop').exists()).toBe(false);
 
-    // Reabrir y simular error
+    // Reabrir y simular error con detail
     await wrapper.find('.btn-create').trigger('click');
     vi.spyOn(http, 'post').mockRejectedValueOnce({
-      message: 'Nombre de usuario ya existe',
+      detail: 'Nombre de usuario ya existe',
     });
 
     await wrapper.find('#u-username').setValue('tech_dup');
@@ -138,6 +141,12 @@ describe('UsersAndPermissionsView.vue — Gestión de 11 Roles y Matriz RBAC', (
     await flushPromises();
 
     expect(wrapper.find('.banner--error').text()).toContain('Nombre de usuario ya existe');
+
+    // Simular error genérico sin detail ni message
+    vi.spyOn(http, 'post').mockRejectedValueOnce({});
+    await wrapper.find('.modal-form').trigger('submit');
+    await flushPromises();
+    expect(wrapper.find('.banner--error').text()).toContain('Error al crear el operador.');
 
     // Ahora crear con éxito usando fallback
     vi.spyOn(http, 'post').mockResolvedValueOnce({
@@ -196,6 +205,14 @@ describe('UsersAndPermissionsView.vue — Gestión de 11 Roles y Matriz RBAC', (
         modal.vm.$emit('submit-totp', '000000');
         await flushPromises();
         expect(wrapper.find('.banner--error').text()).toContain('Código TOTP incorrecto');
+
+        // Error genérico sin message ni detail
+        vi.spyOn(http, 'post').mockRejectedValueOnce({});
+        modal.vm.$emit('submit-totp', '000000');
+        await flushPromises();
+        expect(wrapper.find('.banner--error').text()).toContain(
+          'Error al reiniciar 2FA con Step-Up.',
+        );
 
         // Éxito en reset-2fa
         vi.spyOn(http, 'post').mockResolvedValueOnce({

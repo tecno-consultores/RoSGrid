@@ -48,10 +48,20 @@ describe('LoginView.vue — Autenticación Multi-Tenant en 2 Etapas y 2FA TOTP',
 
   it('muestra banner de advertencia si la URL contiene query reason', () => {
     mockQuery = { reason: 'session_revoked' };
-    const wrapper = mount(LoginView);
-    const alert = wrapper.find('.alert-banner--warning');
-    expect(alert.exists()).toBe(true);
-    expect(alert.text()).toContain('Tu sesión fue revocada');
+    let wrapper = mount(LoginView);
+    expect(wrapper.find('.alert-banner--warning').text()).toContain('Tu sesión fue revocada');
+
+    mockQuery = { reason: 'killed_by_admin' };
+    wrapper = mount(LoginView);
+    expect(wrapper.find('.alert-banner--warning').text()).toContain('Tu sesión fue revocada');
+
+    mockQuery = { reason: 'session_expired' };
+    wrapper = mount(LoginView);
+    expect(wrapper.find('.alert-banner--warning').text()).toContain('Tu sesión ha expirado');
+
+    mockQuery = { reason: 'unauthorized' };
+    wrapper = mount(LoginView);
+    expect(wrapper.find('.alert-banner--warning').text()).toContain('Debes iniciar sesión');
   });
 
   it('normaliza tenant slug en minúsculas y caracteres válidos', async () => {
@@ -227,6 +237,34 @@ describe('LoginView.vue — Autenticación Multi-Tenant en 2 Etapas y 2FA TOTP',
 
     await wrapper.find('.btn-back').trigger('click');
     expect(wrapper.find('.login-form').exists()).toBe(true);
+  });
+
+  it('expira el desafío 2FA y regresa a CREDENTIALS al llegar a 0 el temporizador', async () => {
+    vi.spyOn(http, 'post').mockResolvedValueOnce({
+      status: 200,
+      data: {
+        next_step: 'VERIFY_2FA_TOTP',
+        challenge_id: 'ch-expire',
+      },
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(LoginView);
+    await wrapper.find('#tenant-slug').setValue('isp-norte');
+    await wrapper.find('#login-email').setValue('admin@isp.net');
+    await wrapper.find('#login-password').setValue('Password123!');
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+
+    // Avanzar reloj 185 segundos para expirar el desafío
+    vi.advanceTimersByTime(185000);
+    await flushPromises();
+
+    expect(wrapper.find('.alert-banner--danger').text()).toContain('ha expirado');
+    expect(wrapper.find('.login-form').exists()).toBe(true);
+
+    // Desmontar para cubrir onBeforeUnmount con stopCountdown
+    wrapper.unmount();
   });
 
   it('valida longitud de 6 dígitos en desafío 2FA verify', async () => {

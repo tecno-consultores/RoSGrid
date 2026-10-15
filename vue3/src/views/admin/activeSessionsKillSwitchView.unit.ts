@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { setActivePinia, createPinia } from 'pinia';
 import ActiveSessionsKillSwitchView from '../ActiveSessionsKillSwitchView.vue';
@@ -160,28 +160,48 @@ describe('ActiveSessionsKillSwitchView.vue — Control de Sesiones y Kill-Switch
 
     await flushPromises();
 
-    const killBtn = wrapper.find('.btn-kill-session');
-    if (killBtn.exists()) {
-      await killBtn.trigger('click');
-      expect(wrapper.find('.rg-modal').exists()).toBe(true);
+    // Revocar sesión que no tiene router asignado
+    const killButtons = wrapper.findAll('.btn-kill-session');
+    expect(killButtons.length).toBeGreaterThanOrEqual(2);
 
-      await wrapper.find('#revoke-reason').setValue('Cierre por auditoría');
+    // Abrir modal con segunda sesión
+    await killButtons[1].trigger('click');
+    expect(wrapper.find('.rg-modal').exists()).toBe(true);
 
-      vi.spyOn(http, 'delete').mockResolvedValueOnce({
-        status: 200,
-        data: { success: true },
-        headers: new Headers(),
-      });
+    // Simular error con detail
+    vi.spyOn(http, 'delete').mockRejectedValueOnce({
+      detail: 'Error detallado de KeyDB',
+    });
+    await wrapper.find('.btn-confirm-kill').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('.banner--error').text()).toContain('Error detallado de KeyDB');
 
-      await wrapper.find('.btn-confirm-kill').trigger('click');
-      await flushPromises();
-      expect(wrapper.find('.banner--success').exists()).toBe(true);
+    // Simular error genérico sin detail ni message
+    vi.spyOn(http, 'delete').mockRejectedValueOnce({});
+    await wrapper.find('.btn-confirm-kill').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('.banner--error').text()).toContain(
+      'Error al ejecutar la orden Kill-Switch.',
+    );
 
-      // Avanzar timers para limpiar mensaje de éxito
-      vi.advanceTimersByTime(5000);
-      await flushPromises();
-      expect(wrapper.find('.banner--success').exists()).toBe(false);
-    }
+    // Ahora revocar con éxito
+    await killButtons[0].trigger('click');
+    await wrapper.find('#revoke-reason').setValue('Cierre por auditoría');
+
+    vi.spyOn(http, 'delete').mockResolvedValueOnce({
+      status: 200,
+      data: { success: true },
+      headers: new Headers(),
+    });
+
+    await wrapper.find('.btn-confirm-kill').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('.banner--success').exists()).toBe(true);
+
+    // Avanzar timers para limpiar mensaje de éxito
+    vi.advanceTimersByTime(5000);
+    await flushPromises();
+    expect(wrapper.find('.banner--success').exists()).toBe(false);
   });
 
   it('permite expulsar a un usuario de todos sus dispositivos y maneja errores de red', async () => {
@@ -194,29 +214,28 @@ describe('ActiveSessionsKillSwitchView.vue — Control de Sesiones y Kill-Switch
     await flushPromises();
 
     const killAllBtn = wrapper.find('.btn-kill-user');
-    if (killAllBtn.exists()) {
-      await killAllBtn.trigger('click');
-      expect(wrapper.find('.modal-title').text()).toContain('Kill-Switch Total');
+    expect(killAllBtn.exists()).toBe(true);
+    await killAllBtn.trigger('click');
+    expect(wrapper.find('.modal-title').text()).toContain('Kill-Switch Total');
 
-      // Error en revocación masiva
-      vi.spyOn(http, 'delete').mockRejectedValueOnce({
-        message: 'Fallo al revocar en KeyDB',
-      });
+    // Error en revocación masiva
+    vi.spyOn(http, 'delete').mockRejectedValueOnce({
+      message: 'Fallo al revocar en KeyDB',
+    });
 
-      await wrapper.find('.btn-confirm-kill').trigger('click');
-      await flushPromises();
-      expect(wrapper.find('.banner--error').text()).toContain('Fallo al revocar en KeyDB');
+    await wrapper.find('.btn-confirm-kill').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('.banner--error').text()).toContain('Fallo al revocar en KeyDB');
 
-      // Éxito en revocación masiva
-      vi.spyOn(http, 'delete').mockResolvedValueOnce({
-        status: 200,
-        data: { success: true },
-        headers: new Headers(),
-      });
+    // Éxito en revocación masiva
+    vi.spyOn(http, 'delete').mockResolvedValueOnce({
+      status: 200,
+      data: { success: true },
+      headers: new Headers(),
+    });
 
-      await wrapper.find('.btn-confirm-kill').trigger('click');
-      await flushPromises();
-      expect(wrapper.find('.banner--success').text()).toContain('Todas las sesiones');
-    }
+    await wrapper.find('.btn-confirm-kill').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('.banner--success').text()).toContain('Todas las sesiones');
   });
 });

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { setActivePinia, createPinia } from 'pinia';
 import RouterInventoryView from '../RouterInventoryView.vue';
@@ -112,6 +112,11 @@ describe('RouterInventoryView.vue — Inventario y Modos Tabla, Mapa y Dividido'
     // Filtros
     const searchInput = wrapper.find('#inv-search');
     await searchInput.setValue('CCR2004');
+    await searchInput.setValue('CCR2004-1G-12S+2XS'); // model
+    await searchInput.setValue('SN123456'); // serial
+    await searchInput.setValue('Edge1'); // ros_identity
+    await searchInput.setValue('10.0.0.1'); // ip_address
+    await searchInput.setValue('');
 
     const roleSelect = wrapper.find('#inv-role');
     await roleSelect.setValue('EDGE_BGP');
@@ -181,5 +186,37 @@ describe('RouterInventoryView.vue — Inventario y Modos Tabla, Mapa y Dividido'
     if (vaultModal.exists()) {
       vaultModal.vm.$emit('close');
     }
+  });
+
+  it('oculta botón de bóveda para operadores sin privilegios (SUPPORT_L1)', () => {
+    const authStore = useAuthStore();
+    authStore.setAuth({
+      id: 'op-1',
+      username: 'field_tech',
+      email: 'tech@isp.net',
+      tenant_id: 't-corp',
+      tenant_slug: 'corp',
+      role: 'SUPPORT_L1',
+      totp_enabled: false,
+    });
+
+    const wrapper = mount(RouterInventoryView, {
+      global: {
+        stubs: {
+          RgDataTable: {
+            template: `
+              <div class="rg-datatable-stub">
+                <slot name="actions" :row="{ id: 'r-01' }" />
+              </div>
+            `,
+          },
+          OsmRouterMap: true,
+          CsvOnboardingWizardModal: true,
+          VaultRevealModal: true,
+        },
+      },
+    });
+
+    expect(wrapper.find('.btn-row-action--vault').exists()).toBe(false);
   });
 });

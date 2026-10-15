@@ -139,4 +139,50 @@ describe('CsvOnboardingWizardModal.vue — Asistente de Importación CSV en 2 Pa
     await wrapper.find('.btn-close').trigger('click');
     expect(wrapper.emitted('close')).toBeTruthy();
   });
+
+  it('procesa archivo CSV 100% válido sin errores en dry-run y confirma importación', async () => {
+    const wrapper = mount(CsvOnboardingWizardModal, {
+      props: { isOpen: true },
+    });
+
+    const file = new File(['valid_content'], 'valid.csv', { type: 'text/csv' });
+    const fileInput = wrapper.find('#csv-file-input');
+    Object.defineProperty(fileInput.element, 'files', { value: [file] });
+    await fileInput.trigger('change');
+
+    vi.spyOn(http, 'post').mockResolvedValueOnce({
+      status: 200,
+      data: {
+        total_rows: 1,
+        valid_rows_count: 1,
+        invalid_rows_count: 0,
+        rows: [
+          {
+            line: 2,
+            is_valid: true,
+            display_name: 'CCR-Valid',
+            ip_address: '10.0.0.1',
+            serial_number: 'SN-OK',
+          },
+        ],
+      },
+      headers: new Headers(),
+    });
+
+    await wrapper.find('.btn-primary').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('.badge-invalid').exists()).toBe(false);
+
+    vi.spyOn(http, 'post').mockResolvedValueOnce({
+      status: 200,
+      data: { imported_count: 1, errors: [] },
+      headers: new Headers(),
+    });
+
+    await wrapper.findAll('.btn-primary')[0].trigger('click');
+    await flushPromises();
+
+    expect(wrapper.emitted('imported')).toBeTruthy();
+  });
 });

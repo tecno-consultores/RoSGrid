@@ -10,8 +10,8 @@ import type { TableColumn } from '@/types';
 interface TestRow extends Record<string, unknown> {
   id: string;
   name: string;
-  ip: string;
-  status: string;
+  ip?: string;
+  status?: string;
   disabled?: boolean;
   invalid?: boolean;
   dynamic?: boolean;
@@ -25,14 +25,15 @@ describe('RgDataTable.vue — WinBox 32px / Táctil 44px & RouterOS Flags', () =
 
   const columns: TableColumn<Record<string, unknown>>[] = [
     { key: 'name', label: 'Nombre', sortable: true, formatter: (row) => `dev:${row.name}` },
-    { key: 'ip', label: 'Dirección IP' },
-    { key: 'status', label: 'Estado' },
+    { key: 'ip', label: 'Dirección IP', align: 'center' },
+    { key: 'status', label: 'Estado', align: 'right' },
   ];
 
   const sampleRows: TestRow[] = [
     { id: '1', name: 'ether1', ip: '10.0.0.1', status: 'up', running: true },
     { id: '2', name: 'ether2', ip: '', status: '', disabled: true },
     { id: '3', name: 'ether3', ip: '10.0.0.3', status: 'invalid', invalid: true, dynamic: true },
+    { id: '4', name: 'ether4', ip: undefined, status: undefined },
   ];
 
   it('renderiza encabezados y filas correctamente con accesibilidad WCAG', () => {
@@ -46,7 +47,7 @@ describe('RgDataTable.vue — WinBox 32px / Táctil 44px & RouterOS Flags', () =
 
     expect(wrapper.find('caption').text()).toBe('Interfaces de Red');
     expect(wrapper.findAll('th').length).toBe(4);
-    expect(wrapper.findAll('tbody tr.rg-table-row').length).toBe(3);
+    expect(wrapper.findAll('tbody tr.rg-table-row').length).toBe(4);
   });
 
   it('renderiza insignias RouterOS v7 ([D], [X], [I], [R]) según banderas de fila', () => {
@@ -115,6 +116,17 @@ describe('RgDataTable.vue — WinBox 32px / Táctil 44px & RouterOS Flags', () =
 
     // Simular drag and drop
     const rows = wrapper.findAll('tbody tr.rg-table-row');
+    // Drop en misma fila (sin reorder)
+    await rows[0].trigger('dragstart', { dataTransfer: { effectAllowed: '' } });
+    await rows[0].trigger('drop');
+
+    // Drop sin haber iniciado drag (draggedIndex === null)
+    await rows[1].trigger('drop');
+
+    // Drag sin dataTransfer
+    await rows[0].trigger('dragstart', {});
+
+    // Drag y drop exitoso entre filas distintas
     await rows[0].trigger('dragstart', { dataTransfer: { effectAllowed: '' } });
     await rows[1].trigger('dragover');
     await rows[1].trigger('drop');
@@ -174,7 +186,7 @@ describe('RgDataTable.vue — WinBox 32px / Táctil 44px & RouterOS Flags', () =
         actions: '<button class="test-action-btn">Acción</button>',
       },
     });
-    expect(wrapper.findAll('.col-custom-actions').length).toBe(4);
+    expect(wrapper.findAll('.col-custom-actions').length).toBe(5);
     expect(wrapper.find('.test-action-btn').exists()).toBe(true);
   });
 });

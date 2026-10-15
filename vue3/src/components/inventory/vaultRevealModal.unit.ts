@@ -96,6 +96,7 @@ describe('VaultRevealModal.vue — Bóveda Criptográfica con Step-Up 2FA y Purg
         router_id: 'r-vault-1',
         api_username: 'rosgrid_admin',
         current_password: 'SecretMikrotikKey#2026',
+        previous_password: 'PreviousSecret#123',
         auto_purge_seconds: 30,
       },
       headers: new Headers(),
@@ -109,12 +110,20 @@ describe('VaultRevealModal.vue — Bóveda Criptográfica con Step-Up 2FA y Purg
     // Ahora debe estar en estado desbloqueado
     expect(wrapper.find('.revealed-box').exists()).toBe(true);
     expect(wrapper.find('.secret-text').text()).toBe('SecretMikrotikKey#2026');
+    expect(wrapper.find('.secret-text--prev').text()).toBe('PreviousSecret#123');
 
     // Copiar al portapapeles
     Object.assign(navigator, {
       clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },
     });
     await wrapper.find('.btn-copy').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('.btn-copy').text()).toContain('Copiado');
+
+    // Avanzar reloj 2.6 segundos para restablecer botón de copiado
+    vi.advanceTimersByTime(2600);
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('.btn-copy').text()).toBe('Copiar');
 
     // Avanzar el reloj 31 segundos para validar autodestrucción en memoria RAM
     vi.advanceTimersByTime(31000);
@@ -221,5 +230,49 @@ describe('VaultRevealModal.vue — Bóveda Criptográfica con Step-Up 2FA y Purg
     vi.advanceTimersByTime(35000);
     await flushPromises();
     expect(wrapper.find('.revealed-box').exists()).toBe(false);
+  });
+
+  it('maneja router nulo y fallbacks de detalle y genéricos en rotación y re-pin', async () => {
+    const wrapper = mount(VaultRevealModal, {
+      props: {
+        isOpen: true,
+        router: null,
+      },
+    });
+
+    expect(wrapper.find('.modal-subtitle').exists()).toBe(false);
+    expect(wrapper.text()).toContain('rosgrid_svc');
+
+    // Reabrir con router válido para errores específicos
+    await wrapper.setProps({ router: sampleRouter });
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    // Error con detail en rotación
+    vi.spyOn(http, 'post').mockRejectedValueOnce({
+      detail: 'Detalle de fallo en rotación',
+    });
+    await wrapper.find('.btn-op--rotate').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('.banner--error').text()).toContain('Detalle de fallo en rotación');
+
+    // Error genérico en rotación
+    vi.spyOn(http, 'post').mockRejectedValueOnce({});
+    await wrapper.find('.btn-op--rotate').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('.banner--error').text()).toContain('Error al rotar la clave de la API.');
+
+    // Error con detail en re-pin
+    vi.spyOn(http, 'post').mockRejectedValueOnce({
+      detail: 'Detalle de fallo en re-pin',
+    });
+    await wrapper.find('.btn-op--repin').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('.banner--error').text()).toContain('Detalle de fallo en re-pin');
+
+    // Error genérico en re-pin
+    vi.spyOn(http, 'post').mockRejectedValueOnce({});
+    await wrapper.find('.btn-op--repin').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('.banner--error').text()).toContain('Error al re-anclar certificado SSL.');
   });
 });

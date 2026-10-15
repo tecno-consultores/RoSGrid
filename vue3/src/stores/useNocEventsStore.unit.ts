@@ -68,7 +68,7 @@ describe('useNocEventsStore — WebSocket Global & Alertas NOC', () => {
     // Mensaje inválido para cubrir bloque catch
     store.handleIncomingEvent('INVALID_NON_JSON_STRING');
 
-    // Enviar mensaje a través del socket
+    // Enviar mensajes a través del socket con distintas variantes
     const ws = MockWebSocket.instances[0];
     if (ws.onmessage) {
       ws.onmessage({
@@ -79,10 +79,23 @@ describe('useNocEventsStore — WebSocket Global & Alertas NOC', () => {
           message: 'Falla de enlace',
         }),
       });
+      // Mensaje con event en lugar de event_name, severity WARNING y detail
+      ws.onmessage({
+        data: JSON.stringify({
+          event: 'MAKER_CHECKER_REQUESTED',
+          severity: 'WARNING',
+          detail: 'Aprobación de regla firewall requerida',
+        }),
+      });
+      // Mensaje vacío para ejercitar todos los fallbacks predeterminados
+      ws.onmessage({
+        data: JSON.stringify({}),
+      });
     }
 
-    expect(store.recentEvents.length).toBe(1);
-    expect(store.activeAlertsCount).toBe(1);
+    expect(store.recentEvents.length).toBe(3);
+    expect(store.activeAlertsCount).toBe(2);
+    expect(store.pendingApprovalsCount).toBe(1);
 
     // Simular error y cierre con backoff
     if (ws.onerror) {

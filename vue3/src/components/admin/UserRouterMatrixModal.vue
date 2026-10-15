@@ -235,10 +235,18 @@
               <button type="button" class="btn-batch" @click="assignByFilter('can_read', true)">
                 + Leer Todos
               </button>
-              <button type="button" class="btn-batch" @click="assignByFilter('can_write_layer1', true)">
+              <button
+                type="button"
+                class="btn-batch"
+                @click="assignByFilter('can_write_layer1', true)"
+              >
                 + L1 Todos
               </button>
-              <button type="button" class="btn-batch" @click="assignByFilter('can_execute_diagnostics', true)">
+              <button
+                type="button"
+                class="btn-batch"
+                @click="assignByFilter('can_execute_diagnostics', true)"
+              >
                 + Diag Todos
               </button>
               <button type="button" class="btn-batch" @click="assignByTag('zona-norte')">

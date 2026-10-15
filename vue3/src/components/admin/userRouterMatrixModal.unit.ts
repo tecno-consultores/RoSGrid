@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import UserRouterMatrixModal from './UserRouterMatrixModal.vue';
 import { http } from '@/api/httpClient';
@@ -143,7 +143,7 @@ describe('UserRouterMatrixModal.vue — Asignación Granular de Permisos por Rou
     expect(wrapper.findAll('.cell-name').length).toBe(0);
 
     await searchInput.setValue('');
-    expect(wrapper.findAll('.cell-name').length).toBe(1);
+    expect(wrapper.findAll('.cell-name').length).toBe(2);
 
     // Guardar cambios con éxito
     vi.spyOn(http, 'put').mockResolvedValueOnce({
@@ -203,7 +203,33 @@ describe('UserRouterMatrixModal.vue — Asignación Granular de Permisos por Rou
     await wrapper.find('.btn-primary').trigger('click');
     await flushPromises();
 
-    expect(wrapper.find('.msg-banner--error').text()).toContain('Network error al guardar permisos');
+    expect(wrapper.find('.msg-banner--error').text()).toContain(
+      'Network error al guardar permisos',
+    );
+
+    // Error con detail
+    vi.spyOn(http, 'put').mockRejectedValueOnce({
+      detail: 'Detalle de fallo en permisos',
+    });
+    await wrapper.find('.btn-primary').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('.msg-banner--error').text()).toContain('Detalle de fallo en permisos');
+
+    // Error genérico sin detail ni message
+    vi.spyOn(http, 'put').mockRejectedValueOnce({});
+    await wrapper.find('.btn-primary').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('.msg-banner--error').text()).toContain('Error al guardar los permisos');
+
+    // Usuario sin full_name
+    await wrapper.setProps({
+      user: { ...sampleUser, full_name: undefined },
+    });
+    expect(wrapper.find('.modal-subtitle').text()).toContain(sampleUser.username);
+
+    // Usuario nulo
+    await wrapper.setProps({ user: null });
+    expect(wrapper.find('.modal-subtitle').exists()).toBe(false);
   });
 
   it('oculta tabla de routers si el switch maestro de acceso total está activo y permite cerrar', async () => {
