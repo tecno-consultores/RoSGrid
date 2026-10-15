@@ -4,6 +4,7 @@
 """Pruebas unitarias para WebFig Capa 1: Interfaces, SFP DDM, IP, Anti-Suicidio, Firewall, Routing, PPP, Queues, System y Tools."""
 
 import uuid
+from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest

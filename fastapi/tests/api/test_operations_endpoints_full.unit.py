@@ -256,6 +256,24 @@ async def test_approvals_approve_and_reject(fake_op_context: dict[str, Any]) -> 
         rej_res = await api_approvals.reject_request(app.id, reject_payload, fake_req, claims=claims, db=db)
         assert rej_res.status == ApprovalStatusEnum.REJECTED.value
 
+        # Approve not found -> 404
+        db.get.return_value = None
+        with pytest.raises(HTTPException) as exc_nf:
+            await api_approvals.approve_request(uuid.uuid4(), approve_payload, fake_req, claims=claims, db=db)
+        assert exc_nf.value.status_code == 404
+
+        # Reject not found -> 404
+        with pytest.raises(HTTPException) as exc_rnf:
+            await api_approvals.reject_request(uuid.uuid4(), reject_payload, fake_req, claims=claims, db=db)
+        assert exc_rnf.value.status_code == 404
+
+        # Reject when not pending -> 400
+        app.status = ApprovalStatusEnum.REJECTED
+        db.get.return_value = app
+        with pytest.raises(HTTPException) as exc_np:
+            await api_approvals.reject_request(app.id, reject_payload, fake_req, claims=claims, db=db)
+        assert exc_np.value.status_code == 400
+
 
 # ============================================================================
 # BACKUPS UNIT TESTS
@@ -355,6 +373,22 @@ async def test_backups_helpers_and_diff(fake_op_context: dict[str, Any]) -> None
             ctx["router_id"], base_backup_id=b_id, target_backup_id="not-a-valid-uuid", claims=claims, db=db
         )
     assert exc_diff.value.status_code == 400
+
+    # Base backup not found -> 404
+    db.get.return_value = None
+    with pytest.raises(HTTPException) as exc_b404:
+        await api_backups.get_backup_diff(
+            ctx["router_id"], base_backup_id=uuid.uuid4(), target_backup_id="LIVE", claims=claims, db=db
+        )
+    assert exc_b404.value.status_code == 404
+
+    # Target backup UUID not found -> 404
+    db.get.side_effect = [backup_obj, None]
+    with pytest.raises(HTTPException) as exc_t404:
+        await api_backups.get_backup_diff(
+            ctx["router_id"], base_backup_id=b_id, target_backup_id=str(uuid.uuid4()), claims=claims, db=db
+        )
+    assert exc_t404.value.status_code == 404
 
 
 @pytest.mark.asyncio
@@ -542,6 +576,24 @@ async def test_bulk_templates_and_jobs(fake_op_context: dict[str, Any]) -> None:
     job_l2 = await api_bulk.create_bulk_job(job_create, claims=l2_claims, db=db)
     assert job_l2.status == BulkJobStatusEnum.AWAITING_APPROVAL.value
 
+    # preview_template 404
+    db.get.return_value = None
+    with pytest.raises(HTTPException) as exc_p404:
+        await api_bulk.preview_template(uuid.uuid4(), TemplateRenderPreviewRequest(variables={}), claims=claims, db=db)
+    assert exc_p404.value.status_code == 404
+
+    # create_bulk_job 400 when no target routers resolved
+    with patch("src.api.v1.bulk_and_updates._resolve_target_router_ids", return_value=[]):
+        with pytest.raises(HTTPException) as exc_no_r:
+            await api_bulk.create_bulk_job(job_create, claims=claims, db=db)
+        assert exc_no_r.value.status_code == 400
+
+    # get_bulk_job 404
+    db.get.return_value = None
+    with pytest.raises(HTTPException) as exc_j404:
+        await api_bulk.get_bulk_job(uuid.uuid4(), claims=claims, db=db)
+    assert exc_j404.value.status_code == 404
+
     # Fleet update status and execution
     mock_routers = MagicMock()
     mock_routers.scalars.return_value.all.return_value = [ctx["router"]]
@@ -556,6 +608,19 @@ async def test_bulk_templates_and_jobs(fake_op_context: dict[str, Any]) -> None:
         exec_payload = RosUpdateExecuteRequest(router_ids=[ctx["router_id"]], auto_upgrade_firmware=True)
         up_res = await api_bulk.execute_fleet_updates(exec_payload, claims=claims, db=db)
         assert up_res.status == "COMPLETED"
+
+    # Fleet updates: pre-backup fails -> ABORTED_PRE_BACKUP_FAILED
+    with (
+        patch("src.api.v1.bulk_and_updates.get_router_and_client", return_value=(ctx["router"], ctx["client"])),
+        patch("src.api.v1.bulk_and_updates._perform_pre_upgrade_backup", return_value=False),
+    ):
+        exec_fail = await api_bulk.execute_fleet_updates(exec_payload, claims=claims, db=db)
+        assert exec_fail.results[0]["status"] == "ABORTED_PRE_BACKUP_FAILED"
+
+    # Fleet updates: exception -> FAILED
+    with patch("src.api.v1.bulk_and_updates.get_router_and_client", side_effect=RuntimeError("MikroTik timeout")):
+        exec_err = await api_bulk.execute_fleet_updates(exec_payload, claims=claims, db=db)
+        assert exec_err.results[0]["status"] == "FAILED"
 
 
 # ============================================================================
@@ -726,3 +791,17 @@ async def test_notification_channels_crud(fake_op_context: dict[str, Any]) -> No
     db.get.return_value = channel
     await api_channels.delete_channel(ch_id, claims=claims, db=db)
     db.delete.assert_called_once_with(channel)
+
+    # 404 error cases for channel not found
+    db.get.return_value = None
+    with pytest.raises(HTTPException) as exc_up_404:
+        await api_channels.update_channel(uuid.uuid4(), up_payload, claims=claims, db=db)
+    assert exc_up_404.value.status_code == 404
+
+    with pytest.raises(HTTPException) as exc_del_404:
+        await api_channels.delete_channel(uuid.uuid4(), claims=claims, db=db)
+    assert exc_del_404.value.status_code == 404
+
+    with pytest.raises(HTTPException) as exc_tst_404:
+        await api_channels.test_channel(uuid.uuid4(), NotificationTestRequest(), claims=claims, db=db)
+    assert exc_tst_404.value.status_code == 404

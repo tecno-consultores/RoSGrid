@@ -37,7 +37,6 @@ from src.services.telemetry_multiplexer import (
     _resolve_router_client,
 )
 from src.workers.alert_dispatcher_worker import (
-    _dispatch_to_channel,
     _process_alert_payload,
     alert_dispatcher_worker_loop,
 )

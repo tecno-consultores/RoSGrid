@@ -200,7 +200,6 @@ async def test_health_monitor_cycle_and_loop() -> None:
         await health_monitor_worker_loop()
 
 
-
 # ============================================================================
 # ALERT DISPATCHER WORKER TESTS
 # ============================================================================
@@ -444,7 +443,6 @@ async def test_vault_rotation_single_and_cycle() -> None:
     # Loop cancellation
     with patch("src.workers.vault_rotation_worker.run_vault_rotation_cycle", side_effect=asyncio.CancelledError):
         await vault_rotation_worker_loop()
-
 
 
 # ============================================================================

@@ -7,8 +7,6 @@ import asyncio
 import json
 import time
 import uuid
-from datetime import UTC, datetime
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import jwt
@@ -20,7 +18,6 @@ import src.services.telemetry_multiplexer as telem_mux
 from src.core.config import settings
 from src.models.core import SystemRoleEnum, UserRouterPermission
 from src.models.inventory import Router, RouterCredentialsVault
-
 
 # ============================================================================
 # TELEMETRY MULTIPLEXER UNIT TESTS
@@ -125,7 +122,7 @@ async def test_telemetry_poller_management() -> None:
     # ensure_poller_active & cancel_poller_task
     with (
         patch("src.services.telemetry_multiplexer._poll_loop", new_callable=AsyncMock) as mock_poll,
-        patch("src.services.telemetry_multiplexer.get_redis_client") as mock_redis,
+        patch("src.services.telemetry_multiplexer.get_redis_client"),
     ):
         mock_poll.return_value = None
         telem_mux.ensure_poller_active(t_id, r_id)
@@ -159,6 +156,17 @@ async def test_telemetry_poller_management() -> None:
         await telem_mux._poll_loop(t_id, r_id)
         assert fake_redis.publish.called
         client.close.assert_called_once()
+
+    # 3. _poll_loop handles Exception
+    fake_redis_err = AsyncMock()
+    fake_redis_err.scard.side_effect = RuntimeError("Redis error")
+    client_err = AsyncMock()
+    with (
+        patch("src.services.telemetry_multiplexer.get_redis_client", return_value=fake_redis_err),
+        patch("src.services.telemetry_multiplexer._resolve_router_client", return_value=client_err),
+    ):
+        await telem_mux._poll_loop(t_id, r_id)
+        client_err.close.assert_called_once()
 
 
 # ============================================================================
@@ -248,9 +256,7 @@ async def test_websockets_permissions_and_killswitch() -> None:
     ws.send_text.assert_called_once_with('{"type":"TICK"}')
 
     # Unrelated event on events channel
-    res_ev = await ws_api._handle_telemetry_msg(
-        ws, "rg:events", json.dumps({"event_name": "ROUTER_ADDED"}), "s1", "u1"
-    )
+    res_ev = await ws_api._handle_telemetry_msg(ws, "rg:events", json.dumps({"event_name": "ROUTER_ADDED"}), "s1", "u1")
     assert res_ev is True
 
     # Kill-Switch event matching target session

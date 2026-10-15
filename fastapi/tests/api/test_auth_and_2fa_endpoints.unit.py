@@ -194,6 +194,33 @@ async def test_login_success_triggers_enroll_2fa(
 
 
 @pytest.mark.asyncio
+async def test_login_success_triggers_verify_2fa(
+    async_client: AsyncClient, sample_tenant: Tenant, sample_user: User, fake_redis: FakeAsyncRedis
+) -> None:
+    sample_user.totp_enabled = True
+    sample_user.totp_secret_ciphertext = "encrypted_secret_data"
+    session = MockAsyncSession(tenant=sample_tenant, user=sample_user)
+    app.dependency_overrides[get_db_session] = lambda: session
+    try:
+        res = await async_client.post(
+            "/api/v1/auth/login",
+            json={"tenant_slug": sample_tenant.slug, "email": sample_user.email, "password": "ValidPassword2026!"},
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["next_step"] == "VERIFY_2FA_TOTP"
+        assert data["totp_provisioning_uri"] is None
+
+        # Verify challenge in Redis
+        challenge_id = data["challenge_id"]
+        preauth = await fake_redis.hgetall(f"rg:{sample_tenant.id}:preauth:{challenge_id}")
+        assert preauth["user_id"] == str(sample_user.id)
+        assert preauth["status"] == "VERIFY_2FA_TOTP"
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)
+
+
+@pytest.mark.asyncio
 async def test_verify_2fa_enrollment_lifecycle(
     async_client: AsyncClient, sample_tenant: Tenant, sample_user: User, fake_redis: FakeAsyncRedis
 ) -> None:

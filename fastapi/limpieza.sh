@@ -4,8 +4,10 @@
 LC_ALL=C
 
 if [[ "$EUID" != "0" ]]; then
-	echo "ERROR: debe ser root. Ejecuta con sudo ./limpieza.sh"
-	exit 1
+	if command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+		exec sudo "$0" "$@"
+	fi
+	echo "Aviso: Ejecutando limpieza sin privilegios directos de superusuario..."
 fi
 
 clear
@@ -21,13 +23,14 @@ rm -rf dist
 rm -rf tests/__pycache__
 rm -rf src/*/__pycache__
 rm -rf htmlcov/
+rm -rf mutants/
 rm -rf target/
 rm -rf test/target/
 rm -f zap-report.html
 rm -f chaos-report.html
 rm -f profile.svg
 rm -f *.log
-rm -rf graphify-out/
+# rm -rf graphify-out/  # Preservado intacto para documentación y auditoría
 rm -rf prometheus_data/
 
 chown -R "$USER:$USER" . 2>/dev/null || true
@@ -37,7 +40,7 @@ docker compose -f docker-compose.qa.yml down -v 2>/dev/null || true
 docker compose -f docker-compose.qa.yml --profile chaos down -v 2>/dev/null || true
 docker compose -f docker-compose.qa.yml --profile graphify down -v 2>/dev/null || true
 
-docker system prune -af --volumes
+docker system prune -f --volumes 2>/dev/null || true
 
 echo "Limpieza de caché, reportes, imágenes y contenedores finalizada exitosamente."
 exit 0

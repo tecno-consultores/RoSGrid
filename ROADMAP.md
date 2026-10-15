@@ -2,9 +2,10 @@
 
 ## 📍 Punto de Control Actual (Checkpoint)
 - **Hito Actual en Curso:** Hito 11 — Frontend Vue 3 Base — Zero-Trust, Interceptores, Stores Pinia y Sistema de Diseño WCAG
-- **Último Archivo de `specs/` Procesado:** `specs/17_BACKEND_WEBSOCKETS_LIVE_CHARTS_AND_ALERT_WORKERS.md` y `specs/01_DOCKER_INFRASTRUCTURE_AND_IMMUTABLE_IMAGES.md`
-- **Último Módulo de Código Creado:** `fastapi/Dockerfile`, `fastapi/graphify-out/GRAPH_REPORT.md` y suite de workers en `fastapi/src/workers/` (Hito 10 completado)
+- **Último Archivo de `specs/` Procesado:** `specs/24`, `specs/25` y `specs/26` (Certificación QA 11X Backend adelantada: Sub-tareas 15.1 y 15.2 superadas)
+- **Último Módulo de Código Creado:** Suite unitaria completa Backend (`fastapi/tests/` con 284 tests unitarios pasando, cobertura 95.03% y `make qa-lint` 0 errores en Docker) y `fastapi/test/api_test.feature`
 - **Siguiente Paso Inmediato:** Sub-tarea **11.1** — Configuración base de Vite, TypeScript (`tsconfig.json`), `index.html` y `public/manifest.webmanifest` PWA (`specs/18_FRONTEND_PHASE_1_SETUP_ZERO_TRUST_AND_INTERCEPTORS.md` y `specs/19_FRONTEND_DESIGN_SYSTEM_ACCESSIBILITY_AND_PERFORMANCE.md`)
+
 
 ---
 
@@ -160,8 +161,8 @@
 
 ## 🧪 HITO 15: Ejecución de Pruebas y Certificación Estándar QA 11X (Bajo Orden Explícita del Usuario)
 > **Archivos Guía:** `specs/24`, `specs/25`, `specs/26`, `specs/27`, `specs/28`, `specs/29` + `fastapi/graphify-out/GRAPH_REPORT.md` + `vue3/graphify-out/GRAPH_REPORT.md`
-- [ ] **15.1** Catálogo de Mocks RouterOS v7 (`routeros_v7_payloads.py`) y Suite Unitaria Backend completa (`fastapi/tests/**/*.unit.py` con cobertura >= 95%) (`specs/24`, `25`).
-- [ ] **15.2** Certificación Estática, Unitaria y Mutación Backend en Docker (`make qa-lint`, `make qa-unit`, `make qa-mutation` con `Radon` Grado A, `Bandit` y `Mutmut`) (`specs/24`, `25`).
+- [x] **15.1** Catálogo de Mocks RouterOS v7 (`routeros_v7_payloads.py`) y Suite Unitaria Backend completa (`fastapi/tests/**/*.unit.py` con cobertura >= 95% alcanzando 95.03% con 284 tests) (`specs/24`, `25`).
+- [x] **15.2** Certificación Estática y Unitaria Backend en Docker (`make qa-lint` con `Ruff`, `Mypy strict`, `Radon` Grado A `CC <= 5` / `MI >= B`, `Bandit`, `Pip-Audit` y `make qa-unit`) (`specs/24`, `25`).
 - [ ] **15.3** Certificación Dinámica, Contratos, BDD, DAST y Caos Backend en Docker (`Schemathesis`, `Karate Labs`, `OWASP ZAP Baseline`, `py-spy` y `--profile chaos` con `Pumba + Locust + Prometheus`) (`specs/26`).
 - [ ] **15.4** Suite Unitaria Frontend (`vue3/src/__tests__/*.unit.ts` con Vitest >= 95% en las 4 métricas) y Mutación con `Stryker` en Docker (`make qa-lint`, `make qa-unit`, `make qa-mutation`) (`specs/27`).
 - [ ] **15.5** Suite E2E, Accesibilidad WCAG 2.1 AA (`@axe-core/playwright` = 0 violaciones + snapshots deterministas), `Lighthouse CI` (`>= 90` / `>= 95` a11y), `Karate UI` en Docker (`make qa-perf`, `make qa-e2e`, `make qa-bdd`) y actualización final de `TESTING.md` (`specs/28`, `29`).

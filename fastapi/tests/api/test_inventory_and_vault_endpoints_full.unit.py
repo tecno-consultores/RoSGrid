@@ -120,7 +120,6 @@ def _fake_add(instance: Any, *args: Any, **kwargs: Any) -> None:
         instance.id = uuid.uuid4()
 
 
-
 @pytest.fixture
 def fake_request() -> MagicMock:
     req = MagicMock()
@@ -214,9 +213,7 @@ async def test_list_and_get_routers(test_router_full: Router) -> None:
 
 
 @pytest.mark.asyncio
-async def test_create_and_update_and_delete_router(
-    test_router_full: Router, fake_request: MagicMock
-) -> None:
+async def test_create_and_update_and_delete_router(test_router_full: Router, fake_request: MagicMock) -> None:
     db = AsyncMock()
     # Check duplicate query returns empty (scalar() -> None)
     db.execute.return_value = MockDbResult([], single=None)
@@ -469,6 +466,39 @@ async def test_maintenance_window_endpoints(fake_request: MagicMock) -> None:
         cancelled = await cancel_maintenance_window(mw.id, fake_request, claims, db)
         assert cancelled.is_cancelled is True
 
+    # 4. Validation error: ends_at <= starts_at
+    bad_dates_mw = CreateMaintenanceWindowRequest(
+        title="Bad Dates",
+        reason="Testing validation",
+        router_id=r_id,
+        starts_at=now + timedelta(hours=2),
+        ends_at=now,
+        suppress_alerts=True,
+    )
+    with pytest.raises(HTTPException) as exc_dates:
+        await create_maintenance_window(bad_dates_mw, fake_request, claims, db)
+    assert exc_dates.value.status_code == 400
+
+    # 5. Validation error: neither router_id nor target_tag
+    no_target_mw = CreateMaintenanceWindowRequest(
+        title="No Target",
+        reason="Testing validation",
+        router_id=None,
+        target_tag=None,
+        starts_at=now,
+        ends_at=now + timedelta(hours=1),
+        suppress_alerts=True,
+    )
+    with pytest.raises(HTTPException) as exc_target:
+        await create_maintenance_window(no_target_mw, fake_request, claims, db)
+    assert exc_target.value.status_code == 400
+
+    # 6. Cancel 404 error
+    db.get.return_value = None
+    with pytest.raises(HTTPException) as exc_cancel:
+        await cancel_maintenance_window(uuid.uuid4(), fake_request, claims, db)
+    assert exc_cancel.value.status_code == 404
+
 
 # ============================================================================
 # NOTIFICATION CHANNELS ENDPOINTS
@@ -499,7 +529,10 @@ async def test_notification_channel_endpoints() -> None:
     db.execute.return_value = MockDbResult([ch])
 
     with (
-        patch("src.api.v1.notification_channels._decrypt_channel_config", return_value={"bot_token": "token", "chat_id": "123"}),
+        patch(
+            "src.api.v1.notification_channels._decrypt_channel_config",
+            return_value={"bot_token": "token", "chat_id": "123"},
+        ),
         patch("src.api.v1.notification_channels._encrypt_channel_config", return_value=(b"c", b"i", b"t")),
     ):
         # 1. List

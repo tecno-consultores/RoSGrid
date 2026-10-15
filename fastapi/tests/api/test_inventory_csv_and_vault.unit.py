@@ -4,9 +4,8 @@
 """Pruebas unitarias para Inventario MikroTik, CSV Onboarding, Bóveda Criptográfica y Ventanas de Mantenimiento."""
 
 import uuid
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime
 from decimal import Decimal
-from typing import Any
 from unittest.mock import AsyncMock
 
 import pyotp
@@ -274,6 +273,7 @@ async def test_verify_admin_totp(test_tenant_id: uuid.UUID) -> None:
 
 def test_maintenance_window_filters(test_router: Router) -> None:
     from sqlalchemy import select
+
     from src.api.v1.maintenance import _apply_window_filters
 
     q = select(MaintenanceWindow)

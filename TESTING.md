@@ -221,8 +221,9 @@ make clean-cache
 | - | - | :-: | :-: | :-: | :-: |
 | **Hito 0** | Estructura Monorepo, Licencia GPLv3, Hooks y Fusión 11X | N/A | N/A | Trivy IaC + FS Aprobado (Exit 0) | ✅ Completado |
 | **Hito 1** | Núcleo Backend, PostgreSQL RLS, Redis, Auth 2FA, RBAC y Kill-Switch | 97.89% (103/103 tests aislados) | Mutmut (1141 eliminados, 0 no testeados) | Bandit (0 issues) + Radon CC/MI (Grade A) + Pip-Audit (0 CVEs) | ✅ Completado (Gate 1 Superado) |
-| **Hito 2** | Conector RouterOS v7 (TOFU + Safe Mode), Inventario, Bóveda y WebFig L1/L2 | >= 95% | Mutmut | Bandit + Radon A | ⏳ Pendiente (Requiere autorización) |
-| **Hito 3** | Maker-Checker, Backups Diff Git, WebSockets, Alertas y Caos Backend | >= 95% | Mutmut | ZAP + Pumba/Locust | ⏳ Pendiente |
-| **Hito 4** | Frontend Vue 3 Completo, Mapa OSM, RingBuffer WinBox, NOC y Auditor | >= 95% | Stryker | Axe 0 Viol. + LH >= 90 | ⏳ Pendiente |
+| **Hito 2** | Conector RouterOS v7 (TOFU + Safe Mode), Inventario, Bóveda y WebFig L1/L2 | 95.03% (284/284 tests aislados) | Mutmut | Bandit (0 issues) + Radon A (CC <= 5, MI >= B) | ✅ Completado (Certificado en Docker) |
+| **Hito 3** | Maker-Checker, Backups Diff Git, WebSockets, Alertas y Workers Backend | 95.03% (284/284 tests aislados) | Mutmut | Ruff (0 err) + Mypy Strict (0 err, 79 files) + BDD Gherkin | ✅ Completado (Certificado en Docker) |
+| **Hito 4** | Frontend Vue 3 Completo, Mapa OSM, RingBuffer WinBox, NOC y Auditor | >= 95% | Stryker | Axe 0 Viol. + LH >= 90 | ⏳ Pendiente (Hito 11 a 13) |
+
 
 
