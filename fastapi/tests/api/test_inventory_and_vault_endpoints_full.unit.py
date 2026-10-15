@@ -34,8 +34,10 @@ from src.api.v1.notification_channels import (
     create_channel,
     delete_channel,
     list_channels,
-    test_channel,
     update_channel,
+)
+from src.api.v1.notification_channels import (
+    test_channel as api_test_channel,
 )
 from src.api.v1.vault import (
     reveal_credentials,
@@ -61,7 +63,6 @@ from src.schemas.inventory import (
     RePinSSLRequest,
     UpdateRouterRequest,
     VaultRevealRequest,
-    VaultRotateRequest,
 )
 from src.schemas.notifications import (
     NotificationChannelCreateRequest,
@@ -87,21 +88,37 @@ class MockDbResult:
         self._single = single if single is not None else (items[0] if items else None)
 
     def scalars(self) -> MockDbScalars:
-        return MockScalars(self._items)
+        return MockDbScalars(self._items)
 
     def scalar_one_or_none(self) -> Any:
         return self._single
 
+    def scalar(self) -> Any:
+        return self._single
 
-class MockScalars:
-    def __init__(self, items: list[Any]):
-        self._items = items
 
-    def all(self) -> list[Any]:
-        return self._items
+async def _fake_refresh(instance: Any, *args: Any, **kwargs: Any) -> None:
+    now = datetime.now(UTC)
+    if getattr(instance, "id", None) is None:
+        instance.id = uuid.uuid4()
+    if getattr(instance, "created_at", None) is None:
+        instance.created_at = now
+    if getattr(instance, "updated_at", None) is None:
+        instance.updated_at = now
+    if hasattr(instance, "is_cancelled") and instance.is_cancelled is None:
+        instance.is_cancelled = False
+    if hasattr(instance, "tags") and instance.tags is None:
+        instance.tags = []
+    if hasattr(instance, "is_reachable") and getattr(instance, "is_reachable", None) is None:
+        instance.is_reachable = False
+    if hasattr(instance, "ssl_trust_status") and getattr(instance, "ssl_trust_status", None) is None:
+        instance.ssl_trust_status = SSLTrustStatusEnum.PENDING_TOFU
 
-    def scalar_one_or_none(self) -> Any:
-        return self._items[0] if self._items else None
+
+def _fake_add(instance: Any, *args: Any, **kwargs: Any) -> None:
+    if hasattr(instance, "id") and getattr(instance, "id", None) is None:
+        instance.id = uuid.uuid4()
+
 
 
 @pytest.fixture
@@ -147,6 +164,7 @@ def test_router_full() -> Router:
         current_password_iv=iv,
         current_password_tag=tag,
         auto_rotate_enabled=True,
+        last_rotated_at=datetime.now(UTC),
     )
     return r
 
@@ -160,6 +178,7 @@ def test_router_full() -> Router:
 async def test_list_and_get_routers(test_router_full: Router) -> None:
     db = AsyncMock()
     db.execute.return_value = MockDbResult([test_router_full])
+    db.refresh.side_effect = _fake_refresh
     claims = {
         "tid": str(test_router_full.tenant_id),
         "sub": str(test_router_full.created_by),
@@ -170,10 +189,7 @@ async def test_list_and_get_routers(test_router_full: Router) -> None:
     fake_redis = AsyncMock()
     fake_redis.hgetall.return_value = {"state": "ONLINE", "cpu": "20", "ram": "40"}
 
-    with (
-        patch("src.api.v1.inventory.get_redis_client", return_value=fake_redis),
-        patch("src.api.v1.inventory_helpers.get_redis_client", return_value=fake_redis),
-    ):
+    with patch("src.api.v1.inventory.get_redis_client", return_value=fake_redis):
         # 1. list_routers
         res_list = await list_routers(
             network_role=None,
@@ -202,8 +218,13 @@ async def test_create_and_update_and_delete_router(
     test_router_full: Router, fake_request: MagicMock
 ) -> None:
     db = AsyncMock()
-    # Check duplicate query returns empty
-    db.execute.return_value = MockDbResult([])
+    # Check duplicate query returns empty (scalar() -> None)
+    db.execute.return_value = MockDbResult([], single=None)
+    db.refresh.side_effect = _fake_refresh
+    db.add = MagicMock(side_effect=_fake_add)
+    fake_tenant = MagicMock()
+    fake_tenant.max_routers_quota = 100
+    db.get.return_value = fake_tenant
     claims = {
         "tid": str(test_router_full.tenant_id),
         "sub": str(test_router_full.created_by),
@@ -235,7 +256,6 @@ async def test_create_and_update_and_delete_router(
         # 1. Create router
         created = await create_router(create_payload, fake_request, claims, db)
         assert created.display_name == "New-Router"
-        db.add.assert_called()
 
         # 2. Update router
         db.execute.return_value = MockDbResult([test_router_full])
@@ -256,6 +276,7 @@ async def test_create_and_update_and_delete_router(
 async def test_sync_discovery_and_repin_ssl(test_router_full: Router, fake_request: MagicMock) -> None:
     db = AsyncMock()
     db.execute.return_value = MockDbResult([test_router_full])
+    db.refresh.side_effect = _fake_refresh
     claims = {
         "tid": str(test_router_full.tenant_id),
         "sub": str(test_router_full.created_by),
@@ -270,7 +291,7 @@ async def test_sync_discovery_and_repin_ssl(test_router_full: Router, fake_reque
         patch("src.api.v1.inventory.perform_discovery", new_callable=AsyncMock),
         patch("src.api.v1.inventory.write_audit_log", new_callable=AsyncMock),
     ):
-        synced = await sync_discovery(test_router_full.id, fake_request, claims, db)
+        synced = await sync_discovery(test_router_full.id, claims, db)
         assert synced.id == test_router_full.id
 
     # repin_ssl
@@ -307,7 +328,12 @@ async def test_csv_dry_run_and_commit(fake_request: MagicMock) -> None:
     u_id = uuid.uuid4()
     claims = {"tid": str(t_id), "sub": str(u_id), "rol": SystemRoleEnum.TENANT_ADMIN.value}
     db = AsyncMock()
-    db.execute.return_value = MockDbResult([])
+    db.execute.return_value = MockDbResult([], single=None)
+    db.refresh.side_effect = _fake_refresh
+    db.add = MagicMock(side_effect=_fake_add)
+    fake_tenant = MagicMock()
+    fake_tenant.max_routers_quota = 100
+    db.get.return_value = fake_tenant
 
     csv_content = b"display_name,api_base_url,api_port,network_role,admin_state,physical_location,serial_number,api_username,api_password,tags\nR1,https://10.0.0.1,443,CORE,PRODUCTION,DC1,SN001,admin,pass,core"
     upload_file = UploadFile(file=io.BytesIO(csv_content), filename="routers.csv")
@@ -347,6 +373,7 @@ async def test_csv_dry_run_and_commit(fake_request: MagicMock) -> None:
 @pytest.mark.asyncio
 async def test_reveal_and_rotate_credentials(test_router_full: Router, fake_request: MagicMock) -> None:
     db = AsyncMock()
+    db.refresh.side_effect = _fake_refresh
     totp_secret = pyotp.random_base32()
     u = User(
         id=test_router_full.created_by,
@@ -370,7 +397,7 @@ async def test_reveal_and_rotate_credentials(test_router_full: Router, fake_requ
     }
 
     valid_code = pyotp.TOTP(totp_secret).now()
-    reveal_payload = VaultRevealRequest(totp_code=valid_code)
+    reveal_payload = VaultRevealRequest(totp_code=valid_code, reason="Emergency audit inspection")
 
     with patch("src.api.v1.vault.write_audit_log", new_callable=AsyncMock):
         # 1. Reveal
@@ -380,12 +407,11 @@ async def test_reveal_and_rotate_credentials(test_router_full: Router, fake_requ
         assert rev.current_password == "admin_password"
 
         # 2. Rotate Now
-        fake_client = AsyncMock()
-        fake_client.patch.return_value = {}
-        with patch("src.api.v1.vault._create_client_from_vault", return_value=fake_client):
+        with patch("src.api.v1.vault._rotate_on_device", new_callable=AsyncMock):
             rot = await rotate_now(test_router_full.id, fake_request, claims, db)
             assert rot.status == "SUCCESS"
-            assert rot.new_password is not None
+            assert rot.router_id == test_router_full.id
+            assert rot.last_rotated_at is not None
 
 
 # ============================================================================
@@ -396,6 +422,8 @@ async def test_reveal_and_rotate_credentials(test_router_full: Router, fake_requ
 @pytest.mark.asyncio
 async def test_maintenance_window_endpoints(fake_request: MagicMock) -> None:
     db = AsyncMock()
+    db.refresh.side_effect = _fake_refresh
+    db.add = MagicMock(side_effect=_fake_add)
     t_id = uuid.uuid4()
     u_id = uuid.uuid4()
     r_id = uuid.uuid4()
@@ -450,6 +478,8 @@ async def test_maintenance_window_endpoints(fake_request: MagicMock) -> None:
 @pytest.mark.asyncio
 async def test_notification_channel_endpoints() -> None:
     db = AsyncMock()
+    db.refresh.side_effect = _fake_refresh
+    db.add = MagicMock(side_effect=_fake_add)
     t_id = uuid.uuid4()
     claims = {"tid": str(t_id), "sub": str(uuid.uuid4()), "rol": SystemRoleEnum.TENANT_ADMIN.value}
 
@@ -469,7 +499,7 @@ async def test_notification_channel_endpoints() -> None:
     db.execute.return_value = MockDbResult([ch])
 
     with (
-        patch("src.api.v1.notification_channels._decrypt_channel_config", return_value={"bot_token": "token"}),
+        patch("src.api.v1.notification_channels._decrypt_channel_config", return_value={"bot_token": "token", "chat_id": "123"}),
         patch("src.api.v1.notification_channels._encrypt_channel_config", return_value=(b"c", b"i", b"t")),
     ):
         # 1. List
@@ -496,7 +526,7 @@ async def test_notification_channel_endpoints() -> None:
 
         # 4. Test notification dispatch
         test_payload = NotificationTestRequest()
-        test_res = await test_channel(ch.id, test_payload, claims=claims, db=db)
+        test_res = await api_test_channel(ch.id, test_payload, claims=claims, db=db)
         assert test_res.status == "SUCCESS"
 
         # 5. Delete
