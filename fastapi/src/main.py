@@ -10,6 +10,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from src.api.deps import get_current_user_claims
 from src.api.router import api_v1_router
+from src.api.v1.websockets import router as websockets_router
 from src.core.csrf import CSRFProtectionMiddleware
 from src.core.security_headers import SecurityHeadersMiddleware
 from src.redis_layer.client import close_redis_client
@@ -38,8 +39,9 @@ def create_app() -> FastAPI:
     app.add_middleware(CSRFProtectionMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
 
-    # 3. Router de API
+    # 3. Router de API y WebSockets
     app.include_router(api_v1_router)
+    app.include_router(websockets_router)
 
     # 4. Endpoint de salud
     @app.get("/health", tags=["Health"])

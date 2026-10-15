@@ -1,10 +1,10 @@
 # 🗺️ ROADMAP GRANULAR DE EJECUCIÓN (30 SPECS) — RoSGrid
 
 ## 📍 Punto de Control Actual (Checkpoint)
-- **Hito Actual en Curso:** Hito 10 — Multiplexor WebSocket para Gráficas Efímeras (Estilo WinBox), Workers, Dockerfile y Graphify Backend
-- **Último Archivo de `specs/` Procesado:** `specs/15_BACKEND_ENDPOINTS_WEBFIG_L2_UNIVERSAL_ENGINE.md` y `specs/16_BACKEND_ENDPOINTS_MAKER_CHECKER_BACKUPS_BULK_UPDATES.md`
-- **Último Módulo de Código Creado:** `fastapi/src/api/v1/audit.py` y `fastapi/src/api/router.py` (Hito 9 completado)
-- **Siguiente Paso Inmediato:** Sub-tarea **10.1** — Multiplexor WebSocket `/ws/v1/routers/{router_id}/live-telemetry` (`specs/17_BACKEND_WEBSOCKETS_LIVE_CHARTS_AND_ALERT_WORKERS.md`)
+- **Hito Actual en Curso:** Hito 11 — Frontend Vue 3 Base — Zero-Trust, Interceptores, Stores Pinia y Sistema de Diseño WCAG
+- **Último Archivo de `specs/` Procesado:** `specs/17_BACKEND_WEBSOCKETS_LIVE_CHARTS_AND_ALERT_WORKERS.md` y `specs/01_DOCKER_INFRASTRUCTURE_AND_IMMUTABLE_IMAGES.md`
+- **Último Módulo de Código Creado:** `fastapi/Dockerfile`, `fastapi/graphify-out/GRAPH_REPORT.md` y suite de workers en `fastapi/src/workers/` (Hito 10 completado)
+- **Siguiente Paso Inmediato:** Sub-tarea **11.1** — Configuración base de Vite, TypeScript (`tsconfig.json`), `index.html` y `public/manifest.webmanifest` PWA (`specs/18_FRONTEND_PHASE_1_SETUP_ZERO_TRUST_AND_INTERCEPTORS.md` y `specs/19_FRONTEND_DESIGN_SYSTEM_ACCESSIBILITY_AND_PERFORMANCE.md`)
 
 ---
 
@@ -106,13 +106,13 @@
 
 ---
 
-## 📊 HITO 10: Multiplexor WebSocket para Gráficas Efímeras (Estilo WinBox), Workers, Dockerfile y Graphify Backend
+## ✅ HITO 10: Multiplexor WebSocket para Gráficas Efímeras (Estilo WinBox), Workers, Dockerfile y Graphify Backend
 > **Archivos Guía:** `specs/17_BACKEND_WEBSOCKETS_LIVE_CHARTS_AND_ALERT_WORKERS.md` y `specs/01_DOCKER_INFRASTRUCTURE_AND_IMMUTABLE_IMAGES.md`
-- [ ] **10.1** Multiplexor WebSocket `/ws/v1/routers/{router_id}/live-telemetry` (activa el poller cuando hay >= 1 operador viendo el router y se detiene al instante cuando `SCARD == 0`).
-- [ ] **10.2** WebSocket global del Tenant `/ws/v1/tenant/events` (eventos NOC, progreso de trabajos masivos y orden `SESSION_KILLED`).
-- [ ] **10.3** Los 4 Workers en segundo plano (`src/workers/`): Monitor *Zero-Storage*, Despachador de Alertas Multi-Canal (Telegram Bot, Correo SMTP, Webhook HMAC-SHA256 y NOC), Worker de Backups Nocturnos y Worker de Rotación Automática de Bóveda.
-- [ ] **10.4** **Cierre de Arquitectura Backend con Graphify (En Docker):** Ejecutar `docker compose -f docker-compose.qa.yml --profile graphify run --rm graphify` dentro de `./fastapi/` para generar `fastapi/graphify-out/GRAPH_REPORT.md` y el grafo AST completo del Backend (`specs/09`, `29`).
-- [ ] **10.5** **Dockerfile Multi-Stage de Producción Backend (`fastapi/Dockerfile`):** Crear `fastapi/Dockerfile` basado en `sinfallas/base-python-uv:3.13` con soporte `ARG BUILD_DATE`, dependencias `--no-dev`, usuario sin privilegios (`non-root`) y `scripts/entrypoint.sh` (`specs/01`).
+- [x] **10.1** Multiplexor WebSocket `/ws/v1/routers/{router_id}/live-telemetry` (activa el poller cuando hay >= 1 operador viendo el router y se detiene al instante cuando `SCARD == 0`).
+- [x] **10.2** WebSocket global del Tenant `/ws/v1/tenant/events` (eventos NOC, progreso de trabajos masivos y orden `SESSION_KILLED`).
+- [x] **10.3** Los 4 Workers en segundo plano (`src/workers/`): Monitor *Zero-Storage*, Despachador de Alertas Multi-Canal (Telegram Bot, Correo SMTP, Webhook HMAC-SHA256 y NOC), Worker de Backups Nocturnos y Worker de Rotación Automática de Bóveda.
+- [x] **10.4** **Cierre de Arquitectura Backend con Graphify (En Docker):** Ejecutar `docker compose -f docker-compose.qa.yml --profile graphify run --rm graphify` dentro de `./fastapi/` para generar `fastapi/graphify-out/GRAPH_REPORT.md` y el grafo AST completo del Backend (`specs/09`, `29`).
+- [x] **10.5** **Dockerfile Multi-Stage de Producción Backend (`fastapi/Dockerfile`):** Crear `fastapi/Dockerfile` basado en `sinfallas/base-python-uv:3.13` con soporte `ARG BUILD_DATE`, dependencias `--no-dev`, usuario sin privilegios (`non-root`) y `scripts/entrypoint.sh` (`specs/01`).
 
 ---
 

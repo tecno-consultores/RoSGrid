@@ -5,8 +5,12 @@
 LC_ALL=C
 set -euo pipefail
 
-echo "[RoSGrid] Sincronizando dependencias desde volumen uv-cache..."
-uv pip install --system -e "."
+if [[ "${ROSGRID_IMAGE_PREBUILT:-0}" != "1" ]]; then
+    echo "[RoSGrid] Sincronizando dependencias desde volumen uv-cache..."
+    uv pip install --system -e "."
+else
+    echo "[RoSGrid] Imagen de produccion precompilada detectada. Omitiendo uv sync en runtime."
+fi
 
 echo "[RoSGrid] Verificando disponibilidad de PostgreSQL y ejecutando migraciones con pg_advisory_lock..."
 python3 - << 'PYEOF'
@@ -17,7 +21,7 @@ import subprocess
 import psycopg
 
 DB_DSN = os.environ.get("ROSGRID_SYNC_DATABASE_URL", "")
-ADVISORY_LOCK_ID = 948271605  # Identificador único de bloqueo para migraciones de RoSGrid
+ADVISORY_LOCK_ID = 948271605  # Identificador unico de bloqueo para migraciones de RoSGrid
 
 if not DB_DSN:
     print("[ERROR] Variable ROSGRID_SYNC_DATABASE_URL no definida.", file=sys.stderr)
