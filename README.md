@@ -2,7 +2,7 @@
 
 **Licencia:** GNU General Public License v3.0 (GPL-3.0-only)  
 **Stack Principal:** FastAPI (Python 3.13) + Vue 3 (TypeScript / Pinia) + PostgreSQL 17 (RLS) + Redis 7  
-**Calidad y Seguridad:** Certificado bajo el Estándar Corporativo **QA 11X**
+**Calidad y Seguridad:** Certificado bajo el Estándar Corporativo **[QA 11X](https://github.com/tecno-consultores/qa-testing-blueprints)**
 
 
 
