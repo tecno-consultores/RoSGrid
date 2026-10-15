@@ -3,8 +3,10 @@
 
 import os
 from logging.config import fileConfig
-from sqlalchemy import engine_from_config, pool
+
 from alembic import context
+from sqlalchemy import engine_from_config, pool
+
 from src.models.base import Base
 
 config = context.config
@@ -19,7 +21,9 @@ def get_sync_db_url() -> str:
     sync_url = os.environ.get("ROSGRID_SYNC_DATABASE_URL")
     if sync_url:
         return sync_url
-    db_url = os.environ.get("ROSGRID_DATABASE_URL", "postgresql://rosgrid_user:cambiar_en_entorno_local@rosgrid_db:5432/rosgrid")
+    db_url = os.environ.get(
+        "ROSGRID_DATABASE_URL", "postgresql://rosgrid_user:cambiar_en_entorno_local@rosgrid_db:5432/rosgrid"
+    )
     return db_url.replace("postgresql+asyncpg://", "postgresql://")
 
 

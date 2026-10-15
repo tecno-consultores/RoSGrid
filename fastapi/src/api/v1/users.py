@@ -88,6 +88,10 @@ async def create_user(
         full_name=body.full_name,
         password_hash=hash_password(body.temporary_password),
         role=body.role,
+        is_active=True,
+        is_locked=False,
+        failed_login_attempts=0,
+        totp_enabled=False,
         has_all_routers_access=body.has_all_routers_access,
         allowed_cidr_list=body.allowed_cidr_list,
     )

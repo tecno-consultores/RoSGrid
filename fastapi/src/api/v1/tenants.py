@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.deps import require_roles
 from src.core.crypto import hash_password
 from src.db.session import get_db_session, set_tenant_context
-from src.models.core import SystemRoleEnum, Tenant, User
+from src.models.core import SystemRoleEnum, Tenant, TenantStatusEnum, User
 from src.schemas.tenants import CreateTenantRequest, TenantResponse, UpdateTenantRequest
 
 router = APIRouter(prefix="/tenants", tags=["Tenants"])
@@ -49,6 +49,7 @@ async def create_tenant(
     new_tenant = Tenant(
         slug=body.slug,
         name=body.name,
+        status=TenantStatusEnum.ACTIVE,
         tax_id=body.tax_id,
         max_routers_quota=body.max_routers_quota,
         max_users_quota=body.max_users_quota,

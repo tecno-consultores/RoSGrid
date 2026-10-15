@@ -8,15 +8,17 @@ Revises: 0001_core
 Create Date: 2026-10-14 20:31:00.000000
 
 """
-from typing import Sequence, Union
-from alembic import op
+
+from collections.abc import Sequence
+
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "0002_inventory"
-down_revision: Union[str, None] = "0001_core"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "0001_core"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -46,7 +48,9 @@ def upgrade() -> None:
     op.create_table(
         "routers",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
-        sa.Column("tenant_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "tenant_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("display_name", sa.String(120), nullable=False),
         sa.Column("api_base_url", sa.String(255), nullable=False),
         sa.Column("api_port", sa.Integer(), nullable=False, server_default=sa.text("443")),
@@ -76,7 +80,9 @@ def upgrade() -> None:
         sa.Column("last_seen_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("last_discovery_sync_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("last_connection_error", sa.Text(), nullable=True),
-        sa.Column("created_by", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "created_by", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+        ),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("NOW()")),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("NOW()")),
         sa.CheckConstraint("api_base_url ~ '^https://[a-zA-Z0-9._-]+(:[0-9]{1,5})?$'", name="chk_api_https_url"),
@@ -104,8 +110,12 @@ def upgrade() -> None:
     op.create_table(
         "router_tags",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
-        sa.Column("tenant_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("router_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("routers.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "tenant_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+        ),
+        sa.Column(
+            "router_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("routers.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("tag_name", sa.String(48), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("NOW()")),
         sa.CheckConstraint("tag_name ~ '^[a-z0-9-]+$'", name="chk_tag_slug"),
@@ -116,8 +126,15 @@ def upgrade() -> None:
     # 5. Table: router_credentials_vault
     op.create_table(
         "router_credentials_vault",
-        sa.Column("router_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("routers.id", ondelete="CASCADE"), primary_key=True),
-        sa.Column("tenant_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "router_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("routers.id", ondelete="CASCADE"),
+            primary_key=True,
+        ),
+        sa.Column(
+            "tenant_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("api_username", sa.String(64), nullable=False),
         sa.Column("current_password_ciphertext", sa.LargeBinary(), nullable=False),
         sa.Column("current_password_iv", sa.LargeBinary(), nullable=False),
@@ -130,12 +147,18 @@ def upgrade() -> None:
         sa.Column("last_rotated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("NOW()")),
         sa.Column("next_rotation_due_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("last_rotation_status", sa.String(32), nullable=False, server_default=sa.text("'SUCCESS'")),
-        sa.Column("updated_by", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "updated_by", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+        ),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("NOW()")),
         sa.CheckConstraint("octet_length(current_password_iv) = 12", name="chk_curr_iv_len"),
         sa.CheckConstraint("octet_length(current_password_tag) = 16", name="chk_curr_tag_len"),
-        sa.CheckConstraint("previous_password_iv IS NULL OR octet_length(previous_password_iv) = 12", name="chk_prev_iv_len"),
-        sa.CheckConstraint("previous_password_tag IS NULL OR octet_length(previous_password_tag) = 16", name="chk_prev_tag_len"),
+        sa.CheckConstraint(
+            "previous_password_iv IS NULL OR octet_length(previous_password_iv) = 12", name="chk_prev_iv_len"
+        ),
+        sa.CheckConstraint(
+            "previous_password_tag IS NULL OR octet_length(previous_password_tag) = 16", name="chk_prev_tag_len"
+        ),
         sa.CheckConstraint("rotation_interval_days BETWEEN 1 AND 365", name="chk_rotation_days"),
     )
 
@@ -143,16 +166,22 @@ def upgrade() -> None:
     op.create_table(
         "maintenance_windows",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
-        sa.Column("tenant_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "tenant_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("title", sa.String(150), nullable=False),
         sa.Column("reason", sa.Text(), nullable=False),
-        sa.Column("router_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("routers.id", ondelete="CASCADE"), nullable=True),
+        sa.Column(
+            "router_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("routers.id", ondelete="CASCADE"), nullable=True
+        ),
         sa.Column("target_tag", sa.String(48), nullable=True),
         sa.Column("starts_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("ends_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("suppress_alerts", sa.Boolean(), nullable=False, server_default=sa.text("TRUE")),
         sa.Column("is_cancelled", sa.Boolean(), nullable=False, server_default=sa.text("FALSE")),
-        sa.Column("created_by", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="RESTRICT"), nullable=False),
+        sa.Column(
+            "created_by", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+        ),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("NOW()")),
         sa.CheckConstraint("ends_at > starts_at", name="chk_window_dates"),
         sa.CheckConstraint("router_id IS NOT NULL OR target_tag IS NOT NULL", name="chk_window_target"),

@@ -357,3 +357,70 @@ async def test_auth_logout(
 
     # Sesión eliminada de Redis
     assert await fake_redis.hgetall(sess_key) == {}
+
+
+@pytest.mark.asyncio
+async def test_refresh_token_missing_cookies(async_client: AsyncClient) -> None:
+    res = await async_client.post("/api/v1/auth/refresh")
+    assert res.status_code == 401
+    assert "Cookie de Refresh Token ausente" in res.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_refresh_token_success_and_reuse(
+    async_client: AsyncClient, sample_tenant: Tenant, sample_user: User, fake_redis: FakeAsyncRedis
+) -> None:
+    from src.api.v1.auth import create_jwt_access_token
+    from src.redis_layer.sessions import create_session
+
+    session_id, _family_id, initial_rt = await create_session(
+        str(sample_tenant.id),
+        str(sample_user.id),
+        sample_user.username,
+        sample_user.full_name,
+        sample_user.role.value,
+        "127.0.0.1",
+        "TestAgent",
+    )
+    at = create_jwt_access_token(
+        str(sample_user.id),
+        str(sample_tenant.id),
+        sample_tenant.slug,
+        session_id,
+        sample_user.role.value,
+        True,
+    )
+    cookies = {"rg_rt": initial_rt, "rg_at": at}
+    res = await async_client.post("/api/v1/auth/refresh", cookies=cookies)
+    assert res.status_code == 200
+    assert res.json()["status"] == "refreshed"
+
+    # Reuse attack: reutilizar el token anterior 'initial_rt'
+    res_reuse = await async_client.post("/api/v1/auth/refresh", cookies=cookies)
+    assert res_reuse.status_code == 401
+    assert "Fallo de rotación" in res_reuse.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_verify_2fa_invalid_scenarios(async_client: AsyncClient, fake_redis: FakeAsyncRedis) -> None:
+    res = await async_client.post(
+        "/api/v1/auth/2fa/verify",
+        json={"challenge_id": "non-existent-challenge", "totp_code": "123456"},
+    )
+    assert res.status_code == 401
+    assert "inválido o expirado" in res.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_auth_deps_failure_scenarios(async_client: AsyncClient) -> None:
+    # 1. Sin token
+    res = await async_client.get("/users/me")
+    assert res.status_code == 401
+
+    # 2. Token inválido
+    res_inv = await async_client.get("/users/me", headers={"Authorization": "Bearer not-a-valid-jwt"})
+    assert res_inv.status_code == 401
+
+    # 3. Esquema no Bearer
+    res_bad = await async_client.get("/users/me", headers={"Authorization": "Basic 12345"})
+    assert res_bad.status_code == 401

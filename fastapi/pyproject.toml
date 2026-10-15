@@ -56,6 +56,7 @@ packages = ["src"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 python_files = ["*.unit.py", "*.spec.py"]
+pythonpath = ["."]
 addopts = "--strict-markers --cov=src/ --cov-report=html --cov-report=term-missing --import-mode=importlib"
 markers = [
     "integration: Pruebas internas que requieren servicios reales (deseleccionar en unitarias con '-m \"not integration\"')",
@@ -73,7 +74,7 @@ strict = true
 plugins = ["pydantic.mypy"]
 
 [tool.mutmut]
-paths_to_mutate = "src/"
+source_paths = ["src/"]
 backup = false
-runner = "python -m pytest -x"
-tests_dir = "tests/"
+runner = "pytest -x -m 'not integration'"
+pytest_add_cli_args_test_selection = ["tests/"]

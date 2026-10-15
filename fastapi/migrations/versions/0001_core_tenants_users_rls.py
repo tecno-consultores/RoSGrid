@@ -4,19 +4,21 @@
 """0001_core_tenants_users_rls
 
 Revision ID: 0001_core
-Revises: 
+Revises:
 Create Date: 2026-10-14 20:30:00.000000
 
 """
-from typing import Sequence, Union
-from alembic import op
+
+from collections.abc import Sequence
+
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "0001_core"
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -68,7 +70,9 @@ def upgrade() -> None:
     op.create_table(
         "users",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
-        sa.Column("tenant_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "tenant_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("username", sa.String(64), nullable=False),
         sa.Column("email", sa.String(255), nullable=False),
         sa.Column("full_name", sa.String(150), nullable=False),
@@ -82,8 +86,18 @@ def upgrade() -> None:
         sa.Column("totp_secret_ciphertext", sa.LargeBinary(), nullable=True),
         sa.Column("totp_secret_iv", sa.LargeBinary(), nullable=True),
         sa.Column("totp_secret_tag", sa.LargeBinary(), nullable=True),
-        sa.Column("totp_recovery_codes_hashes", postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default=sa.text("'[]'::jsonb")),
-        sa.Column("allowed_cidr_list", postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default=sa.text("'[]'::jsonb")),
+        sa.Column(
+            "totp_recovery_codes_hashes",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+            server_default=sa.text("'[]'::jsonb"),
+        ),
+        sa.Column(
+            "allowed_cidr_list",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+            server_default=sa.text("'[]'::jsonb"),
+        ),
         sa.Column("has_all_routers_access", sa.Boolean(), nullable=False, server_default=sa.text("FALSE")),
         sa.Column("last_login_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("last_login_ip", postgresql.INET(), nullable=True),
@@ -100,8 +114,12 @@ def upgrade() -> None:
     op.create_table(
         "user_router_permissions",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, server_default=sa.text("gen_random_uuid()")),
-        sa.Column("tenant_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "tenant_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+        ),
+        sa.Column(
+            "user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("router_id", postgresql.UUID(as_uuid=True), nullable=False),
         sa.Column("can_read", sa.Boolean(), nullable=False, server_default=sa.text("TRUE")),
         sa.Column("can_write_layer1", sa.Boolean(), nullable=False, server_default=sa.text("FALSE")),
@@ -110,7 +128,9 @@ def upgrade() -> None:
         sa.Column("can_trigger_backup", sa.Boolean(), nullable=False, server_default=sa.text("FALSE")),
         sa.Column("can_reboot", sa.Boolean(), nullable=False, server_default=sa.text("FALSE")),
         sa.Column("bypass_maker_checker", sa.Boolean(), nullable=False, server_default=sa.text("FALSE")),
-        sa.Column("assigned_by", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "assigned_by", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+        ),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("NOW()")),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("NOW()")),
         sa.UniqueConstraint("tenant_id", "user_id", "router_id", name="uq_user_router_perm"),

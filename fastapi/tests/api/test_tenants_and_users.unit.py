@@ -3,6 +3,7 @@
 
 import time
 import uuid
+from datetime import UTC, datetime
 from typing import Any
 
 import pytest
@@ -59,12 +60,32 @@ class MockDbSession:
         return MockDbResult(None, [])
 
     def add(self, instance: Any) -> None:
+        now = datetime.now(UTC)
+        if getattr(instance, "id", None) is None:
+            instance.id = uuid.uuid4()
+        if getattr(instance, "created_at", None) is None:
+            instance.created_at = now
+        if getattr(instance, "updated_at", None) is None:
+            instance.updated_at = now
+        if getattr(instance, "is_locked", None) is None:
+            instance.is_locked = False
+        if getattr(instance, "status", None) is None and hasattr(instance, "status"):
+            instance.status = TenantStatusEnum.ACTIVE
         self.added.append(instance)
 
     async def flush(self) -> None:
+        now = datetime.now(UTC)
         for item in self.added:
             if getattr(item, "id", None) is None:
                 item.id = uuid.uuid4()
+            if getattr(item, "created_at", None) is None:
+                item.created_at = now
+            if getattr(item, "updated_at", None) is None:
+                item.updated_at = now
+            if getattr(item, "is_locked", None) is None:
+                item.is_locked = False
+            if getattr(item, "status", None) is None and hasattr(item, "status"):
+                item.status = TenantStatusEnum.ACTIVE
 
     async def commit(self) -> None:
         self.committed = True
@@ -114,6 +135,9 @@ async def test_tenants_crud_endpoints(async_client: AsyncClient, superadmin_auth
     t.max_users_quota = 20
     t.require_2fa_all_users = True
     t.default_safemode_seconds = 60
+    now = datetime.now(UTC)
+    t.created_at = now
+    t.updated_at = now
 
     # 1. Listar tenants
     db = MockDbSession(tenants=[t])
@@ -170,6 +194,12 @@ async def test_users_endpoints(async_client: AsyncClient, superadmin_auth: dict[
     u.is_locked = False
     u.totp_enabled = True
     u.has_all_routers_access = False
+    u.failed_login_attempts = 0
+    u.allowed_cidr_list = []
+    now = datetime.now(UTC)
+    u.created_at = now
+    u.updated_at = now
+    u.last_login_at = None
 
     db = MockDbSession(users=[u])
     app.dependency_overrides[get_db_session] = lambda: db
@@ -201,18 +231,132 @@ async def test_sessions_and_killswitch_endpoints(
     tid = superadmin_auth["tid"]
     sid = superadmin_auth["sid"]
 
-    # Añadir a active_sessions ZSET
-    await fake_redis.zadd(f"rg:{tid}:active_sessions", {sid: float(time.time())})
+    # Añadir sesión propia y otra sesión ajena
+    other_sid = "sess-other-999"
+    await fake_redis.hset(
+        f"rg:{tid}:sess:{other_sid}",
+        mapping={"session_id": other_sid, "user_id": str(uuid.uuid4()), "username": "other", "role": "FIELD_TECH"},
+    )
+    await fake_redis.zadd(
+        f"rg:{tid}:active_sessions",
+        {sid: float(time.time()), other_sid: float(time.time())},
+    )
 
     # 1. Listar sesiones activas
     res = await async_client.get("/api/v1/sessions/active", headers=headers)
     assert res.status_code == 200
     data = res.json()
-    assert data["total_active_sessions"] == 1
-    assert data["items"][0]["session_id"] == sid
+    assert data["total_active_sessions"] == 2
 
-    # 2. Terminar una sesión (Kill-Switch)
+    # 2. Terminar una sesión ajena (Kill-Switch)
     idemp_headers = {**headers, "Idempotency-Key": str(uuid.uuid4())}
-    res_kill = await async_client.delete(f"/api/v1/sessions/{sid}", headers=idemp_headers)
+    res_kill = await async_client.delete(f"/api/v1/sessions/{other_sid}", headers=idemp_headers)
     assert res_kill.status_code == 200
     assert res_kill.json()["status"] == "terminated"
+
+    # 3. Terminar todas las sesiones de otro usuario
+    other_user_id = str(uuid.uuid4())
+    idemp_headers_all = {**headers, "Idempotency-Key": str(uuid.uuid4())}
+    res_kill_all = await async_client.delete(f"/api/v1/sessions/user/{other_user_id}/all", headers=idemp_headers_all)
+    assert res_kill_all.status_code == 200
+    assert res_kill_all.json()["status"] == "terminated_all"
+
+
+@pytest.mark.asyncio
+async def test_create_user_and_conflicts(async_client: AsyncClient, superadmin_auth: dict[str, str]) -> None:
+    headers = {"Authorization": superadmin_auth["Authorization"]}
+    db_empty = MockDbSession(users=[])
+    app.dependency_overrides[get_db_session] = lambda: db_empty
+    try:
+        # Crear usuario con éxito
+        body = {
+            "username": "nocoperator",
+            "email": "noc@acme.com",
+            "full_name": "NOC Operator",
+            "temporary_password": "InitialPassword2026!",
+            "role": SystemRoleEnum.NOC_MONITOR.value,
+            "has_all_routers_access": True,
+            "allowed_cidr_list": ["10.0.0.0/8"],
+        }
+        res = await async_client.post(
+            "/api/v1/users",
+            json=body,
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res.status_code == 201
+        assert res.json()["username"] == "nocoperator"
+
+        # Conflicto al crear usuario con username existente
+        existing_user = User()
+        existing_user.id = uuid.uuid4()
+        existing_user.tenant_id = uuid.UUID(superadmin_auth["tid"])
+        existing_user.username = "nocoperator"
+        existing_user.email = "noc@acme.com"
+        db_conflict = MockDbSession(users=[existing_user])
+        app.dependency_overrides[get_db_session] = lambda: db_conflict
+        res_conflict = await async_client.post(
+            "/api/v1/users",
+            json=body,
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res_conflict.status_code == 409
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)
+
+
+@pytest.mark.asyncio
+async def test_assign_router_permissions_and_not_found(
+    async_client: AsyncClient, superadmin_auth: dict[str, str]
+) -> None:
+    headers = {"Authorization": superadmin_auth["Authorization"]}
+    u = User()
+    u.id = uuid.uuid4()
+    u.tenant_id = uuid.UUID(superadmin_auth["tid"])
+    u.username = "fieldtech"
+    u.email = "tech@acme.com"
+
+    db = MockDbSession(users=[u])
+    app.dependency_overrides[get_db_session] = lambda: db
+    try:
+        body = {
+            "has_all_routers_access": False,
+            "router_assignments": [
+                {
+                    "router_id": str(uuid.uuid4()),
+                    "can_read": True,
+                    "can_write_layer1": True,
+                    "can_write_layer2": False,
+                    "can_execute_diagnostics": True,
+                    "can_trigger_backup": True,
+                    "can_reboot": False,
+                    "bypass_maker_checker": False,
+                }
+            ],
+        }
+        res = await async_client.put(
+            f"/api/v1/users/{u.id}/router-permissions",
+            json=body,
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res.status_code == 200
+        assert res.json()["status"] == "success"
+
+        # Not found case
+        db_empty = MockDbSession(users=[])
+        app.dependency_overrides[get_db_session] = lambda: db_empty
+        res_nf = await async_client.put(
+            f"/api/v1/users/{uuid.uuid4()}/router-permissions",
+            json=body,
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res_nf.status_code == 404
+
+        # Reset 2FA not found
+        res_reset_nf = await async_client.post(
+            f"/api/v1/users/{uuid.uuid4()}/reset-2fa",
+            json={"admin_totp_code": "123456"},
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res_reset_nf.status_code == 404
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)

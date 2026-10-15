@@ -1,0 +1,683 @@
+{
+    "tests_by_mangled_function_name": {
+        "src.api.deps.x_require_roles": [
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_health_check_endpoint"
+        ],
+        "src.core.security_headers.x\u01c1SecurityHeadersMiddleware\u01c1dispatch": [
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_verification_lifecycle",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_refresh_token_success_and_reuse",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_refresh_token_missing_cookies",
+            "tests/api/test_tenants_and_users.unit.py::test_users_endpoints",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_failed_attempts_boundary_4_and_5",
+            "tests/api/test_tenants_and_users.unit.py::test_create_user_and_conflicts",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_success_triggers_enroll_2fa",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_invalid_scenarios",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_auth_deps_failure_scenarios",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_account_locked",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_unknown_tenant",
+            "tests/core/test_security_headers.unit.py::test_security_headers_injected_on_api_path",
+            "tests/core/test_security_headers.unit.py::test_security_headers_on_non_api_path",
+            "tests/api/test_tenants_and_users.unit.py::test_assign_router_permissions_and_not_found",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_auth_logout",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_health_check_endpoint",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_enrollment_lifecycle",
+            "tests/api/test_tenants_and_users.unit.py::test_tenants_crud_endpoints",
+            "tests/api/test_tenants_and_users.unit.py::test_sessions_and_killswitch_endpoints",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_auth_me_and_users_me_alias",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_unknown_user"
+        ],
+        "src.core.csrf.x\u01c1CSRFProtectionMiddleware\u01c1dispatch": [
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_verification_lifecycle",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_refresh_token_success_and_reuse",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_refresh_token_missing_cookies",
+            "tests/core/test_csrf_and_cookies.unit.py::test_csrf_middleware_blocks_invalid_or_missing_token",
+            "tests/api/test_tenants_and_users.unit.py::test_users_endpoints",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_failed_attempts_boundary_4_and_5",
+            "tests/api/test_tenants_and_users.unit.py::test_create_user_and_conflicts",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_success_triggers_enroll_2fa",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_invalid_scenarios",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_auth_deps_failure_scenarios",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_account_locked",
+            "tests/core/test_csrf_and_cookies.unit.py::test_csrf_middleware_allows_excluded_paths",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_unknown_tenant",
+            "tests/core/test_csrf_and_cookies.unit.py::test_csrf_middleware_allows_safe_methods",
+            "tests/api/test_tenants_and_users.unit.py::test_assign_router_permissions_and_not_found",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_auth_logout",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_health_check_endpoint",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_enrollment_lifecycle",
+            "tests/api/test_tenants_and_users.unit.py::test_tenants_crud_endpoints",
+            "tests/api/test_tenants_and_users.unit.py::test_sessions_and_killswitch_endpoints",
+            "tests/core/test_csrf_and_cookies.unit.py::test_csrf_middleware_validates_mutating_with_session",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_auth_me_and_users_me_alias",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_unknown_user"
+        ],
+        "src.redis_layer.idempotency.x__should_bypass_idempotency": [
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_verification_lifecycle",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_refresh_token_success_and_reuse",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_refresh_token_missing_cookies",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_conflict_in_progress",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_allows_safe_methods",
+            "tests/api/test_tenants_and_users.unit.py::test_users_endpoints",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_failed_attempts_boundary_4_and_5",
+            "tests/api/test_tenants_and_users.unit.py::test_create_user_and_conflicts",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_allows_excluded_paths",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_success_triggers_enroll_2fa",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_invalid_scenarios",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_auth_deps_failure_scenarios",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_account_locked",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_payload_mismatch_422",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_unknown_tenant",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_deletes_key_on_server_error",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_flow_new_and_replay",
+            "tests/api/test_tenants_and_users.unit.py::test_assign_router_permissions_and_not_found",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_auth_logout",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_missing_or_invalid_key",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_health_check_endpoint",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_enrollment_lifecycle",
+            "tests/api/test_tenants_and_users.unit.py::test_tenants_crud_endpoints",
+            "tests/api/test_tenants_and_users.unit.py::test_sessions_and_killswitch_endpoints",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_auth_me_and_users_me_alias",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_unknown_user"
+        ],
+        "src.redis_layer.idempotency.x\u01c1IdempotencyMiddleware\u01c1dispatch": [
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_verification_lifecycle",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_refresh_token_success_and_reuse",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_refresh_token_missing_cookies",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_conflict_in_progress",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_allows_safe_methods",
+            "tests/api/test_tenants_and_users.unit.py::test_users_endpoints",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_failed_attempts_boundary_4_and_5",
+            "tests/api/test_tenants_and_users.unit.py::test_create_user_and_conflicts",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_allows_excluded_paths",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_success_triggers_enroll_2fa",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_invalid_scenarios",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_auth_deps_failure_scenarios",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_account_locked",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_payload_mismatch_422",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_unknown_tenant",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_deletes_key_on_server_error",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_flow_new_and_replay",
+            "tests/api/test_tenants_and_users.unit.py::test_assign_router_permissions_and_not_found",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_auth_logout",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_missing_or_invalid_key",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_health_check_endpoint",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_enrollment_lifecycle",
+            "tests/api/test_tenants_and_users.unit.py::test_tenants_crud_endpoints",
+            "tests/api/test_tenants_and_users.unit.py::test_sessions_and_killswitch_endpoints",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_auth_me_and_users_me_alias",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_unknown_user"
+        ],
+        "src.main.x_create_app": [
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_health_check_endpoint"
+        ],
+        "src.api.v1.auth.x__get_active_tenant": [
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_unknown_tenant",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_failed_attempts_boundary_4_and_5",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_success_triggers_enroll_2fa",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_unknown_user",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_account_locked"
+        ],
+        "src.db.session.x_set_tenant_context": [
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_failed_attempts_boundary_4_and_5",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_enrollment_lifecycle",
+            "tests/api/test_tenants_and_users.unit.py::test_create_user_and_conflicts",
+            "tests/api/test_tenants_and_users.unit.py::test_tenants_crud_endpoints",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_verification_lifecycle",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_success_triggers_enroll_2fa",
+            "tests/core/test_db_and_redis_lifecycles.unit.py::test_db_session_lifecycles",
+            "tests/api/test_tenants_and_users.unit.py::test_assign_router_permissions_and_not_found",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_unknown_user",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_account_locked",
+            "tests/api/test_tenants_and_users.unit.py::test_users_endpoints"
+        ],
+        "src.api.v1.auth.x__verify_user_credentials": [
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_failed_attempts_boundary_4_and_5",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_account_locked",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_success_triggers_enroll_2fa"
+        ],
+        "src.api.v1.auth.x__validate_user_lock": [
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_failed_attempts_boundary_4_and_5",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_account_locked",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_success_triggers_enroll_2fa"
+        ],
+        "src.core.crypto.x_hash_password": [
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_failed_attempts_boundary_4_and_5",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_enrollment_lifecycle",
+            "tests/api/test_tenants_and_users.unit.py::test_create_user_and_conflicts",
+            "tests/api/test_tenants_and_users.unit.py::test_tenants_crud_endpoints",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_verification_lifecycle",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_refresh_token_success_and_reuse",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_success_triggers_enroll_2fa",
+            "tests/core/test_crypto_aes_gcm_argon2.unit.py::test_argon2id_empty_password_raises",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_auth_me_and_users_me_alias",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_auth_logout",
+            "tests/core/test_crypto_aes_gcm_argon2.unit.py::test_argon2id_hash_and_verify",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_account_locked",
+            "tests/api/test_tenants_and_users.unit.py::test_users_endpoints"
+        ],
+        "src.core.crypto.x_verify_password": [
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_failed_attempts_boundary_4_and_5",
+            "tests/core/test_crypto_aes_gcm_argon2.unit.py::test_argon2id_hash_and_verify",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_success_triggers_enroll_2fa"
+        ],
+        "src.api.v1.auth.x__dispatch_preauth_challenge": [
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_success_triggers_enroll_2fa"
+        ],
+        "src.core.crypto.x_encrypt_aes_gcm": [
+            "tests/core/test_crypto_aes_gcm_argon2.unit.py::test_aes_gcm_encryption_and_decryption",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_enrollment_lifecycle",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_verification_lifecycle",
+            "tests/core/test_crypto_aes_gcm_argon2.unit.py::test_aes_gcm_tampered_ciphertext",
+            "tests/core/test_crypto_aes_gcm_argon2.unit.py::test_aes_gcm_tampered_tag",
+            "tests/core/test_crypto_aes_gcm_argon2.unit.py::test_aes_gcm_tampered_aad"
+        ],
+        "src.core.crypto.x_get_master_vault_key": [
+            "tests/core/test_crypto_aes_gcm_argon2.unit.py::test_aes_gcm_encryption_and_decryption",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_enrollment_lifecycle",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_verification_lifecycle",
+            "tests/core/test_crypto_aes_gcm_argon2.unit.py::test_aes_gcm_tampered_ciphertext",
+            "tests/core/test_crypto_aes_gcm_argon2.unit.py::test_aes_gcm_tampered_tag",
+            "tests/core/test_crypto_aes_gcm_argon2.unit.py::test_aes_gcm_tampered_aad",
+            "tests/core/test_crypto_aes_gcm_argon2.unit.py::test_master_key_derivation",
+            "tests/core/test_crypto_aes_gcm_argon2.unit.py::test_master_key_invalid_length"
+        ],
+        "src.api.v1.auth.x_set_auth_cookies": [
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_enrollment_lifecycle",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_verification_lifecycle",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_refresh_token_success_and_reuse"
+        ],
+        "src.redis_layer.sessions.x_compute_token_hash": [
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_enrollment_lifecycle",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_verification_lifecycle",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_refresh_token_success_and_reuse",
+            "tests/redis_layer/test_sessions_and_killswitch.unit.py::test_kill_all_user_sessions",
+            "tests/redis_layer/test_sessions_and_killswitch.unit.py::test_rotate_refresh_token_lifecycle",
+            "tests/redis_layer/test_sessions_and_killswitch.unit.py::test_kill_session_and_pubsub_event",
+            "tests/redis_layer/test_sessions_and_killswitch.unit.py::test_create_and_get_session"
+        ],
+        "src.api.v1.auth.x__fetch_preauth_state": [
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_enrollment_lifecycle",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_invalid_scenarios",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_verification_lifecycle"
+        ],
+        "src.api.v1.auth.x__build_auth_session_response": [
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_enrollment_lifecycle",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_verification_lifecycle"
+        ],
+        "src.api.v1.auth.x_create_jwt_access_token": [
+            "tests/api/test_tenants_and_users.unit.py::test_create_user_and_conflicts",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_enrollment_lifecycle",
+            "tests/api/test_tenants_and_users.unit.py::test_tenants_crud_endpoints",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_verification_lifecycle",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_refresh_token_success_and_reuse",
+            "tests/api/test_tenants_and_users.unit.py::test_sessions_and_killswitch_endpoints",
+            "tests/api/test_tenants_and_users.unit.py::test_assign_router_permissions_and_not_found",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_auth_me_and_users_me_alias",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_auth_logout",
+            "tests/api/test_tenants_and_users.unit.py::test_users_endpoints"
+        ],
+        "src.core.csrf.x_generate_csrf_token": [
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_enrollment_lifecycle",
+            "tests/core/test_csrf_and_cookies.unit.py::test_csrf_token_generation_structure",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_verification_lifecycle",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_refresh_token_success_and_reuse",
+            "tests/core/test_csrf_and_cookies.unit.py::test_csrf_token_validation_success",
+            "tests/core/test_csrf_and_cookies.unit.py::test_csrf_token_expiration",
+            "tests/core/test_csrf_and_cookies.unit.py::test_csrf_middleware_validates_mutating_with_session",
+            "tests/core/test_csrf_and_cookies.unit.py::test_csrf_token_tampered_components"
+        ],
+        "src.api.v1.auth.x__execute_2fa_enrollment": [
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_enrollment_lifecycle"
+        ],
+        "src.redis_layer.sessions.x_create_session": [
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_enrollment_lifecycle",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_verification_lifecycle",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_refresh_token_success_and_reuse",
+            "tests/redis_layer/test_sessions_and_killswitch.unit.py::test_kill_all_user_sessions",
+            "tests/redis_layer/test_sessions_and_killswitch.unit.py::test_rotate_refresh_token_lifecycle",
+            "tests/redis_layer/test_sessions_and_killswitch.unit.py::test_kill_session_and_pubsub_event",
+            "tests/redis_layer/test_sessions_and_killswitch.unit.py::test_create_and_get_session"
+        ],
+        "src.api.v1.auth.x__execute_2fa_verification": [
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_verification_lifecycle"
+        ],
+        "src.core.crypto.x_decrypt_aes_gcm": [
+            "tests/core/test_crypto_aes_gcm_argon2.unit.py::test_aes_gcm_encryption_and_decryption",
+            "tests/core/test_crypto_aes_gcm_argon2.unit.py::test_aes_gcm_invalid_iv_or_tag_length",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_verification_lifecycle",
+            "tests/core/test_crypto_aes_gcm_argon2.unit.py::test_aes_gcm_tampered_ciphertext",
+            "tests/core/test_crypto_aes_gcm_argon2.unit.py::test_aes_gcm_tampered_tag",
+            "tests/core/test_crypto_aes_gcm_argon2.unit.py::test_aes_gcm_tampered_aad"
+        ],
+        "src.api.deps.x_get_current_user_claims": [
+            "tests/api/test_tenants_and_users.unit.py::test_create_user_and_conflicts",
+            "tests/api/test_tenants_and_users.unit.py::test_tenants_crud_endpoints",
+            "tests/api/test_tenants_and_users.unit.py::test_sessions_and_killswitch_endpoints",
+            "tests/api/test_tenants_and_users.unit.py::test_assign_router_permissions_and_not_found",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_auth_me_and_users_me_alias",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_auth_deps_failure_scenarios",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_auth_logout",
+            "tests/api/test_tenants_and_users.unit.py::test_users_endpoints"
+        ],
+        "src.api.deps.x_extract_token_from_request": [
+            "tests/api/test_tenants_and_users.unit.py::test_create_user_and_conflicts",
+            "tests/api/test_tenants_and_users.unit.py::test_tenants_crud_endpoints",
+            "tests/api/test_tenants_and_users.unit.py::test_sessions_and_killswitch_endpoints",
+            "tests/api/test_tenants_and_users.unit.py::test_assign_router_permissions_and_not_found",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_auth_me_and_users_me_alias",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_auth_deps_failure_scenarios",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_auth_logout",
+            "tests/api/test_tenants_and_users.unit.py::test_users_endpoints"
+        ],
+        "src.redis_layer.sessions.x_kill_session": [
+            "tests/api/test_tenants_and_users.unit.py::test_sessions_and_killswitch_endpoints",
+            "tests/redis_layer/test_sessions_and_killswitch.unit.py::test_kill_all_user_sessions",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_refresh_token_success_and_reuse",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_auth_logout",
+            "tests/redis_layer/test_sessions_and_killswitch.unit.py::test_rotate_refresh_token_lifecycle",
+            "tests/redis_layer/test_sessions_and_killswitch.unit.py::test_kill_session_and_pubsub_event"
+        ],
+        "src.api.v1.auth.x__extract_refresh_cookies": [
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_refresh_token_missing_cookies",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_refresh_token_success_and_reuse"
+        ],
+        "src.api.v1.auth.x__decode_refresh_claims": [
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_refresh_token_success_and_reuse"
+        ],
+        "src.redis_layer.sessions.x_rotate_refresh_token": [
+            "tests/redis_layer/test_sessions_and_killswitch.unit.py::test_rotate_refresh_token_expired_family",
+            "tests/redis_layer/test_sessions_and_killswitch.unit.py::test_rotate_refresh_token_lifecycle",
+            "tests/api/test_auth_and_2fa_endpoints.unit.py::test_refresh_token_success_and_reuse"
+        ],
+        "src.redis_layer.idempotency.x_is_valid_uuid": [
+            "tests/api/test_tenants_and_users.unit.py::test_create_user_and_conflicts",
+            "tests/api/test_tenants_and_users.unit.py::test_tenants_crud_endpoints",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_deletes_key_on_server_error",
+            "tests/api/test_tenants_and_users.unit.py::test_sessions_and_killswitch_endpoints",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_flow_new_and_replay",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_is_valid_uuid",
+            "tests/api/test_tenants_and_users.unit.py::test_assign_router_permissions_and_not_found",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_conflict_in_progress",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_missing_or_invalid_key",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_payload_mismatch_422",
+            "tests/api/test_tenants_and_users.unit.py::test_users_endpoints"
+        ],
+        "src.redis_layer.idempotency.x__capture_response_body": [
+            "tests/api/test_tenants_and_users.unit.py::test_create_user_and_conflicts",
+            "tests/api/test_tenants_and_users.unit.py::test_tenants_crud_endpoints",
+            "tests/api/test_tenants_and_users.unit.py::test_sessions_and_killswitch_endpoints",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_flow_new_and_replay",
+            "tests/api/test_tenants_and_users.unit.py::test_assign_router_permissions_and_not_found",
+            "tests/api/test_tenants_and_users.unit.py::test_users_endpoints"
+        ],
+        "src.redis_layer.idempotency.x_check_idempotency_state": [
+            "tests/api/test_tenants_and_users.unit.py::test_create_user_and_conflicts",
+            "tests/api/test_tenants_and_users.unit.py::test_tenants_crud_endpoints",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_deletes_key_on_server_error",
+            "tests/api/test_tenants_and_users.unit.py::test_sessions_and_killswitch_endpoints",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_flow_new_and_replay",
+            "tests/api/test_tenants_and_users.unit.py::test_assign_router_permissions_and_not_found",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_conflict_in_progress",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_payload_mismatch_422",
+            "tests/api/test_tenants_and_users.unit.py::test_users_endpoints"
+        ],
+        "src.redis_layer.idempotency.x__cache_completed_idempotency": [
+            "tests/api/test_tenants_and_users.unit.py::test_create_user_and_conflicts",
+            "tests/api/test_tenants_and_users.unit.py::test_tenants_crud_endpoints",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_deletes_key_on_server_error",
+            "tests/api/test_tenants_and_users.unit.py::test_sessions_and_killswitch_endpoints",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_flow_new_and_replay",
+            "tests/api/test_tenants_and_users.unit.py::test_assign_router_permissions_and_not_found",
+            "tests/api/test_tenants_and_users.unit.py::test_users_endpoints"
+        ],
+        "src.redis_layer.idempotency.x_compute_request_hash": [
+            "tests/api/test_tenants_and_users.unit.py::test_create_user_and_conflicts",
+            "tests/api/test_tenants_and_users.unit.py::test_tenants_crud_endpoints",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_deletes_key_on_server_error",
+            "tests/api/test_tenants_and_users.unit.py::test_sessions_and_killswitch_endpoints",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_flow_new_and_replay",
+            "tests/api/test_tenants_and_users.unit.py::test_assign_router_permissions_and_not_found",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_compute_request_hash",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_conflict_in_progress",
+            "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_payload_mismatch_422",
+            "tests/api/test_tenants_and_users.unit.py::test_users_endpoints"
+        ],
+        "src.redis_layer.sessions.x_kill_all_user_sessions": [
+            "tests/api/test_tenants_and_users.unit.py::test_sessions_and_killswitch_endpoints",
+            "tests/redis_layer/test_sessions_and_killswitch.unit.py::test_kill_all_user_sessions",
+            "tests/api/test_tenants_and_users.unit.py::test_users_endpoints"
+        ],
+        "src.core.csrf.x_validate_csrf_token": [
+            "tests/core/test_csrf_and_cookies.unit.py::test_csrf_token_validation_success",
+            "tests/core/test_csrf_and_cookies.unit.py::test_csrf_token_expiration",
+            "tests/core/test_csrf_and_cookies.unit.py::test_csrf_middleware_validates_mutating_with_session",
+            "tests/core/test_csrf_and_cookies.unit.py::test_csrf_middleware_blocks_invalid_or_missing_token",
+            "tests/core/test_csrf_and_cookies.unit.py::test_csrf_token_tampered_components",
+            "tests/core/test_csrf_and_cookies.unit.py::test_csrf_token_invalid_formats"
+        ],
+        "src.redis_layer.client.x_close_redis_client": [
+            "tests/core/test_db_and_redis_lifecycles.unit.py::test_redis_client_lifecycle"
+        ],
+        "src.redis_layer.client.x_get_redis_client": [
+            "tests/core/test_db_and_redis_lifecycles.unit.py::test_redis_client_lifecycle"
+        ],
+        "src.db.session.x_get_tenant_db_session": [
+            "tests/core/test_db_and_redis_lifecycles.unit.py::test_db_session_lifecycles"
+        ],
+        "src.core.audit.x_sanitize_sensitive_data": [
+            "tests/core/test_immutable_audit_hashchain.unit.py::test_sanitize_sensitive_data_keys",
+            "tests/core/test_immutable_audit_hashchain.unit.py::test_sanitize_primitive_passthrough"
+        ],
+        "src.core.audit.x__is_sensitive_key": [
+            "tests/core/test_immutable_audit_hashchain.unit.py::test_sanitize_sensitive_data_keys"
+        ],
+        "src.core.audit.x_compute_audit_record_hash": [
+            "tests/core/test_immutable_audit_hashchain.unit.py::test_compute_audit_record_hash_deterministic",
+            "tests/core/test_immutable_audit_hashchain.unit.py::test_compute_audit_record_hash_tampering"
+        ],
+        "src.rbac.checker.x_verify_router_access": [
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_verify_router_access_global_roles_bypass_specific_checks",
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_verify_router_access_missing_or_no_read_permission",
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_verify_router_access_base_deny_prevails",
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_verify_router_access_maker_checker_bypass",
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_verify_router_access_has_all_routers"
+        ],
+        "src.rbac.checker.x_evaluate_role_permission": [
+            "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[TRIGGER_PASSWORD_ROTATION]",
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_verify_router_access_missing_or_no_read_permission",
+            "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[CRITICAL_NETWORK_ACTIONS]",
+            "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[CONFIG_STANDARD_L1]",
+            "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[REBOOT_SHUTDOWN]",
+            "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[VIEW_ACTIVE_SESSIONS_KILLSWITCH]",
+            "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[AUDIT_LOGS_QUERY]",
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_verify_router_access_has_all_routers",
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_verify_router_access_maker_checker_bypass",
+            "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_support_l2_requires_maker_checker",
+            "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_unknown_action_defaults_to_deny",
+            "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_supervisor_cannot_reveal_vault_keys",
+            "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[LIVE_DIAGNOSTICS]",
+            "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[TENANT_MANAGEMENT]",
+            "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_tenant_admin_cannot_manage_tenants",
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_verify_router_access_global_roles_bypass_specific_checks",
+            "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[REVEAL_VAULT_KEYS]",
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_verify_router_access_base_deny_prevails",
+            "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[MANUAL_BACKUP_DIFF_GIT]",
+            "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[BULK_ACTIONS_UPGRADE_ROS]",
+            "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[L1_OPERATIONS]",
+            "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[WEBFIG_L2_UNIVERSAL]",
+            "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[APPROVE_MAKER_CHECKER]",
+            "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[ROUTER_INVENTORY_CSV]",
+            "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[RESTORE_BACKUP_CUSTOM_SCRIPT]",
+            "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_auditor_permissions",
+            "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[USER_MANAGEMENT]",
+            "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[SCHEDULE_MAINTENANCE]",
+            "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_noc_monitor_read_only_charts",
+            "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[VIEW_OSM_MAP_NOC_CHARTS]"
+        ],
+        "src.rbac.checker.x_classify_critical_mikrotik_operation": [
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_classify_critical_operations_routing",
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_classify_critical_operations_backup_restore_and_users",
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_classify_critical_operations_interfaces_and_ips",
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_classify_critical_operations_firewall_and_service",
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_classify_critical_operations_reboot_shutdown",
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_classify_non_critical_operation"
+        ],
+        "src.rbac.checker.x__check_firewall_or_service": [
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_classify_critical_operations_routing",
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_classify_critical_operations_backup_restore_and_users",
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_classify_critical_operations_interfaces_and_ips",
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_classify_critical_operations_firewall_and_service",
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_classify_non_critical_operation"
+        ],
+        "src.rbac.checker.x__check_routing_critical": [
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_classify_critical_operations_routing",
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_classify_critical_operations_backup_restore_and_users",
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_classify_critical_operations_interfaces_and_ips",
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_classify_critical_operations_firewall_and_service",
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_classify_non_critical_operation"
+        ],
+        "src.rbac.checker.x__check_interface_or_ip": [
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_classify_critical_operations_routing",
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_classify_critical_operations_backup_restore_and_users",
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_classify_critical_operations_interfaces_and_ips",
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_classify_critical_operations_firewall_and_service",
+            "tests/rbac/test_maker_checker_interceptor.unit.py::test_classify_non_critical_operation"
+        ],
+        "src.redis_layer.sessions.x_get_session": [
+            "tests/redis_layer/test_sessions_and_killswitch.unit.py::test_kill_session_and_pubsub_event",
+            "tests/redis_layer/test_sessions_and_killswitch.unit.py::test_create_and_get_session",
+            "tests/redis_layer/test_sessions_and_killswitch.unit.py::test_rotate_refresh_token_lifecycle",
+            "tests/redis_layer/test_sessions_and_killswitch.unit.py::test_kill_all_user_sessions"
+        ],
+        "src.redis_layer.zero_metrics_monitor.x_get_default_monitor_state": [
+            "tests/redis_layer/test_zero_metrics_state_machine.unit.py::test_ssl_mismatch_transition",
+            "tests/redis_layer/test_zero_metrics_state_machine.unit.py::test_default_monitor_state",
+            "tests/redis_layer/test_zero_metrics_state_machine.unit.py::test_maintenance_window_suppresses_router_down_alert",
+            "tests/redis_layer/test_zero_metrics_state_machine.unit.py::test_boundary_cpu_load_degraded_transition",
+            "tests/redis_layer/test_zero_metrics_state_machine.unit.py::test_router_recovery_online_triggers_router_up",
+            "tests/redis_layer/test_zero_metrics_state_machine.unit.py::test_boundary_reachability_failures_offline_transition"
+        ],
+        "src.redis_layer.zero_metrics_monitor.x_evaluate_router_monitoring_cycle": [
+            "tests/redis_layer/test_zero_metrics_state_machine.unit.py::test_ssl_mismatch_transition",
+            "tests/redis_layer/test_zero_metrics_state_machine.unit.py::test_maintenance_window_suppresses_router_down_alert",
+            "tests/redis_layer/test_zero_metrics_state_machine.unit.py::test_boundary_cpu_load_degraded_transition",
+            "tests/redis_layer/test_zero_metrics_state_machine.unit.py::test_router_recovery_online_triggers_router_up",
+            "tests/redis_layer/test_zero_metrics_state_machine.unit.py::test_boundary_reachability_failures_offline_transition"
+        ],
+        "src.redis_layer.zero_metrics_monitor.x__process_failure": [
+            "tests/redis_layer/test_zero_metrics_state_machine.unit.py::test_maintenance_window_suppresses_router_down_alert",
+            "tests/redis_layer/test_zero_metrics_state_machine.unit.py::test_boundary_reachability_failures_offline_transition"
+        ],
+        "src.redis_layer.zero_metrics_monitor.x__process_success_cpu": [
+            "tests/redis_layer/test_zero_metrics_state_machine.unit.py::test_boundary_cpu_load_degraded_transition",
+            "tests/redis_layer/test_zero_metrics_state_machine.unit.py::test_router_recovery_online_triggers_router_up"
+        ]
+    },
+    "duration_by_test": {
+        "tests/api/test_auth_and_2fa_endpoints.unit.py::test_health_check_endpoint": 0.02610884499972599,
+        "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_unknown_tenant": 0.05172635899998568,
+        "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_unknown_user": 0.011270851000517723,
+        "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_account_locked": 0.012527168999440619,
+        "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_failed_attempts_boundary_4_and_5": 0.15585465999993176,
+        "tests/api/test_auth_and_2fa_endpoints.unit.py::test_login_success_triggers_enroll_2fa": 0.06368499899963354,
+        "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_enrollment_lifecycle": 0.029101623999849835,
+        "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_verification_lifecycle": 0.022506082000290917,
+        "tests/api/test_auth_and_2fa_endpoints.unit.py::test_auth_me_and_users_me_alias": 0.009992065000005823,
+        "tests/api/test_auth_and_2fa_endpoints.unit.py::test_auth_logout": 0.006040907000169682,
+        "tests/api/test_auth_and_2fa_endpoints.unit.py::test_refresh_token_missing_cookies": 0.009527778000119724,
+        "tests/api/test_auth_and_2fa_endpoints.unit.py::test_refresh_token_success_and_reuse": 0.011263462999522744,
+        "tests/api/test_auth_and_2fa_endpoints.unit.py::test_verify_2fa_invalid_scenarios": 0.006480973999714479,
+        "tests/api/test_auth_and_2fa_endpoints.unit.py::test_auth_deps_failure_scenarios": 0.011096608999650925,
+        "tests/api/test_tenants_and_users.unit.py::test_tenants_crud_endpoints": 0.08119717799945647,
+        "tests/api/test_tenants_and_users.unit.py::test_users_endpoints": 0.07626246000018,
+        "tests/api/test_tenants_and_users.unit.py::test_sessions_and_killswitch_endpoints": 0.018482194999705825,
+        "tests/api/test_tenants_and_users.unit.py::test_create_user_and_conflicts": 0.07642222600043169,
+        "tests/api/test_tenants_and_users.unit.py::test_assign_router_permissions_and_not_found": 0.03193048299999646,
+        "tests/core/test_crypto_aes_gcm_argon2.unit.py::test_master_key_derivation": 0.0003557919999366277,
+        "tests/core/test_crypto_aes_gcm_argon2.unit.py::test_master_key_invalid_length": 0.000792538000496279,
+        "tests/core/test_crypto_aes_gcm_argon2.unit.py::test_aes_gcm_encryption_and_decryption": 0.00048514700029045343,
+        "tests/core/test_crypto_aes_gcm_argon2.unit.py::test_aes_gcm_tampered_ciphertext": 0.0007079430006342591,
+        "tests/core/test_crypto_aes_gcm_argon2.unit.py::test_aes_gcm_tampered_aad": 0.0005277320005916408,
+        "tests/core/test_crypto_aes_gcm_argon2.unit.py::test_aes_gcm_tampered_tag": 0.0005641630004902254,
+        "tests/core/test_crypto_aes_gcm_argon2.unit.py::test_aes_gcm_invalid_iv_or_tag_length": 0.0008865259997037356,
+        "tests/core/test_crypto_aes_gcm_argon2.unit.py::test_argon2id_hash_and_verify": 0.15363814099964657,
+        "tests/core/test_crypto_aes_gcm_argon2.unit.py::test_argon2id_empty_password_raises": 0.0005792460005977773,
+        "tests/core/test_csrf_and_cookies.unit.py::test_csrf_token_generation_structure": 0.0004237039993313374,
+        "tests/core/test_csrf_and_cookies.unit.py::test_csrf_token_validation_success": 0.0004958620002071257,
+        "tests/core/test_csrf_and_cookies.unit.py::test_csrf_token_tampered_components": 0.0006510539997179876,
+        "tests/core/test_csrf_and_cookies.unit.py::test_csrf_token_invalid_formats": 0.0004842080006710603,
+        "tests/core/test_csrf_and_cookies.unit.py::test_csrf_token_expiration": 0.00048304200026905164,
+        "tests/core/test_csrf_and_cookies.unit.py::test_csrf_middleware_allows_safe_methods": 0.0013180010000723996,
+        "tests/core/test_csrf_and_cookies.unit.py::test_csrf_middleware_allows_excluded_paths": 0.0010139619998881244,
+        "tests/core/test_csrf_and_cookies.unit.py::test_csrf_middleware_validates_mutating_with_session": 0.0011408070004108595,
+        "tests/core/test_csrf_and_cookies.unit.py::test_csrf_middleware_blocks_invalid_or_missing_token": 0.0012460199995985022,
+        "tests/core/test_db_and_redis_lifecycles.unit.py::test_redis_client_lifecycle": 0.0025974529999075457,
+        "tests/core/test_db_and_redis_lifecycles.unit.py::test_db_session_lifecycles": 0.005594233999545395,
+        "tests/core/test_immutable_audit_hashchain.unit.py::test_genesis_audit_hash": 0.00038492900057462975,
+        "tests/core/test_immutable_audit_hashchain.unit.py::test_sanitize_sensitive_data_keys": 0.0009019549997901777,
+        "tests/core/test_immutable_audit_hashchain.unit.py::test_sanitize_primitive_passthrough": 0.0004325720001361333,
+        "tests/core/test_immutable_audit_hashchain.unit.py::test_compute_audit_record_hash_deterministic": 0.00047817499944358133,
+        "tests/core/test_immutable_audit_hashchain.unit.py::test_compute_audit_record_hash_tampering": 0.0004730910004582256,
+        "tests/core/test_security_headers.unit.py::test_security_headers_injected_on_api_path": 0.00104603500039957,
+        "tests/core/test_security_headers.unit.py::test_security_headers_on_non_api_path": 0.0014607590001105564,
+        "tests/rbac/test_maker_checker_interceptor.unit.py::test_verify_router_access_base_deny_prevails": 0.0004500479999478557,
+        "tests/rbac/test_maker_checker_interceptor.unit.py::test_verify_router_access_global_roles_bypass_specific_checks": 0.0004153440004301956,
+        "tests/rbac/test_maker_checker_interceptor.unit.py::test_verify_router_access_has_all_routers": 0.00040654599979461636,
+        "tests/rbac/test_maker_checker_interceptor.unit.py::test_verify_router_access_missing_or_no_read_permission": 0.00047086500035220524,
+        "tests/rbac/test_maker_checker_interceptor.unit.py::test_verify_router_access_maker_checker_bypass": 0.00044261699986236636,
+        "tests/rbac/test_maker_checker_interceptor.unit.py::test_classify_critical_operations_reboot_shutdown": 0.0004216980005367077,
+        "tests/rbac/test_maker_checker_interceptor.unit.py::test_classify_critical_operations_routing": 0.0005296449999150354,
+        "tests/rbac/test_maker_checker_interceptor.unit.py::test_classify_critical_operations_firewall_and_service": 0.0007994560000952333,
+        "tests/rbac/test_maker_checker_interceptor.unit.py::test_classify_critical_operations_interfaces_and_ips": 0.0007035909993646783,
+        "tests/rbac/test_maker_checker_interceptor.unit.py::test_classify_critical_operations_backup_restore_and_users": 0.0005987790000290261,
+        "tests/rbac/test_maker_checker_interceptor.unit.py::test_classify_non_critical_operation": 0.0005138820006322931,
+        "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_matrix_contains_all_11_roles": 0.00036374800038174726,
+        "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[TENANT_MANAGEMENT]": 0.00038545799998246366,
+        "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[USER_MANAGEMENT]": 0.00038351299917849246,
+        "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[VIEW_ACTIVE_SESSIONS_KILLSWITCH]": 0.0003852119998555281,
+        "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[ROUTER_INVENTORY_CSV]": 0.0005508029998964048,
+        "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[REVEAL_VAULT_KEYS]": 0.00042024200047308113,
+        "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[TRIGGER_PASSWORD_ROTATION]": 0.00039499499962403206,
+        "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[SCHEDULE_MAINTENANCE]": 0.00038086899985501077,
+        "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[VIEW_OSM_MAP_NOC_CHARTS]": 0.0003835220004475559,
+        "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[LIVE_DIAGNOSTICS]": 0.00038687000051140785,
+        "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[L1_OPERATIONS]": 0.00037684499966417206,
+        "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[CONFIG_STANDARD_L1]": 0.00039098100023693405,
+        "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[CRITICAL_NETWORK_ACTIONS]": 0.0005940060000284575,
+        "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[REBOOT_SHUTDOWN]": 0.0005296470008033793,
+        "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[WEBFIG_L2_UNIVERSAL]": 0.00039598999956069747,
+        "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[MANUAL_BACKUP_DIFF_GIT]": 0.00037385399991762824,
+        "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[RESTORE_BACKUP_CUSTOM_SCRIPT]": 0.0003761360003409209,
+        "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[BULK_ACTIONS_UPGRADE_ROS]": 0.00038744900029996643,
+        "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[APPROVE_MAKER_CHECKER]": 0.00038058700010878965,
+        "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_superadmin_global_has_allow_on_all_actions[AUDIT_LOGS_QUERY]": 0.00038129600034153555,
+        "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_tenant_admin_cannot_manage_tenants": 0.0006601119994229521,
+        "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_supervisor_cannot_reveal_vault_keys": 0.00045232800039229915,
+        "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_support_l2_requires_maker_checker": 0.000472790999992867,
+        "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_auditor_permissions": 0.0007252529994730139,
+        "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_noc_monitor_read_only_charts": 0.0006816709992563119,
+        "tests/rbac/test_rbac_11_roles_matrix.unit.py::test_unknown_action_defaults_to_deny": 0.0006337720005831216,
+        "tests/redis_layer/test_idempotency_middleware.unit.py::test_is_valid_uuid": 0.000830203000077745,
+        "tests/redis_layer/test_idempotency_middleware.unit.py::test_compute_request_hash": 0.0008159660001183511,
+        "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_allows_safe_methods": 0.001058496999576164,
+        "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_allows_excluded_paths": 0.0009829919999901904,
+        "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_missing_or_invalid_key": 0.0010957740005324013,
+        "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_flow_new_and_replay": 0.002609021999887773,
+        "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_conflict_in_progress": 0.0014527189996442758,
+        "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_payload_mismatch_422": 0.0013981550000607967,
+        "tests/redis_layer/test_idempotency_middleware.unit.py::test_idempotency_middleware_deletes_key_on_server_error": 0.0014580690003640484,
+        "tests/redis_layer/test_sessions_and_killswitch.unit.py::test_create_and_get_session": 0.0013352619998840964,
+        "tests/redis_layer/test_sessions_and_killswitch.unit.py::test_kill_session_and_pubsub_event": 0.001345941000181483,
+        "tests/redis_layer/test_sessions_and_killswitch.unit.py::test_kill_all_user_sessions": 0.0014715039997099666,
+        "tests/redis_layer/test_sessions_and_killswitch.unit.py::test_rotate_refresh_token_lifecycle": 0.0017299250002906774,
+        "tests/redis_layer/test_sessions_and_killswitch.unit.py::test_rotate_refresh_token_expired_family": 0.0011727090004569618,
+        "tests/redis_layer/test_zero_metrics_state_machine.unit.py::test_default_monitor_state": 0.00039572599962411914,
+        "tests/redis_layer/test_zero_metrics_state_machine.unit.py::test_boundary_reachability_failures_offline_transition": 0.0005977569999231491,
+        "tests/redis_layer/test_zero_metrics_state_machine.unit.py::test_maintenance_window_suppresses_router_down_alert": 0.0005306450002535712,
+        "tests/redis_layer/test_zero_metrics_state_machine.unit.py::test_router_recovery_online_triggers_router_up": 0.0004516649996730848,
+        "tests/redis_layer/test_zero_metrics_state_machine.unit.py::test_boundary_cpu_load_degraded_transition": 0.000768334999520448,
+        "tests/redis_layer/test_zero_metrics_state_machine.unit.py::test_ssl_mismatch_transition": 0.0006001980000291951
+    },
+    "stats_time": 16.698251069,
+    "function_hashes": {
+        "src.core.audit.x__is_sensitive_key": "a3a39dad7276",
+        "src.core.audit.x_sanitize_sensitive_data": "b3fb3a8f6506",
+        "src.core.audit.x_compute_audit_record_hash": "dbc4790026e1",
+        "src.main.x_create_app": "80fd217ca5bc",
+        "src.core.security_headers.x\u01c1SecurityHeadersMiddleware\u01c1dispatch": "eb27fe675f33",
+        "src.db.session.x_set_tenant_context": "f43c710b7c8a",
+        "src.db.session.x_get_tenant_db_session": "24f549ecaa05",
+        "src.core.crypto.x_get_master_vault_key": "eac377e3e0b0",
+        "src.core.crypto.x_encrypt_aes_gcm": "e27e41f42b8c",
+        "src.core.crypto.x_decrypt_aes_gcm": "b4a1ecdb5c9e",
+        "src.core.crypto.x_hash_password": "dc27f0008286",
+        "src.core.crypto.x_verify_password": "b155d6ccb16b",
+        "src.redis_layer.client.x_get_redis_client": "6da9ef3ebaab",
+        "src.redis_layer.client.x_close_redis_client": "0579d7b8556d",
+        "src.core.csrf.x_generate_csrf_token": "a2e7abaee877",
+        "src.core.csrf.x_validate_csrf_token": "0fd15c4c86c9",
+        "src.core.csrf.x\u01c1CSRFProtectionMiddleware\u01c1dispatch": "c2ead06eb815",
+        "src.api.deps.x_extract_token_from_request": "039c3dacf075",
+        "src.api.deps.x_get_current_user_claims": "cba809e76d44",
+        "src.api.deps.x_require_roles": "6d1de4f54989",
+        "src.rbac.checker.x_evaluate_role_permission": "b360c9440ddc",
+        "src.rbac.checker.x_verify_router_access": "f7c7b743af04",
+        "src.rbac.checker.x__check_routing_critical": "3ace29eb1982",
+        "src.rbac.checker.x__check_firewall_or_service": "57a594ea05de",
+        "src.rbac.checker.x__check_interface_or_ip": "2d923b48d3bf",
+        "src.rbac.checker.x_classify_critical_mikrotik_operation": "b411cd291735",
+        "src.redis_layer.zero_metrics_monitor.x_get_default_monitor_state": "0a911e54364c",
+        "src.redis_layer.zero_metrics_monitor.x__process_failure": "79be8ee09d6c",
+        "src.redis_layer.zero_metrics_monitor.x__process_success_cpu": "7fc06a14309e",
+        "src.redis_layer.zero_metrics_monitor.x_evaluate_router_monitoring_cycle": "5449c3d61b15",
+        "src.redis_layer.idempotency.x_is_valid_uuid": "89aebf1bffc1",
+        "src.redis_layer.idempotency.x_compute_request_hash": "49ec7cf530f9",
+        "src.redis_layer.idempotency.x_check_idempotency_state": "0411a4683646",
+        "src.redis_layer.idempotency.x__should_bypass_idempotency": "2ca066537933",
+        "src.redis_layer.idempotency.x__capture_response_body": "c746ad23c9d0",
+        "src.redis_layer.idempotency.x__cache_completed_idempotency": "e6818b45cb8d",
+        "src.redis_layer.idempotency.x\u01c1IdempotencyMiddleware\u01c1dispatch": "f8407f51b922",
+        "src.redis_layer.sessions.x_compute_token_hash": "85443bd4e164",
+        "src.redis_layer.sessions.x_create_session": "3a011d63e3c5",
+        "src.redis_layer.sessions.x_get_session": "81382dbbc8c9",
+        "src.redis_layer.sessions.x_kill_session": "311c7a593869",
+        "src.redis_layer.sessions.x_kill_all_user_sessions": "a9ae94761941",
+        "src.redis_layer.sessions.x_rotate_refresh_token": "5967d732a626",
+        "src.api.v1.auth.x_create_jwt_access_token": "48a928a7321b",
+        "src.api.v1.auth.x_set_auth_cookies": "a587268efe1c",
+        "src.api.v1.auth.x__get_active_tenant": "576306ddbd31",
+        "src.api.v1.auth.x__validate_user_lock": "c9af9e6648e8",
+        "src.api.v1.auth.x__verify_user_credentials": "0ec4b2ea64db",
+        "src.api.v1.auth.x__dispatch_preauth_challenge": "8058ea96405e",
+        "src.api.v1.auth.x__fetch_preauth_state": "80cd7f2602c1",
+        "src.api.v1.auth.x__execute_2fa_enrollment": "edf568ffb061",
+        "src.api.v1.auth.x__execute_2fa_verification": "64f767d98824",
+        "src.api.v1.auth.x__build_auth_session_response": "8aee2a069f2e",
+        "src.api.v1.auth.x__extract_refresh_cookies": "d9b274afff91",
+        "src.api.v1.auth.x__decode_refresh_claims": "b6733e0684af"
+    },
+    "function_dependencies": {
+        "src.core.crypto.x_get_master_vault_key": [
+            "src.core.crypto.x_decrypt_aes_gcm",
+            "src.core.crypto.x_encrypt_aes_gcm"
+        ],
+        "src.core.crypto.x_decrypt_aes_gcm": [
+            "src.api.v1.auth.x__execute_2fa_verification"
+        ],
+        "src.core.audit.x__is_sensitive_key": [
+            "src.core.audit.x_sanitize_sensitive_data"
+        ],
+        "src.core.audit.x_sanitize_sensitive_data": [
+            "src.core.audit.x_sanitize_sensitive_data"
+        ],
+        "src.rbac.checker.x_evaluate_role_permission": [
+            "src.rbac.checker.x_verify_router_access"
+        ],
+        "src.rbac.checker.x__check_routing_critical": [
+            "src.rbac.checker.x_classify_critical_mikrotik_operation"
+        ],
+        "src.rbac.checker.x__check_firewall_or_service": [
+            "src.rbac.checker.x_classify_critical_mikrotik_operation"
+        ],
+        "src.rbac.checker.x__check_interface_or_ip": [
+            "src.rbac.checker.x_classify_critical_mikrotik_operation"
+        ],
+        "src.redis_layer.zero_metrics_monitor.x__process_failure": [
+            "src.redis_layer.zero_metrics_monitor.x_evaluate_router_monitoring_cycle"
+        ],
+        "src.redis_layer.zero_metrics_monitor.x__process_success_cpu": [
+            "src.redis_layer.zero_metrics_monitor.x_evaluate_router_monitoring_cycle"
+        ]
+    },
+    "config_fingerprint": {
+        "test_execution": "2e38e77b22c3",
+        "test_selection": "5955b66c0091",
+        "timeout": "d3052321fdc3",
+        "type_check": "2e38e77b22c3"
+    },
+    "watched_file_hashes": {
+        "pyproject.toml": "ce3896d94bd2",
+        "uv.lock": "9aea4c3ca1fe"
+    },
+    "git_commit": null
+}

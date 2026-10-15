@@ -3,7 +3,7 @@ services:
     image: sinfallas/base-python-uv:3.13
     container_name: fastapi_api
     hostname: fastapi_api
-    pull_policy: always
+    pull_policy: if_not_present
     environment:
       TZ: 'America/Caracas'
       UV_CACHE_DIR: /root/.cache/uv
@@ -27,7 +27,7 @@ services:
     image: sinfallas/base-python-uv:3.13
     container_name: fastapi_qa_backend
     hostname: fastapi_qa_backend
-    pull_policy: always
+    pull_policy: if_not_present
     environment:
       TZ: 'America/Caracas'
       UV_PYTHON_DOWNLOADS: 'true'
