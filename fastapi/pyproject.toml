@@ -24,7 +24,9 @@ dependencies = [
     "python-multipart>=0.0.12",
     "orjson>=3.10.7",
     "uvloop>=0.20.0",
-    "httptools>=0.6.1"
+    "httptools>=0.6.1",
+    "prometheus-fastapi-instrumentator>=7.0.0",
+    "prometheus-client>=0.21.0"
 ]
 
 [project.optional-dependencies]
@@ -43,9 +45,7 @@ dev = [
     "py-spy>=0.3.14",
     "schemathesis>=3.36.0",
     "locust>=2.31.0",
-    "pip-audit>=2.7.3",
-    "prometheus-fastapi-instrumentator>=7.0.0",
-    "prometheus-client>=0.21.0"
+    "pip-audit>=2.7.3"
 ]
 
 [build-system]
