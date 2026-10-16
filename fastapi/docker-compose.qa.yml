@@ -11,6 +11,13 @@ services:
       ROSGRID_MASTER_VAULT_KEY: 'MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY='
       ROSGRID_JWT_SECRET_KEY: 'qa_jwt_secret_key_for_ephemeral_testing_only'
       ROSGRID_CSRF_HMAC_SECRET: 'qa_csrf_hmac_secret_for_ephemeral_testing_only'
+      ROSGRID_REDIS_URL: 'redis://rosgrid-redis:6379/0'
+      ROSGRID_MCP_ENABLED: 'true'
+    depends_on:
+      rosgrid-db:
+        condition: service_healthy
+      rosgrid-redis:
+        condition: service_healthy
     volumes:
       - .:/app
       - uv-cache:/root/.cache/uv
@@ -21,7 +28,22 @@ services:
       - SYS_PTRACE
     security_opt:
       - seccomp:unconfined
-    command: bash -c "uv pip install --system -e '.[dev]' && uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload"
+    command: bash -c "uv pip install --system -e '.[dev]' && alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  rosgrid-db:
+    image: postgres:17-alpine
+    container_name: fastapi_qa_db
+    hostname: rosgrid_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: rosgrid
+      POSTGRES_USER: rosgrid_user
+      POSTGRES_PASSWORD: cambiar_en_entorno_local
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rosgrid_user -d rosgrid"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
 
   rosgrid-redis:
     image: eqalpha/keydb:alpine
@@ -54,6 +76,7 @@ services:
       ROSGRID_MASTER_VAULT_KEY: 'MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY='
       ROSGRID_JWT_SECRET_KEY: 'qa_jwt_secret_key_for_ephemeral_testing_only'
       ROSGRID_CSRF_HMAC_SECRET: 'qa_csrf_hmac_secret_for_ephemeral_testing_only'
+      ROSGRID_REDIS_URL: 'redis://rosgrid-redis:6379/0'
     volumes:
       - .:/app
       - uv-cache:/root/.cache/uv
@@ -74,7 +97,7 @@ services:
     command: bash -c "echo 'Contenedor Karate listo. Usa docker compose run --rm karatelabs mvn clean test'; sleep infinity"
 
   zap:
-    image: owasp/zap2docker-stable:latest
+    image: zaproxy/zap-stable:latest
     container_name: fastapi_zap
     hostname: fastapi_zap
     pull_policy: always

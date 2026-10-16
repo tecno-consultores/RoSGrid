@@ -134,6 +134,16 @@
     }, 4000);
   }
 
+  const isFleetUpdated = ref(false);
+
+  function handleManualRefresh() {
+    inventoryStore.fetchRouters();
+    isFleetUpdated.value = true;
+    setTimeout(() => {
+      isFleetUpdated.value = false;
+    }, 4000);
+  }
+
   onMounted(() => {
     inventoryStore.fetchRouters();
   });
@@ -143,7 +153,7 @@
   <div class="inventory-view">
     <header class="inventory-header">
       <div>
-        <h1 class="inventory-title">Inventario de Equipos MikroTik</h1>
+        <h1 class="inventory-title">Dashboard — Flota MikroTik</h1>
         <p class="inventory-subtitle">
           Supervisión de hardware RouterOS v7, mapa geográfico OpenStreetMap y gestión de acceso.
         </p>
@@ -189,6 +199,19 @@
         >
           📂 Importar CSV
         </button>
+
+        <button
+          type="button"
+          class="btn btn-primary"
+          aria-label="Actualizar datos de la flota"
+          @click="handleManualRefresh"
+        >
+          Actualizar Datos
+        </button>
+
+        <div v-if="isFleetUpdated" class="status-indicator success" role="status">
+          <span class="status-text">Actualizado</span>
+        </div>
       </div>
     </header>
 
@@ -514,5 +537,18 @@
   .btn-row-action--vault {
     border-color: #fbbf24;
     color: #fbbf24;
+  }
+
+  .status-indicator.success {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid #10b981;
+    border-radius: 4px;
+    color: #34d399;
+    font-size: 0.8rem;
+    font-weight: 600;
   }
 </style>

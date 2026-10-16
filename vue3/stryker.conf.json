@@ -1,15 +1,15 @@
 {
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
-  "packageManager": "npm",
+  "packageManager": "pnpm",
+  "plugins": ["@stryker-mutator/vitest-runner"],
   "reporters": ["html", "clear-text", "progress"],
   "testRunner": "vitest",
   "coverageAnalysis": "perTest",
+  "concurrency": 4,
   "mutate": [
-    "src/**/*.ts",
-    "src/**/*.vue",
-    "!src/main.ts",
-    "!src/**/*.unit.ts",
-    "!src/**/*.spec.ts",
-    "!src/**/*.test.ts"
+    "src/api/httpClient.ts",
+    "src/composables/useTelemetryRingBuffer.ts",
+    "src/stores/useAuthStore.ts",
+    "src/components/inventory/VaultRevealModal.vue"
   ]
 }

@@ -1,33 +1,54 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 RoSGrid Contributors
 
+import uuid
 from locust import HttpUser, between, task
 
 
-class FastApiStressUser(HttpUser):
-    # Simula latencia natural entre acciones de usuario (1 a 3 segundos)
+class RoSGridStressUser(HttpUser):
     wait_time = between(1, 3)
 
-    def on_start(self):
-        """Simula un proceso de autenticación o preparación antes de bombardear la API."""
-        self.headers = {"Content-Type": "application/json"}
-        # Auto-mock de token si la API lo requiere para las pruebas:
-        self.token = "Bearer test-load-token-123"
+    def on_start(self) -> None:
+        self.headers = {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": "qa-load-test-csrf",
+        }
 
-    @task(3)
-    def check_health(self):
-        """Simula múltiples lecturas concurrentes de estado."""
+    @task(4)
+    def check_health(self) -> None:
+        """Verifica disponibilidad continua bajo inyección de jitter de Pumba."""
         self.client.get("/health", headers=self.headers)
 
     @task(2)
-    def simulate_heavy_computation(self):
-        """Ataca endpoints de lectura intensiva para evaluar si bloquean el Event Loop asíncrono."""
-        with self.client.get("/data?limit=100", headers={"Authorization": self.token}, catch_response=True) as response:
-            if response.status_code in (200, 404):
-                response.success()  # Marca como éxito temporal si la API no tiene esta ruta configurada aún.
+    def check_prometheus_metrics(self) -> None:
+        """Verifica que el colector de métricas RED responda sin bloqueos."""
+        self.client.get("/metrics")
+
+    @task(2)
+    def simulate_inventory_read_unauthorized_or_cached(self) -> None:
+        """Evalúa velocidad de respuesta del guard de sesión/RBAC bajo carga."""
+        with self.client.get(
+            "/api/v1/inventory/routers",
+            headers=self.headers,
+            catch_response=True,
+        ) as response:
+            if response.status_code in (200, 401):
+                response.success()
 
     @task(1)
-    def invalid_login_attempt(self):
-        """Genera carga enviando peticiones POST para validar el rendimiento y parsing de Pydantic."""
-        payload = {"username": "load_test", "password": "123", "client_id": "locust_bot"}
-        self.client.post("/login", json=payload, headers=self.headers)
+    def invalid_login_attempt_validation(self) -> None:
+        """Estresa el parser Pydantic v2 y el control de intentos fallidos."""
+        payload = {
+            "tenant_slug": "isp-chaos-test",
+            "email": f"bot-{uuid.uuid4().hex[:6]}@isp.net",
+            "password": "invalid_password_123",
+        }
+        with self.client.post(
+            "/api/v1/auth/login",
+            json=payload,
+            headers=self.headers,
+            catch_response=True,
+        ) as response:
+            if response.status_code in (401, 422, 423, 429):
+                response.success()
+

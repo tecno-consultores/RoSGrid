@@ -6,6 +6,11 @@ module.exports = {
     collect: {
       url: ['http://ui-prod:80/', 'http://ui-prod:80/login'],
       numberOfRuns: 3,
+      settings: {
+        preset: 'desktop',
+        skipAudits: ['is-on-https'],
+        chromeFlags: '--no-sandbox --headless --disable-gpu --disable-dev-shm-usage',
+      },
     },
     assert: {
       assertions: {

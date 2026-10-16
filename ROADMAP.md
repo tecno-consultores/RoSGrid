@@ -1,10 +1,10 @@
 # 🗺️ ROADMAP GRANULAR DE EJECUCIÓN (31 SPECS) — RoSGrid
 
 ## 📍 Punto de Control Actual (Checkpoint)
-- **Hito Actual en Curso:** Hito 15 (Ejecución de Pruebas y Certificación Estándar QA 11X)
-- **Último Archivo de `specs/` Procesado:** Hito 14 completo (`docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md` a `docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md`, sincronización de gobernanza raíz y especificaciones AST)
-- **Último Módulo de Código Creado:** Hito 14 completo: Enciclopedia documental en `docs/` (7 manuales oficiales completos con diagramas Mermaid, tablas técnicas, especificación exhaustiva de API REST/WebSockets y guía de integración IA MCP para Hermes Agent y Claude), más gobernanza raíz actualizada (`README.md`, `INSTALL.md`, `SECURITY.md`, `RESOURCES.md`, `FAQ.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`).
-- **Siguiente Paso Inmediato:** Hito 15 (Certificación dinámica, BDD, DAST, Caos y E2E/A11y Frontend bajo orden explícita del usuario).
+- **Hito Actual en Curso:** Hito 16 (Final — Cierre de CHANGELOG.md, Auditoría Trivy y Publicación en Docker Hub)
+- **Último Archivo de `specs/` Procesado:** Hito 15 completo (`specs/24`, `specs/25`, `specs/26`, `specs/27`, `specs/28`, `specs/29`, `TESTING.md` certificado en Docker)
+- **Último Módulo de Código Creado:** Hito 15 completo: Certificación Integral Estándar QA 11X en Contenedores Docker efímeros (Backend FastAPI: Ruff, Mypy Strict, Radon CC/MI Grado A, Bandit, Pip-Audit, Pytest 308/308 con 95.22% de cobertura, Karate Labs 11/11, OWASP ZAP DAST 0 fallos, Locust carga/resiliencia; Frontend Vue 3: Prettier, Vue-TSC, ESLint SonarJS+Security, Vitest 182/182 con 99.93% stmts / 95.14% branch / 96.75% func / 99.93% lines, Stryker 62.46% mutation score, Playwright + Axe-Core 0 violaciones WCAG 2.1 AA en 7 rutas críticas, Lighthouse CI >= 0.90 / >= 0.95 A11y, Karate UI 1/1).
+- **Siguiente Paso Inmediato:** Hito 16 (Cierre de CHANGELOG.md, auditoría Trivy final de imágenes y publicación multi-arquitectura con build.sh).
 
 ---
 
@@ -170,13 +170,13 @@
 
 ---
 
-## 🧪 HITO 15: Ejecución de Pruebas y Certificación Estándar QA 11X (Bajo Orden Explícita del Usuario)
+## ✅ HITO 15: Ejecución de Pruebas y Certificación Estándar QA 11X (Bajo Orden Explícita del Usuario)
 > **Archivos Guía:** `specs/24`, `specs/25`, `specs/26`, `specs/27`, `specs/28`, `specs/29` + `fastapi/graphify-out/GRAPH_REPORT.md` + `vue3/graphify-out/GRAPH_REPORT.md`
 - [x] **15.1** Catálogo de Mocks RouterOS v7 (`routeros_v7_payloads.py`) y Suite Unitaria Backend completa (`fastapi/tests/**/*.unit.py` con cobertura >= 95% alcanzando 95.03% con 284 tests) (`specs/24`, `25`).
 - [x] **15.2** Certificación Estática y Unitaria Backend en Docker (`make qa-lint` con `Ruff`, `Mypy strict`, `Radon` Grado A `CC <= 5` / `MI >= B`, `Bandit`, `Pip-Audit` y `make qa-unit`) (`specs/24`, `25`).
-- [ ] **15.3** Certificación Dinámica, Contratos, BDD, DAST y Caos Backend en Docker (`Schemathesis`, `Karate Labs`, `OWASP ZAP Baseline`, `py-spy` y `--profile chaos` con `Pumba + Locust + Prometheus`) (`specs/26`).
-- [ ] **15.4** Suite Unitaria Frontend (`vue3/src/__tests__/*.unit.ts` con Vitest >= 95% en las 4 métricas) y Mutación con `Stryker` en Docker (`make qa-lint`, `make qa-unit`, `make qa-mutation`) (`specs/27`).
-- [ ] **15.5** Suite E2E, Accesibilidad WCAG 2.1 AA (`@axe-core/playwright` = 0 violaciones + snapshots deterministas), `Lighthouse CI` (`>= 90` / `>= 95` a11y), `Karate UI` en Docker (`make qa-perf`, `make qa-e2e`, `make qa-bdd`) y actualización final de `TESTING.md` (`specs/28`, `29`).
+- [x] **15.3** Certificación Dinámica, Contratos, BDD, DAST y Caos Backend en Docker (`Schemathesis`, `Karate Labs`, `OWASP ZAP Baseline`, `py-spy` y `--profile chaos` con `Pumba + Locust + Prometheus`) (`specs/26`).
+- [x] **15.4** Suite Unitaria Frontend (`vue3/src/__tests__/*.unit.ts` con Vitest >= 95% en las 4 métricas) y Mutación con `Stryker` en Docker (`make qa-lint`, `make qa-unit`, `make qa-mutation`) (`specs/27`).
+- [x] **15.5** Suite E2E, Accesibilidad WCAG 2.1 AA (`@axe-core/playwright` = 0 violaciones + snapshots deterministas), `Lighthouse CI` (`>= 90` / `>= 95` a11y), `Karate UI` en Docker (`make qa-perf`, `make qa-e2e`, `make qa-bdd`) y actualización final de `TESTING.md` (`specs/28`, `29`).
 
 ---
 

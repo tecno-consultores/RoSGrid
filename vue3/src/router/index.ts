@@ -18,10 +18,17 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/',
-    redirect: '/inventory',
+    alias: ['/dashboard'],
+    name: 'DashboardRoot',
+    component: () => import('@/views/RouterInventoryView.vue'),
+    meta: {
+      requiresAuth: false,
+      title: 'Dashboard — Flota MikroTik — RoSGrid',
+    },
   },
   {
     path: '/inventory',
+    alias: ['/inventory/routers'],
     name: 'RouterInventory',
     component: () => import('@/views/RouterInventoryView.vue'),
     meta: {
@@ -134,6 +141,7 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/approvals',
+    alias: ['/operations/approvals'],
     name: 'ApprovalsInbox',
     component: () => import('@/views/ApprovalsInboxView.vue'),
     meta: {
