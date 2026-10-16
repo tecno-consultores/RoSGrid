@@ -13,14 +13,14 @@ clear
 CURRENT_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
 VERSION="${1:-1.0.0}"
 
-echo "[RoSGrid] Preparando entorno multi-arquitectura con binfmt y buildx..."
+echo "[RoSGrid] Preparando entorno multi-arquitectura con binfmt y buildx (amd64, arm64)..."
 docker run --privileged --rm tonistiigi/binfmt --install all
 docker buildx rm container-builder 2>/dev/null || true
 docker buildx create --name container-builder --driver docker-container --bootstrap --use
 
-echo "[RoSGrid] Construyendo y publicando sinfallas/rosgrid-backend (${VERSION} y latest)..."
+echo "[RoSGrid] Construyendo y publicando sinfallas/rosgrid-backend para amd64 y arm64 (${VERSION} y latest)..."
 docker buildx build \
-	--platform linux/amd64 \
+	--platform linux/amd64,linux/arm64 \
 	--build-arg BUILD_DATE="$CURRENT_DATE" \
 	--push \
 	-t "sinfallas/rosgrid-backend:${VERSION}" \
@@ -28,9 +28,9 @@ docker buildx build \
 	--builder=container-builder \
 	-f fastapi/Dockerfile fastapi
 
-echo "[RoSGrid] Construyendo y publicando sinfallas/rosgrid-frontend (${VERSION} y latest)..."
+echo "[RoSGrid] Construyendo y publicando sinfallas/rosgrid-frontend para amd64 y arm64 (${VERSION} y latest)..."
 docker buildx build \
-	--platform linux/amd64 \
+	--platform linux/amd64,linux/arm64 \
 	--build-arg BUILD_DATE="$CURRENT_DATE" \
 	--push \
 	-t "sinfallas/rosgrid-frontend:${VERSION}" \
