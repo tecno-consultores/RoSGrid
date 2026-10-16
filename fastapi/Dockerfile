@@ -22,13 +22,13 @@ RUN groupadd -g 10001 rosgrid && \
     mkdir -p /var/lib/rosgrid/backups && \
     chown -R rosgrid:rosgrid /app /var/lib/rosgrid
 
-COPY --chown=rosgrid:rosgrid pyproject.toml alembic.ini ./
+COPY --chown=rosgrid:rosgrid pyproject.toml uv.lock* alembic.ini ./
 COPY --chown=rosgrid:rosgrid migrations ./migrations
 COPY --chown=rosgrid:rosgrid scripts ./scripts
 COPY --chown=rosgrid:rosgrid src ./src
 
 RUN chmod +x /app/scripts/entrypoint.sh && \
-    uv pip install --system --no-cache .
+    uv sync --frozen --no-dev
 
 USER rosgrid
 
