@@ -45,14 +45,17 @@ echo "✔ Docker, Docker Compose y dependencias locales verificadas."
 
 # 3. Configuración del archivo de variables de entorno (.env)
 echo -e "\n[2/5] Configurando variables de entorno y secretos criptográficos..."
+GENERAR_SECRETOS=true
+
 if [[ -f .env ]]; then
-    echo -e "\e[33m[AVISO] Ya existe un archivo .env en la raíz. ¿Deseas sobrescribirlo? (s/N)\e[0m"
-    read -r respuesta
+    read -r -p $'\e[33m[AVISO] Ya existe un archivo .env en la raíz. ¿Deseas sobrescribirlo? (s/N): \e[0m' respuesta
+    respuesta="${respuesta:-N}"
     if [[ "$respuesta" =~ ^[sS]$ ]]; then
         cp .env.example .env
         echo "✔ Archivo .env reiniciado desde la plantilla."
     else
-        echo "✔ Conservando el archivo .env existente."
+        GENERAR_SECRETOS=false
+        echo "✔ Conservando el archivo .env y los secretos existentes."
     fi
 else
     cp .env.example .env
@@ -60,16 +63,21 @@ else
 fi
 
 # 4. Generación de entropía y secretos criptográficos automáticos de 256 bits
-echo -e "\n[3/5] Generando llaves criptográficas de alta seguridad..."
-sed -i "s|POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$(openssl rand -hex 24)|" .env
-sed -i "s|REDIS_PASSWORD=.*|REDIS_PASSWORD=$(openssl rand -hex 24)|" .env
-sed -i "s|ROSGRID_MASTER_VAULT_KEY=.*|ROSGRID_MASTER_VAULT_KEY=$(openssl rand -base64 32)|" .env
-sed -i "s|ROSGRID_JWT_SECRET_KEY=.*|ROSGRID_JWT_SECRET_KEY=$(openssl rand -base64 48)|" .env
-sed -i "s|ROSGRID_CSRF_HMAC_SECRET=.*|ROSGRID_CSRF_HMAC_SECRET=$(openssl rand -base64 48)|" .env
+echo -e "\n[3/5] Verificando llaves criptográficas de alta seguridad..."
+if [[ "$GENERAR_SECRETOS" == "true" ]]; then
+    sed -i "s|POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$(openssl rand -hex 24)|" .env
+    sed -i "s|REDIS_PASSWORD=.*|REDIS_PASSWORD=$(openssl rand -hex 24)|" .env
+    sed -i "s|ROSGRID_MASTER_VAULT_KEY=.*|ROSGRID_MASTER_VAULT_KEY=$(openssl rand -base64 32)|" .env
+    sed -i "s|ROSGRID_JWT_SECRET_KEY=.*|ROSGRID_JWT_SECRET_KEY=$(openssl rand -base64 48)|" .env
+    sed -i "s|ROSGRID_CSRF_HMAC_SECRET=.*|ROSGRID_CSRF_HMAC_SECRET=$(openssl rand -base64 48)|" .env
+    echo "✔ Nuevos secretos generados e inyectados en .env."
+else
+    echo "✔ Se mantienen las llaves criptográficas actuales de .env."
+fi
 
 # Asegurar permisos estrictos de lectura exclusiva para el propietario
 chmod 600 .env
-echo "✔ Secretos generados e inyectados en .env (Permisos 600 aplicados)."
+echo "✔ Permisos 600 verificados sobre .env."
 
 # 5. Ejecución del auditor de infraestructura (Trivy IaC)
 if [[ -f ./auditar-infra.sh ]]; then
@@ -90,17 +98,20 @@ echo -e "\n[5/5] Desplegando el stack de contenedores RoSGrid..."
 echo "Selecciona el modo de despliegue:"
 echo "  1) Producción (Docker Hub: imágenes precompiladas inmutables) [Recomendado]"
 echo "  2) Local / Laboratorio (Montaje de código fuente sobre imágenes base)"
-read -option -p "Ingresa tu opción (1 o 2) [1]: "
+read -r -p "Ingresa tu opción (1 o 2) [1]: " option
 option="${option:-1}"
 
 if [[ "$option" == "1" ]]; then
     echo "Desplegando con docker-compose.prod.yml..."
     docker compose -f docker-compose.prod.yml pull
     docker compose -f docker-compose.prod.yml up -d
-else
+elif [[ "$option" == "2" ]]; then
     echo "Desplegando con docker-compose.yml (Local)..."
     docker compose pull rosgrid-db rosgrid-redis rosgrid-api rosgrid-worker rosgrid-ui
     docker compose up -d
+else
+    echo -e "\e[31m[ERROR] Opción no válida: '$option'. Debe ser 1 o 2.\e[0m"
+    exit 1
 fi
 
 echo -e "\n=============================================================================="
@@ -108,6 +119,4 @@ echo -e "\e[32m       🎉 ¡Instalación de RoSGrid completada exitosamente sin
 echo "=============================================================================="
 echo "Accede a la consola web en: http://localhost:8080 (o el puerto configurado)"
 echo "Para verificar el estado de las migraciones automáticas ejecuta:"
-echo "  docker logs -f rosgrid_api"
-echo "=============================================================================="
-exit 0
+echo "  docker logs -f rosgrid_api
