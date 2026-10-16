@@ -43,22 +43,33 @@ fi
 
 echo "✔ Docker, Docker Compose y dependencias locales verificadas."
 
-# 3. Configuración del archivo de variables de entorno (.env)
+# 3. Configuración del archivo de variables de entorno (.env) y manejo de volúmenes
 echo -e "\n[2/5] Configurando variables de entorno y secretos criptográficos..."
 GENERAR_SECRETOS=true
+RECREAR_VOLUMENES=false
 
 if [[ -f .env ]]; then
-    read -r -p $'\e[33m[AVISO] Ya existe un archivo .env en la raíz. ¿Deseas sobrescribirlo? (s/N): \e[0m' respuesta
+    read -r -p $'\e[33m[AVISO] Ya existe un archivo .env en la raíz. ¿Deseas sobrescribirlo y limpiar la BD? (s/N): \e[0m' respuesta
     respuesta="${respuesta:-N}"
     if [[ "$respuesta" =~ ^[sS]$ ]]; then
         cp .env.example .env
-        echo "✔ Archivo .env reiniciado desde la plantilla."
+        RECREAR_VOLUMENES=true
+        echo "✔ Archivo .env reiniciado desde la plantilla y programada limpieza de volúmenes."
     else
         GENERAR_SECRETOS=false
         echo "✔ Conservando el archivo .env y los secretos existentes."
     fi
 else
     cp .env.example .env
+    # Si es una instalación nueva pero ya existía un volumen viejo, prevenimos conflictos de credenciales
+    if docker volume inspect rosgrid_pg_data &>/dev/null; then
+        echo -e "\e[33m[AVISO] Se detectó un volumen de PostgreSQL previo ('rosgrid_pg_data').\e[0m"
+        read -r -p "¿Deseas purgar el volumen anterior para evitar conflictos de contraseña? (S/n): " purgar
+        purgar="${purgar:-S}"
+        if [[ "$purgar" =~ ^[sS]$ ]]; then
+            RECREAR_VOLUMENES=true
+        fi
+    fi
     echo "✔ Archivo .env creado desde la plantilla base."
 fi
 
@@ -78,6 +89,13 @@ fi
 # Asegurar permisos estrictos de lectura exclusiva para el propietario
 chmod 600 .env
 echo "✔ Permisos 600 verificados sobre .env."
+
+# Purgar volúmenes antiguos si se solicitó por incompatibilidad de credenciales
+if [[ "$RECREAR_VOLUMENES" == "true" ]]; then
+    echo -e "\e[33m[INFO] Purgando contenedores y volúmenes antiguos de base de datos...\e[0m"
+    docker compose -f docker-compose.prod.yml down -v --remove-orphans 2>/dev/null || true
+    echo "✔ Volúmenes anteriores purgados exitosamente."
+fi
 
 # 5. Ejecución del auditor de infraestructura (Trivy IaC)
 if [[ -f ./auditar-infra.sh ]]; then
