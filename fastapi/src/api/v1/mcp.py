@@ -1,0 +1,751 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright (C) 2026 RoSGrid Contributors
+
+"""Endpoint MCP Protegido (/api/v1/mcp JSON-RPC 2.0 Streamable HTTP) para agentes IA."""
+
+import ipaddress
+import json
+import logging
+import uuid
+from collections.abc import Callable, Coroutine
+from datetime import UTC, datetime, timedelta
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import select, text
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.api.deps import get_current_user_claims
+from src.api.v1.backups import (
+    _compute_diff_stats,
+    _decrypt_backup_rsc,
+    _extract_raw_rsc_text,
+    clean_rsc_export_comments,
+)
+from src.api.v1.webfig_common import get_router_and_client
+from src.core.audit import write_audit_log
+from src.core.config import settings
+from src.db.session import get_tenant_db_session
+from src.models.core import SystemRoleEnum, User, UserRouterPermission
+from src.models.inventory import Router
+from src.models.operations import (
+    ApprovalRequest,
+    ApprovalStatusEnum,
+    CriticalActionTypeEnum,
+    RouterBackup,
+)
+from src.redis_layer.client import get_redis_client
+from src.schemas.mcp import (
+    McpJsonRpcError,
+    McpJsonRpcRequest,
+    McpJsonRpcResponse,
+)
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/mcp", tags=["Model Context Protocol (MCP)"])
+
+_ALLOWED_MCP_ROLES = {
+    SystemRoleEnum.SERVICE_ACCOUNT.value,
+    SystemRoleEnum.TENANT_ADMIN.value,
+    SystemRoleEnum.SUPERADMIN_GLOBAL.value,
+}
+
+_CRITICAL_ACTIONS_MAP: dict[str, CriticalActionTypeEnum] = {
+    "ROUTER_REBOOT_OR_SHUTDOWN": CriticalActionTypeEnum.ROUTER_REBOOT_OR_SHUTDOWN,
+    "BULK_MULTI_ROUTER_EXECUTION": CriticalActionTypeEnum.BULK_MULTI_ROUTER_EXECUTION,
+    "ROUTING_BGP_OSPF_DEFAULT_CHANGE": CriticalActionTypeEnum.ROUTING_BGP_OSPF_DEFAULT_CHANGE,
+    "FIREWALL_INPUT_OR_SERVICE_PORT_CHANGE": CriticalActionTypeEnum.FIREWALL_INPUT_OR_SERVICE_PORT_CHANGE,
+    "WAN_TRUNK_INTERFACE_OR_IP_CHANGE": CriticalActionTypeEnum.WAN_TRUNK_INTERFACE_OR_IP_CHANGE,
+    "BACKUP_RESTORE_OR_CUSTOM_SCRIPT": CriticalActionTypeEnum.BACKUP_RESTORE_OR_CUSTOM_SCRIPT,
+    "ROUTER_INTERNAL_USER_CHANGE": CriticalActionTypeEnum.ROUTER_INTERNAL_USER_CHANGE,
+}
+
+
+def _resolve_critical_action(category: str) -> CriticalActionTypeEnum:
+    upper = category.upper()
+    return _CRITICAL_ACTIONS_MAP.get(upper, CriticalActionTypeEnum.FIREWALL_INPUT_OR_SERVICE_PORT_CHANGE)
+
+
+def _classify_optical_rx(rx_power: float | None) -> str:
+    if rx_power is None:
+        return "OPTIMAL"
+    if rx_power < -25.0:
+        return "CRITICAL_LOW_LIGHT"
+    if rx_power < -20.0:
+        return "WARNING"
+    return "OPTIMAL"
+
+
+def _parse_rx_power(val: Any) -> float | None:
+    if val is None:
+        return None
+    try:
+        return float(str(val).replace("dBm", "").strip())
+    except ValueError:
+        return None
+
+
+def _extract_metric_by_name(entries: list[dict[str, Any]], keyword: str) -> float | None:
+    for item in entries:
+        if keyword in item.get("name", ""):
+            return float(item.get("value", 0))
+    return None
+
+
+def _extract_health_metrics(health_entries: Any) -> tuple[float | None, float | None]:
+    if not isinstance(health_entries, list):
+        return None, None
+    items = [x for x in health_entries if isinstance(x, dict)]
+    return _extract_metric_by_name(items, "temperature"), _extract_metric_by_name(items, "voltage")
+
+
+def _match_pppoe_entry(entry: Any, username: str) -> str | None:
+    if not isinstance(entry, dict) or entry.get("name") != username:
+        return None
+    val = entry.get(".id")
+    if val is not None:
+        return str(val)
+    fallback = entry.get("id")
+    return str(fallback) if fallback is not None else ""
+
+
+def _find_pppoe_item_id(active_list: Any, username: str) -> str | None:
+    if not isinstance(active_list, list):
+        return None
+    for entry in active_list:
+        matched = _match_pppoe_entry(entry, username)
+        if matched is not None:
+            return matched
+    return None
+
+
+async def _fetch_live_rsc(
+    router_id: uuid.UUID,
+    claims: dict[str, Any],
+    db: AsyncSession,
+) -> str:
+    _, client = await get_router_and_client(router_id, claims, db)
+    live = await client.post("export", {"terse": "false", "show-sensitive": "false"})
+    return clean_rsc_export_comments(_extract_raw_rsc_text(live))
+
+
+async def _fetch_backup_rsc_from_db(
+    target_backup_id: str,
+    router_id: uuid.UUID,
+    tenant_id: uuid.UUID,
+    db: AsyncSession,
+) -> str:
+    target_backup = await db.get(RouterBackup, uuid.UUID(target_backup_id))
+    if not target_backup or target_backup.tenant_id != tenant_id:
+        raise HTTPException(status_code=404, detail="Respaldo objetivo no encontrado")
+    if target_backup.router_id != router_id:
+        raise HTTPException(status_code=404, detail="Respaldo objetivo no encontrado")
+    return clean_rsc_export_comments(_decrypt_backup_rsc(target_backup, tenant_id))
+
+
+async def _fetch_target_rsc(
+    target_backup_id: str | None,
+    router_id: uuid.UUID,
+    tenant_id: uuid.UUID,
+    claims: dict[str, Any],
+    db: AsyncSession,
+) -> str:
+    if not target_backup_id or target_backup_id.upper() == "LIVE":
+        return await _fetch_live_rsc(router_id, claims, db)
+    return await _fetch_backup_rsc_from_db(target_backup_id, router_id, tenant_id, db)
+
+
+def _should_filter_user_routers(claims: dict[str, Any]) -> bool:
+    if claims.get("rol") == SystemRoleEnum.SUPERADMIN_GLOBAL.value:
+        return False
+    return not bool(claims.get("all_r", False))
+
+
+def _matches_status_filter(is_reachable: bool, s_filter: str | None) -> bool:
+    if not s_filter:
+        return True
+    return (s_filter == "ONLINE" and is_reachable) or (s_filter == "OFFLINE" and not is_reachable)
+
+
+def _serialize_router_summary(r: Router) -> dict[str, Any]:
+    trust_val = r.ssl_trust_status.value if hasattr(r.ssl_trust_status, "value") else str(r.ssl_trust_status)
+    return {
+        "id": str(r.id),
+        "display_name": r.display_name,
+        "system_identity": r.ros_identity or r.display_name,
+        "model": r.model_name or "MikroTik RouterOS",
+        "ros_version": r.ros_version or "v7",
+        "is_online": r.is_reachable,
+        "ssl_tofu_status": trust_val,
+    }
+
+
+# ============================================================================
+# 8 HANDLERS SEMÁNTICOS MCP (Radon CC <= 5)
+# ============================================================================
+
+
+async def _handle_list_inventory(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    claims: dict[str, Any],
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    stmt = select(Router).where(Router.tenant_id == tenant_id)
+    if _should_filter_user_routers(claims):
+        perm_sub = select(UserRouterPermission.router_id).where(
+            UserRouterPermission.tenant_id == tenant_id,
+            UserRouterPermission.user_id == user_id,
+            UserRouterPermission.can_read.is_(True),
+        )
+        stmt = stmt.where(Router.id.in_(perm_sub))
+    routers = (await db.execute(stmt)).scalars().all()
+    s_filter = args.get("status_filter")
+    result = [_serialize_router_summary(r) for r in routers if _matches_status_filter(r.is_reachable, s_filter)]
+    return {"total": len(result), "routers": result}
+
+
+async def _handle_get_router_health(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    claims: dict[str, Any],
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    router_id = uuid.UUID(str(args["router_id"]))
+    r, client = await get_router_and_client(router_id, claims, db)
+    resource = await client.get("system/resource") or {}
+    health = await client.get("system/health") or []
+    temp, volt = _extract_health_metrics(health)
+    return {
+        "router_id": str(r.id),
+        "cpu_load": resource.get("cpu-load"),
+        "free_memory_mb": round(int(resource.get("free-memory", 0)) / (1024 * 1024), 2),
+        "total_memory_mb": round(int(resource.get("total-memory", 0)) / (1024 * 1024), 2),
+        "uptime": resource.get("uptime"),
+        "temperature_c": temp,
+        "voltage_v": volt,
+    }
+
+
+async def _handle_check_sfp(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    claims: dict[str, Any],
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    router_id = uuid.UUID(str(args["router_id"]))
+    _, client = await get_router_and_client(router_id, claims, db)
+    ifname = args.get("interface_name", "sfp-sfpplus1")
+    mon = await client.post("interface/ethernet/monitor", {"numbers": ifname, "once": "true"}) or {}
+    data = mon[0] if isinstance(mon, list) and mon else (mon if isinstance(mon, dict) else {})
+    rx_val = _parse_rx_power(data.get("sfp-rx-power"))
+    tx_val = _parse_rx_power(data.get("sfp-tx-power"))
+    return {
+        "router_id": str(router_id),
+        "interface": ifname,
+        "sfp_rx_power_dbm": rx_val,
+        "sfp_tx_power_dbm": tx_val,
+        "optical_status": _classify_optical_rx(rx_val),
+    }
+
+
+async def _handle_inspect_routing(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    claims: dict[str, Any],
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    router_id = uuid.UUID(str(args["router_id"]))
+    _, client = await get_router_and_client(router_id, claims, db)
+    proto = args.get("protocol", "all")
+    bgp_data: Any = []
+    ospf_data: Any = []
+    if proto in ("bgp", "all"):
+        bgp_data = await client.get("routing/bgp/session") or []
+    if proto in ("ospf", "all"):
+        ospf_data = await client.get("routing/ospf/neighbor") or []
+    return {
+        "router_id": str(router_id),
+        "protocol": proto,
+        "bgp_sessions": bgp_data,
+        "ospf_neighbors": ospf_data,
+    }
+
+
+async def _handle_live_diagnostic(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    claims: dict[str, Any],
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    router_id = uuid.UUID(str(args["router_id"]))
+    _, client = await get_router_and_client(router_id, claims, db)
+    diag_tool = args["tool"]
+    target = args["target"]
+    cnt = max(1, min(int(args.get("count", 4)), 5))
+    ep = "tool/ping" if diag_tool == "ping" else "tool/traceroute"
+    res = await client.post(ep, {"address": target, "count": str(cnt)})
+    return {
+        "router_id": str(router_id),
+        "tool": diag_tool,
+        "target": target,
+        "count": cnt,
+        "results": res,
+    }
+
+
+async def _handle_config_diff(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    claims: dict[str, Any],
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    router_id = uuid.UUID(str(args["router_id"]))
+    base_id = uuid.UUID(str(args["base_backup_id"]))
+    base_backup = await db.get(RouterBackup, base_id)
+    if not base_backup or base_backup.tenant_id != tenant_id or base_backup.router_id != router_id:
+        raise HTTPException(status_code=404, detail="Respaldo base no encontrado")
+    base_rsc = clean_rsc_export_comments(_decrypt_backup_rsc(base_backup, tenant_id))
+    target_rsc = await _fetch_target_rsc(args.get("target_backup_id"), router_id, tenant_id, claims, db)
+    added, removed, diff_lines = _compute_diff_stats(base_rsc.splitlines(), target_rsc.splitlines())
+    return {
+        "router_id": str(router_id),
+        "base_backup_id": str(base_id),
+        "lines_added": added,
+        "lines_removed": removed,
+        "unified_diff": diff_lines,
+    }
+
+
+async def _handle_reconnect_pppoe(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    claims: dict[str, Any],
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    router_id = uuid.UUID(str(args["router_id"]))
+    _, client = await get_router_and_client(router_id, claims, db)
+    user_target = args["pppoe_username"]
+    active = await client.get("ppp/active") or []
+    item_id = _find_pppoe_item_id(active, user_target)
+    if not item_id:
+        raise HTTPException(status_code=404, detail=f"Sesión PPPoE para {user_target} no encontrada")
+    await client.post("ppp/active/remove", {".id": item_id})
+    return {
+        "router_id": str(router_id),
+        "pppoe_username": user_target,
+        "status": "RECONNECTED",
+        "reason": args.get("reason", "Operator request"),
+    }
+
+
+async def _handle_propose_network_change(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    claims: dict[str, Any],
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    router_id = uuid.UUID(str(args["router_id"]))
+    act_type = _resolve_critical_action(args.get("category", "FIREWALL_INPUT_OR_SERVICE_PORT_CHANGE"))
+    now = datetime.now(UTC)
+    req = ApprovalRequest(
+        tenant_id=tenant_id,
+        router_id=router_id,
+        action_type=act_type,
+        status=ApprovalStatusEnum.PENDING,
+        summary=f"MCP AI Propose: {args.get('ros_path', '')}",
+        requester_justification=args.get("justification", "MCP AI Agent proposal"),
+        ros_rest_method=str(args.get("http_method", "POST")).upper(),
+        ros_rest_path=args.get("ros_path", ""),
+        request_payload=args.get("payload", {}),
+        requested_by=user_id,
+        expires_at=now + timedelta(hours=24),
+    )
+    db.add(req)
+    await db.flush()
+    return {
+        "status": "AWAITING_APPROVAL",
+        "approval_request_id": str(req.id),
+        "message": "Propuesta enviada exitosamente a la bandeja de aprobación Maker-Checker (Safe Mode 60s)",
+    }
+
+
+TOOL_HANDLERS_MAP: dict[str, Callable[..., Coroutine[Any, Any, dict[str, Any]]]] = {
+    "rosgrid_list_inventory": _handle_list_inventory,
+    "rosgrid_get_router_health": _handle_get_router_health,
+    "rosgrid_check_sfp_optical_ddm": _handle_check_sfp,
+    "rosgrid_inspect_routing_bgp_ospf": _handle_inspect_routing,
+    "rosgrid_run_live_diagnostic": _handle_live_diagnostic,
+    "rosgrid_compare_config_diff": _handle_config_diff,
+    "rosgrid_reconnect_pppoe_client": _handle_reconnect_pppoe,
+    "rosgrid_propose_network_change": _handle_propose_network_change,
+}
+
+MCP_TOOLS_CATALOG: list[dict[str, Any]] = [
+    {
+        "name": "rosgrid_list_inventory",
+        "description": "Lista los routers MikroTik autorizados para el Tenant/Cuenta con su ID, nombre, identidad RouterOS, modelo, versión v7, estado en KeyDB y estado TOFU SSL.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "status_filter": {
+                    "type": "string",
+                    "description": "Filtro opcional de estado (ej. ONLINE, OFFLINE, DEGRADED_HIGH_LOAD)",
+                },
+                "role_filter": {
+                    "type": "string",
+                    "description": "Filtro opcional por rol o etiqueta del router",
+                },
+            },
+            "required": [],
+        },
+    },
+    {
+        "name": "rosgrid_get_router_health",
+        "description": "Consulta el estado efímero en KeyDB y /rest/system/resource + /rest/system/health, devolviendo CPU%, RAM%, Disco, Uptime, Temperatura (°C) y Voltaje (V).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "router_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID del router MikroTik a consultar",
+                },
+            },
+            "required": ["router_id"],
+        },
+    },
+    {
+        "name": "rosgrid_check_sfp_optical_ddm",
+        "description": "Consulta el diagnóstico óptico DDM (tx-power, rx-power en dBm, temperatura láser y clasificación OPTIMAL, WARNING, CRITICAL_LOW_LIGHT).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "router_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID del router MikroTik",
+                },
+                "interface_name": {
+                    "type": "string",
+                    "description": "Nombre de la interfaz SFP (ej. sfp-sfpplus1)",
+                },
+            },
+            "required": ["router_id"],
+        },
+    },
+    {
+        "name": "rosgrid_inspect_routing_bgp_ospf",
+        "description": "Devuelve el resumen de sesiones BGP v7 (estado established, prefijos recibidos, uptime) y adyacencias OSPF activas.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "router_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID del router MikroTik",
+                },
+                "protocol": {
+                    "type": "string",
+                    "enum": ["bgp", "ospf", "all"],
+                    "description": "Protocolo a inspeccionar (bgp, ospf o all)",
+                    "default": "all",
+                },
+            },
+            "required": ["router_id"],
+        },
+    },
+    {
+        "name": "rosgrid_run_live_diagnostic",
+        "description": "Ejecuta ping o traceroute acotado desde el MikroTik y devuelve latencia min/avg/max y porcentaje de pérdida de paquetes.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "router_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID del router MikroTik",
+                },
+                "tool": {
+                    "type": "string",
+                    "enum": ["ping", "traceroute"],
+                    "description": "Herramienta diagnóstica a ejecutar",
+                },
+                "target": {
+                    "type": "string",
+                    "description": "Dirección IP de destino o FQDN",
+                },
+                "count": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5,
+                    "default": 4,
+                    "description": "Número de paquetes de sondeo (1 a 5)",
+                },
+            },
+            "required": ["router_id", "tool", "target"],
+        },
+    },
+    {
+        "name": "rosgrid_compare_config_diff",
+        "description": "Ejecuta el motor Diff estilo Git (unified_diff) sobre los respaldos .rsc para que la IA identifique qué línea exacta cambió antes de un incidente.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "router_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID del router MikroTik",
+                },
+                "base_backup_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID del respaldo base a comparar",
+                },
+                "target_backup_id": {
+                    "type": "string",
+                    "description": "UUID del respaldo objetivo o 'LIVE' para comparar contra la configuración en vivo",
+                },
+            },
+            "required": ["router_id", "base_backup_id"],
+        },
+    },
+    {
+        "name": "rosgrid_reconnect_pppoe_client",
+        "description": "Busca la sesión activa en /ppp/active, solicita su reconexión limpia, registra el evento en audit_logs (WORM) y devuelve confirmación.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "router_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID del router MikroTik",
+                },
+                "pppoe_username": {
+                    "type": "string",
+                    "description": "Nombre de usuario PPPoE de la sesión activa a reiniciar",
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "Motivo justificado del reinicio de sesión",
+                },
+            },
+            "required": ["router_id", "pppoe_username", "reason"],
+        },
+    },
+    {
+        "name": "rosgrid_propose_network_change",
+        "description": "Propone una mutación de red controlada bajo freno obligatorio Maker-Checker (HTTP 202). Inserta la solicitud en approval_requests para autorización humana con Safe Mode (60s).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "router_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID del router MikroTik",
+                },
+                "category": {
+                    "type": "string",
+                    "description": "Categoría crítica de la acción (ej. FIREWALL_INPUT_OR_SERVICE_PORT_CHANGE, ROUTING_BGP_OSPF_DEFAULT_CHANGE)",
+                },
+                "ros_path": {
+                    "type": "string",
+                    "description": "Ruta REST de RouterOS (ej. /ip/firewall/filter)",
+                },
+                "http_method": {
+                    "type": "string",
+                    "enum": ["POST", "PATCH", "DELETE", "PUT"],
+                    "description": "Método HTTP para la mutación",
+                },
+                "payload": {
+                    "type": "object",
+                    "description": "Payload de configuración de RouterOS v7",
+                },
+                "justification": {
+                    "type": "string",
+                    "description": "Justificación técnica requerida para la aprobación humana",
+                },
+            },
+            "required": ["router_id", "category", "ros_path", "http_method", "payload", "justification"],
+        },
+    },
+]
+
+
+# ============================================================================
+# DISPATCHER Y CONTROL DE SEGURIDAD
+# ============================================================================
+
+
+def _verify_mcp_role(claims: dict[str, Any]) -> None:
+    role = claims.get("rol")
+    if role not in _ALLOWED_MCP_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes los privilegios requeridos para el endpoint MCP",
+        )
+
+
+def _extract_client_ip(request: Request) -> str:
+    real_ip = request.headers.get("X-Real-IP")
+    if real_ip:
+        return real_ip.split(",")[0].strip()
+    fwd = request.headers.get("X-Forwarded-For")
+    if fwd:
+        return fwd.split(",")[0].strip()
+    return request.client.host if request.client else "127.0.0.1"
+
+
+def _verify_ip_in_cidrs(client_ip: str, cidrs: list[str]) -> None:
+    try:
+        ip_obj = ipaddress.ip_address(client_ip)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"IP de origen inválida: {client_ip}",
+        ) from exc
+    if not any(ip_obj in ipaddress.ip_network(c, strict=False) for c in cidrs):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Dirección IP de origen no autorizada en la lista blanca CIDR del SERVICE_ACCOUNT",
+        )
+
+
+async def _verify_mcp_user_access(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    client_ip: str,
+) -> None:
+    user = (await db.execute(select(User).where(User.id == user_id, User.tenant_id == tenant_id))).scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuario no encontrado")
+    if user.allowed_cidr_list:
+        _verify_ip_in_cidrs(client_ip, user.allowed_cidr_list)
+
+
+async def _check_mcp_rate_limit(tenant_id: uuid.UUID, user_id: uuid.UUID) -> None:
+    redis = get_redis_client()
+    key = f"mcp:ratelimit:{tenant_id}:{user_id}"
+    req_count = await redis.incr(key)
+    if req_count == 1:
+        await redis.expire(key, 60)
+    if req_count > settings.ROSGRID_MCP_RATE_LIMIT_PER_MIN:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Límite de peticiones MCP por minuto excedido",
+        )
+
+
+def _make_initialize_response(req_id: str | int | None) -> McpJsonRpcResponse:
+    return McpJsonRpcResponse(
+        jsonrpc="2.0",
+        id=req_id,
+        result={
+            "protocolVersion": "2025-03-26",
+            "capabilities": {"tools": {"listChanged": False}},
+            "serverInfo": {"name": "rosgrid-mcp-server", "version": "1.0.0"},
+        },
+    )
+
+
+async def _record_mcp_audit(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    claims: dict[str, Any],
+    client_ip: str,
+    tool_name: str,
+    args: dict[str, Any],
+) -> None:
+    rid_str = args.get("router_id")
+    target_rid = uuid.UUID(str(rid_str)) if rid_str else None
+    await write_audit_log(
+        session=db,
+        tenant_id=tenant_id,
+        actor_username=claims.get("preferred_username", "service_account"),
+        actor_role=claims.get("rol", SystemRoleEnum.SERVICE_ACCOUNT.value),
+        actor_ip=client_ip,
+        event_category="MCP_AI_TOOL_CALL",
+        event_action=tool_name,
+        actor_user_id=user_id,
+        router_id=target_rid,
+        after_state={"arguments": args},
+        status_code=200,
+    )
+    await db.commit()
+
+
+async def _execute_tool_call(
+    body: McpJsonRpcRequest,
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    claims: dict[str, Any],
+    client_ip: str,
+) -> McpJsonRpcResponse:
+    name = body.params.get("name", "")
+    args = body.params.get("arguments", {})
+    handler = TOOL_HANDLERS_MAP.get(name)
+    if not handler:
+        return McpJsonRpcResponse(
+            jsonrpc="2.0",
+            id=body.id,
+            error=McpJsonRpcError(code=-32601, message=f"Herramienta MCP no encontrada: {name}"),
+        )
+    data = await handler(db, tenant_id, user_id, claims, args)
+    await _record_mcp_audit(db, tenant_id, user_id, claims, client_ip, name, args)
+    return McpJsonRpcResponse(
+        jsonrpc="2.0",
+        id=body.id,
+        result={
+            "content": [{"type": "text", "text": json.dumps({"status": "OK", "data": data}, default=str)}],
+            "isError": False,
+        },
+    )
+
+
+async def _dispatch_mcp_method(
+    body: McpJsonRpcRequest,
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    claims: dict[str, Any],
+    client_ip: str,
+) -> McpJsonRpcResponse:
+    if body.method == "initialize":
+        return _make_initialize_response(body.id)
+    if body.method in ("ping", "notifications/initialized"):
+        return McpJsonRpcResponse(jsonrpc="2.0", id=body.id, result={})
+    if body.method == "tools/list":
+        return McpJsonRpcResponse(jsonrpc="2.0", id=body.id, result={"tools": MCP_TOOLS_CATALOG})
+    return await _execute_tool_call(body, db, tenant_id, user_id, claims, client_ip)
+
+
+@router.post("", response_model=McpJsonRpcResponse)
+async def mcp_endpoint(
+    request: Request,
+    body: McpJsonRpcRequest,
+    claims: dict[str, Any] = Depends(get_current_user_claims),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> McpJsonRpcResponse:
+    """Punto de enlace MCP Streamable HTTP (JSON-RPC 2.0) protegido por RBAC, CIDR y WORM audit."""
+    if not settings.ROSGRID_MCP_ENABLED:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="MCP endpoint is disabled")
+    _verify_mcp_role(claims)
+    tenant_id = uuid.UUID(claims["tid"])
+    user_id = uuid.UUID(claims["sub"])
+    client_ip = _extract_client_ip(request)
+    await _verify_mcp_user_access(db, tenant_id, user_id, client_ip)
+    await _check_mcp_rate_limit(tenant_id, user_id)
+    await db.execute(text(f"SET LOCAL app.current_tenant_id = '{tenant_id}'"))
+    return await _dispatch_mcp_method(body, db, tenant_id, user_id, claims, client_ip)

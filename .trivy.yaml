@@ -1,0 +1,10 @@
+# Configuración oficial de Trivy para RoSGrid (Estándar QA 11X)
+scan:
+  skip-dirs:
+    - examples
+    - fastapi/mutants
+    - vue3/node_modules
+    - vue3/dist
+  skip-files:
+    - fastapi/docker-compose.qa.yml
+    - vue3/docker-compose.qa.yml

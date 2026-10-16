@@ -23,6 +23,7 @@ import RscGitDiffViewer from './RscGitDiffViewer.vue';
 import UsersAndPermissionsView from './UsersAndPermissionsView.vue';
 import TenantsManagementView from './admin/TenantsManagementView.vue';
 import MaintenanceWindowsView from './MaintenanceWindowsView.vue';
+import DynamicLayer2ResourceView from './DynamicLayer2ResourceView.vue';
 
 vi.mock('vue-router', () => ({
   useRoute: () => ({ path: '/inventory', params: {}, query: {} }),
@@ -34,6 +35,21 @@ vi.mock('vue-router', () => ({
 describe('Views Base — Montaje y Accesibilidad WCAG', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
+    HTMLCanvasElement.prototype.getContext = vi.fn().mockReturnValue({
+      clearRect: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      stroke: vi.fn(),
+      fill: vi.fn(),
+      fillText: vi.fn(),
+      closePath: vi.fn(),
+      strokeStyle: '',
+      fillStyle: '',
+      lineWidth: 1,
+      lineJoin: '',
+      font: '',
+    });
   });
 
   const views = [
@@ -55,6 +71,7 @@ describe('Views Base — Montaje y Accesibilidad WCAG', () => {
     { name: 'UsersAndPermissionsView', component: UsersAndPermissionsView },
     { name: 'TenantsManagementView', component: TenantsManagementView },
     { name: 'MaintenanceWindowsView', component: MaintenanceWindowsView },
+    { name: 'DynamicLayer2ResourceView', component: DynamicLayer2ResourceView },
   ];
 
   for (const v of views) {

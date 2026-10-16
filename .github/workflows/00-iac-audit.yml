@@ -1,0 +1,42 @@
+name: "Paso 0: Auditoría de Infraestructura y Seguridad (Trivy IaC & FS — RoSGrid)"
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+permissions:
+  contents: read
+
+jobs:
+  trivy-iac-scan:
+    name: 🛡️ Escaneo Estático de Contenedores, Dockerfiles, Compose y Dependencias
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout del código de RoSGrid
+        uses: actions/checkout@v4
+
+      - name: 🔍 Escaneo de Misconfiguraciones IaC (Dockerfiles, Compose Prod/Local y Nginx)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          hide-progress: false
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+          trivy-config: '.trivy.yaml'
+
+      - name: 📦 Escaneo de Vulnerabilidades y Secretos en Sistema de Archivos (CVEs)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL'
+          trivy-config: '.trivy.yaml'

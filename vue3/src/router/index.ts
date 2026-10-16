@@ -108,6 +108,28 @@ const routes: RouteRecordRaw[] = [
           tabIcon: '🛠️',
         },
       },
+      {
+        path: 'layer2/:rosPath(.*)',
+        name: 'DynamicLayer2Resource',
+        component: () => import('@/views/DynamicLayer2ResourceView.vue'),
+        meta: {
+          requiresAuth: true,
+          title: 'Recurso Capa 2 — RoSGrid',
+          tabLabel: 'Capa 2',
+          tabIcon: '⚙️',
+        },
+      },
+      {
+        path: 'backups',
+        name: 'RouterBackupsGitDiff',
+        component: () => import('@/views/RscGitDiffViewer.vue'),
+        meta: {
+          requiresAuth: true,
+          title: 'Respaldos y Comparador Diff — RoSGrid',
+          tabLabel: 'Respaldos',
+          tabIcon: '💾',
+        },
+      },
     ],
   },
   {

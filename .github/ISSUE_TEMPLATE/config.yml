@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🛡️ Reportar Vulnerabilidad de Seguridad (Zero-Trust / Bóveda / RBAC)
+    url: mailto:security@tecno-consultores.com
+    about: Por favor, NUNCA abras un issue público para vulnerabilidades de seguridad. Envía el reporte en privado a nuestro equipo según SECURITY.md.

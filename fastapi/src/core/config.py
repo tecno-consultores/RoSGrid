@@ -35,5 +35,9 @@ class Settings(BaseSettings):
     ROSGRID_SAFEMODE_ROLLBACK_SECONDS: int = 60
     ROSGRID_BACKUP_RETENTION_DAYS: int = 30
 
+    # Model Context Protocol (MCP)
+    ROSGRID_MCP_ENABLED: bool = False
+    ROSGRID_MCP_RATE_LIMIT_PER_MIN: int = 30
+
 
 settings = Settings()
