@@ -119,4 +119,6 @@ echo -e "\e[32m       🎉 ¡Instalación de RoSGrid completada exitosamente sin
 echo "=============================================================================="
 echo "Accede a la consola web en: http://localhost:8080 (o el puerto configurado)"
 echo "Para verificar el estado de las migraciones automáticas ejecuta:"
-echo "  docker logs -f rosgrid_api
+echo "  docker logs -f rosgrid_api"
+echo "=============================================================================="
+exit 0
