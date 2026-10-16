@@ -12,13 +12,15 @@ Este documento centraliza las referencias técnicas, imágenes oficiales de Dock
 - `docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md` — Gestión de empresas (Tenants), los 11 roles RBAC, matriz de permisos por router, Bóveda *Step-Up Auth* (30s) y *Kill-Switch*.
 - `docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md` — Operación de Capa 1 y Capa 2, gráficas efímeras `RingBuffer` sobre `<canvas>` 2D, *Maker-Checker*, comparador Diff `.rsc` estilo Git, importador CSV y Wallboard NOC.
 - `docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md` — Guía del rol `AUDITOR`, verificación criptográfica WORM, ADR sobre la exclusión deliberada de terminal CLI/SSH libre y diagramas de arquitectura AST generados con Graphify.
-- `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md` — Especificación completa de todos los endpoints `/api/v1/*` y canales `/ws/v1/*` (cabeceras `X-CSRF-Token`, `Idempotency-Key`, payloads JSON y uso de `SERVICE_ACCOUNT`), supliendo a Swagger/ReDoc en producción.
+- `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md` — Especificación completa de todos los endpoints `/api/v1/*` (incluyendo `/api/v1/mcp`) y canales `/ws/v1/*` (cabeceras `X-CSRF-Token`, `Idempotency-Key`, payloads JSON y uso de `SERVICE_ACCOUNT`), supliendo a Swagger/ReDoc en producción.
+- `docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md` — Manual técnico del servidor MCP protegido (`POST /api/v1/mcp` JSON-RPC 2.0 Streamable HTTP) para conectar **Hermes Agent** y **Claude**, con catálogo de las 8 Tools semánticas, flujo NOC autónomo 24/7 y gobierno Maker-Checker.
 
 ### Enciclopedia de Especificaciones (`specs/`)
 - `specs/00` a `specs/08` — Gobernanza 11X, infraestructura Docker inmutable, esquema PostgreSQL 17 RLS/WORM/BRIN, KeyDB/RESP, criptografía, RBAC de 11 roles y cliente RouterOS v7 TOFU/Safe Mode con pool TLS Keep-Alive.
 - `specs/09` a `specs/17` — Arquitectura Backend FastAPI (`ORJSONResponse` + `uvloop`), endpoints de Capa 1, motor universal de Capa 2, Maker-Checker, Backups Diff Git, WebSockets de telemetría efímera y Workers asíncronos.
 - `specs/18` a `specs/23` — Arquitectura Frontend Vue 3 Zero-Trust (`shallowRef`), sistema de diseño táctico NOC (`WCAG 2.1 AA` + *Virtual Scrolling*), mapa OpenStreetMap (`Leaflet`), consola WebFig con `<KeepAlive :max="5">` y `TelemetryRingBuffer` sobre `<canvas>` 2D.
 - `specs/24` a `specs/29` — Suites de certificación del Estándar Corporativo **QA 11X**.
+- `specs/30_BACKEND_MCP_PROTECTED_ENDPOINT.md` — Especificación arquitectónica del servidor **Model Context Protocol (MCP)** protegido para agentes de IA autónomos.
 
 ---
 
@@ -48,6 +50,7 @@ Este documento centraliza las referencias técnicas, imágenes oficiales de Dock
 
 ## 4. Estándares Técnicos, RFCs y Normativas Aplicadas
 
+- **Model Context Protocol (MCP) Specification:** Protocolo estándar abierto JSON-RPC 2.0 para la comunicación segura entre agentes LLM (Hermes, Claude) y servidores de contexto/herramientas ([modelcontextprotocol.io](https://modelcontextprotocol.io)).
 - **Estándar Corporativo QA 11X:** [https://github.com/tecno-consultores/qa-testing-blueprints](https://github.com/tecno-consultores/qa-testing-blueprints)
 - **NIST SP 800-38D:** Especificación de cifrado autenticado `AES-256-GCM` con `AAD` utilizado en la bóveda `router_credentials_vault`.
 - **RFC 9106:** Algoritmo `Argon2id` para almacenamiento seguro de contraseñas resistentes a ataques por GPU/ASIC.

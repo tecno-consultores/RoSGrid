@@ -63,7 +63,14 @@ RoSGrid administra infraestructura crítica de telecomunicaciones e ISP (routers
 - Por diseño de seguridad, RoSGrid **no incluye ni aceptará** terminales interactivas SSH/Telnet ni consolas CLI libres que permitan a un operador evadir el modelo *Split-Credential*, el interceptor *Maker-Checker*, el *Safe Mode* o la auditoría estructurada `before_state` / `after_state`.
 
 ### 3.8 Desactivación Estricta de Swagger / ReDoc / OpenAPI en Producción
-- Cuando el contenedor se ejecuta con `ROSGRID_ENV=production`, FastAPI inicializa con `docs_url=None`, `redoc_url=None` y `openapi_url=None` para impedir el reconocimiento automatizado de esquemas y endpoints por parte de terceros.
+- Cuando el contenedor se ejecuta con `ROSGRID_ENV=production`, FastAPI inicializa con `docs_url=None`, `redoc_url=None` y `openapi_url=None` para impedir el reconocimiento automatizado de esquemas y endpoints por parte de terceros (consulta `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`).
+
+### 3.9 Servidor MCP Protegido para Agentes IA (`POST /api/v1/mcp`) y Gobierno Autónomo
+- **Autenticación Machine-to-Machine Restringida:** El endpoint JSON-RPC 2.0 Streamable HTTP solo acepta autenticación `Bearer` proveniente del rol `SERVICE_ACCOUNT`.
+- **Lista Blanca de Red (CIDR):** La IP del agente IA (Hermes Agent o Claude) debe pertenecer estrictamente a la subred declarada en `user.allowed_cidr`. Cualquier intento fuera de rango responde `403 Forbidden`.
+- **Rate-Limiting en KeyDB:** La variable `ROSGRID_MCP_RATE_LIMIT_PER_MIN` (por defecto `30` req/min) previene sobrecargas al plano de control del MikroTik.
+- **Trazabilidad WORM:** Cada llamada a herramientas (`tools/call`) se registra en la bitácora inmutable con acción `MCP_AI_TOOL_CALL`.
+- **Contención de Mutaciones (Maker-Checker Obligatorio):** Cualquier herramienta de cambio destructivo o mutación de red (`rosgrid_propose_network_change`) no se ejecuta inmediatamente en el router; se retiene con estado `202 Accepted` (`AWAITING_APPROVAL`) para que un operador humano la revise y apruebe, respaldada por *Safe Mode (60s)*. Consulta `docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md`.
 
 ---
 
@@ -74,3 +81,15 @@ Antes de cada commit, push o publicación de imagen en Docker Hub (`./build.sh`)
 - **SAST Backend & Frontend:** `Bandit` (Python) y `eslint-plugin-security` (Vue 3 / TypeScript), más `.npmrc` con `ignore-scripts=true`.
 - **Auditoría IaC y Contenedores:** `Trivy` (`./auditar-infra.sh`) exigiendo `0` vulnerabilidades `HIGH` o `CRITICAL` y ejecución con usuarios sin privilegios (`non-root`).
 - **DAST en Vivo:** Escaneo dinámico con **OWASP ZAP Baseline** contra el contenedor compilado.
+
+---
+
+## 5. Manuales Oficiales de Referencia de Seguridad (`docs/`)
+
+Para una inspección profunda de los controles y auditorías de RoSGrid:
+- [docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md](./docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md) — Generación de llaves AES-256-GCM / JWT y despliegue inmutable.
+- [docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md](./docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md) — Hardening de RouterOS v7, pinning SSL TOFU y Safe Mode.
+- [docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md](./docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md) — Aislamiento RLS en PostgreSQL 17, matriz de 11 roles RBAC, Bóveda 2FA y Kill-Switch.
+- [docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md](./docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md) — Cadena WORM SHA-256, índice BRIN y ADR sobre la exclusión de terminales libres.
+- [docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md](./docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md) — Especificación exhaustiva de endpoints protegidos y WebSocket multiplexor.
+- [docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md](./docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md) — Arquitectura de seguridad del servidor Model Context Protocol.

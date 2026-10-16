@@ -60,3 +60,33 @@ La bóveda `router_credentials_vault` opera de forma transaccional en dos fases:
 
 ### ¿Por qué cuando edito una regla con rol `SUPPORT_L2` recibo un aviso `202 Accepted` y el cambio no se aplica de inmediato?
 Porque tu rol está sujeto a la política **Maker-Checker** en las 7 categorías críticas (Firewall, BGP/OSPF, direccionamiento de interfaces troncales, etc.). La plataforma captura tu solicitud con su vista previa y la coloca en la **Bandeja de Aprobaciones** para que un `SUPERVISOR`, `SUPPORT_L3` o `TENANT_ADMIN` la revise y ejecute con un clic.
+
+---
+
+## 4. Integración con Inteligencia Artificial y Agentes Autónomos (MCP)
+
+### ¿Cómo conecto RoSGrid con Hermes Agent, Claude Desktop o Claude Code mediante el protocolo MCP?
+RoSGrid implementa de forma nativa la especificación **Model Context Protocol (JSON-RPC 2.0 Streamable HTTP)** sobre el endpoint `POST /api/v1/mcp`:
+1. Habilita la funcionalidad en tu `.env` con `ROSGRID_MCP_ENABLED=true`.
+2. Crea un usuario con rol `SERVICE_ACCOUNT`, asígnale los routers permitidos en la matriz de permisos y declara la subred autorizada en `allowed_cidr`.
+3. Configura el bloque de conexión HTTP en `mcp_config.json` (Hermes Agent) o en tu cliente MCP apuntando a `https://tu-dominio.com/api/v1/mcp` con la cabecera `Authorization: Bearer <token>`.
+4. El agente dispondrá inmediatamente de **8 herramientas semánticas** especializadas de diagnóstico, salud, óptica SFP DDM, enrutamiento y auditoría. Consulta la guía detallada en [docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md](./docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md).
+
+### ¿Puede un agente de IA causar una interrupción masiva de red a través del endpoint MCP?
+**No.** RoSGrid aplica el principio de contención estricta:
+- Las herramientas de lectura (`rosgrid_list_inventory`, `rosgrid_get_router_health`, `rosgrid_check_sfp_optical_ddm`, `rosgrid_inspect_routing_bgp_ospf`, `rosgrid_run_live_diagnostic`, `rosgrid_compare_config_diff`) solo inspeccionan el estado sin alterar la configuración.
+- La herramienta de modificación de red (`rosgrid_propose_network_change`) **no aplica ningún cambio directamente**: intercepta la propuesta hacia la bandeja **Maker-Checker** con código HTTP `202 Accepted` (`AWAITING_APPROVAL`). Un supervisor humano debe validar el cambio antes de que se ejecute bajo protección de **Safe Mode (60s)**.
+- Cada interacción del LLM queda registrada de forma inalterable en la bitácora WORM con el evento `MCP_AI_TOOL_CALL`.
+
+---
+
+## 5. Dónde Aprender Más (`docs/`)
+
+Para consultar todos los manuales oficiales de producción de RoSGrid:
+- [docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md](./docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md) — Despliegue, `.env` y perfiles KeyDB / DragonflyDB.
+- [docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md](./docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md) — Configuración RouterOS v7, TOFU y Safe Mode.
+- [docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md](./docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md) — RLS, 11 roles RBAC, Bóveda 2FA y Kill-Switch.
+- [docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md](./docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md) — WebFig, RingBuffer, Maker-Checker y Wallboard.
+- [docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md](./docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md) — Bitácora WORM, ADR y grafos de arquitectura.
+- [docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md](./docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md) — Catálogo de endpoints REST y WebSockets.
+- [docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md](./docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md) — Integración de IA con Model Context Protocol.

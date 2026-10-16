@@ -56,3 +56,13 @@ Todas las quejas serán revisadas e investigadas de manera puntual y justa. Todo
 ## Atribución
 
 Este Código de Conducta está adaptado del [Contributor Covenant](https://www.contributor-covenant.org), versión 2.1, disponible en [https://www.contributor-covenant.org/es/version/2/1/code_of_conduct.html](https://www.contributor-covenant.org/es/version/2/1/code_of_conduct.html).
+
+---
+
+## Recursos y Documentación Oficial (`docs/`)
+
+Para conocer en detalle los estándares de arquitectura, gobernanza y seguridad de RoSGrid:
+- [docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md](./docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md) — Despliegue seguro e infraestructura inmutable.
+- [docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md](./docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md) — Seguridad Multi-Tenant, roles y bóveda.
+- [docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md](./docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md) — Trazabilidad WORM y registro de decisiones de arquitectura.
+- [docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md](./docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md) — Gobierno de agentes IA mediante Model Context Protocol.

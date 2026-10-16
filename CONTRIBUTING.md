@@ -40,6 +40,8 @@ Antes de proponer una nueva funcionalidad, verifica que cumpla estas 6 reglas de
    - Toda tabla técnica debe usar `RgDataTable.vue` (que activa *Virtual Scrolling* nativo al superar 100 filas) y las gráficas en tiempo real deben renderizarse en `<canvas>` 2D con `requestAnimationFrame`.
 6. **Accesibilidad (`WCAG 2.1 AA`) y Diseño de Alta Densidad:**
    - Toda vista o componente en `vue3/` debe usar las variables CSS de `src/assets/themes.css` (soportando los temas `dark`, `light` y `noc-high-contrast` con ratio de contraste `>= 4.5:1`), respetar la **Densidad Dual Adaptativa (`32px` en PC / `44px` en móvil)** y aplicar `font-variant-numeric: tabular-nums` en columnas numéricas, IPs y contadores.
+7. **Gobernanza de Herramientas MCP y Agentes IA (`specs/30` / `docs/07`):**
+   - Cualquier nueva herramienta semántica para el endpoint MCP (`POST /api/v1/mcp`) debe seguir estrictamente JSON-RPC 2.0, validar rigurosamente su esquema Pydantic (`extra="forbid"`), registrar su invocación en la bitácora WORM (`MCP_AI_TOOL_CALL`) y, si altera el estado del router, canalizarse obligatoriamente hacia el flujo **Maker-Checker** (`202 Accepted` / `AWAITING_APPROVAL`) bajo protección de **Safe Mode (60s)**. Queda prohibida la ejecución desatendida de comandos destructivos por parte de agentes IA.
 
 ---
 
@@ -91,3 +93,17 @@ Nunca subas al repositorio directorios autogenerados como `mutants/`, `htmlcov/`
 ./fastapi/limpieza.sh
 ./vue3/limpieza.sh
 ~~~
+
+---
+
+## 6. Documentación y Manuales de Referencia (`docs/`)
+
+Antes de enviar un PR, consulta los manuales oficiales para asegurar coherencia arquitectónica:
+- [docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md](./docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md) — Despliegue, `.env` y perfiles en memoria (KeyDB / DragonflyDB).
+- [docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md](./docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md) — Configuración RouterOS v7, TOFU y Safe Mode.
+- [docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md](./docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md) — RLS, 11 roles RBAC, Bóveda 2FA y Kill-Switch.
+- [docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md](./docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md) — WebFig, RingBuffer, Maker-Checker y Wallboard.
+- [docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md](./docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md) — Bitácora WORM, ADR y grafos de arquitectura.
+- [docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md](./docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md) — Catálogo exhaustivo de endpoints REST y WebSockets.
+- [docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md](./docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md) — Protocolo MCP y agentes de IA autónomos.
+
