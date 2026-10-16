@@ -22,18 +22,25 @@ services:
   rosgrid-redis:
     image: eqalpha/keydb:alpine
     container_name: rosgrid_redis
-    hostname: rosgrid-redis
+    hostname: rosgrid_redis
     restart: unless-stopped
     environment:
       TZ: "America/Caracas"
-    command: >
-      keydb-server
-      --server-threads 2
-      --appendonly no
-      --save ""
-      --maxmemory 512mb
-      --maxmemory-policy volatile-lru
-      --requirepass "${REDIS_PASSWORD:?Debes definir REDIS_PASSWORD en .env}"
+      REDIS_PASSWORD: "${REDIS_PASSWORD:?Debes definir REDIS_PASSWORD en .env}"
+    command:
+      - keydb-server
+      - --server-threads
+      - "2"
+      - --appendonly
+      - "no"
+      - --save
+      - ""
+      - --maxmemory
+      - 512mb
+      - --maxmemory-policy
+      - volatile-lru
+      - --requirepass
+      - "${REDIS_PASSWORD:?Debes definir REDIS_PASSWORD en .env}"
     volumes:
       - rosgrid_redis_data:/data
     healthcheck:
@@ -49,16 +56,19 @@ services:
   # rosgrid-redis:
   #   image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
   #   container_name: rosgrid_redis
-  #   hostname: rosgrid-redis
+  #   hostname: rosgrid_redis
   #   restart: unless-stopped
+  #   environment:
+  #     TZ: "America/Caracas"
+  #     REDIS_PASSWORD: "${REDIS_PASSWORD:?Debes definir REDIS_PASSWORD en .env}"
   #   ulimits:
   #     memlock: -1
-  #   command: >
-  #     dragonfly
-  #     --proactor_threads=4
-  #     --maxmemory=2gb
-  #     --requirepass=${REDIS_PASSWORD}
-  #     --alsologtostderr
+  #   command:
+  #     - dragonfly
+  #     - --proactor_threads=4
+  #     - --maxmemory=2gb
+  #     - --requirepass=${REDIS_PASSWORD}
+  #     - --alsologtostderr
   #   volumes:
   #     - rosgrid_redis_data:/data
   #   healthcheck:
@@ -89,6 +99,8 @@ services:
       ROSGRID_MASTER_VAULT_KEY: "${ROSGRID_MASTER_VAULT_KEY:?Debes definir ROSGRID_MASTER_VAULT_KEY}"
       ROSGRID_JWT_SECRET_KEY: "${ROSGRID_JWT_SECRET_KEY:?Debes definir ROSGRID_JWT_SECRET_KEY}"
       ROSGRID_CSRF_HMAC_SECRET: "${ROSGRID_CSRF_HMAC_SECRET:?Debes definir ROSGRID_CSRF_HMAC_SECRET}"
+      ROSGRID_MCP_ENABLED: "${ROSGRID_MCP_ENABLED:-false}"
+      ROSGRID_MCP_RATE_LIMIT_PER_MIN: "${ROSGRID_MCP_RATE_LIMIT_PER_MIN:-30}"
     volumes:
       - rosgrid_backups_storage:/var/lib/rosgrid/backups
     networks:
