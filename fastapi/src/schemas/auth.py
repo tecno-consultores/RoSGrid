@@ -3,15 +3,26 @@
 
 import uuid
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 from src.models.core import SystemRoleEnum
 
 
 class LoginStep1Request(BaseModel):
     tenant_slug: str = Field(..., min_length=2, max_length=64)
-    email: EmailStr
+    email: str | None = None
+    username_or_email: str | None = None
     password: str = Field(..., min_length=1)
+
+    @model_validator(mode="after")
+    def check_identifier(self) -> "LoginStep1Request":
+        if not self.email and not self.username_or_email:
+            raise ValueError("Debe proporcionar 'email' o 'username_or_email'")
+        return self
+
+    @property
+    def identifier(self) -> str:
+        return (self.username_or_email or self.email or "").strip()
 
 
 class LoginStep1Response(BaseModel):

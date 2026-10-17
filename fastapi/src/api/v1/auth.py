@@ -11,7 +11,7 @@ from typing import Any, Literal
 import jwt
 import pyotp
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_current_user_claims
@@ -195,7 +195,11 @@ async def login_step1(
     tenant = await _get_active_tenant(db, body.tenant_slug)
     await set_tenant_context(db, tenant.id, is_superadmin=False)
 
-    stmt_user = select(User).where(User.tenant_id == tenant.id, User.email == body.email)
+    ident = body.identifier
+    stmt_user = select(User).where(
+        User.tenant_id == tenant.id,
+        or_(User.email == ident, User.username == ident),
+    )
     res_user = await db.execute(stmt_user)
     user = res_user.scalar_one_or_none()
     if not user:

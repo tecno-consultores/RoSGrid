@@ -135,6 +135,7 @@
 
     isLoading.value = true;
     try {
+      const trimmedIdent = usernameOrEmail.value.trim();
       const res = await http.post<{
         next_step: 'ENROLL_2FA_REQUIRED' | 'VERIFY_2FA_TOTP' | 'AUTHENTICATED';
         challenge_id?: string;
@@ -145,7 +146,8 @@
         csrf_token?: string;
       }>('/api/v1/auth/login', {
         tenant_slug: tenantSlug.value.trim(),
-        username_or_email: usernameOrEmail.value.trim(),
+        email: trimmedIdent,
+        username_or_email: trimmedIdent,
         password: password.value,
       });
 
