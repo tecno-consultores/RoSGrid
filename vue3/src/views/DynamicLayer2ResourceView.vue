@@ -55,38 +55,16 @@
         `/api/v1/routers/${routerId.value}/webfig/layer2/resource/${rosPath.value}`,
       );
       resourceData.value = res.data;
-    } catch {
-      // Fallback mock
-      if (rosPath.value === 'snmp') {
-        resourceData.value = {
-          ros_path: 'snmp',
-          title: 'Configuración SNMP',
-          is_singleton: true,
-          columns_schema: [],
-          items: [],
-          form_data: {
-            enabled: true,
-            contact: 'noc@isp.net',
-            location: 'POP Centro DataCenter',
-            trap_community: 'public',
-          },
-        };
-      } else {
-        resourceData.value = {
-          ros_path: rosPath.value,
-          title: `Módulo ${rosPath.value.toUpperCase()}`,
-          is_singleton: false,
-          columns_schema: [
-            { key: 'name', label: 'Identificador', type: 'string' },
-            { key: 'status', label: 'Estado', type: 'string' },
-            { key: 'enabled', label: 'Habilitado', type: 'boolean_ros' },
-          ],
-          items: [
-            { id: '*1', name: `${rosPath.value}-inst-1`, status: 'running', enabled: true },
-            { id: '*2', name: `${rosPath.value}-inst-2`, status: 'inactive', enabled: false },
-          ],
-        };
-      }
+    } catch (err: any) {
+      resourceData.value = {
+        ros_path: rosPath.value,
+        title: `Módulo ${rosPath.value}`,
+        is_singleton: false,
+        columns_schema: [],
+        items: [],
+      };
+      errorMessage.value =
+        err?.response?.data?.detail || err?.message || 'Error al consultar recurso en el router';
     } finally {
       isLoading.value = false;
     }

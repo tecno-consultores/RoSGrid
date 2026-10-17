@@ -132,6 +132,25 @@ describe('TenantsManagementView.vue — Gestión de Empresas Multi-Tenant', () =
   });
 
   it('permite suspender o reactivar una empresa tras confirmación, manejando rechazo o errores', async () => {
+    vi.spyOn(http, 'get').mockResolvedValue({
+      status: 200,
+      data: [
+        {
+          id: 't-01',
+          slug: 'isp-norte',
+          name: 'ISP Norte C.A.',
+          tax_id: 'J-12345678-9',
+          status: 'ACTIVE',
+          max_routers_quota: 100,
+          max_users_quota: 25,
+          active_routers_count: 42,
+          active_users_count: 12,
+          default_safemode_seconds: 60,
+        },
+      ],
+      headers: new Headers(),
+    });
+
     vi.spyOn(window, 'confirm').mockReturnValue(false);
 
     const wrapper = mount(TenantsManagementView);

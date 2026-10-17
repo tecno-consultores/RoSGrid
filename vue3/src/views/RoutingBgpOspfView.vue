@@ -52,71 +52,20 @@
     isLoading.value = true;
     try {
       if (activeTab.value === 'bgp') {
-        const res = await http.get<{ items: BgpSessionItem[] }>(
-          `/api/v1/routers/${routerId.value}/webfig/layer1/routing/bgp`,
-        );
-        bgpSessions.value = res.data.items || [];
+        const res = await http.get<
+          BgpSessionItem[] | { items: BgpSessionItem[] } | { peers: BgpSessionItem[] }
+        >(`/api/v1/routers/${routerId.value}/webfig/routing/bgp/sessions`);
+        const data: any = res.data;
+        bgpSessions.value = Array.isArray(data) ? data : data?.peers || data?.items || [];
       } else if (activeTab.value === 'ospf') {
-        const res = await http.get<{ items: OspfNeighborItem[] }>(
-          `/api/v1/routers/${routerId.value}/webfig/layer1/routing/ospf`,
+        const res = await http.get<OspfNeighborItem[] | { items: OspfNeighborItem[] }>(
+          `/api/v1/routers/${routerId.value}/webfig/routing/ospf/neighbors`,
         );
-        ospfNeighbors.value = res.data.items || [];
+        ospfNeighbors.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
       }
     } catch {
-      // Fallback mock
-      bgpSessions.value = [
-        {
-          id: '*1',
-          name: 'bgp-upstream-transit-1',
-          remote_address: '198.51.100.1',
-          remote_as: 13335,
-          state: 'established',
-          uptime: '18d 04:12:00',
-          prefixes_received: 945000,
-          prefixes_sent: 4,
-        },
-        {
-          id: '*2',
-          name: 'bgp-ixp-caracas',
-          remote_address: '198.51.200.25',
-          remote_as: 52468,
-          state: 'established',
-          uptime: '42d 12:30:15',
-          prefixes_received: 12500,
-          prefixes_sent: 16,
-        },
-        {
-          id: '*3',
-          name: 'bgp-backup-transit-2',
-          remote_address: '203.0.113.1',
-          remote_as: 2914,
-          state: 'connect',
-          uptime: '00:01:23',
-          prefixes_received: 0,
-          prefixes_sent: 0,
-        },
-      ];
-
-      ospfNeighbors.value = [
-        {
-          id: '*1',
-          instance: 'default-v2',
-          router_id: '10.255.255.2',
-          address: '10.0.0.2',
-          interface: 'vlan100-Core',
-          state: 'Full',
-          priority: 1,
-        },
-        {
-          id: '*2',
-          instance: 'default-v2',
-          router_id: '10.255.255.3',
-          address: '10.0.0.6',
-          interface: 'sfp-plus1-Trunk',
-          state: 'Full',
-          priority: 1,
-        },
-      ];
+      bgpSessions.value = [];
+      ospfNeighbors.value = [];
     } finally {
       isLoading.value = false;
     }

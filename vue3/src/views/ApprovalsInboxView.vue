@@ -40,51 +40,12 @@
     isLoading.value = true;
     errorMessage.value = '';
     try {
-      const res = await http.get<{ items: ApprovalRequestItem[] }>('/api/v1/operations/approvals');
-      requests.value = res.data.items || [];
+      const res = await http.get<{ items: ApprovalRequestItem[] } | ApprovalRequestItem[]>('/api/v1/operations/approvals');
+      const raw = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      requests.value = raw;
     } catch {
-      // Mock para pruebas unitarias / offline
-      requests.value = [
-        {
-          id: 'appr-01',
-          requested_by: 'u-support-1',
-          requested_by_username: 'carlos.mendoza',
-          requested_by_role: 'SUPPORT_L2',
-          action_type: 'FIREWALL_RULE_CHANGE',
-          router_id: 'r-01',
-          router_name: 'CCR2004-Edge-Core',
-          justification: 'Apertura de puerto 443 para servidor web de clientes VIP',
-          previous_state_snapshot: {
-            chain: 'forward',
-            action: 'drop',
-            dst_port: '443',
-            comment: 'Default drop HTTPS',
-          },
-          request_payload: {
-            chain: 'forward',
-            action: 'accept',
-            dst_port: '443',
-            src_address: '190.200.10.0/24',
-            comment: 'Acceso VIP autorizado por ticket #8492',
-          },
-          status: 'AWAITING_APPROVAL',
-          created_at: new Date(Date.now() - 3600000).toISOString(),
-        },
-        {
-          id: 'appr-02',
-          requested_by: authStore.user?.id || 'admin-root',
-          requested_by_username: authStore.user?.username || 'root_admin',
-          requested_by_role: authStore.currentRole || 'SUPERADMIN_GLOBAL',
-          action_type: 'ROUTER_REBOOT',
-          router_id: 'r-02',
-          router_name: 'RB4011-Tower-AP',
-          justification: 'Reinicio programado tras actualización de firmware RouterBOOT',
-          previous_state_snapshot: { status: 'running', uptime: '45d' },
-          request_payload: { action: 'reboot' },
-          status: 'AWAITING_APPROVAL',
-          created_at: new Date(Date.now() - 7200000).toISOString(),
-        },
-      ];
+      // Sin datos de demostración en producción
+      requests.value = [];
     } finally {
       isLoading.value = false;
       if (filteredRequests.value.length > 0 && !selectedRequest.value) {
@@ -109,11 +70,11 @@
       setTimeout(() => {
         actionMessage.value = '';
       }, 4000);
-    } catch {
-      request.status = 'APPROVED';
-      actionMessage.value = `Solicitud ${request.id} aprobada en modo simulado.`;
+    } catch (err: any) {
+      errorMessage.value =
+        err?.response?.data?.detail || err?.message || 'Error al aprobar solicitud en el servidor';
       setTimeout(() => {
-        actionMessage.value = '';
+        errorMessage.value = '';
       }, 4000);
     }
   }
@@ -129,11 +90,11 @@
       setTimeout(() => {
         actionMessage.value = '';
       }, 4000);
-    } catch {
-      request.status = 'REJECTED';
-      actionMessage.value = `Solicitud ${request.id} marcada como rechazada.`;
+    } catch (err: any) {
+      errorMessage.value =
+        err?.response?.data?.detail || err?.message || 'Error al rechazar solicitud en el servidor';
       setTimeout(() => {
-        actionMessage.value = '';
+        errorMessage.value = '';
       }, 4000);
     }
   }

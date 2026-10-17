@@ -26,121 +26,32 @@
   const auditLogs = ref<AuditLogItem[]>([]);
   const selectedLog = ref<AuditLogItem | null>(null);
 
-  function useFallbackAuditLogs() {
-    auditLogs.value = [
-      {
-        id: 'aud-01',
-        actor_id: 'usr-01',
-        created_at: new Date(Date.now() - 60000).toISOString(),
-        actor_username: 'carlos.admin',
-        actor_role: 'TENANT_ADMIN',
-        source_ip: '198.51.100.22',
-        router_id: 'r-01',
-        router_name: 'RB5009-Core-01',
-        action_category: 'WEBFIG_L1',
-        action_name: 'UPDATE_FIREWALL_FILTER',
-        http_status: 200,
-        id_key: 'idem-4f2a-88bc-192a8383b123',
-        prev_record_hash: '9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a3f7a1b8c9d0e1f2a4b5c6d7e8f',
-        record_sha256_hash: '3f7a1b8c9d0e1f2a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a',
-        before_state: {
-          chain: 'input',
-          action: 'drop',
-          comment: 'defconf: drop all not coming from LAN',
-          'in-interface-list': '!LAN',
-        },
-        after_state: {
-          chain: 'input',
-          action: 'accept',
-          comment: 'RoSGrid Safe API access',
-          'dst-port': 443,
-          protocol: 'tcp',
-        },
-      },
-      {
-        id: 'aud-02',
-        actor_id: 'usr-02',
-        created_at: new Date(Date.now() - 3600000).toISOString(),
-        actor_username: 'sofia.supervisor',
-        actor_role: 'SUPERVISOR',
-        source_ip: '198.51.100.54',
-        router_id: 'r-02',
-        router_name: 'CCR2004-Border-02',
-        action_category: 'MAKER_CHECKER',
-        action_name: 'APPROVE_CHANGE_REQUEST',
-        http_status: 200,
-        id_key: 'idem-9b1c-33df-441122334455',
-        prev_record_hash: '3f7a1b8c9d0e1f2a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a',
-        record_sha256_hash: 'b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a3f7a1b8c9d0e1f2a4b5c6d7e8f9a0',
-        before_state: {
-          status: 'PENDING_APPROVAL',
-          request_id: 'appr-01',
-        },
-        after_state: {
-          status: 'APPROVED',
-          approver_notes: 'Validado con ventana de mantenimiento aprobada',
-        },
-      },
-      {
-        id: 'aud-03',
-        actor_id: 'usr-03',
-        created_at: new Date(Date.now() - 7200000).toISOString(),
-        actor_username: 'elena.tech',
-        actor_role: 'SUPPORT_L2',
-        source_ip: '203.0.113.88',
-        router_id: 'r-01',
-        router_name: 'RB5009-Core-01',
-        action_category: 'SAFEMODE',
-        action_name: 'SAFEMODE_SESSION_START',
-        http_status: 200,
-        id_key: 'idem-77aa-66bb-554433221100',
-        prev_record_hash: 'b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a3f7a1b8c9d0e1f2a4b5c6d7e8f9a0',
-        record_sha256_hash: 'c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a3f7a1b8c9d0e1f2a4b5c6d7e8f9a0b1',
-        before_state: {
-          safe_mode_active: false,
-        },
-        after_state: {
-          safe_mode_active: true,
-          ttl_seconds: 60,
-        },
-      },
-      {
-        id: 'aud-04',
-        actor_id: 'usr-04',
-        created_at: new Date(Date.now() - 86400000).toISOString(),
-        actor_username: 'miguel.noc',
-        actor_role: 'NOC_MONITOR',
-        source_ip: '198.51.100.12',
-        action_category: 'AUTH',
-        action_name: 'USER_LOGIN_2FA',
-        http_status: 200,
-        id_key: 'idem-1122-3344-556677889900',
-        prev_record_hash: 'c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a3f7a1b8c9d0e1f2a4b5c6d7e8f9a0b1',
-        record_sha256_hash: 'd3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a3f7a1b8c9d0e1f2a4b5c6d7e8f9a0b1c2',
-        before_state: {
-          session: null,
-          password: '[REDACTED]',
-        },
-        after_state: {
-          session_created: true,
-          totp_verified: true,
-        },
-      },
-    ];
-  }
-
   async function loadAuditLogs() {
     loading.value = true;
     error.value = null;
     try {
-      const res = await http.get<{ items: AuditLogItem[] }>('/api/v1/audit/logs');
-      if (res.data?.items && res.data.items.length > 0) {
-        auditLogs.value = res.data.items;
-      } else {
-        useFallbackAuditLogs();
-      }
+      const res = await http.get<{ items: any[] } | any[]>('/api/v1/audit/logs');
+      const raw = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      auditLogs.value = raw.map((item: any) => ({
+        id: String(item.id),
+        actor_id: String(item.actor_user_id || item.actor_id || ''),
+        actor_username: item.actor_username || 'sistema',
+        actor_role: item.actor_role || 'SUPERADMIN_GLOBAL',
+        action_category: item.event_category || item.action_category || 'GENERAL',
+        action_name: item.event_action || item.action_name || 'OPERACION',
+        router_id: item.router_id ? String(item.router_id) : undefined,
+        router_name: item.router_display_name || item.router_name,
+        source_ip: item.actor_ip || item.source_ip || '127.0.0.1',
+        http_status: item.status_code ?? item.http_status ?? 200,
+        id_key: item.idempotency_key || item.id_key || '',
+        before_state: item.before_state,
+        after_state: item.after_state,
+        prev_record_hash: item.prev_record_hash || '',
+        record_sha256_hash: item.record_sha256_hash || '',
+        created_at: item.created_at || new Date().toISOString(),
+      }));
     } catch {
-      useFallbackAuditLogs();
+      auditLogs.value = [];
     } finally {
       loading.value = false;
     }

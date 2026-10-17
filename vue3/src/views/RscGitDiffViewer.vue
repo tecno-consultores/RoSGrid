@@ -32,32 +32,6 @@
   const baseContent = ref<string>('');
   const targetContent = ref<string>('');
 
-  const sampleRscA = `# 2026-10-01 04:00:00 by RouterOS 7.15.2
-/interface bridge add name=bridge1 vlan-filtering=yes
-/ip address add address=192.168.88.1/24 interface=bridge1 network=192.168.88.0
-/ip firewall filter
-add action=accept chain=input comment="defconf: accept established,related" connection-state=established,related
-add action=drop chain=input comment="defconf: drop invalid" connection-state=invalid
-add action=accept chain=input protocol=icmp
-add action=drop chain=input comment="defconf: drop all not coming from LAN" in-interface-list=!LAN
-/routing bgp connection
-add as=65001 disabled=no local.role=ebgp name=upstream-peer1 remote.address=198.51.100.1 remote.as=64496
-/system identity set name=RB5009-Core-01`;
-
-  const sampleRscB = `# 2026-10-15 04:00:00 by RouterOS 7.16.1
-/interface bridge add name=bridge1 vlan-filtering=yes
-/ip address add address=192.168.88.1/24 interface=bridge1 network=192.168.88.0
-/ip firewall filter
-add action=accept chain=input comment="defconf: accept established,related" connection-state=established,related
-add action=drop chain=input comment="defconf: drop invalid" connection-state=invalid
-add action=accept chain=input protocol=icmp
-add action=accept chain=input comment="RoSGrid Safe API" dst-port=443 protocol=tcp
-add action=drop chain=input comment="defconf: drop all not coming from LAN" in-interface-list=!LAN
-/routing bgp connection
-add as=65001 disabled=no local.role=ebgp name=upstream-peer1 remote.address=198.51.100.1 remote.as=64496 router-id=198.51.100.2
-add as=65001 disabled=no local.role=ebgp name=backup-peer2 remote.address=198.51.100.5 remote.as=64497
-/system identity set name=RB5009-Core-01-PROD`;
-
   async function loadBackups() {
     loading.value = true;
     error.value = null;
@@ -65,13 +39,9 @@ add as=65001 disabled=no local.role=ebgp name=backup-peer2 remote.address=198.51
       const res = await http.get<{ items: BackupItem[] }>(
         `/api/v1/routers/${routerId.value}/backups`,
       );
-      if (res.data?.items && res.data.items.length > 0) {
-        backups.value = res.data.items;
-      } else {
-        useFallbackBackups();
-      }
+      backups.value = res.data?.items || [];
     } catch {
-      useFallbackBackups();
+      backups.value = [];
     } finally {
       loading.value = false;
       if (backups.value.length > 0 && !selectedBaseId.value) {
@@ -81,65 +51,16 @@ add as=65001 disabled=no local.role=ebgp name=backup-peer2 remote.address=198.51
     }
   }
 
-  function useFallbackBackups() {
-    backups.value = [
-      {
-        id: 'bk-01',
-        router_id: routerId.value,
-        filename: 'backup-2026-10-15.rsc',
-        ros_version_at_backup: '7.16.1',
-        created_at: new Date(Date.now() - 3600000 * 2).toISOString(),
-        sha256_hash: '3f7a1b8c9d0e1f2a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a',
-        lines_added: 4,
-        lines_removed: 1,
-        last_verified_identical_at: new Date(Date.now() - 1800000).toISOString(),
-      },
-      {
-        id: 'bk-02',
-        router_id: routerId.value,
-        filename: 'backup-2026-10-13.rsc',
-        ros_version_at_backup: '7.15.2',
-        created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-        sha256_hash: '9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a3f7a1b8c9d0e1f2a4b5c6d7e8f',
-        lines_added: 12,
-        lines_removed: 3,
-        last_verified_identical_at: new Date(Date.now() - 86400000).toISOString(),
-      },
-      {
-        id: 'bk-03',
-        router_id: routerId.value,
-        filename: 'backup-2026-10-08.rsc',
-        ros_version_at_backup: '7.15.2',
-        created_at: new Date(Date.now() - 86400000 * 7).toISOString(),
-        sha256_hash: 'e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a3f7a1b8c9d0e1f2a4b5c6d7',
-        lines_added: 0,
-        lines_removed: 0,
-        last_verified_identical_at: new Date(Date.now() - 86400000 * 6).toISOString(),
-      },
-    ];
-  }
-
   async function createManualBackup() {
     creatingBackup.value = true;
     backupSuccessMsg.value = null;
     try {
-      await http.post(`/api/v1/routers/${routerId.value}/backups`);
+      await http.post(`/api/v1/routers/${routerId.value}/backups/trigger`);
       backupSuccessMsg.value = 'Respaldo .rsc + .backup generado y encriptado exitosamente.';
       await loadBackups();
-    } catch {
-      // Simula backup exitoso
-      backupSuccessMsg.value = 'Respaldo manual completado (SHA-256 verificado en bóveda WORM).';
-      backups.value.unshift({
-        id: `bk-${Date.now().toString().slice(-4)}`,
-        router_id: routerId.value,
-        filename: `backup-${Date.now().toString().slice(-4)}.rsc`,
-        ros_version_at_backup: '7.16.1',
-        created_at: new Date().toISOString(),
-        sha256_hash: '7c8d9e0f1a2b3c4d5e6f7a3f7a1b8c9d0e1f2a4b5c6d7e8f9a0b1c2d3e4f5a6b',
-        lines_added: 2,
-        lines_removed: 0,
-        last_verified_identical_at: new Date().toISOString(),
-      });
+    } catch (err: unknown) {
+      const e = err as { message?: string; detail?: string };
+      error.value = e.detail || e.message || 'Error al solicitar generación de respaldo en el router.';
     } finally {
       creatingBackup.value = false;
       setTimeout(() => {
@@ -151,8 +72,13 @@ add as=65001 disabled=no local.role=ebgp name=backup-peer2 remote.address=198.51
   async function compareDiff() {
     diffLoading.value = true;
     try {
-      baseContent.value = sampleRscA;
-      targetContent.value = selectedTargetId.value === 'LIVE' ? sampleRscB : sampleRscA;
+      if (backups.value.length === 0) {
+        baseContent.value = '';
+        targetContent.value = '';
+        return;
+      }
+      baseContent.value = '';
+      targetContent.value = '';
     } finally {
       diffLoading.value = false;
     }
@@ -484,8 +410,14 @@ add as=65001 disabled=no local.role=ebgp name=backup-peer2 remote.address=198.51
           </div>
         </div>
 
+        <!-- Estado vacío si no hay respaldos -->
+        <div v-if="backups.length === 0 && !loading" class="diff-empty-state">
+          <p>No hay respaldos registrados para este router.</p>
+          <p class="diff-empty-sub">Haga clic en <strong>➕ Crear Backup Ahora</strong> para generar el primer respaldo (.rsc + .backup) cifrado en la bóveda.</p>
+        </div>
+
         <!-- Área de código diff -->
-        <div v-if="diffLoading" class="diff-loading">Calculando diferencias...</div>
+        <div v-else-if="diffLoading" class="diff-loading">Calculando diferencias...</div>
 
         <!-- Modo Lado a Lado (Split) -->
         <div

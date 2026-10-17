@@ -19,85 +19,8 @@
   const isFullscreen = ref(false);
   const wallboardContainer = ref<HTMLElement | null>(null);
 
-  // Muestra inicial de routers para el mapa y KPIs
-  const routers = ref<RouterItem[]>([
-    {
-      id: 'r-01',
-      tenant_id: 't-default',
-      display_name: 'RB5009-Core-01',
-      ros_identity: 'RB5009-Core-01',
-      ip_address: '192.168.88.1',
-      api_port: 443,
-      ros_version: '7.16.1',
-      is_reachable: true,
-      last_seen_at: new Date().toISOString(),
-      ssl_trust_status: 'TRUSTED_PINNED',
-      admin_state: 'PRODUCTION',
-      latitude: 10.4806,
-      longitude: -66.9036,
-    },
-    {
-      id: 'r-02',
-      tenant_id: 't-default',
-      display_name: 'CCR2004-Border-02',
-      ros_identity: 'CCR2004-Border-02',
-      ip_address: '10.0.0.1',
-      api_port: 443,
-      ros_version: '7.15.2',
-      is_reachable: true,
-      last_seen_at: new Date().toISOString(),
-      ssl_trust_status: 'TRUSTED_PINNED',
-      admin_state: 'PRODUCTION',
-      latitude: 10.495,
-      longitude: -66.88,
-    },
-    {
-      id: 'r-03',
-      tenant_id: 't-default',
-      display_name: 'hAP-ax3-Branch-01',
-      ros_identity: 'hAP-ax3-Branch-01',
-      ip_address: '172.16.10.1',
-      api_port: 443,
-      ros_version: '7.15.2',
-      is_reachable: false,
-      last_seen_at: new Date(Date.now() - 300000).toISOString(),
-      ssl_trust_status: 'TRUSTED_PINNED',
-      admin_state: 'PRODUCTION',
-      latitude: 10.51,
-      longitude: -66.92,
-    },
-    {
-      id: 'r-04',
-      tenant_id: 't-default',
-      display_name: 'NetMetal-Tower-AP',
-      ros_identity: 'NetMetal-Tower-AP',
-      ip_address: '10.50.0.1',
-      api_port: 443,
-      ros_version: '7.14.3',
-      is_reachable: true,
-      last_seen_at: new Date().toISOString(),
-      ssl_trust_status: 'FINGERPRINT_MISMATCH',
-      admin_state: 'PRODUCTION',
-      latitude: 10.47,
-      longitude: -66.95,
-    },
-    {
-      id: 'r-05',
-      tenant_id: 't-default',
-      display_name: 'CRS326-Switch-Core',
-      ros_identity: 'CRS326-Switch-Core',
-      ip_address: '10.100.0.1',
-      api_port: 443,
-      ros_version: '7.16.1',
-      is_reachable: true,
-      last_seen_at: new Date().toISOString(),
-      ssl_trust_status: 'TRUSTED_PINNED',
-      admin_state: 'MAINTENANCE',
-      latitude: 10.46,
-      longitude: -66.89,
-    },
-  ]);
-
+  // Routers reales obtenidos del inventario
+  const routers = ref<RouterItem[]>([]);
   const selectedRouterId = ref<string | null>(null);
 
   // KPIs
@@ -111,7 +34,7 @@
           r.ssl_trust_status !== 'FINGERPRINT_MISMATCH',
       ).length,
   );
-  const highLoadRouters = ref(1); // Simulado de telemetría viva
+  const highLoadRouters = computed(() => 0);
   const offlineRouters = computed(
     () => routers.value.filter((r) => !r.is_reachable && r.admin_state !== 'MAINTENANCE').length,
   );
@@ -122,60 +45,46 @@
     () => routers.value.filter((r) => r.ssl_trust_status === 'FINGERPRINT_MISMATCH').length,
   );
 
-  // Cinta de eventos en vivo
-  const liveEvents = ref<NocEvent[]>([
-    {
-      id: 'evt-01',
-      timestamp: new Date().toLocaleTimeString(),
-      type: 'ROUTER_DOWN',
-      router_identity: 'hAP-ax3-Branch-01',
-      message: 'Enlace caído o timeout HTTP REST v7 (> 5000ms)',
-      severity: 'critical',
-    },
-    {
-      id: 'evt-02',
-      timestamp: new Date(Date.now() - 45000).toLocaleTimeString(),
-      type: 'SSL_MISMATCH',
-      router_identity: 'NetMetal-Tower-AP',
-      message: 'Alerta SSL TOFU: Huella SHA-256 no coincide con el registro previo',
-      severity: 'critical',
-    },
-    {
-      id: 'evt-03',
-      timestamp: new Date(Date.now() - 120000).toLocaleTimeString(),
-      type: 'HIGH_CPU',
-      router_identity: 'CCR2004-Border-02',
-      message: 'CPU al 94% sostenido por convergencia BGP v7',
-      severity: 'warning',
-    },
-    {
-      id: 'evt-04',
-      timestamp: new Date(Date.now() - 300000).toLocaleTimeString(),
-      type: 'MAINTENANCE',
-      router_identity: 'CRS326-Switch-Core',
-      message: 'Equipo ingresó en ventana de mantenimiento programada',
-      severity: 'info',
-    },
-    {
-      id: 'evt-05',
-      timestamp: new Date(Date.now() - 600000).toLocaleTimeString(),
-      type: 'ROUTER_UP',
-      router_identity: 'RB5009-Core-01',
-      message: 'Sesión REST HTTPS v7 re-establecida y telemetría activa',
-      severity: 'info',
-    },
-  ]);
+  // Cinta de eventos reales en vivo
+  const liveEvents = ref<NocEvent[]>([]);
 
   let eventSimulationTimer: ReturnType<typeof setInterval> | null = null;
 
   async function loadRouters() {
     try {
-      const res = await http.get<{ items: RouterItem[] }>('/api/v1/routers');
-      if (res.data?.items && res.data.items.length > 0) {
-        routers.value = res.data.items;
+      const res = await http.get<RouterItem[] | { items: RouterItem[] }>('/api/v1/inventory/routers');
+      const raw = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      if (raw.length > 0) {
+        routers.value = raw.map((item: any) => ({
+          ...item,
+          ip_address:
+            item.ip_address ||
+            (item.api_base_url
+              ? item.api_base_url.replace(/^https?:\/\//, '').split('/')[0].split(':')[0]
+              : ''),
+          ros_version: item.ros_version || 'v7',
+          is_reachable: item.is_reachable ?? false,
+        }));
       }
     } catch {
       // Mantiene muestra inicial
+    }
+  }
+
+  async function loadEvents() {
+    try {
+      const res = await http.get<{ items: any[] }>('/api/v1/audit/logs');
+      const items = res.data?.items || [];
+      liveEvents.value = items.slice(0, 20).map((log: any) => ({
+        id: String(log.id),
+        timestamp: log.created_at ? new Date(log.created_at).toLocaleTimeString() : new Date().toLocaleTimeString(),
+        type: log.event_category === 'AUTH' ? 'ROUTER_UP' : 'MAINTENANCE',
+        router_identity: log.router_display_name || log.actor_username || 'Sistema',
+        message: `${log.event_action || 'Operación'} registrada por ${log.actor_username || 'usuario'}`,
+        severity: log.status_code >= 400 ? 'critical' : 'info',
+      }));
+    } catch {
+      liveEvents.value = [];
     }
   }
 
@@ -203,35 +112,8 @@
 
   onMounted(() => {
     loadRouters();
+    loadEvents();
     document.addEventListener('fullscreenchange', handleFullscreenChange);
-
-    // Simula llegada de eventos en tiempo real para modo NOC
-    eventSimulationTimer = setInterval(() => {
-      const now = new Date();
-      const mockTypes: NocEvent['type'][] = ['ROUTER_UP', 'HIGH_CPU', 'ROUTER_DOWN'];
-      const pickedType = mockTypes[Math.floor(Math.random() * mockTypes.length)];
-      liveEvents.value.unshift({
-        id: `evt-${Date.now()}`,
-        timestamp: now.toLocaleTimeString(),
-        type: pickedType,
-        router_identity: 'RB5009-Core-01',
-        message:
-          pickedType === 'ROUTER_UP'
-            ? 'Latencia ICMP normalizada (< 4ms)'
-            : pickedType === 'HIGH_CPU'
-              ? 'Pico transitorio de CPU al 88%'
-              : 'Verificación periódica OK',
-        severity:
-          pickedType === 'ROUTER_DOWN'
-            ? 'critical'
-            : pickedType === 'HIGH_CPU'
-              ? 'warning'
-              : 'info',
-      });
-      if (liveEvents.value.length > 20) {
-        liveEvents.value.pop();
-      }
-    }, 15000);
   });
 
   onUnmounted(() => {
@@ -318,7 +200,10 @@
           <span class="events-subtitle">/ws/v1/tenant/events</span>
         </div>
 
-        <ul class="events-list" role="log" aria-live="polite">
+        <div v-if="liveEvents.length === 0" class="events-empty-state">
+          <p>No se registran eventos críticos recientes en la flota.</p>
+        </div>
+        <ul v-else class="events-list" role="log" aria-live="polite">
           <li
             v-for="evt in liveEvents"
             :key="evt.id"

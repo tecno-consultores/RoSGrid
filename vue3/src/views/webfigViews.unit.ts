@@ -390,25 +390,23 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
   });
 
   it('InterfacesAndSfpView — navega subpestañas y abre modal SFP DDM', async () => {
-    vi.spyOn(http, 'get').mockImplementation(async (url: string) => {
-      if (url.includes('sfp-ddm')) {
-        return {
-          status: 200,
-          data: {
-            interface_name: 'sfp-plus1',
-            tx_power_dbm: -2.4,
-            rx_power_dbm: -18.2,
-            optical_health: 'OPTIMAL',
-            temperature_c: 41,
-            voltage_v: 3.3,
-            wavelength_nm: 1310,
-          },
-          headers: new Headers(),
-        };
-      }
-      return {
-        status: 200,
-        data: {
+    vi.spyOn(http, 'post').mockResolvedValue({
+      status: 200,
+      data: {
+        interface_name: 'sfp-plus1',
+        tx_power_dbm: -2.4,
+        rx_power_dbm: -18.2,
+        optical_health: 'OPTIMAL',
+        temperature_c: 41,
+        voltage_v: 3.3,
+        wavelength_nm: 1310,
+      },
+      headers: new Headers(),
+    });
+
+    vi.spyOn(http, 'get').mockResolvedValue({
+      status: 200,
+      data: {
           items: [
             {
               id: '*1',
@@ -440,8 +438,7 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
           ],
         },
         headers: new Headers(),
-      };
-    });
+      });
 
     const wrapper = mount(InterfacesAndSfpView);
     await flushPromises();
@@ -640,7 +637,7 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
       headers: new Headers(),
     });
 
-    vi.spyOn(http, 'post').mockResolvedValue({
+    vi.spyOn(http, 'delete').mockResolvedValue({
       status: 200,
       data: { success: true },
       headers: new Headers(),
@@ -665,7 +662,7 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
       await flushPromises();
 
       // Reconectar con fallo para cubrir catch branch
-      vi.spyOn(http, 'post').mockRejectedValueOnce(new Error('Reset timeout'));
+      vi.spyOn(http, 'delete').mockRejectedValueOnce(new Error('Reset timeout'));
       await reconnectBtn.trigger('click');
       await flushPromises();
     }

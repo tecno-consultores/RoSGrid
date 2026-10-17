@@ -100,12 +100,32 @@ describe('CsvOnboardingWizardModal.vue — Asistente de Importación CSV en 2 Pa
     Object.defineProperty(fileInput.element, 'files', { value: [file] });
     await fileInput.trigger('change');
 
-    // Simular error en dry-run para activar mock fallback
+    // Simular error en dry-run para verificar mensaje de error real
     vi.spyOn(http, 'post').mockRejectedValueOnce(new Error('Dry-run offline'));
 
     await wrapper.find('.btn-primary').trigger('click');
     await flushPromises();
 
+    expect(wrapper.text()).toContain('Dry-run offline');
+    expect(wrapper.find('#csv-wizard-title').text()).toContain('Paso 1');
+
+    // Ahora simular éxito en dry-run para avanzar a paso 2
+    vi.spyOn(http, 'post').mockResolvedValueOnce({
+      status: 200,
+      headers: new Headers(),
+      data: {
+        total_rows: 2,
+        valid_rows_count: 2,
+        invalid_rows_count: 0,
+        rows: [
+          { line: 2, is_valid: true, display_name: 'Router-A', ip_address: '10.0.0.1' },
+          { line: 3, is_valid: true, display_name: 'Router-B', ip_address: '10.0.0.2' },
+        ],
+      },
+    });
+
+    await wrapper.find('.btn-primary').trigger('click');
+    await flushPromises();
     expect(wrapper.find('#csv-wizard-title').text()).toContain('Paso 2');
 
     // Probar volver al paso 1 usando el botón '← Volver a cargar archivo'
@@ -114,19 +134,30 @@ describe('CsvOnboardingWizardModal.vue — Asistente de Importación CSV en 2 Pa
     expect(wrapper.find('#csv-wizard-title').text()).toContain('Paso 1');
 
     // Volver al paso 2
+    vi.spyOn(http, 'post').mockResolvedValueOnce({
+      status: 200,
+      headers: new Headers(),
+      data: {
+        total_rows: 2,
+        valid_rows_count: 2,
+        invalid_rows_count: 0,
+        rows: [],
+      },
+    });
     await wrapper.find('.btn-primary').trigger('click');
     await flushPromises();
     expect(wrapper.find('#csv-wizard-title').text()).toContain('Paso 2');
 
-    // Confirmar importación con error de red para activar catch fallback
+    // Confirmar importación con error de red para verificar manejo de error
     vi.spyOn(http, 'post').mockRejectedValueOnce(new Error('Commit offline'));
     await wrapper.findAll('.btn-primary')[0].trigger('click');
     await flushPromises();
-    expect(wrapper.emitted('imported')).toBeTruthy();
+    expect(wrapper.text()).toContain('Commit offline');
 
     // Botón cancelar
-    const cancelBtn = wrapper.find('.btn-secondary');
-    if (cancelBtn.exists()) {
+    const cancelBtns = wrapper.findAll('.btn-secondary');
+    const cancelBtn = cancelBtns.find((b) => b.text().includes('Cancelar'));
+    if (cancelBtn) {
       await cancelBtn.trigger('click');
       expect(wrapper.emitted('close')).toBeTruthy();
     }

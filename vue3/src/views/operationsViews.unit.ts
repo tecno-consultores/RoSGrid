@@ -364,11 +364,68 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
   it('BulkOperationsAndUpdatesView — completa asistente de 3 pasos y matriz de updates', async () => {
     vi.useFakeTimers();
 
+    vi.spyOn(http, 'get').mockResolvedValue({
+      status: 200,
+      data: [
+        {
+          id: 'tpl-dns',
+          name: 'Actualizar DNS Corporativos',
+          category: 'IP Service',
+          description: 'Configura servidores DNS',
+          variables_schema: [
+            { key: 'primary_dns', label: 'DNS Primario', default_val: '1.1.1.1' },
+          ],
+          ros_command_template: '/ip dns set servers={{primary_dns}}',
+        },
+        {
+          id: 'tpl-fw-drop',
+          name: 'Bloquear IP Atacante',
+          category: 'Seguridad',
+          description: 'Agrega regla firewall',
+          variables_schema: [
+            { key: 'bad_ip', label: 'IP Atacante', default_val: '203.0.113.45/32' },
+          ],
+          ros_command_template:
+            '/ip firewall raw add chain=prerouting src-address={{bad_ip}} action=drop',
+        },
+      ],
+      headers: new Headers(),
+    });
+
     vi.spyOn(http, 'post').mockResolvedValue({
       status: 200,
       data: { success: true },
       headers: new Headers(),
     });
+
+    const { useInventoryStore } = await import('@/stores/useInventoryStore');
+    const invStore = useInventoryStore();
+    invStore.setRouters([
+      {
+        id: 'r-01',
+        tenant_id: 't-1',
+        display_name: 'RB5009-Core-01',
+        ros_identity: 'RB5009-Core-01',
+        ip_address: '192.168.88.1',
+        api_port: 8728,
+        ros_version: '7.16',
+        network_role: 'CORE_ROUTER',
+        admin_state: 'PRODUCTION',
+        is_reachable: true,
+      },
+      {
+        id: 'r-02',
+        tenant_id: 't-1',
+        display_name: 'CCR2004-Border-02',
+        ros_identity: 'CCR2004-Border-02',
+        ip_address: '10.0.0.1',
+        api_port: 8728,
+        ros_version: '7.16',
+        network_role: 'BORDER_BGP',
+        admin_state: 'PRODUCTION',
+        is_reachable: true,
+      },
+    ]);
 
     const wrapper = mount(BulkOperationsAndUpdatesView);
     await flushPromises();
@@ -611,7 +668,7 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
     }
   });
 
-  it('ImmutableAuditLogsView — maneja lista vacía usando fallback', async () => {
+  it('ImmutableAuditLogsView — maneja lista vacía sin datos de demostración', async () => {
     vi.spyOn(http, 'get').mockResolvedValueOnce({
       status: 200,
       data: { items: [] },
@@ -620,6 +677,6 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
 
     const wrapper = mount(ImmutableAuditLogsView);
     await flushPromises();
-    expect(wrapper.findAll('.audit-row').length).toBeGreaterThan(0);
+    expect(wrapper.findAll('.audit-row').length).toBe(0);
   });
 });

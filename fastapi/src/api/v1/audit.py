@@ -163,7 +163,7 @@ async def list_audit_logs(
             actor_user_id=r.actor_user_id,
             actor_username=r.actor_username,
             actor_role=r.actor_role.value if hasattr(r.actor_role, "value") else str(r.actor_role),
-            actor_ip=r.actor_ip,
+            actor_ip=str(r.actor_ip) if r.actor_ip is not None else "",
             actor_user_agent=r.actor_user_agent,
             event_category=r.event_category,
             event_action=r.event_action,

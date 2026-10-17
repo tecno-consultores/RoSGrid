@@ -200,7 +200,7 @@ describe('VaultRevealModal.vue — Bóveda Criptográfica con Step-Up 2FA y Purg
     wrapper.unmount();
   });
 
-  it('activa fallback simulado si falla http.post al desbloquear y maneja error de portapapeles', async () => {
+  it('maneja error en http.post al desbloquear y maneja error de portapapeles tras desbloqueo', async () => {
     const wrapper = mount(VaultRevealModal, {
       props: {
         isOpen: true,
@@ -215,9 +215,25 @@ describe('VaultRevealModal.vue — Bóveda Criptográfica con Step-Up 2FA y Purg
     await wrapper.find('.stepup-form').trigger('submit');
     await flushPromises();
 
-    // Se desbloquea usando datos de prueba simulados
+    // Muestra error y no se desbloquea
+    expect(wrapper.find('.banner--error').text()).toContain('API offline');
+    expect(wrapper.find('.revealed-box').exists()).toBe(false);
+
+    // Ahora simular éxito
+    vi.spyOn(http, 'post').mockResolvedValueOnce({
+      status: 200,
+      headers: new Headers(),
+      data: {
+        api_username: 'rosgrid_admin',
+        current_password: 'RealSecurePassword123!',
+        auto_purge_seconds: 30,
+      },
+    });
+    await wrapper.find('.stepup-form').trigger('submit');
+    await flushPromises();
+
     expect(wrapper.find('.revealed-box').exists()).toBe(true);
-    expect(wrapper.find('.secret-text').text()).toContain('Mkt-SecurePass');
+    expect(wrapper.find('.secret-text').text()).toContain('RealSecurePassword123!');
 
     // Simular fallo en clipboard
     Object.assign(navigator, {

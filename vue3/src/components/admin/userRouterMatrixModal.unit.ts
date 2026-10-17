@@ -258,7 +258,7 @@ describe('UserRouterMatrixModal.vue — Asignación Granular de Permisos por Rou
     expect(wrapper.emitted('close')).toHaveLength(2);
   });
 
-  it('usa fallback de permisos simulados si la API de carga falla', async () => {
+  it('no muestra routers simulados si la API de carga falla', async () => {
     vi.spyOn(http, 'get').mockRejectedValueOnce(new Error('Fetch failed'));
     const wrapper = mount(UserRouterMatrixModal, {
       props: {
@@ -267,6 +267,6 @@ describe('UserRouterMatrixModal.vue — Asignación Granular de Permisos por Rou
       },
     });
     await flushPromises();
-    expect(wrapper.find('.cell-name').text()).toContain('CCR2004-Edge-Core');
+    expect(wrapper.find('.cell-name').exists()).toBe(false);
   });
 });

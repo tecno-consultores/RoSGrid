@@ -36,15 +36,7 @@
   const totpCode = ref('');
 
   // Datos de la bóveda
-  const vaultData = ref<VaultSecretData>({
-    router_id: '',
-    api_username: 'rosgrid_svc',
-    current_password: '',
-    previous_password: '',
-    last_rotated_at: '',
-    next_rotation_due_at: '',
-    auto_purge_seconds: 30,
-  });
+  const vaultData = ref<VaultSecretData | null>(null);
 
   const remainingSeconds = ref(30);
   const isCopied = ref(false);
@@ -52,8 +44,10 @@
 
   function purgeSecretMemory() {
     // Autodestrucción en memoria RAM
-    vaultData.value.current_password = '';
-    vaultData.value.previous_password = '';
+    if (vaultData.value) {
+      vaultData.value.current_password = '';
+      vaultData.value.previous_password = '';
+    }
     isUnlocked.value = false;
     totpCode.value = '';
     consultationReason.value = '';
@@ -93,7 +87,7 @@
 
     try {
       const res = await http.post<VaultSecretData>(
-        `/api/v1/vault/routers/${props.router.id}/reveal`,
+        `/api/v1/inventory/routers/${props.router.id}/vault/reveal`,
         {
           reason: consultationReason.value.trim(),
           totp_code: totpCode.value,
@@ -102,20 +96,12 @@
 
       vaultData.value = res.data;
       isUnlocked.value = true;
-      startPurgeTimer(vaultData.value.auto_purge_seconds || 30);
-    } catch {
-      // Mock para pruebas unitarias / offline
-      vaultData.value = {
-        router_id: props.router.id,
-        api_username: 'rosgrid_admin',
-        current_password: 'Mkt-SecurePass-2026-XyZ!',
-        previous_password: 'Mkt-PrevPass-2025-Old#',
-        last_rotated_at: new Date(Date.now() - 86400000).toISOString(),
-        next_rotation_due_at: new Date(Date.now() + 86400000 * 29).toISOString(),
-        auto_purge_seconds: 30,
-      };
-      isUnlocked.value = true;
-      startPurgeTimer(30);
+      startPurgeTimer(vaultData.value?.auto_purge_seconds || 30);
+    } catch (err: unknown) {
+      const e = err as { detail?: string; message?: string };
+      errorMessage.value = e.detail || e.message || 'Código 2FA incorrecto o error al consultar la bóveda.';
+      isUnlocked.value = false;
+      vaultData.value = null;
     } finally {
       isLoading.value = false;
     }
@@ -243,7 +229,7 @@
           <div class="vault-meta-grid">
             <div class="meta-item">
               <span class="meta-label">Usuario API MikroTik:</span>
-              <strong class="meta-value">{{ vaultData.api_username || 'rosgrid_admin' }}</strong>
+              <strong class="meta-value">{{ vaultData?.api_username || 'rosgrid_admin' }}</strong>
             </div>
             <div class="meta-item">
               <span class="meta-label">Estado de Contraseña:</span>
@@ -311,22 +297,22 @@
             <div class="secret-field">
               <label class="form-label">Contraseña API Actual:</label>
               <div class="secret-input-row">
-                <code class="secret-text">{{ vaultData.current_password }}</code>
+                <code class="secret-text">{{ vaultData?.current_password }}</code>
                 <button
                   type="button"
                   class="btn-copy"
                   aria-label="Copiar contraseña al portapapeles"
-                  @click="copyToClipboard(vaultData.current_password)"
+                  @click="copyToClipboard(vaultData?.current_password)"
                 >
                   {{ isCopied ? '✓ Copiado' : 'Copiar' }}
                 </button>
               </div>
             </div>
 
-            <div v-if="vaultData.previous_password" class="secret-field">
+            <div v-if="vaultData?.previous_password" class="secret-field">
               <label class="form-label">Contraseña API Anterior (Histórica):</label>
               <div class="secret-input-row">
-                <code class="secret-text secret-text--prev">{{ vaultData.previous_password }}</code>
+                <code class="secret-text secret-text--prev">{{ vaultData?.previous_password }}</code>
               </div>
             </div>
           </div>

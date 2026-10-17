@@ -28,36 +28,12 @@
     isLoading.value = true;
     errorMessage.value = '';
     try {
-      const res = await http.get<{ items: MaintenanceWindowItem[] }>('/api/v1/maintenance');
-      windowsList.value = res.data.items || [];
+      const res = await http.get<MaintenanceWindowItem[] | { items: MaintenanceWindowItem[] }>('/api/v1/maintenance/windows');
+      const raw = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      windowsList.value = raw;
     } catch {
-      // Mock para pruebas unitarias / offline
-      if (windowsList.value.length === 0) {
-        windowsList.value = [
-          {
-            id: 'mw-01',
-            tenant_id: 't-01',
-            router_id: 'r-01',
-            title: 'Mantenimiento Preventivo Enlace Primario',
-            reason: 'Sustitución de transceptor SFP+ en interfaz sfp-plus1',
-            starts_at: new Date(Date.now() + 3600000).toISOString(),
-            ends_at: new Date(Date.now() + 7200000).toISOString(),
-            suppress_alerts: true,
-            is_cancelled: false,
-          },
-          {
-            id: 'mw-02',
-            tenant_id: 't-01',
-            target_tag: 'zona-sur',
-            title: 'Actualización Firmware SwOS / RouterOS',
-            reason: 'Migración a RouterOS v7.18 en anillo de distribución sur',
-            starts_at: new Date(Date.now() + 86400000).toISOString(),
-            ends_at: new Date(Date.now() + 90000000).toISOString(),
-            suppress_alerts: true,
-            is_cancelled: false,
-          },
-        ];
-      }
+      // Sin datos de demostración en producción
+      windowsList.value = [];
     } finally {
       isLoading.value = false;
     }

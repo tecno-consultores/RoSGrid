@@ -71,30 +71,29 @@ export const useInventoryStore = defineStore('inventory', () => {
   async function fetchRouters(): Promise<void> {
     try {
       const { http } = await import('@/api/httpClient');
-      const res = await http.get<{ items: RouterItem[] }>('/api/v1/inventory/routers');
-      setRouters(res.data.items || []);
+      const res = await http.get<RouterItem[] | { items: RouterItem[] }>('/api/v1/inventory/routers');
+      const raw = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      const items: RouterItem[] = raw.map((item: any) => ({
+        ...item,
+        ip_address:
+          item.ip_address ||
+          (item.api_base_url
+            ? item.api_base_url.replace(/^https?:\/\//, '').split('/')[0].split(':')[0]
+            : ''),
+        ros_version: item.ros_version || 'v7',
+        is_reachable: item.is_reachable ?? false,
+      }));
+      setRouters(items);
     } catch {
-      if (routers.value.length === 0) {
-        setRouters([
-          {
-            id: 'r-01',
-            tenant_id: 't-01',
-            display_name: 'CCR2004-Edge-Core',
-            ros_identity: 'EdgeCore1',
-            ip_address: '192.168.10.1',
-            api_port: 8728,
-            ros_version: '7.18',
-            model: 'CCR2004-1G-12S+2XS',
-            serial_number: 'HE4011ABC123',
-            network_role: 'EDGE_BGP',
-            admin_state: 'PRODUCTION',
-            is_reachable: true,
-            latitude: 10.4806,
-            longitude: -66.9036,
-          },
-        ]);
-      }
+      // Sin datos de demostración: si falla la red, el inventario permanece vacío
+      setRouters([]);
     }
+  }
+
+  async function deleteRouter(routerId: string): Promise<void> {
+    const { http } = await import('@/api/httpClient');
+    await http.delete(`/api/v1/inventory/routers/${routerId}`);
+    routers.value = routers.value.filter((r) => r.id !== routerId);
   }
 
   return {
@@ -112,5 +111,6 @@ export const useInventoryStore = defineStore('inventory', () => {
     selectRouter,
     clearInventory,
     fetchRouters,
+    deleteRouter,
   };
 });

@@ -54,37 +54,8 @@
         res.data.has_all_routers_access ?? props.user.has_all_routers_access;
       permissionsList.value = res.data.permissions || [];
     } catch {
-      // Mock / fallback si no hay routers en test
-      if (permissionsList.value.length === 0) {
-        permissionsList.value = [
-          {
-            router_id: 'r-01',
-            router_name: 'CCR2004-Edge-Core',
-            network_role: 'EDGE_BGP',
-            tag: 'zona-norte',
-            can_read: true,
-            can_write_layer1: false,
-            can_write_layer2: false,
-            can_execute_diagnostics: true,
-            can_trigger_backup: false,
-            can_reboot: false,
-            bypass_maker_checker: false,
-          },
-          {
-            router_id: 'r-02',
-            router_name: 'RB4011-Tower-AP',
-            network_role: 'TOWER_AP',
-            tag: 'zona-sur',
-            can_read: true,
-            can_write_layer1: true,
-            can_write_layer2: false,
-            can_execute_diagnostics: true,
-            can_trigger_backup: true,
-            can_reboot: false,
-            bypass_maker_checker: false,
-          },
-        ];
-      }
+      // Sin datos de demostración en producción
+      permissionsList.value = [];
     } finally {
       isLoading.value = false;
     }

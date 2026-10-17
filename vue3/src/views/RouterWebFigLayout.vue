@@ -8,7 +8,7 @@
   import { useLiveTelemetryStore } from '@/stores/useLiveTelemetryStore';
   import { useInventoryStore } from '@/stores/useInventoryStore';
   import { http } from '@/api/httpClient';
-  import type { RouterItem, TelemetryPoint } from '@/types';
+  import type { RouterItem } from '@/types';
   import RouterContextHeader from '@/components/webfig/RouterContextHeader.vue';
   import RouterWorkspaceTabsBar from '@/components/webfig/RouterWorkspaceTabsBar.vue';
   import RouterSidebarMenu from '@/components/webfig/RouterSidebarMenu.vue';
@@ -22,7 +22,6 @@
   const routerId = computed(() => String(route.params.routerId || ''));
 
   let wsInstance: WebSocket | null = null;
-  let mockTickInterval: ReturnType<typeof setInterval> | null = null;
 
   const currentRouter = computed<RouterItem | null>(() => {
     return (
@@ -35,25 +34,10 @@
   async function loadRouterData() {
     if (!routerId.value) return;
     try {
-      const res = await http.get<RouterItem>(`/api/v1/routers/${routerId.value}`);
+      const res = await http.get<RouterItem>(`/api/v1/inventory/routers/${routerId.value}`);
       webFigStore.setCurrentRouter(res.data);
     } catch {
-      // Si falla o en modo mock, crear objeto de respaldo
-      if (!webFigStore.currentRouter) {
-        webFigStore.setCurrentRouter({
-          id: routerId.value,
-          tenant_id: 't-default',
-          display_name: `CCR2004-${routerId.value.substring(0, 5)}`,
-          ros_identity: 'Edge-Core-RouterOS',
-          model: 'CCR2004-16G-2S+',
-          serial_number: 'HE4011ABC123',
-          ip_address: '192.168.88.1',
-          api_port: 8728,
-          ros_version: '7.18',
-          admin_state: 'PRODUCTION',
-          is_reachable: true,
-        });
-      }
+      // Si falla la consulta, no se inyectan datos simulados
     }
   }
 
@@ -81,46 +65,22 @@
         };
 
         wsInstance.onerror = () => {
-          startMockTelemetry();
+          // Error de conexión WS
         };
 
         wsInstance.onclose = () => {
           // Desconexión limpia
         };
       } catch {
-        startMockTelemetry();
+        // Excepción de constructor WebSocket
       }
-    } else {
-      startMockTelemetry();
     }
-  }
-
-  function startMockTelemetry() {
-    if (mockTickInterval) return;
-    let tick = 0;
-    mockTickInterval = setInterval(() => {
-      tick++;
-      const samplePoint: TelemetryPoint = {
-        timestampEpoch: Math.floor(Date.now() / 1000),
-        timestampIso: new Date().toISOString(),
-        cpuLoadPct: 15 + Math.round(Math.sin(tick * 0.3) * 12),
-        freeMemoryPct: 65 - Math.round(Math.cos(tick * 0.2) * 8),
-        rxBps: Math.max(100000, 10000000 + Math.round(Math.sin(tick * 0.5) * 5000000)),
-        txBps: Math.max(80000, 6000000 + Math.round(Math.cos(tick * 0.5) * 3000000)),
-        temperatureC: 41 + (tick % 3),
-      };
-      liveTelemetryStore.pushTelemetryPoint(samplePoint);
-    }, 2000);
   }
 
   function disconnectTelemetryWebSocket() {
     if (wsInstance) {
       wsInstance.close();
       wsInstance = null;
-    }
-    if (mockTickInterval) {
-      clearInterval(mockTickInterval);
-      mockTickInterval = null;
     }
   }
 

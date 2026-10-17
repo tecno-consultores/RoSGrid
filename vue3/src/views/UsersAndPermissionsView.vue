@@ -84,48 +84,12 @@
     isLoading.value = true;
     errorMessage.value = '';
     try {
-      const res = await http.get<{ items: UserManagementItem[] }>('/api/v1/users');
-      usersList.value = res.data.items || [];
+      const res = await http.get<UserManagementItem[] | { items: UserManagementItem[] }>('/api/v1/users');
+      const raw = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      usersList.value = raw;
     } catch {
-      // Mock para pruebas unitarias / offline
-      if (usersList.value.length === 0) {
-        usersList.value = [
-          {
-            id: 'u-01',
-            username: 'admin.norte',
-            email: 'admin@isp-norte.net',
-            full_name: 'Carlos Mendoza',
-            role: 'TENANT_ADMIN',
-            totp_enabled: true,
-            is_active: true,
-            has_all_routers_access: true,
-            created_at: new Date().toISOString(),
-          },
-          {
-            id: 'u-02',
-            username: 'tech.valencia',
-            email: 'valencia@isp-norte.net',
-            full_name: 'Soporte Nivel 2 Valencia',
-            role: 'SUPPORT_L2',
-            totp_enabled: true,
-            is_active: true,
-            has_all_routers_access: false,
-            assigned_router_ids: ['r-01', 'r-02'],
-            created_at: new Date().toISOString(),
-          },
-          {
-            id: 'u-03',
-            username: 'noc.monitor',
-            email: 'noc@isp-norte.net',
-            full_name: 'Operador Wallboard 24/7',
-            role: 'NOC_MONITOR',
-            totp_enabled: false,
-            is_active: true,
-            has_all_routers_access: true,
-            created_at: new Date().toISOString(),
-          },
-        ];
-      }
+      // Sin datos de demostración en producción
+      usersList.value = [];
     } finally {
       isLoading.value = false;
     }

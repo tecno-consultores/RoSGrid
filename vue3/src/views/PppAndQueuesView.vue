@@ -61,51 +61,19 @@
     isLoading.value = true;
     try {
       if (activeTab.value === 'pppoe-active') {
-        const res = await http.get<{ items: PppActiveSessionItem[] }>(
-          `/api/v1/routers/${routerId.value}/webfig/layer1/ppp/active`,
+        const res = await http.get<PppActiveSessionItem[] | { items: PppActiveSessionItem[] }>(
+          `/api/v1/routers/${routerId.value}/webfig/ppp/active`,
         );
-        pppSessions.value = res.data.items || [];
+        pppSessions.value = Array.isArray(res.data) ? res.data : (res.data?.items || []);
       } else {
-        const res = await http.get<{ items: SimpleQueueItem[] }>(
-          `/api/v1/routers/${routerId.value}/webfig/layer1/queues/simple`,
+        const res = await http.get<SimpleQueueItem[] | { items: SimpleQueueItem[] }>(
+          `/api/v1/routers/${routerId.value}/webfig/queues/simple`,
         );
-        simpleQueues.value = res.data.items || [];
+        simpleQueues.value = Array.isArray(res.data) ? res.data : (res.data?.items || []);
       }
     } catch {
-      // Fallback mock
-      pppSessions.value = [
-        {
-          id: '*1',
-          name: 'cliente.torre1@isp.net',
-          service: 'pppoe',
-          caller_id: '48:8F:5A:12:34:56',
-          address: '10.50.12.44',
-          uptime: '04d 18:22:10',
-        },
-        {
-          id: '*2',
-          name: 'empresa.norte@isp.net',
-          service: 'pppoe',
-          caller_id: '00:0C:42:AA:BB:CC',
-          address: '10.50.12.45',
-          uptime: '19d 02:11:00',
-        },
-      ];
-
-      simpleQueues.value = [
-        {
-          id: '*1',
-          name: 'Plan-100M-Residencial',
-          target: '10.50.12.0/24',
-          max_limit: '20M/100M',
-          burst_limit: '30M/150M',
-          bytes_in: 4500000000,
-          bytes_out: 18500000000,
-          packets_in: 3400000,
-          packets_out: 14000000,
-          disabled: false,
-        },
-      ];
+      pppSessions.value = [];
+      simpleQueues.value = [];
     } finally {
       isLoading.value = false;
     }
@@ -114,15 +82,17 @@
   async function handleReconnectPpp(session: PppActiveSessionItem) {
     webFigStore.startSafeModeCountdown(60);
     try {
-      await http.post(
-        `/api/v1/routers/${routerId.value}/webfig/layer1/ppp/active/${session.id}/reconnect`,
+      await http.delete(
+        `/api/v1/routers/${routerId.value}/webfig/ppp/active/${session.id}`,
       );
       actionMessage.value = `Sesión de ${session.name} reiniciada con éxito.`;
       setTimeout(() => {
         actionMessage.value = '';
       }, 4000);
-    } catch {
-      actionMessage.value = `Sesión ${session.name} reseteada exitosamente (Modo Safe).`;
+      loadPppData();
+    } catch (err: any) {
+      actionMessage.value =
+        err?.response?.data?.detail || err?.message || 'Error al reiniciar sesión';
       setTimeout(() => {
         actionMessage.value = '';
       }, 4000);

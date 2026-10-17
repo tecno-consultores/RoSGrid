@@ -126,6 +126,25 @@
     }
   }
 
+  async function handleDeleteRouter(targetRouter: RouterItem) {
+    if (!confirm(`¿Está seguro de eliminar permanentemente el equipo "${targetRouter.display_name}"?`)) {
+      return;
+    }
+    actionMessage.value = '';
+    actionError.value = '';
+    try {
+      await http.delete(`/api/v1/inventory/routers/${targetRouter.id}`);
+      actionMessage.value = `Router "${targetRouter.display_name}" eliminado correctamente.`;
+      await inventoryStore.fetchRouters();
+      setTimeout(() => {
+        actionMessage.value = '';
+      }, 4000);
+    } catch (err: unknown) {
+      const error = err as { message?: string; detail?: string };
+      actionError.value = error.detail || error.message || 'Error al eliminar el router.';
+    }
+  }
+
   function handleCsvImported(count: number) {
     actionMessage.value = `Se importaron ${count} routers correctamente. Sincronizando inventario...`;
     inventoryStore.fetchRouters();
@@ -145,7 +164,9 @@
   }
 
   onMounted(() => {
-    inventoryStore.fetchRouters();
+    if (inventoryStore.routers.length === 0) {
+      inventoryStore.fetchRouters();
+    }
   });
 </script>
 
@@ -324,6 +345,16 @@
                   @click="triggerDiscovery(row as unknown as RouterItem)"
                 >
                   🔍 TOFU
+                </button>
+
+                <button
+                  v-if="isVaultAuthorized"
+                  type="button"
+                  class="btn-row-action btn-row-action--delete"
+                  aria-label="Eliminar router del inventario"
+                  @click="handleDeleteRouter(row as unknown as RouterItem)"
+                >
+                  🗑️ Eliminar
                 </button>
               </div>
             </template>
@@ -537,6 +568,15 @@
   .btn-row-action--vault {
     border-color: #fbbf24;
     color: #fbbf24;
+  }
+
+  .btn-row-action--delete {
+    border-color: #ef4444;
+    color: #f87171;
+  }
+
+  .btn-row-action--delete:hover {
+    background: rgba(239, 68, 68, 0.15);
   }
 
   .status-indicator.success {

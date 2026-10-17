@@ -138,11 +138,11 @@ describe('useInventoryStore — Inventario Flota MikroTik (shallowRef)', () => {
     expect(store.routers.length).toBe(3);
     getSpy.mockRestore();
 
-    // Probar fetchRouters en fallo (fallback a mocks)
+    // Probar fetchRouters en fallo (sin mocks, inventario vacío)
     store.clearInventory();
     const failSpy = vi.spyOn(http, 'get').mockRejectedValueOnce(new Error('Network error'));
     await store.fetchRouters();
-    expect(store.routers.length).toBeGreaterThan(0);
+    expect(store.routers.length).toBe(0);
     failSpy.mockRestore();
 
     store.clearInventory();

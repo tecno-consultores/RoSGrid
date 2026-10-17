@@ -10,6 +10,23 @@ describe('MaintenanceWindowsView.vue — Ventanas de Mantenimiento Programadas',
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.useFakeTimers();
+    vi.spyOn(http, 'get').mockResolvedValue({
+      status: 200,
+      data: [
+        {
+          id: 'mw-99',
+          tenant_id: 't-1',
+          router_id: 'r-1',
+          title: 'Parche de Seguridad',
+          reason: 'Actualización ROS v7',
+          starts_at: new Date().toISOString(),
+          ends_at: new Date(Date.now() + 3600000).toISOString(),
+          suppress_alerts: true,
+          is_cancelled: false,
+        },
+      ],
+      headers: new Headers(),
+    });
   });
 
   afterEach(() => {

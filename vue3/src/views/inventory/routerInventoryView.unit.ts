@@ -39,6 +39,11 @@ describe('RouterInventoryView.vue — Inventario y Modos Tabla, Mapa y Dividido'
   });
 
   it('monta la vista, alterna modos de visualización y filtra routers', async () => {
+    vi.spyOn(http, 'get').mockResolvedValue({
+      status: 200,
+      data: [],
+      headers: new Headers(),
+    });
     const inventoryStore = useInventoryStore();
     inventoryStore.setRouters([
       {

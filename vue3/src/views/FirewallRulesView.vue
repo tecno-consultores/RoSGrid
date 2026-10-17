@@ -55,62 +55,12 @@
   async function loadFirewallRules() {
     isLoading.value = true;
     try {
-      const res = await http.get<{ items: FirewallRuleItem[] }>(
-        `/api/v1/routers/${routerId.value}/webfig/layer1/firewall/${activeTab.value}`,
+      const res = await http.get<FirewallRuleItem[] | { items: FirewallRuleItem[] }>(
+        `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}`,
       );
-      rulesList.value = res.data.items || [];
+      rulesList.value = Array.isArray(res.data) ? res.data : (res.data?.items || []);
     } catch {
-      // Fallback mock para pruebas / offline
-      rulesList.value = [
-        {
-          id: '*1',
-          chain: 'input',
-          action: 'accept',
-          protocol: 'tcp',
-          dst_port: '22,8728',
-          bytes: 14500000,
-          packets: 98000,
-          comment: 'Permitir Administración y API Segura',
-          disabled: false,
-          dynamic: false,
-          invalid: false,
-        },
-        {
-          id: '*2',
-          chain: 'input',
-          action: 'drop',
-          protocol: 'tcp',
-          bytes: 84000000,
-          packets: 450000,
-          comment: 'Bloquear Escaneos Externos',
-          disabled: false,
-          dynamic: false,
-          invalid: false,
-        },
-        {
-          id: '*3',
-          chain: 'forward',
-          action: 'accept',
-          src_address: '192.168.10.0/24',
-          bytes: 520000000,
-          packets: 1200000,
-          comment: 'Acceso Internet Clientes Corporativos',
-          disabled: false,
-          dynamic: false,
-          invalid: false,
-        },
-        {
-          id: '*4',
-          chain: 'forward',
-          action: 'drop',
-          comment: 'Drop general final',
-          bytes: 3500000,
-          packets: 12000,
-          disabled: false,
-          dynamic: false,
-          invalid: false,
-        },
-      ];
+      rulesList.value = [];
     } finally {
       isLoading.value = false;
     }
@@ -129,14 +79,14 @@
 
     try {
       await http.post(
-        `/api/v1/routers/${routerId.value}/webfig/layer1/firewall/${activeTab.value}/move`,
+        `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}/move`,
         {
-          rule_id: event.row.id,
-          destination_index: event.toIndex,
+          numbers: event.row.id,
+          destination: String(event.toIndex),
         },
       );
     } catch {
-      // Mantiene el orden reordenado local en pruebas
+      // Manejo silencioso en fallo de red
     } finally {
       isMoving.value = false;
     }

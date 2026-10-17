@@ -31,7 +31,8 @@
   const mapContainer = ref<HTMLDivElement | null>(null);
   let mapInstance: L.Map | null = null;
   let markersLayer: L.LayerGroup | null = null;
-  const isDeterministicE2E = typeof navigator !== 'undefined' && Boolean(navigator.webdriver);
+  const isDeterministicE2E =
+    typeof window !== 'undefined' && Boolean((window as unknown as { __ROSGRID_E2E__?: boolean }).__ROSGRID_E2E__);
 
   function getStatusColor(router: RouterItem): string {
     if (router.admin_state === 'MAINTENANCE') return '#38BDF8';
@@ -147,6 +148,11 @@
 
   onMounted(() => {
     initMap();
+    setTimeout(() => {
+      if (mapInstance) {
+        mapInstance.invalidateSize();
+      }
+    }, 250);
   });
 
   onBeforeUnmount(() => {

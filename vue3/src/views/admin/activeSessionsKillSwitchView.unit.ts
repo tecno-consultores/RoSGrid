@@ -23,6 +23,41 @@ describe('ActiveSessionsKillSwitchView.vue — Control de Sesiones y Kill-Switch
       role: 'SUPERADMIN_GLOBAL',
       totp_enabled: true,
     });
+    vi.spyOn(http, 'get').mockResolvedValue({
+      status: 200,
+      data: {
+        items: [
+          {
+            session_id: 'sess-01',
+            user_id: 'u-01',
+            username: 'admin.corp',
+            full_name: 'Carlos Mendoza',
+            role: 'TENANT_ADMIN',
+            ip_address: '192.168.10.45',
+            user_agent: 'Mozilla/5.0 (X11; Linux x86_64)',
+            current_router_id: 'r-01',
+            current_router_name: 'CCR2004-Edge-Core',
+            current_view_path: '/routers/r-01/webfig/firewall',
+            created_at: new Date().toISOString(),
+            last_activity_at: new Date().toISOString(),
+            seconds_since_active: 15,
+          },
+          {
+            session_id: 'sess-02',
+            user_id: 'u-02',
+            username: 'tech.valencia',
+            full_name: 'Soporte Terreno',
+            role: 'SUPPORT_L2',
+            ip_address: '10.50.2.14',
+            user_agent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0)',
+            created_at: new Date().toISOString(),
+            last_activity_at: new Date().toISOString(),
+            seconds_since_active: 60,
+          },
+        ],
+      },
+      headers: new Headers(),
+    });
   });
 
   afterEach(() => {

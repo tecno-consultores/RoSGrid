@@ -70,57 +70,12 @@
   async function loadInterfaces() {
     isLoading.value = true;
     try {
-      const res = await http.get<{ items: InterfaceRow[] }>(
-        `/api/v1/routers/${routerId.value}/webfig/layer1/interfaces`,
+      const res = await http.get<InterfaceRow[] | { items: InterfaceRow[] }>(
+        `/api/v1/routers/${routerId.value}/webfig/interfaces`,
       );
-      interfacesList.value = res.data.items || [];
+      interfacesList.value = Array.isArray(res.data) ? res.data : (res.data?.items || []);
     } catch {
-      // Fallback mock para pruebas unitarias / offline
-      interfacesList.value = [
-        {
-          id: '*1',
-          name: 'ether1-WAN',
-          type: 'ether',
-          mac_address: 'DC:2C:6E:01:02:03',
-          mtu: 1500,
-          running: true,
-          disabled: false,
-          rx_bps: 45000000,
-          tx_bps: 12000000,
-          comment: 'Enlace Fibra Óptica Principal',
-        },
-        {
-          id: '*2',
-          name: 'sfp-plus1-Trunk',
-          type: 'ether',
-          is_sfp: true,
-          mac_address: 'DC:2C:6E:01:02:04',
-          mtu: 9000,
-          running: true,
-          disabled: false,
-          rx_bps: 850000000,
-          tx_bps: 620000000,
-          comment: 'Troncal 10G hacia Core',
-        },
-        {
-          id: '*3',
-          name: 'vlan100-Clientes',
-          type: 'vlan',
-          mtu: 1500,
-          running: true,
-          disabled: false,
-          dynamic: false,
-        },
-        {
-          id: '*4',
-          name: 'bridge-LAN',
-          type: 'bridge',
-          mac_address: 'DC:2C:6E:01:02:FF',
-          mtu: 1500,
-          running: true,
-          disabled: false,
-        },
-      ];
+      interfacesList.value = [];
     } finally {
       isLoading.value = false;
     }
@@ -128,23 +83,14 @@
 
   async function openSfpDdm(interfaceName: string) {
     try {
-      const res = await http.get<SfpOpticalDdmInfo>(
-        `/api/v1/routers/${routerId.value}/webfig/layer1/sfp-ddm/${interfaceName}`,
+      const res = await http.post<SfpOpticalDdmInfo>(
+        `/api/v1/routers/${routerId.value}/webfig/interfaces/ethernet/${interfaceName}/sfp-monitor`,
       );
       selectedSfpDdm.value = res.data;
+      isDdmModalOpen.value = true;
     } catch {
-      // Mock DDM
-      selectedSfpDdm.value = {
-        interface_name: interfaceName,
-        tx_power_dbm: -2.4,
-        rx_power_dbm: -14.8,
-        optical_health: 'OPTIMAL',
-        temperature_c: 44.5,
-        voltage_v: 3.28,
-        wavelength_nm: 1310,
-      };
+      selectedSfpDdm.value = null;
     }
-    isDdmModalOpen.value = true;
   }
 
   function getHealthClass(health: string): string {

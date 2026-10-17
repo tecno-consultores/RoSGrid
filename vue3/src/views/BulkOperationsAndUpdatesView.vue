@@ -2,8 +2,10 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { ref, computed } from 'vue';
+  import { ref, computed, onMounted } from 'vue';
   import { http } from '@/api/httpClient';
+  import { useInventoryStore } from '@/stores/useInventoryStore';
+
 
   interface FleetRouter {
     id: string;
@@ -20,8 +22,9 @@
     name: string;
     category: string;
     description: string;
-    variables_schema: { key: string; label: string; default_val: string }[];
-    ros_command_template: string;
+    variables_schema: { key: string; label: string; default_val?: string }[];
+    ros_command_template?: string;
+    rest_steps_template?: unknown[];
   }
 
   interface BulkExecutionResult {
@@ -41,44 +44,7 @@
   // Paso 1: Flota
   const filterRole = ref<string>('ALL');
   const filterTag = ref<string>('ALL');
-  const fleetRouters = ref<FleetRouter[]>([
-    {
-      id: 'r-01',
-      identity: 'RB5009-Core-01',
-      ip_address: '192.168.88.1',
-      network_role: 'CORE_ROUTER',
-      tag: 'datacenter-central',
-      ros_version: '7.16.1',
-      selected: true,
-    },
-    {
-      id: 'r-02',
-      identity: 'CCR2004-Border-02',
-      ip_address: '10.0.0.1',
-      network_role: 'BORDER_BGP',
-      tag: 'datacenter-central',
-      ros_version: '7.15.2',
-      selected: true,
-    },
-    {
-      id: 'r-03',
-      identity: 'hAP-ax3-Branch-01',
-      ip_address: '172.16.10.1',
-      network_role: 'BRANCH_CPE',
-      tag: 'zona-norte',
-      ros_version: '7.15.2',
-      selected: false,
-    },
-    {
-      id: 'r-04',
-      identity: 'NetMetal-Tower-AP',
-      ip_address: '10.50.0.1',
-      network_role: 'TOWER_AP',
-      tag: 'zona-norte',
-      ros_version: '7.14.3',
-      selected: false,
-    },
-  ]);
+  const fleetRouters = ref<FleetRouter[]>([]);
 
   const filteredFleet = computed(() => {
     return fleetRouters.value.filter((r) => {
@@ -92,6 +58,32 @@
     return fleetRouters.value.filter((r) => r.selected).length;
   });
 
+  const inventoryStore = useInventoryStore();
+
+  function syncFleetFromInventory() {
+    if (inventoryStore.routers && inventoryStore.routers.length > 0) {
+      fleetRouters.value = inventoryStore.routers.map((r) => ({
+        id: r.id,
+        identity: r.ros_identity || r.display_name,
+        ip_address: r.ip_address || '',
+        network_role: r.network_role || 'CORE_ROUTER',
+        tag: (r as any).tags?.[0] || 'datacenter-central',
+        ros_version: r.ros_version || 'v7.16',
+        selected: true,
+      }));
+    } else {
+      fleetRouters.value = [];
+    }
+  }
+
+  onMounted(async () => {
+    if (inventoryStore.routers.length === 0) {
+      await inventoryStore.fetchRouters();
+    }
+    syncFleetFromInventory();
+    await fetchTemplates();
+  });
+
   function toggleAllVisible(checked: boolean) {
     filteredFleet.value.forEach((r) => {
       r.selected = checked;
@@ -99,55 +91,30 @@
   }
 
   // Paso 2: Plantillas y Variables
-  const templates = ref<ConfigTemplate[]>([
-    {
-      id: 'tpl-dns',
-      name: 'Actualizar DNS Corporativos',
-      category: 'IP Service',
-      description: 'Configura servidores DNS primarios y secundarios con verificación DoH',
-      variables_schema: [
-        { key: 'primary_dns', label: 'DNS Primario', default_val: '1.1.1.1' },
-        { key: 'secondary_dns', label: 'DNS Secundario', default_val: '8.8.8.8' },
-      ],
-      ros_command_template:
-        '/ip dns set servers={{primary_dns}},{{secondary_dns}} allow-remote-requests=no',
-    },
-    {
-      id: 'tpl-fw-drop',
-      name: 'Bloquear IP Atacante en Firewall RAW',
-      category: 'Seguridad',
-      description: 'Agrega regla de bloqueo instantáneo en prerouting chain raw',
-      variables_schema: [
-        { key: 'bad_ip', label: 'IP o Prefijo Atacante', default_val: '203.0.113.45/32' },
-        { key: 'comment', label: 'Comentario / Ticket', default_val: 'Bloqueo por DDoS NOC-4421' },
-      ],
-      ros_command_template:
-        '/ip firewall raw add chain=prerouting src-address={{bad_ip}} action=drop comment="{{comment}}"',
-    },
-    {
-      id: 'tpl-ntp',
-      name: 'Sincronización Horaria NTP',
-      category: 'Sistema',
-      description: 'Configura cliente SNTP institucional con pool.ntp.org',
-      variables_schema: [{ key: 'ntp_server', label: 'Servidor NTP', default_val: 'pool.ntp.org' }],
-      ros_command_template: '/system ntp client set enabled=yes servers={{ntp_server}}',
-    },
-  ]);
-
-  const selectedTemplateId = ref<string>('tpl-dns');
-  const templateVars = ref<Record<string, string>>({
-    primary_dns: '1.1.1.1',
-    secondary_dns: '8.8.8.8',
-  });
+  const templates = ref<ConfigTemplate[]>([]);
+  const selectedTemplateId = ref<string>('');
+  const templateVars = ref<Record<string, string>>({});
   const previewPayload = ref<string>('');
+
+  async function fetchTemplates() {
+    try {
+      const res = await http.get<ConfigTemplate[]>('/api/v1/operations/templates');
+      templates.value = Array.isArray(res.data) ? res.data : [];
+      if (templates.value.length > 0 && !selectedTemplateId.value) {
+        onSelectTemplate(templates.value[0].id);
+      }
+    } catch {
+      templates.value = [];
+    }
+  }
 
   function onSelectTemplate(tplId: string) {
     selectedTemplateId.value = tplId;
     const tpl = templates.value.find((t) => t.id === tplId);
     if (tpl) {
       const vars: Record<string, string> = {};
-      tpl.variables_schema.forEach((v) => {
-        vars[v.key] = v.default_val;
+      (tpl.variables_schema || []).forEach((v) => {
+        vars[v.key] = v.default_val || '';
       });
       templateVars.value = vars;
       generatePreview();
@@ -156,10 +123,13 @@
 
   function generatePreview() {
     const tpl = templates.value.find((t) => t.id === selectedTemplateId.value);
-    if (!tpl) return;
-    let cmd = tpl.ros_command_template;
+    if (!tpl) {
+      previewPayload.value = '';
+      return;
+    }
+    let cmd = tpl.ros_command_template || JSON.stringify(tpl.rest_steps_template || []);
     Object.entries(templateVars.value).forEach(([k, v]) => {
-      cmd = cmd.replaceAll(`{{${k}}}`, v);
+      cmd = cmd.replaceAll(`{{${k}}}`, v).replaceAll(`{{ ${k} }}`, v);
     });
     previewPayload.value = JSON.stringify(
       {
@@ -190,38 +160,31 @@
       identity: r.identity,
       status: 'RUNNING',
       progress: 0,
-      details: 'Conectando con MikroTik REST...',
+      details: 'Encolando en servidor...',
     }));
 
     try {
       await http.post('/api/v1/operations/bulk-jobs', {
         template_id: selectedTemplateId.value,
         variables: templateVars.value,
-        router_ids: selected.map((r) => r.id),
+        target_router_ids: selected.map((r) => r.id),
       });
-    } catch {
-      // Simula ejecución WebSocket
-    }
-
-    // Progreso simulado para retroalimentación en UI
-    for (let i = 1; i <= 5; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      progressPercent.value = i * 20;
-      executionResults.value.forEach((job, idx) => {
-        if (i === 5) {
-          job.status = idx === 1 ? 'ROLLED_BACK' : 'SUCCESS';
-          job.details =
-            idx === 1
-              ? 'Safe Mode revirtió el cambio por pérdida de enlace'
-              : 'Comando aplicado y verificado correctamente';
-          job.progress = 100;
-        } else {
-          job.progress = i * 20;
-          job.details = `Aplicando paso ${i} de 5...`;
-        }
+      progressPercent.value = 100;
+      executionResults.value.forEach((job) => {
+        job.status = 'SUCCESS';
+        job.details = 'Trabajo masivo encolado exitosamente';
+        job.progress = 100;
       });
+    } catch (err: any) {
+      progressPercent.value = 100;
+      executionResults.value.forEach((job) => {
+        job.status = 'FAILED';
+        job.details = err?.response?.data?.detail || err?.message || 'Fallo de ejecución';
+        job.progress = 0;
+      });
+    } finally {
+      executing.value = false;
     }
-    executing.value = false;
   }
 
   // Pestaña Updates de RouterOS
@@ -233,15 +196,14 @@
     upgradingRouterId.value = router.id;
     updateSuccess.value = null;
     try {
-      await http.post(`/api/v1/routers/${router.id}/operations/ros-upgrade`, {
-        target_version: targetRosVersion.value,
-        mandatory_backup: true,
+      await http.post('/api/v1/operations/ros-updates/execute', {
+        router_ids: [router.id],
+        auto_upgrade_firmware: true,
       });
-      updateSuccess.value = `Actualización de ${router.identity} iniciada. Se guardó respaldo .rsc + .backup obligatorio.`;
+      updateSuccess.value = `Actualización de ${router.identity} iniciada. Se guardó respaldo obligatorio.`;
       router.ros_version = targetRosVersion.value;
-    } catch {
-      updateSuccess.value = `Actualización de ${router.identity} a v${targetRosVersion.value} en curso tras crear respaldo previo.`;
-      router.ros_version = targetRosVersion.value;
+    } catch (err: any) {
+      updateSuccess.value = `Error al actualizar ${router.identity}: ${err?.response?.data?.detail || err?.message || 'Fallo de conexión'}`;
     } finally {
       upgradingRouterId.value = null;
       setTimeout(() => {
@@ -398,7 +360,10 @@
       <div v-if="wizardStep === 2" class="wizard-step-card">
         <h2 class="step-title">Paso 2: Elegir Plantilla Parametrizable</h2>
 
-        <div class="templates-grid">
+        <div v-if="templates.length === 0" class="empty-state-banner">
+          <p>No existen plantillas Golden Config registradas para este Tenant.</p>
+        </div>
+        <div v-else class="templates-grid">
           <div
             v-for="tpl in templates"
             :key="tpl.id"
@@ -415,7 +380,7 @@
         </div>
 
         <!-- Formulario dinámico de variables -->
-        <div class="template-variables-box">
+        <div v-if="selectedTemplateId" class="template-variables-box">
           <h3 class="vars-title">Parámetros de la Plantilla</h3>
           <div class="vars-grid">
             <div
@@ -437,7 +402,7 @@
         </div>
 
         <!-- Previsualización -->
-        <div class="preview-box">
+        <div v-if="selectedTemplateId" class="preview-box">
           <div class="preview-header">
             <span>Previsualización de Comandos REST (render-preview)</span>
             <span class="badge badge--safe">Safe Mode 60s Activado</span>
@@ -449,7 +414,12 @@
           <button type="button" class="btn btn--secondary" @click="wizardStep = 1">
             ⬅️ Volver a Flota
           </button>
-          <button type="button" class="btn btn--primary btn--run" @click="startBulkExecution">
+          <button
+            type="button"
+            class="btn btn--primary btn--run"
+            :disabled="!selectedTemplateId || selectedRoutersCount === 0"
+            @click="startBulkExecution"
+          >
             🚀 Ejecutar en {{ selectedRoutersCount }} Routers con Safe Mode ➔
           </button>
         </div>

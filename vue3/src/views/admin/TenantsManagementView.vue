@@ -30,38 +30,12 @@
     isLoading.value = true;
     errorMessage.value = '';
     try {
-      const res = await http.get<{ items: TenantItem[] }>('/api/v1/tenants');
-      tenants.value = res.data.items || [];
-    } catch {
-      // Fallback para pruebas unitarias / entornos aislados
-      if (tenants.value.length === 0) {
-        tenants.value = [
-          {
-            id: 't-01',
-            slug: 'isp-norte',
-            name: 'ISP Norte C.A.',
-            tax_id: 'J-12345678-9',
-            status: 'ACTIVE',
-            max_routers_quota: 100,
-            max_users_quota: 25,
-            active_routers_count: 42,
-            active_users_count: 12,
-            default_safemode_seconds: 60,
-          },
-          {
-            id: 't-02',
-            slug: 'corp-sur',
-            name: 'Telecomunicaciones del Sur',
-            tax_id: 'J-98765432-1',
-            status: 'SUSPENDED',
-            max_routers_quota: 50,
-            max_users_quota: 10,
-            active_routers_count: 5,
-            active_users_count: 3,
-            default_safemode_seconds: 45,
-          },
-        ];
-      }
+      const res = await http.get<TenantItem[] | { items: TenantItem[] }>('/api/v1/tenants');
+      tenants.value = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+    } catch (err: unknown) {
+      tenants.value = [];
+      const error = err as { message?: string; detail?: string };
+      errorMessage.value = error.detail || error.message || 'Error al cargar organizaciones.';
     } finally {
       isLoading.value = false;
     }

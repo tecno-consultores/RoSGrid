@@ -23,6 +23,35 @@ describe('UsersAndPermissionsView.vue — Gestión de 11 Roles y Matriz RBAC', (
       role: 'SUPERADMIN_GLOBAL',
       totp_enabled: true,
     });
+    vi.spyOn(http, 'get').mockResolvedValue({
+      status: 200,
+      data: [
+        {
+          id: 'u-01',
+          username: 'admin.norte',
+          email: 'admin@isp-norte.net',
+          full_name: 'Carlos Mendoza',
+          role: 'TENANT_ADMIN',
+          totp_enabled: true,
+          is_active: true,
+          has_all_routers_access: true,
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: 'u-02',
+          username: 'tech.valencia',
+          email: 'valencia@isp-norte.net',
+          full_name: 'Soporte Nivel 2 Valencia',
+          role: 'SUPPORT_L2',
+          totp_enabled: true,
+          is_active: true,
+          has_all_routers_access: false,
+          assigned_router_ids: ['r-01', 'r-02'],
+          created_at: new Date().toISOString(),
+        },
+      ],
+      headers: new Headers(),
+    });
   });
 
   afterEach(() => {

@@ -32,23 +32,18 @@
     isRunning.value = true;
     pingResults.value = [];
     try {
-      const res = await http.post<{ rows: DiagnosticRow[] }>(
-        `/api/v1/routers/${routerId.value}/webfig/layer1/tools/${activeTab.value}`,
+      const res = await http.post<DiagnosticRow[] | { rows: DiagnosticRow[] } | { results: DiagnosticRow[] }>(
+        `/api/v1/routers/${routerId.value}/webfig/tools/${activeTab.value}`,
         {
           target: targetHost.value,
           count: pingCount.value,
           interface: selectedInterface.value,
         },
       );
-      pingResults.value = res.data.rows || [];
+      const data: any = res.data;
+      pingResults.value = Array.isArray(data) ? data : data?.rows || data?.results || [];
     } catch {
-      // Fallback mock
-      pingResults.value = [
-        { seq: 1, host: targetHost.value, size: 56, ttl: 58, time_ms: 12.4, status: 'echo reply' },
-        { seq: 2, host: targetHost.value, size: 56, ttl: 58, time_ms: 11.8, status: 'echo reply' },
-        { seq: 3, host: targetHost.value, size: 56, ttl: 58, time_ms: 13.1, status: 'echo reply' },
-        { seq: 4, host: targetHost.value, size: 56, ttl: 58, time_ms: 12.0, status: 'echo reply' },
-      ];
+      pingResults.value = [];
     } finally {
       isRunning.value = false;
     }
@@ -56,42 +51,12 @@
 
   async function loadLogs() {
     try {
-      const res = await http.get<{ items: DiagnosticLogItem[] }>(
-        `/api/v1/routers/${routerId.value}/webfig/layer1/tools/logs`,
+      const res = await http.get<DiagnosticLogItem[] | { items: DiagnosticLogItem[] }>(
+        `/api/v1/routers/${routerId.value}/webfig/tools/logs`,
       );
-      logEntries.value = res.data.items || [];
+      logEntries.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
     } catch {
-      // Mock logs
-      logEntries.value = [
-        {
-          id: '1',
-          time: '19:14:02',
-          topics: 'system,info',
-          message: 'user admin logged in from 192.168.10.45 via api-ssl',
-          severity: 'info',
-        },
-        {
-          id: '2',
-          time: '19:15:30',
-          topics: 'bgp,warning',
-          message: 'BGP session 198.51.100.1 hold timer expired, resetting',
-          severity: 'warning',
-        },
-        {
-          id: '3',
-          time: '19:15:35',
-          topics: 'interface,warning',
-          message: 'sfp-plus1-Trunk link down',
-          severity: 'critical',
-        },
-        {
-          id: '4',
-          time: '19:15:38',
-          topics: 'interface,info',
-          message: 'sfp-plus1-Trunk link up (speed 10G, full duplex)',
-          severity: 'info',
-        },
-      ];
+      logEntries.value = [];
     }
   }
 

@@ -74,38 +74,9 @@
       );
       dryRunResult.value = res.data;
       step.value = 2;
-    } catch {
-      // Mock para pruebas unitarias / offline
-      dryRunResult.value = {
-        total_rows: 3,
-        valid_rows_count: 2,
-        invalid_rows_count: 1,
-        rows: [
-          {
-            line: 2,
-            is_valid: true,
-            display_name: 'CCR2004-Edge-Norte',
-            ip_address: '192.168.10.1',
-            serial_number: 'HE4011ABC123',
-          },
-          {
-            line: 3,
-            is_valid: true,
-            display_name: 'RB4011-Tower-Sur',
-            ip_address: '192.168.20.1',
-            serial_number: 'RB4011XYZ789',
-          },
-          {
-            line: 4,
-            is_valid: false,
-            display_name: 'HAP-Ax2-Falla',
-            ip_address: 'invalid-ip',
-            serial_number: 'DUP001',
-            error: 'Dirección IP inválida y serial duplicado',
-          },
-        ],
-      };
-      step.value = 2;
+    } catch (err: any) {
+      errorMessage.value =
+        err?.response?.data?.detail || err?.message || 'Error al validar el archivo CSV con el servidor';
     } finally {
       isProcessing.value = false;
     }
@@ -124,15 +95,13 @@
         '/api/v1/inventory/import-csv/commit',
         formData,
       );
-      const count = res.data?.imported_count || dryRunResult.value?.valid_rows_count || 0;
+      const count = res.data?.imported_count ?? dryRunResult.value?.valid_rows_count ?? 0;
       emit('imported', count);
       resetState();
       emit('close');
-    } catch {
-      const count = dryRunResult.value?.valid_rows_count || 1;
-      emit('imported', count);
-      resetState();
-      emit('close');
+    } catch (err: any) {
+      errorMessage.value =
+        err?.response?.data?.detail || err?.message || 'Error al importar los equipos en el servidor';
     } finally {
       isProcessing.value = false;
     }
