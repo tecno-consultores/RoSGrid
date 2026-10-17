@@ -59,6 +59,9 @@
 
   // Banner accesible de redirección
   const redirectReason = computed(() => {
+    if (!isBootstrapped.value || currentStep.value === 'BOOTSTRAP') {
+      return '';
+    }
     const reason = route.query.reason;
     if (reason === 'session_revoked' || reason === 'killed_by_admin') {
       return 'Tu sesión fue revocada por un Administrador o por la activación del Kill-Switch.';
@@ -309,6 +312,7 @@
         totp_secret: string;
         totp_provisioning_uri: string;
         backup_codes: string[];
+        challenge_id?: string;
       }>('/api/v1/auth/bootstrap', {
         tenant_name: bootstrapTenantName.value.trim(),
         tenant_slug: bootstrapTenantSlug.value.trim().toLowerCase(),
@@ -323,6 +327,7 @@
       secretKey.value = res.data.totp_secret;
       provisioningUri.value = res.data.totp_provisioning_uri;
       backupCodes.value = res.data.backup_codes;
+      challengeId.value = res.data.challenge_id || '';
 
       currentStep.value = 'ENROLL_2FA';
       await renderQrCode(provisioningUri.value);

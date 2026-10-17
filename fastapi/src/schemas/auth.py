@@ -83,6 +83,7 @@ class BootstrapInitResponse(BaseModel):
     totp_secret: str
     totp_provisioning_uri: str
     backup_codes: list[str]
+    challenge_id: str | None = None
     message: str
 
 

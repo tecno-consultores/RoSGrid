@@ -22,7 +22,7 @@ const routes: RouteRecordRaw[] = [
     name: 'DashboardRoot',
     component: () => import('@/views/RouterInventoryView.vue'),
     meta: {
-      requiresAuth: false,
+      requiresAuth: true,
       title: 'Dashboard — Flota MikroTik — RoSGrid',
     },
   },

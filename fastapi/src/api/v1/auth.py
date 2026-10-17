@@ -343,6 +343,17 @@ async def verify_2fa(
     return await _build_auth_session_response(request, response, tenant_id, tenant_obj.slug, tenant_obj.name, user)
 
 
+@router.post("/2fa/confirm-enrollment", response_model=AuthSessionResponse)
+async def confirm_2fa_enrollment(
+    body: Verify2FARequest,
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db_session),
+) -> AuthSessionResponse:
+    """Alias para confirmación de enrolamiento 2FA (mismo flujo de validación y sesión que verify_2fa)."""
+    return await verify_2fa(body, request, response, db)
+
+
 def _extract_refresh_cookies(request: Request) -> tuple[str, str]:
     rt = request.cookies.get("__Host-rg_rt") or request.cookies.get("rg_rt")
     if not rt:
@@ -576,6 +587,19 @@ async def bootstrap_initial_admin(
     await db.refresh(tenant)
     await db.refresh(super_admin)
 
+    # 5. Generar preauth challenge para enrolar/verificar 2FA en el navegador inmediatamente
+    challenge_id = secrets.token_hex(16)
+    redis = get_redis_client()
+    preauth_key = f"rg:{tenant.id}:preauth:{challenge_id}"
+    mapping: dict[str, Any] = {
+        "user_id": str(super_admin.id),
+        "tenant_id": str(tenant.id),
+        "tenant_slug": tenant.slug,
+        "status": "VERIFY_2FA_TOTP",
+    }
+    await redis.hset(preauth_key, mapping=mapping)
+    await redis.expire(preauth_key, 300)
+
     return BootstrapInitResponse(
         status="success",
         tenant_id=tenant.id,
@@ -585,5 +609,6 @@ async def bootstrap_initial_admin(
         totp_secret=totp_secret,
         totp_provisioning_uri=totp_uri,
         backup_codes=backup_codes,
+        challenge_id=challenge_id,
         message="Super Administrador y Tenant Principal creados exitosamente.",
     )
