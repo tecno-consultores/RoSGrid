@@ -17,6 +17,7 @@ docker compose -f fastapi/docker-compose.qa.yml --profile graphify down --remove
 docker compose -f vue3/docker-compose.qa.yml down --remove-orphans -v 2>/dev/null || true
 docker compose -f vue3/docker-compose.qa.yml --profile observability down --remove-orphans -v 2>/dev/null || true
 docker compose -f vue3/docker-compose.qa.yml --profile graphify down --remove-orphans -v 2>/dev/null || true
+docker compose -f docker-compose.prod.local.yml down --remove-orphans -v 2>/dev/null || true
 docker ps -q --filter "name=rosgrid" | xargs -r docker stop 2>/dev/null || true
 
 echo "[2/4] Eliminando artefactos temporales del Backend (fastapi)..."

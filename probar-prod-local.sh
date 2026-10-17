@@ -29,6 +29,7 @@ Opciones disponibles:
                        construidas previamente en la caché Docker.
   -a, --audit          Ejecuta la auditoría estática de seguridad de infraestructura
                        (./auditar-infra.sh: Trivy IaC, CVEs y secretos) antes del despliegue.
+  -d, --down, --stop   Apaga y desmantela el entorno local de pruebas (contenedores, redes y volúmenes).
   -p, --port PUERTO    Especifica el puerto del host para acceder al Frontend Nginx
                        (Predeterminado: 8085 o variable ROSGRID_HTTP_PORT).
 
@@ -43,6 +44,7 @@ Fases del Pipeline de Validación:
 Ejemplos:
   ./probar-prod-local.sh                     # Ejecución completa estándar automatizada
   ./probar-prod-local.sh --keep-alive        # Valida y deja el sistema levantado para probar en navegador
+  ./probar-prod-local.sh --down              # Apaga el stack activo y libera todos los recursos
   ./probar-prod-local.sh --skip-build        # Revalida el stack rápidamente sin recompilar imágenes
   ./probar-prod-local.sh -a -k -p 8090       # Auditoría previa, levanta en puerto 8090 y mantiene activo
 ==============================================================================
@@ -54,6 +56,12 @@ while [ $# -gt 0 ]; do
     case "$1" in
         -h|--help)
             mostrar_ayuda
+            exit 0
+            ;;
+        -d|--down|--stop)
+            echo -e "\n🧹 Deteniendo y desmantelando el stack de pruebas de producción (${COMPOSE_FILE})..."
+            docker compose -f "$COMPOSE_FILE" down -v
+            echo -e "\e[32m✔ Stack local de producción apagado y volúmenes efímeros liberados exitosamente.\e[0m"
             exit 0
             ;;
         -k|--keep-alive)
@@ -247,7 +255,8 @@ if [ "$KEEP_ALIVE" = true ]; then
     echo "  • Contraseña:            ClaveSegura123!"
     echo "------------------------------------------------------------------------------"
     echo "Para apagar el stack y liberar los recursos cuando termines, ejecuta:"
-    echo "  docker compose -f ${COMPOSE_FILE} down -v"
+    echo "  ./probar-prod-local.sh --down"
+    echo "  (o alternativamente: docker compose -f ${COMPOSE_FILE} down -v)"
     echo "=============================================================================="
     exit 0
 else
