@@ -31,6 +31,7 @@ rm -rf fastapi/.tox
 rm -rf fastapi/.uv
 rm -rf fastapi/htmlcov
 rm -rf fastapi/mutants
+rm -rf fastapi/.mutmut-cache
 rm -rf fastapi/target
 rm -rf fastapi/test/target
 rm -f fastapi/zap-report.html
@@ -39,9 +40,12 @@ rm -f fastapi/chaos-report.html
 rm -f fastapi/profile.svg
 rm -f fastapi/*.log 2>/dev/null || true
 rm -rf fastapi/prometheus_data
+find fastapi -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+find fastapi -type f -name "*.py[cod]" -delete 2>/dev/null || true
 
 echo "[3/4] Eliminando artefactos temporales del Frontend (vue3)..."
 rm -rf vue3/dist
+rm -rf vue3/.vite
 rm -rf vue3/coverage
 rm -rf vue3/.stryker-tmp
 rm -rf vue3/test-results
