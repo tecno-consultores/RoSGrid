@@ -8,6 +8,7 @@ import {
   fetchWithInterceptors,
   http,
   ApiError,
+  resolveUrl,
 } from './httpClient';
 
 function createMockResponse(data: unknown, status = 200, statusText = 'OK', isJson = true) {
@@ -247,6 +248,29 @@ describe('httpClient — Zero Trust & Interceptores', () => {
       await fetchWithInterceptors('/api/no-method', { method: undefined });
 
       expect(mockFetch).toHaveBeenCalledTimes(9);
+    });
+  });
+
+  describe('resolveUrl', () => {
+    it('mantiene URLs absolutas con esquema http o https intactas', () => {
+      expect(resolveUrl('https://api.rosgrid.io/v1/auth')).toBe('https://api.rosgrid.io/v1/auth');
+      expect(resolveUrl('http://192.168.88.1/rest/system')).toBe('http://192.168.88.1/rest/system');
+    });
+
+    it('resuelve rutas relativas con o sin barra inicial', () => {
+      expect(resolveUrl('/api/v1/auth/login')).toContain('/api/v1/auth/login');
+      expect(resolveUrl('api/v1/auth/login')).toContain('/api/v1/auth/login');
+    });
+
+    it('prefija base URL remota cuando VITE_API_BASE_URL está configurada', () => {
+      const envRef = import.meta.env as Record<string, string | undefined>;
+      const original = envRef.VITE_API_BASE_URL;
+      try {
+        envRef.VITE_API_BASE_URL = 'http://api.backend:8000';
+        expect(resolveUrl('/health')).toBe('http://api.backend:8000/health');
+      } finally {
+        envRef.VITE_API_BASE_URL = original;
+      }
     });
   });
 });

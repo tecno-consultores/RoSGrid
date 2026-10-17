@@ -42,6 +42,48 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
 
 ### 2.1 Autenticación y Sesiones (`/api/v1/auth`, `/api/v1/sessions`)
 
+#### `GET /api/v1/auth/bootstrap-status`
+- **Roles:** Público.
+- **Propósito:** Determinar si el sistema requiere inicialización del primer usuario (`COUNT(users) == 0`).
+- **Salida (200):**
+  ```json
+  {
+    "is_bootstrapped": false,
+    "tenants_count": 0,
+    "users_count": 0,
+    "message": "Inicialización requerida: No hay usuarios registrados."
+  }
+  ```
+
+#### `POST /api/v1/auth/bootstrap`
+- **Roles:** Público (restringido exclusivamente a cuando `COUNT(users) == 0`; si ya existen usuarios responde `403 Forbidden`).
+- **Propósito:** Crear atómicamente la Organización Principal y el usuario `SUPERADMIN_GLOBAL` inicial.
+- **Entrada:**
+  ```json
+  {
+    "tenant_name": "Empresa Principal",
+    "tenant_slug": "master",
+    "admin_username": "superadmin",
+    "admin_email": "admin@empresa.com",
+    "admin_password": "ClaveSegura123!",
+    "admin_full_name": "Super Administrador"
+  }
+  ```
+- **Salida (201 Created):**
+  ```json
+  {
+    "status": "success",
+    "tenant_id": "uuid",
+    "tenant_slug": "master",
+    "admin_id": "uuid",
+    "admin_username": "superadmin",
+    "totp_secret": "JBSWY3DPEHPK3PXP",
+    "totp_provisioning_uri": "otpauth://totp/RoSGrid:admin@empresa.com?secret=...",
+    "backup_codes": ["A1B2C3D4", "E5F6G7H8", "..."],
+    "message": "Super Administrador y Tenant Principal creados exitosamente."
+  }
+  ```
+
 #### `POST /api/v1/auth/login`
 - **Roles:** Público.
 - **Entrada:** `{"username": "admin", "password": "secure_password"}`

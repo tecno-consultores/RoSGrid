@@ -51,6 +51,30 @@ graph TB
 5. **Freno Obligatorio *Maker-Checker* en Mutaciones:** Los agentes IA **jamás pueden modificar directamente** reglas de firewall, sesiones BGP/OSPF ni direccionamiento. La herramienta `rosgrid_propose_network_change` inserta la propuesta forzosamente en `approval_requests` con estado `PENDING` (HTTP `202 Accepted`) para que un humano la apruebe y ejecute con Safe Mode (60s).
 6. **Trazabilidad Forense WORM:** Toda invocación a `tools/call` queda sellada criptográficamente en `audit_logs` con `action_category = "MCP_AI_TOOL_CALL"`.
 
+### 1.2 ¿De Dónde Sale el Token Bearer y Cómo se Genera?
+Para que un agente de IA pueda interactuar de manera desatendida y continua con `POST /api/v1/mcp` sin requerir interacción con navegador web ni desafíos 2FA manuales, RoSGrid implementa un flujo de emisión de **Tokens de Servicio de Larga Duración**:
+
+1. **Paso 1 — Creación de la Cuenta de Servicio en RoSGrid:**
+   - Un usuario con rol `SUPERADMIN_GLOBAL` o `TENANT_ADMIN` crea una cuenta con el rol especial **`SERVICE_ACCOUNT`** desde la interfaz web (*Usuarios y Permisos*) o mediante la API `POST /api/v1/users`.
+   - Durante la creación, se define la lista blanca de segmentos de red permitidos (`allowed_cidr_list`, ej. `["192.168.1.50/32"]`). Si la petición proviene de otra IP, la API la rechazará automáticamente.
+
+2. **Paso 2 — Emisión del Token con el Script Oficial `generar_token_mcp.py`:**
+   - En el servidor donde corre RoSGrid, ejecuta el script dentro del contenedor de la API:
+     ```bash
+     docker exec -it rosgrid_api python3 /app/scripts/generar_token_mcp.py --username <NOMBRE_SERVICE_ACCOUNT> --expiry-days 365
+     ```
+   - **¿Qué hace este script internamente?**
+     * Localiza la cuenta de servicio y verifica que posea el rol `SERVICE_ACCOUNT`.
+     * Genera un identificador de sesión criptográfico (`session_id` UUIDv4) y registra la sesión activa en KeyDB (`rg:{tenant_id}:sess:{session_id}`) con un tiempo de vida (TTL) equivalente al número de días configurado.
+     * Construye y firma criptográficamente un token JWT (`HS256`) utilizando la llave secreta `ROSGRID_JWT_SECRET_KEY`, inyectando los claims `sub` (User ID), `tid` (Tenant ID), `tslug` (Slug del Tenant), `sid` (Session ID) y `rol` (`SERVICE_ACCOUNT`).
+     * Entrega en la terminal la cabecera completa lista para copiar y pegar:
+       ```http
+       Authorization: Bearer eyJhbGciOiJIUzI1NiIsIn...
+       ```
+
+3. **Paso 3 — Configuración en el Agente IA:**
+   - El token generado se inyecta en la variable de entorno o cabecera `AUTHORIZATION` de la configuración del cliente MCP (Hermes Agent, Claude Desktop, etc.).
+
 ---
 
 ## 2. Protocolo de Transporte: JSON-RPC 2.0 sobre `POST /api/v1/mcp`

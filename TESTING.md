@@ -42,14 +42,29 @@
 - **Pruebas de Mutación:** 0 mutantes críticos sobrevivientes en lógica de negocio crítica.
 - **Accesibilidad y Rendimiento UI:** 0 violaciones WCAG 2.1 A/AA en `@axe-core/playwright`, regresión visual determinista, y Lighthouse CI con Performance `>= 0.90`, Accessibility `>= 0.95`, Best-Practices `>= 0.90` y SEO `>= 0.90`.
 - **Regla Cero de Host:** Cero ejecuciones de entornos en el host local; ejecución 100% encapsulada en contenedores Docker efímeros.
+- **Auditoría Estática de Scripts en Bash (ShellCheck):** Cero (0) errores y cero (0) advertencias en `ShellCheck` (`koalaman/shellcheck:stable`) sobre el 100% de los scripts `.sh` del monorepo (`auditar-infra.sh`, `instalar-rosgrid.sh`, `build.sh`, `instalar-hooks.sh`, `limpieza.sh`, `probar-prod-local.sh`, `fastapi/scripts/entrypoint.sh`).
 
 ---
 
 ## 3. Comandos Oficiales de Ejecución Efímera (Cero Instalación Local)
 
-### A. Auditoría Global de Infraestructura y Secretos (Trivy IaC + FS)
+### A. Auditoría Global de Infraestructura, Secretos y Scripts en Bash
 ```bash
+# 1. Auditoría de Infraestructura como Código (IaC) y Vulnerabilidades en File System (Trivy)
 ./auditar-infra.sh
+
+# 2. Auditoría Estática de Scripts en Bash (ShellCheck en Docker)
+docker run --rm -v "$(pwd):/mnt" koalaman/shellcheck:stable \
+    /mnt/auditar-infra.sh \
+    /mnt/instalar-rosgrid.sh \
+    /mnt/build.sh \
+    /mnt/instalar-hooks.sh \
+    /mnt/limpieza.sh \
+    /mnt/probar-prod-local.sh \
+    /mnt/fastapi/scripts/entrypoint.sh
+
+# 3. Pipeline de Validación Integral de Imágenes de Producción en Local (Sin Docker Hub)
+./probar-prod-local.sh
 ```
 
 ### B. Ecosistema Backend (`cd fastapi`)
@@ -178,3 +193,15 @@ docker compose -f docker-compose.qa.yml down --remove-orphans
 - **Pruebas de Aceptación BDD (Karate UI con CDP):**
   - **Resultado:** 1 de 1 escenario pasado exitosamente.
   - **Verificación:** Carga de vista Dashboard, comprobación de selectores táctiles accesibles, interacción con el botón "Actualizar Datos" y validación de estado exitoso en tiempo real.
+
+### D. Pruebas Estáticas de Scripts en Bash y Pipeline de Producción Local
+- **Auditoría Estática con ShellCheck (`koalaman/shellcheck:stable`):**
+  - **Scripts Auditados:** 7 archivos (`auditar-infra.sh`, `instalar-rosgrid.sh`, `build.sh`, `instalar-hooks.sh`, `limpieza.sh`, `probar-prod-local.sh`, `fastapi/scripts/entrypoint.sh`).
+  - **Resultado:** Cero (0) errores y cero (0) advertencias (100% de cumplimiento en directivas POSIX, entrecomillado estricto de variables y mitigación de comodines SC2035).
+- **Validación de Imágenes de Producción en Local (`probar-prod-local.sh`):**
+  - **Arranque en Perfil `--no-dev`:** Verificada la compilación y arranque de imágenes Docker de Backend y Frontend sin dependencias de desarrollo.
+  - **Transición de Healthchecks:** PostgreSQL 17 (`pg_isready`), KeyDB Multi-Hilo (`ping | PONG`), y FastAPI (`curl /health`) alcanzaron estado `healthy` satisfactoriamente.
+  - **Doble Compuerta de Bootstrap:**
+    - Verificado que `/api/v1/auth/bootstrap-status` reporta `is_bootstrapped: false` en base de datos recién migrada.
+    - Verificada la ejecución de `crear_admin.py` dentro del contenedor con inserción del Tenant inicial y Super Administrador.
+    - Verificado que `/api/v1/auth/bootstrap-status` transiciona a `is_bootstrapped: true` y bloquea intentos posteriores con HTTP `403 Forbidden`.

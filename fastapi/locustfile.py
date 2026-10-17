@@ -2,6 +2,7 @@
 # Copyright (C) 2026 RoSGrid Contributors
 
 import uuid
+
 from locust import HttpUser, between, task
 
 
@@ -51,4 +52,3 @@ class RoSGridStressUser(HttpUser):
         ) as response:
             if response.status_code in (401, 422, 423, 429):
                 response.success()
-

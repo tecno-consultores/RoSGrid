@@ -9,6 +9,8 @@ from typing import Any
 import pyotp
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import delete
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.crypto import encrypt_aes_gcm, hash_password
 from src.db.session import get_db_session
@@ -31,10 +33,19 @@ class MockDbResult:
 
 
 class MockAsyncSession:
-    def __init__(self, tenant: Tenant | None = None, user: User | None = None):
+    def __init__(
+        self,
+        tenant: Tenant | None = None,
+        user: User | None = None,
+        users_count: int = 1,
+        tenants_count: int = 1,
+    ):
         self.tenant = tenant
         self.user = user
+        self.users_count = users_count
+        self.tenants_count = tenants_count
         self.committed = False
+        self.added: list[Any] = []
 
     async def execute(self, stmt: Any, params: dict[str, Any] | None = None) -> MockDbResult:
         stmt_str = str(stmt).lower()
@@ -43,6 +54,24 @@ class MockAsyncSession:
         if "from users" in stmt_str:
             return MockDbResult(self.user)
         return MockDbResult(None)
+
+    async def scalar(self, stmt: Any, params: dict[str, Any] | None = None) -> Any:
+        stmt_str = str(stmt).lower()
+        if "count" in stmt_str:
+            if "users" in stmt_str:
+                return self.users_count
+            if "tenants" in stmt_str:
+                return self.tenants_count
+        return 0
+
+    def add(self, instance: Any) -> None:
+        self.added.append(instance)
+
+    async def flush(self) -> None:
+        pass
+
+    async def refresh(self, instance: Any) -> None:
+        pass
 
     async def commit(self) -> None:
         self.committed = True
@@ -448,6 +477,68 @@ async def test_auth_deps_failure_scenarios(async_client: AsyncClient) -> None:
     res_inv = await async_client.get("/users/me", headers={"Authorization": "Bearer not-a-valid-jwt"})
     assert res_inv.status_code == 401
 
-    # 3. Esquema no Bearer
+
+@pytest.mark.asyncio
+async def test_bootstrap_status_and_init(async_client: AsyncClient) -> None:
+    session = MockAsyncSession(users_count=1, tenants_count=1)
+    app.dependency_overrides[get_db_session] = lambda: session
+    try:
+        # 1. Con usuarios existentes, bootstrap-status reporta is_bootstrapped: True
+        res = await async_client.get("/api/v1/auth/bootstrap-status")
+        assert res.status_code == 200
+        assert res.json()["is_bootstrapped"] is True
+
+        # 2. Si ya hay usuarios, POST /api/v1/auth/bootstrap es rechazado con 403
+        payload = {
+            "tenant_name": "Nuevo Tenant",
+            "tenant_slug": "nuevo-tenant",
+            "admin_username": "newadmin",
+            "admin_email": "newadmin@test.com",
+            "admin_password": "ClaveSegura123!",
+            "admin_full_name": "New Admin",
+        }
+        res_boot = await async_client.post("/api/v1/auth/bootstrap", json=payload)
+        assert res_boot.status_code == 403
+        assert "ya ha sido inicializado" in res_boot.json()["detail"]
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_init_success(async_client: AsyncClient) -> None:
+    session = MockAsyncSession(users_count=0, tenants_count=0)
+    app.dependency_overrides[get_db_session] = lambda: session
+    try:
+        # 1. Estado debe ser false
+        res_status = await async_client.get("/api/v1/auth/bootstrap-status")
+        assert res_status.status_code == 200
+        assert res_status.json()["is_bootstrapped"] is False
+
+        # 2. Ejecutar bootstrap inicial
+        payload = {
+            "tenant_name": "ISP Principal",
+            "tenant_slug": "master",
+            "admin_username": "superadmin",
+            "admin_email": "superadmin@rosgrid.net",
+            "admin_password": "ClaveSegura1234!",
+            "admin_full_name": "Super Administrador",
+        }
+        res_init = await async_client.post("/api/v1/auth/bootstrap", json=payload)
+        assert res_init.status_code == 201
+        data = res_init.json()
+        assert data["status"] == "success"
+        assert data["tenant_slug"] == "master"
+        assert data["admin_username"] == "superadmin"
+        assert len(data["totp_secret"]) > 0
+        assert len(data["backup_codes"]) == 8
+
+        # 3. Simular que ahora hay usuarios
+        session.users_count = 1
+        res_retry = await async_client.post("/api/v1/auth/bootstrap", json=payload)
+        assert res_retry.status_code == 403
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)
+
+    # 4. Esquema no Bearer
     res_bad = await async_client.get("/users/me", headers={"Authorization": "Basic 12345"})
     assert res_bad.status_code == 401

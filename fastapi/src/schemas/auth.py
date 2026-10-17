@@ -44,3 +44,31 @@ class AuthSessionResponse(BaseModel):
     session_id: str
     user: UserProfileResponse
     csrf_token: str
+
+
+class BootstrapStatusResponse(BaseModel):
+    is_bootstrapped: bool
+    tenants_count: int
+    users_count: int
+    message: str
+
+
+class BootstrapInitRequest(BaseModel):
+    tenant_name: str = Field(..., min_length=2, max_length=128)
+    tenant_slug: str = Field(..., min_length=2, max_length=64, pattern=r"^[a-z0-9-]+$")
+    admin_username: str = Field(..., min_length=3, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$")
+    admin_email: EmailStr
+    admin_password: str = Field(..., min_length=12)
+    admin_full_name: str = Field(..., min_length=3, max_length=128)
+
+
+class BootstrapInitResponse(BaseModel):
+    status: str
+    tenant_id: uuid.UUID
+    tenant_slug: str
+    admin_id: uuid.UUID
+    admin_username: str
+    totp_secret: str
+    totp_provisioning_uri: str
+    backup_codes: list[str]
+    message: str

@@ -114,29 +114,59 @@ fi
 # 6. Despliegue de contenedores utilizando Docker Compose (Modo Producción o Local)
 echo -e "\n[5/5] Desplegando el stack de contenedores RoSGrid..."
 echo "Selecciona el modo de despliegue:"
-echo "  1) Producción (Docker Hub: imágenes precompiladas inmutables) [Recomendado]"
-echo "  2) Local / Laboratorio (Montaje de código fuente sobre imágenes base)"
-read -r -p "Ingresa tu opción (1 o 2) [1]: " option
-option="${option:-1}"
+echo "  1) Producción Remota (Docker Hub: imágenes precompiladas oficiales)"
+echo "  2) Producción Local (Compilar y ejecutar imágenes de producción localmente sin Docker Hub) [Recomendado para pruebas]"
+echo "  3) Desarrollo / Laboratorio (Montaje de código fuente en vivo)"
+read -r -p "Ingresa tu opción (1, 2 o 3) [2]: " option
+option="${option:-2}"
+
+API_CONTAINER="rosgrid_api"
 
 if [[ "$option" == "1" ]]; then
     echo "Desplegando con docker-compose.prod.yml..."
     docker compose -f docker-compose.prod.yml pull
     docker compose -f docker-compose.prod.yml up -d
 elif [[ "$option" == "2" ]]; then
-    echo "Desplegando con docker-compose.yml (Local)..."
+    echo "Construyendo y desplegando con docker-compose.prod.local.yml..."
+    docker build -f fastapi/Dockerfile -t sinfallas/rosgrid-backend:local-test fastapi
+    docker build -f vue3/Dockerfile -t sinfallas/rosgrid-frontend:local-test vue3
+    docker compose -f docker-compose.prod.local.yml up -d
+    API_CONTAINER="rosgrid_api_local"
+elif [[ "$option" == "3" ]]; then
+    echo "Desplegando con docker-compose.yml (Desarrollo)..."
     docker compose pull rosgrid-db rosgrid-redis rosgrid-api rosgrid-worker rosgrid-ui
     docker compose up -d
 else
-    echo -e "\e[31m[ERROR] Opción no válida: '$option'. Debe ser 1 o 2.\e[0m"
+    echo -e "\e[31m[ERROR] Opción no válida: '$option'. Debe ser 1, 2 o 3.\e[0m"
     exit 1
+fi
+
+echo -e "\nEsperando a que la API complete las migraciones de base de datos..."
+for _ in {1..30}; do
+    if docker exec "$API_CONTAINER" curl -fsS http://127.0.0.1:8000/health &>/dev/null; then
+        break
+    fi
+    sleep 2
+done
+
+echo -e "\nVerificando inicialización de cuenta administrativa..."
+if docker exec "$API_CONTAINER" python3 /app/scripts/crear_admin.py --check-only &>/dev/null; then
+    echo "✔ Ya existen cuentas de usuario registradas en la base de datos."
+else
+    echo -e "\e[33m[AVISO] No se detectó ningún usuario en la base de datos de RoSGrid.\e[0m"
+    echo "Puedes crear el Super Administrador ahora desde la consola o hacerlo a través de la web."
+    read -r -p "¿Deseas ejecutar el asistente de creación del Super Administrador ahora? (S/n): " crear_adm
+    crear_adm="${crear_adm:-S}"
+    if [[ "$crear_adm" =~ ^[sS]$ ]]; then
+        docker exec -it "$API_CONTAINER" python3 /app/scripts/crear_admin.py
+    fi
 fi
 
 echo -e "\n=============================================================================="
 echo -e "\e[32m       🎉 ¡Instalación de RoSGrid completada exitosamente sin root!       \e[0m"
 echo "=============================================================================="
 echo "Accede a la consola web en: http://localhost:8080 (o el puerto configurado)"
-echo "Para verificar el estado de las migraciones automáticas ejecuta:"
-echo "  docker logs -f rosgrid_api"
+echo "Para verificar el estado de los logs ejecuta:"
+echo "  docker logs -f $API_CONTAINER"
 echo "=============================================================================="
 exit 0

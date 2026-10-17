@@ -90,6 +90,7 @@ zap.yaml
 chaos-report.html
 profile.svg
 graphify-out/
+!**/graphify-out/GRAPH_REPORT.md
 prometheus_data/
 .trivycache/
 trivy-results*

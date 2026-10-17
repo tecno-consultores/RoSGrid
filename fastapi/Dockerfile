@@ -29,7 +29,7 @@ COPY --chown=rosgrid:rosgrid scripts ./scripts
 COPY --chown=rosgrid:rosgrid src ./src
 
 # Sincronizar e instalar todas las dependencias de producción con uv
-RUN chmod +x /app/scripts/entrypoint.sh && \
+RUN chmod +x /app/scripts/*.sh /app/scripts/*.py && \
     uv pip install --system --no-cache .
 
 USER rosgrid

@@ -27,7 +27,9 @@ Cada fila contiene:
 - `prev_record_hash`: El hash SHA-256 del registro anterior perteneciente al mismo Tenant.
 - `record_sha256_hash`: El hash computado sobre la serialización canónica del registro actual concatenado con el hash previo:
 
-$$\text{record\_hash} = \text{SHA256}(\text{prev\_hash} \mathbin{\Vert} \text{canonical\_json}(\text{record\_data}))$$
+```text
+record_hash = SHA256(prev_record_hash || canonical_json(record_data))
+```
 
 Si un adversario con acceso directo a la base de datos alterase una sola coma o parámetro de un comando pasado, todos los hashes posteriores de la cadena quedan invalidados inmediatamente, delatando la manipulación durante la verificación.
 

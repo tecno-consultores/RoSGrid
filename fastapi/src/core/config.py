@@ -39,5 +39,15 @@ class Settings(BaseSettings):
     ROSGRID_MCP_ENABLED: bool = False
     ROSGRID_MCP_RATE_LIMIT_PER_MIN: int = 30
 
+    # Configuración de Orígenes Cruzados (CORS) y Despliegue Separado
+    ROSGRID_CORS_ORIGINS: str = "*"
+    ROSGRID_CROSS_ORIGIN_COOKIES: bool = False
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        if not self.ROSGRID_CORS_ORIGINS or self.ROSGRID_CORS_ORIGINS.strip() == "*":
+            return ["*"]
+        return [o.strip() for o in self.ROSGRID_CORS_ORIGINS.split(",") if o.strip()]
+
 
 settings = Settings()

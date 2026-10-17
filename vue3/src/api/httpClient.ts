@@ -95,11 +95,27 @@ function buildHeaders(method: string, options: RequestOptions, csrfToken?: strin
 // Singleton Refresh Token Handler
 // ---------------------------------------------------------------------------
 
+export function getBaseUrl(): string {
+  if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) {
+    return String(import.meta.env.VITE_API_BASE_URL).replace(/\/+$/, '');
+  }
+  return '';
+}
+
+export function resolveUrl(path: string): string {
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+  const baseUrl = getBaseUrl();
+  const normalizedPath = path.startsWith('/') ? path : '/' + path;
+  return `${baseUrl}${normalizedPath}`;
+}
+
 let refreshPromiseSingleton: Promise<boolean> | null = null;
 
 async function executeRefreshTokenRotation(): Promise<boolean> {
   try {
-    const res = await fetch('/api/v1/auth/refresh', {
+    const res = await fetch(resolveUrl('/api/v1/auth/refresh'), {
       method: 'POST',
       credentials: 'include',
       headers: { Accept: 'application/json' },
@@ -154,7 +170,7 @@ export async function request<T = unknown>(
 
   let response: Response;
   try {
-    response = await fetch(url, init);
+    response = await fetch(resolveUrl(url), init);
   } catch (netErr) {
     throw new ApiError(0, 'NetworkError', null, (netErr as Error).message);
   }

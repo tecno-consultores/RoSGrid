@@ -358,4 +358,132 @@ describe('LoginView.vue — Autenticación Multi-Tenant en 2 Etapas y 2FA TOTP',
 
     expect(wrapper.find('.enroll-container').exists()).toBe(true);
   });
+
+  it('detecta automáticamente primer uso y activa el paso BOOTSTRAP si is_bootstrapped es false', async () => {
+    vi.spyOn(http, 'get').mockResolvedValueOnce({
+      status: 200,
+      data: { is_bootstrapped: false },
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(LoginView);
+    await flushPromises();
+
+    expect(wrapper.find('#bootstrap-tenant-name').exists()).toBe(true);
+    expect(wrapper.find('h2').text()).toContain('Configuración Inicial de RoSGrid');
+  });
+
+  it('valida campos obligatorios y contraseñas en el formulario de bootstrap', async () => {
+    vi.spyOn(http, 'get').mockResolvedValueOnce({
+      status: 200,
+      data: { is_bootstrapped: false },
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(LoginView);
+    await flushPromises();
+
+    // 1. Campos vacíos
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+    expect(wrapper.find('.alert-banner--danger').text()).toContain(
+      'Todos los campos marcados con asterisco son obligatorios.',
+    );
+
+    // 2. Contraseña corta (<12)
+    await wrapper.find('#bootstrap-tenant-name').setValue('Empresa Master');
+    await wrapper.find('#bootstrap-tenant-slug').setValue('master');
+    await wrapper.find('#bootstrap-admin-user').setValue('superadmin');
+    await wrapper.find('#bootstrap-admin-email').setValue('admin@empresa.com');
+    await wrapper.find('#bootstrap-admin-name').setValue('Super Administrador');
+    await wrapper.find('#bootstrap-admin-pass').setValue('corta');
+    await wrapper.find('#bootstrap-admin-pass-confirm').setValue('corta');
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+    expect(wrapper.find('.alert-banner--danger').text()).toContain(
+      'La contraseña debe tener al menos 12 caracteres.',
+    );
+
+    // 3. Contraseñas no coinciden
+    await wrapper.find('#bootstrap-admin-pass').setValue('PasswordLargo123!');
+    await wrapper.find('#bootstrap-admin-pass-confirm').setValue('PasswordDiferente123!');
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+    expect(wrapper.find('.alert-banner--danger').text()).toContain('Las contraseñas no coinciden.');
+  });
+
+  it('ejecuta bootstrap inicial exitoso y transiciona a ENROLL_2FA', async () => {
+    vi.spyOn(http, 'get').mockResolvedValueOnce({
+      status: 200,
+      data: { is_bootstrapped: false },
+      headers: new Headers(),
+    });
+
+    vi.spyOn(http, 'post').mockResolvedValueOnce({
+      status: 201,
+      data: {
+        status: 'success',
+        tenant_slug: 'master',
+        admin_username: 'superadmin',
+        totp_secret: 'JBSWY3DPEHPK3PXP',
+        totp_provisioning_uri: 'otpauth://totp/RoSGrid:superadmin?secret=JBSWY3DPEHPK3PXP',
+        backup_codes: ['AAAA-1111', 'BBBB-2222'],
+      },
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(LoginView);
+    await flushPromises();
+
+    const slugInput = wrapper.find('#bootstrap-tenant-slug');
+    await slugInput.setValue('Master_Org!');
+    await slugInput.trigger('input');
+
+    await wrapper.find('#bootstrap-tenant-name').setValue('Empresa Master');
+    await wrapper.find('#bootstrap-tenant-slug').setValue('master');
+    await wrapper.find('#bootstrap-admin-user').setValue('superadmin');
+    await wrapper.find('#bootstrap-admin-email').setValue('admin@master.com');
+    await wrapper.find('#bootstrap-admin-name').setValue('Super Administrador');
+    await wrapper.find('#bootstrap-admin-pass').setValue('ClaveSegura2026!');
+    await wrapper.find('#bootstrap-admin-pass-confirm').setValue('ClaveSegura2026!');
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+
+    expect(wrapper.find('.enroll-container').exists()).toBe(true);
+    expect(wrapper.find('.secret-key').text()).toContain('JBSWY3DPEHPK3PXP');
+
+    const downloadBtn = wrapper.find('.btn-download-backup');
+    if (downloadBtn.exists()) {
+      await downloadBtn.trigger('click');
+    }
+  });
+
+  it('maneja error en bootstrap inicial mostrando mensaje de error', async () => {
+    vi.spyOn(http, 'get').mockResolvedValueOnce({
+      status: 200,
+      data: { is_bootstrapped: false },
+      headers: new Headers(),
+    });
+
+    vi.spyOn(http, 'post').mockRejectedValueOnce({
+      detail: 'El sistema ya ha sido inicializado.',
+    });
+
+    const wrapper = mount(LoginView);
+    await flushPromises();
+
+    await wrapper.find('#bootstrap-tenant-name').setValue('Empresa Master');
+    await wrapper.find('#bootstrap-tenant-slug').setValue('master');
+    await wrapper.find('#bootstrap-admin-user').setValue('superadmin');
+    await wrapper.find('#bootstrap-admin-email').setValue('admin@master.com');
+    await wrapper.find('#bootstrap-admin-name').setValue('Super Administrador');
+    await wrapper.find('#bootstrap-admin-pass').setValue('ClaveSegura2026!');
+    await wrapper.find('#bootstrap-admin-pass-confirm').setValue('ClaveSegura2026!');
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+
+    expect(wrapper.find('.alert-banner--danger').text()).toContain(
+      'El sistema ya ha sido inicializado.',
+    );
+  });
 });

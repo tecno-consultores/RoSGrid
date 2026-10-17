@@ -153,7 +153,7 @@
   <div class="inventory-view">
     <header class="inventory-header">
       <div>
-        <h1 class="inventory-title">Dashboard — Flota MikroTik</h1>
+        <h1 class="inventory-title">Inventario de Equipos — Flota MikroTik</h1>
         <p class="inventory-subtitle">
           Supervisión de hardware RouterOS v7, mapa geográfico OpenStreetMap y gestión de acceso.
         </p>

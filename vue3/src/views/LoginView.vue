@@ -14,8 +14,17 @@
   const authStore = useAuthStore();
 
   // Estados de etapas de Login
-  type LoginStep = 'CREDENTIALS' | 'ENROLL_2FA' | 'VERIFY_2FA';
+  type LoginStep = 'CREDENTIALS' | 'ENROLL_2FA' | 'VERIFY_2FA' | 'BOOTSTRAP';
   const currentStep = ref<LoginStep>('CREDENTIALS');
+
+  // Formulario Etapa Bootstrap (Primer Usuario / Super Admin Inicial)
+  const bootstrapTenantName = ref('Empresa Principal');
+  const bootstrapTenantSlug = ref('master');
+  const bootstrapAdminUsername = ref('superadmin');
+  const bootstrapAdminEmail = ref('');
+  const bootstrapAdminFullName = ref('Super Administrador');
+  const bootstrapAdminPassword = ref('');
+  const bootstrapAdminPasswordConfirm = ref('');
 
   // Formulario Etapa 1
   const tenantSlug = ref('');
@@ -236,10 +245,74 @@
     router.push(redirect);
   }
 
-  onMounted(() => {
+  async function handleBootstrapSubmit() {
+    errorMessage.value = '';
+    if (
+      !bootstrapTenantName.value.trim() ||
+      !bootstrapTenantSlug.value.trim() ||
+      !bootstrapAdminUsername.value.trim() ||
+      !bootstrapAdminEmail.value.trim()
+    ) {
+      errorMessage.value = 'Todos los campos marcados con asterisco son obligatorios.';
+      return;
+    }
+    if (bootstrapAdminPassword.value.length < 12) {
+      errorMessage.value = 'La contraseña debe tener al menos 12 caracteres.';
+      return;
+    }
+    if (bootstrapAdminPassword.value !== bootstrapAdminPasswordConfirm.value) {
+      errorMessage.value = 'Las contraseñas no coinciden.';
+      return;
+    }
+
+    isLoading.value = true;
+    try {
+      const res = await http.post<{
+        status: string;
+        tenant_slug: string;
+        admin_username: string;
+        totp_secret: string;
+        totp_provisioning_uri: string;
+        backup_codes: string[];
+      }>('/api/v1/auth/bootstrap', {
+        tenant_name: bootstrapTenantName.value.trim(),
+        tenant_slug: bootstrapTenantSlug.value.trim().toLowerCase(),
+        admin_username: bootstrapAdminUsername.value.trim(),
+        admin_email: bootstrapAdminEmail.value.trim().toLowerCase(),
+        admin_full_name: bootstrapAdminFullName.value.trim(),
+        admin_password: bootstrapAdminPassword.value,
+      });
+
+      tenantSlug.value = res.data.tenant_slug;
+      usernameOrEmail.value = res.data.admin_username;
+      secretKey.value = res.data.totp_secret;
+      provisioningUri.value = res.data.totp_provisioning_uri;
+      backupCodes.value = res.data.backup_codes;
+
+      currentStep.value = 'ENROLL_2FA';
+      await renderQrCode(provisioningUri.value);
+      startCountdown(300);
+    } catch (err: unknown) {
+      const error = err as { detail?: string };
+      errorMessage.value = error.detail || 'Error al aprovisionar el Super Administrador inicial.';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  onMounted(async () => {
     // Si viene pre-cargado el tenant_slug en la query
     if (route.query.tenant) {
       tenantSlug.value = String(route.query.tenant).toLowerCase();
+    }
+    // Detección automática de primer uso (Bootstrap)
+    try {
+      const res = await http.get<{ is_bootstrapped: boolean }>('/api/v1/auth/bootstrap-status');
+      if (res.data && res.data.is_bootstrapped === false) {
+        currentStep.value = 'BOOTSTRAP';
+      }
+    } catch {
+      // Si falla la consulta, se mantiene el formulario estándar
     }
   });
 </script>
@@ -274,6 +347,144 @@
         <span class="alert-icon" aria-hidden="true">⛔</span>
         <span class="alert-text">{{ errorMessage }}</span>
       </div>
+
+      <!-- ETAPA 0: Inicialización del Sistema (Bootstrap / Primer Usuario) -->
+      <form
+        v-if="currentStep === 'BOOTSTRAP'"
+        class="login-form"
+        novalidate
+        @submit.prevent="handleBootstrapSubmit"
+      >
+        <div class="bootstrap-intro">
+          <h2 class="section-title">🚀 Configuración Inicial de RoSGrid</h2>
+          <p class="section-desc">
+            No se detectaron usuarios en la base de datos. Registra la Organización Principal y la
+            cuenta del
+            <strong>Super Administrador Global</strong>.
+          </p>
+        </div>
+
+        <div class="form-group">
+          <label for="bootstrap-tenant-name" class="form-label">
+            Organización Principal <span class="required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="bootstrap-tenant-name"
+            v-model="bootstrapTenantName"
+            type="text"
+            required
+            placeholder="ej. Empresa Principal"
+            class="form-input"
+            :disabled="isLoading"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="bootstrap-tenant-slug" class="form-label">
+            Slug de Organización <span class="required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="bootstrap-tenant-slug"
+            v-model="bootstrapTenantSlug"
+            type="text"
+            required
+            placeholder="ej. master"
+            class="form-input"
+            :disabled="isLoading"
+            @input="
+              (e) =>
+                (bootstrapTenantSlug = (e.target as HTMLInputElement).value
+                  .toLowerCase()
+                  .replace(/[^a-z0-9-]/g, ''))
+            "
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="bootstrap-admin-user" class="form-label">
+            Usuario Super Administrador <span class="required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="bootstrap-admin-user"
+            v-model="bootstrapAdminUsername"
+            type="text"
+            required
+            placeholder="ej. superadmin"
+            class="form-input"
+            :disabled="isLoading"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="bootstrap-admin-email" class="form-label">
+            Correo Electrónico <span class="required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="bootstrap-admin-email"
+            v-model="bootstrapAdminEmail"
+            type="email"
+            required
+            placeholder="ej. admin@tuempresa.com"
+            class="form-input"
+            :disabled="isLoading"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="bootstrap-admin-name" class="form-label">
+            Nombre Completo <span class="required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="bootstrap-admin-name"
+            v-model="bootstrapAdminFullName"
+            type="text"
+            required
+            placeholder="ej. Administrador Global"
+            class="form-input"
+            :disabled="isLoading"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="bootstrap-admin-pass" class="form-label">
+            Contraseña Segura (Mínimo 12 caracteres)
+            <span class="required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="bootstrap-admin-pass"
+            v-model="bootstrapAdminPassword"
+            type="password"
+            required
+            autocomplete="new-password"
+            placeholder="••••••••••••"
+            class="form-input"
+            :disabled="isLoading"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="bootstrap-admin-pass-confirm" class="form-label">
+            Confirmar Contraseña <span class="required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="bootstrap-admin-pass-confirm"
+            v-model="bootstrapAdminPasswordConfirm"
+            type="password"
+            required
+            autocomplete="new-password"
+            placeholder="••••••••••••"
+            class="form-input"
+            :disabled="isLoading"
+          />
+        </div>
+
+        <button type="submit" class="btn btn-primary" :disabled="isLoading">
+          <span v-if="isLoading" class="spinner" aria-hidden="true"></span>
+          <span>{{
+            isLoading ? 'Inicializando...' : 'Crear Super Administrador y Continuar'
+          }}</span>
+        </button>
+      </form>
 
       <!-- ETAPA 1: Identificación de Empresa y Credenciales -->
       <form
@@ -365,7 +576,7 @@
 
         <div class="secret-manual-box">
           <span class="secret-label">Clave Secreta Manual:</span>
-          <code class="secret-key">{{ secretKey || 'Cargando secreto...' }}</code>
+          <code class="secret-key">{{ secretKey }}</code>
         </div>
 
         <div v-if="backupCodes.length > 0" class="backup-codes-box">
@@ -710,5 +921,24 @@
     color: var(--rg-accent-cyan, #22d3ee);
     font-family: 'JetBrains Mono', monospace;
     font-variant-numeric: tabular-nums;
+  }
+
+  .bootstrap-intro {
+    margin-bottom: var(--rg-space-4, 16px);
+    text-align: center;
+  }
+
+  .bootstrap-intro .section-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--rg-accent-cyan, #22d3ee);
+    margin: 0 0 6px 0;
+  }
+
+  .bootstrap-intro .section-desc {
+    font-size: 0.85rem;
+    color: var(--rg-text-secondary, #cbd5e1);
+    line-height: 1.4;
+    margin: 0;
   }
 </style>

@@ -1,16 +1,17 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 RoSGrid Contributors
 
+import hashlib
 import secrets
 import time
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
 
 import jwt
 import pyotp
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_current_user_claims
@@ -18,11 +19,12 @@ from src.core.config import settings
 from src.core.crypto import (
     decrypt_aes_gcm,
     encrypt_aes_gcm,
+    hash_password,
     verify_password,
 )
 from src.core.csrf import generate_csrf_token
 from src.db.session import get_db_session, set_tenant_context
-from src.models.core import Tenant, TenantStatusEnum, User
+from src.models.core import SystemRoleEnum, Tenant, TenantStatusEnum, User
 from src.redis_layer.client import get_redis_client
 from src.redis_layer.sessions import (
     create_session,
@@ -31,6 +33,9 @@ from src.redis_layer.sessions import (
 )
 from src.schemas.auth import (
     AuthSessionResponse,
+    BootstrapInitRequest,
+    BootstrapInitResponse,
+    BootstrapStatusResponse,
     LoginStep1Request,
     LoginStep1Response,
     UserProfileResponse,
@@ -69,16 +74,25 @@ def set_auth_cookies(
     csrf_token: str,
     is_secure: bool = False,
 ) -> None:
-    at_name = "__Host-rg_at" if is_secure else "rg_at"
-    rt_name = "__Host-rg_rt" if is_secure else "rg_rt"
+    samesite: Literal["lax", "strict", "none"]
+    if settings.ROSGRID_CROSS_ORIGIN_COOKIES:
+        at_name = "rg_at"
+        rt_name = "rg_rt"
+        samesite = "none"
+        secure_cookie = True
+    else:
+        at_name = "__Host-rg_at" if is_secure else "rg_at"
+        rt_name = "__Host-rg_rt" if is_secure else "rg_rt"
+        samesite = "strict"
+        secure_cookie = is_secure
 
     response.set_cookie(
         key=at_name,
         value=access_token,
         max_age=600,
         httponly=True,
-        secure=is_secure,
-        samesite="strict",
+        secure=secure_cookie,
+        samesite=samesite,
         path="/",
     )
     response.set_cookie(
@@ -86,8 +100,8 @@ def set_auth_cookies(
         value=refresh_token,
         max_age=28800,
         httponly=True,
-        secure=is_secure,
-        samesite="strict",
+        secure=secure_cookie,
+        samesite=samesite,
         path="/api/v1/auth/refresh",
     )
     response.set_cookie(
@@ -95,8 +109,8 @@ def set_auth_cookies(
         value=csrf_token,
         max_age=28800,
         httponly=False,
-        secure=is_secure,
-        samesite="strict",
+        secure=secure_cookie,
+        samesite=samesite,
         path="/",
     )
 
@@ -377,3 +391,93 @@ async def logout(
 @router.get("/me")
 async def get_me(claims: dict[str, Any] = Depends(get_current_user_claims)) -> dict[str, Any]:
     return claims
+
+
+@router.get("/bootstrap-status", response_model=BootstrapStatusResponse)
+async def get_bootstrap_status(
+    db: AsyncSession = Depends(get_db_session),
+) -> BootstrapStatusResponse:
+    users_count = await db.scalar(select(func.count(User.id))) or 0
+    tenants_count = await db.scalar(select(func.count(Tenant.id))) or 0
+    is_bootstrapped = users_count > 0
+
+    return BootstrapStatusResponse(
+        is_bootstrapped=is_bootstrapped,
+        tenants_count=tenants_count,
+        users_count=users_count,
+        message="Sistema ya inicializado"
+        if is_bootstrapped
+        else "Inicialización requerida: No hay usuarios registrados.",
+    )
+
+
+@router.post("/bootstrap", response_model=BootstrapInitResponse, status_code=status.HTTP_201_CREATED)
+async def bootstrap_initial_admin(
+    body: BootstrapInitRequest,
+    db: AsyncSession = Depends(get_db_session),
+) -> BootstrapInitResponse:
+    users_count = await db.scalar(select(func.count(User.id))) or 0
+    if users_count > 0:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="El sistema ya ha sido inicializado. No es posible crear otro Super Administrador inicial vía bootstrap.",
+        )
+
+    # 1. Crear Tenant Principal
+    tenant_id = uuid.uuid4()
+    tenant = Tenant(
+        id=tenant_id,
+        name=body.tenant_name.strip(),
+        slug=body.tenant_slug.strip().lower(),
+        status=TenantStatusEnum.ACTIVE,
+    )
+    db.add(tenant)
+    await db.flush()
+
+    # 2. Generar secreto 2FA y códigos de respaldo
+    totp_secret = pyotp.random_base32()
+    totp = pyotp.totp.TOTP(totp_secret)
+    totp_uri = totp.provisioning_uri(name=body.admin_email, issuer_name="RoSGrid")
+    backup_codes = [secrets.token_hex(4).upper() for _ in range(8)]
+    backup_hashes = [hashlib.sha256(c.encode("utf-8")).hexdigest() for c in backup_codes]
+
+    # 3. Cifrar secretos con AES-256-GCM
+    admin_id = uuid.uuid4()
+    aad = f"{tenant.id}:{admin_id}".encode("utf-8")
+    ct, iv, tag = encrypt_aes_gcm(totp_secret.encode("utf-8"), aad)
+
+    # 4. Crear Super Administrador Global
+    super_admin = User(
+        id=admin_id,
+        tenant_id=tenant.id,
+        username=body.admin_username.strip(),
+        email=body.admin_email.strip().lower(),
+        full_name=body.admin_full_name.strip(),
+        password_hash=hash_password(body.admin_password),
+        role=SystemRoleEnum.SUPERADMIN_GLOBAL,
+        is_active=True,
+        is_locked=False,
+        failed_login_attempts=0,
+        totp_enabled=True,
+        totp_secret_ciphertext=ct,
+        totp_secret_iv=iv,
+        totp_secret_tag=tag,
+        totp_recovery_codes_hashes=backup_hashes,
+        has_all_routers_access=True,
+    )
+    db.add(super_admin)
+    await db.commit()
+    await db.refresh(tenant)
+    await db.refresh(super_admin)
+
+    return BootstrapInitResponse(
+        status="success",
+        tenant_id=tenant.id,
+        tenant_slug=tenant.slug,
+        admin_id=super_admin.id,
+        admin_username=super_admin.username,
+        totp_secret=totp_secret,
+        totp_provisioning_uri=totp_uri,
+        backup_codes=backup_codes,
+        message="Super Administrador y Tenant Principal creados exitosamente.",
+    )

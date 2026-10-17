@@ -49,6 +49,8 @@ chmod 600 .env
 | `ROSGRID_BACKUP_RETENTION_DAYS` | Entero | `30` | Días de retención para respaldos automáticos y manuales de configuraciones `.rsc`. |
 | `ROSGRID_MCP_ENABLED` | Booleano | `false` | Activa el servidor Model Context Protocol (`POST /api/v1/mcp`) para agentes IA como Hermes o Claude. |
 | `ROSGRID_MCP_RATE_LIMIT_PER_MIN` | Entero | `30` | Límite de peticiones MCP por minuto por cuenta `SERVICE_ACCOUNT`. |
+| `ROSGRID_CORS_ORIGINS` | String | `*` | Lista de orígenes permitidos separados por comas para despliegues con Backend y Frontend en servidores separados (ej. `https://app.tuempresa.com,http://localhost:8080`). |
+| `ROSGRID_CROSS_ORIGIN_COOKIES` | Booleano | `false` | Si es `true`, emite cookies de sesión sin prefijo `__Host-` con `SameSite=None; Secure` para permitir autenticación cross-domain. |
 
 ### 2.2 Generación Criptográfica de Secretos
 Ejecuta los siguientes comandos en tu terminal para generar llaves criptográficas de alta entropía:
@@ -180,3 +182,69 @@ El script `./build.sh`:
 3. Compila y etiqueta `sinfallas/rosgrid-backend` y `sinfallas/rosgrid-frontend` con la versión especificada y `latest`.
 4. Publica las imágenes autenticadas a Docker Hub.
 5. Ejecuta limpieza profunda con `prune -af` para liberar espacio en disco.
+
+---
+
+## 7. Operaciones Avanzadas de Despliegue y Validación
+
+### 7.1 Inicialización Inicial (Bootstrap y Seeder del Super Administrador)
+En una instalación limpia con base de datos virgen (`COUNT(users) == 0`), RoSGrid provee dos mecanismos para aprovisionar la primera organización y al Super Administrador Global:
+
+1. **Vía Consola Web (Recomendado para Operadores):**
+   - Al acceder por primera vez a `http://localhost:8080`, la interfaz detecta automáticamente el estado de inicialización y muestra el formulario de bienvenida de **Configuración Inicial de RoSGrid**.
+   - Ingresa el nombre de la organización, slug, credenciales del Super Administrador y confirma. El sistema aprovisionará la cuenta y te presentará inmediatamente el código QR para el enrolamiento 2FA TOTP y los códigos de respaldo.
+
+2. **Vía CLI en el Servidor (Recomendado para SysAdmins y Automatización):**
+   - Ejecuta de forma interactiva:
+     ```bash
+     docker exec -it rosgrid_api python3 /app/scripts/crear_admin.py
+     ```
+   - O de forma desatendida mediante argumentos:
+     ```bash
+     docker exec rosgrid_api python3 /app/scripts/crear_admin.py \
+         --tenant-name "ISP Principal" \
+         --tenant-slug "master" \
+         --username "superadmin" \
+         --email "admin@rosgrid.local" \
+         --password "ClaveSegura123!" \
+         --full-name "Super Administrador"
+     ```
+   - Una vez creado el primer usuario, los endpoints de bootstrap se bloquean permanentemente con HTTP `403 Forbidden`.
+
+### 7.2 Despliegue en Servidores Separados (Backend y Frontend Independientes)
+RoSGrid permite desplegar el Frontend (Nginx) y el Backend (FastAPI + Bases de Datos) en servidores físicos o virtuales distintos:
+
+* **Opción B — Dominios Cruzados / Cross-Origin Directo (CORS):**
+  - **Servidor 1 (Frontend):** `https://app.tuempresa.com`
+    * Configura la variable de entorno `VITE_API_BASE_URL=https://api.tuempresa.com`.
+  - **Servidor 2 (Backend):** `https://api.tuempresa.com`
+    * Configura en `.env`:
+      ```bash
+      ROSGRID_CORS_ORIGINS="https://app.tuempresa.com,http://localhost:8080"
+      ROSGRID_CROSS_ORIGIN_COOKIES=true
+      ```
+    * El backend habilitará `CORSMiddleware` con credenciales permitidas y emitirá las cookies de sesión con `SameSite=None; Secure` para permitir la autenticación cross-origin.
+
+* **Opción A — Proxy Reverso en Misma Origen Virtual:**
+  - El servidor Frontend recibe todo el tráfico en `https://noc.tuempresa.com` y reenvía internamente `/api/` y `/ws/` al servidor Backend a través de red privada o túnel WireGuard.
+  - Permite conservar las cookies `__Host-rg_at` con `SameSite=Strict`.
+
+### 7.3 Pipeline de Validación de Imágenes de Producción en Local (`./probar-prod-local.sh`)
+Para validar el stack completo de producción (`--no-dev`) antes de subir las imágenes a Docker Hub o desplegarlas:
+```bash
+./probar-prod-local.sh
+```
+Este pipeline:
+1. Compila las imágenes de producción localmente sin subir a ningún registro.
+2. Levanta el stack con `docker-compose.prod.local.yml`.
+3. Valida la transición a `healthy` de PostgreSQL, KeyDB y FastAPI.
+4. Ejecuta pruebas sintéticas de conexión sobre `/health`, `/metrics`, `/api/v1/auth/bootstrap-status` y el Nginx frontend.
+5. Ejecuta el script `crear_admin.py` y verifica la transición exitosa del estado de bootstrap.
+6. Apaga y purga los volúmenes efímeros de prueba.
+
+### 7.4 Dictamen de Arquitecturas de Hardware (AMD64, ARM64 y ARMv7)
+- **Soportadas Oficialmente:** `linux/amd64` (Intel/AMD) y `linux/arm64` (`aarch64`, para Raspberry Pi 3/4/5 con SO de 64 bits y servidores ARM empresariales).
+- **Incompatible (ARMv7 32-bit):** Las placas con procesadores de 32 bits no están soportadas debido a que:
+  * El motor en memoria multi-hilo **KeyDB** requiere instrucciones atómicas de 64 bits (`CAS64`) y carece de imágenes oficiales para 32 bits.
+  * **PostgreSQL 17** ha discontinuado los builds oficiales de 32 bits en Alpine Linux.
+  * El espacio virtual de memoria está topado en 2 GB por proceso, incompatible con la telemetría concurrente y los índices BRIN.
