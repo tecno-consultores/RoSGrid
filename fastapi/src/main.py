@@ -67,7 +67,7 @@ async def health_check(response: Response) -> dict[str, str]:
     }
 
 
-async def users_me_alias(
+def users_me_alias(
     claims: dict[str, Any] = Depends(get_current_user_claims),
 ) -> dict[str, Any]:
     """Alias /users/me para compatibilidad con suite BDD Karate Labs."""
