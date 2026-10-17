@@ -58,7 +58,23 @@
       const res = await http.get<FirewallRuleItem[] | { items: FirewallRuleItem[] }>(
         `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}`,
       );
-      rulesList.value = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      const raw = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      rulesList.value = raw.map((item: any) => ({
+        ...item,
+        id: item.id || item['.id'] || '',
+        chain: item.chain || 'forward',
+        action: item.action || 'accept',
+        src_address: item.src_address || item['src-address'] || '',
+        dst_address: item.dst_address || item['dst-address'] || '',
+        protocol: item.protocol || '',
+        dst_port: item.dst_port || item['dst-port'] || '',
+        bytes: Number(item.bytes || 0),
+        packets: Number(item.packets || 0),
+        comment: item.comment || '',
+        disabled: item.disabled === true || item.disabled === 'true',
+        dynamic: item.dynamic === true || item.dynamic === 'true',
+        invalid: item.invalid === true || item.invalid === 'true',
+      }));
     } catch {
       rulesList.value = [];
     } finally {

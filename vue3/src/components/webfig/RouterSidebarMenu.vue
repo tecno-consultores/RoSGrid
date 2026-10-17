@@ -29,14 +29,34 @@
       category: 'Virtualization',
       is_singleton: false,
     },
-    { ros_path: 'snmp', title: 'SNMP Community', category: 'Management', is_singleton: true },
+    { ros_path: 'snmp', title: 'SNMP Settings', category: 'Management', is_singleton: true },
+    { ros_path: 'snmp/community', title: 'SNMP Communities', category: 'Management', is_singleton: false },
   ]);
 
   async function loadLayer2Catalog() {
     try {
-      const res = await http.get<{ items: Layer2CatalogItem[] }>(
-        `/api/v1/routers/${props.routerId}/webfig/layer2/catalog`,
-      );
+      const res = await http.get<{
+        items?: Layer2CatalogItem[];
+        menu_tree?: Array<{ group: string; items: Array<{ label: string; ros_path: string }> }>;
+      }>(`/api/v1/routers/${props.routerId}/webfig/layer2/catalog`);
+
+      if (res.data?.menu_tree && res.data.menu_tree.length > 0) {
+        const flattened: Layer2CatalogItem[] = [];
+        for (const grp of res.data.menu_tree) {
+          for (const it of grp.items) {
+            flattened.push({
+              ros_path: it.ros_path,
+              title: it.label,
+              category: grp.group,
+              is_singleton: it.ros_path === 'snmp' || it.ros_path === 'system/ntp/client',
+            });
+          }
+        }
+        if (flattened.length > 0) {
+          layer2Catalog.value = flattened;
+          return;
+        }
+      }
       if (res.data?.items && res.data.items.length > 0) {
         layer2Catalog.value = res.data.items;
       }

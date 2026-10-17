@@ -590,13 +590,23 @@ async def import_csv_commit(
     for item in items:
         r, tags, vault = build_router_from_csv(item, tenant_id, user_id)
         db.add(r)
-        await db.flush()
-        for t in tags:
-            t.router_id = r.id
-            db.add(t)
-        vault.router_id = r.id
         db.add(vault)
+        for t in tags:
+            db.add(t)
         created_ids.append(r.id)
+
+        try:
+            host = item.api_base_url.replace("https://", "").replace("http://", "").split("/")[0].split(":")[0]
+            async with MikrotikRestClient(
+                host=host,
+                port=item.api_port,
+                username=item.api_username,
+                password=item.api_password,
+                timeout=5.0,
+            ) as client:
+                await perform_discovery(client, r)
+        except Exception as exc:
+            logger.debug("Discovery en import_csv para %s: %s", r.display_name, exc)
 
     ip_addr = request.client.host if request.client else "127.0.0.1"
     ua = request.headers.get("User-Agent")

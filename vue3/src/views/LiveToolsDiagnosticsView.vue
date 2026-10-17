@@ -22,26 +22,87 @@
   const activeTab = ref<'ping' | 'traceroute' | 'torch' | 'logs'>('ping');
   const targetHost = ref('8.8.8.8');
   const pingCount = ref(4);
-  const selectedInterface = ref('ether1-WAN');
+  const selectedInterface = ref('ether1');
+  const availableInterfaces = ref<string[]>(['ether1']);
   const isRunning = ref(false);
 
   const pingResults = ref<DiagnosticRow[]>([]);
   const logEntries = ref<DiagnosticLogItem[]>([]);
 
+  async function loadRealInterfaces() {
+    if (!routerId.value) return;
+    try {
+      const res = await http.get<Array<{ name?: string }> | { items: Array<{ name?: string }> }>(
+        `/api/v1/routers/${routerId.value}/webfig/interfaces`,
+      );
+      const raw = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      const names = raw.map((i) => i.name).filter(Boolean) as string[];
+      if (names.length > 0) {
+        availableInterfaces.value = names;
+        if (!names.includes(selectedInterface.value)) {
+          selectedInterface.value = names[0];
+        }
+      }
+    } catch {
+      // Mantiene lista por defecto
+    }
+  }
+
   async function runDiagnostic() {
     isRunning.value = true;
     pingResults.value = [];
     try {
-      const res = await http.post<DiagnosticRow[] | { rows: DiagnosticRow[] } | { results: DiagnosticRow[] }>(
+      const payload: Record<string, any> = {};
+      if (activeTab.value === 'ping') {
+        payload.address = targetHost.value.trim();
+        payload.count = Number(pingCount.value) || 4;
+        payload.size = 64;
+      } else if (activeTab.value === 'traceroute') {
+        payload.address = targetHost.value.trim();
+        payload.count = 3;
+      } else if (activeTab.value === 'torch') {
+        payload.interface = selectedInterface.value;
+        payload.duration_seconds = 3;
+      }
+
+      const res = await http.post<any>(
         `/api/v1/routers/${routerId.value}/webfig/tools/${activeTab.value}`,
-        {
-          target: targetHost.value,
-          count: pingCount.value,
-          interface: selectedInterface.value,
-        },
+        payload,
       );
-      const data: any = res.data;
-      pingResults.value = Array.isArray(data) ? data : data?.rows || data?.results || [];
+
+      if (activeTab.value === 'ping') {
+        const items = res.data?.results || (Array.isArray(res.data) ? res.data : []);
+        pingResults.value = items.map((r: any, idx: number) => ({
+          seq: r.seq !== undefined ? Number(r.seq) + 1 : idx + 1,
+          host: r.host || r.address || targetHost.value,
+          size: r.size ? Number(r.size) : 56,
+          ttl: r.ttl ? Number(r.ttl) : 64,
+          time_ms: r.time || r['avg-rtt'] || `${r.time_ms ?? 0} ms`,
+          status: r.status || (r.loss === '100' ? 'timeout' : 'ok'),
+        }));
+      } else if (activeTab.value === 'traceroute') {
+        const items = Array.isArray(res.data) ? res.data : (res.data?.results || []);
+        pingResults.value = items
+          .filter((r: any) => r.address || r.last)
+          .map((r: any, idx: number) => ({
+            seq: r['.section'] ? Number(r['.section']) : idx + 1,
+            host: r.address || '(sin respuesta)',
+            size: 56,
+            ttl: idx + 1,
+            time_ms: r.avg ? `${r.avg} ms` : (r.last || '*'),
+            status: r.loss === '100' ? 'timeout' : 'ok',
+          }));
+      } else if (activeTab.value === 'torch') {
+        const items = Array.isArray(res.data) ? res.data : (res.data?.results || []);
+        pingResults.value = items.map((r: any, idx: number) => ({
+          seq: idx + 1,
+          host: `${r['src-address'] || '*'}:${r['src-port'] || '*'} -> ${r['dst-address'] || '*'}:${r['dst-port'] || '*'}`,
+          size: Number(r.rx || 0) + Number(r.tx || 0),
+          ttl: Number(r['rx-packets'] || 0) + Number(r['tx-packets'] || 0),
+          time_ms: r['ip-protocol'] || r['mac-protocol'] || 'ip',
+          status: `${r.tx || 0} TX / ${r.rx || 0} RX`,
+        }));
+      }
     } catch {
       pingResults.value = [];
     } finally {
@@ -54,7 +115,18 @@
       const res = await http.get<DiagnosticLogItem[] | { items: DiagnosticLogItem[] }>(
         `/api/v1/routers/${routerId.value}/webfig/tools/logs`,
       );
-      logEntries.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
+      const raw = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      logEntries.value = raw.map((l: any, idx: number) => ({
+        id: l.id || l['.id'] || String(idx),
+        time: l.time || '',
+        topics: l.topics || 'system',
+        message: l.message || '',
+        severity: String(l.topics || '').includes('error')
+          ? 'error'
+          : String(l.topics || '').includes('warning')
+            ? 'warning'
+            : 'info',
+      }));
     } catch {
       logEntries.value = [];
     }
@@ -67,6 +139,7 @@
   }
 
   onMounted(() => {
+    loadRealInterfaces();
     loadLogs();
   });
 </script>
@@ -108,7 +181,7 @@
     <!-- Panel de Ejecución de Ping / Traceroute / Torch -->
     <div v-if="activeTab !== 'logs'" class="tool-runner-card">
       <form class="runner-form" @submit.prevent="runDiagnostic">
-        <div class="form-group">
+        <div v-if="activeTab !== 'torch'" class="form-group">
           <label for="diag-target" class="form-label">Destino (IP / Hostname):</label>
           <input
             id="diag-target"
@@ -135,9 +208,7 @@
         <div v-if="activeTab === 'torch'" class="form-group">
           <label for="diag-iface" class="form-label">Interfaz:</label>
           <select id="diag-iface" v-model="selectedInterface" class="form-input font-tabular">
-            <option value="ether1-WAN">ether1-WAN</option>
-            <option value="sfp-plus1-Trunk">sfp-plus1-Trunk</option>
-            <option value="bridge-LAN">bridge-LAN</option>
+            <option v-for="iface in availableInterfaces" :key="iface" :value="iface">{{ iface }}</option>
           </select>
         </div>
 

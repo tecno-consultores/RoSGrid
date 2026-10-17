@@ -34,9 +34,15 @@ async def enrich_router_telemetry(redis: Any, tenant_id: uuid.UUID, r_id: uuid.U
     data = await redis.hgetall(key)
     if not data:
         return {"operational_status": "OFFLINE", "cpu_load_percent": None, "memory_used_percent": None}
-    op_status = data.get("state", "ONLINE")
-    cpu = int(data["cpu"]) if "cpu" in data and data["cpu"].isdigit() else None
-    ram = int(data["ram"]) if "ram" in data and data["ram"].isdigit() else None
+    op_status = data.get("operational_status") or data.get("state", "ONLINE")
+    cpu_val = data.get("last_cpu_load_pct") or data.get("cpu")
+    cpu = int(cpu_val) if cpu_val and cpu_val.isdigit() else None
+    free_mem_val = data.get("last_free_memory_pct")
+    if free_mem_val and free_mem_val.isdigit():
+        ram = max(0, min(100, 100 - int(free_mem_val)))
+    else:
+        ram_val = data.get("ram")
+        ram = int(ram_val) if ram_val and ram_val.isdigit() else None
     return {"operational_status": op_status, "cpu_load_percent": cpu, "memory_used_percent": ram}
 
 
@@ -258,7 +264,9 @@ def build_router_from_csv(
     item: CsvCommitRowItem, tenant_id: uuid.UUID, user_id: uuid.UUID
 ) -> tuple[Router, list[RouterTag], RouterCredentialsVault]:
     """Instancia Router, Tags y Vault desde una fila CSV verificada."""
+    router_id = uuid.uuid4()
     r = Router(
+        id=router_id,
         tenant_id=tenant_id,
         display_name=item.display_name.strip(),
         api_base_url=item.api_base_url.strip(),
@@ -273,14 +281,14 @@ def build_router_from_csv(
         created_by=user_id,
     )
     tags = [
-        RouterTag(tenant_id=tenant_id, router_id=r.id, tag_name=clean_tag)
+        RouterTag(tenant_id=tenant_id, router_id=router_id, tag_name=clean_tag)
         for tag in item.tags
         if (clean_tag := tag.strip().lower())
     ]
-    aad = f"{tenant_id}:{r.id}".encode()
+    aad = f"{tenant_id}:{router_id}".encode()
     ct, iv, tag = encrypt_aes_gcm(item.api_password.encode("utf-8"), aad)
     vault = RouterCredentialsVault(
-        router_id=r.id,
+        router_id=router_id,
         tenant_id=tenant_id,
         api_username=item.api_username.strip(),
         current_password_ciphertext=ct,
