@@ -13,9 +13,11 @@ RoSGrid valida la autenticidad del router mediante *Trust On First Use* (TOFU) c
 
 ```routeros
 # 1. Crear plantilla de certificado autofirmado
-/certificate add name=rosgrid-ssl common-name="rosgrid-router.local" days-valid=3650 key-size=2048 key-usage=digital-signature,key-encipherment,tls-server
+/certificate add name=my-ca common-name="Rosgrid Root CA" days-valid=3650 key-size=2048 key-usage=key-cert-sign,crl-sign
+/certificate sign my-ca
 
 # 2. Firmar el certificado localmente
+/certificate add name=rosgrid-ssl common-name="rosgrid-router.local" days-valid=3650 key-size=2048 key-usage=digital-signature,key-encipherment,tls-server
 /certificate sign rosgrid-ssl ca=my-ca
 
 # 3. Verificar el certificado firmado y obtener el Fingerprint SHA-256
