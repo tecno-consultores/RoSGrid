@@ -112,9 +112,10 @@
 
   5. Registra ROUTER\_CREATED en audit\_logs y responde 201 Created.
 
-### **1.3 POST /api/v1/inventory/routers/\{router\_id\}/sync-discovery — Forzar Autodescubrimiento de Hardware y Versión**
+### **1.3 POST /api/v1/inventory/routers/\{router\_id\}/discover y /sync-discovery — Forzar Autodescubrimiento y Pinning TOFU**
 
-- Consulta bajo demanda el MikroTik y actualiza modelo, versión de RouterOS, firmware y disponibilidad de paquetes de actualización.
+- **Roles Permitidos:** SUPERADMIN\_GLOBAL, TENANT\_ADMIN, SUPERVISOR, SUPPORT\_L3, INVENTORY\_MANAGER.
+- **Acción:** Consulta bajo demanda el MikroTik físico/CHR vía REST API (`/rest/system/resource`, `/rest/system/routerboard`, `/rest/system/identity`), calcula y fija la huella SSL TOFU SHA-256 en caso de estar pendiente, y actualiza modelo, arquitectura, versión de RouterOS, firmware y uptime en tiempo real. Utilizado por el botón *TOFU / Redescubrir* en la grilla de la UI.
 
 ### **1.4 POST /api/v1/inventory/routers/\{router\_id\}/repin-ssl — Autorizar Cambio de Certificado SSL Autofirmado (Re-Pin TOFU)**
 

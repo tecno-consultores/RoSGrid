@@ -54,6 +54,7 @@ Las pruebas automatizadas de RoSGrid (cobertura unitaria `>= 95%`, mutación, ac
 | ID | Caso de Prueba | Precondición | Pasos de Ejecución | Resultado Esperado |
 | :--- | :--- | :--- | :--- | :--- |
 | **UAT-07** | Alta Individual con Pinning TOFU | Router MikroTik accesible por red | 1. Ir a *Inventario* -> *Nuevo Router*.<br>2. Ingresar Nombre, IP, Puerto REST, Usuario y Clave.<br>3. Guardar. | Se abre modal TOFU mostrando la huella SHA-256 del certificado SSL autofirmado del router. Al confirmar, el router pasa a estado *Activo*. |
+| **UAT-07B** | Redescubrimiento Dinámico TOFU | Router registrado en Inventario | 1. En la fila del router, hacer clic en el botón *TOFU / Redescubrir*.<br>2. Observar la notificación toast y actualización de datos. | Se invoca `POST /api/v1/inventory/routers/{id}/discover`. El sistema consulta al MikroTik real, extrae versión de RouterOS, arquitectura de CPU, memoria y huella SSL, actualizando la ficha en vivo sin recargar. |
 | **UAT-08** | Importación Masiva CSV (Dry-Run + Commit) | Archivo CSV con 3 routers | 1. Abrir Asistente CSV.<br>2. Cargar archivo.<br>3. Presionar *Validar (Dry-Run)*.<br>4. Revisar tabla de validación.<br>5. Presionar *Importar*. | Paso 1 muestra resumen sin guardar en DB. Paso 2 confirma los registros en DB y muestra los 3 routers en la grilla. |
 | **UAT-09** | Revelación de Clave (*Step-Up Auth* 30s) | Router en inventario con clave cifrada | 1. Ir a la Bóveda del router.<br>2. Clic en icono del ojo para ver clave.<br>3. Ingresar código 2FA TOTP en el modal emergente. | La clave se descifra en pantalla con una barra de progreso regresiva de 30 segundos. Al expirar, se borra de la memoria y se enmascara nuevamente. |
 | **UAT-10** | Rotación Automática de Claves API | Router conectado | 1. Presionar *Rotar Clave API*.<br>2. Confirmar acción. | RoSGrid genera clave de 32 bytes, actualiza el usuario en MikroTik vía REST, cifra la nueva clave en DB con AES-256-GCM y registra auditoría. |
@@ -108,6 +109,15 @@ Las pruebas automatizadas de RoSGrid (cobertura unitaria `>= 95%`, mutación, ac
 | **UAT-23** | Generación de Token MCP para Agente | Script `generar_token_mcp.py` | 1. Ejecutar script especificando usuario y organización.<br>2. Obtener token Bearer JWT. | Se emite token de 365 días con rol `SERVICE_ACCOUNT` y claims restringidos. |
 | **UAT-24** | Ejecución de Diagnóstico MCP | Agente IA o cliente HTTP | 1. Enviar payload JSON-RPC invocando `rosgrid_get_router_health`. | La API responde el estado del router con latencia mínima y sin bypass de políticas de seguridad. |
 | **UAT-25** | Intercepción MCP en Maker-Checker | Agente IA solicita cambio mutable | 1. Agente invoca `rosgrid_propose_network_change`. | La operación queda retenida en bandeja Maker-Checker; no se ejecuta hasta que un humano la autorice en la UI. |
+
+---
+
+### Módulo 10: Auto-Registro de Operadores y Aprobación Maker-Checker
+| ID | Caso de Prueba | Precondición | Pasos de Ejecución | Resultado Esperado |
+| :--- | :--- | :--- | :--- | :--- |
+| **UAT-26** | Solicitud de Auto-Registro Web | Sistema inicializado y toggle activo | 1. En la pantalla de login, hacer clic en *"Solicitar acceso de operador"*.<br>2. Completar formulario con nombre, username, email y contraseña.<br>3. Enviar solicitud. | Mensaje de éxito indicando que la solicitud está en estado `PENDING_APPROVAL`. Intento de login posterior arroja HTTP 403 (*"Cuenta pendiente de aprobación"*). |
+| **UAT-27** | Aprobación de Cuenta por Superadmin | Solicitud pendiente en el sistema | 1. Superadmin inicia sesión e ingresa a *Usuarios y Permisos*.<br>2. Localiza al usuario en la pestaña *Solicitudes Pendientes*.<br>3. Asigna rol (ej. `OPERATOR_RW`) y hace clic en *Aprobar*. | El usuario pasa a estado activo, se habilita el acceso y se audita el evento con inmutabilidad WORM. |
+| **UAT-28** | Rechazo y Toggle de Registro | Solicitud pendiente | 1. En *Solicitudes Pendientes*, hacer clic en *Rechazar*.<br>2. En la barra superior, desactivar el switch *Permitir Nuevos Registros*. | La solicitud se descarta de forma segura. El formulario de login oculta el enlace de registro y cualquier intento directo vía API responde HTTP 403 (*"El auto-registro está deshabilitado"*). |
 
 ---
 

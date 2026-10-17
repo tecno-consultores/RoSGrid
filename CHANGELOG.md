@@ -8,12 +8,37 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ## [Unreleased]
 
-### Pendiente para cierre de Release 1.0.0
-- Construcción de la interfaz Frontend Vue 3 (Hitos 11, 12 y 13) y manuales en `docs/` (Hito 14).
-- Certificación completa de suites QA 11X en contenedores efímeros (Hito 15 — `15.1` y `15.2` ya superados con 95.03% de cobertura en Backend).
-- Publicación inicial multi-etapa con `docker buildx` hacia Docker Hub (`sinfallas/rosgrid-backend:1.0.0` y `sinfallas/rosgrid-frontend:1.0.0`) (Hito 16).
+### Pendiente para publicación oficial
+- Auditoría final de vulnerabilidades Trivy (`CRITICAL,HIGH = 0`) en imágenes Docker de producción (Hito 16).
+- Publicación multi-arquitectura con `./build.sh` hacia Docker Hub (`sinfallas/rosgrid-backend:1.0.0` y `sinfallas/rosgrid-frontend:1.0.0`).
 
 ---
+
+## [1.0.0-rc.2] - 2026-10-17
+
+### Added
+- **Flujo de Auto-Registro Web de Operadores y Aprobación Maker-Checker:**
+  - Formulario público accesible en `LoginView.vue` para solicitar acceso (`POST /api/v1/auth/register`).
+  - Bloqueo preventivo HTTP 403 a usuarios con estado `PENDING_APPROVAL`.
+  - Pestaña de "Solicitudes Pendientes" en `UsersAndPermissionsView.vue` con aprobación (`PUT /api/v1/users/{id}/approve`) y asignación de rol por Superadmin.
+  - Switch global de activación/desactivación de auto-registro en KeyDB (`rosgrid:registration_enabled`).
+- **Botón de Redescubrimiento Dinámico TOFU:**
+  - Botón táctil en la grilla de Inventario que invoca `POST /api/v1/inventory/routers/{id}/discover`.
+  - Detección en vivo de hardware, arquitectura, versión de RouterOS y fijación de huella SSL TOFU SHA-256 sin recargar página.
+- **Suite Automatizada de Validación Front-Back (`validar_comunicacion_front_back.py`):**
+  - 24 contratos de prueba verificando exhaustivamente que todas las rutas y funciones de la UI se comunican con FastAPI y con el MikroTik físico/CHR (100% de éxito).
+
+### Fixed
+- **Compatibilidad con RouterOS v7.13+ (`rest-api` Policy):**
+  - Detección y normalización de error HTTP 401 debido a la ausencia del flag `rest-api` en el grupo de usuarios de RouterOS v7.13+.
+  - Documentación detallada en manuales operativos.
+- **Visualización de Mapas OpenStreetMap:**
+  - Corrección de cabeceras Content Security Policy (CSP) en Nginx para permitir la carga de teselas cartográficas de `*.tile.openstreetmap.org`.
+  - Ajuste de estilos CSS en Leaflet para evitar estiramiento vertical infinito en pantallas de gran resolución.
+- **Resiliencia de Inmutabilidad WORM en Rechazo de Usuarios:**
+  - Modificación del flujo de rechazo (`DELETE /api/v1/users/{id}/reject`) para aplicar soft-revocación segura en caso de que existan eventos en `audit_logs` con clave foránea, impidiendo violaciones del trigger inmutable de PostgreSQL.
+- **Telemetría y Pestañas de WebFig en Hardware Real:**
+  - Corrección de mapeo de métricas reales de CPU, memoria y lectura de 10 interfaces vivas desde el router físico/CHR.
 
 ## [1.0.0] - 2026-10-15
 

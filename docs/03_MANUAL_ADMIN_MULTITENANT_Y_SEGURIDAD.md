@@ -118,3 +118,47 @@ Si un usuario pierde su dispositivo, es desvinculado de la empresa o se sospecha
 1. **Invalidación en Memoria:** RoSGrid elimina inmediatamente la clave de sesión en KeyDB (`rg:{tenant_id}:sess:{session_id}`).
 2. **Empuje WebSocket:** El servicio de eventos publica una trama `SESSION_KILLED` dirigida al navegador del usuario.
 3. **Expulsión Inmediata:** La SPA Vue 3 destruye el almacén de Pinia (`authStore.logout()`), elimina la cookie segura `__Host-rg_at` y redirige a la pantalla de login en menos de 100 milisegundos.
+
+---
+
+## 6. Flujo de Auto-Registro Web y Aprobación Maker-Checker de Operadores
+
+Para simplificar el onboarding de técnicos sin requerir acceso a consola de servidores:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Op as Operador Solicitante
+    participant Login as LoginView.vue
+    participant API as FastAPI Backend
+    participant KeyDB as KeyDB / Redis
+    participant DB as PostgreSQL 17
+    participant Admin as Administrador (UsersView)
+
+    Op->>Login: Clic en "¿No tienes cuenta? Solicitar Registro"
+    Login->>API: POST /api/v1/auth/register (datos de usuario)
+    API->>KeyDB: Verificar flag rg:config:public_registration_enabled
+    API->>DB: Crear usuario con is_active = FALSE (PENDING_APPROVAL)
+    API-->>Login: 201 Created (Cuenta pendiente de aprobación)
+    
+    Note over Op,Login: Si el usuario intenta hacer login antes de ser aprobado
+    Op->>Login: Intento de inicio de sesión con credenciales
+    Login->>API: POST /api/v1/auth/login
+    API-->>Login: 403 Forbidden (Tu cuenta está pendiente de aprobación...)
+
+    Note over Admin: Autorización por el Administrador (Maker-Checker)
+    Admin->>API: GET /api/v1/users?status=PENDING
+    API-->>Admin: Lista de operadores en espera
+    Admin->>API: PUT /api/v1/users/{id}/approve (asignar Rol RBAC y routers)
+    API->>DB: Actualizar is_active = TRUE y rol seleccionado
+    API-->>Admin: Operador activado exitosamente
+    
+    Note over Op,Login: Tras la aprobación
+    Op->>Login: Login exitoso -> Pasa a enrolamiento obligatorio 2FA TOTP
+```
+
+### 6.1 Control de Registro Público en KeyDB
+El Superadmin o Tenant Admin puede habilitar o deshabilitar las solicitudes externas de registro en cualquier momento desde el botón en la cabecera de `UsersAndPermissionsView.vue` (`POST /api/v1/users/registration-toggle`). Cuando está desactivado, el endpoint responde inmediatamente `403 Forbidden`.
+
+### 6.2 Plan B por Terminal (`crear_admin.py`)
+El script de terminal en `fastapi/scripts/crear_admin.py` se mantiene 100% operativo como alternativa para aprovisionamiento directo por consola cuando no se dispone de acceso web o en entornos de contingencia.

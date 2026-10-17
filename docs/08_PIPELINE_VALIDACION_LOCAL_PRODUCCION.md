@@ -40,7 +40,7 @@ flowchart TD
 | **2/6** | **Despliegue Sintético** | Limpieza de huérfanos y arranque de PostgreSQL 17, KeyDB, FastAPI API, Worker y Nginx UI. | Contenedores creados e iniciados sin conflicto de puertos. |
 | **3/6** | **Healthchecks** | Sondeo activo con `docker inspect` hasta 45 intentos (intervalos de 3s). | Los tres servicios de fondo reportan `healthy`. |
 | **4/6** | **Pruebas Sintéticas y Smoke Test** | Ejecución de `test_production_boot_smoke.py` (`--no-dev`), consultas `curl` a `/health`, `/metrics`, `/api/v1/auth/bootstrap-status` y `/` (UI Nginx). | 80 submódulos importados sin dependencias dev, HTTP 200, métricas exportadas, `is_bootstrapped: false` y bundle servido. |
-| **5/6** | **Aprovisionamiento E2E** | Ejecución de `crear_admin.py`, consulta de transición a `is_bootstrapped: true`, emisión de token MCP y llamada autenticada a `/api/v1/auth/me`. | Super Admin creado con 2FA, token Bearer validado en KeyDB y claims correctos. |
+| **5/6** | **Aprovisionamiento E2E y Validación Front-Back** | Ejecución de `crear_admin.py`, consulta de transición a `is_bootstrapped: true`, emisión de token MCP y validación de sesión autenticada. Ejecución de `validar_comunicacion_front_back.py` (24 contratos de rutas y funciones de la UI contra FastAPI y RouterOS real). | Super Admin creado con 2FA, token Bearer validado en KeyDB, y 100% de éxito (24/24) en rutas UI-API. |
 | **6/6** | **Cierre y Limpieza** | Inspección de logs en busca de `Traceback` y purga de volúmenes con `docker compose down -v`. | 0 excepciones no controladas en logs y host limpio. |
 
 ---
@@ -154,3 +154,22 @@ Si se interrumpió abruptamente una sesión anterior con `Ctrl+C`:
 docker compose -f docker-compose.prod.local.yml down -v --remove-orphans
 docker volume prune -f
 ```
+
+---
+
+## 7. Suite Automatizada de Validación Front-Back (`validar_comunicacion_front_back.py`)
+
+Para certificar que **todas** las rutas, formularios y vistas de la interfaz Vue 3 se comunican contractualmente sin errores con el backend FastAPI y con la flota MikroTik real, RoSGrid incluye una suite de 24 pruebas de integración en `fastapi/scripts/validar_comunicacion_front_back.py`.
+
+### 7.1 Ejecución en Contenedor (Regla Cero)
+```bash
+docker exec -i rosgrid_api_local python3 /app/scripts/validar_comunicacion_front_back.py
+```
+
+### 7.2 Catálogo de 24 Pruebas de Integración Cubiertas
+1. **Infraestructura Base:** Liveness de Nginx (`/`), cabeceras CSP con soporte de mapas OpenStreetMap y `/health` de FastAPI.
+2. **Autenticación y Ciclo de Vida:** `/api/v1/auth/bootstrap-status`, login de Superadmin con TOTP 2FA y perfil `/api/v1/auth/me`.
+3. **Flujo Maker-Checker de Registro Web:** Auto-registro `/api/v1/auth/register`, bloqueo 403 a usuarios no aprobados, aprobación `/api/v1/users/{id}/approve` por Superadmin, rechazo seguro `/api/v1/users/{id}/reject` y toggle de registro en KeyDB.
+4. **Inventario y Hardware Real:** Consulta de routers `/api/v1/inventory/routers`, botón TOFU de redescubrimiento `/api/v1/inventory/routers/{id}/discover` con validación de versión y arquitectura real (CHR QEMU v7.21.5), y lectura de interfaces reales `/api/v1/routers/{id}/webfig/interfaces`.
+5. **Gobernanza y Operaciones:** Sesiones activas en KeyDB, pistas inmutables WORM en PostgreSQL, ventanas de mantenimiento, catálogo de usuarios, plantillas de script, cola de aprobaciones Maker-Checker, estado de actualizaciones RouterOS, dry-run de importación CSV e historial de backups `.rsc`.
+

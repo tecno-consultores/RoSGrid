@@ -30,6 +30,17 @@ El formulario presenta 3 campos obligatorios con etiquetas \<label\> explícitas
 
    - Si la URL contiene ?reason=session\_revoked, muestra una alerta accesible (role="alert") informando: *"Tu sesión fue cerrada por un Administrador o Supervisor"*.
 
+### **1.1B Etapa 1B: Formulario de Auto-Registro de Operadores (currentStep === 'REGISTER')**
+
+- Si el auto-registro está habilitado por el Superadmin, se muestra el botón *"Solicitar acceso de operador"*.
+- Al pulsar, la tarjeta de login transmuta al formulario de registro accesible:
+  - Nombre completo (`full_name`)
+  - Nombre de usuario (`username`)
+  - Correo electrónico (`email`)
+  - Contraseña robusta (`password`) y confirmación (`confirmPassword`)
+- Al enviar (`POST /api/v1/auth/register`), el usuario entra en estado `PENDING_APPROVAL` y se muestra un banner táctil con mensaje explicativo invitando a contactar al Superadmin para su habilitación.
+- Permite regresar inmediatamente al formulario de login mediante el botón *"Volver al inicio de sesión"*.
+
 ### **1.2 Etapa 2A: Enrolamiento Inicial de 2FA TOTP (Si next\_step === 'ENROLL\_2FA\_REQUIRED')**
 
 - Renderiza en un \<canvas\> local (usando la librería qrcode sin llamadas externas a internet) el código QR del totp\_provisioning\_uri.
@@ -104,6 +115,19 @@ Cumple el requerimiento de que **el administrador asigne a cada usuario exactame
 - Incluye botones de selección rápida por lote: *"Asignar todos los routers con etiqueta zona-norte"* o *"Asignar todos los routers con rol TOWER\_AP"*.
 
 - Al guardar, invoca PUT /api/v1/users/\{user\_id\}/router-permissions con Idempotency-Key.
+
+### **3.3 Pestaña de Solicitudes Pendientes (Maker-Checker de Cuentas) y Switch Global**
+
+- **Switch de Registro en la Barra Superior:**
+  - Control tipo toggle táctil *"Permitir Nuevos Registros"*, visible exclusivamente para el `SUPERADMIN_GLOBAL`.
+  - Al alternar, invoca `POST /api/v1/users/registration-toggle` y actualiza la bandera en KeyDB en tiempo real con feedback visual táctico.
+- **Pestaña "Solicitudes Pendientes" en la Vista de Usuarios:**
+  - Muestra un badge con el conteo de operadores en espera de aprobación.
+  - Cada fila presenta los datos del solicitante (nombre, usuario, correo, fecha de solicitud).
+  - **Selector de Rol y Acceso:** Menú desplegable táctil para elegir el rol operativo que se otorgará (ej. `SUPPORT_L1`, `SUPPORT_L2`, `OPERATOR_RW`).
+  - **Acción "Aprobar" (Verde):** Ejecuta `PUT /api/v1/users/{user_id}/approve`, activando la cuenta y registrando el evento de auditoría WORM.
+  - **Acción "Rechazar" (Rojo):** Ejecuta `DELETE /api/v1/users/{user_id}/reject` con confirmación, eliminando o revocando la solicitud de manera limpia y sin corromper la inmutabilidad de la base de datos.
+
 
 
 

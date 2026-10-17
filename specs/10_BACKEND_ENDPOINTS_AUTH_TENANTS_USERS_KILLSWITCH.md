@@ -60,7 +60,31 @@
 
   - 401 Unauthorized: \{"detail": "Credenciales inválidas o empresa no encontrada"\}
 
+  - 403 Forbidden: \{"detail": "Cuenta pendiente de aprobación por el Administrador"\} (si el usuario fue creado vía auto-registro y aún no ha sido aprobado).
+
   - 423 Locked: \{"detail": "Cuenta bloqueada temporalmente por múltiples intentos fallidos. Intenta en 15 minutos."\}
+
+### **1.1B POST /api/v1/auth/register — Auto-Registro Web de Operadores (Maker-Checker)**
+
+- **Acceso:** Público (sujeto al switch global en KeyDB `rosgrid:registration_enabled`). Si está deshabilitado responde HTTP 403 Forbidden.
+- **Request Body (RegisterOperatorRequest):**
+  ```json
+  {
+    "full_name": "Ing. Roberto Díaz",
+    "username": "rdiaz",
+    "email": "rdiaz@isp.net",
+    "password": "PasswordSeguro2026!",
+    "tenant_id": "01928a00-1111-7000-8000-000000000001"
+  }
+  ```
+- **Comportamiento:**
+  - Valida unicidad de `username` y `email`.
+  - Crea el registro en `users` con rol inicial `SUPPORT_L1`, bandera `is_active=False` y estado en metadata `status='PENDING_APPROVAL'`.
+  - Registra el evento `USER_REGISTRATION_REQUESTED` en `audit_logs` (WORM).
+- **Respuestas:**
+  - 201 Created: `{"status": "PENDING_APPROVAL", "user_id": "01928b55...", "message": "Solicitud de registro enviada con éxito. Un administrador debe aprobar tu cuenta antes de iniciar sesión."}`
+  - 400 Bad Request: `{"detail": "El nombre de usuario o correo ya está registrado"}`
+  - 403 Forbidden: `{"detail": "El registro público de usuarios se encuentra deshabilitado por el administrador"}`
 
 ### **1.2 POST /api/v1/auth/2fa/verify — Paso 2: Validación TOTP y Emisión de Cookies Split-Credential**
 
@@ -275,6 +299,43 @@
 ### **3.4 POST /api/v1/users/\{user\_id\}/reset-2fa — Reiniciar Enrolamiento 2FA TOTP de un Usuario**
 
 - Requiere que el TENANT\_ADMIN envíe su propio totp\_code de confirmación. Borra el secreto TOTP del usuario objetivo, revoca todas sus sesiones activas en Redis (vía *Kill-Switch*) y lo obliga a escanear un nuevo código QR en su próximo inicio de sesión.
+
+### **3.5 PUT /api/v1/users/\{user\_id\}/approve — Aprobación Maker-Checker de Usuario Registrado**
+
+- **Roles Permitidos:** SUPERADMIN\_GLOBAL, TENANT\_ADMIN.
+- **Request Body (ApproveUserRequest):**
+  ```json
+  {
+    "role": "SUPPORT_L2",
+    "can_write": true
+  }
+  ```
+- **Comportamiento:**
+  - Valida que el usuario exista en el tenant y esté en estado pendiente.
+  - Actualiza `is_active = True`, asigna el `role` y establece en metadata `status = 'ACTIVE'`.
+  - Registra el evento de auditoría `USER_REGISTRATION_APPROVED` en `audit_logs` con `actor_user_id` del administrador aprobador.
+- **Respuestas:**
+  - 200 OK: `{"status": "ACTIVE", "user_id": "...", "message": "Usuario aprobado exitosamente"}`
+  - 404 Not Found: `{"detail": "Usuario no encontrado"}`
+
+### **3.6 DELETE /api/v1/users/\{user\_id\}/reject — Rechazo y Eliminación Segura de Solicitud de Usuario**
+
+- **Roles Permitidos:** SUPERADMIN\_GLOBAL, TENANT\_ADMIN.
+- **Comportamiento:**
+  - Si el usuario nunca generó registros dependientes en tablas auditadas, se elimina físicamente de `users`.
+  - Si existen referencias en `audit_logs` que dispararían el trigger de inmutabilidad WORM, se aplica soft-revocación segura (`is_active = False`, username ofuscado con sufijo de revocación y `status = 'REJECTED'`).
+  - Registra el evento de auditoría `USER_REGISTRATION_REJECTED`.
+- **Respuestas:**
+  - 200 OK: `{"status": "REJECTED", "user_id": "...", "message": "Solicitud de usuario rechazada y eliminada"}`
+
+### **3.7 Switch Global de Auto-Registro: POST y GET /api/v1/users/registration-***
+
+- **GET /api/v1/users/registration-status:**
+  - Retorna `{ "registration_enabled": true/false }` leyendo la llave `rosgrid:registration_enabled` en KeyDB (por defecto `True`).
+- **POST /api/v1/users/registration-toggle:**
+  - **Roles Permitidos:** SUPERADMIN\_GLOBAL.
+  - Alterna el estado en KeyDB y audita el evento `REGISTRATION_SWITCH_TOGGLED`.
+  - Retorna el nuevo estado booleano.
 
 
 

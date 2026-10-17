@@ -273,15 +273,136 @@ async def run_suite():
         except Exception as e:
             log_test("POST /api/v1/inventory/import-csv/dry-run", False, f"{type(e).__name__}: {e}")
 
-        # 13. Si hay un router real en inventario, probar endpoints por router
+        # 13. Validar Bootstrap Status y Auto-Registro con Aprobación Maker-Checker
+        try:
+            r_boot = await client.get("/api/v1/auth/bootstrap-status")
+            log_test(
+                "GET /api/v1/auth/bootstrap-status",
+                r_boot.status_code == 200 and "registration_enabled" in r_boot.json(),
+                f"HTTP {r_boot.status_code} (Registro Habilitado: {r_boot.json().get('registration_enabled')})",
+            )
+        except Exception as e:
+            log_test("GET /api/v1/auth/bootstrap-status", False, str(e))
+
+        # 14. Ciclo Completo de Auto-Registro y Aprobación de Operador
+        try:
+            rnd_user = uuid.uuid4().hex[:6]
+            reg_payload = {
+                "tenant_slug": tenant_slug,
+                "username": f"qa_{rnd_user}",
+                "email": f"qa_{rnd_user}@isp-local.com",
+                "full_name": f"Operador QA {rnd_user}",
+                "password": "Password123!",
+            }
+            r_reg = await client.post(
+                "/api/v1/auth/register",
+                json=reg_payload,
+                headers={"Idempotency-Key": str(uuid.uuid4())},
+            )
+            reg_ok = r_reg.status_code == 201 and r_reg.json().get("status") == "PENDING_APPROVAL"
+            log_test(
+                "POST /api/v1/auth/register (Auto-Registro Pendiente)",
+                reg_ok,
+                f"HTTP {r_reg.status_code} (Usuario: {reg_payload['username']})",
+            )
+
+            if reg_ok:
+                qa_uid = r_reg.json()["user_id"]
+                # Login antes de aprobar debe ser 403
+                r_login_pending = await client.post(
+                    "/api/v1/auth/login",
+                    json={
+                        "tenant_slug": tenant_slug,
+                        "email": reg_payload["email"],
+                        "username_or_email": reg_payload["username"],
+                        "password": reg_payload["password"],
+                    },
+                    headers={"Idempotency-Key": str(uuid.uuid4())},
+                )
+                log_test(
+                    "POST /api/v1/auth/login (Bloqueo 403 para Cuenta Pendiente)",
+                    r_login_pending.status_code == 403,
+                    f"HTTP {r_login_pending.status_code}",
+                )
+
+                # Aprobar cuenta
+                r_app = await client.put(
+                    f"/api/v1/users/{qa_uid}/approve",
+                    json={
+                        "role": "SUPPORT_L2",
+                        "has_all_routers_access": True,
+                    },
+                    headers={**auth_headers, "Idempotency-Key": str(uuid.uuid4())},
+                )
+                log_test(
+                    f"PUT /api/v1/users/{qa_uid}/approve (Aprobación Maker-Checker)",
+                    r_app.status_code == 200 and r_app.json().get("is_active") is True,
+                    f"HTTP {r_app.status_code} (Rol: {r_app.json().get('role')})",
+                )
+
+                # Switch de registro público (Toggle)
+                r_tog_off = await client.post(
+                    "/api/v1/users/registration-toggle",
+                    json={"enabled": False},
+                    headers={**auth_headers, "Idempotency-Key": str(uuid.uuid4())},
+                )
+                r_tog_on = await client.post(
+                    "/api/v1/users/registration-toggle",
+                    json={"enabled": True},
+                    headers={**auth_headers, "Idempotency-Key": str(uuid.uuid4())},
+                )
+                log_test(
+                    "POST /api/v1/users/registration-toggle (Switch KeyDB)",
+                    r_tog_off.status_code == 200 and r_tog_on.status_code == 200,
+                    f"Off: {r_tog_off.status_code}, On: {r_tog_on.status_code}",
+                )
+
+                # Rechazar / Limpiar cuenta de prueba
+                r_rej = await client.delete(
+                    f"/api/v1/users/{qa_uid}/reject",
+                    headers={**auth_headers, "Idempotency-Key": str(uuid.uuid4())},
+                )
+                log_test(
+                    f"DELETE /api/v1/users/{qa_uid}/reject (Rechazo Seguro WORM)",
+                    r_rej.status_code == 204,
+                    f"HTTP {r_rej.status_code}",
+                )
+        except Exception as e:
+            log_test("Flujo de Auto-Registro y Aprobación", False, str(e))
+
+        # 15. Si hay un router real en inventario, probar endpoints por router (TOFU Discover, Interfaces Reales, Backups)
         if router_id:
             try:
                 r_bk = await client.get(f"/api/v1/routers/{router_id}/backups", headers=auth_headers)
                 log_test(f"GET /api/v1/routers/{router_id}/backups (Respaldos Git Diff)", r_bk.status_code == 200, f"HTTP {r_bk.status_code}")
             except Exception as e:
                 log_test(f"GET /api/v1/routers/{router_id}/backups", False, str(e))
+
+            try:
+                r_disc = await client.post(
+                    f"/api/v1/inventory/routers/{router_id}/discover",
+                    headers={**auth_headers, "Idempotency-Key": str(uuid.uuid4())},
+                )
+                log_test(
+                    f"POST /api/v1/routers/{router_id}/discover (Botón TOFU UI)",
+                    r_disc.status_code in (200, 202),
+                    f"HTTP {r_disc.status_code} (Hardware: {r_disc.json().get('board_name', 'OK')})",
+                )
+            except Exception as e:
+                log_test(f"POST /api/v1/routers/{router_id}/discover", False, str(e))
+
+            try:
+                r_ifaces = await client.get(f"/api/v1/routers/{router_id}/webfig/interfaces", headers=auth_headers)
+                ifaces_data = r_ifaces.json() if r_ifaces.status_code == 200 else []
+                log_test(
+                    f"GET /api/v1/routers/{router_id}/webfig/interfaces (Interfaces Reales RouterOS v7)",
+                    r_ifaces.status_code == 200 and isinstance(ifaces_data, list),
+                    f"HTTP {r_ifaces.status_code} ({len(ifaces_data)} interfaces vivas)",
+                )
+            except Exception as e:
+                log_test(f"GET /api/v1/routers/{router_id}/webfig/interfaces", False, str(e))
         else:
-            log_test("Pruebas por Router Específico (/backups, /vault)", True, "Omitido limpiamente (No hay routers creados)")
+            log_test("Pruebas por Router Específico (/backups, /discover, /webfig/interfaces)", True, "Omitido limpiamente (No hay routers creados)")
 
     # 14. Validar Cabeceras de Nginx y CSP para OpenStreetMap Tiles
     print(f"\n{Colors.CYAN}{Colors.BOLD}--- Verificación de Nginx Frontend y CSP para Teselas de OpenStreetMap ---{Colors.RESET}")

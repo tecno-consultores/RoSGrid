@@ -44,14 +44,15 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
 
 #### `GET /api/v1/auth/bootstrap-status`
 - **Roles:** Público.
-- **Propósito:** Determinar si el sistema requiere inicialización del primer usuario (`COUNT(users) == 0`).
+- **Propósito:** Determinar si el sistema requiere inicialización del primer usuario (`COUNT(users) == 0`) y si el auto-registro público está habilitado en KeyDB.
 - **Salida (200):**
   ```json
   {
-    "is_bootstrapped": false,
-    "tenants_count": 0,
-    "users_count": 0,
-    "message": "Inicialización requerida: No hay usuarios registrados."
+    "is_bootstrapped": true,
+    "tenants_count": 1,
+    "users_count": 1,
+    "registration_enabled": true,
+    "message": "Sistema ya inicializado"
   }
   ```
 
@@ -84,11 +85,35 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
   }
   ```
 
+#### `POST /api/v1/auth/register`
+- **Roles:** Público (sujeto al flag en KeyDB `rg:config:public_registration_enabled`).
+- **Propósito:** Solicitar registro como nuevo operador. Crea la cuenta en estado `is_active = false` (`PENDING_APPROVAL`). Cualquier intento de login previo a aprobación responderá `403 Forbidden`.
+- **Entrada:**
+  ```json
+  {
+    "tenant_slug": "isp-local",
+    "username": "tecnico_redes",
+    "email": "tecnico@isp.net",
+    "full_name": "Carlos Rodríguez",
+    "password": "Password123!"
+  }
+  ```
+- **Salida (201 Created):**
+  ```json
+  {
+    "status": "PENDING_APPROVAL",
+    "message": "Tu cuenta fue creada exitosamente y se encuentra pendiente de aprobación por el Administrador.",
+    "user_id": "uuid",
+    "username": "tecnico_redes",
+    "is_active": false
+  }
+  ```
+
 #### `POST /api/v1/auth/login`
 - **Roles:** Público.
-- **Entrada:** `{"username": "admin", "password": "secure_password"}`
-- **Salida (200):** Si 2FA está deshabilitado, establece cookie `__Host-rg_at` y devuelve `{"status": "AUTHENTICATED", "user": {...}}`.
-- **Salida (200 con Desafío 2FA):** `{"status": "CHALLENGE_2FA_REQUIRED", "challenge_id": "uuid", "expires_in_seconds": 300}`.
+- **Entrada:** `{"tenant_slug": "isp-local", "username_or_email": "tecnico_redes", "password": "secure_password"}`
+- **Salida (200 con Desafío 2FA):** `{"next_step": "VERIFY_2FA_TOTP", "challenge_id": "uuid", "expires_in_seconds": 180}`.
+- **Salida (403 Forbidden para Cuenta Pendiente):** `{"detail": "Tu cuenta está pendiente de aprobación por el Administrador. No puedes ingresar hasta que sea autorizada y se te asigne un rol."}`.
 
 #### `POST /api/v1/auth/verify-2fa`
 - **Roles:** Público (con `challenge_id` válido).
@@ -109,7 +134,57 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
 
 ---
 
-### 2.2 Gestión de Inventario y Bóveda (`/api/v1/routers`)
+### 2.2 Gestión de Usuarios, Roles RBAC y Aprobaciones (`/api/v1/users`)
+
+#### `GET /api/v1/users`
+- **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`, `SUPERVISOR`, `AUDITOR`.
+- **Parámetros Query:** `pending_only` (`true`/`false`), `role`, `search`.
+- **Salida (200):** Lista de usuarios del tenant con indicación de `is_active`, `role`, `totp_enabled`, `has_all_routers_access`.
+
+#### `POST /api/v1/users`
+- **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`.
+- **Propósito:** Creación directa de operador aprovisionado por el Administrador (con `is_active = true` inmediato).
+
+#### `PUT /api/v1/users/{user_id}/approve`
+- **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`.
+- **Propósito:** Aprobar y activar una cuenta de auto-registro en estado PENDIENTE, asignándole su rol operativo y permisos iniciales de router.
+- **Entrada:**
+  ```json
+  {
+    "role": "SUPPORT_L2",
+    "has_all_routers_access": true,
+    "allowed_cidr_list": ["10.250.0.0/16"]
+  }
+  ```
+- **Salida (200):** Objeto de usuario con `is_active: true` y rol asignado.
+
+#### `DELETE /api/v1/users/{user_id}/reject`
+- **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`.
+- **Propósito:** Rechazar y eliminar una solicitud pendiente. Compatible con la inmutabilidad de RoSGrid WORM: si el usuario ya registró eventos en `audit_logs`, se revoca y bloquea irreversiblemente en lugar de violar la restricción del disparador WORM.
+- **Salida (204 No Content).**
+
+#### `POST /api/v1/users/registration-toggle`
+- **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`.
+- **Propósito:** Conmutador global en KeyDB (`rg:config:public_registration_enabled`) para permitir o suspender el auto-registro web.
+- **Entrada:** `{"enabled": true}` o `{"enabled": false}`
+- **Salida (200):** `{"registration_enabled": bool}`.
+
+#### `PUT /api/v1/users/{user_id}/router-permissions`
+- **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`.
+- **Propósito:** Asignar granularmente la matriz de routers autorizados para un técnico (`can_read`, `can_write_layer1`, `can_write_layer2`, `can_reboot`, `bypass_maker_checker`).
+
+#### `POST /api/v1/users/{user_id}/reset-2fa`
+- **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN` (con Step-Up Auth TOTP obligatorio del administrador).
+- **Propósito:** Reiniciar el segundo factor de un operador que haya extraviado su dispositivo.
+
+---
+
+### 2.3 Gestión de Inventario y Bóveda (`/api/v1/inventory`, `/api/v1/routers`)
+
+#### `POST /api/v1/inventory/routers/{router_id}/discover`
+- **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`, `SUPPORT_L3`.
+- **Propósito:** Ejecutar autodescubrimiento y captura criptográfica de huella SSL (TOFU) del router MikroTik. Consumido por el botón TOFU de la UI.
+- **Salida (200):** Objeto del router con `model_name`, `ros_version`, `cpu_count`, `total_memory`, `is_reachable: true`.
 
 #### `GET /api/v1/routers`
 - **Roles:** Todos los roles (filtrado automáticamente por RLS y matriz de permisos por router).

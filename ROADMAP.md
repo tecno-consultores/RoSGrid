@@ -2,9 +2,15 @@
 
 ## 📍 Punto de Control Actual (Checkpoint)
 - **Hito Actual en Curso:** Hito 16 (Final — Cierre de CHANGELOG.md, Auditoría Trivy y Publicación en Docker Hub)
-- **Último Archivo de `specs/` Procesado:** Hito 15 completo (`specs/24`, `specs/25`, `specs/26`, `specs/27`, `specs/28`, `specs/29`, `TESTING.md` certificado en Docker)
-- **Último Módulo de Código Creado:** Hito 15 completo: Certificación Integral Estándar QA 11X en Contenedores Docker efímeros (Backend FastAPI: Ruff, Mypy Strict, Radon CC/MI Grado A, Bandit, Pip-Audit, Pytest 308/308 con 95.22% de cobertura, Karate Labs 11/11, OWASP ZAP DAST 0 fallos, Locust carga/resiliencia; Frontend Vue 3: Prettier, Vue-TSC, ESLint SonarJS+Security, Vitest 182/182 con 99.93% stmts / 95.14% branch / 96.75% func / 99.93% lines, Stryker 62.46% mutation score, Playwright + Axe-Core 0 violaciones WCAG 2.1 AA en 7 rutas críticas, Lighthouse CI >= 0.90 / >= 0.95 A11y, Karate UI 1/1).
-- **Siguiente Paso Inmediato:** Hito 16 (Cierre de CHANGELOG.md, auditoría Trivy final de imágenes y publicación multi-arquitectura con build.sh).
+- **Estado General del Sistema:** Hitos 0 al 15 COMPLETADOS (100%).
+- **Fase de Estabilización con MikroTik Real:** COMPLETADA al 100% sobre RouterOS v7.21.5 (CHR / Hardware físico):
+  * Detección y normalización de la política obligatoria `rest-api` de RouterOS v7.13+.
+  * Auto-registro web de operadores con aprobación Maker-Checker por Superadmin y switch en KeyDB.
+  * Botón TOFU de redescubrimiento dinámico de recursos, arquitectura y firmware.
+  * Corrección de mapas OpenStreetMap (CSP Nginx y layout Leaflet).
+  * Suite automatizada de integración Front-Back (`fastapi/scripts/validar_comunicacion_front_back.py`) con 24 contratos de UI-API verificados (24 pasadas, 0 fallidas).
+  * Documentación completa sincronizada en `docs/` (9 manuales), `specs/` (31 especificaciones) y raíz (`README.md`, `CHANGELOG.md`, `FAQ.md`, `SECURITY.md`, `INSTALL.md`).
+- **Único Paso Restante para Salida a Producción:** Hito 16 (Auditoría Trivy de imágenes de producción y empaquetado multi-arquitectura con `build.sh` hacia Docker Hub).
 
 ---
 
@@ -177,6 +183,22 @@
 - [x] **15.3** Certificación Dinámica, Contratos, BDD, DAST y Caos Backend en Docker (`Schemathesis`, `Karate Labs`, `OWASP ZAP Baseline`, `py-spy` y `--profile chaos` con `Pumba + Locust + Prometheus`) (`specs/26`).
 - [x] **15.4** Suite Unitaria Frontend (`vue3/src/__tests__/*.unit.ts` con Vitest >= 95% en las 4 métricas) y Mutación con `Stryker` en Docker (`make qa-lint`, `make qa-unit`, `make qa-mutation`) (`specs/27`).
 - [x] **15.5** Suite E2E, Accesibilidad WCAG 2.1 AA (`@axe-core/playwright` = 0 violaciones + snapshots deterministas), `Lighthouse CI` (`>= 90` / `>= 95` a11y), `Karate UI` en Docker (`make qa-perf`, `make qa-e2e`, `make qa-bdd`) y actualización final de `TESTING.md` (`specs/28`, `29`).
+
+---
+
+## ✅ HITO 15B: Estabilización Operativa en Hardware Real MikroTik RouterOS v7 y Validación Front-Back E2E
+> **Validación en Vivo:** CHR QEMU x86_64 / RouterBOARD físico con RouterOS v7.21.5 y suite de 24 contratos automatizados.
+- [x] **15B.1** **Diagnóstico de Conectividad y Políticas RouterOS v7.13+:** Corrección del error HTTP 401 provocado por la ausencia de la política `rest-api` en el grupo de usuarios de MikroTik, permitiendo la autenticación efectiva de `rosgrid_agent`.
+- [x] **15B.2** **Flujo de Auto-Registro Web de Operadores con Aprobación Maker-Checker:**
+  * Implementación de solicitud de acceso web en `LoginView.vue` (`POST /api/v1/auth/register`).
+  * Bloqueo 403 preventivo a cuentas no aprobadas.
+  * Pestaña de gestión de solicitudes en `UsersAndPermissionsView.vue` con aprobación (`PUT /api/v1/users/{id}/approve`) y asignación de rol por Superadmin.
+  * Switch de activación/desactivación en tiempo real en KeyDB (`POST /api/v1/users/registration-toggle`).
+- [x] **15B.3** **Resiliencia de Inmutabilidad WORM en Eliminación de Usuarios:** Adaptación de `reject_user` (`DELETE /api/v1/users/{id}/reject`) para aplicar soft-revocación segura si el usuario tiene registros en `audit_logs`, preservando el trigger inmutable de PostgreSQL.
+- [x] **15B.4** **Redescubrimiento Dinámico TOFU:** Implementación del botón de redescubrimiento en la grilla de Inventario (`POST /api/v1/inventory/routers/{id}/discover`), detectando en caliente hardware, versión de RouterOS, memoria y huella SSL sin recargar la página.
+- [x] **15B.5** **Consola WebFig e Interfaces en Router Real:** Corrección de la lectura de interfaces vivas (10 interfaces detectadas) y telemetría de CPU y memoria desde el endpoint REST real.
+- [x] **15B.6** **Visualización Cartográfica OpenStreetMap:** Corrección de directivas CSP en Nginx y dimensionamiento CSS en Leaflet para eliminar el estiramiento vertical infinito.
+- [x] **15B.7** **Suite Automatizada de 24 Pruebas de Integración UI-API:** Ejecución dentro del contenedor Docker (`rosgrid_api_local`) de `fastapi/scripts/validar_comunicacion_front_back.py` con 100% de éxito (24 pruebas pasadas | 0 fallidas).
 
 ---
 

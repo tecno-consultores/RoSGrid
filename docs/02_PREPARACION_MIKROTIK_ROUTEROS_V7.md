@@ -49,11 +49,17 @@ Para cumplir con el principio de mínimo privilegio, crea un grupo restringido s
 
 ```routeros
 # 1. Crear grupo con permisos requeridos para REST API, telemetría y operaciones
-/user group add name=rosgrid-api-group policy=api,read,write,test,reboot,policy,sensitive
+# NOTA CRÍTICA: En RouterOS v7.13+ es estrictamente obligatorio incluir 'rest-api'.
+# Si se omite, RouterOS niega la política por defecto (!rest-api), provocando HTTP 401 en todas las llamadas.
+/user group add name=rosgrid-api-group policy=api,rest-api,read,write,test,reboot,policy,sensitive
 
 # 2. Crear usuario con contraseña criptográfica aleatoria
 /user add name=rosgrid_agent group=rosgrid-api-group password="CAMBIAR_POR_PASSWORD_ROBUSTO_DE_BOVEDA" comment="Gestionado por RoSGrid Central"
 ```
+
+> **[ADVERTENCIA TÉCNICA — RouterOS v7.13+]**  
+> Si el grupo ya existía previamente sin la política `rest-api`, el router rechazará la autenticación con HTTP 401 y registrará 0 sesiones en WinBox. Para remediarlo en routers existentes, ejecuta:  
+> `/user group set rosgrid-api-group policy=api,rest-api,read,write,test,reboot,policy,sensitive`
 
 ---
 

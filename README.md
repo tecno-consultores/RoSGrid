@@ -28,6 +28,7 @@ El sistema traslada la experiencia operativa y técnica de **WinBox / WebFig** a
   - Tokens de sesión encapsulados en cookies `__Host-` con banderas `HttpOnly; Secure; SameSite=Strict` (inmunes a exfiltración por XSS) y protección `X-CSRF-Token` firmada con HMAC-SHA256.
   - Rotación estricta de Refresh Tokens en KeyDB con detección automática de robo por reúso (*Reuse Detection*).
 - **Control de Sesiones en Vivo (*Kill-Switch*):** Panel en tiempo real para que Administradores y Supervisores visualicen qué técnicos están conectados, desde qué IP/dispositivo y qué MikroTik están operando, con botón de expulsión instantánea en KeyDB y cierre forzoso de WebSockets.
+- **Flujo de Auto-Registro Web y Aprobación Maker-Checker:** Interfaz accesible en el login para que nuevos operadores soliciten acceso. Las solicitudes ingresan en estado `PENDING_APPROVAL` (bloqueo 403 preventivo) y requieren la aprobación explícita del Superadmin con asignación de rol, gobernado por un interruptor global de registro en KeyDB.
 - **Superficie de Ataque Cero en Producción:** En modo `ROSGRID_ENV=production`, la documentación interactiva Swagger/ReDoc/OpenAPI se desactiva por completo (consulta la especificación estática en `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`).
 
 ### 2. Bóveda de Credenciales AES-256-GCM, Rotación Automática y Pinning SSL (TOFU)
@@ -125,17 +126,19 @@ rosgrid/
 
 ### 📖 Enciclopedia Documental de Producción (`docs/`)
 
-Para una referencia exhaustiva de operación, seguridad y despliegue, consulta los 7 manuales oficiales del sistema:
+Para una referencia exhaustiva de operación, seguridad y despliegue, consulta los 9 manuales oficiales del sistema:
 
 | Manual | Descripción Técnica |
 | :--- | :--- |
 | **[`docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md`](./docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md)** | Variables `.env`, entropía criptográfica, arquitectura **KeyDB Multi-Hilo por defecto** vs. perfil **DragonflyDB**, Compose y `./build.sh`. |
-| **[`docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md`](./docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md)** | Comandos CLI RouterOS v7.1+, certificados TLS para Pinning TOFU (`SHA-256`), `/ip/service/www-ssl` y Safe Mode. |
-| **[`docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md`](./docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md)** | Aislamiento RLS en PostgreSQL 17, matriz de los 11 roles RBAC, permisos por router, Bóveda 2FA (30s) y Kill-Switch. |
+| **[`docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md`](./docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md)** | Comandos CLI RouterOS v7.1+, política obligatoria `rest-api` (v7.13+), certificados TLS para Pinning TOFU (`SHA-256`), `/ip/service/www-ssl` y Safe Mode. |
+| **[`docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md`](./docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md)** | Aislamiento RLS en PostgreSQL 17, matriz de 11 roles RBAC, permisos por router, Bóveda 2FA (30s), Kill-Switch y Auto-Registro con Maker-Checker. |
 | **[`docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md`](./docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md)** | Consola WebFig L1/L2, pestañas `<KeepAlive :max="5">`, gráficas Canvas 2D, Maker-Checker, comparador Git Diff `.rsc` y Wallboard. |
 | **[`docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md`](./docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md)** | Perfil Auditor, cadena WORM SHA-256 e índice BRIN, ADR sobre la exclusión de terminal CLI/SSH y diagramas Mermaid AST. |
-| **[`docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`](./docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md)** | Especificación completa de endpoints `/api/v1/*` (incluyendo `/api/v1/mcp`) y WebSockets `/ws/v1/*`, sustituto de Swagger en producción. |
+| **[`docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`](./docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md)** | Especificación completa de endpoints `/api/v1/*` (incluyendo `/api/v1/auth/register`, `/users/*` y `/api/v1/mcp`) y WebSockets `/ws/v1/*`. |
 | **[`docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md`](./docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md)** | Servidor MCP protegido (`POST /api/v1/mcp`), catálogo de 8 tools semánticas, configuración Hermes/Claude y NOC Autónomo 24/7. |
+| **[`docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md`](./docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md)** | Pipeline local `./probar-prod-local.sh`, verificación sintética en 6 fases y suite de 24 pruebas de integración UI-API (`validar_comunicacion_front_back.py`). |
+| **[`docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md`](./docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md)** | Plan maestro de pruebas de aceptación de usuario (UAT 11X), 28 casos manuales E2E, redescubrimiento TOFU y bitácora de sign-off. |
 
 ---
 

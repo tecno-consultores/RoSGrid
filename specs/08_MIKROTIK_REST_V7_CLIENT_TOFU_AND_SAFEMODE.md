@@ -80,6 +80,17 @@ La REST API de RouterOS v7 mapea todos los menús de consola bajo \<api\_base\_u
 
 Si al conectarse al MikroTik con current\_password (desencriptada de router\_credentials\_vault) el router responde HTTP 401 Unauthorized y existe previous\_password\_ciphertext con una rotación reciente (\< 5 minutos), el cliente intenta una única vez con previous\_password. Si tampoco autentica, lanza MikrotikAuthFailedError sin seguir reintentando (para no bloquear al usuario en el router).
 
+### **3.2 Requerimiento Crítico de Políticas de Usuario en RouterOS v7.13+ (`rest-api`)**
+A partir de MikroTik RouterOS v7.13+, MikroTik introdujo una política de seguridad explícita llamada `rest-api` para usuarios locales en `/user group`.
+- Si el grupo asignado al usuario de RoSGrid carece del flag `rest-api`, RouterOS rechazará inmediatamente las peticiones HTTP con **HTTP 401 Unauthorized**, y en WinBox se observará que el usuario registra 0 conexiones.
+- **Configuración requerida en RouterOS v7.13+:**
+  ```routeros
+  /user group add name=rosgrid-api-group policy=read,write,api,rest-api,test
+  /user add name=rosgrid_agent group=rosgrid-api-group password="ClaveSegura"
+  ```
+- El cliente `fastapi/src/mikrotik/client.py` normaliza este error informando al operador la necesidad de habilitar la política `rest-api` en el grupo si recibe un 401 persistente.
+
+
 
 
 

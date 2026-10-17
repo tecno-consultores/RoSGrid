@@ -20,6 +20,16 @@ RoSGrid se comunica exclusivamente a través de la **REST API nativa sobre HTTPS
 ### ¿Qué hago si renuevo legítimamente el certificado SSL de un MikroTik y aparece bloqueado por `FINGERPRINT_MISMATCH`?
 Un usuario con rol `SUPERADMIN_GLOBAL` o `TENANT_ADMIN` debe abrir el detalle del router en RoSGrid, seleccionar **"Autorizar Nuevo Certificado (Re-Pin SSL TOFU)"** e ingresar su código **2FA TOTP en vivo (*Step-Up Auth*)**. El cambio quedará asentado en la bitácora forense WORM.
 
+### ¿Por qué mi usuario API creado en MikroTik devuelve HTTP 401 Unauthorized y en WinBox dice que nunca se ha conectado?
+A partir de **MikroTik RouterOS v7.13+**, MikroTik dividió los permisos de la API binaria (`api`) y la API REST (`rest-api`).
+- Si creaste un grupo personalizado en `/user group` con las políticas estándar (`read,write,api,test`) pero **omitiste `rest-api`**, el servidor HTTP de MikroTik rechazará cualquier petición REST con `401 Unauthorized` a nivel de autenticación básica antes de registrar una sesión interactiva en WinBox.
+- **Solución en RouterOS CLI:**
+  ```routeros
+  /user group add name=rosgrid-api-group policy=read,write,api,rest-api,test
+  /user set [find name=rosgrid_agent] group=rosgrid-api-group
+  ```
+
+
 ---
 
 ## 2. Arquitectura, Rendimiento y Decisiones de Diseño
@@ -61,6 +71,13 @@ La bóveda `router_credentials_vault` opera de forma transaccional en dos fases:
 ### ¿Por qué cuando edito una regla con rol `SUPPORT_L2` recibo un aviso `202 Accepted` y el cambio no se aplica de inmediato?
 Porque tu rol está sujeto a la política **Maker-Checker** en las 7 categorías críticas (Firewall, BGP/OSPF, direccionamiento de interfaces troncales, etc.). La plataforma captura tu solicitud con su vista previa y la coloca en la **Bandeja de Aprobaciones** para que un `SUPERVISOR`, `SUPPORT_L3` o `TENANT_ADMIN` la revise y ejecute con un clic.
 
+### ¿Cómo funciona el Auto-Registro Web de Operadores y la Aprobación Maker-Checker?
+Para evitar la necesidad obligatoria de crear usuarios mediante terminal CLI en producción:
+1. En la pantalla de login, los técnicos pueden usar el enlace *"Solicitar acceso de operador"*.
+2. El registro crea la cuenta en estado `PENDING_APPROVAL` con acceso bloqueado (`HTTP 403 Forbidden`).
+3. El Superadmin recibe la solicitud en la pestaña *Solicitudes Pendientes* de la vista de usuarios, donde puede evaluar la solicitud, asignarle su rol definitivo (`SUPPORT_L1`, `SUPPORT_L2`, etc.) y aprobarla o rechazarla con un clic.
+4. El Superadmin puede deshabilitar el registro público en cualquier momento mediante el switch táctil en la barra superior (gobernado por la llave `rosgrid:registration_enabled` en KeyDB).
+
 ---
 
 ## 4. Integración con Inteligencia Artificial y Agentes Autónomos (MCP)
@@ -85,8 +102,11 @@ RoSGrid implementa de forma nativa la especificación **Model Context Protocol (
 Para consultar todos los manuales oficiales de producción de RoSGrid:
 - [docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md](./docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md) — Despliegue, `.env` y perfiles KeyDB / DragonflyDB.
 - [docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md](./docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md) — Configuración RouterOS v7, TOFU y Safe Mode.
-- [docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md](./docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md) — RLS, 11 roles RBAC, Bóveda 2FA y Kill-Switch.
+- [docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md](./docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md) — RLS, 11 roles RBAC, Bóveda 2FA, Kill-Switch y Auto-Registro.
 - [docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md](./docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md) — WebFig, RingBuffer, Maker-Checker y Wallboard.
 - [docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md](./docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md) — Bitácora WORM, ADR y grafos de arquitectura.
 - [docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md](./docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md) — Catálogo de endpoints REST y WebSockets.
 - [docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md](./docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md) — Integración de IA con Model Context Protocol.
+- [docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md](./docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md) — Pipeline local y suite de 24 pruebas UI-API.
+- [docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md](./docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md) — Plan maestro UAT 11X (28 casos de prueba E2E).
+

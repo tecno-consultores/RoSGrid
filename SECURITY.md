@@ -72,6 +72,11 @@ RoSGrid administra infraestructura crítica de telecomunicaciones e ISP (routers
 - **Trazabilidad WORM:** Cada llamada a herramientas (`tools/call`) se registra en la bitácora inmutable con acción `MCP_AI_TOOL_CALL`.
 - **Contención de Mutaciones (Maker-Checker Obligatorio):** Cualquier herramienta de cambio destructivo o mutación de red (`rosgrid_propose_network_change`) no se ejecuta inmediatamente en el router; se retiene con estado `202 Accepted` (`AWAITING_APPROVAL`) para que un operador humano la revise y apruebe, respaldada por *Safe Mode (60s)*. Consulta `docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md`.
 
+### 3.10 Gobernanza de Auto-Registro de Operadores (Maker-Checker)
+- Para prevenir registros descontrolados, el auto-registro web (`POST /api/v1/auth/register`) almacena a los solicitantes con bandera inactiva y estado `PENDING_APPROVAL`.
+- El endpoint de inicio de sesión rechaza con `403 Forbidden` cualquier intento de autenticación hasta que un `SUPERADMIN_GLOBAL` o `TENANT_ADMIN` apruebe explícitamente al operador (`PUT /api/v1/users/{id}/approve`) y le asigne un rol RBAC adecuado.
+- Un switch global en KeyDB (`rosgrid:registration_enabled`) permite al Superadmin desactivar completamente el auto-registro público cuando no se esperan nuevos operadores.
+
 ---
 
 ## 4. Barreras Automatizadas DevSecOps
@@ -88,8 +93,11 @@ Antes de cada commit, push o publicación de imagen en Docker Hub (`./build.sh`)
 
 Para una inspección profunda de los controles y auditorías de RoSGrid:
 - [docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md](./docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md) — Generación de llaves AES-256-GCM / JWT y despliegue inmutable.
-- [docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md](./docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md) — Hardening de RouterOS v7, pinning SSL TOFU y Safe Mode.
-- [docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md](./docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md) — Aislamiento RLS en PostgreSQL 17, matriz de 11 roles RBAC, Bóveda 2FA y Kill-Switch.
+- [docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md](./docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md) — Hardening de RouterOS v7, política `rest-api` (v7.13+), pinning SSL TOFU y Safe Mode.
+- [docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md](./docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md) — Aislamiento RLS en PostgreSQL 17, matriz de 11 roles RBAC, Bóveda 2FA, Kill-Switch y Auto-Registro.
 - [docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md](./docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md) — Cadena WORM SHA-256, índice BRIN y ADR sobre la exclusión de terminales libres.
 - [docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md](./docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md) — Especificación exhaustiva de endpoints protegidos y WebSocket multiplexor.
 - [docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md](./docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md) — Arquitectura de seguridad del servidor Model Context Protocol.
+- [docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md](./docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md) — Pipeline de validación local y suite de 24 pruebas de integración UI-API.
+- [docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md](./docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md) — Plan maestro de pruebas de aceptación UAT 11X (28 casos E2E).
+
