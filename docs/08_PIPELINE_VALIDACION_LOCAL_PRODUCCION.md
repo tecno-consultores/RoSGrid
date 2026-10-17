@@ -1,5 +1,5 @@
-# SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 # Guía Operativa: Pipeline de Validación y Pruebas Locales de Imágenes de Producción
 
@@ -66,17 +66,23 @@ Uso: ./probar-prod-local.sh [OPCIONES]
 ## 4. Casos de Uso Habituales
 
 ### 4.1 Validación Estándar Previa a Git Push
+
 Ejecuta la validación completa en modo desatendido. Si todas las fases se superan, limpia los recursos y retorna código `0`:
+
 ```bash
 ./probar-prod-local.sh
 ```
 
 ### 4.2 Inspección Interactiva en el Navegador Web
+
 Ideal cuando el operador desea verificar visualmente la interfaz WebFig táctil, el formulario de login o las políticas de seguridad antes de dar el visto bueno:
+
 ```bash
 ./probar-prod-local.sh --keep-alive
 ```
+
 Al finalizar, el script mostrará en consola:
+
 ```text
 ==============================================================================
 El stack permanece ACTIVO (--keep-alive) para tu inspección interactiva:
@@ -92,13 +98,17 @@ Para apagar el stack y liberar los recursos cuando termines, ejecuta:
 ```
 
 ### 4.3 Validación Rápida de Configuración (Sin Recompilar)
+
 Si solo se modificaron variables de entorno o configuraciones del compose y las imágenes locales ya están construidas:
+
 ```bash
 ./probar-prod-local.sh --skip-build
 ```
 
 ### 4.4 Auditoría de Seguridad Integral con Puerto Personalizado
+
 Para verificar exhaustivamente las imágenes con Trivy y levantar la UI en el puerto 9000:
+
 ```bash
 ./probar-prod-local.sh --audit --keep-alive --port 9000
 ```
@@ -124,24 +134,34 @@ Si `./probar-prod-local.sh` detecta cualquier fallo en healthchecks, migraciones
 ## 6. Procedimiento de Diagnóstico y Resolución de Problemas
 
 ### 6.1 Conflicto de Puertos en el Host (`address already in use`)
+
 Si un servicio local ya está utilizando el puerto `8085` o `8000`:
+
 - **Solución:** Ejecuta el pipeline especificando un puerto alternativo:
+
   ```bash
   ./probar-prod-local.sh -p 8095
   ```
+
 - O exporta la variable en tu sesión:
+
   ```bash
   export ROSGRID_HTTP_PORT=8095
   ./probar-prod-local.sh
   ```
 
 ### 6.2 Tiempo de Espera Agotado en Healthchecks (`timeout`)
+
 Si el contenedor de la API o la base de datos no alcanza el estado `healthy` en 45 intentos:
+
 - El pipeline ejecutará automáticamente la captura de logs mediante la trampa `EXIT`:
+
   ```bash
   docker compose -f docker-compose.prod.local.yml logs --tail=40
   ```
+
 - Si deseas investigar con los contenedores congelados en su estado actual, puedes arrancar manualmente:
+
   ```bash
   docker compose -f docker-compose.prod.local.yml up -d
   docker compose -f docker-compose.prod.local.yml ps
@@ -149,7 +169,9 @@ Si el contenedor de la API o la base de datos no alcanza el estado `healthy` en 
   ```
 
 ### 6.3 Reseteo Completo de Contenedores Huérfanos
+
 Si se interrumpió abruptamente una sesión anterior con `Ctrl+C`:
+
 ```bash
 docker compose -f docker-compose.prod.local.yml down -v --remove-orphans
 docker volume prune -f
@@ -162,14 +184,15 @@ docker volume prune -f
 Para certificar que **todas** las rutas, formularios y vistas de la interfaz Vue 3 se comunican contractualmente sin errores con el backend FastAPI y con la flota MikroTik real, RoSGrid incluye una suite de 24 pruebas de integración en `fastapi/scripts/validar_comunicacion_front_back.py`.
 
 ### 7.1 Ejecución en Contenedor (Regla Cero)
+
 ```bash
 docker exec -i rosgrid_api_local python3 /app/scripts/validar_comunicacion_front_back.py
 ```
 
 ### 7.2 Catálogo de 24 Pruebas de Integración Cubiertas
+
 1. **Infraestructura Base:** Liveness de Nginx (`/`), cabeceras CSP con soporte de mapas OpenStreetMap y `/health` de FastAPI.
 2. **Autenticación y Ciclo de Vida:** `/api/v1/auth/bootstrap-status`, login de Superadmin con TOTP 2FA y perfil `/api/v1/auth/me`.
 3. **Flujo Maker-Checker de Registro Web:** Auto-registro `/api/v1/auth/register`, bloqueo 403 a usuarios no aprobados, aprobación `/api/v1/users/{id}/approve` por Superadmin, rechazo seguro `/api/v1/users/{id}/reject` y toggle de registro en KeyDB.
 4. **Inventario y Hardware Real:** Consulta de routers `/api/v1/inventory/routers`, botón TOFU de redescubrimiento `/api/v1/inventory/routers/{id}/discover` con validación de versión y arquitectura real (CHR QEMU v7.21.5), y lectura de interfaces reales `/api/v1/routers/{id}/webfig/interfaces`.
 5. **Gobernanza y Operaciones:** Sesiones activas en KeyDB, pistas inmutables WORM en PostgreSQL, ventanas de mantenimiento, catálogo de usuarios, plantillas de script, cola de aprobaciones Maker-Checker, estado de actualizaciones RouterOS, dry-run de importación CSV e historial de backups `.rsc`.
-

@@ -22,10 +22,13 @@ graph TD
 ```
 
 ### 1.1 Inyección de Contexto en Sesión
+
 Cada transacción en la base de datos inyecta de forma atómica la variable de sesión:
+
 ```sql
 SET LOCAL app.current_tenant_id = 'c1234567-89ab-cdef-0123-456789abcdef';
 ```
+
 Todas las tablas críticas (`routers`, `router_backups`, `approval_requests`, `audit_logs`, `users`, etc.) cuentan con políticas RLS activadas (`ENABLE ROW LEVEL SECURITY; FORCE ROW LEVEL SECURITY;`), impidiendo que incluso un fallo en la capa de aplicación pueda devolver o mutar registros de otra empresa.
 
 ---
@@ -63,6 +66,7 @@ graph LR
 ```
 
 ### 3.1 Banderas de Control por Router
+
 - `can_read`: Permite visualizar el router y su telemetría en la lista y mapa.
 - `can_write_layer1`: Permite alterar interfaces, firewall, rutas, colas y servicios.
 - `can_write_layer2`: Permite modificar recursos universales de Capa 2.
@@ -78,12 +82,15 @@ graph LR
 RoSGrid utiliza una arquitectura **Split-Credential**: los operadores no necesitan conocer la contraseña real de los routers para operarlos; el sistema almacena las credenciales cifradas y las utiliza internamente mediante un pool TLS Keep-Alive.
 
 ### 4.1 Cifrado Autenticado `AES-256-GCM`
+
 Cada contraseña se almacena en la tabla `router_credentials_vault` cifrada con:
+
 - Algoritmo: `AES-256-GCM` (Galois/Counter Mode).
 - Vector de Inicialización (`IV`): 12 bytes aleatorios por registro.
 - Datos Autenticados Adicionales (`AAD`): Cadena atómica `"{tenant_id}:{router_id}"` que previene ataques de transposición de contraseñas entre routers o empresas.
 
 ### 4.2 Modal de Revelación con Step-Up Auth 2FA y Autodestrucción en 30s (`VaultRevealModal.vue`)
+
 Cuando un administrador o supervisor requiere ver la contraseña en texto plano para una intervención de emergencia en sitio:
 
 ```mermaid
@@ -115,6 +122,7 @@ sequenceDiagram
 ## 5. Kill-Switch de Sesiones en Vivo
 
 Si un usuario pierde su dispositivo, es desvinculado de la empresa o se sospecha un compromiso de credenciales, un administrador puede revocar sus sesiones de inmediato desde `ActiveSessionsKillSwitchView.vue`:
+
 1. **Invalidación en Memoria:** RoSGrid elimina inmediatamente la clave de sesión en KeyDB (`rg:{tenant_id}:sess:{session_id}`).
 2. **Empuje WebSocket:** El servicio de eventos publica una trama `SESSION_KILLED` dirigida al navegador del usuario.
 3. **Expulsión Inmediata:** La SPA Vue 3 destruye el almacén de Pinia (`authStore.logout()`), elimina la cookie segura `__Host-rg_at` y redirige a la pantalla de login en menos de 100 milisegundos.
@@ -158,7 +166,9 @@ sequenceDiagram
 ```
 
 ### 6.1 Control de Registro Público en KeyDB
+
 El Superadmin o Tenant Admin puede habilitar o deshabilitar las solicitudes externas de registro en cualquier momento desde el botón en la cabecera de `UsersAndPermissionsView.vue` (`POST /api/v1/users/registration-toggle`). Cuando está desactivado, el endpoint responde inmediatamente `403 Forbidden`.
 
 ### 6.2 Plan B por Terminal (`crear_admin.py`)
+
 El script de terminal en `fastapi/scripts/crear_admin.py` se mantiene 100% operativo como alternativa para aprovisionamiento directo por consola cuando no se dispone de acceso web o en entornos de contingencia.

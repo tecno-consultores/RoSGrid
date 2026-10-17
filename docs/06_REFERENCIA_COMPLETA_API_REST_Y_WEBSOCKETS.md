@@ -8,6 +8,7 @@
 ## 1. Convenciones de Comunicación, Seguridad y Cabeceras
 
 ### 1.1 Esquemas de Autenticación
+
 1. **Acceso de Usuarios y Operadores Web (Navegador):**
    - **Cookie Segura:** `__Host-rg_at` (o `rg_at` en testing): `HttpOnly; Secure; SameSite=Strict; Path=/`.
    - **Cabecera Anti-CSRF:** En peticiones mutantes (`POST`, `PUT`, `PATCH`, `DELETE`) es obligatoria la cabecera `X-CSRF-Token`.
@@ -16,10 +17,13 @@
    - **Validación de IP de Origen:** La dirección IP del cliente se verifica forzosamente contra la lista blanca CIDR asociada a la cuenta de servicio (`allowed_cidr_list`).
 
 ### 1.2 Idempotencia en Mutaciones Sensibles
+
 Para prevenir la duplicación accidental de reglas o peticiones por cortes transitorios de red, los endpoints de mutación aceptan la cabecera opcional:
+
 ```http
 Idempotency-Key: 018f23a4-8b1c-7e3f-912a-456789abcdef (UUIDv7)
 ```
+
 RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idénticas subsiguientes devuelven inmediatamente la respuesta cacheada sin re-ejecutar el comando en el MikroTik.
 
 ### 1.3 Códigos de Estado HTTP Estándar
@@ -34,7 +38,7 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
 | `404 Not Found` | Router, usuario, respaldo o recurso REST no encontrado en el Tenant actual. |
 | `409 Conflict` | Conflicto de unicidad (ej. nombre de usuario, IP de router o nombre de regla duplicado). |
 | `422 Unprocessable` | Validación fallida de esquema Pydantic v2 (parámetros requeridos faltantes o tipos erróneos). |
-| `429 Too Many Requests`| Límite de tasa excedido en KeyDB (ej. más de 30 req/min en el endpoint MCP). |
+| `429 Too Many Requests` | Límite de tasa excedido en KeyDB (ej. más de 30 req/min en el endpoint MCP). |
 
 ---
 
@@ -43,92 +47,107 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
 ### 2.1 Autenticación y Sesiones (`/api/v1/auth`, `/api/v1/sessions`)
 
 #### `GET /api/v1/auth/bootstrap-status`
+
 - **Roles:** Público.
 - **Propósito:** Determinar si el sistema requiere inicialización del primer usuario (`COUNT(users) == 0`) y si el auto-registro público está habilitado en KeyDB.
 - **Salida (200):**
-  ```json
-  {
-    "is_bootstrapped": true,
-    "tenants_count": 1,
-    "users_count": 1,
-    "registration_enabled": true,
-    "message": "Sistema ya inicializado"
-  }
-  ```
+
+```json
+{
+  "is_bootstrapped": true,
+  "tenants_count": 1,
+  "users_count": 1,
+  "registration_enabled": true,
+  "message": "Sistema ya inicializado"
+}
+```
 
 #### `POST /api/v1/auth/bootstrap`
+
 - **Roles:** Público (restringido exclusivamente a cuando `COUNT(users) == 0`; si ya existen usuarios responde `403 Forbidden`).
 - **Propósito:** Crear atómicamente la Organización Principal y el usuario `SUPERADMIN_GLOBAL` inicial.
 - **Entrada:**
-  ```json
-  {
-    "tenant_name": "Empresa Principal",
-    "tenant_slug": "master",
-    "admin_username": "superadmin",
-    "admin_email": "admin@empresa.com",
-    "admin_password": "ClaveSegura123!",
-    "admin_full_name": "Super Administrador"
-  }
-  ```
+
+```json
+{
+  "tenant_name": "Empresa Principal",
+  "tenant_slug": "master",
+  "admin_username": "superadmin",
+  "admin_email": "admin@empresa.com",
+  "admin_password": "ClaveSegura123!",
+  "admin_full_name": "Super Administrador"
+}
+```
+
 - **Salida (201 Created):**
-  ```json
-  {
-    "status": "success",
-    "tenant_id": "uuid",
-    "tenant_slug": "master",
-    "admin_id": "uuid",
-    "admin_username": "superadmin",
-    "totp_secret": "JBSWY3DPEHPK3PXP",
-    "totp_provisioning_uri": "otpauth://totp/RoSGrid:admin@empresa.com?secret=...",
-    "backup_codes": ["A1B2C3D4", "E5F6G7H8", "..."],
-    "message": "Super Administrador y Tenant Principal creados exitosamente."
-  }
-  ```
+
+```json
+{
+  "status": "success",
+  "tenant_id": "uuid",
+  "tenant_slug": "master",
+  "admin_id": "uuid",
+  "admin_username": "superadmin",
+  "totp_secret": "JBSWY3DPEHPK3PXP",
+  "totp_provisioning_uri": "otpauth://totp/RoSGrid:admin@empresa.com?secret=...",
+  "backup_codes": ["A1B2C3D4", "E5F6G7H8", "..."],
+  "message": "Super Administrador y Tenant Principal creados exitosamente."
+}
+```
 
 #### `POST /api/v1/auth/register`
+
 - **Roles:** Público (sujeto al flag en KeyDB `rg:config:public_registration_enabled`).
 - **Propósito:** Solicitar registro como nuevo operador. Crea la cuenta en estado `is_active = false` (`PENDING_APPROVAL`). Cualquier intento de login previo a aprobación responderá `403 Forbidden`.
 - **Entrada:**
-  ```json
-  {
-    "tenant_slug": "isp-local",
-    "username": "tecnico_redes",
-    "email": "tecnico@isp.net",
-    "full_name": "Carlos Rodríguez",
-    "password": "Password123!"
-  }
-  ```
+
+```json
+{
+  "tenant_slug": "isp-local",
+  "username": "tecnico_redes",
+  "email": "tecnico@isp.net",
+  "full_name": "Carlos Rodríguez",
+  "password": "Password123!"
+}
+```
+
 - **Salida (201 Created):**
-  ```json
-  {
-    "status": "PENDING_APPROVAL",
-    "message": "Tu cuenta fue creada exitosamente y se encuentra pendiente de aprobación por el Administrador.",
-    "user_id": "uuid",
-    "username": "tecnico_redes",
-    "is_active": false
-  }
-  ```
+
+```json
+{
+  "status": "PENDING_APPROVAL",
+  "message": "Tu cuenta fue creada exitosamente y se encuentra pendiente de aprobación por el Administrador.",
+  "user_id": "uuid",
+  "username": "tecnico_redes",
+  "is_active": false
+}
+```
 
 #### `POST /api/v1/auth/login`
+
 - **Roles:** Público.
 - **Entrada:** `{"tenant_slug": "isp-local", "username_or_email": "tecnico_redes", "password": "secure_password"}`
 - **Salida (200 con Desafío 2FA):** `{"next_step": "VERIFY_2FA_TOTP", "challenge_id": "uuid", "expires_in_seconds": 180}`.
 - **Salida (403 Forbidden para Cuenta Pendiente):** `{"detail": "Tu cuenta está pendiente de aprobación por el Administrador. No puedes ingresar hasta que sea autorizada y se te asigne un rol."}`.
 
 #### `POST /api/v1/auth/verify-2fa`
+
 - **Roles:** Público (con `challenge_id` válido).
 - **Entrada:** `{"challenge_id": "uuid", "totp_code": "123456"}`
 - **Salida (200):** Establece cookie `__Host-rg_at` y devuelve `{"status": "AUTHENTICATED", "user": {...}}`.
 
 #### `POST /api/v1/auth/logout`
+
 - **Roles:** Todos los usuarios autenticados.
 - **Salida (200):** Invalida la sesión en KeyDB y elimina la cookie.
 
 #### `GET /api/v1/sessions`
+
 - **Roles:** `TENANT_ADMIN`, `SUPERADMIN_GLOBAL`.
 - **Salida (200):** Lista de sesiones activas en KeyDB con IP, navegador, último acceso y `session_id`.
 
 #### `DELETE /api/v1/sessions/{session_id}` *(Kill-Switch)*
+
 - **Roles:** `TENANT_ADMIN`, `SUPERADMIN_GLOBAL`.
 - **Salida (200):** Revoca inmediatamente la sesión en KeyDB y emite señal WebSocket para expulsar al navegador cliente.
 
@@ -137,43 +156,52 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
 ### 2.2 Gestión de Usuarios, Roles RBAC y Aprobaciones (`/api/v1/users`)
 
 #### `GET /api/v1/users`
+
 - **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`, `SUPERVISOR`, `AUDITOR`.
 - **Parámetros Query:** `pending_only` (`true`/`false`), `role`, `search`.
 - **Salida (200):** Lista de usuarios del tenant con indicación de `is_active`, `role`, `totp_enabled`, `has_all_routers_access`.
 
 #### `POST /api/v1/users`
+
 - **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`.
 - **Propósito:** Creación directa de operador aprovisionado por el Administrador (con `is_active = true` inmediato).
 
 #### `PUT /api/v1/users/{user_id}/approve`
+
 - **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`.
 - **Propósito:** Aprobar y activar una cuenta de auto-registro en estado PENDIENTE, asignándole su rol operativo y permisos iniciales de router.
 - **Entrada:**
-  ```json
-  {
-    "role": "SUPPORT_L2",
-    "has_all_routers_access": true,
-    "allowed_cidr_list": ["10.250.0.0/16"]
-  }
-  ```
+
+```json
+{
+  "role": "SUPPORT_L2",
+  "has_all_routers_access": true,
+  "allowed_cidr_list": ["10.250.0.0/16"]
+}
+```
+
 - **Salida (200):** Objeto de usuario con `is_active: true` y rol asignado.
 
 #### `DELETE /api/v1/users/{user_id}/reject`
+
 - **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`.
 - **Propósito:** Rechazar y eliminar una solicitud pendiente. Compatible con la inmutabilidad de RoSGrid WORM: si el usuario ya registró eventos en `audit_logs`, se revoca y bloquea irreversiblemente en lugar de violar la restricción del disparador WORM.
 - **Salida (204 No Content).**
 
 #### `POST /api/v1/users/registration-toggle`
+
 - **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`.
 - **Propósito:** Conmutador global en KeyDB (`rg:config:public_registration_enabled`) para permitir o suspender el auto-registro web.
 - **Entrada:** `{"enabled": true}` o `{"enabled": false}`
 - **Salida (200):** `{"registration_enabled": bool}`.
 
 #### `PUT /api/v1/users/{user_id}/router-permissions`
+
 - **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`.
 - **Propósito:** Asignar granularmente la matriz de routers autorizados para un técnico (`can_read`, `can_write_layer1`, `can_write_layer2`, `can_reboot`, `bypass_maker_checker`).
 
 #### `POST /api/v1/users/{user_id}/reset-2fa`
+
 - **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN` (con Step-Up Auth TOTP obligatorio del administrador).
 - **Propósito:** Reiniciar el segundo factor de un operador que haya extraviado su dispositivo.
 
@@ -182,14 +210,17 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
 ### 2.3 Gestión de Inventario y Bóveda (`/api/v1/inventory`, `/api/v1/routers`)
 
 #### `POST /api/v1/inventory/routers/{router_id}/discover`
+
 - **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`, `SUPPORT_L3`.
 - **Propósito:** Ejecutar autodescubrimiento y captura criptográfica de huella SSL (TOFU) del router MikroTik. Consumido por el botón TOFU de la UI.
 - **Salida (200):** Objeto del router con `model_name`, `ros_version`, `cpu_count`, `total_memory`, `is_reachable: true`.
 
 #### `GET /api/v1/routers`
+
 - **Roles:** Todos los roles (filtrado automáticamente por RLS y matriz de permisos por router).
 - **Parámetros Query:** `status_filter` (`ONLINE`, `OFFLINE`), `role_filter`.
 - **Salida (200):**
+
 ```json
 {
   "total": 1,
@@ -209,8 +240,10 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
 ```
 
 #### `POST /api/v1/routers`
+
 - **Roles:** `TENANT_ADMIN`, `INVENTORY_MANAGER`.
 - **Entrada:**
+
 ```json
 {
   "display_name": "Edge-Core-01",
@@ -222,12 +255,15 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
   "initial_api_password": "super_secret_password"
 }
 ```
+
 - **Salida (201):** Crea el router y almacena la contraseña cifrada con `AES-256-GCM` en la Bóveda.
 
 #### `POST /api/v1/routers/{id}/vault/reveal` *(Step-Up Auth 2FA)*
+
 - **Roles:** `TENANT_ADMIN`, `SUPERVISOR`.
 - **Entrada:** `{"totp_code": "654321"}`
 - **Salida (200):**
+
 ```json
 {
   "username": "rosgrid_agent",
@@ -238,15 +274,18 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
 
 ---
 
-### 2.3 Consola WebFig Capa 1 y Capa 2 (`/api/v1/routers/{id}/...`)
+### 2.4 Consola WebFig Capa 1 y Capa 2 (`/api/v1/routers/{id}/...`)
 
 #### `GET /api/v1/routers/{id}/interfaces`
+
 - **Roles:** Lectura concedida en matriz de permisos.
 - **Salida (200):** Lista de interfaces físicas con estadísticas en vivo de bytes, paquetes y estado SFP DDM (`tx-power`, `rx-power`, temperatura láser).
 
 #### `POST /api/v1/routers/{id}/firewall/filter`
+
 - **Roles:** `SUPPORT_L3`, `SUPPORT_L2`, `TENANT_ADMIN`.
 - **Entrada:**
+
 ```json
 {
   "chain": "input",
@@ -255,43 +294,49 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
   "comment": "Bloqueo por tráfico anómalo detectado"
 }
 ```
+
 - **Comportamiento:**
   - Si la regla afecta la cadena `input` crítica: **HTTP 202 Accepted** (Derivada a Maker-Checker).
   - Si el usuario cuenta con `bypass_maker_checker`: **HTTP 200 OK** (Ejecutada con Safe Mode de 60s).
 
 #### `GET/POST/PATCH/DELETE /api/v1/routers/{id}/layer2/{resource_path}`
+
 - **Roles:** `can_write_layer2` en matriz de permisos.
 - **Descripción:** Acceso transparente a recursos de Capa 2 (Bridges, VLANs, Switch, WireGuard, Capsman, IoT).
 
 ---
 
-### 2.4 Operaciones: Aprobaciones Maker-Checker y Respaldos (`/api/v1/operations/*`)
+### 2.5 Operaciones: Aprobaciones Maker-Checker y Respaldos (`/api/v1/operations/*`)
 
 #### `GET /api/v1/operations/approvals`
+
 - **Roles:** `TENANT_ADMIN`, `SUPERVISOR`, `SUPPORT_L3`, `AUDITOR`.
 - **Salida (200):** Lista de solicitudes pendientes (`status: PENDING`), expiradas o aprobadas con diff del cambio y justificación técnica.
 
 #### `POST /api/v1/operations/approvals/{id}/approve`
+
 - **Roles:** `TENANT_ADMIN`, `SUPERVISOR`, `SUPPORT_L3` (Segregación: el aprobador debe ser un usuario distinto al solicitante).
 - **Salida (200):** Ejecuta la mutación almacenada utilizando Safe Mode (60s) y actualiza el estado a `APPROVED_AND_EXECUTED`.
 
 #### `GET /api/v1/routers/{id}/backups/diff`
+
 - **Roles:** `SUPPORT_L3`, `SUPPORT_L2`, `AUDITOR`.
 - **Parámetros Query:** `base_backup_id` (UUID), `target_backup_id` (UUID o `"LIVE"`).
 - **Salida (200):**
+
 ```json
 {
   "router_id": "uuid",
   "lines_added": 4,
   "lines_removed": 1,
   "unified_diff_text": "--- base.rsc\n+++ target.rsc\n@@ -10,3 +10,6 @@\n-/ip firewall filter add chain=input action=accept\n+/ip firewall filter add chain=input action=drop",
-  "side_by_side_hunks": [...]
+  "side_by_side_hunks": []
 }
 ```
 
 ---
 
-### 2.5 Endpoint MCP Protegido para Agentes IA (`POST /api/v1/mcp`)
+### 2.6 Endpoint MCP Protegido para Agentes IA (`POST /api/v1/mcp`)
 
 - **Protocolo:** JSON-RPC 2.0 *Streamable HTTP*.
 - **Roles Exclusivos:** `SERVICE_ACCOUNT` (o `TENANT_ADMIN` / `SUPERADMIN_GLOBAL` en auditoría).
@@ -308,13 +353,16 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
 Los canales WebSocket de RoSGrid requieren pasar la cookie `__Host-rg_at` durante el apretón de manos inicial (`Upgrade: websocket`) y operan frames codificados en JSON ultrarrápido con **`orjson`**.
 
 ### 3.1 Canal de Telemetría en Vivo de Router
+
 ```http
 GET /ws/v1/routers/{router_id}/live-telemetry HTTP/1.1
 Upgrade: websocket
 Connection: Upgrade
 ```
+
 - **Frecuencia de Emisión:** 1 tick cada 2 segundos.
 - **Estructura de la Trama (`TELEMETRY_TICK`):**
+
 ```json
 {
   "event": "TELEMETRY_TICK",
@@ -337,11 +385,13 @@ Connection: Upgrade
 ```
 
 ### 3.2 Canal Global de Eventos del Tenant
+
 ```http
 GET /ws/v1/tenant/events HTTP/1.1
 Upgrade: websocket
 Connection: Upgrade
 ```
+
 - **Trama `MAKER_CHECKER_REQUEST_CREATED`:** Notifica a los supervisores cuando un cambio ha quedado encolado para su revisión.
 - **Trama `NOC_ROUTER_STATE_CHANGED`:** Alerta instantánea cuando un equipo pasa a estado `OFFLINE` o `DEGRADED`.
 - **Trama `SESSION_KILLED`:** Fuerza el cierre de sesión del usuario especificado.

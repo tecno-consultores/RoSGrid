@@ -9,6 +9,7 @@ Este manual describe los procedimientos oficiales para preparar cualquier router
 Accede por primera vez a tu equipo MikroTik mediante consola serial o WinBox temporal y ejecuta los siguientes comandos en la terminal de RouterOS:
 
 ### 1.1 Generación de Certificado SSL para Pinning TOFU (`SHA-256`)
+
 RoSGrid valida la autenticidad del router mediante *Trust On First Use* (TOFU) capturando y fijando criptográficamente la huella digital SHA-256 del certificado SSL:
 
 ```routeros
@@ -27,6 +28,7 @@ RoSGrid valida la autenticidad del router mediante *Trust On First Use* (TOFU) c
 Anota el valor de `fingerprint` (ej. `3a:b8:c4:...`); este valor será fijado automáticamente por RoSGrid en el primer apretón de manos TLS o introducido manualmente en el inventario.
 
 ### 1.2 Activación de `/ip/service/www-ssl` y Endurecimiento
+
 La comunicación entre RoSGrid y MikroTik se realiza **exclusivamente mediante la REST API nativa sobre HTTPS**. Deshabilita todos los protocolos no cifrados o legados:
 
 ```routeros
@@ -45,6 +47,7 @@ La comunicación entre RoSGrid y MikroTik se realiza **exclusivamente mediante l
 ```
 
 ### 1.3 Creación del Grupo y Usuario de Servicio RoSGrid
+
 Para cumplir con el principio de mínimo privilegio, crea un grupo restringido sin acceso a la consola SSH completa:
 
 ```routeros
@@ -94,6 +97,7 @@ sequenceDiagram
 ```
 
 ### 2.1 Pasos del Flujo Safe Mode
+
 1. **Armado del Disparador:** Antes de ejecutar cualquier mutación sensible (categorías de Firewall, Interfaces WAN, Direccionamiento IP o Enrutamiento BGP/OSPF), RoSGrid inyecta una tarea temporal en `/system/scheduler` configurada para ejecutarse en exactamente 60 segundos. Esta tarea contiene el comando de reversión específico (restablecer el valor previo o borrar la regla agregada).
 2. **Ejecución del Cambio:** La mutación solicitada por el operador o aprobada en Maker-Checker es ejecutada vía REST API.
 3. **Verificación de Enlace:** RoSGrid valida inmediatamente mediante un ping y una llamada REST GET que el canal de gestión sigue operativo y respondiendo normalmente.
