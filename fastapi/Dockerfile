@@ -23,7 +23,7 @@ RUN groupadd -g 10001 rosgrid && \
     chown -R rosgrid:rosgrid /app /var/lib/rosgrid
 
 # Copiar archivos de configuración y código fuente
-COPY --chown=rosgrid:rosgrid pyproject.toml uv.lock* alembic.ini ./
+COPY --chown=rosgrid:rosgrid pyproject.toml uv.lock alembic.ini ./
 COPY --chown=rosgrid:rosgrid migrations ./migrations
 COPY --chown=rosgrid:rosgrid scripts ./scripts
 COPY --chown=rosgrid:rosgrid src ./src

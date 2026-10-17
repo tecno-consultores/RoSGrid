@@ -195,7 +195,7 @@ async def test_login_failed_attempts_boundary_4_and_5(
         )
         assert res.status_code == 401
         assert sample_user.failed_login_attempts == 4
-        assert sample_user.is_locked is False
+        assert not sample_user.is_locked
 
         # Intento 5 (Límite exacto de bloqueo: >= 5)
         res2 = await async_client.post(
@@ -204,7 +204,7 @@ async def test_login_failed_attempts_boundary_4_and_5(
         )
         assert res2.status_code == 401
         assert sample_user.failed_login_attempts == 5
-        assert sample_user.is_locked is True
+        assert bool(sample_user.is_locked) is True
         assert sample_user.locked_until is not None
     finally:
         app.dependency_overrides.pop(get_db_session, None)
@@ -242,7 +242,7 @@ async def test_login_success_triggers_verify_2fa(
     async_client: AsyncClient, sample_tenant: Tenant, sample_user: User, fake_redis: FakeAsyncRedis
 ) -> None:
     sample_user.totp_enabled = True
-    sample_user.totp_secret_ciphertext = "encrypted_secret_data"
+    sample_user.totp_secret_ciphertext = b"encrypted_secret_data"
     session = MockAsyncSession(tenant=sample_tenant, user=sample_user)
     app.dependency_overrides[get_db_session] = lambda: session
     try:
