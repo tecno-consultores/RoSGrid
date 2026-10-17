@@ -43,6 +43,9 @@
 - **Accesibilidad y Rendimiento UI:** 0 violaciones WCAG 2.1 A/AA en `@axe-core/playwright`, regresión visual determinista, y Lighthouse CI con Performance `>= 0.90`, Accessibility `>= 0.95`, Best-Practices `>= 0.90` y SEO `>= 0.90`.
 - **Regla Cero de Host:** Cero ejecuciones de entornos en el host local; ejecución 100% encapsulada en contenedores Docker efímeros.
 - **Auditoría Estática de Scripts en Bash (ShellCheck):** Cero (0) errores y cero (0) advertencias en `ShellCheck` (`koalaman/shellcheck:stable`) sobre el 100% de los scripts `.sh` del monorepo (`auditar-infra.sh`, `instalar-rosgrid.sh`, `build.sh`, `instalar-hooks.sh`, `limpieza.sh`, `probar-prod-local.sh`, `fastapi/scripts/entrypoint.sh`).
+- **Tolerancia Cero a Diagnósticos de IDE y Linters Estáticos:** Cero (0) errores y cero (0) advertencias en Pyrefly, SonarLint, Hadolint y ESLint sobre todo archivo versionado en el repositorio.
+- **Certificación de Arranque Estricto de Producción (`--no-dev`):** Validación obligatoria por AST (`test_production_no_dev_cleanliness.unit.py`) y Smoke Test inmutable en contenedor (`test_production_boot_smoke.py`) asegurando cero dependencias de desarrollo en el runtime de producción.
+- **Plan Maestro de Pruebas de Aceptación Manual (UAT 11X):** Ejecución protocolizada de [docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md) sobre hardware físico o MikroTik CHR v7 antes de cada release.
 
 ---
 
@@ -216,3 +219,14 @@ docker compose -f docker-compose.qa.yml down --remove-orphans
     - Verificado que `/api/v1/auth/bootstrap-status` reporta `is_bootstrapped: false` en base de datos recién migrada.
     - Verificada la ejecución de `crear_admin.py` dentro del contenedor con inserción del Tenant inicial y Super Administrador.
     - Verificado que `/api/v1/auth/bootstrap-status` transiciona a `is_bootstrapped: true` y bloquea intentos posteriores con HTTP `403 Forbidden`.
+
+### E. Smoke Test de Arranque Inmutable (--no-dev) y Plan Maestro UAT Manual
+- **Smoke Test de Arranque Estricto de Producción (`fastapi/scripts/test_production_boot_smoke.py`):**
+  - Valida la importación incondicional de los 80 submódulos de `src/` en entorno con dependencias exclusivas de producción.
+  - Comprueba la ausencia de dependencias de desarrollo (`pytest`, `radon`, `hypothesis`, etc.) en memoria de ejecución.
+  - Verifica la desactivación estricta de Swagger (`/docs`), ReDoc (`/redoc`) y OpenAPI (`/openapi.json`) bajo `ROSGRID_ENV=production`.
+  - Prueba de ciclo completo in-process del endpoint `/health`.
+- **Test Unitario Estático contra Inclusión de Paquetes Dev (`test_production_no_dev_cleanliness.unit.py`):**
+  - Inspección por AST de cada archivo en `src/` asegurando 0 importaciones hacia librerías de prueba.
+- **Plan Maestro de Pruebas Manuales y Aceptación de Usuario (UAT 11X):**
+  - Especificado formalmente en [docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md) con 25 casos de prueba de extremo a extremo cubriendo hardware MikroTik v7+ físico/CHR, Safe Mode 60s, Step-Up Auth 30s, Maker-Checker y Wallboard NOC.

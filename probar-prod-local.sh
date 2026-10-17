@@ -36,7 +36,7 @@ Fases del Pipeline de Validación:
   [1/6] Auditoría y Preparación de Imágenes de Producción (Trivy / Docker build)
   [2/6] Despliegue en Aislamiento Sintético con docker-compose.prod.local.yml
   [3/6] Estabilización y Verificación de Healthchecks (PostgreSQL, KeyDB, FastAPI)
-  [4/6] Pruebas Sintéticas de Endpoints (/health, /metrics, bootstrap-status, UI)
+  [4/6] Pruebas Sintéticas y Smoke Test --no-dev (/health, /metrics, bootstrap-status, UI)
   [5/6] Aprovisionamiento E2E (crear_admin.py, Bearer JWT MCP y verificación de sesión en KeyDB)
   [6/6] Inspección de Logs y Desmantelamiento Limpio (o Modo Interactivo con -k)
 
@@ -166,6 +166,10 @@ fi
 
 # Fase 4: Pruebas Sintéticas de Endpoints de Producción
 echo -e "\n[4/6] Ejecutando pruebas sintéticas de endpoints de producción..."
+# Prueba 0: Smoke Test de Arranque Estricto de Producción (--no-dev)
+echo "Ejecutando Smoke Test de arranque estricto (--no-dev) dentro del contenedor de producción..."
+docker exec rosgrid_api_local python3 /app/scripts/test_production_boot_smoke.py
+
 # Prueba 1: Endpoint de Salud
 curl -fsS http://127.0.0.1:8000/health > /dev/null
 echo "✔ Endpoint /health respondiendo HTTP 200 (healthy)."

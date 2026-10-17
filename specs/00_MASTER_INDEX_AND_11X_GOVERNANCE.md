@@ -195,3 +195,25 @@ Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `
 * `specs/27_QA_11X_VUE3_INFRA_UNIT_AND_STRYKER_MUTATION.md` — Orquestador `vue3/docker-compose.qa.yml`, `Makefile`, pruebas unitarias `Vitest` (>= 95%) y mutación con `Stryker`.
 * `specs/28_QA_11X_VUE3_PLAYWRIGHT_AXE_LIGHTHOUSE_AND_KARATE.md` — Pruebas E2E `Playwright + @axe-core`, snapshots visuales deterministas, `Lighthouse CI`, `Karate UI` y observabilidad Nginx.
 * `specs/29_ANTIGRAVITY_MASTER_EXECUTION_PLAYBOOK_AND_TESTING_MD.md` — Playbook secuencial de construcción, validación y plantilla obligatoria de `TESTING.md`.
+* `specs/31_PRODUCTION_BOOTSTRAP_LOCAL_TESTING_AND_DISTRIBUTED_OPS.md` — Procedimiento de bootstrap en DB virgen, arquitectura distribuida Cross-Origin Direct y pipeline de validación local `./probar-prod-local.sh`.
+
+---
+
+## 5. Políticas Complementarias de Gobernanza 11X (Linters, Smoke Test --no-dev y UAT)
+
+1. **Política Innegociable de Cero Diagnósticos de IDE y Linters Estáticos:**
+   - Todo archivo versionado en el repositorio debe mantener 0 errores y 0 advertencias en:
+     - **Pyrefly / IDE:** Analizador estático tipado de Python con búsqueda configurada en `pyrefly.toml`.
+     - **SonarLint / Radon:** Complejidad cognitiva máxima de 15 por función y complejidad ciclomática Grado A (`< 5`).
+     - **Hadolint / Docker Linter:** Prohibición de comodines (*globs*) en instrucciones `COPY` (ej. `COPY uv.lock*`) para prevenir fugas de ficheros no previstos.
+     - **ShellCheck (`koalaman/shellcheck:stable`):** Cero advertencias y cero errores en la totalidad de scripts `.sh` del monorepo.
+
+2. **Protocolo de Dependencias Inmutables y Validación de Arranque en Producción (`--no-dev`):**
+   - El contenedor de producción instala estrictamente mediante `uv sync --frozen --no-dev --compile-bytecode` en `/app/.venv`.
+   - Se prohíbe terminantemente la presencia de paquetes de prueba o desarrollo (`pytest`, `radon`, `freezegun`, `unittest.mock`) en el código fuente de `src/`.
+   - **Compuertas de Verificación:**
+     - Test unitario AST [test_production_no_dev_cleanliness.unit.py](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/fastapi/tests/core/test_production_no_dev_cleanliness.unit.py) ejecutado en la suite de `pytest`.
+     - Smoke test inmutable [test_production_boot_smoke.py](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/fastapi/scripts/test_production_boot_smoke.py) ejecutado dentro del contenedor de producción verificando 80 submódulos sin paquetes dev.
+
+3. **Plan Maestro de Pruebas Manuales y Aceptación de Usuario (UAT 11X):**
+   - Antes de cada pase a producción o liberación de release con `./build.sh`, es requisito mandatorio ejecutar y registrar la bitácora de aceptación formal definida en [docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md), evaluando el comportamiento en hardware MikroTik v7+ físico o CHR.

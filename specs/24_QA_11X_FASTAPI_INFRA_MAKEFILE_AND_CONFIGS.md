@@ -610,3 +610,13 @@ commands =
    - Prohibido usar random estándar para tokens, nonces o contraseñas de rotación (B311); usa exclusivamente el módulo secrets o os.urandom().
 
    - Prohibido usar subprocess con shell=True (B602).
+
+## **5. Protocolo de Aislamiento de Producción (--no-dev) y Smoke Test Inmutable**
+
+1. **Test Estático AST de Limpieza (`test_production_no_dev_cleanliness.unit.py`):**
+   - Ejecuta un análisis del árbol de sintaxis abstracta (AST) sobre el 100% de los archivos `.py` en `src/`.
+   - Garantiza que ninguna clase, servicio o endpoint importe módulos del grupo `[project.optional-dependencies] dev` (`pytest`, `radon`, `hypothesis`, `freezegun`, `unittest.mock`, etc.).
+
+2. **Smoke Test de Arranque Inmutable (`fastapi/scripts/test_production_boot_smoke.py`):**
+   - Ejecutado directamente dentro de la imagen final compilada con `uv sync --frozen --no-dev --compile-bytecode`.
+   - Verifica la ausencia de paquetes dev en memoria (`sys.modules`), importa recursivamente los 80 submódulos de `src/`, confirma la desactivación estricta de Swagger en producción (`docs_url=None`, `redoc_url=None`, `openapi_url=None`) y valida el ciclo `/health` in-process.
