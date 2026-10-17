@@ -9,8 +9,6 @@ from typing import Any
 import pyotp
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import delete
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.crypto import encrypt_aes_gcm, hash_password
 from src.db.session import get_db_session
@@ -116,6 +114,23 @@ async def test_health_check_endpoint(async_client: AsyncClient) -> None:
     data = res.json()
     assert data["status"] == "healthy"
     assert data["service"] == "rosgrid-api"
+
+
+@pytest.mark.asyncio
+async def test_health_check_endpoint_degraded(async_client: AsyncClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    from unittest.mock import AsyncMock
+    from src.core.config import settings
+
+    monkeypatch.setattr(settings, "ROSGRID_ENV", "production")
+    mock_redis = AsyncMock()
+    mock_redis.ping.side_effect = ConnectionError("Redis unreachable")
+    monkeypatch.setattr("src.main.get_redis_client", lambda: mock_redis)
+
+    res = await async_client.get("/health")
+    assert res.status_code == 503
+    data = res.json()
+    assert data["status"] == "unhealthy"
+    assert data["redis"] == "disconnected"
 
 
 @pytest.mark.asyncio

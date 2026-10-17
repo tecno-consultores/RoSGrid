@@ -17,7 +17,7 @@ docker compose -f fastapi/docker-compose.qa.yml --profile graphify down --remove
 docker compose -f vue3/docker-compose.qa.yml down --remove-orphans -v 2>/dev/null || true
 docker compose -f vue3/docker-compose.qa.yml --profile observability down --remove-orphans -v 2>/dev/null || true
 docker compose -f vue3/docker-compose.qa.yml --profile graphify down --remove-orphans -v 2>/dev/null || true
-docker compose down --remove-orphans 2>/dev/null || true
+docker ps -q --filter "name=rosgrid" | xargs -r docker stop 2>/dev/null || true
 
 echo "[2/4] Eliminando artefactos temporales del Backend (fastapi)..."
 rm -f fastapi/.coverage
@@ -59,6 +59,7 @@ rm -rf vue3/prometheus_data
 echo "[4/4] Eliminando archivos temporales en la raíz..."
 rm -f ./*.log 2>/dev/null || true
 rm -f ./trivy-results* 2>/dev/null || true
+docker system prune -af
 
 # Verificación de integridad: los grafos AST de Graphify se conservan intactos
 if [[ -f fastapi/graphify-out/GRAPH_REPORT.md ]] && [[ -f vue3/graphify-out/GRAPH_REPORT.md ]]; then

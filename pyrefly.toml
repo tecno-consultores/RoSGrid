@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright (C) 2026 RoSGrid Contributors
+# Configuración Pyrefly para Antigravity IDE
+
+search-path = [
+    "fastapi",
+    "fastapi/src",
+]
+
+project-includes = [
+    "fastapi/**/*.py",
+]
+
+project-excludes = [
+    "**/node_modules/**",
+    "**/.venv/**",
+    "**/dist/**",
+]
+
+[errors]
+missing-import = "ignore"
+untyped-import = "ignore"
+missing-source = "ignore"
+missing-module-attribute = "ignore"
+unnecessary-type-conversion = "ignore"
+unnecessary-comparison = "ignore"

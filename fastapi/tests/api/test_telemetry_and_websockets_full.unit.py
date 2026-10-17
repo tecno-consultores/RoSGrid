@@ -7,6 +7,7 @@ import asyncio
 import json
 import time
 import uuid
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import jwt
@@ -47,7 +48,7 @@ async def test_telemetry_helpers_and_deltas() -> None:
     assert delta["tx_pps"] == 5
 
     # _process_interfaces
-    ifaces_raw = [cur, "invalid_entry", {"name": ""}]
+    ifaces_raw: Any = [cur, "invalid_entry", {"name": ""}]
     res_list, new_snap = telem_mux._process_interfaces(ifaces_raw, {"ether1": prev}, dt=1.0)
     assert len(res_list) == 1
     assert "ether1" in new_snap

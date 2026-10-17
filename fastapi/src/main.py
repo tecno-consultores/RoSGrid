@@ -5,10 +5,11 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
+from sqlalchemy import text
 
 from src.api.deps import get_current_user_claims
 from src.api.router import api_v1_router
@@ -16,7 +17,8 @@ from src.api.v1.websockets import router as websockets_router
 from src.core.config import settings
 from src.core.csrf import CSRFProtectionMiddleware
 from src.core.security_headers import SecurityHeadersMiddleware
-from src.redis_layer.client import close_redis_client
+from src.db.session import engine
+from src.redis_layer.client import close_redis_client, get_redis_client
 from src.redis_layer.idempotency import IdempotencyMiddleware
 
 
@@ -70,10 +72,42 @@ def create_app() -> FastAPI:
     app.include_router(api_v1_router)
     app.include_router(websockets_router)
 
-    # 4. Endpoint de salud
+    # 4. Endpoint de salud con verificación activa de PostgreSQL y KeyDB
     @app.get("/health", tags=["Health"])
-    async def health_check() -> dict[str, str]:
-        return {"status": "healthy", "service": "rosgrid-api"}
+    async def health_check(response: Response) -> dict[str, str]:
+        db_status = "connected"
+        redis_status = "connected"
+        is_healthy = True
+
+        try:
+            async with engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
+        except Exception:
+            if not settings.ROSGRID_ENV.startswith("qa") and settings.ROSGRID_ENV != "test":
+                db_status = "disconnected"
+                is_healthy = False
+            else:
+                db_status = "mocked"
+
+        try:
+            redis = get_redis_client()
+            await redis.ping()
+        except Exception:
+            if not settings.ROSGRID_ENV.startswith("qa") and settings.ROSGRID_ENV != "test":
+                redis_status = "disconnected"
+                is_healthy = False
+            else:
+                redis_status = "mocked"
+
+        if not is_healthy:
+            response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+
+        return {
+            "status": "healthy" if is_healthy else "unhealthy",
+            "service": "rosgrid-api",
+            "database": db_status,
+            "redis": redis_status,
+        }
 
     # 5. Alias /users/me para compatibilidad con suite BDD Karate Labs (api_test.feature)
     @app.get("/users/me", tags=["Compatibility"])

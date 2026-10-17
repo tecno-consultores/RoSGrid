@@ -6,8 +6,8 @@ LC_ALL=C
 set -euo pipefail
 
 if [[ "${ROSGRID_IMAGE_PREBUILT:-0}" != "1" ]]; then
-    echo "[RoSGrid] Sincronizando dependencias desde volumen uv-cache..."
-    uv pip install --system -e "."
+    echo "[RoSGrid] Sincronizando dependencias con uv.lock (--frozen)..."
+    uv sync --frozen
 else
     echo "[RoSGrid] Imagen de produccion precompilada detectada. Omitiendo uv sync en runtime."
 fi
