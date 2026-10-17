@@ -63,9 +63,20 @@ docker run --rm -v "$(pwd):/mnt" koalaman/shellcheck:stable \
     /mnt/probar-prod-local.sh \
     /mnt/fastapi/scripts/entrypoint.sh
 
-# 3. Pipeline de Validación Integral de Imágenes de Producción en Local (Sin Docker Hub)
+# 3. Pipeline de Validación Integral de Imágenes de Producción en Local (Bajo Demanda)
+# Ejecución estándar (automatizada de 6 fases con desmantelamiento limpio)
 ./probar-prod-local.sh
+
+# Modo Interactivo: Deja el stack levantado para inspección en navegador (http://localhost:8085)
+./probar-prod-local.sh --keep-alive
+
+# Modo Rápido: Revalida endpoints y aprovisionamiento sin recompilar imágenes
+./probar-prod-local.sh --skip-build
+
+# Modo Seguridad: Ejecuta Trivy IaC/CVEs previo al despliegue y mapea a puerto personalizado
+./probar-prod-local.sh --audit --port 8090
 ```
+> Consulta el manual operativo completo en [docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md).
 
 ### B. Ecosistema Backend (`cd fastapi`)
 ```bash

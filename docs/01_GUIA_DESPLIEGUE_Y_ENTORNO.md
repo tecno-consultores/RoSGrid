@@ -230,17 +230,32 @@ RoSGrid permite desplegar el Frontend (Nginx) y el Backend (FastAPI + Bases de D
   - Permite conservar las cookies `__Host-rg_at` con `SameSite=Strict`.
 
 ### 7.3 Pipeline de Validación de Imágenes de Producción en Local (`./probar-prod-local.sh`)
-Para validar el stack completo de producción (`--no-dev`) antes de subir las imágenes a Docker Hub o desplegarlas:
+Para validar el stack completo de producción (`--no-dev`) antes de subir las imágenes a Docker Hub o desplegarlas, RoSGrid dispone de un pipeline automatizado configurable a petición del usuario:
+
 ```bash
+# Ejecución estándar automatizada
 ./probar-prod-local.sh
+
+# Modo interactivo (mantiene el stack activo para navegar en http://localhost:8085)
+./probar-prod-local.sh --keep-alive
+
+# Modo rápido (sin recompilar si las imágenes ya existen)
+./probar-prod-local.sh --skip-build
+
+# Modo seguridad (ejecuta auditoría Trivy previa y cambia el puerto UI)
+./probar-prod-local.sh --audit --port 8090
 ```
-Este pipeline:
-1. Compila las imágenes de producción localmente sin subir a ningún registro.
-2. Levanta el stack con `docker-compose.prod.local.yml`.
-3. Valida la transición a `healthy` de PostgreSQL, KeyDB y FastAPI.
-4. Ejecuta pruebas sintéticas de conexión sobre `/health`, `/metrics`, `/api/v1/auth/bootstrap-status` y el Nginx frontend.
-5. Ejecuta el script `crear_admin.py` y verifica la transición exitosa del estado de bootstrap.
-6. Apaga y purga los volúmenes efímeros de prueba.
+
+Este pipeline ejecuta 6 fases exhaustivas:
+1. **Auditoría e Imágenes:** Verificación estática con Trivy (opcional) y compilación multi-stage de Backend y Frontend.
+2. **Despliegue Aislado:** Levantamiento del stack efímero mediante `docker-compose.prod.local.yml`.
+3. **Healthchecks:** Estabilización de PostgreSQL 17, KeyDB Multi-Hilo y FastAPI hasta estado `healthy`.
+4. **Pruebas Sintéticas:** Validación de endpoints `/health`, `/metrics`, `/api/v1/auth/bootstrap-status` (estado virgen) y bundle UI Nginx.
+5. **Aprovisionamiento E2E y MCP:** Creación de Super Admin con `crear_admin.py`, verificación de transición a `is_bootstrapped: true`, emisión de Token Bearer MCP con `generar_token_mcp.py` y validación de sesión autenticada contra KeyDB en `/api/v1/auth/me`.
+6. **Inspección de Logs y Limpieza:** Auditoría de ausencia de tracebacks y purga de volúmenes (o entrega de enlaces si se usó `--keep-alive`).
+
+> [!NOTE]
+> Para la guía operativa paso a paso, arquitectura y solución de problemas, consulta el manual completo en [08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md](08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md). Además, el script de publicación [build.sh](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/build.sh) ejecuta automáticamente este pipeline como Paso 0 previo a cualquier `docker buildx build --push`.
 
 ### 7.4 Dictamen de Arquitecturas de Hardware (AMD64, ARM64 y ARMv7)
 - **Soportadas Oficialmente:** `linux/amd64` (Intel/AMD) y `linux/arm64` (`aarch64`, para Raspberry Pi 3/4/5 con SO de 64 bits y servidores ARM empresariales).

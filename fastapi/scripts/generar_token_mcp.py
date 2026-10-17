@@ -29,6 +29,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--username", help="Nombre de usuario del Service Account (ej: mcp-agent)", required=True)
     parser.add_argument("--tenant-slug", help="Slug de la organización (opcional)", default=None)
     parser.add_argument("--expiry-days", help="Días de validez del token (default: 365 días)", type=int, default=365)
+    parser.add_argument(
+        "--raw-token",
+        help="Imprimir únicamente la cadena del token JWT en stdout (ideal para pipelines y scripts)",
+        action="store_true",
+    )
     return parser.parse_args()
 
 
@@ -57,8 +62,8 @@ async def generate_mcp_token(
 
     # 3. Advertencia si no es SERVICE_ACCOUNT
     if user.role != SystemRoleEnum.SERVICE_ACCOUNT:
-        print(f"[AVISO] El usuario '{username}' tiene rol '{user.role.value}', no 'SERVICE_ACCOUNT'.")
-        print("El endpoint MCP /api/v1/mcp rechazará llamadas si el token no pertenece a SERVICE_ACCOUNT.")
+        print(f"[AVISO] El usuario '{username}' tiene rol '{user.role.value}', no 'SERVICE_ACCOUNT'.", file=sys.stderr)
+        print("El endpoint MCP /api/v1/mcp rechazará llamadas si el token no pertenece a SERVICE_ACCOUNT.", file=sys.stderr)
 
     # 4. Generar identificador de sesión y registrar en KeyDB
     session_id = str(uuid.uuid4())
@@ -110,6 +115,10 @@ async def main() -> None:
             tenant_slug=args.tenant_slug,
             expiry_days=args.expiry_days,
         )
+
+        if args.raw_token:
+            print(token)
+            return
 
         print("==============================================================================")
         print("      🤖 Token de Servicio MCP Generado Exitosamente para Agente IA          ")
