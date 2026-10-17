@@ -5,11 +5,24 @@ import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import type { SystemRole, UserInfo } from '@/types';
 
+function getStoredUser(): UserInfo | null {
+  if (typeof localStorage === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem('rosgrid_user');
+    return raw ? (JSON.parse(raw) as UserInfo) : null;
+  } catch {
+    return null;
+  }
+}
+
 export const useAuthStore = defineStore('auth', () => {
-  const user = ref<UserInfo | null>(null);
-  const tenantSlug = ref<string | null>(null);
-  const currentRole = ref<SystemRole | null>(null);
-  const csrfToken = ref<string | null>(null);
+  const initialUser = getStoredUser();
+  const user = ref<UserInfo | null>(initialUser);
+  const tenantSlug = ref<string | null>(initialUser?.tenant_slug ?? null);
+  const currentRole = ref<SystemRole | null>(initialUser?.role ?? null);
+  const csrfToken = ref<string | null>(
+    typeof localStorage !== 'undefined' ? localStorage.getItem('rosgrid_csrf') : null,
+  );
 
   const isAuthenticated = computed<boolean>(() => user.value !== null);
 
@@ -17,13 +30,34 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = userInfo;
     currentRole.value = userInfo.role;
     tenantSlug.value = userInfo.tenant_slug;
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('rosgrid_user', JSON.stringify(userInfo));
+      } catch {
+        // Ignora fallos de storage cuota
+      }
+    }
     if (token) {
       csrfToken.value = token;
+      if (typeof localStorage !== 'undefined') {
+        try {
+          localStorage.setItem('rosgrid_csrf', token);
+        } catch {
+          // Ignora fallos de storage cuota
+        }
+      }
     }
   }
 
   function setCsrfToken(token: string): void {
     csrfToken.value = token;
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('rosgrid_csrf', token);
+      } catch {
+        // Ignora fallos de storage cuota
+      }
+    }
   }
 
   function clearAuth(): void {
@@ -31,6 +65,14 @@ export const useAuthStore = defineStore('auth', () => {
     currentRole.value = null;
     tenantSlug.value = null;
     csrfToken.value = null;
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.removeItem('rosgrid_user');
+        localStorage.removeItem('rosgrid_csrf');
+      } catch {
+        // Ignora fallos de storage cuota
+      }
+    }
   }
 
   function hasCapability(actionCode: string): boolean {

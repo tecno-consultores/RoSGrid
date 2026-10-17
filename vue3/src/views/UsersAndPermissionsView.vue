@@ -61,6 +61,20 @@
     'AUDITOR',
   ];
 
+  // Gestión de Auto-Registro Público
+  const isRegistrationEnabled = ref(true);
+  const isTogglingRegistration = ref(false);
+
+  // Modal y Acciones de Aprobación
+  const isApproveModalOpen = ref(false);
+  const targetUserForApproval = ref<UserManagementItem | null>(null);
+  const isApproving = ref(false);
+  const approvalForm = ref({
+    role: 'SUPPORT_L2' as SystemRole,
+    has_all_routers_access: false,
+    allowed_cidr_list: '',
+  });
+
   const filteredUsers = computed(() => {
     return usersList.value.filter((u) => {
       const q = searchFilter.value.trim().toLowerCase();
@@ -74,11 +88,107 @@
       const matchesStatus =
         statusFilter.value === 'ALL' ||
         (statusFilter.value === 'ACTIVE' && u.is_active) ||
-        (statusFilter.value === 'INACTIVE' && !u.is_active);
+        (statusFilter.value === 'PENDING' && !u.is_active && !u.totp_enabled) ||
+        (statusFilter.value === 'INACTIVE' && !u.is_active && u.totp_enabled);
 
       return matchesSearch && matchesRole && matchesStatus;
     });
   });
+
+  async function loadRegistrationStatus() {
+    try {
+      const res = await http.get<{ registration_enabled?: boolean }>('/api/v1/auth/bootstrap-status');
+      if (res.data && res.data.registration_enabled !== undefined) {
+        isRegistrationEnabled.value = res.data.registration_enabled;
+      }
+    } catch {
+      // Ignorar fallback
+    }
+  }
+
+  async function toggleRegistration() {
+    isTogglingRegistration.value = true;
+    try {
+      const nextVal = !isRegistrationEnabled.value;
+      await http.post('/api/v1/users/registration-toggle', { enabled: nextVal });
+      isRegistrationEnabled.value = nextVal;
+      successMessage.value = nextVal
+        ? 'Auto-registro público HABILITADO. Nuevos operadores pueden registrarse desde el login.'
+        : 'Auto-registro público DESHABILITADO. Se bloquean nuevos registros externos.';
+      setTimeout(() => {
+        successMessage.value = '';
+      }, 4000);
+    } catch (err: unknown) {
+      const error = err as { detail?: string; message?: string };
+      errorMessage.value = error.detail || error.message || 'Error al cambiar estado de auto-registro.';
+    } finally {
+      isTogglingRegistration.value = false;
+    }
+  }
+
+  function openApproveModal(user: UserManagementItem) {
+    targetUserForApproval.value = user;
+    approvalForm.value = {
+      role: 'SUPPORT_L2',
+      has_all_routers_access: false,
+      allowed_cidr_list: '',
+    };
+    isApproveModalOpen.value = true;
+  }
+
+  async function handleApproveUser() {
+    if (!targetUserForApproval.value) return;
+    isApproving.value = true;
+    try {
+      const cidrList = approvalForm.value.allowed_cidr_list
+        ? approvalForm.value.allowed_cidr_list
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : undefined;
+
+      await http.put(`/api/v1/users/${targetUserForApproval.value.id}/approve`, {
+        role: approvalForm.value.role,
+        has_all_routers_access: approvalForm.value.has_all_routers_access,
+        allowed_cidr_list: cidrList,
+      });
+
+      targetUserForApproval.value.is_active = true;
+      targetUserForApproval.value.role = approvalForm.value.role;
+      targetUserForApproval.value.has_all_routers_access = approvalForm.value.has_all_routers_access;
+      if (cidrList) targetUserForApproval.value.allowed_cidr_list = cidrList;
+
+      isApproveModalOpen.value = false;
+      successMessage.value = `Operador @${targetUserForApproval.value.username} aprobado y activado con rol ${approvalForm.value.role}.`;
+      setTimeout(() => {
+        successMessage.value = '';
+      }, 4000);
+    } catch (err: unknown) {
+      const error = err as { detail?: string; message?: string };
+      errorMessage.value = error.detail || error.message || 'Error al aprobar usuario.';
+    } finally {
+      isApproving.value = false;
+    }
+  }
+
+  async function handleRejectUser(user: UserManagementItem) {
+    const confirmed = window.confirm(
+      `¿Confirmas el rechazo y eliminación de la solicitud del operador @${user.username}?`,
+    );
+    if (!confirmed) return;
+
+    try {
+      await http.delete(`/api/v1/users/${user.id}/reject`);
+      usersList.value = usersList.value.filter((u) => u.id !== user.id);
+      successMessage.value = `Solicitud de @${user.username} rechazada y eliminada del sistema.`;
+      setTimeout(() => {
+        successMessage.value = '';
+      }, 4000);
+    } catch (err: unknown) {
+      const error = err as { detail?: string; message?: string };
+      errorMessage.value = error.detail || error.message || 'Error al rechazar usuario.';
+    }
+  }
 
   async function loadUsers() {
     isLoading.value = true;
@@ -183,6 +293,7 @@
 
   onMounted(() => {
     loadUsers();
+    loadRegistrationStatus();
   });
 </script>
 
@@ -196,14 +307,30 @@
         </p>
       </div>
 
-      <button
-        v-if="isWriteAuthorized"
-        type="button"
-        class="btn-create"
-        @click="isCreateUserModalOpen = true"
-      >
-        + Nuevo Operador
-      </button>
+      <div class="header-actions">
+        <button
+          v-if="isWriteAuthorized"
+          type="button"
+          class="btn-toggle-reg"
+          :class="{
+            'btn-toggle-reg--enabled': isRegistrationEnabled,
+            'btn-toggle-reg--disabled': !isRegistrationEnabled,
+          }"
+          :disabled="isTogglingRegistration"
+          @click="toggleRegistration"
+        >
+          {{ isRegistrationEnabled ? '🔓 Auto-Registro: Activado' : '🔒 Auto-Registro: Desactivado' }}
+        </button>
+
+        <button
+          v-if="isWriteAuthorized"
+          type="button"
+          class="btn-create"
+          @click="isCreateUserModalOpen = true"
+        >
+          + Nuevo Operador
+        </button>
+      </div>
     </header>
 
     <div v-if="errorMessage" class="banner banner--error" role="alert">
@@ -239,6 +366,7 @@
         <select id="filter-status" v-model="statusFilter" class="filter-select">
           <option value="ALL">Todos los Estados</option>
           <option value="ACTIVE">Activos</option>
+          <option value="PENDING">Pendientes de Aprobación</option>
           <option value="INACTIVE">Bloqueados</option>
         </select>
       </div>
@@ -293,31 +421,54 @@
                 class="badge-status"
                 :class="{
                   'badge-status--active': u.is_active,
-                  'badge-status--disabled': !u.is_active,
+                  'badge-status--pending': !u.is_active && !u.totp_enabled,
+                  'badge-status--disabled': !u.is_active && u.totp_enabled,
                 }"
               >
-                {{ u.is_active ? 'Habilitado' : 'Bloqueado' }}
+                {{ u.is_active ? 'Habilitado' : (!u.totp_enabled ? '⏳ Pendiente' : 'Bloqueado') }}
               </span>
             </td>
             <td class="col-actions">
-              <button
-                type="button"
-                class="btn-matrix"
-                aria-label="Abrir matriz de asignación de routers"
-                @click="openMatrixModal(u)"
-              >
-                ⚙ Matriz Routers
-              </button>
+              <template v-if="!u.is_active && !u.totp_enabled">
+                <button
+                  v-if="isWriteAuthorized"
+                  type="button"
+                  class="btn-approve"
+                  aria-label="Aprobar operador y asignar rol"
+                  @click="openApproveModal(u)"
+                >
+                  ✓ Aprobar
+                </button>
+                <button
+                  v-if="isWriteAuthorized"
+                  type="button"
+                  class="btn-reject"
+                  aria-label="Rechazar solicitud"
+                  @click="handleRejectUser(u)"
+                >
+                  ✕ Rechazar
+                </button>
+              </template>
+              <template v-else>
+                <button
+                  type="button"
+                  class="btn-matrix"
+                  aria-label="Abrir matriz de asignación de routers"
+                  @click="openMatrixModal(u)"
+                >
+                  ⚙ Matriz Routers
+                </button>
 
-              <button
-                v-if="isWriteAuthorized && u.totp_enabled"
-                type="button"
-                class="btn-reset-2fa"
-                aria-label="Reiniciar 2FA de este operador"
-                @click="openReset2FAModal(u)"
-              >
-                ↺ Reset 2FA
-              </button>
+                <button
+                  v-if="isWriteAuthorized && u.totp_enabled"
+                  type="button"
+                  class="btn-reset-2fa"
+                  aria-label="Reiniciar 2FA de este operador"
+                  @click="openReset2FAModal(u)"
+                >
+                  ↺ Reset 2FA
+                </button>
+              </template>
             </td>
           </tr>
           <tr v-if="filteredUsers.length === 0 && !isLoading">
@@ -440,6 +591,71 @@
       @close="isMatrixModalOpen = false"
       @saved="loadUsers"
     />
+
+    <!-- Modal para Aprobar Operador y Asignar Rol Inicial -->
+    <div
+      v-if="isApproveModalOpen && targetUserForApproval"
+      class="rg-modal-backdrop"
+      @click.self="isApproveModalOpen = false"
+    >
+      <div class="rg-modal" role="dialog" aria-modal="true" aria-labelledby="modal-approve-title">
+        <header class="modal-header">
+          <h2 id="modal-approve-title" class="modal-title">
+            Aprobar Operador: @{{ targetUserForApproval.username }}
+          </h2>
+          <button
+            type="button"
+            class="btn-close"
+            aria-label="Cerrar modal"
+            @click="isApproveModalOpen = false"
+          >
+            ✕
+          </button>
+        </header>
+
+        <form class="modal-form" @submit.prevent="handleApproveUser">
+          <p class="modal-desc">
+            Asigna el rol técnico y permisos operativos para activar la cuenta de
+            <strong>{{ targetUserForApproval.full_name || targetUserForApproval.username }}</strong>
+            ({{ targetUserForApproval.email }}).
+          </p>
+
+          <div class="form-group">
+            <label for="app-role" class="form-label">Rol RBAC Asignado *</label>
+            <select id="app-role" v-model="approvalForm.role" class="form-select">
+              <option v-for="r in availableRoles" :key="r" :value="r">{{ r }}</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="app-cidr" class="form-label">IPs / CIDRs Permitidos (Opcional)</label>
+            <input
+              id="app-cidr"
+              v-model="approvalForm.allowed_cidr_list"
+              type="text"
+              placeholder="ej. 192.168.1.0/24, 10.0.0.5/32"
+              class="form-input"
+            />
+          </div>
+
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input v-model="approvalForm.has_all_routers_access" type="checkbox" />
+              <span>Conceder acceso global a todos los MikroTiks del Tenant</span>
+            </label>
+          </div>
+
+          <footer class="modal-footer">
+            <button type="button" class="btn-cancel" @click="isApproveModalOpen = false">
+              Cancelar
+            </button>
+            <button type="submit" class="btn-submit" :disabled="isApproving">
+              {{ isApproving ? 'Activando...' : '✓ Aprobar y Activar Cuenta' }}
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -457,6 +673,41 @@
     margin-bottom: 20px;
     flex-wrap: wrap;
     gap: 16px;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .btn-toggle-reg {
+    padding: 9px 14px;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+  }
+
+  .btn-toggle-reg--enabled {
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid #10b981;
+    color: #34d399;
+  }
+
+  .btn-toggle-reg--enabled:hover:not(:disabled) {
+    background: rgba(16, 185, 129, 0.25);
+  }
+
+  .btn-toggle-reg--disabled {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid #ef4444;
+    color: #f87171;
+  }
+
+  .btn-toggle-reg--disabled:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.25);
   }
 
   .view-title {
@@ -625,8 +876,61 @@
     color: #34d399;
   }
 
+  .badge-status--pending {
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid #f59e0b;
+    color: #fbbf24;
+    animation: pulse-badge 2s infinite ease-in-out;
+  }
+
+  @keyframes pulse-badge {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.65; }
+  }
+
   .badge-status--disabled {
     color: #f87171;
+  }
+
+  .btn-approve {
+    background: rgba(16, 185, 129, 0.2);
+    border: 1px solid #10b981;
+    color: #34d399;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-right: 6px;
+    transition: background-color 0.2s, color 0.2s;
+  }
+
+  .btn-approve:hover {
+    background: #10b981;
+    color: #0b0f19;
+  }
+
+  .btn-reject {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid #ef4444;
+    color: #f87171;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+  }
+
+  .btn-reject:hover {
+    background: #ef4444;
+    color: #ffffff;
+  }
+
+  .modal-desc {
+    font-size: 0.85rem;
+    color: var(--rg-text-secondary, #cbd5e1);
+    margin: 0;
+    line-height: 1.4;
   }
 
   .btn-matrix {

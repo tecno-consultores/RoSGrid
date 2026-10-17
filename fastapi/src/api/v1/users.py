@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 RoSGrid Contributors
 
+import secrets
 import uuid
 from typing import Any
 
@@ -13,6 +14,7 @@ from src.api.deps import require_roles
 from src.core.crypto import hash_password
 from src.db.session import get_db_session, set_tenant_context
 from src.models.core import SystemRoleEnum, User, UserRouterPermission
+from src.redis_layer.client import get_redis_client
 from src.redis_layer.sessions import kill_all_user_sessions
 from src.schemas.users import (
     AssignUserRoutersRequest,
@@ -27,10 +29,21 @@ class Reset2FARequest(BaseModel):
     admin_totp_code: str
 
 
+class ToggleRegistrationRequest(BaseModel):
+    enabled: bool
+
+
+class ApproveUserRequest(BaseModel):
+    role: SystemRoleEnum
+    has_all_routers_access: bool = False
+    allowed_cidr_list: list[str] = []
+
+
 @router.get("", response_model=list[UserResponse])
 async def list_users(
     role: SystemRoleEnum | None = None,
     is_active: bool | None = None,
+    pending_only: bool = False,
     search: str | None = None,
     claims: dict[str, Any] = Depends(
         require_roles(
@@ -49,7 +62,9 @@ async def list_users(
     stmt = select(User).where(User.tenant_id == tenant_id)
     if role is not None:
         stmt = stmt.where(User.role == role)
-    if is_active is not None:
+    if pending_only:
+        stmt = stmt.where(User.is_active.is_(False))
+    elif is_active is not None:
         stmt = stmt.where(User.is_active == is_active)
     if search:
         pattern = f"%{search}%"
@@ -174,3 +189,79 @@ async def reset_user_2fa(
     await kill_all_user_sessions(str(tenant_id), str(user_id), killed_by=claims["sub"], reason="Reinicio de 2FA")
 
     return {"status": "2fa_reset_completed"}
+
+
+@router.post("/registration-toggle")
+async def toggle_registration(
+    body: ToggleRegistrationRequest,
+    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)),
+) -> dict[str, Any]:
+    """Habilita o deshabilita el auto-registro público de usuarios en la plataforma."""
+    redis = get_redis_client()
+    val = "true" if body.enabled else "false"
+    await redis.set("rg:config:public_registration_enabled", val)
+    return {"registration_enabled": body.enabled}
+
+
+@router.put("/{user_id}/approve", response_model=UserResponse)
+async def approve_user(
+    user_id: uuid.UUID,
+    body: ApproveUserRequest,
+    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)),
+    db: AsyncSession = Depends(get_db_session),
+) -> UserResponse:
+    """Aprueba un usuario auto-registrado en estado PENDIENTE, activándolo y asignándole un rol."""
+    tenant_id = uuid.UUID(claims["tid"])
+    is_sa = claims["rol"] == SystemRoleEnum.SUPERADMIN_GLOBAL.value
+    await set_tenant_context(db, tenant_id, is_superadmin=is_sa)
+
+    stmt = select(User).where(User.id == user_id, User.tenant_id == tenant_id)
+    res = await db.execute(stmt)
+    target_user = res.scalar_one_or_none()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    target_user.is_active = True
+    target_user.role = body.role
+    target_user.has_all_routers_access = body.has_all_routers_access
+    target_user.allowed_cidr_list = body.allowed_cidr_list
+    await db.commit()
+    await db.refresh(target_user)
+
+    return UserResponse.model_validate(target_user)
+
+
+@router.delete("/{user_id}/reject", status_code=status.HTTP_204_NO_CONTENT)
+async def reject_user(
+    user_id: uuid.UUID,
+    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)),
+    db: AsyncSession = Depends(get_db_session),
+) -> None:
+    """Rechaza y elimina una solicitud de registro pendiente de aprobación.
+    Si ya existen trazas inmutables en audit_logs (donde WORM prohíbe UPDATE),
+    bloquea y desactiva el usuario permanentemente."""
+    tenant_id = uuid.UUID(claims["tid"])
+    is_sa = claims["rol"] == SystemRoleEnum.SUPERADMIN_GLOBAL.value
+    await set_tenant_context(db, tenant_id, is_superadmin=is_sa)
+
+    stmt = select(User).where(User.id == user_id, User.tenant_id == tenant_id)
+    res = await db.execute(stmt)
+    target_user = res.scalar_one_or_none()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    try:
+        await db.delete(target_user)
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        # Se recarga el usuario para aplicar soft-delete / revocación definitiva
+        res_reload = await db.execute(stmt)
+        u_reload = res_reload.scalar_one_or_none()
+        if u_reload:
+            u_reload.is_active = False
+            u_reload.is_locked = True
+            rnd_suffix = secrets.token_hex(4)
+            u_reload.username = f"rejected_{u_reload.username}_{rnd_suffix}"
+            u_reload.email = f"rejected_{rnd_suffix}_{u_reload.email}"
+            await db.commit()

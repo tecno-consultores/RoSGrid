@@ -38,6 +38,8 @@ from src.schemas.auth import (
     BootstrapStatusResponse,
     LoginStep1Request,
     LoginStep1Response,
+    RegisterUserRequest,
+    RegisterUserResponse,
     UserProfileResponse,
     Verify2FARequest,
 )
@@ -89,7 +91,7 @@ def set_auth_cookies(
     response.set_cookie(
         key=at_name,
         value=access_token,
-        max_age=600,
+        max_age=28800,
         httponly=True,
         secure=secure_cookie,
         samesite=samesite,
@@ -141,7 +143,11 @@ async def _verify_user_credentials(db: AsyncSession, user: User, password: str) 
             user.is_locked = True
             user.locked_until = datetime.fromtimestamp(time.time() + 900, UTC)
         await db.commit()
-        raise HTTPException(status_code=401, detail="Credenciales inválidas o empresa no encontrada")
+    if not user.is_active:
+        raise HTTPException(
+            status_code=403,
+            detail="Tu cuenta está pendiente de aprobación por el Administrador. No puedes ingresar hasta que sea autorizada y se te asigne un rol.",
+        )
     user.failed_login_attempts = 0
     await db.commit()
 
@@ -413,17 +419,101 @@ async def get_me(claims: dict[str, Any] = Depends(get_current_user_claims)) -> d
 async def get_bootstrap_status(
     db: AsyncSession = Depends(get_db_session),
 ) -> BootstrapStatusResponse:
+    redis = get_redis_client()
     users_count = await db.scalar(select(func.count(User.id))) or 0
     tenants_count = await db.scalar(select(func.count(Tenant.id))) or 0
     is_bootstrapped = users_count > 0
+
+    reg_enabled_raw = await redis.get("rg:config:public_registration_enabled")
+    reg_enabled = True
+    if reg_enabled_raw is not None:
+        val = reg_enabled_raw.decode("utf-8") if isinstance(reg_enabled_raw, bytes) else str(reg_enabled_raw)
+        if val.lower() in ("0", "false", "off", "no"):
+            reg_enabled = False
 
     return BootstrapStatusResponse(
         is_bootstrapped=is_bootstrapped,
         tenants_count=tenants_count,
         users_count=users_count,
+        registration_enabled=reg_enabled,
         message="Sistema ya inicializado"
         if is_bootstrapped
         else "Inicialización requerida: No hay usuarios registrados.",
+    )
+
+
+@router.post("/register", response_model=RegisterUserResponse, status_code=status.HTTP_201_CREATED)
+async def register_user(
+    body: RegisterUserRequest,
+    db: AsyncSession = Depends(get_db_session),
+) -> RegisterUserResponse:
+    redis = get_redis_client()
+    users_count = await db.scalar(select(func.count(User.id))) or 0
+    if users_count == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El sistema requiere inicialización mediante bootstrap para crear el Super Administrador inicial.",
+        )
+
+    # 1. Verificar si el auto-registro está habilitado
+    reg_enabled_raw = await redis.get("rg:config:public_registration_enabled")
+    if reg_enabled_raw is not None:
+        val = reg_enabled_raw.decode("utf-8") if isinstance(reg_enabled_raw, bytes) else str(reg_enabled_raw)
+        if val.lower() in ("0", "false", "off", "no"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="El auto-registro de usuarios ha sido deshabilitado por el Administrador.",
+            )
+
+    # 2. Buscar tenant por slug
+    stmt_t = select(Tenant).where(Tenant.slug == body.tenant_slug.strip().lower())
+    res_t = await db.execute(stmt_t)
+    tenant = res_t.scalar_one_or_none()
+    if not tenant:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"La empresa '{body.tenant_slug}' no existe en RoSGrid.",
+        )
+
+    # 3. Verificar unicidad de username y email
+    clean_username = body.username.strip()
+    clean_email = body.email.strip().lower()
+    stmt_check = select(User).where(
+        User.tenant_id == tenant.id,
+        (User.username == clean_username) | (User.email == clean_email),
+    )
+    res_check = await db.execute(stmt_check)
+    if res_check.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Ya existe un usuario con este nombre de usuario o correo en la empresa.",
+        )
+
+    # 4. Crear usuario en estado PENDIENTE DE APROBACIÓN (is_active = False)
+    new_user = User(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        username=clean_username,
+        email=clean_email,
+        full_name=body.full_name.strip(),
+        password_hash=hash_password(body.password),
+        role=SystemRoleEnum.NOC_MONITOR,
+        is_active=False,
+        is_locked=False,
+        failed_login_attempts=0,
+        totp_enabled=False,
+        has_all_routers_access=False,
+    )
+    db.add(new_user)
+    await db.commit()
+    await db.refresh(new_user)
+
+    return RegisterUserResponse(
+        status="PENDING_APPROVAL",
+        message="Tu cuenta fue creada exitosamente y se encuentra pendiente de aprobación por el Administrador. No podrás ingresar hasta que sea autorizada y se te asigne un rol.",
+        user_id=new_user.id,
+        username=new_user.username,
+        is_active=False,
     )
 
 

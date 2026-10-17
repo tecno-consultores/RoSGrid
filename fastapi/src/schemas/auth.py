@@ -61,6 +61,7 @@ class BootstrapStatusResponse(BaseModel):
     is_bootstrapped: bool
     tenants_count: int
     users_count: int
+    registration_enabled: bool = True
     message: str
 
 
@@ -83,3 +84,19 @@ class BootstrapInitResponse(BaseModel):
     totp_provisioning_uri: str
     backup_codes: list[str]
     message: str
+
+
+class RegisterUserRequest(BaseModel):
+    tenant_slug: str = Field(..., min_length=2, max_length=64, pattern=r"^[a-z0-9-]+$")
+    username: str = Field(..., min_length=3, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$")
+    email: EmailStr
+    full_name: str = Field(..., min_length=3, max_length=128)
+    password: str = Field(..., min_length=12)
+
+
+class RegisterUserResponse(BaseModel):
+    status: str
+    message: str
+    user_id: uuid.UUID
+    username: str
+    is_active: bool

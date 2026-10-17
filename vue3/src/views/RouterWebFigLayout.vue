@@ -8,7 +8,7 @@
   import { useLiveTelemetryStore } from '@/stores/useLiveTelemetryStore';
   import { useInventoryStore } from '@/stores/useInventoryStore';
   import { http } from '@/api/httpClient';
-  import type { RouterItem } from '@/types';
+  import type { RouterItem, TelemetryPoint } from '@/types';
   import RouterContextHeader from '@/components/webfig/RouterContextHeader.vue';
   import RouterWorkspaceTabsBar from '@/components/webfig/RouterWorkspaceTabsBar.vue';
   import RouterSidebarMenu from '@/components/webfig/RouterSidebarMenu.vue';
@@ -56,8 +56,27 @@
         wsInstance.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
-            if (data && (data.type === 'TELEMETRY_TICK' || data.cpuLoadPct !== undefined)) {
-              liveTelemetryStore.pushTelemetryPoint(data);
+            if (data && (data.type === 'TELEMETRY_TICK' || data.cpuLoadPct !== undefined || data.system !== undefined)) {
+              let totalRx = 0;
+              let totalTx = 0;
+              if (Array.isArray(data.interfaces)) {
+                for (const iface of data.interfaces) {
+                  totalRx += Number(iface.rx_bps || iface.rxBps || 0);
+                  totalTx += Number(iface.tx_bps || iface.txBps || 0);
+                }
+              }
+              const memUsedPct = Number(data.system?.memory_used_pct ?? data.memoryUsedPct ?? 0);
+              const freeMemPct = Number(data.freeMemoryPct ?? (100 - memUsedPct));
+              const normalizedPoint: TelemetryPoint = {
+                timestampEpoch: Date.now(),
+                timestampIso: data.timestamp_iso || data.timestampIso || new Date().toISOString(),
+                cpuLoadPct: Number(data.system?.cpu_load_pct ?? data.cpuLoadPct ?? 0),
+                freeMemoryPct: Math.max(0, Math.min(100, freeMemPct)),
+                rxBps: data.rxBps !== undefined ? Number(data.rxBps) : totalRx,
+                txBps: data.txBps !== undefined ? Number(data.txBps) : totalTx,
+                temperatureC: data.system?.temperature_c !== undefined ? Number(data.system.temperature_c) : data.temperatureC,
+              };
+              liveTelemetryStore.pushTelemetryPoint(normalizedPoint);
             }
           } catch {
             // Ignorar errores de deserialización

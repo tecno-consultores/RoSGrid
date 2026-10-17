@@ -14,8 +14,11 @@
   const authStore = useAuthStore();
 
   // Estados de etapas de Login
-  type LoginStep = 'CREDENTIALS' | 'ENROLL_2FA' | 'VERIFY_2FA' | 'BOOTSTRAP';
+  type LoginStep = 'CREDENTIALS' | 'ENROLL_2FA' | 'VERIFY_2FA' | 'BOOTSTRAP' | 'REGISTER';
   const currentStep = ref<LoginStep>('CREDENTIALS');
+  const isBootstrapped = ref(true);
+  const registrationEnabled = ref(true);
+  const registerSuccess = ref('');
 
   // Formulario Etapa Bootstrap (Primer Usuario / Super Admin Inicial)
   const bootstrapTenantName = ref('Empresa Principal');
@@ -25,6 +28,15 @@
   const bootstrapAdminFullName = ref('Super Administrador');
   const bootstrapAdminPassword = ref('');
   const bootstrapAdminPasswordConfirm = ref('');
+
+  // Formulario Etapa Registro de Operador
+  const registerTenantSlug = ref('master');
+  const registerUsername = ref('');
+  const registerEmail = ref('');
+  const registerFullName = ref('');
+  const registerPassword = ref('');
+  const registerPasswordConfirm = ref('');
+  const showRegisterPassword = ref(false);
 
   // Formulario Etapa 1
   const tenantSlug = ref('');
@@ -323,16 +335,80 @@
     }
   }
 
+  async function handleRegisterSubmit() {
+    errorMessage.value = '';
+    registerSuccess.value = '';
+    if (
+      !registerTenantSlug.value.trim() ||
+      !registerUsername.value.trim() ||
+      !registerEmail.value.trim() ||
+      !registerFullName.value.trim() ||
+      !registerPassword.value
+    ) {
+      errorMessage.value = 'Todos los campos son obligatorios.';
+      return;
+    }
+    if (registerPassword.value.length < 8) {
+      errorMessage.value = 'La contraseña debe tener al menos 8 caracteres.';
+      return;
+    }
+    if (registerPassword.value !== registerPasswordConfirm.value) {
+      errorMessage.value = 'Las contraseñas no coinciden.';
+      return;
+    }
+
+    isLoading.value = true;
+    try {
+      const res = await http.post<{ status: string; message: string }>('/api/v1/auth/register', {
+        tenant_slug: registerTenantSlug.value.trim().toLowerCase(),
+        username: registerUsername.value.trim(),
+        email: registerEmail.value.trim().toLowerCase(),
+        full_name: registerFullName.value.trim(),
+        password: registerPassword.value,
+      });
+
+      registerSuccess.value =
+        res.data.message ||
+        'Solicitud enviada con éxito. Tu cuenta se encuentra PENDIENTE DE APROBACIÓN por un Administrador.';
+      
+      // Pre-cargar valores en el formulario de login para agilizar
+      tenantSlug.value = registerTenantSlug.value.trim().toLowerCase();
+      usernameOrEmail.value = registerUsername.value.trim();
+      
+      // Limpiar campos sensibles
+      registerPassword.value = '';
+      registerPasswordConfirm.value = '';
+      
+      currentStep.value = 'CREDENTIALS';
+    } catch (err: unknown) {
+      const error = err as { detail?: string; message?: string };
+      errorMessage.value = error.detail || error.message || 'Error al procesar la solicitud de registro.';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   onMounted(async () => {
     // Si viene pre-cargado el tenant_slug en la query
     if (route.query.tenant) {
       tenantSlug.value = String(route.query.tenant).toLowerCase();
+      registerTenantSlug.value = String(route.query.tenant).toLowerCase();
     }
-    // Detección automática de primer uso (Bootstrap)
+    // Detección automática de primer uso (Bootstrap) y estado de registro público
     try {
-      const res = await http.get<{ is_bootstrapped: boolean }>('/api/v1/auth/bootstrap-status');
-      if (res.data && res.data.is_bootstrapped === false) {
-        currentStep.value = 'BOOTSTRAP';
+      const res = await http.get<{ is_bootstrapped: boolean; registration_enabled?: boolean }>(
+        '/api/v1/auth/bootstrap-status',
+      );
+      if (res.data) {
+        if (res.data.is_bootstrapped === false) {
+          currentStep.value = 'BOOTSTRAP';
+          isBootstrapped.value = false;
+        } else {
+          isBootstrapped.value = true;
+        }
+        if (res.data.registration_enabled !== undefined) {
+          registrationEnabled.value = res.data.registration_enabled;
+        }
       }
     } catch {
       // Si falla la consulta, se mantiene el formulario estándar
@@ -369,6 +445,17 @@
       >
         <span class="alert-icon" aria-hidden="true">⛔</span>
         <span class="alert-text">{{ errorMessage }}</span>
+      </div>
+
+      <!-- Banner de éxito de registro -->
+      <div
+        v-if="registerSuccess"
+        class="alert-banner alert-banner--success"
+        role="status"
+        aria-live="polite"
+      >
+        <span class="alert-icon" aria-hidden="true">✅</span>
+        <span class="alert-text">{{ registerSuccess }}</span>
       </div>
 
       <!-- ETAPA 0: Inicialización del Sistema (Bootstrap / Primer Usuario) -->
@@ -579,6 +666,164 @@
           <span v-if="isLoading" class="spinner" aria-hidden="true">⏳</span>
           <span>{{ isLoading ? 'Verificando...' : 'Continuar con 2FA →' }}</span>
         </button>
+
+        <div v-if="isBootstrapped && registrationEnabled" class="register-footer-hint">
+          <span class="register-hint-text">¿No tienes cuenta de operador?</span>
+          <button
+            type="button"
+            class="btn-switch-register"
+            @click="
+              errorMessage = '';
+              registerSuccess = '';
+              currentStep = 'REGISTER';
+            "
+          >
+            Solicitar Registro de Operador →
+          </button>
+        </div>
+      </form>
+
+      <!-- ETAPA 0B: Solicitud de Auto-Registro de Operador -->
+      <form
+        v-if="currentStep === 'REGISTER'"
+        class="login-form"
+        novalidate
+        @submit.prevent="handleRegisterSubmit"
+      >
+        <div class="bootstrap-intro">
+          <h2 class="section-title">📝 Solicitud de Registro</h2>
+          <p class="section-desc">
+            Ingresa tus datos para registrarte. Tu cuenta quedará en estado <strong>Pendiente de Aprobación</strong> y deberá ser autorizada por un Administrador antes de tu primer ingreso.
+          </p>
+        </div>
+
+        <div class="form-group">
+          <label for="reg-tenant-slug" class="form-label">
+            Organización / Empresa <span class="required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="reg-tenant-slug"
+            v-model="registerTenantSlug"
+            type="text"
+            required
+            placeholder="ej. master"
+            class="form-input"
+            :disabled="isLoading"
+            @input="
+              (e) =>
+                (registerTenantSlug = (e.target as HTMLInputElement).value
+                  .toLowerCase()
+                  .replace(/[^a-z0-9-]/g, ''))
+            "
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="reg-username" class="form-label">
+            Nombre de Usuario <span class="required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="reg-username"
+            v-model="registerUsername"
+            type="text"
+            required
+            autocomplete="username"
+            placeholder="ej. operador1"
+            class="form-input"
+            :disabled="isLoading"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="reg-email" class="form-label">
+            Correo Electrónico <span class="required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="reg-email"
+            v-model="registerEmail"
+            type="email"
+            required
+            autocomplete="email"
+            placeholder="ej. operador@empresa.com"
+            class="form-input"
+            :disabled="isLoading"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="reg-fullname" class="form-label">
+            Nombre y Apellido <span class="required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="reg-fullname"
+            v-model="registerFullName"
+            type="text"
+            required
+            placeholder="ej. Carlos Rodríguez"
+            class="form-input"
+            :disabled="isLoading"
+          />
+        </div>
+
+        <div class="form-group">
+          <div class="label-row">
+            <label for="reg-password" class="form-label">
+              Contraseña (Mínimo 8 caracteres) <span class="required" aria-hidden="true">*</span>
+            </label>
+            <button
+              type="button"
+              class="btn-toggle-visibility"
+              :aria-label="showRegisterPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+              @click="showRegisterPassword = !showRegisterPassword"
+            >
+              {{ showRegisterPassword ? 'Ocultar' : 'Mostrar' }}
+            </button>
+          </div>
+          <input
+            id="reg-password"
+            v-model="registerPassword"
+            :type="showRegisterPassword ? 'text' : 'password'"
+            required
+            autocomplete="new-password"
+            placeholder="••••••••••••"
+            class="form-input"
+            :disabled="isLoading"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="reg-password-confirm" class="form-label">
+            Confirmar Contraseña <span class="required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="reg-password-confirm"
+            v-model="registerPasswordConfirm"
+            :type="showRegisterPassword ? 'text' : 'password'"
+            required
+            autocomplete="new-password"
+            placeholder="••••••••••••"
+            class="form-input"
+            :disabled="isLoading"
+          />
+        </div>
+
+        <button type="submit" class="btn-submit" :disabled="isLoading">
+          <span v-if="isLoading" class="spinner" aria-hidden="true">⏳</span>
+          <span>{{ isLoading ? 'Enviando...' : 'Enviar Solicitud de Registro' }}</span>
+        </button>
+
+        <button
+          type="button"
+          class="btn-back"
+          :disabled="isLoading"
+          @click="
+            errorMessage = '';
+            registerSuccess = '';
+            currentStep = 'CREDENTIALS';
+          "
+        >
+          ← Volver al Inicio de Sesión
+        </button>
       </form>
 
       <!-- ETAPA 2A: Enrolamiento Inicial 2FA TOTP -->
@@ -780,6 +1025,46 @@
     background: rgba(239, 68, 68, 0.15);
     border: 1px solid #ef4444;
     color: #f87171;
+  }
+
+  .alert-banner--success {
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid #10b981;
+    color: #34d399;
+  }
+
+  .register-footer-hint {
+    margin-top: var(--rg-space-3, 12px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding-top: var(--rg-space-3, 12px);
+    border-top: 1px solid var(--rg-border-grid, #1e293b);
+  }
+
+  .register-hint-text {
+    font-size: 0.8rem;
+    color: var(--rg-text-muted, #94a3b8);
+  }
+
+  .btn-switch-register {
+    background: transparent;
+    border: none;
+    color: var(--rg-accent-cyan, #22d3ee);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition:
+      color 0.2s,
+      background-color 0.2s;
+  }
+
+  .btn-switch-register:hover {
+    color: #38bdf8;
+    background-color: rgba(34, 211, 238, 0.08);
   }
 
   .login-form,

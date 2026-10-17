@@ -31,8 +31,7 @@
   const mapContainer = ref<HTMLDivElement | null>(null);
   let mapInstance: L.Map | null = null;
   let markersLayer: L.LayerGroup | null = null;
-  const isDeterministicE2E =
-    typeof window !== 'undefined' && Boolean((window as unknown as { __ROSGRID_E2E__?: boolean }).__ROSGRID_E2E__);
+  let resizeObserver: ResizeObserver | null = null;
 
   function getStatusColor(router: RouterItem): string {
     if (router.admin_state === 'MAINTENANCE') return '#38BDF8';
@@ -108,13 +107,11 @@
       attributionControl: true,
     });
 
-    if (!isDeterministicE2E) {
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors',
-      }).addTo(mapInstance);
-    }
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors',
+    }).addTo(mapInstance);
 
     markersLayer = L.layerGroup().addTo(mapInstance);
     renderMarkers();
@@ -148,14 +145,31 @@
 
   onMounted(() => {
     initMap();
+    if (typeof ResizeObserver !== 'undefined' && mapContainer.value) {
+      resizeObserver = new ResizeObserver(() => {
+        if (mapInstance) {
+          mapInstance.invalidateSize();
+        }
+      });
+      resizeObserver.observe(mapContainer.value);
+    }
     setTimeout(() => {
       if (mapInstance) {
         mapInstance.invalidateSize();
       }
-    }, 250);
+    }, 150);
+    setTimeout(() => {
+      if (mapInstance) {
+        mapInstance.invalidateSize();
+      }
+    }, 500);
   });
 
   onBeforeUnmount(() => {
+    if (resizeObserver) {
+      resizeObserver.disconnect();
+      resizeObserver = null;
+    }
     if (mapInstance) {
       mapInstance.remove();
       mapInstance = null;
@@ -168,22 +182,8 @@
     <div
       ref="mapContainer"
       class="osm-map-container"
-      :class="{ 'osm-map-container--deterministic': isDeterministicE2E }"
       aria-label="Mapa interactivo de routers MikroTik"
-    >
-      <!-- En modo E2E Playwright, se muestra un lienzo determinista para snapshot visual -->
-      <div v-if="isDeterministicE2E" class="deterministic-grid-placeholder" aria-hidden="true">
-        <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1E293B" stroke-width="1" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="#0B0F19" />
-          <rect width="100%" height="100%" fill="url(#grid)" />
-        </svg>
-      </div>
-    </div>
+    ></div>
   </div>
 </template>
 
@@ -291,7 +291,7 @@
   .map-wrapper {
     width: 100%;
     height: 100%;
-    min-height: 400px;
+    min-height: 480px;
     position: relative;
     border-radius: 8px;
     overflow: hidden;
@@ -301,7 +301,7 @@
   .osm-map-container {
     width: 100%;
     height: 100%;
-    min-height: 400px;
+    min-height: 480px;
   }
 
   .deterministic-grid-placeholder {

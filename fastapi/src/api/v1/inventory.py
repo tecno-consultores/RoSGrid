@@ -352,6 +352,7 @@ async def delete_router(
 
 
 @router.post("/routers/{router_id}/sync-discovery", response_model=RouterResponse)
+@router.post("/routers/{router_id}/discover", response_model=RouterResponse)
 async def sync_discovery(
     router_id: uuid.UUID,
     claims: dict[str, Any] = Depends(

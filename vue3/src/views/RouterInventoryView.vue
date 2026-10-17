@@ -541,8 +541,13 @@
   }
 
   .panel-map {
-    height: 100%;
-    min-height: 480px;
+    height: calc(100vh - 230px);
+    min-height: 520px;
+    max-height: calc(100vh - 180px);
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
+    border: 1px solid var(--rg-border-grid, #1e293b);
   }
 
   .table-row-actions {

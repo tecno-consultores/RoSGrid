@@ -17,13 +17,30 @@
   const cpuCanvasRef = ref<HTMLCanvasElement | null>(null);
   const trafficCanvasRef = ref<HTMLCanvasElement | null>(null);
 
+  import { useRoute } from 'vue-router';
+  import { http } from '@/api/httpClient';
+
+  const route = useRoute();
+  const routerId = computed(() => String(route.params.routerId || ''));
+
   const selectedIface = ref('all-interfaces');
-  const availableInterfaces = ref([
-    'all-interfaces',
-    'ether1-WAN',
-    'ether2-LAN',
-    'sfp-plus1-Trunk',
-  ]);
+  const availableInterfaces = ref<string[]>(['all-interfaces']);
+
+  async function loadRealInterfaces() {
+    if (!routerId.value) return;
+    try {
+      const res = await http.get<{ name?: string }[] | { items: { name?: string }[] }>(
+        `/api/v1/routers/${routerId.value}/webfig/interfaces`
+      );
+      const raw = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      const names = raw.map((i) => i.name).filter(Boolean) as string[];
+      if (names.length > 0) {
+        availableInterfaces.value = ['all-interfaces', ...names];
+      }
+    } catch {
+      // Mantiene solo 'all-interfaces' sin inventar interfaces simuladas
+    }
+  }
 
   let animationFrameId: number | null = null;
   const isDeterministic = typeof navigator !== 'undefined' && Boolean(navigator.webdriver);
@@ -218,6 +235,7 @@
       trafficCanvasRef.value.width = trafficCanvasRef.value.parentElement?.clientWidth || 600;
       trafficCanvasRef.value.height = 200;
     }
+    loadRealInterfaces();
     drawCanvasCharts();
   });
 
