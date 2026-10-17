@@ -282,14 +282,14 @@
     <section class="kpi-grid font-tabular" aria-label="Métricas del sistema">
       <div class="kpi-card">
         <span class="kpi-title">Carga CPU</span>
-        <div class="kpi-value text-cyan">{{ ringBuffer.latestPoint.value?.cpuLoadPct ?? 0 }}%</div>
+        <div class="kpi-value text-cyan">{{ Math.round(ringBuffer.latestPoint.value?.cpuLoadPct ?? 0) }}%</div>
         <span class="kpi-sub">Multi-Core</span>
       </div>
 
       <div class="kpi-card">
         <span class="kpi-title">RAM Libre</span>
         <div class="kpi-value text-emerald">
-          {{ ringBuffer.latestPoint.value?.freeMemoryPct ?? 0 }}%
+          {{ Math.round(ringBuffer.latestPoint.value?.freeMemoryPct ?? 0) }}%
         </div>
         <span class="kpi-sub">Memoria del Sistema</span>
       </div>

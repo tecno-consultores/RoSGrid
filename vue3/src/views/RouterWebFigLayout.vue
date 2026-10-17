@@ -65,16 +65,22 @@
                   totalTx += Number(iface.tx_bps || iface.txBps || 0);
                 }
               }
-              const memUsedPct = Number(data.system?.memory_used_pct ?? data.memoryUsedPct ?? 0);
-              const freeMemPct = Number(data.freeMemoryPct ?? (100 - memUsedPct));
+              const freeMemPct = Number(
+                data.system?.free_memory_pct ??
+                  data.freeMemoryPct ??
+                  100 - Number(data.system?.memory_used_pct ?? data.memoryUsedPct ?? 0),
+              );
               const normalizedPoint: TelemetryPoint = {
                 timestampEpoch: Date.now(),
                 timestampIso: data.timestamp_iso || data.timestampIso || new Date().toISOString(),
-                cpuLoadPct: Number(data.system?.cpu_load_pct ?? data.cpuLoadPct ?? 0),
-                freeMemoryPct: Math.max(0, Math.min(100, freeMemPct)),
+                cpuLoadPct: Math.round(Number(data.system?.cpu_load_pct ?? data.cpuLoadPct ?? 0)),
+                freeMemoryPct: Math.max(0, Math.min(100, Math.round(freeMemPct))),
                 rxBps: data.rxBps !== undefined ? Number(data.rxBps) : totalRx,
                 txBps: data.txBps !== undefined ? Number(data.txBps) : totalTx,
-                temperatureC: data.system?.temperature_c !== undefined ? Number(data.system.temperature_c) : data.temperatureC,
+                temperatureC:
+                  data.system?.temperature_c !== undefined
+                    ? Math.round(Number(data.system.temperature_c))
+                    : data.temperatureC,
               };
               liveTelemetryStore.pushTelemetryPoint(normalizedPoint);
             }

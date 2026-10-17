@@ -26,11 +26,11 @@
   });
 
   const cpuValue = computed(() => {
-    return props.latestTelemetry?.cpuLoadPct ?? 0;
+    return Math.round(props.latestTelemetry?.cpuLoadPct ?? 0);
   });
 
   const ramFreeValue = computed(() => {
-    return props.latestTelemetry?.freeMemoryPct ?? 0;
+    return Math.round(props.latestTelemetry?.freeMemoryPct ?? 0);
   });
 
   const tempValue = computed(() => {

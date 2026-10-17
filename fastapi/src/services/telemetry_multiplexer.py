@@ -111,7 +111,8 @@ def _build_telemetry_frame(
 ) -> dict[str, Any]:
     total_mem = int(res.get("total-memory", 1))
     free_mem = int(res.get("free-memory", 0))
-    used_pct = round(((total_mem - free_mem) / total_mem) * 100, 1) if total_mem > 0 else 0.0
+    used_pct = round(((total_mem - free_mem) / total_mem) * 100) if total_mem > 0 else 0
+    free_pct = round((free_mem / total_mem) * 100) if total_mem > 0 else 100
 
     return {
         "type": "TELEMETRY_TICK",
@@ -125,6 +126,7 @@ def _build_telemetry_frame(
             "free_memory_bytes": free_mem,
             "total_memory_bytes": total_mem,
             "memory_used_pct": used_pct,
+            "free_memory_pct": free_pct,
             "free_hdd_bytes": int(res.get("free-hdd-space", 0)),
             "total_hdd_bytes": int(res.get("total-hdd-space", 0)),
             "temperature_c": float(health.get("temperature", 0.0)) if "temperature" in health else None,
