@@ -232,13 +232,25 @@ async def _execute_2fa_enrollment(db: AsyncSession, user: User, code: str, secre
     await db.commit()
 
 
-def _execute_2fa_verification(user: User, code: str, aad: bytes) -> None:
+async def _execute_2fa_verification(db: AsyncSession, user: User, code: str, aad: bytes) -> None:
+    clean_code = code.strip().upper()
+    code_hash = hashlib.sha256(clean_code.encode("utf-8")).hexdigest()
+
+    # 1. Comprobar si coincide con un código de recuperación de emergencia
+    current_hashes = list(user.totp_recovery_codes_hashes or [])
+    if code_hash in current_hashes:
+        current_hashes.remove(code_hash)
+        user.totp_recovery_codes_hashes = current_hashes
+        await db.commit()
+        return
+
+    # 2. Si no es código de recuperación, verificar token TOTP dinámico
     if not user.totp_secret_ciphertext or not user.totp_secret_iv or not user.totp_secret_tag:
         raise HTTPException(status_code=401, detail="Configuración 2FA corrupta")
     secret_bytes = decrypt_aes_gcm(user.totp_secret_ciphertext, user.totp_secret_iv, user.totp_secret_tag, aad)
     secret = secret_bytes.decode("utf-8")
-    if not pyotp.TOTP(secret).verify(code, valid_window=1):
-        raise HTTPException(status_code=401, detail="Código 2FA incorrecto")
+    if not pyotp.TOTP(secret).verify(clean_code, valid_window=1):
+        raise HTTPException(status_code=401, detail="Código 2FA o de recuperación incorrecto")
 
 
 async def _build_auth_session_response(
@@ -314,7 +326,7 @@ async def verify_2fa(
         secret = str(preauth_data.get("temp_totp_secret", ""))
         await _execute_2fa_enrollment(db, user, body.totp_code, secret, aad)
     else:
-        _execute_2fa_verification(user, body.totp_code, aad)
+        await _execute_2fa_verification(db, user, body.totp_code, aad)
 
     await redis.delete(preauth_key)
 

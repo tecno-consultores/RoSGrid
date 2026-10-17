@@ -288,6 +288,60 @@ describe('LoginView.vue — Autenticación Multi-Tenant en 2 Etapas y 2FA TOTP',
     expect(wrapper.find('.alert-banner--danger').text()).toContain('exactamente 6 dígitos');
   });
 
+  it('permite alternar a modo código de respaldo y valida 8 caracteres alfanuméricos', async () => {
+    vi.spyOn(http, 'post').mockResolvedValueOnce({
+      status: 200,
+      data: {
+        next_step: 'VERIFY_2FA_TOTP',
+        challenge_id: 'ch-verify-backup',
+      },
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(LoginView);
+    await wrapper.find('#tenant-slug').setValue('isp-norte');
+    await wrapper.find('#login-email').setValue('admin@isp.net');
+    await wrapper.find('#login-password').setValue('Password123!');
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+
+    // Clic en alternar a código de respaldo
+    await wrapper.find('.btn-toggle-backup').trigger('click');
+    expect(wrapper.find('.step-title').text()).toContain('Código de Respaldo');
+
+    // Intentar enviar con menos de 8 caracteres
+    await wrapper.find('#verify-totp-input').setValue('123');
+    await wrapper.find('.verify-form').trigger('submit');
+    expect(wrapper.find('.alert-banner--danger').text()).toContain('exactamente 8 caracteres');
+
+    // Ingresar código de respaldo válido de 8 caracteres
+    const postSpy = vi.spyOn(http, 'post').mockResolvedValueOnce({
+      status: 200,
+      data: {
+        user: {
+          id: 'u-1',
+          email: 'admin@isp.net',
+          username: 'admin',
+          role: 'SUPERADMIN_GLOBAL',
+          tenant_id: 't-1',
+          tenant_slug: 'isp-norte',
+          totp_enabled: true,
+        },
+        csrf_token: 'csrf-backup',
+      },
+      headers: new Headers(),
+    });
+
+    await wrapper.find('#verify-totp-input').setValue('8BB8B5C7');
+    await flushPromises();
+    expect(postSpy).toHaveBeenCalledWith(
+      '/api/v1/auth/2fa/verify',
+      expect.objectContaining({
+        totp_code: '8BB8B5C7',
+      }),
+    );
+  });
+
   it('permite autenticación directa cuando la API retorna usuario sin 2FA', async () => {
     vi.spyOn(http, 'post').mockResolvedValueOnce({
       status: 200,

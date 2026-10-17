@@ -118,9 +118,13 @@ class RePinSSLRequest(StrictBaseModel):
 
 
 class CsvDryRunRowPreview(BaseModel):
-    row_number: int
+    line: int = 1
+    row_number: int = 1
     display_name: str
+    ip_address: str = ""
+    serial_number: str = ""
     is_valid: bool
+    error: str | None = None
     errors: list[str] = Field(default_factory=list)
 
 
@@ -129,7 +133,9 @@ class CsvDryRunResponse(BaseModel):
     valid_rows_count: int
     invalid_rows_count: int
     can_proceed: bool
-    rows_preview: list[CsvDryRunRowPreview]
+    rows: list[CsvDryRunRowPreview] = Field(default_factory=list)
+    rows_preview: list[CsvDryRunRowPreview] = Field(default_factory=list)
+
 
 
 class CsvCommitRowItem(StrictBaseModel):

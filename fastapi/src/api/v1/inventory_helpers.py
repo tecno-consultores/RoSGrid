@@ -5,14 +5,17 @@
 
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
+from decimal import Decimal
 from typing import Any
 
 from src.core.crypto import encrypt_aes_gcm
 from src.mikrotik.client import MikrotikRestClient
 from src.models.inventory import (
     Router,
+    RouterAdminStateEnum,
     RouterCredentialsVault,
+    RouterNetworkRoleEnum,
     RouterTag,
     SSLTrustStatusEnum,
 )
@@ -165,21 +168,90 @@ def validate_single_csv_row(
     existing_serials: set[str],
     seen_serials: set[str],
 ) -> tuple[bool, list[str]]:
-    """Valida una fila de importación CSV garantizando unicidad de serial."""
+    """Valida una fila de importación CSV garantizando unicidad de serial y tolerando alias de plantilla."""
     errors: list[str] = []
-    name = row.get("display_name", "").strip()
-    url = row.get("api_base_url", "").strip()
-    sn = row.get("serial_number", "").strip()
-    pwd = row.get("api_password", "").strip()
+    name = (row.get("display_name") or row.get("name") or "").strip()
+    raw_url = (row.get("api_base_url") or row.get("ip_address") or row.get("ip") or "").strip()
+    if raw_url and not raw_url.startswith("http://") and not raw_url.startswith("https://"):
+        raw_url = f"https://{raw_url}"
+    sn = (row.get("serial_number") or row.get("serial") or "").strip()
+    pwd = (row.get("api_password") or row.get("ros_password") or row.get("password") or "").strip()
 
     if not name:
         errors.append("display_name es obligatorio")
-    if not url.startswith("https://"):
+    if not raw_url.startswith("https://"):
         errors.append("api_base_url debe comenzar con https://")
     _check_csv_serial(sn, existing_serials, seen_serials, errors)
     if not pwd:
         errors.append("api_password es obligatorio")
     return len(errors) == 0, errors
+
+
+def row_to_commit_item(row: dict[str, str]) -> CsvCommitRowItem:
+    """Convierte un diccionario de fila CSV a CsvCommitRowItem tolerando nombres alternativos."""
+    name = (row.get("display_name") or row.get("name") or "").strip()
+    url = (row.get("api_base_url") or row.get("ip_address") or row.get("ip") or "").strip()
+    if url and not url.startswith("http://") and not url.startswith("https://"):
+        url = f"https://{url}"
+
+    port_val = (row.get("api_port") or "").strip()
+    port = int(port_val) if port_val and port_val.isdigit() else 443
+
+    user = (row.get("api_username") or row.get("ros_username") or row.get("username") or "admin").strip()
+    pwd = (row.get("api_password") or row.get("ros_password") or row.get("password") or "").strip()
+
+    role_str = (row.get("network_role") or "EDGE_BGP").strip().upper()
+    try:
+        network_role = RouterNetworkRoleEnum(role_str)
+    except ValueError:
+        network_role = RouterNetworkRoleEnum.EDGE_BGP
+
+    state_str = (row.get("admin_state") or "PRODUCTION").strip().upper()
+    try:
+        admin_state = RouterAdminStateEnum(state_str)
+    except ValueError:
+        admin_state = RouterAdminStateEnum.PRODUCTION
+
+    location = (row.get("physical_location") or row.get("location") or "Sede Central").strip()
+
+    lat_val = (row.get("latitude") or "").strip()
+    lat = Decimal(lat_val) if lat_val else None
+
+    lon_val = (row.get("longitude") or "").strip()
+    lon = Decimal(lon_val) if lon_val else None
+
+    date_val = (row.get("online_since_date") or "").strip()
+    if date_val:
+        try:
+            online_date = date.fromisoformat(date_val)
+        except ValueError:
+            online_date = date.today()
+    else:
+        online_date = date.today()
+
+    sn = (row.get("serial_number") or row.get("serial") or "").strip()
+
+    tags_raw = row.get("tags") or ""
+    tags = [t.strip() for t in tags_raw.replace(";", ",").split(",") if t.strip()]
+
+    return CsvCommitRowItem(
+        display_name=name,
+        api_base_url=url,
+        api_port=port,
+        api_username=user,
+        api_password=pwd,
+        network_role=network_role,
+        admin_state=admin_state,
+        physical_location=location,
+        latitude=lat,
+        longitude=lon,
+        online_since_date=online_date,
+        serial_number=sn,
+        tags=tags,
+        auto_rotate_credentials=True,
+        rotation_interval_days=30,
+    )
+
 
 
 def build_router_from_csv(

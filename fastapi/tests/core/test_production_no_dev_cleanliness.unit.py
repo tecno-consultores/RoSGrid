@@ -48,9 +48,7 @@ def test_no_dev_dependencies_imported_in_production_source() -> None:
                     root_name = alias.name.split(".")[0]
                     full_name = alias.name
                     if root_name in FORBIDDEN_DEV_MODULES or full_name in FORBIDDEN_DEV_MODULES:
-                        violations.append(
-                            f"{file_path.name}:{node.lineno} importa módulo de desarrollo '{alias.name}'"
-                        )
+                        violations.append(f"{file_path.name}:{node.lineno} importa módulo de desarrollo '{alias.name}'")
             elif isinstance(node, ast.ImportFrom):
                 if node.module:
                     root_name = node.module.split(".")[0]

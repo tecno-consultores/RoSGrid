@@ -113,6 +113,11 @@ services:
     volumes:
       - rosgrid_backups_local:/var/lib/rosgrid/backups
     entrypoint: ["python3", "-m", "src.workers.runner"]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import os; os.kill(1, 0)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
     networks:
       - rosgrid_internal_net
 

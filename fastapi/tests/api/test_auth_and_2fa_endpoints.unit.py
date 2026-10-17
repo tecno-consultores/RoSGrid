@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 RoSGrid Contributors
 
+import hashlib
 import time
 import uuid
 from datetime import UTC, datetime
@@ -119,6 +120,7 @@ async def test_health_check_endpoint(async_client: AsyncClient) -> None:
 @pytest.mark.asyncio
 async def test_health_check_endpoint_degraded(async_client: AsyncClient, monkeypatch: pytest.MonkeyPatch) -> None:
     from unittest.mock import AsyncMock
+
     from src.core.config import settings
 
     monkeypatch.setattr(settings, "ROSGRID_ENV", "production")
@@ -351,6 +353,49 @@ async def test_verify_2fa_verification_lifecycle(
         )
         assert res.status_code == 200
         assert res.json()["user"]["username"] == sample_user.username
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)
+
+
+@pytest.mark.asyncio
+async def test_verify_2fa_with_recovery_code(
+    async_client: AsyncClient, sample_tenant: Tenant, sample_user: User, fake_redis: FakeAsyncRedis
+) -> None:
+    raw_secret = pyotp.random_base32()
+    aad = f"{sample_tenant.id}:{sample_user.id}".encode()
+    ct, iv, tag = encrypt_aes_gcm(raw_secret.encode("utf-8"), aad)
+    backup_code = "8BB8B5C7"
+    backup_hash = hashlib.sha256(backup_code.encode("utf-8")).hexdigest()
+
+    sample_user.totp_enabled = True
+    sample_user.totp_secret_ciphertext = ct
+    sample_user.totp_secret_iv = iv
+    sample_user.totp_secret_tag = tag
+    sample_user.totp_recovery_codes_hashes = [backup_hash]
+
+    session = MockAsyncSession(tenant=sample_tenant, user=sample_user)
+    app.dependency_overrides[get_db_session] = lambda: session
+    try:
+        challenge_id = "test-challenge-recovery"
+        preauth_key = f"rg:{sample_tenant.id}:preauth:{challenge_id}"
+        await fake_redis.hset(
+            preauth_key,
+            mapping={
+                "user_id": str(sample_user.id),
+                "tenant_id": str(sample_tenant.id),
+                "tenant_slug": sample_tenant.slug,
+                "status": "VERIFY_2FA_TOTP",
+            },
+        )
+
+        res = await async_client.post(
+            "/api/v1/auth/2fa/verify",
+            json={"challenge_id": challenge_id, "totp_code": backup_code.lower()},
+        )
+        assert res.status_code == 200
+        assert res.json()["user"]["username"] == sample_user.username
+        # El código de emergencia debe haber sido consumido
+        assert backup_hash not in sample_user.totp_recovery_codes_hashes
     finally:
         app.dependency_overrides.pop(get_db_session, None)
 

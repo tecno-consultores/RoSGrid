@@ -37,6 +37,7 @@
   // Formulario Etapa 2 (2FA)
   const challengeId = ref('');
   const totpCode = ref('');
+  const isUsingBackupCode = ref(false);
   const provisioningUri = ref('');
   const secretKey = ref('');
   const backupCodes = ref<string[]>([]);
@@ -207,9 +208,16 @@
   // Etapa 2B: Verificar Desafío 2FA
   async function handleVerifySubmit() {
     errorMessage.value = '';
-    if (totpCode.value.length !== 6) {
-      errorMessage.value = 'El código debe tener exactamente 6 dígitos numéricos.';
-      return;
+    if (isUsingBackupCode.value) {
+      if (totpCode.value.length !== 8) {
+        errorMessage.value = 'El código de respaldo debe tener exactamente 8 caracteres alfanuméricos.';
+        return;
+      }
+    } else {
+      if (totpCode.value.length !== 6) {
+        errorMessage.value = 'El código debe tener exactamente 6 dígitos numéricos.';
+        return;
+      }
     }
 
     isLoading.value = true;
@@ -226,17 +234,30 @@
     } catch (err: unknown) {
       const error = err as { message?: string; detail?: string };
       errorMessage.value =
-        error.detail || error.message || 'Código de seguridad incorrecto o expirado.';
+        error.detail || error.message || 'Código de seguridad o de respaldo incorrecto o expirado.';
     } finally {
       isLoading.value = false;
     }
   }
 
   function onTotpInput() {
-    totpCode.value = totpCode.value.replace(/[^0-9]/g, '').slice(0, 6);
-    if (totpCode.value.length === 6 && currentStep.value === 'VERIFY_2FA') {
-      handleVerifySubmit();
+    if (isUsingBackupCode.value) {
+      totpCode.value = totpCode.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8).toUpperCase();
+      if (totpCode.value.length === 8 && currentStep.value === 'VERIFY_2FA') {
+        handleVerifySubmit();
+      }
+    } else {
+      totpCode.value = totpCode.value.replace(/[^0-9]/g, '').slice(0, 6);
+      if (totpCode.value.length === 6 && currentStep.value === 'VERIFY_2FA') {
+        handleVerifySubmit();
+      }
     }
+  }
+
+  function toggleBackupCodeMode() {
+    isUsingBackupCode.value = !isUsingBackupCode.value;
+    totpCode.value = '';
+    errorMessage.value = '';
   }
 
   function completeLogin(user: UserInfo, csrfToken?: string) {
@@ -620,27 +641,34 @@
 
       <!-- ETAPA 2B: Verificación de Código 2FA TOTP -->
       <div v-else-if="currentStep === 'VERIFY_2FA'" class="verify-container">
-        <h2 class="step-title">Verificación de Segundo Factor (2FA)</h2>
+        <h2 class="step-title">
+          {{ isUsingBackupCode ? 'Código de Respaldo de Emergencia' : 'Verificación de Segundo Factor (2FA)' }}
+        </h2>
         <p class="step-desc">
-          Introduce el código de 6 dígitos que muestra tu aplicación autenticadora.
+          {{
+            isUsingBackupCode
+              ? 'Introduce uno de tus códigos de recuperación de 8 caracteres alfanuméricos.'
+              : 'Introduce el código de 6 dígitos que muestra tu aplicación autenticadora.'
+          }}
         </p>
 
         <form class="verify-form" @submit.prevent="handleVerifySubmit">
           <div class="form-group">
             <label for="verify-totp-input" class="form-label">
-              Código de Seguridad TOTP <span class="required" aria-hidden="true">*</span>
+              {{ isUsingBackupCode ? 'Código de Respaldo' : 'Código de Seguridad TOTP' }}
+              <span class="required" aria-hidden="true">*</span>
             </label>
             <input
               id="verify-totp-input"
               v-model="totpCode"
               type="text"
-              inputmode="numeric"
-              pattern="[0-9]{6}"
-              maxlength="6"
+              :inputmode="isUsingBackupCode ? 'text' : 'numeric'"
+              :maxlength="isUsingBackupCode ? 8 : 6"
               required
               autocomplete="one-time-code"
-              placeholder="000000"
+              :placeholder="isUsingBackupCode ? 'ej. 8BB8B5C7' : '000000'"
               class="form-input form-input--totp"
+              :style="isUsingBackupCode ? 'letter-spacing: 0.25rem; text-transform: uppercase;' : ''"
               :disabled="isLoading"
               autofocus
               @input="onTotpInput"
@@ -651,8 +679,25 @@
             Desafío válido por: <strong>{{ challengeCountdown }}s</strong>
           </div>
 
-          <button type="submit" class="btn-submit" :disabled="isLoading || totpCode.length !== 6">
+          <button
+            type="submit"
+            class="btn-submit"
+            :disabled="isLoading || (isUsingBackupCode ? totpCode.length !== 8 : totpCode.length !== 6)"
+          >
             <span>{{ isLoading ? 'Validando...' : 'Acceder al Sistema' }}</span>
+          </button>
+
+          <button
+            type="button"
+            class="btn-toggle-backup"
+            :disabled="isLoading"
+            @click="toggleBackupCodeMode"
+          >
+            {{
+              isUsingBackupCode
+                ? '← Usar código dinámico de la app (6 dígitos)'
+                : '🔑 ¿No tienes tu app? Usar código de respaldo (8 caracteres)'
+            }}
           </button>
 
           <button
@@ -843,6 +888,26 @@
 
   .btn-back:hover {
     color: var(--rg-text-primary, #f8fafc);
+  }
+
+  .btn-toggle-backup {
+    background: transparent;
+    border: 1px dashed var(--rg-border, #334155);
+    border-radius: var(--rg-radius-md, 6px);
+    color: var(--rg-accent-cyan, #22d3ee);
+    font-size: 0.85rem;
+    padding: 8px 12px;
+    cursor: pointer;
+    margin-top: var(--rg-space-2, 8px);
+    text-align: center;
+    transition:
+      border-color 0.2s,
+      background-color 0.2s;
+  }
+
+  .btn-toggle-backup:hover:not(:disabled) {
+    border-color: var(--rg-accent-cyan, #22d3ee);
+    background-color: rgba(34, 211, 238, 0.05);
   }
 
   .step-title {

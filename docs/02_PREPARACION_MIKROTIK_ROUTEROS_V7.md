@@ -13,10 +13,10 @@ RoSGrid valida la autenticidad del router mediante *Trust On First Use* (TOFU) c
 
 ```routeros
 # 1. Crear plantilla de certificado autofirmado
-/certificate add name=rosgrid-ssl common-name=rosgrid-router.local days-valid=3650 key-size=2048 key-usage=digital-signature,key-encipherment,tls-server
+/certificate add name=rosgrid-ssl common-name="rosgrid-router.local" days-valid=3650 key-size=2048 key-usage=digital-signature,key-encipherment,tls-server
 
 # 2. Firmar el certificado localmente
-/certificate sign rosgrid-ssl
+/certificate sign rosgrid-ssl ca=my-ca
 
 # 3. Verificar el certificado firmado y obtener el Fingerprint SHA-256
 /certificate print detail where name=rosgrid-ssl
@@ -29,7 +29,7 @@ La comunicación entre RoSGrid y MikroTik se realiza **exclusivamente mediante l
 
 ```routeros
 # 1. Asignar el certificado y habilitar el servicio www-ssl en puerto 443
-/ip service set www-ssl certificate=rosgrid-ssl port=443 disabled=no tls-version=only-1.2,only-1.3
+/ip service set www-ssl certificate=rosgrid-ssl port=443 disabled=no tls-version=only-1.2
 
 # 2. Deshabilitar servicios inseguros y puertos innecesarios
 /ip service disable www

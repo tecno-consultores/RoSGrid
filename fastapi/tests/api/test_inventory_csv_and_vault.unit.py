@@ -18,6 +18,7 @@ from src.api.v1.inventory_helpers import (
     build_router_response,
     enrich_router_telemetry,
     perform_discovery,
+    row_to_commit_item,
     validate_single_csv_row,
 )
 from src.core.crypto import decrypt_aes_gcm, encrypt_aes_gcm
@@ -183,6 +184,41 @@ def test_validate_single_csv_row() -> None:
     is_valid3, errors3 = validate_single_csv_row(bad_row, existing, seen)
     assert is_valid3 is False
     assert len(errors3) >= 3
+
+
+def test_validate_single_csv_row_with_template_aliases() -> None:
+    existing = {"SN_EXISTING"}
+    seen: set[str] = set()
+
+    # Fila generada a partir de la plantilla descargada en la UI
+    template_row = {
+        "display_name": "CCR2004-Edge-Norte",
+        "ip_address": "192.168.10.1",
+        "api_port": "8728",
+        "ros_username": "api_admin",
+        "ros_password": "ClaveSegura123!",
+        "network_role": "EDGE_BGP",
+        "serial_number": "HE4011ABC123",
+        "latitude": "10.4806",
+        "longitude": "-66.9036",
+        "tags": "core;zona-norte",
+    }
+    is_valid, errors = validate_single_csv_row(template_row, existing, seen)
+    assert is_valid is True
+    assert len(errors) == 0
+
+    # Conversión a CsvCommitRowItem
+    item = row_to_commit_item(template_row)
+    assert item.display_name == "CCR2004-Edge-Norte"
+    assert item.api_base_url == "https://192.168.10.1"
+    assert item.api_port == 8728
+    assert item.api_username == "api_admin"
+    assert item.api_password == "ClaveSegura123!"
+    assert item.network_role == RouterNetworkRoleEnum.EDGE_BGP
+    assert item.serial_number == "HE4011ABC123"
+    assert item.latitude == Decimal("10.4806")
+    assert item.tags == ["core", "zona-norte"]
+
 
 
 def test_build_router_from_csv(test_tenant_id: uuid.UUID, test_user_id: uuid.UUID) -> None:

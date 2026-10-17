@@ -31,6 +31,7 @@ from src.api.v1.inventory_helpers import (
     build_router_response,
     enrich_router_telemetry,
     perform_discovery,
+    row_to_commit_item,
     validate_single_csv_row,
 )
 from src.core.audit import write_audit_log
@@ -51,6 +52,7 @@ from src.schemas.inventory import (
     CreateRouterRequest,
     CsvCommitRequest,
     CsvCommitResponse,
+    CsvCommitRowItem,
     CsvDryRunResponse,
     CsvDryRunRowPreview,
     RePinSSLRequest,
@@ -506,14 +508,21 @@ async def import_csv_dry_run(
     for row in reader:
         row_num += 1
         is_valid, errors = validate_single_csv_row(row, existing_serials, seen_serials)
-        previews.append(
-            CsvDryRunRowPreview(
-                row_number=row_num,
-                display_name=row.get("display_name", f"Fila {row_num}"),
-                is_valid=is_valid,
-                errors=errors,
-            )
+        name = (row.get("display_name") or row.get("name") or f"Fila {row_num}").strip()
+        url = (row.get("api_base_url") or row.get("ip_address") or row.get("ip") or "").strip()
+        sn = (row.get("serial_number") or row.get("serial") or "").strip()
+        err_msg = "; ".join(errors) if errors else None
+        item = CsvDryRunRowPreview(
+            line=row_num,
+            row_number=row_num,
+            display_name=name,
+            ip_address=url,
+            serial_number=sn,
+            is_valid=is_valid,
+            error=err_msg,
+            errors=errors,
         )
+        previews.append(item)
         if row_num > 501:
             raise HTTPException(status_code=400, detail="El archivo excede el límite de 500 filas")
 
@@ -524,13 +533,13 @@ async def import_csv_dry_run(
         valid_rows_count=valid_count,
         invalid_rows_count=invalid_count,
         can_proceed=invalid_count == 0 and valid_count > 0,
+        rows=previews,
         rows_preview=previews,
     )
 
 
 @router.post("/import-csv/commit", response_model=CsvCommitResponse)
 async def import_csv_commit(
-    payload: CsvCommitRequest,
     request: Request,
     claims: dict[str, Any] = Depends(
         require_roles(
@@ -548,8 +557,36 @@ async def import_csv_commit(
     user_id = uuid.UUID(claims["sub"])
     await _check_tenant_router_quota(db, tenant_id)
 
+    content_type = request.headers.get("content-type", "")
+    items: list[CsvCommitRowItem] = []
+
+    if "multipart/form-data" in content_type:
+        form = await request.form()
+        upload = form.get("file")
+        if upload is None or not hasattr(upload, "read"):
+            raise HTTPException(status_code=400, detail="Debe proporcionar un archivo CSV en el campo 'file'")
+        content = await upload.read()
+        try:
+            decoded = content.decode("utf-8-sig")
+        except UnicodeDecodeError as exc:
+            raise HTTPException(status_code=400, detail="El archivo debe tener codificación UTF-8 válida") from exc
+        reader = csv.DictReader(io.StringIO(decoded))
+        serials_res = await db.execute(select(Router.serial_number).where(Router.tenant_id == tenant_id))
+        existing_serials = set(serials_res.scalars().all())
+        seen_serials: set[str] = set()
+        for row in reader:
+            is_valid, _ = validate_single_csv_row(row, existing_serials, seen_serials)
+            if is_valid:
+                items.append(row_to_commit_item(row))
+        if not items:
+            raise HTTPException(status_code=400, detail="El archivo CSV no contiene filas válidas para importar")
+    else:
+        body = await request.json()
+        payload = CsvCommitRequest.model_validate(body)
+        items = payload.rows
+
     created_ids = []
-    for item in payload.rows:
+    for item in items:
         r, tags, vault = build_router_from_csv(item, tenant_id, user_id)
         db.add(r)
         await db.flush()
