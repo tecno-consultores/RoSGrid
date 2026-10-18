@@ -42,17 +42,26 @@
       'display_name,ip_address,api_port,ros_username,ros_password,network_role,serial_number,latitude,longitude,tags';
     const sample =
       'CCR2004-Edge-Norte,192.168.10.1,8728,api_admin,ClaveSegura123!,EDGE_BGP,HE4011ABC123,10.4806,-66.9036,core;zona-norte';
-    const content = `${headers}\n${sample}\n`;
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
+    const content = `\uFEFF${headers}\r\n${sample}\r\n`;
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
     const url =
       typeof URL.createObjectURL === 'function' ? URL.createObjectURL(blob) : 'blob:sample';
     const link = document.createElement('a');
+    link.style.display = 'none';
     link.href = url;
     link.download = 'rosgrid-inventario-plantilla.csv';
-    link.click();
-    if (typeof URL.revokeObjectURL === 'function') {
-      URL.revokeObjectURL(url);
+    if (typeof document !== 'undefined' && document.body) {
+      document.body.appendChild(link);
     }
+    link.click();
+    setTimeout(() => {
+      if (link.parentNode) {
+        link.parentNode.removeChild(link);
+      }
+      if (typeof URL.revokeObjectURL === 'function') {
+        URL.revokeObjectURL(url);
+      }
+    }, 1000);
   }
 
   async function handleDryRunSubmit() {

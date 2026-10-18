@@ -108,44 +108,70 @@
     selectedLog.value = log;
   }
 
+  function escapeCsvCell(val: unknown): string {
+    if (val === null || val === undefined) return '""';
+    const str = String(val).replace(/"/g, '""');
+    return `"${str}"`;
+  }
+
+  function downloadBlob(blob: Blob, filename: string) {
+    const url =
+      typeof URL.createObjectURL === 'function' ? URL.createObjectURL(blob) : 'blob:audit';
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.setAttribute('download', filename);
+    if (typeof document !== 'undefined' && document.body) {
+      document.body.appendChild(a);
+    }
+    a.click();
+    setTimeout(() => {
+      if (a.parentNode) {
+        a.parentNode.removeChild(a);
+      }
+      if (typeof URL.revokeObjectURL === 'function') {
+        URL.revokeObjectURL(url);
+      }
+    }, 1000);
+  }
+
   function exportReport(format: 'json' | 'csv') {
-    let content = '';
-    let mime = 'text/plain';
+    const dateStr = new Date().toISOString().slice(0, 10);
     if (format === 'json') {
-      content = JSON.stringify(filteredLogs.value, null, 2);
-      mime = 'application/json';
+      const content = JSON.stringify(filteredLogs.value, null, 2);
+      const blob = new Blob([content], { type: 'application/json;charset=utf-8;' });
+      downloadBlob(blob, `rosgrid-audit-report-${dateStr}.json`);
     } else {
       const headers = [
-        'id',
-        'created_at',
-        'actor_username',
-        'actor_role',
-        'action_category',
-        'action_name',
-        'http_status',
-        'sha256_hash',
+        'ID',
+        'Fecha y Hora (UTC)',
+        'Usuario',
+        'Rol',
+        'Categoría',
+        'Acción',
+        'Router',
+        'IP Origen',
+        'Código HTTP',
+        'Hash Criptográfico SHA-256',
       ];
       const rows = filteredLogs.value.map((l) => [
-        l.id,
-        l.created_at,
-        l.actor_username,
-        l.actor_role,
-        l.action_category,
-        l.action_name,
-        l.http_status,
-        l.record_sha256_hash,
+        escapeCsvCell(l.id),
+        escapeCsvCell(l.created_at),
+        escapeCsvCell(l.actor_username),
+        escapeCsvCell(l.actor_role),
+        escapeCsvCell(l.action_category),
+        escapeCsvCell(l.action_name),
+        escapeCsvCell(l.router_name || 'N/A'),
+        escapeCsvCell(l.source_ip || '127.0.0.1'),
+        escapeCsvCell(l.http_status),
+        escapeCsvCell(l.record_sha256_hash),
       ]);
-      content = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-      mime = 'text/csv';
+      const csvBody = [headers.map(escapeCsvCell).join(','), ...rows.map((r) => r.join(','))].join('\r\n');
+      // Anteponer '\uFEFF' (UTF-8 Byte Order Mark) para que Microsoft Excel, LibreOffice y visores CSV
+      // en Windows/Mac/Linux reconozcan la codificación UTF-8 sin corromper caracteres ni columnas.
+      const blob = new Blob(['\uFEFF' + csvBody], { type: 'text/csv;charset=utf-8;' });
+      downloadBlob(blob, `rosgrid-audit-report-${dateStr}.csv`);
     }
-
-    const blob = new Blob([content], { type: mime });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `rosgrid-audit-report.${format}`;
-    a.click();
-    URL.revokeObjectURL(url);
   }
 
   onMounted(() => {

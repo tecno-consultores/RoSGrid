@@ -242,7 +242,7 @@ async def export_audit_logs(
     records = list((await db.execute(stmt)).scalars().all())
 
     if export_format.lower() == "csv":
-        content_str = _build_export_csv(records)
+        content_str = "\ufeff" + _build_export_csv(records)
         media_type = "text/csv; charset=utf-8"
         filename = f"audit_export_{tenant_id}.csv"
     else:

@@ -662,9 +662,15 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
     const exportBtns = wrapper.findAll('.audit-header-actions .btn--secondary');
     if (exportBtns.length > 0) {
       await exportBtns[0].trigger('click'); // CSV
+      expect(createObjUrl).toHaveBeenCalled();
+      const csvBlob = createObjUrl.mock.calls[0][0] as Blob;
+      expect(csvBlob.type).toContain('text/csv');
     }
     if (exportBtns.length > 1) {
       await exportBtns[1].trigger('click'); // JSON
+      expect(createObjUrl).toHaveBeenCalledTimes(2);
+      const jsonBlob = createObjUrl.mock.calls[1][0] as Blob;
+      expect(jsonBlob.type).toContain('application/json');
     }
   });
 
