@@ -54,7 +54,17 @@ chmod 600 .env
 
 Para conocer todos los parámetros avanzados de despliegue, puertos y topologías de red, consulta [docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md](./docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md).
 
-### Opción A: Despliegue en Producción desde Docker Hub (Recomendado para ISP / NOC)
+### Método Asistido Rápido (Recomendado — 1 Solo Comando)
+Para una instalación turnkey sin fricción, ejecuta el asistente interactivo. Este valida automáticamente los prerrequisitos del host, genera claves criptográficas seguras de 256 bits en `.env`, corre la auditoría de seguridad Trivy IaC, levanta el stack Docker y guía la creación interactiva del Super Administrador:
+
+~~~bash
+chmod +x ./instalar-rosgrid.sh
+./instalar-rosgrid.sh
+~~~
+
+---
+
+### Opción A: Despliegue Manual en Producción desde Docker Hub (ISP / NOC)
 Utiliza las imágenes oficiales precompiladas, inmutables y sin privilegios (`non-root`) publicadas en Docker Hub (`sinfallas/rosgrid-backend:latest` y `sinfallas/rosgrid-frontend:latest`). En este modo (`ROSGRID_ENV=production`), la documentación interactiva Swagger/ReDoc está **deshabilitada por seguridad** (consulta `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`).
 
 ~~~bash

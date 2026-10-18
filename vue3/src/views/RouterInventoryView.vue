@@ -46,7 +46,15 @@
   const actionMessage = ref('');
   const actionError = ref('');
 
-  const networkRoles = computed(() => inventoryStore.networkRoles);
+  const networkRoles = computed(() => {
+    const rolesSet = new Set<string>(inventoryStore.networkRoles);
+    for (const r of inventoryStore.routers) {
+      if (r.network_role) {
+        rolesSet.add(r.network_role);
+      }
+    }
+    return Array.from(rolesSet);
+  });
 
   const filteredRouters = computed<RouterItem[]>(() => {
     return inventoryStore.routers.filter((r) => {

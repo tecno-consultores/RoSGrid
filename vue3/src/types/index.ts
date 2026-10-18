@@ -293,6 +293,7 @@ export interface BackupItem {
   created_at: string;
   last_verified_identical_at?: string;
   size_bytes?: number;
+  has_binary_backup?: boolean;
 }
 
 export interface BulkJobItem {

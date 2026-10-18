@@ -8,6 +8,26 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ## [Unreleased]
 
+### Added
+- **Hub de Monitoreo Táctico "Mission Control":**
+  - Panel integrado en Wallboard con telemetría en vivo, consumo agregado de ancho de banda (Tx/Rx), distribución de flota por roles de red y latencia de sondas.
+  - Transiciones cinemáticas fluidas aceleradas por hardware entre vistas (Wallboard, Inventario, WebFig).
+  - Integración de apertura directa de WebFig desde el popup del mapa geográfico de Wallboard.
+- **Gestión Avanzada de Respaldos y Comparador Visual Diff:**
+  - Selección interactiva directa sobre cualquier tarjeta de respaldo de los últimos 30 días para comparaciones base/objetivo con badges de estado `[🔵 BASE]` y `[🟢 OBJETIVO]`.
+  - Detección precisa de archivos `.backup` binarios vs scripts `.rsc` y descarga con encoding binario `application/octet-stream`.
+- **Roles de Red Personalizados y Auto-Registro Dinámico en CSV:**
+  - Endpoint `POST /api/v1/inventory/roles` para crear y listar roles personalizados de infraestructura MikroTik.
+  - Auto-registro seguro en base de datos (`tenant_custom_roles`) de roles de red no predefinidos cuando se importan equipos por archivo CSV.
+  - Integración de los roles en los filtros del Wallboard, Inventario y Acciones Masivas.
+- **Facilidad de Instalación y Documentación de Almacenamiento S3:**
+  - Mejoras en `instalar-rosgrid.sh` para detección y muestra exacta del puerto asignado en modo producción local (8085) vs oficial (8080).
+  - Documentación técnica sobre arquitectura de almacenamiento de respaldos en base de datos PostgreSQL vs AWS S3 / MinIO con cifrado `AES-256-GCM` del lado del cliente.
+
+### Fixed
+- **Descarga de Respaldos Binarios `.backup`:** Corrección del endpoint para evitar servir scripts `.rsc` renombrados cuando no existe respaldo binario nativo, y configuración de `responseType: 'blob'` en frontend para prevenir corrupción de bytes.
+- **Botón "Abrir WebFig" en Wallboard:** Conexión del evento `@open-webfig` entre `OsmRouterMap` y el enrutador de Vue para navegación inmediata al router seleccionado.
+
 ### Pendiente para publicación oficial
 - Auditoría final de vulnerabilidades Trivy (`CRITICAL,HIGH = 0`) en imágenes Docker de producción (Hito 16).
 - Publicación multi-arquitectura con `./build.sh` hacia Docker Hub (`sinfallas/rosgrid-backend:1.0.0` y `sinfallas/rosgrid-frontend:1.0.0`).

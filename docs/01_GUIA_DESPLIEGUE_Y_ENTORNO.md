@@ -263,3 +263,45 @@ Este pipeline ejecuta 6 fases exhaustivas:
   * El motor en memoria multi-hilo **KeyDB** requiere instrucciones atómicas de 64 bits (`CAS64`) y carece de imágenes oficiales para 32 bits.
   * **PostgreSQL 17** ha discontinuado los builds oficiales de 32 bits en Alpine Linux.
   * El espacio virtual de memoria está topado en 2 GB por proceso, incompatible con la telemetría concurrente y los índices BRIN.
+
+### 7.5 Arquitectura de Almacenamiento de Respaldos e Integración con AWS S3 / MinIO
+
+#### ¿Dónde se almacenan actualmente los respaldos?
+RoSGrid utiliza una estrategia dual según la naturaleza del respaldo:
+1. **Respaldos de Configuración Exportada (`.rsc`):**
+   - **Ubicación:** Tabla central `router_backups` en **PostgreSQL 17**.
+   - **Cifrado en Reposo:** Cifrados simétricamente a nivel de campo con **AES-256-GCM** (`rsc_ciphertext`, `rsc_iv`, `rsc_tag`) mediante la llave maestra `ROSGRID_MASTER_VAULT_KEY`.
+   - **Aislamiento Multi-Tenant:** Cada registro incluye Datos Asociados Autenticados (AAD) vinculados al inquilino (`f"{tenant_id}:{router_id}"`), garantizando que ninguna consulta o tenant rival pueda descifrarlo fuera de su contexto.
+   - **Retención y Auditoría:** Administrado por la política `ROSGRID_BACKUP_RETENTION_DAYS` (predeterminado 30 días) y registrado en la bitácora WORM.
+2. **Instantáneas Binarias Nativas RouterOS (`.backup`):**
+   - **Ubicación:** Volumen persistente Docker montado en `/var/lib/rosgrid/backups/` (`rosgrid_backups_storage` en producción o `rosgrid_backups_local` en pruebas locales).
+   - **Formato:** Archivos de volcado binario nativo generados directamente por `/system/backup/save` en RouterOS v7.
+
+#### Propuesta y Arquitectura para Almacenamiento en AWS S3 / S3-Compatible
+La externalización de respaldos hacia **AWS S3** o proveedores compatibles con la S3 API (**MinIO**, **Ceph Object Gateway**, **Cloudflare R2**, **Backblaze B2**) es una excelente práctica para infraestructuras ISP de alta escala:
+
+```mermaid
+graph LR
+    Worker[RoSGrid Worker] -->|1. Exporta RSC / Backup| MT[MikroTik RouterOS v7]
+    Worker -->|2. Client-Side AES-256-GCM| CryptEngine[Crypto Vault Engine]
+    CryptEngine -->|3. PutObject ciphertext| S3[AWS S3 / MinIO Bucket]
+    Worker -->|4. Metadata & Checksum| PG[(PostgreSQL 17 - RLS)]
+    
+    subgraph "Políticas de Seguridad en S3"
+        S3 --> WORM[S3 Object Lock: COMPLIANCE 30 días]
+        S3 --> SSE[SSE-KMS / SSE-C Opcional]
+        S3 --> Path[Prefijo /tenant_id/router_id/backup_id.enc]
+    end
+```
+
+**Principios de Implementación para S3:**
+1. **Cifrado en Origen (*Client-Side Envelope Encryption*):**
+   - El worker de RoSGrid cifra los datos con **AES-256-GCM** antes de transmitirlos mediante la AWS SDK (`aioboto3`). De esta manera, el proveedor en la nube (AWS / MinIO) solo almacena texto cifrado y nunca tiene acceso a las llaves de la bóveda ni a las contraseñas de red de los routers.
+2. **Partición Estricta por Tenant (*Key Prefix Partitioning*):**
+   - Ruta en el bucket: `s3://<bucket>/tenants/{tenant_id}/routers/{router_id}/{backup_id}.rsc.enc`
+   - Los permisos IAM y las políticas de bucket pueden restringir lecturas y escrituras por prefijo de tenant si se desea delegar accesos específicos.
+3. **Inmutabilidad WORM (*Write Once, Read Many*) con S3 Object Lock:**
+   - Habilitando **S3 Object Lock en Modo Compliance**, los respaldos quedan legalmente protegidos contra borrado o sobreescritura accidental o maliciosa durante el periodo de retención legal (ej. 30 días), igualando la política de inmutabilidad de la bitácora forense de RoSGrid.
+4. **Resiliencia Geográfica y Disaster Recovery (DR):**
+   - Posibilidad de activar replicación multi-región (CRR - *Cross-Region Replication*) para recuperación instantánea ante desastres mayores en el centro de datos principal.
+

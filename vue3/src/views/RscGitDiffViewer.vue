@@ -238,15 +238,36 @@
     if (currentDiffIndex.value > 0) currentDiffIndex.value--;
   }
 
+  function selectCardAsBase(id: string) {
+    selectedBaseId.value = id;
+    compareDiff();
+  }
+
+  function selectCardAsTarget(id: string) {
+    selectedTargetId.value = id;
+    compareDiff();
+  }
+
   async function downloadBackup(id: string, format: 'rsc' | 'backup') {
     try {
-      const res = await http.get<string>(
-        `/api/v1/routers/${routerId.value}/backups/${id}/download?format=${format}`,
-      );
-      const filename = `rosgrid-backup-${id.slice(0, 8)}.${format}`;
-      const blob = new Blob([String(res.data)], {
-        type: format === 'rsc' ? 'text/plain' : 'application/octet-stream',
+      const endpoint = `/api/v1/routers/${routerId.value}/backups/${id}/download?format=${format}`;
+      const res = await fetch(endpoint, {
+        credentials: 'include',
+        headers: { Accept: format === 'rsc' ? 'text/plain' : 'application/octet-stream' },
       });
+      if (!res.ok) {
+        let errorMsg = 'Error al descargar el archivo de respaldo.';
+        try {
+          const errJson = await res.json();
+          if (errJson?.detail) errorMsg = errJson.detail;
+        } catch {
+          // ignore non-json error responses
+        }
+        error.value = errorMsg;
+        return;
+      }
+      const blob = await res.blob();
+      const filename = `rosgrid-backup-${id.slice(0, 8)}.${format}`;
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -254,14 +275,7 @@
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      const filename = `rosgrid-backup-${id.slice(0, 8)}.${format}`;
-      const blob = new Blob([baseContent.value || ''], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
+      error.value = 'Error al descargar el archivo de respaldo.';
     }
   }
 
@@ -360,13 +374,26 @@
             v-for="b in backups"
             :key="b.id"
             class="backup-card"
-            :class="{ 'backup-card--selected': selectedBaseId === b.id }"
+            :class="{
+              'backup-card--selected': selectedBaseId === b.id,
+              'backup-card--target': selectedTargetId === b.id,
+            }"
+            tabindex="0"
+            role="button"
+            :aria-label="`Seleccionar respaldo ${new Date(b.created_at).toLocaleString()} como base`"
+            @click="selectCardAsBase(b.id)"
+            @keydown.enter="selectCardAsBase(b.id)"
+            @keydown.space.prevent="selectCardAsBase(b.id)"
           >
             <div class="backup-card-top">
               <span class="backup-date">
                 {{ new Date(b.created_at).toLocaleString() }}
               </span>
-              <span class="ros-tag">v{{ b.ros_version_at_backup }}</span>
+              <div class="backup-top-badges">
+                <span v-if="selectedBaseId === b.id" class="badge-pill badge-pill--base">🔵 BASE</span>
+                <span v-if="selectedTargetId === b.id" class="badge-pill badge-pill--target">🟢 OBJETIVO</span>
+                <span class="ros-tag">v{{ b.ros_version_at_backup }}</span>
+              </div>
             </div>
 
             <div class="backup-hash" :title="b.sha256_hash">
@@ -380,6 +407,9 @@
               <span class="badge badge--removed" title="Líneas eliminadas">
                 -{{ b.lines_removed }}
               </span>
+              <span v-if="b.has_binary_backup" class="badge badge--bin-available" title="Archivo binario .backup disponible">
+                📦 .backup
+              </span>
             </div>
 
             <div class="backup-actions">
@@ -387,10 +417,8 @@
                 type="button"
                 class="btn-text"
                 :class="{ 'btn-text--active': selectedBaseId === b.id }"
-                @click="
-                  selectedBaseId = b.id;
-                  compareDiff();
-                "
+                title="Fijar como Base (panel izquierdo)"
+                @click.stop="selectCardAsBase(b.id)"
               >
                 Base (Izq)
               </button>
@@ -398,10 +426,8 @@
                 type="button"
                 class="btn-text"
                 :class="{ 'btn-text--active': selectedTargetId === b.id }"
-                @click="
-                  selectedTargetId = b.id;
-                  compareDiff();
-                "
+                title="Fijar como Objetivo (panel derecho)"
+                @click.stop="selectCardAsTarget(b.id)"
               >
                 Objetivo (Der)
               </button>
@@ -410,16 +436,18 @@
                 class="btn-icon"
                 title="Descargar script .rsc"
                 aria-label="Descargar script .rsc"
-                @click="downloadBackup(b.id, 'rsc')"
+                @click.stop="downloadBackup(b.id, 'rsc')"
               >
                 📜
               </button>
               <button
                 type="button"
                 class="btn-icon"
-                title="Descargar binario .backup"
+                :class="{ 'btn-icon--disabled': !b.has_binary_backup }"
+                :disabled="!b.has_binary_backup"
+                :title="b.has_binary_backup ? 'Descargar binario .backup nativo' : 'Este punto no tiene archivo .backup binario (solo script .rsc)'"
                 aria-label="Descargar binario .backup"
-                @click="downloadBackup(b.id, 'backup')"
+                @click.stop="downloadBackup(b.id, 'backup')"
               >
                 💾
               </button>
@@ -715,16 +743,68 @@
   .backup-card {
     background: #1e293b;
     border: 1px solid #334155;
-    border-radius: 4px;
+    border-radius: 6px;
     padding: 0.75rem;
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .backup-card:hover {
+    border-color: #475569;
+    background: #253349;
+    transform: translateY(-1px);
   }
 
   .backup-card--selected {
-    border-color: #38bdf8;
-    background: #1e2e4a;
+    border-color: #38bdf8 !important;
+    background: #1e2e4a !important;
+    box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4);
+  }
+
+  .backup-card--target {
+    border-color: #34d399 !important;
+    box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.4);
+  }
+
+  .backup-top-badges {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .badge-pill {
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 0.1rem 0.35rem;
+    border-radius: 9999px;
+    letter-spacing: 0.05em;
+  }
+
+  .badge-pill--base {
+    background: rgba(56, 189, 248, 0.2);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.6);
+  }
+
+  .badge-pill--target {
+    background: rgba(52, 211, 153, 0.2);
+    color: #34d399;
+    border: 1px solid rgba(52, 211, 153, 0.6);
+  }
+
+  .badge--bin-available {
+    background: rgba(168, 85, 247, 0.2);
+    color: #c084fc;
+    border: 1px solid rgba(168, 85, 247, 0.4);
+  }
+
+  .btn-icon--disabled {
+    opacity: 0.35;
+    cursor: not-allowed !important;
+    pointer-events: none;
   }
 
   .backup-card-top {

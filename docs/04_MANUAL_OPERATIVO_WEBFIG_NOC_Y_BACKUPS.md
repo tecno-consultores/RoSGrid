@@ -106,22 +106,33 @@ sequenceDiagram
 ## 6. Comparador Visual de Respaldos Diff estilo Git (`RscGitDiffViewer.vue`)
 
 Ante incidentes o comportamientos anómalos de red, el comparador de configuraciones `.rsc` permite identificar con precisión forense qué línea cambió:
+- **Selección Interactiva en Tarjetas:** Los respaldos de los últimos 30 días se organizan en tarjetas visuales interactivas (`.backup-card`). El operador puede hacer clic directamente en cualquier tarjeta para designarla como configuración **[🔵 BASE]** o usar el botón para asignarla como **[🟢 OBJETIVO]**, permitiendo comparaciones entre cualquier par de fechas sin restricciones.
 - **Comparación Bidireccional:** Compara dos respaldos históricos cifrados entre sí o compara cualquier respaldo histórico contra la configuración en vivo (`LIVE`).
 - **Limpieza de Ruido Volátil:** Filtra automáticamente marcas de tiempo volátiles de RouterOS (`# jan/01/1970 00:00:00 by RouterOS`).
 - **Vista Lado a Lado / Unificada:** Resalta en rojo las líneas eliminadas (`-`) y en verde las adiciones (`+`) agrupadas por secciones de menú (ej. `/ip firewall nat`, `/routing bgp`).
+- **Descargas Seguras de Respaldos (`.rsc` vs `.backup`):**
+  - **Script `.rsc` (Texto Plano Cifrado):** Exportación completa en comandos RouterOS legible y auditable. Descargable en cualquier momento para inspección en editores de texto.
+  - **Binario Nativo `.backup`:** Archivo binario de restauración total generado por MikroTik (`/system backup save`). El botón de descarga binaria (`💾`) valida la existencia del binario nativo en el almacenamiento persistente y lo transmite con encoding `application/octet-stream` (`responseType: 'blob'`), garantizando integridad bit a bit y previniendo archivos corruptos.
 
 ---
 
-## 7. Importación Masiva CSV y Ventanas de Mantenimiento
+## 7. Importación Masiva CSV, Roles Dinámicos y Ventanas de Mantenimiento
 
 - **Asistente CSV en 2 Pasos (`CsvOnboardingWizardModal.vue`):** Permite subir archivos CSV con cientos de routers (IP, puerto, credenciales iniciales, rol y coordenadas GPS), validando la sintaxis antes de insertar masivamente en la base de datos.
+- **Roles de Red Personalizados y Auto-Registro Dinámico:**
+  - Los administradores pueden definir roles personalizados adaptados a su topología (`POST /api/v1/inventory/roles`).
+  - **Manejo de Roles No Predefinidos en CSV:** Si se importa un CSV con roles de red nuevos que no existían en el desplegable, RoSGrid los detecta automáticamente, los registra de forma segura en la tabla `tenant_custom_roles` de PostgreSQL y los habilita de inmediato en los desplegables de filtrado y edición sin interrumpir el proceso de importación.
 - **Ventanas de Mantenimiento (`MaintenanceWindowsView.vue`):** Programa periodos de gracia operativa en los que se silencian automáticamente las alertas hacia los canales de notificación (Telegram, Email, Webhooks), evitando falsas alarmas durante trabajos programados de madrugada.
 
 ---
 
-## 8. Pantalla Gigante Wallboard NOC (`NocWallboardView.vue`)
+## 8. Pantalla Gigante Wallboard NOC y Hub "Mission Control" (`NocWallboardView.vue`)
 
 Diseñada para salas de control y pantallas de monitoreo 24/7 en centros de operaciones (NOC):
+- **Hub Táctico "Mission Control":**
+  - Muestra métricas agregadas en vivo: ancho de banda total transmitido y recibido (Tx/Rx), desglose de equipos por rol operativo, latencia de sondas activas y porcentaje de salud global del parque de routers.
+  - Transiciones cinemáticas fluidas con aceleración por hardware (`will-change`, CSS cubic-bezier) para alternar entre el mapa geográfico y el panel de analítica.
+- **Apertura Directa de WebFig:** Al seleccionar un router en el mapa interactivo (Leaflet / OpenStreetMap), el popup de inspección rápida incluye el botón **"Abrir WebFig"**, que redirige inmediatamente a la consola operativa en vivo (`/routers/:id/webfig/live`) del equipo seleccionado.
 - **Diseño *Dark High-Contrast*:** Fondo oscuro profundo con acentos Cyan tácticos para visualización clara a distancia.
 - **Alertas Sonoras y Visuales:** Emite tonos discretos y destellos perimetrales en tiempo real ante caídas de routers (`OFFLINE`), enlaces caídos o degradación óptica en módulos SFP.
-- **Integración Cartográfica:** Muestra la ubicación geográfica de los nodos en un mapa interactivo con OpenStreetMap (Leaflet).
+

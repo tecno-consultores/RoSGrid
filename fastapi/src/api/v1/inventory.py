@@ -728,6 +728,31 @@ async def import_csv_commit(
         items = payload.rows
 
     created_ids = []
+
+    # Auto-registrar roles dinámicos presentes en el CSV que no sean estándar
+    standard_roles = {r.value for r in RouterNetworkRoleEnum}
+    csv_roles = {
+        item.network_role
+        for item in items
+        if item.network_role and item.network_role not in standard_roles
+    }
+    if csv_roles:
+        existing_custom_res = await db.execute(
+            select(TenantCustomRole.role_name).where(
+                TenantCustomRole.tenant_id == tenant_id,
+                TenantCustomRole.role_name.in_(csv_roles),
+            )
+        )
+        existing_custom_roles = set(existing_custom_res.scalars().all())
+        for new_role_name in csv_roles - existing_custom_roles:
+            db.add(
+                TenantCustomRole(
+                    tenant_id=tenant_id,
+                    role_name=new_role_name,
+                    description="Rol detectado e importado automáticamente desde archivo CSV",
+                )
+            )
+
     for item in items:
         r, tags, vault = build_router_from_csv(item, tenant_id, user_id)
         db.add(r)

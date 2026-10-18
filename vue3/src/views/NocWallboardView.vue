@@ -3,9 +3,12 @@
 
 <script setup lang="ts">
   import { ref, computed, onMounted, onUnmounted } from 'vue';
+  import { useRouter } from 'vue-router';
   import OsmRouterMap from '@/components/inventory/OsmRouterMap.vue';
   import type { RouterItem } from '@/types';
   import { http } from '@/api/httpClient';
+
+  const router = useRouter();
 
   interface NocEvent {
     id: string;
@@ -22,6 +25,10 @@
   // Routers reales obtenidos del inventario
   const routers = ref<RouterItem[]>([]);
   const selectedRouterId = ref<string | null>(null);
+
+  function handleOpenWebFig(routerId: string) {
+    router.push(`/routers/${routerId}/webfig/live`);
+  }
 
   // KPIs
   const totalRouters = computed(() => routers.value.length);
@@ -190,6 +197,7 @@
           :selected-router-id="selectedRouterId"
           :zoom-level="12"
           @select-router="handleSelectRouter"
+          @open-webfig="handleOpenWebFig"
         />
       </section>
 

@@ -7,6 +7,7 @@ import asyncio
 import difflib
 import hashlib
 import logging
+import os
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -328,14 +329,29 @@ async def download_backup_file(
     claims: dict[str, Any] = Depends(require_roles(*_ALLOWED_BACKUP_ROLES)),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Response:
-    """Descarga el respaldo .rsc descifrado en texto plano."""
+    """Descarga el respaldo (.rsc descifrado en texto plano o .backup binario)."""
     tenant_id = uuid.UUID(claims["tid"])
     backup = await db.get(RouterBackup, backup_id)
     if not backup or backup.tenant_id != tenant_id or backup.router_id != router_id:
         raise HTTPException(status_code=404, detail="Respaldo no encontrado")
 
+    if format == "backup":
+        if not backup.binary_backup_file_path or not os.path.exists(backup.binary_backup_file_path):
+            raise HTTPException(
+                status_code=400,
+                detail="Este punto de restauración solo contiene el script de configuración .rsc. No existe archivo binario .backup nativo para este punto.",
+            )
+        with open(backup.binary_backup_file_path, "rb") as f:
+            bin_data = f.read()
+        fname = f"rosgrid-backup-{router_id}-{str(backup.id)[:8]}.backup"
+        return Response(
+            content=bin_data,
+            media_type="application/octet-stream",
+            headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+        )
+
     rsc_text = clean_rsc_export_comments(_decrypt_backup_rsc(backup, tenant_id))
-    fname = f"rosgrid-backup-{router_id}-{str(backup.id)[:8]}.{format}"
+    fname = f"rosgrid-backup-{router_id}-{str(backup.id)[:8]}.rsc"
     return Response(
         content=rsc_text,
         media_type="text/plain; charset=utf-8",
