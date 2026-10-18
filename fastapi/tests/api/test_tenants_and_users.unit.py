@@ -219,6 +219,30 @@ async def test_users_endpoints(async_client: AsyncClient, superadmin_auth: dict[
         assert res_reset.status_code == 200
         assert res_reset.json()["status"] == "2fa_reset_completed"
         assert u.totp_enabled is False
+
+        # 3. Crear usuario usando alias password
+        db_create = MockDbSession(users=[])
+        app.dependency_overrides[get_db_session] = lambda: db_create
+        body_user = {
+            "username": "operador_l2",
+            "email": "l2@acme.com",
+            "full_name": "Operador Nivel 2",
+            "password": "PasswordSegura123!",
+            "role": "SUPPORT_L2",
+            "has_all_routers_access": False,
+            "allowed_cidr_list": [],
+        }
+        res_create = await async_client.post(
+            "/api/v1/users",
+            json=body_user,
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res_create.status_code == 201
+        data_create = res_create.json()
+        assert data_create["username"] == "operador_l2"
+        assert data_create["email"] == "l2@acme.com"
+        assert data_create["role"] == "SUPPORT_L2"
+        assert data_create["is_active"] is True
     finally:
         app.dependency_overrides.pop(get_db_session, None)
 

@@ -3,8 +3,9 @@
 
 import uuid
 from datetime import datetime
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 from src.models.core import SystemRoleEnum
 
@@ -12,11 +13,33 @@ from src.models.core import SystemRoleEnum
 class CreateUserRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=64)
     email: EmailStr
-    full_name: str = Field(..., min_length=3, max_length=150)
-    temporary_password: str = Field(..., min_length=8)
+    full_name: str = Field(default="", max_length=150)
+    temporary_password: str | None = Field(None, min_length=8)
+    password: str | None = Field(None, min_length=8)
     role: SystemRoleEnum
     has_all_routers_access: bool = False
     allowed_cidr_list: list[str] = Field(default_factory=list)
+
+    @field_validator("allowed_cidr_list", mode="before")
+    @classmethod
+    def normalize_cidr_list(cls, v: Any) -> list[str]:
+        if v is None:
+            return []
+        if isinstance(v, str):
+            return [s.strip() for s in v.split(",") if s.strip()]
+        return v
+
+    @model_validator(mode="after")
+    def validate_password_and_fullname(self) -> "CreateUserRequest":
+        if not self.temporary_password and not self.password:
+            raise ValueError(
+                "Se requiere una contraseña temporal ('temporary_password' o 'password') de al menos 8 caracteres."
+            )
+        if not self.temporary_password:
+            self.temporary_password = self.password
+        if not self.full_name or not self.full_name.strip():
+            self.full_name = self.username
+        return self
 
 
 class UpdateUserRequest(BaseModel):

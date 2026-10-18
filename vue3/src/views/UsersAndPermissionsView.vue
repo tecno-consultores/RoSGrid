@@ -243,33 +243,26 @@
           .split(',')
           .map((s) => s.trim())
           .filter(Boolean)
-      : undefined;
+      : [];
 
     try {
-      const res = await http.post<{ user: UserManagementItem }>('/api/v1/users', {
+      const payload = {
         username: newUser.value.username.trim(),
         email: newUser.value.email.trim(),
+        temporary_password: newUser.value.password,
         password: newUser.value.password,
-        full_name: newUser.value.full_name.trim(),
+        full_name: newUser.value.full_name.trim() || newUser.value.username.trim(),
         role: newUser.value.role,
         allowed_cidr_list: cidrList,
-        has_all_routers_access: newUser.value.has_all_routers_access,
-      });
+        has_all_routers_access: Boolean(newUser.value.has_all_routers_access),
+      };
 
-      usersList.value.push(
-        res.data.user || {
-          id: `u-${Date.now()}`,
-          username: newUser.value.username.trim(),
-          email: newUser.value.email.trim(),
-          full_name: newUser.value.full_name.trim(),
-          role: newUser.value.role,
-          totp_enabled: false,
-          is_active: true,
-          allowed_cidr_list: cidrList,
-          has_all_routers_access: newUser.value.has_all_routers_access,
-          created_at: new Date().toISOString(),
-        },
-      );
+      const res = await http.post<UserManagementItem | { user: UserManagementItem }>('/api/v1/users', payload);
+
+      const createdUser = (res.data && 'user' in res.data ? res.data.user : res.data) as UserManagementItem;
+      if (createdUser && createdUser.id) {
+        usersList.value.push(createdUser);
+      }
 
       isCreateUserModalOpen.value = false;
       successMessage.value = `Usuario @${newUser.value.username} creado exitosamente.`;
@@ -283,9 +276,24 @@
         allowed_cidr_list: '',
         has_all_routers_access: false,
       };
+      await loadUsers();
     } catch (err: unknown) {
-      const error = err as { message?: string; detail?: string };
-      errorMessage.value = error.detail || error.message || 'Error al crear el operador.';
+      const error = err as {
+        detail?: string;
+        message?: string;
+        data?: { detail?: string | Array<{ msg: string }> };
+      };
+      let detailStr = '';
+      if (typeof error.data?.detail === 'string') {
+        detailStr = error.data.detail;
+      } else if (Array.isArray(error.data?.detail)) {
+        detailStr = error.data.detail.map((d) => d.msg).join(', ');
+      } else if (error.detail) {
+        detailStr = error.detail;
+      } else if (error.message) {
+        detailStr = error.message;
+      }
+      errorMessage.value = detailStr || 'Error al crear el operador.';
     } finally {
       isCreating.value = false;
     }
@@ -523,16 +531,25 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label for="u-fullname" class="form-label">Nombre y Apellido</label>
-              <input id="u-fullname" v-model="newUser.full_name" type="text" class="form-input" />
+              <label for="u-fullname" class="form-label">Nombre y Apellido *</label>
+              <input
+                id="u-fullname"
+                v-model="newUser.full_name"
+                type="text"
+                required
+                placeholder="ej. Carlos Rodríguez"
+                class="form-input"
+              />
             </div>
             <div class="form-group">
-              <label for="u-password" class="form-label">Contraseña Temporal *</label>
+              <label for="u-password" class="form-label">Contraseña Temporal (Mínimo 8 car.) *</label>
               <input
                 id="u-password"
                 v-model="newUser.password"
                 type="password"
                 required
+                minlength="8"
+                placeholder="••••••••"
                 class="form-input"
               />
             </div>
