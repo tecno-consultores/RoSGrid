@@ -4,6 +4,7 @@
 <script setup lang="ts">
   import { ref, computed, onMounted, onUnmounted } from 'vue';
   import { useRoute } from 'vue-router';
+  import { useInventoryStore } from '@/stores/useInventoryStore';
   import { http } from '@/api/httpClient';
   import type { BackupItem } from '@/types';
 
@@ -15,7 +16,11 @@
   }
 
   const route = useRoute();
-  const routerId = computed(() => (route.params.routerId as string) || 'r-01');
+  const inventoryStore = useInventoryStore();
+  const selectedRouterId = ref<string>('');
+  const routerId = computed(() => {
+    return (route.params.routerId as string) || selectedRouterId.value || inventoryStore.routers[0]?.id || '';
+  });
 
   const loading = ref(false);
   const diffLoading = ref(false);
@@ -215,8 +220,16 @@
     URL.revokeObjectURL(url);
   }
 
-  onMounted(() => {
-    loadBackups();
+  onMounted(async () => {
+    if (inventoryStore.routers.length === 0) {
+      await inventoryStore.fetchRouters();
+    }
+    if (!selectedRouterId.value && inventoryStore.routers.length > 0) {
+      selectedRouterId.value = (route.params.routerId as string) || inventoryStore.routers[0].id;
+    }
+    if (routerId.value) {
+      await loadBackups();
+    }
     window.addEventListener('keydown', handleKeydown);
   });
 
@@ -238,10 +251,27 @@
       </div>
 
       <div class="diff-header-actions">
+        <label v-if="!route.params.routerId && inventoryStore.routers.length > 0" class="filter-label">
+          Router:
+          <select
+            v-model="selectedRouterId"
+            class="form-select"
+            aria-label="Seleccionar router para respaldos"
+            @change="loadBackups"
+          >
+            <option
+              v-for="r in inventoryStore.routers"
+              :key="r.id"
+              :value="r.id"
+            >
+              {{ r.display_name }} ({{ r.ip_address }})
+            </option>
+          </select>
+        </label>
         <button
           type="button"
           class="btn btn--primary"
-          :disabled="creatingBackup"
+          :disabled="creatingBackup || !routerId"
           @click="createManualBackup"
         >
           <span v-if="creatingBackup">⏳ Generando...</span>

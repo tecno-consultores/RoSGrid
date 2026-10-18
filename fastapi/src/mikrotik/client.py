@@ -51,7 +51,7 @@ class MikrotikRestClient:
         self,
         host: str,
         port: int = 443,
-        username: str = "admin",
+        username: str = "",
         password: str = "",  # nosec B107
         previous_password: str | None = None,
         ssl_pinned_fingerprint: str | None = None,

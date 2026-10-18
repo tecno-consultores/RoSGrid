@@ -233,6 +233,7 @@ async def get_resource(
         supports_safe_mode=True,
         columns_schema=columns,
         items=items,
+        form_data=items[0] if is_singleton and items else None,
     )
 
 

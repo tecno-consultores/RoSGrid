@@ -54,7 +54,12 @@
       const res = await http.get<Layer2ResourceResponse>(
         `/api/v1/routers/${routerId.value}/webfig/layer2/resource/${rosPath.value}`,
       );
-      resourceData.value = res.data;
+      resourceData.value = {
+        ...res.data,
+        form_data:
+          res.data.form_data ||
+          (res.data.is_singleton && res.data.items?.[0] ? { ...res.data.items[0] } : {}),
+      };
     } catch (err: any) {
       resourceData.value = {
         ros_path: rosPath.value,
@@ -172,18 +177,19 @@
         <div v-for="(val, key) in resourceData.form_data" :key="key" class="form-field">
           <label :for="`field-${key}`" class="field-label">{{ key }}:</label>
           <input
-            v-if="typeof val !== 'boolean'"
+            v-if="typeof val === 'boolean' || val === 'true' || val === 'false'"
             :id="`field-${key}`"
-            v-model="resourceData.form_data[key]"
-            type="text"
-            class="field-input"
+            :checked="val === true || val === 'true'"
+            type="checkbox"
+            class="field-checkbox"
+            @change="resourceData.form_data[key] = ($event.target as HTMLInputElement).checked ? 'true' : 'false'"
           />
           <input
             v-else
             :id="`field-${key}`"
             v-model="resourceData.form_data[key]"
-            type="checkbox"
-            class="field-checkbox"
+            type="text"
+            class="field-input"
           />
         </div>
 

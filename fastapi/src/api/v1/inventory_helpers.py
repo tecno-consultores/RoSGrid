@@ -203,7 +203,9 @@ def row_to_commit_item(row: dict[str, str]) -> CsvCommitRowItem:
     port_val = (row.get("api_port") or "").strip()
     port = int(port_val) if port_val and port_val.isdigit() else 443
 
-    user = (row.get("api_username") or row.get("ros_username") or row.get("username") or "admin").strip()
+    user = (row.get("api_username") or row.get("ros_username") or row.get("username") or "").strip()
+    if not user:
+        raise ValueError(f"Fila con display_name='{row.get('display_name', '')}' no especifica usuario (ros_username o api_username).")
     pwd = (row.get("api_password") or row.get("ros_password") or row.get("password") or "").strip()
 
     role_str = (row.get("network_role") or "EDGE_BGP").strip().upper()

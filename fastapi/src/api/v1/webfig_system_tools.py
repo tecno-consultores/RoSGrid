@@ -354,8 +354,9 @@ async def run_ping(
         "address": payload.address,
         "count": payload.count,
         "size": payload.size,
-        "routing-table": payload.routing_table,
     }
+    if payload.routing_table and payload.routing_table != "main":
+        body["vrf"] = payload.routing_table
     if payload.src_address:
         body["src-address"] = payload.src_address
     if payload.interface:

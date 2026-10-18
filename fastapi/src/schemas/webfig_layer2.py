@@ -57,6 +57,7 @@ class DynamicLayer2CollectionResponse(StrictBaseModel):
     supports_safe_mode: bool
     columns_schema: list[ColumnSchemaItem] = Field(default_factory=list)
     items: list[dict[str, Any]] = Field(default_factory=list)
+    form_data: dict[str, Any] | None = None
 
 
 class DynamicLayer2WriteRequest(StrictBaseModel):

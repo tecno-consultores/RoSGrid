@@ -3,6 +3,7 @@
 
 """Motor de Respaldos RouterOS v7 (.rsc/.backup), Deduplicación SHA-256 y Comparador Diff estilo Git."""
 
+import asyncio
 import difflib
 import hashlib
 import logging
@@ -19,6 +20,7 @@ from src.api.v1.webfig_common import get_router_and_client
 from src.core.audit import write_audit_log
 from src.core.crypto import decrypt_aes_gcm, encrypt_aes_gcm
 from src.db.session import get_tenant_db_session
+from src.mikrotik.client import MikrotikRestClient
 from src.models.core import SystemRoleEnum
 from src.models.operations import RouterBackup
 from src.schemas.backups import (
@@ -67,6 +69,35 @@ def _extract_raw_rsc_text(export_res: Any) -> str:
     if isinstance(export_res, dict):
         return str(export_res.get("ret", export_res.get("detail", str(export_res))))
     return str(export_res)
+
+
+async def export_router_rsc(client: MikrotikRestClient) -> str:
+    """Exporta configuración completa del router leyendo el archivo temporal .rsc y limpiándolo."""
+    fname = f"rosgrid_bk_{uuid.uuid4().hex[:8]}"
+    raw_text = ""
+    try:
+        await client.post("export", json_data={"file": fname, "show-sensitive": "false"})
+        await asyncio.sleep(1.0)
+        files = await client.get("file")
+        if isinstance(files, list):
+            target_files = [f for f in files if f.get("name") in (f"{fname}.rsc", fname)]
+            if target_files:
+                tf = target_files[0]
+                raw_text = tf.get("contents", "")
+                file_id = tf.get(".id")
+                if file_id:
+                    try:
+                        await client.delete(f"file/{file_id}")
+                    except Exception as del_err:
+                        logger.debug("Error eliminando archivo temporal en router: %s", del_err)
+    except Exception as exc:
+        logger.warning("Fallo al exportar via archivo en router: %s", exc)
+
+    if not raw_text:
+        raw_res = await client.post("export", json_data={"terse": "false", "show-sensitive": "false"})
+        raw_text = _extract_raw_rsc_text(raw_res)
+
+    return clean_rsc_export_comments(raw_text)
 
 
 def _compute_diff_stats(base_lines: list[str], target_lines: list[str]) -> tuple[int, int, list[str]]:
@@ -157,9 +188,7 @@ async def trigger_backup(
     user_id = uuid.UUID(claims["sub"])
     router_obj, client = await get_router_and_client(router_id, claims, db)
 
-    raw_res = await client.post("export", {"terse": "false", "show-sensitive": "false"})
-    raw_text = _extract_raw_rsc_text(raw_res)
-    cleaned_rsc = clean_rsc_export_comments(raw_text)
+    cleaned_rsc = await export_router_rsc(client)
 
     rsc_hash = hashlib.sha256(cleaned_rsc.encode("utf-8")).hexdigest()
     now_utc = datetime.now(UTC)

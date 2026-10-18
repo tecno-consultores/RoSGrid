@@ -64,7 +64,10 @@
     if (inventoryStore.routers && inventoryStore.routers.length > 0) {
       fleetRouters.value = inventoryStore.routers.map((r) => ({
         id: r.id,
-        identity: r.ros_identity || r.display_name,
+        identity:
+          r.ros_identity && r.ros_identity !== r.display_name
+            ? `${r.display_name} (${r.ros_identity})`
+            : r.display_name,
         ip_address: r.ip_address || '',
         network_role: r.network_role || 'CORE_ROUTER',
         tag: (r as any).tags?.[0] || 'datacenter-central',

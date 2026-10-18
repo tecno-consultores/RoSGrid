@@ -13,7 +13,7 @@ from typing import Any
 from sqlalchemy import desc, select
 from sqlalchemy.orm import selectinload
 
-from src.api.v1.backups import clean_rsc_export_comments
+from src.api.v1.backups import clean_rsc_export_comments, export_router_rsc
 from src.api.v1.webfig_common import _create_client_from_vault
 from src.core.crypto import encrypt_aes_gcm
 from src.db.session import async_session_maker
@@ -59,9 +59,7 @@ async def _backup_single_router(session: Any, r: Router) -> None:
         return
     client = _create_client_from_vault(r, r.tenant_id)
     try:
-        raw_res = await client.post("export", {"terse": "false", "show-sensitive": "false"})
-        raw_text = str(raw_res) if not isinstance(raw_res, str) else raw_res
-        cleaned_rsc = clean_rsc_export_comments(raw_text)
+        cleaned_rsc = await export_router_rsc(client)
         rsc_hash = hashlib.sha256(cleaned_rsc.encode("utf-8")).hexdigest()
         now_utc = datetime.now(UTC)
 

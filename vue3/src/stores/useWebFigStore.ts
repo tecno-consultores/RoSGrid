@@ -8,7 +8,7 @@ import type { RouterItem, RouterTabItem } from '@/types';
 export const MAX_OPEN_TABS = 5;
 
 const DEFAULT_DASHBOARD_TAB: RouterTabItem = {
-  tabId: 'live-dashboard',
+  tabId: 'RouterLiveDashboard',
   routeName: 'RouterLiveDashboard',
   label: 'Dashboard en Vivo',
   icon: '📊',
@@ -20,7 +20,7 @@ export const useWebFigStore = defineStore('webfig', () => {
 
   // Cola FIFO/LRU de hasta 5 pestañas activas
   const openRouterTabs = ref<RouterTabItem[]>([DEFAULT_DASHBOARD_TAB]);
-  const activeTabId = ref<string>('live-dashboard');
+  const activeTabId = ref<string>('RouterLiveDashboard');
 
   // Estado Safe Mode (Dead Man's Switch a 60s)
   const isSafeModeActive = ref<boolean>(false);
@@ -33,9 +33,11 @@ export const useWebFigStore = defineStore('webfig', () => {
   }
 
   function openOrFocusTab(tab: RouterTabItem): void {
-    const existingIndex = openRouterTabs.value.findIndex((t) => t.tabId === tab.tabId);
+    const existingIndex = openRouterTabs.value.findIndex(
+      (t) => t.tabId === tab.tabId || (t.routeName === tab.routeName && t.routeName === 'RouterLiveDashboard')
+    );
     if (existingIndex !== -1) {
-      activeTabId.value = tab.tabId;
+      activeTabId.value = openRouterTabs.value[existingIndex].tabId;
       return;
     }
 
