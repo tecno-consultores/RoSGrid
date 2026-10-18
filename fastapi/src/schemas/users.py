@@ -65,6 +65,14 @@ class RouterAssignmentItem(BaseModel):
 class AssignUserRoutersRequest(BaseModel):
     has_all_routers_access: bool = False
     router_assignments: list[RouterAssignmentItem] = Field(default_factory=list)
+    permissions: list[RouterAssignmentItem] | None = None
+
+    @model_validator(mode="after")
+    def unify_assignments(self) -> "AssignUserRoutersRequest":
+        if not self.router_assignments and self.permissions:
+            self.router_assignments = self.permissions
+        return self
+
 
 
 class UserResponse(BaseModel):

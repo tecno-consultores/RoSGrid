@@ -28,6 +28,7 @@ from src.models.core import SystemRoleEnum, Tenant, TenantStatusEnum, User
 from src.redis_layer.client import get_redis_client
 from src.redis_layer.sessions import (
     create_session,
+    kill_all_user_sessions,
     kill_session,
     rotate_refresh_token,
 )
@@ -288,6 +289,14 @@ async def _build_auth_session_response(
 ) -> AuthSessionResponse:
     ip_addr = request.client.host if request.client else "127.0.0.1"
     ua = request.headers.get("User-Agent", "Unknown")
+
+    # Política de Sesión Única: revocar cualquier sesión activa previa del usuario
+    await kill_all_user_sessions(
+        str(tenant_id),
+        str(user.id),
+        killed_by="AUTH_LOGIN",
+        reason="Nueva sesión iniciada (política de sesión única)",
+    )
 
     session_id, _family_id, initial_rt = await create_session(
         str(tenant_id),

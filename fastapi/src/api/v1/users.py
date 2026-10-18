@@ -116,6 +116,69 @@ async def create_user(
     return UserResponse.model_validate(new_user)
 
 
+@router.get("/{user_id}/router-permissions")
+async def get_user_router_permissions(
+    user_id: uuid.UUID,
+    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict[str, Any]:
+    tenant_id = uuid.UUID(claims["tid"])
+    is_sa = claims["rol"] == SystemRoleEnum.SUPERADMIN_GLOBAL.value
+    await set_tenant_context(db, tenant_id, is_superadmin=is_sa)
+
+    stmt_user = select(User).where(User.id == user_id)
+    if not is_sa:
+        stmt_user = stmt_user.where(User.tenant_id == tenant_id)
+    u_res = await db.execute(stmt_user)
+    target_user = u_res.scalar_one_or_none()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    target_tenant_id = target_user.tenant_id
+
+    from sqlalchemy.orm import selectinload
+    from src.models.inventory import Router
+
+    stmt_routers = (
+        select(Router)
+        .options(selectinload(Router.tags))
+        .where(Router.tenant_id == target_tenant_id)
+        .order_by(Router.display_name.asc())
+    )
+    routers = (await db.execute(stmt_routers)).scalars().all()
+
+    stmt_perms = select(UserRouterPermission).where(
+        UserRouterPermission.tenant_id == target_tenant_id, UserRouterPermission.user_id == user_id
+    )
+    perms_map = {p.router_id: p for p in (await db.execute(stmt_perms)).scalars().all()}
+
+    res_permissions = []
+    for r in routers:
+        p = perms_map.get(r.id)
+        tag_str = r.tags[0].tag_name if r.tags and len(r.tags) > 0 else ""
+        role_str = r.network_role.value if hasattr(r.network_role, "value") else str(r.network_role or "")
+        res_permissions.append(
+            {
+                "router_id": str(r.id),
+                "router_name": r.display_name,
+                "network_role": role_str,
+                "tag": tag_str,
+                "can_read": p.can_read if p else False,
+                "can_write_layer1": p.can_write_layer1 if p else False,
+                "can_write_layer2": p.can_write_layer2 if p else False,
+                "can_execute_diagnostics": p.can_execute_diagnostics if p else False,
+                "can_trigger_backup": p.can_trigger_backup if p else False,
+                "can_reboot": p.can_reboot if p else False,
+                "bypass_maker_checker": p.bypass_maker_checker if p else False,
+            }
+        )
+
+    return {
+        "has_all_routers_access": target_user.has_all_routers_access,
+        "permissions": res_permissions,
+    }
+
+
 @router.put("/{user_id}/router-permissions")
 async def assign_router_permissions(
     user_id: uuid.UUID,
@@ -127,24 +190,27 @@ async def assign_router_permissions(
     is_sa = claims["rol"] == SystemRoleEnum.SUPERADMIN_GLOBAL.value
     await set_tenant_context(db, tenant_id, is_superadmin=is_sa)
 
-    stmt_user = select(User).where(User.id == user_id, User.tenant_id == tenant_id)
+    stmt_user = select(User).where(User.id == user_id)
+    if not is_sa:
+        stmt_user = stmt_user.where(User.tenant_id == tenant_id)
     u_res = await db.execute(stmt_user)
     target_user = u_res.scalar_one_or_none()
     if not target_user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
+    target_tenant_id = target_user.tenant_id
     target_user.has_all_routers_access = body.has_all_routers_access
 
     # Limpiar asignaciones previas y crear nuevas
     stmt_del = delete(UserRouterPermission).where(
-        UserRouterPermission.tenant_id == tenant_id, UserRouterPermission.user_id == user_id
+        UserRouterPermission.tenant_id == target_tenant_id, UserRouterPermission.user_id == user_id
     )
     await db.execute(stmt_del)
 
     admin_uuid = uuid.UUID(claims["sub"])
     for item in body.router_assignments:
         perm = UserRouterPermission(
-            tenant_id=tenant_id,
+            tenant_id=target_tenant_id,
             user_id=user_id,
             router_id=item.router_id,
             can_read=item.can_read,

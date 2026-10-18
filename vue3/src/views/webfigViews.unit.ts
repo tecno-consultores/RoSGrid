@@ -17,6 +17,8 @@ import RoutingBgpOspfView from './RoutingBgpOspfView.vue';
 import PppAndQueuesView from './PppAndQueuesView.vue';
 import LiveToolsDiagnosticsView from './LiveToolsDiagnosticsView.vue';
 import DynamicLayer2ResourceView from './DynamicLayer2ResourceView.vue';
+import BridgeView from './BridgeView.vue';
+import WireGuardVpnView from './WireGuardVpnView.vue';
 import type { RouterItem, TelemetryPoint } from '@/types';
 
 const mockPush = vi.fn();
@@ -888,4 +890,93 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
 
     vi.useRealTimers();
   });
+
+  it('BridgeView — renderiza pestañas de bridges, puertos, vlans y hosts y maneja modales', async () => {
+    vi.spyOn(http, 'get').mockResolvedValue({
+      status: 200,
+      data: [{ name: 'bridge1', mac_address: '00:11:22:33:44:55', vlan_filtering: true, protocol_mode: 'rstp' }],
+      headers: new Headers(),
+    });
+    vi.spyOn(http, 'post').mockResolvedValue({
+      status: 201,
+      data: { status: 'success' },
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(BridgeView);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Gestor Bridge & VLAN Switching');
+    expect(wrapper.text()).toContain('Bridges');
+
+    const tabs = wrapper.findAll('.tab-btn');
+    expect(tabs.length).toBe(4);
+
+    // Cambiar a pestaña puertos
+    await tabs[1].trigger('click');
+    await flushPromises();
+
+    // Cambiar a pestaña vlans
+    await tabs[2].trigger('click');
+    await flushPromises();
+
+    // Cambiar a pestaña hosts
+    await tabs[3].trigger('click');
+    await flushPromises();
+
+    // Volver a bridges y abrir modal
+    await tabs[0].trigger('click');
+    await flushPromises();
+    const btnCreate = wrapper.find('.btn-primary');
+    if (btnCreate.exists()) {
+      await btnCreate.trigger('click');
+      expect(wrapper.find('.modal-card').exists()).toBe(true);
+      const form = wrapper.find('form.modal-form');
+      if (form.exists()) {
+        await form.trigger('submit.prevent');
+        await flushPromises();
+      }
+    }
+  });
+
+  it('WireGuardVpnView — renderiza interfaces y peers y registra nuevo túnel', async () => {
+    vi.spyOn(http, 'get').mockResolvedValue({
+      status: 200,
+      data: [{ name: 'wg0', listen_port: 13231, public_key: 'abcdef1234567890=', running: true }],
+      headers: new Headers(),
+    });
+    vi.spyOn(http, 'post').mockResolvedValue({
+      status: 201,
+      data: { status: 'success' },
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(WireGuardVpnView);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('VPN Moderna WireGuard');
+    expect(wrapper.text()).toContain('Interfaces de Túnel');
+
+    const tabs = wrapper.findAll('.tab-btn');
+    expect(tabs.length).toBe(2);
+
+    // Pestaña peers
+    await tabs[1].trigger('click');
+    await flushPromises();
+
+    // Volver a interfaces y crear túnel
+    await tabs[0].trigger('click');
+    await flushPromises();
+    const btnCreate = wrapper.find('.btn-primary');
+    if (btnCreate.exists()) {
+      await btnCreate.trigger('click');
+      expect(wrapper.find('.modal-card').exists()).toBe(true);
+      const form = wrapper.find('form.modal-form');
+      if (form.exists()) {
+        await form.trigger('submit.prevent');
+        await flushPromises();
+      }
+    }
+  });
 });
+

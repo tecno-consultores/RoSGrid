@@ -72,6 +72,28 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        path: 'bridge',
+        name: 'BridgeSwitching',
+        component: () => import('@/views/BridgeView.vue'),
+        meta: {
+          requiresAuth: true,
+          title: 'Bridge y Switching Capa 2 — RoSGrid',
+          tabLabel: 'Bridge',
+          tabIcon: '🌉',
+        },
+      },
+      {
+        path: 'wireguard',
+        name: 'WireGuardVpn',
+        component: () => import('@/views/WireGuardVpnView.vue'),
+        meta: {
+          requiresAuth: true,
+          title: 'WireGuard VPN — RoSGrid',
+          tabLabel: 'WireGuard',
+          tabIcon: '🛡️',
+        },
+      },
+      {
         path: 'firewall',
         name: 'FirewallRules',
         component: () => import('@/views/FirewallRulesView.vue'),

@@ -53,8 +53,9 @@
       hasAllRoutersAccess.value =
         res.data.has_all_routers_access ?? props.user.has_all_routers_access;
       permissionsList.value = res.data.permissions || [];
-    } catch {
-      // Sin datos de demostración en producción
+    } catch (err: unknown) {
+      const error = err as { message?: string; detail?: string };
+      errorMessage.value = error.detail || error.message || 'Error al cargar routers asignados.';
       permissionsList.value = [];
     } finally {
       isLoading.value = false;
@@ -116,6 +117,7 @@
     try {
       await http.put(`/api/v1/users/${props.user.id}/router-permissions`, {
         has_all_routers_access: hasAllRoutersAccess.value,
+        router_assignments: permissionsList.value,
         permissions: permissionsList.value,
       });
 

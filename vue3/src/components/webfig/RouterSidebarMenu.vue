@@ -138,6 +138,26 @@
           <button
             type="button"
             class="nav-item"
+            :class="{ 'nav-item--active': route.path.includes('/bridge') }"
+            @click="navigateTo('bridge')"
+          >
+            <span class="item-icon">🌉</span>
+            <span class="item-text">Bridge (VLANs, Puertos & FDB)</span>
+          </button>
+
+          <button
+            type="button"
+            class="nav-item"
+            :class="{ 'nav-item--active': route.path.includes('/wireguard') }"
+            @click="navigateTo('wireguard')"
+          >
+            <span class="item-icon">🛡️</span>
+            <span class="item-text">WireGuard VPN & Peers</span>
+          </button>
+
+          <button
+            type="button"
+            class="nav-item"
             :class="{ 'nav-item--active': route.path.includes('/firewall') }"
             @click="navigateTo('firewall')"
           >

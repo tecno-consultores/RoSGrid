@@ -28,7 +28,7 @@
   }
 
   const globalNavItems = computed<NavItem[]>(() => {
-    return [
+    const items: NavItem[] = [
       { name: 'DashboardRoot', path: '/', label: 'Centro de Mando', icon: '🎛️' },
       { name: 'RouterInventory', path: '/inventory', label: 'Inventario', icon: '🖥️' },
       {
@@ -56,6 +56,17 @@
       { name: 'UsersAndPermissions', path: '/users', label: 'Usuarios & RBAC', icon: '👥' },
       { name: 'ImmutableAuditLogs', path: '/audit-logs', label: 'Auditoría WORM', icon: '📜' },
     ];
+
+    if (authStore.currentRole === 'SUPERADMIN_GLOBAL') {
+      items.push({
+        name: 'TenantsManagement',
+        path: '/admin/tenants',
+        label: 'Empresas (Tenants)',
+        icon: '🏢',
+      });
+    }
+
+    return items;
   });
 
   function handleLogout(): void {

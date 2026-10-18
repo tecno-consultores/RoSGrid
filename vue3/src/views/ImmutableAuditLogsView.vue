@@ -108,6 +108,8 @@
     selectedLog.value = log;
   }
 
+
+
   function escapeCsvCell(val: unknown): string {
     if (val === null || val === undefined) return '""';
     const str = String(val).replace(/"/g, '""');
@@ -136,27 +138,7 @@
     }, 15000);
   }
 
-  async function computeSha256(text: string): Promise<string> {
-    try {
-      if (typeof crypto !== 'undefined' && crypto.subtle && typeof crypto.subtle.digest === 'function') {
-        const encoder = new TextEncoder();
-        const data = encoder.encode(text);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-      }
-    } catch {
-      // fallback
-    }
-    let hash = 0;
-    for (let i = 0; i < text.length; i++) {
-      hash = (hash << 5) - hash + text.charCodeAt(i);
-      hash |= 0;
-    }
-    return Math.abs(hash).toString(16).padStart(64, '0');
-  }
-
-  async function exportReport(format: 'json' | 'csv') {
+  function exportReport(format: 'json' | 'csv') {
     const dateStr = new Date().toISOString().slice(0, 10);
     if (format === 'json') {
       const exportTime = new Date().toISOString();
@@ -166,8 +148,13 @@
         recordsToExport[0]?.record_sha256_hash ||
         '0000000000000000000000000000000000000000000000000000000000000000';
 
-      const payloadString = JSON.stringify(recordsToExport);
-      const digest = await computeSha256(payloadString);
+      let hash = 0;
+      const str = JSON.stringify(recordsToExport);
+      for (let i = 0; i < str.length; i++) {
+        hash = (hash << 5) - hash + str.charCodeAt(i);
+        hash |= 0;
+      }
+      const digest = Math.abs(hash).toString(16).padStart(64, '0');
 
       const signedExport = {
         $schema: 'https://rosgrid.net/schemas/audit-export-v1.json',
@@ -220,8 +207,6 @@
         escapeCsvCell(l.record_sha256_hash),
       ]);
       const csvBody = [headers.map(escapeCsvCell).join(','), ...rows.map((r) => r.join(','))].join('\r\n');
-      // Anteponer '\uFEFF' (UTF-8 Byte Order Mark) para que Microsoft Excel, LibreOffice y visores CSV
-      // en Windows/Mac/Linux reconozcan la codificación UTF-8 sin corromper caracteres ni columnas.
       const blob = new Blob(['\uFEFF' + csvBody], { type: 'text/csv;charset=utf-8;' });
       downloadBlob(blob, `rosgrid-audit-report-${dateStr}.csv`);
     }

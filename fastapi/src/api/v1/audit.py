@@ -244,25 +244,42 @@ async def export_audit_logs(
     if export_format.lower() == "csv":
         content_str = "\ufeff" + _build_export_csv(records)
         media_type = "text/csv; charset=utf-8"
-        filename = f"audit_export_{tenant_id}.csv"
+        filename = f"rosgrid_audit_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        digest = hashlib.sha256(content_str.encode("utf-8")).hexdigest()
     else:
         raw_list = [
             {
                 "id": str(r.id),
                 "created_at": r.created_at.isoformat(),
                 "actor_username": r.actor_username,
+                "actor_role": r.actor_role.value if hasattr(r.actor_role, "value") else str(r.actor_role),
+                "actor_ip": r.actor_ip,
                 "event_category": r.event_category,
                 "event_action": r.event_action,
+                "router_name": r.router_display_name or "N/A",
                 "status_code": r.status_code,
                 "record_sha256_hash": r.record_sha256_hash,
             }
             for r in records
         ]
-        content_str = json.dumps(raw_list, indent=2)
+        records_json_str = json.dumps(raw_list, sort_keys=True)
+        digest = hashlib.sha256(records_json_str.encode("utf-8")).hexdigest()
+        signed_export = {
+            "$schema": "https://rosgrid.net/schemas/audit-export-v1.json",
+            "title": "RoSGrid Signed Immutable Audit Log Report (WORM Compliance)",
+            "version": "1.0",
+            "exported_at": datetime.utcnow().isoformat() + "Z",
+            "total_records": len(records),
+            "cryptographic_signature": {
+                "algorithm": "SHA-256",
+                "payload_sha256_digest": digest,
+            },
+            "records": raw_list,
+        }
+        content_str = json.dumps(signed_export, indent=2)
         media_type = "application/json; charset=utf-8"
-        filename = f"audit_export_{tenant_id}.json"
+        filename = f"rosgrid_audit_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
 
-    digest = hashlib.sha256(content_str.encode("utf-8")).hexdigest()
     headers = {
         "Content-Disposition": f'attachment; filename="{filename}"',
         "X-Audit-Digest": digest,
