@@ -45,7 +45,7 @@ find fastapi -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 find fastapi -type f -name "*.py[cod]" -delete 2>/dev/null || true
 
 echo "[3/4] Eliminando artefactos temporales del Frontend (vue3)..."
-rm -rf vue3/dist
+rm -rf vue3/dist 2>/dev/null || docker run --rm -v "$(pwd)/vue3:/app" alpine rm -rf /app/dist 2>/dev/null || true
 rm -rf vue3/.vite
 rm -rf vue3/coverage
 rm -rf vue3/.stryker-tmp
