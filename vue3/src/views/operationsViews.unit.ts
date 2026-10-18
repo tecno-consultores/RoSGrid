@@ -668,6 +668,7 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
     }
     if (exportBtns.length > 1) {
       await exportBtns[1].trigger('click'); // JSON
+      await flushPromises();
       expect(createObjUrl).toHaveBeenCalledTimes(2);
       const jsonBlob = createObjUrl.mock.calls[1][0] as Blob;
       expect(jsonBlob.type).toContain('application/json');

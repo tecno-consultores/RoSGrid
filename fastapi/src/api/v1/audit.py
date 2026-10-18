@@ -259,7 +259,7 @@ async def export_audit_logs(
             for r in records
         ]
         content_str = json.dumps(raw_list, indent=2)
-        media_type = "application/json"
+        media_type = "application/json; charset=utf-8"
         filename = f"audit_export_{tenant_id}.json"
 
     digest = hashlib.sha256(content_str.encode("utf-8")).hexdigest()
