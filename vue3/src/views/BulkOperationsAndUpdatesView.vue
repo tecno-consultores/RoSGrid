@@ -2,7 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { ref, computed, onMounted } from 'vue';
+  import { ref, computed, onMounted, watch } from 'vue';
   import { http } from '@/api/httpClient';
   import { useInventoryStore } from '@/stores/useInventoryStore';
 
@@ -58,31 +58,68 @@
     return fleetRouters.value.filter((r) => r.selected).length;
   });
 
+  const availableRoles = computed(() => {
+    const roles = new Set<string>();
+    fleetRouters.value.forEach((r) => {
+      if (r.network_role) roles.add(r.network_role);
+    });
+    return Array.from(roles);
+  });
+
+  const availableTags = computed(() => {
+    const tags = new Set<string>();
+    fleetRouters.value.forEach((r) => {
+      if (r.tag) tags.add(r.tag);
+    });
+    return Array.from(tags);
+  });
+
   const inventoryStore = useInventoryStore();
 
   function syncFleetFromInventory() {
     if (inventoryStore.routers && inventoryStore.routers.length > 0) {
-      fleetRouters.value = inventoryStore.routers.map((r) => ({
-        id: r.id,
-        identity:
+      fleetRouters.value = inventoryStore.routers.map((r) => {
+        const ip =
+          r.ip_address ||
+          (r.api_base_url
+            ? r.api_base_url.replace(/^https?:\/\//, '').split('/')[0].split(':')[0]
+            : '');
+        const role = r.network_role || 'CORE';
+        const rawTags = (r as any).tags;
+        let tag = 'datacenter-central';
+        if (Array.isArray(rawTags) && rawTags.length > 0) {
+          tag = typeof rawTags[0] === 'object' && rawTags[0]?.tag ? rawTags[0].tag : String(rawTags[0]);
+        }
+        const rosVer = r.ros_version || 'v7';
+        const identity =
           r.ros_identity && r.ros_identity !== r.display_name
             ? `${r.display_name} (${r.ros_identity})`
-            : r.display_name,
-        ip_address: r.ip_address || '',
-        network_role: r.network_role || 'CORE_ROUTER',
-        tag: (r as any).tags?.[0] || 'datacenter-central',
-        ros_version: r.ros_version || 'v7.16',
-        selected: true,
-      }));
+            : r.display_name;
+        return {
+          id: r.id,
+          identity,
+          ip_address: ip,
+          network_role: role,
+          tag,
+          ros_version: rosVer,
+          selected: true,
+        };
+      });
     } else {
       fleetRouters.value = [];
     }
   }
 
+  watch(
+    () => inventoryStore.routers,
+    () => {
+      syncFleetFromInventory();
+    },
+    { deep: true },
+  );
+
   onMounted(async () => {
-    if (inventoryStore.routers.length === 0) {
-      await inventoryStore.fetchRouters();
-    }
+    await inventoryStore.fetchRouters();
     syncFleetFromInventory();
     await fetchTemplates();
   });
@@ -284,10 +321,9 @@
               Rol:
               <select v-model="filterRole" class="form-select">
                 <option value="ALL">Todos los Roles</option>
-                <option value="CORE_ROUTER">CORE_ROUTER</option>
-                <option value="BORDER_BGP">BORDER_BGP</option>
-                <option value="BRANCH_CPE">BRANCH_CPE</option>
-                <option value="TOWER_AP">TOWER_AP</option>
+                <option v-for="role in availableRoles" :key="role" :value="role">
+                  {{ role }}
+                </option>
               </select>
             </label>
 
@@ -295,8 +331,9 @@
               Etiqueta:
               <select v-model="filterTag" class="form-select">
                 <option value="ALL">Todas las Etiquetas</option>
-                <option value="datacenter-central">datacenter-central</option>
-                <option value="zona-norte">zona-norte</option>
+                <option v-for="tag in availableTags" :key="tag" :value="tag">
+                  {{ tag }}
+                </option>
               </select>
             </label>
           </div>

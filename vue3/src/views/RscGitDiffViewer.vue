@@ -2,7 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { ref, computed, onMounted, onUnmounted } from 'vue';
+  import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
   import { useRoute } from 'vue-router';
   import { useInventoryStore } from '@/stores/useInventoryStore';
   import { http } from '@/api/httpClient';
@@ -38,14 +38,29 @@
   const targetContent = ref<string>('');
 
   async function loadBackups() {
+    if (!routerId.value) return;
     loading.value = true;
     error.value = null;
     try {
-      const res = await http.get<{ items: BackupItem[] }>(
+      const res = await http.get<{ items: any[] }>(
         `/api/v1/routers/${routerId.value}/backups`,
       );
-      backups.value = res.data?.items || [];
-    } catch {
+      const raw = res.data?.items || [];
+      backups.value = raw.map((b: any) => ({
+        id: String(b.id),
+        router_id: String(b.router_id || routerId.value),
+        filename: b.filename || `rosgrid-bk-${String(b.id).slice(0, 8)}.rsc`,
+        ros_version_at_backup: b.ros_version_at_backup || 'v7',
+        sha256_hash: b.rsc_sha256_hash || b.sha256_hash || '',
+        lines_added: Number(b.diff_lines_added ?? b.lines_added ?? 0),
+        lines_removed: Number(b.diff_lines_removed ?? b.lines_removed ?? 0),
+        size_bytes: Number(b.rsc_size_bytes ?? b.size_bytes ?? 0),
+        created_at: b.created_at,
+        has_binary_backup: Boolean(b.has_binary_backup),
+      }));
+    } catch (err: unknown) {
+      const e = err as { message?: string; detail?: string };
+      error.value = e.detail || e.message || 'Error al cargar respaldos del router.';
       backups.value = [];
     } finally {
       loading.value = false;
@@ -59,13 +74,14 @@
   async function createManualBackup() {
     creatingBackup.value = true;
     backupSuccessMsg.value = null;
+    error.value = null;
     try {
       await http.post(`/api/v1/routers/${routerId.value}/backups/trigger`);
-      backupSuccessMsg.value = 'Respaldo .rsc + .backup generado y encriptado exitosamente.';
+      backupSuccessMsg.value = 'Respaldo .rsc generado y encriptado exitosamente en la bóveda.';
       await loadBackups();
     } catch (err: unknown) {
-      const e = err as { message?: string; detail?: string };
-      error.value = e.detail || e.message || 'Error al solicitar generación de respaldo en el router.';
+      const e = err as { response?: { data?: { detail?: string } }; message?: string; detail?: string };
+      error.value = e.response?.data?.detail || e.detail || e.message || 'Error al solicitar generación de respaldo en el router.';
     } finally {
       creatingBackup.value = false;
       setTimeout(() => {
@@ -77,11 +93,26 @@
   async function compareDiff() {
     diffLoading.value = true;
     try {
-      if (backups.value.length === 0) {
+      if (backups.value.length === 0 || !selectedBaseId.value) {
         baseContent.value = '';
         targetContent.value = '';
         return;
       }
+      const targetParam = selectedTargetId.value || 'LIVE';
+      const q = new URLSearchParams({
+        base_backup_id: selectedBaseId.value,
+        target_backup_id: targetParam,
+      });
+      const res = await http.get<{
+        base_content?: string;
+        target_content?: string;
+        unified_diff_text?: string;
+      }>(`/api/v1/routers/${routerId.value}/backups/diff?${q.toString()}`);
+      if (res.data) {
+        baseContent.value = res.data.base_content || '';
+        targetContent.value = res.data.target_content || '';
+      }
+    } catch {
       baseContent.value = '';
       targetContent.value = '';
     } finally {
@@ -207,18 +238,43 @@
     if (currentDiffIndex.value > 0) currentDiffIndex.value--;
   }
 
-  function downloadBackup(id: string, format: 'rsc' | 'backup') {
-    const filename = `rosgrid-backup-${id}.${format}`;
-    const blob = new Blob([format === 'rsc' ? baseContent.value : 'BINARY_BACKUP_DUMMY_DATA'], {
-      type: format === 'rsc' ? 'text/plain' : 'application/octet-stream',
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
+  async function downloadBackup(id: string, format: 'rsc' | 'backup') {
+    try {
+      const res = await http.get<string>(
+        `/api/v1/routers/${routerId.value}/backups/${id}/download?format=${format}`,
+      );
+      const filename = `rosgrid-backup-${id.slice(0, 8)}.${format}`;
+      const blob = new Blob([String(res.data)], {
+        type: format === 'rsc' ? 'text/plain' : 'application/octet-stream',
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      const filename = `rosgrid-backup-${id.slice(0, 8)}.${format}`;
+      const blob = new Blob([baseContent.value || ''], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
   }
+
+  watch(
+    () => routerId.value,
+    (newVal) => {
+      if (newVal) {
+        selectedBaseId.value = '';
+        selectedTargetId.value = 'LIVE';
+        loadBackups();
+      }
+    },
+  );
 
   onMounted(async () => {
     if (inventoryStore.routers.length === 0) {
@@ -264,7 +320,7 @@
               :key="r.id"
               :value="r.id"
             >
-              {{ r.display_name }} ({{ r.ip_address }})
+              {{ r.display_name }} ({{ r.ip_address || (r.api_base_url ? r.api_base_url.replace(/^https?:\/\//, '').split('/')[0].split(':')[0] : '') }})
             </option>
           </select>
         </label>
@@ -314,7 +370,7 @@
             </div>
 
             <div class="backup-hash" :title="b.sha256_hash">
-              SHA: {{ b.sha256_hash.slice(0, 14) }}...
+              SHA: {{ b.sha256_hash ? b.sha256_hash.slice(0, 14) : '—' }}...
             </div>
 
             <div class="backup-diff-badges">

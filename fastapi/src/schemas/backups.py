@@ -62,3 +62,5 @@ class BackupGitDiffResponse(StrictBaseModel):
     lines_removed: int
     unified_diff_text: str
     side_by_side_hunks: list[BackupDiffHunk] = Field(default_factory=list)
+    base_content: str | None = None
+    target_content: str | None = None

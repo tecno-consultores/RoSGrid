@@ -11,7 +11,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -97,7 +97,13 @@ async def export_router_rsc(client: MikrotikRestClient) -> str:
         raw_res = await client.post("export", json_data={"terse": "false", "show-sensitive": "false"})
         raw_text = _extract_raw_rsc_text(raw_res)
 
-    return clean_rsc_export_comments(raw_text)
+    cleaned = clean_rsc_export_comments(raw_text)
+    if not cleaned:
+        raise HTTPException(
+            status_code=502,
+            detail="El router no devolvió configuración o no tiene permisos de exportación (requiere política 'ftp' en MikroTik).",
+        )
+    return cleaned
 
 
 def _compute_diff_stats(base_lines: list[str], target_lines: list[str]) -> tuple[int, int, list[str]]:
@@ -309,4 +315,29 @@ async def get_backup_diff(
         lines_removed=removed,
         unified_diff_text="\n".join(diff_lines),
         side_by_side_hunks=hunks,
+        base_content=base_rsc,
+        target_content=target_rsc,
+    )
+
+
+@router.get("/{backup_id}/download")
+async def download_backup_file(
+    router_id: uuid.UUID,
+    backup_id: uuid.UUID,
+    format: str = Query("rsc", pattern="^(rsc|backup)$"),
+    claims: dict[str, Any] = Depends(require_roles(*_ALLOWED_BACKUP_ROLES)),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Response:
+    """Descarga el respaldo .rsc descifrado en texto plano."""
+    tenant_id = uuid.UUID(claims["tid"])
+    backup = await db.get(RouterBackup, backup_id)
+    if not backup or backup.tenant_id != tenant_id or backup.router_id != router_id:
+        raise HTTPException(status_code=404, detail="Respaldo no encontrado")
+
+    rsc_text = clean_rsc_export_comments(_decrypt_backup_rsc(backup, tenant_id))
+    fname = f"rosgrid-backup-{router_id}-{str(backup.id)[:8]}.{format}"
+    return Response(
+        content=rsc_text,
+        media_type="text/plain; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
     )

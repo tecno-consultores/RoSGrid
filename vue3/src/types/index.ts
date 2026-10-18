@@ -36,7 +36,9 @@ export interface RouterItem {
   display_name: string;
   ros_identity?: string;
   ip_address: string;
+  api_base_url?: string;
   api_port: number;
+  tags?: string[] | Array<{ id?: string; tag: string }>;
   ros_version: string;
   architecture_name?: string;
   board_name?: string;
