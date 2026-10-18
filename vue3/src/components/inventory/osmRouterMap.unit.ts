@@ -172,4 +172,82 @@ describe('OsmRouterMap.vue — Mapa Interactivo Leaflet & OpenStreetMap', () => 
     });
     wrapper.unmount();
   });
+
+  it('agrupa 2 o más routers en la misma ubicación, crea pin con badge y muestra todos los equipos en el popup', async () => {
+    const createdMarkers: L.Marker[] = [];
+    const origMarker = L.marker;
+
+    vi.spyOn(L, 'marker').mockImplementation((coords, opts) => {
+      const m = origMarker(coords, opts);
+      createdMarkers.push(m);
+      return m;
+    });
+
+    // 2 routers exactamente en las mismas coordenadas (Caracas)
+    const coLocatedRouters: RouterItem[] = [
+      {
+        id: 'r-coloc-1',
+        tenant_id: 't-1',
+        display_name: 'Router-Rack-Principal',
+        ros_identity: 'CCR-Rack1',
+        ip_address: '10.10.10.1',
+        api_port: 8728,
+        ros_version: '7.18',
+        admin_state: 'PRODUCTION',
+        is_reachable: true,
+        latitude: 10.4806,
+        longitude: -66.9036,
+        network_role: 'EDGE_BGP',
+      },
+      {
+        id: 'r-coloc-2',
+        tenant_id: 't-1',
+        display_name: 'Router-Rack-Secundario',
+        ros_identity: 'RB-Rack2',
+        ip_address: '10.10.10.2',
+        api_port: 8728,
+        ros_version: '7.18',
+        admin_state: 'MAINTENANCE',
+        is_reachable: true,
+        latitude: 10.4806,
+        longitude: -66.9036,
+        network_role: 'CORE_AGGREGATION',
+      },
+    ];
+
+    const wrapper = mount(OsmRouterMap, {
+      props: {
+        routers: coLocatedRouters,
+      },
+    });
+
+    expect(wrapper.find('.osm-map-container').exists()).toBe(true);
+    expect(createdMarkers.length).toBe(1);
+
+    const clusterMarker = createdMarkers[0];
+    const popup = clusterMarker.getPopup();
+    expect(popup).toBeDefined();
+
+    if (popup) {
+      const content = popup.getContent() as HTMLElement;
+      expect(content.innerHTML).toContain('2 Routers en la misma ubicación');
+      expect(content.innerHTML).toContain('Router-Rack-Principal');
+      expect(content.innerHTML).toContain('Router-Rack-Secundario');
+      expect(content.innerHTML).toContain('10.10.10.1');
+      expect(content.innerHTML).toContain('10.10.10.2');
+
+      // Ambos botones de WebFig deben estar presentes
+      const webfigBtns = content.querySelectorAll('.btn-popup-webfig');
+      expect(webfigBtns.length).toBe(2);
+
+      // Ambos botones de selección deben estar presentes
+      const selectBtns = content.querySelectorAll('.btn-popup-select');
+      expect(selectBtns.length).toBe(2);
+    }
+
+    // Al hacer clic en el cluster, se emite selección y se despliegan los marcadores radiales (spiderfy)
+    clusterMarker.fire('click');
+    expect(wrapper.emitted('select-router')).toBeTruthy();
+    expect(createdMarkers.length).toBe(3); // 1 cluster + 2 radial spider markers
+  });
 });

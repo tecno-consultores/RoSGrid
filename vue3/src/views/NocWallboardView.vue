@@ -75,6 +75,14 @@
       if (raw.length > 0) {
         routers.value = raw.map((item: any) => ({
           ...item,
+          latitude:
+            item.latitude !== null && item.latitude !== undefined && item.latitude !== ''
+              ? Number(item.latitude)
+              : undefined,
+          longitude:
+            item.longitude !== null && item.longitude !== undefined && item.longitude !== ''
+              ? Number(item.longitude)
+              : undefined,
           ip_address:
             item.ip_address ||
             (item.api_base_url
