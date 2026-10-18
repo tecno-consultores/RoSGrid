@@ -15,7 +15,6 @@ from src.models.inventory import (
     Router,
     RouterAdminStateEnum,
     RouterCredentialsVault,
-    RouterNetworkRoleEnum,
     RouterTag,
     SSLTrustStatusEnum,
 )
@@ -209,10 +208,7 @@ def row_to_commit_item(row: dict[str, str]) -> CsvCommitRowItem:
     pwd = (row.get("api_password") or row.get("ros_password") or row.get("password") or "").strip()
 
     role_str = (row.get("network_role") or "EDGE_BGP").strip().upper()
-    try:
-        network_role = RouterNetworkRoleEnum(role_str)
-    except ValueError:
-        network_role = RouterNetworkRoleEnum.EDGE_BGP
+    network_role = role_str if role_str else "EDGE_BGP"
 
     state_str = (row.get("admin_state") or "PRODUCTION").strip().upper()
     try:

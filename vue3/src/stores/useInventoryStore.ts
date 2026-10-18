@@ -96,6 +96,47 @@ export const useInventoryStore = defineStore('inventory', () => {
     routers.value = routers.value.filter((r) => r.id !== routerId);
   }
 
+  // Roles de red configurables
+  const defaultRoles = [
+    'CORE',
+    'EDGE_BGP',
+    'WAN_BALANCER',
+    'BRAS_PPPOE',
+    'DISTRIBUTION_SWITCH',
+    'TOWER_AP',
+    'CORPORATE_CPE',
+  ];
+  const networkRoles = ref<string[]>([...defaultRoles]);
+  const customRoles = ref<Array<{ id: string; role_name: string; description?: string }>>([]);
+
+  async function fetchNetworkRoles(): Promise<void> {
+    try {
+      const { http } = await import('@/api/httpClient');
+      const res = await http.get<{ roles: string[]; custom_roles: Array<{ id: string; role_name: string; description?: string }> }>('/api/v1/inventory/network-roles');
+      if (res.data?.roles && res.data.roles.length > 0) {
+        networkRoles.value = res.data.roles;
+        customRoles.value = res.data.custom_roles || [];
+      }
+    } catch {
+      // Si la API falla temporalmente, se mantienen los roles existentes
+    }
+  }
+
+  async function createCustomRole(roleName: string, description?: string): Promise<void> {
+    const { http } = await import('@/api/httpClient');
+    await http.post('/api/v1/inventory/network-roles', {
+      role_name: roleName,
+      description: description || null,
+    });
+    await fetchNetworkRoles();
+  }
+
+  async function deleteCustomRole(roleName: string): Promise<void> {
+    const { http } = await import('@/api/httpClient');
+    await http.delete(`/api/v1/inventory/network-roles/${encodeURIComponent(roleName)}`);
+    await fetchNetworkRoles();
+  }
+
   return {
     routers,
     maintenanceWindows,
@@ -105,6 +146,8 @@ export const useInventoryStore = defineStore('inventory', () => {
     filterStatus,
     searchQuery,
     filteredRouters,
+    networkRoles,
+    customRoles,
     setRouters,
     updateRouter,
     setMaintenanceWindows,
@@ -112,5 +155,9 @@ export const useInventoryStore = defineStore('inventory', () => {
     clearInventory,
     fetchRouters,
     deleteRouter,
+    fetchNetworkRoles,
+    createCustomRole,
+    deleteCustomRole,
   };
 });
+

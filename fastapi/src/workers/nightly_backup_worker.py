@@ -13,7 +13,7 @@ from typing import Any
 from sqlalchemy import desc, select
 from sqlalchemy.orm import selectinload
 
-from src.api.v1.backups import clean_rsc_export_comments, export_router_rsc
+from src.api.v1.backups import export_router_rsc
 from src.api.v1.webfig_common import _create_client_from_vault
 from src.core.crypto import encrypt_aes_gcm
 from src.db.session import async_session_maker

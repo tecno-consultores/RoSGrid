@@ -66,9 +66,7 @@ class Router(Base):
     display_name: Mapped[str] = mapped_column(String(120), nullable=False)
     api_base_url: Mapped[str] = mapped_column(String(255), nullable=False)
     api_port: Mapped[int] = mapped_column(Integer, nullable=False, default=443)
-    network_role: Mapped[RouterNetworkRoleEnum] = mapped_column(
-        Enum(RouterNetworkRoleEnum, name="router_network_role_enum", create_type=False), nullable=False
-    )
+    network_role: Mapped[str] = mapped_column(String(64), nullable=False, default="CORE")
     admin_state: Mapped[RouterAdminStateEnum] = mapped_column(
         Enum(RouterAdminStateEnum, name="router_admin_state_enum", create_type=False),
         nullable=False,
@@ -194,3 +192,18 @@ class MaintenanceWindow(Base):
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+
+
+class TenantCustomRole(Base):
+    __tablename__ = "tenant_custom_roles"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "role_name", name="uq_tenant_custom_role"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    role_name: Mapped[str] = mapped_column(String(64), nullable=False)
+    description: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("now()"))

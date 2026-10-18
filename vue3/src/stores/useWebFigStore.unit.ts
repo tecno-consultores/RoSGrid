@@ -19,7 +19,7 @@ describe('useWebFigStore — Pestañas en RAM (Cola máx 5) y Safe Mode 60s', ()
   it('inicia con pestaña Dashboard por defecto y Safe Mode inactivo', () => {
     const store = useWebFigStore();
     expect(store.openRouterTabs.length).toBe(1);
-    expect(store.activeTabId).toBe('live-dashboard');
+    expect(store.activeTabId).toBe('RouterLiveDashboard');
     expect(store.isSafeModeActive).toBe(false);
     expect(store.safeModeCountdownSeconds).toBe(60);
   });
@@ -87,8 +87,8 @@ describe('useWebFigStore — Pestañas en RAM (Cola máx 5) y Safe Mode 60s', ()
 
     // Intentar cerrar pestaña inexistente y pestaña no cerrable (dashboard)
     store.closeTab('non-existent-tab');
-    store.closeTab('live-dashboard');
-    expect(store.openRouterTabs.some((t) => t.tabId === 'live-dashboard')).toBe(true);
+    store.closeTab('RouterLiveDashboard');
+    expect(store.openRouterTabs.some((t) => t.tabId === 'RouterLiveDashboard')).toBe(true);
   });
 
   it('activa Safe Mode con Dead Man Switch de 60s y cuenta regresiva', () => {
@@ -123,6 +123,6 @@ describe('useWebFigStore — Pestañas en RAM (Cola máx 5) y Safe Mode 60s', ()
     store.clearRouterWorkspace();
     expect(store.currentRouter).toBeNull();
     expect(store.openRouterTabs.length).toBe(1);
-    expect(store.activeTabId).toBe('live-dashboard');
+    expect(store.activeTabId).toBe('RouterLiveDashboard');
   });
 });

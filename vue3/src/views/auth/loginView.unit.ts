@@ -158,7 +158,7 @@ describe('LoginView.vue — Autenticación Multi-Tenant en 2 Etapas y 2FA TOTP',
 
     const authStore = useAuthStore();
     expect(authStore.isAuthenticated).toBe(true);
-    expect(mockPush).toHaveBeenCalledWith('/inventory');
+    expect(mockPush).toHaveBeenCalledWith('/');
   });
 
   it('pasa a etapa VERIFY_2FA_TOTP, maneja error de verificación y completa login al verificar código', async () => {
@@ -369,7 +369,7 @@ describe('LoginView.vue — Autenticación Multi-Tenant en 2 Etapas y 2FA TOTP',
 
     const authStore = useAuthStore();
     expect(authStore.isAuthenticated).toBe(true);
-    expect(mockPush).toHaveBeenCalledWith('/inventory');
+    expect(mockPush).toHaveBeenCalledWith('/');
   });
 
   it('muestra mensaje de error cuando fallan las credenciales', async () => {

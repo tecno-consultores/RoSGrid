@@ -20,10 +20,10 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     alias: ['/dashboard'],
     name: 'DashboardRoot',
-    component: () => import('@/views/RouterInventoryView.vue'),
+    component: () => import('@/views/DashboardHomeView.vue'),
     meta: {
       requiresAuth: true,
-      title: 'Dashboard — Flota MikroTik — RoSGrid',
+      title: 'Centro de Mando — Mission Control — RoSGrid',
     },
   },
   {

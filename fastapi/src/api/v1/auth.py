@@ -143,6 +143,10 @@ async def _verify_user_credentials(db: AsyncSession, user: User, password: str) 
             user.is_locked = True
             user.locked_until = datetime.fromtimestamp(time.time() + 900, UTC)
         await db.commit()
+        raise HTTPException(
+            status_code=401,
+            detail="Credenciales inválidas",
+        )
     if not user.is_active:
         raise HTTPException(
             status_code=403,

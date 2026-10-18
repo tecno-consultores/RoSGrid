@@ -11,7 +11,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from src.models.inventory import (
     RouterAdminStateEnum,
-    RouterNetworkRoleEnum,
     SSLTrustStatusEnum,
 )
 
@@ -27,13 +26,30 @@ class StrictBaseModel(BaseModel):
 # ============================================================================
 
 
+class CustomNetworkRoleCreate(StrictBaseModel):
+    role_name: str = Field(..., min_length=2, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
+    description: str | None = Field(default=None, max_length=255)
+
+
+class CustomNetworkRoleItem(StrictBaseModel):
+    id: uuid.UUID
+    role_name: str
+    description: str | None = None
+    created_at: datetime
+
+
+class NetworkRolesListResponse(StrictBaseModel):
+    roles: list[str]
+    custom_roles: list[CustomNetworkRoleItem]
+
+
 class CreateRouterRequest(StrictBaseModel):
     display_name: str = Field(..., min_length=2, max_length=120)
     api_base_url: str = Field(..., min_length=5, max_length=255)
     api_port: int = Field(default=443, ge=1, le=65535)
     api_username: str = Field(default="rosgrid_api_admin", min_length=1, max_length=64)
     api_password: str = Field(..., min_length=1)
-    network_role: RouterNetworkRoleEnum
+    network_role: str = Field(..., min_length=2, max_length=64)
     admin_state: RouterAdminStateEnum = RouterAdminStateEnum.PRODUCTION
     physical_location: str = Field(..., min_length=2, max_length=255)
     latitude: Decimal | None = Field(default=None, ge=-90, le=90)
@@ -52,7 +68,7 @@ class UpdateRouterRequest(StrictBaseModel):
     display_name: str | None = Field(default=None, min_length=2, max_length=120)
     api_base_url: str | None = Field(default=None, min_length=5, max_length=255)
     api_port: int | None = Field(default=None, ge=1, le=65535)
-    network_role: RouterNetworkRoleEnum | None = None
+    network_role: str | None = Field(default=None, min_length=2, max_length=64)
     admin_state: RouterAdminStateEnum | None = None
     physical_location: str | None = Field(default=None, min_length=2, max_length=255)
     latitude: Decimal | None = Field(default=None, ge=-90, le=90)
@@ -74,7 +90,7 @@ class RouterResponse(BaseModel):
     display_name: str
     api_base_url: str
     api_port: int
-    network_role: RouterNetworkRoleEnum
+    network_role: str
     admin_state: RouterAdminStateEnum
     physical_location: str
     latitude: Decimal | None = None
@@ -144,7 +160,7 @@ class CsvCommitRowItem(StrictBaseModel):
     api_port: int = Field(default=443, ge=1, le=65535)
     api_username: str = Field(default="rosgrid_api_admin", min_length=1, max_length=64)
     api_password: str = Field(..., min_length=1)
-    network_role: RouterNetworkRoleEnum
+    network_role: str = Field(default="EDGE_BGP", min_length=2, max_length=64)
     admin_state: RouterAdminStateEnum = RouterAdminStateEnum.PRODUCTION
     physical_location: str = Field(..., min_length=2, max_length=255)
     latitude: Decimal | None = Field(default=None, ge=-90, le=90)

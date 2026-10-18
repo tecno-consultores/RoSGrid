@@ -463,6 +463,7 @@ async def test_bulk_templates_and_jobs(fake_op_context: dict[str, Any]) -> None:
     )
     mock_t_list = MagicMock()
     mock_t_list.scalars.return_value.all.return_value = [tmpl]
+    mock_t_list.scalar_one_or_none.return_value = None
     db.execute.return_value = mock_t_list
 
     t_list = await api_bulk.list_templates(claims=claims, db=db)
@@ -476,8 +477,19 @@ async def test_bulk_templates_and_jobs(fake_op_context: dict[str, Any]) -> None:
         rest_steps_template=[{"method": "PUT", "path": "/ip/service"}],
         requires_safemode=False,
     )
-    c_res = await api_bulk.create_template(create_payload, claims=claims, db=db)
+    fake_req = MagicMock()
+    fake_req.client.host = "127.0.0.1"
+    fake_req.headers.get.return_value = "Pytest-Client"
+    c_res = await api_bulk.create_template(create_payload, fake_req, claims=claims, db=db)
     assert c_res.name == "New Template"
+
+    # Test update and delete template
+    update_payload = api_bulk.ConfigTemplateUpdateRequest(description="Updated description")
+    db.get.return_value = tmpl
+    u_res = await api_bulk.update_template(t_id, update_payload, fake_req, claims=claims, db=db)
+    assert u_res.description == "Updated description"
+
+    await api_bulk.delete_template(t_id, fake_req, claims=claims, db=db)
 
     db.get.return_value = tmpl
     prev_res = await api_bulk.preview_template(

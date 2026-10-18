@@ -279,7 +279,7 @@
     authStore.setAuth(user, csrfToken || 'csrf-session');
     const redirect =
       (route.query.redirect as string) ||
-      (user.role === 'NOC_MONITOR' ? '/noc-wallboard' : '/inventory');
+      (user.role === 'NOC_MONITOR' ? '/noc-wallboard' : '/');
     router.push(redirect);
   }
 

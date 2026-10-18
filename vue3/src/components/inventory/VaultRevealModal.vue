@@ -229,7 +229,7 @@
           <div class="vault-meta-grid">
             <div class="meta-item">
               <span class="meta-label">Usuario API MikroTik:</span>
-              <strong class="meta-value">{{ vaultData?.api_username || 'rosgrid_admin' }}</strong>
+              <strong class="meta-value">{{ vaultData?.api_username || 'rosgrid_svc' }}</strong>
             </div>
             <div class="meta-item">
               <span class="meta-label">Estado de Contraseña:</span>

@@ -29,6 +29,7 @@
 
   const globalNavItems = computed<NavItem[]>(() => {
     return [
+      { name: 'DashboardRoot', path: '/', label: 'Centro de Mando', icon: '🎛️' },
       { name: 'RouterInventory', path: '/inventory', label: 'Inventario', icon: '🖥️' },
       {
         name: 'NocWallboard',
@@ -151,7 +152,7 @@
             <router-link
               :to="item.path"
               class="rail-link"
-              :class="{ 'rail-link--active': route.path === item.path }"
+              :class="{ 'rail-link--active': route.path === item.path || (item.path === '/' && route.path === '/dashboard') }"
               @click="themeStore.closeMobileDrawer()"
             >
               <span class="rail-icon" aria-hidden="true">{{ item.icon }}</span>

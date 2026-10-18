@@ -12,6 +12,7 @@
   import OsmRouterMap from '@/components/inventory/OsmRouterMap.vue';
   import CsvOnboardingWizardModal from '@/components/inventory/CsvOnboardingWizardModal.vue';
   import VaultRevealModal from '@/components/inventory/VaultRevealModal.vue';
+  import ManageNetworkRolesModal from '@/components/inventory/ManageNetworkRolesModal.vue';
 
   const router = useRouter();
   const inventoryStore = useInventoryStore();
@@ -38,21 +39,14 @@
   // Modales
   const isCsvModalOpen = ref(false);
   const isVaultModalOpen = ref(false);
+  const isRolesModalOpen = ref(false);
   const targetRouterForVault = ref<RouterItem | null>(null);
 
   // Feedback de operaciones
   const actionMessage = ref('');
   const actionError = ref('');
 
-  const networkRoles = [
-    'CORE',
-    'EDGE_BGP',
-    'WAN_BALANCER',
-    'BRAS_PPPOE',
-    'DISTRIBUTION_SWITCH',
-    'TOWER_AP',
-    'CORPORATE_CPE',
-  ];
+  const networkRoles = computed(() => inventoryStore.networkRoles);
 
   const filteredRouters = computed<RouterItem[]>(() => {
     return inventoryStore.routers.filter((r) => {
@@ -167,6 +161,7 @@
     if (inventoryStore.routers.length === 0) {
       inventoryStore.fetchRouters();
     }
+    inventoryStore.fetchNetworkRoles();
   });
 </script>
 
@@ -213,6 +208,16 @@
         </div>
 
         <button
+          v-if="isVaultAuthorized"
+          type="button"
+          class="btn-manage-roles"
+          aria-label="Personalizar roles de red de equipos"
+          @click="isRolesModalOpen = true"
+        >
+          🏷️ Roles de Red
+        </button>
+
+        <button
           type="button"
           class="btn-import-csv"
           aria-label="Abrir asistente de importación CSV"
@@ -257,7 +262,18 @@
       </div>
 
       <div class="filter-item">
-        <label for="inv-role" class="filter-label">Rol en la Red:</label>
+        <div class="filter-label-wrap">
+          <label for="inv-role" class="filter-label">Rol en la Red:</label>
+          <button
+            v-if="isVaultAuthorized"
+            type="button"
+            class="btn-text-action"
+            title="Gestionar roles de red personalizados"
+            @click="isRolesModalOpen = true"
+          >
+            ⚙️ Personalizar
+          </button>
+        </div>
         <select id="inv-role" v-model="networkRoleFilter" class="filter-select">
           <option value="ALL">Todos los Roles</option>
           <option v-for="role in networkRoles" :key="role" :value="role">{{ role }}</option>
@@ -389,6 +405,11 @@
       :router="targetRouterForVault"
       @close="isVaultModalOpen = false"
     />
+
+    <ManageNetworkRolesModal
+      :is-open="isRolesModalOpen"
+      @close="isRolesModalOpen = false"
+    />
   </div>
 </template>
 
@@ -461,6 +482,50 @@
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
+  }
+
+  .btn-manage-roles {
+    background: rgba(14, 165, 233, 0.15);
+    border: 1px solid rgba(14, 165, 233, 0.4);
+    color: #38bdf8;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: monospace;
+    transition: all 0.2s;
+  }
+
+  .btn-manage-roles:hover {
+    background: rgba(14, 165, 233, 0.25);
+    border-color: #38bdf8;
+    color: #fff;
+  }
+
+  .filter-label-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .btn-text-action {
+    background: transparent;
+    border: none;
+    color: var(--rg-accent-cyan, #22d3ee);
+    font-size: 0.72rem;
+    font-family: monospace;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+    opacity: 0.85;
+    transition: opacity 0.15s;
+  }
+
+  .btn-text-action:hover {
+    opacity: 1;
+    color: #38bdf8;
   }
 
   .banner {

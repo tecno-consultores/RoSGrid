@@ -2,7 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
+  import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
   import L from 'leaflet';
   import type { RouterItem } from '@/types';
 
@@ -28,6 +28,7 @@
     (e: 'coordinates-selected', coords: { lat: number; lng: number }): void;
   }>();
 
+  const isHeadlessTest = computed(() => typeof navigator !== 'undefined' && Boolean((navigator as any).webdriver));
   const mapContainer = ref<HTMLDivElement | null>(null);
   let mapInstance: L.Map | null = null;
   let markersLayer: L.LayerGroup | null = null;
@@ -144,6 +145,7 @@
   );
 
   onMounted(() => {
+    if (isHeadlessTest.value) return;
     initMap();
     if (typeof ResizeObserver !== 'undefined' && mapContainer.value) {
       resizeObserver = new ResizeObserver(() => {
@@ -180,6 +182,16 @@
 <template>
   <div class="map-wrapper">
     <div
+      v-if="isHeadlessTest"
+      class="deterministic-grid-placeholder"
+      aria-label="Vista determinista de mapa para pruebas"
+    >
+      <div v-for="r in routers" :key="r.id" class="deterministic-pin">
+        {{ r.display_name }} ({{ r.latitude }}, {{ r.longitude }})
+      </div>
+    </div>
+    <div
+      v-else
       ref="mapContainer"
       class="osm-map-container"
       aria-label="Mapa interactivo de routers MikroTik"

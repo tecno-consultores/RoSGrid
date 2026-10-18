@@ -46,6 +46,7 @@ from src.models.inventory import (
     RouterNetworkRoleEnum,
     RouterTag,
     SSLTrustStatusEnum,
+    TenantCustomRole,
 )
 from src.redis_layer.client import get_redis_client
 from src.schemas.inventory import (
@@ -55,6 +56,9 @@ from src.schemas.inventory import (
     CsvCommitRowItem,
     CsvDryRunResponse,
     CsvDryRunRowPreview,
+    CustomNetworkRoleCreate,
+    CustomNetworkRoleItem,
+    NetworkRolesListResponse,
     RePinSSLRequest,
     RouterResponse,
     UpdateRouterRequest,
@@ -71,6 +75,143 @@ _GLOBAL_ROUTER_ROLES = {
     SystemRoleEnum.INVENTORY_MANAGER.value,
     SystemRoleEnum.AUDITOR.value,
 }
+
+DEFAULT_NETWORK_ROLES = [
+    "CORE",
+    "EDGE_BGP",
+    "WAN_BALANCER",
+    "BRAS_PPPOE",
+    "DISTRIBUTION_SWITCH",
+    "TOWER_AP",
+    "CORPORATE_CPE",
+]
+
+
+@router.get("/network-roles", response_model=NetworkRolesListResponse)
+async def list_network_roles(
+    claims: dict[str, Any] = Depends(get_current_user_claims),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> NetworkRolesListResponse:
+    """Lista todos los roles de red disponibles (estándar + personalizados por la empresa)."""
+    tenant_id = uuid.UUID(claims["tid"])
+    stmt = (
+        select(TenantCustomRole)
+        .where(TenantCustomRole.tenant_id == tenant_id)
+        .order_by(TenantCustomRole.role_name)
+    )
+    custom_records = (await db.execute(stmt)).scalars().all()
+
+    custom_items = [
+        CustomNetworkRoleItem(
+            id=r.id,
+            role_name=r.role_name,
+            description=r.description,
+            created_at=r.created_at,
+        )
+        for r in custom_records
+    ]
+
+    all_roles = list(DEFAULT_NETWORK_ROLES)
+    for cr in custom_records:
+        if cr.role_name not in all_roles:
+            all_roles.append(cr.role_name)
+
+    return NetworkRolesListResponse(roles=all_roles, custom_roles=custom_items)
+
+
+@router.post("/network-roles", response_model=CustomNetworkRoleItem, status_code=status.HTTP_201_CREATED)
+async def create_custom_network_role(
+    payload: CustomNetworkRoleCreate,
+    request: Request,
+    claims: dict[str, Any] = Depends(
+        require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> CustomNetworkRoleItem:
+    """Crea un rol de red personalizado para la empresa (exclusivo SuperAdmin y TenantAdmin)."""
+    tenant_id = uuid.UUID(claims["tid"])
+    user_id = uuid.UUID(claims["sub"])
+    role_normalized = payload.role_name.strip().upper()
+
+    if role_normalized in DEFAULT_NETWORK_ROLES:
+        raise HTTPException(status_code=400, detail="Este rol ya existe como rol estándar del sistema")
+
+    stmt = select(TenantCustomRole).where(
+        TenantCustomRole.tenant_id == tenant_id,
+        TenantCustomRole.role_name == role_normalized,
+    )
+    existing = (await db.execute(stmt)).scalar_one_or_none()
+    if existing:
+        raise HTTPException(status_code=400, detail="Ya existe un rol personalizado con este nombre")
+
+    new_role = TenantCustomRole(
+        tenant_id=tenant_id,
+        role_name=role_normalized,
+        description=payload.description,
+        created_at=datetime.now(UTC),
+    )
+    db.add(new_role)
+
+    await write_audit_log(
+        session=db,
+        tenant_id=tenant_id,
+        actor_user_id=user_id,
+        actor_username=claims.get("preferred_username", claims.get("sub", "")),
+        actor_role=claims.get("rol", SystemRoleEnum.TENANT_ADMIN),
+        actor_ip=request.client.host if request.client else "127.0.0.1",
+        event_category="INVENTORY",
+        event_action="CUSTOM_NETWORK_ROLE_CREATED",
+        after_state={"role_name": role_normalized, "description": payload.description},
+    )
+    await db.commit()
+    await db.refresh(new_role)
+
+    return CustomNetworkRoleItem(
+        id=new_role.id,
+        role_name=new_role.role_name,
+        description=new_role.description,
+        created_at=new_role.created_at,
+    )
+
+
+@router.delete("/network-roles/{role_name}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_custom_network_role(
+    role_name: str,
+    request: Request,
+    claims: dict[str, Any] = Depends(
+        require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> None:
+    """Elimina un rol de red personalizado de la empresa."""
+    tenant_id = uuid.UUID(claims["tid"])
+    user_id = uuid.UUID(claims["sub"])
+    role_normalized = role_name.strip().upper()
+
+    if role_normalized in DEFAULT_NETWORK_ROLES:
+        raise HTTPException(status_code=400, detail="No se pueden eliminar los roles estándar del sistema")
+
+    stmt = select(TenantCustomRole).where(
+        TenantCustomRole.tenant_id == tenant_id,
+        TenantCustomRole.role_name == role_normalized,
+    )
+    role_obj = (await db.execute(stmt)).scalar_one_or_none()
+    if not role_obj:
+        raise HTTPException(status_code=404, detail="Rol personalizado no encontrado")
+
+    await db.delete(role_obj)
+    await write_audit_log(
+        session=db,
+        tenant_id=tenant_id,
+        actor_user_id=user_id,
+        actor_username=claims.get("preferred_username", claims.get("sub", "")),
+        actor_role=claims.get("rol", SystemRoleEnum.TENANT_ADMIN),
+        actor_ip=request.client.host if request.client else "127.0.0.1",
+        event_category="INVENTORY",
+        event_action="CUSTOM_NETWORK_ROLE_DELETED",
+        before_state={"role_name": role_normalized},
+    )
+    await db.commit()
 
 
 async def _check_tenant_router_quota(db: AsyncSession, tenant_id: uuid.UUID) -> None:

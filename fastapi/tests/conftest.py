@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 RoSGrid Contributors
 
+from __future__ import annotations
+
 import fnmatch
 from collections.abc import AsyncGenerator
 from typing import Any
@@ -90,9 +92,29 @@ class FakePipeline:
 
 class FakeAsyncRedis:
     def __init__(self) -> None:
+        self.strings: dict[str, str] = {}
         self.hashes: dict[str, dict[str, str]] = {}
         self.sets: dict[str, set[str]] = {}
         self.zsets: dict[str, dict[str, float]] = {}
+
+    async def get(self, name: str) -> str | None:
+        return self.strings.get(name)
+
+    async def set(
+        self,
+        name: str,
+        value: Any,
+        ex: int | None = None,
+        px: int | None = None,
+        nx: bool = False,
+        xx: bool = False,
+    ) -> bool:
+        if nx and name in self.strings:
+            return False
+        if xx and name not in self.strings:
+            return False
+        self.strings[name] = str(value)
+        return True
 
     async def hset(
         self,
@@ -119,6 +141,9 @@ class FakeAsyncRedis:
     async def delete(self, *names: str) -> int:
         count = 0
         for n in names:
+            if n in self.strings:
+                del self.strings[n]
+                count += 1
             if n in self.hashes:
                 del self.hashes[n]
                 count += 1
@@ -136,7 +161,7 @@ class FakeAsyncRedis:
     async def exists(self, *names: str) -> int:
         count = 0
         for n in names:
-            if n in self.hashes or n in self.sets or n in self.zsets:
+            if n in self.strings or n in self.hashes or n in self.sets or n in self.zsets:
                 count += 1
         return count
 
@@ -207,24 +232,36 @@ class FakeAsyncRedis:
         return sorted_members[start : end + 1]
 
     async def keys(self, pattern: str) -> list[str]:
-        all_keys = list(self.hashes.keys()) + list(self.sets.keys()) + list(self.zsets.keys())
+        all_keys = list(self.strings.keys()) + list(self.hashes.keys()) + list(self.sets.keys()) + list(self.zsets.keys())
         return [k for k in all_keys if fnmatch.fnmatch(k, pattern)]
 
     async def publish(self, channel: str, message: str) -> int:
         return 1
 
+    async def ping(self) -> bool:
+        return True
+
     def pipeline(self) -> FakePipeline:
         return FakePipeline(self)
 
     async def aclose(self) -> None:
+        self.strings.clear()
         self.hashes.clear()
         self.sets.clear()
         self.zsets.clear()
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
+def configure_test_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    from src.core.config import settings
+
+    monkeypatch.setattr(settings, "ROSGRID_ENV", "qa_unit")
+
+
+@pytest.fixture(autouse=True)
 def fake_redis(monkeypatch: pytest.MonkeyPatch) -> FakeAsyncRedis:
     fake = FakeAsyncRedis()
+    monkeypatch.setattr("src.main.get_redis_client", lambda: fake)
     monkeypatch.setattr("src.redis_layer.client.get_redis_client", lambda: fake)
     monkeypatch.setattr("src.redis_layer.sessions.get_redis_client", lambda: fake)
     monkeypatch.setattr("src.redis_layer.idempotency.get_redis_client", lambda: fake)

@@ -98,7 +98,7 @@ describe('Router — Navigation Guards & RBAC 11 Roles', () => {
     const auth = useAuthStore();
     auth.setAuth({ ...normalUser, role: 'NOC_MONITOR' });
 
-    await router.push('/inventory');
+    await router.push('/');
     expect(router.currentRoute.value.path).toBe('/noc-wallboard');
   });
 

@@ -356,8 +356,11 @@ async def test_csv_dry_run_and_commit(fake_request: MagicMock) -> None:
     )
     commit_payload = CsvCommitRequest(rows=[row_item])
 
+    fake_request.headers.get.return_value = "application/json"
+    fake_request.json = AsyncMock(return_value=commit_payload.model_dump(mode="json"))
+
     with patch("src.api.v1.inventory.write_audit_log", new_callable=AsyncMock):
-        commit_res = await import_csv_commit(commit_payload, fake_request, claims, db)
+        commit_res = await import_csv_commit(fake_request, claims, db)
         assert commit_res.imported_count == 1
         assert len(commit_res.created_router_ids) == 1
 

@@ -5,6 +5,7 @@
   import { ref, computed, onMounted, watch } from 'vue';
   import { http } from '@/api/httpClient';
   import { useInventoryStore } from '@/stores/useInventoryStore';
+  import ConfigTemplateEditorModal from '@/components/operations/ConfigTemplateEditorModal.vue';
 
 
   interface FleetRouter {
@@ -161,6 +162,56 @@
     }
   }
 
+  // Gestión de Plantillas
+  const isTemplateModalOpen = ref(false);
+  const templateToEdit = ref<any>(null);
+
+  function openCreateTemplateModal() {
+    templateToEdit.value = null;
+    isTemplateModalOpen.value = true;
+  }
+
+  function openEditTemplateModal() {
+    const tpl = templates.value.find((t) => t.id === selectedTemplateId.value);
+    if (tpl) {
+      templateToEdit.value = JSON.parse(JSON.stringify(tpl));
+      isTemplateModalOpen.value = true;
+    }
+  }
+
+  function cloneSelectedTemplate() {
+    const tpl = templates.value.find((t) => t.id === selectedTemplateId.value);
+    if (tpl) {
+      const cloned = JSON.parse(JSON.stringify(tpl));
+      delete cloned.id;
+      cloned.name = `${cloned.name}_COPIA`;
+      templateToEdit.value = cloned;
+      isTemplateModalOpen.value = true;
+    }
+  }
+
+  async function deleteSelectedTemplate() {
+    const tpl = templates.value.find((t) => t.id === selectedTemplateId.value);
+    if (!tpl) return;
+    if (!confirm(`¿Estás seguro de eliminar permanentemente la plantilla "${tpl.name}"?`)) {
+      return;
+    }
+    try {
+      await http.delete(`/api/v1/operations/templates/${tpl.id}`);
+      selectedTemplateId.value = '';
+      await fetchTemplates();
+    } catch (err: any) {
+      alert(err.response?.data?.detail || 'Error al eliminar la plantilla.');
+    }
+  }
+
+  async function handleTemplateSaved(savedTpl: any) {
+    await fetchTemplates();
+    if (savedTpl?.id) {
+      onSelectTemplate(savedTpl.id);
+    }
+  }
+
   function generatePreview() {
     const tpl = templates.value.find((t) => t.id === selectedTemplateId.value);
     if (!tpl) {
@@ -263,25 +314,36 @@
         </p>
       </div>
 
-      <!-- Pestañas Superiores -->
-      <nav class="tabs-nav" aria-label="Secciones de operaciones masivas">
+      <!-- Pestañas Superiores y Acciones -->
+      <div class="header-nav-wrap">
+        <nav class="tabs-nav" aria-label="Secciones de operaciones masivas">
+          <button
+            type="button"
+            class="tab-btn"
+            :class="{ 'tab-btn--active': activeTab === 'templates' }"
+            @click="activeTab = 'templates'"
+          >
+            📋 Plantillas y Acciones Masivas
+          </button>
+          <button
+            type="button"
+            class="tab-btn"
+            :class="{ 'tab-btn--active': activeTab === 'updates' }"
+            @click="activeTab = 'updates'"
+          >
+            🚀 Actualizador de RouterOS
+          </button>
+        </nav>
+
         <button
           type="button"
-          class="tab-btn"
-          :class="{ 'tab-btn--active': activeTab === 'templates' }"
-          @click="activeTab = 'templates'"
+          class="btn-manage-tpl"
+          aria-label="Crear nueva plantilla Golden Config"
+          @click="openCreateTemplateModal"
         >
-          📋 Plantillas y Acciones Masivas
+          ⚡ + Nueva Plantilla
         </button>
-        <button
-          type="button"
-          class="tab-btn"
-          :class="{ 'tab-btn--active': activeTab === 'updates' }"
-          @click="activeTab = 'updates'"
-        >
-          🚀 Actualizador de RouterOS
-        </button>
-      </nav>
+      </div>
     </header>
 
     <!-- Pestaña 1: Asistente de Plantillas en 3 Pasos -->
@@ -398,7 +460,46 @@
 
       <!-- PASO 2: Selección de Plantilla y Previsualización -->
       <div v-if="wizardStep === 2" class="wizard-step-card">
-        <h2 class="step-title">Paso 2: Elegir Plantilla Parametrizable</h2>
+        <div class="step-header-with-actions">
+          <h2 class="step-title">Paso 2: Elegir o Crear Plantilla Parametrizable</h2>
+          <div class="tpl-action-buttons">
+            <button
+              type="button"
+              class="btn-primary-sm"
+              title="Crear una nueva plantilla Golden Config"
+              @click="openCreateTemplateModal"
+            >
+              + Nueva Plantilla
+            </button>
+            <button
+              v-if="selectedTemplateId"
+              type="button"
+              class="btn-secondary-sm"
+              title="Editar la plantilla seleccionada"
+              @click="openEditTemplateModal"
+            >
+              ✏️ Editar
+            </button>
+            <button
+              v-if="selectedTemplateId"
+              type="button"
+              class="btn-secondary-sm"
+              title="Clonar plantilla seleccionada"
+              @click="cloneSelectedTemplate"
+            >
+              📄 Clonar
+            </button>
+            <button
+              v-if="selectedTemplateId"
+              type="button"
+              class="btn-danger-sm"
+              title="Eliminar plantilla seleccionada"
+              @click="deleteSelectedTemplate"
+            >
+              🗑️ Eliminar
+            </button>
+          </div>
+        </div>
 
         <div v-if="templates.length === 0" class="empty-state-banner">
           <p>No existen plantillas Golden Config registradas para este Tenant.</p>
@@ -582,6 +683,14 @@
         </tbody>
       </table>
     </section>
+
+    <!-- Modal de Configuración de Plantillas Golden Config -->
+    <ConfigTemplateEditorModal
+      :is-open="isTemplateModalOpen"
+      :template-to-edit="templateToEdit"
+      @close="isTemplateModalOpen = false"
+      @saved="handleTemplateSaved"
+    />
   </main>
 </template>
 
@@ -992,5 +1101,101 @@
     background-color: rgba(34, 197, 94, 0.15);
     border: 1px solid rgba(34, 197, 94, 0.4);
     color: #4ade80;
+  }
+
+  .header-nav-wrap {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .btn-manage-tpl {
+    background: rgba(34, 211, 238, 0.15);
+    border: 1px solid rgba(34, 211, 238, 0.4);
+    color: #22d3ee;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: monospace;
+    transition: all 0.2s;
+  }
+
+  .btn-manage-tpl:hover {
+    background: rgba(34, 211, 238, 0.25);
+    border-color: #22d3ee;
+    color: #fff;
+    transform: translateY(-1px);
+  }
+
+  .step-header-with-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    border-bottom: 1px solid #1e293b;
+    padding-bottom: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .tpl-action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .btn-primary-sm {
+    background: #0284c7;
+    color: #fff;
+    border: none;
+    padding: 0.35rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: monospace;
+    transition: background-color 0.15s;
+  }
+
+  .btn-primary-sm:hover {
+    background: #0369a1;
+  }
+
+  .btn-secondary-sm {
+    background: #1e293b;
+    color: #cbd5e1;
+    border: 1px solid #475569;
+    padding: 0.35rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    font-family: monospace;
+    transition: background-color 0.15s;
+  }
+
+  .btn-secondary-sm:hover {
+    background: #334155;
+    color: #fff;
+  }
+
+  .btn-danger-sm {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    padding: 0.35rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    font-family: monospace;
+    transition: all 0.15s;
+  }
+
+  .btn-danger-sm:hover {
+    background: rgba(239, 68, 68, 0.25);
+    border-color: #ef4444;
+    color: #fff;
   }
 </style>

@@ -10,12 +10,13 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import require_roles
 from src.api.v1.webfig_common import get_router_and_client
+from src.core.audit import write_audit_log
 from src.core.crypto import encrypt_aes_gcm
 from src.db.session import get_tenant_db_session
 from src.mikrotik.client import MikrotikRestClient
@@ -37,6 +38,7 @@ from src.schemas.bulk_and_updates import (
     BulkJobItemResponse,
     ConfigTemplateCreateRequest,
     ConfigTemplateResponse,
+    ConfigTemplateUpdateRequest,
     RosFleetUpdateStatusResponse,
     RosUpdateExecuteRequest,
     RosUpdateExecuteResponse,
@@ -147,16 +149,77 @@ async def _perform_pre_upgrade_backup(
 # PLANTILLAS (GOLDEN CONFIGS)
 # ============================================================================
 
+_DEFAULT_STARTER_TEMPLATES = [
+    {
+        "name": "DNS_CORPORATIVO_RESILIENTE",
+        "category": "NETWORK",
+        "description": "Configura servidores DNS redundantes (Quad9 y Cloudflare) y vacía la caché de resolución.",
+        "variables_schema": [
+            {"key": "dns_servers", "label": "Servidores DNS (separados por coma)", "default_val": "9.9.9.9,1.1.1.1", "var_type": "string"},
+            {"key": "allow_remote", "label": "Permitir peticiones remotas", "default_val": "no", "var_type": "string"},
+        ],
+        "rest_steps_template": [
+            {"method": "PATCH", "endpoint": "ip/dns", "payload": {"servers": "{{ dns_servers }}", "allow-remote-requests": "{{ allow_remote }}"}},
+            {"method": "POST", "endpoint": "ip/dns/cache/flush", "payload": {}},
+        ],
+        "requires_safemode": True,
+    },
+    {
+        "name": "NTP_CLIENT_TIEMPO_EXACTO",
+        "category": "SYSTEM",
+        "description": "Habilita el cliente SNTP v7 corporativo para sincronización horaria precisa.",
+        "variables_schema": [
+            {"key": "ntp_servers", "label": "Servidores NTP Primario y Secundario", "default_val": "pool.ntp.org,time.google.com", "var_type": "string"},
+        ],
+        "rest_steps_template": [
+            {"method": "PATCH", "endpoint": "system/ntp/client", "payload": {"enabled": "yes", "servers": "{{ ntp_servers }}"}},
+        ],
+        "requires_safemode": True,
+    },
+    {
+        "name": "SNMP_V2C_MONITOREO_NOC",
+        "category": "SECURITY",
+        "description": "Configura comunidad SNMP v2c para supervisión y telemetría desde el Wallboard NOC.",
+        "variables_schema": [
+            {"key": "snmp_community", "label": "Nombre de Comunidad SNMP", "default_val": "RoSGrid_NOC", "var_type": "string"},
+            {"key": "snmp_addresses", "label": "Subredes autorizadas (separadas por coma)", "default_val": "10.0.0.0/8,192.168.0.0/16", "var_type": "string"},
+        ],
+        "rest_steps_template": [
+            {"method": "PATCH", "endpoint": "snmp", "payload": {"enabled": "yes"}},
+            {"method": "PATCH", "endpoint": "snmp/community/*0", "payload": {"name": "{{ snmp_community }}", "addresses": "{{ snmp_addresses }}"}},
+        ],
+        "requires_safemode": True,
+    },
+]
+
 
 @router.get("/templates", response_model=list[ConfigTemplateResponse])
 async def list_templates(
     claims: dict[str, Any] = Depends(require_roles(*_OPERATOR_ROLES)),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> list[ConfigTemplateResponse]:
-    """Lista plantillas de configuración del Tenant."""
+    """Lista plantillas de configuración del Tenant. Si no existen, inicializa plantillas base sugeridas."""
     tenant_id = uuid.UUID(claims["tid"])
+    user_id = uuid.UUID(claims["sub"])
     stmt = select(ConfigTemplate).where(ConfigTemplate.tenant_id == tenant_id).order_by(ConfigTemplate.name)
-    templates = (await db.execute(stmt)).scalars().all()
+    templates = list((await db.execute(stmt)).scalars().all())
+
+    if not templates:
+        for starter in _DEFAULT_STARTER_TEMPLATES:
+            tpl = ConfigTemplate(
+                tenant_id=tenant_id,
+                name=starter["name"],
+                category=starter["category"],
+                description=starter["description"],
+                variables_schema=starter["variables_schema"],
+                rest_steps_template=starter["rest_steps_template"],
+                requires_safemode=starter["requires_safemode"],
+                created_by=user_id,
+            )
+            db.add(tpl)
+        await db.commit()
+        templates = list((await db.execute(stmt)).scalars().all())
+
     return [
         ConfigTemplateResponse(
             id=t.id,
@@ -175,15 +238,52 @@ async def list_templates(
     ]
 
 
+@router.get("/templates/{template_id}", response_model=ConfigTemplateResponse)
+async def get_template(
+    template_id: uuid.UUID,
+    claims: dict[str, Any] = Depends(require_roles(*_OPERATOR_ROLES)),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> ConfigTemplateResponse:
+    """Obtiene el detalle completo de una plantilla."""
+    tenant_id = uuid.UUID(claims["tid"])
+    template = await db.get(ConfigTemplate, template_id)
+    if not template or template.tenant_id != tenant_id:
+        raise HTTPException(status_code=404, detail="Plantilla no encontrada")
+
+    return ConfigTemplateResponse(
+        id=template.id,
+        tenant_id=template.tenant_id,
+        name=template.name,
+        category=template.category,
+        description=template.description,
+        variables_schema=template.variables_schema,
+        rest_steps_template=template.rest_steps_template,
+        requires_safemode=template.requires_safemode,
+        created_by=template.created_by,
+        created_at=template.created_at,
+        updated_at=template.updated_at,
+    )
+
+
 @router.post("/templates", response_model=ConfigTemplateResponse, status_code=status.HTTP_201_CREATED)
 async def create_template(
     payload: ConfigTemplateCreateRequest,
+    request: Request,
     claims: dict[str, Any] = Depends(require_roles(*_ADMIN_OPERATIONS_ROLES)),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> ConfigTemplateResponse:
     """Crea una nueva plantilla parametrizable Golden Config."""
     tenant_id = uuid.UUID(claims["tid"])
     user_id = uuid.UUID(claims["sub"])
+
+    existing = await db.execute(
+        select(ConfigTemplate).where(
+            ConfigTemplate.tenant_id == tenant_id,
+            ConfigTemplate.name == payload.name,
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail=f"Ya existe una plantilla con el nombre '{payload.name}'")
 
     template = ConfigTemplate(
         tenant_id=tenant_id,
@@ -199,6 +299,22 @@ async def create_template(
     await db.commit()
     await db.refresh(template)
 
+    ip_addr = request.client.host if (request and request.client) else "127.0.0.1"
+    ua = request.headers.get("User-Agent") if request else "Internal/UnitTests"
+    await write_audit_log(
+        session=db,
+        tenant_id=tenant_id,
+        actor_user_id=user_id,
+        actor_username=claims.get("sub", ""),
+        actor_role=claims.get("rol", SystemRoleEnum.TENANT_ADMIN),
+        actor_ip=ip_addr,
+        actor_user_agent=ua,
+        event_category="OPERATIONS",
+        event_action="CONFIG_TEMPLATE_CREATED",
+        after_state={"template_id": str(template.id), "name": template.name, "category": template.category},
+    )
+    await db.commit()
+
     return ConfigTemplateResponse(
         id=template.id,
         tenant_id=template.tenant_id,
@@ -212,6 +328,114 @@ async def create_template(
         created_at=template.created_at,
         updated_at=template.updated_at,
     )
+
+
+@router.put("/templates/{template_id}", response_model=ConfigTemplateResponse)
+async def update_template(
+    template_id: uuid.UUID,
+    payload: ConfigTemplateUpdateRequest,
+    request: Request,
+    claims: dict[str, Any] = Depends(require_roles(*_ADMIN_OPERATIONS_ROLES)),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> ConfigTemplateResponse:
+    """Actualiza una plantilla Golden Config existente."""
+    tenant_id = uuid.UUID(claims["tid"])
+    user_id = uuid.UUID(claims["sub"])
+    template = await db.get(ConfigTemplate, template_id)
+    if not template or template.tenant_id != tenant_id:
+        raise HTTPException(status_code=404, detail="Plantilla no encontrada")
+
+    if payload.name is not None and payload.name != template.name:
+        existing = await db.execute(
+            select(ConfigTemplate).where(
+                ConfigTemplate.tenant_id == tenant_id,
+                ConfigTemplate.name == payload.name,
+                ConfigTemplate.id != template_id,
+            )
+        )
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail=f"Ya existe una plantilla con el nombre '{payload.name}'")
+        template.name = payload.name
+
+    if payload.category is not None:
+        template.category = payload.category
+    if payload.description is not None:
+        template.description = payload.description
+    if payload.variables_schema is not None:
+        template.variables_schema = payload.variables_schema
+    if payload.rest_steps_template is not None:
+        template.rest_steps_template = payload.rest_steps_template
+    if payload.requires_safemode is not None:
+        template.requires_safemode = payload.requires_safemode
+
+    template.updated_at = datetime.now(UTC)
+    await db.commit()
+    await db.refresh(template)
+
+    ip_addr = request.client.host if (request and request.client) else "127.0.0.1"
+    ua = request.headers.get("User-Agent") if request else "Internal/UnitTests"
+    await write_audit_log(
+        session=db,
+        tenant_id=tenant_id,
+        actor_user_id=user_id,
+        actor_username=claims.get("sub", ""),
+        actor_role=claims.get("rol", SystemRoleEnum.TENANT_ADMIN),
+        actor_ip=ip_addr,
+        actor_user_agent=ua,
+        event_category="OPERATIONS",
+        event_action="CONFIG_TEMPLATE_UPDATED",
+        after_state={"template_id": str(template.id), "name": template.name, "category": template.category},
+    )
+    await db.commit()
+
+    return ConfigTemplateResponse(
+        id=template.id,
+        tenant_id=template.tenant_id,
+        name=template.name,
+        category=template.category,
+        description=template.description,
+        variables_schema=template.variables_schema,
+        rest_steps_template=template.rest_steps_template,
+        requires_safemode=template.requires_safemode,
+        created_by=template.created_by,
+        created_at=template.created_at,
+        updated_at=template.updated_at,
+    )
+
+
+@router.delete("/templates/{template_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_template(
+    template_id: uuid.UUID,
+    request: Request,
+    claims: dict[str, Any] = Depends(require_roles(*_ADMIN_OPERATIONS_ROLES)),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> None:
+    """Elimina una plantilla Golden Config."""
+    tenant_id = uuid.UUID(claims["tid"])
+    user_id = uuid.UUID(claims["sub"])
+    template = await db.get(ConfigTemplate, template_id)
+    if not template or template.tenant_id != tenant_id:
+        raise HTTPException(status_code=404, detail="Plantilla no encontrada")
+
+    tpl_name = template.name
+    await db.delete(template)
+    await db.commit()
+
+    ip_addr = request.client.host if (request and request.client) else "127.0.0.1"
+    ua = request.headers.get("User-Agent") if request else "Internal/UnitTests"
+    await write_audit_log(
+        session=db,
+        tenant_id=tenant_id,
+        actor_user_id=user_id,
+        actor_username=claims.get("sub", ""),
+        actor_role=claims.get("rol", SystemRoleEnum.TENANT_ADMIN),
+        actor_ip=ip_addr,
+        actor_user_agent=ua,
+        event_category="OPERATIONS",
+        event_action="CONFIG_TEMPLATE_DELETED",
+        before_state={"template_id": str(template_id), "name": tpl_name},
+    )
+    await db.commit()
 
 
 @router.post("/templates/{template_id}/render-preview", response_model=TemplateRenderPreviewResponse)
