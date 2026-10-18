@@ -270,21 +270,36 @@
         error.value = errorMsg;
         return;
       }
+      let filename = `rosgrid-backup-${routerId.value.slice(0, 8)}-${id.slice(0, 8)}.${format}`;
+      const disposition = res.headers.get('content-disposition');
+      if (disposition && disposition.includes('filename=')) {
+        const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (match && match[1]) {
+          filename = match[1].replace(/['"]/g, '').trim();
+        }
+      }
       const rawBlob = await res.blob();
       const mimeType = format === 'rsc' ? 'text/plain;charset=utf-8' : 'application/octet-stream';
       const blob = new Blob([rawBlob], { type: mimeType });
-      const filename = `rosgrid-backup-${routerId.value.slice(0, 8)}-${id.slice(0, 8)}.${format}`;
-      const url = URL.createObjectURL(blob);
+      const url =
+        typeof URL.createObjectURL === 'function' ? URL.createObjectURL(blob) : 'blob:backup';
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = url;
+      a.download = filename;
       a.setAttribute('download', filename);
-      document.body.appendChild(a);
+      if (typeof document !== 'undefined' && document.body) {
+        document.body.appendChild(a);
+      }
       a.click();
       setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 200);
+        if (a.parentNode) {
+          a.parentNode.removeChild(a);
+        }
+        if (typeof URL.revokeObjectURL === 'function') {
+          URL.revokeObjectURL(url);
+        }
+      }, 15000);
     } catch {
       error.value = 'Error al descargar el archivo de respaldo.';
     }

@@ -120,6 +120,7 @@
     const a = document.createElement('a');
     a.style.display = 'none';
     a.href = url;
+    a.download = filename;
     a.setAttribute('download', filename);
     if (typeof document !== 'undefined' && document.body) {
       document.body.appendChild(a);
@@ -132,7 +133,7 @@
       if (typeof URL.revokeObjectURL === 'function') {
         URL.revokeObjectURL(url);
       }
-    }, 1000);
+    }, 15000);
   }
 
   async function computeSha256(text: string): Promise<string> {

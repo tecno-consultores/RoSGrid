@@ -136,6 +136,7 @@
     link.style.display = 'none';
     link.href = url;
     link.download = `rosgrid-backup-codes-${tenantSlug.value}.txt`;
+    link.setAttribute('download', `rosgrid-backup-codes-${tenantSlug.value}.txt`);
     if (typeof document !== 'undefined' && document.body) {
       document.body.appendChild(link);
     }
@@ -147,7 +148,7 @@
       if (typeof URL.revokeObjectURL === 'function') {
         URL.revokeObjectURL(url);
       }
-    }, 1000);
+    }, 15000);
   }
 
   // Etapa 1: Enviar credenciales
