@@ -132,6 +132,43 @@ Las pruebas automatizadas de RoSGrid (cobertura unitaria `>= 95%`, mutación, ac
 
 ---
 
+### Módulo 11: Centro de Mando Táctico "Mission Control" y Wallboard NOC
+
+| ID | Caso de Prueba | Precondición | Pasos de Ejecución | Resultado Esperado |
+| :--- | :--- | :--- | :--- | :--- |
+| **UAT-29** | Tablero Táctico Mission Control | Sesión activa en RoSGrid | 1. Navegar a la raíz `/` o hacer clic en el isotipo de RoSGrid. 2. Observar reloj UTC en vivo, métricas de ancho de banda agregado y disponibilidad de flota. | Los datos se actualizan dinámicamente cada segundo sin parpadeos. La distribución por roles refleja la flota real. |
+| **UAT-30** | Wallboard NOC y Apertura Directa de WebFig | Al menos un router en Inventario | 1. Ingresar a *Wallboard NOC* (`/noc-wallboard`). 2. Hacer clic sobre el pin de un router en el mapa OSM. 3. Probar clic en *"Abrir WebFig"* en el popup y en la barra HUD inferior. | Ambos botones redirigen inmediatamente a la consola operativa en vivo (`/routers/:id/webfig/live`) del router seleccionado. |
+| **UAT-31** | Modo TV Pantalla Completa | Wallboard abierto | 1. Presionar el botón *"🖥️ Modo TV"*. 2. Observar comportamiento. 3. Presionar *"🗗 Salir TV"* o tecla `Esc`. | La pantalla entra a modo inmersivo sin barras de navegación del navegador, optimizado para salas de monitoreo 24/7. |
+
+---
+
+### Módulo 12: Gestor de Plantillas de Configuración "Golden Config" & Acciones Masivas
+
+| ID | Caso de Prueba | Precondición | Pasos de Ejecución | Resultado Esperado |
+| :--- | :--- | :--- | :--- | :--- |
+| **UAT-32** | Creación de Plantilla Golden Config | Rol `SUPERADMIN` o `TENANT_ADMIN` | 1. Ir a *Acciones Masivas* -> *Gestionar Plantillas*. 2. Crear plantilla con variables Jinja2 (ej. `set [find name="ether1"] comment="{{ wan_comment }}"`). 3. Guardar. | La plantilla se valida sintácticamente, se almacena en base de datos y queda disponible en el selector de tareas masivas. |
+| **UAT-33** | Despliegue Masivo con Dry-Run | Plantilla creada y routers seleccionados | 1. Seleccionar plantilla y filtrar routers objetivo por rol. 2. Presionar *Simular (Dry-Run)*. 3. Revisar comandos resultantes. 4. Presionar *Ejecutar*. | La simulación muestra el diff de comandos antes de tocar la red. La ejecución aplica los cambios bajo Safe Mode y registra auditoría forense. |
+
+---
+
+### Módulo 13: Roles de Red Personalizados y Auto-Registro en CSV
+
+| ID | Caso de Prueba | Precondición | Pasos de Ejecución | Resultado Esperado |
+| :--- | :--- | :--- | :--- | :--- |
+| **UAT-34** | Creación de Rol de Infraestructura | Usuario administrador en *Inventario* | 1. Clic en *Gestionar Roles*. 2. Ingresar nombre: `CORE_BGP_MPLS` y descripción. 3. Guardar. | El nuevo rol aparece de inmediato en el selector de filtros de inventario y en los formularios de edición. |
+| **UAT-35** | Auto-Registro Dinámico desde Archivo CSV | Archivo CSV con columna `network_role` desconocida (ej. `TOWER_SECTORIAL`) | 1. Abrir Asistente CSV en *Inventario*. 2. Subir CSV con rol inexistente en el catálogo. 3. Completar importación. | RoSGrid detecta el rol nuevo, lo registra automáticamente en la tabla `tenant_custom_roles` y añade el equipo sin rechazar la importación. |
+
+---
+
+### Módulo 14: Comparador Diff Avanzado y Descarga Segura de Respaldos
+
+| ID | Caso de Prueba | Precondición | Pasos de Ejecución | Resultado Esperado |
+| :--- | :--- | :--- | :--- | :--- |
+| **UAT-36** | Selección Interactiva de Tarjetas en Diff | Al menos 2 respaldos en los últimos 30 días | 1. Ir a *Respaldos y Diff*. 2. Hacer clic en una tarjeta para seleccionarla como `[🔵 BASE]`. 3. Clic en botón `[🟢 OBJETIVO]` de otra tarjeta. | Las tarjetas se resaltan con bordes de alto contraste e insignias. El comparador inferior actualiza el diff side-by-side de inmediato. |
+| **UAT-37** | Descarga Segura de Script `.rsc` vs `.backup` | Router con respaldos generados | 1. Clic en icono de descarga script (`📄`). 2. Clic en descarga binaria (`💾`). | El script `.rsc` descarga un archivo de texto claro válido. Si no existe snapshot binario nativo, el botón `💾` se inhabilita con tooltip explicativo impidiendo descargas de archivos corruptos. |
+
+---
+
 ## 4. Plantilla de Bitácora de Ejecución (Sign-off)
 
 ```markdown

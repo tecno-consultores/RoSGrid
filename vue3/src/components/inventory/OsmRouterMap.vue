@@ -81,9 +81,13 @@
           </div>
         `;
 
-        const webfigBtn = popupContent.querySelector('.btn-popup-webfig');
+        L.DomEvent.disableClickPropagation(popupContent);
+        const webfigBtn = popupContent.querySelector('.btn-popup-webfig') as HTMLButtonElement | null;
         if (webfigBtn) {
-          webfigBtn.addEventListener('click', () => {
+          L.DomEvent.disableClickPropagation(webfigBtn);
+          L.DomEvent.on(webfigBtn, 'click', (ev) => {
+            L.DomEvent.stopPropagation(ev);
+            L.DomEvent.preventDefault(ev);
             emit('open-webfig', r.id);
           });
         }
@@ -117,12 +121,41 @@
     markersLayer = L.layerGroup().addTo(mapInstance);
     renderMarkers();
 
+    // Asegurar que cualquier popup abierto maneje correctamente los clics en el botón de WebFig
+    mapInstance.on('popupopen', (e: L.PopupEvent) => {
+      const popupEl = e.popup.getElement();
+      if (!popupEl) return;
+      L.DomEvent.disableClickPropagation(popupEl);
+      const btn = popupEl.querySelector('.btn-popup-webfig') as HTMLButtonElement | null;
+      if (btn) {
+        L.DomEvent.disableClickPropagation(btn);
+        btn.onclick = (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          const rId = btn.getAttribute('data-router-id');
+          if (rId) emit('open-webfig', rId);
+        };
+      }
+    });
+
     // Modo selector de coordenadas
     mapInstance.on('click', (e: L.LeafletMouseEvent) => {
       if (props.enableCoordinatePicker) {
         emit('coordinates-selected', { lat: e.latlng.lat, lng: e.latlng.lng });
       }
     });
+  }
+
+  function handleContainerClick(ev: MouseEvent) {
+    const btn = (ev.target as HTMLElement)?.closest('.btn-popup-webfig') as HTMLElement | null;
+    if (btn) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const rId = btn.getAttribute('data-router-id');
+      if (rId) {
+        emit('open-webfig', rId);
+      }
+    }
   }
 
   watch(
@@ -147,6 +180,9 @@
   onMounted(() => {
     if (isHeadlessTest.value) return;
     initMap();
+    if (mapContainer.value) {
+      mapContainer.value.addEventListener('click', handleContainerClick, true);
+    }
     if (typeof ResizeObserver !== 'undefined' && mapContainer.value) {
       resizeObserver = new ResizeObserver(() => {
         if (mapInstance) {
@@ -168,6 +204,9 @@
   });
 
   onBeforeUnmount(() => {
+    if (mapContainer.value) {
+      mapContainer.value.removeEventListener('click', handleContainerClick, true);
+    }
     if (resizeObserver) {
       resizeObserver.disconnect();
       resizeObserver = null;

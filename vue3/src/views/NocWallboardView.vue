@@ -26,7 +26,18 @@
   const routers = ref<RouterItem[]>([]);
   const selectedRouterId = ref<string | null>(null);
 
+  const selectedRouter = computed(() => {
+    if (!selectedRouterId.value) return null;
+    return routers.value.find((r) => r.id === selectedRouterId.value) || null;
+  });
+
   function handleOpenWebFig(routerId: string) {
+    if (isFullscreen.value && typeof document !== 'undefined' && document.fullscreenElement) {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+      isFullscreen.value = false;
+    }
     router.push(`/routers/${routerId}/webfig/live`);
   }
 
@@ -199,6 +210,50 @@
           @select-router="handleSelectRouter"
           @open-webfig="handleOpenWebFig"
         />
+
+        <!-- Floating HUD de equipo seleccionado con botón directo a WebFig -->
+        <transition name="hud-fade">
+          <div
+            v-if="selectedRouter"
+            class="wallboard-router-hud"
+            role="region"
+            aria-label="Detalle de router seleccionado"
+          >
+            <div class="hud-left">
+              <span
+                class="hud-dot"
+                :class="selectedRouter.is_reachable ? 'hud-dot--online' : 'hud-dot--offline'"
+              ></span>
+              <div class="hud-text">
+                <div class="hud-title font-mono">{{ selectedRouter.display_name }}</div>
+                <div class="hud-meta">
+                  <code>{{ selectedRouter.ip_address }}</code> |
+                  <span class="badge-role">{{ selectedRouter.network_role || 'GENERAL' }}</span> |
+                  <span>v{{ selectedRouter.ros_version }}</span>
+                </div>
+              </div>
+            </div>
+            <div class="hud-actions">
+              <button
+                type="button"
+                class="btn-hud-webfig"
+                id="btn-wallboard-open-webfig"
+                @click="handleOpenWebFig(selectedRouter.id)"
+              >
+                📊 Abrir WebFig →
+              </button>
+              <button
+                type="button"
+                class="btn-hud-close"
+                title="Cerrar detalle"
+                aria-label="Cerrar detalle"
+                @click="selectedRouterId = null"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        </transition>
       </section>
 
       <!-- Mitad Derecha: Cinta de Eventos Críticos en Vivo -->
@@ -405,6 +460,148 @@
     height: 100%;
     width: 100%;
     border-right: 2px solid #1f2937;
+  }
+
+  /* Floating HUD de Router Seleccionado en Wallboard */
+  .wallboard-router-hud {
+    position: absolute;
+    bottom: 1.25rem;
+    left: 1.25rem;
+    right: 1.25rem;
+    background: rgba(11, 15, 25, 0.95);
+    backdrop-filter: blur(8px);
+    border: 1px solid #0284c7;
+    border-radius: 8px;
+    padding: 0.75rem 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    z-index: 1000;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7), 0 0 15px rgba(2, 132, 199, 0.3);
+  }
+
+  .hud-left {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    min-width: 0;
+  }
+
+  .hud-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .hud-dot--online {
+    background-color: #22c55e;
+    box-shadow: 0 0 8px #22c55e;
+  }
+
+  .hud-dot--offline {
+    background-color: #ef4444;
+    box-shadow: 0 0 8px #ef4444;
+  }
+
+  .hud-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+  }
+
+  .hud-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #38bdf8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .hud-meta {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .hud-meta code {
+    color: #e5e7eb;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+  }
+
+  .badge-role {
+    font-size: 0.7rem;
+    font-weight: 600;
+    background: rgba(56, 189, 248, 0.2);
+    color: #38bdf8;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    border: 1px solid rgba(56, 189, 248, 0.4);
+  }
+
+  .hud-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  .btn-hud-webfig {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: #0284c7;
+    color: #ffffff;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    border: 1px solid #38bdf8;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn-hud-webfig:hover {
+    background: #0369a1;
+    transform: translateY(-1px);
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+  }
+
+  .btn-hud-close {
+    background: transparent;
+    color: #9ca3af;
+    border: none;
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 0.35rem;
+    border-radius: 4px;
+    line-height: 1;
+    transition: color 0.15s ease;
+  }
+
+  .btn-hud-close:hover {
+    color: #f3f4f6;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  /* Transición HUD */
+  .hud-fade-enter-active,
+  .hud-fade-leave-active {
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .hud-fade-enter-from,
+  .hud-fade-leave-to {
+    opacity: 0;
+    transform: translateY(12px);
   }
 
   .wallboard-events-panel {
