@@ -92,6 +92,7 @@ describe('UsersAndPermissionsView.vue — Gestión de 11 Roles y Matriz RBAC', (
         stubs: {
           RgStepUp2FAModal: true,
           UserRouterMatrixModal: true,
+          RbacRoleMatrixPanel: true,
         },
       },
     });
@@ -136,6 +137,7 @@ describe('UsersAndPermissionsView.vue — Gestión de 11 Roles y Matriz RBAC', (
         stubs: {
           RgStepUp2FAModal: true,
           UserRouterMatrixModal: true,
+          RbacRoleMatrixPanel: true,
         },
       },
     });
@@ -203,6 +205,7 @@ describe('UsersAndPermissionsView.vue — Gestión de 11 Roles y Matriz RBAC', (
         stubs: {
           RgStepUp2FAModal: false,
           UserRouterMatrixModal: true,
+          RbacRoleMatrixPanel: true,
         },
       },
     });
@@ -262,5 +265,51 @@ describe('UsersAndPermissionsView.vue — Gestión de 11 Roles y Matriz RBAC', (
         modal.vm.$emit('close');
       }
     }
+  });
+
+  it('conmuta entre pestañas de usuarios y roles RBAC, y muestra descripciones de roles en modal', async () => {
+    const wrapper = mount(UsersAndPermissionsView, {
+      global: {
+        stubs: {
+          RgStepUp2FAModal: true,
+          UserRouterMatrixModal: true,
+          RbacRoleMatrixPanel: true,
+        },
+      },
+    });
+
+    await flushPromises();
+
+    // Comprobar existencia de pestañas
+    const tabUsers = wrapper.find('#tab-users');
+    const tabRoles = wrapper.find('#tab-roles');
+    expect(tabUsers.exists()).toBe(true);
+    expect(tabRoles.exists()).toBe(true);
+
+    // Cambiar a pestaña de roles
+    await tabRoles.trigger('click');
+    expect(wrapper.find('#tabpanel-roles').isVisible()).toBe(true);
+    expect(wrapper.findComponent({ name: 'RbacRoleMatrixPanel' }).exists()).toBe(true);
+
+    // Regresar a pestaña de usuarios
+    await tabUsers.trigger('click');
+    expect(wrapper.find('#tabpanel-users').isVisible()).toBe(true);
+
+    // Abrir modal de creación y verificar cuadro de descripción de rol
+    await wrapper.find('.btn-create').trigger('click');
+    expect(wrapper.find('.role-desc-preview').exists()).toBe(true);
+    expect(wrapper.find('.role-desc-preview').text()).toContain('Soporte Técnico Nivel 2');
+
+    // Cambiar a rol SUPERADMIN_GLOBAL
+    await wrapper.find('#u-role').setValue('SUPERADMIN_GLOBAL');
+    expect(wrapper.find('.role-desc-preview').text()).toContain('Superadministrador Global');
+
+    // Cambiar a rol FIELD_TECH
+    await wrapper.find('#u-role').setValue('FIELD_TECH');
+    expect(wrapper.find('.role-desc-preview').text()).toContain('Técnico de Campo');
+
+    // Cambiar a rol AUDITOR
+    await wrapper.find('#u-role').setValue('AUDITOR');
+    expect(wrapper.find('.role-desc-preview').text()).toContain('Auditor de Seguridad');
   });
 });

@@ -12,6 +12,7 @@ from src.api.v1.inventory import router as inventory_router
 from src.api.v1.maintenance import router as maintenance_router
 from src.api.v1.mcp import router as mcp_router
 from src.api.v1.notification_channels import router as notification_channels_router
+from src.api.v1.rbac import router as rbac_router
 from src.api.v1.sessions import router as sessions_router
 from src.api.v1.tenants import router as tenants_router
 from src.api.v1.users import router as users_router
@@ -53,3 +54,4 @@ api_v1_router.include_router(bulk_updates_router)
 api_v1_router.include_router(notification_channels_router)
 api_v1_router.include_router(audit_router)
 api_v1_router.include_router(mcp_router)
+api_v1_router.include_router(rbac_router)

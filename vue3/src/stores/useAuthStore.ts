@@ -102,7 +102,11 @@ export const useAuthStore = defineStore('auth', () => {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('rosgrid:kill-switch', { detail: { reason } }));
       if (window.location.pathname !== '/login') {
-        window.location.href = `/login?reason=${encodeURIComponent(reason)}`;
+        try {
+          window.location.href = `/login?reason=${encodeURIComponent(reason)}`;
+        } catch {
+          // Fallback para entornos de prueba JSDOM donde window.location.href arroja error de navegación
+        }
       }
     }
   }

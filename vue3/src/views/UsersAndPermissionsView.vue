@@ -3,11 +3,28 @@
 
 <script setup lang="ts">
   import { ref, computed, onMounted } from 'vue';
+  import { useRoute, useRouter } from 'vue-router';
   import { http } from '@/api/httpClient';
   import { useAuthStore } from '@/stores/useAuthStore';
   import type { SystemRole, UserManagementItem } from '@/types';
   import RgStepUp2FAModal from '@/components/common/RgStepUp2FAModal.vue';
   import UserRouterMatrixModal from '@/components/admin/UserRouterMatrixModal.vue';
+  import RbacRoleMatrixPanel from '@/components/admin/RbacRoleMatrixPanel.vue';
+
+  const route = useRoute();
+  const router = useRouter();
+
+  // Control de Pestañas: 'users' (Operadores) | 'roles' (Matriz de Políticas RBAC)
+  const activeTab = ref<'users' | 'roles'>(
+    (route?.query?.tab as 'users' | 'roles') || 'users',
+  );
+
+  function selectTab(tab: 'users' | 'roles') {
+    activeTab.value = tab;
+    if (router && route) {
+      router.replace({ query: { ...route.query, tab } }).catch(() => {});
+    }
+  }
 
   const authStore = useAuthStore();
 
@@ -47,6 +64,7 @@
   const isMatrixModalOpen = ref(false);
   const selectedUserForMatrix = ref<UserManagementItem | null>(null);
 
+  // 11 Roles Oficiales del Sistema RoSGrid
   const availableRoles: SystemRole[] = [
     'SUPERADMIN_GLOBAL',
     'TENANT_ADMIN',
@@ -54,12 +72,96 @@
     'SUPPORT_L3',
     'SUPPORT_L2',
     'SUPPORT_L1',
+    'FIELD_TECH',
     'INVENTORY_MANAGER',
-    'SECURITY_OFFICER',
-    'BILLING_ADMIN',
-    'NOC_MONITOR',
     'AUDITOR',
+    'NOC_MONITOR',
+    'SERVICE_ACCOUNT',
   ];
+
+  // Metadatos y Descripciones de Roles para Administradores de Empresa
+  const ROLE_DETAILS: Record<
+    string,
+    { title: string; description: string; level: number; badgeColor: string }
+  > = {
+    SUPERADMIN_GLOBAL: {
+      title: 'Superadministrador Global',
+      description:
+        'Control total de la plataforma multitenant, administración de empresas, auditoría WORM forense y configuración de infraestructura central.',
+      level: 0,
+      badgeColor: '#a855f7',
+    },
+    TENANT_ADMIN: {
+      title: 'Administrador de Organización',
+      description:
+        'Máxima autoridad dentro de la empresa o tenant. Gestiona operadores, asigna routers, aprueba cambios Maker-Checker, descarga respaldos y configura redes.',
+      level: 1,
+      badgeColor: '#22d3ee',
+    },
+    SUPERVISOR: {
+      title: 'Supervisor de Operaciones NOC',
+      description:
+        'Supervisión técnica de cuadrillas. Aprueba cambios Maker-Checker, visualiza auditorías, programa mantenimientos y aprueba operaciones de Soporte L1/L2.',
+      level: 2,
+      badgeColor: '#10b981',
+    },
+    SUPPORT_L3: {
+      title: 'Soporte Técnico Nivel 3 (Senior)',
+      description:
+        'Ingeniería de red avanzada. Ejecuta diagnósticos profundos, modifica configuraciones L1/L2, despliega túneles VPN, enrutamiento BGP/OSPF y aprueba cambios técnicos.',
+      level: 3,
+      badgeColor: '#3b82f6',
+    },
+    SUPPORT_L2: {
+      title: 'Soporte Técnico Nivel 2',
+      description:
+        'Operador de segundo nivel. Gestiona interfaces, diagnostica enlaces en vivo (Ping/Torch/Logs) y reinicia sesiones PPPoE. Cambios críticos pasan por Maker-Checker.',
+      level: 4,
+      badgeColor: '#f59e0b',
+    },
+    SUPPORT_L1: {
+      title: 'Soporte Técnico Nivel 1 (Helpdesk)',
+      description:
+        'Atención primaria a clientes e incidencias. Monitorea estado de routers, visualiza sesiones activas y ejecuta diagnósticos básicos sin modificar configuración directamente.',
+      level: 5,
+      badgeColor: '#94a3b8',
+    },
+    FIELD_TECH: {
+      title: 'Técnico de Campo (Terreno)',
+      description:
+        'Personal técnico en sitio. Diagnostica puertos físicos, prueba transceptores ópticos SFP DDM y cableado TDR para validar conectividad en torres y racks.',
+      level: 6,
+      badgeColor: '#f97316',
+    },
+    INVENTORY_MANAGER: {
+      title: 'Gestor de Inventario y Activos',
+      description:
+        'Responsable de hardware MikroTik. Da de alta routers, realiza importaciones masivas por CSV, programa ventanas de mantenimiento y rota credenciales en bóveda.',
+      level: 7,
+      badgeColor: '#14b8a6',
+    },
+    AUDITOR: {
+      title: 'Auditor de Seguridad y Cumplimiento',
+      description:
+        'Auditoría forense de solo lectura estricta. Inspecciona la cadena inmutable WORM SHA-256, revisa logs de acceso y exporta informes certificados sin alterar nada.',
+      level: 8,
+      badgeColor: '#6366f1',
+    },
+    NOC_MONITOR: {
+      title: 'Operador de Monitoreo NOC 24/7',
+      description:
+        'Vigilancia continua del estado de red. Visualiza Wallboard, mapas de topología OSM, métricas de telemetría y alarmas sin permisos de escritura ni cambios.',
+      level: 9,
+      badgeColor: '#38bdf8',
+    },
+    SERVICE_ACCOUNT: {
+      title: 'Cuenta de Servicio / API / Agentes IA',
+      description:
+        'Identidad para integraciones automatizadas, agentes IA MCP, sondas externas y recolección de telemetría con permisos específicos de ejecución.',
+      level: 10,
+      badgeColor: '#8b5cf6',
+    },
+  };
 
   // Gestión de Auto-Registro Público
   const isRegistrationEnabled = ref(true);
@@ -311,13 +413,12 @@
       <div>
         <h1 class="view-title">Gestión de Usuarios y Roles RBAC (11 Roles)</h1>
         <p class="view-subtitle">
-          Control de acceso técnico, reinicio de 2FA protegido y asignación de matriz de routers.
+          Control de acceso técnico, definición de permisos por rol, reinicio de 2FA y matriz de routers.
         </p>
       </div>
 
-      <div class="header-actions">
+      <div v-if="activeTab === 'users' && isWriteAuthorized" class="header-actions">
         <button
-          v-if="isWriteAuthorized"
           type="button"
           class="btn-toggle-reg"
           :class="{
@@ -331,7 +432,6 @@
         </button>
 
         <button
-          v-if="isWriteAuthorized"
           type="button"
           class="btn-create"
           @click="isCreateUserModalOpen = true"
@@ -341,12 +441,52 @@
       </div>
     </header>
 
-    <div v-if="errorMessage" class="banner banner--error" role="alert">
-      {{ errorMessage }}
+    <!-- Navegación de Pestañas de la Sección Usuarios & RBAC -->
+    <div class="rbac-tabs-nav" role="tablist" aria-label="Secciones de Usuarios y RBAC">
+      <button
+        id="tab-users"
+        type="button"
+        role="tab"
+        class="rbac-tab-btn"
+        :class="{ 'rbac-tab-btn--active': activeTab === 'users' }"
+        :aria-selected="activeTab === 'users'"
+        aria-controls="tabpanel-users"
+        @click="selectTab('users')"
+      >
+        <span class="tab-btn-icon" aria-hidden="true">👥</span>
+        <span class="tab-btn-text">Operadores &amp; Cuentas</span>
+        <span class="tab-btn-badge">{{ usersList.length }}</span>
+      </button>
+
+      <button
+        id="tab-roles"
+        type="button"
+        role="tab"
+        class="rbac-tab-btn"
+        :class="{ 'rbac-tab-btn--active': activeTab === 'roles' }"
+        :aria-selected="activeTab === 'roles'"
+        aria-controls="tabpanel-roles"
+        @click="selectTab('roles')"
+      >
+        <span class="tab-btn-icon" aria-hidden="true">🛡️</span>
+        <span class="tab-btn-text">Perfiles &amp; Matriz de Permisos</span>
+        <span class="tab-btn-badge tab-btn-badge--cyan">11 Roles</span>
+      </button>
     </div>
-    <div v-if="successMessage" class="banner banner--success" role="status">
-      {{ successMessage }}
-    </div>
+
+    <!-- Pestaña 1: Operadores y Usuarios -->
+    <div
+      v-show="activeTab === 'users'"
+      id="tabpanel-users"
+      role="tabpanel"
+      aria-labelledby="tab-users"
+    >
+      <div v-if="errorMessage" class="banner banner--error" role="alert">
+        {{ errorMessage }}
+      </div>
+      <div v-if="successMessage" class="banner banner--success" role="status">
+        {{ successMessage }}
+      </div>
 
     <!-- Barra de Filtros Accesibles -->
     <div class="filters-bar">
@@ -485,6 +625,17 @@
         </tbody>
       </table>
     </div>
+    </div>
+
+    <!-- Pestaña 2: Matriz de Roles y Permisos RBAC -->
+    <div
+      v-show="activeTab === 'roles'"
+      id="tabpanel-roles"
+      role="tabpanel"
+      aria-labelledby="tab-roles"
+    >
+      <RbacRoleMatrixPanel />
+    </div>
 
     <!-- Modal para Crear Usuario -->
     <div
@@ -574,6 +725,25 @@
             </div>
           </div>
 
+          <!-- Cuadro de Información y Descripción del Rol para nuevos administradores -->
+          <div
+            v-if="ROLE_DETAILS[newUser.role]"
+            class="role-desc-preview"
+            role="region"
+            aria-label="Descripción del rol seleccionado"
+          >
+            <div class="preview-header">
+              <span
+                class="preview-badge"
+                :style="{ borderColor: ROLE_DETAILS[newUser.role].badgeColor, color: ROLE_DETAILS[newUser.role].badgeColor }"
+              >
+                Nivel {{ ROLE_DETAILS[newUser.role].level }}
+              </span>
+              <strong class="preview-title">{{ ROLE_DETAILS[newUser.role].title }}</strong>
+            </div>
+            <p class="preview-text">{{ ROLE_DETAILS[newUser.role].description }}</p>
+          </div>
+
           <div class="form-group">
             <label class="checkbox-label">
               <input v-model="newUser.has_all_routers_access" type="checkbox" />
@@ -642,6 +812,25 @@
             <select id="app-role" v-model="approvalForm.role" class="form-select">
               <option v-for="r in availableRoles" :key="r" :value="r">{{ r }}</option>
             </select>
+          </div>
+
+          <!-- Cuadro de Información y Descripción del Rol para aprobación -->
+          <div
+            v-if="ROLE_DETAILS[approvalForm.role]"
+            class="role-desc-preview"
+            role="region"
+            aria-label="Descripción del rol asignado"
+          >
+            <div class="preview-header">
+              <span
+                class="preview-badge"
+                :style="{ borderColor: ROLE_DETAILS[approvalForm.role].badgeColor, color: ROLE_DETAILS[approvalForm.role].badgeColor }"
+              >
+                Nivel {{ ROLE_DETAILS[approvalForm.role].level }}
+              </span>
+              <strong class="preview-title">{{ ROLE_DETAILS[approvalForm.role].title }}</strong>
+            </div>
+            <p class="preview-text">{{ ROLE_DETAILS[approvalForm.role].description }}</p>
           </div>
 
           <div class="form-group">
@@ -1087,5 +1276,103 @@
     padding: 8px 18px;
     border-radius: 6px;
     cursor: pointer;
+  }
+
+  /* Pestañas de Navegación Sección Usuarios & RBAC */
+  .rbac-tabs-nav {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--rg-border-grid, #1e293b);
+    padding-bottom: 2px;
+  }
+
+  .rbac-tab-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--rg-text-muted, #94a3b8);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 6px 6px 0 0;
+  }
+
+  .rbac-tab-btn:hover {
+    color: var(--rg-text-primary, #f8fafc);
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .rbac-tab-btn--active {
+    color: var(--rg-accent-cyan, #22d3ee);
+    border-bottom-color: var(--rg-accent-cyan, #22d3ee);
+    background: rgba(34, 211, 238, 0.06);
+  }
+
+  .tab-btn-icon {
+    font-size: 1.1rem;
+  }
+
+  .tab-btn-text {
+    font-weight: 600;
+  }
+
+  .tab-btn-badge {
+    background: rgba(148, 163, 184, 0.15);
+    color: var(--rg-text-muted, #94a3b8);
+    font-size: 0.72rem;
+    padding: 2px 7px;
+    border-radius: 12px;
+    font-weight: 600;
+  }
+
+  .tab-btn-badge--cyan {
+    background: rgba(34, 211, 238, 0.15);
+    color: #22d3ee;
+  }
+
+  /* Previsualización de Descripción del Rol en Modales */
+  .role-desc-preview {
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid var(--rg-border-grid, #1e293b);
+    border-left: 3px solid var(--rg-accent-cyan, #22d3ee);
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-top: 8px;
+    margin-bottom: 12px;
+  }
+
+  .preview-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  .preview-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid currentColor;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .preview-title {
+    font-size: 0.82rem;
+    color: var(--rg-text-primary, #f8fafc);
+  }
+
+  .preview-text {
+    font-size: 0.78rem;
+    line-height: 1.35;
+    color: var(--rg-text-secondary, #cbd5e1);
+    margin: 0;
   }
 </style>

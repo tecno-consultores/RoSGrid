@@ -17,7 +17,9 @@ _GLOBAL_ACCESS_ROLES = {
 }
 
 
-def evaluate_role_permission(role: SystemRoleEnum, action: str) -> str:
+def evaluate_role_permission(role: SystemRoleEnum, action: str, overrides: dict[str, str] | None = None) -> str:
+    if overrides and action in overrides:
+        return overrides[action]
     return POLICY_MATRIX.get(role, {}).get(action, DENY)
 
 

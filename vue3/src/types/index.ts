@@ -8,11 +8,31 @@ export type SystemRole =
   | 'SUPPORT_L3'
   | 'SUPPORT_L2'
   | 'SUPPORT_L1'
+  | 'FIELD_TECH'
   | 'INVENTORY_MANAGER'
   | 'SECURITY_OFFICER'
   | 'BILLING_ADMIN'
   | 'NOC_MONITOR'
-  | 'AUDITOR';
+  | 'AUDITOR'
+  | 'SERVICE_ACCOUNT';
+
+export interface RbacRoleItem {
+  role: string;
+  title: string;
+  description: string;
+  level: number;
+  badge_color: string;
+  is_system_reserved: boolean;
+  has_custom_overrides: boolean;
+  permissions: Record<string, string>;
+}
+
+export interface RbacActionItem {
+  key: string;
+  label: string;
+  category: string;
+  description: string;
+}
 
 export interface UserInfo {
   id: string;
