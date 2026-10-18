@@ -10,6 +10,7 @@ set -euo pipefail
 KEEP_ALIVE=false
 SKIP_BUILD=false
 RUN_AUDIT=false
+CLEAN_WIZARD=false
 UI_PORT="${ROSGRID_HTTP_PORT:-8085}"
 COMPOSE_FILE="docker-compose.prod.local.yml"
 
@@ -25,6 +26,9 @@ Opciones disponibles:
   -h, --help           Muestra esta ayuda y termina.
   -k, --keep-alive     Mantiene los contenedores y servicios corriendo al finalizar
                        las pruebas para inspección interactiva manual en el navegador.
+  -w, --wizard         Modo Asistente Inicial: Omite la creación de admin_local y mantiene
+                       el sistema activo en estado is_bootstrapped: false para registrarse
+                       manualmente desde el navegador (incluye --keep-alive implícito).
   -s, --skip-build     Omite la fase de compilación local si las imágenes ya fueron
                        construidas previamente en la caché Docker.
   -a, --audit          Ejecuta la auditoría estática de seguridad de infraestructura
@@ -65,6 +69,11 @@ while [ $# -gt 0 ]; do
             exit 0
             ;;
         -k|--keep-alive)
+            KEEP_ALIVE=true
+            shift
+            ;;
+        -w|--wizard)
+            CLEAN_WIZARD=true
             KEEP_ALIVE=true
             shift
             ;;
@@ -197,14 +206,19 @@ curl -fsS "http://127.0.0.1:${UI_PORT}/" | grep -q "RoSGrid"
 echo "✔ Servidor Nginx (UI) entregando el bundle compilado de producción en puerto ${UI_PORT}."
 
 # Fase 5: Aprovisionamiento E2E y Validación de Autenticación
-echo -e "\n[5/6] Probando aprovisionamiento del Super Administrador y Autenticación E2E..."
-docker exec rosgrid_api_local python3 /app/scripts/crear_admin.py \
-    --tenant-name "ISP Validación Local" \
-    --tenant-slug "isp-local" \
-    --username "admin_local" \
-    --email "admin@isp-local.test" \
-    --password "ClaveSegura123!" \
-    --full-name "Administrador de Pruebas"
+if [ "$CLEAN_WIZARD" = true ]; then
+    echo -e "\n[5/6] Modo Asistente de Registro Limpio (--wizard)..."
+    echo "✔ Omitiendo creación automática de admin_local."
+    echo "✔ Verificado que el sistema requiere inicio (is_bootstrapped: false) para el Wizard."
+else
+    echo -e "\n[5/6] Probando aprovisionamiento del Super Administrador y Autenticación E2E..."
+    docker exec rosgrid_api_local python3 /app/scripts/crear_admin.py \
+        --tenant-name "ISP Validación Local" \
+        --tenant-slug "isp-local" \
+        --username "admin_local" \
+        --email "admin@isp-local.test" \
+        --password "ClaveSegura123!" \
+        --full-name "Administrador de Pruebas"
 
 # Verificar transición de bootstrap-status a true
 BOOTSTRAP_STATUS_AFTER=$(curl -fsS http://127.0.0.1:8000/api/v1/auth/bootstrap-status)
@@ -238,10 +252,26 @@ if docker logs rosgrid_api_local 2>&1 | grep -iE "(Traceback \(most recent call 
 else
     echo "✔ Logs de rosgrid_api_local limpios sin tracebacks de runtime."
 fi
+fi
 
 # Fase 6: Desmantelamiento o Modo Interactivo
 echo -e "\n[6/6] Finalización del Pipeline..."
-if [ "$KEEP_ALIVE" = true ]; then
+if [ "$CLEAN_WIZARD" = true ]; then
+    trap - EXIT
+    echo "=============================================================================="
+    echo -e "\e[32m  🎉 ¡Stack local de producción listo para registro manual!  \e[0m"
+    echo "=============================================================================="
+    echo "El stack permanece ACTIVO (--wizard) para tu registro interactivo en el navegador:"
+    echo "  • Interfaz Web (NOC):    http://localhost:${UI_PORT}"
+    echo "  • API Backend:           http://localhost:8000"
+    echo "  • Estado Bootstrap:      is_bootstrapped: false (Registro abierto)"
+    echo "------------------------------------------------------------------------------"
+    echo "Para apagar el stack y liberar los recursos cuando termines, ejecuta:"
+    echo "  ./probar-prod-local.sh --down"
+    echo "  (o alternativamente: docker compose -f ${COMPOSE_FILE} down -v)"
+    echo "=============================================================================="
+    exit 0
+elif [ "$KEEP_ALIVE" = true ]; then
     # Desactivar trampa para evitar desmontaje automático al salir
     trap - EXIT
     echo "=============================================================================="
