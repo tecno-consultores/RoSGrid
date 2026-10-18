@@ -14,14 +14,28 @@ export interface ApiResponse<T = unknown> {
 }
 
 export class ApiError extends Error {
+  public readonly detail?: string;
+
   constructor(
     public readonly status: number,
     public readonly statusText: string,
     public readonly data: unknown,
     message?: string,
   ) {
-    super(message || `HTTP ${status}: ${statusText}`);
+    let detailMsg: string | undefined;
+    if (data && typeof data === 'object' && 'detail' in (data as Record<string, unknown>)) {
+      const d = (data as Record<string, unknown>).detail;
+      if (typeof d === 'string') {
+        detailMsg = d;
+      } else if (Array.isArray(d)) {
+        detailMsg = (d as Array<Record<string, unknown>>)
+          .map((item) => (typeof item?.msg === 'string' ? item.msg : JSON.stringify(item)))
+          .join(', ');
+      }
+    }
+    super(message || detailMsg || `HTTP ${status}: ${statusText}`);
     this.name = 'ApiError';
+    this.detail = detailMsg;
   }
 }
 

@@ -602,3 +602,77 @@ async def test_bootstrap_init_success(async_client: AsyncClient) -> None:
     # 4. Esquema no Bearer
     res_bad = await async_client.get("/users/me", headers={"Authorization": "Basic 12345"})
     assert res_bad.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_register_user_success_with_single_tenant_fallback(
+    async_client: AsyncClient,
+    sample_tenant: Tenant,
+) -> None:
+    session = MockAsyncSession(tenant=sample_tenant, user=None, users_count=1, tenants_count=1)
+    app.dependency_overrides[get_db_session] = lambda: session
+    try:
+        payload = {
+            "tenant_slug": "different-slug",  # Diferente slug, debe resolver a single tenant
+            "username": "nuevo_operador",
+            "email": "operador@test.com",
+            "full_name": "Nuevo Operador",
+            "password": "Password123!",
+        }
+        headers = {"Idempotency-Key": str(uuid.uuid4())}
+        res = await async_client.post("/api/v1/auth/register", json=payload, headers=headers)
+        assert res.status_code == 201
+        data = res.json()
+        assert data["status"] == "PENDING_APPROVAL"
+        assert data["username"] == "nuevo_operador"
+        assert data["is_active"] is False
+        assert len(session.added) == 1
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)
+
+
+@pytest.mark.asyncio
+async def test_register_user_multi_tenant_not_found(async_client: AsyncClient) -> None:
+    session = MockAsyncSession(tenant=None, user=None, users_count=5, tenants_count=3)
+    app.dependency_overrides[get_db_session] = lambda: session
+    try:
+        payload = {
+            "tenant_slug": "inexistente",
+            "username": "operador_fail",
+            "email": "fail@test.com",
+            "full_name": "Operador Fail",
+            "password": "Password123!",
+        }
+        headers = {"Idempotency-Key": str(uuid.uuid4())}
+        res = await async_client.post("/api/v1/auth/register", json=payload, headers=headers)
+        assert res.status_code == 404
+        assert "no existe en RoSGrid" in res.json()["detail"]
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)
+
+
+@pytest.mark.asyncio
+async def test_register_user_disabled(
+    async_client: AsyncClient,
+    sample_tenant: Tenant,
+    fake_redis: FakeAsyncRedis,
+) -> None:
+    session = MockAsyncSession(tenant=sample_tenant, user=None, users_count=1, tenants_count=1)
+    app.dependency_overrides[get_db_session] = lambda: session
+    try:
+        await fake_redis.set("rg:config:public_registration_enabled", "0")
+        payload = {
+            "tenant_slug": sample_tenant.slug,
+            "username": "operador_off",
+            "email": "off@test.com",
+            "full_name": "Operador Off",
+            "password": "Password123!",
+        }
+        headers = {"Idempotency-Key": str(uuid.uuid4())}
+        res = await async_client.post("/api/v1/auth/register", json=payload, headers=headers)
+        assert res.status_code == 403
+        assert "deshabilitado" in res.json()["detail"]
+    finally:
+        await fake_redis.delete("rg:config:public_registration_enabled")
+        app.dependency_overrides.pop(get_db_session, None)
+

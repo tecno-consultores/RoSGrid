@@ -30,7 +30,7 @@
   const bootstrapAdminPasswordConfirm = ref('');
 
   // Formulario Etapa Registro de Operador
-  const registerTenantSlug = ref('master');
+  const registerTenantSlug = ref('');
   const registerUsername = ref('');
   const registerEmail = ref('');
   const registerFullName = ref('');
@@ -386,8 +386,22 @@
       
       currentStep.value = 'CREDENTIALS';
     } catch (err: unknown) {
-      const error = err as { detail?: string; message?: string };
-      errorMessage.value = error.detail || error.message || 'Error al procesar la solicitud de registro.';
+      const error = err as {
+        detail?: string;
+        message?: string;
+        data?: { detail?: string | Array<{ msg: string }> };
+      };
+      let detailStr = '';
+      if (typeof error.data?.detail === 'string') {
+        detailStr = error.data.detail;
+      } else if (Array.isArray(error.data?.detail)) {
+        detailStr = error.data.detail.map((d) => d.msg).join(', ');
+      } else if (error.detail) {
+        detailStr = error.detail;
+      } else if (error.message) {
+        detailStr = error.message;
+      }
+      errorMessage.value = detailStr || 'Error al procesar la solicitud de registro.';
     } finally {
       isLoading.value = false;
     }
@@ -401,18 +415,29 @@
     }
     // Detección automática de primer uso (Bootstrap) y estado de registro público
     try {
-      const res = await http.get<{ is_bootstrapped: boolean; registration_enabled?: boolean }>(
-        '/api/v1/auth/bootstrap-status',
-      );
+      const res = await http.get<{
+        is_bootstrapped: boolean;
+        registration_enabled?: boolean;
+        default_tenant_slug?: string;
+        default_tenant_name?: string;
+      }>('/api/v1/auth/bootstrap-status');
       if (res.data) {
         if (res.data.is_bootstrapped === false) {
           currentStep.value = 'BOOTSTRAP';
           isBootstrapped.value = false;
         } else {
           isBootstrapped.value = true;
-        }
-        if (res.data.registration_enabled !== undefined) {
-          registrationEnabled.value = res.data.registration_enabled;
+          if (res.data.registration_enabled !== undefined) {
+            registrationEnabled.value = res.data.registration_enabled;
+          }
+          if (res.data.default_tenant_slug) {
+            if (!tenantSlug.value) {
+              tenantSlug.value = res.data.default_tenant_slug;
+            }
+            if (!registerTenantSlug.value) {
+              registerTenantSlug.value = res.data.default_tenant_slug;
+            }
+          }
         }
       }
     } catch {
@@ -711,7 +736,7 @@
             v-model="registerTenantSlug"
             type="text"
             required
-            placeholder="ej. master"
+            placeholder="ej. sistemas"
             class="form-input"
             :disabled="isLoading"
             @input="

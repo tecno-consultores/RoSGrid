@@ -118,9 +118,24 @@ def set_auth_cookies(
 
 
 async def _get_active_tenant(db: AsyncSession, slug: str) -> Tenant:
-    stmt = select(Tenant).where(Tenant.slug == slug, Tenant.status == TenantStatusEnum.ACTIVE)
+    clean_slug = slug.strip().lower()
+    stmt = select(Tenant).where(Tenant.slug == clean_slug, Tenant.status == TenantStatusEnum.ACTIVE)
     res = await db.execute(stmt)
     tenant = res.scalar_one_or_none()
+    if not tenant:
+        # Intentar coincidencia por nombre de la empresa
+        stmt_name = select(Tenant).where(func.lower(Tenant.name) == clean_slug, Tenant.status == TenantStatusEnum.ACTIVE)
+        res_name = await db.execute(stmt_name)
+        tenant = res_name.scalar_one_or_none()
+    if not tenant:
+        # Si sólo existe 1 tenant activo en la plataforma, resolver a ese tenant
+        active_count = await db.scalar(
+            select(func.count(Tenant.id)).where(Tenant.status == TenantStatusEnum.ACTIVE)
+        ) or 0
+        if active_count == 1:
+            stmt_single = select(Tenant).where(Tenant.status == TenantStatusEnum.ACTIVE)
+            res_single = await db.execute(stmt_single)
+            tenant = res_single.scalar_one_or_none()
     if not tenant:
         raise HTTPException(status_code=401, detail="Credenciales inválidas o empresa no encontrada")
     return tenant
@@ -446,11 +461,21 @@ async def get_bootstrap_status(
         if val.lower() in ("0", "false", "off", "no"):
             reg_enabled = False
 
+    default_tenant_slug: str | None = None
+    default_tenant_name: str | None = None
+    if tenants_count == 1:
+        single_tenant = (await db.execute(select(Tenant))).scalar_one_or_none()
+        if single_tenant:
+            default_tenant_slug = single_tenant.slug
+            default_tenant_name = single_tenant.name
+
     return BootstrapStatusResponse(
         is_bootstrapped=is_bootstrapped,
         tenants_count=tenants_count,
         users_count=users_count,
         registration_enabled=reg_enabled,
+        default_tenant_slug=default_tenant_slug,
+        default_tenant_name=default_tenant_name,
         message="Sistema ya inicializado"
         if is_bootstrapped
         else "Inicialización requerida: No hay usuarios registrados.",
@@ -480,14 +505,25 @@ async def register_user(
                 detail="El auto-registro de usuarios ha sido deshabilitado por el Administrador.",
             )
 
-    # 2. Buscar tenant por slug
-    stmt_t = select(Tenant).where(Tenant.slug == body.tenant_slug.strip().lower())
+    # 2. Buscar tenant por slug, nombre o fallback si existe un único tenant
+    clean_slug = body.tenant_slug.strip().lower()
+    stmt_t = select(Tenant).where(Tenant.slug == clean_slug)
     res_t = await db.execute(stmt_t)
     tenant = res_t.scalar_one_or_none()
     if not tenant:
+        stmt_name = select(Tenant).where(func.lower(Tenant.name) == clean_slug)
+        res_name = await db.execute(stmt_name)
+        tenant = res_name.scalar_one_or_none()
+    if not tenant:
+        tenants_count = await db.scalar(select(func.count(Tenant.id))) or 0
+        if tenants_count == 1:
+            stmt_single = select(Tenant)
+            res_single = await db.execute(stmt_single)
+            tenant = res_single.scalar_one_or_none()
+    if not tenant:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"La empresa '{body.tenant_slug}' no existe en RoSGrid.",
+            detail=f"La empresa o tenant '{body.tenant_slug}' no existe en RoSGrid. Verifica el identificador de la organización.",
         )
 
     # 3. Verificar unicidad de username y email

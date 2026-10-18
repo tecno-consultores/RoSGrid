@@ -62,6 +62,8 @@ class BootstrapStatusResponse(BaseModel):
     tenants_count: int
     users_count: int
     registration_enabled: bool = True
+    default_tenant_slug: str | None = None
+    default_tenant_name: str | None = None
     message: str
 
 
@@ -92,7 +94,7 @@ class RegisterUserRequest(BaseModel):
     username: str = Field(..., min_length=3, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$")
     email: EmailStr
     full_name: str = Field(..., min_length=3, max_length=128)
-    password: str = Field(..., min_length=12)
+    password: str = Field(..., min_length=8)
 
 
 class RegisterUserResponse(BaseModel):
