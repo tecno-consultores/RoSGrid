@@ -61,6 +61,8 @@ async def _discover_resource(client: MikrotikRestClient, r: Router) -> None:
             r.ros_version = res_data.get("version", r.ros_version)
             r.board_name = res_data.get("board-name", r.board_name)
             r.architecture_name = res_data.get("architecture-name", r.architecture_name)
+            if not r.model_name and r.board_name:
+                r.model_name = r.board_name
     except Exception as exc:
         logger.debug("Discovery resource error: %s", exc)
 

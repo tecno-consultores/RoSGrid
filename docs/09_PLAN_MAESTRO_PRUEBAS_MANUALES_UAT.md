@@ -136,8 +136,8 @@ Las pruebas automatizadas de RoSGrid (cobertura unitaria `>= 95%`, mutación, ac
 
 | ID | Caso de Prueba | Precondición | Pasos de Ejecución | Resultado Esperado |
 | :--- | :--- | :--- | :--- | :--- |
-| **UAT-29** | Tablero Táctico Mission Control | Sesión activa en RoSGrid | 1. Navegar a la raíz `/` o hacer clic en el isotipo de RoSGrid. 2. Observar reloj UTC en vivo, métricas de ancho de banda agregado y disponibilidad de flota. | Los datos se actualizan dinámicamente cada segundo sin parpadeos. La distribución por roles refleja la flota real. |
-| **UAT-30** | Wallboard NOC y Apertura Directa de WebFig | Al menos un router en Inventario | 1. Ingresar a *Wallboard NOC* (`/noc-wallboard`). 2. Hacer clic sobre el pin de un router en el mapa OSM. 3. Probar clic en *"Abrir WebFig"* en el popup y en la barra HUD inferior. | Ambos botones redirigen inmediatamente a la consola operativa en vivo (`/routers/:id/webfig/live`) del router seleccionado. |
+| **UAT-29** | Tablero Táctico Mission Control | Sesión activa en RoSGrid | 1. Navegar a la raíz `/` (o hacer clic en el isotipo de RoSGrid). 2. En la franja superior de KPIs, observar las 4 tarjetas tácticas: *Flota MikroTik* (Total, Online, Offline), *Disponibilidad Flota* (%), *Alertas NOC Activas* (en curso / despejado), y *Maker-Checker* (pendientes). 3. En la sección inferior, revisar la agrupación de equipos por "Rol de Red". | Los relojes (Local y UTC en vivo) se actualizan segundo a segundo sin parpadeo. Los KPIs reflejan el estado del parque de routers y el WebSocket muestra `NOC EN VIVO`. |
+| **UAT-30** | Wallboard NOC y Apertura Directa de WebFig | Al menos un router en Inventario | 1. Ingresar a *Wallboard NOC* (`/noc-wallboard`). 2. Observar la franja superior de KPIs (*TOTAL*, *ONLINE*, *CARGA ALTA*, *OFFLINE*, *MANTENIMIENTO*, *ALERTA TOFU*). 3. Hacer clic sobre el pin de un router en el mapa OSM. 4. Probar clic en *"Abrir WebFig"* en el popup y en la barra flotante HUD inferior. | Ambos botones redirigen inmediatamente a la consola operativa en vivo (`/routers/:id/webfig/live`) del router seleccionado. |
 | **UAT-31** | Modo TV Pantalla Completa | Wallboard abierto | 1. Presionar el botón *"🖥️ Modo TV"*. 2. Observar comportamiento. 3. Presionar *"🗗 Salir TV"* o tecla `Esc`. | La pantalla entra a modo inmersivo sin barras de navegación del navegador, optimizado para salas de monitoreo 24/7. |
 
 ---
@@ -146,8 +146,8 @@ Las pruebas automatizadas de RoSGrid (cobertura unitaria `>= 95%`, mutación, ac
 
 | ID | Caso de Prueba | Precondición | Pasos de Ejecución | Resultado Esperado |
 | :--- | :--- | :--- | :--- | :--- |
-| **UAT-32** | Creación de Plantilla Golden Config | Rol `SUPERADMIN` o `TENANT_ADMIN` | 1. Ir a *Acciones Masivas* -> *Gestionar Plantillas*. 2. Crear plantilla con variables Jinja2 (ej. `set [find name="ether1"] comment="{{ wan_comment }}"`). 3. Guardar. | La plantilla se valida sintácticamente, se almacena en base de datos y queda disponible en el selector de tareas masivas. |
-| **UAT-33** | Despliegue Masivo con Dry-Run | Plantilla creada y routers seleccionados | 1. Seleccionar plantilla y filtrar routers objetivo por rol. 2. Presionar *Simular (Dry-Run)*. 3. Revisar comandos resultantes. 4. Presionar *Ejecutar*. | La simulación muestra el diff de comandos antes de tocar la red. La ejecución aplica los cambios bajo Safe Mode y registra auditoría forense. |
+| **UAT-32** | Creación y Edición de Plantillas Golden Config | Rol `SUPERADMIN` o `TENANT_ADMIN` | 1. Ir a *Acciones Masivas* (`/bulk-ops`). 2. En el *Paso 1*, seleccionar al menos un router y hacer clic en *"Siguiente: Configurar Plantilla ➔"*. 3. En el *Paso 2*, hacer clic en el botón superior **`+ Nueva Plantilla`**. 4. Ingresar Nombre (ej. `Hardening DNS & NTP`), Categoría, Script Jinja2 (`/ip dns set allow-remote-requests=no`) y definir variables. 5. Guardar. | La plantilla se valida sintácticamente, se almacena en base de datos y aparece seleccionable en la cuadrícula de plantillas. |
+| **UAT-33** | Despliegue Masivo con Simulación Dry-Run | Plantilla seleccionada en Paso 2 | 1. Con la plantilla seleccionada en el Paso 2, rellenar los valores de las variables. 2. Hacer clic en *"Siguiente: Simulación Dry-Run ➔"*. 3. En el *Paso 3*, inspeccionar la previsualización del script renderizado. 4. Clic en *"Siguiente: Confirmar Ejecución ➔"* y luego en *"🚀 Desplegar a la Flota (Safe Mode)"*. | Se inicia la tarea masiva, los comandos se aplican bajo Safe Mode (60s) en cada router y se registra la auditoría forense WORM. |
 
 ---
 
@@ -155,8 +155,8 @@ Las pruebas automatizadas de RoSGrid (cobertura unitaria `>= 95%`, mutación, ac
 
 | ID | Caso de Prueba | Precondición | Pasos de Ejecución | Resultado Esperado |
 | :--- | :--- | :--- | :--- | :--- |
-| **UAT-34** | Creación de Rol de Infraestructura | Usuario administrador en *Inventario* | 1. Clic en *Gestionar Roles*. 2. Ingresar nombre: `CORE_BGP_MPLS` y descripción. 3. Guardar. | El nuevo rol aparece de inmediato en el selector de filtros de inventario y en los formularios de edición. |
-| **UAT-35** | Auto-Registro Dinámico desde Archivo CSV | Archivo CSV con columna `network_role` desconocida (ej. `TOWER_SECTORIAL`) | 1. Abrir Asistente CSV en *Inventario*. 2. Subir CSV con rol inexistente en el catálogo. 3. Completar importación. | RoSGrid detecta el rol nuevo, lo registra automáticamente en la tabla `tenant_custom_roles` y añade el equipo sin rechazar la importación. |
+| **UAT-34** | Creación de Rol de Infraestructura | Usuario administrador en *Inventario* | 1. En la cabecera de *Inventario*, hacer clic en el botón **`🏷️ Roles de Red`**. 2. En el modal, ingresar nombre del rol: `CORE_BGP_MPLS` y su descripción. 3. Guardar. | El nuevo rol aparece de inmediato en el filtro desplegable de roles de inventario y en los formularios de edición de routers. |
+| **UAT-35** | Auto-Registro Dinámico desde Archivo CSV | Archivo CSV con columna `network_role` desconocida (ej. `TOWER_SECTORIAL`) | 1. En *Inventario*, abrir *"📂 Importar CSV"*. 2. Cargar CSV que contenga un rol no registrado previamente. 3. Completar validación y confirmación. | RoSGrid detecta el rol nuevo, lo registra automáticamente en la tabla `tenant_custom_roles` de PostgreSQL y completa la importación sin errores. |
 
 ---
 
@@ -164,8 +164,46 @@ Las pruebas automatizadas de RoSGrid (cobertura unitaria `>= 95%`, mutación, ac
 
 | ID | Caso de Prueba | Precondición | Pasos de Ejecución | Resultado Esperado |
 | :--- | :--- | :--- | :--- | :--- |
-| **UAT-36** | Selección Interactiva de Tarjetas en Diff | Al menos 2 respaldos en los últimos 30 días | 1. Ir a *Respaldos y Diff*. 2. Hacer clic en una tarjeta para seleccionarla como `[🔵 BASE]`. 3. Clic en botón `[🟢 OBJETIVO]` de otra tarjeta. | Las tarjetas se resaltan con bordes de alto contraste e insignias. El comparador inferior actualiza el diff side-by-side de inmediato. |
-| **UAT-37** | Descarga Segura de Script `.rsc` vs `.backup` | Router con respaldos generados | 1. Clic en icono de descarga script (`📄`). 2. Clic en descarga binaria (`💾`). | El script `.rsc` descarga un archivo de texto claro válido. Si no existe snapshot binario nativo, el botón `💾` se inhabilita con tooltip explicativo impidiendo descargas de archivos corruptos. |
+| **UAT-36** | Selección Interactiva de Tarjetas en Diff | Al menos 2 respaldos en los últimos 30 días | 1. Ir a *Respaldos y Diff* (`/backups`). 2. Hacer clic directamente en una tarjeta para seleccionarla como `[🔵 BASE]`. 3. Hacer clic en el botón `Objetivo (Der)` de otra tarjeta. | Las tarjetas se resaltan con bordes de alto contraste e insignias `[🔵 BASE]` y `[🟢 OBJETIVO]`. El comparador inferior actualiza el diff side-by-side de inmediato. |
+| **UAT-37** | Descarga Segura de Script `.rsc` vs `.backup` | Router con respaldos generados | 1. Hacer clic en el icono del script (`📜`): debe descargar un archivo con nombre `rosgrid-backup-<routerId>-<backupId>.rsc`. 2. Observar el botón del binario (`💾`): si el punto de restauración es una exportación de configuración en texto plano, el botón se muestra inhabilitado con tooltip indicativo; si existe una instantánea binaria nativa en disco, permite su descarga binaria directa. | El archivo `.rsc` se descarga con su extensión correcta y puede abrirse con cualquier editor de texto o terminal. |
+| **UAT-37B** | Generación de Nuevo Respaldo y Deduplicación | Router en línea | 1. Presionar el botón *"➕ Nuevo Respaldo"*. 2. Si la configuración del router no ha cambiado desde el último respaldo, el sistema emite el aviso informativo: *"Configuración idéntica al último respaldo. Se aplicó deduplicación inteligente"*. 3. Modificar un comentario o valor en el router y presionar *"➕ Nuevo Respaldo"*. | Al detectar un cambio real en el hash SHA-256, se crea de inmediato un nuevo punto de restauración en la lista con su contador de líneas añadidas/eliminadas. |
+
+---
+
+### Módulo 15: Administración Integral de Usuarios, Roles RBAC y Bóveda
+
+| ID | Caso de Prueba | Precondición | Pasos de Ejecución | Resultado Esperado |
+| :--- | :--- | :--- | :--- | :--- |
+| **UAT-38** | Creación de Nuevo Usuario Operador | Sesión como `SUPERADMIN` o `TENANT_ADMIN` | 1. Ir a *Usuarios y Permisos* (`/users`). 2. Clic en *"Crear Usuario"*. 3. Ingresar Nombre, Username, Email, Rol (ej. `SUPPORT_L2`) y Contraseña inicial. 4. Guardar. | El usuario aparece en la lista de usuarios activos con su insignia de rol correspondiente y se genera registro de auditoría. |
+| **UAT-39** | Asignación Granular de Routers (Matriz de Acceso) | Usuario creado con rol operativo | 1. En la fila del usuario, hacer clic en el botón *"Asignar Routers"*. 2. En el modal, seleccionar 1 o 2 routers específicos y guardar. | El operador solo podrá visualizar y operar los routers asignados explícitamente en el inventario y WebFig. |
+| **UAT-40** | Cambio de Contraseña de Operador | Usuario seleccionado | 1. En la fila del usuario, clic en *"Cambiar Clave"*. 2. Ingresar nueva contraseña segura y confirmar. | La contraseña se hashea con Argon2id en base de datos; la sesión anterior se invalida forzosamente. |
+| **UAT-41** | Eliminación / Desactivación de Usuario | Usuario no-superadmin | 1. En la fila del usuario, hacer clic en *"Eliminar"*. 2. Confirmar en el diálogo emergente. | El usuario se elimina de la base de datos o se revoca su estado; si tenía sesión activa, el WebSocket dispara el kill-switch cerrándola de inmediato. |
+
+---
+
+### Módulo 16: Gestión Multi-Tenant y Aislamiento RLS
+
+| ID | Caso de Prueba | Precondición | Pasos de Ejecución | Resultado Esperado |
+| :--- | :--- | :--- | :--- | :--- |
+| **UAT-42** | Creación de Organización (Tenant) | Rol `SUPERADMIN_GLOBAL` | 1. Ir a *Organizaciones / Tenants* (`/tenants`). 2. Clic en *"Nueva Organización"*. 3. Ingresar Nombre (ej. `Sucursal Maracaibo`), Slug (`maracaibo`), cuota de routers y usuarios. 4. Guardar. | El nuevo inquilino se crea con su propio esquema RLS en PostgreSQL 17. |
+| **UAT-43** | Aislamiento Estricto de Datos entre Tenants | Dos tenants creados con routers propios | 1. Iniciar sesión con usuario del Tenant A. 2. Verificar que no aparezcan routers ni auditoría del Tenant B en ninguna pantalla ni petición API. | Aislamiento total: PostgreSQL aplica `FORCE ROW LEVEL SECURITY` mediante `app.current_tenant_id` garantizando fuga de datos cero. |
+
+---
+
+### Módulo 17: Ventanas de Mantenimiento y Supresión de Alertas
+
+| ID | Caso de Prueba | Precondición | Pasos de Ejecución | Resultado Esperado |
+| :--- | :--- | :--- | :--- | :--- |
+| **UAT-44** | Programación de Ventana de Mantenimiento | Router en producción | 1. Ir a *Ventanas de Mantenimiento* (`/maintenance`). 2. Clic en *"Programar Ventana"*. 3. Seleccionar router, fecha/hora inicio y fin. 4. Guardar. | El router muestra la insignia táctica *"MANTENIMIENTO"* en Wallboard e Inventario, y las alertas de desconexión se silencian temporalmente. |
+
+---
+
+### Módulo 18: Herramientas Operativas WebFig en Vivo
+
+| ID | Caso de Prueba | Precondición | Pasos de Ejecución | Resultado Esperado |
+| :--- | :--- | :--- | :--- | :--- |
+| **UAT-45** | Utilidades de Diagnóstico en Vivo (Ping / Traceroute) | Conexión activa a router en WebFig | 1. En la consola WebFig del router, ir a la pestaña *Tools / Diagnóstico*. 2. Ingresar IP destino (ej. `8.8.8.8`) y presionar *Iniciar Ping*. | La terminal en vivo muestra los paquetes ICMP, RTT y pérdida de paquetes en tiempo real sin recargar página. |
+| **UAT-46** | Reordenamiento de Reglas de Firewall (Drag & Drop / Teclado) | Pestaña *Firewall* activa | 1. Arrastrar una regla de firewall a una nueva posición o seleccionarla y presionar `Alt + Flecha Arriba`. | La posición se actualiza visualmente y se envía la mutación `/ip/firewall/filter/move` al router bajo Safe Mode (60s). |
 
 ---
 

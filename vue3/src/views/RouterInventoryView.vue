@@ -90,7 +90,16 @@
     { key: 'display_name', label: 'Nombre / Identity', sortable: true },
     { key: 'network_role', label: 'Rol de Red' },
     { key: 'ip_address', label: 'Dirección IP / Puerto' },
-    { key: 'hardware', label: 'Modelo y Arquitectura' },
+    {
+      key: 'hardware',
+      label: 'Modelo y Arquitectura',
+      formatter: (row: Record<string, unknown>) => {
+        const r = row as unknown as RouterItem;
+        const model = r.model || (r as any).model_name || r.board_name || 'CHR';
+        const arch = r.architecture_name ? ` (${r.architecture_name})` : '';
+        return `${model}${arch}`;
+      },
+    },
     { key: 'serial_number', label: 'Serial' },
     { key: 'ros_version', label: 'RouterOS' },
     { key: 'ssl_trust_status', label: 'SSL TOFU' },
@@ -117,8 +126,11 @@
     actionMessage.value = '';
     actionError.value = '';
     try {
-      await http.post(`/api/v1/inventory/routers/${targetRouter.id}/discover`);
-      actionMessage.value = `Autodescubrimiento TOFU disparado para ${targetRouter.display_name}.`;
+      const res = await http.post<RouterItem>(`/api/v1/inventory/routers/${targetRouter.id}/discover`);
+      if (res.data) {
+        inventoryStore.updateRouter(res.data);
+      }
+      actionMessage.value = `Autodescubrimiento TOFU completado para ${targetRouter.display_name}.`;
       setTimeout(() => {
         actionMessage.value = '';
       }, 4000);

@@ -75,6 +75,7 @@ export const useInventoryStore = defineStore('inventory', () => {
       const raw = Array.isArray(res.data) ? res.data : (res.data?.items || []);
       const items: RouterItem[] = raw.map((item: any) => ({
         ...item,
+        model: item.model || item.model_name || item.board_name,
         ip_address:
           item.ip_address ||
           (item.api_base_url

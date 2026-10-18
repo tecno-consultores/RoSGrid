@@ -76,8 +76,12 @@
     backupSuccessMsg.value = null;
     error.value = null;
     try {
-      await http.post(`/api/v1/routers/${routerId.value}/backups/trigger`);
-      backupSuccessMsg.value = 'Respaldo .rsc generado y encriptado exitosamente en la bóveda.';
+      const res = await http.post<{ status?: string; message?: string }>(`/api/v1/routers/${routerId.value}/backups/trigger`);
+      if (res.data?.status === 'IDENTICAL_SKIPPED_DEDUPLICATED') {
+        backupSuccessMsg.value = 'ℹ️ Configuración idéntica al último respaldo. Se aplicó deduplicación inteligente (sin almacenamiento redundante).';
+      } else {
+        backupSuccessMsg.value = '✅ Nuevo punto de respaldo generado y cifrado exitosamente en la bóveda.';
+      }
       await loadBackups();
     } catch (err: unknown) {
       const e = err as { response?: { data?: { detail?: string } }; message?: string; detail?: string };
@@ -266,14 +270,21 @@
         error.value = errorMsg;
         return;
       }
-      const blob = await res.blob();
-      const filename = `rosgrid-backup-${id.slice(0, 8)}.${format}`;
+      const rawBlob = await res.blob();
+      const mimeType = format === 'rsc' ? 'text/plain;charset=utf-8' : 'application/octet-stream';
+      const blob = new Blob([rawBlob], { type: mimeType });
+      const filename = `rosgrid-backup-${routerId.value.slice(0, 8)}-${id.slice(0, 8)}.${format}`;
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
+      a.style.display = 'none';
       a.href = url;
-      a.download = filename;
+      a.setAttribute('download', filename);
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 200);
     } catch {
       error.value = 'Error al descargar el archivo de respaldo.';
     }
