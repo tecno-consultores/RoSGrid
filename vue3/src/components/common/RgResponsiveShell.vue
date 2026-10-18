@@ -45,6 +45,8 @@
         icon: '🛡️',
         badge: nocStore.pendingApprovalsCount,
       },
+      { name: 'IpamManagement', path: '/ipam', label: 'IPAM & FTTH', icon: '🌐' },
+      { name: 'FieldTechOperations', path: '/field-ops', label: 'Técnico de Campo', icon: '🛠️' },
       { name: 'RscGitDiff', path: '/backups', label: 'Respaldos Diff', icon: '📦' },
       { name: 'BulkOperations', path: '/bulk-ops', label: 'Acciones Masivas', icon: '⚡' },
       {

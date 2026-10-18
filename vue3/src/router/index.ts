@@ -251,6 +251,24 @@ const routes: RouteRecordRaw[] = [
       allowedRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'SUPERVISOR'],
     },
   },
+  {
+    path: '/ipam',
+    name: 'IpamManagement',
+    component: () => import('@/views/IpamManagementView.vue'),
+    meta: {
+      requiresAuth: true,
+      title: 'IPAM Dual-Stack Universal & Clientes — RoSGrid',
+    },
+  },
+  {
+    path: '/field-ops',
+    name: 'FieldTechOperations',
+    component: () => import('@/views/FieldTechOperationsView.vue'),
+    meta: {
+      requiresAuth: true,
+      title: 'Operaciones de Campo & Toolkit — RoSGrid',
+    },
+  },
 ];
 
 export const router = createRouter({

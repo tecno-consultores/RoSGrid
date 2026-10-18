@@ -58,6 +58,22 @@
       action: () => router.push('/backups'),
     },
     {
+      id: 'nav-ipam',
+      category: 'NAVIGATION',
+      title: 'IPAM Dual-Stack & FTTH',
+      subtitle: 'Gestor universal de prefijos, pools y abonados',
+      icon: '🌐',
+      action: () => router.push('/ipam'),
+    },
+    {
+      id: 'nav-field-ops',
+      category: 'NAVIGATION',
+      title: 'Técnico de Campo & Toolkit',
+      subtitle: 'Verificación 1-click, diagnóstico ONU y certificación',
+      icon: '🛠️',
+      action: () => router.push('/field-ops'),
+    },
+    {
       id: 'action-theme-toggle',
       category: 'ACTION',
       title: 'Alternar Tema Visual',

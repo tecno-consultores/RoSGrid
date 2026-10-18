@@ -362,3 +362,161 @@ export interface Layer2ResourceResponse {
   items: Array<Record<string, unknown>>;
   form_data?: Record<string, unknown>;
 }
+
+// ============================================================================
+// IPAM & FIELD OPS TYPES
+// ============================================================================
+
+export type IPFamily = 'IPv4' | 'IPv6';
+export type IPPrefixRole =
+  | 'CGNAT'
+  | 'PUBLIC_DYNAMIC'
+  | 'PUBLIC_STATIC'
+  | 'INFRA_P2P'
+  | 'LOOPBACK'
+  | 'CUSTOMER_RESIDENTIAL'
+  | 'CUSTOMER_CORPORATE'
+  | 'MGMT';
+
+export type IPPrefixStatus = 'ACTIVE' | 'RESERVED' | 'DEPRECATED';
+export type IPAddressStatus =
+  | 'ALLOCATED'
+  | 'RESERVED'
+  | 'SOFT_LOCKED'
+  | 'DHCP_STATIC'
+  | 'DHCP_DYNAMIC'
+  | 'QUARANTINE'
+  | 'DEPRECATED';
+
+export type CustomerServiceType = 'PPPOE' | 'DHCP' | 'STATIC';
+export type AuthBackend = 'LOCAL_SECRET' | 'RADIUS';
+export type ONUMode = 'ROUTER' | 'BRIDGE' | 'UNKNOWN';
+export type CustomerServiceStatus = 'ACTIVE' | 'PENDING_INSTALL' | 'SUSPENDED' | 'TERMINATED';
+export type FieldOrderStatus = 'ASSIGNED' | 'IN_PROGRESS' | 'CERTIFIED' | 'FAILED' | 'CANCELLED';
+export type FiberCutStatus = 'DETECTED' | 'INVESTIGATING' | 'RESOLVED';
+
+export interface IPAMVrf {
+  id: string;
+  tenant_id: string;
+  name: string;
+  route_distinguisher?: string;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IPAMPrefix {
+  id: string;
+  tenant_id: string;
+  vrf_id: string;
+  parent_id?: string;
+  prefix: string;
+  ip_family: IPFamily;
+  role: IPPrefixRole;
+  status: IPPrefixStatus;
+  is_pool: boolean;
+  default_child_prefix_len?: number;
+  utilization_pct: number;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IPAMAddress {
+  id: string;
+  tenant_id: string;
+  prefix_id: string;
+  address: string;
+  ip_family: IPFamily;
+  status: IPAddressStatus;
+  router_id?: string;
+  interface_name?: string;
+  mac_address?: string;
+  dns_ptr?: string;
+  description?: string;
+  soft_lock_until?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CustomerService {
+  id: string;
+  tenant_id: string;
+  router_id: string;
+  customer_name: string;
+  customer_code?: string;
+  service_type: CustomerServiceType;
+  auth_backend: AuthBackend;
+  pppoe_username?: string;
+  ipv4_address_id?: string;
+  ipv6_delegated_prefix?: string;
+  onu_mode: ONUMode;
+  onu_mac_address?: string;
+  onu_serial_number?: string;
+  cpe_wifi_mac_address?: string;
+  pon_port?: string;
+  optical_box?: string;
+  last_reachability_status: string;
+  last_seen_at?: string;
+  status: CustomerServiceStatus;
+  physical_address?: string;
+  latitude?: number;
+  longitude?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FieldOrder {
+  id: string;
+  tenant_id: string;
+  customer_service_id: string;
+  assigned_tech_id?: string;
+  status: FieldOrderStatus;
+  onu_scanned_serial?: string;
+  onu_scanned_mac?: string;
+  detected_mode?: string;
+  ping_avg_ms?: number;
+  ping_loss_pct?: number;
+  traffic_rx_kbps?: number;
+  traffic_tx_kbps?: number;
+  tech_latitude?: number;
+  tech_longitude?: number;
+  customer_signature_svg?: string;
+  notes?: string;
+  certified_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FieldVerifyResult {
+  customer_service_id: string;
+  session_active: boolean;
+  connection_type: string;
+  uptime_seconds: number;
+  assigned_ipv4?: string;
+  assigned_ipv6_prefix?: string;
+  detected_mac?: string;
+  detected_mode: string;
+  ping_success: boolean;
+  ping_avg_ms?: number;
+  ping_loss_pct: number;
+  traffic_rx_kbps: number;
+  traffic_tx_kbps: number;
+  status_summary: string;
+}
+
+export interface FiberCutIncident {
+  id: string;
+  tenant_id: string;
+  router_id: string;
+  pon_port: string;
+  optical_box?: string;
+  affected_onus_count: number;
+  status: FiberCutStatus;
+  incident_summary: string;
+  detected_at: string;
+  resolved_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+

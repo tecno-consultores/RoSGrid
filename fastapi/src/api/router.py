@@ -8,7 +8,9 @@ from src.api.v1.audit import router as audit_router
 from src.api.v1.auth import router as auth_router
 from src.api.v1.backups import router as backups_router
 from src.api.v1.bulk_and_updates import router as bulk_updates_router
+from src.api.v1.field_ops import router as field_ops_router
 from src.api.v1.inventory import router as inventory_router
+from src.api.v1.ipam import router as ipam_router
 from src.api.v1.maintenance import router as maintenance_router
 from src.api.v1.mcp import router as mcp_router
 from src.api.v1.notification_channels import router as notification_channels_router
@@ -37,6 +39,8 @@ api_v1_router.include_router(tenants_router)
 api_v1_router.include_router(users_router)
 api_v1_router.include_router(sessions_router)
 api_v1_router.include_router(inventory_router)
+api_v1_router.include_router(ipam_router)
+api_v1_router.include_router(field_ops_router)
 api_v1_router.include_router(vault_router)
 api_v1_router.include_router(maintenance_router)
 api_v1_router.include_router(webfig_interfaces_router)
