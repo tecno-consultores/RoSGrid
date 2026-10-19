@@ -251,7 +251,14 @@ export interface SfpOpticalDdmInfo {
 export interface FirewallRuleItem {
   id: string;
   chain:
-    'input' | 'forward' | 'output' | 'prerouting' | 'postrouting' | 'srcnat' | 'dstnat' | string;
+    | 'input'
+    | 'forward'
+    | 'output'
+    | 'prerouting'
+    | 'postrouting'
+    | 'srcnat'
+    | 'dstnat'
+    | (string & {});
   action: string;
   src_address?: string;
   dst_address?: string;
@@ -270,7 +277,7 @@ export interface BgpSessionItem {
   name: string;
   remote_address: string;
   remote_as: number;
-  state: 'established' | 'connect' | 'active' | 'idle' | string;
+  state: 'established' | 'connect' | 'active' | 'idle' | (string & {});
   uptime: string;
   prefixes_received: number;
   prefixes_sent: number;

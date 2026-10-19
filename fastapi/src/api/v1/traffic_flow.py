@@ -107,7 +107,7 @@ def _analyze_connections(
         pps = data["pps"]
         if cnt < threshold_conns and pps < threshold_pps:
             continue
-        protocols = sorted(list(data["protocols"]))
+        protocols = sorted(data["protocols"])
         atype, severity = _evaluate_anomaly_severity(cnt, pps, threshold_pps, protocols)
         anomalies.append(
             TrafficAnomalyItem(

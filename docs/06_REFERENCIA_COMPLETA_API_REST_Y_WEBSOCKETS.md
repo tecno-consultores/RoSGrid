@@ -408,6 +408,7 @@ Permite la gobernanza modular de capacidades por organización. La consulta se a
 - **`GET /api/v1/tenants/{id}/features`**
   - **Roles:** `SUPERADMIN_GLOBAL` o miembros del propio tenant (`TENANT_ADMIN`, etc.).
   - **Salida (200 OK):**
+
     ```json
     {
       "isp_module_enabled": true,
@@ -449,6 +450,7 @@ Permite la gobernanza modular de capacidades por organización. La consulta se a
   - **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`.
   - **Cabecera:** `Idempotency-Key: {uuid}`.
   - **Entrada:**
+
     ```json
     {
       "name": "Plan-Fibra-100M",
@@ -463,6 +465,7 @@ Permite la gobernanza modular de capacidades por organización. La consulta se a
       "queue_type": "pcq-download-custom"
     }
     ```
+
 - **`GET /api/v1/bandwidth-profiles/{id}`:** Consulta detalle de un perfil.
 - **`PATCH /api/v1/bandwidth-profiles/{id}`:** Modifica parámetros de velocidad o ráfagas.
 - **`DELETE /api/v1/bandwidth-profiles/{id}`:** Elimina el perfil (rechazado con HTTP 409 si tiene abonados asociados).
@@ -475,6 +478,7 @@ Permite la gobernanza modular de capacidades por organización. La consulta se a
   - **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`, `SUPPORT_L2`, `FIELD_TECH`.
   - **Cabecera:** `Idempotency-Key: {uuid}`.
   - **Entrada:**
+
     ```json
     {
       "router_id": "c7a8b9c0-1234-4567-89ab-cdef01234567",
@@ -491,6 +495,7 @@ Permite la gobernanza modular de capacidades por organización. La consulta se a
       "longitude": -66.9036
     }
     ```
+
 - **`GET /api/v1/subscriber-devices/{id}`:** Detalle técnico del abonado.
 - **`PATCH /api/v1/subscriber-devices/{id}`:** Actualización técnica de parámetros de red (MAC, serial, caja óptica, estado).
 - **`DELETE /api/v1/subscriber-devices/{id}`:** Desincorporación del dispositivo.
@@ -548,10 +553,12 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
 ### 4.4 Diagnóstico 360°, BGP Looking Glass e IPFIX
 
 #### 4.4.1 `POST /api/v1/diagnostics/endpoint-360`
+
 - **Propósito:** Suite unificada de diagnóstico para abonado o enlace en MikroTik v7: ejecuta Ping Multi-MTU secuencial (64B, 512B, 1472B DF-bit), parsea causas forenses de desconexión en `/log` (`link down`, `peer is not responding`, `user request`, `authentication failed`) y ejecuta muestreo Torch instantáneo (Top 5 flujos activos).
 - **Feature Flag:** `isp_module_enabled`.
 - **Rol Mínimo:** `SUPPORT_L1`, `FIELD_TECH`, `NOC_MONITOR`.
 - **Payload Entrada:**
+
   ```json
   {
     "router_id": "7b8d4f10-1234-4567-89ab-cdef01234567",
@@ -560,7 +567,9 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
     "interface": "ether2"
   }
   ```
+
 - **Respuesta (200 OK):**
+
   ```json
   {
     "router_id": "7b8d4f10-1234-4567-89ab-cdef01234567",
@@ -588,11 +597,13 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
   ```
 
 #### 4.4.2 `GET /api/v1/bgp/looking-glass/route`
+
 - **Propósito:** Consulta de rutas BGP en RouterOS v7 sin acceso shell/SSH. Filtra por prefijo o CIDR.
 - **Feature Flag:** `bgp_looking_glass_enabled`.
 - **Rol Mínimo:** `SUPPORT_L1`, `NOC_MONITOR`.
 - **Query Params:** `router_id={uuid}&prefix={cidr}&refresh={bool}`.
 - **Respuesta (200 OK):**
+
   ```json
   {
     "router_id": "7b8d4f10-1234-4567-89ab-cdef01234567",
@@ -615,11 +626,13 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
   ```
 
 #### 4.4.3 `GET /api/v1/bgp/looking-glass/advertised`
+
 - **Propósito:** Consulta prefijos anunciados en vivo hacia un peer o carrier BGP upstream.
 - **Feature Flag:** `bgp_looking_glass_enabled`.
 - **Rol Mínimo:** `SUPPORT_L1`, `NOC_MONITOR`.
 - **Query Params:** `router_id={uuid}&peer={peer_name}&refresh={bool}`.
 - **Respuesta (200 OK):**
+
   ```json
   {
     "router_id": "7b8d4f10-1234-4567-89ab-cdef01234567",
@@ -639,11 +652,13 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
   ```
 
 #### 4.4.4 `GET /api/v1/traffic-flow/anomalies`
+
 - **Propósito:** Escaneo y análisis de la tabla de conexiones de RouterOS v7 para identificar hosts abusivos, flood de conexiones o saturación de PPS.
 - **Feature Flag:** `ipfix_analytics_enabled`.
 - **Rol Mínimo:** `SUPPORT_L1`, `NOC_MONITOR`.
 - **Query Params:** `router_id={uuid}&threshold_pps=1000&threshold_conns=500`.
 - **Respuesta (200 OK):**
+
   ```json
   {
     "router_id": "7b8d4f10-1234-4567-89ab-cdef01234567",
@@ -664,10 +679,12 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
   ```
 
 #### 4.4.5 `POST /api/v1/traffic-flow/mitigate`
+
 - **Propósito:** Mitigación de emergencia FastDrop / Blackhole bajo Safe Mode (60s) con registro de auditoría WORM inmutable.
 - **Feature Flag:** `ipfix_analytics_enabled`.
 - **Rol Mínimo:** `SUPPORT_L2`.
 - **Payload Entrada:**
+
   ```json
   {
     "router_id": "7b8d4f10-1234-4567-89ab-cdef01234567",
@@ -677,7 +694,9 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
     "duration_seconds": 3600
   }
   ```
+
 - **Respuesta (200 OK):**
+
   ```json
   {
     "status": "MITIGATED",
@@ -690,9 +709,8 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
   }
   ```
 
-
-
 ### 4.5 Suite Corporativa & Enterprise
+
 - `POST /api/v1/compliance/drift-check/{router_id}`: Compara la configuración en ejecución contra la Plantilla Maestra (*Golden Baseline*). Retorna diff semántico en formato Git.
 - `POST /api/v1/compliance/drift-revert/{router_id}`: Aplica reversión a la configuración canónica con Safe Mode y Maker-Checker.
 - `POST /api/v1/compliance/cis-audit/{router_id}`: Evalúa las 10 directivas críticas CIS y genera Security Score (0 a 100).
@@ -701,4 +719,3 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
 - `GET /api/v1/switching/rogue-dhcp-alerts`: Lista eventos de DHCP Snooping y puertos con intrusos detectados.
 - `GET /api/v1/sla/reports/monthly`: Genera reporte auditable de disponibilidad y latencia P95/P99 para reclamos a carriers.
 - `GET/POST /api/v1/wifi/capsman/profiles`: Gestiona perfiles centralizados de SSIDs Corporativo (802.1X), Invitados e IoT.
-

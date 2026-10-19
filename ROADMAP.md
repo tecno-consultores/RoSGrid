@@ -272,7 +272,6 @@
 - [x] **18.2** Consola BGP Looking Glass Interno: Endpoints `GET /api/v1/bgp/looking-glass/route` y `/advertised` para inspeccionar rutas, AS-Path, comunidades BGP y prefijos exportados a proveedores de tránsito sin dar acceso por SSH.
 - [x] **18.3** Detección de Tráfico Anómalo / Flujos IPFIX: Detección de clientes con tasas anormales de PPS o conexiones masivas con botón de mitigación rápida (FastDrop / Blackhole con Safe Mode y auditoría WORM inmutable).
 
-
 ---
 
 ## 🗺️ HITO 19: Mapas Separados, Telemetría Efímera, Responsive e i18n (Fase 4)

@@ -43,6 +43,8 @@ _DIAGNOSTICS_ROLES = (
     SystemRoleEnum.NOC_MONITOR,
 )
 
+_PING_ENDPOINT = "/ping"
+
 
 def _parse_rtt_ms(val: Any) -> float | None:
     """Extrae la latencia en milisegundos de salidas textuales o numéricas de RouterOS."""
@@ -254,15 +256,15 @@ async def run_endpoint_360_diagnostics(
     async with client:
         # 1. Ping Multi-MTU Secuencial
         raw_64 = await client.post(
-            "/ping",
+            _PING_ENDPOINT,
             json_data={"address": payload.target_ip, "count": 3, "size": 64},
         )
         raw_512 = await client.post(
-            "/ping",
+            _PING_ENDPOINT,
             json_data={"address": payload.target_ip, "count": 3, "size": 512},
         )
         raw_1472 = await client.post(
-            "/ping",
+            _PING_ENDPOINT,
             json_data={
                 "address": payload.target_ip,
                 "count": 3,
@@ -279,7 +281,7 @@ async def run_endpoint_360_diagnostics(
         if p64.avg_rtt_ms is not None and p1472.avg_rtt_ms is not None:
             if (p1472.avg_rtt_ms - p64.avg_rtt_ms) > 40.0:
                 dispersion = True
-        pass_1500 = bool(p1472.received > 0 or p64.received == 0)
+        pass_1500 = p1472.received > 0 or p64.received == 0
 
         multi_mtu = MultiMtuPingSummary(
             ping_64=p64,
