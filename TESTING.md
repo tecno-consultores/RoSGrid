@@ -230,3 +230,37 @@ docker compose -f docker-compose.qa.yml down --remove-orphans
   - Inspección por AST de cada archivo en `src/` asegurando 0 importaciones hacia librerías de prueba.
 - **Plan Maestro de Pruebas Manuales y Aceptación de Usuario (UAT 11X):**
   - Especificado formalmente en [docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md) con 25 casos de prueba de extremo a extremo cubriendo hardware MikroTik v7+ físico/CHR, Safe Mode 60s, Step-Up Auth 30s, Maker-Checker y Wallboard NOC.
+
+---
+
+## 11. Certificación Estándar QA 11X — Hito 16 (Gobernanza Modular, Feature Flags y Purga de Datos)
+
+### A. Backend (`fastapi/`) — Docker `sinfallas/base-python-uv:3.13`
+- **Análisis Estático y Seguridad:**
+  - **Ruff (`ruff check src/ tests/`):** Cero (0) errores.
+  - **Ruff Format (`ruff format --check src/ tests/`):** 125 archivos formateados limpiamente (0 diffs).
+  - **Mypy Estricto (`mypy --strict src/`):** Cero (0) errores en los 88 módulos de código fuente.
+  - **Bandit SAST (`bandit -c pyproject.toml -r src/`):** Cero (0) problemas de seguridad identificados.
+  - **Pip-Audit (`pip-audit`):** Cero (0) vulnerabilidades conocidas en dependencias instaladas.
+- **Pruebas Unitarias y Cobertura (Pytest 9.1.1):**
+  - **Pruebas Ejecutadas:** 344 de 344 pruebas pasadas (100% exitosas) en 27.55s.
+  - **Cobertura Total de Código:** **95.01%** (7,771 sentencias totales, 388 no ejecutadas) cumpliendo el umbral corporativo de `>= 95%`.
+  - **Nuevos Módulos y Endpoints Certificados:**
+    - `0005_tenant_feature_flags_and_technical_qos.py`: Migración de 16 flags modulares en `tenants`.
+    - `src/api/v1/subscribers.py`: CRUD de `BandwidthProfile` y `SubscriberDevice`, generador de scripts MikroTik Simple Queues / Queue Tree y validación RBAC.
+    - `src/api/v1/tenants.py`: Consulta y actualización de flags de empresa (`/api/v1/tenants/{id}/features`) con invalidación en caliente de caché KeyDB (`rg:{id}:features`).
+    - Purga estricta de PII (nombres, documentos y direcciones físicas eliminadas; identificación técnica exclusiva por `endpoint_identifier`).
+
+### B. Frontend (`vue3/`) — Docker `sinfallas/base-node-ionic:22`
+- **Análisis Estático y Tipado Estricto:**
+  - **Vue-TSC (`type-check`):** Cero (0) errores de tipado TypeScript estricto.
+  - **ESLint:** Cero (0) errores y cero (0) advertencias en los componentes y vistas modificados (`TenantsManagementView.vue`, `RgCommandPalette.vue`, `LoginView.vue`, `RgResponsiveShell.vue`).
+  - **Prettier (`format:check`):** Código 100% consistente y formateado bajo directivas corporativas.
+- **Pruebas Unitarias (Vitest v8):**
+  - **Pruebas Ejecutadas:** 211 de 211 pruebas pasadas (100% exitosas) en 31 suites de prueba en 6.98s.
+  - **Cobertura de Código:** **95.84%** en Statements y Líneas a nivel global de la aplicación.
+  - **Nuevas Capacidades de UI Validadas:**
+    - Modal *"Módulos & Capacidades"* en `TenantsManagementView.vue` con 16 switches clasificados por grupos funcionales y guardado reactivo.
+    - Filtrado dinámico en `RgCommandPalette.vue` y rutas protegidas por Feature Flags con `useAuthStore.isFeatureEnabled`.
+    - Pie de página institucional y branding oficial con enlace accesible SVG a GitHub y licencia GNU GPLv3 en `LoginView.vue` y `RgResponsiveShell.vue`.
+

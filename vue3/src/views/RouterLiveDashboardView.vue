@@ -30,9 +30,9 @@
     if (!routerId.value) return;
     try {
       const res = await http.get<{ name?: string }[] | { items: { name?: string }[] }>(
-        `/api/v1/routers/${routerId.value}/webfig/interfaces`
+        `/api/v1/routers/${routerId.value}/webfig/interfaces`,
       );
-      const raw = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
       const names = raw.map((i) => i.name).filter(Boolean) as string[];
       if (names.length > 0) {
         availableInterfaces.value = ['all-interfaces', ...names];
@@ -282,7 +282,9 @@
     <section class="kpi-grid font-tabular" aria-label="Métricas del sistema">
       <div class="kpi-card">
         <span class="kpi-title">Carga CPU</span>
-        <div class="kpi-value text-cyan">{{ Math.round(ringBuffer.latestPoint.value?.cpuLoadPct ?? 0) }}%</div>
+        <div class="kpi-value text-cyan">
+          {{ Math.round(ringBuffer.latestPoint.value?.cpuLoadPct ?? 0) }}%
+        </div>
         <span class="kpi-sub">Multi-Core</span>
       </div>
 

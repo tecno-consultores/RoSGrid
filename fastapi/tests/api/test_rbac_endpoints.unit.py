@@ -2,6 +2,7 @@
 # Copyright (C) 2026 RoSGrid Contributors
 
 import uuid
+
 import pytest
 from httpx import AsyncClient
 
@@ -20,11 +21,14 @@ class MockDbSession:
         class MockResult:
             def scalar_one_or_none(self):
                 return None
+
             def scalars(self):
                 class MockScalars:
                     def all(self):
                         return []
+
                 return MockScalars()
+
         return MockResult()
 
     async def commit(self):
@@ -32,7 +36,9 @@ class MockDbSession:
 
 
 @pytest.mark.asyncio
-async def test_get_rbac_roles_and_actions(async_client: AsyncClient, fake_redis: FakeAsyncRedis, monkeypatch: pytest.MonkeyPatch):
+async def test_get_rbac_roles_and_actions(
+    async_client: AsyncClient, fake_redis: FakeAsyncRedis, monkeypatch: pytest.MonkeyPatch
+):
     monkeypatch.setattr("src.api.v1.rbac.get_redis_client", lambda: fake_redis)
 
     tenant_id = str(uuid.uuid4())
@@ -87,7 +93,9 @@ async def test_get_rbac_roles_and_actions(async_client: AsyncClient, fake_redis:
 
 
 @pytest.mark.asyncio
-async def test_put_and_reset_role_permissions(async_client: AsyncClient, fake_redis: FakeAsyncRedis, monkeypatch: pytest.MonkeyPatch):
+async def test_put_and_reset_role_permissions(
+    async_client: AsyncClient, fake_redis: FakeAsyncRedis, monkeypatch: pytest.MonkeyPatch
+):
     monkeypatch.setattr("src.api.v1.rbac.get_redis_client", lambda: fake_redis)
 
     tenant_id = str(uuid.uuid4())

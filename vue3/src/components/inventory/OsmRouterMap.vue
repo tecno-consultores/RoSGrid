@@ -34,7 +34,9 @@
     (e: 'coordinates-selected', coords: { lat: number; lng: number }): void;
   }>();
 
-  const isHeadlessTest = computed(() => typeof navigator !== 'undefined' && Boolean((navigator as any).webdriver));
+  const isHeadlessTest = computed(
+    () => typeof navigator !== 'undefined' && Boolean((navigator as any).webdriver),
+  );
   const mapContainer = ref<HTMLDivElement | null>(null);
   let mapInstance: L.Map | null = null;
   let markersLayer: L.LayerGroup | null = null;

@@ -220,7 +220,6 @@ def test_validate_single_csv_row_with_template_aliases() -> None:
     assert item.tags == ["core", "zona-norte"]
 
 
-
 def test_build_router_from_csv(test_tenant_id: uuid.UUID, test_user_id: uuid.UUID) -> None:
     item = CsvCommitRowItem(
         display_name="CSV-Router",

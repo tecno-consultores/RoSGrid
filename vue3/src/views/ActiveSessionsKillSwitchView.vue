@@ -35,14 +35,17 @@
     errorMessage.value = '';
     try {
       const res = await http.get<{ items: any[] } | any[]>('/api/v1/sessions/active');
-      const raw = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
       sessions.value = raw.map((item: any) => ({
         ...item,
         last_active_at: item.last_active_at || item.last_activity_at || new Date().toISOString(),
         seconds_since_active:
           item.seconds_since_active ??
           (item.last_activity_at
-            ? Math.max(0, Math.floor((Date.now() - new Date(item.last_activity_at).getTime()) / 1000))
+            ? Math.max(
+                0,
+                Math.floor((Date.now() - new Date(item.last_activity_at).getTime()) / 1000),
+              )
             : 0),
       }));
     } catch {

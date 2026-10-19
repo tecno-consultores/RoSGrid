@@ -40,8 +40,10 @@
     isLoading.value = true;
     errorMessage.value = '';
     try {
-      const res = await http.get<{ items: ApprovalRequestItem[] } | ApprovalRequestItem[]>('/api/v1/operations/approvals');
-      const raw = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      const res = await http.get<{ items: ApprovalRequestItem[] } | ApprovalRequestItem[]>(
+        '/api/v1/operations/approvals',
+      );
+      const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
       requests.value = raw;
     } catch {
       // Sin datos de demostración en producción

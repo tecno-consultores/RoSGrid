@@ -143,4 +143,41 @@ describe('RgCommandPalette.vue — Accesibilidad (Ctrl+K)', () => {
     // Desmontar componente para cubrir onUnmounted
     wrapper.unmount();
   });
+
+  it('filtra comandos de navegación según el feature flag del tenant', async () => {
+    const { useAuthStore } = await import('@/stores/useAuthStore');
+    const authStore = useAuthStore();
+    const themeStore = useThemeAndLayoutStore();
+
+    // Caso 1: Flag desactivado
+    authStore.setAuth({
+      id: 'u-1',
+      username: 'tech',
+      email: 'tech@corp.local',
+      role: 'SUPPORT_L2',
+      tenant_id: 't-1',
+      tenant_slug: 'corp',
+      totp_enabled: false,
+      tenant_feature_flags: { isp_module_enabled: false },
+    });
+    themeStore.isCommandPaletteOpen = true;
+
+    let wrapper = mount(RgCommandPalette);
+    expect(wrapper.text()).not.toContain('Técnico de Campo & Toolkit');
+
+    // Caso 2: Flag activado
+    authStore.setAuth({
+      id: 'u-1',
+      username: 'tech',
+      email: 'tech@corp.local',
+      role: 'SUPPORT_L2',
+      tenant_id: 't-1',
+      tenant_slug: 'corp',
+      totp_enabled: false,
+      tenant_feature_flags: { isp_module_enabled: true },
+    });
+
+    wrapper = mount(RgCommandPalette);
+    expect(wrapper.text()).toContain('Técnico de Campo & Toolkit');
+  });
 });

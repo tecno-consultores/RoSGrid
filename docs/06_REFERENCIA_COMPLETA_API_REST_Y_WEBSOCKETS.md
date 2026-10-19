@@ -402,15 +402,99 @@ Connection: Upgrade
 ## 4. Endpoints de Gobernanza Modular, Feature Flags y Operaciones
 
 ### 4.1 Feature Flags por Empresa (`/api/v1/tenants/{id}/features`)
-- `GET /api/v1/tenants/{id}/features`: Consulta el catálogo de banderas booleanas activas para el tenant (Módulo ISP, BGP, SFP DDM, CIS, SD-WAN, etc.).
-- `PUT /api/v1/tenants/{id}/features`: (Exclusivo `SUPERADMIN_GLOBAL`) Actualiza atómicamente los módulos habilitados, conmutando la interfaz y bloqueando/desbloqueando rutas API.
 
-### 4.2 Aprovisionamiento Técnico & QoS (Interconexión con Facturación Externa)
-Permite a sistemas externos de facturación o CRM orquestar el ciclo de vida de la red mediante cabecera obligatoria `Idempotency-Key: {uuid-v7}`:
-- `POST /api/v1/qos/profiles`: Define perfiles técnicos con velocidad nominal Up/Down, Burst (`burst_down_kbps`, `burst_threshold`, `burst_time`), prioridad (1-8) y cola PCQ.
-- `POST /api/v1/network-services/{id}/isolate`: Aísla administrativamente la IP en MikroTik (`AISLADOS_TECNICO`) o conmuta a 64k. Retorna `{ "status": "ISOLATED" }` o `{ "status": "ALREADY_ISOLATED" }`.
-- `POST /api/v1/network-services/{id}/restore`: Restablece el servicio nominal en milisegundos sin desconectar la sesión física.
-- `POST /api/v1/network-services/{id}/change-rate-limit`: Modifica en caliente los límites de cola del suscriptor (`{ "bandwidth_profile_id": "uuid" }`).
+Permite la gobernanza modular de capacidades por organización. La consulta se acelera mediante la capa L2 de KeyDB (`rg:{id}:features`) con invalidación en caliente ante mutaciones.
+
+- **`GET /api/v1/tenants/{id}/features`**
+  - **Roles:** `SUPERADMIN_GLOBAL` o miembros del propio tenant (`TENANT_ADMIN`, etc.).
+  - **Salida (200 OK):**
+    ```json
+    {
+      "isp_module_enabled": true,
+      "bgp_looking_glass_enabled": false,
+      "sfp_ddm_telemetry_enabled": true,
+      "ipfix_analytics_enabled": false,
+      "enforce_maker_checker": true,
+      "auto_safemode_enforced": true,
+      "ai_mcp_integration_enabled": true,
+      "nightly_backups_enabled": true,
+      "outbound_webhooks_enabled": true,
+      "config_drift_monitoring_enabled": false,
+      "cis_audit_enabled": true,
+      "sdwan_orchestrator_enabled": false,
+      "capsman_wifi_enabled": false,
+      "sla_tracker_enabled": false,
+      "mass_outage_threshold": 10,
+      "default_locale": "es"
+    }
+    ```
+
+- **`PATCH /api/v1/tenants/{id}/features`**
+  - **Roles:** Exclusivo `SUPERADMIN_GLOBAL`.
+  - **Cabecera Requerida:** `Idempotency-Key: {uuid}`.
+  - **Entrada:** Cualquier subconjunto de los 16 atributos del esquema anterior.
+  - **Comportamiento:** Persiste en PostgreSQL, invalida la caché KeyDB y genera traza forense inmutable WORM en `audit_logs` con `event_action: "UPDATE_TENANT_FEATURE_FLAGS"`.
+  - **Salida (200 OK):** Objeto con el estado consolidado de los Feature Flags del tenant.
+
+---
+
+### 4.2 Dispositivos de Abonados & Perfiles de Calidad de Servicio (QoS Técnico)
+
+> **Gobernanza de Datos (Purga de PII):** RoSGrid no almacena datos personales de clientes (nombres, cédulas, teléfonos o direcciones residenciales). La vinculación técnica se realiza de forma estrictamente seudónima mediante `endpoint_identifier` y el serial técnico del equipo `device_serial`.
+
+#### A. Perfiles de Ancho de Banda (`/api/v1/bandwidth-profiles`)
+
+- **`GET /api/v1/bandwidth-profiles`:** Lista perfiles QoS del tenant con conteo de dispositivos asignados (`subscribers_count`).
+- **`POST /api/v1/bandwidth-profiles`:** Crea un nuevo perfil técnico.
+  - **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`.
+  - **Cabecera:** `Idempotency-Key: {uuid}`.
+  - **Entrada:**
+    ```json
+    {
+      "name": "Plan-Fibra-100M",
+      "rate_down_kbps": 102400,
+      "rate_up_kbps": 51200,
+      "burst_down_kbps": 122880,
+      "burst_up_kbps": 61440,
+      "burst_threshold_down_kbps": 81920,
+      "burst_threshold_up_kbps": 40960,
+      "burst_time_seconds": 16,
+      "priority": 4,
+      "queue_type": "pcq-download-custom"
+    }
+    ```
+- **`GET /api/v1/bandwidth-profiles/{id}`:** Consulta detalle de un perfil.
+- **`PATCH /api/v1/bandwidth-profiles/{id}`:** Modifica parámetros de velocidad o ráfagas.
+- **`DELETE /api/v1/bandwidth-profiles/{id}`:** Elimina el perfil (rechazado con HTTP 409 si tiene abonados asociados).
+- **`GET /api/v1/bandwidth-profiles/{id}/mikrotik-script?target_ip=100.64.0.10`:** Genera scripts CLI RouterOS v7 listos para Simple Queues (`/queue/simple/add`) y Queue Tree (`/queue/tree/add`).
+
+#### B. Dispositivos de Abonados (`/api/v1/subscriber-devices`)
+
+- **`GET /api/v1/subscriber-devices`:** Lista abonados con filtros opcionales (`router_id`, `service_type`, `status`).
+- **`POST /api/v1/subscriber-devices`:** Registra un nuevo dispositivo de acceso.
+  - **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`, `SUPPORT_L2`, `FIELD_TECH`.
+  - **Cabecera:** `Idempotency-Key: {uuid}`.
+  - **Entrada:**
+    ```json
+    {
+      "router_id": "c7a8b9c0-1234-4567-89ab-cdef01234567",
+      "endpoint_identifier": "CLI-CAR-0042",
+      "service_type": "PPPOE",
+      "auth_backend": "LOCAL_SECRET",
+      "bandwidth_profile_id": "b1a2c3d4-0000-1111-2222-333344445555",
+      "onu_mode": "ROUTER",
+      "onu_mac_address": "AA:BB:CC:DD:EE:FF",
+      "device_serial": "ALCLB1234567",
+      "pon_port": "pon-1/1/2",
+      "optical_box": "NAP-CENTRO-01",
+      "latitude": 10.4806,
+      "longitude": -66.9036
+    }
+    ```
+- **`GET /api/v1/subscriber-devices/{id}`:** Detalle técnico del abonado.
+- **`PATCH /api/v1/subscriber-devices/{id}`:** Actualización técnica de parámetros de red (MAC, serial, caja óptica, estado).
+- **`DELETE /api/v1/subscriber-devices/{id}`:** Desincorporación del dispositivo.
+- **`GET /api/v1/subscriber-devices/{id}/mikrotik-queue-script`:** Genera dinámicamente el comando de provisión de cola `/queue/simple/add` basado en el perfil asociado.
 
 ### 4.3 Webhooks Salientes Técnicos
 RoSGrid envía peticiones `POST` firmadas con `X-RoSGrid-Signature: sha256={hmac}` ante eventos de infraestructura:

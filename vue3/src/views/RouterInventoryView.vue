@@ -126,7 +126,9 @@
     actionMessage.value = '';
     actionError.value = '';
     try {
-      const res = await http.post<RouterItem>(`/api/v1/inventory/routers/${targetRouter.id}/discover`);
+      const res = await http.post<RouterItem>(
+        `/api/v1/inventory/routers/${targetRouter.id}/discover`,
+      );
       if (res.data) {
         inventoryStore.updateRouter(res.data);
       }
@@ -141,7 +143,9 @@
   }
 
   async function handleDeleteRouter(targetRouter: RouterItem) {
-    if (!confirm(`¿Está seguro de eliminar permanentemente el equipo "${targetRouter.display_name}"?`)) {
+    if (
+      !confirm(`¿Está seguro de eliminar permanentemente el equipo "${targetRouter.display_name}"?`)
+    ) {
       return;
     }
     actionMessage.value = '';
@@ -426,10 +430,7 @@
       @close="isVaultModalOpen = false"
     />
 
-    <ManageNetworkRolesModal
-      :is-open="isRolesModalOpen"
-      @close="isRolesModalOpen = false"
-    />
+    <ManageNetworkRolesModal :is-open="isRolesModalOpen" @close="isRolesModalOpen = false" />
   </div>
 </template>
 

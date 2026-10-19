@@ -7,7 +7,6 @@
   import { useInventoryStore } from '@/stores/useInventoryStore';
   import ConfigTemplateEditorModal from '@/components/operations/ConfigTemplateEditorModal.vue';
 
-
   interface FleetRouter {
     id: string;
     identity: string;
@@ -83,13 +82,17 @@
         const ip =
           r.ip_address ||
           (r.api_base_url
-            ? r.api_base_url.replace(/^https?:\/\//, '').split('/')[0].split(':')[0]
+            ? r.api_base_url
+                .replace(/^https?:\/\//, '')
+                .split('/')[0]
+                .split(':')[0]
             : '');
         const role = r.network_role || 'CORE';
         const rawTags = (r as any).tags;
         let tag = 'datacenter-central';
         if (Array.isArray(rawTags) && rawTags.length > 0) {
-          tag = typeof rawTags[0] === 'object' && rawTags[0]?.tag ? rawTags[0].tag : String(rawTags[0]);
+          tag =
+            typeof rawTags[0] === 'object' && rawTags[0]?.tag ? rawTags[0].tag : String(rawTags[0]);
         }
         const rosVer = r.ros_version || 'v7';
         const identity =

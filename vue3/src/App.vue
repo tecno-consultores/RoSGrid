@@ -58,7 +58,9 @@
   /* Transición táctica de cambio de pantalla */
   .rg-page-fade-enter-active,
   .rg-page-fade-leave-active {
-    transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    transition:
+      opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .rg-page-fade-enter-from {
@@ -84,4 +86,3 @@
     }
   }
 </style>
-

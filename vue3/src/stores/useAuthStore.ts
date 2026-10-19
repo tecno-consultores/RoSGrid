@@ -3,7 +3,26 @@
 
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import type { SystemRole, UserInfo } from '@/types';
+import type { SystemRole, TenantFeatureFlags, UserInfo } from '@/types';
+
+export const defaultTenantFeatures: TenantFeatureFlags = {
+  isp_module_enabled: true,
+  bgp_looking_glass_enabled: false,
+  sfp_ddm_telemetry_enabled: true,
+  ipfix_analytics_enabled: false,
+  enforce_maker_checker: true,
+  auto_safemode_enforced: true,
+  ai_mcp_integration_enabled: true,
+  nightly_backups_enabled: true,
+  outbound_webhooks_enabled: true,
+  config_drift_monitoring_enabled: false,
+  cis_audit_enabled: true,
+  sdwan_orchestrator_enabled: false,
+  capsman_wifi_enabled: false,
+  sla_tracker_enabled: false,
+  mass_outage_threshold: 10,
+  default_locale: 'es',
+};
 
 function getStoredUser(): UserInfo | null {
   if (typeof localStorage === 'undefined') return null;
@@ -20,6 +39,11 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<UserInfo | null>(initialUser);
   const tenantSlug = ref<string | null>(initialUser?.tenant_slug ?? null);
   const currentRole = ref<SystemRole | null>(initialUser?.role ?? null);
+  const tenantFeatures = ref<Partial<TenantFeatureFlags>>(
+    (initialUser?.tenant_feature_flags as Partial<TenantFeatureFlags>) ||
+      initialUser?.features ||
+      {},
+  );
   const csrfToken = ref<string | null>(
     typeof localStorage !== 'undefined' ? localStorage.getItem('rosgrid_csrf') : null,
   );
@@ -30,6 +54,11 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = userInfo;
     currentRole.value = userInfo.role;
     tenantSlug.value = userInfo.tenant_slug;
+    tenantFeatures.value = {
+      ...((userInfo.tenant_feature_flags as Partial<TenantFeatureFlags>) ||
+        userInfo.features ||
+        {}),
+    };
     if (typeof localStorage !== 'undefined') {
       try {
         localStorage.setItem('rosgrid_user', JSON.stringify(userInfo));
@@ -65,6 +94,7 @@ export const useAuthStore = defineStore('auth', () => {
     currentRole.value = null;
     tenantSlug.value = null;
     csrfToken.value = null;
+    tenantFeatures.value = {};
     if (typeof localStorage !== 'undefined') {
       try {
         localStorage.removeItem('rosgrid_user');
@@ -73,6 +103,31 @@ export const useAuthStore = defineStore('auth', () => {
         // Ignora fallos de storage cuota
       }
     }
+  }
+
+  function updateTenantFeatures(features: Partial<TenantFeatureFlags>): void {
+    tenantFeatures.value = { ...tenantFeatures.value, ...features };
+    if (user.value) {
+      user.value = {
+        ...user.value,
+        features: { ...(user.value.features || {}), ...features },
+        tenant_feature_flags: {
+          ...((user.value.tenant_feature_flags as Partial<TenantFeatureFlags>) || {}),
+          ...features,
+        },
+      };
+      if (typeof localStorage !== 'undefined') {
+        try {
+          localStorage.setItem('rosgrid_user', JSON.stringify(user.value));
+        } catch {
+          // Ignora fallos de storage cuota
+        }
+      }
+    }
+  }
+
+  function isFeatureEnabled(flagName: string): boolean {
+    return Boolean((tenantFeatures.value as Record<string, unknown>)[flagName]);
   }
 
   function hasCapability(actionCode: string): boolean {
@@ -116,10 +171,13 @@ export const useAuthStore = defineStore('auth', () => {
     tenantSlug,
     currentRole,
     csrfToken,
+    tenantFeatures,
     isAuthenticated,
     setAuth,
     setCsrfToken,
     clearAuth,
+    updateTenantFeatures,
+    isFeatureEnabled,
     hasCapability,
     forceKillSwitchLogout,
   };

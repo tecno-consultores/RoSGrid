@@ -675,4 +675,3 @@ async def test_register_user_disabled(
     finally:
         await fake_redis.delete("rg:config:public_registration_enabled")
         app.dependency_overrides.pop(get_db_session, None)
-

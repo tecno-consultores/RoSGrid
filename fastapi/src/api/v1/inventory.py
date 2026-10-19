@@ -94,11 +94,7 @@ async def list_network_roles(
 ) -> NetworkRolesListResponse:
     """Lista todos los roles de red disponibles (estándar + personalizados por la empresa)."""
     tenant_id = uuid.UUID(claims["tid"])
-    stmt = (
-        select(TenantCustomRole)
-        .where(TenantCustomRole.tenant_id == tenant_id)
-        .order_by(TenantCustomRole.role_name)
-    )
+    stmt = select(TenantCustomRole).where(TenantCustomRole.tenant_id == tenant_id).order_by(TenantCustomRole.role_name)
     custom_records = (await db.execute(stmt)).scalars().all()
 
     custom_items = [
@@ -123,9 +119,7 @@ async def list_network_roles(
 async def create_custom_network_role(
     payload: CustomNetworkRoleCreate,
     request: Request,
-    claims: dict[str, Any] = Depends(
-        require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)
-    ),
+    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> CustomNetworkRoleItem:
     """Crea un rol de red personalizado para la empresa (exclusivo SuperAdmin y TenantAdmin)."""
@@ -178,9 +172,7 @@ async def create_custom_network_role(
 async def delete_custom_network_role(
     role_name: str,
     request: Request,
-    claims: dict[str, Any] = Depends(
-        require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)
-    ),
+    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> None:
     """Elimina un rol de red personalizado de la empresa."""
@@ -731,11 +723,7 @@ async def import_csv_commit(
 
     # Auto-registrar roles dinámicos presentes en el CSV que no sean estándar
     standard_roles = {r.value for r in RouterNetworkRoleEnum}
-    csv_roles = {
-        item.network_role
-        for item in items
-        if item.network_role and item.network_role not in standard_roles
-    }
+    csv_roles = {item.network_role for item in items if item.network_role and item.network_role not in standard_roles}
     if csv_roles:
         existing_custom_res = await db.execute(
             select(TenantCustomRole.role_name).where(

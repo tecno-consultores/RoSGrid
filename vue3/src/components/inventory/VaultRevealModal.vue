@@ -99,7 +99,8 @@
       startPurgeTimer(vaultData.value?.auto_purge_seconds || 30);
     } catch (err: unknown) {
       const e = err as { detail?: string; message?: string };
-      errorMessage.value = e.detail || e.message || 'Código 2FA incorrecto o error al consultar la bóveda.';
+      errorMessage.value =
+        e.detail || e.message || 'Código 2FA incorrecto o error al consultar la bóveda.';
       isUnlocked.value = false;
       vaultData.value = null;
     } finally {
@@ -312,7 +313,9 @@
             <div v-if="vaultData?.previous_password" class="secret-field">
               <label class="form-label">Contraseña API Anterior (Histórica):</label>
               <div class="secret-input-row">
-                <code class="secret-text secret-text--prev">{{ vaultData?.previous_password }}</code>
+                <code class="secret-text secret-text--prev">{{
+                  vaultData?.previous_password
+                }}</code>
               </div>
             </div>
           </div>

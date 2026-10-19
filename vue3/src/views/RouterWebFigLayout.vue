@@ -56,7 +56,12 @@
         wsInstance.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
-            if (data && (data.type === 'TELEMETRY_TICK' || data.cpuLoadPct !== undefined || data.system !== undefined)) {
+            if (
+              data &&
+              (data.type === 'TELEMETRY_TICK' ||
+                data.cpuLoadPct !== undefined ||
+                data.system !== undefined)
+            ) {
               let totalRx = 0;
               let totalTx = 0;
               if (Array.isArray(data.interfaces)) {

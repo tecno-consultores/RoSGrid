@@ -36,7 +36,10 @@
   });
 
   function formatRoleInput(val: string) {
-    newRoleName.value = val.toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_-]/g, '');
+    newRoleName.value = val
+      .toUpperCase()
+      .replace(/\s+/g, '_')
+      .replace(/[^A-Z0-9_-]/g, '');
   }
 
   async function handleCreateRole() {
@@ -125,7 +128,9 @@
 
       <div class="modal-body">
         <p class="modal-description">
-          Define y administra los roles de red disponibles para clasificar los routers MikroTik de tu organización. Los roles estándar son globales; los roles personalizados aplican a tu empresa.
+          Define y administra los roles de red disponibles para clasificar los routers MikroTik de
+          tu organización. Los roles estándar son globales; los roles personalizados aplican a tu
+          empresa.
         </p>
 
         <!-- Feedback de operaciones -->
@@ -186,7 +191,9 @@
 
         <!-- Listado de roles actuales -->
         <div class="roles-section">
-          <h3 class="section-title">Roles de Red Disponibles ({{ inventoryStore.networkRoles.length }})</h3>
+          <h3 class="section-title">
+            Roles de Red Disponibles ({{ inventoryStore.networkRoles.length }})
+          </h3>
 
           <div class="roles-grid">
             <div
@@ -206,15 +213,13 @@
               </div>
 
               <div class="role-card-footer">
-                <span
-                  v-if="customRoleNames.includes(role)"
-                  class="role-desc-text"
-                >
-                  {{ inventoryStore.customRoles.find((c) => c.role_name === role)?.description || 'Rol de empresa' }}
+                <span v-if="customRoleNames.includes(role)" class="role-desc-text">
+                  {{
+                    inventoryStore.customRoles.find((c) => c.role_name === role)?.description ||
+                    'Rol de empresa'
+                  }}
                 </span>
-                <span v-else class="role-desc-text system-desc">
-                  Rol de arquitectura base
-                </span>
+                <span v-else class="role-desc-text system-desc"> Rol de arquitectura base </span>
 
                 <button
                   v-if="customRoleNames.includes(role)"
@@ -233,13 +238,7 @@
       </div>
 
       <div class="modal-footer">
-        <button
-          type="button"
-          class="btn-secondary"
-          @click="handleClose"
-        >
-          Cerrar
-        </button>
+        <button type="button" class="btn-secondary" @click="handleClose">Cerrar</button>
       </div>
     </div>
   </div>
@@ -270,7 +269,9 @@
     max-height: 90vh;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 240, 255, 0.15);
+    box-shadow:
+      0 16px 40px rgba(0, 0, 0, 0.6),
+      0 0 20px rgba(0, 240, 255, 0.15);
   }
 
   .modal-header {
@@ -303,7 +304,9 @@
     line-height: 1;
     padding: 0.25rem;
     border-radius: 4px;
-    transition: color 0.15s, background-color 0.15s;
+    transition:
+      color 0.15s,
+      background-color 0.15s;
   }
 
   .btn-close:hover {
@@ -426,7 +429,9 @@
     border-radius: 4px;
     cursor: pointer;
     font-family: monospace;
-    transition: background-color 0.15s, transform 0.1s;
+    transition:
+      background-color 0.15s,
+      transform 0.1s;
     white-space: nowrap;
   }
 
@@ -541,7 +546,9 @@
     padding: 0.2rem 0.45rem;
     cursor: pointer;
     font-family: monospace;
-    transition: background-color 0.15s, border-color 0.15s;
+    transition:
+      background-color 0.15s,
+      border-color 0.15s;
     white-space: nowrap;
   }
 

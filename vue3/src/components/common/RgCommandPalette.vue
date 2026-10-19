@@ -4,10 +4,12 @@
 <script setup lang="ts">
   import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
   import { useRouter } from 'vue-router';
+  import { useAuthStore } from '@/stores/useAuthStore';
   import { useInventoryStore } from '@/stores/useInventoryStore';
   import { useThemeAndLayoutStore } from '@/stores/useThemeAndLayoutStore';
 
   const router = useRouter();
+  const authStore = useAuthStore();
   const themeStore = useThemeAndLayoutStore();
   const inventoryStore = useInventoryStore();
 
@@ -21,6 +23,7 @@
     title: string;
     subtitle: string;
     icon: string;
+    requiredFeature?: string;
     action: () => void;
   }
 
@@ -71,6 +74,7 @@
       title: 'Técnico de Campo & Toolkit',
       subtitle: 'Verificación 1-click, diagnóstico ONU y certificación',
       icon: '🛠️',
+      requiredFeature: 'isp_module_enabled',
       action: () => router.push('/field-ops'),
     },
     {
@@ -115,6 +119,9 @@
 
     // Comandos de navegación
     for (const cmd of staticCommands) {
+      if (cmd.requiredFeature && !authStore.isFeatureEnabled(cmd.requiredFeature)) {
+        continue;
+      }
       if (!q || cmd.title.toLowerCase().includes(q) || cmd.subtitle.toLowerCase().includes(q)) {
         results.push(cmd);
       }

@@ -37,6 +37,7 @@ async def enrich_router_telemetry(redis: Any, tenant_id: uuid.UUID, r_id: uuid.U
     cpu_val = data.get("last_cpu_load_pct") or data.get("cpu")
     cpu = int(cpu_val) if cpu_val and cpu_val.isdigit() else None
     free_mem_val = data.get("last_free_memory_pct")
+    ram: int | None = None
     if free_mem_val and free_mem_val.isdigit():
         ram = max(0, min(100, 100 - int(free_mem_val)))
     else:
@@ -206,7 +207,9 @@ def row_to_commit_item(row: dict[str, str]) -> CsvCommitRowItem:
 
     user = (row.get("api_username") or row.get("ros_username") or row.get("username") or "").strip()
     if not user:
-        raise ValueError(f"Fila con display_name='{row.get('display_name', '')}' no especifica usuario (ros_username o api_username).")
+        raise ValueError(
+            f"Fila con display_name='{row.get('display_name', '')}' no especifica usuario (ros_username o api_username)."
+        )
     pwd = (row.get("api_password") or row.get("ros_password") or row.get("password") or "").strip()
 
     role_str = (row.get("network_role") or "EDGE_BGP").strip().upper()
@@ -257,7 +260,6 @@ def row_to_commit_item(row: dict[str, str]) -> CsvCommitRowItem:
         auto_rotate_credentials=True,
         rotation_interval_days=30,
     )
-
 
 
 def build_router_from_csv(

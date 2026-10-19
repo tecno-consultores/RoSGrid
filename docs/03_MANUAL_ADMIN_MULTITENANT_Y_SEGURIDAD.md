@@ -172,3 +172,50 @@ El Superadmin o Tenant Admin puede habilitar o deshabilitar las solicitudes exte
 ### 6.2 Plan B por Terminal (`crear_admin.py`)
 
 El script de terminal en `fastapi/scripts/crear_admin.py` se mantiene 100% operativo como alternativa para aprovisionamiento directo por consola cuando no se dispone de acceso web o en entornos de contingencia.
+
+---
+
+## 7. Gobernanza Modular y Panel de Feature Flags por Tenant
+
+Para permitir que cada empresa u organización active únicamente las capacidades requeridas según su modelo de negocio (ej. ISP de fibra/inalámbrico vs. Empresa Corporativa con flota SD-WAN), RoSGrid implementa una matriz de **16 Feature Flags granulares** gestionados de forma centralizada por el `SUPERADMIN_GLOBAL`.
+
+```mermaid
+graph TD
+    SuperAdmin[Superadmin Global] -->|PATCH /api/v1/tenants/:id/features| API[FastAPI Backend]
+    API -->|1. Actualiza PostgreSQL| DB[(tenants table)]
+    API -->|2. Invalida L2 Cache| KeyDB[(KeyDB rg:tenant_id:features)]
+    
+    User[Operador / Técnico] -->|Petición con JWT| AppRoute[Ruta API / UI]
+    AppRoute -->|require_feature| Check{¿Flag activo?}
+    Check -->|Sí| Exec[Ejecución de Operación / Módulo]
+    Check -->|No| Block[HTTP 403 FEATURE_MODULE_DISABLED]
+```
+
+### 7.1 Catálogo de Feature Flags Modulares
+
+| Categoría | Nombre del Flag | Valor por Defecto | Propósito y Módulos Afectados |
+| :--- | :--- | :--- | :--- |
+| **Operaciones ISP & Red** | `isp_module_enabled` | `true` | Gestión de abonados (`/api/v1/subscriber-devices`), perfiles QoS y corte de fibra. |
+| | `bgp_looking_glass_enabled` | `false` | Consola interna de consulta de rutas BGP y prefijos anunciados. |
+| | `sfp_ddm_telemetry_enabled` | `true` | Lectura de telemetría óptica DDM (temperatura, potencia TX/RX SFP). |
+| | `ipfix_analytics_enabled` | `false` | Colectores y analítica de flujos de tráfico IPFIX / NetFlow. |
+| **Seguridad & Compliance** | `enforce_maker_checker` | `true` | Obligatoriedad de doble aprobación para cambios de alto impacto. |
+| | `auto_safemode_enforced` | `true` | Safe Mode (Dead Man's Switch) de 60s obligatorio en mutaciones WebFig. |
+| | `ai_mcp_integration_enabled` | `true` | Exposición del endpoint MCP protegido (`/api/v1/mcp`) para agentes IA. |
+| | `nightly_backups_enabled` | `true` | Ejecución del worker de respaldos automáticos nocturnos `.rsc` y binarios. |
+| | `outbound_webhooks_enabled` | `true` | Despacho de webhooks firmados HMAC-SHA256 ante eventos críticos de red. |
+| | `cis_audit_enabled` | `true` | Escaneo y cálculo de score de cumplimiento de endurecimiento CIS MikroTik. |
+| **Suite Corporativa** | `config_drift_monitoring_enabled` | `false` | Detección de desviaciones contra la plantilla maestra (*Golden Baseline*). |
+| | `sdwan_orchestrator_enabled` | `false` | Orquestación de topologías Hub & Spoke con túneles WireGuard y OSPF. |
+| | `capsman_wifi_enabled` | `false` | Gestión centralizada de controladoras WiFi MikroTik CAPsMAN. |
+| | `sla_tracker_enabled` | `false` | Monitor de cumplimiento de acuerdos de nivel de servicio (SLA) de enlaces. |
+| **Gobernanza & Umbrales** | `mass_outage_threshold` | `10` | Cantidad mínima de abonados caídos simultáneamente para declarar corte masivo. |
+| | `default_locale` | `"es"` | Idioma base del tenant (`es` / `en`). |
+
+### 7.2 Operación desde la Consola Web
+
+El Superadmin accede a `TenantsManagementView.vue` y hace clic en el botón táctico **"⚙️ Módulos"** de la empresa correspondiente:
+1. Se despliega el modal reactivo *"Módulos & Capacidades"*.
+2. Permite conmutar en caliente los switches organizados por grupos temáticos.
+3. Al guardar, el backend persiste los cambios en PostgreSQL e invalida inmediatamente la clave KeyDB `rg:{tenant_id}:features`.
+4. En la interfaz web, el menú lateral (`RgResponsiveShell.vue`) y la paleta de comandos (`RgCommandPalette.vue`) reaccionan automáticamente ocultando o mostrando los módulos asociados a través de `useAuthStore.isFeatureEnabled`.

@@ -64,7 +64,11 @@ export const useIpamStore = defineStore('ipam', () => {
     }
   }
 
-  async function createVrf(payload: { name: string; route_distinguisher?: string; description?: string }): Promise<IPAMVrf> {
+  async function createVrf(payload: {
+    name: string;
+    route_distinguisher?: string;
+    description?: string;
+  }): Promise<IPAMVrf> {
     const { http } = await import('@/api/httpClient');
     const res = await http.post<IPAMVrf>('/api/v1/ipam/vrfs', payload);
     vrfs.value = [...vrfs.value, res.data];
@@ -103,7 +107,9 @@ export const useIpamStore = defineStore('ipam', () => {
     return res.data;
   }
 
-  async function getNextAvailable(prefixId: string): Promise<{ next_available: string; is_subnet: boolean; message: string }> {
+  async function getNextAvailable(
+    prefixId: string,
+  ): Promise<{ next_available: string; is_subnet: boolean; message: string }> {
     const { http } = await import('@/api/httpClient');
     const res = await http.get<{ next_available: string; is_subnet: boolean; message: string }>(
       `/api/v1/ipam/prefixes/${prefixId}/next-available`,
@@ -115,7 +121,9 @@ export const useIpamStore = defineStore('ipam', () => {
   async function fetchAddresses(prefixId?: string): Promise<void> {
     try {
       const { http } = await import('@/api/httpClient');
-      const url = prefixId ? `/api/v1/ipam/addresses?prefix_id=${prefixId}` : '/api/v1/ipam/addresses';
+      const url = prefixId
+        ? `/api/v1/ipam/addresses?prefix_id=${prefixId}`
+        : '/api/v1/ipam/addresses';
       const res = await http.get<IPAMAddress[]>(url);
       addresses.value = Array.isArray(res.data) ? res.data : [];
       triggerRef(addresses);
@@ -136,7 +144,9 @@ export const useIpamStore = defineStore('ipam', () => {
     }
   }
 
-  async function createCustomerService(payload: Partial<CustomerService>): Promise<CustomerService> {
+  async function createCustomerService(
+    payload: Partial<CustomerService>,
+  ): Promise<CustomerService> {
     const { http } = await import('@/api/httpClient');
     const res = await http.post<CustomerService>('/api/v1/ipam/customer-services', payload);
     customerServices.value = [...customerServices.value, res.data];
@@ -145,7 +155,9 @@ export const useIpamStore = defineStore('ipam', () => {
   }
 
   // Sync from MikroTik
-  async function syncMikrotikIpam(routerId: string): Promise<{ synced_prefixes: number; synced_ips: number; message: string }> {
+  async function syncMikrotikIpam(
+    routerId: string,
+  ): Promise<{ synced_prefixes: number; synced_ips: number; message: string }> {
     const { http } = await import('@/api/httpClient');
     const res = await http.post<{ synced_prefixes: number; synced_ips: number; message: string }>(
       `/api/v1/ipam/sync-mikrotik/${routerId}`,

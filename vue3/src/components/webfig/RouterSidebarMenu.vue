@@ -30,7 +30,12 @@
       is_singleton: false,
     },
     { ros_path: 'snmp', title: 'SNMP Settings', category: 'Management', is_singleton: true },
-    { ros_path: 'snmp/community', title: 'SNMP Communities', category: 'Management', is_singleton: false },
+    {
+      ros_path: 'snmp/community',
+      title: 'SNMP Communities',
+      category: 'Management',
+      is_singleton: false,
+    },
   ]);
 
   async function loadLayer2Catalog() {

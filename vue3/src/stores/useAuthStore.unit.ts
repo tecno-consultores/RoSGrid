@@ -97,4 +97,21 @@ describe('useAuthStore — Autenticación Zero-Trust & RBAC', () => {
 
     window.removeEventListener('rosgrid:kill-switch', eventSpy);
   });
+
+  it('evalúa correctamente los feature flags del tenant con isFeatureEnabled', () => {
+    const auth = useAuthStore();
+    expect(auth.isFeatureEnabled('isp_module_enabled')).toBe(false);
+
+    auth.setAuth({
+      ...sampleUser,
+      tenant_feature_flags: {
+        isp_module_enabled: true,
+        nightly_backups_enabled: false,
+      },
+    });
+
+    expect(auth.isFeatureEnabled('isp_module_enabled')).toBe(true);
+    expect(auth.isFeatureEnabled('nightly_backups_enabled')).toBe(false);
+    expect(auth.isFeatureEnabled('unknown_flag')).toBe(false);
+  });
 });

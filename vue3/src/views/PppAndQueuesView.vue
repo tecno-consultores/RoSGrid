@@ -44,7 +44,9 @@
   const routerId = computed(() => String(route.params.routerId || ''));
   const webFigStore = useWebFigStore();
 
-  const activeTab = ref<'pppoe-active' | 'ppp-secrets' | 'ppp-profiles' | 'pppoe-servers' | 'simple-queues'>('pppoe-active');
+  const activeTab = ref<
+    'pppoe-active' | 'ppp-secrets' | 'ppp-profiles' | 'pppoe-servers' | 'simple-queues'
+  >('pppoe-active');
   const isLoading = ref(false);
   const pppSearchQuery = ref('');
   const actionMessage = ref('');
@@ -169,7 +171,7 @@
     try {
       if (activeTab.value === 'pppoe-active') {
         const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ppp/active`);
-        const items = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+        const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
         pppSessions.value = items.map((s: any) => ({
           ...s,
           id: s.id || s['.id'] || s.name,
@@ -177,7 +179,7 @@
         }));
       } else if (activeTab.value === 'ppp-secrets') {
         const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ppp/secrets`);
-        const items = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+        const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
         pppSecrets.value = items.map((sec: any) => ({
           ...sec,
           id: sec.id || sec['.id'] || sec.name,
@@ -187,7 +189,7 @@
         }));
       } else if (activeTab.value === 'ppp-profiles') {
         const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ppp/profiles`);
-        const items = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+        const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
         pppProfiles.value = items.map((prof: any) => ({
           ...prof,
           id: prof.id || prof['.id'] || prof.name,
@@ -198,8 +200,10 @@
           only_one: prof.only_one || prof['only-one'] || '',
         }));
       } else if (activeTab.value === 'pppoe-servers') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ppp/pppoe-servers`);
-        const items = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+        const res = await http.get<any>(
+          `/api/v1/routers/${routerId.value}/webfig/ppp/pppoe-servers`,
+        );
+        const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
         pppoeServers.value = items.map((srv: any) => ({
           ...srv,
           id: srv.id || srv['.id'] || `${srv.interface}-${srv.service_name || srv['service-name']}`,
@@ -210,7 +214,7 @@
         }));
       } else {
         const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/queues/simple`);
-        const items = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+        const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
         simpleQueues.value = items.map((q: any) => ({
           ...q,
           id: q.id || q['.id'] || q.name,
@@ -256,7 +260,15 @@
       await http.post(`/api/v1/routers/${routerId.value}/webfig/ppp/secrets`, newSecret.value);
       actionMessage.value = `Usuario PPP "${newSecret.value.name}" creado exitosamente bajo Safe Mode.`;
       isCreateSecretModalOpen.value = false;
-      newSecret.value = { name: '', password: '', service: 'any', profile: 'default', local_address: '', remote_address: '', comment: '' };
+      newSecret.value = {
+        name: '',
+        password: '',
+        service: 'any',
+        profile: 'default',
+        local_address: '',
+        remote_address: '',
+        comment: '',
+      };
       loadPppData();
     } catch (err: unknown) {
       const error = err as { message?: string; detail?: string };
@@ -274,7 +286,14 @@
       await http.post(`/api/v1/routers/${routerId.value}/webfig/ppp/profiles`, newProfile.value);
       actionMessage.value = `Perfil PPP "${newProfile.value.name}" creado exitosamente.`;
       isCreateProfileModalOpen.value = false;
-      newProfile.value = { name: '', local_address: '', remote_address: '', rate_limit: '10M/10M', dns_server: '8.8.8.8,1.1.1.1', only_one: 'yes' };
+      newProfile.value = {
+        name: '',
+        local_address: '',
+        remote_address: '',
+        rate_limit: '10M/10M',
+        dns_server: '8.8.8.8,1.1.1.1',
+        only_one: 'yes',
+      };
       loadPppData();
     } catch (err: unknown) {
       const error = err as { message?: string; detail?: string };
@@ -289,7 +308,10 @@
     errorMessage.value = '';
     webFigStore.startSafeModeCountdown(60);
     try {
-      await http.post(`/api/v1/routers/${routerId.value}/webfig/ppp/pppoe-servers`, newServer.value);
+      await http.post(
+        `/api/v1/routers/${routerId.value}/webfig/ppp/pppoe-servers`,
+        newServer.value,
+      );
       actionMessage.value = `Servidor PPPoE "${newServer.value.service_name}" activado en ${newServer.value.interface}.`;
       isCreateServerModalOpen.value = false;
       loadPppData();
@@ -317,7 +339,8 @@
       <div>
         <h1 class="view-title">PPPoE & Control de Ancho de Banda (Simple Queues)</h1>
         <p class="view-subtitle">
-          Supervisión de sesiones de abonados, usuarios PPP Secrets, perfiles y servidores PPPoE MikroTik v7.
+          Supervisión de sesiones de abonados, usuarios PPP Secrets, perfiles y servidores PPPoE
+          MikroTik v7.
         </p>
       </div>
 
@@ -424,7 +447,7 @@
       <!-- Pestaña 1: Sesiones Activas -->
       <div v-if="activeTab === 'pppoe-active'">
         <RgDataTable
-          :columns="(pppColumns as any)"
+          :columns="pppColumns as any"
           :rows="filteredPppSessions"
           caption="Sesiones PPPoE Activas"
           row-key="id"
@@ -445,7 +468,7 @@
       <!-- Pestaña 2: Secretos PPP -->
       <div v-else-if="activeTab === 'ppp-secrets'">
         <RgDataTable
-          :columns="(secretColumns as any)"
+          :columns="secretColumns as any"
           :rows="pppSecrets"
           caption="Secretos y Clientes PPP"
           row-key="id"
@@ -455,7 +478,7 @@
       <!-- Pestaña 3: Perfiles PPP -->
       <div v-else-if="activeTab === 'ppp-profiles'">
         <RgDataTable
-          :columns="(profileColumns as any)"
+          :columns="profileColumns as any"
           :rows="pppProfiles"
           caption="Perfiles de Servicio PPP"
           row-key="id"
@@ -465,7 +488,7 @@
       <!-- Pestaña 4: Servidores PPPoE -->
       <div v-else-if="activeTab === 'pppoe-servers'">
         <RgDataTable
-          :columns="(serverColumns as any)"
+          :columns="serverColumns as any"
           :rows="pppoeServers"
           caption="Servidores de Autenticación PPPoE"
           row-key="id"
@@ -475,7 +498,7 @@
       <!-- Pestaña 5: Simple Queues -->
       <div v-else-if="activeTab === 'simple-queues'">
         <RgDataTable
-          :columns="(queueColumns as any)"
+          :columns="queueColumns as any"
           :rows="simpleQueues"
           caption="Colas de Ancho de Banda Simples"
           row-key="id"
@@ -484,11 +507,17 @@
     </div>
 
     <!-- Modal Crear Secreto PPP -->
-    <div v-if="isCreateSecretModalOpen" class="modal-backdrop" @click.self="isCreateSecretModalOpen = false">
+    <div
+      v-if="isCreateSecretModalOpen"
+      class="modal-backdrop"
+      @click.self="isCreateSecretModalOpen = false"
+    >
       <div class="modal-card" role="dialog" aria-labelledby="modal-secret-title" aria-modal="true">
         <header class="modal-header">
           <h2 id="modal-secret-title">Crear Secreto / Usuario PPP</h2>
-          <button type="button" class="btn-close" @click="isCreateSecretModalOpen = false">✕</button>
+          <button type="button" class="btn-close" @click="isCreateSecretModalOpen = false">
+            ✕
+          </button>
         </header>
         <form class="modal-form" @submit.prevent="handleCreateSecret">
           <div class="form-group">
@@ -497,7 +526,13 @@
           </div>
           <div class="form-group">
             <label for="sec-pwd">Contraseña:</label>
-            <input id="sec-pwd" v-model="newSecret.password" type="password" required placeholder="Contraseña segura" />
+            <input
+              id="sec-pwd"
+              v-model="newSecret.password"
+              type="password"
+              required
+              placeholder="Contraseña segura"
+            />
           </div>
           <div class="form-group">
             <label for="sec-svc">Servicio:</label>
@@ -519,22 +554,36 @@
           </div>
           <div class="form-group">
             <label for="sec-remote">IP Remota (Cliente Opcional):</label>
-            <input id="sec-remote" v-model="newSecret.remote_address" placeholder="ej. 10.10.10.50" />
+            <input
+              id="sec-remote"
+              v-model="newSecret.remote_address"
+              placeholder="ej. 10.10.10.50"
+            />
           </div>
           <footer class="modal-footer">
-            <button type="button" class="btn-secondary" @click="isCreateSecretModalOpen = false">Cancelar</button>
-            <button type="submit" class="btn-primary" :disabled="isLoading">Crear con Safe Mode</button>
+            <button type="button" class="btn-secondary" @click="isCreateSecretModalOpen = false">
+              Cancelar
+            </button>
+            <button type="submit" class="btn-primary" :disabled="isLoading">
+              Crear con Safe Mode
+            </button>
           </footer>
         </form>
       </div>
     </div>
 
     <!-- Modal Crear Perfil PPP -->
-    <div v-if="isCreateProfileModalOpen" class="modal-backdrop" @click.self="isCreateProfileModalOpen = false">
+    <div
+      v-if="isCreateProfileModalOpen"
+      class="modal-backdrop"
+      @click.self="isCreateProfileModalOpen = false"
+    >
       <div class="modal-card" role="dialog" aria-labelledby="modal-profile-title" aria-modal="true">
         <header class="modal-header">
           <h2 id="modal-profile-title">Crear Perfil PPP</h2>
-          <button type="button" class="btn-close" @click="isCreateProfileModalOpen = false">✕</button>
+          <button type="button" class="btn-close" @click="isCreateProfileModalOpen = false">
+            ✕
+          </button>
         </header>
         <form class="modal-form" @submit.prevent="handleCreateProfile">
           <div class="form-group">
@@ -547,10 +596,16 @@
           </div>
           <div class="form-group">
             <label for="prof-dns">Servidores DNS:</label>
-            <input id="prof-dns" v-model="newProfile.dns_server" placeholder="ej. 1.1.1.1,8.8.8.8" />
+            <input
+              id="prof-dns"
+              v-model="newProfile.dns_server"
+              placeholder="ej. 1.1.1.1,8.8.8.8"
+            />
           </div>
           <footer class="modal-footer">
-            <button type="button" class="btn-secondary" @click="isCreateProfileModalOpen = false">Cancelar</button>
+            <button type="button" class="btn-secondary" @click="isCreateProfileModalOpen = false">
+              Cancelar
+            </button>
             <button type="submit" class="btn-primary" :disabled="isLoading">Crear Perfil</button>
           </footer>
         </form>
@@ -558,20 +613,36 @@
     </div>
 
     <!-- Modal Crear Servidor PPPoE -->
-    <div v-if="isCreateServerModalOpen" class="modal-backdrop" @click.self="isCreateServerModalOpen = false">
+    <div
+      v-if="isCreateServerModalOpen"
+      class="modal-backdrop"
+      @click.self="isCreateServerModalOpen = false"
+    >
       <div class="modal-card" role="dialog" aria-labelledby="modal-server-title" aria-modal="true">
         <header class="modal-header">
           <h2 id="modal-server-title">Activar Servidor PPPoE</h2>
-          <button type="button" class="btn-close" @click="isCreateServerModalOpen = false">✕</button>
+          <button type="button" class="btn-close" @click="isCreateServerModalOpen = false">
+            ✕
+          </button>
         </header>
         <form class="modal-form" @submit.prevent="handleCreateServer">
           <div class="form-group">
             <label for="srv-name">Nombre del Servicio:</label>
-            <input id="srv-name" v-model="newServer.service_name" required placeholder="ej. pppoe-clientes" />
+            <input
+              id="srv-name"
+              v-model="newServer.service_name"
+              required
+              placeholder="ej. pppoe-clientes"
+            />
           </div>
           <div class="form-group">
             <label for="srv-iface">Interfaz Física / Bridge:</label>
-            <input id="srv-iface" v-model="newServer.interface" required placeholder="ej. bridge1 o ether3" />
+            <input
+              id="srv-iface"
+              v-model="newServer.interface"
+              required
+              placeholder="ej. bridge1 o ether3"
+            />
           </div>
           <div class="form-group">
             <label for="srv-prof">Perfil Predeterminado:</label>
@@ -579,11 +650,21 @@
           </div>
           <div class="form-group">
             <label for="srv-mtu">Max MTU:</label>
-            <input id="srv-mtu" v-model.number="newServer.max_mtu" type="number" min="1280" max="1500" />
+            <input
+              id="srv-mtu"
+              v-model.number="newServer.max_mtu"
+              type="number"
+              min="1280"
+              max="1500"
+            />
           </div>
           <footer class="modal-footer">
-            <button type="button" class="btn-secondary" @click="isCreateServerModalOpen = false">Cancelar</button>
-            <button type="submit" class="btn-primary" :disabled="isLoading">Activar Servidor</button>
+            <button type="button" class="btn-secondary" @click="isCreateServerModalOpen = false">
+              Cancelar
+            </button>
+            <button type="submit" class="btn-primary" :disabled="isLoading">
+              Activar Servidor
+            </button>
           </footer>
         </form>
       </div>

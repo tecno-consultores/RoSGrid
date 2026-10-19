@@ -62,4 +62,3 @@ api_v1_router.include_router(notification_channels_router)
 api_v1_router.include_router(audit_router)
 api_v1_router.include_router(mcp_router)
 api_v1_router.include_router(rbac_router)
-

@@ -26,7 +26,9 @@
 
   const selectedRole = computed(() => {
     if (!Array.isArray(rolesList.value)) return null;
-    return rolesList.value.find((r) => r.role === selectedRoleKey.value) || rolesList.value[0] || null;
+    return (
+      rolesList.value.find((r) => r.role === selectedRoleKey.value) || rolesList.value[0] || null
+    );
   });
 
   // Agrupar acciones por categoría
@@ -72,16 +74,21 @@
       ]);
 
       const rawRoles = resRoles?.data;
-      rolesList.value = Array.isArray(rawRoles) ? rawRoles : ((rawRoles as any)?.items || []);
+      rolesList.value = Array.isArray(rawRoles) ? rawRoles : (rawRoles as any)?.items || [];
       const rawActions = resActions?.data;
-      actionsList.value = Array.isArray(rawActions) ? rawActions : ((rawActions as any)?.items || []);
+      actionsList.value = Array.isArray(rawActions) ? rawActions : (rawActions as any)?.items || [];
 
-      if (Array.isArray(rolesList.value) && rolesList.value.length > 0 && !rolesList.value.some((r) => r.role === selectedRoleKey.value)) {
+      if (
+        Array.isArray(rolesList.value) &&
+        rolesList.value.length > 0 &&
+        !rolesList.value.some((r) => r.role === selectedRoleKey.value)
+      ) {
         selectedRoleKey.value = rolesList.value[0].role;
       }
     } catch (err: unknown) {
       const error = err as { message?: string; detail?: string };
-      errorMessage.value = error.detail || error.message || 'Error al cargar la matriz de roles y permisos.';
+      errorMessage.value =
+        error.detail || error.message || 'Error al cargar la matriz de roles y permisos.';
     } finally {
       isLoading.value = false;
     }
@@ -124,13 +131,15 @@
 
       selectedRole.value.has_custom_overrides = true;
       successMessage.value =
-        res.data.message || `Permisos del rol "${selectedRole.value.title}" guardados exitosamente.`;
+        res.data.message ||
+        `Permisos del rol "${selectedRole.value.title}" guardados exitosamente.`;
       setTimeout(() => {
         successMessage.value = '';
       }, 4000);
     } catch (err: unknown) {
       const error = err as { message?: string; detail?: string };
-      errorMessage.value = error.detail || error.message || 'Error al guardar los permisos del rol.';
+      errorMessage.value =
+        error.detail || error.message || 'Error al guardar los permisos del rol.';
     } finally {
       isSaving.value = false;
     }
@@ -140,7 +149,11 @@
     if (!selectedRole.value || selectedRole.value.is_system_reserved || !isWriteAuthorized.value) {
       return;
     }
-    if (!confirm(`¿Deseas restaurar los permisos del rol "${selectedRole.value.title}" a los valores predeterminados de fábrica?`)) {
+    if (
+      !confirm(
+        `¿Deseas restaurar los permisos del rol "${selectedRole.value.title}" a los valores predeterminados de fábrica?`,
+      )
+    ) {
       return;
     }
 
@@ -204,7 +217,9 @@
           <span class="role-chip-level">Niv. {{ r.level }}</span>
           <span class="role-chip-title">{{ r.title }}</span>
           <span v-if="r.is_system_reserved" class="role-chip-badge badge--reserved">Master</span>
-          <span v-else-if="r.has_custom_overrides" class="role-chip-badge badge--custom">Personalizado</span>
+          <span v-else-if="r.has_custom_overrides" class="role-chip-badge badge--custom"
+            >Personalizado</span
+          >
         </button>
       </div>
     </div>
@@ -338,7 +353,9 @@
                 <button
                   type="button"
                   class="btn-perm btn-perm--mc"
-                  :class="{ 'btn-perm--active': selectedRole.permissions[act.key] === 'MAKER_CHECKER' }"
+                  :class="{
+                    'btn-perm--active': selectedRole.permissions[act.key] === 'MAKER_CHECKER',
+                  }"
                   :disabled="selectedRole.is_system_reserved || !isWriteAuthorized"
                   title="Requiere Aprobación Formal de Supervisor (Maker-Checker)"
                   @click="setActionPermission(act.key, 'MAKER_CHECKER')"

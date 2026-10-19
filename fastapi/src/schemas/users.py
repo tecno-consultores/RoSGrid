@@ -27,7 +27,9 @@ class CreateUserRequest(BaseModel):
             return []
         if isinstance(v, str):
             return [s.strip() for s in v.split(",") if s.strip()]
-        return v
+        if isinstance(v, list):
+            return [str(s) for s in v]
+        return []
 
     @model_validator(mode="after")
     def validate_password_and_fullname(self) -> "CreateUserRequest":
@@ -72,7 +74,6 @@ class AssignUserRoutersRequest(BaseModel):
         if not self.router_assignments and self.permissions:
             self.router_assignments = self.permissions
         return self
-
 
 
 class UserResponse(BaseModel):

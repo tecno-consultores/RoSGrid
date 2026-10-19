@@ -155,11 +155,20 @@ _DEFAULT_STARTER_TEMPLATES = [
         "category": "NETWORK",
         "description": "Configura servidores DNS redundantes (Quad9 y Cloudflare) y vacía la caché de resolución.",
         "variables_schema": [
-            {"key": "dns_servers", "label": "Servidores DNS (separados por coma)", "default_val": "9.9.9.9,1.1.1.1", "var_type": "string"},
+            {
+                "key": "dns_servers",
+                "label": "Servidores DNS (separados por coma)",
+                "default_val": "9.9.9.9,1.1.1.1",
+                "var_type": "string",
+            },
             {"key": "allow_remote", "label": "Permitir peticiones remotas", "default_val": "no", "var_type": "string"},
         ],
         "rest_steps_template": [
-            {"method": "PATCH", "endpoint": "ip/dns", "payload": {"servers": "{{ dns_servers }}", "allow-remote-requests": "{{ allow_remote }}"}},
+            {
+                "method": "PATCH",
+                "endpoint": "ip/dns",
+                "payload": {"servers": "{{ dns_servers }}", "allow-remote-requests": "{{ allow_remote }}"},
+            },
             {"method": "POST", "endpoint": "ip/dns/cache/flush", "payload": {}},
         ],
         "requires_safemode": True,
@@ -169,10 +178,19 @@ _DEFAULT_STARTER_TEMPLATES = [
         "category": "SYSTEM",
         "description": "Habilita el cliente SNTP v7 corporativo para sincronización horaria precisa.",
         "variables_schema": [
-            {"key": "ntp_servers", "label": "Servidores NTP Primario y Secundario", "default_val": "pool.ntp.org,time.google.com", "var_type": "string"},
+            {
+                "key": "ntp_servers",
+                "label": "Servidores NTP Primario y Secundario",
+                "default_val": "pool.ntp.org,time.google.com",
+                "var_type": "string",
+            },
         ],
         "rest_steps_template": [
-            {"method": "PATCH", "endpoint": "system/ntp/client", "payload": {"enabled": "yes", "servers": "{{ ntp_servers }}"}},
+            {
+                "method": "PATCH",
+                "endpoint": "system/ntp/client",
+                "payload": {"enabled": "yes", "servers": "{{ ntp_servers }}"},
+            },
         ],
         "requires_safemode": True,
     },
@@ -181,12 +199,26 @@ _DEFAULT_STARTER_TEMPLATES = [
         "category": "SECURITY",
         "description": "Configura comunidad SNMP v2c para supervisión y telemetría desde el Wallboard NOC.",
         "variables_schema": [
-            {"key": "snmp_community", "label": "Nombre de Comunidad SNMP", "default_val": "RoSGrid_NOC", "var_type": "string"},
-            {"key": "snmp_addresses", "label": "Subredes autorizadas (separadas por coma)", "default_val": "10.0.0.0/8,192.168.0.0/16", "var_type": "string"},
+            {
+                "key": "snmp_community",
+                "label": "Nombre de Comunidad SNMP",
+                "default_val": "RoSGrid_NOC",
+                "var_type": "string",
+            },
+            {
+                "key": "snmp_addresses",
+                "label": "Subredes autorizadas (separadas por coma)",
+                "default_val": "10.0.0.0/8,192.168.0.0/16",
+                "var_type": "string",
+            },
         ],
         "rest_steps_template": [
             {"method": "PATCH", "endpoint": "snmp", "payload": {"enabled": "yes"}},
-            {"method": "PATCH", "endpoint": "snmp/community/*0", "payload": {"name": "{{ snmp_community }}", "addresses": "{{ snmp_addresses }}"}},
+            {
+                "method": "PATCH",
+                "endpoint": "snmp/community/*0",
+                "payload": {"name": "{{ snmp_community }}", "addresses": "{{ snmp_addresses }}"},
+            },
         ],
         "requires_safemode": True,
     },

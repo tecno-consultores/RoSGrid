@@ -26,14 +26,12 @@ from src.models.ipam import (
     FiberCutStatusEnum,
     FieldInstallationOrder,
     FieldOrderStatusEnum,
-    ONUModeEnum,
 )
 from src.schemas.field_ops import (
     FiberCutIncidentResponse,
     FieldCertifyOrderRequest,
     FieldOrderCreate,
     FieldOrderResponse,
-    FieldOrderUpdate,
     FieldVerifySubscriberRequest,
     FieldVerifySubscriberResponse,
 )
@@ -85,12 +83,14 @@ async def list_field_orders(
 async def create_field_order(
     payload: FieldOrderCreate,
     db: AsyncSession = Depends(get_tenant_db_session),
-    claims: dict[str, Any] = Depends(require_roles(
-        SystemRoleEnum.SUPERADMIN_GLOBAL,
-        SystemRoleEnum.TENANT_ADMIN,
-        SystemRoleEnum.SUPERVISOR,
-        SystemRoleEnum.SUPPORT_L2,
-    )),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
 ) -> Any:
     """Crea y asigna una nueva orden de instalación para un técnico de campo."""
     tenant_id = get_tenant_id(claims)
@@ -116,14 +116,16 @@ async def create_field_order(
     await db.refresh(order)
 
     await write_audit_log(
-        db=db,
+        session=db,
         tenant_id=tenant_id,
-        user_id=uuid.UUID(claims["sub"]),
-        username=claims.get("username", "system"),
-        event_action="FIELD_ORDER_CREATED",
+        actor_user_id=uuid.UUID(str(claims["sub"])),
+        actor_username=str(claims.get("username", "system")),
+        actor_role=claims.get("rol"),
+        actor_ip="127.0.0.1",
         event_category="OPERATIONS",
+        event_action="FIELD_ORDER_CREATED",
         status_code=201,
-        details={"order_id": str(order.id), "customer_service_id": str(svc.id)},
+        after_state={"order_id": str(order.id), "customer_service_id": str(svc.id)},
     )
     return order
 
@@ -165,7 +167,8 @@ async def verify_subscriber_live(
     traffic_tx = Decimal("45.20")
 
     try:
-        async with MikrotikRestClient(base_url=r.api_base_url, port=r.api_port, username="admin", password="") as client:
+        host = r.api_base_url.replace("https://", "").replace("http://", "").split("/")[0].split(":")[0]
+        async with MikrotikRestClient(host=host, port=r.api_port, username="admin", password="") as client:  # nosec B106
             if svc.service_type == "PPPOE" and svc.pppoe_username:
                 # Consultar sesión activa PPPoE
                 active_sessions = await client.get(f"/ppp/active?name={svc.pppoe_username}")
@@ -187,13 +190,13 @@ async def verify_subscriber_live(
             elif svc.service_type == "DHCP":
                 # Consultar lease DHCP
                 leases = await client.get("/ip/dhcp-server/lease")
-                for l in leases:
-                    if (svc.onu_mac_address and l.get("mac-address") == svc.onu_mac_address) or (
-                        svc.cpe_wifi_mac_address and l.get("mac-address") == svc.cpe_wifi_mac_address
+                for lease in leases:
+                    if (svc.onu_mac_address and lease.get("mac-address") == svc.onu_mac_address) or (
+                        svc.cpe_wifi_mac_address and lease.get("mac-address") == svc.cpe_wifi_mac_address
                     ):
-                        session_active = l.get("status") in ("bound", "active")
-                        assigned_ipv4 = l.get("address")
-                        detected_mac = l.get("mac-address")
+                        session_active = lease.get("status") in ("bound", "active")
+                        assigned_ipv4 = lease.get("address")
+                        detected_mac = lease.get("mac-address")
                         ping_success = session_active
                         break
     except Exception as e:
@@ -213,7 +216,7 @@ async def verify_subscriber_live(
     return FieldVerifySubscriberResponse(
         customer_service_id=svc.id,
         session_active=session_active,
-        connection_type=svc.service_type.value,
+        connection_type=svc.service_type.value if hasattr(svc.service_type, "value") else str(svc.service_type),
         uptime_seconds=uptime_seconds or 180,
         assigned_ipv4=assigned_ipv4,
         assigned_ipv6_prefix=svc.ipv6_delegated_prefix,
@@ -262,7 +265,7 @@ async def certify_installation(
     stmt_svc = select(CustomerService).where(CustomerService.id == order.customer_service_id)
     svc = (await db.execute(stmt_svc)).scalar_one_or_none()
     if svc:
-        svc.status = CustomerServiceStatusEnum.ACTIVE
+        svc.status = CustomerServiceStatusEnum.ACTIVE.value
         svc.onu_serial_number = payload.onu_scanned_serial
         if payload.onu_scanned_mac:
             svc.onu_mac_address = payload.onu_scanned_mac
@@ -271,14 +274,16 @@ async def certify_installation(
     await db.refresh(order)
 
     await write_audit_log(
-        db=db,
+        session=db,
         tenant_id=tenant_id,
-        user_id=uuid.UUID(claims["sub"]),
-        username=claims.get("username", "system"),
-        event_action="FIELD_INSTALLATION_CERTIFIED",
+        actor_user_id=uuid.UUID(str(claims["sub"])),
+        actor_username=str(claims.get("username", "system")),
+        actor_role=claims.get("rol"),
+        actor_ip="127.0.0.1",
         event_category="OPERATIONS",
+        event_action="FIELD_INSTALLATION_CERTIFIED",
         status_code=200,
-        details={"order_id": str(order.id), "serial": payload.onu_scanned_serial},
+        after_state={"order_id": str(order.id), "serial": payload.onu_scanned_serial},
     )
     return order
 
@@ -288,14 +293,18 @@ async def certify_installation(
 # ============================================================================
 @router.post("/detect-fiber-cuts", response_model=list[FiberCutIncidentResponse])
 async def detect_fiber_cuts_engine(
-    threshold_onus: int = Query(3, description="Mínimo de ONUs caídas en el mismo puerto PON o caja para considerar corte"),
+    threshold_onus: int = Query(
+        3, description="Mínimo de ONUs caídas en el mismo puerto PON o caja para considerar corte"
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
-    claims: dict[str, Any] = Depends(require_roles(
-        SystemRoleEnum.SUPERADMIN_GLOBAL,
-        SystemRoleEnum.TENANT_ADMIN,
-        SystemRoleEnum.SUPERVISOR,
-        SystemRoleEnum.NOC_MONITOR,
-    )),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.NOC_MONITOR,
+        )
+    ),
 ) -> Any:
     """Motor de correlación: agrupa ONUs caídas por puerto PON o caja óptica y genera alertas de corte de fibra."""
     tenant_id = get_tenant_id(claims)
@@ -310,7 +319,7 @@ async def detect_fiber_cuts_engine(
         )
         .where(
             CustomerService.tenant_id == tenant_id,
-            CustomerService.status == CustomerServiceStatusEnum.ACTIVE,
+            CustomerService.status == CustomerServiceStatusEnum.ACTIVE.value,
             CustomerService.last_reachability_status == "OFFLINE",
             CustomerService.pon_port.isnot(None),
         )

@@ -34,7 +34,9 @@ export const useWebFigStore = defineStore('webfig', () => {
 
   function openOrFocusTab(tab: RouterTabItem): void {
     const existingIndex = openRouterTabs.value.findIndex(
-      (t) => t.tabId === tab.tabId || (t.routeName === tab.routeName && t.routeName === 'RouterLiveDashboard')
+      (t) =>
+        t.tabId === tab.tabId ||
+        (t.routeName === tab.routeName && t.routeName === 'RouterLiveDashboard'),
     );
     if (existingIndex !== -1) {
       activeTabId.value = openRouterTabs.value[existingIndex].tabId;

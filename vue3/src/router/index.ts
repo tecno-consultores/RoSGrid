@@ -2,7 +2,7 @@
 // Copyright (C) 2026 RoSGrid Contributors
 
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
-import type { SystemRole } from '@/types';
+import type { SystemRole, TenantFeatureFlags } from '@/types';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useWebFigStore } from '@/stores/useWebFigStore';
 
@@ -266,6 +266,7 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/FieldTechOperationsView.vue'),
     meta: {
       requiresAuth: true,
+      requiredFeature: 'isp_module_enabled',
       title: 'Operaciones de Campo & Toolkit — RoSGrid',
     },
   },
@@ -303,6 +304,12 @@ router.beforeEach((to, _from, next) => {
   // 4. Verificación de allowedRoles declarados en la ruta
   const allowed = to.meta.allowedRoles as SystemRole[] | undefined;
   if (allowed && role && !allowed.includes(role)) {
+    return next({ path: '/inventory' });
+  }
+
+  // 5. Verificación de flags de características del Tenant (Subtarea 16.4)
+  const requiredFeature = to.meta.requiredFeature as keyof TenantFeatureFlags | undefined;
+  if (requiredFeature && !authStore.isFeatureEnabled(requiredFeature)) {
     return next({ path: '/inventory' });
   }
 

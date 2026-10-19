@@ -17,7 +17,9 @@ export const useFieldOpsStore = defineStore('fieldOps', () => {
     try {
       isLoading.value = true;
       const { http } = await import('@/api/httpClient');
-      const res = await http.get<FieldOrder[]>(`/api/v1/field-ops/orders?my_orders_only=${myOrdersOnly}`);
+      const res = await http.get<FieldOrder[]>(
+        `/api/v1/field-ops/orders?my_orders_only=${myOrdersOnly}`,
+      );
       orders.value = Array.isArray(res.data) ? res.data : [];
       triggerRef(orders);
     } catch (e: any) {
@@ -27,7 +29,11 @@ export const useFieldOpsStore = defineStore('fieldOps', () => {
     }
   }
 
-  async function createOrder(payload: { customer_service_id: string; assigned_tech_id?: string; notes?: string }): Promise<FieldOrder> {
+  async function createOrder(payload: {
+    customer_service_id: string;
+    assigned_tech_id?: string;
+    notes?: string;
+  }): Promise<FieldOrder> {
     const { http } = await import('@/api/httpClient');
     const res = await http.post<FieldOrder>('/api/v1/field-ops/orders', payload);
     orders.value = [res.data, ...orders.value];
@@ -44,11 +50,14 @@ export const useFieldOpsStore = defineStore('fieldOps', () => {
       isVerifying.value = true;
       activeVerification.value = null;
       const { http } = await import('@/api/httpClient');
-      const res = await http.post<FieldVerifyResult>(`/api/v1/field-ops/verify/${customerServiceId}`, {
-        customer_service_id: customerServiceId,
-        onu_scanned_mac: scannedMac,
-        onu_scanned_serial: scannedSerial,
-      });
+      const res = await http.post<FieldVerifyResult>(
+        `/api/v1/field-ops/verify/${customerServiceId}`,
+        {
+          customer_service_id: customerServiceId,
+          onu_scanned_mac: scannedMac,
+          onu_scanned_serial: scannedSerial,
+        },
+      );
       activeVerification.value = res.data;
       return res.data;
     } finally {
@@ -78,7 +87,9 @@ export const useFieldOpsStore = defineStore('fieldOps', () => {
   async function detectFiberCuts(thresholdOnus: number = 3): Promise<FiberCutIncident[]> {
     try {
       const { http } = await import('@/api/httpClient');
-      const res = await http.post<FiberCutIncident[]>(`/api/v1/field-ops/detect-fiber-cuts?threshold_onus=${thresholdOnus}`);
+      const res = await http.post<FiberCutIncident[]>(
+        `/api/v1/field-ops/detect-fiber-cuts?threshold_onus=${thresholdOnus}`,
+      );
       incidents.value = Array.isArray(res.data) ? res.data : [];
       triggerRef(incidents);
       return incidents.value;

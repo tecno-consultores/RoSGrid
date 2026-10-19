@@ -93,6 +93,12 @@ class MockDbSession:
     async def rollback(self) -> None:
         pass
 
+    async def delete(self, instance: Any) -> None:
+        if instance in self.users:
+            self.users.remove(instance)
+        if instance in self.tenants:
+            self.tenants.remove(instance)
+
     async def refresh(self, instance: Any) -> None:
         pass
 
@@ -382,5 +388,171 @@ async def test_assign_router_permissions_and_not_found(
             headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
         )
         assert res_reset_nf.status_code == 404
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)
+
+
+@pytest.mark.asyncio
+async def test_tenant_features_endpoints(
+    async_client: AsyncClient, superadmin_auth: dict[str, str], fake_redis: FakeAsyncRedis
+) -> None:
+    headers = {"Authorization": superadmin_auth["Authorization"]}
+    tenant_id = uuid.uuid4()
+    t = Tenant()
+    t.id = tenant_id
+    t.slug = "corp-features"
+    t.name = "Corp Features"
+    t.status = TenantStatusEnum.ACTIVE
+    t.isp_module_enabled = True
+    t.bgp_looking_glass_enabled = False
+    t.sfp_ddm_telemetry_enabled = True
+    t.ipfix_analytics_enabled = False
+    t.enforce_maker_checker = True
+    t.auto_safemode_enforced = True
+    t.ai_mcp_integration_enabled = True
+    t.nightly_backups_enabled = True
+    t.outbound_webhooks_enabled = True
+    t.config_drift_monitoring_enabled = False
+    t.cis_audit_enabled = True
+    t.sdwan_orchestrator_enabled = False
+    t.capsman_wifi_enabled = False
+    t.sla_tracker_enabled = False
+    t.mass_outage_threshold = 10
+    t.default_locale = "es"
+
+    db = MockDbSession(tenants=[t])
+    app.dependency_overrides[get_db_session] = lambda: db
+    try:
+        # 1. Superadmin GET features -> 200
+        res_get = await async_client.get(f"/api/v1/tenants/{tenant_id}/features", headers=headers)
+        assert res_get.status_code == 200
+        data_get = res_get.json()
+        assert data_get["isp_module_enabled"] is True
+        assert data_get["bgp_looking_glass_enabled"] is False
+        assert data_get["mass_outage_threshold"] == 10
+        assert data_get["default_locale"] == "es"
+
+        # 2. Superadmin PATCH features -> 200
+        patch_body = {
+            "isp_module_enabled": False,
+            "bgp_looking_glass_enabled": True,
+            "mass_outage_threshold": 25,
+            "default_locale": "en",
+        }
+        res_patch = await async_client.patch(
+            f"/api/v1/tenants/{tenant_id}/features",
+            json=patch_body,
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res_patch.status_code == 200, f"res_patch failed: {res_patch.status_code} - {res_patch.text}"
+        data_patch = res_patch.json()
+        assert data_patch["isp_module_enabled"] is False
+        assert data_patch["bgp_looking_glass_enabled"] is True
+        assert data_patch["mass_outage_threshold"] == 25
+        assert data_patch["default_locale"] == "en"
+
+        # 3. GET / PATCH 404 si tenant no existe
+        db_empty = MockDbSession(tenants=[])
+        app.dependency_overrides[get_db_session] = lambda: db_empty
+        res_nf_get = await async_client.get(f"/api/v1/tenants/{uuid.uuid4()}/features", headers=headers)
+        assert res_nf_get.status_code == 404
+
+        res_nf_patch = await async_client.patch(
+            f"/api/v1/tenants/{uuid.uuid4()}/features",
+            json=patch_body,
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res_nf_patch.status_code == 404
+
+        # 4. GET 403 para usuario no superadmin de otro tenant
+        other_tenant_id = uuid.uuid4()
+        other_user_id = str(uuid.uuid4())
+        other_sess_id = "sess-other-001"
+        await fake_redis.hset(
+            f"rg:{other_tenant_id}:sess:{other_sess_id}",
+            mapping={
+                "session_id": other_sess_id,
+                "user_id": other_user_id,
+                "username": "nocmonitor",
+                "role": SystemRoleEnum.NOC_MONITOR.value,
+            },
+        )
+        other_user_token = create_jwt_access_token(
+            other_user_id, str(other_tenant_id), "other-slug", other_sess_id, SystemRoleEnum.NOC_MONITOR.value, True
+        )
+        app.dependency_overrides[get_db_session] = lambda: db
+        res_forbidden = await async_client.get(
+            f"/api/v1/tenants/{tenant_id}/features",
+            headers={"Authorization": f"Bearer {other_user_token}"},
+        )
+        assert res_forbidden.status_code == 403, (
+            f"res_forbidden failed: {res_forbidden.status_code} - {res_forbidden.text}"
+        )
+
+        # 5. PATCH con payload inválido (locale no soportado) -> 422
+        res_invalid = await async_client.patch(
+            f"/api/v1/tenants/{tenant_id}/features",
+            json={"default_locale": "fr"},
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res_invalid.status_code == 422
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)
+
+
+@pytest.mark.asyncio
+async def test_user_registration_toggle_approve_reject_and_permissions(
+    async_client: AsyncClient, superadmin_auth: dict[str, str], fake_redis: FakeAsyncRedis
+) -> None:
+    headers = {"Authorization": superadmin_auth["Authorization"]}
+    tid = uuid.UUID(superadmin_auth["tid"])
+
+    # 1. Toggle public registration
+    res_toggle = await async_client.post(
+        "/api/v1/users/registration-toggle",
+        json={"enabled": True},
+        headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+    )
+    assert res_toggle.status_code == 200
+    assert res_toggle.json()["registration_enabled"] is True
+
+    # 2. Approve user
+    target_user = User()
+    target_user.id = uuid.uuid4()
+    target_user.tenant_id = tid
+    target_user.username = "pending_worker"
+    target_user.email = "worker@acme.com"
+    target_user.full_name = "Pending Worker"
+    target_user.is_active = False
+    target_user.is_locked = False
+    target_user.failed_login_attempts = 0
+    target_user.totp_enabled = False
+    target_user.created_at = datetime.now(UTC)
+    target_user.updated_at = datetime.now(UTC)
+
+    db = MockDbSession(users=[target_user])
+    app.dependency_overrides[get_db_session] = lambda: db
+    try:
+        res_approve = await async_client.put(
+            f"/api/v1/users/{target_user.id}/approve",
+            json={"role": SystemRoleEnum.NOC_MONITOR.value, "has_all_routers_access": True, "allowed_cidr_list": []},
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res_approve.status_code == 200
+        assert res_approve.json()["is_active"] is True
+
+        # 3. Get user permissions
+        res_perms = await async_client.get(
+            f"/api/v1/users/{target_user.id}/router-permissions",
+            headers=headers,
+        )
+        assert res_perms.status_code == 200
+
+        # 4. Reject user
+        res_reject = await async_client.delete(
+            f"/api/v1/users/{target_user.id}/reject",
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res_reject.status_code == 204
     finally:
         app.dependency_overrides.pop(get_db_session, None)

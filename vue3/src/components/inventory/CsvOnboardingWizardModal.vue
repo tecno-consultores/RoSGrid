@@ -86,7 +86,9 @@
       step.value = 2;
     } catch (err: any) {
       errorMessage.value =
-        err?.response?.data?.detail || err?.message || 'Error al validar el archivo CSV con el servidor';
+        err?.response?.data?.detail ||
+        err?.message ||
+        'Error al validar el archivo CSV con el servidor';
     } finally {
       isProcessing.value = false;
     }
@@ -111,7 +113,9 @@
       emit('close');
     } catch (err: any) {
       errorMessage.value =
-        err?.response?.data?.detail || err?.message || 'Error al importar los equipos en el servidor';
+        err?.response?.data?.detail ||
+        err?.message ||
+        'Error al importar los equipos en el servidor';
     } finally {
       isProcessing.value = false;
     }

@@ -137,6 +137,7 @@ async def get_user_router_permissions(
     target_tenant_id = target_user.tenant_id
 
     from sqlalchemy.orm import selectinload
+
     from src.models.inventory import Router
 
     stmt_routers = (

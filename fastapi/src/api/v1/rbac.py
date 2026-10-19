@@ -6,9 +6,9 @@
 import json
 import logging
 import uuid
-from typing import Any
+from typing import Any, cast
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -233,7 +233,7 @@ async def _get_tenant_role_overrides(tenant_id: str, role_value: str) -> dict[st
         key = f"rosgrid:{tenant_id}:rbac:{role_value}"
         raw = await redis.get(key)
         if raw:
-            return json.loads(raw)
+            return cast(dict[str, str], json.loads(raw))
     except Exception as exc:
         logger.warning("Fallo al leer overrides de RBAC en KeyDB: %s", exc)
     return None
@@ -312,8 +312,8 @@ async def update_role_permissions(
     """Define o modifica la matriz de permisos para un rol específico en el tenant."""
     try:
         target_role = SystemRoleEnum(role_name)
-    except ValueError:
-        raise HTTPException(status_code=400, detail=f"Rol '{role_name}' inválido o no reconocido")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Rol '{role_name}' inválido o no reconocido") from e
 
     if target_role == SystemRoleEnum.SUPERADMIN_GLOBAL:
         raise HTTPException(
@@ -367,8 +367,8 @@ async def reset_role_permissions(
     """Restaura los permisos de un rol a la matriz predeterminada de fábrica."""
     try:
         target_role = SystemRoleEnum(role_name)
-    except ValueError:
-        raise HTTPException(status_code=400, detail=f"Rol '{role_name}' inválido")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Rol '{role_name}' inválido") from e
 
     tenant_id = str(claims["tid"])
     redis = get_redis_client()

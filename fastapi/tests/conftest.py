@@ -135,6 +135,9 @@ class FakeAsyncRedis:
             count += 1
         return count
 
+    async def hget(self, name: str, key: str) -> str | None:
+        return self.hashes.get(name, {}).get(str(key))
+
     async def hgetall(self, name: str) -> dict[str, str]:
         return dict(self.hashes.get(name, {}))
 
@@ -232,7 +235,9 @@ class FakeAsyncRedis:
         return sorted_members[start : end + 1]
 
     async def keys(self, pattern: str) -> list[str]:
-        all_keys = list(self.strings.keys()) + list(self.hashes.keys()) + list(self.sets.keys()) + list(self.zsets.keys())
+        all_keys = (
+            list(self.strings.keys()) + list(self.hashes.keys()) + list(self.sets.keys()) + list(self.zsets.keys())
+        )
         return [k for k in all_keys if fnmatch.fnmatch(k, pattern)]
 
     async def publish(self, channel: str, message: str) -> int:
@@ -269,6 +274,8 @@ def fake_redis(monkeypatch: pytest.MonkeyPatch) -> FakeAsyncRedis:
     monkeypatch.setattr("src.api.v1.auth.get_redis_client", lambda: fake)
     monkeypatch.setattr("src.api.v1.sessions.get_redis_client", lambda: fake)
     monkeypatch.setattr("src.api.v1.inventory.get_redis_client", lambda: fake)
+    monkeypatch.setattr("src.api.v1.users.get_redis_client", lambda: fake)
+    monkeypatch.setattr("src.api.v1.tenants.get_redis_client", lambda: fake)
     monkeypatch.setattr("src.api.v1.websockets.get_redis_client", lambda: fake)
     monkeypatch.setattr("src.services.telemetry_multiplexer.get_redis_client", lambda: fake)
     return fake

@@ -11,15 +11,15 @@ from decimal import Decimal
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_current_user_claims, require_roles
 from src.core.audit import write_audit_log
 from src.db.session import get_tenant_db_session
 from src.mikrotik.client import MikrotikRestClient
-from src.models.core import SystemRoleEnum, User
-from src.models.inventory import Router, RouterCredentialsVault
+from src.models.core import SystemRoleEnum
+from src.models.inventory import Router
 from src.models.ipam import (
     CustomerService,
     CustomerServiceStatusEnum,
@@ -33,17 +33,13 @@ from src.models.ipam import (
 from src.schemas.ipam import (
     CustomerServiceCreate,
     CustomerServiceResponse,
-    CustomerServiceUpdate,
     IPAMAddressCreate,
     IPAMAddressResponse,
-    IPAMAddressUpdate,
     IPAMPrefixCreate,
     IPAMPrefixNextAvailableResponse,
     IPAMPrefixResponse,
-    IPAMPrefixUpdate,
     IPAMVrfCreate,
     IPAMVrfResponse,
-    IPAMVrfUpdate,
 )
 
 logger = logging.getLogger(__name__)
@@ -77,7 +73,9 @@ async def list_vrfs(
 async def create_vrf(
     payload: IPAMVrfCreate,
     db: AsyncSession = Depends(get_tenant_db_session),
-    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN, SystemRoleEnum.INVENTORY_MANAGER)),
+    claims: dict[str, Any] = Depends(
+        require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN, SystemRoleEnum.INVENTORY_MANAGER)
+    ),
 ) -> Any:
     """Crea una nueva VRF en el IPAM."""
     tenant_id = get_tenant_id(claims)
@@ -98,14 +96,16 @@ async def create_vrf(
     await db.refresh(vrf)
 
     await write_audit_log(
-        db=db,
+        session=db,
         tenant_id=tenant_id,
-        user_id=uuid.UUID(claims["sub"]),
-        username=claims.get("username", "system"),
-        event_action="IPAM_VRF_CREATED",
+        actor_user_id=uuid.UUID(str(claims["sub"])),
+        actor_username=str(claims.get("username", "system")),
+        actor_role=claims.get("rol"),
+        actor_ip="127.0.0.1",
         event_category="INVENTORY",
+        event_action="IPAM_VRF_CREATED",
         status_code=201,
-        details={"vrf_id": str(vrf.id), "name": vrf.name},
+        after_state={"vrf_id": str(vrf.id), "name": vrf.name},
     )
     return vrf
 
@@ -140,7 +140,9 @@ async def list_prefixes(
 async def create_prefix(
     payload: IPAMPrefixCreate,
     db: AsyncSession = Depends(get_tenant_db_session),
-    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN, SystemRoleEnum.INVENTORY_MANAGER)),
+    claims: dict[str, Any] = Depends(
+        require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN, SystemRoleEnum.INVENTORY_MANAGER)
+    ),
 ) -> Any:
     """Registra un nuevo prefijo o subred CIDR validada matemáticamente."""
     tenant_id = get_tenant_id(claims)
@@ -149,7 +151,9 @@ async def create_prefix(
     try:
         network_obj = ipaddress.ip_network(payload.prefix, strict=True)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Formato CIDR inválido: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Formato CIDR inválido: {e}"
+        ) from e
 
     # Verificar concordancia con ip_family
     if (payload.ip_family == IPFamilyEnum.IPv4 and network_obj.version != 4) or (
@@ -167,7 +171,9 @@ async def create_prefix(
         IPAMPrefix.prefix == str(network_obj),
     )
     if (await db.execute(stmt_dup)).scalar_one_or_none():
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"El prefijo {network_obj} ya está registrado en esta VRF")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=f"El prefijo {network_obj} ya está registrado en esta VRF"
+        )
 
     prefix = IPAMPrefix(
         tenant_id=tenant_id,
@@ -187,14 +193,16 @@ async def create_prefix(
     await db.refresh(prefix)
 
     await write_audit_log(
-        db=db,
+        session=db,
         tenant_id=tenant_id,
-        user_id=uuid.UUID(claims["sub"]),
-        username=claims.get("username", "system"),
-        event_action="IPAM_PREFIX_CREATED",
+        actor_user_id=uuid.UUID(str(claims["sub"])),
+        actor_username=str(claims.get("username", "system")),
+        actor_role=claims.get("rol"),
+        actor_ip="127.0.0.1",
         event_category="INVENTORY",
+        event_action="IPAM_PREFIX_CREATED",
         status_code=201,
-        details={"prefix_id": str(prefix.id), "prefix": prefix.prefix, "role": prefix.role},
+        after_state={"prefix_id": str(prefix.id), "prefix": prefix.prefix, "role": prefix.role},
     )
     return prefix
 
@@ -231,7 +239,9 @@ async def get_next_available_resource(
                     is_subnet=True,
                     message=f"Siguiente subred delegada /{target_len} disponible",
                 )
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No hay subredes IPv6 disponibles en este bloque")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="No hay subredes IPv6 disponibles en este bloque"
+        )
 
     # Caso B: IPv4 o IPv6 para asignación de IPs de host
     stmt_allocated = select(IPAMAddress.address).where(
@@ -299,7 +309,9 @@ async def list_addresses(
 async def create_address(
     payload: IPAMAddressCreate,
     db: AsyncSession = Depends(get_tenant_db_session),
-    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN, SystemRoleEnum.INVENTORY_MANAGER)),
+    claims: dict[str, Any] = Depends(
+        require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN, SystemRoleEnum.INVENTORY_MANAGER)
+    ),
 ) -> Any:
     """Asigna manualmente una dirección IP en el IPAM."""
     tenant_id = get_tenant_id(claims)
@@ -308,10 +320,14 @@ async def create_address(
     try:
         ip_iface = ipaddress.ip_interface(payload.address)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Dirección IP inválida: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Dirección IP inválida: {e}"
+        ) from e
 
     # Verificar si ya existe
-    stmt_check = select(IPAMAddress).where(IPAMAddress.prefix_id == payload.prefix_id, IPAMAddress.address == str(ip_iface))
+    stmt_check = select(IPAMAddress).where(
+        IPAMAddress.prefix_id == payload.prefix_id, IPAMAddress.address == str(ip_iface)
+    )
     existing = (await db.execute(stmt_check)).scalar_one_or_none()
     if existing:
         if existing.status == IPAddressStatusEnum.SOFT_LOCKED:
@@ -364,7 +380,7 @@ async def list_customer_services(
     if status_filter:
         stmt = stmt.where(CustomerService.status == status_filter)
 
-    stmt = stmt.order_by(CustomerService.customer_name.asc())
+    stmt = stmt.order_by(CustomerService.endpoint_identifier.asc())
     res = await db.execute(stmt)
     return res.scalars().all()
 
@@ -373,57 +389,61 @@ async def list_customer_services(
 async def create_customer_service(
     payload: CustomerServiceCreate,
     db: AsyncSession = Depends(get_tenant_db_session),
-    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN, SystemRoleEnum.INVENTORY_MANAGER)),
+    claims: dict[str, Any] = Depends(
+        require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN, SystemRoleEnum.INVENTORY_MANAGER)
+    ),
 ) -> Any:
     """Registra un nuevo servicio de cliente con su asignación IP Dual-Stack."""
     tenant_id = get_tenant_id(claims)
 
-    # Si es PPPoE, validar que el username no esté duplicado en el mismo router
-    if payload.pppoe_username:
+    endpoint_val = payload.endpoint_identifier or payload.pppoe_username
+    # Si tiene endpoint/username, validar que no esté duplicado en el mismo router
+    if endpoint_val:
         stmt_check = select(CustomerService).where(
             CustomerService.router_id == payload.router_id,
-            CustomerService.pppoe_username == payload.pppoe_username,
+            CustomerService.endpoint_identifier == endpoint_val,
         )
         if (await db.execute(stmt_check)).scalar_one_or_none():
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"El usuario PPPoE '{payload.pppoe_username}' ya existe en el router seleccionado",
+                detail=f"El identificador de abonado '{endpoint_val}' ya existe en el router seleccionado",
             )
 
     svc = CustomerService(
         tenant_id=tenant_id,
         router_id=payload.router_id,
-        customer_name=payload.customer_name,
-        customer_code=payload.customer_code,
         service_type=payload.service_type,
         auth_backend=payload.auth_backend,
-        pppoe_username=payload.pppoe_username,
+        endpoint_identifier=endpoint_val,
         ipv4_address_id=payload.ipv4_address_id,
         ipv6_delegated_prefix=payload.ipv6_delegated_prefix,
+        bandwidth_profile_id=payload.bandwidth_profile_id,
         onu_mode=payload.onu_mode,
         onu_mac_address=payload.onu_mac_address,
-        onu_serial_number=payload.onu_serial_number,
+        device_serial=payload.device_serial or payload.onu_serial_number,
         cpe_wifi_mac_address=payload.cpe_wifi_mac_address,
         pon_port=payload.pon_port,
         optical_box=payload.optical_box,
-        physical_address=payload.physical_address,
         latitude=payload.latitude,
         longitude=payload.longitude,
         status=CustomerServiceStatusEnum.PENDING_INSTALL,
+        last_reachability_status="ONLINE",
     )
     db.add(svc)
     await db.commit()
     await db.refresh(svc)
 
     await write_audit_log(
-        db=db,
+        session=db,
         tenant_id=tenant_id,
-        user_id=uuid.UUID(claims["sub"]),
-        username=claims.get("username", "system"),
-        event_action="CUSTOMER_SERVICE_CREATED",
+        actor_user_id=uuid.UUID(str(claims["sub"])),
+        actor_username=str(claims.get("username", "system")),
+        actor_role=claims.get("rol"),
+        actor_ip="127.0.0.1",
         event_category="INVENTORY",
+        event_action="CUSTOMER_SERVICE_CREATED",
         status_code=201,
-        details={"customer_service_id": str(svc.id), "name": svc.customer_name, "type": svc.service_type},
+        after_state={"customer_service_id": str(svc.id), "endpoint": svc.endpoint_identifier, "type": svc.service_type},
     )
     return svc
 
@@ -457,7 +477,8 @@ async def sync_mikrotik_ipam(
     synced_ips = 0
 
     try:
-        async with MikrotikRestClient(base_url=r.api_base_url, port=r.api_port, username="admin", password="") as client:
+        host = r.api_base_url.replace("https://", "").replace("http://", "").split("/")[0].split(":")[0]
+        async with MikrotikRestClient(host=host, port=r.api_port, username="admin", password="") as client:  # nosec B106
             raw_addrs = await client.get("/ip/address")
             for item in raw_addrs:
                 ip_str = item.get("address")

@@ -409,38 +409,38 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
     vi.spyOn(http, 'get').mockResolvedValue({
       status: 200,
       data: {
-          items: [
-            {
-              id: '*1',
-              name: 'sfp-plus1',
-              type: 'ether',
-              is_sfp: true,
-              mac_address: '00:0C:42:00:11:22',
-              mtu: 1500,
-              running: true,
-              disabled: false,
-              rx_bps: 1250000, // Mbps
-              tx_bps: 450, // bps
-            },
-            {
-              id: '*2',
-              name: 'ether1',
-              type: 'ether',
-              is_sfp: false,
-              running: true,
-              disabled: false,
-              rx_bps: 5000, // kbps
-              tx_bps: 0, // 0 bps
-            },
-            { id: '*3', name: 'vlan10', type: 'vlan', running: true, disabled: false },
-            { id: '*4', name: 'br0', type: 'bridge', running: true, disabled: false },
-            { id: '*5', name: 'wg0', type: 'wireguard', running: true, disabled: false },
-            { id: '*6', name: 'wlan1', type: 'wlan', running: true, disabled: false },
-            { id: '*7', name: 'wifi1', type: 'wifi', running: true, disabled: false },
-          ],
-        },
-        headers: new Headers(),
-      });
+        items: [
+          {
+            id: '*1',
+            name: 'sfp-plus1',
+            type: 'ether',
+            is_sfp: true,
+            mac_address: '00:0C:42:00:11:22',
+            mtu: 1500,
+            running: true,
+            disabled: false,
+            rx_bps: 1250000, // Mbps
+            tx_bps: 450, // bps
+          },
+          {
+            id: '*2',
+            name: 'ether1',
+            type: 'ether',
+            is_sfp: false,
+            running: true,
+            disabled: false,
+            rx_bps: 5000, // kbps
+            tx_bps: 0, // 0 bps
+          },
+          { id: '*3', name: 'vlan10', type: 'vlan', running: true, disabled: false },
+          { id: '*4', name: 'br0', type: 'bridge', running: true, disabled: false },
+          { id: '*5', name: 'wg0', type: 'wireguard', running: true, disabled: false },
+          { id: '*6', name: 'wlan1', type: 'wlan', running: true, disabled: false },
+          { id: '*7', name: 'wifi1', type: 'wifi', running: true, disabled: false },
+        ],
+      },
+      headers: new Headers(),
+    });
 
     const wrapper = mount(InterfacesAndSfpView);
     await flushPromises();
@@ -894,7 +894,14 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
   it('BridgeView — renderiza pestañas de bridges, puertos, vlans y hosts y maneja modales', async () => {
     vi.spyOn(http, 'get').mockResolvedValue({
       status: 200,
-      data: [{ name: 'bridge1', mac_address: '00:11:22:33:44:55', vlan_filtering: true, protocol_mode: 'rstp' }],
+      data: [
+        {
+          name: 'bridge1',
+          mac_address: '00:11:22:33:44:55',
+          vlan_filtering: true,
+          protocol_mode: 'rstp',
+        },
+      ],
       headers: new Headers(),
     });
     vi.spyOn(http, 'post').mockResolvedValue({
@@ -979,4 +986,3 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
     }
   });
 });
-

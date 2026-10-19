@@ -40,9 +40,7 @@
 
   // Métricas calculadas
   const totalRouters = computed(() => inventoryStore.routers.length);
-  const onlineRouters = computed(
-    () => inventoryStore.routers.filter((r) => r.is_reachable).length,
-  );
+  const onlineRouters = computed(() => inventoryStore.routers.filter((r) => r.is_reachable).length);
   const offlineRouters = computed(
     () => inventoryStore.routers.filter((r) => !r.is_reachable).length,
   );
@@ -70,7 +68,8 @@
       id: 'inventory',
       title: 'Inventario de Flota',
       category: 'INFRAESTRUCTURA',
-      description: 'Supervisión de hardware RouterOS v7, mapa geográfico OSM y acceso a consola WebFig.',
+      description:
+        'Supervisión de hardware RouterOS v7, mapa geográfico OSM y acceso a consola WebFig.',
       icon: '🖥️',
       route: '/inventory',
     },
@@ -78,27 +77,36 @@
       id: 'wallboard',
       title: 'Wallboard NOC en Vivo',
       category: 'MONITOREO',
-      description: 'Telemetría de CPU, memoria y tráfico en tiempo real, alarmas sonoras y modo TV.',
+      description:
+        'Telemetría de CPU, memoria y tráfico en tiempo real, alarmas sonoras y modo TV.',
       icon: '📊',
       route: '/noc-wallboard',
-      badge: computed(() => nocStore.activeAlertsCount).value > 0 ? `${nocStore.activeAlertsCount} Alertas` : undefined,
+      badge:
+        computed(() => nocStore.activeAlertsCount).value > 0
+          ? `${nocStore.activeAlertsCount} Alertas`
+          : undefined,
       badgeType: 'critical',
     },
     {
       id: 'maker-checker',
       title: 'Aprobaciones Maker-Checker',
       category: 'SEGURIDAD & GOBERNANZA',
-      description: 'Flujo de autorización de 4 ojos para comandos de alto impacto y reversión segura.',
+      description:
+        'Flujo de autorización de 4 ojos para comandos de alto impacto y reversión segura.',
       icon: '🛡️',
       route: '/approvals',
-      badge: computed(() => nocStore.pendingApprovalsCount).value > 0 ? `${nocStore.pendingApprovalsCount} Pendientes` : undefined,
+      badge:
+        computed(() => nocStore.pendingApprovalsCount).value > 0
+          ? `${nocStore.pendingApprovalsCount} Pendientes`
+          : undefined,
       badgeType: 'warning',
     },
     {
       id: 'backups',
       title: 'Respaldos RSC & Git Diff',
       category: 'CONTINUIDAD',
-      description: 'Snapshots .rsc exportados de la flota, versionado Git de diferencias y respaldo WORM.',
+      description:
+        'Snapshots .rsc exportados de la flota, versionado Git de diferencias y respaldo WORM.',
       icon: '📦',
       route: '/backups',
     },
@@ -106,7 +114,8 @@
       id: 'bulk-ops',
       title: 'Acciones Masivas & Scripts',
       category: 'OPERACIONES EN LOTE',
-      description: 'Despliegue simultáneo de configuraciones con Safe Mode integrado y dry-run pre-vuelo.',
+      description:
+        'Despliegue simultáneo de configuraciones con Safe Mode integrado y dry-run pre-vuelo.',
       icon: '⚡',
       route: '/bulk-ops',
     },
@@ -114,7 +123,8 @@
       id: 'sessions',
       title: 'Sesiones & Kill-Switch',
       category: 'DEFENSA ACTIVA',
-      description: 'Control de conexiones concurrentes y revocación inmediata de sesiones comprometidas.',
+      description:
+        'Control de conexiones concurrentes y revocación inmediata de sesiones comprometidas.',
       icon: '🛑',
       route: '/sessions',
       requiredRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'SECURITY_OFFICER'],
@@ -123,7 +133,8 @@
       id: 'users',
       title: 'Usuarios & Matriz RBAC',
       category: 'ACCESO',
-      description: 'Gestión de operadores, asignación de roles y control de acceso router por router.',
+      description:
+        'Gestión de operadores, asignación de roles y control de acceso router por router.',
       icon: '👥',
       route: '/users',
       requiredRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN'],
@@ -132,7 +143,8 @@
       id: 'audit',
       title: 'Auditoría Forense WORM',
       category: 'CUMPLIMIENTO',
-      description: 'Bitácora inmutable de eventos, autenticación 2FA y revelaciones de credenciales.',
+      description:
+        'Bitácora inmutable de eventos, autenticación 2FA y revelaciones de credenciales.',
       icon: '📜',
       route: '/audit-logs',
     },
@@ -202,12 +214,20 @@
       </div>
 
       <div class="kpi-card" @click="navigateTo('/inventory')">
-        <div class="kpi-icon-wrap" :class="availabilityPct >= 90 ? 'kpi-icon--green' : 'kpi-icon--amber'">⚡</div>
+        <div
+          class="kpi-icon-wrap"
+          :class="availabilityPct >= 90 ? 'kpi-icon--green' : 'kpi-icon--amber'"
+        >
+          ⚡
+        </div>
         <div class="kpi-content">
           <span class="kpi-label">Disponibilidad Flota</span>
           <div class="kpi-value-row">
             <span class="kpi-value">{{ availabilityPct }}%</span>
-            <span class="kpi-badge" :class="availabilityPct >= 90 ? 'badge--online' : 'badge--warning'">
+            <span
+              class="kpi-badge"
+              :class="availabilityPct >= 90 ? 'badge--online' : 'badge--warning'"
+            >
               {{ availabilityPct >= 90 ? 'OPTIMO' : 'REVISIÓN' }}
             </span>
           </div>
@@ -218,12 +238,20 @@
       </div>
 
       <div class="kpi-card" @click="navigateTo('/noc-wallboard')">
-        <div class="kpi-icon-wrap" :class="nocStore.activeAlertsCount > 0 ? 'kpi-icon--red' : 'kpi-icon--green'">🚨</div>
+        <div
+          class="kpi-icon-wrap"
+          :class="nocStore.activeAlertsCount > 0 ? 'kpi-icon--red' : 'kpi-icon--green'"
+        >
+          🚨
+        </div>
         <div class="kpi-content">
           <span class="kpi-label">Alertas NOC Activas</span>
           <div class="kpi-value-row">
             <span class="kpi-value">{{ nocStore.activeAlertsCount }}</span>
-            <span class="kpi-badge" :class="nocStore.activeAlertsCount > 0 ? 'badge--critical' : 'badge--online'">
+            <span
+              class="kpi-badge"
+              :class="nocStore.activeAlertsCount > 0 ? 'badge--critical' : 'badge--online'"
+            >
               {{ nocStore.activeAlertsCount > 0 ? 'EN CURSO' : 'DESPEJADO' }}
             </span>
           </div>
@@ -232,12 +260,20 @@
       </div>
 
       <div class="kpi-card" @click="navigateTo('/approvals')">
-        <div class="kpi-icon-wrap" :class="nocStore.pendingApprovalsCount > 0 ? 'kpi-icon--amber' : 'kpi-icon--cyan'">🛡️</div>
+        <div
+          class="kpi-icon-wrap"
+          :class="nocStore.pendingApprovalsCount > 0 ? 'kpi-icon--amber' : 'kpi-icon--cyan'"
+        >
+          🛡️
+        </div>
         <div class="kpi-content">
           <span class="kpi-label">Maker-Checker</span>
           <div class="kpi-value-row">
             <span class="kpi-value">{{ nocStore.pendingApprovalsCount }}</span>
-            <span class="kpi-badge" :class="nocStore.pendingApprovalsCount > 0 ? 'badge--warning' : 'badge--online'">
+            <span
+              class="kpi-badge"
+              :class="nocStore.pendingApprovalsCount > 0 ? 'badge--warning' : 'badge--online'"
+            >
               {{ nocStore.pendingApprovalsCount > 0 ? 'PENDIENTES' : 'AL DÍA' }}
             </span>
           </div>
@@ -253,7 +289,10 @@
           <span class="section-icon" aria-hidden="true">🎛️</span>
           Módulos y Herramientas del Operador
         </h2>
-        <span class="section-count">{{ authorizedTools.length }} disponibles para tu rol: <strong>{{ userRole }}</strong></span>
+        <span class="section-count"
+          >{{ authorizedTools.length }} disponibles para tu rol:
+          <strong>{{ userRole }}</strong></span
+        >
       </div>
 
       <div class="tiling-grid">
@@ -317,11 +356,7 @@
         </div>
 
         <div v-else class="router-fast-list">
-          <div
-            v-for="r in inventoryStore.routers.slice(0, 5)"
-            :key="r.id"
-            class="router-fast-item"
-          >
+          <div v-for="r in inventoryStore.routers.slice(0, 5)" :key="r.id" class="router-fast-item">
             <div class="router-fast-info">
               <div class="router-name-line">
                 <span
@@ -368,15 +403,8 @@
         </div>
 
         <div v-else class="events-fast-list">
-          <div
-            v-for="ev in nocStore.recentEvents.slice(0, 5)"
-            :key="ev.id"
-            class="event-fast-item"
-          >
-            <span
-              class="event-badge-sev"
-              :class="`sev--${ev.severity.toLowerCase()}`"
-            >
+          <div v-for="ev in nocStore.recentEvents.slice(0, 5)" :key="ev.id" class="event-fast-item">
+            <span class="event-badge-sev" :class="`sev--${ev.severity.toLowerCase()}`">
               {{ ev.severity }}
             </span>
             <div class="event-details">
@@ -428,8 +456,15 @@
   }
 
   @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.4; transform: scale(0.85); }
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.4;
+      transform: scale(0.85);
+    }
   }
 
   .hub-title {
@@ -531,7 +566,10 @@
     align-items: center;
     gap: 14px;
     cursor: pointer;
-    transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+    transition:
+      transform 0.15s,
+      border-color 0.15s,
+      box-shadow 0.15s;
   }
 
   .kpi-card:hover {
@@ -551,10 +589,22 @@
     flex-shrink: 0;
   }
 
-  .kpi-icon--cyan { background: rgba(34, 211, 238, 0.15); color: #22d3ee; }
-  .kpi-icon--green { background: rgba(16, 185, 129, 0.15); color: #10b981; }
-  .kpi-icon--amber { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
-  .kpi-icon--red { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+  .kpi-icon--cyan {
+    background: rgba(34, 211, 238, 0.15);
+    color: #22d3ee;
+  }
+  .kpi-icon--green {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+  }
+  .kpi-icon--amber {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+  }
+  .kpi-icon--red {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+  }
 
   .kpi-content {
     flex: 1;
@@ -598,9 +648,18 @@
     font-family: var(--rg-font-mono, monospace);
   }
 
-  .badge--online { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
-  .badge--warning { background: rgba(245, 158, 11, 0.2); color: #fde68a; }
-  .badge--critical { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+  .badge--online {
+    background: rgba(16, 185, 129, 0.2);
+    color: #6ee7b7;
+  }
+  .badge--warning {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fde68a;
+  }
+  .badge--critical {
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+  }
 
   .kpi-micro-status {
     font-size: 0.72rem;
@@ -610,9 +669,15 @@
     font-family: var(--rg-font-mono, monospace);
   }
 
-  .micro-online { color: #6ee7b7; }
-  .micro-offline { color: #f87171; }
-  .micro-sep { color: var(--rg-border-panel, #334155); }
+  .micro-online {
+    color: #6ee7b7;
+  }
+  .micro-offline {
+    color: #f87171;
+  }
+  .micro-sep {
+    color: var(--rg-border-panel, #334155);
+  }
 
   .kpi-progress-bar {
     width: 100%;
@@ -690,7 +755,9 @@
     border-color: var(--rg-accent-cyan, #22d3ee);
     background: var(--rg-bg-elevated, #1e293b);
     transform: translateY(-3px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), var(--rg-cyan-glow, 0 0 12px rgba(6, 182, 212, 0.28));
+    box-shadow:
+      0 8px 24px rgba(0, 0, 0, 0.4),
+      var(--rg-cyan-glow, 0 0 12px rgba(6, 182, 212, 0.28));
   }
 
   .tile-header {
@@ -922,8 +989,12 @@
     flex-shrink: 0;
   }
 
-  .status-dot--online { background: #10b981; }
-  .status-dot--offline { background: #ef4444; }
+  .status-dot--online {
+    background: #10b981;
+  }
+  .status-dot--offline {
+    background: #ef4444;
+  }
 
   .router-name {
     font-size: 0.85rem;
@@ -985,9 +1056,21 @@
     flex-shrink: 0;
   }
 
-  .sev--critical { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid #ef4444; }
-  .sev--warning { background: rgba(245, 158, 11, 0.2); color: #fde68a; border: 1px solid #f59e0b; }
-  .sev--info { background: rgba(56, 189, 248, 0.2); color: #bae6fd; border: 1px solid #38bdf8; }
+  .sev--critical {
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+    border: 1px solid #ef4444;
+  }
+  .sev--warning {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fde68a;
+    border: 1px solid #f59e0b;
+  }
+  .sev--info {
+    background: rgba(56, 189, 248, 0.2);
+    color: #bae6fd;
+    border: 1px solid #38bdf8;
+  }
 
   .event-details {
     flex: 1;

@@ -3,7 +3,8 @@
 
 import uuid
 from datetime import UTC, datetime
-from decimal import Decimal
+from unittest.mock import AsyncMock, patch
+
 import pytest
 from httpx import AsyncClient
 
@@ -11,24 +12,18 @@ from src.api.v1.auth import create_jwt_access_token
 from src.db.session import get_tenant_db_session
 from src.main import app
 from src.models.core import SystemRoleEnum
+from src.models.inventory import Router, RouterAdminStateEnum, RouterNetworkRoleEnum
 from src.models.ipam import (
     CustomerService,
     CustomerServiceStatusEnum,
     CustomerServiceTypeEnum,
     FiberCutIncident,
-    FiberCutStatusEnum,
     FieldInstallationOrder,
-    FieldOrderStatusEnum,
-    IPAddressStatusEnum,
     IPAMAddress,
     IPAMPrefix,
     IPAMVrf,
-    IPFamilyEnum,
-    IPPrefixRoleEnum,
-    IPPrefixStatusEnum,
     ONUModeEnum,
 )
-from src.models.inventory import Router, RouterAdminStateEnum, RouterNetworkRoleEnum
 from tests.conftest import FakeAsyncRedis
 
 
@@ -107,9 +102,11 @@ class MockIpamDbSession:
 
             def scalars(self):
                 items = self._items
+
                 class MockScalars:
                     def all(self):
                         return items
+
                 return MockScalars()
 
             def all(self):
@@ -139,7 +136,9 @@ class MockIpamDbSession:
 
 
 @pytest.mark.asyncio
-async def test_ipam_vrf_and_prefix_lifecycle(async_client: AsyncClient, fake_redis: FakeAsyncRedis, monkeypatch: pytest.MonkeyPatch):
+async def test_ipam_vrf_and_prefix_lifecycle(
+    async_client: AsyncClient, fake_redis: FakeAsyncRedis, monkeypatch: pytest.MonkeyPatch
+):
     monkeypatch.setattr("src.api.v1.ipam.write_audit_log", fake_audit)
 
     tenant_id = str(uuid.uuid4())
@@ -211,17 +210,49 @@ async def test_ipam_vrf_and_prefix_lifecycle(async_client: AsyncClient, fake_red
         assert resp_bad.status_code == 422
 
         # 5. Calcular Siguiente IP Libre (Next Available)
-        resp_next = await async_client.get(f"/api/v1/ipam/prefixes/{pfx_id}/next-available", headers=make_headers(token))
+        resp_next = await async_client.get(
+            f"/api/v1/ipam/prefixes/{pfx_id}/next-available", headers=make_headers(token)
+        )
         assert resp_next.status_code == 200
         next_data = resp_next.json()
         assert next_data["next_available"] == "100.64.10.1"
         assert next_data["is_subnet"] is False
+
+        # 6. Listar Prefijos con filtros
+        resp_filter = await async_client.get(
+            f"/api/v1/ipam/prefixes?vrf_id={vrf_id}&ip_family=IPv4&role=CGNAT",
+            headers=make_headers(token),
+        )
+        assert resp_filter.status_code == 200
+
+        # 7. Asignar IP en el prefijo
+        resp_addr = await async_client.post(
+            "/api/v1/ipam/addresses",
+            headers=make_headers(token),
+            json={
+                "prefix_id": str(pfx_id),
+                "address": "100.64.10.5",
+                "ip_family": "IPv4",
+                "status": "ALLOCATED",
+                "description": "Gateway CGNAT",
+            },
+        )
+        assert resp_addr.status_code == 201
+
+        # 8. Listar IPs del prefijo
+        resp_list_addr = await async_client.get(
+            f"/api/v1/ipam/addresses?prefix_id={pfx_id}",
+            headers=make_headers(token),
+        )
+        assert resp_list_addr.status_code == 200
     finally:
         app.dependency_overrides.clear()
 
 
 @pytest.mark.asyncio
-async def test_ipam_ipv6_prefix_delegation_slicing(async_client: AsyncClient, fake_redis: FakeAsyncRedis, monkeypatch: pytest.MonkeyPatch):
+async def test_ipam_ipv6_prefix_delegation_slicing(
+    async_client: AsyncClient, fake_redis: FakeAsyncRedis, monkeypatch: pytest.MonkeyPatch
+):
     monkeypatch.setattr("src.api.v1.ipam.write_audit_log", fake_audit)
 
     tenant_id = str(uuid.uuid4())
@@ -266,7 +297,9 @@ async def test_ipam_ipv6_prefix_delegation_slicing(async_client: AsyncClient, fa
         pfx_v6_id = resp_pfx_v6.json()["id"]
 
         # Pedir siguiente subred /56 disponible
-        resp_next_v6 = await async_client.get(f"/api/v1/ipam/prefixes/{pfx_v6_id}/next-available", headers=make_headers(token))
+        resp_next_v6 = await async_client.get(
+            f"/api/v1/ipam/prefixes/{pfx_v6_id}/next-available", headers=make_headers(token)
+        )
         assert resp_next_v6.status_code == 200
         next_v6_data = resp_next_v6.json()
         assert next_v6_data["is_subnet"] is True
@@ -276,7 +309,9 @@ async def test_ipam_ipv6_prefix_delegation_slicing(async_client: AsyncClient, fa
 
 
 @pytest.mark.asyncio
-async def test_field_ops_verification_and_fiber_cuts(async_client: AsyncClient, fake_redis: FakeAsyncRedis, monkeypatch: pytest.MonkeyPatch):
+async def test_field_ops_verification_and_fiber_cuts(
+    async_client: AsyncClient, fake_redis: FakeAsyncRedis, monkeypatch: pytest.MonkeyPatch
+):
     monkeypatch.setattr("src.api.v1.field_ops.write_audit_log", fake_audit)
 
     tenant_id = str(uuid.uuid4())
@@ -354,5 +389,173 @@ async def test_field_ops_verification_and_fiber_cuts(async_client: AsyncClient, 
         assert len(cuts_data) == 1
         assert "POSIBLE CORTE DE FIBRA ÓPTICA" in cuts_data[0]["incident_summary"]
         assert cuts_data[0]["affected_onus_count"] == 4
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_ipam_customer_services_and_sync_mikrotik(
+    async_client: AsyncClient, fake_redis: FakeAsyncRedis, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.setattr("src.api.v1.ipam.write_audit_log", fake_audit)
+
+    tenant_id = str(uuid.uuid4())
+    user_id = str(uuid.uuid4())
+    session_id = "sess-ipam-003"
+    sess_key = f"rg:{tenant_id}:sess:{session_id}"
+
+    await fake_redis.hset(
+        sess_key,
+        mapping={
+            "session_id": session_id,
+            "user_id": user_id,
+            "username": "admin",
+            "role": SystemRoleEnum.TENANT_ADMIN.value,
+        },
+    )
+
+    token = create_jwt_access_token(
+        user_id, tenant_id, "test_tenant", session_id, SystemRoleEnum.TENANT_ADMIN.value, True
+    )
+
+    mock_db = MockIpamDbSession(tenant_id)
+    app.dependency_overrides[get_tenant_db_session] = lambda: mock_db
+
+    try:
+        router_id = mock_db.routers[0].id
+        # 1. Crear servicio de cliente (CustomerService)
+        resp_cs = await async_client.post(
+            "/api/v1/ipam/customer-services",
+            headers=make_headers(token),
+            json={
+                "router_id": str(router_id),
+                "endpoint_identifier": "PPPOE-SUB-01",
+                "service_type": "PPPOE",
+                "auth_backend": "LOCAL_SECRET",
+                "onu_mode": "ROUTER",
+                "onu_mac_address": "AA:BB:CC:DD:EE:01",
+                "device_serial": "ONU-TEST-001",
+            },
+        )
+        assert resp_cs.status_code == 201
+        cs_data = resp_cs.json()
+        assert cs_data["endpoint_identifier"] == "PPPOE-SUB-01"
+
+        # 2. Listar servicios de cliente
+        resp_list = await async_client.get(
+            "/api/v1/ipam/customer-services",
+            headers=make_headers(token),
+        )
+        assert resp_list.status_code == 200
+        assert len(resp_list.json()) >= 1
+
+        # 3. Sincronizar desde MikroTik con Mock
+        mock_client = AsyncMock()
+        mock_client.get.return_value = [{"address": "172.16.10.1/24", "interface": "ether2"}]
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
+
+        with patch("src.api.v1.ipam.MikrotikRestClient", return_value=mock_client):
+            resp_sync = await async_client.post(
+                f"/api/v1/ipam/sync-mikrotik/{router_id}",
+                headers=make_headers(token),
+            )
+            assert resp_sync.status_code == 200
+            assert resp_sync.json()["status"] == "success"
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_field_ops_orders_and_certification(
+    async_client: AsyncClient, fake_redis: FakeAsyncRedis, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.setattr("src.api.v1.field_ops.write_audit_log", fake_audit)
+
+    tenant_id = str(uuid.uuid4())
+    admin_id = str(uuid.uuid4())
+    session_admin = "sess-admin-001"
+    await fake_redis.hset(
+        f"rg:{tenant_id}:sess:{session_admin}",
+        mapping={
+            "session_id": session_admin,
+            "user_id": admin_id,
+            "username": "supervisor_admin",
+            "role": SystemRoleEnum.TENANT_ADMIN.value,
+        },
+    )
+    token_admin = create_jwt_access_token(
+        admin_id, tenant_id, "test_tenant", session_admin, SystemRoleEnum.TENANT_ADMIN.value, True
+    )
+
+    tech_id = str(uuid.uuid4())
+    session_tech = "sess-field-003"
+    await fake_redis.hset(
+        f"rg:{tenant_id}:sess:{session_tech}",
+        mapping={
+            "session_id": session_tech,
+            "user_id": tech_id,
+            "username": "tech_field",
+            "role": SystemRoleEnum.FIELD_TECH.value,
+        },
+    )
+    token_tech = create_jwt_access_token(
+        tech_id, tenant_id, "test_tenant", session_tech, SystemRoleEnum.FIELD_TECH.value, True
+    )
+
+    mock_db = MockIpamDbSession(tenant_id)
+    app.dependency_overrides[get_tenant_db_session] = lambda: mock_db
+
+    try:
+        router_id = mock_db.routers[0].id
+        svc = CustomerService(
+            id=uuid.uuid4(),
+            tenant_id=uuid.UUID(tenant_id),
+            router_id=router_id,
+            endpoint_identifier="SUB-ORDER-01",
+            device_serial="SN-ORDER-99",
+            service_type=CustomerServiceTypeEnum.PPPOE,
+            onu_mode=ONUModeEnum.ROUTER,
+            status=CustomerServiceStatusEnum.PENDING_INSTALL,
+            last_reachability_status="ONLINE",
+        )
+        mock_db.add(svc)
+
+        # 1. Crear orden de instalación de campo (Supervisor / Admin)
+        resp_order = await async_client.post(
+            "/api/v1/field-ops/orders",
+            headers=make_headers(token_admin),
+            json={
+                "customer_service_id": str(svc.id),
+                "notes": "Instalación en NAP 02 puerto 4",
+            },
+        )
+        assert resp_order.status_code == 201
+        order_data = resp_order.json()
+        order_id = order_data["id"]
+
+        # 2. Listar órdenes
+        resp_list = await async_client.get(
+            "/api/v1/field-ops/orders",
+            headers=make_headers(token_tech),
+        )
+        assert resp_list.status_code == 200
+        assert len(resp_list.json()) >= 1
+
+        # 3. Certificar orden de instalación (Técnico de campo)
+        resp_cert = await async_client.post(
+            "/api/v1/field-ops/certify",
+            headers=make_headers(token_tech),
+            json={
+                "order_id": order_id,
+                "onu_scanned_serial": "SN-ORDER-99-OK",
+                "onu_scanned_mac": "AA:BB:CC:11:22:33",
+                "tech_latitude": 10.4850,
+                "tech_longitude": -66.9050,
+                "notes": "Certificación exitosa con niveles ópticos adecuados",
+            },
+        )
+        assert resp_cert.status_code == 200
+        assert resp_cert.json()["status"] == "CERTIFIED"
     finally:
         app.dependency_overrides.clear()

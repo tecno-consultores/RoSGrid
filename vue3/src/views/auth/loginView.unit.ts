@@ -540,4 +540,24 @@ describe('LoginView.vue — Autenticación Multi-Tenant en 2 Etapas y 2FA TOTP',
       'El sistema ya ha sido inicializado.',
     );
   });
+
+  it('renderiza pie de página institucional accesible con atribución, versión, licencia y enlace a GitHub', async () => {
+    const wrapper = mount(LoginView);
+    await flushPromises();
+
+    const footer = wrapper.find('footer.login-footer');
+    expect(footer.exists()).toBe(true);
+    expect(footer.text()).toContain('Elaborado por');
+    expect(footer.text()).toContain('Tecno Consultores 2023 C.A.');
+    expect(footer.text()).toContain('v1.0');
+    expect(footer.text()).toContain('Licencia GNU GPLv3');
+
+    const tecnoLink = footer.find('a[href="https://www.tecnoconsultores.net/"]');
+    expect(tecnoLink.exists()).toBe(true);
+    expect(tecnoLink.attributes('target')).toBe('_blank');
+
+    const githubLink = footer.find('a[href="https://github.com/tecno-consultores/RoSGrid/"]');
+    expect(githubLink.exists()).toBe(true);
+    expect(githubLink.attributes('aria-label')).toContain('GitHub');
+  });
 });

@@ -196,9 +196,7 @@ class MaintenanceWindow(Base):
 
 class TenantCustomRole(Base):
     __tablename__ = "tenant_custom_roles"
-    __table_args__ = (
-        UniqueConstraint("tenant_id", "role_name", name="uq_tenant_custom_role"),
-    )
+    __table_args__ = (UniqueConstraint("tenant_id", "role_name", name="uq_tenant_custom_role"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(

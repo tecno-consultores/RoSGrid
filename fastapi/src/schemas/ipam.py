@@ -10,7 +10,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from src.models.ipam import (
     AuthBackendEnum,
-    CustomerServiceStatusEnum,
     CustomerServiceTypeEnum,
     IPAddressStatusEnum,
     IPFamilyEnum,
@@ -244,7 +243,7 @@ class SubscriberDeviceResponse(BaseModel):
     cpe_wifi_mac_address: Optional[str] = None
     pon_port: Optional[str] = None
     optical_box: Optional[str] = None
-    last_reachability_status: str
+    last_reachability_status: str = "ONLINE"
     last_seen_at: Optional[datetime] = None
     status: str
     latitude: Optional[Decimal] = None

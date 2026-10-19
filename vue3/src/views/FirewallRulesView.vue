@@ -58,7 +58,7 @@
       const res = await http.get<FirewallRuleItem[] | { items: FirewallRuleItem[] }>(
         `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}`,
       );
-      const raw = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
       rulesList.value = raw.map((item: any) => ({
         ...item,
         id: item.id || item['.id'] || '',

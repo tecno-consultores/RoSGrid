@@ -35,7 +35,7 @@
       const res = await http.get<Array<{ name?: string }> | { items: Array<{ name?: string }> }>(
         `/api/v1/routers/${routerId.value}/webfig/interfaces`,
       );
-      const raw = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
       const names = raw.map((i) => i.name).filter(Boolean) as string[];
       if (names.length > 0) {
         availableInterfaces.value = names;
@@ -81,7 +81,7 @@
           status: r.status || (r.loss === '100' ? 'timeout' : 'ok'),
         }));
       } else if (activeTab.value === 'traceroute') {
-        const items = Array.isArray(res.data) ? res.data : (res.data?.results || []);
+        const items = Array.isArray(res.data) ? res.data : res.data?.results || [];
         pingResults.value = items
           .filter((r: any) => r.address || r.last)
           .map((r: any, idx: number) => ({
@@ -89,11 +89,11 @@
             host: r.address || '(sin respuesta)',
             size: 56,
             ttl: idx + 1,
-            time_ms: r.avg ? `${r.avg} ms` : (r.last || '*'),
+            time_ms: r.avg ? `${r.avg} ms` : r.last || '*',
             status: r.loss === '100' ? 'timeout' : 'ok',
           }));
       } else if (activeTab.value === 'torch') {
-        const items = Array.isArray(res.data) ? res.data : (res.data?.results || []);
+        const items = Array.isArray(res.data) ? res.data : res.data?.results || [];
         pingResults.value = items.map((r: any, idx: number) => ({
           seq: idx + 1,
           host: `${r['src-address'] || '*'}:${r['src-port'] || '*'} -> ${r['dst-address'] || '*'}:${r['dst-port'] || '*'}`,
@@ -115,7 +115,7 @@
       const res = await http.get<DiagnosticLogItem[] | { items: DiagnosticLogItem[] }>(
         `/api/v1/routers/${routerId.value}/webfig/tools/logs`,
       );
-      const raw = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
       logEntries.value = raw.map((l: any, idx: number) => ({
         id: l.id || l['.id'] || String(idx),
         time: l.time || '',
@@ -208,7 +208,9 @@
         <div v-if="activeTab === 'torch'" class="form-group">
           <label for="diag-iface" class="form-label">Interfaz:</label>
           <select id="diag-iface" v-model="selectedInterface" class="form-input font-tabular">
-            <option v-for="iface in availableInterfaces" :key="iface" :value="iface">{{ iface }}</option>
+            <option v-for="iface in availableInterfaces" :key="iface" :value="iface">
+              {{ iface }}
+            </option>
           </select>
         </div>
 

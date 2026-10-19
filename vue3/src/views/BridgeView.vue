@@ -137,8 +137,10 @@
     errorMessage.value = '';
     try {
       if (activeTab.value === 'bridges') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/interfaces/bridge`);
-        const items = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+        const res = await http.get<any>(
+          `/api/v1/routers/${routerId.value}/webfig/interfaces/bridge`,
+        );
+        const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
         bridgesList.value = items.map((b: any) => ({
           ...b,
           id: b.id || b['.id'] || b.name,
@@ -149,8 +151,10 @@
           disabled: b.disabled === 'true' || b.disabled === true,
         }));
       } else if (activeTab.value === 'ports') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/interfaces/bridge/ports`);
-        const items = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+        const res = await http.get<any>(
+          `/api/v1/routers/${routerId.value}/webfig/interfaces/bridge/ports`,
+        );
+        const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
         portsList.value = items.map((p: any) => ({
           ...p,
           id: p.id || p['.id'] || `${p.bridge}-${p.interface}`,
@@ -160,8 +164,10 @@
           disabled: p.disabled === 'true' || p.disabled === true,
         }));
       } else if (activeTab.value === 'vlans') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/interfaces/bridge/vlans`);
-        const items = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+        const res = await http.get<any>(
+          `/api/v1/routers/${routerId.value}/webfig/interfaces/bridge/vlans`,
+        );
+        const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
         vlansList.value = items.map((v: any) => ({
           ...v,
           id: v.id || v['.id'] || `${v.bridge}-${v.vlan_ids || v['vlan-ids']}`,
@@ -170,8 +176,10 @@
           current_untagged: v.current_untagged || v['current-untagged'] || '',
         }));
       } else if (activeTab.value === 'hosts') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/interfaces/bridge/hosts`);
-        const items = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+        const res = await http.get<any>(
+          `/api/v1/routers/${routerId.value}/webfig/interfaces/bridge/hosts`,
+        );
+        const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
         hostsList.value = items.map((h: any) => ({
           ...h,
           id: h.id || h['.id'] || `${h.bridge}-${h.mac_address || h['mac-address']}`,
@@ -183,7 +191,8 @@
       }
     } catch (err: unknown) {
       const error = err as { message?: string; detail?: string };
-      errorMessage.value = error.detail || error.message || 'Error al cargar datos del módulo Bridge.';
+      errorMessage.value =
+        error.detail || error.message || 'Error al cargar datos del módulo Bridge.';
     } finally {
       isLoading.value = false;
     }
@@ -194,10 +203,18 @@
     errorMessage.value = '';
     webFigStore.startSafeModeCountdown(60);
     try {
-      await http.post(`/api/v1/routers/${routerId.value}/webfig/interfaces/bridge`, newBridge.value);
+      await http.post(
+        `/api/v1/routers/${routerId.value}/webfig/interfaces/bridge`,
+        newBridge.value,
+      );
       statusMessage.value = `Bridge "${newBridge.value.name}" creado exitosamente bajo Safe Mode.`;
       isCreateBridgeModalOpen.value = false;
-      newBridge.value = { name: `bridge${bridgesList.value.length + 1}`, vlan_filtering: false, protocol_mode: 'rstp', comment: '' };
+      newBridge.value = {
+        name: `bridge${bridgesList.value.length + 1}`,
+        vlan_filtering: false,
+        protocol_mode: 'rstp',
+        comment: '',
+      };
       loadData();
     } catch (err: unknown) {
       const error = err as { message?: string; detail?: string };
@@ -212,7 +229,10 @@
     errorMessage.value = '';
     webFigStore.startSafeModeCountdown(60);
     try {
-      await http.post(`/api/v1/routers/${routerId.value}/webfig/interfaces/bridge/ports`, newPort.value);
+      await http.post(
+        `/api/v1/routers/${routerId.value}/webfig/interfaces/bridge/ports`,
+        newPort.value,
+      );
       statusMessage.value = `Puerto agregado al Bridge "${newPort.value.bridge}" exitosamente.`;
       isCreatePortModalOpen.value = false;
       loadData();
@@ -240,7 +260,8 @@
       <div>
         <h1 class="view-title">Gestor Bridge & VLAN Switching (Capa 2)</h1>
         <p class="view-subtitle">
-          Configuración de Bridges MikroTik v7, Puertos STP/RSTP, Tabla VLAN Filtering y FDB MAC Hosts.
+          Configuración de Bridges MikroTik v7, Puertos STP/RSTP, Tabla VLAN Filtering y FDB MAC
+          Hosts.
         </p>
       </div>
 
@@ -320,7 +341,7 @@
     <div class="tab-content">
       <div v-if="activeTab === 'bridges'">
         <RgDataTable
-          :columns="(bridgeColumns as any)"
+          :columns="bridgeColumns as any"
           :rows="bridgesList"
           caption="Interfaces Bridge RouterOS"
           row-key="id"
@@ -329,7 +350,7 @@
 
       <div v-else-if="activeTab === 'ports'">
         <RgDataTable
-          :columns="(portColumns as any)"
+          :columns="portColumns as any"
           :rows="portsList"
           caption="Puertos Miembros Bridge"
           row-key="id"
@@ -338,7 +359,7 @@
 
       <div v-else-if="activeTab === 'vlans'">
         <RgDataTable
-          :columns="(vlanColumns as any)"
+          :columns="vlanColumns as any"
           :rows="vlansList"
           caption="Tabla VLAN Switching"
           row-key="id"
@@ -347,7 +368,7 @@
 
       <div v-else-if="activeTab === 'hosts'">
         <RgDataTable
-          :columns="(hostColumns as any)"
+          :columns="hostColumns as any"
           :rows="hostsList"
           caption="Tabla de Direcciones MAC Hosts (FDB)"
           row-key="id"
@@ -356,16 +377,27 @@
     </div>
 
     <!-- Modal Crear Bridge -->
-    <div v-if="isCreateBridgeModalOpen" class="modal-backdrop" @click.self="isCreateBridgeModalOpen = false">
+    <div
+      v-if="isCreateBridgeModalOpen"
+      class="modal-backdrop"
+      @click.self="isCreateBridgeModalOpen = false"
+    >
       <div class="modal-card" role="dialog" aria-labelledby="modal-bridge-title" aria-modal="true">
         <header class="modal-header">
           <h2 id="modal-bridge-title">Crear Nuevo Bridge MikroTik</h2>
-          <button type="button" class="btn-close" @click="isCreateBridgeModalOpen = false">✕</button>
+          <button type="button" class="btn-close" @click="isCreateBridgeModalOpen = false">
+            ✕
+          </button>
         </header>
         <form class="modal-form" @submit.prevent="handleCreateBridge">
           <div class="form-group">
             <label for="bridge-name">Nombre del Bridge:</label>
-            <input id="bridge-name" v-model="newBridge.name" required placeholder="ej. bridge-lan" />
+            <input
+              id="bridge-name"
+              v-model="newBridge.name"
+              required
+              placeholder="ej. bridge-lan"
+            />
           </div>
           <div class="form-group">
             <label for="bridge-protocol">Protocolo Spanning Tree (STP):</label>
@@ -384,18 +416,30 @@
           </div>
           <div class="form-group">
             <label for="bridge-comment">Comentario:</label>
-            <input id="bridge-comment" v-model="newBridge.comment" placeholder="ej. Bridge Anillo de Distribución" />
+            <input
+              id="bridge-comment"
+              v-model="newBridge.comment"
+              placeholder="ej. Bridge Anillo de Distribución"
+            />
           </div>
           <footer class="modal-footer">
-            <button type="button" class="btn-secondary" @click="isCreateBridgeModalOpen = false">Cancelar</button>
-            <button type="submit" class="btn-primary" :disabled="isLoading">Crear con Safe Mode</button>
+            <button type="button" class="btn-secondary" @click="isCreateBridgeModalOpen = false">
+              Cancelar
+            </button>
+            <button type="submit" class="btn-primary" :disabled="isLoading">
+              Crear con Safe Mode
+            </button>
           </footer>
         </form>
       </div>
     </div>
 
     <!-- Modal Agregar Puerto -->
-    <div v-if="isCreatePortModalOpen" class="modal-backdrop" @click.self="isCreatePortModalOpen = false">
+    <div
+      v-if="isCreatePortModalOpen"
+      class="modal-backdrop"
+      @click.self="isCreatePortModalOpen = false"
+    >
       <div class="modal-card" role="dialog" aria-labelledby="modal-port-title" aria-modal="true">
         <header class="modal-header">
           <h2 id="modal-port-title">Agregar Puerto al Bridge</h2>
@@ -404,21 +448,40 @@
         <form class="modal-form" @submit.prevent="handleCreatePort">
           <div class="form-group">
             <label for="port-iface">Interfaz Física:</label>
-            <input id="port-iface" v-model="newPort.interface" required placeholder="ej. ether2 o sfp-sfpplus1" />
+            <input
+              id="port-iface"
+              v-model="newPort.interface"
+              required
+              placeholder="ej. ether2 o sfp-sfpplus1"
+            />
           </div>
           <div class="form-group">
             <label for="port-bridge">Bridge Destino:</label>
-            <input id="port-bridge" v-model="newPort.bridge" required placeholder="ej. bridge-lan" />
+            <input
+              id="port-bridge"
+              v-model="newPort.bridge"
+              required
+              placeholder="ej. bridge-lan"
+            />
           </div>
           <div class="form-group">
             <label for="port-pvid">PVID (Port VLAN ID):</label>
-            <input id="port-pvid" v-model.number="newPort.pvid" type="number" min="1" max="4094" required />
+            <input
+              id="port-pvid"
+              v-model.number="newPort.pvid"
+              type="number"
+              min="1"
+              max="4094"
+              required
+            />
           </div>
           <div class="form-group">
             <label for="port-frame-types">Frame Types:</label>
             <select id="port-frame-types" v-model="newPort.frame_types">
               <option value="admit-all">Admit All (Tagged y Untagged)</option>
-              <option value="admit-only-untagged-and-priority-tagged">Solo Untagged (Acceso)</option>
+              <option value="admit-only-untagged-and-priority-tagged">
+                Solo Untagged (Acceso)
+              </option>
               <option value="admit-only-vlan-tagged">Solo Tagged (Trunk)</option>
             </select>
           </div>
@@ -429,8 +492,12 @@
             </label>
           </div>
           <footer class="modal-footer">
-            <button type="button" class="btn-secondary" @click="isCreatePortModalOpen = false">Cancelar</button>
-            <button type="submit" class="btn-primary" :disabled="isLoading">Asignar con Safe Mode</button>
+            <button type="button" class="btn-secondary" @click="isCreatePortModalOpen = false">
+              Cancelar
+            </button>
+            <button type="submit" class="btn-primary" :disabled="isLoading">
+              Asignar con Safe Mode
+            </button>
           </footer>
         </form>
       </div>

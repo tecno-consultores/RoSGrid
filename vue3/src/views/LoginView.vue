@@ -235,7 +235,8 @@
     errorMessage.value = '';
     if (isUsingBackupCode.value) {
       if (totpCode.value.length !== 8) {
-        errorMessage.value = 'El código de respaldo debe tener exactamente 8 caracteres alfanuméricos.';
+        errorMessage.value =
+          'El código de respaldo debe tener exactamente 8 caracteres alfanuméricos.';
         return;
       }
     } else {
@@ -267,7 +268,10 @@
 
   function onTotpInput() {
     if (isUsingBackupCode.value) {
-      totpCode.value = totpCode.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8).toUpperCase();
+      totpCode.value = totpCode.value
+        .replace(/[^a-zA-Z0-9]/g, '')
+        .slice(0, 8)
+        .toUpperCase();
       if (totpCode.value.length === 8 && currentStep.value === 'VERIFY_2FA') {
         handleVerifySubmit();
       }
@@ -288,8 +292,7 @@
   function completeLogin(user: UserInfo, csrfToken?: string) {
     authStore.setAuth(user, csrfToken || 'csrf-session');
     const redirect =
-      (route.query.redirect as string) ||
-      (user.role === 'NOC_MONITOR' ? '/noc-wallboard' : '/');
+      (route.query.redirect as string) || (user.role === 'NOC_MONITOR' ? '/noc-wallboard' : '/');
     router.push(redirect);
   }
 
@@ -385,15 +388,15 @@
       registerSuccess.value =
         res.data.message ||
         'Solicitud enviada con éxito. Tu cuenta se encuentra PENDIENTE DE APROBACIÓN por un Administrador.';
-      
+
       // Pre-cargar valores en el formulario de login para agilizar
       tenantSlug.value = registerTenantSlug.value.trim().toLowerCase();
       usernameOrEmail.value = registerUsername.value.trim();
-      
+
       // Limpiar campos sensibles
       registerPassword.value = '';
       registerPasswordConfirm.value = '';
-      
+
       currentStep.value = 'CREDENTIALS';
     } catch (err: unknown) {
       const error = err as {
@@ -417,13 +420,38 @@
     }
   }
 
-  onMounted(async () => {
-    // Si viene pre-cargado el tenant_slug en la query
+  function applyQueryTenant(): void {
     if (route.query.tenant) {
-      tenantSlug.value = String(route.query.tenant).toLowerCase();
-      registerTenantSlug.value = String(route.query.tenant).toLowerCase();
+      const q = String(route.query.tenant).toLowerCase();
+      tenantSlug.value = q;
+      registerTenantSlug.value = q;
     }
-    // Detección automática de primer uso (Bootstrap) y estado de registro público
+  }
+
+  function applyBootstrapData(data: {
+    is_bootstrapped: boolean;
+    registration_enabled?: boolean;
+    default_tenant_slug?: string;
+    default_tenant_name?: string;
+  }): void {
+    if (!data) return;
+    if (data.is_bootstrapped === false) {
+      currentStep.value = 'BOOTSTRAP';
+      isBootstrapped.value = false;
+      return;
+    }
+    isBootstrapped.value = true;
+    if (data.registration_enabled !== undefined) {
+      registrationEnabled.value = data.registration_enabled;
+    }
+    if (data.default_tenant_slug) {
+      tenantSlug.value ||= data.default_tenant_slug;
+      registerTenantSlug.value ||= data.default_tenant_slug;
+    }
+  }
+
+  onMounted(async () => {
+    applyQueryTenant();
     try {
       const res = await http.get<{
         is_bootstrapped: boolean;
@@ -431,25 +459,7 @@
         default_tenant_slug?: string;
         default_tenant_name?: string;
       }>('/api/v1/auth/bootstrap-status');
-      if (res.data) {
-        if (res.data.is_bootstrapped === false) {
-          currentStep.value = 'BOOTSTRAP';
-          isBootstrapped.value = false;
-        } else {
-          isBootstrapped.value = true;
-          if (res.data.registration_enabled !== undefined) {
-            registrationEnabled.value = res.data.registration_enabled;
-          }
-          if (res.data.default_tenant_slug) {
-            if (!tenantSlug.value) {
-              tenantSlug.value = res.data.default_tenant_slug;
-            }
-            if (!registerTenantSlug.value) {
-              registerTenantSlug.value = res.data.default_tenant_slug;
-            }
-          }
-        }
-      }
+      applyBootstrapData(res.data);
     } catch {
       // Si falla la consulta, se mantiene el formulario estándar
     }
@@ -733,7 +743,9 @@
         <div class="bootstrap-intro">
           <h2 class="section-title">📝 Solicitud de Registro</h2>
           <p class="section-desc">
-            Ingresa tus datos para registrarte. Tu cuenta quedará en estado <strong>Pendiente de Aprobación</strong> y deberá ser autorizada por un Administrador antes de tu primer ingreso.
+            Ingresa tus datos para registrarte. Tu cuenta quedará en estado
+            <strong>Pendiente de Aprobación</strong> y deberá ser autorizada por un Administrador
+            antes de tu primer ingreso.
           </p>
         </div>
 
@@ -927,7 +939,11 @@
       <!-- ETAPA 2B: Verificación de Código 2FA TOTP -->
       <div v-else-if="currentStep === 'VERIFY_2FA'" class="verify-container">
         <h2 class="step-title">
-          {{ isUsingBackupCode ? 'Código de Respaldo de Emergencia' : 'Verificación de Segundo Factor (2FA)' }}
+          {{
+            isUsingBackupCode
+              ? 'Código de Respaldo de Emergencia'
+              : 'Verificación de Segundo Factor (2FA)'
+          }}
         </h2>
         <p class="step-desc">
           {{
@@ -953,7 +969,9 @@
               autocomplete="one-time-code"
               :placeholder="isUsingBackupCode ? 'ej. 8BB8B5C7' : '000000'"
               class="form-input form-input--totp"
-              :style="isUsingBackupCode ? 'letter-spacing: 0.25rem; text-transform: uppercase;' : ''"
+              :style="
+                isUsingBackupCode ? 'letter-spacing: 0.25rem; text-transform: uppercase;' : ''
+              "
               :disabled="isLoading"
               autofocus
               @input="onTotpInput"
@@ -967,7 +985,9 @@
           <button
             type="submit"
             class="btn-submit"
-            :disabled="isLoading || (isUsingBackupCode ? totpCode.length !== 8 : totpCode.length !== 6)"
+            :disabled="
+              isLoading || (isUsingBackupCode ? totpCode.length !== 8 : totpCode.length !== 6)
+            "
           >
             <span>{{ isLoading ? 'Validando...' : 'Acceder al Sistema' }}</span>
           </button>
@@ -999,6 +1019,54 @@
         </form>
       </div>
     </main>
+
+    <!-- Pie de página Institucional y Enlaces Oficiales (Subtarea 16.5) -->
+    <footer class="login-footer" role="contentinfo">
+      <div class="login-footer-content">
+        <span class="footer-attribution">
+          Elaborado por
+          <a
+            href="https://www.tecnoconsultores.net/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="footer-link"
+          >
+            Tecno Consultores 2023 C.A.
+          </a>
+        </span>
+        <span class="footer-divider" aria-hidden="true">•</span>
+        <span class="footer-version">v1.0</span>
+        <span class="footer-divider" aria-hidden="true">•</span>
+        <a
+          href="https://www.gnu.org/licenses/gpl-3.0.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="badge-license"
+        >
+          Licencia GNU GPLv3
+        </a>
+        <a
+          href="https://github.com/tecno-consultores/RoSGrid/"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="footer-github-link"
+          aria-label="Repositorio GitHub oficial de RoSGrid"
+        >
+          <svg
+            class="github-icon"
+            viewBox="0 0 24 24"
+            width="16"
+            height="16"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"
+            />
+          </svg>
+        </a>
+      </div>
+    </footer>
   </div>
 </template>
 
@@ -1332,5 +1400,54 @@
     color: var(--rg-text-secondary, #cbd5e1);
     line-height: 1.4;
     margin: 0;
+  }
+
+  /* Pie de página Institucional (Subtarea 16.5) */
+  .login-footer {
+    margin-top: var(--rg-space-6, 24px);
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--rg-text-muted, #94a3b8);
+  }
+
+  .login-footer-content {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .footer-link,
+  .footer-github-link,
+  .badge-license {
+    color: var(--rg-accent-cyan, #22d3ee);
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  .footer-link:hover,
+  .footer-github-link:hover,
+  .badge-license:hover {
+    text-decoration: underline;
+    color: #67e8f9;
+  }
+
+  .badge-license {
+    background: rgba(34, 211, 238, 0.1);
+    border: 1px solid rgba(34, 211, 238, 0.25);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 500;
+  }
+
+  .footer-divider {
+    color: var(--rg-border-grid, #334155);
+  }
+
+  .github-icon {
+    display: inline-block;
+    vertical-align: middle;
   }
 </style>

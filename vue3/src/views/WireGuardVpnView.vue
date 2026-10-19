@@ -97,8 +97,10 @@
     errorMessage.value = '';
     try {
       if (activeTab.value === 'interfaces') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/interfaces/wireguard`);
-        const items = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+        const res = await http.get<any>(
+          `/api/v1/routers/${routerId.value}/webfig/interfaces/wireguard`,
+        );
+        const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
         ifacesList.value = items.map((i: any) => ({
           ...i,
           id: i.id || i['.id'] || i.name,
@@ -108,15 +110,19 @@
           disabled: i.disabled === 'true' || i.disabled === true,
         }));
       } else {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/interfaces/wireguard/peers`);
-        const items = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+        const res = await http.get<any>(
+          `/api/v1/routers/${routerId.value}/webfig/interfaces/wireguard/peers`,
+        );
+        const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
         peersList.value = items.map((p: any) => ({
           ...p,
           id: p.id || p['.id'] || `${p.interface}-${p.public_key || p['public-key']}`,
           public_key: p.public_key || p['public-key'] || '',
           allowed_address: p.allowed_address || p['allowed-address'] || '',
           endpoint_address: p.endpoint_address || p['endpoint-address'] || '',
-          endpoint_port: p.endpoint_port ? Number(p.endpoint_port) : Number(p['endpoint-port'] || 0),
+          endpoint_port: p.endpoint_port
+            ? Number(p.endpoint_port)
+            : Number(p['endpoint-port'] || 0),
           last_handshake: p.last_handshake || p['last-handshake'] || 'Nunca',
           disabled: p.disabled === 'true' || p.disabled === true,
         }));
@@ -134,10 +140,18 @@
     errorMessage.value = '';
     webFigStore.startSafeModeCountdown(60);
     try {
-      await http.post(`/api/v1/routers/${routerId.value}/webfig/interfaces/wireguard`, newIface.value);
+      await http.post(
+        `/api/v1/routers/${routerId.value}/webfig/interfaces/wireguard`,
+        newIface.value,
+      );
       statusMessage.value = `Interfaz WireGuard "${newIface.value.name}" creada exitosamente bajo Safe Mode.`;
       isCreateIfaceModalOpen.value = false;
-      newIface.value = { name: `wg${ifacesList.value.length + 1}`, listen_port: 13231 + ifacesList.value.length, mtu: 1420, comment: '' };
+      newIface.value = {
+        name: `wg${ifacesList.value.length + 1}`,
+        listen_port: 13231 + ifacesList.value.length,
+        mtu: 1420,
+        comment: '',
+      };
       loadData();
     } catch (err: unknown) {
       const error = err as { message?: string; detail?: string };
@@ -152,10 +166,21 @@
     errorMessage.value = '';
     webFigStore.startSafeModeCountdown(60);
     try {
-      await http.post(`/api/v1/routers/${routerId.value}/webfig/interfaces/wireguard/peers`, newPeer.value);
+      await http.post(
+        `/api/v1/routers/${routerId.value}/webfig/interfaces/wireguard/peers`,
+        newPeer.value,
+      );
       statusMessage.value = `Peer WireGuard registrado exitosamente bajo Safe Mode.`;
       isCreatePeerModalOpen.value = false;
-      newPeer.value = { interface: ifacesList.value[0]?.name || 'wg0', public_key: '', endpoint_address: '', endpoint_port: 13231, allowed_address: '10.250.0.3/32', persistent_keepalive: 25, comment: '' };
+      newPeer.value = {
+        interface: ifacesList.value[0]?.name || 'wg0',
+        public_key: '',
+        endpoint_address: '',
+        endpoint_port: 13231,
+        allowed_address: '10.250.0.3/32',
+        persistent_keepalive: 25,
+        comment: '',
+      };
       loadData();
     } catch (err: unknown) {
       const error = err as { message?: string; detail?: string };
@@ -181,7 +206,8 @@
       <div>
         <h1 class="view-title">VPN Moderna WireGuard (RouterOS v7)</h1>
         <p class="view-subtitle">
-          Administración de interfaces de túnel WireGuard de alto rendimiento y gestión de Peers criptográficos.
+          Administración de interfaces de túnel WireGuard de alto rendimiento y gestión de Peers
+          criptográficos.
         </p>
       </div>
 
@@ -245,7 +271,7 @@
     <div class="tab-content">
       <div v-if="activeTab === 'interfaces'">
         <RgDataTable
-          :columns="(ifaceColumns as any)"
+          :columns="ifaceColumns as any"
           :rows="ifacesList"
           caption="Túneles WireGuard Configurados"
           row-key="id"
@@ -254,7 +280,7 @@
 
       <div v-else-if="activeTab === 'peers'">
         <RgDataTable
-          :columns="(peerColumns as any)"
+          :columns="peerColumns as any"
           :rows="peersList"
           caption="Peers Criptográficos WireGuard"
           row-key="id"
@@ -263,7 +289,11 @@
     </div>
 
     <!-- Modal Crear Interfaz WireGuard -->
-    <div v-if="isCreateIfaceModalOpen" class="modal-backdrop" @click.self="isCreateIfaceModalOpen = false">
+    <div
+      v-if="isCreateIfaceModalOpen"
+      class="modal-backdrop"
+      @click.self="isCreateIfaceModalOpen = false"
+    >
       <div class="modal-card" role="dialog" aria-labelledby="modal-wg-title" aria-modal="true">
         <header class="modal-header">
           <h2 id="modal-wg-title">Crear Interfaz WireGuard</h2>
@@ -276,26 +306,52 @@
           </div>
           <div class="form-group">
             <label for="wg-port">Puerto de Escucha UDP (Listen Port):</label>
-            <input id="wg-port" v-model.number="newIface.listen_port" type="number" min="1024" max="65535" required />
+            <input
+              id="wg-port"
+              v-model.number="newIface.listen_port"
+              type="number"
+              min="1024"
+              max="65535"
+              required
+            />
           </div>
           <div class="form-group">
             <label for="wg-mtu">MTU:</label>
-            <input id="wg-mtu" v-model.number="newIface.mtu" type="number" min="1280" max="1500" required />
+            <input
+              id="wg-mtu"
+              v-model.number="newIface.mtu"
+              type="number"
+              min="1280"
+              max="1500"
+              required
+            />
           </div>
           <div class="form-group">
             <label for="wg-comment">Comentario:</label>
-            <input id="wg-comment" v-model="newIface.comment" placeholder="ej. Túnel VPN Sucursales" />
+            <input
+              id="wg-comment"
+              v-model="newIface.comment"
+              placeholder="ej. Túnel VPN Sucursales"
+            />
           </div>
           <footer class="modal-footer">
-            <button type="button" class="btn-secondary" @click="isCreateIfaceModalOpen = false">Cancelar</button>
-            <button type="submit" class="btn-primary" :disabled="isLoading">Crear con Safe Mode</button>
+            <button type="button" class="btn-secondary" @click="isCreateIfaceModalOpen = false">
+              Cancelar
+            </button>
+            <button type="submit" class="btn-primary" :disabled="isLoading">
+              Crear con Safe Mode
+            </button>
           </footer>
         </form>
       </div>
     </div>
 
     <!-- Modal Agregar Peer WireGuard -->
-    <div v-if="isCreatePeerModalOpen" class="modal-backdrop" @click.self="isCreatePeerModalOpen = false">
+    <div
+      v-if="isCreatePeerModalOpen"
+      class="modal-backdrop"
+      @click.self="isCreatePeerModalOpen = false"
+    >
       <div class="modal-card" role="dialog" aria-labelledby="modal-peer-title" aria-modal="true">
         <header class="modal-header">
           <h2 id="modal-peer-title">Agregar Peer Criptográfico WireGuard</h2>
@@ -308,23 +364,47 @@
           </div>
           <div class="form-group">
             <label for="peer-pubkey">Clave Pública (Base64):</label>
-            <input id="peer-pubkey" v-model="newPeer.public_key" required placeholder="44 caracteres Base64..." />
+            <input
+              id="peer-pubkey"
+              v-model="newPeer.public_key"
+              required
+              placeholder="44 caracteres Base64..."
+            />
           </div>
           <div class="form-group">
             <label for="peer-allowed">Allowed IPs (Redes Enrutadas):</label>
-            <input id="peer-allowed" v-model="newPeer.allowed_address" required placeholder="ej. 10.250.0.2/32 o 0.0.0.0/0" />
+            <input
+              id="peer-allowed"
+              v-model="newPeer.allowed_address"
+              required
+              placeholder="ej. 10.250.0.2/32 o 0.0.0.0/0"
+            />
           </div>
           <div class="form-group">
             <label for="peer-endpoint">Endpoint Remoto (IP o FQDN):</label>
-            <input id="peer-endpoint" v-model="newPeer.endpoint_address" placeholder="ej. vpn.empresa.com o IP pública" />
+            <input
+              id="peer-endpoint"
+              v-model="newPeer.endpoint_address"
+              placeholder="ej. vpn.empresa.com o IP pública"
+            />
           </div>
           <div class="form-group">
             <label for="peer-eport">Puerto Endpoint:</label>
-            <input id="peer-eport" v-model.number="newPeer.endpoint_port" type="number" min="1" max="65535" />
+            <input
+              id="peer-eport"
+              v-model.number="newPeer.endpoint_port"
+              type="number"
+              min="1"
+              max="65535"
+            />
           </div>
           <footer class="modal-footer">
-            <button type="button" class="btn-secondary" @click="isCreatePeerModalOpen = false">Cancelar</button>
-            <button type="submit" class="btn-primary" :disabled="isLoading">Registrar Peer con Safe Mode</button>
+            <button type="button" class="btn-secondary" @click="isCreatePeerModalOpen = false">
+              Cancelar
+            </button>
+            <button type="submit" class="btn-primary" :disabled="isLoading">
+              Registrar Peer con Safe Mode
+            </button>
           </footer>
         </form>
       </div>

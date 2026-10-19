@@ -194,4 +194,82 @@ describe('RgResponsiveShell.vue — Doble Contexto & Barra Inferior Móvil', () 
       expect(themeStore.isMobileDrawerOpen).toBe(true);
     }
   });
+
+  it('filtra Técnico de Campo según el feature flag isp_module_enabled', () => {
+    const authStore = useAuthStore();
+    authStore.setAuth({
+      id: 'usr-1',
+      username: 'operador',
+      email: 'op@rosgrid.local',
+      role: 'SUPPORT_L2',
+      tenant_id: 't-1',
+      tenant_slug: 'demo',
+      totp_enabled: false,
+      tenant_feature_flags: { isp_module_enabled: false },
+    });
+
+    const wrapper = mount(RgResponsiveShell, {
+      global: {
+        stubs: {
+          RouterLink: { template: '<a class="rail-link"><slot /></a>' },
+          RouterView: true,
+          RgCommandPalette: true,
+          RgSafeModeBanner: true,
+        },
+      },
+    });
+
+    expect(wrapper.text()).not.toContain('Técnico de Campo');
+
+    authStore.setAuth({
+      id: 'usr-1',
+      username: 'operador',
+      email: 'op@rosgrid.local',
+      role: 'SUPPORT_L2',
+      tenant_id: 't-1',
+      tenant_slug: 'demo',
+      totp_enabled: false,
+      tenant_feature_flags: { isp_module_enabled: true },
+    });
+
+    const wrapperWithFlag = mount(RgResponsiveShell, {
+      global: {
+        stubs: {
+          RouterLink: { template: '<a class="rail-link"><slot /></a>' },
+          RouterView: true,
+          RgCommandPalette: true,
+          RgSafeModeBanner: true,
+        },
+      },
+    });
+
+    expect(wrapperWithFlag.text()).toContain('Técnico de Campo');
+  });
+
+  it('renderiza el pie de página global autenticado con atribución y enlace a GitHub', () => {
+    const wrapper = mount(RgResponsiveShell, {
+      global: {
+        stubs: {
+          RouterLink: true,
+          RouterView: true,
+          RgCommandPalette: true,
+          RgSafeModeBanner: true,
+        },
+      },
+    });
+
+    const footer = wrapper.find('footer.rg-global-footer');
+    expect(footer.exists()).toBe(true);
+    expect(footer.text()).toContain('Elaborado por');
+    expect(footer.text()).toContain('Tecno Consultores 2023 C.A.');
+    expect(footer.text()).toContain('Licencia GNU GPLv3');
+
+    const tecnoLink = footer.find('a[href="https://www.tecnoconsultores.net/"]');
+    expect(tecnoLink.exists()).toBe(true);
+    expect(tecnoLink.attributes('target')).toBe('_blank');
+
+    const githubLink = footer.find('a[href="https://github.com/tecno-consultores/RoSGrid/"]');
+    expect(githubLink.exists()).toBe(true);
+    expect(githubLink.attributes('aria-label')).toContain('GitHub');
+  });
 });

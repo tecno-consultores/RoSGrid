@@ -31,7 +31,7 @@
     error.value = null;
     try {
       const res = await http.get<{ items: any[] } | any[]>('/api/v1/audit/logs');
-      const raw = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
       auditLogs.value = raw.map((item: any) => ({
         id: String(item.id),
         actor_id: String(item.actor_user_id || item.actor_id || ''),
@@ -107,8 +107,6 @@
   function selectLogForInspection(log: AuditLogItem) {
     selectedLog.value = log;
   }
-
-
 
   function escapeCsvCell(val: unknown): string {
     if (val === null || val === undefined) return '""';
@@ -206,7 +204,9 @@
         escapeCsvCell(l.http_status),
         escapeCsvCell(l.record_sha256_hash),
       ]);
-      const csvBody = [headers.map(escapeCsvCell).join(','), ...rows.map((r) => r.join(','))].join('\r\n');
+      const csvBody = [headers.map(escapeCsvCell).join(','), ...rows.map((r) => r.join(','))].join(
+        '\r\n',
+      );
       const blob = new Blob(['\uFEFF' + csvBody], { type: 'text/csv;charset=utf-8;' });
       downloadBlob(blob, `rosgrid-audit-report-${dateStr}.csv`);
     }

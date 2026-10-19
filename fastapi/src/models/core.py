@@ -61,7 +61,7 @@ class Tenant(Base):
     max_users_quota: Mapped[int] = mapped_column(Integer, nullable=False, default=50)
     require_2fa_all_users: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     default_safemode_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=60)
-    
+
     # Feature Flags & Gobernanza Modular (Specs 32 & 34)
     isp_module_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     bgp_looking_glass_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

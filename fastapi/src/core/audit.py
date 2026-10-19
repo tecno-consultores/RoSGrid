@@ -3,6 +3,7 @@
 
 import hashlib
 import json
+import uuid
 from typing import Any
 
 GENESIS_AUDIT_HASH = "0" * 64
@@ -35,6 +36,24 @@ def sanitize_sensitive_data(data: Any) -> Any:
     elif isinstance(data, list):
         return [sanitize_sensitive_data(item) for item in data]
     return data
+
+
+_LOOPBACK_ACTOR_IP = "127.0.0.1"
+
+
+def audit_actor_from_claims(claims: dict[str, Any], request: Any = None) -> dict[str, Any]:
+    """Deriva los campos de actor WORM (tenant, usuario, rol, IP y User-Agent) desde los claims JWT."""
+    client = getattr(request, "client", None)
+    headers = getattr(request, "headers", {})
+    sub = claims.get("sub")
+    return {
+        "tenant_id": uuid.UUID(str(claims.get("tid"))),
+        "actor_user_id": uuid.UUID(str(sub)) if sub else None,
+        "actor_username": str(claims.get("username") or sub or "system"),
+        "actor_role": claims.get("rol"),
+        "actor_ip": getattr(client, "host", None) or _LOOPBACK_ACTOR_IP,
+        "actor_user_agent": headers.get("user-agent"),
+    }
 
 
 def compute_audit_record_hash(prev_hash: str, record_data: dict[str, Any]) -> str:

@@ -70,8 +70,10 @@
 
   async function loadRouters() {
     try {
-      const res = await http.get<RouterItem[] | { items: RouterItem[] }>('/api/v1/inventory/routers');
-      const raw = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      const res = await http.get<RouterItem[] | { items: RouterItem[] }>(
+        '/api/v1/inventory/routers',
+      );
+      const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
       if (raw.length > 0) {
         routers.value = raw.map((item: any) => ({
           ...item,
@@ -86,7 +88,10 @@
           ip_address:
             item.ip_address ||
             (item.api_base_url
-              ? item.api_base_url.replace(/^https?:\/\//, '').split('/')[0].split(':')[0]
+              ? item.api_base_url
+                  .replace(/^https?:\/\//, '')
+                  .split('/')[0]
+                  .split(':')[0]
               : ''),
           ros_version: item.ros_version || 'v7',
           is_reachable: item.is_reachable ?? false,
@@ -103,7 +108,9 @@
       const items = res.data?.items || [];
       liveEvents.value = items.slice(0, 20).map((log: any) => ({
         id: String(log.id),
-        timestamp: log.created_at ? new Date(log.created_at).toLocaleTimeString() : new Date().toLocaleTimeString(),
+        timestamp: log.created_at
+          ? new Date(log.created_at).toLocaleTimeString()
+          : new Date().toLocaleTimeString(),
         type: log.event_category === 'AUTH' ? 'ROUTER_UP' : 'MAINTENANCE',
         router_identity: log.router_display_name || log.actor_username || 'Sistema',
         message: `${log.event_action || 'Operación'} registrada por ${log.actor_username || 'usuario'}`,
@@ -486,7 +493,9 @@
     align-items: center;
     gap: 1rem;
     z-index: 1000;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7), 0 0 15px rgba(2, 132, 199, 0.3);
+    box-shadow:
+      0 10px 25px -5px rgba(0, 0, 0, 0.7),
+      0 0 15px rgba(2, 132, 199, 0.3);
   }
 
   .hud-left {

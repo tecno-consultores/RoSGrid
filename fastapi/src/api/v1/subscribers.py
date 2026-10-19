@@ -7,14 +7,13 @@ Arquitectura de Cero Facturación y Cero Datos Personales (Identificación Técn
 
 import logging
 import uuid
-from decimal import Decimal
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.deps import get_current_user_claims, require_feature, require_roles
+from src.api.deps import require_feature, require_roles
 from src.core.audit import write_audit_log
 from src.db.session import get_tenant_db_session
 from src.models.core import SystemRoleEnum
@@ -59,15 +58,18 @@ def get_tenant_id(claims: dict[str, Any]) -> uuid.UUID:
 # 1. BANDWIDTH PROFILES (PERFILES DE ANCHO DE BANDA Y QOS)
 # ============================================================================
 
+
 @bandwidth_router.get("", response_model=list[BandwidthProfileResponse])
 async def list_bandwidth_profiles(
     db: AsyncSession = Depends(get_tenant_db_session),
-    claims: dict[str, Any] = Depends(require_roles(
-        SystemRoleEnum.SUPERADMIN_GLOBAL,
-        SystemRoleEnum.TENANT_ADMIN,
-        SystemRoleEnum.NOC_MONITOR,
-        SystemRoleEnum.FIELD_TECH,
-    )),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.NOC_MONITOR,
+            SystemRoleEnum.FIELD_TECH,
+        )
+    ),
 ) -> list[BandwidthProfile]:
     tenant_id = get_tenant_id(claims)
     stmt = select(BandwidthProfile).where(BandwidthProfile.tenant_id == tenant_id).order_by(BandwidthProfile.name.asc())
@@ -111,14 +113,15 @@ async def create_bandwidth_profile(
     await db.refresh(profile)
 
     await write_audit_log(
-        db=db,
+        session=db,
         tenant_id=tenant_id,
-        user_id=uuid.UUID(claims["sub"]),
-        username=claims.get("username", "system"),
-        action="CREATE_BANDWIDTH_PROFILE",
-        resource_type="BANDWIDTH_PROFILE",
-        resource_id=str(profile.id),
-        details={"name": profile.name, "rate_down": profile.rate_down_kbps, "rate_up": profile.rate_up_kbps},
+        actor_user_id=uuid.UUID(str(claims["sub"])),
+        actor_username=str(claims.get("username", "system")),
+        actor_role=claims.get("rol"),
+        actor_ip="127.0.0.1",
+        event_category="NETWORK",
+        event_action="CREATE_BANDWIDTH_PROFILE",
+        after_state={"name": profile.name, "rate_down": profile.rate_down_kbps, "rate_up": profile.rate_up_kbps},
     )
     return profile
 
@@ -127,12 +130,14 @@ async def create_bandwidth_profile(
 async def get_bandwidth_profile(
     profile_id: uuid.UUID,
     db: AsyncSession = Depends(get_tenant_db_session),
-    claims: dict[str, Any] = Depends(require_roles(
-        SystemRoleEnum.SUPERADMIN_GLOBAL,
-        SystemRoleEnum.TENANT_ADMIN,
-        SystemRoleEnum.NOC_MONITOR,
-        SystemRoleEnum.FIELD_TECH,
-    )),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.NOC_MONITOR,
+            SystemRoleEnum.FIELD_TECH,
+        )
+    ),
 ) -> BandwidthProfile:
     tenant_id = get_tenant_id(claims)
     stmt = select(BandwidthProfile).where(BandwidthProfile.id == profile_id, BandwidthProfile.tenant_id == tenant_id)
@@ -163,14 +168,15 @@ async def update_bandwidth_profile(
     await db.refresh(profile)
 
     await write_audit_log(
-        db=db,
+        session=db,
         tenant_id=tenant_id,
-        user_id=uuid.UUID(claims["sub"]),
-        username=claims.get("username", "system"),
-        action="UPDATE_BANDWIDTH_PROFILE",
-        resource_type="BANDWIDTH_PROFILE",
-        resource_id=str(profile.id),
-        details={"name": profile.name, "updated_fields": list(update_dict.keys())},
+        actor_user_id=uuid.UUID(str(claims["sub"])),
+        actor_username=str(claims.get("username", "system")),
+        actor_role=claims.get("rol"),
+        actor_ip="127.0.0.1",
+        event_category="NETWORK",
+        event_action="UPDATE_BANDWIDTH_PROFILE",
+        after_state={"name": profile.name, "updated_fields": list(update_dict.keys())},
     )
     return profile
 
@@ -205,11 +211,13 @@ async def generate_mikrotik_bandwidth_script(
     profile_id: uuid.UUID,
     target_ip: Optional[str] = Query("100.64.0.2", description="IP objetivo de prueba"),
     db: AsyncSession = Depends(get_tenant_db_session),
-    claims: dict[str, Any] = Depends(require_roles(
-        SystemRoleEnum.SUPERADMIN_GLOBAL,
-        SystemRoleEnum.TENANT_ADMIN,
-        SystemRoleEnum.NOC_MONITOR,
-    )),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.NOC_MONITOR,
+        )
+    ),
 ) -> dict[str, str]:
     """Genera sintaxis RouterOS v7 para Simple Queue y Queue Tree basada en el perfil QoS."""
     tenant_id = get_tenant_id(claims)
@@ -256,6 +264,7 @@ async def generate_mikrotik_bandwidth_script(
 # 2. SUBSCRIBER DEVICES (ABONADOS TÉCNICOS SIN DATOS PERSONALES)
 # ============================================================================
 
+
 @subscribers_router.get("", response_model=list[SubscriberDeviceResponse])
 async def list_subscriber_devices(
     router_id: Optional[uuid.UUID] = None,
@@ -264,12 +273,14 @@ async def list_subscriber_devices(
     bandwidth_profile_id: Optional[uuid.UUID] = None,
     status_filter: Optional[str] = None,
     db: AsyncSession = Depends(get_tenant_db_session),
-    claims: dict[str, Any] = Depends(require_roles(
-        SystemRoleEnum.SUPERADMIN_GLOBAL,
-        SystemRoleEnum.TENANT_ADMIN,
-        SystemRoleEnum.NOC_MONITOR,
-        SystemRoleEnum.FIELD_TECH,
-    )),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.NOC_MONITOR,
+            SystemRoleEnum.FIELD_TECH,
+        )
+    ),
 ) -> list[SubscriberDevice]:
     tenant_id = get_tenant_id(claims)
     stmt = select(SubscriberDevice).where(SubscriberDevice.tenant_id == tenant_id)
@@ -294,11 +305,13 @@ async def list_subscriber_devices(
 async def create_subscriber_device(
     payload: SubscriberDeviceCreate,
     db: AsyncSession = Depends(get_tenant_db_session),
-    claims: dict[str, Any] = Depends(require_roles(
-        SystemRoleEnum.SUPERADMIN_GLOBAL,
-        SystemRoleEnum.TENANT_ADMIN,
-        SystemRoleEnum.NOC_MONITOR,
-    )),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.NOC_MONITOR,
+        )
+    ),
 ) -> SubscriberDevice:
     tenant_id = get_tenant_id(claims)
 
@@ -340,20 +353,22 @@ async def create_subscriber_device(
         latitude=payload.latitude,
         longitude=payload.longitude,
         status=CustomerServiceStatusEnum.PENDING_INSTALL,
+        last_reachability_status="ONLINE",
     )
     db.add(device)
     await db.commit()
     await db.refresh(device)
 
     await write_audit_log(
-        db=db,
+        session=db,
         tenant_id=tenant_id,
-        user_id=uuid.UUID(claims["sub"]),
-        username=claims.get("username", "system"),
-        action="CREATE_SUBSCRIBER_DEVICE",
-        resource_type="SUBSCRIBER_DEVICE",
-        resource_id=str(device.id),
-        details={"endpoint_identifier": device.endpoint_identifier, "router_id": str(device.router_id)},
+        actor_user_id=uuid.UUID(str(claims["sub"])),
+        actor_username=str(claims.get("username", "system")),
+        actor_role=claims.get("rol"),
+        actor_ip="127.0.0.1",
+        event_category="NETWORK",
+        event_action="CREATE_SUBSCRIBER_DEVICE",
+        after_state={"endpoint_identifier": device.endpoint_identifier, "router_id": str(device.router_id)},
     )
     return device
 
@@ -362,12 +377,14 @@ async def create_subscriber_device(
 async def get_subscriber_device(
     device_id: uuid.UUID,
     db: AsyncSession = Depends(get_tenant_db_session),
-    claims: dict[str, Any] = Depends(require_roles(
-        SystemRoleEnum.SUPERADMIN_GLOBAL,
-        SystemRoleEnum.TENANT_ADMIN,
-        SystemRoleEnum.NOC_MONITOR,
-        SystemRoleEnum.FIELD_TECH,
-    )),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.NOC_MONITOR,
+            SystemRoleEnum.FIELD_TECH,
+        )
+    ),
 ) -> SubscriberDevice:
     tenant_id = get_tenant_id(claims)
     stmt = select(SubscriberDevice).where(SubscriberDevice.id == device_id, SubscriberDevice.tenant_id == tenant_id)
@@ -382,12 +399,14 @@ async def update_subscriber_device(
     device_id: uuid.UUID,
     payload: SubscriberDeviceUpdate,
     db: AsyncSession = Depends(get_tenant_db_session),
-    claims: dict[str, Any] = Depends(require_roles(
-        SystemRoleEnum.SUPERADMIN_GLOBAL,
-        SystemRoleEnum.TENANT_ADMIN,
-        SystemRoleEnum.NOC_MONITOR,
-        SystemRoleEnum.FIELD_TECH,
-    )),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.NOC_MONITOR,
+            SystemRoleEnum.FIELD_TECH,
+        )
+    ),
 ) -> SubscriberDevice:
     tenant_id = get_tenant_id(claims)
     stmt = select(SubscriberDevice).where(SubscriberDevice.id == device_id, SubscriberDevice.tenant_id == tenant_id)
@@ -407,14 +426,15 @@ async def update_subscriber_device(
     await db.refresh(device)
 
     await write_audit_log(
-        db=db,
+        session=db,
         tenant_id=tenant_id,
-        user_id=uuid.UUID(claims["sub"]),
-        username=claims.get("username", "system"),
-        action="UPDATE_SUBSCRIBER_DEVICE",
-        resource_type="SUBSCRIBER_DEVICE",
-        resource_id=str(device.id),
-        details={"endpoint_identifier": device.endpoint_identifier, "updated_fields": list(update_dict.keys())},
+        actor_user_id=uuid.UUID(str(claims["sub"])),
+        actor_username=str(claims.get("username", "system")),
+        actor_role=claims.get("rol"),
+        actor_ip="127.0.0.1",
+        event_category="NETWORK",
+        event_action="UPDATE_SUBSCRIBER_DEVICE",
+        after_state={"endpoint_identifier": device.endpoint_identifier, "updated_fields": list(update_dict.keys())},
     )
     return device
 
@@ -439,11 +459,13 @@ async def delete_subscriber_device(
 async def generate_subscriber_mikrotik_queue_script(
     device_id: uuid.UUID,
     db: AsyncSession = Depends(get_tenant_db_session),
-    claims: dict[str, Any] = Depends(require_roles(
-        SystemRoleEnum.SUPERADMIN_GLOBAL,
-        SystemRoleEnum.TENANT_ADMIN,
-        SystemRoleEnum.NOC_MONITOR,
-    )),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.NOC_MONITOR,
+        )
+    ),
 ) -> dict[str, Any]:
     """Genera el script de provisión o actualización de colas MikroTik para el abonado."""
     tenant_id = get_tenant_id(claims)
@@ -458,7 +480,7 @@ async def generate_subscriber_mikrotik_queue_script(
             "endpoint_identifier": device.endpoint_identifier,
             "has_profile": False,
             "message": "El abonado no tiene un perfil de ancho de banda asociado",
-            "command": f'# Sin perfil QoS asociado para endpoint {device.endpoint_identifier}',
+            "command": f"# Sin perfil QoS asociado para endpoint {device.endpoint_identifier}",
         }
 
     stmt_p = select(BandwidthProfile).where(BandwidthProfile.id == device.bandwidth_profile_id)

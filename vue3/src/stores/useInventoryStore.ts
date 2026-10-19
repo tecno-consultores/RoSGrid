@@ -71,8 +71,10 @@ export const useInventoryStore = defineStore('inventory', () => {
   async function fetchRouters(): Promise<void> {
     try {
       const { http } = await import('@/api/httpClient');
-      const res = await http.get<RouterItem[] | { items: RouterItem[] }>('/api/v1/inventory/routers');
-      const raw = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      const res = await http.get<RouterItem[] | { items: RouterItem[] }>(
+        '/api/v1/inventory/routers',
+      );
+      const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
       const items: RouterItem[] = raw.map((item: any) => ({
         ...item,
         latitude:
@@ -87,7 +89,10 @@ export const useInventoryStore = defineStore('inventory', () => {
         ip_address:
           item.ip_address ||
           (item.api_base_url
-            ? item.api_base_url.replace(/^https?:\/\//, '').split('/')[0].split(':')[0]
+            ? item.api_base_url
+                .replace(/^https?:\/\//, '')
+                .split('/')[0]
+                .split(':')[0]
             : ''),
         ros_version: item.ros_version || 'v7',
         is_reachable: item.is_reachable ?? false,
@@ -121,7 +126,10 @@ export const useInventoryStore = defineStore('inventory', () => {
   async function fetchNetworkRoles(): Promise<void> {
     try {
       const { http } = await import('@/api/httpClient');
-      const res = await http.get<{ roles: string[]; custom_roles: Array<{ id: string; role_name: string; description?: string }> }>('/api/v1/inventory/network-roles');
+      const res = await http.get<{
+        roles: string[];
+        custom_roles: Array<{ id: string; role_name: string; description?: string }>;
+      }>('/api/v1/inventory/network-roles');
       if (res.data?.roles && res.data.roles.length > 0) {
         networkRoles.value = res.data.roles;
         customRoles.value = res.data.custom_roles || [];
@@ -169,4 +177,3 @@ export const useInventoryStore = defineStore('inventory', () => {
     deleteCustomRole,
   };
 });
-

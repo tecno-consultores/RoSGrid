@@ -15,9 +15,7 @@
   const router = useRouter();
 
   // Control de Pestañas: 'users' (Operadores) | 'roles' (Matriz de Políticas RBAC)
-  const activeTab = ref<'users' | 'roles'>(
-    (route?.query?.tab as 'users' | 'roles') || 'users',
-  );
+  const activeTab = ref<'users' | 'roles'>((route?.query?.tab as 'users' | 'roles') || 'users');
 
   function selectTab(tab: 'users' | 'roles') {
     activeTab.value = tab;
@@ -199,7 +197,9 @@
 
   async function loadRegistrationStatus() {
     try {
-      const res = await http.get<{ registration_enabled?: boolean }>('/api/v1/auth/bootstrap-status');
+      const res = await http.get<{ registration_enabled?: boolean }>(
+        '/api/v1/auth/bootstrap-status',
+      );
       if (res.data && res.data.registration_enabled !== undefined) {
         isRegistrationEnabled.value = res.data.registration_enabled;
       }
@@ -222,7 +222,8 @@
       }, 4000);
     } catch (err: unknown) {
       const error = err as { detail?: string; message?: string };
-      errorMessage.value = error.detail || error.message || 'Error al cambiar estado de auto-registro.';
+      errorMessage.value =
+        error.detail || error.message || 'Error al cambiar estado de auto-registro.';
     } finally {
       isTogglingRegistration.value = false;
     }
@@ -257,7 +258,8 @@
 
       targetUserForApproval.value.is_active = true;
       targetUserForApproval.value.role = approvalForm.value.role;
-      targetUserForApproval.value.has_all_routers_access = approvalForm.value.has_all_routers_access;
+      targetUserForApproval.value.has_all_routers_access =
+        approvalForm.value.has_all_routers_access;
       if (cidrList) targetUserForApproval.value.allowed_cidr_list = cidrList;
 
       isApproveModalOpen.value = false;
@@ -296,8 +298,10 @@
     isLoading.value = true;
     errorMessage.value = '';
     try {
-      const res = await http.get<UserManagementItem[] | { items: UserManagementItem[] }>('/api/v1/users');
-      const raw = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      const res = await http.get<UserManagementItem[] | { items: UserManagementItem[] }>(
+        '/api/v1/users',
+      );
+      const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
       usersList.value = raw;
     } catch {
       // Sin datos de demostración en producción
@@ -359,9 +363,14 @@
         has_all_routers_access: Boolean(newUser.value.has_all_routers_access),
       };
 
-      const res = await http.post<UserManagementItem | { user: UserManagementItem }>('/api/v1/users', payload);
+      const res = await http.post<UserManagementItem | { user: UserManagementItem }>(
+        '/api/v1/users',
+        payload,
+      );
 
-      const createdUser = (res.data && 'user' in res.data ? res.data.user : res.data) as UserManagementItem;
+      const createdUser = (
+        res.data && 'user' in res.data ? res.data.user : res.data
+      ) as UserManagementItem;
       if (createdUser && createdUser.id) {
         usersList.value.push(createdUser);
       }
@@ -413,7 +422,8 @@
       <div>
         <h1 class="view-title">Gestión de Usuarios y Roles RBAC (11 Roles)</h1>
         <p class="view-subtitle">
-          Control de acceso técnico, definición de permisos por rol, reinicio de 2FA y matriz de routers.
+          Control de acceso técnico, definición de permisos por rol, reinicio de 2FA y matriz de
+          routers.
         </p>
       </div>
 
@@ -428,14 +438,12 @@
           :disabled="isTogglingRegistration"
           @click="toggleRegistration"
         >
-          {{ isRegistrationEnabled ? '🔓 Auto-Registro: Activado' : '🔒 Auto-Registro: Desactivado' }}
+          {{
+            isRegistrationEnabled ? '🔓 Auto-Registro: Activado' : '🔒 Auto-Registro: Desactivado'
+          }}
         </button>
 
-        <button
-          type="button"
-          class="btn-create"
-          @click="isCreateUserModalOpen = true"
-        >
+        <button type="button" class="btn-create" @click="isCreateUserModalOpen = true">
           + Nuevo Operador
         </button>
       </div>
@@ -488,143 +496,143 @@
         {{ successMessage }}
       </div>
 
-    <!-- Barra de Filtros Accesibles -->
-    <div class="filters-bar">
-      <div class="filter-item">
-        <label for="filter-search" class="filter-label">Buscar Operador:</label>
-        <input
-          id="filter-search"
-          v-model="searchFilter"
-          type="search"
-          placeholder="Nombre, username o correo..."
-          class="filter-input"
-        />
+      <!-- Barra de Filtros Accesibles -->
+      <div class="filters-bar">
+        <div class="filter-item">
+          <label for="filter-search" class="filter-label">Buscar Operador:</label>
+          <input
+            id="filter-search"
+            v-model="searchFilter"
+            type="search"
+            placeholder="Nombre, username o correo..."
+            class="filter-input"
+          />
+        </div>
+
+        <div class="filter-item">
+          <label for="filter-role" class="filter-label">Rol RBAC:</label>
+          <select id="filter-role" v-model="roleFilter" class="filter-select">
+            <option value="ALL">Todos los Roles (11)</option>
+            <option v-for="r in availableRoles" :key="r" :value="r">{{ r }}</option>
+          </select>
+        </div>
+
+        <div class="filter-item">
+          <label for="filter-status" class="filter-label">Estado:</label>
+          <select id="filter-status" v-model="statusFilter" class="filter-select">
+            <option value="ALL">Todos los Estados</option>
+            <option value="ACTIVE">Activos</option>
+            <option value="PENDING">Pendientes de Aprobación</option>
+            <option value="INACTIVE">Bloqueados</option>
+          </select>
+        </div>
       </div>
 
-      <div class="filter-item">
-        <label for="filter-role" class="filter-label">Rol RBAC:</label>
-        <select id="filter-role" v-model="roleFilter" class="filter-select">
-          <option value="ALL">Todos los Roles (11)</option>
-          <option v-for="r in availableRoles" :key="r" :value="r">{{ r }}</option>
-        </select>
+      <div class="table-container">
+        <table class="rg-table" aria-label="Listado de usuarios y matriz RBAC">
+          <thead>
+            <tr>
+              <th scope="col">Operador / Username</th>
+              <th scope="col">Correo Electrónico</th>
+              <th scope="col">Rol RBAC</th>
+              <th scope="col">Estado 2FA</th>
+              <th scope="col">Acceso Routers</th>
+              <th scope="col">Estado</th>
+              <th scope="col" class="col-actions">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="u in filteredUsers" :key="u.id">
+              <td class="cell-user">
+                <strong>{{ u.full_name || u.username }}</strong>
+                <code class="user-handle">@{{ u.username }}</code>
+              </td>
+              <td>{{ u.email }}</td>
+              <td>
+                <span class="badge-role">{{ u.role }}</span>
+              </td>
+              <td>
+                <span
+                  class="badge-2fa"
+                  :class="{
+                    'badge-2fa--active': u.totp_enabled,
+                    'badge-2fa--pending': !u.totp_enabled,
+                  }"
+                >
+                  {{ u.totp_enabled ? '✓ Activo' : 'Pendiente' }}
+                </span>
+              </td>
+              <td>
+                <span v-if="u.has_all_routers_access" class="badge-access badge-access--all">
+                  Todos (Global)
+                </span>
+                <span v-else class="badge-access badge-access--custom">
+                  {{
+                    u.assigned_router_ids ? `${u.assigned_router_ids.length} equipos` : 'Por Matriz'
+                  }}
+                </span>
+              </td>
+              <td>
+                <span
+                  class="badge-status"
+                  :class="{
+                    'badge-status--active': u.is_active,
+                    'badge-status--pending': !u.is_active && !u.totp_enabled,
+                    'badge-status--disabled': !u.is_active && u.totp_enabled,
+                  }"
+                >
+                  {{ u.is_active ? 'Habilitado' : !u.totp_enabled ? '⏳ Pendiente' : 'Bloqueado' }}
+                </span>
+              </td>
+              <td class="col-actions">
+                <template v-if="!u.is_active && !u.totp_enabled">
+                  <button
+                    v-if="isWriteAuthorized"
+                    type="button"
+                    class="btn-approve"
+                    aria-label="Aprobar operador y asignar rol"
+                    @click="openApproveModal(u)"
+                  >
+                    ✓ Aprobar
+                  </button>
+                  <button
+                    v-if="isWriteAuthorized"
+                    type="button"
+                    class="btn-reject"
+                    aria-label="Rechazar solicitud"
+                    @click="handleRejectUser(u)"
+                  >
+                    ✕ Rechazar
+                  </button>
+                </template>
+                <template v-else>
+                  <button
+                    type="button"
+                    class="btn-matrix"
+                    aria-label="Abrir matriz de asignación de routers"
+                    @click="openMatrixModal(u)"
+                  >
+                    ⚙ Matriz Routers
+                  </button>
+
+                  <button
+                    v-if="isWriteAuthorized && u.totp_enabled"
+                    type="button"
+                    class="btn-reset-2fa"
+                    aria-label="Reiniciar 2FA de este operador"
+                    @click="openReset2FAModal(u)"
+                  >
+                    ↺ Reset 2FA
+                  </button>
+                </template>
+              </td>
+            </tr>
+            <tr v-if="filteredUsers.length === 0 && !isLoading">
+              <td colspan="7" class="cell-empty">No se encontraron usuarios coincidentes.</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-
-      <div class="filter-item">
-        <label for="filter-status" class="filter-label">Estado:</label>
-        <select id="filter-status" v-model="statusFilter" class="filter-select">
-          <option value="ALL">Todos los Estados</option>
-          <option value="ACTIVE">Activos</option>
-          <option value="PENDING">Pendientes de Aprobación</option>
-          <option value="INACTIVE">Bloqueados</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="table-container">
-      <table class="rg-table" aria-label="Listado de usuarios y matriz RBAC">
-        <thead>
-          <tr>
-            <th scope="col">Operador / Username</th>
-            <th scope="col">Correo Electrónico</th>
-            <th scope="col">Rol RBAC</th>
-            <th scope="col">Estado 2FA</th>
-            <th scope="col">Acceso Routers</th>
-            <th scope="col">Estado</th>
-            <th scope="col" class="col-actions">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="u in filteredUsers" :key="u.id">
-            <td class="cell-user">
-              <strong>{{ u.full_name || u.username }}</strong>
-              <code class="user-handle">@{{ u.username }}</code>
-            </td>
-            <td>{{ u.email }}</td>
-            <td>
-              <span class="badge-role">{{ u.role }}</span>
-            </td>
-            <td>
-              <span
-                class="badge-2fa"
-                :class="{
-                  'badge-2fa--active': u.totp_enabled,
-                  'badge-2fa--pending': !u.totp_enabled,
-                }"
-              >
-                {{ u.totp_enabled ? '✓ Activo' : 'Pendiente' }}
-              </span>
-            </td>
-            <td>
-              <span v-if="u.has_all_routers_access" class="badge-access badge-access--all">
-                Todos (Global)
-              </span>
-              <span v-else class="badge-access badge-access--custom">
-                {{
-                  u.assigned_router_ids ? `${u.assigned_router_ids.length} equipos` : 'Por Matriz'
-                }}
-              </span>
-            </td>
-            <td>
-              <span
-                class="badge-status"
-                :class="{
-                  'badge-status--active': u.is_active,
-                  'badge-status--pending': !u.is_active && !u.totp_enabled,
-                  'badge-status--disabled': !u.is_active && u.totp_enabled,
-                }"
-              >
-                {{ u.is_active ? 'Habilitado' : (!u.totp_enabled ? '⏳ Pendiente' : 'Bloqueado') }}
-              </span>
-            </td>
-            <td class="col-actions">
-              <template v-if="!u.is_active && !u.totp_enabled">
-                <button
-                  v-if="isWriteAuthorized"
-                  type="button"
-                  class="btn-approve"
-                  aria-label="Aprobar operador y asignar rol"
-                  @click="openApproveModal(u)"
-                >
-                  ✓ Aprobar
-                </button>
-                <button
-                  v-if="isWriteAuthorized"
-                  type="button"
-                  class="btn-reject"
-                  aria-label="Rechazar solicitud"
-                  @click="handleRejectUser(u)"
-                >
-                  ✕ Rechazar
-                </button>
-              </template>
-              <template v-else>
-                <button
-                  type="button"
-                  class="btn-matrix"
-                  aria-label="Abrir matriz de asignación de routers"
-                  @click="openMatrixModal(u)"
-                >
-                  ⚙ Matriz Routers
-                </button>
-
-                <button
-                  v-if="isWriteAuthorized && u.totp_enabled"
-                  type="button"
-                  class="btn-reset-2fa"
-                  aria-label="Reiniciar 2FA de este operador"
-                  @click="openReset2FAModal(u)"
-                >
-                  ↺ Reset 2FA
-                </button>
-              </template>
-            </td>
-          </tr>
-          <tr v-if="filteredUsers.length === 0 && !isLoading">
-            <td colspan="7" class="cell-empty">No se encontraron usuarios coincidentes.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
     </div>
 
     <!-- Pestaña 2: Matriz de Roles y Permisos RBAC -->
@@ -693,7 +701,9 @@
               />
             </div>
             <div class="form-group">
-              <label for="u-password" class="form-label">Contraseña Temporal (Mínimo 8 car.) *</label>
+              <label for="u-password" class="form-label"
+                >Contraseña Temporal (Mínimo 8 car.) *</label
+              >
               <input
                 id="u-password"
                 v-model="newUser.password"
@@ -735,7 +745,10 @@
             <div class="preview-header">
               <span
                 class="preview-badge"
-                :style="{ borderColor: ROLE_DETAILS[newUser.role].badgeColor, color: ROLE_DETAILS[newUser.role].badgeColor }"
+                :style="{
+                  borderColor: ROLE_DETAILS[newUser.role].badgeColor,
+                  color: ROLE_DETAILS[newUser.role].badgeColor,
+                }"
               >
                 Nivel {{ ROLE_DETAILS[newUser.role].level }}
               </span>
@@ -824,7 +837,10 @@
             <div class="preview-header">
               <span
                 class="preview-badge"
-                :style="{ borderColor: ROLE_DETAILS[approvalForm.role].badgeColor, color: ROLE_DETAILS[approvalForm.role].badgeColor }"
+                :style="{
+                  borderColor: ROLE_DETAILS[approvalForm.role].badgeColor,
+                  color: ROLE_DETAILS[approvalForm.role].badgeColor,
+                }"
               >
                 Nivel {{ ROLE_DETAILS[approvalForm.role].level }}
               </span>
@@ -893,7 +909,10 @@
     font-size: 0.82rem;
     font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+    transition:
+      background-color 0.2s,
+      border-color 0.2s,
+      color 0.2s;
   }
 
   .btn-toggle-reg--enabled {
@@ -1090,8 +1109,13 @@
   }
 
   @keyframes pulse-badge {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.65; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.65;
+    }
   }
 
   .badge-status--disabled {
@@ -1108,7 +1132,9 @@
     font-weight: 600;
     cursor: pointer;
     margin-right: 6px;
-    transition: background-color 0.2s, color 0.2s;
+    transition:
+      background-color 0.2s,
+      color 0.2s;
   }
 
   .btn-approve:hover {
@@ -1124,7 +1150,9 @@
     border-radius: 4px;
     font-size: 0.75rem;
     cursor: pointer;
-    transition: background-color 0.2s, color 0.2s;
+    transition:
+      background-color 0.2s,
+      color 0.2s;
   }
 
   .btn-reject:hover {

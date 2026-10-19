@@ -19,7 +19,12 @@
   const inventoryStore = useInventoryStore();
   const selectedRouterId = ref<string>('');
   const routerId = computed(() => {
-    return (route.params.routerId as string) || selectedRouterId.value || inventoryStore.routers[0]?.id || '';
+    return (
+      (route.params.routerId as string) ||
+      selectedRouterId.value ||
+      inventoryStore.routers[0]?.id ||
+      ''
+    );
   });
 
   const loading = ref(false);
@@ -42,9 +47,7 @@
     loading.value = true;
     error.value = null;
     try {
-      const res = await http.get<{ items: any[] }>(
-        `/api/v1/routers/${routerId.value}/backups`,
-      );
+      const res = await http.get<{ items: any[] }>(`/api/v1/routers/${routerId.value}/backups`);
       const raw = res.data?.items || [];
       backups.value = raw.map((b: any) => ({
         id: String(b.id),
@@ -76,16 +79,28 @@
     backupSuccessMsg.value = null;
     error.value = null;
     try {
-      const res = await http.post<{ status?: string; message?: string }>(`/api/v1/routers/${routerId.value}/backups/trigger`);
+      const res = await http.post<{ status?: string; message?: string }>(
+        `/api/v1/routers/${routerId.value}/backups/trigger`,
+      );
       if (res.data?.status === 'IDENTICAL_SKIPPED_DEDUPLICATED') {
-        backupSuccessMsg.value = 'ℹ️ Configuración idéntica al último respaldo. Se aplicó deduplicación inteligente (sin almacenamiento redundante).';
+        backupSuccessMsg.value =
+          'ℹ️ Configuración idéntica al último respaldo. Se aplicó deduplicación inteligente (sin almacenamiento redundante).';
       } else {
-        backupSuccessMsg.value = '✅ Nuevo punto de respaldo generado y cifrado exitosamente en la bóveda.';
+        backupSuccessMsg.value =
+          '✅ Nuevo punto de respaldo generado y cifrado exitosamente en la bóveda.';
       }
       await loadBackups();
     } catch (err: unknown) {
-      const e = err as { response?: { data?: { detail?: string } }; message?: string; detail?: string };
-      error.value = e.response?.data?.detail || e.detail || e.message || 'Error al solicitar generación de respaldo en el router.';
+      const e = err as {
+        response?: { data?: { detail?: string } };
+        message?: string;
+        detail?: string;
+      };
+      error.value =
+        e.response?.data?.detail ||
+        e.detail ||
+        e.message ||
+        'Error al solicitar generación de respaldo en el router.';
     } finally {
       creatingBackup.value = false;
       setTimeout(() => {
@@ -306,7 +321,10 @@
       </div>
 
       <div class="diff-header-actions">
-        <label v-if="!route.params.routerId && inventoryStore.routers.length > 0" class="filter-label">
+        <label
+          v-if="!route.params.routerId && inventoryStore.routers.length > 0"
+          class="filter-label"
+        >
           Router:
           <select
             v-model="selectedRouterId"
@@ -314,12 +332,16 @@
             aria-label="Seleccionar router para respaldos"
             @change="loadBackups"
           >
-            <option
-              v-for="r in inventoryStore.routers"
-              :key="r.id"
-              :value="r.id"
-            >
-              {{ r.display_name }} ({{ r.ip_address || (r.api_base_url ? r.api_base_url.replace(/^https?:\/\//, '').split('/')[0].split(':')[0] : '') }})
+            <option v-for="r in inventoryStore.routers" :key="r.id" :value="r.id">
+              {{ r.display_name }} ({{
+                r.ip_address ||
+                (r.api_base_url
+                  ? r.api_base_url
+                      .replace(/^https?:\/\//, '')
+                      .split('/')[0]
+                      .split(':')[0]
+                  : '')
+              }})
             </option>
           </select>
         </label>
@@ -375,8 +397,12 @@
                 {{ new Date(b.created_at).toLocaleString() }}
               </span>
               <div class="backup-top-badges">
-                <span v-if="selectedBaseId === b.id" class="badge-pill badge-pill--base">🔵 BASE</span>
-                <span v-if="selectedTargetId === b.id" class="badge-pill badge-pill--target">🟢 OBJETIVO</span>
+                <span v-if="selectedBaseId === b.id" class="badge-pill badge-pill--base"
+                  >🔵 BASE</span
+                >
+                <span v-if="selectedTargetId === b.id" class="badge-pill badge-pill--target"
+                  >🟢 OBJETIVO</span
+                >
                 <span class="ros-tag">v{{ b.ros_version_at_backup }}</span>
               </div>
             </div>
@@ -392,7 +418,11 @@
               <span class="badge badge--removed" title="Líneas eliminadas">
                 -{{ b.lines_removed }}
               </span>
-              <span v-if="b.has_binary_backup" class="badge badge--bin-available" title="Archivo binario .backup disponible">
+              <span
+                v-if="b.has_binary_backup"
+                class="badge badge--bin-available"
+                title="Archivo binario .backup disponible"
+              >
                 📦 .backup
               </span>
             </div>
@@ -430,7 +460,11 @@
                 class="btn-icon"
                 :class="{ 'btn-icon--disabled': !b.has_binary_backup }"
                 :disabled="!b.has_binary_backup"
-                :title="b.has_binary_backup ? 'Descargar binario .backup nativo' : 'Este punto no tiene archivo .backup binario (solo script .rsc)'"
+                :title="
+                  b.has_binary_backup
+                    ? 'Descargar binario .backup nativo'
+                    : 'Este punto no tiene archivo .backup binario (solo script .rsc)'
+                "
                 aria-label="Descargar binario .backup"
                 @click.stop="downloadBackup(b.id, 'backup')"
               >
@@ -512,7 +546,10 @@
         <!-- Estado vacío si no hay respaldos -->
         <div v-if="backups.length === 0 && !loading" class="diff-empty-state">
           <p>No hay respaldos registrados para este router.</p>
-          <p class="diff-empty-sub">Haga clic en <strong>➕ Crear Backup Ahora</strong> para generar el primer respaldo (.rsc + .backup) cifrado en la bóveda.</p>
+          <p class="diff-empty-sub">
+            Haga clic en <strong>➕ Crear Backup Ahora</strong> para generar el primer respaldo
+            (.rsc + .backup) cifrado en la bóveda.
+          </p>
         </div>
 
         <!-- Área de código diff -->

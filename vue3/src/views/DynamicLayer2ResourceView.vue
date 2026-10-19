@@ -182,7 +182,11 @@
             :checked="val === true || val === 'true'"
             type="checkbox"
             class="field-checkbox"
-            @change="resourceData.form_data[key] = ($event.target as HTMLInputElement).checked ? 'true' : 'false'"
+            @change="
+              resourceData.form_data[key] = ($event.target as HTMLInputElement).checked
+                ? 'true'
+                : 'false'
+            "
           />
           <input
             v-else

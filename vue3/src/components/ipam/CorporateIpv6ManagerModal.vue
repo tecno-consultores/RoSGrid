@@ -2,61 +2,63 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { useIpamStore } from '@/stores/useIpamStore';
+  import { computed, ref } from 'vue';
+  import { useIpamStore } from '@/stores/useIpamStore';
 
-const emit = defineEmits<{
-  (e: 'close'): void;
-}>();
+  const emit = defineEmits<{
+    (e: 'close'): void;
+  }>();
 
-const ipamStore = useIpamStore();
+  const ipamStore = useIpamStore();
 
-const corpForm = ref({
-  clientName: '',
-  contractCode: '',
-  prefixLength: 48,
-  baseSupernetId: '',
-  bgpAsn: '',
-  reverseDnsNs: 'ns1.cliente-corp.com',
-  description: '',
-});
+  const corpForm = ref({
+    clientName: '',
+    contractCode: '',
+    prefixLength: 48,
+    baseSupernetId: '',
+    bgpAsn: '',
+    reverseDnsNs: 'ns1.cliente-corp.com',
+    description: '',
+  });
 
-// Prefijos IPv6 disponibles para carving
-const availableV6Supernets = computed(() => {
-  return ipamStore.prefixes.filter((p) => p.ip_family === 'IPv6' && p.role === 'CUSTOMER_CORPORATE');
-});
+  // Prefijos IPv6 disponibles para carving
+  const availableV6Supernets = computed(() => {
+    return ipamStore.prefixes.filter(
+      (p) => p.ip_family === 'IPv6' && p.role === 'CUSTOMER_CORPORATE',
+    );
+  });
 
-const calculatedPrefixPreview = computed(() => {
-  if (!corpForm.value.baseSupernetId) return '2803:cafe:corp::/48';
-  const supernet = ipamStore.prefixes.find((p) => p.id === corpForm.value.baseSupernetId);
-  if (!supernet) return '';
-  const root = supernet.prefix.split('::')[0];
-  return `${root}:b${corpForm.value.prefixLength}00::/${corpForm.value.prefixLength}`;
-});
+  const calculatedPrefixPreview = computed(() => {
+    if (!corpForm.value.baseSupernetId) return '2803:cafe:corp::/48';
+    const supernet = ipamStore.prefixes.find((p) => p.id === corpForm.value.baseSupernetId);
+    if (!supernet) return '';
+    const root = supernet.prefix.split('::')[0];
+    return `${root}:b${corpForm.value.prefixLength}00::/${corpForm.value.prefixLength}`;
+  });
 
-const generatedMikrotikCommand = computed(() => {
-  return `/ipv6/route add dst-address=${calculatedPrefixPreview.value} blackhole comment="CORP-${corpForm.value.clientName || 'CLIENT'}"`;
-});
+  const generatedMikrotikCommand = computed(() => {
+    return `/ipv6/route add dst-address=${calculatedPrefixPreview.value} blackhole comment="CORP-${corpForm.value.clientName || 'CLIENT'}"`;
+  });
 
-async function handleAssignCorporatePrefix() {
-  if (!corpForm.value.clientName.trim() || !calculatedPrefixPreview.value) return;
+  async function handleAssignCorporatePrefix() {
+    if (!corpForm.value.clientName.trim() || !calculatedPrefixPreview.value) return;
 
-  try {
-    const vrfId = ipamStore.vrfs.length > 0 ? ipamStore.vrfs[0].id : '';
-    await ipamStore.createPrefix({
-      vrf_id: vrfId,
-      prefix: calculatedPrefixPreview.value,
-      ip_family: 'IPv6',
-      role: 'CUSTOMER_CORPORATE',
-      default_child_prefix_len: 64,
-      description: `Corporativo: ${corpForm.value.clientName} (Contrato: ${corpForm.value.contractCode || 'N/A'}) - DNS: ${corpForm.value.reverseDnsNs}`,
-    });
-    alert(`Prefijo Corporativo ${calculatedPrefixPreview.value} asignado exitosamente.`);
-    emit('close');
-  } catch (err: any) {
-    alert(err?.response?.data?.detail || err?.message || 'Error al asignar prefijo corporativo');
+    try {
+      const vrfId = ipamStore.vrfs.length > 0 ? ipamStore.vrfs[0].id : '';
+      await ipamStore.createPrefix({
+        vrf_id: vrfId,
+        prefix: calculatedPrefixPreview.value,
+        ip_family: 'IPv6',
+        role: 'CUSTOMER_CORPORATE',
+        default_child_prefix_len: 64,
+        description: `Corporativo: ${corpForm.value.clientName} (Contrato: ${corpForm.value.contractCode || 'N/A'}) - DNS: ${corpForm.value.reverseDnsNs}`,
+      });
+      alert(`Prefijo Corporativo ${calculatedPrefixPreview.value} asignado exitosamente.`);
+      emit('close');
+    } catch (err: any) {
+      alert(err?.response?.data?.detail || err?.message || 'Error al asignar prefijo corporativo');
+    }
   }
-}
 </script>
 
 <template>
@@ -64,12 +66,16 @@ async function handleAssignCorporatePrefix() {
     <div class="rg-modal rg-modal--corp">
       <header class="modal-header">
         <h3 id="corp-modal-title">🏢 Gestor de Asignación IPv6 Corporativo</h3>
-        <button type="button" class="btn-close" @click="emit('close')" aria-label="Cerrar modal">✕</button>
+        <button type="button" class="btn-close" @click="emit('close')" aria-label="Cerrar modal">
+          ✕
+        </button>
       </header>
 
       <form @submit.prevent="handleAssignCorporatePrefix" class="modal-body">
         <div class="info-banner">
-          Permite segmentar bloques dedicados (<strong>/48</strong>, <strong>/52</strong> o <strong>/56</strong>) para empresas con múltiples VLANs, infraestructura interna o sesión BGP directa.
+          Permite segmentar bloques dedicados (<strong>/48</strong>, <strong>/52</strong> o
+          <strong>/56</strong>) para empresas con múltiples VLANs, infraestructura interna o sesión
+          BGP directa.
         </div>
 
         <div class="form-row">
@@ -151,9 +157,7 @@ async function handleAssignCorporatePrefix() {
           <button type="button" class="btn-rg btn-rg--secondary" @click="emit('close')">
             Cancelar
           </button>
-          <button type="submit" class="btn-rg btn-rg--purple">
-            ✅ Delegar Bloque Corporativo
-          </button>
+          <button type="submit" class="btn-rg btn-rg--purple">✅ Delegar Bloque Corporativo</button>
         </footer>
       </form>
     </div>
@@ -161,56 +165,56 @@ async function handleAssignCorporatePrefix() {
 </template>
 
 <style scoped>
-.rg-modal--corp {
-  max-width: 620px;
-}
+  .rg-modal--corp {
+    max-width: 620px;
+  }
 
-.info-banner {
-  background: rgba(138, 43, 226, 0.15);
-  border-left: 3px solid #8a2be2;
-  color: #e9d5ff;
-  padding: 0.65rem 0.85rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  margin-bottom: 1rem;
-}
+  .info-banner {
+    background: rgba(138, 43, 226, 0.15);
+    border-left: 3px solid #8a2be2;
+    color: #e9d5ff;
+    padding: 0.65rem 0.85rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    margin-bottom: 1rem;
+  }
 
-.preview-box {
-  margin: 1.25rem 0;
-  padding: 0.85rem;
-  background: #060a12;
-  border: 1px solid rgba(138, 43, 226, 0.4);
-  border-radius: 6px;
-}
+  .preview-box {
+    margin: 1.25rem 0;
+    padding: 0.85rem;
+    background: #060a12;
+    border: 1px solid rgba(138, 43, 226, 0.4);
+    border-radius: 6px;
+  }
 
-.preview-label {
-  font-size: 0.75rem;
-  color: #94a3b8;
-  margin-bottom: 0.25rem;
-}
+  .preview-label {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    margin-bottom: 0.25rem;
+  }
 
-.preview-cidr {
-  font-family: monospace;
-  font-size: 1.35rem;
-  font-weight: 800;
-  color: #c084fc;
-  margin-bottom: 0.5rem;
-}
+  .preview-cidr {
+    font-family: monospace;
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #c084fc;
+    margin-bottom: 0.5rem;
+  }
 
-.preview-command-label {
-  font-size: 0.7rem;
-  color: #64748b;
-  margin-bottom: 0.2rem;
-}
+  .preview-command-label {
+    font-size: 0.7rem;
+    color: #64748b;
+    margin-bottom: 0.2rem;
+  }
 
-.preview-command {
-  display: block;
-  font-family: monospace;
-  font-size: 0.75rem;
-  background: #020617;
-  color: #38bdf8;
-  padding: 0.4rem 0.6rem;
-  border-radius: 4px;
-  overflow-x: auto;
-}
+  .preview-command {
+    display: block;
+    font-family: monospace;
+    font-size: 0.75rem;
+    background: #020617;
+    color: #38bdf8;
+    padding: 0.4rem 0.6rem;
+    border-radius: 4px;
+    overflow-x: auto;
+  }
 </style>

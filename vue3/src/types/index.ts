@@ -34,6 +34,25 @@ export interface RbacActionItem {
   description: string;
 }
 
+export interface TenantFeatureFlags {
+  isp_module_enabled: boolean;
+  bgp_looking_glass_enabled: boolean;
+  sfp_ddm_telemetry_enabled: boolean;
+  ipfix_analytics_enabled: boolean;
+  enforce_maker_checker: boolean;
+  auto_safemode_enforced: boolean;
+  ai_mcp_integration_enabled: boolean;
+  nightly_backups_enabled: boolean;
+  outbound_webhooks_enabled: boolean;
+  config_drift_monitoring_enabled: boolean;
+  cis_audit_enabled: boolean;
+  sdwan_orchestrator_enabled: boolean;
+  capsman_wifi_enabled: boolean;
+  sla_tracker_enabled: boolean;
+  mass_outage_threshold: number;
+  default_locale: string;
+}
+
 export interface UserInfo {
   id: string;
   email: string;
@@ -43,6 +62,8 @@ export interface UserInfo {
   role: SystemRole;
   totp_enabled: boolean;
   assigned_router_ids?: string[];
+  features?: Partial<TenantFeatureFlags>;
+  tenant_feature_flags?: Partial<TenantFeatureFlags> | Record<string, boolean>;
 }
 
 export type TableDensityMode = 'auto' | 'compact' | 'comfortable';
@@ -144,6 +165,7 @@ export interface TenantItem {
   active_users_count: number;
   default_safemode_seconds: number;
   created_at?: string;
+  features?: Partial<TenantFeatureFlags>;
 }
 
 export interface UserManagementItem {
@@ -519,4 +541,3 @@ export interface FiberCutIncident {
   created_at: string;
   updated_at: string;
 }
-

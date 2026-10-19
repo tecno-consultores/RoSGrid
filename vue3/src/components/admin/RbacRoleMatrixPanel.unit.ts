@@ -125,7 +125,9 @@ describe('RbacRoleMatrixPanel.vue — Matriz de Roles y Políticas RBAC', () => 
     await l2Chip?.trigger('click');
 
     expect(wrapper.find('.role-heading-title').text()).toContain('Soporte Técnico Nivel 2');
-    expect(wrapper.find('.role-description-text').text()).toContain('Operador de segundo nivel NOC.');
+    expect(wrapper.find('.role-description-text').text()).toContain(
+      'Operador de segundo nivel NOC.',
+    );
   });
 
   it('permite cambiar permisos de una acción mediante los botones segmentados', async () => {

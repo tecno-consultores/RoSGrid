@@ -2,16 +2,15 @@
 
 ## 📍 Punto de Control Actual (Checkpoint)
 
-- **Hito Actual en Curso:** Hito 16 (Final — Cierre de CHANGELOG.md, Auditoría Trivy y Publicación en Docker Hub)
-- **Estado General del Sistema:** Hitos 0 al 15 COMPLETADOS (100%).
-- **Fase de Estabilización con MikroTik Real:** COMPLETADA al 100% sobre RouterOS v7.21.5 (CHR / Hardware físico):
-  - Detección y normalización de la política obligatoria `rest-api` de RouterOS v7.13+.
-  - Auto-registro web de operadores con aprobación Maker-Checker por Superadmin y switch en KeyDB.
-  - Botón TOFU de redescubrimiento dinámico de recursos, arquitectura y firmware.
-  - Corrección de mapas OpenStreetMap (CSP Nginx y layout Leaflet).
-  - Suite automatizada de integración Front-Back (`fastapi/scripts/validar_comunicacion_front_back.py`) con 24 contratos de UI-API verificados (24 pasadas, 0 fallidas).
-  - Documentación completa sincronizada en `docs/` (9 manuales), `specs/` (31 especificaciones) y raíz (`README.md`, `CHANGELOG.md`, `FAQ.md`, `SECURITY.md`, `INSTALL.md`).
-- **Único Paso Restante para Salida a Producción:** Hito 16 (Auditoría Trivy de imágenes de producción y empaquetado multi-arquitectura con `build.sh` hacia Docker Hub).
+- **Hito Actual en Curso:** Hito 17 (QoS Técnico, API de Aprovisionamiento e Idempotencia — Fase 2)
+- **Estado General del Sistema:** Hitos 0 al 16 COMPLETADOS (100%).
+- **Hito 16 (Gobernanza Modular, Feature Flags y Purga de Datos):** COMPLETADO al 100% y certificado en Docker:
+  - Migración Alembic `0005_tenant_feature_flags_and_technical_qos.py` con 16 flags modulares y cache L2 KeyDB (`rg:{id}:features`).
+  - Purga definitiva de datos personales (PII) en `subscriber_devices`, identificación técnica exclusiva por `endpoint_identifier` y `device_serial`.
+  - Panel táctico *"Módulos & Capacidades"* en `TenantsManagementView.vue` con conmutación reactiva e inmediata para Superadmin.
+  - Dependencia de seguridad `require_feature` (HTTP 403 `FEATURE_MODULE_DISABLED`) y ocultamiento reactivo en shell y `RgCommandPalette.vue`.
+  - Branding institucional completo con Tecno Consultores 2023 C.A., enlace SVG a GitHub y licencia GNU GPLv3 en `LoginView.vue` y `RgResponsiveShell.vue`.
+  - Suite de pruebas unitarias al 100% (Backend: 344 tests con 95.01% de cobertura total; Frontend: 211 tests con 100% de aprobación).
 
 ---
 
@@ -237,15 +236,15 @@
 
 ---
 
-## 🚀 HITO 16: Gobernanza Modular, Feature Flags y Purga de Datos (Fase 1)
+## ✅ HITO 16: Gobernanza Modular, Feature Flags y Purga de Datos (Fase 1)
 
 > **Archivos Guía:** `specs/32_ISP_OPERATIONS_TECHNICAL_QOS_AND_FIELD_TOOLKIT.md` y `specs/34_TENANT_FEATURE_FLAGS_AND_GOVERNANCE_PANEL.md`
 
-- [ ] **16.1** Migración Alembic `0005_tenant_feature_flags_and_technical_qos.py` con atributos booleanos en `tenants` (`isp_module_enabled`, `bgp_looking_glass_enabled`, `sfp_ddm_telemetry_enabled`, `ipfix_analytics_enabled`, `enforce_maker_checker`, `auto_safemode_enforced`, `ai_mcp_integration_enabled`, `nightly_backups_enabled`, `outbound_webhooks_enabled`, `config_drift_monitoring_enabled`, `cis_audit_enabled`, `sdwan_orchestrator_enabled`, `capsman_wifi_enabled`, `sla_tracker_enabled`, `mass_outage_threshold`, `default_locale`).
-- [ ] **16.2** Refactorización de `subscriber_devices` en PostgreSQL: Purga estricta de nombres, cédulas y datos personales. Identificación técnica exclusiva por `device_serial`, `endpoint_identifier`, router y puerto.
-- [ ] **16.3** Panel de Feature Flags en Frontend (`TenantsManagementView.vue`): Pestaña táctica *"Módulos & Capacidades"* con switches de alta densidad para conmutación inmediata por tenant por el Superadmin.
-- [ ] **16.4** Seguridad y Reactividad de Módulos: Dependencia FastAPI `require_feature(flag_name)` que responde HTTP 403 `FEATURE_MODULE_DISABLED`, y adaptación dinámica de `RgResponsiveShell.vue`, `RgCommandPalette.vue` y rutas Vue Router para ocultar módulos inactivos.
-- [ ] **16.5** Branding Institucional, Footer Global y Enlaces Oficiales:
+- [x] **16.1** Migración Alembic `0005_tenant_feature_flags_and_technical_qos.py` con atributos booleanos en `tenants` (`isp_module_enabled`, `bgp_looking_glass_enabled`, `sfp_ddm_telemetry_enabled`, `ipfix_analytics_enabled`, `enforce_maker_checker`, `auto_safemode_enforced`, `ai_mcp_integration_enabled`, `nightly_backups_enabled`, `outbound_webhooks_enabled`, `config_drift_monitoring_enabled`, `cis_audit_enabled`, `sdwan_orchestrator_enabled`, `capsman_wifi_enabled`, `sla_tracker_enabled`, `mass_outage_threshold`, `default_locale`).
+- [x] **16.2** Refactorización de `subscriber_devices` en PostgreSQL: Purga estricta de nombres, cédulas y datos personales. Identificación técnica exclusiva por `device_serial`, `endpoint_identifier`, router y puerto.
+- [x] **16.3** Panel de Feature Flags en Frontend (`TenantsManagementView.vue`): Pestaña táctica *"Módulos & Capacidades"* con switches de alta densidad para conmutación inmediata por tenant por el Superadmin.
+- [x] **16.4** Seguridad y Reactividad de Módulos: Dependencia FastAPI `require_feature(flag_name)` que responde HTTP 403 `FEATURE_MODULE_DISABLED`, y adaptación dinámica de `RgResponsiveShell.vue`, `RgCommandPalette.vue` y rutas Vue Router para ocultar módulos inactivos.
+- [x] **16.5** Branding Institucional, Footer Global y Enlaces Oficiales:
   - Modificación de `LoginView.vue`: Pie de página discreto y elegante con icono SVG accesible de GitHub enlazando a `https://github.com/tecno-consultores/RoSGrid/`, atribución *"Elaborado por [Tecno Consultores 2023 C.A.](https://www.tecnoconsultores.net/)"*, versión del sistema y badge de *"Licencia GNU GPLv3"*.
   - Modificación de `RgResponsiveShell.vue`: Pie de página global autenticado en la base del sitio mostrando *"Elaborado por [Tecno Consultores 2023 C.A.](https://www.tecnoconsultores.net/) • Licencia GNU GPLv3"* e icono de GitHub enlazando al repositorio, en tipografía reducida con ratio de contraste WCAG 2.1 AA.
 

@@ -73,7 +73,7 @@
       const res = await http.get<InterfaceRow[] | { items: InterfaceRow[] }>(
         `/api/v1/routers/${routerId.value}/webfig/interfaces`,
       );
-      const raw = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
       interfacesList.value = raw.map((item: any) => ({
         ...item,
         id: item.id || item['.id'] || item.name,
@@ -84,8 +84,10 @@
         dynamic: item.dynamic === true || item.dynamic === 'true',
         is_sfp: Boolean(
           item.is_sfp ||
-            String(item.name).toLowerCase().includes('sfp') ||
-            String(item['default-name'] || '').toLowerCase().includes('sfp')
+          String(item.name).toLowerCase().includes('sfp') ||
+          String(item['default-name'] || '')
+            .toLowerCase()
+            .includes('sfp'),
         ),
       }));
     } catch {

@@ -28,8 +28,10 @@
     isLoading.value = true;
     errorMessage.value = '';
     try {
-      const res = await http.get<MaintenanceWindowItem[] | { items: MaintenanceWindowItem[] }>('/api/v1/maintenance/windows');
-      const raw = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+      const res = await http.get<MaintenanceWindowItem[] | { items: MaintenanceWindowItem[] }>(
+        '/api/v1/maintenance/windows',
+      );
+      const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
       windowsList.value = raw;
     } catch {
       // Sin datos de demostración en producción

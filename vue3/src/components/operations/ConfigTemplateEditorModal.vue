@@ -83,7 +83,12 @@
       description.value = '';
       requiresSafemode.value = true;
       variables.value = [
-        { key: 'param_valor', label: 'Parámetro de configuración', default_val: '', var_type: 'string' },
+        {
+          key: 'param_valor',
+          label: 'Parámetro de configuración',
+          default_val: '',
+          var_type: 'string',
+        },
       ];
       steps.value = [
         { method: 'PATCH', endpoint: 'ip/dns', payload: { servers: '{{ param_valor }}' } },
@@ -106,7 +111,10 @@
   );
 
   function formatName(val: string) {
-    name.value = val.toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_-]/g, '');
+    name.value = val
+      .toUpperCase()
+      .replace(/\s+/g, '_')
+      .replace(/[^A-Z0-9_-]/g, '');
   }
 
   function addVariable() {
@@ -303,7 +311,12 @@
           type="button"
           class="tab-btn"
           :class="{ 'tab-btn--active': activeTab === 'preview' }"
-          @click="() => { activeTab = 'preview'; updatePreview(); }"
+          @click="
+            () => {
+              activeTab = 'preview';
+              updatePreview();
+            }
+          "
         >
           4. Dry-Run / Previsualizador
         </button>
@@ -350,13 +363,10 @@
 
             <div class="form-group flex-1 checkbox-group">
               <label class="checkbox-label">
-                <input
-                  v-model="requiresSafemode"
-                  type="checkbox"
-                  class="form-checkbox"
-                />
+                <input v-model="requiresSafemode" type="checkbox" class="form-checkbox" />
                 <span class="checkbox-text">
-                  <strong>Safe Mode de 60s Obligatorio</strong> (Reversión automática si se pierde conectividad)
+                  <strong>Safe Mode de 60s Obligatorio</strong> (Reversión automática si se pierde
+                  conectividad)
                 </span>
               </label>
             </div>
@@ -382,7 +392,8 @@
             <div>
               <h3 class="pane-title">Variables Parametrizables</h3>
               <p class="pane-subtitle">
-                Estas variables serán solicitadas al operador antes de ejecutar la acción sobre la flota.
+                Estas variables serán solicitadas al operador antes de ejecutar la acción sobre la
+                flota.
               </p>
             </div>
             <button type="button" class="btn-secondary-sm" @click="addVariable">
@@ -391,13 +402,11 @@
           </div>
 
           <div class="variables-list">
-            <div
-              v-for="(v, idx) in variables"
-              :key="idx"
-              class="var-item-card"
-            >
+            <div v-for="(v, idx) in variables" :key="idx" class="var-item-card">
               <div class="var-field flex-2">
-                <label :for="'var-key-' + idx" class="var-label">Clave &#123;&#123; {{ v.key }} &#125;&#125;:</label>
+                <label :for="'var-key-' + idx" class="var-label"
+                  >Clave &#123;&#123; {{ v.key }} &#125;&#125;:</label
+                >
                 <input
                   :id="'var-key-' + idx"
                   v-model="v.key"
@@ -457,16 +466,15 @@
               <button
                 type="button"
                 class="btn-toggle-mode"
-                @click="rawJsonMode = !rawJsonMode; if (!rawJsonMode) syncRawToSteps(); else syncStepsToRaw();"
+                @click="
+                  rawJsonMode = !rawJsonMode;
+                  if (!rawJsonMode) syncRawToSteps();
+                  else syncStepsToRaw();
+                "
               >
                 {{ rawJsonMode ? 'Visual' : '{ } JSON' }}
               </button>
-              <button
-                v-if="!rawJsonMode"
-                type="button"
-                class="btn-secondary-sm"
-                @click="addStep"
-              >
+              <button v-if="!rawJsonMode" type="button" class="btn-secondary-sm" @click="addStep">
                 + Agregar Paso
               </button>
             </div>
@@ -481,16 +489,14 @@
               placeholder="[ { 'method': 'PATCH', 'endpoint': 'ip/dns', 'payload': { ... } } ]"
               @input="updatePreview"
             ></textarea>
-            <span class="help-text">Edita directamente la estructura JSON de pasos REST RouterOS v7.</span>
+            <span class="help-text"
+              >Edita directamente la estructura JSON de pasos REST RouterOS v7.</span
+            >
           </div>
 
           <!-- Modo Estructurado Visual -->
           <div v-else class="steps-list">
-            <div
-              v-for="(st, idx) in steps"
-              :key="idx"
-              class="step-card"
-            >
+            <div v-for="(st, idx) in steps" :key="idx" class="step-card">
               <div class="step-card-header">
                 <span class="step-number">Paso #{{ idx + 1 }}</span>
                 <button
@@ -507,7 +513,11 @@
               <div class="form-row">
                 <div class="form-group flex-1">
                   <label class="form-label">Método REST:</label>
-                  <select v-model="st.method" class="form-control form-control--mono" @change="updatePreview">
+                  <select
+                    v-model="st.method"
+                    class="form-control form-control--mono"
+                    @change="updatePreview"
+                  >
                     <option value="PATCH">PATCH (Actualizar propiedad)</option>
                     <option value="POST">POST (Crear recurso / Ejecutar script)</option>
                     <option value="PUT">PUT (Reemplazar configuración)</option>
@@ -530,18 +540,24 @@
               <div class="form-group">
                 <label class="form-label">Payload JSON (parámetros y variables):</label>
                 <textarea
-                  :value="typeof st.payload === 'object' ? JSON.stringify(st.payload, null, 2) : String(st.payload || '')"
+                  :value="
+                    typeof st.payload === 'object'
+                      ? JSON.stringify(st.payload, null, 2)
+                      : String(st.payload || '')
+                  "
                   class="form-control textarea mono-editor-sm"
                   rows="3"
                   placeholder="{ 'servers': '{{ dns_servers }}' }"
-                  @input="(e) => {
-                    try {
-                      st.payload = JSON.parse((e.target as HTMLTextAreaElement).value);
-                    } catch {
-                      // Se mantiene como texto provisional
+                  @input="
+                    (e) => {
+                      try {
+                        st.payload = JSON.parse((e.target as HTMLTextAreaElement).value);
+                      } catch {
+                        // Se mantiene como texto provisional
+                      }
+                      updatePreview();
                     }
-                    updatePreview();
-                  }"
+                  "
                 ></textarea>
               </div>
             </div>
@@ -554,7 +570,8 @@
             <div>
               <h3 class="pane-title">Previsualización de Renderizado en Pre-Vuelo</h3>
               <p class="pane-subtitle">
-                Así se construirá la carga útil final para cada router con las variables sustituidas.
+                Así se construirá la carga útil final para cada router con las variables
+                sustituidas.
               </p>
             </div>
             <button type="button" class="btn-secondary-sm" @click="updatePreview">
@@ -567,22 +584,12 @@
       </div>
 
       <footer class="modal-footer">
-        <button
-          type="button"
-          class="btn-secondary"
-          :disabled="isSubmitting"
-          @click="handleClose"
-        >
+        <button type="button" class="btn-secondary" :disabled="isSubmitting" @click="handleClose">
           Cancelar
         </button>
 
-        <button
-          type="button"
-          class="btn-primary"
-          :disabled="isSubmitting"
-          @click="handleSave"
-        >
-          {{ isSubmitting ? 'Guardando...' : (isEditing ? 'Guardar Cambios' : '+ Crear Plantilla') }}
+        <button type="button" class="btn-primary" :disabled="isSubmitting" @click="handleSave">
+          {{ isSubmitting ? 'Guardando...' : isEditing ? 'Guardar Cambios' : '+ Crear Plantilla' }}
         </button>
       </footer>
     </div>
@@ -614,7 +621,9 @@
     max-height: 90vh;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(0, 240, 255, 0.15);
+    box-shadow:
+      0 16px 40px rgba(0, 0, 0, 0.7),
+      0 0 25px rgba(0, 240, 255, 0.15);
   }
 
   .modal-header {
@@ -647,7 +656,9 @@
     line-height: 1;
     padding: 0.25rem;
     border-radius: 4px;
-    transition: color 0.15s, background-color 0.15s;
+    transition:
+      color 0.15s,
+      background-color 0.15s;
   }
 
   .btn-close:hover {
@@ -765,9 +776,18 @@
     flex-wrap: wrap;
   }
 
-  .flex-1 { flex: 1; min-width: 160px; }
-  .flex-2 { flex: 2; min-width: 180px; }
-  .flex-3 { flex: 3; min-width: 200px; }
+  .flex-1 {
+    flex: 1;
+    min-width: 160px;
+  }
+  .flex-2 {
+    flex: 2;
+    min-width: 180px;
+  }
+  .flex-3 {
+    flex: 3;
+    min-width: 200px;
+  }
 
   .form-label {
     font-size: 0.75rem;
@@ -777,7 +797,9 @@
     text-transform: uppercase;
   }
 
-  .required { color: #ef4444; }
+  .required {
+    color: #ef4444;
+  }
 
   .form-control {
     background: #020617;
@@ -951,7 +973,9 @@
     border-radius: 4px;
     cursor: pointer;
     font-family: monospace;
-    transition: background-color 0.15s, transform 0.1s;
+    transition:
+      background-color 0.15s,
+      transform 0.1s;
   }
 
   .btn-primary:hover:not(:disabled) {

@@ -372,9 +372,7 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
           name: 'Actualizar DNS Corporativos',
           category: 'IP Service',
           description: 'Configura servidores DNS',
-          variables_schema: [
-            { key: 'primary_dns', label: 'DNS Primario', default_val: '1.1.1.1' },
-          ],
+          variables_schema: [{ key: 'primary_dns', label: 'DNS Primario', default_val: '1.1.1.1' }],
           ros_command_template: '/ip dns set servers={{primary_dns}}',
         },
         {

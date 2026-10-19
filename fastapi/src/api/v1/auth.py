@@ -125,14 +125,16 @@ async def _get_active_tenant(db: AsyncSession, slug: str) -> Tenant:
     tenant = res.scalar_one_or_none()
     if not tenant:
         # Intentar coincidencia por nombre de la empresa
-        stmt_name = select(Tenant).where(func.lower(Tenant.name) == clean_slug, Tenant.status == TenantStatusEnum.ACTIVE)
+        stmt_name = select(Tenant).where(
+            func.lower(Tenant.name) == clean_slug, Tenant.status == TenantStatusEnum.ACTIVE
+        )
         res_name = await db.execute(stmt_name)
         tenant = res_name.scalar_one_or_none()
     if not tenant:
         # Si sólo existe 1 tenant activo en la plataforma, resolver a ese tenant
-        active_count = await db.scalar(
-            select(func.count(Tenant.id)).where(Tenant.status == TenantStatusEnum.ACTIVE)
-        ) or 0
+        active_count = (
+            await db.scalar(select(func.count(Tenant.id)).where(Tenant.status == TenantStatusEnum.ACTIVE)) or 0
+        )
         if active_count == 1:
             stmt_single = select(Tenant).where(Tenant.status == TenantStatusEnum.ACTIVE)
             res_single = await db.execute(stmt_single)
@@ -661,7 +663,7 @@ async def bootstrap_initial_admin(
 
     # 5. Generar preauth challenge para enrolar/verificar 2FA en el navegador inmediatamente
     challenge_id = secrets.token_hex(16)
-    redis = get_redis_client()
+    redis: Any = get_redis_client()
     preauth_key = f"rg:{tenant.id}:preauth:{challenge_id}"
     mapping: dict[str, Any] = {
         "user_id": str(super_admin.id),
