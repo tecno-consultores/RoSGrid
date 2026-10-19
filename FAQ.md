@@ -87,17 +87,38 @@ RoSGrid implementa de forma nativa la especificación **Model Context Protocol (
 1. Habilita la funcionalidad en tu `.env` con `ROSGRID_MCP_ENABLED=true`.
 2. Crea un usuario con rol `SERVICE_ACCOUNT`, asígnale los routers permitidos en la matriz de permisos y declara la subred autorizada en `allowed_cidr`.
 3. Configura el bloque de conexión HTTP en `mcp_config.json` (Hermes Agent) o en tu cliente MCP apuntando a `https://tu-dominio.com/api/v1/mcp` con la cabecera `Authorization: Bearer <token>`.
-4. El agente dispondrá inmediatamente de **8 herramientas semánticas** especializadas de diagnóstico, salud, óptica SFP DDM, enrutamiento y auditoría. Consulta la guía detallada en [docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md](./docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md).
+4. El agente dispondrá inmediatamente de **16 herramientas semánticas** especializadas de diagnóstico 360°, salud, óptica SFP DDM, enrutamiento BGP, aislamiento técnico, remediación de Config Drift, auditoría CIS y detección de cortes masivos. Consulta la guía detallada en [docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md](./docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md).
 
 ### ¿Puede un agente de IA causar una interrupción masiva de red a través del endpoint MCP?
 **No.** RoSGrid aplica el principio de contención estricta:
-- Las herramientas de lectura (`rosgrid_list_inventory`, `rosgrid_get_router_health`, `rosgrid_check_sfp_optical_ddm`, `rosgrid_inspect_routing_bgp_ospf`, `rosgrid_run_live_diagnostic`, `rosgrid_compare_config_diff`) solo inspeccionan el estado sin alterar la configuración.
-- La herramienta de modificación de red (`rosgrid_propose_network_change`) **no aplica ningún cambio directamente**: intercepta la propuesta hacia la bandeja **Maker-Checker** con código HTTP `202 Accepted` (`AWAITING_APPROVAL`). Un supervisor humano debe validar el cambio antes de que se ejecute bajo protección de **Safe Mode (60s)**.
+- Las herramientas de lectura e inspección técnica solo consultan el estado sin alterar la configuración del router.
+- Las acciones de aprovisionamiento como el aislamiento de un equipo (`rosgrid_isolate_subscriber`) o el cambio de ancho de banda son estrictamente **idempotentes**, evitando mutaciones dobles ante reintentos.
+- La herramienta de modificación de red no estructurada (`rosgrid_propose_network_change`) **no aplica ningún cambio directamente**: intercepta la propuesta hacia la bandeja **Maker-Checker** con código HTTP `202 Accepted` (`AWAITING_APPROVAL`). Un supervisor humano debe validar el cambio antes de que se ejecute bajo protección de **Safe Mode (60s)**.
 - Cada interacción del LLM queda registrada de forma inalterable en la bitácora WORM con el evento `MCP_AI_TOOL_CALL`.
 
 ---
 
-## 5. Dónde Aprender Más (`docs/`)
+## 5. Gobernanza Modular, Feature Flags, Operaciones ISP y Redes Corporativas
+
+### ¿Por qué RoSGrid NO incluye módulos de facturación ni almacena datos personales de clientes?
+RoSGrid es una **plataforma pura de ingeniería de red e infraestructura**. No es un CRM comercial, ERP ni sistema de facturación tributaria (BSS):
+- **Cumplimiento y Privacidad:** En RoSGrid no existen campos para nombres de personas, identificaciones fiscales, direcciones residenciales ni datos bancarios.
+- **Identificación Técnica Exclusiva:** Los equipos y circuitos de abonados se referencian únicamente por su `device_serial` (serial de la ONU/CPE) y su `endpoint_identifier` técnico (ej. usuario PPPoE o código de circuito).
+- **Desacoplamiento Total:** La relación entre la persona y su número de contrato reside en el sistema de cobro externo del cliente, no en RoSGrid.
+
+### ¿Cómo se integra un sistema de facturación o CRM externo con RoSGrid?
+A través de la **API de Aprovisionamiento Técnico Idempotente** documentada en [docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md](./docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md):
+- El sistema externo invoca `POST /api/v1/network-services/{id}/isolate` para suspender el tráfico en MikroTik, o `/restore` para reactivarlo, utilizando la cabecera `Idempotency-Key` (UUIDv7) para garantizar cero efectos secundarios ante cortes de red.
+- RoSGrid responde en milisegundos y despacha **Webhooks Salientes** firmados criptográficamente con `HMAC-SHA256` para notificar al CRM eventos como `DEVICE_ACTIVATED_GPS`, `DEVICE_ISOLATED` o `MASS_OUTAGE_TRIGGERED`.
+
+### ¿Cómo se adapta RoSGrid para un Banco, Hospital, Campus o Cadena de Retail (Entorno Corporativo)?
+El Superadmin simplemente desactiva el switch **"Módulo ISP & Operaciones de Campo"** en el panel de Feature Flags (`TenantsManagementView.vue`):
+- La interfaz oculta automáticamente el mapa de ONUs y el formulario de técnicos de calle.
+- Se activan las herramientas empresariales: **Detección de Desviación de Configuración (*Config Drift*)** contra la Plantilla Maestra homologada, **Orquestador SD-WAN WireGuard Hub & Spoke**, **Auditoría CIS Benchmark**, **Detección de Rogue DHCP en switches**, **Monitor de Cumplimiento de SLA de enlaces WAN** y **Gestión Centralizada WiFi (CAPsMAN)**.
+
+---
+
+## 6. Dónde Aprender Más (`docs/`)
 
 Para consultar todos los manuales oficiales de producción de RoSGrid:
 - [docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md](./docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md) — Despliegue, `.env` y perfiles KeyDB / DragonflyDB.
@@ -105,8 +126,8 @@ Para consultar todos los manuales oficiales de producción de RoSGrid:
 - [docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md](./docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md) — RLS, 11 roles RBAC, Bóveda 2FA, Kill-Switch y Auto-Registro.
 - [docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md](./docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md) — WebFig, RingBuffer, Maker-Checker y Wallboard.
 - [docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md](./docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md) — Bitácora WORM, ADR y grafos de arquitectura.
-- [docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md](./docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md) — Catálogo de endpoints REST y WebSockets.
-- [docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md](./docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md) — Integración de IA con Model Context Protocol.
+- [docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md](./docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md) — Catálogo de endpoints REST, WebSockets, Aprovisionamiento QoS y Webhooks.
+- [docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md](./docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md) — Integración de IA con Model Context Protocol (16 Tools).
 - [docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md](./docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md) — Pipeline local y suite de 24 pruebas UI-API.
-- [docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md](./docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md) — Plan maestro UAT 11X (28 casos de prueba E2E).
+- [docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md](./docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md) — Plan maestro UAT 11X (74 casos de prueba E2E).
 

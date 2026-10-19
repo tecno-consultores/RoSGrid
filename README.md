@@ -57,8 +57,26 @@ El sistema traslada la experiencia operativa y técnica de **WinBox / WebFig** a
 
 ### 5. Servidor MCP Protegido para Agentes de IA (`Hermes Agent`, `Claude Desktop / Code`)
 - **Model Context Protocol (JSON-RPC 2.0 Streamable HTTP):** Endpoint `POST /api/v1/mcp` protegido por lista blanca CIDR, tokens de cuenta `SERVICE_ACCOUNT` y límite de tasa en KeyDB (`30 req/min`).
-- **Catálogo de 8 Tools Semánticas:** Inventario (`rosgrid_list_inventory`), salud (`rosgrid_get_router_health`), óptica SFP DDM (`rosgrid_check_sfp_optical_ddm`), enrutamiento BGP/OSPF (`rosgrid_inspect_routing_bgp_ospf`), diagnóstico en vivo (`rosgrid_run_live_diagnostic`), comparador Diff Git `.rsc` (`rosgrid_compare_config_diff`), reconexión PPPoE (`rosgrid_reconnect_pppoe_client`) y propuesta de mutaciones de red (`rosgrid_propose_network_change`).
+- **Catálogo de 16 Tools Semánticas:** Inventario (`rosgrid_list_inventory`), salud física (`rosgrid_get_router_health`), óptica SFP DDM (`rosgrid_check_sfp_optical_ddm`), enrutamiento BGP/OSPF (`rosgrid_inspect_routing_bgp_ospf`), diagnóstico en vivo (`rosgrid_run_live_diagnostic`), comparador Diff Git `.rsc` (`rosgrid_compare_config_diff`), reconexión PPPoE (`rosgrid_reconnect_pppoe_client`), propuesta de mutaciones de red (`rosgrid_propose_network_change`), diagnóstico 360° (`rosgrid_run_360_diagnostics`), aislamiento técnico (`rosgrid_isolate_subscriber`), restauración técnica (`rosgrid_restore_subscriber`), cambio de rate-limit (`rosgrid_change_subscriber_rate_limit`), consultas BGP Looking Glass (`rosgrid_query_bgp_looking_glass`), detección de desviación de configuración (`rosgrid_check_config_drift`), auditoría CIS Benchmark (`rosgrid_run_cis_audit`) y detección de caídas masivas (`rosgrid_detect_mass_outage`).
 - **NOC Autónomo 24/7 y Gobierno Maker-Checker:** Las propuestas de mutación generadas por agentes IA se retienen automáticamente como `202 Accepted` (`AWAITING_APPROVAL`) para autorización humana previa, protegidas por *Safe Mode (60s)* y registradas en la bitácora forense WORM (`MCP_AI_TOOL_CALL`). Consulta `docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md`.
+
+### 6. Gobernanza Modular (Feature Flags): Operación Dual ISP y Corporativa
+Una sola instalación de RoSGrid se adapta instantáneamente a las necesidades de cada organización mediante el panel de Feature Flags por Tenant administrado por el Superadmin:
+- **Modo Proveedor de Internet (ISP / WISP / FTTH):**
+  - **Cero Facturación y Cero Datos Personales:** Identificación técnica exclusiva por `device_serial` y `endpoint_identifier`. Desacoplamiento total con sistemas de facturación/CRM externos.
+  - **QoS Técnico & Perfiles de Tráfico:** Modelado de Simple Queues y PCQ con tasas nominales, Burst (limit, threshold, time) y prioridades (1-8).
+  - **API de Aprovisionamiento Idempotente:** Endpoints `/isolate`, `/restore` y `/change-rate-limit` con cabecera `Idempotency-Key` (UUIDv7) y webhooks salientes firmados con `HMAC-SHA256`.
+  - **Diagnóstico 360°:** Ping secuencial multi-MTU (64B, 512B, 1472B), análisis automático de motivos de desconexión en `/log` de RouterOS y muestreo Torch de flujos en tiempo real.
+  - **Mapa Exclusivo de ONUs:** Separado de la infraestructura core, con telemetría efímera Zero-Metrics (Verde, Naranja, Rojo) y alarma visual/auditiva en Wallboard NOC ante caídas simultáneas > 10 equipos.
+  - **Toolkit de Campo Responsive:** Interfaz táctil fluida para móviles, tablets o laptops con captura directa de coordenadas GPS (`navigator.geolocation`).
+  - **Internacionalización (i18n):** Arquitectura modular multilingüe con diccionarios JSON (`locales/es.json`, `locales/en.json`).
+- **Modo Redes Corporativas / Enterprise (Banca, Retail, Universidades, Hospitales):**
+  - **Detección de Desviación de Configuración (*Config Drift*):** Comparación continua contra la Plantilla Maestra (*Golden Baseline*) con visor Git Diff y reversión en 1-clic (*Auto-Revert*) bajo Safe Mode.
+  - **Orquestador SD-WAN WireGuard Hub & Spoke:** Despliegue automático de túneles WireGuard inter-sucursal con enrutamiento dinámico OSPF y failover multi-WAN recursivo en $< 1\text{s}$.
+  - **Auditoría de Seguridad CIS Benchmark:** Evaluación de 10 directivas críticas de RouterOS, cálculo de Security Score (0 a 100) y botón de auto-endurecimiento (*Auto-Hardening*).
+  - **Detección de Rogue DHCP & Seguridad LAN:** Detección de servidores DHCP no autorizados mediante DHCP Snooping en switches/bridges y aislamiento de puertos comprometidos.
+  - **Monitor de Cumplimiento de SLA:** Sondas continuas hacia gateways de carriers con generación de reportes mensuales de disponibilidad y latencia P95/P99 para reclamos contractuales.
+  - **Gestión Centralizada WiFi (CAPsMAN / WiFiWave2):** Perfiles de radio para SSIDs Corporativo (WPA3-Enterprise 802.1X), Invitados (aislado) y dispositivos IoT.
 
 ---
 
@@ -107,7 +125,7 @@ rosgrid/
 ├── CONTRIBUTING.md                 # Guía de contribución y umbrales del estándar QA 11X
 ├── CODE_OF_CONDUCT.md              # Código de conducta de la comunidad (Contributor Covenant v2.1)
 ├── CHANGELOG.md                    # Historial de versiones (Keep a Changelog / SemVer)
-├── ROADMAP.md                      # Control granular de ejecución por hitos (Hitos 0 al 16)
+├── ROADMAP.md                      # Control granular de ejecución por hitos (Hitos 0 al 22)
 ├── TESTING.md                      # Bitácora Viva de certificación QA 11X
 ├── docker-compose.yml              # Orquestador de entorno local / laboratorio EVE-NG (con KeyDB)
 ├── docker-compose.prod.yml         # Orquestador de producción (Imágenes oficiales en Docker Hub)
@@ -117,7 +135,7 @@ rosgrid/
 ├── commitlint.config.js            # Convenciones estrictas de mensajes de commit
 ├── instalar-hooks.sh               # Instalador local de hooks Lefthook
 ├── auditar-infra.sh                # Auditoría efímera Trivy (IaC + File System CVEs)
-├── specs/                          # Enciclopedia de 30 especificaciones técnicas + Blueprints QA 11X
+├── specs/                          # Enciclopedia de 34 especificaciones técnicas + Blueprints QA 11X
 ├── examples/                       # Plantillas de referencia de solo lectura (FastAPI y Vue 3)
 ├── docs/                           # Manuales técnicos, operativos y referencia completa de la API
 ├── fastapi/                        # Ecosistema Backend (FastAPI + SQLAlchemy 2.0 + KeyDB + QA 11X)
