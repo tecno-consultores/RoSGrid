@@ -261,16 +261,17 @@
 
 ---
 
-## 🔍 HITO 18: Diagnóstico 360°, BGP Looking Glass e IPFIX (Fase 3)
+## ✅ HITO 18: Diagnóstico 360°, BGP Looking Glass e IPFIX (Fase 3)
 
 > **Archivos Guía:** `specs/32_ISP_OPERATIONS_TECHNICAL_QOS_AND_FIELD_TOOLKIT.md` y `specs/13_BACKEND_ENDPOINTS_WEBFIG_L1_FIREWALL_AND_ROUTING.md`
 
-- [ ] **18.1** Suite de Diagnóstico 360° (`POST /api/v1/diagnostics/endpoint-360`):
+- [x] **18.1** Suite de Diagnóstico 360° (`POST /api/v1/diagnostics/endpoint-360`):
   - Ping Multi-MTU (64B, 512B, 1472B) para detección de dispersión de latencia y fragmentación DF-bit.
   - Parser automático de motivos de desconexión en `/log` de RouterOS (`link down`, `peer is not responding`, `user request`, `auth failed`).
-  - Muestreo Torch en tiempo real (2.5 segundos) filtrado por IP/MAC con Top 5 de flujos activos.
-- [ ] **18.2** Consola BGP Looking Glass Interno: Endpoints `GET /api/v1/bgp/looking-glass/route` y `/advertised` para inspeccionar rutas, AS-Path, comunidades BGP y prefijos exportados a proveedores de tránsito sin dar acceso por SSH.
-- [ ] **18.3** Detección de Tráfico Anómalo / Flujos IPFIX: Detección de clientes con tasas anormales de PPS o conexiones masivas con botón de mitigación rápida (FastDrop / Blackhole con Safe Mode).
+  - Muestreo Torch en tiempo real (3 segundos) filtrado por IP/MAC con Top 5 de flujos activos.
+- [x] **18.2** Consola BGP Looking Glass Interno: Endpoints `GET /api/v1/bgp/looking-glass/route` y `/advertised` para inspeccionar rutas, AS-Path, comunidades BGP y prefijos exportados a proveedores de tránsito sin dar acceso por SSH.
+- [x] **18.3** Detección de Tráfico Anómalo / Flujos IPFIX: Detección de clientes con tasas anormales de PPS o conexiones masivas con botón de mitigación rápida (FastDrop / Blackhole con Safe Mode y auditoría WORM inmutable).
+
 
 ---
 

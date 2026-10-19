@@ -546,11 +546,151 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
 ```
 
 ### 4.4 Diagnóstico 360°, BGP Looking Glass e IPFIX
-- `POST /api/v1/diagnostics/endpoint-360`: Ejecuta ping secuencial multi-MTU (64B, 512B, 1472B), parsea causas de desconexión en `/log` de RouterOS (`link down`, `peer is not responding`, `user request`) y realiza muestreo Torch de 2.5s por IP.
-- `GET /api/v1/bgp/looking-glass/route?router_id={id}&prefix={cidr}`: Consulta la tabla de rutas BGP v7 mostrando AS-Path, Next-Hop y comunidades.
-- `GET /api/v1/bgp/looking-glass/advertised?router_id={id}&peer={name}`: Muestra los prefijos anunciados a un carrier específico.
-- `GET /api/v1/traffic-flow/anomalies`: Detecta IPs con altas tasas de PPS o conexiones concurrentes anómalas.
-- `POST /api/v1/traffic-flow/mitigate`: Aplica regla FastDrop/Blackhole con Safe Mode y registro WORM.
+
+#### 4.4.1 `POST /api/v1/diagnostics/endpoint-360`
+- **Propósito:** Suite unificada de diagnóstico para abonado o enlace en MikroTik v7: ejecuta Ping Multi-MTU secuencial (64B, 512B, 1472B DF-bit), parsea causas forenses de desconexión en `/log` (`link down`, `peer is not responding`, `user request`, `authentication failed`) y ejecuta muestreo Torch instantáneo (Top 5 flujos activos).
+- **Feature Flag:** `isp_module_enabled`.
+- **Rol Mínimo:** `SUPPORT_L1`, `FIELD_TECH`, `NOC_MONITOR`.
+- **Payload Entrada:**
+  ```json
+  {
+    "router_id": "7b8d4f10-1234-4567-89ab-cdef01234567",
+    "target_ip": "100.64.10.50",
+    "device_serial": "ZTEGC1234567",
+    "interface": "ether2"
+  }
+  ```
+- **Respuesta (200 OK):**
+  ```json
+  {
+    "router_id": "7b8d4f10-1234-4567-89ab-cdef01234567",
+    "target_ip": "100.64.10.50",
+    "device_serial": "ZTEGC1234567",
+    "interface": "ether2",
+    "overall_status": "OPTIMAL",
+    "multi_mtu": {
+      "ping_64": { "size": 64, "sent": 3, "received": 3, "packet_loss_pct": 0.0, "min_rtt_ms": 12.0, "avg_rtt_ms": 13.5, "max_rtt_ms": 15.0, "jitter_ms": 1.5, "df_bit": false },
+      "ping_512": { "size": 512, "sent": 3, "received": 3, "packet_loss_pct": 0.0, "min_rtt_ms": 13.0, "avg_rtt_ms": 14.2, "max_rtt_ms": 15.5, "jitter_ms": 1.2, "df_bit": false },
+      "ping_1472": { "size": 1472, "sent": 3, "received": 3, "packet_loss_pct": 0.0, "min_rtt_ms": 14.5, "avg_rtt_ms": 15.8, "max_rtt_ms": 17.0, "jitter_ms": 1.3, "df_bit": true },
+      "mtu_dispersion_detected": false,
+      "mtu_pass_1500": true
+    },
+    "disconnect_analysis": {
+      "detected_reason": "none_detected",
+      "last_disconnect_time": null,
+      "matched_logs": []
+    },
+    "torch_top_flows": [
+      { "protocol": "tcp", "port": 443, "src_address": "100.64.10.50", "dst_address": "1.1.1.1", "tx_rate_kbps": 2500.0, "rx_rate_kbps": 45000.0 }
+    ],
+    "diagnostic_timestamp": "2026-10-19T22:50:00Z"
+  }
+  ```
+
+#### 4.4.2 `GET /api/v1/bgp/looking-glass/route`
+- **Propósito:** Consulta de rutas BGP en RouterOS v7 sin acceso shell/SSH. Filtra por prefijo o CIDR.
+- **Feature Flag:** `bgp_looking_glass_enabled`.
+- **Rol Mínimo:** `SUPPORT_L1`, `NOC_MONITOR`.
+- **Query Params:** `router_id={uuid}&prefix={cidr}&refresh={bool}`.
+- **Respuesta (200 OK):**
+  ```json
+  {
+    "router_id": "7b8d4f10-1234-4567-89ab-cdef01234567",
+    "prefix": "1.1.1.0/24",
+    "total_routes": 1,
+    "routes": [
+      {
+        "prefix": "1.1.1.0/24",
+        "gateway": "186.10.20.1",
+        "immediate_gw": "186.10.20.1%ether1",
+        "as_path": "65001 13335",
+        "communities": ["65001:100", "65001:500"],
+        "scope": 30,
+        "active": true,
+        "protocol": "bgp",
+        "uptime": "1w2d"
+      }
+    ]
+  }
+  ```
+
+#### 4.4.3 `GET /api/v1/bgp/looking-glass/advertised`
+- **Propósito:** Consulta prefijos anunciados en vivo hacia un peer o carrier BGP upstream.
+- **Feature Flag:** `bgp_looking_glass_enabled`.
+- **Rol Mínimo:** `SUPPORT_L1`, `NOC_MONITOR`.
+- **Query Params:** `router_id={uuid}&peer={peer_name}&refresh={bool}`.
+- **Respuesta (200 OK):**
+  ```json
+  {
+    "router_id": "7b8d4f10-1234-4567-89ab-cdef01234567",
+    "peer": "ISP-Uplink-1",
+    "total_advertised": 1,
+    "advertisements": [
+      {
+        "peer": "ISP-Uplink-1",
+        "prefix": "190.200.0.0/22",
+        "nexthop": "186.10.20.2",
+        "as_path": "65000",
+        "origin": "igp",
+        "communities": ["65000:10"]
+      }
+    ]
+  }
+  ```
+
+#### 4.4.4 `GET /api/v1/traffic-flow/anomalies`
+- **Propósito:** Escaneo y análisis de la tabla de conexiones de RouterOS v7 para identificar hosts abusivos, flood de conexiones o saturación de PPS.
+- **Feature Flag:** `ipfix_analytics_enabled`.
+- **Rol Mínimo:** `SUPPORT_L1`, `NOC_MONITOR`.
+- **Query Params:** `router_id={uuid}&threshold_pps=1000&threshold_conns=500`.
+- **Respuesta (200 OK):**
+  ```json
+  {
+    "router_id": "7b8d4f10-1234-4567-89ab-cdef01234567",
+    "threshold_pps": 1000,
+    "threshold_conns": 500,
+    "anomalies_detected": 1,
+    "items": [
+      {
+        "ip_address": "192.168.88.240",
+        "connection_count": 850,
+        "estimated_pps": 1200,
+        "protocols": ["tcp"],
+        "anomaly_type": "HIGH_CONNECTION_COUNT",
+        "severity": "HIGH"
+      }
+    ]
+  }
+  ```
+
+#### 4.4.5 `POST /api/v1/traffic-flow/mitigate`
+- **Propósito:** Mitigación de emergencia FastDrop / Blackhole bajo Safe Mode (60s) con registro de auditoría WORM inmutable.
+- **Feature Flag:** `ipfix_analytics_enabled`.
+- **Rol Mínimo:** `SUPPORT_L2`.
+- **Payload Entrada:**
+  ```json
+  {
+    "router_id": "7b8d4f10-1234-4567-89ab-cdef01234567",
+    "target_ip": "192.168.88.240",
+    "action": "fast_drop",
+    "comment": "Mitigación SYN Flood",
+    "duration_seconds": 3600
+  }
+  ```
+- **Respuesta (200 OK):**
+  ```json
+  {
+    "status": "MITIGATED",
+    "router_id": "7b8d4f10-1234-4567-89ab-cdef01234567",
+    "target_ip": "192.168.88.240",
+    "action_taken": "fast_drop",
+    "rule_or_list_id": "mitig-a1b2c3d4",
+    "safemode_applied": true,
+    "audit_event": "TRAFFIC_ANOMALY_MITIGATED"
+  }
+  ```
+
+
 
 ### 4.5 Suite Corporativa & Enterprise
 - `POST /api/v1/compliance/drift-check/{router_id}`: Compara la configuración en ejecución contra la Plantilla Maestra (*Golden Baseline*). Retorna diff semántico en formato Git.

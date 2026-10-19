@@ -7,7 +7,9 @@ from src.api.v1.approvals import router as approvals_router
 from src.api.v1.audit import router as audit_router
 from src.api.v1.auth import router as auth_router
 from src.api.v1.backups import router as backups_router
+from src.api.v1.bgp_looking_glass import router as bgp_looking_glass_router
 from src.api.v1.bulk_and_updates import router as bulk_updates_router
+from src.api.v1.diagnostics_360 import router as diagnostics_360_router
 from src.api.v1.field_ops import router as field_ops_router
 from src.api.v1.inventory import router as inventory_router
 from src.api.v1.ipam import router as ipam_router
@@ -19,6 +21,7 @@ from src.api.v1.rbac import router as rbac_router
 from src.api.v1.sessions import router as sessions_router
 from src.api.v1.subscribers import bandwidth_router, subscribers_router
 from src.api.v1.tenants import router as tenants_router
+from src.api.v1.traffic_flow import router as traffic_flow_router
 from src.api.v1.users import router as users_router
 from src.api.v1.vault import router as vault_router
 from src.api.v1.webfig_firewall import router as webfig_firewall_router
@@ -64,3 +67,6 @@ api_v1_router.include_router(notification_channels_router)
 api_v1_router.include_router(audit_router)
 api_v1_router.include_router(mcp_router)
 api_v1_router.include_router(rbac_router)
+api_v1_router.include_router(diagnostics_360_router)
+api_v1_router.include_router(bgp_looking_glass_router)
+api_v1_router.include_router(traffic_flow_router)

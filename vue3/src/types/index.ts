@@ -573,3 +573,139 @@ export interface NetworkServiceActionResponse {
   rate_down_kbps?: number;
   rate_up_kbps?: number;
 }
+
+// ============================================================================
+// HITO 18: DIAGNÓSTICO 360°, BGP LOOKING GLASS E IPFIX MITIGATION
+// ============================================================================
+
+export interface PingMtuStats {
+  size: number;
+  sent: number;
+  received: number;
+  packet_loss_pct: number;
+  min_rtt_ms?: number | null;
+  avg_rtt_ms?: number | null;
+  max_rtt_ms?: number | null;
+  jitter_ms?: number | null;
+  df_bit: boolean;
+}
+
+export interface MultiMtuPingSummary {
+  ping_64: PingMtuStats;
+  ping_512: PingMtuStats;
+  ping_1472: PingMtuStats;
+  mtu_dispersion_detected: boolean;
+  mtu_pass_1500: boolean;
+}
+
+export interface DisconnectLogItem {
+  time?: string | null;
+  topics?: string | null;
+  message: string;
+}
+
+export interface DisconnectLogAnalysis {
+  detected_reason: string;
+  last_disconnect_time?: string | null;
+  matched_logs: DisconnectLogItem[];
+}
+
+export interface TorchTopFlowItem {
+  protocol: string;
+  port?: number | null;
+  src_address?: string | null;
+  dst_address?: string | null;
+  tx_rate_kbps: number;
+  rx_rate_kbps: number;
+}
+
+export interface Endpoint360Request {
+  router_id: string;
+  target_ip: string;
+  device_serial?: string | null;
+  interface?: string | null;
+}
+
+export interface Endpoint360Response {
+  router_id: string;
+  target_ip: string;
+  device_serial?: string | null;
+  interface?: string | null;
+  overall_status: 'OPTIMAL' | 'DEGRADED' | 'DOWN';
+  multi_mtu: MultiMtuPingSummary;
+  disconnect_analysis: DisconnectLogAnalysis;
+  torch_top_flows: TorchTopFlowItem[];
+  diagnostic_timestamp: string;
+  raw_details?: Record<string, unknown>;
+}
+
+export interface BgpLookingGlassRouteItem {
+  prefix: string;
+  gateway: string;
+  immediate_gw?: string | null;
+  as_path: string;
+  communities: string[];
+  scope?: number | null;
+  active: boolean;
+  protocol: string;
+  uptime?: string | null;
+  attributes?: Record<string, unknown>;
+}
+
+export interface BgpLookingGlassRouteResponse {
+  router_id: string;
+  prefix: string;
+  total_routes: number;
+  routes: BgpLookingGlassRouteItem[];
+}
+
+export interface BgpLookingGlassAdvertisedItem {
+  peer: string;
+  prefix: string;
+  nexthop: string;
+  as_path?: string | null;
+  origin?: string | null;
+  communities: string[];
+}
+
+export interface BgpLookingGlassAdvertisedResponse {
+  router_id: string;
+  peer: string;
+  total_advertised: number;
+  advertisements: BgpLookingGlassAdvertisedItem[];
+}
+
+export interface TrafficAnomalyItem {
+  ip_address: string;
+  connection_count: number;
+  estimated_pps: number;
+  protocols: string[];
+  anomaly_type: 'HIGH_CONNECTION_COUNT' | 'HIGH_PPS_BURST' | 'POSSIBLE_SYN_FLOOD';
+  severity: 'WARNING' | 'HIGH' | 'CRITICAL';
+}
+
+export interface TrafficAnomaliesResponse {
+  router_id: string;
+  threshold_pps: number;
+  threshold_conns: number;
+  anomalies_detected: number;
+  items: TrafficAnomalyItem[];
+}
+
+export interface TrafficMitigationRequest {
+  router_id: string;
+  target_ip: string;
+  action: 'fast_drop' | 'blackhole';
+  comment?: string;
+  duration_seconds?: number;
+}
+
+export interface TrafficMitigationResponse {
+  status: string;
+  router_id: string;
+  target_ip: string;
+  action_taken: string;
+  rule_or_list_id: string;
+  safemode_applied: boolean;
+  audit_event: string;
+}

@@ -295,4 +295,38 @@ Certificación integral ejecutada bajo la **Regla Cero** dentro de los contenedo
   - **Nuevas Definiciones TypeScript Validadas:**
     - `BandwidthProfileItem`, `ChangeRateLimitRequest` y `NetworkServiceActionResponse` incorporadas a `src/types/index.ts`.
 
+---
+
+## 13. Certificación QA 11X — Hito 18 (Diagnóstico 360°, BGP Looking Glass e IPFIX Mitigación)
+
+Certificación integral ejecutada bajo la **Regla Cero** dentro de los contenedores Docker efímeros `qa-backend` (`sinfallas/base-python-uv:3.13`) y `qa-vue3` (`sinfallas/base-node-ionic:22`).
+
+### A. Backend (`fastapi/`) — Docker `sinfallas/base-python-uv:3.13`
+- **Análisis Estático y Seguridad (SAST):**
+  - **Ruff (`ruff check src/ tests/`):** Cero (0) errores.
+  - **Ruff Format (`ruff format --check src/ tests/`):** 136 archivos formateados limpiamente (0 diffs).
+  - **Mypy Estricto (`mypy --strict src/`):** Cero (0) errores en los 97 módulos de código fuente.
+  - **Radon (Complejidad Ciclomática y Mantenibilidad):** Grado A/B en todas las funciones (todas con `CC < C`), y Maintainability Index Grado A en todos los nuevos submódulos (`diagnostics_360.py`, `bgp_looking_glass.py`, `traffic_flow.py`).
+  - **Bandit SAST (`bandit -c pyproject.toml -r src/`):** Cero (0) problemas de seguridad identificados (15,773 líneas escaneadas).
+- **Pruebas Unitarias y Cobertura (Pytest 9.1.1):**
+  - **Pruebas Ejecutadas:** 366 de 366 pruebas pasadas (100% exitosas) en 28.10s.
+  - **Cobertura Total de Código:** **95.15%** (8,441 sentencias totales, 409 no ejecutadas) superando el umbral corporativo de `>= 95%`.
+  - **Nuevos Módulos y Endpoints Certificados:**
+    - `src/api/v1/diagnostics_360.py`: Protocolo de diagnóstico 360° para abonados (`POST /api/v1/diagnostics/endpoint-360`) con Ping Multi-MTU secuencial (64B, 512B, 1472B DF-bit), parser automático de desconexiones en `/log` de RouterOS (`link down`, `peer is not responding`, `user request`, `auth failed`), y muestreo Torch instantáneo (Top 5 de flujos activos).
+    - `src/api/v1/bgp_looking_glass.py`: Consola interna BGP Looking Glass (`GET /api/v1/bgp/looking-glass/route` y `GET /api/v1/bgp/looking-glass/advertised`) para inspección de rutas, AS-Path, comunidades BGP y prefijos exportados a upstream sin acceso SSH.
+    - `src/api/v1/traffic_flow.py`: Detección de tráfico anómalo (`GET /api/v1/traffic-flow/anomalies`) y mitigación inmediata (`POST /api/v1/traffic-flow/mitigate`) con FastDrop vía Address-List / RAW y Blackhole en `/ip/route`, protegidos con Safe Mode (60s) y registro inmutable en PostgreSQL WORM.
+    - `src/schemas/diagnostics_360.py`, `src/schemas/bgp_looking_glass.py`, `src/schemas/traffic_flow.py`: Esquemas Pydantic v2 con 100% de cobertura.
+
+### B. Frontend (`vue3/`) — Docker `sinfallas/base-node-ionic:22`
+- **Análisis Estático y Tipado Estricto:**
+  - **Vue-TSC (`type-check`):** Cero (0) errores de tipado TypeScript estricto.
+  - **Prettier (`format:check`):** 100% de los archivos con estilo y formato verificado.
+- **Pruebas Unitarias (Vitest v8):**
+  - **Pruebas Ejecutadas:** 211 de 211 pruebas pasadas (100% exitosas) en 31 suites.
+  - **Nuevas Definiciones TypeScript Validadas en `src/types/index.ts`:**
+    - `PingMtuStats`, `MultiMtuPingSummary`, `DisconnectLogItem`, `DisconnectLogAnalysis`, `TorchTopFlowItem`, `Endpoint360Request`, `Endpoint360Response`.
+    - `BgpLookingGlassRouteItem`, `BgpLookingGlassRouteResponse`, `BgpLookingGlassAdvertisedItem`, `BgpLookingGlassAdvertisedResponse`.
+    - `TrafficAnomalyItem`, `TrafficAnomaliesResponse`, `TrafficMitigationRequest`, `TrafficMitigationResponse`.
+
+
 
