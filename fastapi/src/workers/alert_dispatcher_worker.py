@@ -86,6 +86,7 @@ async def _dispatch_webhook(config: dict[str, Any], alert: dict[str, Any]) -> No
     sig = hmac.new(secret, body, hashlib.sha256).hexdigest()
     headers = {
         "Content-Type": "application/json",
+        "X-RoSGrid-Signature": f"sha256={sig}",
         "X-RoSGrid-Signature-256": sig,
     }
     async with httpx.AsyncClient(timeout=10.0) as client:

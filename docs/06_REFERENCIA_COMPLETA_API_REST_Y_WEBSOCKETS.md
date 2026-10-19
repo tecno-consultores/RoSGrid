@@ -496,19 +496,51 @@ Permite la gobernanza modular de capacidades por organización. La consulta se a
 - **`DELETE /api/v1/subscriber-devices/{id}`:** Desincorporación del dispositivo.
 - **`GET /api/v1/subscriber-devices/{id}/mikrotik-queue-script`:** Genera dinámicamente el comando de provisión de cola `/queue/simple/add` basado en el perfil asociado.
 
+#### B. API de Aprovisionamiento Técnico Idempotente (`/api/v1/network-services`)
+
+> **Idempotencia Obligatoria:** Todo endpoint mutante requiere la cabecera `Idempotency-Key` con un UUIDv7 válido. Si la operación ya fue procesada, responde con el estado actual sin mutaciones redundantes ni errores (HTTP 200).
+
+- **`POST /api/v1/network-services/{id}/isolate`**
+  - **Cabecera:** `Idempotency-Key: {uuid}`.
+  - **Mecanismo en MikroTik:** Agrega la IP a la lista de firewall `AISLADOS_TECNICO` o conmuta la velocidad de su cola a `64k/64k` para mantener telemetría sin cortar la sesión física.
+  - **Respuesta (200 OK):** `{ "status": "ISOLATED" | "ALREADY_ISOLATED", "service_id": "{id}", "endpoint_identifier": "{ep}", "message": "..." }`.
+  - **Evento Emitido:** `DEVICE_ISOLATED`.
+
+- **`POST /api/v1/network-services/{id}/restore`**
+  - **Cabecera:** `Idempotency-Key: {uuid}`.
+  - **Mecanismo en MikroTik:** Retira la IP de la lista `AISLADOS_TECNICO` y restaura los límites normales de su cola Simple Queue según su `bandwidth_profile_id`.
+  - **Respuesta (200 OK):** `{ "status": "RESTORED" | "ALREADY_ACTIVE", "service_id": "{id}", "endpoint_identifier": "{ep}", "message": "..." }`.
+  - **Evento Emitido:** `DEVICE_RESTORED`.
+
+- **`POST /api/v1/network-services/{id}/change-rate-limit`**
+  - **Cabecera:** `Idempotency-Key: {uuid}`.
+  - **Entrada:** `{ "bandwidth_profile_id": "{uuid}" }`.
+  - **Mecanismo en MikroTik:** Modifica en caliente los parámetros `max-limit`, `burst-limit`, `burst-threshold` y `burst-time` en `/queue/simple` sin desconectar al abonado.
+  - **Respuesta (200 OK):** `{ "status": "RATE_LIMIT_UPDATED", "bandwidth_profile_name": "...", "rate_down_kbps": 100000, "rate_up_kbps": 50000 }`.
+
+- **`GET /api/v1/network-services/{id}`**
+  - **Respuesta (200 OK):** Retorna el detalle técnico consolidado del servicio de red, estado de aislamiento, IP asignada y perfil QoS.
+
 ### 4.3 Webhooks Salientes Técnicos
-RoSGrid envía peticiones `POST` firmadas con `X-RoSGrid-Signature: sha256={hmac}` ante eventos de infraestructura:
+
+RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-Signature: sha256={hmac}` y `X-RoSGrid-Signature-256: {hmac}` hacia las URLs registradas ante eventos de red:
+
+- `DEVICE_ACTIVATED_GPS`: Activación de abonado con coordenadas GPS definitivas por el técnico de campo.
+- `DEVICE_ISOLATED`: Suspensión o aislamiento preventivo del servicio en MikroTik.
+- `DEVICE_RESTORED`: Restablecimiento del servicio y normalización de colas.
+- `MASS_OUTAGE_TRIGGERED`: Detección de caída masiva (>= 10 ONUs caídas en el mismo puerto PON o caja óptica).
+
 ```json
 {
   "event": "DEVICE_ACTIVATED_GPS",
-  "timestamp": "2026-10-18T21:40:00Z",
-  "data": {
+  "timestamp": "2026-10-19T22:40:00Z",
+  "payload": {
+    "order_id": "c7a8b9c0-1234-4567-89ab-cdef01234567",
+    "customer_service_id": "b1a2c3d4-0000-1111-2222-333344445555",
     "device_serial": "ZTEGC1234567",
-    "endpoint_identifier": "usr_ftth_4091",
-    "router_id": "c7a8b9c0-1234-4567-89ab-cdef01234567",
-    "assigned_ip": "100.64.10.45",
     "latitude": 10.4806,
-    "longitude": -66.9036
+    "longitude": -66.9036,
+    "activated_at": "2026-10-19T22:40:00Z"
   }
 }
 ```

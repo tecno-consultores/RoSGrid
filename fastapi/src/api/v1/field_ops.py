@@ -35,6 +35,7 @@ from src.schemas.field_ops import (
     FieldVerifySubscriberRequest,
     FieldVerifySubscriberResponse,
 )
+from src.services.network_events import publish_network_service_event
 
 logger = logging.getLogger(__name__)
 
@@ -285,6 +286,21 @@ async def certify_installation(
         status_code=200,
         after_state={"order_id": str(order.id), "serial": payload.onu_scanned_serial},
     )
+
+    if payload.tech_latitude is not None and payload.tech_longitude is not None:
+        await publish_network_service_event(
+            tenant_id=tenant_id,
+            event_name="DEVICE_ACTIVATED_GPS",
+            payload={
+                "order_id": str(order.id),
+                "customer_service_id": str(order.customer_service_id),
+                "device_serial": payload.onu_scanned_serial,
+                "latitude": float(payload.tech_latitude),
+                "longitude": float(payload.tech_longitude),
+                "activated_at": datetime.now(UTC).isoformat(),
+            },
+        )
+
     return order
 
 
@@ -356,6 +372,19 @@ async def detect_fiber_cuts_engine(
             )
             db.add(incident)
             created_incidents.append(incident)
+
+        if count >= 10:
+            await publish_network_service_event(
+                tenant_id=tenant_id,
+                event_name="MASS_OUTAGE_TRIGGERED",
+                payload={
+                    "router_id": str(r_id),
+                    "pon_port": p_port,
+                    "optical_box": o_box,
+                    "affected_onus_count": count,
+                    "detected_at": datetime.now(UTC).isoformat(),
+                },
+            )
 
     await db.commit()
     for inc in created_incidents:

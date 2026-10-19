@@ -541,3 +541,35 @@ export interface FiberCutIncident {
   created_at: string;
   updated_at: string;
 }
+
+export interface BandwidthProfileItem {
+  id: string;
+  tenant_id: string;
+  name: string;
+  rate_down_kbps: number;
+  rate_up_kbps: number;
+  burst_down_kbps: number;
+  burst_up_kbps: number;
+  burst_threshold_down_kbps: number;
+  burst_threshold_up_kbps: number;
+  burst_time_seconds: number;
+  priority: number;
+  queue_type: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChangeRateLimitRequest {
+  bandwidth_profile_id: string;
+}
+
+export interface NetworkServiceActionResponse {
+  status: 'ISOLATED' | 'ALREADY_ISOLATED' | 'RESTORED' | 'ALREADY_ACTIVE' | 'RATE_LIMIT_UPDATED';
+  service_id: string;
+  endpoint_identifier?: string;
+  message: string;
+  bandwidth_profile_id?: string;
+  bandwidth_profile_name?: string;
+  rate_down_kbps?: number;
+  rate_up_kbps?: number;
+}

@@ -2,15 +2,13 @@
 
 ## 📍 Punto de Control Actual (Checkpoint)
 
-- **Hito Actual en Curso:** Hito 17 (QoS Técnico, API de Aprovisionamiento e Idempotencia — Fase 2)
-- **Estado General del Sistema:** Hitos 0 al 16 COMPLETADOS (100%).
-- **Hito 16 (Gobernanza Modular, Feature Flags y Purga de Datos):** COMPLETADO al 100% y certificado en Docker:
-  - Migración Alembic `0005_tenant_feature_flags_and_technical_qos.py` con 16 flags modulares y cache L2 KeyDB (`rg:{id}:features`).
-  - Purga definitiva de datos personales (PII) en `subscriber_devices`, identificación técnica exclusiva por `endpoint_identifier` y `device_serial`.
-  - Panel táctico *"Módulos & Capacidades"* en `TenantsManagementView.vue` con conmutación reactiva e inmediata para Superadmin.
-  - Dependencia de seguridad `require_feature` (HTTP 403 `FEATURE_MODULE_DISABLED`) y ocultamiento reactivo en shell y `RgCommandPalette.vue`.
-  - Branding institucional completo con Tecno Consultores 2023 C.A., enlace SVG a GitHub y licencia GNU GPLv3 en `LoginView.vue` y `RgResponsiveShell.vue`.
-  - Suite de pruebas unitarias al 100% (Backend: 344 tests con 95.01% de cobertura total; Frontend: 211 tests con 100% de aprobación).
+- **Hito Actual en Curso:** Hito 18 (Diagnóstico 360°, BGP Looking Glass e IPFIX — Fase 3)
+- **Estado General del Sistema:** Hitos 0 al 17 COMPLETADOS (100%).
+- **Hito 17 (QoS Técnico, API de Aprovisionamiento e Idempotencia):** COMPLETADO al 100% y certificado en Docker:
+  - Modelo y Endpoints de `BandwidthProfile` con tasas nominales, ráfagas (burst), prioridad (1-8) y colas PCQ / Simple Queues en MikroTik v7.
+  - API de aprovisionamiento técnico idempotente (`Idempotency-Key` UUIDv7 obligatorio): `/api/v1/network-services/{id}/isolate`, `/restore`, y `/change-rate-limit`.
+  - Despachador de webhooks técnicos salientes (`src/services/network_events.py` y `alert_dispatcher_worker.py`) con firma HMAC-SHA256 (`X-RoSGrid-Signature: sha256={hmac}`).
+  - Suite de pruebas unitarias al 100% (Backend: 353 tests con 95.10% de cobertura total; Frontend: 211 tests con 100% de aprobación).
 
 ---
 
@@ -250,16 +248,16 @@
 
 ---
 
-## ⚡ HITO 17: QoS Técnico, API de Aprovisionamiento e Idempotencia (Fase 2)
+## ✅ HITO 17: QoS Técnico, API de Aprovisionamiento e Idempotencia (Fase 2)
 
 > **Archivo Guía:** `specs/32_ISP_OPERATIONS_TECHNICAL_QOS_AND_FIELD_TOOLKIT.md`
 
-- [ ] **17.1** Modelo y Endpoints de `BandwidthProfile`: Tasas Up/Down nominales, parámetros de Burst (`burst_down_kbps`, `burst_up_kbps`, `burst_threshold`, `burst_time`), Prioridad (1-8) y colas PCQ / Simple Queues en MikroTik v7.
-- [ ] **17.2** API de Aprovisionamiento Técnico Idempotente (`Idempotency-Key` UUIDv7 obligatorio):
+- [x] **17.1** Modelo y Endpoints de `BandwidthProfile`: Tasas Up/Down nominales, parámetros de Burst (`burst_down_kbps`, `burst_up_kbps`, `burst_threshold`, `burst_time`), Prioridad (1-8) y colas PCQ / Simple Queues en MikroTik v7.
+- [x] **17.2** API de Aprovisionamiento Técnico Idempotente (`Idempotency-Key` UUIDv7 obligatorio):
   - `POST /api/v1/network-services/{id}/isolate` (agrega a lista de firewall `AISLADOS_TECNICO` o conmuta a 64k).
   - `POST /api/v1/network-services/{id}/restore` (retira aislamiento y restaura perfil en caliente).
   - `POST /api/v1/network-services/{id}/change-rate-limit` (modifica límites de cola sin desconectar sesión física).
-- [ ] **17.3** Despachador de Webhooks Salientes: Worker asíncrono que envía payloads firmados con HMAC-SHA256 ante eventos técnicos de red (`DEVICE_ACTIVATED_GPS`, `DEVICE_ISOLATED`, `DEVICE_RESTORED`, `MASS_OUTAGE_TRIGGERED`).
+- [x] **17.3** Despachador de Webhooks Salientes: Worker asíncrono que envía payloads firmados con HMAC-SHA256 ante eventos técnicos de red (`DEVICE_ACTIVATED_GPS`, `DEVICE_ISOLATED`, `DEVICE_RESTORED`, `MASS_OUTAGE_TRIGGERED`).
 
 ---
 

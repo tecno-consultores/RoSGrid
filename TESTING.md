@@ -264,3 +264,35 @@ docker compose -f docker-compose.qa.yml down --remove-orphans
     - Filtrado dinámico en `RgCommandPalette.vue` y rutas protegidas por Feature Flags con `useAuthStore.isFeatureEnabled`.
     - Pie de página institucional y branding oficial con enlace accesible SVG a GitHub y licencia GNU GPLv3 en `LoginView.vue` y `RgResponsiveShell.vue`.
 
+---
+
+## 12. Certificación QA 11X — Hito 17 (QoS Técnico, Aprovisionamiento e Idempotencia)
+
+Certificación integral ejecutada bajo la **Regla Cero** dentro de los contenedores Docker efímeros `fastapi-qa-backend` (`sinfallas/base-python-alembic:3.13`) y `vue_qa_frontend` (`sinfallas/base-node-ionic:22`).
+
+### A. Backend (`fastapi/`) — Docker `sinfallas/base-python-alembic:3.13`
+- **Análisis Estático y Seguridad (SAST):**
+  - **Ruff (`ruff check src/ tests/`):** Cero (0) errores.
+  - **Ruff Format (`ruff format --check src/ tests/`):** 129 archivos formateados limpiamente (0 diffs).
+  - **Mypy Estricto (`mypy --strict src/`):** Cero (0) errores en los 91 módulos de código fuente.
+  - **Bandit SAST (`bandit -c pyproject.toml -r src/`):** Cero (0) problemas de seguridad identificados.
+- **Pruebas Unitarias y Cobertura (Pytest 9.1.1):**
+  - **Pruebas Ejecutadas:** 353 de 353 pruebas pasadas (100% exitosas) en 29.11s.
+  - **Cobertura Total de Código:** **95.10%** (7,984 sentencias totales, 391 no ejecutadas) superando el umbral corporativo de `>= 95%`.
+  - **Nuevos Módulos y Endpoints Certificados:**
+    - `src/api/v1/network_services.py`: Aprovisionamiento técnico idempotente (`Idempotency-Key` obligatorio) con endpoints `/api/v1/network-services/{id}/isolate`, `/restore`, `/change-rate-limit` y `/api/v1/network-services/{id}` con 98% de cobertura.
+    - `src/schemas/network_services.py`: Esquemas Pydantic v2 para aprovisionamiento, respuestas y modificación de tasas (100% de cobertura).
+    - `src/services/network_events.py`: Servicio emisor de eventos a Redis y despachador de webhooks firmados con HMAC-SHA256 (100% de cobertura).
+    - `src/workers/alert_dispatcher_worker.py`: Cabecera oficial de firma `X-RoSGrid-Signature: sha256={hmac}` y `X-RoSGrid-Signature-256`.
+    - Eventos técnicos de red: `DEVICE_ACTIVATED_GPS`, `DEVICE_ISOLATED`, `DEVICE_RESTORED` y `MASS_OUTAGE_TRIGGERED`.
+
+### B. Frontend (`vue3/`) — Docker `sinfallas/base-node-ionic:22`
+- **Análisis Estático y Tipado Estricto:**
+  - **Vue-TSC (`type-check`):** Cero (0) errores de tipado TypeScript estricto.
+  - **Prettier (`format:check`):** Código 100% formateado y consistente.
+- **Pruebas Unitarias (Vitest v8):**
+  - **Pruebas Ejecutadas:** 211 de 211 pruebas pasadas (100% exitosas) en 31 suites.
+  - **Nuevas Definiciones TypeScript Validadas:**
+    - `BandwidthProfileItem`, `ChangeRateLimitRequest` y `NetworkServiceActionResponse` incorporadas a `src/types/index.ts`.
+
+

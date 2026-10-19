@@ -314,6 +314,18 @@ class SubscriberDevice(Base):
     def onu_serial_number(self, val: Optional[str]) -> None:
         self.device_serial = val
 
+    @property
+    def assigned_ipv4(self) -> Optional[str]:
+        if hasattr(self, "_assigned_ipv4_cache") and self._assigned_ipv4_cache:
+            return self._assigned_ipv4_cache
+        if self.ipv4_address and hasattr(self.ipv4_address, "address") and self.ipv4_address.address:
+            return str(self.ipv4_address.address).split("/")[0]
+        return None
+
+    @assigned_ipv4.setter
+    def assigned_ipv4(self, val: Optional[str]) -> None:
+        self._assigned_ipv4_cache = val
+
 
 CustomerService = SubscriberDevice
 
