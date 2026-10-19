@@ -207,6 +207,76 @@ Las pruebas automatizadas de RoSGrid (cobertura unitaria `>= 95%`, mutación, ac
 
 ---
 
+### Módulo 19: Feature Flags y Gobernanza Modular por Tenant
+
+| ID | Caso de Prueba | Precondición | Pasos de Ejecución | Resultado Esperado |
+| :--- | :--- | :--- | :--- | :--- |
+| **UAT-47** | Conmutación de Módulo ISP (ON/OFF) | Rol `SUPERADMIN_GLOBAL` | 1. Ir a `/tenants` y abrir pestaña *"Módulos & Capacidades"*. 2. Desactivar switch *"Módulo ISP & Operaciones de Campo"*. 3. Guardar. 4. Observar la barra lateral y paleta `Ctrl+K`. | Desaparecen inmediatamente las opciones *"Técnico de Campo"* y *"Mapa de Abonados"*. La UI se simplifica 100% a modo corporativo. |
+| **UAT-48** | Protección de Rutas y API ante Módulo Desactivado | Tenant con `isp_module_enabled=false` | 1. Intentar acceder por URL a `/field-ops`. 2. Enviar petición API `POST /api/v1/network-services/1/isolate`. | El router frontend redirige al dashboard con notificación toast. La API responde HTTP 403 Forbidden con `{ "code": "FEATURE_MODULE_DISABLED" }`. |
+| **UAT-49** | Activación Selectiva de BGP Looking Glass | Red con ASN propio | 1. En el panel de Feature Flags, activar switch *"BGP Looking Glass"*. 2. Guardar y verificar la consola. | Aparece la herramienta BGP Looking Glass permitiendo consultas de rutas y AS-Path sin acceso a SSH. |
+| **UAT-50** | Ajuste de Umbral de Caída Masiva | Superadmin configurando tenant | 1. Modificar campo numérico *"Umbral de Caída Masiva"* de 10 a 5. 2. Guardar. | El valor se persiste en la columna `mass_outage_threshold` de la tabla `tenants` y el worker ajusta su sensibilidad en caliente. |
+
+---
+
+### Módulo 20: QoS Técnico, API de Aprovisionamiento y Webhooks
+
+| ID | Caso de Prueba | Precondición | Pasos de Ejecución | Resultado Esperado |
+| :--- | :--- | :--- | :--- | :--- |
+| **UAT-51** | Creación de Perfil Técnico de Ancho de Banda | Rol `ADMIN` o `OPERATOR` | 1. Ir a configuración de QoS/Colas. 2. Crear perfil *"100M/50M-Burst"*: Up 50M, Down 100M, Burst Up 75M, Burst Down 150M, Burst Time 8s, Prioridad 3. 3. Guardar. | Se crea el registro en `bandwidth_profiles` sin referencias a precios ni facturación, listo para aplicarse a Simple Queues o PCQ. |
+| **UAT-52** | Aislamiento Técnico Idempotente de Equipo | Equipo activo en MikroTik | 1. Enviar `POST /api/v1/network-services/{id}/isolate` con cabecera `Idempotency-Key: {uuid}`. 2. Repetir la misma petición con la misma llave. | En la 1ra petición la IP entra en la Address List `AISLADOS_TECNICO` o limita a 64k. La 2da petición retorna HTTP 200 `{ status: "ALREADY_ISOLATED" }` sin mutaciones dobles. |
+| **UAT-53** | Restauración Inmediata de Servicio | Equipo en estado aislado | 1. Enviar `POST /api/v1/network-services/{id}/restore` con `Idempotency-Key`. | La IP se remueve de la lista de bloqueo y su cola vuelve a los límites nominales en milisegundos sin reiniciar la sesión física. |
+| **UAT-54** | Despacho de Webhook Firmado con HMAC | URL de webhook configurada | 1. Ejecutar acción de aislamiento o cambio de perfil. 2. Inspeccionar servidor receptor de webhooks. | El servidor receptor recibe `HTTP POST` con cabecera `X-RoSGrid-Signature: sha256=...` validable mediante la clave secreta compartida. |
+
+---
+
+### Módulo 21: Diagnóstico 360°, BGP Looking Glass y Flujos IPFIX
+
+| ID | Caso de Prueba | Precondición | Pasos de Ejecución | Resultado Esperado |
+| :--- | :--- | :--- | :--- | :--- |
+| **UAT-55** | Diagnóstico 360° con Ping Multi-MTU | Equipo accesible en MikroTik | 1. Ejecutar prueba 360° hacia la IP del equipo. 2. Observar panel de resultados. | Muestra métricas de latencia y pérdida para paquetes de 64B, 512B y 1472B, identificando problemas de jitter o fragmentación de MTU. |
+| **UAT-56** | Parseo de Causa de Desconexión en Logs | Sesión PPPoE desconectada | 1. Desconectar físicamente el cable de red de un equipo. 2. Ejecutar diagnóstico 360°. | El sistema parsea `/log` de RouterOS e informa con precisión: *"Motivo: peer is not responding (Corte de enlace físico / micro-corte óptico)"*. |
+| **UAT-57** | Muestreo Torch Instantáneo por IP | Tráfico activo hacia el cliente | 1. En diagnóstico 360°, iniciar muestreo Torch (2.5s). | Muestra los 5 principales flujos de red clasificados por protocolo, puerto y velocidad Tx/Rx en kbps. |
+| **UAT-58** | Consulta BGP Looking Glass sin SSH | Sesión BGP activa en router Edge | 1. Ir a BGP Looking Glass. 2. Ingresar prefijo `8.8.8.8/32`. 3. Consultar. | Retorna la ruta activa, Next-Hop, AS-Path completo y comunidades BGP directamente desde la tabla de rutas de RouterOS v7. |
+
+---
+
+### Módulo 22: Mapa de Clientes/ONUs, Alerta Masiva, Responsive e i18n
+
+| ID | Caso de Prueba | Precondición | Pasos de Ejecución | Resultado Esperado |
+| :--- | :--- | :--- | :--- | :--- |
+| **UAT-59** | Mapa de ONUs Separado de Infraestructura | ONUs con coordenadas GPS | 1. Acceder a `/subscribers/map`. 2. Comparar con el mapa de routers en `/inventory`. | El mapa de ONUs es independiente. Los marcadores muestran estado cromático en vivo: Verde (óptimo), Naranja (latencia alta) o Rojo (offline). |
+| **UAT-60** | Alarma NOC por Caída Masiva (> 10 Equipos) | 12 equipos simulando caída simultánea | 1. Forzar timeout o caída en 12 equipos de la misma zona. 2. Observar el Wallboard NOC. | Se dispara banner de emergencia visual y auditivo *"ALERTA: Caída masiva detectada (12 equipos)"*, y se estampa entrada WORM en `audit_logs`. |
+| **UAT-61** | Toolkit de Campo Fluido y Responsive | Dispositivo móvil, tablet o laptop | 1. Abrir vista de Técnico de Campo en navegador redimensionado a 375px (móvil), 768px (tablet) y 1280px (laptop). | El contenido se adapta fluidamente sin el rectángulo vertical estrecho forzado. Botones táctiles de al menos 48px en móvil. |
+| **UAT-62** | Activación Técnica con Captura GPS | Técnico en campo registrando equipo | 1. Ingresar serial de la ONU (sin nombres de cliente). 2. Presionar *"📍 Capturar Coordenadas GPS"*. 3. Confirmar activación. | El navegador lee la geolocalización satelital, asocia las coordenadas al equipo y este aparece de inmediato en el mapa `/subscribers/map`. |
+| **UAT-63** | Conmutación de Idioma i18n | Interfaz en Español (default) | 1. En la barra superior, cambiar selector de idioma de *"ES"* a *"EN"*. | Toda la terminología de navegación, menús tácticos y estados conmuta fluidamente a Inglés mediante los diccionarios JSON reactivos. |
+
+---
+
+### Módulo 23: Suite Corporativa — Config Drift, CIS Hardening, SD-WAN, Rogue DHCP, SLA y CAPsMAN
+
+| ID | Caso de Prueba | Precondición | Pasos de Ejecución | Resultado Esperado |
+| :--- | :--- | :--- | :--- | :--- |
+| **UAT-64** | Detección de Desviación (*Config Drift*) | Router con regla de firewall alterada localmente | 1. Ejecutar análisis de Drift contra la Plantilla Maestra (*Golden Baseline*). 2. Observar el visor Diff. | Se resalta en rojo la regla no autorizada. El router pasa a estado `CONFIG_DRIFT_DETECTED`. |
+| **UAT-65** | Remediación en 1-Clic (*Auto-Revert*) | Drift detectado en router | 1. Presionar *"Revertir a Configuración Homologada"*. 2. Confirmar con aprobación Maker-Checker. | RoSGrid aplica el bloque correctivo bajo Safe Mode (60s), eliminando la regla no autorizada y normalizando el estado a `COMPLIANT`. |
+| **UAT-66** | Auditoría CIS Benchmark y Security Score | Router recién instalado | 1. Ejecutar auditoría CIS en el router. 2. Revisar puntuación. | Muestra calificación (ej. 60/100) listando vulnerabilidades: Telnet activo, usuario `admin` existente y DNS remoto permitido. |
+| **UAT-67** | Auto-Endurecimiento (*Auto-Hardening*) | Router con vulnerabilidades CIS | 1. Presionar *"Endurecer Router Automáticamente"*. | Aplica script correctivo con Safe Mode: desactiva servicios inseguros, renombra `admin` y restringe WinBox, elevando el Score a 100/100. |
+| **UAT-68** | Detección de Rogue DHCP en Switch | Switch MikroTik con DHCP Snooping | 1. Conectar servidor DHCP falso en puerto no confiable (`trusted=no`). 2. Observar alerta NOC. | El chip de conmutación descarta los paquetes por hardware y RoSGrid alerta al operador con la MAC del intruso y el puerto físico exacto. |
+| **UAT-69** | Reporte Mensual de Cumplimiento de SLA | Enlace WAN dedicado monitoreado | 1. Ir a Monitor de SLA. 2. Exportar reporte mensual en PDF/CSV. | Genera documento formal con porcentaje de disponibilidad (Uptime), latencia P95/P99 y lista de caídas para reclamos contractuales. |
+| **UAT-70** | Centralización WiFi CAPsMAN (SSIDs) | Entorno con Access Points MikroTik | 1. Desplegar perfil inalámbrico con SSIDs Corporativo (802.1X), Invitados y Dispositivos IoT. | Los APs se aprovisionan simultáneamente, aplicando aislamiento de clientes en la red de invitados y roaming rápido 802.11r. |
+
+---
+
+### Módulo 24: Agentes de IA vía MCP (Asistencia Técnica Autónoma)
+
+| ID | Caso de Prueba | Precondición | Pasos de Ejecución | Resultado Esperado |
+| :--- | :--- | :--- | :--- | :--- |
+| **UAT-71** | Diagnóstico Autónomo de Equipo vía MCP | Agente IA (Claude / Hermes) conectado a `/api/v1/mcp` | 1. Indicar al agente: *"Diagnostica la ONU con serial ZTEGC1234567"*. | El agente invoca la tool `rosgrid_run_360_diagnostics`, evalúa latencia multi-MTU y causas de log, y entrega diagnóstico técnico resumido. |
+| **UAT-72** | Aislamiento Técnico de Dispositivo por IA | Permiso de agente configurado | 1. Indicar al agente: *"Aísla el equipo con ID 42 por reporte de bucle"*. | El agente invoca `rosgrid_isolate_subscriber` con cabecera de idempotencia; el cambio se aplica y queda registrado en la bitácora WORM. |
+| **UAT-73** | Consulta de Rutas BGP vía IA | BGP Looking Glass habilitado | 1. Indicar al agente: *"Verifica por cuál proveedor estamos alcanzando el prefijo 1.1.1.0/24"*. | El agente invoca `rosgrid_query_bgp_looking_glass` y analiza el AS-Path y Next-Hop activo de forma autónoma. |
+| **UAT-74** | Detección de Cortes y Caídas Masivas por IA | Evento de caída masiva activo | 1. Indicar al agente: *"Revisa si hay cortes masivos de red en este momento"*. | El agente invoca `rosgrid_detect_mass_outage`, identifica los equipos caídos y la rama o zona afectada, y recomienda acciones de mitigación. |
+
+---
+
 ## 4. Plantilla de Bitácora de Ejecución (Sign-off)
 
 ```markdown

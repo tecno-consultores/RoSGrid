@@ -207,3 +207,63 @@
 - [ ] **16.1** Auditar los `Dockerfile`, `docker-compose*.yml` e infraestructura con `./auditar-infra.sh` y escaneo Trivy de imágenes (`CRITICAL,HIGH = 0`).
 - [ ] **16.2** Actualizar `CHANGELOG.md` consolidando los cambios de `[Unreleased]` dentro del lanzamiento oficial `[1.0.0]` con las métricas certificadas en `TESTING.md`.
 - [ ] **16.3** Ejecutar `./build.sh` (como usuario no-root) con `docker buildx` (`container-builder` + `tonistiigi/binfmt`) para construir y publicar `sinfallas/rosgrid-backend:latest` (`:1.0.0`) y `sinfallas/rosgrid-frontend:latest` (`:1.0.0`) en Docker Hub y limpiar cachés con `prune -af`.
+
+---
+
+## 🚀 HITO 17: Gobernanza Modular, Feature Flags y Purga de Datos (Fase 1)
+> **Archivos Guía:** `specs/32_ISP_OPERATIONS_TECHNICAL_QOS_AND_FIELD_TOOLKIT.md` y `specs/34_TENANT_FEATURE_FLAGS_AND_GOVERNANCE_PANEL.md`
+- [ ] **17.1** Migración Alembic `0005_tenant_feature_flags_and_technical_qos.py` con atributos booleanos en `tenants` (`isp_module_enabled`, `bgp_looking_glass_enabled`, `sfp_ddm_telemetry_enabled`, `ipfix_analytics_enabled`, `enforce_maker_checker`, `auto_safemode_enforced`, `ai_mcp_integration_enabled`, `nightly_backups_enabled`, `outbound_webhooks_enabled`, `config_drift_monitoring_enabled`, `cis_audit_enabled`, `sdwan_orchestrator_enabled`, `capsman_wifi_enabled`, `sla_tracker_enabled`, `mass_outage_threshold`, `default_locale`).
+- [ ] **17.2** Refactorización de `subscriber_devices` en PostgreSQL: Purga estricta de nombres, cédulas y datos personales. Identificación técnica exclusiva por `device_serial`, `endpoint_identifier`, router y puerto.
+- [ ] **17.3** Panel de Feature Flags en Frontend (`TenantsManagementView.vue`): Pestaña táctica *"Módulos & Capacidades"* con switches de alta densidad para conmutación inmediata por tenant por el Superadmin.
+- [ ] **17.4** Seguridad y Reactividad de Módulos: Dependencia FastAPI `require_feature(flag_name)` que responde HTTP 403 `FEATURE_MODULE_DISABLED`, y adaptación dinámica de `RgResponsiveShell.vue`, `RgCommandPalette.vue` y rutas Vue Router para ocultar módulos inactivos.
+
+---
+
+## ⚡ HITO 18: QoS Técnico, API de Aprovisionamiento e Idempotencia (Fase 2)
+> **Archivo Guía:** `specs/32_ISP_OPERATIONS_TECHNICAL_QOS_AND_FIELD_TOOLKIT.md`
+- [ ] **18.1** Modelo y Endpoints de `BandwidthProfile`: Tasas Up/Down nominales, parámetros de Burst (`burst_down_kbps`, `burst_up_kbps`, `burst_threshold`, `burst_time`), Prioridad (1-8) y colas PCQ / Simple Queues en MikroTik v7.
+- [ ] **18.2** API de Aprovisionamiento Técnico Idempotente (`Idempotency-Key` UUIDv7 obligatorio):
+  * `POST /api/v1/network-services/{id}/isolate` (agrega a lista de firewall `AISLADOS_TECNICO` o conmuta a 64k).
+  * `POST /api/v1/network-services/{id}/restore` (retira aislamiento y restaura perfil en caliente).
+  * `POST /api/v1/network-services/{id}/change-rate-limit` (modifica límites de cola sin desconectar sesión física).
+- [ ] **18.3** Despachador de Webhooks Salientes: Worker asíncrono que envía payloads firmados con HMAC-SHA256 ante eventos técnicos de red (`DEVICE_ACTIVATED_GPS`, `DEVICE_ISOLATED`, `DEVICE_RESTORED`, `MASS_OUTAGE_TRIGGERED`).
+
+---
+
+## 🔍 HITO 19: Diagnóstico 360°, BGP Looking Glass e IPFIX (Fase 3)
+> **Archivos Guía:** `specs/32_ISP_OPERATIONS_TECHNICAL_QOS_AND_FIELD_TOOLKIT.md` y `specs/13_BACKEND_ENDPOINTS_WEBFIG_L1_FIREWALL_AND_ROUTING.md`
+- [ ] **19.1** Suite de Diagnóstico 360° (`POST /api/v1/diagnostics/endpoint-360`):
+  * Ping Multi-MTU (64B, 512B, 1472B) para detección de dispersión de latencia y fragmentación DF-bit.
+  * Parser automático de motivos de desconexión en `/log` de RouterOS (`link down`, `peer is not responding`, `user request`, `auth failed`).
+  * Muestreo Torch en tiempo real (2.5 segundos) filtrado por IP/MAC con Top 5 de flujos activos.
+- [ ] **19.2** Consola BGP Looking Glass Interno: Endpoints `GET /api/v1/bgp/looking-glass/route` y `/advertised` para inspeccionar rutas, AS-Path, comunidades BGP y prefijos exportados a proveedores de tránsito sin dar acceso por SSH.
+- [ ] **19.3** Detección de Tráfico Anómalo / Flujos IPFIX: Detección de clientes con tasas anormales de PPS o conexiones masivas con botón de mitigación rápida (FastDrop / Blackhole con Safe Mode).
+
+---
+
+## 🗺️ HITO 20: Mapas Separados, Telemetría Efímera, Responsive e i18n (Fase 4)
+> **Archivo Guía:** `specs/32_ISP_OPERATIONS_TECHNICAL_QOS_AND_FIELD_TOOLKIT.md`
+- [ ] **20.1** Mapa Exclusivo de Clientes/ONUs (`OsmOnuMap.vue` en `/subscribers/map`): Completamente separado del mapa de routers de infraestructura, con telemetría efímera Zero-Metrics (Verde < 40ms, Naranja 40-120ms o pérdida leve, Rojo timeout).
+- [ ] **20.2** Alerta de Caída Masiva (Mass Outage Alert): Detección automática en segundo plano de caídas simultáneas > `mass_outage_threshold` (por defecto 10), con alarma visual/sonora en NOC y registro forense en `audit_logs` con hash encadenado HMAC-SHA256.
+- [ ] **20.3** Corrección de Responsive del Técnico de Calle (`FieldTechMobileView.vue`): Eliminación del contenedor fijo vertical (`max-width: 480px`), maquetación 100% fluida para móvil, tablet y laptop, campo simplificado solo con Serial de ONU, y botón prominente *"📍 Capturar Coordenadas GPS"* al activar.
+- [ ] **20.4** Arquitectura de Internacionalización (i18n): Base modular con `locales/es.json` y `locales/en.json`, composable `useI18n()` y selector táctico de idioma en barra de herramientas superior.
+
+---
+
+## 🏢 HITO 21: Suite Corporativa — Config Drift, CIS Hardening, SD-WAN, Rogue DHCP, SLA y CAPsMAN
+> **Archivo Guía:** `specs/33_ENTERPRISE_FLEET_MANAGEMENT_AND_SECURITY_COMPLIANCE.md`
+- [ ] **21.1** Detección de Desviación de Configuración (*Config Drift Detection*): Comparador contra Plantilla Maestra (*Golden Baseline Template*), visor de diferencias Git Diff en rojo/verde y botón de remediación en 1 clic (*Auto-Revert*) con Safe Mode y Maker-Checker.
+- [ ] **21.2** Orquestador SD-WAN WireGuard Hub & Spoke: Generación automática de llaves, direccionamiento `/30` o `/31`, inserción de peers y enrutamiento dinámico OSPF sobre WireGuard con failover multi-WAN recursivo.
+- [ ] **21.3** Auditoría de Seguridad & Endurecimiento CIS Benchmark para RouterOS: Escaneo de las 10 directivas críticas de ciberseguridad, cálculo de Security Score (0-100) y botón de auto-endurecimiento (*Auto-Hardening*).
+- [ ] **21.4** Detección de Rogue DHCP & Seguridad de Conmutación: Monitoreo de eventos de DHCP Snooping en switches y bridges MikroTik, alertas al NOC con puerto físico y MAC del intruso, y deshabilitación preventiva de puerto.
+- [ ] **21.5** Monitor de Cumplimiento de SLA para Enlaces Dedicados: Medición continua de jitter, latencia y pérdida hacia el gateway del carrier con generador de reportes de cumplimiento (PDF/CSV) para reclamos de penalización.
+- [ ] **21.6** Gestión Centralizada de WiFi Corporativo (CAPsMAN / WiFiWave2): Orquestación de SSIDs (Corporativo WPA3-Enterprise 802.1X, Invitados aislado y dispositivos IoT) con telemetría de señal RSSI y trazabilidad de roaming 802.11r.
+
+---
+
+## 🤖 HITO 22: Servidor MCP Ampliado para Agentes IA y Certificación QA 11X Final
+> **Archivos Guía:** `specs/30_BACKEND_MCP_PROTECTED_ENDPOINT.md`, `specs/24` a `specs/29` y `docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md`
+- [ ] **22.1** Expansión de Tools MCP para Agentes de IA: Nuevas herramientas para sustitución o asistencia técnica autónoma (`rosgrid_isolate_subscriber`, `rosgrid_restore_subscriber`, `rosgrid_change_rate_limit`, `rosgrid_run_360_diagnostics`, `rosgrid_query_bgp_looking_glass`, `rosgrid_check_config_drift`, `rosgrid_run_cis_audit`, `rosgrid_detect_mass_outage`).
+- [ ] **22.2** Actualización de Documentación: Sincronización completa de `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md` y `docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md` con los nuevos contratos.
+- [ ] **22.3** Certificación Estándar QA 11X en Docker: Cobertura unitaria >= 95% en backend (`sinfallas/base-python-uv:3.13`) y frontend (`sinfallas/base-node-ionic:22`), ejecución de la suite de contratos Front-Back y compilación limpia del bundle de producción.
+

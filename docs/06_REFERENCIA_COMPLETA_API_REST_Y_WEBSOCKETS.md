@@ -394,4 +394,55 @@ Connection: Upgrade
 
 - **Trama `MAKER_CHECKER_REQUEST_CREATED`:** Notifica a los supervisores cuando un cambio ha quedado encolado para su revisión.
 - **Trama `NOC_ROUTER_STATE_CHANGED`:** Alerta instantánea cuando un equipo pasa a estado `OFFLINE` o `DEGRADED`.
+- **Trama `MASS_OUTAGE_DETECTED`:** Alerta prioritaria cuando caen simultáneamente más de `mass_outage_threshold` equipos de última milla.
 - **Trama `SESSION_KILLED`:** Fuerza el cierre de sesión del usuario especificado.
+
+---
+
+## 4. Endpoints de Gobernanza Modular, Feature Flags y Operaciones
+
+### 4.1 Feature Flags por Empresa (`/api/v1/tenants/{id}/features`)
+- `GET /api/v1/tenants/{id}/features`: Consulta el catálogo de banderas booleanas activas para el tenant (Módulo ISP, BGP, SFP DDM, CIS, SD-WAN, etc.).
+- `PUT /api/v1/tenants/{id}/features`: (Exclusivo `SUPERADMIN_GLOBAL`) Actualiza atómicamente los módulos habilitados, conmutando la interfaz y bloqueando/desbloqueando rutas API.
+
+### 4.2 Aprovisionamiento Técnico & QoS (Interconexión con Facturación Externa)
+Permite a sistemas externos de facturación o CRM orquestar el ciclo de vida de la red mediante cabecera obligatoria `Idempotency-Key: {uuid-v7}`:
+- `POST /api/v1/qos/profiles`: Define perfiles técnicos con velocidad nominal Up/Down, Burst (`burst_down_kbps`, `burst_threshold`, `burst_time`), prioridad (1-8) y cola PCQ.
+- `POST /api/v1/network-services/{id}/isolate`: Aísla administrativamente la IP en MikroTik (`AISLADOS_TECNICO`) o conmuta a 64k. Retorna `{ "status": "ISOLATED" }` o `{ "status": "ALREADY_ISOLATED" }`.
+- `POST /api/v1/network-services/{id}/restore`: Restablece el servicio nominal en milisegundos sin desconectar la sesión física.
+- `POST /api/v1/network-services/{id}/change-rate-limit`: Modifica en caliente los límites de cola del suscriptor (`{ "bandwidth_profile_id": "uuid" }`).
+
+### 4.3 Webhooks Salientes Técnicos
+RoSGrid envía peticiones `POST` firmadas con `X-RoSGrid-Signature: sha256={hmac}` ante eventos de infraestructura:
+```json
+{
+  "event": "DEVICE_ACTIVATED_GPS",
+  "timestamp": "2026-10-18T21:40:00Z",
+  "data": {
+    "device_serial": "ZTEGC1234567",
+    "endpoint_identifier": "usr_ftth_4091",
+    "router_id": "c7a8b9c0-1234-4567-89ab-cdef01234567",
+    "assigned_ip": "100.64.10.45",
+    "latitude": 10.4806,
+    "longitude": -66.9036
+  }
+}
+```
+
+### 4.4 Diagnóstico 360°, BGP Looking Glass e IPFIX
+- `POST /api/v1/diagnostics/endpoint-360`: Ejecuta ping secuencial multi-MTU (64B, 512B, 1472B), parsea causas de desconexión en `/log` de RouterOS (`link down`, `peer is not responding`, `user request`) y realiza muestreo Torch de 2.5s por IP.
+- `GET /api/v1/bgp/looking-glass/route?router_id={id}&prefix={cidr}`: Consulta la tabla de rutas BGP v7 mostrando AS-Path, Next-Hop y comunidades.
+- `GET /api/v1/bgp/looking-glass/advertised?router_id={id}&peer={name}`: Muestra los prefijos anunciados a un carrier específico.
+- `GET /api/v1/traffic-flow/anomalies`: Detecta IPs con altas tasas de PPS o conexiones concurrentes anómalas.
+- `POST /api/v1/traffic-flow/mitigate`: Aplica regla FastDrop/Blackhole con Safe Mode y registro WORM.
+
+### 4.5 Suite Corporativa & Enterprise
+- `POST /api/v1/compliance/drift-check/{router_id}`: Compara la configuración en ejecución contra la Plantilla Maestra (*Golden Baseline*). Retorna diff semántico en formato Git.
+- `POST /api/v1/compliance/drift-revert/{router_id}`: Aplica reversión a la configuración canónica con Safe Mode y Maker-Checker.
+- `POST /api/v1/compliance/cis-audit/{router_id}`: Evalúa las 10 directivas críticas CIS y genera Security Score (0 a 100).
+- `POST /api/v1/compliance/cis-harden/{router_id}`: Ejecuta auto-endurecimiento cerrando servicios vulnerables.
+- `POST /api/v1/sdwan/mesh-provision`: Genera llaves WireGuard, asigna `/30` y despliega adyacencia de enrutamiento dinámico Hub & Spoke.
+- `GET /api/v1/switching/rogue-dhcp-alerts`: Lista eventos de DHCP Snooping y puertos con intrusos detectados.
+- `GET /api/v1/sla/reports/monthly`: Genera reporte auditable de disponibilidad y latencia P95/P99 para reclamos a carriers.
+- `GET/POST /api/v1/wifi/capsman/profiles`: Gestiona perfiles centralizados de SSIDs Corporativo (802.1X), Invitados e IoT.
+

@@ -197,6 +197,11 @@ Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `
 * `specs/29_ANTIGRAVITY_MASTER_EXECUTION_PLAYBOOK_AND_TESTING_MD.md` — Playbook secuencial de construcción, validación y plantilla obligatoria de `TESTING.md`.
 * `specs/31_PRODUCTION_BOOTSTRAP_LOCAL_TESTING_AND_DISTRIBUTED_OPS.md` — Procedimiento de bootstrap en DB virgen, arquitectura distribuida Cross-Origin Direct y pipeline de validación local `./probar-prod-local.sh`.
 
+### Bloque 6: Operaciones ISP, Gestión Corporativa de Flotas y Gobernanza Modular
+* `specs/32_ISP_OPERATIONS_TECHNICAL_QOS_AND_FIELD_TOOLKIT.md` — Módulo ISP técnico: QoS con Burst/PCQ, API de aprovisionamiento externa (Isolate/Restore/Rate-limit) con idempotencia, diagnóstico 360°, mapa de ONUs con telemetría efímera, alerta masiva, toolkit de campo responsive con GPS y arquitectura i18n.
+* `specs/33_ENTERPRISE_FLEET_MANAGEMENT_AND_SECURITY_COMPLIANCE.md` — Módulo Corporativo / Enterprise: Detección de Desviación de Configuración (Config Drift vs Golden Baseline), Orquestador SD-WAN y Malla WireGuard Hub & Spoke, Auditoría CIS Benchmark (Score 0-100), Detección de Rogue DHCP / Seguridad LAN, Monitor de Cumplimiento de SLA y Gestión Centralizada WiFi (CAPsMAN / WiFiWave2).
+* `specs/34_TENANT_FEATURE_FLAGS_AND_GOVERNANCE_PANEL.md` — Panel de Gobernanza de Feature Flags por Empresa: Modelo de datos en `tenants`, control de acceso por SuperAdmin, guardias de API y conmutación dinámica de la interfaz para operar como ISP, Entorno Corporativo o Mixto.
+
 ---
 
 ## 5. Políticas Complementarias de Gobernanza 11X (Linters, Smoke Test --no-dev y UAT)

@@ -26,13 +26,13 @@ graph TB
 
     subgraph "Servidor MCP RoSGrid (FastAPI)"
         RateLimit --> Dispatcher[Dispatcher JSON-RPC 2.0]
-        Dispatcher --> ToolsList["tools/list (8 Tools Semánticas)"]
+        Dispatcher --> ToolsList["tools/list (16 Tools Semánticas)"]
         Dispatcher --> ToolExec["tools/call (Ejecutor Aislado)"]
         ToolExec --> AuditWORM[(Bitácora WORM: MCP_AI_TOOL_CALL)]
     end
 
     subgraph "Freno de Seguridad y Enlace a MikroTik"
-        ToolExec --> ReadTools[1 a 7: Herramientas de Solo Lectura y Diagnóstico Acotado]
+        ToolExec --> ReadTools[1 a 7 & 9 a 16: Herramientas de Diagnóstico, Consulta y Aislamiento Técnico]
         ToolExec --> MutationTool[8: rosgrid_propose_network_change]
         
         ReadTools -->|Pool TLS Keep-Alive| MikroTik[MikroTik RouterOS v7]
@@ -130,11 +130,11 @@ Verificación de latencia y confirmación de sesión:
 ```
 
 ### 2.3 Método `tools/list`
-Devuelve el catálogo de las 8 herramientas semánticas con sus esquemas JSON de entrada (`inputSchema`).
+Devuelve el catálogo de las 16 herramientas semánticas con sus esquemas JSON de entrada (`inputSchema`).
 
 ---
 
-## 3. Catálogo Detallado de las 8 Herramientas Semánticas MCP
+## 3. Catálogo Detallado de las 16 Herramientas Semánticas MCP
 
 ### Herramienta 1: `rosgrid_list_inventory`
 - **Nivel de Riesgo:** Solo Lectura.
@@ -262,6 +262,79 @@ Devuelve el catálogo de las 8 herramientas semánticas con sus esquemas JSON de
   }
 }
 ```
+
+---
+
+### Herramienta 9: `rosgrid_run_360_diagnostics`
+- **Nivel de Riesgo:** Diagnóstico Técnico Avanzado.
+- **Descripción:** Ejecuta una batería completa de pruebas: ping multi-MTU (64B, 512B, 1472B), análisis del historial de logs en RouterOS para determinar la causa de desconexión (`link down`, `peer not responding`, `user request`) y muestreo Torch de flujos activos.
+- **Argumentos:**
+  - `router_id` (UUID requerido).
+  - `target_ip` (string requerido).
+  - `device_serial` (string opcional).
+
+---
+
+### Herramienta 10: `rosgrid_isolate_subscriber`
+- **Nivel de Riesgo:** Operación de Aislamiento Técnico (Idempotente).
+- **Descripción:** Permite al agente IA aislar un equipo en MikroTik (bloqueo por lista de firewall `AISLADOS_TECNICO` o degradación a 64k) ante detección de bucles de capa 2, ataques DDoS o requerimiento de seguridad.
+- **Argumentos:**
+  - `subscriber_device_id` (UUID requerido).
+  - `reason` (string justificando el aislamiento).
+  - `idempotency_key` (UUIDv7 opcional).
+
+---
+
+### Herramienta 11: `rosgrid_restore_subscriber`
+- **Nivel de Riesgo:** Operación de Restauración Técnica (Idempotente).
+- **Descripción:** Restaura el servicio normal de un equipo previamente aislado, removiendo la regla de bloqueo y restableciendo los límites de cola nominales.
+- **Argumentos:**
+  - `subscriber_device_id` (UUID requerido).
+  - `idempotency_key` (UUIDv7 opcional).
+
+---
+
+### Herramienta 12: `rosgrid_change_subscriber_rate_limit`
+- **Nivel de Riesgo:** Modificación Técnica de Ancho de Banda.
+- **Descripción:** Aplica un nuevo perfil de velocidad (Queue Simple / PCQ con parámetros de Burst) al equipo sin desconectar la sesión física.
+- **Argumentos:**
+  - `subscriber_device_id` (UUID requerido).
+  - `bandwidth_profile_id` (UUID requerido).
+
+---
+
+### Herramienta 13: `rosgrid_query_bgp_looking_glass`
+- **Nivel de Riesgo:** Solo Lectura de Enrutamiento BGP.
+- **Descripción:** Realiza consultas directas a la tabla BGP de RouterOS v7 para verificar el camino óptimo (AS-Path), comunidades y prefijos anunciados o recibidos hacia proveedores de tránsito.
+- **Argumentos:**
+  - `router_id` (UUID requerido).
+  - `query_type` (`"route"` o `"advertised"`).
+  - `prefix` (string CIDR, ej. `"1.1.1.0/24"`).
+  - `peer_session` (string opcional para consultar un peer específico).
+
+---
+
+### Herramienta 14: `rosgrid_check_config_drift`
+- **Nivel de Riesgo:** Auditoría de Cumplimiento Corporativo.
+- **Descripción:** Compara la configuración en ejecución del router contra la Plantilla Maestra (*Golden Baseline Template*) de la empresa y devuelve el diff semántico de líneas no autorizadas.
+- **Argumentos:**
+  - `router_id` (UUID requerido).
+
+---
+
+### Herramienta 15: `rosgrid_run_cis_audit`
+- **Nivel de Riesgo:** Auditoría de Ciberseguridad.
+- **Descripción:** Evalúa las 10 directivas críticas de endurecimiento CIS Benchmark en RouterOS y retorna el Security Score (0 a 100) junto con la lista detallada de vulnerabilidades detectadas.
+- **Argumentos:**
+  - `router_id` (UUID requerido).
+
+---
+
+### Herramienta 16: `rosgrid_detect_mass_outage`
+- **Nivel de Riesgo:** Monitoreo y Respuesta a Incidentes.
+- **Descripción:** Analiza en memoria efímera el estado de los equipos de última milla y determina si hay una caída masiva activa en un sector, rama PON o switch, evaluando si supera el umbral configurado (`mass_outage_threshold`).
+- **Argumentos:**
+  - `tenant_id` (UUID opcional).
 
 ---
 
