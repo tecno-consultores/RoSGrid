@@ -41,6 +41,21 @@ El formulario presenta 3 campos obligatorios con etiquetas `<label>` explícitas
 - Presenta un campo numérico de 6 dígitos (`inputmode="numeric"`, `pattern="[0-9]{6}"`, `autocomplete="one-time-code"`) con cuenta regresiva del tiempo restante del `challenge_id` (180 segundos).
 - Al completarse el 6.º dígito, dispara `POST /api/v1/auth/2fa/verify` y redirige al Dashboard (o al Wallboard NOC si el rol es `NOC_MONITOR`).
 
+### **1.4 Pie de Página y Branding Institucional (`LoginView.vue`)**
+
+El pie de la pantalla de login incorpora un bloque sutil y elegante (`.login-institutional-footer`), ubicado debajo de la tarjeta de inicio de sesión:
+1. **Enlace al Repositorio Oficial en GitHub:**
+   - Enlace `<a>` con `target="_blank" rel="noopener noreferrer"` hacia `https://github.com/tecno-consultores/RoSGrid/`.
+   - Renderiza un icono SVG vectorial de GitHub (20x20px) con atributo `aria-label="Repositorio oficial de RoSGrid en GitHub"` y `title="Código fuente en GitHub"`.
+2. **Atribución de Autoría:**
+   - Texto: *"Elaborado por Tecno Consultores 2023 C.A."* con tipografía de alta legibilidad y estilo discreto.
+3. **Versión y Licencia del Sistema:**
+   - Muestra el número de versión (ej. `v1.0.0` extraído del entorno de compilación) junto a la insignia *"Licencia GNU GPLv3"*.
+4. **Diseño y Accesibilidad:**
+   - Tipografía reducida (`0.75rem` / `12px`), colores tenues en gris pizarra (`--rg-text-muted`, ratio de contraste `>= 4.5:1` sobre `--rg-bg-canvas` para cumplir WCAG 2.1 AA) e interacciones hover con resplandor cian sutil (`--rg-accent-cyan`).
+
+---
+
 ## **2. Vista de Administración de Empresas — Multi-Tenant (vue3/src/views/admin/TenantsManagementView.vue)**
 
 - **Ruta:** `/admin/tenants`

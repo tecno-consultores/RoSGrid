@@ -129,5 +129,5 @@ Para consultar todos los manuales oficiales de producción de RoSGrid:
 - [docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md](./docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md) — Catálogo de endpoints REST, WebSockets, Aprovisionamiento QoS y Webhooks.
 - [docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md](./docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md) — Integración de IA con Model Context Protocol (16 Tools).
 - [docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md](./docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md) — Pipeline local y suite de 24 pruebas UI-API.
-- [docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md](./docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md) — Plan maestro UAT 11X (74 casos de prueba E2E).
+- [docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md](./docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md) — Plan maestro UAT 11X (75 casos de prueba E2E).
 
