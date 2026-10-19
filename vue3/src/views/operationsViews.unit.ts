@@ -576,6 +576,60 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
     vi.useRealTimers();
   });
 
+  it('NocWallboardView — alerta y banner de caída masiva (Mass Outage) con reconocimiento y silenciado', async () => {
+    vi.spyOn(http, 'get').mockImplementation(async (url: string) => {
+      if (url.includes('/api/v1/inventory/routers')) {
+        return {
+          status: 200,
+          data: { items: [] },
+          headers: new Headers(),
+        };
+      }
+      if (url.includes('/api/v1/audit/logs')) {
+        return {
+          status: 200,
+          data: {
+            items: [
+              {
+                id: 'log-outage-1',
+                event_action: 'MASS_OUTAGE_TRIGGERED',
+                created_at: new Date().toISOString(),
+                after_state: {
+                  affected_onus_count: 14,
+                  pon_port: 'sfp-plus1',
+                  optical_box: 'NAP-SectorNorte',
+                },
+              },
+            ],
+          },
+          headers: new Headers(),
+        };
+      }
+      return { status: 200, data: [], headers: new Headers() };
+    });
+
+    const wrapper = mount(NocWallboardView, {
+      global: {
+        stubs: { OsmRouterMap: true },
+      },
+    });
+    await flushPromises();
+
+    expect(wrapper.find('.mass-outage-banner').exists()).toBe(true);
+    expect(wrapper.text()).toContain('ALERTA DE CAÍDA MASIVA');
+    expect(wrapper.text()).toContain('14 Equipos');
+
+    // Botón de silenciar
+    const btnSilence = wrapper.find('.btn-outage-silence');
+    await btnSilence.trigger('click');
+    expect(btnSilence.text()).toContain('Activar Sonido');
+
+    // Botón de reconocer
+    const btnAck = wrapper.find('#btn-ack-mass-outage');
+    await btnAck.trigger('click');
+    expect(wrapper.find('.mass-outage-banner').exists()).toBe(false);
+  });
+
   it('ImmutableAuditLogsView — busca registros forenses, verifica cadena WORM y exporta', async () => {
     vi.spyOn(http, 'get').mockResolvedValue({
       status: 200,

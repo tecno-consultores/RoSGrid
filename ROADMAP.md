@@ -2,13 +2,14 @@
 
 ## 📍 Punto de Control Actual (Checkpoint)
 
-- **Hito Actual en Curso:** Hito 18 (Diagnóstico 360°, BGP Looking Glass e IPFIX — Fase 3)
-- **Estado General del Sistema:** Hitos 0 al 17 COMPLETADOS (100%).
-- **Hito 17 (QoS Técnico, API de Aprovisionamiento e Idempotencia):** COMPLETADO al 100% y certificado en Docker:
-  - Modelo y Endpoints de `BandwidthProfile` con tasas nominales, ráfagas (burst), prioridad (1-8) y colas PCQ / Simple Queues en MikroTik v7.
-  - API de aprovisionamiento técnico idempotente (`Idempotency-Key` UUIDv7 obligatorio): `/api/v1/network-services/{id}/isolate`, `/restore`, y `/change-rate-limit`.
-  - Despachador de webhooks técnicos salientes (`src/services/network_events.py` y `alert_dispatcher_worker.py`) con firma HMAC-SHA256 (`X-RoSGrid-Signature: sha256={hmac}`).
-  - Suite de pruebas unitarias al 100% (Backend: 353 tests con 95.10% de cobertura total; Frontend: 211 tests con 100% de aprobación).
+- **Hito Actual en Curso:** Hito 20 (Suite Corporativa — Config Drift, CIS Hardening, SD-WAN, Rogue DHCP, SLA y CAPsMAN)
+- **Estado General del Sistema:** Hitos 0 al 19 COMPLETADOS (100%).
+- **Hito 19 (Mapas Separados, Telemetría Efímera, Responsive e i18n):** COMPLETADO al 100% y certificado en Docker:
+  - Mapa Exclusivo de Clientes/ONUs (`OsmOnuMap.vue` en `/subscribers/map`): Totalmente desacoplado del mapa de infraestructura de routers, con telemetría efímera Zero-Metrics (🟢 < 40ms, 🟠 40-120ms, 🔴 > 20% o timeout), agrupación por caja de empalme / coordenadas coincidentes y spiderfier interactivo.
+  - Detección de Caída Masiva (Mass Outage Alert): Monitoreo de umbral dinámico (`tenant.mass_outage_threshold`), alerta visual y sonora reactiva en el Wallboard NOC mediante WebSockets y registro de auditoría WORM inmutable con hash encadenado HMAC-SHA256.
+  - Interfaz Responsive Táctica de Campo (`FieldTechMobileView.vue`): Eliminación de la restricción rígida de 480px, layout fluido adaptable a móvil (<768px), tablet (2 columnas) y desktop/laptop (3 columnas con diagnóstico 360° integrado), captura GPS prominente con georreferenciación en la activación de ONUs y canvas de firma digital.
+  - Arquitectura Modular de Internacionalización (i18n): Composable `useI18n()` reactivo con diccionarios `es.json` y `en.json`, persistencia en localStorage y botón conmutador táctico en la barra superior del shell.
+  - Certificación QA: Backend con 370 pruebas unitarias aprobadas y 95.16% de cobertura; Frontend con 234 pruebas unitarias aprobadas, 0 errores en `vue-tsc`, 0 errores en `eslint` y compilación de producción validada.
 
 ---
 
@@ -278,10 +279,10 @@
 
 > **Archivo Guía:** `specs/32_ISP_OPERATIONS_TECHNICAL_QOS_AND_FIELD_TOOLKIT.md`
 
-- [ ] **19.1** Mapa Exclusivo de Clientes/ONUs (`OsmOnuMap.vue` en `/subscribers/map`): Completamente separado del mapa de routers de infraestructura, con telemetría efímera Zero-Metrics (Verde < 40ms, Naranja 40-120ms o pérdida leve, Rojo timeout).
-- [ ] **19.2** Alerta de Caída Masiva (Mass Outage Alert): Detección automática en segundo plano de caídas simultáneas > `mass_outage_threshold` (por defecto 10), con alarma visual/sonora en NOC y registro forense en `audit_logs` con hash encadenado HMAC-SHA256.
-- [ ] **19.3** Corrección de Responsive del Técnico de Calle (`FieldTechMobileView.vue`): Eliminación del contenedor fijo vertical (`max-width: 480px`), maquetación 100% fluida para móvil, tablet y laptop, campo simplificado solo con Serial de ONU, y botón prominente *"📍 Capturar Coordenadas GPS"* al activar.
-- [ ] **19.4** Arquitectura de Internacionalización (i18n): Base modular con `locales/es.json` y `locales/en.json`, composable `useI18n()` y selector táctico de idioma en barra de herramientas superior.
+- [x] **19.1** Mapa Exclusivo de Clientes/ONUs (`OsmOnuMap.vue` en `/subscribers/map`): Completamente separado del mapa de routers de infraestructura, con telemetría efímera Zero-Metrics (Verde < 40ms, Naranja 40-120ms o pérdida leve, Rojo timeout).
+- [x] **19.2** Alerta de Caída Masiva (Mass Outage Alert): Detección automática en segundo plano de caídas simultáneas > `mass_outage_threshold` (por defecto 10), con alarma visual/sonora en NOC y registro forense en `audit_logs` con hash encadenado HMAC-SHA256.
+- [x] **19.3** Corrección de Responsive del Técnico de Calle (`FieldTechMobileView.vue`): Eliminación del contenedor fijo vertical (`max-width: 480px`), maquetación 100% fluida para móvil, tablet y laptop, campo simplificado solo con Serial de ONU, y botón prominente *"📍 Capturar Coordenadas GPS"* al activar.
+- [x] **19.4** Arquitectura de Internacionalización (i18n): Base modular con `locales/es.json` y `locales/en.json`, composable `useI18n()` y selector táctico de idioma en barra de herramientas superior.
 
 ---
 

@@ -716,3 +716,38 @@ export interface TrafficMitigationResponse {
   safemode_applied: boolean;
   audit_event: string;
 }
+
+export type ZeroMetricsState = 'OPTIMAL' | 'DEGRADED' | 'DOWN';
+
+export interface SubscriberDeviceItem {
+  id: string;
+  tenant_id: string;
+  router_id: string;
+  service_type: string;
+  auth_backend: string;
+  endpoint_identifier?: string | null;
+  pppoe_username?: string | null;
+  ipv4_address_id?: string | null;
+  ipv6_delegated_prefix?: string | null;
+  bandwidth_profile_id?: string | null;
+  onu_mode: 'ROUTER' | 'BRIDGE' | string;
+  onu_mac_address?: string | null;
+  device_serial?: string | null;
+  onu_serial_number?: string | null;
+  cpe_wifi_mac_address?: string | null;
+  pon_port?: string | null;
+  optical_box?: string | null;
+  last_reachability_status?: string | null;
+  last_seen_at?: string | null;
+  status: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  customer_name?: string | null;
+  customer_code?: string | null;
+  physical_address?: string | null;
+  created_at: string;
+  updated_at: string;
+  ping_latency_ms?: number | null;
+  packet_loss_pct?: number | null;
+  zero_metrics_state?: ZeroMetricsState;
+}

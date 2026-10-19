@@ -328,5 +328,39 @@ Certificación integral ejecutada bajo la **Regla Cero** dentro de los contenedo
     - `BgpLookingGlassRouteItem`, `BgpLookingGlassRouteResponse`, `BgpLookingGlassAdvertisedItem`, `BgpLookingGlassAdvertisedResponse`.
     - `TrafficAnomalyItem`, `TrafficAnomaliesResponse`, `TrafficMitigationRequest`, `TrafficMitigationResponse`.
 
+---
+
+## 14. Certificación QA 11X — Hito 19 (Mapas Separados, Telemetría Efímera, Responsive e i18n)
+
+Certificación integral ejecutada bajo la **Regla Cero** dentro de los contenedores Docker efímeros `qa-backend` (`sinfallas/base-python-uv:3.13`) y `qa-vue3` (`sinfallas/base-node-ionic:22`).
+
+### A. Backend (`fastapi/`) — Docker `sinfallas/base-python-uv:3.13`
+- **Análisis Estático y Seguridad (SAST):**
+  - **Ruff (`ruff check`):** Cero (0) errores en código fuente y scripts auxiliares.
+  - **Mypy Estricto (`mypy --strict src/`):** Cero (0) errores en los 97 módulos de código fuente (`Success: no issues found in 97 source files`).
+- **Pruebas Unitarias y Cobertura (Pytest 9.1.1):**
+  - **Pruebas Ejecutadas:** 370 de 370 pruebas pasadas (100% exitosas) en 28.73s.
+  - **Cobertura Total de Código:** **95.16%** (8,457 sentencias totales, 409 no ejecutadas), superando el umbral del `>= 95.0%`.
+  - **Módulos y Capacidades Certificadas:**
+    - `src/api/v1/field_ops.py` (`detect_fiber_cuts`): Alerta automática de corte masivo (*Mass Outage Alert*) al superar `tenant.mass_outage_threshold` (por defecto 10), con publicación de evento `MASS_OUTAGE_TRIGGERED` al despachador de webhooks, difusión por Redis Pub/Sub (`MASS_OUTAGE_DETECTED`) a los Wallboards NOC conectados por WebSocket, y registro en `audit_logs` con hash encadenado HMAC-SHA256.
+    - `src/api/v1/field_ops.py` (`certify_installation`): Georreferenciación de ONUs mediante vinculación inmediata de `tech_latitude` y `tech_longitude` al abonado (`SubscriberDevice`) para su visualización automática en el mapa.
+    - `fastapi/tests/api/test_hito19_mass_outage_and_maps.unit.py`: Suite de validación exhaustiva con 100% de cobertura en flujos de corte masivo y certificación con coordenadas GPS.
+
+### B. Frontend (`vue3/`) — Docker `sinfallas/base-node-ionic:22`
+- **Análisis Estático y Calidad de Código:**
+  - **Vue-TSC (`type-check`):** Cero (0) errores de tipado TypeScript estricto.
+  - **ESLint (`pnpm exec eslint`):** Cero (0) errores y cero (0) advertencias en los componentes y suites de prueba de Hito 19.
+  - **Prettier (`format:check`):** 100% de consistencia de formato y estilo en todos los archivos.
+- **Compilación de Producción:**
+  - **Vite Build (`pnpm run build`):** Compilación limpia sin errores en 4.08s, generando los bundles optimizados con división de código (`vendor-vue`, `vendor-map`, vistas asíncronas).
+- **Pruebas Unitarias (Vitest v8):**
+  - **Pruebas Ejecutadas:** 234 de 234 pruebas pasadas (100% exitosas) en 35 suites de prueba.
+  - **Nuevas Capacidades de UI Validadas:**
+    - `src/components/inventory/OsmOnuMap.vue`: Mapa OpenStreetMap exclusivo para ONUs de última milla, totalmente aislado del mapa de infraestructura de routers. Estados cromáticos Zero-Metrics (🟢 Óptimo < 40ms 0% pérdida, 🟠 Degradado 40-120ms o 1-20% pérdida, 🔴 Caído > 20% pérdida o timeout), spiderfier para cajas NAP / puntos coincidentes, popups táctiles y botones de acción rápida (*Test 1-Click* y *Diagnóstico 360°*).
+    - `src/views/SubscribersMapView.vue`: Vista táctica en `/subscribers/map` con cinta de KPIs Zero-Metrics en tiempo real, filtros cromáticos, barra de búsqueda reactiva y panel lateral (drawer) de detalle del cliente.
+    - `src/views/NocWallboardView.vue`: Banner interactivo de Caída Masiva con aviso sonoro táctico generado con la Web Audio API nativa y controles de acuse/silenciamiento.
+    - `src/components/field/FieldTechMobileView.vue`: Eliminación del ancho fijo de 480px; diseño fluido adaptativo para móviles, tablets (2 columnas) y laptops/desktops (3 columnas con herramienta 360°), botón prominente *"📍 Capturar Coordenadas GPS"* y canvas táctil de firma digital.
+    - `src/composables/useI18n.ts`: Módulo de internacionalización con diccionarios `es.json` y `en.json`, persistencia en `localStorage`, actualización de `document.documentElement.lang` y botón conmutador global `#btn-global-lang-toggle` en `RgResponsiveShell.vue`.
+
 
 

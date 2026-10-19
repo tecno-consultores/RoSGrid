@@ -270,6 +270,16 @@ const routes: RouteRecordRaw[] = [
       title: 'Operaciones de Campo & Toolkit — RoSGrid',
     },
   },
+  {
+    path: '/subscribers/map',
+    name: 'SubscribersMap',
+    component: () => import('@/views/SubscribersMapView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiredFeature: 'isp_module_enabled',
+      title: 'Mapa Exclusivo de Clientes y ONUs — RoSGrid',
+    },
+  },
 ];
 
 export const router = createRouter({

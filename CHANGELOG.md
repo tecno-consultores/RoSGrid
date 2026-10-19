@@ -20,6 +20,11 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
   - Endpoint `POST /api/v1/inventory/roles` para crear y listar roles personalizados de infraestructura MikroTik.
   - Auto-registro seguro en base de datos (`tenant_custom_roles`) de roles de red no predefinidos cuando se importan equipos por archivo CSV.
   - Integración de los roles en los filtros del Wallboard, Inventario y Acciones Masivas.
+- **Mapas Separados, Telemetría Efímera de Última Milla e i18n (Hito 19):**
+  - **Mapa Exclusivo de Clientes/ONUs (`/subscribers/map`):** Componente `OsmOnuMap.vue` desacoplado del mapa de infraestructura, con telemetría Zero-Metrics (🟢 Óptimo < 40ms 0% pérdida, 🟠 Degradado 40-120ms o 1-20% pérdida, 🔴 Caído > 20% pérdida o timeout), spiderfier interactivo para cajas NAP / coordenadas agrupadas, y accesos rápidos a *Test 1-Click* y *Diagnóstico 360°*.
+  - **Alerta de Caída Masiva (Mass Outage Alert):** Detección en segundo plano según `tenant.mass_outage_threshold` (por defecto 10), aviso prioritario en tiempo real al Wallboard NOC mediante WebSockets y sintetizador sonoro Web Audio API, con registro en auditoría WORM inmutable encadenada con HMAC-SHA256.
+  - **Rediseño Responsive Táctico de Calle (`FieldTechMobileView.vue`):** Supresión de la restricción fija de 480px a favor de un layout 100% fluido en móvil (<768px), tablet (2 columnas) y laptop/desktop (3 columnas con diagnóstico 360° integrado), captura GPS prominente con georreferenciación de ONUs activadas y firma digital en canvas.
+  - **Internacionalización Modular (i18n):** Composable reactivo `useI18n()` con diccionarios `es.json` y `en.json`, conmutador táctico en la cabecera del shell (`#btn-global-lang-toggle`), sincronización con `document.documentElement.lang` y persistencia en `localStorage`.
 - **Facilidad de Instalación y Documentación de Almacenamiento S3:**
   - Mejoras en `instalar-rosgrid.sh` para detección y muestra exacta del puerto asignado en modo producción local (8085) vs oficial (8080).
   - Documentación técnica sobre arquitectura de almacenamiento de respaldos en base de datos PostgreSQL vs AWS S3 / MinIO con cifrado `AES-256-GCM` del lado del cliente.

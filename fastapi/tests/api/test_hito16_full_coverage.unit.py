@@ -585,9 +585,11 @@ async def test_field_ops_live_verification_and_fiber_cut(fake_request: MagicMock
         await certify_installation(cert_payload, db=db, claims=claims)
     assert exc_cert_nf.value.status_code == 404
 
-    # 4. Fiber cut detection: updating existing incident
+    # 4. Fiber cut detection: updating existing incident with mass_outage_threshold
+    tenant_mock = Tenant(id=t_id, slug="tenant-qa", name="Tenant QA", mass_outage_threshold=10)
     db.execute.side_effect = [
         MockDbResult(items=[(r_id, "pon-1", "BOX-A", 15)]),  # results of group-by
+        MockDbResult([tenant_mock]),  # tenant query
         MockDbResult(
             [
                 FiberCutIncident(
@@ -601,7 +603,10 @@ async def test_field_ops_live_verification_and_fiber_cut(fake_request: MagicMock
             ]
         ),  # existing incident
     ]
-    with patch("src.api.v1.field_ops.write_audit_log", AsyncMock()):
+    with (
+        patch("src.api.v1.field_ops.write_audit_log", AsyncMock()),
+        patch("src.redis_layer.client.get_redis_client", MagicMock()),
+    ):
         incidents = await detect_fiber_cuts_engine(threshold_onus=5, db=db, claims=claims)
         assert len(incidents) == 1
         assert incidents[0].affected_onus_count == 15

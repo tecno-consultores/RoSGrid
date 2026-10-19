@@ -7,6 +7,7 @@
   import { useAuthStore } from '@/stores/useAuthStore';
   import { useNocEventsStore } from '@/stores/useNocEventsStore';
   import { useThemeAndLayoutStore } from '@/stores/useThemeAndLayoutStore';
+  import { useI18n } from '@/composables/useI18n';
   import RgCommandPalette from './RgCommandPalette.vue';
   import RgSafeModeBanner from './RgSafeModeBanner.vue';
 
@@ -15,6 +16,7 @@
   const authStore = useAuthStore();
   const themeStore = useThemeAndLayoutStore();
   const nocStore = useNocEventsStore();
+  const { t, locale, toggleLocale } = useI18n();
 
   const isRouterContext = computed(() => route.path.includes('/routers/'));
   const currentRouterId = computed(() => String(route.params.routerId || ''));
@@ -29,52 +31,93 @@
 
   const globalNavItems = computed<NavItem[]>(() => {
     const items: NavItem[] = [
-      { name: 'DashboardRoot', path: '/', label: 'Centro de Mando', icon: '🎛️' },
-      { name: 'RouterInventory', path: '/inventory', label: 'Inventario', icon: '🖥️' },
+      {
+        name: 'DashboardRoot',
+        path: '/',
+        label: t('nav.dashboard', 'Centro de Mando'),
+        icon: '🎛️',
+      },
+      {
+        name: 'RouterInventory',
+        path: '/inventory',
+        label: t('nav.inventory', 'Inventario'),
+        icon: '🖥️',
+      },
       {
         name: 'NocWallboard',
         path: '/noc-wallboard',
-        label: 'Wallboard NOC',
+        label: t('nav.noc_wallboard', 'Wallboard NOC'),
         icon: '📊',
         badge: nocStore.activeAlertsCount,
       },
       {
         name: 'ApprovalsInbox',
         path: '/approvals',
-        label: 'Maker-Checker',
+        label: t('nav.maker_checker', 'Maker-Checker'),
         icon: '🛡️',
         badge: nocStore.pendingApprovalsCount,
       },
-      { name: 'IpamManagement', path: '/ipam', label: 'IPAM & FTTH', icon: '🌐' },
+      {
+        name: 'IpamManagement',
+        path: '/ipam',
+        label: t('nav.ipam_ftth', 'IPAM & FTTH'),
+        icon: '🌐',
+      },
     ];
 
     if (authStore.isFeatureEnabled('isp_module_enabled')) {
       items.push({
+        name: 'SubscribersMap',
+        path: '/subscribers/map',
+        label: t('nav.subscribers_map', 'Mapa Clientes (ONUs)'),
+        icon: '📍',
+      });
+      items.push({
         name: 'FieldTechOperations',
         path: '/field-ops',
-        label: 'Técnico de Campo',
+        label: t('nav.field_ops', 'Técnico de Campo'),
         icon: '🛠️',
       });
     }
 
     items.push(
-      { name: 'RscGitDiff', path: '/backups', label: 'Respaldos Diff', icon: '📦' },
-      { name: 'BulkOperations', path: '/bulk-ops', label: 'Acciones Masivas', icon: '⚡' },
+      {
+        name: 'RscGitDiff',
+        path: '/backups',
+        label: t('nav.backups_diff', 'Respaldos Diff'),
+        icon: '📦',
+      },
+      {
+        name: 'BulkOperations',
+        path: '/bulk-ops',
+        label: t('nav.bulk_ops', 'Acciones Masivas'),
+        icon: '⚡',
+      },
       {
         name: 'ActiveSessionsKillSwitch',
         path: '/sessions',
-        label: 'Sesiones & Kill-Switch',
+        label: t('nav.sessions_killswitch', 'Sesiones & Kill-Switch'),
         icon: '🛑',
       },
-      { name: 'UsersAndPermissions', path: '/users', label: 'Usuarios & RBAC', icon: '👥' },
-      { name: 'ImmutableAuditLogs', path: '/audit-logs', label: 'Auditoría WORM', icon: '📜' },
+      {
+        name: 'UsersAndPermissions',
+        path: '/users',
+        label: t('nav.users_rbac', 'Usuarios & RBAC'),
+        icon: '👥',
+      },
+      {
+        name: 'ImmutableAuditLogs',
+        path: '/audit-logs',
+        label: t('nav.audit_worm', 'Auditoría WORM'),
+        icon: '📜',
+      },
     );
 
     if (authStore.currentRole === 'SUPERADMIN_GLOBAL') {
       items.push({
         name: 'TenantsManagement',
         path: '/admin/tenants',
-        label: 'Empresas (Tenants)',
+        label: t('nav.tenants', 'Empresas (Tenants)'),
         icon: '🏢',
       });
     }
@@ -151,6 +194,18 @@
           <span v-if="themeStore.theme === 'dark'" aria-hidden="true">🌙</span>
           <span v-else-if="themeStore.theme === 'light'" aria-hidden="true">☀️</span>
           <span v-else aria-hidden="true">⚡</span>
+        </button>
+
+        <!-- Conmutador Táctico de Idioma i18n (ES / EN) -->
+        <button
+          type="button"
+          class="btn-icon btn-lang-toggle"
+          id="btn-global-lang-toggle"
+          :aria-label="`Idioma actual: ${locale.toUpperCase()}. Presione para alternar idioma entre Español e Inglés`"
+          :title="locale === 'es' ? 'Switch to English' : 'Cambiar a Español'"
+          @click="toggleLocale"
+        >
+          <span class="lang-text">{{ locale.toUpperCase() }}</span>
         </button>
 
         <!-- Info Usuario & Salir -->
@@ -401,6 +456,20 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
+  }
+
+  .btn-lang-toggle {
+    font-family: var(--rg-font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--rg-accent-cyan);
+    letter-spacing: 0.5px;
+    transition: all 0.2s ease;
+  }
+
+  .btn-lang-toggle:hover {
+    border-color: var(--rg-accent-cyan);
+    background: rgba(0, 243, 255, 0.12);
   }
 
   .user-info {

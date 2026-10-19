@@ -48,7 +48,7 @@ def verificar_importaciones_productivas() -> None:
     if app_root not in sys.path:
         sys.path.insert(0, app_root)
 
-    for _, module_name, is_pkg in pkgutil.walk_packages([str(src_dir)], prefix="src."):
+    for _, module_name, _is_pkg in pkgutil.walk_packages([str(src_dir)], prefix="src."):
         try:
             importlib.import_module(module_name)
             modulos_importados += 1
@@ -63,8 +63,9 @@ async def verificar_instancia_produccion() -> None:
     """Instancia la aplicación FastAPI en modo producción y prueba el endpoint /health."""
     os.environ["ROSGRID_ENV"] = "production"
 
-    from src.main import create_app, health_check
     from fastapi import Response
+
+    from src.main import create_app, health_check
 
     app = create_app()
 

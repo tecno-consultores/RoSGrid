@@ -3,6 +3,7 @@
 
 """Endpoints de Operaciones de Campo (Field Tech Toolkit) y Detección de Cortes de Fibra."""
 
+import json
 import logging
 import uuid
 from datetime import UTC, datetime
@@ -17,7 +18,7 @@ from src.api.deps import get_current_user_claims, require_feature, require_roles
 from src.core.audit import write_audit_log
 from src.db.session import get_tenant_db_session
 from src.mikrotik.client import MikrotikRestClient
-from src.models.core import SystemRoleEnum
+from src.models.core import SystemRoleEnum, Tenant
 from src.models.inventory import Router
 from src.models.ipam import (
     CustomerService,
@@ -27,6 +28,7 @@ from src.models.ipam import (
     FieldInstallationOrder,
     FieldOrderStatusEnum,
 )
+from src.redis_layer.client import get_redis_client
 from src.schemas.field_ops import (
     FiberCutIncidentResponse,
     FieldCertifyOrderRequest,
@@ -262,7 +264,7 @@ async def certify_installation(
     order.notes = payload.notes
     order.certified_at = datetime.now(UTC)
 
-    # Actualizar el servicio de cliente a ACTIVE
+    # Actualizar el servicio de cliente a ACTIVE y asociar coordenadas GPS para el mapa de ONUs
     stmt_svc = select(CustomerService).where(CustomerService.id == order.customer_service_id)
     svc = (await db.execute(stmt_svc)).scalar_one_or_none()
     if svc:
@@ -270,6 +272,9 @@ async def certify_installation(
         svc.onu_serial_number = payload.onu_scanned_serial
         if payload.onu_scanned_mac:
             svc.onu_mac_address = payload.onu_scanned_mac
+        if payload.tech_latitude is not None and payload.tech_longitude is not None:
+            svc.latitude = payload.tech_latitude
+            svc.longitude = payload.tech_longitude
 
     await db.commit()
     await db.refresh(order)
@@ -346,6 +351,11 @@ async def detect_fiber_cuts_engine(
     results = (await db.execute(stmt)).all()
     created_incidents = []
 
+    # Obtener umbral de caída masiva configurado en el tenant
+    stmt_t = select(Tenant).where(Tenant.id == tenant_id)
+    tenant_obj = (await db.execute(stmt_t)).scalar_one_or_none()
+    mass_threshold = getattr(tenant_obj, "mass_outage_threshold", 10) if tenant_obj else 10
+
     for r_id, p_port, o_box, count in results:
         # Verificar si ya existe incidente activo para este puerto
         stmt_check = select(FiberCutIncident).where(
@@ -373,17 +383,52 @@ async def detect_fiber_cuts_engine(
             db.add(incident)
             created_incidents.append(incident)
 
-        if count >= 10:
+        if count >= mass_threshold:
+            payload_data = {
+                "router_id": str(r_id),
+                "pon_port": p_port,
+                "optical_box": o_box,
+                "affected_onus_count": count,
+                "mass_outage_threshold": mass_threshold,
+                "detected_at": datetime.now(UTC).isoformat(),
+            }
             await publish_network_service_event(
                 tenant_id=tenant_id,
                 event_name="MASS_OUTAGE_TRIGGERED",
-                payload={
-                    "router_id": str(r_id),
-                    "pon_port": p_port,
-                    "optical_box": o_box,
-                    "affected_onus_count": count,
-                    "detected_at": datetime.now(UTC).isoformat(),
-                },
+                payload=payload_data,
+            )
+            # Notificación WebSocket prioritaria al Wallboard NOC
+            try:
+                redis = get_redis_client()
+                await redis.publish(
+                    f"rg:pubsub:events:{tenant_id}",
+                    json.dumps(
+                        {
+                            "type": "MASS_OUTAGE_DETECTED",
+                            "tenant_id": str(tenant_id),
+                            "event_name": "MASS_OUTAGE_DETECTED",
+                            "timestamp_iso": datetime.now(UTC).isoformat(),
+                            "payload": payload_data,
+                        }
+                    ),
+                )
+            except Exception as redis_exc:
+                logger.warning("Fallo al publicar MASS_OUTAGE_DETECTED a WebSocket: %s", redis_exc)
+
+            # Registro forense inmutable WORM con hash HMAC-SHA256 encadenado
+            await write_audit_log(
+                session=db,
+                tenant_id=tenant_id,
+                actor_user_id=uuid.UUID(str(claims["sub"])) if claims.get("sub") else None,
+                actor_username=str(claims.get("username", "system_worker")),
+                actor_role=claims.get("rol", "SYSTEM"),
+                actor_ip="127.0.0.1",
+                event_category="SECURITY_ALERT",
+                event_action="MASS_OUTAGE_TRIGGERED",
+                router_id=r_id,
+                status_code=200,
+                before_state=None,
+                after_state=payload_data,
             )
 
     await db.commit()

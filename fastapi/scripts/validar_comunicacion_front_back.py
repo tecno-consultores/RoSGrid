@@ -10,15 +10,11 @@ inventario real, sesiones KeyDB, auditoría WORM, plantillas, aprobaciones y CSP
 
 import asyncio
 import io
-import json
 import os
 import sys
-from datetime import UTC, datetime
-from typing import Any
 import uuid
 
 import httpx
-
 
 API_BASE = os.getenv("ROSGRID_TEST_API_URL", "http://127.0.0.1:8000")  # NOSONAR
 UI_BASE = os.getenv("ROSGRID_TEST_UI_URL", "http://rosgrid_ui_local:80")  # NOSONAR
@@ -88,11 +84,12 @@ async def obtain_admin_token(client: httpx.AsyncClient) -> str:
         log_test(AUTH_LOGIN_ENDPOINT, False, f"{type(e).__name__}: {e}")
 
     if not access_token:
-        from src.api.v1.auth import create_jwt_access_token
-        from src.redis_layer.sessions import create_session
-        from src.db.session import async_session_maker
-        from src.models.core import User, Tenant
         from sqlalchemy import select
+
+        from src.api.v1.auth import create_jwt_access_token
+        from src.db.session import async_session_maker
+        from src.models.core import Tenant, User
+        from src.redis_layer.sessions import create_session
 
         async with async_session_maker() as session:
             u_res = await session.execute(select(User).where(User.username == DEFAULT_ADMIN_USER))

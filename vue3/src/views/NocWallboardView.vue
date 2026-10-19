@@ -66,6 +66,65 @@
   // Cinta de eventos reales en vivo
   const liveEvents = ref<NocEvent[]>([]);
 
+  // Alerta de Caída Masiva (Mass Outage) — specs/32 §5.3
+  interface MassOutageAlertData {
+    active: boolean;
+    title: string;
+    message: string;
+    affectedCount: number;
+    ponPort?: string;
+    opticalBox?: string;
+    timestamp?: string;
+  }
+
+  const massOutageAlert = ref<MassOutageAlertData>({
+    active: false,
+    title: 'ALERTA DE CAÍDA MASIVA DETECTADA',
+    message: '',
+    affectedCount: 0,
+  });
+
+  const isAudioSilenced = ref(false);
+
+  function playTacticalChime(): void {
+    if (isAudioSilenced.value || typeof window === 'undefined') return;
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.3);
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.35);
+    } catch {
+      // AudioContext protegido o restringido
+    }
+  }
+
+  function triggerMassOutage(count: number, ponPort?: string, opticalBox?: string): void {
+    massOutageAlert.value = {
+      active: true,
+      title: '🚨 ALERTA DE CAÍDA MASIVA DETECTADA (MASS OUTAGE)',
+      message: `Caída simultánea de ${count} equipos superando el umbral técnico. Sector afectado: Puerto ${ponPort || 'PON'} / Caja ${opticalBox || 'NAP'}`,
+      affectedCount: count,
+      ponPort,
+      opticalBox,
+      timestamp: new Date().toLocaleTimeString(),
+    };
+    playTacticalChime();
+  }
+
+  function acknowledgeOutage(): void {
+    massOutageAlert.value.active = false;
+  }
+
   let eventSimulationTimer: ReturnType<typeof setInterval> | null = null;
 
   async function loadRouters() {
@@ -97,6 +156,10 @@
           is_reachable: item.is_reachable ?? false,
         }));
       }
+
+      if (offlineRouters.value >= 10 && !massOutageAlert.value.active) {
+        triggerMassOutage(offlineRouters.value, 'INFRAESTRUCTURA', 'CORE/ROUTERS');
+      }
     } catch {
       // Mantiene muestra inicial
     }
@@ -106,15 +169,43 @@
     try {
       const res = await http.get<{ items: any[] }>('/api/v1/audit/logs');
       const items = res.data?.items || [];
+
+      // Detección de caída masiva en eventos de auditoría recientes
+      const outageLog = items.find(
+        (log: any) =>
+          log.event_action === 'MASS_OUTAGE_TRIGGERED' ||
+          log.event_action === 'MASS_OUTAGE_DETECTED',
+      );
+      if (outageLog && !massOutageAlert.value.active) {
+        const after = outageLog.after_state || {};
+        triggerMassOutage(
+          Number(after.affected_onus_count || 10),
+          after.pon_port,
+          after.optical_box,
+        );
+      }
+
       liveEvents.value = items.slice(0, 20).map((log: any) => ({
         id: String(log.id),
         timestamp: log.created_at
           ? new Date(log.created_at).toLocaleTimeString()
           : new Date().toLocaleTimeString(),
-        type: log.event_category === 'AUTH' ? 'ROUTER_UP' : 'MAINTENANCE',
+        type:
+          log.event_action === 'MASS_OUTAGE_TRIGGERED' ||
+          log.event_action === 'MASS_OUTAGE_DETECTED'
+            ? 'ROUTER_DOWN'
+            : log.event_category === 'AUTH'
+              ? 'ROUTER_UP'
+              : 'MAINTENANCE',
         router_identity: log.router_display_name || log.actor_username || 'Sistema',
         message: `${log.event_action || 'Operación'} registrada por ${log.actor_username || 'usuario'}`,
-        severity: log.status_code >= 400 ? 'critical' : 'info',
+        severity:
+          log.event_action === 'MASS_OUTAGE_TRIGGERED' ||
+          log.event_action === 'MASS_OUTAGE_DETECTED'
+            ? 'critical'
+            : log.status_code >= 400
+              ? 'critical'
+              : 'info',
       }));
     } catch {
       liveEvents.value = [];
@@ -213,6 +304,49 @@
         {{ isFullscreen ? '🗗 Salir TV' : '🖥️ Modo TV' }}
       </button>
     </header>
+
+    <!-- Banner de Alta Visibilidad de Caída Masiva (specs/32 §5.3) -->
+    <transition name="outage-slide">
+      <div
+        v-if="massOutageAlert.active"
+        class="mass-outage-banner"
+        role="alert"
+        aria-live="assertive"
+      >
+        <div class="outage-icon-box">
+          <span class="outage-siren">🚨</span>
+        </div>
+        <div class="outage-text-group">
+          <div class="outage-headline">
+            <strong>{{ massOutageAlert.title }}</strong>
+            <span class="outage-count-tag font-mono"
+              >{{ massOutageAlert.affectedCount }} Equipos</span
+            >
+          </div>
+          <div class="outage-description">
+            {{ massOutageAlert.message }}
+          </div>
+        </div>
+        <div class="outage-actions">
+          <button
+            type="button"
+            class="btn-outage-silence"
+            :aria-label="isAudioSilenced ? 'Activar sirena' : 'Silenciar sirena'"
+            @click="isAudioSilenced = !isAudioSilenced"
+          >
+            {{ isAudioSilenced ? '🔔 Activar Sonido' : '🔇 Silenciar' }}
+          </button>
+          <button
+            type="button"
+            class="btn-outage-ack"
+            id="btn-ack-mass-outage"
+            @click="acknowledgeOutage"
+          >
+            Reconocer Alarma
+          </button>
+        </div>
+      </div>
+    </transition>
 
     <!-- Cuerpo Dividido: Mitad Izquierda (Mapa OSM) + Mitad Derecha (Ticker de Eventos) -->
     <div class="wallboard-body">
@@ -316,6 +450,117 @@
       -apple-system,
       sans-serif;
     overflow: hidden;
+  }
+
+  /* Banner Táctico de Caída Masiva (specs/32 §5.3) */
+  .mass-outage-banner {
+    background: linear-gradient(90deg, #7f1d1d, #b91c1c, #dc2626);
+    color: #fff;
+    padding: 0.85rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.25rem;
+    box-shadow: 0 0 25px rgba(239, 68, 68, 0.7);
+    border-bottom: 2px solid #fca5a5;
+    animation: outage-flash 1.6s infinite alternate;
+    z-index: 100;
+  }
+
+  @keyframes outage-flash {
+    from {
+      background: linear-gradient(90deg, #7f1d1d, #b91c1c, #dc2626);
+      box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+    }
+    to {
+      background: linear-gradient(90deg, #991b1b, #dc2626, #ef4444);
+      box-shadow: 0 0 35px rgba(239, 68, 68, 0.95);
+    }
+  }
+
+  .outage-icon-box {
+    font-size: 2rem;
+    animation: siren-swing 1s infinite alternate ease-in-out;
+  }
+
+  @keyframes siren-swing {
+    from {
+      transform: rotate(-10deg) scale(0.95);
+    }
+    to {
+      transform: rotate(10deg) scale(1.1);
+    }
+  }
+
+  .outage-text-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .outage-headline {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+  }
+
+  .outage-count-tag {
+    background: #000;
+    color: #fca5a5;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    border: 1px solid rgba(254, 202, 202, 0.4);
+  }
+
+  .outage-description {
+    font-size: 0.85rem;
+    color: #fee2e2;
+  }
+
+  .outage-actions {
+    display: flex;
+    gap: 0.65rem;
+    align-items: center;
+  }
+
+  .btn-outage-silence {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #fee2e2;
+    color: #fff;
+    padding: 0.45rem 0.85rem;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-outage-silence:hover {
+    background: rgba(0, 0, 0, 0.8);
+  }
+
+  .btn-outage-ack {
+    background: #fff;
+    color: #991b1b;
+    border: none;
+    padding: 0.5rem 1.1rem;
+    border-radius: 6px;
+    font-weight: 800;
+    font-size: 0.9rem;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    transition: all 0.2s;
+  }
+
+  .btn-outage-ack:hover {
+    background: #fee2e2;
+    transform: translateY(-1px);
   }
 
   /* Encabezado KPI */
