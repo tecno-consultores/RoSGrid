@@ -121,7 +121,7 @@ class MockIpamDbSession:
             return MockResult(self.prefixes)
         elif "ipam_ip_addresses" in stmt_str:
             return MockResult(self.addresses)
-        elif "customer_services" in stmt_str:
+        elif "subscriber_devices" in stmt_str or "customer_services" in stmt_str:
             if "count(" in stmt_str:
                 if self.customer_services:
                     r_id = self.customer_services[0].router_id
@@ -306,10 +306,9 @@ async def test_field_ops_verification_and_fiber_cuts(async_client: AsyncClient, 
         svc = CustomerService(
             tenant_id=uuid.UUID(tenant_id),
             router_id=router_id,
-            customer_name="Inversiones El Avila",
-            customer_code="V-12345678",
+            endpoint_identifier="avila_corp",
+            device_serial="SN-12345678",
             service_type=CustomerServiceTypeEnum.PPPOE,
-            pppoe_username="avila_corp",
             onu_mode=ONUModeEnum.ROUTER,
             onu_mac_address="48:8F:5A:11:22:33",
             pon_port="gpon-olt1/1/1",

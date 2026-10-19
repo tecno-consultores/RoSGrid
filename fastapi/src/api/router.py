@@ -16,6 +16,7 @@ from src.api.v1.mcp import router as mcp_router
 from src.api.v1.notification_channels import router as notification_channels_router
 from src.api.v1.rbac import router as rbac_router
 from src.api.v1.sessions import router as sessions_router
+from src.api.v1.subscribers import bandwidth_router, subscribers_router
 from src.api.v1.tenants import router as tenants_router
 from src.api.v1.users import router as users_router
 from src.api.v1.vault import router as vault_router
@@ -40,6 +41,8 @@ api_v1_router.include_router(users_router)
 api_v1_router.include_router(sessions_router)
 api_v1_router.include_router(inventory_router)
 api_v1_router.include_router(ipam_router)
+api_v1_router.include_router(bandwidth_router)
+api_v1_router.include_router(subscribers_router)
 api_v1_router.include_router(field_ops_router)
 api_v1_router.include_router(vault_router)
 api_v1_router.include_router(maintenance_router)
@@ -59,3 +62,4 @@ api_v1_router.include_router(notification_channels_router)
 api_v1_router.include_router(audit_router)
 api_v1_router.include_router(mcp_router)
 api_v1_router.include_router(rbac_router)
+

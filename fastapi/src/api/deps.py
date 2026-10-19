@@ -91,3 +91,86 @@ def require_roles(
         return claims
 
     return _role_checker
+
+
+def require_feature(flag_name: str) -> Callable[..., Coroutine[Any, Any, bool]]:
+    """Validador de Feature Flags por Tenant con caché L2 en KeyDB."""
+    async def _feature_checker(
+        request: Request,
+        claims: dict[str, Any] = Depends(get_current_user_claims),
+    ) -> bool:
+        tid = claims.get("tid")
+        if not tid:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "code": "FEATURE_MODULE_DISABLED",
+                    "message": f"El módulo '{flag_name}' no está habilitado para esta empresa.",
+                },
+            )
+        tenant_id = uuid.UUID(str(tid))
+
+        redis = get_redis_client()
+        cache_key = f"rg:{tenant_id}:features"
+        try:
+            flag_val = await redis.hget(cache_key, flag_name)
+            if flag_val is not None:
+                val_str = flag_val.decode() if isinstance(flag_val, bytes) else str(flag_val)
+                if val_str.lower() in ("1", "true"):
+                    return True
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail={
+                        "code": "FEATURE_MODULE_DISABLED",
+                        "message": f"El módulo '{flag_name}' no está habilitado para esta empresa.",
+                    },
+                )
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+
+        # Consulta a base de datos si no está en caché
+        try:
+            from src.db.session import engine
+            from sqlalchemy import text
+            async with engine.connect() as conn:
+                stmt = text(f"SELECT {flag_name} FROM tenants WHERE id = :tid")
+                result = await conn.execute(stmt, {"tid": str(tenant_id)})
+                row = result.fetchone()
+                if not row or not row[0]:
+                    try:
+                        await redis.hset(cache_key, flag_name, "0")
+                        await redis.expire(cache_key, 300)
+                    except Exception:
+                        pass
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail={
+                            "code": "FEATURE_MODULE_DISABLED",
+                            "message": f"El módulo '{flag_name}' no está habilitado para esta empresa.",
+                        },
+                    )
+                try:
+                    await redis.hset(cache_key, flag_name, "1")
+                    await redis.expire(cache_key, 300)
+                except Exception:
+                    pass
+        except HTTPException:
+            raise
+        except Exception:
+            from src.schemas.tenants import TENANT_FEATURE_DEFAULTS
+            if TENANT_FEATURE_DEFAULTS.get(flag_name, False):
+                return True
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "code": "FEATURE_MODULE_DISABLED",
+                    "message": f"El módulo '{flag_name}' no está habilitado para esta empresa.",
+                },
+            )
+
+        return True
+
+    return _feature_checker
+

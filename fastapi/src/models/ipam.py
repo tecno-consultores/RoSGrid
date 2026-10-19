@@ -182,17 +182,47 @@ class IPAMAddress(Base):
     prefix_rel: Mapped["IPAMPrefix"] = relationship("IPAMPrefix", back_populates="addresses")
 
 
-class CustomerService(Base):
-    __tablename__ = "customer_services"
+class SubscriberDeviceStatusEnum(str, enum.Enum):
+    PENDING_ACTIVATION = "PENDING_ACTIVATION"
+    ACTIVE = "ACTIVE"
+    ISOLATED_ADMINISTRATIVE = "ISOLATED_ADMINISTRATIVE"
+    SUSPENDED_TECHNICAL = "SUSPENDED_TECHNICAL"
+    DECOMMISSIONED = "DECOMMISSIONED"
+
+
+class BandwidthProfile(Base):
+    __tablename__ = "bandwidth_profiles"
     __table_args__ = (
-        UniqueConstraint("router_id", "pppoe_username", name="uq_customer_services_router_user"),
+        UniqueConstraint("tenant_id", "name", name="uq_bandwidth_profiles_tenant_name"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(64), nullable=False)
+    rate_down_kbps: Mapped[int] = mapped_column(Integer, nullable=False)
+    rate_up_kbps: Mapped[int] = mapped_column(Integer, nullable=False)
+    burst_down_kbps: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    burst_up_kbps: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    burst_threshold_down_kbps: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    burst_threshold_up_kbps: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    burst_time_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=8)
+    priority: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=8)
+    queue_type: Mapped[str] = mapped_column(String(64), nullable=False, default="pcq-download-default")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"), onupdate=datetime.now)
+
+    subscriber_devices: Mapped[list["SubscriberDevice"]] = relationship("SubscriberDevice", back_populates="bandwidth_profile")
+
+
+class SubscriberDevice(Base):
+    __tablename__ = "subscriber_devices"
+    __table_args__ = (
+        UniqueConstraint("router_id", "endpoint_identifier", name="uq_subscriber_devices_router_endpoint"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
     router_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("routers.id", ondelete="RESTRICT"), nullable=False)
-    customer_name: Mapped[str] = mapped_column(String(128), nullable=False)
-    customer_code: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     service_type: Mapped[CustomerServiceTypeEnum] = mapped_column(
         Enum(CustomerServiceTypeEnum, name="customer_service_type_enum", create_type=False),
         nullable=False,
@@ -203,35 +233,51 @@ class CustomerService(Base):
         nullable=False,
         default=AuthBackendEnum.LOCAL_SECRET,
     )
-    pppoe_username: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    endpoint_identifier: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     pppoe_password_vault_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True)
     ipv4_address_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("ipam_ip_addresses.id", ondelete="SET NULL"), nullable=True)
     ipv6_delegated_prefix: Mapped[Optional[str]] = mapped_column(CIDR, nullable=True)
+    bandwidth_profile_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("bandwidth_profiles.id", ondelete="SET NULL"), nullable=True)
     onu_mode: Mapped[ONUModeEnum] = mapped_column(
         Enum(ONUModeEnum, name="onu_mode_enum", create_type=False),
         nullable=False,
         default=ONUModeEnum.ROUTER,
     )
     onu_mac_address: Mapped[Optional[str]] = mapped_column(String(17), nullable=True)
-    onu_serial_number: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    device_serial: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     cpe_wifi_mac_address: Mapped[Optional[str]] = mapped_column(String(17), nullable=True)
     pon_port: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     optical_box: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     last_reachability_status: Mapped[str] = mapped_column(String(20), default="ONLINE")
     last_seen_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-    status: Mapped[CustomerServiceStatusEnum] = mapped_column(
-        Enum(CustomerServiceStatusEnum, name="customer_service_status_enum", create_type=False),
-        nullable=False,
-        default=CustomerServiceStatusEnum.PENDING_INSTALL,
-    )
-    physical_address: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="PENDING_ACTIVATION")
     latitude: Mapped[Optional[Decimal]] = mapped_column(Numeric(9, 6), nullable=True)
     longitude: Mapped[Optional[Decimal]] = mapped_column(Numeric(9, 6), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"), onupdate=datetime.now)
 
     ipv4_address: Mapped[Optional["IPAMAddress"]] = relationship("IPAMAddress")
-    field_orders: Mapped[list["FieldInstallationOrder"]] = relationship("FieldInstallationOrder", back_populates="customer_service", cascade="all, delete-orphan")
+    bandwidth_profile: Mapped[Optional["BandwidthProfile"]] = relationship("BandwidthProfile", back_populates="subscriber_devices")
+    field_orders: Mapped[list["FieldInstallationOrder"]] = relationship("FieldInstallationOrder", back_populates="subscriber_device", cascade="all, delete-orphan")
+
+    @property
+    def pppoe_username(self) -> Optional[str]:
+        return self.endpoint_identifier
+
+    @pppoe_username.setter
+    def pppoe_username(self, val: Optional[str]) -> None:
+        self.endpoint_identifier = val
+
+    @property
+    def onu_serial_number(self) -> Optional[str]:
+        return self.device_serial
+
+    @onu_serial_number.setter
+    def onu_serial_number(self, val: Optional[str]) -> None:
+        self.device_serial = val
+
+
+CustomerService = SubscriberDevice
 
 
 class FieldInstallationOrder(Base):
@@ -239,7 +285,7 @@ class FieldInstallationOrder(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
-    customer_service_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("customer_services.id", ondelete="CASCADE"), nullable=False)
+    customer_service_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("subscriber_devices.id", ondelete="CASCADE"), nullable=False)
     assigned_tech_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     status: Mapped[FieldOrderStatusEnum] = mapped_column(
         Enum(FieldOrderStatusEnum, name="field_order_status_enum", create_type=False),
@@ -255,13 +301,16 @@ class FieldInstallationOrder(Base):
     traffic_tx_kbps: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True)
     tech_latitude: Mapped[Optional[Decimal]] = mapped_column(Numeric(9, 6), nullable=True)
     tech_longitude: Mapped[Optional[Decimal]] = mapped_column(Numeric(9, 6), nullable=True)
-    customer_signature_svg: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     certified_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"), onupdate=datetime.now)
 
-    customer_service: Mapped["CustomerService"] = relationship("CustomerService", back_populates="field_orders")
+    subscriber_device: Mapped["SubscriberDevice"] = relationship("SubscriberDevice", back_populates="field_orders")
+
+    @property
+    def customer_service(self) -> "SubscriberDevice":
+        return self.subscriber_device
 
 
 class FiberCutIncident(Base):

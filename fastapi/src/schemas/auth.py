@@ -2,6 +2,7 @@
 # Copyright (C) 2026 RoSGrid Contributors
 
 import uuid
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
@@ -49,6 +50,7 @@ class UserProfileResponse(BaseModel):
     tenant_slug: str
     tenant_name: str
     has_all_routers_access: bool
+    features: dict[str, Any] = Field(default_factory=dict)
 
 
 class AuthSessionResponse(BaseModel):

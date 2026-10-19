@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.deps import get_current_user_claims, require_roles
+from src.api.deps import get_current_user_claims, require_feature, require_roles
 from src.core.audit import write_audit_log
 from src.db.session import get_tenant_db_session
 from src.mikrotik.client import MikrotikRestClient
@@ -40,7 +40,11 @@ from src.schemas.field_ops import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/field-ops", tags=["Field Operations & Fiber Cut Detection"])
+router = APIRouter(
+    prefix="/field-ops",
+    tags=["Field Operations & Fiber Cut Detection"],
+    dependencies=[Depends(require_feature("isp_module_enabled"))],
+)
 
 
 def get_tenant_id(claims: dict[str, Any]) -> uuid.UUID:
@@ -251,7 +255,6 @@ async def certify_installation(
     order.onu_scanned_mac = payload.onu_scanned_mac
     order.tech_latitude = payload.tech_latitude
     order.tech_longitude = payload.tech_longitude
-    order.customer_signature_svg = payload.customer_signature_svg
     order.notes = payload.notes
     order.certified_at = datetime.now(UTC)
 

@@ -41,7 +41,7 @@ class FieldOrderResponse(BaseModel):
     traffic_tx_kbps: Optional[Decimal]
     tech_latitude: Optional[Decimal]
     tech_longitude: Optional[Decimal]
-    customer_signature_svg: Optional[str]
+    customer_signature_svg: Optional[str] = None
     notes: Optional[str]
     certified_at: Optional[datetime]
     created_at: datetime

@@ -131,72 +131,133 @@ class IPAMAddressResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class CustomerServiceCreate(BaseModel):
-    router_id: uuid.UUID
-    customer_name: str = Field(..., min_length=2, max_length=128)
-    customer_code: Optional[str] = Field(None, max_length=64)
-    service_type: CustomerServiceTypeEnum = CustomerServiceTypeEnum.PPPOE
-    auth_backend: AuthBackendEnum = AuthBackendEnum.LOCAL_SECRET
-    pppoe_username: Optional[str] = Field(None, max_length=64)
-    pppoe_password: Optional[str] = Field(None, min_length=4, max_length=64)
-    ipv4_address_id: Optional[uuid.UUID] = None
-    ipv6_delegated_prefix: Optional[str] = None
-    onu_mode: ONUModeEnum = ONUModeEnum.ROUTER
-    onu_mac_address: Optional[str] = Field(None, max_length=17)
-    onu_serial_number: Optional[str] = Field(None, max_length=64)
-    cpe_wifi_mac_address: Optional[str] = Field(None, max_length=17)
-    pon_port: Optional[str] = Field(None, max_length=64)
-    optical_box: Optional[str] = Field(None, max_length=64)
-    physical_address: Optional[str] = Field(None, max_length=255)
-    latitude: Optional[Decimal] = None
-    longitude: Optional[Decimal] = None
+class BandwidthProfileCreate(BaseModel):
+    name: str = Field(..., min_length=2, max_length=64)
+    rate_down_kbps: int = Field(..., gt=0)
+    rate_up_kbps: int = Field(..., gt=0)
+    burst_down_kbps: int = Field(0, ge=0)
+    burst_up_kbps: int = Field(0, ge=0)
+    burst_threshold_down_kbps: int = Field(0, ge=0)
+    burst_threshold_up_kbps: int = Field(0, ge=0)
+    burst_time_seconds: int = Field(8, ge=1, le=60)
+    priority: int = Field(8, ge=1, le=8)
+    queue_type: str = Field("pcq-download-default", max_length=64)
 
 
-class CustomerServiceUpdate(BaseModel):
-    customer_name: Optional[str] = None
-    customer_code: Optional[str] = None
-    service_type: Optional[CustomerServiceTypeEnum] = None
-    auth_backend: Optional[AuthBackendEnum] = None
-    pppoe_username: Optional[str] = None
-    pppoe_password: Optional[str] = None
-    ipv4_address_id: Optional[uuid.UUID] = None
-    ipv6_delegated_prefix: Optional[str] = None
-    onu_mode: Optional[ONUModeEnum] = None
-    onu_mac_address: Optional[str] = None
-    onu_serial_number: Optional[str] = None
-    cpe_wifi_mac_address: Optional[str] = None
-    pon_port: Optional[str] = None
-    optical_box: Optional[str] = None
-    status: Optional[CustomerServiceStatusEnum] = None
-    physical_address: Optional[str] = None
-    latitude: Optional[Decimal] = None
-    longitude: Optional[Decimal] = None
+class BandwidthProfileUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=2, max_length=64)
+    rate_down_kbps: Optional[int] = Field(None, gt=0)
+    rate_up_kbps: Optional[int] = Field(None, gt=0)
+    burst_down_kbps: Optional[int] = Field(None, ge=0)
+    burst_up_kbps: Optional[int] = Field(None, ge=0)
+    burst_threshold_down_kbps: Optional[int] = Field(None, ge=0)
+    burst_threshold_up_kbps: Optional[int] = Field(None, ge=0)
+    burst_time_seconds: Optional[int] = Field(None, ge=1, le=60)
+    priority: Optional[int] = Field(None, ge=1, le=8)
+    queue_type: Optional[str] = Field(None, max_length=64)
 
 
-class CustomerServiceResponse(BaseModel):
+class BandwidthProfileResponse(BaseModel):
     id: uuid.UUID
     tenant_id: uuid.UUID
-    router_id: uuid.UUID
-    customer_name: str
-    customer_code: Optional[str]
-    service_type: CustomerServiceTypeEnum
-    auth_backend: AuthBackendEnum
-    pppoe_username: Optional[str]
-    ipv4_address_id: Optional[uuid.UUID]
-    ipv6_delegated_prefix: Optional[str]
-    onu_mode: ONUModeEnum
-    onu_mac_address: Optional[str]
-    onu_serial_number: Optional[str]
-    cpe_wifi_mac_address: Optional[str]
-    pon_port: Optional[str]
-    optical_box: Optional[str]
-    last_reachability_status: str
-    last_seen_at: Optional[datetime]
-    status: CustomerServiceStatusEnum
-    physical_address: Optional[str]
-    latitude: Optional[Decimal]
-    longitude: Optional[Decimal]
+    name: str
+    rate_down_kbps: int
+    rate_up_kbps: int
+    burst_down_kbps: int
+    burst_up_kbps: int
+    burst_threshold_down_kbps: int
+    burst_threshold_up_kbps: int
+    burst_time_seconds: int
+    priority: int
+    queue_type: str
     created_at: datetime
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class SubscriberDeviceCreate(BaseModel):
+    router_id: uuid.UUID
+    endpoint_identifier: Optional[str] = Field(None, max_length=64)
+    service_type: CustomerServiceTypeEnum = CustomerServiceTypeEnum.PPPOE
+    auth_backend: AuthBackendEnum = AuthBackendEnum.LOCAL_SECRET
+    pppoe_password: Optional[str] = Field(None, min_length=4, max_length=64)
+    ipv4_address_id: Optional[uuid.UUID] = None
+    ipv6_delegated_prefix: Optional[str] = None
+    bandwidth_profile_id: Optional[uuid.UUID] = None
+    onu_mode: ONUModeEnum = ONUModeEnum.ROUTER
+    onu_mac_address: Optional[str] = Field(None, max_length=17)
+    device_serial: Optional[str] = Field(None, max_length=64)
+    cpe_wifi_mac_address: Optional[str] = Field(None, max_length=17)
+    pon_port: Optional[str] = Field(None, max_length=64)
+    optical_box: Optional[str] = Field(None, max_length=64)
+    latitude: Optional[Decimal] = None
+    longitude: Optional[Decimal] = None
+    # Compatibilidad con llamadas heredadas
+    customer_name: Optional[str] = None
+    customer_code: Optional[str] = None
+    pppoe_username: Optional[str] = None
+    onu_serial_number: Optional[str] = None
+    physical_address: Optional[str] = None
+
+
+class SubscriberDeviceUpdate(BaseModel):
+    endpoint_identifier: Optional[str] = None
+    service_type: Optional[CustomerServiceTypeEnum] = None
+    auth_backend: Optional[AuthBackendEnum] = None
+    pppoe_password: Optional[str] = None
+    ipv4_address_id: Optional[uuid.UUID] = None
+    ipv6_delegated_prefix: Optional[str] = None
+    bandwidth_profile_id: Optional[uuid.UUID] = None
+    onu_mode: Optional[ONUModeEnum] = None
+    onu_mac_address: Optional[str] = None
+    device_serial: Optional[str] = None
+    cpe_wifi_mac_address: Optional[str] = None
+    pon_port: Optional[str] = None
+    optical_box: Optional[str] = None
+    status: Optional[str] = None
+    latitude: Optional[Decimal] = None
+    longitude: Optional[Decimal] = None
+    # Compatibilidad con llamadas heredadas
+    customer_name: Optional[str] = None
+    customer_code: Optional[str] = None
+    pppoe_username: Optional[str] = None
+    onu_serial_number: Optional[str] = None
+    physical_address: Optional[str] = None
+
+
+class SubscriberDeviceResponse(BaseModel):
+    id: uuid.UUID
+    tenant_id: uuid.UUID
+    router_id: uuid.UUID
+    service_type: CustomerServiceTypeEnum
+    auth_backend: AuthBackendEnum
+    endpoint_identifier: Optional[str] = None
+    pppoe_username: Optional[str] = None
+    ipv4_address_id: Optional[uuid.UUID] = None
+    ipv6_delegated_prefix: Optional[str] = None
+    bandwidth_profile_id: Optional[uuid.UUID] = None
+    onu_mode: ONUModeEnum
+    onu_mac_address: Optional[str] = None
+    device_serial: Optional[str] = None
+    onu_serial_number: Optional[str] = None
+    cpe_wifi_mac_address: Optional[str] = None
+    pon_port: Optional[str] = None
+    optical_box: Optional[str] = None
+    last_reachability_status: str
+    last_seen_at: Optional[datetime] = None
+    status: str
+    latitude: Optional[Decimal] = None
+    longitude: Optional[Decimal] = None
+    customer_name: Optional[str] = None
+    customer_code: Optional[str] = None
+    physical_address: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+CustomerServiceCreate = SubscriberDeviceCreate
+CustomerServiceUpdate = SubscriberDeviceUpdate
+CustomerServiceResponse = SubscriberDeviceResponse

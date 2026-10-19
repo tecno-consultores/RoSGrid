@@ -3,8 +3,9 @@
 
 import uuid
 from datetime import datetime
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 from src.models.core import TenantStatusEnum
 
@@ -34,6 +35,82 @@ class UpdateTenantRequest(BaseModel):
     require_2fa_all_users: bool | None = None
     default_safemode_seconds: int | None = Field(None, ge=15, le=300)
 
+    # Feature Flags opcionales
+    isp_module_enabled: bool | None = None
+    bgp_looking_glass_enabled: bool | None = None
+    sfp_ddm_telemetry_enabled: bool | None = None
+    ipfix_analytics_enabled: bool | None = None
+    enforce_maker_checker: bool | None = None
+    auto_safemode_enforced: bool | None = None
+    ai_mcp_integration_enabled: bool | None = None
+    nightly_backups_enabled: bool | None = None
+    outbound_webhooks_enabled: bool | None = None
+    config_drift_monitoring_enabled: bool | None = None
+    cis_audit_enabled: bool | None = None
+    sdwan_orchestrator_enabled: bool | None = None
+    capsman_wifi_enabled: bool | None = None
+    sla_tracker_enabled: bool | None = None
+    mass_outage_threshold: int | None = Field(None, ge=1, le=1000)
+    default_locale: str | None = Field(None, max_length=5)
+
+
+class UpdateTenantFeaturesRequest(BaseModel):
+    isp_module_enabled: bool | None = None
+    bgp_looking_glass_enabled: bool | None = None
+    sfp_ddm_telemetry_enabled: bool | None = None
+    ipfix_analytics_enabled: bool | None = None
+    enforce_maker_checker: bool | None = None
+    auto_safemode_enforced: bool | None = None
+    ai_mcp_integration_enabled: bool | None = None
+    nightly_backups_enabled: bool | None = None
+    outbound_webhooks_enabled: bool | None = None
+    config_drift_monitoring_enabled: bool | None = None
+    cis_audit_enabled: bool | None = None
+    sdwan_orchestrator_enabled: bool | None = None
+    capsman_wifi_enabled: bool | None = None
+    sla_tracker_enabled: bool | None = None
+    mass_outage_threshold: int | None = Field(None, ge=1, le=1000)
+    default_locale: str | None = Field(None, max_length=5)
+
+
+TENANT_FEATURE_DEFAULTS: dict[str, Any] = {
+    "isp_module_enabled": True,
+    "bgp_looking_glass_enabled": False,
+    "sfp_ddm_telemetry_enabled": True,
+    "ipfix_analytics_enabled": False,
+    "enforce_maker_checker": True,
+    "auto_safemode_enforced": True,
+    "ai_mcp_integration_enabled": True,
+    "nightly_backups_enabled": True,
+    "outbound_webhooks_enabled": True,
+    "config_drift_monitoring_enabled": False,
+    "cis_audit_enabled": True,
+    "sdwan_orchestrator_enabled": False,
+    "capsman_wifi_enabled": False,
+    "sla_tracker_enabled": False,
+    "mass_outage_threshold": 10,
+    "default_locale": "es",
+}
+
+
+class TenantFeaturesResponse(BaseModel):
+    isp_module_enabled: bool = True
+    bgp_looking_glass_enabled: bool = False
+    sfp_ddm_telemetry_enabled: bool = True
+    ipfix_analytics_enabled: bool = False
+    enforce_maker_checker: bool = True
+    auto_safemode_enforced: bool = True
+    ai_mcp_integration_enabled: bool = True
+    nightly_backups_enabled: bool = True
+    outbound_webhooks_enabled: bool = True
+    config_drift_monitoring_enabled: bool = False
+    cis_audit_enabled: bool = True
+    sdwan_orchestrator_enabled: bool = False
+    capsman_wifi_enabled: bool = False
+    sla_tracker_enabled: bool = False
+    mass_outage_threshold: int = 10
+    default_locale: str = "es"
+
 
 class TenantResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -47,5 +124,57 @@ class TenantResponse(BaseModel):
     max_users_quota: int
     require_2fa_all_users: bool
     default_safemode_seconds: int
+
+    # Feature Flags & Gobernanza Modular
+    isp_module_enabled: bool = True
+    bgp_looking_glass_enabled: bool = False
+    sfp_ddm_telemetry_enabled: bool = True
+    ipfix_analytics_enabled: bool = False
+    enforce_maker_checker: bool = True
+    auto_safemode_enforced: bool = True
+    ai_mcp_integration_enabled: bool = True
+    nightly_backups_enabled: bool = True
+    outbound_webhooks_enabled: bool = True
+    config_drift_monitoring_enabled: bool = False
+    cis_audit_enabled: bool = True
+    sdwan_orchestrator_enabled: bool = False
+    capsman_wifi_enabled: bool = False
+    sla_tracker_enabled: bool = False
+    mass_outage_threshold: int = 10
     created_at: datetime
     updated_at: datetime
+
+    @model_validator(mode="before")
+    @classmethod
+    def handle_none_features(cls, data: Any) -> Any:
+        defaults = {
+            "isp_module_enabled": True,
+            "bgp_looking_glass_enabled": False,
+            "sfp_ddm_telemetry_enabled": True,
+            "ipfix_analytics_enabled": False,
+            "enforce_maker_checker": True,
+            "auto_safemode_enforced": True,
+            "ai_mcp_integration_enabled": True,
+            "nightly_backups_enabled": True,
+            "outbound_webhooks_enabled": True,
+            "config_drift_monitoring_enabled": False,
+            "cis_audit_enabled": True,
+            "sdwan_orchestrator_enabled": False,
+            "capsman_wifi_enabled": False,
+            "sla_tracker_enabled": False,
+            "mass_outage_threshold": 10,
+            "default_locale": "es",
+        }
+        if isinstance(data, dict):
+            for k, v in defaults.items():
+                if data.get(k) is None:
+                    data[k] = v
+            return data
+        for k, v in defaults.items():
+            if getattr(data, k, None) is None:
+                try:
+                    setattr(data, k, v)
+                except Exception:
+                    pass
+        return data
+

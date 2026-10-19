@@ -286,6 +286,7 @@ async def _build_auth_session_response(
     tenant_slug: str,
     tenant_name: str,
     user: User,
+    features: dict[str, Any] | None = None,
 ) -> AuthSessionResponse:
     ip_addr = request.client.host if request.client else "127.0.0.1"
     ua = request.headers.get("User-Agent", "Unknown")
@@ -330,6 +331,7 @@ async def _build_auth_session_response(
             tenant_slug=tenant_slug,
             tenant_name=tenant_name,
             has_all_routers_access=user.has_all_routers_access,
+            features=features or {},
         ),
         csrf_token=csrf_token,
     )
@@ -368,7 +370,28 @@ async def verify_2fa(
     t_res = await db.execute(stmt_t)
     tenant_obj = t_res.scalar_one()
 
-    return await _build_auth_session_response(request, response, tenant_id, tenant_obj.slug, tenant_obj.name, user)
+    features = {
+        "isp_module_enabled": getattr(tenant_obj, "isp_module_enabled", True),
+        "bgp_looking_glass_enabled": getattr(tenant_obj, "bgp_looking_glass_enabled", False),
+        "sfp_ddm_telemetry_enabled": getattr(tenant_obj, "sfp_ddm_telemetry_enabled", True),
+        "ipfix_analytics_enabled": getattr(tenant_obj, "ipfix_analytics_enabled", False),
+        "enforce_maker_checker": getattr(tenant_obj, "enforce_maker_checker", True),
+        "auto_safemode_enforced": getattr(tenant_obj, "auto_safemode_enforced", True),
+        "ai_mcp_integration_enabled": getattr(tenant_obj, "ai_mcp_integration_enabled", True),
+        "nightly_backups_enabled": getattr(tenant_obj, "nightly_backups_enabled", True),
+        "outbound_webhooks_enabled": getattr(tenant_obj, "outbound_webhooks_enabled", True),
+        "config_drift_monitoring_enabled": getattr(tenant_obj, "config_drift_monitoring_enabled", False),
+        "cis_audit_enabled": getattr(tenant_obj, "cis_audit_enabled", True),
+        "sdwan_orchestrator_enabled": getattr(tenant_obj, "sdwan_orchestrator_enabled", False),
+        "capsman_wifi_enabled": getattr(tenant_obj, "capsman_wifi_enabled", False),
+        "sla_tracker_enabled": getattr(tenant_obj, "sla_tracker_enabled", False),
+        "mass_outage_threshold": getattr(tenant_obj, "mass_outage_threshold", 10),
+        "default_locale": getattr(tenant_obj, "default_locale", "es"),
+    }
+
+    return await _build_auth_session_response(
+        request, response, tenant_id, tenant_obj.slug, tenant_obj.name, user, features=features
+    )
 
 
 @router.post("/2fa/confirm-enrollment", response_model=AuthSessionResponse)
