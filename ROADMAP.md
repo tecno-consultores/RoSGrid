@@ -209,8 +209,8 @@
 - [ ] **16.3** Panel de Feature Flags en Frontend (`TenantsManagementView.vue`): Pestaña táctica *"Módulos & Capacidades"* con switches de alta densidad para conmutación inmediata por tenant por el Superadmin.
 - [ ] **16.4** Seguridad y Reactividad de Módulos: Dependencia FastAPI `require_feature(flag_name)` que responde HTTP 403 `FEATURE_MODULE_DISABLED`, y adaptación dinámica de `RgResponsiveShell.vue`, `RgCommandPalette.vue` y rutas Vue Router para ocultar módulos inactivos.
 - [ ] **16.5** Branding Institucional, Footer Global y Enlaces Oficiales:
-  * Modificación de `LoginView.vue`: Pie de página discreto y elegante con icono SVG accesible de GitHub enlazando a `https://github.com/tecno-consultores/RoSGrid/`, atribución *"Elaborado por Tecno Consultores 2023 C.A."*, versión del sistema y badge de *"Licencia GNU GPLv3"*.
-  * Modificación de `RgResponsiveShell.vue`: Pie de página global autenticado en la base del sitio mostrando *"Elaborado por Tecno Consultores 2023 C.A. • Licencia GNU GPLv3"* en tipografía reducida con ratio de contraste WCAG 2.1 AA.
+  * Modificación de `LoginView.vue`: Pie de página discreto y elegante con icono SVG accesible de GitHub enlazando a `https://github.com/tecno-consultores/RoSGrid/`, atribución *"Elaborado por [Tecno Consultores 2023 C.A.](https://www.tecnoconsultores.net/)"*, versión del sistema y badge de *"Licencia GNU GPLv3"*.
+  * Modificación de `RgResponsiveShell.vue`: Pie de página global autenticado en la base del sitio mostrando *"Elaborado por [Tecno Consultores 2023 C.A.](https://www.tecnoconsultores.net/) • Licencia GNU GPLv3"* e icono de GitHub enlazando al repositorio, en tipografía reducida con ratio de contraste WCAG 2.1 AA.
 
 ---
 

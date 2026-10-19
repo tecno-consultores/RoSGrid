@@ -47,10 +47,10 @@ El pie de la pantalla de login incorpora un bloque sutil y elegante (`.login-ins
 1. **Enlace al Repositorio Oficial en GitHub:**
    - Enlace `<a>` con `target="_blank" rel="noopener noreferrer"` hacia `https://github.com/tecno-consultores/RoSGrid/`.
    - Renderiza un icono SVG vectorial de GitHub (20x20px) con atributo `aria-label="Repositorio oficial de RoSGrid en GitHub"` y `title="Código fuente en GitHub"`.
-2. **Atribución de Autoría:**
-   - Texto: *"Elaborado por Tecno Consultores 2023 C.A."* con tipografía de alta legibilidad y estilo discreto.
+2. **Atribución de Autoría y Sitio Web:**
+   - Texto con enlace `<a>`: *"Elaborado por [Tecno Consultores 2023 C.A.](https://www.tecnoconsultores.net/)"* (`target="_blank" rel="noopener noreferrer"`), con tipografía de alta legibilidad y estilo discreto.
 3. **Versión y Licencia del Sistema:**
-   - Muestra el número de versión (ej. `v1.0.0` extraído del entorno de compilación) junto a la insignia *"Licencia GNU GPLv3"*.
+   - Presenta la cadena normalizada: *"Elaborado por Tecno Consultores 2023 C.A. • Licencia GNU GPLv3"*, acompañada del número de versión del sistema (ej. `v1.0.0` extraído del entorno de compilación).
 4. **Diseño y Accesibilidad:**
    - Tipografía reducida (`0.75rem` / `12px`), colores tenues en gris pizarra (`--rg-text-muted`, ratio de contraste `>= 4.5:1` sobre `--rg-bg-canvas` para cumplir WCAG 2.1 AA) e interacciones hover con resplandor cian sutil (`--rg-accent-cyan`).
 

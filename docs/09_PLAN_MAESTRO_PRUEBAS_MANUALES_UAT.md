@@ -281,7 +281,7 @@ Las pruebas automatizadas de RoSGrid (cobertura unitaria `>= 95%`, mutación, ac
 
 | ID | Caso de Prueba | Precondición | Pasos de Ejecución | Resultado Esperado |
 | :--- | :--- | :--- | :--- | :--- |
-| **UAT-75** | Branding Institucional en Login y Shell | Navegador en `/login` y sesión activa en el sistema | 1. Cargar `/login` y verificar el pie de página. 2. Hacer clic en el icono de GitHub. 3. Iniciar sesión y verificar la base del sitio (`RgResponsiveShell.vue`). | En `/login` se muestra el enlace al repositorio `https://github.com/tecno-consultores/RoSGrid/` con icono SVG de GitHub, versión del sistema, licencia GNU GPLv3 y el texto *"Elaborado por Tecno Consultores 2023 C.A."*. Dentro de la aplicación, el footer global exhibe el crédito institucional con tipografía accesible (`--rg-text-muted`, contraste >= 4.5:1) sin obstruir la cuadrícula de monitoreo. |
+| **UAT-75** | Branding Institucional en Login y Shell | Navegador en `/login` y sesión activa en el sistema | 1. Cargar `/login` y verificar el pie de página. 2. Hacer clic en el icono de GitHub y en el enlace de la empresa. 3. Iniciar sesión y verificar la base del sitio (`RgResponsiveShell.vue`). | En `/login` se muestra el enlace al repositorio `https://github.com/tecno-consultores/RoSGrid/` con icono SVG de GitHub, versión del sistema, y la atribución con enlace *"Elaborado por [Tecno Consultores 2023 C.A.](https://www.tecnoconsultores.net/) • Licencia GNU GPLv3"*. Ambos enlaces abren en nueva pestaña. Dentro de la aplicación, el footer global de `RgResponsiveShell.vue` exhibe el crédito institucional y los enlaces con tipografía accesible (`--rg-text-muted`, contraste >= 4.5:1) sin obstruir la cuadrícula de monitoreo. |
 
 ---
 
