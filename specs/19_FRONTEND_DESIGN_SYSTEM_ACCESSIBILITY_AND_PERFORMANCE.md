@@ -20,10 +20,10 @@ El archivo `vue3/src/assets/themes.css` define 3 paletas que cumplen matemática
    - `--rg-accent-cyan`: `#22D3EE` para texto/iconos interactivos sobre fondo oscuro (ratio de contraste **10.8:1**, superando holgadamente WCAG AA) y `#06B6D4` para bordes activos e indicadores con resplandor sutil `--rg-cyan-glow: 0 0 12px rgba(6, 182, 212, 0.28)`.
    - `--rg-text-primary`: `#F8FAFC` | `--rg-text-secondary`: `#CBD5E1` | `--rg-text-muted`: `#94A3B8` (ratio >= 4.6:1 sobre `#0B0F19`, prohibido usar grises más oscuros).
    - **Estados Semánticos:**
-     * `--rg-status-online`: `#10B981` (Texto en badges: `#6EE7B7` sobre `#064E3B`).
-     * `--rg-status-warning`: `#F59E0B` (Safe Mode 60s / Maker-Checker / SFP Warning).
-     * `--rg-status-critical`: `#EF4444` (Offline / Regla Inválida `[I]` / Alerta TOFU SSL).
-     * `--rg-status-info`: `#38BDF8` (Rutas dinámicas `[D]` / Pinning TOFU).
+     - `--rg-status-online`: `#10B981` (Texto en badges: `#6EE7B7` sobre `#064E3B`).
+     - `--rg-status-warning`: `#F59E0B` (Safe Mode 60s / Maker-Checker / SFP Warning).
+     - `--rg-status-critical`: `#EF4444` (Offline / Regla Inválida `[I]` / Alerta TOFU SSL).
+     - `--rg-status-info`: `#38BDF8` (Rutas dinámicas `[D]` / Pinning TOFU).
 2. **Tema Claro de Campo / Oficina (`data-theme="light"`):**
    - `--rg-bg-canvas`: `#F8FAFC` | `--rg-bg-surface`: `#FFFFFF` | `--rg-border-grid`: `#E2E8F0`.
    - `--rg-accent-cyan`: `#0E7490` (Cian oscuro con ratio >= 5.2:1 sobre blanco) | `--rg-text-primary`: `#0F172A` | `--rg-text-secondary`: `#334155`.
@@ -55,10 +55,10 @@ Para evitar duplicación de código y mantener complejidad cognitiva baja en Son
   - Aprovechando la altura determinista de fila (`32px` en modo `compact` y `44px` en modo `comfortable`), cuando el arreglo `rows` supere los `100` elementos, `RgDataTable.vue` activa automáticamente su ventana de virtualización (`startIndex`, `endIndex`, `overscan = 10`), renderizando en el DOM únicamente las ~30 filas visibles en el viewport más un espaciador superior/inferior para mantener 60 FPS constantes en PC y móviles incluso con 5,000 sesiones PPPoE o rutas BGP.
 - **Insignias de Estado Nativas de RouterOS (Flags Column):**
   - Soporta el renderizado estandarizado de banderas MikroTik al inicio de cada fila:
-    * `[D]` (*Dynamic*) en cian informativo.
-    * `[X]` (*Disabled*) aplicando estilo cursiva y opacidad accesible a toda la fila (igual que en WinBox).
-    * `[I]` (*Invalid*) en rojo coral con etiqueta `title` del motivo.
-    * `[R]` (*Running*) en verde esmeralda para interfaces y sesiones activas.
+    - `[D]` (*Dynamic*) en cian informativo.
+    - `[X]` (*Disabled*) aplicando estilo cursiva y opacidad accesible a toda la fila (igual que en WinBox).
+    - `[I]` (*Invalid*) en rojo coral con etiqueta `title` del motivo.
+    - `[R]` (*Running*) en verde esmeralda para interfaces y sesiones activas.
 - **Soporte Drag & Drop Dual (Ratón + Teclado + Táctil):**
   - Utilizado en Firewall (`Filter`, `NAT`, `Mangle`, `RAW`) y `Simple Queues`.
   - Además de arrastrar con el ratón, cada fila ordenable incluye botones accesibles por teclado (`Alt + Flecha Arriba` / `Alt + Flecha Abajo` con `aria-label="Mover regla *1C hacia arriba"`) para cumplir al 100% con **WCAG 2.1.1 (Keyboard Accessible)**.

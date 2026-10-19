@@ -1,21 +1,24 @@
 # 🗺️ ROADMAP GRANULAR DE EJECUCIÓN (31 SPECS) — RoSGrid
 
 ## 📍 Punto de Control Actual (Checkpoint)
+
 - **Hito Actual en Curso:** Hito 16 (Final — Cierre de CHANGELOG.md, Auditoría Trivy y Publicación en Docker Hub)
 - **Estado General del Sistema:** Hitos 0 al 15 COMPLETADOS (100%).
 - **Fase de Estabilización con MikroTik Real:** COMPLETADA al 100% sobre RouterOS v7.21.5 (CHR / Hardware físico):
-  * Detección y normalización de la política obligatoria `rest-api` de RouterOS v7.13+.
-  * Auto-registro web de operadores con aprobación Maker-Checker por Superadmin y switch en KeyDB.
-  * Botón TOFU de redescubrimiento dinámico de recursos, arquitectura y firmware.
-  * Corrección de mapas OpenStreetMap (CSP Nginx y layout Leaflet).
-  * Suite automatizada de integración Front-Back (`fastapi/scripts/validar_comunicacion_front_back.py`) con 24 contratos de UI-API verificados (24 pasadas, 0 fallidas).
-  * Documentación completa sincronizada en `docs/` (9 manuales), `specs/` (31 especificaciones) y raíz (`README.md`, `CHANGELOG.md`, `FAQ.md`, `SECURITY.md`, `INSTALL.md`).
+  - Detección y normalización de la política obligatoria `rest-api` de RouterOS v7.13+.
+  - Auto-registro web de operadores con aprobación Maker-Checker por Superadmin y switch en KeyDB.
+  - Botón TOFU de redescubrimiento dinámico de recursos, arquitectura y firmware.
+  - Corrección de mapas OpenStreetMap (CSP Nginx y layout Leaflet).
+  - Suite automatizada de integración Front-Back (`fastapi/scripts/validar_comunicacion_front_back.py`) con 24 contratos de UI-API verificados (24 pasadas, 0 fallidas).
+  - Documentación completa sincronizada en `docs/` (9 manuales), `specs/` (31 especificaciones) y raíz (`README.md`, `CHANGELOG.md`, `FAQ.md`, `SECURITY.md`, `INSTALL.md`).
 - **Único Paso Restante para Salida a Producción:** Hito 16 (Auditoría Trivy de imágenes de producción y empaquetado multi-arquitectura con `build.sh` hacia Docker Hub).
 
 ---
 
 ## ✅ HITO 0: Gobernanza 11X, Infraestructura Docker Inmutable y Fusión Base
+
 > **Archivos Guía:** `specs/00_MASTER_INDEX_AND_11X_GOVERNANCE.md` y `specs/01_DOCKER_INFRASTRUCTURE_AND_IMMUTABLE_IMAGES.md`
+
 - [x] **0.1** Estructura del monorepo (`fastapi/`, `vue3/`, `specs/`, `examples/`, `docs/`).
 - [x] **0.2** Archivos raíz (`LICENSE` GPL-3.0-only, `.env.example`, `docker-compose.yml`, `.gitignore`, `lefthook.yml`, `commitlint.config.js`, `instalar-hooks.sh`, `auditar-infra.sh`).
 - [x] **0.3** Fusión quirúrgica inicial en `fastapi/` (`pyproject.toml`, `tox.ini`, `Makefile`, `docker-compose.qa.yml`, `limpieza.sh`, `locustfile.py`, `scripts/entrypoint.sh`).
@@ -24,7 +27,9 @@
 ---
 
 ## ✅ HITO 1: Esquema PostgreSQL 17, Multi-Tenant RLS, Bóveda y Auditoría WORM
+
 > **Archivos Guía:** `specs/02_DB_SCHEMA_CORE_TENANTS_AND_RLS.md`, `specs/03_DB_SCHEMA_INVENTORY_VAULT_AND_MAINTENANCE.md` y `specs/04_DB_SCHEMA_OPERATIONS_BACKUPS_AND_IMMUTABLE_AUDIT.md`
+
 - [x] **1.1** Configuración de Alembic (`fastapi/alembic.ini`, `fastapi/migrations/env.py`, `script.py.mako`).
 - [x] **1.2** Migración `0001_core_tenants_users_rls.py` (Tablas `tenants`, `users`, `user_router_permissions`, los 11 roles y políticas `FORCE ROW LEVEL SECURITY` — `specs/02`).
 - [x] **1.3** Migración `0002_inventory_vault_maintenance.py` (Tablas `routers`, `router_tags`, `router_credentials_vault` AES-256-GCM y `maintenance_windows` — `specs/03`).
@@ -34,7 +39,9 @@
 ---
 
 ## ✅ HITO 2: Capa KeyDB Multi-Hilo (Compatible RESP) — Idempotencia, Sesiones Kill-Switch, Pub/Sub y Monitor Zero-Metrics
+
 > **Archivo Guía:** `specs/05_REDIS_KEYS_IDEMPOTENCY_AND_ZERO_METRICS.md`
+
 - [x] **2.1** Cliente y pool de conexión asíncrono compatible con KeyDB / DragonflyDB (`src/redis_layer/client.py`).
 - [x] **2.2** Middleware y gestor de Idempotencia HTTP (`Idempotency-Key` UUIDv7 con estados `IN_PROGRESS` / `COMPLETED` y hash SHA-256 del body en `src/redis_layer/idempotency.py`).
 - [x] **2.3** Gestor de familias de Refresh Tokens (*Reuse Detection*), registro de sesiones activas e invocación del **Kill-Switch** (`src/redis_layer/sessions.py`).
@@ -43,7 +50,9 @@
 ---
 
 ## ✅ HITO 3: Seguridad Split-Credential, 2FA TOTP, Step-Up Auth y Matriz RBAC (11 Roles)
+
 > **Archivos Guía:** `specs/06_SECURITY_SPLIT_CREDENTIAL_2FA_AND_STEPUP.md` y `specs/07_RBAC_11_ROLES_MATRIX_AND_MAKER_CHECKER.md`
+
 - [x] **3.1** Configuración central tipada (`src/core/config.py`).
 - [x] **3.2** Motor criptográfico `Argon2id`, `AES-256-GCM` con `AAD` (`tenant_id|router_id`) y generador TOTP RFC 6238 (`src/core/crypto.py`).
 - [x] **3.3** Generación/verificación de cookies `__Host-rg_at` / `__Host-rg_rt` y protección `X-CSRF-Token` firmada con HMAC-SHA256 (`src/core/csrf.py`).
@@ -55,7 +64,9 @@
 ---
 
 ## ✅ HITO 4: Conector Asíncrono RouterOS v7 (`/rest/*`), Pinning SSL TOFU y Motor Safe Mode
+
 > **Archivo Guía:** `specs/08_MIKROTIK_REST_V7_CLIENT_TOFU_AND_SAFEMODE.md`
+
 - [x] **4.1** Verificador de huella TLS `SHA-256` (*Trust On First Use* — `PENDING_TOFU`, `TRUSTED_PINNED`, `FINGERPRINT_MISMATCH` en `src/mikrotik/ssl_tofu.py`).
 - [x] **4.2** Cliente HTTP asíncrono `httpx` para RouterOS v7 (`/rest/*`) con soporte de fallback transaccional a `previous_password` (`src/mikrotik/client.py`).
 - [x] **4.3** Motor **Safe Mode (*Dead Man's Switch*)** mediante inyección y limpieza de `/rest/system/scheduler` a 60s (`src/mikrotik/safemode.py`).
@@ -64,7 +75,9 @@
 ---
 
 ## ✅ HITO 5: Esqueleto FastAPI, Observabilidad `/metrics` y Endpoints Auth, Usuarios y Kill-Switch
+
 > **Archivos Guía:** `specs/09_BACKEND_PHASE_1_SKELETON_OBSERVABILITY_AND_MIGRATIONS.md` y `specs/10_BACKEND_ENDPOINTS_AUTH_TENANTS_USERS_KILLSWITCH.md`
+
 - [x] **5.1** Aplicación principal `src/main.py` con `prometheus-fastapi-instrumentator` (`/metrics`), `/health`, `/users/me` y registro de middlewares.
 - [x] **5.2** Dependencias de inyección (`src/api/deps.py`) y esquemas Pydantic v2 de Autenticación, Tenants, Usuarios y Sesiones (`src/schemas/auth.py`, `users.py`).
 - [x] **5.3** Endpoints de Login Multi-Tenant en 2 etapas, enrolamiento/verificación 2FA TOTP, Refresh y Logout (`src/api/v1/auth.py` — `specs/10`).
@@ -74,7 +87,9 @@
 ---
 
 ## ✅ HITO 6: Endpoints de Inventario MikroTik, Importador CSV, Bóveda Step-Up (30s) y Rotación
+
 > **Archivo Guía:** `specs/11_BACKEND_ENDPOINTS_INVENTORY_CSV_VAULT_AND_ROTATION.md`
+
 - [x] **6.1** Esquemas Pydantic v2 de Inventario, CSV, Bóveda y Ventanas de Mantenimiento (`src/schemas/inventory.py`).
 - [x] **6.2** Endpoints CRUD de Routers MikroTik con autodescubrimiento (`/rest/system/resource`, `routerboard`, `identity`, `package`) y coordenadas OpenStreetMap (`src/api/v1/inventory.py`).
 - [x] **6.3** Importador Masivo por CSV en 2 pasos: validación `/import-csv/dry-run` y ejecución `/import-csv/commit`.
@@ -84,7 +99,9 @@
 ---
 
 ## ✅ HITO 7: Endpoints WebFig Capa 1 (Parte A) — Interfaces, Óptica SFP DDM, VLAN, WireGuard e IP
+
 > **Archivo Guía:** `specs/12_BACKEND_ENDPOINTS_WEBFIG_L1_INTERFACES_AND_IP.md`
+
 - [x] **7.1** Esquemas Pydantic v2 para Interfaces e IP/IPv6 (`src/schemas/webfig_l1_net.py`).
 - [x] **7.2** Endpoints de Interfaces generales, Ethernet, test de cable TDR y diagnóstico óptico **SFP/SFP+ DDM** (`tx-power`, `rx-power` dBm y clasificación de salud óptica) (`src/api/v1/webfig_interfaces.py`).
 - [x] **7.3** Endpoints de VLAN 802.1Q, Bridges + Ports, WireGuard (Peers + llave pública) y tabla de registro WiFi/Wireless.
@@ -93,7 +110,9 @@
 ---
 
 ## ✅ HITO 8: Endpoints WebFig Capa 1 (Partes B y C) — Firewall, BGP/OSPF, PPPoE, Queues, System y Tools
+
 > **Archivos Guía:** `specs/13_BACKEND_ENDPOINTS_WEBFIG_L1_FIREWALL_AND_ROUTING.md` y `specs/14_BACKEND_ENDPOINTS_WEBFIG_L1_PPP_QUEUES_SYSTEM_TOOLS.md`
+
 - [x] **8.1** Endpoints de Firewall (`Filter`, `NAT`, `Mangle`, `RAW`, `Address-Lists`, `Connections`) y endpoint de reordenamiento (`move`) protegido por Safe Mode (`src/api/v1/webfig_firewall.py` — `specs/13`).
 - [x] **8.2** Endpoints de Routing v7: sesiones/peers `BGP`, prefijos anunciados, `OSPF`, `Routing Tables`, `Routing Rules`, `BFD` y `Filters` (`src/api/v1/webfig_routing.py` — `specs/13`).
 - [x] **8.3** Endpoints de PPPoE Active (con corte/reconexión para Soporte N1), PPP Secrets, Profiles y Servidores PPPoE (`src/api/v1/webfig_ppp.py` — `specs/14`).
@@ -103,7 +122,9 @@
 ---
 
 ## ✅ HITO 9: Motor Universal WebFig Capa 2, Maker-Checker, Backups Diff Git y Acciones Masivas
+
 > **Archivos Guía:** `specs/15_BACKEND_ENDPOINTS_WEBFIG_L2_UNIVERSAL_ENGINE.md` y `specs/16_BACKEND_ENDPOINTS_MAKER_CHECKER_BACKUPS_BULK_UPDATES.md`
+
 - [x] **9.1** Motor Dinámico Universal WebFig Capa 2 (`/webfig/layer2/catalog`, inspector de esquema dinámico, CRUD genérico y bloqueo de rutas prohibidas `FORBIDDEN_L2_PATHS`) (`src/api/v1/webfig_layer2.py` — `specs/15`).
 - [x] **9.2** Endpoints de Bandeja de Aprobación **Maker-Checker** (listar, aprobar ejecutando cambio diferido con Safe Mode y rechazar, impidiendo auto-aprobación) (`src/api/v1/approvals.py` — `specs/16`).
 - [x] **9.3** Motor de Backups `.rsc`/`.backup` con deduplicación SHA-256, retención de 30 días y comparador **Diff estilo Git (`unified_diff`)** entre backups o contra el estado `LIVE` (`src/api/v1/backups.py` — `specs/16`).
@@ -113,22 +134,26 @@
 ---
 
 ## ✅ HITO 10: Multiplexor WebSocket, Workers, Dockerfile, Graphify y Optimización de Alto Rendimiento Backend
+
 > **Archivos Guía:** `specs/17_BACKEND_WEBSOCKETS_LIVE_CHARTS_AND_ALERT_WORKERS.md` y `specs/01_DOCKER_INFRASTRUCTURE_AND_IMMUTABLE_IMAGES.md`
+
 - [x] **10.1** Multiplexor WebSocket `/ws/v1/routers/{router_id}/live-telemetry` (activa el poller cuando hay >= 1 operador viendo el router y se detiene al instante cuando `SCARD == 0`).
 - [x] **10.2** WebSocket global del Tenant `/ws/v1/tenant/events` (eventos NOC, progreso de trabajos masivos y orden `SESSION_KILLED`).
 - [x] **10.3** Los 4 Workers en segundo plano (`src/workers/`): Monitor *Zero-Storage*, Despachador de Alertas Multi-Canal (Telegram Bot, Correo SMTP, Webhook HMAC-SHA256 y NOC), Worker de Backups Nocturnos y Worker de Rotación Automática de Bóveda.
 - [x] **10.4** **Cierre de Arquitectura Backend con Graphify (En Docker):** Ejecutar `docker compose -f docker-compose.qa.yml --profile graphify run --rm graphify` dentro de `./fastapi/` para generar `fastapi/graphify-out/GRAPH_REPORT.md` y el grafo AST completo del Backend (`specs/09`, `29`).
 - [x] **10.5** **Dockerfile Multi-Stage de Producción Backend (`fastapi/Dockerfile`):** Crear `fastapi/Dockerfile` basado en `sinfallas/base-python-uv:3.13` con soporte `ARG BUILD_DATE`, dependencias `--no-dev`, usuario sin privilegios (`non-root`) y `scripts/entrypoint.sh` (`specs/01`).
 - [x] **10.6** **Paquete de Optimización de Alto Rendimiento Backend, DB y KeyDB Multi-Hilo:**
-  * Sustituir `redis:7-alpine` por `eqalpha/keydb:alpine` (`keydb-server --server-threads 2` y healthcheck `keydb-cli`) en `docker-compose.yml`, `fastapi/docker-compose.qa.yml` y `specs/01` (documentando `DragonflyDB` como perfil de alta escala).
-  * Configurar `ORJSONResponse` como `default_response_class` en `fastapi/src/main.py`, serialización `orjson` en frames WebSocket, desactivación estricta de Swagger/ReDoc/OpenAPI cuando `ROSGRID_ENV == "production"` y activar `--loop uvloop --http httptools` en `fastapi/scripts/entrypoint.sh`.
-  * Implementar reutilización de pool `Keep-Alive` TLS (`limits=httpx.Limits(max_keepalive_connections=20, keepalive_expiry=60.0)`) en `src/mikrotik/client.py` y ejecución por lotes con `pipeline()` hacia KeyDB en `src/redis_layer/zero_metrics_monitor.py`.
-  * Añadir índice `BRIN` (`ix_audit_logs_created_at_brin` con `postgresql_using='brin'`) sobre `audit_logs(created_at)` en `0003_operations_backups_immutable_audit.py` y re-validar `make qa-lint && make qa-unit`.
+  - Sustituir `redis:7-alpine` por `eqalpha/keydb:alpine` (`keydb-server --server-threads 2` y healthcheck `keydb-cli`) en `docker-compose.yml`, `fastapi/docker-compose.qa.yml` y `specs/01` (documentando `DragonflyDB` como perfil de alta escala).
+  - Configurar `ORJSONResponse` como `default_response_class` en `fastapi/src/main.py`, serialización `orjson` en frames WebSocket, desactivación estricta de Swagger/ReDoc/OpenAPI cuando `ROSGRID_ENV == "production"` y activar `--loop uvloop --http httptools` en `fastapi/scripts/entrypoint.sh`.
+  - Implementar reutilización de pool `Keep-Alive` TLS (`limits=httpx.Limits(max_keepalive_connections=20, keepalive_expiry=60.0)`) en `src/mikrotik/client.py` y ejecución por lotes con `pipeline()` hacia KeyDB en `src/redis_layer/zero_metrics_monitor.py`.
+  - Añadir índice `BRIN` (`ix_audit_logs_created_at_brin` con `postgresql_using='brin'`) sobre `audit_logs(created_at)` en `0003_operations_backups_immutable_audit.py` y re-validar `make qa-lint && make qa-unit`.
 
 ---
 
 ## ✅ HITO 11: Frontend Vue 3 Base — Zero-Trust, Interceptores, Stores Pinia (`shallowRef`) y Sistema de Diseño WCAG (`Virtual Scroll`)
+
 > **Archivos Guía:** `specs/18_FRONTEND_PHASE_1_SETUP_ZERO_TRUST_AND_INTERCEPTORS.md` y `specs/19_FRONTEND_DESIGN_SYSTEM_ACCESSIBILITY_AND_PERFORMANCE.md`
+
 - [x] **11.1** Configuración base de Vite, TypeScript (`tsconfig.json`), `index.html` y `public/manifest.webmanifest` PWA (`specs/18`, `19`).
 - [x] **11.2** Cliente HTTP seguro (`vue3/src/api/httpClient.ts`) con los 4 interceptores: `X-CSRF-Token`, `Idempotency-Key` (`UUIDv7`), rotación transparente de Refresh Token y captura de `202 Accepted` (*Maker-Checker*) (`specs/18`).
 - [x] **11.3** Los 6 Stores en Pinia (`useAuthStore`, `useThemeAndLayoutStore` con densidad dual adaptativa `auto`/`compact`/`comfortable`, `useInventoryStore`, `useWebFigStore` con cola de hasta 5 pestañas en RAM `openRouterTabs`, `useLiveTelemetryStore`, `useNocEventsStore`) usando **`shallowRef` para colecciones masivas y buffers de telemetría**, más Vue Router con Guards RBAC para los 11 roles (`specs/18`).
@@ -138,7 +163,9 @@
 ---
 
 ## ✅ HITO 12: Vistas Frontend (Parte A) — Login 2FA, Usuarios/Matriz, Kill-Switch, Inventario OSM y Bóveda
+
 > **Archivos Guía:** `specs/20_FRONTEND_VIEWS_AUTH_USERS_PERMISSIONS_AND_SESSIONS.md` y `specs/21_FRONTEND_VIEWS_INVENTORY_OSM_MAP_CSV_AND_VAULT.md`
+
 - [x] **12.1** Vista `LoginView.vue` en 2 etapas (`tenant_slug` + credenciales -> QR de enrolamiento local o desafío 2FA TOTP) (`specs/20`).
 - [x] **12.2** Vistas de Administración de Tenants (`TenantsManagementView.vue`), Gestión de Usuarios de los 11 roles (`UsersAndPermissionsView.vue`) y Modal de Matriz de Asignación de Routers por Técnico (`UserRouterMatrixModal.vue`) (`specs/20`).
 - [x] **12.3** Panel en vivo de Sesiones Activas y botón de expulsión **Kill-Switch** (`ActiveSessionsKillSwitchView.vue`) (`specs/20`).
@@ -148,7 +175,9 @@
 ---
 
 ## ✅ HITO 13: Vistas Frontend (Parte B), Endpoint MCP Protegido para IA (`Hermes`/`Claude`), Dockerfiles y Graphify
+
 > **Archivos Guía:** `specs/22_FRONTEND_VIEWS_WEBFIG_CONSOLE_RINGBUFFER_AND_LAYERS.md`, `specs/23_FRONTEND_VIEWS_APPROVALS_DIFF_BULK_NOC_AND_AUDITOR.md`, `specs/01_DOCKER_INFRASTRUCTURE_AND_IMMUTABLE_IMAGES.md` y `specs/30_BACKEND_MCP_PROTECTED_ENDPOINT.md`
+
 - [x] **13.1** Clase `TelemetryRingBuffer<T>` en memoria RAM (`MAX_POINTS = 5400` para 3 horas a 1 tick/2s con reactividad superficial `shallowRef` y limpieza total en `onBeforeUnmount` al salir del router) (`specs/22`).
 - [x] **13.2** Layout de Consola WebFig (`RouterWebFigLayout.vue`), Barra de Pestañas de Trabajo con `<KeepAlive :max="5">` (`RouterWorkspaceTabsBar.vue`) y Dashboard de Gráficas Efímeras estilo WinBox (`RouterLiveDashboardView.vue`) renderizadas sobre **`<canvas>` 2D acelerado con `requestAnimationFrame`** (`specs/22`).
 - [x] **13.3** Vistas especializadas de WebFig Capa 1 (`InterfacesAndSfpView.vue`, `FirewallRulesView.vue` con Drag & Drop + Safe Mode, `RoutingBgpOspfView.vue`, `PppAndQueuesView.vue`, `LiveToolsDiagnosticsView.vue`) y Renderizador Universal de Capa 2 (`DynamicLayer2ResourceView.vue`) (`specs/22`).
@@ -157,14 +186,16 @@
 - [x] **13.6** **Cierre de Arquitectura Frontend con Graphify (En Docker):** Ejecutar `docker compose -f docker-compose.qa.yml --profile graphify run --rm graphify` dentro de `./vue3/` para generar `vue3/graphify-out/GRAPH_REPORT.md` y el grafo de componentes/stores del Frontend (`specs/18`, `29`).
 - [x] **13.7** **Dockerfile Multi-Stage de Producción Frontend (`vue3/Dockerfile`), `docker-compose.prod.yml` (con KeyDB Multi-Hilo) y Script `build.sh`:** Crear `vue3/Dockerfile` (builder `pnpm build` + runtime `nginx:1.27-alpine` no-root con `ARG BUILD_DATE` y `vue3/nginx/default.conf`), `docker-compose.prod.yml` (usando `eqalpha/keydb:alpine` por defecto y bloque comentado de `DragonflyDB` para alto rendimiento) y el script `build.sh` en la raíz con `docker buildx` (`container-builder`, `tonistiigi/binfmt` y limpieza `prune -af`) (`specs/01`).
 - [x] **13.8** **Endpoint MCP Protegido (`POST /api/v1/mcp` JSON-RPC 2.0 Streamable HTTP) para Agentes IA (`Hermes Agent`, `Claude`):**
-  * Implementar `fastapi/src/schemas/mcp.py` y `fastapi/src/api/v1/mcp.py` conforme a `specs/30_BACKEND_MCP_PROTECTED_ENDPOINT.md`, controlado por `ROSGRID_MCP_ENABLED` (`false` por defecto) y `ROSGRID_MCP_RATE_LIMIT_PER_MIN` (`30` req/min en KeyDB), restringido exclusivamente al rol `SERVICE_ACCOUNT` con validación de lista blanca CIDR.
-  * Exponer las 8 Tools semánticas de diagnóstico y operación (`rosgrid_list_inventory`, `rosgrid_get_router_health`, `rosgrid_check_sfp_optical_ddm`, `rosgrid_inspect_routing_bgp_ospf`, `rosgrid_run_live_diagnostic`, `rosgrid_compare_config_diff`, `rosgrid_reconnect_pppoe_client` y `rosgrid_propose_network_change` con intercepción obligatoria **Maker-Checker** + **Safe Mode 60s** y registro en **WORM**).
-  * Crear suite unitaria `fastapi/tests/test_mcp_endpoint.unit.py` (`make qa-lint && make qa-unit` >= 95% de cobertura) y actualizar `fastapi/graphify-out/GRAPH_REPORT.md` con Graphify en Docker antes del Hito 14.
+  - Implementar `fastapi/src/schemas/mcp.py` y `fastapi/src/api/v1/mcp.py` conforme a `specs/30_BACKEND_MCP_PROTECTED_ENDPOINT.md`, controlado por `ROSGRID_MCP_ENABLED` (`false` por defecto) y `ROSGRID_MCP_RATE_LIMIT_PER_MIN` (`30` req/min en KeyDB), restringido exclusivamente al rol `SERVICE_ACCOUNT` con validación de lista blanca CIDR.
+  - Exponer las 8 Tools semánticas de diagnóstico y operación (`rosgrid_list_inventory`, `rosgrid_get_router_health`, `rosgrid_check_sfp_optical_ddm`, `rosgrid_inspect_routing_bgp_ospf`, `rosgrid_run_live_diagnostic`, `rosgrid_compare_config_diff`, `rosgrid_reconnect_pppoe_client` y `rosgrid_propose_network_change` con intercepción obligatoria **Maker-Checker** + **Safe Mode 60s** y registro en **WORM**).
+  - Crear suite unitaria `fastapi/tests/test_mcp_endpoint.unit.py` (`make qa-lint && make qa-unit` >= 95% de cobertura) y actualizar `fastapi/graphify-out/GRAPH_REPORT.md` con Graphify en Docker antes del Hito 14.
 
 ---
 
 ## ✅ HITO 14: Documentación Oficial en `docs/`, Referencia de API, Guía de Integración IA (MCP) y Gobernanza Raíz (Basada en `GRAPH_REPORT.md`)
+
 > **Propósito:** Generar la documentación técnica, operativa, de despliegue, la especificación completa de la API y la guía detallada de integración del servidor MCP para agentes IA (`Hermes`, `Claude`) dentro de `docs/`, más la sincronización de los archivos de gobernanza de la raíz tomando como referencia `fastapi/graphify-out/GRAPH_REPORT.md` y `vue3/graphify-out/GRAPH_REPORT.md`.
+
 - [x] **14.1** `docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md`: Requisitos de infraestructura, configuración de variables `.env` (incluyendo `ROSGRID_MCP_ENABLED`), generación de llaves criptográficas (`AES-256-GCM`, `JWT`, `CSRF`), arquitectura en memoria con **KeyDB Multi-Hilo por defecto** y guía de activación del **Perfil de Alto Rendimiento con DragonflyDB** para grandes flotas ISP, despliegue con `docker-compose.yml` / `docker-compose.prod.yml`, uso de `build.sh` y auto-migración con `pg_advisory_lock`.
 - [x] **14.2** `docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md`: Guía paso a paso con comandos CLI de RouterOS v7.1+ para habilitar `/ip/service/www-ssl`, generar certificado autofirmado para pinning TOFU, permisos mínimos del usuario API y explicación del mecanismo *Safe Mode (Dead Man's Switch)* vía `/system/scheduler`.
 - [x] **14.3** `docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md`: Administración de empresas (Tenants), detalle de los **11 roles RBAC**, uso de la matriz de asignación de routers por técnico, consulta de la Bóveda con *Step-Up Auth* (30s) y operación del *Kill-Switch* de sesiones en vivo.
@@ -177,7 +208,9 @@
 ---
 
 ## ✅ HITO 15: Ejecución de Pruebas y Certificación Estándar QA 11X (Bajo Orden Explícita del Usuario)
+
 > **Archivos Guía:** `specs/24`, `specs/25`, `specs/26`, `specs/27`, `specs/28`, `specs/29` + `fastapi/graphify-out/GRAPH_REPORT.md` + `vue3/graphify-out/GRAPH_REPORT.md`
+
 - [x] **15.1** Catálogo de Mocks RouterOS v7 (`routeros_v7_payloads.py`) y Suite Unitaria Backend completa (`fastapi/tests/**/*.unit.py` con cobertura >= 95% alcanzando 95.03% con 284 tests) (`specs/24`, `25`).
 - [x] **15.2** Certificación Estática y Unitaria Backend en Docker (`make qa-lint` con `Ruff`, `Mypy strict`, `Radon` Grado A `CC <= 5` / `MI >= B`, `Bandit`, `Pip-Audit` y `make qa-unit`) (`specs/24`, `25`).
 - [x] **15.3** Certificación Dinámica, Contratos, BDD, DAST y Caos Backend en Docker (`Schemathesis`, `Karate Labs`, `OWASP ZAP Baseline`, `py-spy` y `--profile chaos` con `Pumba + Locust + Prometheus`) (`specs/26`).
@@ -187,13 +220,15 @@
 ---
 
 ## ✅ HITO 15B: Estabilización Operativa en Hardware Real MikroTik RouterOS v7 y Validación Front-Back E2E
+
 > **Validación en Vivo:** CHR QEMU x86_64 / RouterBOARD físico con RouterOS v7.21.5 y suite de 24 contratos automatizados.
+
 - [x] **15B.1** **Diagnóstico de Conectividad y Políticas RouterOS v7.13+:** Corrección del error HTTP 401 provocado por la ausencia de la política `rest-api` en el grupo de usuarios de MikroTik, permitiendo la autenticación efectiva de `rosgrid_agent`.
 - [x] **15B.2** **Flujo de Auto-Registro Web de Operadores con Aprobación Maker-Checker:**
-  * Implementación de solicitud de acceso web en `LoginView.vue` (`POST /api/v1/auth/register`).
-  * Bloqueo 403 preventivo a cuentas no aprobadas.
-  * Pestaña de gestión de solicitudes en `UsersAndPermissionsView.vue` con aprobación (`PUT /api/v1/users/{id}/approve`) y asignación de rol por Superadmin.
-  * Switch de activación/desactivación en tiempo real en KeyDB (`POST /api/v1/users/registration-toggle`).
+  - Implementación de solicitud de acceso web en `LoginView.vue` (`POST /api/v1/auth/register`).
+  - Bloqueo 403 preventivo a cuentas no aprobadas.
+  - Pestaña de gestión de solicitudes en `UsersAndPermissionsView.vue` con aprobación (`PUT /api/v1/users/{id}/approve`) y asignación de rol por Superadmin.
+  - Switch de activación/desactivación en tiempo real en KeyDB (`POST /api/v1/users/registration-toggle`).
 - [x] **15B.3** **Resiliencia de Inmutabilidad WORM en Eliminación de Usuarios:** Adaptación de `reject_user` (`DELETE /api/v1/users/{id}/reject`) para aplicar soft-revocación segura si el usuario tiene registros en `audit_logs`, preservando el trigger inmutable de PostgreSQL.
 - [x] **15B.4** **Redescubrimiento Dinámico TOFU:** Implementación del botón de redescubrimiento en la grilla de Inventario (`POST /api/v1/inventory/routers/{id}/discover`), detectando en caliente hardware, versión de RouterOS, memoria y huella SSL sin recargar la página.
 - [x] **15B.5** **Consola WebFig e Interfaces en Router Real:** Corrección de la lectura de interfaces vivas (10 interfaces detectadas) y telemetría de CPU y memoria desde el endpoint REST real.
@@ -203,41 +238,49 @@
 ---
 
 ## 🚀 HITO 16: Gobernanza Modular, Feature Flags y Purga de Datos (Fase 1)
+
 > **Archivos Guía:** `specs/32_ISP_OPERATIONS_TECHNICAL_QOS_AND_FIELD_TOOLKIT.md` y `specs/34_TENANT_FEATURE_FLAGS_AND_GOVERNANCE_PANEL.md`
+
 - [ ] **16.1** Migración Alembic `0005_tenant_feature_flags_and_technical_qos.py` con atributos booleanos en `tenants` (`isp_module_enabled`, `bgp_looking_glass_enabled`, `sfp_ddm_telemetry_enabled`, `ipfix_analytics_enabled`, `enforce_maker_checker`, `auto_safemode_enforced`, `ai_mcp_integration_enabled`, `nightly_backups_enabled`, `outbound_webhooks_enabled`, `config_drift_monitoring_enabled`, `cis_audit_enabled`, `sdwan_orchestrator_enabled`, `capsman_wifi_enabled`, `sla_tracker_enabled`, `mass_outage_threshold`, `default_locale`).
 - [ ] **16.2** Refactorización de `subscriber_devices` en PostgreSQL: Purga estricta de nombres, cédulas y datos personales. Identificación técnica exclusiva por `device_serial`, `endpoint_identifier`, router y puerto.
 - [ ] **16.3** Panel de Feature Flags en Frontend (`TenantsManagementView.vue`): Pestaña táctica *"Módulos & Capacidades"* con switches de alta densidad para conmutación inmediata por tenant por el Superadmin.
 - [ ] **16.4** Seguridad y Reactividad de Módulos: Dependencia FastAPI `require_feature(flag_name)` que responde HTTP 403 `FEATURE_MODULE_DISABLED`, y adaptación dinámica de `RgResponsiveShell.vue`, `RgCommandPalette.vue` y rutas Vue Router para ocultar módulos inactivos.
 - [ ] **16.5** Branding Institucional, Footer Global y Enlaces Oficiales:
-  * Modificación de `LoginView.vue`: Pie de página discreto y elegante con icono SVG accesible de GitHub enlazando a `https://github.com/tecno-consultores/RoSGrid/`, atribución *"Elaborado por [Tecno Consultores 2023 C.A.](https://www.tecnoconsultores.net/)"*, versión del sistema y badge de *"Licencia GNU GPLv3"*.
-  * Modificación de `RgResponsiveShell.vue`: Pie de página global autenticado en la base del sitio mostrando *"Elaborado por [Tecno Consultores 2023 C.A.](https://www.tecnoconsultores.net/) • Licencia GNU GPLv3"* e icono de GitHub enlazando al repositorio, en tipografía reducida con ratio de contraste WCAG 2.1 AA.
+  - Modificación de `LoginView.vue`: Pie de página discreto y elegante con icono SVG accesible de GitHub enlazando a `https://github.com/tecno-consultores/RoSGrid/`, atribución *"Elaborado por [Tecno Consultores 2023 C.A.](https://www.tecnoconsultores.net/)"*, versión del sistema y badge de *"Licencia GNU GPLv3"*.
+  - Modificación de `RgResponsiveShell.vue`: Pie de página global autenticado en la base del sitio mostrando *"Elaborado por [Tecno Consultores 2023 C.A.](https://www.tecnoconsultores.net/) • Licencia GNU GPLv3"* e icono de GitHub enlazando al repositorio, en tipografía reducida con ratio de contraste WCAG 2.1 AA.
 
 ---
 
 ## ⚡ HITO 17: QoS Técnico, API de Aprovisionamiento e Idempotencia (Fase 2)
+
 > **Archivo Guía:** `specs/32_ISP_OPERATIONS_TECHNICAL_QOS_AND_FIELD_TOOLKIT.md`
+
 - [ ] **17.1** Modelo y Endpoints de `BandwidthProfile`: Tasas Up/Down nominales, parámetros de Burst (`burst_down_kbps`, `burst_up_kbps`, `burst_threshold`, `burst_time`), Prioridad (1-8) y colas PCQ / Simple Queues en MikroTik v7.
 - [ ] **17.2** API de Aprovisionamiento Técnico Idempotente (`Idempotency-Key` UUIDv7 obligatorio):
-  * `POST /api/v1/network-services/{id}/isolate` (agrega a lista de firewall `AISLADOS_TECNICO` o conmuta a 64k).
-  * `POST /api/v1/network-services/{id}/restore` (retira aislamiento y restaura perfil en caliente).
-  * `POST /api/v1/network-services/{id}/change-rate-limit` (modifica límites de cola sin desconectar sesión física).
+  - `POST /api/v1/network-services/{id}/isolate` (agrega a lista de firewall `AISLADOS_TECNICO` o conmuta a 64k).
+  - `POST /api/v1/network-services/{id}/restore` (retira aislamiento y restaura perfil en caliente).
+  - `POST /api/v1/network-services/{id}/change-rate-limit` (modifica límites de cola sin desconectar sesión física).
 - [ ] **17.3** Despachador de Webhooks Salientes: Worker asíncrono que envía payloads firmados con HMAC-SHA256 ante eventos técnicos de red (`DEVICE_ACTIVATED_GPS`, `DEVICE_ISOLATED`, `DEVICE_RESTORED`, `MASS_OUTAGE_TRIGGERED`).
 
 ---
 
 ## 🔍 HITO 18: Diagnóstico 360°, BGP Looking Glass e IPFIX (Fase 3)
+
 > **Archivos Guía:** `specs/32_ISP_OPERATIONS_TECHNICAL_QOS_AND_FIELD_TOOLKIT.md` y `specs/13_BACKEND_ENDPOINTS_WEBFIG_L1_FIREWALL_AND_ROUTING.md`
+
 - [ ] **18.1** Suite de Diagnóstico 360° (`POST /api/v1/diagnostics/endpoint-360`):
-  * Ping Multi-MTU (64B, 512B, 1472B) para detección de dispersión de latencia y fragmentación DF-bit.
-  * Parser automático de motivos de desconexión en `/log` de RouterOS (`link down`, `peer is not responding`, `user request`, `auth failed`).
-  * Muestreo Torch en tiempo real (2.5 segundos) filtrado por IP/MAC con Top 5 de flujos activos.
+  - Ping Multi-MTU (64B, 512B, 1472B) para detección de dispersión de latencia y fragmentación DF-bit.
+  - Parser automático de motivos de desconexión en `/log` de RouterOS (`link down`, `peer is not responding`, `user request`, `auth failed`).
+  - Muestreo Torch en tiempo real (2.5 segundos) filtrado por IP/MAC con Top 5 de flujos activos.
 - [ ] **18.2** Consola BGP Looking Glass Interno: Endpoints `GET /api/v1/bgp/looking-glass/route` y `/advertised` para inspeccionar rutas, AS-Path, comunidades BGP y prefijos exportados a proveedores de tránsito sin dar acceso por SSH.
 - [ ] **18.3** Detección de Tráfico Anómalo / Flujos IPFIX: Detección de clientes con tasas anormales de PPS o conexiones masivas con botón de mitigación rápida (FastDrop / Blackhole con Safe Mode).
 
 ---
 
 ## 🗺️ HITO 19: Mapas Separados, Telemetría Efímera, Responsive e i18n (Fase 4)
+
 > **Archivo Guía:** `specs/32_ISP_OPERATIONS_TECHNICAL_QOS_AND_FIELD_TOOLKIT.md`
+
 - [ ] **19.1** Mapa Exclusivo de Clientes/ONUs (`OsmOnuMap.vue` en `/subscribers/map`): Completamente separado del mapa de routers de infraestructura, con telemetría efímera Zero-Metrics (Verde < 40ms, Naranja 40-120ms o pérdida leve, Rojo timeout).
 - [ ] **19.2** Alerta de Caída Masiva (Mass Outage Alert): Detección automática en segundo plano de caídas simultáneas > `mass_outage_threshold` (por defecto 10), con alarma visual/sonora en NOC y registro forense en `audit_logs` con hash encadenado HMAC-SHA256.
 - [ ] **19.3** Corrección de Responsive del Técnico de Calle (`FieldTechMobileView.vue`): Eliminación del contenedor fijo vertical (`max-width: 480px`), maquetación 100% fluida para móvil, tablet y laptop, campo simplificado solo con Serial de ONU, y botón prominente *"📍 Capturar Coordenadas GPS"* al activar.
@@ -246,7 +289,9 @@
 ---
 
 ## 🏢 HITO 20: Suite Corporativa — Config Drift, CIS Hardening, SD-WAN, Rogue DHCP, SLA y CAPsMAN
+
 > **Archivo Guía:** `specs/33_ENTERPRISE_FLEET_MANAGEMENT_AND_SECURITY_COMPLIANCE.md`
+
 - [ ] **20.1** Detección de Desviación de Configuración (*Config Drift Detection*): Comparador contra Plantilla Maestra (*Golden Baseline Template*), visor de diferencias Git Diff en rojo/verde y botón de remediación en 1 clic (*Auto-Revert*) con Safe Mode y Maker-Checker.
 - [ ] **20.2** Orquestador SD-WAN WireGuard Hub & Spoke: Generación automática de llaves, direccionamiento `/30` o `/31`, inserción de peers y enrutamiento dinámico OSPF sobre WireGuard con failover multi-WAN recursivo.
 - [ ] **20.3** Auditoría de Seguridad & Endurecimiento CIS Benchmark para RouterOS: Escaneo de las 10 directivas críticas de ciberseguridad, cálculo de Security Score (0-100) y botón de auto-endurecimiento (*Auto-Hardening*).
@@ -257,7 +302,9 @@
 ---
 
 ## 🤖 HITO 21: Servidor MCP Ampliado para Agentes IA y Certificación QA 11X Final
+
 > **Archivos Guía:** `specs/30_BACKEND_MCP_PROTECTED_ENDPOINT.md`, `specs/24` a `specs/29` y `docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md`
+
 - [ ] **21.1** Expansión de Tools MCP para Agentes de IA: Nuevas herramientas para sustitución o asistencia técnica autónoma (`rosgrid_isolate_subscriber`, `rosgrid_restore_subscriber`, `rosgrid_change_rate_limit`, `rosgrid_run_360_diagnostics`, `rosgrid_query_bgp_looking_glass`, `rosgrid_check_config_drift`, `rosgrid_run_cis_audit`, `rosgrid_detect_mass_outage`).
 - [ ] **21.2** Actualización de Documentación: Sincronización completa de `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md` y `docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md` con los nuevos contratos.
 - [ ] **21.3** Certificación Estándar QA 11X en Docker: Cobertura unitaria >= 95% en backend (`sinfallas/base-python-uv:3.13`) y frontend (`sinfallas/base-node-ionic:22`), ejecución de la suite de contratos Front-Back y compilación limpia del bundle de producción.
@@ -265,9 +312,9 @@
 ---
 
 ## 📦 HITO 22: Cierre de `CHANGELOG.md`, Auditoría Trivy y Publicación en Docker Hub (`build.sh`)
+
 > **Archivo Guía:** `specs/01_DOCKER_INFRASTRUCTURE_AND_IMMUTABLE_IMAGES.md`
+
 - [ ] **22.1** Auditar los `Dockerfile`, `docker-compose*.yml` e infraestructura con `./auditar-infra.sh` y escaneo Trivy de imágenes (`CRITICAL,HIGH = 0`).
 - [ ] **22.2** Actualizar `CHANGELOG.md` consolidando los cambios de `[Unreleased]` dentro del lanzamiento oficial `[1.0.0]` con las métricas certificadas en `TESTING.md`.
 - [ ] **22.3** Ejecutar `./build.sh` (como usuario no-root) con `docker buildx` (`container-builder` + `tonistiigi/binfmt`) para construir y publicar `sinfallas/rosgrid-backend:latest` (`:1.0.0`) y `sinfallas/rosgrid-frontend:latest` (`:1.0.0`) en Docker Hub y limpiar cachés con `prune -af`.
-
-

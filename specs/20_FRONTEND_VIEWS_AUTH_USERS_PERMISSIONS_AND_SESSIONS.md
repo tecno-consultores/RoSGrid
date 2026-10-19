@@ -44,6 +44,7 @@ El formulario presenta 3 campos obligatorios con etiquetas `<label>` explícitas
 ### **1.4 Pie de Página y Branding Institucional (`LoginView.vue`)**
 
 El pie de la pantalla de login incorpora un bloque sutil y elegante (`.login-institutional-footer`), ubicado debajo de la tarjeta de inicio de sesión:
+
 1. **Enlace al Repositorio Oficial en GitHub:**
    - Enlace `<a>` con `target="_blank" rel="noopener noreferrer"` hacia `https://github.com/tecno-consultores/RoSGrid/`.
    - Renderiza un icono SVG vectorial de GitHub (20x20px) con atributo `aria-label="Repositorio oficial de RoSGrid en GitHub"` y `title="Código fuente en GitHub"`.
