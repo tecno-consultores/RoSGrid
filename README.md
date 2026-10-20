@@ -17,6 +17,50 @@ El sistema traslada la experiencia operativa y técnica de **WinBox / WebFig** a
 - **No es un sistema de facturación:** RoSGrid se enfoca 100% en la operación técnica de red, aprovisionamiento, seguridad y diagnóstico.
 - **Cero almacenamiento de métricas históricas en base de datos:** Para series históricas a largo plazo existen herramientas dedicadas como Zabbix o Prometheus. En RoSGrid, las gráficas de CPU, RAM y tráfico en vivo funcionan exactamente igual que en **WinBox**: se alimentan por WebSocket y se acumulan en memoria RAM del navegador (`RingBuffer` de hasta 3 horas renderizado en `<canvas>` 2D) mientras el técnico mantiene la consola del router abierta, reiniciándose al salir sin consumir disco en PostgreSQL.
 
+```mermaid
+graph TB
+    subgraph "Clientes y Actores Operativos"
+        NOC["🖥️ Pantalla Gigante NOC Wallboard"]
+        PC["💻 Consola WinBox PC (32px)"]
+        Field["📱 Técnico de Campo (44px Touch)"]
+        AI["🤖 Agentes IA MCP (Hermes / Claude)"]
+    end
+
+    subgraph "Perímetro Seguro & Reverse Proxy"
+        Nginx["🛡️ Nginx 1.27 Alpine (:8080)<br>Anti-CSWSH | SSL Termination | CSP Estricta"]
+    end
+
+    subgraph "Núcleo de Aplicación RoSGrid"
+        SPA["🌐 Frontend: Vue 3 + TS + Pinia<br>Tabs KeepAlive :max=5 | Canvas 2D | Virtual Scroll"]
+        API["⚡ Backend: FastAPI Async + orjson + uvloop<br>11 Roles RBAC | Maker-Checker (202) | Safe Mode (60s)"]
+    end
+
+    subgraph "Capa de Datos y Memoria"
+        KeyDB[("🚀 KeyDB Multi-Hilo (:6379)<br>Sesiones | Rate Limit | Pub/Sub")]
+        PG[("🐘 PostgreSQL 17 (:5432)<br>Multi-Tenant RLS | Bitácora WORM BRIN | Vault AES-256-GCM")]
+    end
+
+    subgraph "Flota de Red de Telecomunicaciones"
+        MT1["📡 MikroTik Core (BGP / OSPF)"]
+        MT2["🏢 MikroTik Acceso (VLAN / Bridge)"]
+        MT3["🌐 MikroTik BRAS (PPPoE / Queues)"]
+    end
+
+    NOC --> Nginx
+    PC --> Nginx
+    Field --> Nginx
+    AI -->|JSON-RPC 2.0 /mcp| Nginx
+
+    Nginx --> SPA
+    Nginx --> API
+
+    API --> KeyDB
+    API --> PG
+    API -->|HTTPS REST :443 TLS Keep-Alive (Pinning TOFU)| MT1
+    API -->|HTTPS REST :443 TLS Keep-Alive (Pinning TOFU)| MT2
+    API -->|HTTPS REST :443 TLS Keep-Alive (Pinning TOFU)| MT3
+```
+
 ---
 
 ## ✨ Características Principales
@@ -151,7 +195,7 @@ rosgrid/
 
 ### 📖 Enciclopedia Documental de Producción (`docs/`)
 
-Para una referencia exhaustiva de operación, seguridad y despliegue, consulta los 9 manuales oficiales del sistema:
+Para una referencia exhaustiva de operación, seguridad y despliegue, consulta los 11 manuales e informes oficiales del sistema:
 
 | Manual | Descripción Técnica |
 | :--- | :--- |
@@ -164,6 +208,8 @@ Para una referencia exhaustiva de operación, seguridad y despliegue, consulta l
 | **[`docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md`](./docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md)** | Servidor MCP protegido (`POST /api/v1/mcp`), catálogo de 8 tools semánticas, configuración Hermes/Claude y NOC Autónomo 24/7. |
 | **[`docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md`](./docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md)** | Pipeline local `./probar-prod-local.sh`, verificación sintética en 6 fases y suite de 24 pruebas de integración UI-API (`validar_comunicacion_front_back.py`). |
 | **[`docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md`](./docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md)** | Plan maestro de pruebas de aceptación de usuario (UAT 11X), 28 casos manuales E2E, redescubrimiento TOFU y bitácora de sign-off. |
+| **[`docs/10_REPORTE_INVESTIGACION_PYTHON_3_15.md`](./docs/10_REPORTE_INVESTIGACION_PYTHON_3_15.md)** | Investigación técnica sobre Python 3.15 (Free-Threading / No-GIL PEP 703, Tier-2 JIT, PEP 649) y migración a `sinfallas/base-python-uv:3.15`. |
+| **[`docs/11_REPORTE_INVESTIGACION_NODE_26.md`](./docs/11_REPORTE_INVESTIGACION_NODE_26.md)** | Investigación técnica sobre Node.js 26 LTS (Native Type Stripping, V8 14.x, Temporal API) y migración a `sinfallas/base-node-ionic:26`. |
 
 ---
 

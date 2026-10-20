@@ -27,6 +27,33 @@ RoSGrid valida la autenticidad del router mediante *Trust On First Use* (TOFU) c
 
 Anota el valor de `fingerprint` (ej. `3a:b8:c4:...`); este valor será fijado automáticamente por RoSGrid en el primer apretón de manos TLS o introducido manualmente en el inventario.
 
+```mermaid
+sequenceDiagram
+    autonumber
+    participant App as RoSGrid Backend (Pool TLS)
+    participant MT as Router MikroTik RouterOS v7
+    participant Vault as Base de Datos (routers table)
+    participant Alert as Alerta de Seguridad (Telegram / NOC)
+
+    App->>MT: Conexión Inicial HTTPS TLS v1.2 / 1.3
+    MT-->>App: Presenta Certificado X.509 autofirmado
+    App->>App: Calcula Fingerprint SHA-256 del certificado
+    App->>Vault: Consulta fingerprint almacenado en BD
+    alt Primer Contacto (Fingerprint NULL / TOFU)
+        Vault-->>App: No existe huella registrada
+        App->>Vault: Guarda Fingerprint SHA-256 (Estado: TRUSTED_PINNED)
+        App-->>MT: Procede con la petición REST autorizada
+    else Huella Coincide (Certificado legítimo)
+        Vault-->>App: Huella coincide con el hash fijado
+        App-->>MT: Comunicación cifrada permitida
+    else Huella Difiere (FINGERPRINT_MISMATCH / Posible MitM)
+        Vault-->>App: Huella calculada != Huella en BD
+        App-xMT: Aborta inmediatamente la conexión TLS (Fail-Closed)
+        App->>Vault: Marca estado del router = SSL_MISMATCH
+        App->>Alert: Dispara alerta crítica: ¡Posible Ataque Man-in-the-Middle!
+    end
+```
+
 ### 1.2 Activación de `/ip/service/www-ssl` y Endurecimiento
 
 La comunicación entre RoSGrid y MikroTik se realiza **exclusivamente mediante la REST API nativa sobre HTTPS**. Deshabilita todos los protocolos no cifrados o legados:

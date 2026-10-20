@@ -16,6 +16,33 @@ Las pruebas automatizadas de RoSGrid (cobertura unitaria `>= 95%`, mutación, ac
 3. **Flujos de Gobernanza y Segregación:** Mecanismo Maker-Checker con aprobación humana, rotación de claves y Step-Up Auth (30s) en Bóveda.
 4. **Interacción con Hardware y Firmware Real:** Validación sobre MikroTik RouterOS v7.12+ (Cloud Hosted Router CHR o RouterBOARD físico).
 
+```mermaid
+flowchart TD
+    subgraph "Fase Previa: Certificación Automatizada"
+        Unit["Unit Tests & Mutación (>=95%)"]
+        Lint["Linters & Typecheck (Grado A)"]
+        Contract["Contratos UI-API (24/24)"]
+        A11y["Axe-Core / WCAG 2.1 AA (0 errores)"]
+        Unit --> Gate1{"Gate Automatizado"}
+        Lint --> Gate1
+        Contract --> Gate1
+        A11y --> Gate1
+    end
+
+    subgraph "Fase UAT 11X: Aceptación Humana"
+        Gate1 -->|Aprobado| EnvPrep["Arranque de Entorno:<br>./probar-prod-local.sh --keep-alive"]
+        EnvPrep --> ManualExec["Ejecución de 28 Casos UAT<br>(Bootstrap, 2FA, TOFU, WebFig, SafeMode, Diff)"]
+        ManualExec --> RealHardware["Validación en Hardware Real / CHR v7"]
+        RealHardware --> Forensic["Verificación de Cadena WORM en audit_logs"]
+    end
+
+    subgraph "Sign-Off Formal"
+        Forensic --> Review{"Comité de Calidad & NOC"}
+        Review -->|Hallazgo / Bug| Rollback["Bloqueo de Release -> Retorno a Desarrollo"]
+        Review -->|100% Casos Superados| SignOff["Certificación UAT Aprobada -> build.sh"]
+    end
+```
+
 ---
 
 ## 2. Entornos y Requisitos Previos

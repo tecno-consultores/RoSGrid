@@ -7,6 +7,35 @@
 
 ## 1. Convenciones de Comunicación, Seguridad y Cabeceras
 
+```mermaid
+flowchart TD
+    Client["Cliente HTTP (Navegador / Agente IA / M2M)"] --> Nginx["Nginx Reverse Proxy :8080"]
+    Nginx --> RateLimit{"KeyDB Rate Limiter<br>(Ej. 30 req/min MCP)"}
+    RateLimit -->|Excedido| HTTP429["HTTP 429 Too Many Requests"]
+    RateLimit -->|Aprobado| AuthCheck{"Middleware de Autenticación"}
+    
+    AuthCheck -->|Cookie __Host-rg_at| ValidateJWT["Validar JWT + Anti-CSRF Token"]
+    AuthCheck -->|Bearer Token| ValidateM2M["Validar Bearer + CIDR Whitelist"]
+    
+    ValidateJWT --> CheckKill{"¿Sesión en Kill-Switch?"}
+    ValidateM2M --> CheckKill
+    
+    CheckKill -->|Revocada| HTTP401["HTTP 401 Unauthorized"]
+    CheckKill -->|Activa| InjectRLS["Inyectar RLS Context:<br>SET LOCAL app.current_tenant_id = :id"]
+    
+    InjectRLS --> PydanticVal{"Validación Pydantic v2<br>(extra='forbid')"}
+    PydanticVal -->|Inválido| HTTP422["HTTP 422 Sanitizado en Producción"]
+    PydanticVal -->|Válido| RBAC{"Matriz RBAC (11 Roles)"}
+    
+    RBAC -->|No Autorizado| HTTP403["HTTP 403 Forbidden"]
+    RBAC -->|Autorizado| MakerChecker{"¿Mutación Crítica?"}
+    
+    MakerChecker -->|Sí + Rol Intermedio| HTTP202["HTTP 202 Accepted (Encolado PENDING)"]
+    MakerChecker -->|No / Aprobado| Execution["Ejecución en MikroTik v7 + Safe Mode (60s)"]
+    Execution --> AuditLog["Firma en Bitácora WORM (SHA-256 + BRIN)"]
+    AuditLog --> HTTP200["HTTP 200 / 201 OK"]
+```
+
 ### 1.1 Esquemas de Autenticación
 
 1. **Acceso de Usuarios y Operadores Web (Navegador):**
@@ -379,6 +408,42 @@ Los canales WebSocket de RoSGrid requieren pasar la cookie `__Host-rg_at` durant
 - **Validación de Origen (`Origin`):** Para neutralizar ataques de secuestro de WebSocket de sitio cruzado (*Cross-Site WebSocket Hijacking*), el servidor valida la cabecera `Origin` contra `ALLOWED_ORIGINS` antes de aceptar la conexión. Si no coincide o está ausente en modo producción, se cierra de inmediato con código de aplicación **`4403 Forbidden Origin`**.
 - **Cabeceras de Proxy Inverso Nginx:** El bloque `/ws/` propaga `X-Forwarded-For` y `X-Forwarded-Proto` hacia FastAPI para auditoría y trazabilidad IP.
 - **Cierre por Kill-Switch:** Si la sesión es terminada por un administrador, el canal se cierra automáticamente con código **`4401 Session Revoked`**.
+
+```mermaid
+flowchart TD
+    subgraph "Navegadores & Paneles NOC"
+        NOC["Wallboard NOC (/ws/v1/tenant/events)"]
+        LiveTab["Consola WebFig (/ws/v1/routers/:id/live-telemetry)"]
+    end
+
+    subgraph "Nginx & Reverse Proxy"
+        NginxWS["Nginx :8080 (Upgrade: websocket)<br>Propaga X-Forwarded-For & X-Forwarded-Proto"]
+    end
+
+    subgraph "FastAPI WebSocket Multiplexer"
+        CSWSH{"_verify_ws_origin()<br>Check Origin vs ALLOWED_ORIGINS"}
+        AuthWS{"Cookie __Host-rg_at<br>Verificación JWT"}
+        WSHub["WebSocket Endpoint Broadcaster"]
+    end
+
+    subgraph "KeyDB Multi-Hilo Pub/Sub"
+        KeyDBEvents["Canal rg:{tenant_id}:events"]
+        KeyDBTelemetry["Canal rg:{tenant_id}:router:{id}:telemetry"]
+    end
+
+    LiveTab --> NginxWS
+    NOC --> NginxWS
+    NginxWS --> CSWSH
+    CSWSH -->|No Autorizado| Close4403["Cierre WS 4403 Forbidden Origin"]
+    CSWSH -->|Válido| AuthWS
+    AuthWS -->|Inválido| Close4401["Cierre WS 4401 Unauthorized"]
+    AuthWS -->|Conectado| WSHub
+
+    KeyDBEvents -.->|Mensajes PubSub| WSHub
+    KeyDBTelemetry -.->|Ticks cada 2s| WSHub
+    WSHub -.->|Frames JSON orjson| NOC
+    WSHub -.->|Frames JSON orjson| LiveTab
+```
 
 ### 3.1 Canal de Telemetría en Vivo de Router
 

@@ -9,6 +9,32 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 ## [Unreleased]
 
 ### Added
+- **Suite Completa de Pruebas BDD Karate Labs para el 100% de la Interfaz Web:**
+  - Expansión de `vue3/test/ui_business_flow.feature` de 1 a **16 escenarios BDD exhaustivos** que cubren de extremo a extremo todas las pantallas, funcionalidades y flujos de usuario del sistema:
+    1. Login Zero-Trust & Enrolamiento Obligatorio 2FA TOTP (`/login`).
+    2. Tablero Principal NOC, Franja de KPIs y Refresco de Flota (`/`, `/dashboard`).
+    3. Inventario Centralizado de Routers, Búsqueda Táctica y Filtros (`/inventory`).
+    4. Consola WebFig v7 de Doble Capa, Pestañas `<KeepAlive :max="5">` y Telemetría en Vivo (`/routers/:id/webfig/live`).
+    5. Bandeja de Aprobaciones Maker-Checker con Intercepción HTTP 202 (`/operations/approvals`).
+    6. Historial de Backups Cifrados, Descarga Binaria `.backup` y Comparador Git Diff `.rsc` (`/backups`).
+    7. Operaciones Masivas, Golden Templates y Actualizador de Paquetes (`/bulk-ops`).
+    8. Wallboard NOC "Mission Control", Mapa OSM y Alertas Sonoras en Vivo (`/noc-wallboard`).
+    9. Bitácora Inmutable WORM, Hashchain SHA-256 y Certificación Forense (`/audit-logs`).
+    10. Gestión Multi-Tenant, Cuotas de Routers y Feature Flags Modulares (`/admin/tenants`).
+    11. Matriz de Permisos RBAC por Técnico y Control de Auto-Registro (`/users`).
+    12. Monitor de Sesiones Activas y Kill-Switch de Expulsión en Tiempo Real (`/sessions`).
+    13. Gestión de Direccionamiento IPAM Universal Dual-Stack IPv4/IPv6 (`/ipam`).
+    14. Toolkit de Campo Móvil Responsive para Técnicos e Instaladores (`/field-ops`).
+    15. Mapa Cartográfico Táctico de Abonados y Detección de Caída Masiva (`/subscribers/map`).
+    16. Suite de Cumplimiento Normativo Corporativo (CIS Benchmark, Config Drift y SD-WAN) (`/enterprise/compliance`).
+  - Sincronización idéntica de la suite en `examples/vue3/test/ui_business_flow.feature`.
+  - Agregado del botón táctico de refresco de flota y su indicador reactivo en `DashboardHomeView.vue`.
+  - Validación completa en contenedor QA (`vue-tsc --noEmit` = 0 errores, Prettier = 100% aprobado, Vitest = 38 suites y 262 pruebas pasadas).
+- **Integración Exhaustiva de Diagramas Mermaid en Toda la Documentación Oficial:**
+  - Inserción de diagramas Mermaid en `README.md` (arquitectura de alto nivel), `INSTALL.md` (árbol de instalación y despliegue), `SECURITY.md` (8 capas de defensa en profundidad) y los manuales técnicos del sistema (`docs/01` al `docs/09`), clarificando topologías de red, protocolos criptográficos (Safe Mode 60s, WORM SHA-256 con índice BRIN, TOFU Pinning, Split-Credential 2FA, Kill-Switch, WebSockets Pub/Sub y compuertas UAT 11X).
+- **Reportes Técnicos de Investigación sobre Próximas Versiones Corporativas:**
+  - `docs/10_REPORTE_INVESTIGACION_PYTHON_3_15.md`: Análisis técnico sobre CPython Free-Threaded (No-GIL PEP 703 Tier-1), compilador Tier-2 JIT Copy-and-Patch, PEP 649 (evaluación diferida de anotaciones de tipo) y hoja de ruta de adopción de la imagen `sinfallas/base-python-uv:3.15`.
+  - `docs/11_REPORTE_INVESTIGACION_NODE_26.md`: Análisis técnico sobre Node.js 26 LTS (Native Type Stripping, motor V8 14.x, Temporal API nativa, Corepack desacoplado) y hoja de ruta de adopción de la imagen `sinfallas/base-node-ionic:26`.
 - **Asistente de Instalación Standalone Remoto (`instalar-rosgrid.sh` vía `curl | bash`):**
   - Soporte para instalación turnkey en 1 solo comando: `curl -fsSL https://raw.githubusercontent.com/tecno-consultores/RoSGrid/main/instalar-rosgrid.sh | bash`.
   - Modo dual inteligente: detección automática entre repositorio local clonado y entorno remoto standalone.

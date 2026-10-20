@@ -21,6 +21,22 @@ Este manual detalla los requerimientos de infraestructura, la configuración de 
   - `8080/TCP`: Interfaz Web y punto de entrada unificado Nginx (`rosgrid-ui`).
   - Las bases de datos PostgreSQL (`5432`) y KeyDB (`6379`) permanecen estrictamente aisladas en la red interna `rosgrid_internal_net` sin mapeo de puertos hacia el host.
 
+```mermaid
+graph TD
+    Client["Operador / Navegador Web"] -->|HTTP/HTTPS 8080| UI["Nginx Gateway: rosgrid-ui"]
+    UI -->|Reverse Proxy /api/ & /ws/| API["FastAPI Backend: rosgrid-api"]
+    
+    subgraph Net["Red Interna Aislada (rosgrid_internal_net - Cero Exposición al Host)"]
+        API <-->|SQL 5432 + RLS| DB[("PostgreSQL 17: rosgrid_db")]
+        API <-->|Redis 6379 + PubSub| KDB[("KeyDB Multi-Hilo: rosgrid_redis")]
+        Worker["Worker Runner: rosgrid-worker"] <-->|SQL 5432| DB
+        Worker <-->|Redis 6379| KDB
+    end
+    
+    API -->|HTTPS 443 /rest/* Pool TLS Keep-Alive| MT["Flota MikroTik RouterOS v7"]
+    Worker -->|HTTPS 443 /rest/* Sondeo 30s / Backups| MT
+```
+
 ---
 
 ## 2. Variables de Entorno (`.env`)
@@ -134,6 +150,28 @@ curl -fsSL https://raw.githubusercontent.com/tecno-consultores/RoSGrid/main/inst
 ```
 El asistente crea y configura automáticamente `/opt/rosgrid`, descarga los manifiestos oficiales (`.env.example` y `docker-compose.prod.yml`), inyecta secretos criptográficos aleatorios de 256 bits (`chmod 600 .env`), descarga las imágenes oficiales y lanza el asistente interactivo para crear el Super Administrador.
 
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Admin as Administrador SysAdmin
+    participant Host as Servidor Linux
+    participant GH as GitHub (tecno-consultores/RoSGrid)
+    participant Hub as Docker Hub
+    participant Stack as RoSGrid Stack (/opt/rosgrid)
+
+    Admin->>Host: curl -fsSL .../instalar-rosgrid.sh | bash
+    Host->>Host: Verifica permisos no-root y grupo docker
+    Host->>Host: Crea /opt/rosgrid (sudo temporal) asignado a $USER
+    Host->>GH: Descarga .env.example y docker-compose.prod.yml
+    Host->>Host: Genera 5 secretos de 256 bits (openssl) -> chmod 600 .env
+    Host->>Hub: docker compose pull (imágenes inmutables)
+    Host->>Stack: docker compose up -d (DB, KeyDB, API, Worker, UI)
+    Stack->>Host: Healthchecks OK (DB migrada con pg_advisory_lock)
+    Host->>Admin: Asistente interactivo en /dev/tty: Crear Super Administrador
+    Admin->>Stack: Ingresa credenciales del Superadmin
+    Stack-->>Admin: ¡Instalación Completada! Accede a http://localhost:8080
+```
+
 #### Método Manual Paso a Paso:
 ```bash
 # 1. Crear directorio del proyecto y descargar docker-compose.prod.yml
@@ -173,6 +211,26 @@ En despliegues de clúster o contenedores redundantes, múltiples instancias de 
 RoSGrid implementa en su script de entrada (`scripts/entrypoint.sh`) la adquisición transaccional de un bloqueo consultivo en PostgreSQL antes de ejecutar `alembic upgrade head`:
 - **ID de Bloqueo Global:** `pg_advisory_lock(948271605)`
 - Si una instancia está migrando la base de datos, las demás instancias quedan en espera pasiva hasta que la migración concluye con éxito, tras lo cual liberan el candado e inician Uvicorn bajo `uvloop` y `httptools`.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Inst1 as Backend Instancia 1
+    participant DB as PostgreSQL 17
+    participant Inst2 as Backend Instancia 2
+
+    Inst1->>DB: SELECT pg_advisory_lock(948271605)
+    Note over Inst1,DB: Candado Adquirido por Instancia 1
+    Inst2->>DB: SELECT pg_advisory_lock(948271605)
+    Note over Inst2: Espera pasiva bloqueada en PostgreSQL...
+    Inst1->>DB: alembic upgrade head (Migraciones ejecutadas OK)
+    Inst1->>DB: SELECT pg_advisory_unlock(948271605)
+    Inst1->>Inst1: Inicia Uvicorn (uvloop + httptools)
+    Note over Inst2,DB: Candado Concedido a Instancia 2
+    Inst2->>DB: alembic upgrade head (Esquema ya al día, 0 cambios)
+    Inst2->>DB: SELECT pg_advisory_unlock(948271605)
+    Inst2->>Inst2: Inicia Uvicorn (uvloop + httptools)
+```
 
 ---
 

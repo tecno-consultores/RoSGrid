@@ -123,6 +123,28 @@ sequenceDiagram
 
 Si un usuario pierde su dispositivo, es desvinculado de la empresa o se sospecha un compromiso de credenciales, un administrador puede revocar sus sesiones de inmediato desde `ActiveSessionsKillSwitchView.vue`:
 
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Admin as Supervisor / Tenant Admin
+    participant UI_Admin as ActiveSessionsKillSwitchView.vue
+    participant API as RoSGrid Backend (FastAPI)
+    participant KeyDB as KeyDB / Redis (Sesiones & PubSub)
+    participant WS_User as Conexión WebSocket Usuario
+    participant UI_User as SPA Vue 3 Navegador Usuario
+
+    Admin->>UI_Admin: Clic en "Revocar Sesión" (Kill-Switch)
+    UI_Admin->>API: DELETE /api/v1/sessions/{session_id}
+    API->>KeyDB: HDEL rg:{tenant_id}:sess:{session_id} (Revocación inmediata)
+    API->>KeyDB: PUBLISH rg:{tenant_id}:events {"event": "SESSION_KILLED", "session_id": "..."}
+    KeyDB->>WS_User: Despacho de trama SESSION_KILLED
+    WS_User->>UI_User: Intercepta evento SESSION_KILLED
+    UI_User->>UI_User: authStore.logout() -> Destruye tokens en memoria Pinia
+    UI_User->>UI_User: Purgado de cookie __Host-rg_at y redirección a /login (<100ms)
+    WS_User->>WS_User: Cierre de conexión WebSocket (Código 4401 Session Revoked)
+    API-->>UI_Admin: 200 OK (Sesión terminada y expulsión completada)
+```
+
 1. **Invalidación en Memoria:** RoSGrid elimina inmediatamente la clave de sesión en KeyDB (`rg:{tenant_id}:sess:{session_id}`).
 2. **Empuje WebSocket:** El servicio de eventos publica una trama `SESSION_KILLED` dirigida al navegador del usuario.
 3. **Expulsión Inmediata:** La SPA Vue 3 destruye el almacén de Pinia (`authStore.logout()`), elimina la cookie segura `__Host-rg_at` y redirige a la pantalla de login en menos de 100 milisegundos.
@@ -225,6 +247,40 @@ El Superadmin accede a `TenantsManagementView.vue` y hace clic en el botón tác
 ## 8. Arquitectura de Defensa en Plataforma Híbrida (Vue 3 + FastAPI)
 
 La combinación de una aplicación SPA en Vue 3 con un backend asíncrono en FastAPI introduce vectores de ataque específicos que RoSGrid neutraliza sistemáticamente:
+
+```mermaid
+flowchart TD
+    subgraph "Cliente & Entorno Externo"
+        Attacker["Actor Malicioso / Exploit Scanner"]
+        SPA["SPA Vue 3 / Pinia Client"]
+    end
+
+    subgraph "Capa de Frontera: Reverse Proxy Nginx :8080"
+        Nginx["Nginx Reverse Proxy"]
+        NginxWS["location /ws/ : Propaga X-Forwarded-For & X-Forwarded-Proto"]
+        NginxFile["Límite de Carga: client_max_body_size 2M"]
+    end
+
+    subgraph "Capa de Aplicación: FastAPI Hardened Core"
+        WSVerify["_verify_ws_origin(): Check Origin Header vs ALLOWED_ORIGINS"]
+        PydanticExtra["Pydantic v2: ConfigDict(extra='forbid')<br>Anti-Mass Assignment"]
+        Err422Handler["Global RequestValidationError Handler<br>Sanitización 422 en Producción"]
+        SSRFVerify["is_safe_webhook_url(): Anti-SSRF DNS Check<br>Bloquea RFC 1918, Loopback, Link-Local, Multicast"]
+    end
+
+    Attacker -->|Ataque CSWSH / Origen Ilícito| NginxWS --> WSVerify
+    WSVerify -->|Origen no permitido| BlockWS["Cierre WebSocket 4403 Forbidden Origin"]
+    
+    Attacker -->|Over-posting con role='superadmin'| Nginx --> PydanticExtra
+    PydanticExtra -->|Campo extra prohibido| Err422Handler
+    Err422Handler -->|En Producción| Clean422["Respuesta Opaca: Datos no válidos"]
+
+    Attacker -->|CSV Exploit > 2MB DoS| NginxFile
+    NginxFile -->|Excede cuota| HTTP413["HTTP 413 Payload Too Large"]
+
+    SPA -->|Webhook saliente| SSRFVerify
+    SSRFVerify -->|Destino 169.254.169.254 o Privado| BlockSSRF["HTTP 400 Unsafe Webhook Target"]
+```
 
 ### 8.1 Mitigación de Asignación Masiva (*Mass Assignment*)
 - Para prevenir que peticiones HTTP inyecten campos reservados (como `role`, `is_superuser`, `is_verified` o `tenant_id`) en formularios de login, registro o actualización de usuarios, todos los esquemas Pydantic v2 de entrada declaran `model_config = ConfigDict(extra="forbid")`.

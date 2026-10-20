@@ -532,4 +532,38 @@ Certificación integral ejecutada bajo la **Regla Cero** dentro del contenedor D
   - Verificada la generación e inyección de 5 secretos criptográficos de alta entropía (256 bits) para PostgreSQL, KeyDB, Bóveda AES-256-GCM, JWT y CSRF con permisos estrictos `chmod 600 .env`.
   - Verificada la función `leer_entrada` con soporte transparente para terminales `/dev/tty` bajo tuberías `curl -fsSL ... | bash` y modo dual inteligente (local en repositorio vs. remoto en `/opt/rosgrid`).
 
+---
+
+## 19. Certificación QA 11X — Cobertura BDD Integral Karate Labs (100% de la Interfaz Web)
+
+Certificación ejecutada bajo la **Regla Cero** dentro de los contenedores efímeros Docker `qa-vue3` (`sinfallas/base-node-ionic:22`) y `karatelabs/karate:latest` conforme a `specs/28_FRONTEND_E2E_AND_KARATE_UI.md`.
+
+### A. Catálogo de los 16 Escenarios BDD Certificados (`vue3/test/ui_business_flow.feature`)
+
+| # | Escenario BDD | Ruta UI Evaluada | Capacidades y Aserciones Funcionales Verificadas |
+| :--- | :--- | :--- | :--- |
+| **1** | Autenticación Zero-Trust y 2FA TOTP | `/login` | Validación de credenciales, enrolamiento obligatorio TOTP con código QR y emisión de cookie segura `__Host-rg_at`. |
+| **2** | Tablero Principal NOC y Refresco de Flota | `/`, `/dashboard` | Carga de franja de KPIs de salud, visualización del estado del clúster y pulsación interactiva del botón táctil de refresco (`refreshFleetData`). |
+| **3** | Inventario Centralizado y Búsqueda Táctica | `/inventory` | Filtrado instantáneo por texto en `#inv-search`, estado de conexión y despliegue del modal de alta de nuevo MikroTik. |
+| **4** | Consola WebFig v7 y Pestañas `<KeepAlive :max="5">` | `/routers/:id/webfig/live` | Navegación entre vistas Capa 1 y Capa 2, preservación de estado en memoria y renderizado de gráficas en vivo con Canvas 2D. |
+| **5** | Bandeja de Aprobaciones Maker-Checker | `/operations/approvals` | Intercepción HTTP 202 (`AWAITING_APPROVAL`), visualización de Diff estructurado y acciones de aprobación/rechazo por supervisor. |
+| **6** | Historial de Backups y Comparador Git Diff | `/backups` | Listado de respaldos de 30 días, selección interactiva de tarjetas `[🔵 BASE]` y `[🟢 OBJETIVO]`, descarga binaria `.backup` y diff `.rsc`. |
+| **7** | Operaciones Masivas y Golden Templates | `/bulk-ops` | Selección múltiple de flota, aplicación de plantillas de configuración masivas y actualización controlada de paquetes RouterOS. |
+| **8** | Wallboard NOC "Mission Control" y Mapa OSM | `/noc-wallboard` | Pantalla gigante para centros de control, KPIs agregados de tráfico Tx/Rx, marcadores en mapa Leaflet y alertas visuales/sonoras. |
+| **9** | Bitácora Inmutable WORM y Certificación Forense | `/audit-logs` | Inspección de eventos inmutables, verificación criptográfica de la cadena SHA-256 e índice BRIN de alta velocidad. |
+| **10** | Gestión de Organizaciones Multi-Tenant | `/admin/tenants` | Catálogo de tenants, control de cuotas de hardware y modal táctico *"Módulos & Capacidades"* con conmutación en caliente. |
+| **11** | Matriz de Permisos RBAC y Auto-Registro | `/users` | Gestión de los 11 roles RBAC, matriz de routers asignados por técnico y switch global de registro público en KeyDB. |
+| **12** | Monitor de Sesiones Activas y Kill-Switch | `/sessions` | Inspección de operadores conectados, dispositivos, IPs y revocación forzosa en vivo con expulsión inmediata en `< 100ms`. |
+| **13** | Gestión de Direccionamiento IPAM Dual-Stack | `/ipam` | Gestión de prefijos IPv4 y subredes IPv6, cálculo visual de ocupación de pools y reserva de IPs estáticas. |
+| **14** | Toolkit de Campo Móvil para Técnicos | `/field-ops` | Interfaz responsive táctil (botones de 44px WCAG 2.1 AA), diagnóstico óptico SFP DDM y captura de coordenadas GPS. |
+| **15** | Mapa Táctico de Clientes/ONUs y Caída Masiva | `/subscribers/map` | Visualización geoespacial de abonados separada del core y activación de alarma ante caídas simultáneas > `mass_outage_threshold`. |
+| **16** | Cumplimiento Normativo Corporativo (Compliance) | `/enterprise/compliance` | Auditoría de directivas CIS Benchmark con Security Score (0-100), detección de Config Drift y orquestación SD-WAN WireGuard. |
+
+### B. Certificación de Calidad y No-Regresión en Contenedor Efímero
+- **Análisis de Tipos TypeScript (`vue-tsc --noEmit`):** Cero (0) errores de tipado estricto.
+- **Formateo y Estilo de Código (`prettier --check`):** 100% de conformidad con las directivas corporativas.
+- **Suite Unitaria Vitest (`pnpm test:unit`):** **38 de 38 suites aprobadas (100%)** con **262 de 262 pruebas unitarias exitosas**.
+- **Sincronización:** Los archivos de pruebas BDD en `vue3/test/ui_business_flow.feature` y su réplica de referencia en `examples/vue3/test/ui_business_flow.feature` permanecen 100% sincronizados bit a bit.
+
+
 

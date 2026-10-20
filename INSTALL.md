@@ -54,6 +54,31 @@ chmod 600 .env
 
 Para conocer todos los parámetros avanzados de despliegue, puertos y topologías de red, consulta [docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md](./docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md).
 
+```mermaid
+flowchart TD
+    Start["Elegir Método de Despliegue"] --> Branch{"¿Cómo deseas instalar?"}
+    
+    Branch -->|Opción 1: Turnkey Remoto| Curl["curl -fsSL ... | bash"]
+    Curl --> OptDir["Crea /opt/rosgrid y descarga manifests de GitHub"]
+    
+    Branch -->|Opción 2: Repositorio Clonado| LocalScript["./instalar-rosgrid.sh"]
+    LocalScript --> DetectLocal["Usa manifests locales del repositorio"]
+    
+    Branch -->|Opción 3: Compose Directo| Manual["cp .env.example .env && docker compose up"]
+    
+    OptDir --> EnvGen["Genera secretos de 256 bits (chmod 600 .env)"]
+    DetectLocal --> EnvGen
+    Manual --> EnvManual["Configurar variables en .env"]
+    
+    EnvGen --> UpProd["docker compose -f docker-compose.prod.yml up -d"]
+    EnvManual --> UpProd
+    
+    UpProd --> PGWait["PostgreSQL 17 + KeyDB Healthy"]
+    PGWait --> AutoMigrate["FastAPI: Migraciones Automáticas (pg_advisory_lock)"]
+    AutoMigrate --> Bootstrap["Bootstrap Superadmin (/dev/tty o Web /bootstrap)"]
+    Bootstrap --> Ready["✅ RoSGrid Listo en http://localhost:8080"]
+```
+
 ### Método Asistido Rápido (Recomendado — Turnkey en 1 Comando)
 Para una instalación turnkey sin fricción, dispones de dos alternativas asistidas:
 

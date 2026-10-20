@@ -31,6 +31,24 @@ Cada fila contiene:
 record_hash = SHA256(prev_record_hash || canonical_json(record_data))
 ```
 
+```mermaid
+flowchart TD
+    Start["Inicio: Verificación Forense WORM"] --> LoadGenesis["Cargar Bloque Génesis (prev_hash = '0000...0000')"]
+    LoadGenesis --> FetchRows["Cursor SQL: SELECT * FROM audit_logs WHERE tenant_id = :id ORDER BY id ASC"]
+    FetchRows --> Loop{"¿Hay registros siguientes?"}
+    
+    Loop -->|Sí| Canonical["Serializar Payload Canónico:<br>canonical_json(record_data)"]
+    Canonical --> Compute["Computar H = SHA256(prev_record_hash || canonical_data)"]
+    Compute --> CheckMatch{"¿H == row.record_sha256_hash?"}
+    
+    CheckMatch -->|Coincide| Advance["Avanzar: prev_hash = H"]
+    Advance --> Loop
+    
+    CheckMatch -->|Discrepancia| AlertTamper["🚨 ALERTA: MANIPULACIÓN DETECTADA<br>Cadena rota en Registro ID: row.id"]
+    
+    Loop -->|Fin de registros| Success["✅ CERTIFICACIÓN VÁLIDA:<br>100% de registros intactos e inalterados"]
+```
+
 Si un adversario con acceso directo a la base de datos alterase una sola coma o parámetro de un comando pasado, todos los hashes posteriores de la cadena quedan invalidados inmediatamente, delatando la manipulación durante la verificación.
 
 ### 1.3 Índice BRIN para Alto Volumen
@@ -70,6 +88,29 @@ En herramientas de gestión tradicionales de MikroTik es común encontrar emulad
 | **3** | **Inyección de Puertas Traseras y Escalada** | A través de la CLI un atacante interno puede ejecutar `/system/script/add` o crear usuarios ocultos (`/user/add`) con privilegios `full` que escapan al control centralizado de contraseñas. | La Bóveda de RoSGrid gestiona de forma hermética la única credencial existente mediante *Split-Credential*; el usuario nunca conoce la clave real. |
 | **4** | **Riesgo de Denegación de Servicio (DoS)** | Comandos como `/tool/flood-ping`, bucles infinitos en scripts o lecturas masivas de memoria congelan la CPU de routers de gama de entrada (RB750Gr3, hEX). | Los endpoints REST están acotados y las utilidades diagnósticas (Ping/Traceroute) tienen un límite estricto de conteo (máximo 5 paquetes). |
 | **5** | **Bypass del Freno Maker-Checker** | La presencia de una terminal permite saltarse la segregación de funciones, ejecutando cambios mayores sin que un supervisor apruebe la solicitud previamente. | Las 7 categorías críticas de red interceptan las peticiones con HTTP 202 (`AWAITING_APPROVAL`) antes de tocar el router. |
+
+```mermaid
+flowchart TD
+    subgraph "Modelo Tradicional Rechazado: Terminal CLI / SSH Libre"
+        UserOld["Operador"] --> SSH["Terminal SSH / Prompt RouterOS"]
+        SSH --> Bypass1["⚠️ Bypass de Safe Mode: Riesgo de corte irreparable"]
+        SSH --> Bypass2["⚠️ Bypass de Maker-Checker: Cambios no autorizados"]
+        SSH --> Bypass3["⚠️ Credencial Expuesta en Sesión"]
+        SSH --> Bypass4["⚠️ Cero Trazabilidad: Comandos volátiles sin WORM"]
+    end
+
+    subgraph "Modelo RoSGrid: Plano de Control Normalizado y Hermético"
+        UserNew["Operador / Agente IA"] --> REST["REST API /rest/* Normalizada"]
+        REST --> Vault["Bóveda Split-Credential AES-256-GCM"]
+        REST --> SafeMode["Safe Mode Automático (60s Dead Man's Switch)"]
+        REST --> MakerChecker["Maker-Checker (HTTP 202 Interception)"]
+        REST --> WORM["Bitácora Inmutable WORM (SHA-256 + BRIN)"]
+        
+        Vault --> MT["MikroTik RouterOS v7"]
+        SafeMode --> MT
+        MakerChecker --> MT
+    end
+```
 
 ---
 

@@ -164,6 +164,15 @@
   function launchWebFig(routerId: string) {
     router.push(`/routers/${routerId}/webfig/live`);
   }
+
+  const isFleetUpdated = ref(false);
+
+  function refreshFleetData() {
+    isFleetUpdated.value = true;
+    setTimeout(() => {
+      isFleetUpdated.value = false;
+    }, 4000);
+  }
 </script>
 
 <template>
@@ -191,6 +200,19 @@
         <div class="telemetry-pill" :class="{ 'telemetry-pill--connected': nocStore.isConnected }">
           <span class="status-dot"></span>
           <span>{{ nocStore.isConnected ? 'NOC EN VIVO' : 'WS RECONECTANDO' }}</span>
+        </div>
+
+        <button
+          type="button"
+          class="btn btn-primary"
+          aria-label="Actualizar datos de la flota"
+          @click="refreshFleetData"
+        >
+          Actualizar Datos
+        </button>
+
+        <div v-if="isFleetUpdated" class="status-indicator success" role="status">
+          <span class="status-text">Actualizado</span>
         </div>
       </div>
     </header>

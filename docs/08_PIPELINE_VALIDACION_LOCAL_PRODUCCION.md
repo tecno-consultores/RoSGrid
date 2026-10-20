@@ -121,6 +121,31 @@ Para verificar exhaustivamente las imágenes con Trivy y levantar la UI en el pu
 
 Para impedir que imágenes rotas o desincronizadas se publiquen en Docker Hub, el script [build.sh](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/build.sh) invoca automáticamente a `./probar-prod-local.sh` como **Paso 0**:
 
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Dev as Desarrollador / CI
+    participant Build as build.sh
+    participant Pipeline as probar-prod-local.sh
+    participant Stack as docker-compose.prod.local.yml
+    participant Hub as Docker Hub (sinfallas/*)
+
+    Dev->>Build: ./build.sh 1.2.0
+    Build->>Pipeline: Paso 0: Ejecutar compuerta local obligatoria
+    Pipeline->>Stack: Despliegue sintético de PostgreSQL + KeyDB + API + Nginx
+    Stack->>Pipeline: Healthchecks Healthy (4/4 servicios)
+    Pipeline->>Stack: Smoke test (80 módulos) + 24 contratos UI-API
+    alt Fallo en pruebas o contratos
+        Pipeline-->>Build: Salida con código 1 (Error crítico)
+        Build-->>Dev: ❌ Compilación abortada: No se publica en Docker Hub
+    else Pruebas 100% exitosas
+        Pipeline->>Stack: Purga de stack y volúmenes temporales
+        Pipeline-->>Build: Salida con código 0 (Compuerta aprobada)
+        Build->>Hub: docker buildx bake (linux/amd64, linux/arm64) -> Push oficial
+        Build-->>Dev: ✅ Versión 1.2.0 publicada exitosamente
+    end
+```
+
 ```bash
 # Publicación normal (valida en local antes de compilar multi-arch y publicar)
 ./build.sh 1.2.0

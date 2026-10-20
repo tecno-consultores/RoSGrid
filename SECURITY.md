@@ -32,6 +32,35 @@ Si descubres una vulnerabilidad de seguridad en el motor criptográfico, el aisl
 
 RoSGrid administra infraestructura crítica de telecomunicaciones e ISP (routers de borde BGP, BRAS PPPoE y firewalls). Por ello, implementa **8 capas de defensa en profundidad**:
 
+```mermaid
+graph TD
+    subgraph "Capa 1: Red y Perímetro"
+        L1["Nginx 1.27 Non-Root :8080<br>Anti-CSWSH | CSP Estricta | Límite 2MB"]
+    end
+
+    subgraph "Capa 2: Identidad y Sesión"
+        L2["Argon2id + 2FA TOTP (RFC 6238)<br>Cookies __Host- HttpOnly + Anti-CSRF HMAC"]
+    end
+
+    subgraph "Capa 3: Control de Acceso y Gobierno"
+        L3["Matriz RBAC (11 Roles) + RLS en PostgreSQL 17<br>Maker-Checker (HTTP 202) + Kill-Switch (<100ms)"]
+    end
+
+    subgraph "Capa 4: Bóveda de Claves y Hardening"
+        L4["Bóveda AES-256-GCM (Split-Credential con AAD)<br>Step-Up Auth (30s) + Rotación Automática"]
+    end
+
+    subgraph "Capa 5: Canal de Control MikroTik"
+        L5["REST API HTTPS :443 + Pinning TOFU SHA-256<br>Safe Mode (60s Dead Man's Switch)"]
+    end
+
+    subgraph "Capa 6: Trazabilidad Forense"
+        L6["Bitácora WORM Inmutable (audit_logs)<br>Encadenamiento SHA-256 + Índice BRIN"]
+    end
+
+    L1 --> L2 --> L3 --> L4 --> L5 --> L6
+```
+
 ### 3.1 Aislamiento Multi-Tenant a Nivel de Motor (`FORCE ROW LEVEL SECURITY`)
 - Todas las tablas operativas en PostgreSQL 17 aplican políticas `ENABLE` y `FORCE ROW LEVEL SECURITY (RLS)`.
 - Cada transacción inyecta `SET LOCAL app.current_tenant_id = '<uuid>'`, impidiendo matemáticamente fugas de datos cruzadas entre empresas (Tenants) incluso ante errores en consultas de la capa de aplicación.

@@ -61,6 +61,33 @@ Para optimizar el trabajo tanto en salas de control de escritorio como en campo 
 
 El monitoreo de tráfico de alta frecuencia genera miles de eventos por minuto que suelen saturar el DOM en bibliotecas gráficas pesadas como Chart.js.
 
+```mermaid
+flowchart LR
+    subgraph "Router MikroTik v7"
+        ROS["REST API /interface/monitor-traffic"]
+    end
+
+    subgraph "FastAPI Backend"
+        Collector["telemetry_streamer (Pool Keep-Alive)"]
+        WS_Server["FastAPI /ws/v1/routers/:id/live-telemetry"]
+        Collector -->|1 tick cada 2s| WS_Server
+    end
+
+    subgraph "SPA Vue 3 Frontend"
+        WS_Client["useWebSocketClient"]
+        RingBuf["TelemetryRingBuffer (RAM)<br>shallowRef - Max 5,400 puntos"]
+        RAF["requestAnimationFrame Engine"]
+        Canvas["HTML5 Canvas 2D (GPU Render)<br>Cero saturación del DOM"]
+        
+        WS_Client --> RingBuf
+        RingBuf --> RAF
+        RAF --> Canvas
+    end
+
+    ROS --> Collector
+    WS_Server -.->|Frames orjson| WS_Client
+```
+
 RoSGrid implementa una arquitectura de cero costo de renderizado:
 1. **Buffer Circular en RAM (`TelemetryRingBuffer<T>`):**
    - Tamaño máximo: 5,400 puntos por métrica (3 horas continuas a 1 tick cada 2 segundos).
@@ -106,6 +133,29 @@ sequenceDiagram
 ## 6. Comparador Visual de Respaldos Diff estilo Git (`RscGitDiffViewer.vue`)
 
 Ante incidentes o comportamientos anómalos de red, el comparador de configuraciones `.rsc` permite identificar con precisión forense qué línea cambió:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Op as Operador / Auditor
+    participant UI as RscGitDiffViewer.vue
+    participant API as RoSGrid Backend
+    participant Storage as Backups Storage (AES-256-GCM)
+    participant Diff as Motor Myers Diff
+
+    Op->>UI: Selecciona Respaldo [BASE] y [OBJETIVO] (o LIVE)
+    UI->>API: GET /api/v1/routers/{id}/backups/{base_id}/diff?target_id={target_id}
+    API->>Storage: Lee y desencripta ambos archivos .rsc
+    API->>API: Sanitiza marcas de tiempo volátiles (# jan/01/1970)
+    API->>Diff: Computa adiciones (+), eliminaciones (-) y sin cambios
+    Diff-->>API: Diff estructurado por bloques de comando
+    API-->>UI: 200 OK con payload JSON de Diff
+    UI->>UI: Renderiza vista lado a lado / unificada con resaltado sintáctico
+    Op->>UI: Opcional: Clic en Descargar binario nativo .backup (blob)
+    UI->>API: GET /api/v1/routers/{id}/backups/{id}/download?format=binary
+    API-->>UI: application/octet-stream (integridad bit a bit)
+```
+
 - **Selección Interactiva en Tarjetas:** Los respaldos de los últimos 30 días se organizan en tarjetas visuales interactivas (`.backup-card`). El operador puede hacer clic directamente en cualquier tarjeta para designarla como configuración **[🔵 BASE]** o usar el botón para asignarla como **[🟢 OBJETIVO]**, permitiendo comparaciones entre cualquier par de fechas sin restricciones.
 - **Comparación Bidireccional:** Compara dos respaldos históricos cifrados entre sí o compara cualquier respaldo histórico contra la configuración en vivo (`LIVE`).
 - **Limpieza de Ruido Volátil:** Filtra automáticamente marcas de tiempo volátiles de RouterOS (`# jan/01/1970 00:00:00 by RouterOS`).
@@ -129,6 +179,36 @@ Ante incidentes o comportamientos anómalos de red, el comparador de configuraci
 ## 8. Pantalla Gigante Wallboard NOC y Hub "Mission Control" (`NocWallboardView.vue`)
 
 Diseñada para salas de control y pantallas de monitoreo 24/7 en centros de operaciones (NOC):
+
+```mermaid
+flowchart TD
+    subgraph "Ingesta de Eventos de Red"
+        SFP["Degradación Óptica SFP DDM"]
+        LinkDown["Corte de Enlace / Ping Sonda Fallido"]
+        MassOutage["Caída Masiva > 10 ONUs"]
+    end
+
+    subgraph "Backend Pub/Sub (KeyDB)"
+        AlertQueue["Worker de Alertas"]
+        KeyDBPubSub["Canal rg:tenant_id:events"]
+    end
+
+    subgraph "NOC Wallboard (Pantalla Gigante)"
+        WSNoc["WebSocket /ws/v1/tenant/events"]
+        KPIs["Franja KPI: Tx/Rx Agregado & Salud Global"]
+        LeafletMap["Mapa Leaflet: Marcadores Rojo/Naranja/Verde"]
+        AudioTone["Motor Web Audio API: Tonos de Alerta"]
+    end
+
+    SFP --> AlertQueue
+    LinkDown --> AlertQueue
+    MassOutage --> AlertQueue
+    AlertQueue --> KeyDBPubSub
+    KeyDBPubSub --> WSNoc
+    WSNoc --> KPIs
+    WSNoc --> LeafletMap
+    WSNoc --> AudioTone
+```
 - **Hub Táctico "Mission Control":**
   - Muestra métricas agregadas en vivo: ancho de banda total transmitido y recibido (Tx/Rx), desglose de equipos por rol operativo, latencia de sondas activas y porcentaje de salud global del parque de routers.
   - Transiciones cinemáticas fluidas con aceleración por hardware (`will-change`, CSS cubic-bezier) para alternar entre el mapa geográfico y el panel de analítica.
