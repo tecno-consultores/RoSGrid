@@ -1,13 +1,15 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 RoSGrid Contributors
 
+import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import Depends, FastAPI, Response, status
+from fastapi import Depends, FastAPI, Request, Response, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import ORJSONResponse
+from fastapi.responses import JSONResponse, ORJSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator
 from sqlalchemy import text
 
@@ -20,6 +22,8 @@ from src.core.security_headers import SecurityHeadersMiddleware
 from src.db.session import engine
 from src.redis_layer.client import close_redis_client, get_redis_client
 from src.redis_layer.idempotency import IdempotencyMiddleware
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -141,6 +145,25 @@ def create_app() -> FastAPI:
     # 4. Endpoints auxiliares
     app.add_api_route("/health", health_check, methods=["GET"], tags=["Health"])
     app.add_api_route("/users/me", users_me_alias, methods=["GET"], tags=["Compatibility"])
+
+    # 5. Sanitización de Errores de Validación (Anti-Enumeración de Modelos Pydantic en Producción)
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+        if settings.ROSGRID_ENV == "production":
+            logger.warning(
+                "Error de validación Pydantic en %s %s: %s",
+                request.method,
+                request.url.path,
+                exc.errors(),
+            )
+            return JSONResponse(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                content={"detail": "Los datos proporcionados no cumplen con los requisitos de validación."},
+            )
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={"detail": exc.errors()},
+        )
 
     return app
 

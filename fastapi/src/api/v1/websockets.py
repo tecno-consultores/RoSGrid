@@ -36,6 +36,27 @@ _GLOBAL_ACCESS_ROLES = {
 }
 
 
+async def _verify_ws_origin(ws: WebSocket) -> None:
+    """Valida la cabecera Origin contra la lista blanca configurada para mitigar CSWSH."""
+    cors_origins = settings.cors_origins_list
+    if cors_origins == ["*"] and settings.ROSGRID_ENV != "production":
+        return
+
+    origin: str | None = None
+    if hasattr(ws, "headers") and ws.headers:
+        origin = ws.headers.get("origin")
+
+    if not origin:
+        if settings.ROSGRID_ENV == "production":
+            await ws.close(code=4403, reason="Origen ausente en entorno de producción")
+            raise WebSocketDisconnect(code=4403)
+        return
+
+    if "*" not in cors_origins and origin not in cors_origins:
+        await ws.close(code=4403, reason="Origen no autorizado (CSWSH)")
+        raise WebSocketDisconnect(code=4403)
+
+
 async def _extract_ws_claims(ws: WebSocket) -> dict[str, Any]:
     token = ws.cookies.get("__Host-rg_at") or ws.cookies.get("rg_at")
     if not token:
@@ -102,6 +123,7 @@ async def _handle_telemetry_msg(ws: WebSocket, channel: str, raw_data: str, sid:
 @router.websocket("/routers/{router_id}/live-telemetry")
 async def router_live_telemetry_ws(ws: WebSocket, router_id: uuid.UUID) -> None:
     """Canal WebSocket para telemetría efímera en vivo (estilo WinBox) con Cero Almacenamiento."""
+    await _verify_ws_origin(ws)
     await ws.accept()
     claims = await _extract_ws_claims(ws)
     try:
@@ -152,6 +174,7 @@ async def router_live_telemetry_ws(ws: WebSocket, router_id: uuid.UUID) -> None:
 @router.websocket("/tenant/events")
 async def tenant_events_ws(ws: WebSocket) -> None:
     """Canal WebSocket global para eventos NOC, progreso de tareas masivas y Kill-Switch."""
+    await _verify_ws_origin(ws)
     await ws.accept()
     claims = await _extract_ws_claims(ws)
 

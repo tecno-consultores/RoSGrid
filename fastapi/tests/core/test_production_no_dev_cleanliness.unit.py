@@ -2,8 +2,11 @@
 # Copyright (C) 2026 RoSGrid Contributors
 
 import ast
+import json
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from src.main import create_app
 
@@ -95,3 +98,30 @@ def test_cors_configuration_production_and_dev() -> None:
     ):
         app_dev = create_app()
         assert app_dev is not None
+
+
+@pytest.mark.asyncio
+async def test_validation_exception_handler_sanitization() -> None:
+    """Valida que los errores 422 de Pydantic se saniticen en producción contra enumeración de esquemas."""
+    from fastapi.exceptions import RequestValidationError
+    from starlette.requests import Request
+
+    fake_request = Request({"type": "http", "method": "POST", "path": "/api/v1/test", "headers": []})
+    mock_exc = MagicMock(spec=RequestValidationError)
+    mock_exc.errors.return_value = [{"loc": ["body", "password"], "msg": "field required", "type": "missing"}]
+
+    with patch("src.main.settings.ROSGRID_ENV", "production"):
+        app_prod = create_app()
+        handler = app_prod.exception_handlers[RequestValidationError]
+        resp_prod = await handler(fake_request, mock_exc)
+        assert resp_prod.status_code == 422
+        assert json.loads(resp_prod.body) == {
+            "detail": "Los datos proporcionados no cumplen con los requisitos de validación."
+        }
+
+    with patch("src.main.settings.ROSGRID_ENV", "development"):
+        app_dev = create_app()
+        handler_dev = app_dev.exception_handlers[RequestValidationError]
+        resp_dev = await handler_dev(fake_request, mock_exc)
+        assert resp_dev.status_code == 422
+        assert json.loads(resp_dev.body) == {"detail": mock_exc.errors()}

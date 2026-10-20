@@ -16,6 +16,7 @@ from starlette.websockets import WebSocketDisconnect
 
 from src.api.v1.websockets import (
     _extract_ws_claims,
+    _verify_ws_origin,
     _verify_ws_router_permission,
     router_live_telemetry_ws,
     tenant_events_ws,
@@ -281,6 +282,48 @@ async def test_tenant_events_ws_endpoint() -> None:
         await tenant_events_ws(ws)
         ws.accept.assert_awaited_once()
         ws.send_text.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_verify_ws_origin_security() -> None:
+    ws = AsyncMock()
+
+    # 1. Dev with wildcard -> always allowed
+    with (
+        patch("src.api.v1.websockets.settings.ROSGRID_ENV", "development"),
+        patch("src.api.v1.websockets.settings.ROSGRID_CORS_ORIGINS", "*"),
+    ):
+        await _verify_ws_origin(ws)
+
+    # 2. Prod with missing origin -> rejected with 4403
+    ws.headers = {}
+    with (
+        patch("src.api.v1.websockets.settings.ROSGRID_ENV", "production"),
+        patch("src.api.v1.websockets.settings.ROSGRID_CORS_ORIGINS", "https://app.rosgrid.com"),
+    ):
+        with pytest.raises(WebSocketDisconnect) as exc_missing:
+            await _verify_ws_origin(ws)
+        assert exc_missing.value.code == 4403
+        ws.close.assert_awaited_with(code=4403, reason="Origen ausente en entorno de producción")
+
+    # 3. Prod with unauthorized origin (CSWSH) -> rejected with 4403
+    ws.headers = {"origin": "https://malicious-site.com"}
+    with (
+        patch("src.api.v1.websockets.settings.ROSGRID_ENV", "production"),
+        patch("src.api.v1.websockets.settings.ROSGRID_CORS_ORIGINS", "https://app.rosgrid.com"),
+    ):
+        with pytest.raises(WebSocketDisconnect) as exc_unauth:
+            await _verify_ws_origin(ws)
+        assert exc_unauth.value.code == 4403
+        ws.close.assert_awaited_with(code=4403, reason="Origen no autorizado (CSWSH)")
+
+    # 4. Prod with authorized origin -> allowed
+    ws.headers = {"origin": "https://app.rosgrid.com"}
+    with (
+        patch("src.api.v1.websockets.settings.ROSGRID_ENV", "production"),
+        patch("src.api.v1.websockets.settings.ROSGRID_CORS_ORIGINS", "https://app.rosgrid.com"),
+    ):
+        await _verify_ws_origin(ws)
 
 
 # ============================================================================
