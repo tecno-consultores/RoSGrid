@@ -103,7 +103,7 @@ Si ya clonaste el repositorio con `git clone`:
 chmod +x ./instalar-rosgrid.sh
 ./instalar-rosgrid.sh
 ~~~
-*(El script detectará los archivos locales y te ofrecerá elegir entre despliegue oficial de Docker Hub, compilación local o entorno de desarrollo).*
+*(El script detectará la ejecución local, buscará y cargará automáticamente la configuración de tu archivo `.env` existente —o empleará los valores por defecto si aún no ha sido creado— y te ofrecerá elegir el modo de despliegue: oficial de Docker Hub, compilación local o desarrollo).*
 
 ---
 

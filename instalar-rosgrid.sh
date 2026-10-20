@@ -62,16 +62,34 @@ fi
 echo "✔ Docker, Docker Compose y dependencias locales verificadas."
 
 # 3. Detección de Modo Dual: Local (repo clonado) vs Remoto Standalone (curl | bash)
-RAW_BASE_URL="https://raw.githubusercontent.com/tecno-consultores/RoSGrid/main"
+RAW_BASE_URL="${RAW_BASE_URL:-https://raw.githubusercontent.com/tecno-consultores/RoSGrid/main}"
 IS_REMOTE=false
 
 if [[ ! -f .env.example || ! -f docker-compose.prod.yml ]]; then
     IS_REMOTE=true
 fi
 
+# Comprobación de variables de entorno (.env):
+# - Modo Local: Busca un archivo .env y lo carga si existe; si no se encuentra, usa valores por defecto.
+# - Modo Remoto (curl | bash): Como no estará el .env inicialmente, se usan los valores por defecto del sistema.
+if [[ "$IS_REMOTE" == "false" ]]; then
+    if [[ -f .env ]]; then
+        echo -e "\n[INFO] Modo local: Archivo '.env' encontrado. Cargando variables de configuración..."
+        set -a
+        # shellcheck source=/dev/null
+        source .env
+        set +a
+        echo "✔ Configuración local cargada desde .env."
+    else
+        echo -e "\n[INFO] Modo local: No se encontró archivo '.env' previo. Se emplearán los valores por defecto."
+    fi
+else
+    echo -e "\n[INFO] Modo de instalación remota standalone detectado."
+    echo "[INFO] No se dispone de archivo .env previo; se utilizarán los valores por defecto del sistema."
+fi
+
 if [[ "$IS_REMOTE" == "true" ]]; then
     INSTALL_DIR="${ROSGRID_INSTALL_DIR:-/opt/rosgrid}"
-    echo -e "\n[INFO] Modo de instalación remota standalone detectado."
     echo "Directorio de destino: $INSTALL_DIR"
 
     if [[ ! -d "$INSTALL_DIR" ]]; then
@@ -144,6 +162,12 @@ fi
 # Asegurar permisos estrictos de lectura exclusiva para el propietario
 chmod 600 .env
 echo "✔ Permisos 600 verificados sobre .env."
+
+# Cargar/recargar las variables finales de .env para que el script use los valores consolidados
+set -a
+# shellcheck source=/dev/null
+source .env
+set +a
 
 # Purgar volúmenes antiguos si se solicitó por incompatibilidad de credenciales
 if [[ "$RECREAR_VOLUMENES" == "true" ]]; then
