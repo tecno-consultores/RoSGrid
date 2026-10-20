@@ -1,6 +1,6 @@
 services:
   api:
-    image: sinfallas/base-python-uv:3.13
+    image: sinfallas/base-python-uv:3.15
     container_name: fastapi_api
     hostname: fastapi_api
     pull_policy: if_not_present
@@ -64,7 +64,7 @@ services:
       retries: 10
 
   qa-backend:
-    image: sinfallas/base-python-uv:3.13
+    image: sinfallas/base-python-uv:3.15
     container_name: fastapi_qa_backend
     hostname: fastapi_qa_backend
     pull_policy: if_not_present
@@ -83,7 +83,7 @@ services:
     working_dir: /app
     cap_add:
       - SYS_PTRACE
-    command: bash -c "echo 'Contenedor QA Backend (Python 3.13) listo para Lint, Pytest y Mutmut'; sleep infinity"
+    command: bash -c "echo 'Contenedor QA Backend (Python 3.15) listo para Lint, Pytest y Mutmut'; sleep infinity"
 
   karatelabs:
     image: sinfallas/karatelabs:latest
@@ -146,7 +146,7 @@ services:
       - api
 
   stress_test:
-    image: sinfallas/base-python-uv:3.13
+    image: sinfallas/base-python-uv:3.15
     container_name: fastapi_chaos_locust
     hostname: fastapi_chaos_locust
     profiles:

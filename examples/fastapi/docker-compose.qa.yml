@@ -1,6 +1,6 @@
 services:
   api:
-    image: sinfallas/base-python-uv:3.13
+    image: sinfallas/base-python-uv:3.15
     container_name: fastapi_api
     hostname: fastapi_api
     pull_policy: always
@@ -20,7 +20,7 @@ services:
     command: bash -c "uv pip install --system -e '.[dev]' && uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload"
 
   qa-backend:
-    image: sinfallas/base-python-uv:3.13
+    image: sinfallas/base-python-uv:3.15
     container_name: fastapi_qa_backend
     hostname: fastapi_qa_backend
     pull_policy: always
@@ -98,7 +98,7 @@ services:
       - api
 
   stress_test:
-    image: sinfallas/base-python-uv:3.13
+    image: sinfallas/base-python-uv:3.15
     container_name: fastapi_chaos_locust
     hostname: fastapi_chaos_locust
     profiles:

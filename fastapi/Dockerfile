@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 RoSGrid Contributors
-FROM sinfallas/base-python-uv:3.13
+FROM sinfallas/base-python-uv:3.15
 
 ARG BUILD_DATE="unknown"
 LABEL org.opencontainers.image.title="RoSGrid Backend API & Workers" \

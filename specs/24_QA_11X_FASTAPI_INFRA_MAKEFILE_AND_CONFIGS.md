@@ -7,7 +7,7 @@
 
 ## **1. Especificación Exacta de fastapi/docker-compose.qa.yml**
 
-El archivo fastapi/docker-compose.qa.yml utiliza exclusivamente las imágenes oficiales sinfallas/base-python-uv:3.13, sinfallas/karatelabs:latest, owasp/zap2docker-stable:latest, gaiaadm/pumba:latest, prom/prometheus:latest y sinfallas/remote-graphify:latest sobre una red bridge estrictamente IPv4:
+El archivo fastapi/docker-compose.qa.yml utiliza exclusivamente las imágenes oficiales sinfallas/base-python-uv:3.15, sinfallas/karatelabs:latest, owasp/zap2docker-stable:latest, gaiaadm/pumba:latest, prom/prometheus:latest y sinfallas/remote-graphify:latest sobre una red bridge estrictamente IPv4:
 
 
 services:
@@ -16,7 +16,7 @@ services:
   api:
 
 
-    image: sinfallas/base-python-uv:3.13
+    image: sinfallas/base-python-uv:3.15
 
 
     container\_name: fastapi\_api
@@ -85,7 +85,7 @@ services:
   qa-backend:
 
 
-    image: sinfallas/base-python-uv:3.13
+    image: sinfallas/base-python-uv:3.15
 
 
     container\_name: fastapi\_qa\_backend
@@ -313,7 +313,7 @@ services:
   stress\_test:
 
 
-    image: sinfallas/base-python-uv:3.13
+    image: sinfallas/base-python-uv:3.15
 
 
     container\_name: fastapi\_chaos\_locust

@@ -1,7 +1,7 @@
 # 🌐 RoSGrid — Consola Centralizada Multi-Tenant para Flotas MikroTik RouterOS v7+
 
 **Licencia:** GNU General Public License v3.0 (GPL-3.0-only)  
-**Stack Principal:** FastAPI (Python 3.13 + `orjson` + `uvloop`) + Vue 3 (TypeScript / Pinia) + PostgreSQL 17 (RLS + BRIN) + KeyDB Multi-Hilo (Compatible DragonflyDB)  
+**Stack Principal:** FastAPI (Python 3.15 + `orjson` + `uvloop`) + Vue 3 (TypeScript / Pinia / Node.js 26 LTS) + PostgreSQL 17 (RLS + BRIN) + KeyDB Multi-Hilo (Compatible DragonflyDB)  
 **Calidad y Seguridad:** Certificado bajo el Estándar Corporativo **[QA 11X](https://github.com/tecno-consultores/qa-testing-blueprints)**
 
 ---

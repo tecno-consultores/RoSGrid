@@ -3,7 +3,8 @@
 ## 📍 Punto de Control Actual (Checkpoint)
 
 - **Hito Actual en Curso:** Hito 22 (Cierre de `CHANGELOG.md`, Auditoría Trivy y Publicación en Docker Hub `build.sh`)
-- **Estado General del Sistema:** Hitos 0 al 21 COMPLETADOS (100%).
+- **Estado General del Sistema:** Hitos 0 al 21 COMPLETADOS (100%) y Hito 22 (Sub-tareas 22.1, 22.2, 22.5, 22.6, 22.7, 22.8, 22.9, 22.10, 22.11) COMPLETADOS.
+- **Hito 22.11 (Migración Integral de Runtime a Python 3.15 y Node.js 26 LTS):** COMPLETADO al 100% y certificado en Docker. Registro histórico integral de hitos consolidado en `TESTING.md`.
 - **Hito 21 (Servidor MCP Ampliado para Agentes IA y Certificación QA 11X Final):** COMPLETADO al 100% y certificado en Docker:
   - Servidor Model Context Protocol (MCP) Integrado en FastAPI (`POST /api/v1/mcp`) ampliado a 16 herramientas semánticas con esquemas Pydantic v2 y validación JSON-RPC 2.0 *Streamable HTTP*.
   - 8 nuevas herramientas semánticas operativas para agentes inteligentes (Hermes Agent, Claude Code / Desktop, NOC Autónomo):
@@ -160,7 +161,7 @@
 - [x] **10.2** WebSocket global del Tenant `/ws/v1/tenant/events` (eventos NOC, progreso de trabajos masivos y orden `SESSION_KILLED`).
 - [x] **10.3** Los 4 Workers en segundo plano (`src/workers/`): Monitor *Zero-Storage*, Despachador de Alertas Multi-Canal (Telegram Bot, Correo SMTP, Webhook HMAC-SHA256 y NOC), Worker de Backups Nocturnos y Worker de Rotación Automática de Bóveda.
 - [x] **10.4** **Cierre de Arquitectura Backend con Graphify (En Docker):** Ejecutar `docker compose -f docker-compose.qa.yml --profile graphify run --rm graphify` dentro de `./fastapi/` para generar `fastapi/graphify-out/GRAPH_REPORT.md` y el grafo AST completo del Backend (`specs/09`, `29`).
-- [x] **10.5** **Dockerfile Multi-Stage de Producción Backend (`fastapi/Dockerfile`):** Crear `fastapi/Dockerfile` basado en `sinfallas/base-python-uv:3.13` con soporte `ARG BUILD_DATE`, dependencias `--no-dev`, usuario sin privilegios (`non-root`) y `scripts/entrypoint.sh` (`specs/01`).
+- [x] **10.5** **Dockerfile Multi-Stage de Producción Backend (`fastapi/Dockerfile`):** Crear `fastapi/Dockerfile` basado en `sinfallas/base-python-uv:3.15` con soporte `ARG BUILD_DATE`, dependencias `--no-dev`, usuario sin privilegios (`non-root`) y `scripts/entrypoint.sh` (`specs/01`).
 - [x] **10.6** **Paquete de Optimización de Alto Rendimiento Backend, DB y KeyDB Multi-Hilo:**
   - Sustituir `redis:7-alpine` por `eqalpha/keydb:alpine` (`keydb-server --server-threads 2` y healthcheck `keydb-cli`) en `docker-compose.yml`, `fastapi/docker-compose.qa.yml` y `specs/01` (documentando `DragonflyDB` como perfil de alta escala).
   - Configurar `ORJSONResponse` como `default_response_class` en `fastapi/src/main.py`, serialización `orjson` en frames WebSocket, desactivación estricta de Swagger/ReDoc/OpenAPI cuando `ROSGRID_ENV == "production"` y activar `--loop uvloop --http httptools` en `fastapi/scripts/entrypoint.sh`.
@@ -326,7 +327,7 @@
 
 - [x] **21.1** Expansión de Tools MCP para Agentes de IA: Nuevas herramientas para sustitución o asistencia técnica autónoma (`rosgrid_isolate_subscriber`, `rosgrid_restore_subscriber`, `rosgrid_change_rate_limit`, `rosgrid_run_360_diagnostics`, `rosgrid_query_bgp_looking_glass`, `rosgrid_check_config_drift`, `rosgrid_run_cis_audit`, `rosgrid_detect_mass_outage`).
 - [x] **21.2** Actualización de Documentación: Sincronización completa de `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md` y `docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md` con los nuevos contratos.
-- [x] **21.3** Certificación Estándar QA 11X en Docker: Cobertura unitaria >= 95% en backend (`sinfallas/base-python-uv:3.13`) y frontend (`sinfallas/base-node-ionic:22`), ejecución de la suite de contratos Front-Back y compilación limpia del bundle de producción.
+- [x] **21.3** Certificación Estándar QA 11X en Docker: Cobertura unitaria >= 95% en backend (`sinfallas/base-python-uv:3.15`) y frontend (`sinfallas/base-node-ionic:26`), ejecución de la suite de contratos Front-Back y compilación limpia del bundle de producción.
 
 ---
 
@@ -352,5 +353,6 @@
   - `docs/10_REPORTE_INVESTIGACION_PYTHON_3_15.md`: Investigación sobre Free-Threading / No-GIL (PEP 703) Tier-1, Tier-2 JIT, PEP 649 y migración a `sinfallas/base-python-uv:3.15`.
   - `docs/11_REPORTE_INVESTIGACION_NODE_26.md`: Investigación sobre Native Type Stripping, V8 14.x, Temporal API y migración a `sinfallas/base-node-ionic:26`.
 - [x] **22.10** **Suite de Pruebas BDD Integral Karate Labs para el 100% de la API REST FastAPI:** Expansión de `fastapi/test/api_test.feature` a 54 escenarios BDD exhaustivos cubriendo todos y cada uno de los 35 submódulos y endpoints de la API REST (Observabilidad, Auth, Multi-Tenant, Usuarios, Sesiones, Inventario, TOFU, Bóveda 2FA, IPAM, QoS, Dispositivos ONU, Servicios de Red, Field Ops, Mantenimiento, WebFig L1/L2, Maker-Checker, Backups, Operaciones Masivas, Notificaciones, WORM, MCP JSON-RPC 2.0, Diagnóstico 360°, BGP Looking Glass, Tráfico IPFIX, Compliance CIS/Drift, SD-WAN, Switching, SLA, WiFi y RBAC), sincronización idéntica en `examples/fastapi/test/api_test.feature` y certificación en `TESTING.md`.
+- [x] **22.11** **Migración Integral de Runtime a Python 3.15 y Node.js 26 LTS:** Actualización de `fastapi/Dockerfile` (`sinfallas/base-python-uv:3.15`), `vue3/Dockerfile` (`sinfallas/base-node-ionic:26`), `docker-compose.yml`, `fastapi/docker-compose.qa.yml`, `vue3/docker-compose.qa.yml`, metadatos en `pyproject.toml` (`requires-python = ">=3.15"`) y `package.json` (`engines: { "node": ">=26.0.0" }`), sincronización completa de la bitácora histórica de hitos (Hitos 0 al 22.11) en `TESTING.md`, gobernanza raíz y reportes técnicos `docs/10` y `docs/11`.
 - [ ] **22.3** Actualizar `CHANGELOG.md` consolidando los cambios de `[Unreleased]` dentro del lanzamiento oficial `[1.0.0]` con las métricas certificadas en `TESTING.md`.
 - [ ] **22.4** Ejecutar `./build.sh` (como usuario no-root) con `docker buildx` (`container-builder` + `tonistiigi/binfmt`) para construir y publicar `sinfallas/rosgrid-backend:latest` (`:1.0.0`) y `sinfallas/rosgrid-frontend:latest` (`:1.0.0`) en Docker Hub y limpiar cachés con `prune -af`.

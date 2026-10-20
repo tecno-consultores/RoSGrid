@@ -4,6 +4,10 @@
   "license": "GPL-3.0-only",
   "description": "Consola Web Centralizada Multi-Tenant para Flotas MikroTik RouterOS v7+ (Vue 3 + TS + Pinia)",
   "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=26.0.0",
+    "pnpm": ">=9.0.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",

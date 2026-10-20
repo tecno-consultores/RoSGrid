@@ -4,6 +4,28 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useI18n } from './useI18n';
 
+const storageMock = (() => {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] || null,
+    setItem: (key: string, value: string) => {
+      store[key] = String(value);
+    },
+    clear: () => {
+      store = {};
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+  };
+})();
+
+Object.defineProperty(window, 'localStorage', {
+  value: storageMock,
+  writable: true,
+  configurable: true,
+});
+
 describe('useI18n — Composable de Internacionalización Reactivo', () => {
   beforeEach(() => {
     window.localStorage.clear();

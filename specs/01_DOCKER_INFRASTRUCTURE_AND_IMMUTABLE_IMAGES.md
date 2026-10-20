@@ -13,8 +13,8 @@ Toda la infraestructura de RoSGrid DEBE operar consumiendo exclusivamente las si
 
 | Componente | Imagen Oficial Obligatoria | Propósito en RoSGrid | Volumen de Caché / Datos |
 | :--- | :--- | :--- | :--- |
-| **Backend Base & QA** | `sinfallas/base-python-uv:3.13` | Base para `fastapi/Dockerfile`, ejecución local de FastAPI (Uvicorn + `uvloop`), migraciones Alembic, workers asíncronos y suite QA Python | `rosgrid_uv_cache:/root/.cache/uv` |
-| **Frontend Builder & QA** | `sinfallas/base-node-ionic:22` | Etapa builder de `vue3/Dockerfile`, compilación de activos estáticos Vite/Vue 3 (`dist/`), Linting, Vitest y Stryker en `vue3/docker-compose.qa.yml` | `rosgrid_pnpm_store:/pnpm` |
+| **Backend Base & QA** | `sinfallas/base-python-uv:3.15` | Base para `fastapi/Dockerfile`, ejecución local de FastAPI (Uvicorn + `uvloop`), migraciones Alembic, workers asíncronos y suite QA Python | `rosgrid_uv_cache:/root/.cache/uv` |
+| **Frontend Builder & QA** | `sinfallas/base-node-ionic:26` | Etapa builder de `vue3/Dockerfile`, compilación de activos estáticos Vite/Vue 3 (`dist/`), Linting, Vitest y Stryker en `vue3/docker-compose.qa.yml` | `rosgrid_pnpm_store:/pnpm` |
 | **Frontend Web Server** | `nginx:1.27-alpine` / `nginx:alpine` | Base runtime de `vue3/Dockerfile`, servidor HTTP de alta velocidad para el bundle compilado (`vue3/dist`) y proxy inverso | `rosgrid_nginx_logs:/var/log/nginx` |
 | **Imagen Producción Backend** | `sinfallas/rosgrid-backend:latest` | Imagen oficial inmutable de producción publicada en Docker Hub mediante `./build.sh` | `rosgrid_backups_storage:/var/lib/rosgrid/backups` |
 | **Imagen Producción Frontend** | `sinfallas/rosgrid-frontend:latest` | Imagen oficial inmutable de producción (Nginx + SPA compilada) publicada en Docker Hub mediante `./build.sh` | `rosgrid_nginx_logs:/var/log/nginx` |
@@ -188,7 +188,7 @@ services:
   #     - rosgrid_internal_net
 
   rosgrid-api:
-    image: sinfallas/base-python-uv:3.13
+    image: sinfallas/base-python-uv:3.15
     container_name: rosgrid_api
     hostname: rosgrid_api
     pull_policy: always
@@ -223,7 +223,7 @@ services:
       - rosgrid_internal_net
 
   rosgrid-worker:
-    image: sinfallas/base-python-uv:3.13
+    image: sinfallas/base-python-uv:3.15
     container_name: rosgrid_worker
     hostname: rosgrid_worker
     pull_policy: always
@@ -248,7 +248,7 @@ services:
       - rosgrid_internal_net
 
   rosgrid-ui-builder:
-    image: sinfallas/base-node-ionic:22
+    image: sinfallas/base-node-ionic:26
     container_name: rosgrid_ui_builder
     hostname: rosgrid_ui_builder
     pull_policy: if_not_present
@@ -413,7 +413,7 @@ Para distribuir **RoSGrid** como imágenes listas para producción en Docker Hub
 ~~~dockerfile
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 RoSGrid Contributors
-FROM sinfallas/base-python-uv:3.13
+FROM sinfallas/base-python-uv:3.15
 
 ARG BUILD_DATE="unknown"
 LABEL org.opencontainers.image.title="RoSGrid Backend API & Workers" \
@@ -460,7 +460,7 @@ ENTRYPOINT ["/usr/bin/env", "bash", "/app/scripts/entrypoint.sh"]
 # Copyright (C) 2026 RoSGrid Contributors
 
 # --- Etapa 1: Compilación de la SPA Vue 3 + TypeScript ---
-FROM sinfallas/base-node-ionic:22 AS builder
+FROM sinfallas/base-node-ionic:26 AS builder
 
 WORKDIR /app
 

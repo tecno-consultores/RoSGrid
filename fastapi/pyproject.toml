@@ -3,7 +3,7 @@ name = "rosgrid-backend"
 version = "1.0.0"
 description = "Backend Centralizado Multi-Tenant para Gestión de Flotas MikroTik RouterOS v7+ (GPL-3.0-only)"
 license = { text = "GPL-3.0-only" }
-requires-python = ">=3.13"
+requires-python = ">=3.15"
 dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.30.0",

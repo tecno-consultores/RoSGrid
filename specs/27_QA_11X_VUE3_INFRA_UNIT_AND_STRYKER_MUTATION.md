@@ -14,7 +14,7 @@ El archivo vue3/docker-compose.qa.yml mantiene intacta la arquitectura efímera 
 
 - ui-prod (nginx:alpine sirviendo ./dist:/usr/share/nginx/html:ro en puerto 8080:80).
 
-- qa-vue3 (sinfallas/base-node-ionic:22 o node:20-bookworm-slim con PNPM\_HOME: /pnpm y volumen nombrado pnpm-store:/pnpm).
+- qa-vue3 (sinfallas/base-node-ionic:26 o node:26-bookworm-slim con PNPM\_HOME: /pnpm y volumen nombrado pnpm-store:/pnpm).
 
 - ui-e2e (Contenedor oficial de Playwright v1.43.0-jammy con pnpm-store:/pnpm).
 

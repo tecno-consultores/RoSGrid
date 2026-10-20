@@ -24,7 +24,7 @@ Antigravity tiene **estrictamente prohibido** violar cualquiera de los siguiente
 
 1. **Imágenes Oficiales Inmutables en QA y Empaquetado Multi-Stage de Producción:**
    * Queda prohibido usar la directiva `build:` dentro de `fastapi/docker-compose.qa.yml` y `vue3/docker-compose.qa.yml`.
-   * Toda ejecución de desarrollo y pruebas QA DEBE consumir las imágenes oficiales inmutables `sinfallas/base-python-uv:3.13` (Backend FastAPI) y `sinfallas/base-node-ionic:22` + `nginx:alpine` (Frontend Vue 3), junto con los sidecars oficiales (`postgres:17-alpine`, `eqalpha/keydb:alpine` Multi-Hilo por defecto o `DragonflyDB` en alta escala, `sinfallas/karatelabs:latest`, `owasp/zap2docker-stable:latest`, `gaiaadm/pumba:latest`, `prom/prometheus:latest`, `sinfallas/remote-graphify:latest`).
+   * Toda ejecución de desarrollo y pruebas QA DEBE consumir las imágenes oficiales inmutables `sinfallas/base-python-uv:3.15` (Backend FastAPI) y `sinfallas/base-node-ionic:26` + `nginx:alpine` (Frontend Vue 3), junto con los sidecars oficiales (`postgres:17-alpine`, `eqalpha/keydb:alpine` Multi-Hilo por defecto o `DragonflyDB` en alta escala, `sinfallas/karatelabs:latest`, `owasp/zap2docker-stable:latest`, `gaiaadm/pumba:latest`, `prom/prometheus:latest`, `sinfallas/remote-graphify:latest`).
    * Para distribución en producción hacia Docker Hub, se utilizan `fastapi/Dockerfile`, `vue3/Dockerfile`, `docker-compose.prod.yml` y `build.sh` generando `sinfallas/rosgrid-backend:latest` y `sinfallas/rosgrid-frontend:latest` con usuario sin privilegios (`non-root`).
 2. **Cero Instalaciones en el Host:**
    * Prohibido ejecutar `pip install`, `uv sync`, `npm install` o `pnpm install` directamente en el sistema operativo anfitrión. Todo se ejecuta de manera efímera dentro de contenedores usando las metas de los `Makefile` (`make qa-lint`, `make qa-unit`, `make qa-mutation`, `make qa-all`) y volúmenes nombrados de caché (`uv-cache` y `pnpm-store`).
@@ -129,7 +129,7 @@ rosgrid/
 │
 └── vue3/                                    # ECOSISTEMA FRONTEND REAL (Vue 3 + TypeScript + Vite + Pinia)
     ├── Dockerfile                           # Imagen multi-stage no-root para sinfallas/rosgrid-frontend
-    ├── docker-compose.qa.yml                # Orquestador efímero 11X para Frontend (sinfallas/base-node-ionic:22)
+    ├── docker-compose.qa.yml                # Orquestador efímero 11X para Frontend (sinfallas/base-node-ionic:26)
     ├── Makefile                             # Comandos: build-ui, qa-lint, qa-unit, qa-mutation, qa-perf, qa-e2e, qa-bdd
     ├── limpieza.sh                          # Purga profunda de artefactos y cachés Frontend
     ├── .npmrc                               # Zero-Trust (ignore-scripts=true, engine-strict=true)

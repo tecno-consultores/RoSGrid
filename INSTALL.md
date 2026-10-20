@@ -122,7 +122,7 @@ docker logs -f rosgrid_api
 ~~~
 
 ### Opción B: Despliegue Local o Laboratorio (EVE-NG / Desarrollo)
-Levanta la plataforma montando el código fuente local sobre las imágenes base inmutables (`sinfallas/base-python-uv:3.13` y `sinfallas/base-node-ionic:22`):
+Levanta la plataforma montando el código fuente local sobre las imágenes base inmutables (`sinfallas/base-python-uv:3.15` y `sinfallas/base-node-ionic:26`):
 
 ~~~bash
 # 1. Auditar la configuración con Trivy antes de levantar

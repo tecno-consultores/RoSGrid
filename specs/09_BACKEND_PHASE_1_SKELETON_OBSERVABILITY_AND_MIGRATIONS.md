@@ -25,7 +25,7 @@ description = "Backend Centralizado Multi-Tenant para Gestión de Flotas MikroTi
 license = \{ text = "GPL-3.0-only" \}
 
 
-requires-python = "\>=3.13"
+requires-python = "\>=3.15"
 
 
 dependencies = \[

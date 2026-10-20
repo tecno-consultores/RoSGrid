@@ -9,6 +9,21 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 ## [Unreleased]
 
 ### Added
+- **Migración Integral de Runtime a Python 3.15 y Node.js 26 LTS (Hito 22.11):**
+  - **Backend (`fastapi/`):** Migración oficial a la imagen base corporativa inmutable `sinfallas/base-python-uv:3.15`, soporte de CPython Free-Threaded (PEP 703 Tier-1), PEP 649 (evaluación diferida de anotaciones) y actualización de metadatos en `pyproject.toml` (`requires-python = ">=3.15"`).
+  - **Frontend (`vue3/`):** Migración oficial a la imagen base corporativa inmutable `sinfallas/base-node-ionic:26`, adopción del motor V8 14.x y declaración de gobernanza en `package.json` (`"engines": { "node": ">=26.0.0", "pnpm": ">=9.0.0" }`).
+  - **Orquestadores y Manifiestos:** Sincronización de `docker-compose.yml`, `fastapi/docker-compose.qa.yml`, `vue3/docker-compose.qa.yml`, `examples/` y Dockerfiles de producción.
+  - **Documentación de Investigación:** Actualización de `docs/10_REPORTE_INVESTIGACION_PYTHON_3_15.md` y `docs/11_REPORTE_INVESTIGACION_NODE_26.md` a estado *"Migración Ejecutada e Implementada en RoSGrid"*.
+- **Consolidación y Completitud del Registro Histórico de Certificación en `TESTING.md`:**
+  - Incorporación en la tabla del *Registro Histórico de Certificación por Hitos* (Sección 4) de todos los hitos previamente no desglosados (Hitos 4 al 10, Hito 14, Hito 15B, Hitos 16 al 20, y sub-hitos 22.1 a 22.11), alcanzando una cobertura histórica continua del 100% de la plataforma.
+  - Adición de las secciones de detalle estructural faltantes (Secciones 6 a 10 y Sección 21), certificando:
+    - Sección 6: Hitos 4 al 6 (Conector RouterOS v7, SSL TOFU, Safe Mode 60s, Inventario, Asistente CSV y Bóveda Step-Up 30s).
+    - Sección 7: Hitos 7 y 8 (Consola WebFig Capa 1: Interfaces, SFP DDM, IP, Firewall Drag & Drop, Routing BGP/OSPF, PPPoE y Queues).
+    - Sección 8: Hitos 9 y 10 (Motor Universal WebFig Capa 2, Maker-Checker, Backups Git Diff, WebSockets y Optimización KeyDB Multi-Hilo).
+    - Sección 9: Hitos 11 al 13 (Frontend Vue 3 Base, Stores Pinia `shallowRef`, Sistema de Diseño WinBox WCAG 2.1 AA, Canvas 2D y Endpoint MCP).
+    - Sección 10: Hitos 14 y 15B (Documentación Técnica `docs/`, Graphify AST y Estabilización en Hardware Real RouterOS v7.21.5).
+    - Sección 21: Hito 22.11 (Certificación Integral de Runtime Python 3.15 y Node.js 26 LTS).
+  - Eliminación de discontinuidades numéricas en la bitácora y actualización de todas las referencias de imágenes efímeras de QA y producción.
 - **Suite Completa de Pruebas BDD Karate Labs para el 100% de la Interfaz Web:**
   - Expansión de `vue3/test/ui_business_flow.feature` de 1 a **16 escenarios BDD exhaustivos** que cubren de extremo a extremo todas las pantallas, funcionalidades y flujos de usuario del sistema:
     1. Login Zero-Trust & Enrolamiento Obligatorio 2FA TOTP (`/login`).

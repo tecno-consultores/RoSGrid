@@ -14,7 +14,7 @@ services:
       - "8085:80"
 
   qa-vue3:
-    image: sinfallas/base-node-ionic:22
+    image: sinfallas/base-node-ionic:26
     container_name: vue_qa_frontend
     hostname: vue_qa_frontend
     pull_policy: always
@@ -26,7 +26,7 @@ services:
       - .:/app
       - pnpm-store:/pnpm
     working_dir: /app
-    command: bash -c "echo 'Contenedor QA Vue 3 (sinfallas/base-node-ionic:22) listo para Lint, Type-Check, Unit y Mutación'; sleep infinity"
+    command: bash -c "echo 'Contenedor QA Vue 3 (sinfallas/base-node-ionic:26) listo para Lint, Type-Check, Unit y Mutación'; sleep infinity"
 
   ui-e2e:
     image: mcr.microsoft.com/playwright:v1.43.0-jammy

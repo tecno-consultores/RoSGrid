@@ -45,7 +45,7 @@ services:
       - rosgrid_internal_net
 
   rosgrid-api:
-    image: sinfallas/base-python-uv:3.13
+    image: sinfallas/base-python-uv:3.15
     container_name: rosgrid_api
     hostname: rosgrid_api
     pull_policy: always
@@ -80,7 +80,7 @@ services:
       - rosgrid_internal_net
 
   rosgrid-worker:
-    image: sinfallas/base-python-uv:3.13
+    image: sinfallas/base-python-uv:3.15
     container_name: rosgrid_worker
     hostname: rosgrid_worker
     pull_policy: always
@@ -105,7 +105,7 @@ services:
       - rosgrid_internal_net
 
   rosgrid-ui-builder:
-    image: sinfallas/base-node-ionic:22
+    image: sinfallas/base-node-ionic:26
     container_name: rosgrid_ui_builder
     hostname: rosgrid_ui_builder
     pull_policy: if_not_present

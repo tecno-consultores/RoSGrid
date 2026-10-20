@@ -32,8 +32,8 @@ Este documento centraliza las referencias técnicas, imágenes oficiales de Dock
 | `sinfallas/rosgrid-frontend:latest` | Imagen oficial inmutable de producción para `rosgrid-ui` sobre Nginx endurecido no-root (`8080`). |
 | `eqalpha/keydb:alpine` | Motor en memoria **Multi-Hilo predeterminado** (`--server-threads 2`, ~35 MB RAM, licencia BSD-3-Clause). |
 | `docker.dragonflydb.io/dragonflydb/dragonfly:latest` | Perfil opcional de **Alto Rendimiento** (*Shared-Nothing* `io_uring`) para flotas masivas ISP (> 300–500 routers). |
-| `sinfallas/base-python-uv:3.13` | Imagen base de Python 3.13 + `uv` para desarrollo, construcción multi-stage y suite QA Backend. |
-| `sinfallas/base-node-ionic:22` | Imagen base de Node 22 + `pnpm` para etapa builder de Frontend y validación estática/unitaria. |
+| `sinfallas/base-python-uv:3.15` | Imagen base de Python 3.15 + `uv` para desarrollo, construcción multi-stage y suite QA Backend. |
+| `sinfallas/base-node-ionic:26` | Imagen base de Node 26 + `pnpm` para etapa builder de Frontend y validación estática/unitaria. |
 | `sinfallas/karatelabs:latest` | Ejecutor de pruebas funcionales BDD Gherkin de caja negra para API y UI. |
 | `sinfallas/remote-graphify:latest` | Extracción de grafos semánticos AST (`GRAPH_REPORT.md`) bajo el perfil `--profile graphify`. |
 

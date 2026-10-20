@@ -2,7 +2,7 @@
 # Copyright (C) 2026 RoSGrid Contributors
 
 # --- Etapa 1: Compilación de la SPA Vue 3 + TypeScript ---
-FROM sinfallas/base-node-ionic:22 AS builder
+FROM sinfallas/base-node-ionic:26 AS builder
 
 WORKDIR /app
 
