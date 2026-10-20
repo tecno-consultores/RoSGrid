@@ -28,6 +28,7 @@ graph TD
 ```
 
 ### 1.1 Vistas Especializadas de Capa 1
+
 1. **`RouterLiveDashboardView.vue`:** Tablero de control con métricas en tiempo real de CPU, RAM, Uptime, almacenamiento y gráficas de tráfico aceleradas por hardware.
 2. **`InterfacesAndSfpView.vue`:** Listado integral de interfaces físicas y lógicas con telemetría óptica DDM (`sfp-rx-power`, `sfp-tx-power`, temperatura láser) y clasificación de salud (`OPTIMAL`, `WARNING`, `CRITICAL_LOW_LIGHT`).
 3. **`FirewallRulesView.vue`:** Tabla interactiva de reglas Filter, NAT y Mangle con reordenamiento por arrastrar y soltar (*Drag & Drop*) que calcula automáticamente la posición en RouterOS (`/ip/firewall/filter/move`) ejecutada bajo **Safe Mode (60s)**.
@@ -36,6 +37,7 @@ graph TD
 6. **`LiveToolsDiagnosticsView.vue`:** Consola de ejecución de utilidades de red (`/tool/ping`, `/tool/traceroute`) acotadas para prevenir saturación de CPU.
 
 ### 1.2 Capa 2: Renderizador Universal Dinámico (`DynamicLayer2ResourceView.vue`)
+
 Para dar cobertura al 100% del catálogo de RouterOS v7 sin escribir cientos de pantallas estáticas, RoSGrid incluye un motor dinámico que introspecciona el endpoint REST solicitado (ej. `/interface/bridge`, `/interface/wireguard`, `/ip/pool`) y genera automáticamente la tabla con sus banderas nativas (`[D]` Dinámico, `[X]` Deshabilitado, `[I]` Inválido, `[R]` Corriendo).
 
 ---
@@ -43,6 +45,7 @@ Para dar cobertura al 100% del catálogo de RouterOS v7 sin escribir cientos de 
 ## 2. Pestañas en Memoria con `<KeepAlive :max="5">`
 
 El componente `RouterWorkspaceTabsBar.vue` permite mantener abiertas hasta 5 herramientas operativas por router de forma simultánea:
+
 - **Cero Pérdida de Estado:** Si un técnico está editando una regla de firewall y cambia a la pestaña de Ping para comprobar conectividad, la edición del firewall no se reinicia ni pierde los campos rellenados.
 - **Gestión de Memoria:** Al abrir una sexta pestaña, la menos utilizada en el historial se destruye limpiamente para conservar la memoria RAM del navegador.
 
@@ -51,6 +54,7 @@ El componente `RouterWorkspaceTabsBar.vue` permite mantener abiertas hasta 5 her
 ## 3. Densidad Dual Adaptativa y *Virtual Scrolling*
 
 Para optimizar el trabajo tanto en salas de control de escritorio como en campo con tablets:
+
 - **Modo WinBox PC (`32px` por fila):** Filas compactas de 32 píxeles de alto, fuentes monoespaciadas y controles de alta densidad que permiten visualizar más de 30 reglas o interfaces en pantalla simultáneamente.
 - **Modo Táctil / Campo (`44px` por fila):** Al detectar pantalla táctil o resolución móvil, los controles se expanden automáticamente a 44 píxeles para cumplir el estándar de accesibilidad **WCAG 2.1 AA** (objetivos de toque para dedos sin clics accidentales).
 - **Virtual Scrolling Nativo:** Los componentes de tabla (`RgDataTable.vue`) renderizan únicamente los elementos visibles en el viewport más un buffer de seguridad, permitiendo desplazarse fluidamente sobre tablas con más de 5,000 clientes PPPoE o rutas BGP sin degradar el navegador.
@@ -89,6 +93,7 @@ flowchart LR
 ```
 
 RoSGrid implementa una arquitectura de cero costo de renderizado:
+
 1. **Buffer Circular en RAM (`TelemetryRingBuffer<T>`):**
    - Tamaño máximo: 5,400 puntos por métrica (3 horas continuas a 1 tick cada 2 segundos).
    - Estructura indexada en memoria con `shallowRef` para evitar sobrecarga del sistema de reactividad de Vue 3.
@@ -209,10 +214,10 @@ flowchart TD
     WSNoc --> LeafletMap
     WSNoc --> AudioTone
 ```
+
 - **Hub Táctico "Mission Control":**
   - Muestra métricas agregadas en vivo: ancho de banda total transmitido y recibido (Tx/Rx), desglose de equipos por rol operativo, latencia de sondas activas y porcentaje de salud global del parque de routers.
   - Transiciones cinemáticas fluidas con aceleración por hardware (`will-change`, CSS cubic-bezier) para alternar entre el mapa geográfico y el panel de analítica.
 - **Apertura Directa de WebFig:** Al seleccionar un router en el mapa interactivo (Leaflet / OpenStreetMap), el popup de inspección rápida incluye el botón **"Abrir WebFig"**, que redirige inmediatamente a la consola operativa en vivo (`/routers/:id/webfig/live`) del equipo seleccionado.
 - **Diseño *Dark High-Contrast*:** Fondo oscuro profundo con acentos Cyan tácticos para visualización clara a distancia.
 - **Alertas Sonoras y Visuales:** Emite tonos discretos y destellos perimetrales en tiempo real ante caídas de routers (`OFFLINE`), enlaces caídos o degradación óptica en módulos SFP.
-

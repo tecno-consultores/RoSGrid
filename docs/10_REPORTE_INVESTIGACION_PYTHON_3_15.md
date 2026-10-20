@@ -37,18 +37,21 @@ timeline
 ## 2. Novedades y Cambios de Arquitectura en Python 3.15
 
 ### 2.1 CPython Libre de Hilos (Free-Threaded / No-GIL, PEP 703) en Madurez Tier-1
+
 En Python 3.13, el modo sin GIL (*Global Interpreter Lock*) se introdujo de forma experimental bajo la bandera `--disable-gil` (binario `python3.13t`). En Python 3.15, la arquitectura de hilos libres alcanza soporte **Tier-1**:
+
 - **Concurrencia Real en CPU Multinúcleo:** Permite que múltiples hilos de ejecución de Python corran paralelamente en distintos cores sin necesidad de particionar la aplicación en múltiples procesos independientes (`multiprocessing` o workers separados de Uvicorn).
 - **Mecanismos de Seguridad de Memoria:**
   - *Biased Reference Counting:* Conteos de referencia optimizados para hilos propietarios sin colisiones en caché de CPU.
   - *Deferred Reference Counting:* Los objetos estáticos e inmutables (como constantes, tipos base y código compilado) omiten el bloqueo de contador de referencias.
   - Asignador de memoria seguro **mimalloc** embebido para gestionar estructuras dinámicas concurrentes.
 
-#### Impacto en RoSGrid:
+#### Impacto en RoSGrid
+
 Actualmente, RoSGrid ejecuta procesos separados: el servidor web API (`fastapi`) y el procesador de tareas asíncronas (`rosgrid-worker` para backups y alertas). Con Python 3.15 Free-Threaded, es viable consolidar o escalar el worker internamente mediante un pool de hilos ligeros de memoria compartida, reduciendo el consumo de RAM base de la plataforma en más de un 40% en servidores modestos de ISP.
 
 ```mermaid
-graph TD
+flowchart TD
     subgraph "Arquitectura Actual (Python 3.13 con GIL)"
         Proc1["Uvicorn Worker 1 (Proceso independiente ~120MB)"]
         Proc2["Uvicorn Worker 2 (Proceso independiente ~120MB)"]
@@ -76,27 +79,35 @@ graph TD
 ---
 
 ### 2.2 Compilador JIT de Nivel 2 (Tier-2 JIT)
+
 El compilador JIT (*Just-In-Time*) basado en la técnica Copy-and-Patch introducido en 3.13 alcanza optimización completa de trazas:
+
 - Identifica fragmentos de bytecode ejecutados repetidamente (*hot loops*) y emite código máquina nativo directamente en memoria ejecutable.
 - **Beneficio para RoSGrid:** Las funciones computacionalmente intensivas —especialmente el algoritmo de cálculo de diff de configuraciones `.rsc` (`src/core/rsc_diff_engine.py`) y la verificación de hashes SHA-256 en la cadena WORM (`verify_worm_chain`)— experimentarán incrementos de velocidad entre **1.8x y 2.5x** sin requerir reescritura en C/Rust.
 
 ---
 
 ### 2.3 Evaluación Diferida de Anotaciones de Tipo (PEP 649 / PEP 749)
+
 Python 3.15 reemplaza de forma definitiva el hack sintáctico `from __future__ import annotations` (que convertía las anotaciones en strings planos) por el modelo formal de **funciones de anotación diferida**:
+
 - Las anotaciones se compilan como código ejecutable que solo se evalúa bajo demanda cuando una biblioteca de reflexión o validación (como Pydantic v2 o FastAPI) solicita inspeccionar el atributo `__annotations__`.
 - **Beneficio para RoSGrid:** Cero overhead de inicialización al arrancar la API con más de 80 submódulos y modelos Pydantic, reduciendo el tiempo de *cold-start* del contenedor backend en un 35%.
 
 ---
 
 ### 2.4 Limpieza y Eliminación de APIs Antiguas en `asyncio`
+
 En Python 3.15 se remueven funciones obsoletas de gestión de bucles de eventos:
+
 - `asyncio.get_event_loop()` ya no creará un nuevo bucle de eventos si no existe uno corriendo en el hilo actual; en su lugar, emitirá un error fatal `RuntimeError`. Se vuelve estrictamente obligatorio el uso de:
+
   ```python
   loop = asyncio.get_running_loop()  # Dentro de corrutinas activas
   # o
   asyncio.run(main())  # Para puntos de entrada y scripts
   ```
+
 - **Revisión en RoSGrid:** En scripts auxiliares de terminal como `fastapi/scripts/crear_admin.py` y tareas de fondo, se debe garantizar que no existan llamadas heredadas a `asyncio.get_event_loop()`.
 
 ---
@@ -122,7 +133,9 @@ El stack de RoSGrid Backend utiliza librerías de alto rendimiento construidas s
 ## 4. Análisis de la Imagen Corporativa `sinfallas/base-python-uv:3.15`
 
 ### 4.1 Características de la Imagen Base Corporativa
+
 La imagen corporativa `sinfallas/base-python-uv:3.15` proporciona:
+
 1. **Sistema Base:** Debian 13 (Trixie) o Ubuntu 26.04 Minimal / Distroless-like.
 2. **CPython 3.15:** Binarios optimizados con flags `--enable-optimizations --with-lto` y soporte dual (estándar y `--disable-gil` free-threaded).
 3. **Gestor de Paquetes `uv` Integrado:** Versión `>= 0.6.x` instalada estáticamente en `/usr/local/bin/uv`, permitiendo resolución y congelación de dependencias en submilisegundos sin requerir `pip` ni compiladores en la imagen de ejecución final.
@@ -195,7 +208,8 @@ gantt
     Publicación oficial de imágenes en Docker Hub      :d1, after c2, 4d
 ```
 
-### Hitos de la Migración:
+### Hitos de la Migración
+
 1. **Hito M1 (Laboratorio y Pre-Build):** Validar la compilación del lockfile `uv.lock` contra Python 3.15 en una rama aislada (`feature/python-3.15-upgrade`).
 2. **Hito M2 (Certificación QA 11X):** Ejecutar los 399 tests unitarios y de integración de backend dentro del contenedor efímero `sinfallas/base-python-uv:3.15`. Criterio de aceptación: **399/399 PASSED**.
 3. **Hito M3 (Pruebas de Carga y Concurrencia):** Ejecutar pruebas de estrés de telemetría y llamadas masivas a la REST API de MikroTik con el modo Free-Threading activo para certificar ausencia de fugas de memoria o condiciones de carrera (*race conditions*).
@@ -206,6 +220,7 @@ gantt
 ## 7. Conclusión
 
 La migración a **Python 3.15** con la imagen corporativa **`sinfallas/base-python-uv:3.15`** representará un salto cualitativo trascendental para RoSGrid:
+
 - **Mayor Densidad por Nodo:** Menor consumo de RAM y CPU, permitiendo administrar flotas de más de 1,000 routers por servidor con un único clúster de backend.
 - **Cero Fricción en el Código de Negocio:** La arquitectura modular y desacoplada de RoSGrid (FastAPI + SQLAlchemy 2.0 + Pydantic v2) está diseñada para asimilar los cambios de PEP 649 y PEP 703 sin requerir modificaciones estructurales en la lógica de routers ni en los contratos REST.
 - **Preparación Inmediata:** La hoja de ruta planteada garantiza una transición controlada, segura y alineada con los más estrictos estándares de ciberseguridad industrial.

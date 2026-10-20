@@ -9,7 +9,7 @@ Este documento está dirigido a oficiales de seguridad, equipos de cumplimiento 
 Toda acción realizada en RoSGrid —ya sea por un operador humano a través de la interfaz web, una llamada a la REST API o un agente de Inteligencia Artificial invocando herramientas semánticas vía MCP— genera un registro inmutable e imborrable en la tabla `audit_logs`.
 
 ```mermaid
-graph LR
+flowchart LR
     subgraph "Cadena Criptográfica WORM (audit_logs)"
         R0["Bloque Génesis<br>Hash: 0000...0000"] --> R1["Registro #1<br>Hash: e3b0...a1f4<br>Prev: 0000...0000"]
         R1 --> R2["Registro #2<br>Hash: 785d...b09c<br>Prev: e3b0...a1f4"]
@@ -18,12 +18,16 @@ graph LR
 ```
 
 ### 1.1 Trigger de Inmutabilidad en PostgreSQL 17
+
 La tabla `audit_logs` cuenta con un trigger a nivel de base de datos (`trg_immutable_audit_logs`) que intercepta cualquier intento de manipulación:
+
 - **`UPDATE`:** Bloqueado con excepción SQL; ningún dato de auditoría puede ser modificado una vez insertado.
 - **`DELETE`:** Bloqueado con excepción SQL; ningún registro puede ser eliminado, incluso por el usuario administrador de la base de datos de la aplicación.
 
 ### 1.2 Encadenamiento Criptográfico de Bloques SHA-256
+
 Cada fila contiene:
+
 - `prev_record_hash`: El hash SHA-256 del registro anterior perteneciente al mismo Tenant.
 - `record_sha256_hash`: El hash computado sobre la serialización canónica del registro actual concatenado con el hash previo:
 
@@ -52,10 +56,13 @@ flowchart TD
 Si un adversario con acceso directo a la base de datos alterase una sola coma o parámetro de un comando pasado, todos los hashes posteriores de la cadena quedan invalidados inmediatamente, delatando la manipulación durante la verificación.
 
 ### 1.3 Índice BRIN para Alto Volumen
+
 Para permitir la búsqueda rápida sobre millones de registros generados durante meses de operación sin saturar la memoria RAM con árboles B-Tree gigantescos, RoSGrid utiliza un **índice de rangos de bloques (BRIN)**:
+
 ```sql
 CREATE INDEX ix_audit_logs_created_at_brin ON audit_logs USING brin (created_at);
 ```
+
 Este índice ocupa menos del 1% del espacio en disco de un índice B-Tree tradicional y ofrece un rendimiento óptimo en consultas por ventanas temporales.
 
 ---
@@ -63,6 +70,7 @@ Este índice ocupa menos del 1% del espacio en disco de un índice B-Tree tradic
 ## 2. Registro de Invocaciones de Agentes IA (`MCP_AI_TOOL_CALL`)
 
 Cuando un agente de IA (como Hermes Agent o Claude) invoca una herramienta semántica a través de `POST /api/v1/mcp`, el sistema registra de forma obligatoria:
+
 - `event_category`: `"MCP_AI_TOOL_CALL"`
 - `event_action`: El nombre exacto de la herramienta invocada (ej. `rosgrid_get_router_health`, `rosgrid_compare_config_diff`, `rosgrid_propose_network_change`).
 - `actor_username`: Nombre de la cuenta de servicio (`SERVICE_ACCOUNT`).
@@ -74,9 +82,11 @@ Cuando un agente de IA (como Hermes Agent o Claude) invoca una herramienta semá
 ## 3. ADR (Architectural Decision Record): Exclusión Deliberada de Terminal CLI/SSH Interactiva Libre
 
 ### Contexto
+
 En herramientas de gestión tradicionales de MikroTik es común encontrar emuladores de terminal SSH embebidos en el navegador que otorgan acceso directo al prompt de RouterOS (`[admin@MikroTik] >`).
 
 ### Decisión
+
 **RoSGrid PROHÍBE Y EXCLUYE DELIBERADAMENTE la inclusión de cualquier consola de terminal CLI o SSH interactiva libre.** Toda interacción con los routers ocurre de forma estructurada a través de la REST API v7 normalizada.
 
 ### Justificación: Las 5 Razones Fundamentales de Seguridad
@@ -119,7 +129,7 @@ flowchart TD
 El siguiente diagrama sintetiza los nodos centrales y dependencias descubiertas en los grafos semánticos de `fastapi/graphify-out/` y `vue3/graphify-out/`:
 
 ```mermaid
-graph TB
+flowchart TB
     subgraph "Frontend Layer (Vue 3 + TypeScript)"
         RouterLayout[RouterWebFigLayout.vue]
         Tabs[RouterWorkspaceTabsBar.vue]

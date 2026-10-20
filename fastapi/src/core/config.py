@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 RoSGrid Contributors
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,13 +18,13 @@ class Settings(BaseSettings):
     # PostgreSQL
     POSTGRES_DB: str = "rosgrid"
     POSTGRES_USER: str = "rosgrid_user"
-    POSTGRES_PASSWORD: str = ""
-    ROSGRID_DATABASE_URL: str = ""
-    ROSGRID_SYNC_DATABASE_URL: str = ""
+    POSTGRES_PASSWORD: str = Field(default_factory=str)
+    ROSGRID_DATABASE_URL: str = Field(default_factory=str)
+    ROSGRID_SYNC_DATABASE_URL: str = Field(default_factory=str)
 
     # Redis
-    REDIS_PASSWORD: str = ""
-    ROSGRID_REDIS_URL: str = ""
+    REDIS_PASSWORD: str = Field(default_factory=str)
+    ROSGRID_REDIS_URL: str = Field(default_factory=str)
 
     @model_validator(mode="after")
     def _compute_default_urls(self) -> "Settings":
@@ -34,10 +34,18 @@ class Settings(BaseSettings):
 
     def _ensure_database_urls(self) -> None:
         if not self.ROSGRID_DATABASE_URL:
-            auth = f"{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@" if self.POSTGRES_PASSWORD else f"{self.POSTGRES_USER}@"
+            auth = (
+                f"{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
+                if self.POSTGRES_PASSWORD
+                else f"{self.POSTGRES_USER}@"
+            )
             self.ROSGRID_DATABASE_URL = f"postgresql+asyncpg://{auth}rosgrid_db:5432/{self.POSTGRES_DB}"
         if not self.ROSGRID_SYNC_DATABASE_URL:
-            auth = f"{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@" if self.POSTGRES_PASSWORD else f"{self.POSTGRES_USER}@"
+            auth = (
+                f"{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
+                if self.POSTGRES_PASSWORD
+                else f"{self.POSTGRES_USER}@"
+            )
             self.ROSGRID_SYNC_DATABASE_URL = f"postgresql://{auth}rosgrid_db:5432/{self.POSTGRES_DB}"
 
     def _ensure_redis_url(self) -> None:

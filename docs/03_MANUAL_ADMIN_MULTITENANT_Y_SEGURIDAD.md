@@ -237,6 +237,7 @@ graph TD
 ### 7.2 Operación desde la Consola Web
 
 El Superadmin accede a `TenantsManagementView.vue` y hace clic en el botón táctico **"⚙️ Módulos"** de la empresa correspondiente:
+
 1. Se despliega el modal reactivo *"Módulos & Capacidades"*.
 2. Permite conmutar en caliente los switches organizados por grupos temáticos.
 3. Al guardar, el backend persiste los cambios en PostgreSQL e invalida inmediatamente la clave KeyDB `rg:{tenant_id}:features`.
@@ -283,41 +284,50 @@ flowchart TD
 ```
 
 ### 8.1 Mitigación de Asignación Masiva (*Mass Assignment*)
+
 - Para prevenir que peticiones HTTP inyecten campos reservados (como `role`, `is_superuser`, `is_verified` o `tenant_id`) en formularios de login, registro o actualización de usuarios, todos los esquemas Pydantic v2 de entrada declaran `model_config = ConfigDict(extra="forbid")`.
 - El backend rechaza de forma estricta cualquier atributo no especificado en el modelo con HTTP `422 Unprocessable Entity`.
 
 ### 8.2 Protección Anti-CSWSH (*Cross-Site WebSocket Hijacking*)
+
 - Dado que los navegadores adjuntan cookies automáticamente en el apretón de manos WebSocket sin importar el origen de la página que hace la petición, RoSGrid implementa verificación de origen obligatoria (`_verify_ws_origin`) en `fastapi/src/api/v1/websockets.py`.
 - Si la cabecera HTTP `Origin` no coincide con los dominios permitidos en `settings.ALLOWED_ORIGINS` o falta en entorno productivo, el servidor rechaza y cierra la conexión inmediatamente con código **`4403` ("Forbidden Origin")** antes de ejecutar `ws.accept()`.
 
 ### 8.3 Sanitización de Respuestas de Error 422 en Producción
+
 - En entorno productivo (`ROSGRID_ENV=production`), los errores de validación de Pydantic se interceptan mediante un manejador global de `RequestValidationError`.
 - En lugar de exponer nombres de atributos internos, regexes y estructuras de datos, la API devuelve una respuesta uniforme y segura `{"detail": "Los datos proporcionados no cumplen con los requisitos de validación."}`, registrando el desglose completo en los logs de servidor.
 
 ### 8.4 Defensa Anti-SSRF en Webhooks Salientes
+
 - Los webhooks configurados por los tenants en `alert_dispatcher_worker.py` se validan mediante la función `is_safe_webhook_url()`.
 - Esta directiva realiza resolución DNS del destino y descarta cualquier dirección IP perteneciente a redes privadas (RFC 1918), loopback (`127.0.0.0/8`), enlaces locales (`169.254.0.0/16`, impidiendo extracción de credenciales de metadatos en nubes públicas) o rangos de multidifusión.
 
 ### 8.5 Límite Estricto de Carga de Archivos de Inventario (2 MB)
+
 - La importación masiva de routers mediante archivo CSV (`POST /api/v1/inventory/routers/import-csv`) valida el tamaño del flujo en el primer chunk y aborta con HTTP `413 Payload Too Large` si supera **2 MB**, previniendo ataques de denegación de servicio por agotamiento de memoria RAM en el contenedor backend.
 
 ### 8.6 Desacoplamiento de Middleware Anti-CSRF y Ámbito de Protección
+
 - Para evitar interrupciones o derivaciones (*bypass*) en el ciclo de vida de los middlewares de Starlette/FastAPI, el middleware `CSRFProtectionMiddleware` extrae y valida el JWT de sesión directamente desde las cookies del navegador (`__Host-rg_at` / `rg_at`).
 - Siguiendo las directrices de la guía OWASP CSRF Prevention, la validación de cabecera `X-CSRF-Token` se aplica estrictamente a peticiones basadas en cookies de navegador. Las peticiones autenticadas exclusivamente mediante `Authorization: Bearer <token>` (como clientes API puros, agentes IA o el endpoint MCP `/api/v1/mcp`) quedan exentas de CSRF, ya que carecen de credenciales ambientales en el navegador y no son susceptibles a ataques Cross-Site.
 
 ### 8.7 Sanitización Anti-XSS en Mapas Leaflet / OpenStreetMap (`escapeHtml`)
+
 - Dado que Leaflet inyecta contenido HTML directo en el DOM a través de `popupContent.innerHTML`, los componentes cartográficos (`OsmRouterMap.vue` y `OsmOnuMap.vue`) filtran todos los valores interpolados dinámicamente (`display_name`, `ros_identity`, `serial_number`, `physical_location`, etc.) utilizando la función de escape estricta `escapeHtml()` en `vue3/src/utils/security.ts`.
 - Esto neutraliza cualquier vector de inyección de código JavaScript o atributos maliciosos (ej. `<img src=x onerror=...>`, `<script>`) incrustados en nombres de routers, identidades de MikroTik o números de serie.
 
 ### 8.8 Validación Anti-SSRF en Direccionamiento de Routers MikroTik
+
 - En el alta y actualización de routers (`api_base_url`), así como en la importación masiva por CSV (`validate_single_csv_row`), se ejecuta la validación exhaustiva `validate_router_target_url`.
 - Esta rutina bloquea la introducción de esquemas no permitidos, direcciones de loopback (`127.0.0.0/8`, `::1`), metadatos de proveedores de nube o enlace local (`169.254.0.0/16`, `fe80::/10`) y nombres de host internos del clúster Docker (`localhost`, `rosgrid-db`, `rosgrid-redis`, `rosgrid-keydb`, `rosgrid-api`, `rosgrid-worker`), impidiendo que atacantes utilicen el conector REST v7 para escanear la infraestructura interna.
 
 ### 8.9 Tolerancia a Carreras Multi-Pestaña en Rotación de Refresh Tokens (*Leeway*)
+
 - Para eliminar falsos positivos de `REUSE_DETECTED` (que cerraban abruptamente la sesión cuando un usuario tenía múltiples pestañas abiertas o cuando Axios emitía refrescos paralelos), el backend implementa una ventana de gracia configurable mediante `ROSGRID_REFRESH_TOKEN_GRACE_PERIOD_SECONDS` (por defecto 5 segundos).
 - Durante esta ventana, las solicitudes concurrentes que presenten el token recientemente rotado reciben el nuevo token vigente sin destruir la sesión. Superado el intervalo de gracia, se activa la respuesta de contención forzosa revocando la sesión completa en KeyDB y PostgreSQL.
 
 ### 8.10 Aislamiento Multi-Tenant en Llaves de Idempotencia
+
 - El middleware de idempotencia (`IdempotencyMiddleware`) decodifica el token de sesión (`rg_at` o Bearer) y construye llaves canónicas en KeyDB con el esquema `rg:{tenant_id}:{user_id}:idemp:{idempotency_key}`.
 - Este aislamiento por empresa y usuario garantiza que la generación o repetición fortuita de un UUIDv7 entre dos inquilinos diferentes jamás provoque colisiones ni interferencias operativas.
-

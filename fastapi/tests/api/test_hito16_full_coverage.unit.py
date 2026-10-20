@@ -10,8 +10,12 @@ from datetime import UTC, datetime
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
 from fastapi import HTTPException, UploadFile
+from starlette.datastructures import URL
+from starlette.requests import Request
+from starlette.responses import Response
 
 from src.api.v1.backups import (
     _build_side_by_side_hunks,
@@ -20,6 +24,8 @@ from src.api.v1.backups import (
     download_backup_file,
     export_router_rsc,
 )
+from src.api.v1.bgp_looking_glass import _parse_communities, _parse_route_item
+from src.api.v1.diagnostics_360 import _parse_torch_flows, _parse_torch_rate
 from src.api.v1.field_ops import (
     certify_installation,
     detect_fiber_cuts_engine,
@@ -34,20 +40,38 @@ from src.api.v1.inventory import (
     import_csv_commit,
     list_network_roles,
 )
+from src.api.v1.rbac import (
+    UpdateRolePermissionsRequest,
+    _get_tenant_role_overrides,
+    update_role_permissions,
+)
+from src.api.v1.sdwan import provision_spoke_tunnel
+from src.api.v1.sessions import terminate_session
 from src.api.v1.subscribers import (
+    create_bandwidth_profile,
     generate_subscriber_mikrotik_queue_script,
+    get_tenant_id,
     update_subscriber_device,
 )
+from src.api.v1.switching import get_dhcp_snooping_state
 from src.api.v1.tenants import (
     create_tenant,
     get_tenant,
     invalidate_tenant_features_cache,
     update_tenant,
 )
+from src.api.v1.traffic_flow import _aggregate_connection_stats, _evaluate_anomaly_severity
 from src.api.v1.users import (
     list_users,
     reject_user,
 )
+from src.core.config import Settings
+from src.core.crypto import hash_password, verify_password
+from src.core.csrf import _extract_cookie_session
+from src.core.security_headers import SecurityHeadersMiddleware
+from src.mikrotik.client import MikrotikRestClient
+from src.mikrotik.normalizers import parse_routeros_duration
+from src.mikrotik.safemode import remove_deadmans_switch
 from src.models.core import SystemRoleEnum, Tenant, TenantStatusEnum, User, UserRouterPermission
 from src.models.inventory import (
     Router,
@@ -62,12 +86,24 @@ from src.models.ipam import (
     SubscriberDevice,
 )
 from src.models.operations import RouterBackup
-from src.schemas.field_ops import FieldCertifyOrderRequest, FieldVerifySubscriberRequest
+from src.schemas.enterprise import SdwanProvisionSpokeRequest
+from src.schemas.field_ops import (
+    FieldCertifyOrderRequest,
+    FieldVerifySubscriberRequest,
+)
 from src.schemas.inventory import (
     CustomNetworkRoleCreate,
+    UpdateRouterRequest,
+    validate_router_target_url,
 )
-from src.schemas.ipam import SubscriberDeviceUpdate
+from src.schemas.ipam import BandwidthProfileCreate, SubscriberDeviceUpdate
 from src.schemas.tenants import CreateTenantRequest, UpdateTenantRequest
+from src.schemas.users import (
+    AssignUserRoutersRequest,
+    CreateUserRequest,
+    RouterAssignmentItem,
+)
+from src.workers.runner import main as runner_main
 
 
 class MockDbScalars:
@@ -896,3 +932,252 @@ async def test_users_permissions_and_management_success_flow() -> None:
         toggle_res = await toggle_registration(ToggleRegistrationRequest(enabled=True), claims=claims)
         assert toggle_res["registration_enabled"] is True
         mock_redis.set.assert_awaited_once_with("rg:config:public_registration_enabled", "true")
+
+
+async def test_extended_coverage_helpers() -> None:
+    # 1. Settings default URLs logic
+    s1 = Settings(
+        POSTGRES_USER="test_u",
+        POSTGRES_PASSWORD="test_p",
+        POSTGRES_DB="test_db",
+        REDIS_PASSWORD="redis_p",
+        ROSGRID_DATABASE_URL="",
+        ROSGRID_SYNC_DATABASE_URL="",
+        ROSGRID_REDIS_URL="",
+    )
+    assert "test_u:test_p@" in s1.ROSGRID_DATABASE_URL
+    assert ":redis_p@" in s1.ROSGRID_REDIS_URL
+
+    s2 = Settings(
+        POSTGRES_USER="test_u2",
+        POSTGRES_PASSWORD="",
+        POSTGRES_DB="test_db",
+        REDIS_PASSWORD="",
+        ROSGRID_DATABASE_URL="",
+        ROSGRID_SYNC_DATABASE_URL="",
+        ROSGRID_REDIS_URL="",
+        ROSGRID_CORS_ORIGINS="http://localhost:3000,http://localhost:8080",
+    )
+    assert "test_u2@" in s2.ROSGRID_DATABASE_URL
+    assert "redis://rosgrid_redis:6379/0" == s2.ROSGRID_REDIS_URL
+    assert "http://localhost:3000" in s2.cors_origins_list
+
+    # 2. Inventory schemas & validator
+    assert validate_router_target_url(None) is None
+    assert validate_router_target_url("") == ""
+    assert validate_router_target_url("   ") == "   "
+    up_req = UpdateRouterRequest(api_base_url="https://203.0.113.1")
+    assert up_req.api_base_url == "https://203.0.113.1"
+
+    # 3. Users schemas validators
+    assert CreateUserRequest.normalize_cidr_list(None) == []
+    assert CreateUserRequest.normalize_cidr_list("10.0.0.0/24, 192.168.1.0/24") == [
+        "10.0.0.0/24",
+        "192.168.1.0/24",
+    ]
+    assert CreateUserRequest.normalize_cidr_list(["10.0.0.1/32"]) == ["10.0.0.1/32"]
+    assert CreateUserRequest.normalize_cidr_list(12345) == []
+
+    u_req = CreateUserRequest(
+        username="coverage_user",
+        email="cov@example.com",
+        password="ValidPassword123!",
+        role=SystemRoleEnum.NOC_MONITOR,
+        full_name="   ",
+    )
+    assert u_req.temporary_password == "ValidPassword123!"
+    assert u_req.full_name == "coverage_user"
+
+    u_req2 = CreateUserRequest(
+        username="coverage_user2",
+        email="cov2@example.com",
+        temporary_password="TempPassword123!",
+        role=SystemRoleEnum.NOC_MONITOR,
+        full_name="Full Name Two",
+    )
+    assert u_req2.temporary_password == "TempPassword123!"
+
+    with pytest.raises(ValueError, match="Se requiere una contraseña"):
+        CreateUserRequest(
+            username="bad_pass_user",
+            email="cov3@example.com",
+            role=SystemRoleEnum.NOC_MONITOR,
+        )
+
+    r_assign_item = RouterAssignmentItem(router_id=uuid.uuid4())
+    assign_req = AssignUserRoutersRequest(permissions=[r_assign_item])
+    assert assign_req.router_assignments == [r_assign_item]
+
+    # 4. CSRF extract cookie session exception branch
+    class DummyRequest:
+        cookies = {"__Host-rg_at": "invalid_jwt_token_payload"}
+        headers: dict[str, str] = {}
+        state = None
+
+    sid, tid = _extract_cookie_session(DummyRequest())  # type: ignore[arg-type]
+    assert sid is None and tid is None
+
+    # 5. BGP Looking Glass helpers
+    assert _parse_communities("65000:100, 65000:200") == ["65000:100", "65000:200"]
+    assert _parse_communities(12345) == ["12345"]
+    route_parsed = _parse_route_item({"scope": "invalid_int", "active": "yes"})
+    assert route_parsed.scope is None
+    assert route_parsed.active is True
+
+    # 6. Diagnostics 360 Torch helpers
+    assert _parse_torch_rate(50000) == 50.0
+    assert _parse_torch_rate(None) == 0.0
+    assert _parse_torch_rate("1500") == 1.5
+    assert _parse_torch_rate("10mbps") == 10000.0
+    assert _parse_torch_rate("100kbps") == 100.0
+    assert _parse_torch_rate("1000bps") == 1.0
+    assert _parse_torch_rate("bad_rate") == 0.0
+    assert _parse_torch_flows(None) == []
+    flows = _parse_torch_flows(
+        [
+            "not-a-dict",
+            {"protocol": "tcp", "port": "bad_port", "tx": 1000},
+        ]
+    )
+    assert len(flows) == 1
+    assert flows[0].port is None
+
+    # 7. SecurityHeadersMiddleware
+    sec_mw = SecurityHeadersMiddleware(app=MagicMock())
+    req_api = MagicMock(spec=Request)
+    req_api.url = URL("http://localhost:8000/api/v1/health")
+
+    async def _dummy_call_next(r: Request) -> Response:
+        return Response(content="ok")
+
+    sec_res = await sec_mw.dispatch(req_api, _dummy_call_next)
+    assert sec_res.headers["Server"] == "RoSGrid"
+    assert "no-store" in sec_res.headers["Cache-Control"]
+
+    # 8. Crypto helpers
+    assert verify_password("", "") is False
+    valid_hash = hash_password("CorrectPass123!")
+    assert verify_password("WrongPass123!", valid_hash) is False
+    assert verify_password("CorrectPass123!", valid_hash) is True
+    with pytest.raises(ValueError, match="no puede estar vacía"):
+        hash_password("")
+
+    # 9. Sessions terminate 404
+    with patch("src.api.v1.sessions.kill_session", AsyncMock(return_value=False)):
+        with pytest.raises(HTTPException) as exc_info:
+            await terminate_session(
+                session_id="nonexistent_sid",
+                claims={"tid": "t_1", "sub": "u_1"},
+                body=None,
+            )
+        assert exc_info.value.status_code == 404
+
+    # 10. Subscribers get_tenant_id 401
+    with pytest.raises(HTTPException) as sub_exc:
+        get_tenant_id({})
+    assert sub_exc.value.status_code == 401
+
+    # 11. Tenants invalidate cache redis error
+    with patch("src.api.v1.tenants.get_redis_client") as mock_rc:
+        mock_r = AsyncMock()
+        mock_r.delete.side_effect = RuntimeError("redis down")
+        mock_rc.return_value = mock_r
+        await invalidate_tenant_features_cache(uuid.uuid4())
+
+    # 12. MikroTik normalizers & client & safemode
+    assert parse_routeros_duration("42") == 42
+    mock_resp = httpx.Response(status_code=200, text="raw-response-text")
+    mt_client = MikrotikRestClient(host="10.0.0.1", username="admin", password="p")
+    assert mt_client._parse_response_body(mock_resp) == "raw-response-text"
+    mock_mt = AsyncMock()
+    mock_mt.get.side_effect = RuntimeError("network failed")
+    assert await remove_deadmans_switch(mock_mt, "test_job") is False
+
+    # 13. Workers runner KeyboardInterrupt
+    with (
+        patch("asyncio.run", side_effect=KeyboardInterrupt),
+        patch("src.workers.runner.main_workers_runner", AsyncMock()),
+    ):
+        with pytest.raises(SystemExit):
+            runner_main()
+
+    # 14. Traffic flow anomalies & stats
+    atype1, sev1 = _evaluate_anomaly_severity(10, 50, 50, ["udp"])
+    assert atype1 == "HIGH_PPS_BURST" and sev1 == "HIGH"
+    atype2, sev2 = _evaluate_anomaly_severity(10, 10, 50, ["udp"])
+    assert atype2 == "HIGH_CONNECTION_COUNT" and sev2 == "HIGH"
+    stats_map = _aggregate_connection_stats(
+        [
+            "not-a-dict",
+            {"src-address": ""},
+            {"src-address": "198.51.100.1:1234", "orig-packets": "bad-int"},
+        ]
+    )
+    assert "198.51.100.1" in stats_map
+
+    # 15. RBAC role overrides & exceptions
+    with patch("src.api.v1.rbac.get_redis_client") as mock_rc:
+        mock_r = AsyncMock()
+        mock_r.get.side_effect = RuntimeError("redis error")
+        mock_rc.return_value = mock_r
+        assert await _get_tenant_role_overrides("tid_1", "role_1") is None
+
+    mock_rbac_db = AsyncMock()
+    with pytest.raises(HTTPException) as rbac_exc1:
+        await update_role_permissions(
+            role_name="INVALID_ROLE_NAME",
+            payload=UpdateRolePermissionsRequest(permissions={}),
+            claims={"tid": str(uuid.uuid4()), "sub": "admin"},
+            db=mock_rbac_db,
+        )
+    assert rbac_exc1.value.status_code == 400
+
+    with pytest.raises(HTTPException) as rbac_exc2:
+        await update_role_permissions(
+            role_name=SystemRoleEnum.SUPERADMIN_GLOBAL.value,
+            payload=UpdateRolePermissionsRequest(permissions={}),
+            claims={"tid": str(uuid.uuid4()), "sub": "admin"},
+            db=mock_rbac_db,
+        )
+    assert rbac_exc2.value.status_code == 403
+
+    # 16. SDWAN & Switching & Subscribers duplicate 404/409
+    mock_res_none = MagicMock()
+    mock_res_none.scalar_one_or_none.return_value = None
+
+    mock_sd_db = AsyncMock()
+    mock_sd_db.execute.return_value = mock_res_none
+    with pytest.raises(HTTPException) as sd_exc:
+        await provision_spoke_tunnel(
+            payload=SdwanProvisionSpokeRequest(
+                hub_router_id=uuid.uuid4(),
+                spoke_router_id=uuid.uuid4(),
+                spoke_name="spoke-1",
+            ),
+            request=MagicMock(),
+            claims={"tid": str(uuid.uuid4())},
+            db=mock_sd_db,
+        )
+    assert sd_exc.value.status_code == 404
+
+    mock_sw_db = AsyncMock()
+    mock_sw_db.execute.return_value = mock_res_none
+    with pytest.raises(HTTPException) as sw_exc:
+        await get_dhcp_snooping_state(
+            router_id=uuid.uuid4(),
+            claims={"tid": str(uuid.uuid4())},
+            db=mock_sw_db,
+        )
+    assert sw_exc.value.status_code == 404
+
+    mock_res_found = MagicMock()
+    mock_res_found.scalar_one_or_none.return_value = MagicMock()
+    mock_sub_db = AsyncMock()
+    mock_sub_db.execute.return_value = mock_res_found
+    with pytest.raises(HTTPException) as bp_exc:
+        await create_bandwidth_profile(
+            payload=BandwidthProfileCreate(name="Gold", rate_down_kbps=100000, rate_up_kbps=50000),
+            claims={"tid": str(uuid.uuid4())},
+            db=mock_sub_db,
+        )
+    assert bp_exc.value.status_code == 409

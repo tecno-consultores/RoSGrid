@@ -71,7 +71,6 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
 | `422 Unprocessable` | Validación fallida de esquema Pydantic v2 (en producción `ROSGRID_ENV=production` se sanitiza a un mensaje genérico para evitar fuga de estructura interna). |
 | `429 Too Many Requests` | Límite de tasa excedido en KeyDB (ej. más de 30 req/min en el endpoint MCP). |
 
-
 ---
 
 ## 2. Catálogo de Endpoints REST (`/api/v1/*`)
@@ -376,7 +375,7 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
 - **Rate-Limiting:** Máximo 30 peticiones por minuto por cuenta en KeyDB.
 - **Métodos Soportados:** `initialize`, `ping`, `notifications/initialized`, `tools/list`, `tools/call`.
 
-#### Catálogo de las 16 Herramientas Semánticas MCP:
+#### Catálogo de las 16 Herramientas Semánticas MCP
 
 | # | Nombre de la Tool | Categoría | Descripción Técnica |
 | :--- | :--- | :--- | :--- |
@@ -406,6 +405,7 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
 Los canales WebSocket de RoSGrid requieren pasar la cookie `__Host-rg_at` durante el apretón de manos inicial (`Upgrade: websocket`) y operan frames codificados en JSON ultrarrápido con **`orjson`**.
 
 ### 3.0 Seguridad Pre-Handshake y Mitigación Anti-CSWSH
+
 - **Validación de Origen (`Origin`):** Para neutralizar ataques de secuestro de WebSocket de sitio cruzado (*Cross-Site WebSocket Hijacking*), el servidor valida la cabecera `Origin` contra `ALLOWED_ORIGINS` antes de aceptar la conexión. Si no coincide o está ausente en modo producción, se cierra de inmediato con código de aplicación **`4403 Forbidden Origin`**.
 - **Cabeceras de Proxy Inverso Nginx:** El bloque `/ws/` propaga `X-Forwarded-For` y `X-Forwarded-Proto` hacia FastAPI para auditoría y trazabilidad IP.
 - **Cierre por Kill-Switch:** Si la sesión es terminada por un administrador, el canal se cierra automáticamente con código **`4401 Session Revoked`**.
@@ -500,9 +500,11 @@ Connection: Upgrade
 Permite la administración global de organizaciones, control de cuotas de hardware MikroTik, suspensión/activación y gobernanza modular de capacidades por organización.
 
 #### `GET /api/v1/tenants`
+
 - **Roles:** Exclusivo `SUPERADMIN_GLOBAL`.
 - **Propósito:** Listar todas las organizaciones registradas con sus cuotas de routers, usuarios activos y estado operativo.
 - **Salida (200 OK):**
+
   ```json
   [
     {
@@ -522,9 +524,11 @@ Permite la administración global de organizaciones, control de cuotas de hardwa
   ```
 
 #### `POST /api/v1/tenants`
+
 - **Roles:** Exclusivo `SUPERADMIN_GLOBAL`.
 - **Propósito:** Registrar una nueva empresa en el sistema, asignándole sus cuotas y aprovisionando automáticamente a su primer `TENANT_ADMIN`.
 - **Payload de Entrada:**
+
   ```json
   {
     "slug": "isp-andino",
@@ -540,16 +544,20 @@ Permite la administración global de organizaciones, control de cuotas de hardwa
     "default_safemode_seconds": 60
   }
   ```
+
 - **Salida (201 Created):** Retorna el objeto `TenantResponse` creado.
 
 #### `PATCH /api/v1/tenants/{tenant_id}`
+
 - **Roles:** Exclusivo `SUPERADMIN_GLOBAL`.
 - **Propósito:** Modificar nombre, RIF, cuotas o suspender/reactivar un Tenant (`status: "ACTIVE" | "SUSPENDED" | "MAINTENANCE"`).
 - **Salida (200 OK):** Retorna el objeto `TenantResponse` actualizado.
 
 #### `GET /api/v1/tenants/{id}/features`
+
 - **Roles:** `SUPERADMIN_GLOBAL` o miembros del propio tenant (`TENANT_ADMIN`, etc.).
 - **Salida (200 OK):**
+
   ```json
   {
     "isp_module_enabled": true,
@@ -572,6 +580,7 @@ Permite la administración global de organizaciones, control de cuotas de hardwa
   ```
 
 #### `PATCH /api/v1/tenants/{id}/features`
+
 - **Roles:** Exclusivo `SUPERADMIN_GLOBAL`.
 - **Cabecera Requerida:** `Idempotency-Key: {uuid}`.
 - **Entrada:** Cualquier subconjunto de los 16 atributos del esquema anterior.
@@ -855,14 +864,17 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
 #### 4.5.1 Config Drift & Golden Baselines (`/api/v1/compliance`)
 
 ##### `GET /api/v1/compliance/golden-templates`
+
 - **Propósito:** Listar las plantillas maestras (*Golden Templates*) de configuración homologada del Tenant.
 - **Rol Mínimo:** `OPERATOR`.
 - **Respuesta (200 OK):** Array de `GoldenConfigTemplate` (`id`, `name`, `network_role`, `baseline_rsc_content`, `enforce_strict_firewall`, `enforce_ntp_dns`, etc.).
 
 ##### `POST /api/v1/compliance/golden-templates`
+
 - **Propósito:** Crear una nueva plantilla maestra de configuración para un rol de red.
 - **Rol Mínimo:** `TENANT_ADMIN`.
 - **Payload Entrada:**
+
   ```json
   {
     "name": "Baseline-CORE-Strict",
@@ -874,9 +886,11 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
   ```
 
 ##### `GET /api/v1/compliance/config-drift/{router_id}`
+
 - **Propósito:** Comparar la configuración exportada en vivo (`/export verbose`) del router contra su plantilla maestra homologada.
 - **Rol Mínimo:** `OPERATOR`.
 - **Respuesta (200 OK):**
+
   ```json
   {
     "router_id": "7b8d4f10-1234-4567-89ab-cdef01234567",
@@ -893,10 +907,12 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
   ```
 
 ##### `POST /api/v1/compliance/config-drift/revert`
+
 - **Propósito:** Revertir la configuración del router a la plantilla homologada en 1 clic (*Auto-Revert*).
 - **Protección:** Safe Mode (60s) forzoso y registro forense inmutable WORM HMAC-SHA256.
 - **Rol Mínimo:** `TENANT_ADMIN` (sujeto a interceptor Maker-Checker en producción).
 - **Payload Entrada:**
+
   ```json
   {
     "router_id": "7b8d4f10-1234-4567-89ab-cdef01234567",
@@ -908,9 +924,11 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
 #### 4.5.2 Auditoría & Auto-Hardening CIS Benchmark (`/api/v1/compliance`)
 
 ##### `GET /api/v1/compliance/cis-audit/{router_id}`
+
 - **Propósito:** Auditar las 10 directivas críticas de seguridad para MikroTik RouterOS v7.
 - **Rol Mínimo:** `OPERATOR`.
 - **Respuesta (200 OK):**
+
   ```json
   {
     "router_id": "7b8d4f10-1234-4567-89ab-cdef01234567",
@@ -935,15 +953,18 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
   ```
 
 ##### `POST /api/v1/compliance/cis-audit/{router_id}/auto-harden`
+
 - **Propósito:** Auto-endurecimiento en 1 clic aplicando las directivas CIS fallidas bajo Safe Mode (60s).
 - **Rol Mínimo:** `TENANT_ADMIN`.
 
 #### 4.5.3 Orquestación SD-WAN WireGuard Hub & Spoke (`/api/v1/sdwan`)
 
 ##### `POST /api/v1/sdwan/spokes`
+
 - **Propósito:** Aprovisionamiento dinámico de un nuevo spoke SD-WAN WireGuard con cálculo de subred `/31` o `/30`.
 - **Rol Mínimo:** `TENANT_ADMIN`.
 - **Payload Entrada:**
+
   ```json
   {
     "hub_router_id": "hub-uuid",
@@ -955,27 +976,33 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
   ```
 
 ##### `GET /api/v1/sdwan/topology/{tenant_id}`
+
 - **Propósito:** Obtener el grafo de topología SD-WAN del tenant con estado operativo de túneles y spokes.
 - **Rol Mínimo:** `OPERATOR`.
 
 ##### `POST /api/v1/sdwan/multi-wan/failover`
+
 - **Propósito:** Desplegar política de conmutación Multi-WAN recursiva mediante scripts `netwatch` en RouterOS v7.
 - **Rol Mínimo:** `TENANT_ADMIN`.
 
 #### 4.5.4 Seguridad L2 & Detección de Rogue DHCP (`/api/v1/switching`)
 
 ##### `GET /api/v1/switching/dhcp-snooping/{router_id}`
+
 - **Propósito:** Inspeccionar estado de DHCP Snooping en bridges y lista de puertos confiables/no-confiables.
 - **Rol Mínimo:** `SUPPORT_L2`.
 
 ##### `GET /api/v1/switching/rogue-dhcp/alerts/{router_id}`
+
 - **Propósito:** Listar alertas de servidores DHCP no autorizados detectados en bridges del router.
 - **Rol Mínimo:** `SUPPORT_L2`.
 
 ##### `POST /api/v1/switching/rogue-dhcp/isolate-port`
+
 - **Propósito:** Aislamiento inmediato en 1 clic del puerto del intruso bajo Safe Mode (60s).
 - **Rol Mínimo:** `SUPPORT_L2`.
 - **Payload Entrada:**
+
   ```json
   {
     "router_id": "7b8d4f10-1234-4567-89ab-cdef01234567",
@@ -987,28 +1014,33 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
 #### 4.5.5 Monitor de Cumplimiento de SLA para Enlaces Dedicados (`/api/v1/sla`)
 
 ##### `POST /api/v1/sla/probes/run`
+
 - **Propósito:** Ejecutar ciclo inmediato de sondeo de latencia mínima/promedio/máxima/p95/p99 y jitter hacia el carrier.
 - **Rol Mínimo:** `SUPPORT_L2`.
 
 ##### `GET /api/v1/sla/metrics/{router_id}`
+
 - **Propósito:** Listar mediciones históricas de SLA y estado de cumplimiento contractual (`COMPLIANT` / `BREACH`).
 - **Rol Mínimo:** `SUPPORT_L2`.
 
 ##### `GET /api/v1/sla/reports/export`
+
 - **Propósito:** Generar informe oficial de cumplimiento de SLA para auditoría y reclamo de penalizaciones por caída/degradación.
 - **Rol Mínimo:** `OPERATOR`.
 
 #### 4.5.6 Wi-Fi Corporativo CAPsMAN / WiFiWave2 (`/api/v1/wifi`)
 
 ##### `GET /api/v1/wifi/capsman/{router_id}/overview`
+
 - **Propósito:** Consultar el estado operativo del controlador central CAPsMAN, radios y APs activos.
 - **Rol Mínimo:** `OPERATOR`.
 
 ##### `GET /api/v1/wifi/capsman/{router_id}/ssids` y `POST /api/v1/wifi/capsman/{router_id}/ssids`
+
 - **Propósito:** Gestionar perfiles de SSID centralizados (WPA3-Enterprise 802.1X, Invitados, IoT).
 - **Rol Mínimo:** `TENANT_ADMIN`.
 
 ##### `GET /api/v1/wifi/clients/{router_id}`
+
 - **Propósito:** Telemetría en tiempo real de clientes Wi-Fi conectados con niveles de señal RSSI (dBm), SNR (dB) y soporte de roaming rápido 802.11r/k/v.
 - **Rol Mínimo:** `OPERATOR`.
-

@@ -9,16 +9,17 @@ Cualquier *Pull Request (PR)* debe superar todas las barreras automatizadas de s
 ## 1. Regla Cero: Ejecución 100% en Contenedores Docker
 
 Para garantizar reproducibilidad absoluta y proteger el sistema operativo anfitrión:
+
 - **Está prohibido** exigir instalaciones globales en el host (`pip install`, `npm install -g`, etc.) para correr linters o pruebas.
 - Todas las validaciones del Backend (`./fastapi/`) y del Frontend (`./vue3/`) se ejecutan dentro de los contenedores efímeros declarados en `fastapi/docker-compose.qa.yml` y `vue3/docker-compose.qa.yml` mediante sus respectivos `Makefile`.
 
-~~~bash
+```bash
 # Activar los hooks locales de Lefthook (Pre-Commit, Commit-Msg y Pre-Push)
 ./instalar-hooks.sh
 
 # Auditar Dockerfiles, docker-compose y vulnerabilidades con Trivy
 ./auditar-infra.sh
-~~~
+```
 
 ---
 
@@ -29,9 +30,11 @@ Antes de proponer una nueva funcionalidad, verifica que cumpla estas 6 reglas de
 1. **Prohibición de Terminales Interactivas Libres (SSH / Telnet / CLI sin filtro):** No se aceptarán PRs que abran sesiones interactivas crudas hacia los equipos MikroTik que permitan evadir el modelo *Split-Credential*, el flujo *Maker-Checker*, el *Safe Mode* o la bitácora inmutable WORM. Toda operación nueva sobre RouterOS v7 debe pasar por Capa 1 o por el Motor Universal de Capa 2 (`/webfig/layer2/*`).
 2. **Aislamiento Multi-Tenant (`RLS`):** Cualquier tabla nueva en PostgreSQL 17 que almacene datos de un Tenant debe incluir `tenant_id` e implementar `ENABLE` y `FORCE ROW LEVEL SECURITY` en su migración de Alembic.
 3. **Encabezado SPDX Obligatorio:** Todo archivo de código fuente (`.py`, `.ts`, `.vue`, `.sh`, `Dockerfile`) debe iniciar con el identificador de licencia:
-   ~~~text
+
+   ```text
    SPDX-License-Identifier: GPL-3.0-only
-   ~~~
+   ```
+
 4. **Esquemas Estrictos y Tipado Total:**
    - **Backend (`fastapi/`):** Todos los modelos de entrada en Pydantic v2 deben declarar `model_config = ConfigDict(extra="forbid")`, usar `ORJSONResponse` y pasar `mypy --strict`.
    - **Frontend (`vue3/`):** Tipado estricto en TypeScript (`vue-tsc --noEmit`). Queda prohibido el uso de `any`.
@@ -64,11 +67,12 @@ Antes de proponer una nueva funcionalidad, verifica que cumpla estas 6 reglas de
 
 Todos los commits son validados automáticamente por `commitlint.config.js`. Utiliza el formato:
 
-~~~text
+```text
 <tipo>(<alcance>): <descripción en minúsculas sin punto final>
-~~~
+```
 
 **Tipos permitidos:**
+
 - `feat`: Nueva característica en Backend o Frontend.
 - `fix`: Corrección de un error.
 - `security`: Mejora o parche de seguridad criptográfica, RBAC o RLS.
@@ -79,9 +83,10 @@ Todos los commits son validados automáticamente por `commitlint.config.js`. Uti
 - `chore` / `ci`: Ajustes en `Makefile`, Docker o configuración de QA.
 
 **Ejemplo válido:**
-~~~text
+
+```text
 feat(webfig-l1): agregar diagnostico optico sfp ddm con umbrales dbm
-~~~
+```
 
 ---
 
@@ -89,16 +94,17 @@ feat(webfig-l1): agregar diagnostico optico sfp ddm con umbrales dbm
 
 Nunca subas al repositorio directorios autogenerados como `mutants/`, `htmlcov/`, `.coverage`, `dist/`, `node_modules/` ni `graphify-out/`. Antes de enviar tu PR, ejecuta los scripts de limpieza:
 
-~~~bash
+```bash
 ./fastapi/limpieza.sh
 ./vue3/limpieza.sh
-~~~
+```
 
 ---
 
 ## 6. Documentación y Manuales de Referencia (`docs/`)
 
 Antes de enviar un PR, consulta los manuales oficiales para asegurar coherencia arquitectónica:
+
 - [docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md](./docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md) — Despliegue, `.env` y perfiles en memoria (KeyDB / DragonflyDB).
 - [docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md](./docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md) — Configuración RouterOS v7, TOFU y Safe Mode.
 - [docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md](./docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md) — RLS, 11 roles RBAC, Bóveda 2FA y Kill-Switch.
@@ -106,4 +112,3 @@ Antes de enviar un PR, consulta los manuales oficiales para asegurar coherencia 
 - [docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md](./docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md) — Bitácora WORM, ADR y grafos de arquitectura.
 - [docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md](./docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md) — Catálogo exhaustivo de endpoints REST y WebSockets.
 - [docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md](./docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md) — Protocolo MCP y agentes de IA autónomos.
-
