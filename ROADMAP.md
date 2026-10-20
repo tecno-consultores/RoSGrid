@@ -334,6 +334,6 @@
 
 > **Archivo Guía:** `specs/01_DOCKER_INFRASTRUCTURE_AND_IMMUTABLE_IMAGES.md`
 
-- [ ] **22.1** Auditar los `Dockerfile`, `docker-compose*.yml` e infraestructura con `./auditar-infra.sh` y escaneo Trivy de imágenes (`CRITICAL,HIGH = 0`).
+- [x] **22.1** Auditar los `Dockerfile`, `docker-compose*.yml` e infraestructura con `./auditar-infra.sh` y escaneo Trivy de imágenes (`CRITICAL,HIGH = 0`).
 - [ ] **22.2** Actualizar `CHANGELOG.md` consolidando los cambios de `[Unreleased]` dentro del lanzamiento oficial `[1.0.0]` con las métricas certificadas en `TESTING.md`.
 - [ ] **22.3** Ejecutar `./build.sh` (como usuario no-root) con `docker buildx` (`container-builder` + `tonistiigi/binfmt`) para construir y publicar `sinfallas/rosgrid-backend:latest` (`:1.0.0`) y `sinfallas/rosgrid-frontend:latest` (`:1.0.0`) en Docker Hub y limpiar cachés con `prune -af`.

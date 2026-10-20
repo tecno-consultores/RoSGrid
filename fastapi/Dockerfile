@@ -32,11 +32,11 @@ COPY --chown=rosgrid:rosgrid src ./src
 RUN chmod +x /app/scripts/*.sh /app/scripts/*.py && \
     uv sync --frozen --no-dev --compile-bytecode
 
-USER rosgrid
+USER 10001:10001
 
 EXPOSE 8000
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -fsS http://127.0.0.1:8000/health || exit 1
+    CMD ["curl", "-fsS", "http://127.0.0.1:8000/health"]
 
 ENTRYPOINT ["/usr/bin/env", "bash", "/app/scripts/entrypoint.sh"]

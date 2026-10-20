@@ -30,11 +30,11 @@ RUN chown -R nginx:nginx /usr/share/nginx/html /var/cache/nginx /var/log/nginx /
     touch /var/run/nginx.pid && \
     chown -R nginx:nginx /var/run/nginx.pid
 
-USER nginx
+USER 101:101
 
 EXPOSE 8080
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=5s --retries=3 \
-    CMD wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1
+    CMD ["wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
 
 CMD ["nginx", "-g", "daemon off;"]
