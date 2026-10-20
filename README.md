@@ -56,9 +56,9 @@ graph TB
 
     API --> KeyDB
     API --> PG
-    API -->|HTTPS REST :443 TLS Keep-Alive (Pinning TOFU)| MT1
-    API -->|HTTPS REST :443 TLS Keep-Alive (Pinning TOFU)| MT2
-    API -->|HTTPS REST :443 TLS Keep-Alive (Pinning TOFU)| MT3
+    API -->|HTTPS REST :443 TLS Keep-Alive - Pinning TOFU| MT1
+    API -->|HTTPS REST :443 TLS Keep-Alive - Pinning TOFU| MT2
+    API -->|HTTPS REST :443 TLS Keep-Alive - Pinning TOFU| MT3
 ```
 
 ---
