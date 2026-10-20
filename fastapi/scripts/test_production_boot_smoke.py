@@ -16,7 +16,12 @@ import sys
 from pathlib import Path
 
 # Asegurar acceso al entorno virtual /app/.venv si existe
-venv_site = Path("/app/.venv/lib/python3.13/site-packages")
+py_ver = f"python{sys.version_info.major}.{sys.version_info.minor}"
+venv_site = Path(f"/app/.venv/lib/{py_ver}/site-packages")
+if not venv_site.exists():
+    candidates = sorted(Path("/app/.venv/lib").glob("python*/site-packages"))
+    if candidates:
+        venv_site = candidates[-1]
 if venv_site.exists() and str(venv_site) not in sys.path:
     sys.path.insert(0, str(venv_site))
 
