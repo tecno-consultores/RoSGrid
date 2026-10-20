@@ -11,6 +11,8 @@ from src.models.core import SystemRoleEnum
 
 
 class CreateUserRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     username: str = Field(..., min_length=3, max_length=64)
     email: EmailStr
     full_name: str = Field(default="", max_length=150)
@@ -45,6 +47,8 @@ class CreateUserRequest(BaseModel):
 
 
 class UpdateUserRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     full_name: str | None = Field(None, min_length=3, max_length=150)
     role: SystemRoleEnum | None = None
     is_active: bool | None = None
@@ -54,6 +58,8 @@ class UpdateUserRequest(BaseModel):
 
 
 class RouterAssignmentItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     router_id: uuid.UUID
     can_read: bool = True
     can_write_layer1: bool = False
@@ -65,6 +71,8 @@ class RouterAssignmentItem(BaseModel):
 
 
 class AssignUserRoutersRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     has_all_routers_access: bool = False
     router_assignments: list[RouterAssignmentItem] = Field(default_factory=list)
     permissions: list[RouterAssignmentItem] | None = None

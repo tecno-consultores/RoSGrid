@@ -10,6 +10,8 @@ from src.models.core import SystemRoleEnum
 
 
 class LoginStep1Request(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     tenant_slug: str = Field(..., min_length=2, max_length=64)
     email: str | None = None
     username_or_email: str | None = None
@@ -35,6 +37,8 @@ class LoginStep1Response(BaseModel):
 
 
 class Verify2FARequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     challenge_id: str
     totp_code: str = Field(..., min_length=6, max_length=10)
 
@@ -70,6 +74,8 @@ class BootstrapStatusResponse(BaseModel):
 
 
 class BootstrapInitRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     tenant_name: str = Field(..., min_length=2, max_length=128)
     tenant_slug: str = Field(..., min_length=2, max_length=64, pattern=r"^[a-z0-9-]+$")
     admin_username: str = Field(..., min_length=3, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$")
@@ -92,6 +98,8 @@ class BootstrapInitResponse(BaseModel):
 
 
 class RegisterUserRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     tenant_slug: str = Field(..., min_length=2, max_length=64, pattern=r"^[a-z0-9-]+$")
     username: str = Field(..., min_length=3, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$")
     email: EmailStr

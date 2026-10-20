@@ -763,3 +763,44 @@ async def test_verify_2fa_failure_writes_audit_log(
         assert any(e.event_action == "2FA_VERIFICATION_FAILED" for e in audit_events)
     finally:
         app.dependency_overrides.pop(get_db_session, None)
+
+
+@pytest.mark.asyncio
+async def test_register_and_login_reject_mass_assignment(
+    async_client: AsyncClient, sample_tenant: Tenant, sample_user: User
+) -> None:
+    session = MockAsyncSession(tenant=sample_tenant, user=sample_user)
+    app.dependency_overrides[get_db_session] = lambda: session
+    try:
+        # Intento de inyectar role y activar cuenta en /register
+        res_reg = await async_client.post(
+            "/api/v1/auth/register",
+            json={
+                "tenant_slug": sample_tenant.slug,
+                "username": "attacker",
+                "email": "attacker@example.com",
+                "full_name": "Attacker Account",
+                "password": "Password123!",
+                "role": "SUPERADMIN_GLOBAL",
+                "is_active": True,
+            },
+            headers={"Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res_reg.status_code == 422
+        assert "extra_forbidden" in str(res_reg.json())
+
+        # Intento de inyectar parámetros no autorizados en /login
+        res_login = await async_client.post(
+            "/api/v1/auth/login",
+            json={
+                "tenant_slug": sample_tenant.slug,
+                "email": sample_user.email,
+                "password": "SecretPassword123!",
+                "injected_param": "malicious_payload",
+            },
+        )
+        assert res_login.status_code == 422
+        assert "extra_forbidden" in str(res_login.json())
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)
+

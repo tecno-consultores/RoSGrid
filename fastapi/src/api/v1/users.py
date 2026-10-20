@@ -6,7 +6,7 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,14 +26,20 @@ router = APIRouter(prefix="/users", tags=["Users"])
 
 
 class Reset2FARequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     admin_totp_code: str
 
 
 class ToggleRegistrationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     enabled: bool
 
 
 class ApproveUserRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     role: SystemRoleEnum
     has_all_routers_access: bool = False
     allowed_cidr_list: list[str] = []
@@ -83,6 +89,12 @@ async def create_user(
     tenant_id = uuid.UUID(claims["tid"])
     is_sa = claims["rol"] == SystemRoleEnum.SUPERADMIN_GLOBAL.value
     await set_tenant_context(db, tenant_id, is_superadmin=is_sa)
+
+    if not is_sa and body.role == SystemRoleEnum.SUPERADMIN_GLOBAL:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Un Administrador de Organización no puede asignar el rol SUPERADMIN_GLOBAL.",
+        )
 
     # Comprobar unicidad
     stmt_check = select(User).where(
@@ -281,6 +293,12 @@ async def approve_user(
     tenant_id = uuid.UUID(claims["tid"])
     is_sa = claims["rol"] == SystemRoleEnum.SUPERADMIN_GLOBAL.value
     await set_tenant_context(db, tenant_id, is_superadmin=is_sa)
+
+    if not is_sa and body.role == SystemRoleEnum.SUPERADMIN_GLOBAL:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Un Administrador de Organización no puede asignar el rol SUPERADMIN_GLOBAL.",
+        )
 
     stmt = select(User).where(User.id == user_id, User.tenant_id == tenant_id)
     res = await db.execute(stmt)

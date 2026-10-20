@@ -181,7 +181,16 @@
   function openEditTemplateModal() {
     const tpl = templates.value.find((t) => t.id === selectedTemplateId.value);
     if (tpl) {
-      templateToEdit.value = JSON.parse(JSON.stringify(tpl)) as TemplateItem;
+      const cloned = structuredClone(tpl);
+      templateToEdit.value = {
+        id: cloned.id,
+        name: cloned.name,
+        category: cloned.category,
+        description: cloned.description,
+        variables_schema: cloned.variables_schema || [],
+        rest_steps_template: cloned.rest_steps_template || [],
+        requires_safemode: cloned.requires_safemode ?? true,
+      };
       isTemplateModalOpen.value = true;
     }
   }
@@ -189,10 +198,15 @@
   function cloneSelectedTemplate() {
     const tpl = templates.value.find((t) => t.id === selectedTemplateId.value);
     if (tpl) {
-      const cloned = JSON.parse(JSON.stringify(tpl)) as TemplateItem;
-      delete cloned.id;
-      cloned.name = `${cloned.name}_COPIA`;
-      templateToEdit.value = cloned;
+      const cloned = structuredClone(tpl);
+      templateToEdit.value = {
+        name: `${cloned.name}_COPIA`,
+        category: cloned.category,
+        description: cloned.description,
+        variables_schema: cloned.variables_schema || [],
+        rest_steps_template: cloned.rest_steps_template || [],
+        requires_safemode: cloned.requires_safemode ?? true,
+      };
       isTemplateModalOpen.value = true;
     }
   }
@@ -430,7 +444,7 @@
         <button
           type="button"
           class="btn-manage-tpl"
-          aria-label="Crear nueva plantilla Golden Config"
+          aria-label="+ Nueva Plantilla"
           @click="openCreateTemplateModal"
         >
           ⚡ + Nueva Plantilla
@@ -842,7 +856,7 @@
   }
 
   .tab-btn--active {
-    background: #0284c7;
+    background: #0369a1;
     color: #ffffff;
     border-color: #38bdf8;
   }
@@ -881,7 +895,7 @@
   }
 
   .step-item--active .step-num {
-    background: #0284c7;
+    background: #0369a1;
     color: #ffffff;
   }
 
@@ -1014,24 +1028,27 @@
   }
 
   .badge--safe {
-    background: rgba(56, 189, 248, 0.15);
+    background: #082f49;
     color: #38bdf8;
-    border: 1px solid rgba(56, 189, 248, 0.3);
+    border: 1px solid rgba(56, 189, 248, 0.4);
   }
 
   .badge--success {
-    background: rgba(34, 197, 94, 0.2);
+    background: #052e16;
     color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.4);
   }
 
   .badge--warning {
-    background: rgba(234, 179, 8, 0.2);
+    background: #422006;
     color: #facc15;
+    border: 1px solid rgba(234, 179, 8, 0.4);
   }
 
   .badge--info {
-    background: rgba(2, 132, 199, 0.2);
+    background: #082f49;
     color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.4);
   }
 
   /* Templates Grid */
@@ -1172,9 +1189,9 @@
   }
 
   .btn--primary {
-    background-color: #0284c7;
+    background-color: #0369a1;
     color: #ffffff;
-    border-color: #0369a1;
+    border-color: #38bdf8;
   }
 
   .btn--primary:hover:not(:disabled) {
@@ -1198,8 +1215,8 @@
   }
 
   .alert--success {
-    background-color: rgba(34, 197, 94, 0.15);
-    border: 1px solid rgba(34, 197, 94, 0.4);
+    background-color: #052e16;
+    border: 1px solid #16a34a;
     color: #4ade80;
   }
 
@@ -1211,8 +1228,8 @@
   }
 
   .btn-manage-tpl {
-    background: rgba(34, 211, 238, 0.15);
-    border: 1px solid rgba(34, 211, 238, 0.4);
+    background: #083344;
+    border: 1px solid #06b6d4;
     color: #22d3ee;
     padding: 0.5rem 1rem;
     border-radius: 6px;
@@ -1224,9 +1241,9 @@
   }
 
   .btn-manage-tpl:hover {
-    background: rgba(34, 211, 238, 0.25);
+    background: #0e7490;
     border-color: #22d3ee;
-    color: #fff;
+    color: #ffffff;
     transform: translateY(-1px);
   }
 
@@ -1248,8 +1265,8 @@
   }
 
   .btn-primary-sm {
-    background: #0284c7;
-    color: #fff;
+    background: #0369a1;
+    color: #ffffff;
     border: none;
     padding: 0.35rem 0.75rem;
     border-radius: 4px;
@@ -1282,9 +1299,9 @@
   }
 
   .btn-danger-sm {
-    background: rgba(239, 68, 68, 0.15);
-    color: #f87171;
-    border: 1px solid rgba(239, 68, 68, 0.4);
+    background: #450a0a;
+    color: #fca5a5;
+    border: 1px solid #dc2626;
     padding: 0.35rem 0.75rem;
     border-radius: 4px;
     font-size: 0.8rem;
@@ -1294,8 +1311,8 @@
   }
 
   .btn-danger-sm:hover {
-    background: rgba(239, 68, 68, 0.25);
+    background: #991b1b;
     border-color: #ef4444;
-    color: #fff;
+    color: #ffffff;
   }
 </style>

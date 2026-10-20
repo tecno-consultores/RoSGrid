@@ -556,3 +556,89 @@ async def test_user_registration_toggle_approve_reject_and_permissions(
         assert res_reject.status_code == 204
     finally:
         app.dependency_overrides.pop(get_db_session, None)
+
+
+@pytest.mark.asyncio
+async def test_tenant_admin_cannot_escalate_to_superadmin(
+    async_client: AsyncClient, fake_redis: FakeAsyncRedis
+) -> None:
+    tid = uuid.uuid4()
+    admin_id = uuid.uuid4()
+    session_id = "sess-ta-001"
+    await fake_redis.hset(
+        f"rg:{tid}:sess:{session_id}",
+        mapping={
+            "session_id": session_id,
+            "user_id": str(admin_id),
+            "username": "tenant_admin",
+            "role": SystemRoleEnum.TENANT_ADMIN.value,
+        },
+    )
+    # Generar token con rol TENANT_ADMIN (no superadmin)
+    token = create_jwt_access_token(
+        str(admin_id),
+        str(tid),
+        "acme",
+        session_id,
+        SystemRoleEnum.TENANT_ADMIN.value,
+        True,
+    )
+    headers = {"Authorization": f"Bearer {token}"}
+
+    target_user = User()
+    target_user.id = uuid.uuid4()
+    target_user.tenant_id = tid
+    target_user.username = "target_worker"
+    target_user.email = "target@acme.com"
+    target_user.full_name = "Target Worker"
+    target_user.is_active = False
+    target_user.is_locked = False
+    target_user.failed_login_attempts = 0
+    target_user.totp_enabled = False
+    target_user.created_at = datetime.now(UTC)
+    target_user.updated_at = datetime.now(UTC)
+
+    db = MockDbSession(users=[target_user])
+    app.dependency_overrides[get_db_session] = lambda: db
+    try:
+        # Intento de aprobar con SUPERADMIN_GLOBAL
+        res_approve = await async_client.put(
+            f"/api/v1/users/{target_user.id}/approve",
+            json={
+                "role": SystemRoleEnum.SUPERADMIN_GLOBAL.value,
+                "has_all_routers_access": True,
+                "allowed_cidr_list": [],
+            },
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res_approve.status_code == 403
+        assert "SUPERADMIN_GLOBAL" in res_approve.json()["detail"]
+
+        # Intento de crear usuario con SUPERADMIN_GLOBAL
+        res_create = await async_client.post(
+            "/api/v1/users",
+            json={
+                "username": "escalated_admin",
+                "email": "escalated@acme.com",
+                "full_name": "Escalated Admin",
+                "password": "ComplexPassword123!",
+                "role": SystemRoleEnum.SUPERADMIN_GLOBAL.value,
+            },
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res_create.status_code == 403
+        assert "SUPERADMIN_GLOBAL" in res_create.json()["detail"]
+
+        # Intento de enviar campo extra en approve
+        res_extra = await async_client.put(
+            f"/api/v1/users/{target_user.id}/approve",
+            json={
+                "role": SystemRoleEnum.SUPPORT_L1.value,
+                "is_superadmin": True,
+            },
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res_extra.status_code == 422
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)
+
