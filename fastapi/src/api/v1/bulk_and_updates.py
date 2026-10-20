@@ -37,6 +37,7 @@ from src.schemas.bulk_and_updates import (
     BulkJobDetailResponse,
     BulkJobItemResponse,
     ConfigTemplateCreateRequest,
+    ConfigTemplatePresetResponse,
     ConfigTemplateResponse,
     ConfigTemplateUpdateRequest,
     RosFleetUpdateStatusResponse,
@@ -151,9 +152,84 @@ async def _perform_pre_upgrade_backup(
 
 _DEFAULT_STARTER_TEMPLATES = [
     {
+        "name": "CLIENTE_NTP",
+        "category": "SYSTEM",
+        "description": "Activa el cliente NTP",
+        "ros_command_template": (
+            "/system ntp client set enabled=yes\n"
+            "/system ntp client servers add address={{ ntp_server_0 }}\n"
+            "/system ntp client servers add address={{ ntp_server_1 }}\n"
+            "/system ntp client servers add address={{ ntp_server_2 }}\n"
+            "/system ntp client servers add address={{ ntp_server_3 }}"
+        ),
+        "variables_schema": [
+            {
+                "key": "ntp_server_0",
+                "label": "Servidor NTP Pool 0",
+                "default_val": "0.pool.ntp.org",
+                "var_type": "string",
+            },
+            {
+                "key": "ntp_server_1",
+                "label": "Servidor NTP Pool 1",
+                "default_val": "1.pool.ntp.org",
+                "var_type": "string",
+            },
+            {
+                "key": "ntp_server_2",
+                "label": "Servidor NTP Pool 2",
+                "default_val": "2.pool.ntp.org",
+                "var_type": "string",
+            },
+            {
+                "key": "ntp_server_3",
+                "label": "Servidor NTP Pool 3",
+                "default_val": "3.pool.ntp.org",
+                "var_type": "string",
+            },
+        ],
+        "rest_steps_template": [
+            {
+                "method": "PATCH",
+                "endpoint": "system/ntp/client",
+                "payload": {"enabled": "yes"},
+                "cli_command": "/system ntp client set enabled=yes",
+            },
+            {
+                "method": "PUT",
+                "endpoint": "system/ntp/client/servers",
+                "payload": {"address": "{{ ntp_server_0 }}"},
+                "cli_command": "/system ntp client servers add address={{ ntp_server_0 }}",
+            },
+            {
+                "method": "PUT",
+                "endpoint": "system/ntp/client/servers",
+                "payload": {"address": "{{ ntp_server_1 }}"},
+                "cli_command": "/system ntp client servers add address={{ ntp_server_1 }}",
+            },
+            {
+                "method": "PUT",
+                "endpoint": "system/ntp/client/servers",
+                "payload": {"address": "{{ ntp_server_2 }}"},
+                "cli_command": "/system ntp client servers add address={{ ntp_server_2 }}",
+            },
+            {
+                "method": "PUT",
+                "endpoint": "system/ntp/client/servers",
+                "payload": {"address": "{{ ntp_server_3 }}"},
+                "cli_command": "/system ntp client servers add address={{ ntp_server_3 }}",
+            },
+        ],
+        "requires_safemode": True,
+    },
+    {
         "name": "DNS_CORPORATIVO_RESILIENTE",
         "category": "NETWORK",
         "description": "Configura servidores DNS redundantes (Quad9 y Cloudflare) y vacía la caché de resolución.",
+        "ros_command_template": (
+            "/ip dns set servers={{ dns_servers }} allow-remote-requests={{ allow_remote }}\n"
+            "/ip dns cache flush"
+        ),
         "variables_schema": [
             {
                 "key": "dns_servers",
@@ -168,28 +244,13 @@ _DEFAULT_STARTER_TEMPLATES = [
                 "method": "PATCH",
                 "endpoint": "ip/dns",
                 "payload": {"servers": "{{ dns_servers }}", "allow-remote-requests": "{{ allow_remote }}"},
+                "cli_command": "/ip dns set servers={{ dns_servers }} allow-remote-requests={{ allow_remote }}",
             },
-            {"method": "POST", "endpoint": "ip/dns/cache/flush", "payload": {}},
-        ],
-        "requires_safemode": True,
-    },
-    {
-        "name": "NTP_CLIENT_TIEMPO_EXACTO",
-        "category": "SYSTEM",
-        "description": "Habilita el cliente SNTP v7 corporativo para sincronización horaria precisa.",
-        "variables_schema": [
             {
-                "key": "ntp_servers",
-                "label": "Servidores NTP Primario y Secundario",
-                "default_val": "pool.ntp.org,time.google.com",
-                "var_type": "string",
-            },
-        ],
-        "rest_steps_template": [
-            {
-                "method": "PATCH",
-                "endpoint": "system/ntp/client",
-                "payload": {"enabled": "yes", "servers": "{{ ntp_servers }}"},
+                "method": "POST",
+                "endpoint": "ip/dns/cache/flush",
+                "payload": {},
+                "cli_command": "/ip dns cache flush",
             },
         ],
         "requires_safemode": True,
@@ -198,6 +259,10 @@ _DEFAULT_STARTER_TEMPLATES = [
         "name": "SNMP_V2C_MONITOREO_NOC",
         "category": "SECURITY",
         "description": "Configura comunidad SNMP v2c para supervisión y telemetría desde el Wallboard NOC.",
+        "ros_command_template": (
+            "/snmp set enabled=yes\n"
+            "/snmp community set [find default=yes] name={{ snmp_community }} addresses={{ snmp_addresses }}"
+        ),
         "variables_schema": [
             {
                 "key": "snmp_community",
@@ -213,11 +278,19 @@ _DEFAULT_STARTER_TEMPLATES = [
             },
         ],
         "rest_steps_template": [
-            {"method": "PATCH", "endpoint": "snmp", "payload": {"enabled": "yes"}},
+            {
+                "method": "PATCH",
+                "endpoint": "snmp",
+                "payload": {"enabled": "yes"},
+                "cli_command": "/snmp set enabled=yes",
+            },
             {
                 "method": "PATCH",
                 "endpoint": "snmp/community/*0",
                 "payload": {"name": "{{ snmp_community }}", "addresses": "{{ snmp_addresses }}"},
+                "cli_command": (
+                    "/snmp community set [find default=yes] name={{ snmp_community }} addresses={{ snmp_addresses }}"
+                ),
             },
         ],
         "requires_safemode": True,
@@ -268,6 +341,65 @@ async def list_templates(
         )
         for t in templates
     ]
+
+
+@router.get("/templates/presets", response_model=list[ConfigTemplatePresetResponse])
+async def list_template_presets(
+    claims: dict[str, Any] = Depends(require_roles(*_OPERATOR_ROLES)),
+) -> list[dict[str, Any]]:
+    """Devuelve el catálogo de plantillas predefinidas recomendadas de RouterOS v7."""
+    return _DEFAULT_STARTER_TEMPLATES
+
+
+@router.post("/templates/seed-defaults", response_model=list[ConfigTemplateResponse])
+async def seed_default_templates(
+    claims: dict[str, Any] = Depends(require_roles(*_ADMIN_OPERATIONS_ROLES)),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> list[ConfigTemplateResponse]:
+    """Siembra las plantillas predefinidas del sistema que no existan aún en el Tenant."""
+    tenant_id = uuid.UUID(claims["tid"])
+    user_id = uuid.UUID(claims["sub"])
+    stmt = select(ConfigTemplate).where(ConfigTemplate.tenant_id == tenant_id).order_by(ConfigTemplate.name)
+    templates = list((await db.execute(stmt)).scalars().all())
+    existing_names = {t.name for t in templates}
+
+    added = False
+    for starter in _DEFAULT_STARTER_TEMPLATES:
+        if starter["name"] not in existing_names:
+            tpl = ConfigTemplate(
+                tenant_id=tenant_id,
+                name=starter["name"],
+                category=starter["category"],
+                description=starter["description"],
+                variables_schema=starter["variables_schema"],
+                rest_steps_template=starter["rest_steps_template"],
+                requires_safemode=starter["requires_safemode"],
+                created_by=user_id,
+            )
+            db.add(tpl)
+            added = True
+
+    if added:
+        await db.commit()
+        templates = list((await db.execute(stmt)).scalars().all())
+
+    return [
+        ConfigTemplateResponse(
+            id=t.id,
+            tenant_id=t.tenant_id,
+            name=t.name,
+            category=t.category,
+            description=t.description,
+            variables_schema=t.variables_schema,
+            rest_steps_template=t.rest_steps_template,
+            requires_safemode=t.requires_safemode,
+            created_by=t.created_by,
+            created_at=t.created_at,
+            updated_at=t.updated_at,
+        )
+        for t in templates
+    ]
+
 
 
 @router.get("/templates/{template_id}", response_model=ConfigTemplateResponse)

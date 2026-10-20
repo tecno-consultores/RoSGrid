@@ -15,7 +15,8 @@
   export interface TemplateStep {
     method: 'PATCH' | 'POST' | 'PUT' | 'DELETE' | 'GET';
     endpoint: string;
-    payload?: Record<string, any>;
+    payload?: Record<string, string | number | boolean>;
+    cli_command?: string;
   }
 
   export interface TemplateItem {
@@ -27,6 +28,8 @@
     rest_steps_template: TemplateStep[];
     requires_safemode: boolean;
   }
+
+  import { PREDEFINED_TEMPLATES } from './templatePresets';
 
   const props = defineProps<{
     isOpen: boolean;
@@ -49,6 +52,7 @@
   const steps = ref<TemplateStep[]>([]);
   const rawJsonMode = ref(false);
   const rawJsonText = ref('');
+  const selectedPresetKey = ref('');
 
   // Pestaña activa del modal
   const activeTab = ref<'general' | 'variables' | 'steps' | 'preview'>('general');
@@ -68,7 +72,25 @@
     { value: 'CUSTOM', label: 'Personalizada' },
   ];
 
+  function loadPredefinedPreset(presetKey: string) {
+    selectedPresetKey.value = presetKey;
+    const preset = PREDEFINED_TEMPLATES.find((p) => p.name === presetKey);
+    if (!preset) return;
+
+    name.value = preset.name;
+    category.value = preset.category;
+    description.value = preset.description;
+    requiresSafemode.value = preset.requires_safemode;
+    variables.value = JSON.parse(JSON.stringify(preset.variables_schema));
+    steps.value = JSON.parse(JSON.stringify(preset.rest_steps_template));
+    rawJsonText.value = JSON.stringify(steps.value, null, 2);
+    errorMessage.value = '';
+    successMessage.value = `Plantilla predefinida "${preset.name}" cargada correctamente.`;
+    updatePreview();
+  }
+
   function resetForm() {
+    selectedPresetKey.value = '';
     if (props.templateToEdit) {
       name.value = props.templateToEdit.name || '';
       category.value = props.templateToEdit.category || 'NETWORK';
@@ -244,8 +266,10 @@
       setTimeout(() => {
         emit('close');
       }, 700);
-    } catch (err: any) {
-      errorMessage.value = err.response?.data?.detail || 'Error al guardar la plantilla.';
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { detail?: string } }; message?: string };
+      errorMessage.value =
+        errorObj.response?.data?.detail || errorObj.message || 'Error al guardar la plantilla.';
     } finally {
       isSubmitting.value = false;
     }
@@ -335,6 +359,33 @@
 
         <!-- Pestaña 1: General -->
         <div v-show="activeTab === 'general'" class="tab-pane">
+          <!-- Selector de Plantilla Predefinida del Sistema -->
+          <div class="preset-card">
+            <div class="preset-card-header">
+              <span class="preset-badge">⚡ PLANTILLA PREDEFINIDA</span>
+              <span class="preset-hint"
+                >Puedes autocompletar con una plantilla estándar de RouterOS v7</span
+              >
+            </div>
+            <div class="preset-selector-row">
+              <label for="preset-select" class="form-label mb-0 font-bold">Cargar Preset:</label>
+              <select
+                id="preset-select"
+                v-model="selectedPresetKey"
+                class="form-control form-select-preset"
+                aria-label="Cargar plantilla predefinida"
+                @change="loadPredefinedPreset(($event.target as HTMLSelectElement).value)"
+              >
+                <option value="">-- Seleccionar plantilla predefinida recomendada --</option>
+                <option value="CLIENTE_NTP">🕒 Cliente NTP (/system ntp client) [SYSTEM]</option>
+                <option value="DNS_CORPORATIVO_RESILIENTE">
+                  🌐 DNS Corporativo Resiliente [NETWORK]
+                </option>
+                <option value="SNMP_V2C_MONITOREO_NOC">🛡️ SNMP v2c Monitoreo NOC [SECURITY]</option>
+              </select>
+            </div>
+          </div>
+
           <div class="form-group">
             <label for="tpl-name" class="form-label">
               Identificador de la Plantilla: <span class="required">*</span>
@@ -1036,5 +1087,59 @@
   .btn-toggle-mode:hover {
     border-color: #00f0ff;
     color: #00f0ff;
+  }
+
+  .preset-card {
+    background: rgba(14, 165, 233, 0.08);
+    border: 1px solid rgba(14, 165, 233, 0.35);
+    border-radius: 6px;
+    padding: 0.85rem 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .preset-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.65rem;
+  }
+
+  .preset-badge {
+    background: rgba(14, 165, 233, 0.25);
+    color: #38bdf8;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-family: monospace;
+    letter-spacing: 0.05em;
+  }
+
+  .preset-hint {
+    font-size: 0.8rem;
+    color: #94a3b8;
+  }
+
+  .preset-selector-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .form-select-preset {
+    flex: 1;
+    background: #0f172a;
+    border: 1px solid rgba(14, 165, 233, 0.4);
+    color: #f8fafc;
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    font-family: monospace;
+  }
+
+  .form-select-preset:focus {
+    border-color: #38bdf8;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.25);
   }
 </style>

@@ -61,6 +61,17 @@ class TemplateRenderPreviewResponse(StrictBaseModel):
     rendered_steps: list[dict[str, Any]] = Field(default_factory=list)
 
 
+class ConfigTemplatePresetResponse(StrictBaseModel):
+    name: str
+    category: str
+    description: str
+    variables_schema: list[dict[str, Any]]
+    rest_steps_template: list[dict[str, Any]]
+    requires_safemode: bool
+    ros_command_template: str | None = None
+
+
+
 # ============================================================================
 # TRABAJOS MASIVOS MULTI-ROUTER (BULK JOBS)
 # ============================================================================

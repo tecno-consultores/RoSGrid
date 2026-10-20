@@ -469,6 +469,21 @@ async def test_bulk_templates_and_jobs(fake_op_context: dict[str, Any]) -> None:
     t_list = await api_bulk.list_templates(claims=claims, db=db)
     assert len(t_list) == 1
 
+    # Test presets endpoint
+    presets = await api_bulk.list_template_presets(claims=claims)
+    assert len(presets) >= 3
+    ntp_preset = next(p for p in presets if p["name"] == "CLIENTE_NTP")
+    assert ntp_preset["category"] == "SYSTEM"
+    assert ntp_preset["description"] == "Activa el cliente NTP"
+    assert len(ntp_preset["variables_schema"]) == 4
+    assert len(ntp_preset["rest_steps_template"]) == 5
+    assert ntp_preset["rest_steps_template"][0]["endpoint"] == "system/ntp/client"
+    assert ntp_preset["rest_steps_template"][1]["endpoint"] == "system/ntp/client/servers"
+
+    # Test seed_default_templates
+    seed_res = await api_bulk.seed_default_templates(claims=claims, db=db)
+    assert len(seed_res) >= 1
+
     create_payload = ConfigTemplateCreateRequest(
         name="New Template",
         category="SECURITY",

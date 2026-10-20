@@ -206,11 +206,15 @@
 
 ### **3.1 Endpoints de Plantillas (/api/v1/operations/templates)**
 
-- GET /api/v1/operations/templates: Lista plantillas del Tenant (ej. *"Hardening SSH/WinBox"*, *"Crear VLAN Clientes"*, *"Actualizar Servidores DNS"*).
+- GET /api/v1/operations/templates: Lista plantillas del Tenant (ej. *"Hardening SSH/WinBox"*, *"Crear VLAN Clientes"*, *"Actualizar Servidores DNS"*, *"Cliente NTP"*).
 
-- POST /api/v1/operations/templates: Crea una nueva plantilla con variables tipadas (variables\_schema) y pasos REST (rest\_steps\_template).
+- GET /api/v1/operations/templates/presets: Catálogo inmutable de plantillas predefinidas (*presets*) provistas por el sistema (`CLIENTE_NTP`, `DNS_CORPORATIVO_RESILIENTE`, `SNMP_V2C_MONITOREO_NOC`).
 
-- POST /api/v1/operations/templates/\{template\_id\}/render-preview: Renderiza los pasos reemplazando las variables enviadas sin tocar ningún MikroTik todavía.
+- POST /api/v1/operations/templates/seed-defaults: Siembra idempotente de plantillas predefinidas en la base de datos del Tenant actual, evitando duplicados si ya existen.
+
+- POST /api/v1/operations/templates: Crea una nueva plantilla con variables tipadas (variables_schema) y pasos REST (rest_steps_template).
+
+- POST /api/v1/operations/templates/{template_id}/render-preview: Renderiza los pasos reemplazando las variables enviadas sin tocar ningún MikroTik todavía.
 
 ### **3.2 Endpoints de Acciones Masivas Multi-Router (/api/v1/operations/bulk-jobs)**
 

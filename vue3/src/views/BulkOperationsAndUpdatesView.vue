@@ -5,7 +5,10 @@
   import { ref, computed, onMounted, watch } from 'vue';
   import { http } from '@/api/httpClient';
   import { useInventoryStore } from '@/stores/useInventoryStore';
-  import ConfigTemplateEditorModal from '@/components/operations/ConfigTemplateEditorModal.vue';
+  import ConfigTemplateEditorModal, {
+    type TemplateItem,
+    type TemplateStep,
+  } from '@/components/operations/ConfigTemplateEditorModal.vue';
 
   interface FleetRouter {
     id: string;
@@ -24,7 +27,8 @@
     description: string;
     variables_schema: { key: string; label: string; default_val?: string }[];
     ros_command_template?: string;
-    rest_steps_template?: unknown[];
+    rest_steps_template?: TemplateStep[];
+    requires_safemode?: boolean;
   }
 
   interface BulkExecutionResult {
@@ -88,7 +92,7 @@
                 .split(':')[0]
             : '');
         const role = r.network_role || 'CORE';
-        const rawTags = (r as any).tags;
+        const rawTags = (r as unknown as { tags?: Array<{ tag?: string } | string> }).tags;
         let tag = 'datacenter-central';
         if (Array.isArray(rawTags) && rawTags.length > 0) {
           tag =
@@ -167,7 +171,7 @@
 
   // Gestión de Plantillas
   const isTemplateModalOpen = ref(false);
-  const templateToEdit = ref<any>(null);
+  const templateToEdit = ref<TemplateItem | null>(null);
 
   function openCreateTemplateModal() {
     templateToEdit.value = null;
@@ -177,7 +181,7 @@
   function openEditTemplateModal() {
     const tpl = templates.value.find((t) => t.id === selectedTemplateId.value);
     if (tpl) {
-      templateToEdit.value = JSON.parse(JSON.stringify(tpl));
+      templateToEdit.value = JSON.parse(JSON.stringify(tpl)) as TemplateItem;
       isTemplateModalOpen.value = true;
     }
   }
@@ -185,7 +189,7 @@
   function cloneSelectedTemplate() {
     const tpl = templates.value.find((t) => t.id === selectedTemplateId.value);
     if (tpl) {
-      const cloned = JSON.parse(JSON.stringify(tpl));
+      const cloned = JSON.parse(JSON.stringify(tpl)) as TemplateItem;
       delete cloned.id;
       cloned.name = `${cloned.name}_COPIA`;
       templateToEdit.value = cloned;
@@ -203,16 +207,60 @@
       await http.delete(`/api/v1/operations/templates/${tpl.id}`);
       selectedTemplateId.value = '';
       await fetchTemplates();
-    } catch (err: any) {
-      alert(err.response?.data?.detail || 'Error al eliminar la plantilla.');
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { detail?: string } }; message?: string };
+      alert(
+        errorObj.response?.data?.detail || errorObj.message || 'Error al eliminar la plantilla.',
+      );
     }
   }
 
-  async function handleTemplateSaved(savedTpl: any) {
+  async function handleTemplateSaved(savedTpl: TemplateItem) {
     await fetchTemplates();
     if (savedTpl?.id) {
       onSelectTemplate(savedTpl.id);
     }
+  }
+
+  interface RenderedStep {
+    method: string;
+    endpoint: string;
+    payload?: Record<string, unknown>;
+    cli_command?: string;
+  }
+
+  function formatPayloadToParams(payload?: Record<string, unknown>): string {
+    return Object.entries(payload || {})
+      .map(([k, val]) => `${k}=${val}`)
+      .join(' ');
+  }
+
+  function formatStepToRosCli(st: RenderedStep, vars: Record<string, string>): string {
+    if (st.cli_command) {
+      let cmdStr = st.cli_command;
+      Object.entries(vars).forEach(([k, v]) => {
+        cmdStr = cmdStr.replaceAll(`{{${k}}}`, v).replaceAll(`{{ ${k} }}`, v);
+      });
+      return cmdStr;
+    }
+    const ep = st.endpoint;
+    const m = st.method;
+    if (ep === 'system/ntp/client' && m === 'PATCH') {
+      return `/system ntp client set ${formatPayloadToParams(st.payload)}`;
+    }
+    if (ep === 'system/ntp/client/servers' && (m === 'PUT' || m === 'POST')) {
+      return `/system ntp client servers add ${formatPayloadToParams(st.payload)}`;
+    }
+    if (ep === 'ip/dns' && m === 'PATCH') {
+      return `/ip dns set ${formatPayloadToParams(st.payload)}`;
+    }
+    if (ep === 'ip/dns/cache/flush') {
+      return '/ip dns cache flush';
+    }
+    if (ep === 'snmp' && m === 'PATCH') {
+      return `/snmp set enabled=${String(st.payload?.enabled || 'yes')}`;
+    }
+    return `# ${m} /rest/${ep} ${JSON.stringify(st.payload || {})}`;
   }
 
   function generatePreview() {
@@ -221,16 +269,35 @@
       previewPayload.value = '';
       return;
     }
-    let cmd = tpl.ros_command_template || JSON.stringify(tpl.rest_steps_template || []);
-    Object.entries(templateVars.value).forEach(([k, v]) => {
-      cmd = cmd.replaceAll(`{{${k}}}`, v).replaceAll(`{{ ${k} }}`, v);
-    });
+
+    let renderedSteps: RenderedStep[] = [];
+    try {
+      let rawStr = JSON.stringify(tpl.rest_steps_template || []);
+      Object.entries(templateVars.value).forEach(([k, v]) => {
+        rawStr = rawStr.replaceAll(`{{${k}}}`, v).replaceAll(`{{ ${k} }}`, v);
+      });
+      renderedSteps = JSON.parse(rawStr);
+    } catch {
+      renderedSteps = [];
+    }
+
+    const cliCommands = renderedSteps.map((st) => formatStepToRosCli(st, templateVars.value));
+
+    let legacyCmd = tpl.ros_command_template || '';
+    if (legacyCmd) {
+      Object.entries(templateVars.value).forEach(([k, v]) => {
+        legacyCmd = legacyCmd.replaceAll(`{{${k}}}`, v).replaceAll(`{{ ${k} }}`, v);
+      });
+    }
+
     previewPayload.value = JSON.stringify(
       {
-        action: 'REST_CMD',
-        command: cmd,
-        target_count: selectedRoutersCount.value,
+        plantilla: tpl.name,
+        categoria: tpl.category,
+        routers_objetivo: selectedRoutersCount.value,
         safe_mode: true,
+        comandos_routeros_v7: legacyCmd ? legacyCmd.split('\n') : cliCommands,
+        pasos_rest_api: renderedSteps,
       },
       null,
       2,
@@ -257,10 +324,13 @@
       details: 'Encolando en servidor...',
     }));
 
+    const tpl = templates.value.find((t) => t.id === selectedTemplateId.value);
     try {
       await http.post('/api/v1/operations/bulk-jobs', {
+        job_type: 'TEMPLATE_ROLLOUT',
+        title: `Ejecución masiva: ${tpl?.name || 'Plantilla'}`,
         template_id: selectedTemplateId.value,
-        variables: templateVars.value,
+        execution_parameters: { variables: templateVars.value },
         target_router_ids: selected.map((r) => r.id),
       });
       progressPercent.value = 100;
@@ -269,15 +339,33 @@
         job.details = 'Trabajo masivo encolado exitosamente';
         job.progress = 100;
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { detail?: string } }; message?: string };
       progressPercent.value = 100;
       executionResults.value.forEach((job) => {
         job.status = 'FAILED';
-        job.details = err?.response?.data?.detail || err?.message || 'Fallo de ejecución';
+        job.details = errorObj.response?.data?.detail || errorObj.message || 'Fallo de ejecución';
         job.progress = 0;
       });
     } finally {
       executing.value = false;
+    }
+  }
+
+  async function seedDefaultTemplates() {
+    try {
+      const res = await http.post<ConfigTemplate[]>('/api/v1/operations/templates/seed-defaults');
+      templates.value = Array.isArray(res.data) ? res.data : [];
+      if (templates.value.length > 0 && !selectedTemplateId.value) {
+        onSelectTemplate(templates.value[0].id);
+      }
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { detail?: string } }; message?: string };
+      alert(
+        errorObj.response?.data?.detail ||
+          errorObj.message ||
+          'Error al sincronizar plantillas predefinidas.',
+      );
     }
   }
 
@@ -296,8 +384,9 @@
       });
       updateSuccess.value = `Actualización de ${router.identity} iniciada. Se guardó respaldo obligatorio.`;
       router.ros_version = targetRosVersion.value;
-    } catch (err: any) {
-      updateSuccess.value = `Error al actualizar ${router.identity}: ${err?.response?.data?.detail || err?.message || 'Fallo de conexión'}`;
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { detail?: string } }; message?: string };
+      updateSuccess.value = `Error al actualizar ${router.identity}: ${errorObj.response?.data?.detail || errorObj.message || 'Fallo de conexión'}`;
     } finally {
       upgradingRouterId.value = null;
       setTimeout(() => {
@@ -473,6 +562,14 @@
               @click="openCreateTemplateModal"
             >
               + Nueva Plantilla
+            </button>
+            <button
+              type="button"
+              class="btn-secondary-sm"
+              title="Sincronizar plantillas predefinidas del sistema"
+              @click="seedDefaultTemplates"
+            >
+              ⭐ Sincronizar Presets
             </button>
             <button
               v-if="selectedTemplateId"
