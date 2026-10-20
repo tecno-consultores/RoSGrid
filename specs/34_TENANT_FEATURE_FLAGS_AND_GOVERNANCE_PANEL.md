@@ -32,7 +32,9 @@ Se incorporan los siguientes atributos a la tabla `tenants` (gestionados mediant
 ## 2. Gobernanza de Acceso y Capa de Seguridad API (FastAPI)
 
 ### 2.1. Middleware / Dependency Guard `require_feature(flag_name)`
+
 - Antes de procesar cualquier endpoint perteneciente a un módulo modular, FastAPI evalúa el estado del Feature Flag en el contexto del tenant autenticado:
+
   ```python
   def require_feature(flag_name: str):
       async def dependency(tenant: Tenant = Depends(get_current_tenant)):
@@ -47,6 +49,7 @@ Se incorporan los siguientes atributos a la tabla `tenants` (gestionados mediant
           return True
       return dependency
   ```
+
 - **Ejemplo:** Las rutas `/api/v1/field-ops/*` y `/api/v1/subscribers/*` exigen `require_feature("isp_module_enabled")`. Si una empresa corporativa tiene este flag en `false`, cualquier intento de invocar estas rutas es rechazado inmediatamente con HTTP 403.
 
 ---
@@ -54,6 +57,7 @@ Se incorporan los siguientes atributos a la tabla `tenants` (gestionados mediant
 ## 3. Comportamiento Dinámico en el Frontend (Vue 3 + Pinia)
 
 ### 3.1. Store de Tenant y Reactividad (`useAuthStore` / `useTenantStore`)
+
 - Al iniciar sesión, el payload de autenticación incluye el objeto `features` con los estados booleanos del tenant actual.
 - **Barra de Navegación (`RgResponsiveShell.vue`):**
   - Si `isp_module_enabled === false`, los elementos de menú *"Técnico de Campo"* y *"Mapa de Abonados"* se omiten de la barra lateral.
@@ -69,6 +73,7 @@ Se incorporan los siguientes atributos a la tabla `tenants` (gestionados mediant
 ## 4. Interfaz de Administración de Feature Flags (`TenantsManagementView.vue`)
 
 Exclusiva para el rol `SUPERADMIN_GLOBAL`:
+
 - Modal o pestaña táctica **"Módulos & Capacidades"** con diseño de alta densidad:
   - **Sección 1: Perfil de Operación de Red:**
     - Switch `Módulo ISP & Operaciones de Campo (FTTH/ONUs)`.

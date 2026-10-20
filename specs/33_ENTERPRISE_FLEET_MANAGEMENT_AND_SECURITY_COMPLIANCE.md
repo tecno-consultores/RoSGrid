@@ -7,9 +7,11 @@
 ## 1. Detección de Desviación de Configuración (*Config Drift Detection*) & Cumplimiento
 
 ### 1.1. El Reto Corporativo
+
 En organizaciones con 50 a 500 sucursales, los administradores locales o técnicos de campo a menudo alteran configuraciones en WinBox de forma no autorizada (abrir puertos, cambiar DNS corporativo, desactivar reglas de firewall o crear usuarios locales). Esto viola normativas de auditoría y genera brechas de seguridad silenciosas.
 
 ### 1.2. Arquitectura de Plantilla Maestra (*Golden Baseline Template*)
+
 - **Tabla `golden_config_templates`:**
   - `id`: UUID.
   - `tenant_id`: UUID.
@@ -21,6 +23,7 @@ En organizaciones con 50 a 500 sucursales, los administradores locales o técnic
   - `created_at`, `updated_at`: Timestamps.
 
 ### 1.3. Motor de Detección de Drift
+
 - **Ejecución Periódica / Bajo Demanda:**
   1. Exporta el archivo `.rsc` en ejecución del router MikroTik.
   2. Normaliza el script (elimina timestamps y comentarios volátiles).
@@ -36,6 +39,7 @@ En organizaciones con 50 a 500 sucursales, los administradores locales o técnic
 ## 2. Orquestador SD-WAN & Malla WireGuard Sucursales-a-Data Center (*Hub & Spoke*)
 
 ### 2.1. Arquitectura de Túneles Automatizada
+
 - **Modelo:** Hub central (Data Center / Nube) y múltiples Spokes (Sucursales).
 - **Aprovisionamiento Zero-Touch de WireGuard:**
   1. Al dar de alta una sucursal, RoSGrid genera el par de llaves WireGuard (pública/privada) mediante criptografía asimétrica local.
@@ -45,6 +49,7 @@ En organizaciones con 50 a 500 sucursales, los administradores locales o técnic
   5. Despliega adyacencia de enrutamiento dinámico (OSPF sobre WireGuard o BGP interno) para propagar las subredes locales de la sucursal instantáneamente.
 
 ### 2.2. Monitoreo Multi-WAN y Failover Inteligente
+
 - Supervisión concurrente de hasta 3 enlaces WAN por sucursal (ej. Fibra principal + Starlink satelital + LTE/5G).
 - Orquestación de **PBR (Policy-Based Routing)** y rutas recursivas con Netwatch:
   - Enrutamiento de tráfico crítico (ERP, Base de Datos, Telefonía IP) conmutado a enlace de respaldo en $< 1\text{ segundo}$ ante degradación o pérdida de paquetes en el enlace primario.
@@ -54,7 +59,9 @@ En organizaciones con 50 a 500 sucursales, los administradores locales o técnic
 ## 3. Auditoría de Seguridad & Endurecimiento CIS Benchmark para RouterOS
 
 ### 3.1. Escáner de Cumplimiento de Ciberseguridad (Security Score 0 a 100)
+
 Endpoint `POST /api/v1/compliance/cis-audit/{router_id}` que evalúa las 10 directivas críticas de hardening:
+
 1. **Servicios Inseguros:** Comprueba que `telnet`, `ftp`, `www` (sin SSL) y `api` (sin TLS) estén en `disabled=yes`.
 2. **Defensa de Usuario Admin:** Verifica que el usuario por defecto `admin` no exista o esté deshabilitado.
 3. **Restricción de Acceso a WinBox/API:** Verifica que `/ip/service/set winbox address=X.X.X.X/XX` solo admita bloques autorizados y no `0.0.0.0/0`.
@@ -67,6 +74,7 @@ Endpoint `POST /api/v1/compliance/cis-audit/{router_id}` que evalúa las 10 dire
 10. **Aislamiento de Interfaces de Gestión:** Verifica el uso de VLANs dedicadas para administración.
 
 ### 3.2. Puntuación y Remediación en 1-Clic
+
 - El sistema asigna una calificación global (0 a 100%).
 - Botón *"Endurecer Router Automáticamente (Auto-Hardening)"*: Genera el script correctivo, lo aplica con Safe Mode y eleva la calificación a 100%.
 
@@ -75,9 +83,11 @@ Endpoint `POST /api/v1/compliance/cis-audit/{router_id}` que evalúa las 10 dire
 ## 4. Detección de Rogue DHCP & Seguridad de Conmutación (Switching / LAN)
 
 ### 4.1. El Problema de Redes Corporativas
+
 Un usuario conecta un router WiFi doméstico o switch no gestionado en una toma de red, lo que inicia un servidor DHCP no autorizado (Rogue DHCP) que reparte puertas de enlace falsas, causando caídas masivas en toda la planta o ataques Man-in-the-Middle.
 
 ### 4.2. Detección y Mitigación en RoSGrid
+
 1. **DHCP Snooping Automatizado:**
    - Activa `/interface/bridge/set dhcp-snooping=yes` en los bridges de acceso.
    - Marca únicamente los puertos de subida hacia el core como `trusted=yes`.
@@ -92,9 +102,11 @@ Un usuario conecta un router WiFi doméstico o switch no gestionado en una toma 
 ## 5. Monitor de Cumplimiento de SLA para Enlaces Dedicados
 
 ### 5.1. Propósito
+
 Las empresas pagan tarifas premium por enlaces de fibra con compromisos contractuales de nivel de servicio (SLA). Este módulo registra métricas continuas para respaldar reclamos de notas de crédito o penalizaciones por incumplimiento.
 
 ### 5.2. Métricas y Registro
+
 - **Sondeo Proactivo:** Envío de paquetes de prueba continuos hacia la IP del gateway del carrier y servidores de referencia.
 - **Parámetros Registrados:**
   - Disponibilidad porcentual (Uptime vs Downtime).
@@ -109,12 +121,15 @@ Las empresas pagan tarifas premium por enlaces de fibra con compromisos contract
 ## 6. Gestión Centralizada de WiFi Corporativo (CAPsMAN / WiFiWave2)
 
 ### 6.1. Orquestación Unificada de Puntos de Acceso (APs)
+
 Para campus, centros de distribución, clínicas y edificios corporativos:
+
 - **SSID Corporativo Seguro:** WPA3-Enterprise con autenticación 802.1X / EAP-TLS y asignación dinámica de VLANs según el rol del empleado.
 - **SSID Invitados:** Aislado en su propia VLAN, con límite de velocidad estricto y aislamiento de clientes (Client Isolation activo para evitar que un invitado vea a otros equipos).
 - **SSID Dispositivos IoT / Operativos:** Clave precompartida WPA2/WPA3 con direccionamiento estático o DHCP reservado para impresoras de red, cámaras y lectores de códigos de barras.
 
 ### 6.2. Telemetría de Radiofrecuencia y Roaming
+
 - Visor centralizado de clientes inalámbricos conectados:
   - Nivel de señal RSSI (dBm), relación señal a ruido (SNR) y estándar en uso (802.11ax / ac / n).
   - Trazabilidad de eventos de itinerancia (*Fast Roaming 802.11r/k/v*) entre puntos de acceso sin cortes de llamada en VoIP.
