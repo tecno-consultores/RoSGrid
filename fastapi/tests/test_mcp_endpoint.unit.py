@@ -225,7 +225,7 @@ async def test_mcp_tools_list(mcp_context: dict[str, Any]) -> None:
         assert resp.id == 2
         assert resp.result is not None
         tools = resp.result.get("tools", [])
-        assert len(tools) == 8
+        assert len(tools) == 16
         names = {t["name"] for t in tools}
         assert "rosgrid_list_inventory" in names
         assert "rosgrid_get_router_health" in names
@@ -235,6 +235,14 @@ async def test_mcp_tools_list(mcp_context: dict[str, Any]) -> None:
         assert "rosgrid_compare_config_diff" in names
         assert "rosgrid_reconnect_pppoe_client" in names
         assert "rosgrid_propose_network_change" in names
+        assert "rosgrid_run_360_diagnostics" in names
+        assert "rosgrid_isolate_subscriber" in names
+        assert "rosgrid_restore_subscriber" in names
+        assert "rosgrid_change_rate_limit" in names
+        assert "rosgrid_query_bgp_looking_glass" in names
+        assert "rosgrid_check_config_drift" in names
+        assert "rosgrid_run_cis_audit" in names
+        assert "rosgrid_detect_mass_outage" in names
 
 
 # ============================================================================
@@ -776,3 +784,391 @@ def test_pppoe_matching_and_metrics_extra() -> None:
 
     # Metric not found
     assert api_mcp._extract_metric_by_name([{"name": "fan-speed", "value": 3000}], "temperature") is None
+
+
+# ============================================================================
+# 4. PRUEBAS DE INVOCACIÓN DE LAS 8 NUEVAS TOOLS (HITO 21)
+# ============================================================================
+
+
+@pytest.mark.asyncio
+async def test_tool_rosgrid_run_360_diagnostics(mcp_context: dict[str, Any]) -> None:
+    db = AsyncMock()
+    res_user = MagicMock()
+    res_user.scalar_one_or_none.return_value = mcp_context["user"]
+    db.execute.return_value = res_user
+
+    fake_redis = AsyncMock()
+    fake_redis.incr.return_value = 1
+
+    mock_resp = MagicMock()
+    mock_resp.model_dump.return_value = {
+        "router_id": str(mcp_context["r_id"]),
+        "target_ip": "192.168.88.50",
+        "overall_status": "OPTIMAL",
+    }
+
+    body = McpJsonRpcRequest(
+        id=20,
+        method="tools/call",
+        params={
+            "name": "rosgrid_run_360_diagnostics",
+            "arguments": {
+                "router_id": str(mcp_context["r_id"]),
+                "target_ip": "192.168.88.50",
+            },
+        },
+    )
+    with (
+        patch.object(settings, "ROSGRID_MCP_ENABLED", True),
+        patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
+        patch("src.api.v1.mcp.run_endpoint_360_diagnostics", new_callable=AsyncMock, return_value=mock_resp),
+        patch("src.api.v1.mcp.write_audit_log", new_callable=AsyncMock) as mock_audit,
+    ):
+        resp = await api_mcp.mcp_endpoint(mcp_context["request"], body, mcp_context["claims"], db)
+        assert resp.result is not None
+        content = json.loads(resp.result["content"][0]["text"])
+        assert content["status"] == "OK"
+        assert content["data"]["overall_status"] == "OPTIMAL"
+        mock_audit.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_tool_rosgrid_isolate_subscriber(mcp_context: dict[str, Any]) -> None:
+    db = AsyncMock()
+    res_user = MagicMock()
+    res_user.scalar_one_or_none.return_value = mcp_context["user"]
+    db.execute.return_value = res_user
+
+    fake_redis = AsyncMock()
+    fake_redis.incr.return_value = 1
+
+    sub_id = uuid.uuid4()
+    mock_resp = MagicMock()
+    mock_resp.model_dump.return_value = {
+        "status": "ISOLATED",
+        "service_id": str(sub_id),
+        "endpoint_identifier": "ONU-TEST-001",
+    }
+
+    body = McpJsonRpcRequest(
+        id=21,
+        method="tools/call",
+        params={
+            "name": "rosgrid_isolate_subscriber",
+            "arguments": {
+                "subscriber_device_id": str(sub_id),
+                "reason": "Suspicious traffic loop detected",
+            },
+        },
+    )
+    with (
+        patch.object(settings, "ROSGRID_MCP_ENABLED", True),
+        patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
+        patch("src.api.v1.mcp.isolate_network_service", new_callable=AsyncMock, return_value=mock_resp),
+        patch("src.api.v1.mcp.write_audit_log", new_callable=AsyncMock),
+    ):
+        resp = await api_mcp.mcp_endpoint(mcp_context["request"], body, mcp_context["claims"], db)
+        assert resp.result is not None
+        content = json.loads(resp.result["content"][0]["text"])
+        assert content["status"] == "OK"
+        assert content["data"]["status"] == "ISOLATED"
+
+
+@pytest.mark.asyncio
+async def test_tool_rosgrid_restore_subscriber(mcp_context: dict[str, Any]) -> None:
+    db = AsyncMock()
+    res_user = MagicMock()
+    res_user.scalar_one_or_none.return_value = mcp_context["user"]
+    db.execute.return_value = res_user
+
+    fake_redis = AsyncMock()
+    fake_redis.incr.return_value = 1
+
+    sub_id = uuid.uuid4()
+    mock_resp = MagicMock()
+    mock_resp.model_dump.return_value = {
+        "status": "RESTORED",
+        "service_id": str(sub_id),
+        "endpoint_identifier": "ONU-TEST-001",
+    }
+
+    body = McpJsonRpcRequest(
+        id=22,
+        method="tools/call",
+        params={
+            "name": "rosgrid_restore_subscriber",
+            "arguments": {"subscriber_device_id": str(sub_id)},
+        },
+    )
+    with (
+        patch.object(settings, "ROSGRID_MCP_ENABLED", True),
+        patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
+        patch("src.api.v1.mcp.restore_network_service", new_callable=AsyncMock, return_value=mock_resp),
+        patch("src.api.v1.mcp.write_audit_log", new_callable=AsyncMock),
+    ):
+        resp = await api_mcp.mcp_endpoint(mcp_context["request"], body, mcp_context["claims"], db)
+        assert resp.result is not None
+        content = json.loads(resp.result["content"][0]["text"])
+        assert content["status"] == "OK"
+        assert content["data"]["status"] == "RESTORED"
+
+
+@pytest.mark.asyncio
+async def test_tool_rosgrid_change_rate_limit(mcp_context: dict[str, Any]) -> None:
+    db = AsyncMock()
+    res_user = MagicMock()
+    res_user.scalar_one_or_none.return_value = mcp_context["user"]
+    db.execute.return_value = res_user
+
+    fake_redis = AsyncMock()
+    fake_redis.incr.return_value = 1
+
+    sub_id = uuid.uuid4()
+    prof_id = uuid.uuid4()
+    mock_resp = MagicMock()
+    mock_resp.model_dump.return_value = {
+        "status": "RATE_LIMIT_UPDATED",
+        "service_id": str(sub_id),
+        "bandwidth_profile_id": str(prof_id),
+    }
+
+    # Test standard name
+    body = McpJsonRpcRequest(
+        id=23,
+        method="tools/call",
+        params={
+            "name": "rosgrid_change_rate_limit",
+            "arguments": {
+                "subscriber_device_id": str(sub_id),
+                "bandwidth_profile_id": str(prof_id),
+            },
+        },
+    )
+    with (
+        patch.object(settings, "ROSGRID_MCP_ENABLED", True),
+        patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
+        patch("src.api.v1.mcp.change_network_service_rate_limit", new_callable=AsyncMock, return_value=mock_resp),
+        patch("src.api.v1.mcp.write_audit_log", new_callable=AsyncMock),
+    ):
+        resp = await api_mcp.mcp_endpoint(mcp_context["request"], body, mcp_context["claims"], db)
+        assert resp.result is not None
+        content = json.loads(resp.result["content"][0]["text"])
+        assert content["status"] == "OK"
+        assert content["data"]["status"] == "RATE_LIMIT_UPDATED"
+
+    # Test alias name
+    body_alias = McpJsonRpcRequest(
+        id=24,
+        method="tools/call",
+        params={
+            "name": "rosgrid_change_subscriber_rate_limit",
+            "arguments": {
+                "subscriber_device_id": str(sub_id),
+                "bandwidth_profile_id": str(prof_id),
+            },
+        },
+    )
+    with (
+        patch.object(settings, "ROSGRID_MCP_ENABLED", True),
+        patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
+        patch("src.api.v1.mcp.change_network_service_rate_limit", new_callable=AsyncMock, return_value=mock_resp),
+        patch("src.api.v1.mcp.write_audit_log", new_callable=AsyncMock),
+    ):
+        resp_alias = await api_mcp.mcp_endpoint(mcp_context["request"], body_alias, mcp_context["claims"], db)
+        assert resp_alias.result is not None
+        content_alias = json.loads(resp_alias.result["content"][0]["text"])
+        assert content_alias["status"] == "OK"
+
+
+@pytest.mark.asyncio
+async def test_tool_rosgrid_query_bgp_looking_glass(mcp_context: dict[str, Any]) -> None:
+    db = AsyncMock()
+    res_user = MagicMock()
+    res_user.scalar_one_or_none.return_value = mcp_context["user"]
+    db.execute.return_value = res_user
+
+    fake_redis = AsyncMock()
+    fake_redis.incr.return_value = 1
+
+    mock_route = MagicMock()
+    mock_route.model_dump.return_value = {
+        "router_id": str(mcp_context["r_id"]),
+        "prefix": "1.1.1.0/24",
+        "total_routes": 1,
+    }
+    mock_adv = MagicMock()
+    mock_adv.model_dump.return_value = {
+        "router_id": str(mcp_context["r_id"]),
+        "peer": "ISP-UPLINK-1",
+        "total_advertised": 5,
+    }
+
+    # 1. query_type = "route"
+    body_route = McpJsonRpcRequest(
+        id=25,
+        method="tools/call",
+        params={
+            "name": "rosgrid_query_bgp_looking_glass",
+            "arguments": {
+                "router_id": str(mcp_context["r_id"]),
+                "query_type": "route",
+                "prefix": "1.1.1.0/24",
+            },
+        },
+    )
+    with (
+        patch.object(settings, "ROSGRID_MCP_ENABLED", True),
+        patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
+        patch("src.api.v1.mcp.get_looking_glass_route", new_callable=AsyncMock, return_value=mock_route),
+        patch("src.api.v1.mcp.write_audit_log", new_callable=AsyncMock),
+    ):
+        resp = await api_mcp.mcp_endpoint(mcp_context["request"], body_route, mcp_context["claims"], db)
+        assert resp.result is not None
+        content = json.loads(resp.result["content"][0]["text"])
+        assert content["status"] == "OK"
+        assert content["data"]["prefix"] == "1.1.1.0/24"
+
+    # 2. query_type = "advertised"
+    body_adv = McpJsonRpcRequest(
+        id=26,
+        method="tools/call",
+        params={
+            "name": "rosgrid_query_bgp_looking_glass",
+            "arguments": {
+                "router_id": str(mcp_context["r_id"]),
+                "query_type": "advertised",
+                "peer_session": "ISP-UPLINK-1",
+            },
+        },
+    )
+    with (
+        patch.object(settings, "ROSGRID_MCP_ENABLED", True),
+        patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
+        patch("src.api.v1.mcp.get_looking_glass_advertised", new_callable=AsyncMock, return_value=mock_adv),
+        patch("src.api.v1.mcp.write_audit_log", new_callable=AsyncMock),
+    ):
+        resp_adv = await api_mcp.mcp_endpoint(mcp_context["request"], body_adv, mcp_context["claims"], db)
+        assert resp_adv.result is not None
+        content_adv = json.loads(resp_adv.result["content"][0]["text"])
+        assert content_adv["status"] == "OK"
+        assert content_adv["data"]["peer"] == "ISP-UPLINK-1"
+
+
+@pytest.mark.asyncio
+async def test_tool_rosgrid_check_config_drift(mcp_context: dict[str, Any]) -> None:
+    db = AsyncMock()
+    res_user = MagicMock()
+    res_user.scalar_one_or_none.return_value = mcp_context["user"]
+    db.execute.return_value = res_user
+
+    fake_redis = AsyncMock()
+    fake_redis.incr.return_value = 1
+
+    mock_drift = MagicMock()
+    mock_drift.model_dump.return_value = {
+        "router_id": str(mcp_context["r_id"]),
+        "drift_detected": False,
+        "total_drift_lines": 0,
+    }
+
+    body = McpJsonRpcRequest(
+        id=27,
+        method="tools/call",
+        params={
+            "name": "rosgrid_check_config_drift",
+            "arguments": {"router_id": str(mcp_context["r_id"])},
+        },
+    )
+    with (
+        patch.object(settings, "ROSGRID_MCP_ENABLED", True),
+        patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
+        patch("src.api.v1.mcp.check_config_drift", new_callable=AsyncMock, return_value=mock_drift),
+        patch("src.api.v1.mcp.write_audit_log", new_callable=AsyncMock),
+    ):
+        resp = await api_mcp.mcp_endpoint(mcp_context["request"], body, mcp_context["claims"], db)
+        assert resp.result is not None
+        content = json.loads(resp.result["content"][0]["text"])
+        assert content["status"] == "OK"
+        assert content["data"]["drift_detected"] is False
+
+
+@pytest.mark.asyncio
+async def test_tool_rosgrid_run_cis_audit(mcp_context: dict[str, Any]) -> None:
+    db = AsyncMock()
+    res_user = MagicMock()
+    res_user.scalar_one_or_none.return_value = mcp_context["user"]
+    db.execute.return_value = res_user
+
+    fake_redis = AsyncMock()
+    fake_redis.incr.return_value = 1
+
+    mock_cis = MagicMock()
+    mock_cis.model_dump.return_value = {
+        "router_id": str(mcp_context["r_id"]),
+        "security_score": 92,
+        "passed_directives_count": 9,
+    }
+
+    body = McpJsonRpcRequest(
+        id=28,
+        method="tools/call",
+        params={
+            "name": "rosgrid_run_cis_audit",
+            "arguments": {"router_id": str(mcp_context["r_id"])},
+        },
+    )
+    with (
+        patch.object(settings, "ROSGRID_MCP_ENABLED", True),
+        patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
+        patch("src.api.v1.mcp.run_cis_audit", new_callable=AsyncMock, return_value=mock_cis),
+        patch("src.api.v1.mcp.write_audit_log", new_callable=AsyncMock),
+    ):
+        resp = await api_mcp.mcp_endpoint(mcp_context["request"], body, mcp_context["claims"], db)
+        assert resp.result is not None
+        content = json.loads(resp.result["content"][0]["text"])
+        assert content["status"] == "OK"
+        assert content["data"]["security_score"] == 92
+
+
+@pytest.mark.asyncio
+async def test_tool_rosgrid_detect_mass_outage(mcp_context: dict[str, Any]) -> None:
+    db = AsyncMock()
+    res_user = MagicMock()
+    res_user.scalar_one_or_none.return_value = mcp_context["user"]
+    db.execute.return_value = res_user
+
+    fake_redis = AsyncMock()
+    fake_redis.incr.return_value = 1
+
+    inc_id = uuid.uuid4()
+    mock_incident = MagicMock()
+    mock_incident.id = inc_id
+    mock_incident.router_id = mcp_context["r_id"]
+    mock_incident.pon_port = "gpon1"
+    mock_incident.optical_box = "BOX-12"
+    mock_incident.affected_onus_count = 14
+    mock_incident.status = MagicMock()
+    mock_incident.status.value = "DETECTED"
+    mock_incident.incident_summary = "14 ONUs caídas en gpon1"
+
+    body = McpJsonRpcRequest(
+        id=29,
+        method="tools/call",
+        params={
+            "name": "rosgrid_detect_mass_outage",
+            "arguments": {"threshold_onus": 5},
+        },
+    )
+    with (
+        patch.object(settings, "ROSGRID_MCP_ENABLED", True),
+        patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
+        patch("src.api.v1.mcp.detect_fiber_cuts_engine", new_callable=AsyncMock, return_value=[mock_incident]),
+        patch("src.api.v1.mcp.write_audit_log", new_callable=AsyncMock),
+    ):
+        resp = await api_mcp.mcp_endpoint(mcp_context["request"], body, mcp_context["claims"], db)
+        assert resp.result is not None
+        content = json.loads(resp.result["content"][0]["text"])
+        assert content["status"] == "OK"
+        assert content["data"]["total_incidents"] == 1
+        assert content["data"]["incidents"][0]["pon_port"] == "gpon1"

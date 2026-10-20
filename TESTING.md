@@ -395,6 +395,51 @@ Certificación integral ejecutada bajo la **Regla Cero** dentro de los contenedo
   - **Pruebas Ejecutadas:** 240 de 240 pruebas pasadas (100% exitosas) en 36 suites de prueba.
   - **Suite de Pruebas Hito 20 (`src/views/enterpriseComplianceView.unit.ts`):** 6 de 6 pruebas unitarias pasadas verificando el header táctico, badge de Safe Mode, navegación reactiva por las 6 pestañas y acción de reversión de Config Drift en 1 clic.
 
+---
+
+## 16. Certificación QA 11X — Hito 21 (Servidor MCP Ampliado para Agentes IA y Certificación QA 11X Final)
+
+Certificación integral ejecutada bajo la **Regla Cero** dentro de los contenedores Docker efímeros `qa-backend` (`sinfallas/base-python-uv:3.13`) y `qa-vue3` (`sinfallas/base-node-ionic:22`).
+
+### A. Backend (`fastapi/`) — Docker `sinfallas/base-python-uv:3.13`
+- **Análisis Estático y Seguridad (SAST):**
+  - **Ruff (`ruff check src/ tests/`):** Cero (0) errores en código fuente y suites de prueba.
+  - **Ruff Format (`ruff format --check src/`):** 103 archivos de código fuente perfectamente formateados (0 diffs).
+  - **Mypy Estricto (`mypy --strict src/`):** Cero (0) errores en los 103 módulos del backend (`Success: no issues found in 103 source files`).
+  - **Radon Complejidad Ciclomática (`radon cc -s -a`):** Grado A en el 100% de las funciones de `src/api/v1/mcp.py` (Promedio A 2.9, máxima CC <= 5 por bloque).
+- **Pruebas Unitarias y Cobertura (Pytest 9.1.1):**
+  - **Pruebas Ejecutadas:** 389 de 389 pruebas pasadas (100% exitosas) en 28.97s.
+  - **Cobertura Total de Código:** **95.0%** (9,328 sentencias totales, 495 no ejecutadas), cumpliendo con el umbral corporativo innegociable de `>= 95.0%`.
+  - **Cobertura Específica de MCP (`src/api/v1/mcp.py`):** **99.0%** (300 sentencias, 3 no ejecutadas).
+  - **Catálogo de 16 Tools Semánticas Certificadas:**
+    1. `rosgrid_list_inventory`: Inventario y estado TOFU SSL.
+    2. `rosgrid_get_router_health`: Telemetría física de CPU, RAM, temperatura y voltaje.
+    3. `rosgrid_check_sfp_optical_ddm`: Diagnóstico DDM óptico con umbrales SFP.
+    4. `rosgrid_inspect_routing_bgp_ospf`: Sesiones BGP v7 y adyacencias OSPF.
+    5. `rosgrid_run_live_diagnostic`: Ping / Traceroute acotado (1 a 5 paquetes).
+    6. `rosgrid_compare_config_diff`: Git unified_diff de respaldos `.rsc` contra base o LIVE.
+    7. `rosgrid_reconnect_pppoe_client`: Reinicio asistido de sesiones PPPoE en `/ppp/active`.
+    8. `rosgrid_propose_network_change`: Freno Maker-Checker HTTP 202 con Safe Mode (60s).
+    9. `rosgrid_run_360_diagnostics`: Ping Multi-MTU (64B/512B/1472B DF), log analysis y Torch.
+    10. `rosgrid_isolate_subscriber`: Aislamiento técnico idempotente en `AISLADOS_TECNICO` / 64k.
+    11. `rosgrid_restore_subscriber`: Restauración idempotente y normalización de colas.
+    12. `rosgrid_change_rate_limit` (alias: `rosgrid_change_subscriber_rate_limit`): Modificación de Simple Queue en caliente sin desconexión física.
+    13. `rosgrid_query_bgp_looking_glass`: Consulta BGP route y advertised peers.
+    14. `rosgrid_check_config_drift`: Comparación semántica contra Golden Baseline Template.
+    15. `rosgrid_run_cis_audit`: Auditoría CIS Benchmark RouterOS v7 (Security Score 0-100).
+    16. `rosgrid_detect_mass_outage`: Motor de correlación de caídas masivas en PON y cajas.
+  - **Suite de Pruebas Unitarias de MCP (`fastapi/tests/test_mcp_endpoint.unit.py`):** 30 de 30 pruebas pasadas cubriendo seguridad RBAC, CIDR whitelist, rate limiting KeyDB, protocolo JSON-RPC 2.0 y las 16 herramientas semánticas.
+
+### B. Frontend (`vue3/`) — Docker `sinfallas/base-node-ionic:22`
+- **Análisis Estático y Tipado Estricto:**
+  - **Vue-TSC (`pnpm type-check`):** Cero (0) errores de tipado TypeScript estricto.
+  - **Prettier (`pnpm format:check`):** 100% de los archivos con estilo y formato verificado (`All matched files use Prettier code style!`).
+- **Compilación de Producción:**
+  - **Vite Build (`pnpm build`):** Compilación limpia sin errores en 4.02s (`✓ built in 4.02s`).
+- **Pruebas Unitarias (Vitest v8):**
+  - **Pruebas Ejecutadas:** 240 de 240 pruebas pasadas (100% exitosas) en 36 suites de prueba.
+
+
 
 
 

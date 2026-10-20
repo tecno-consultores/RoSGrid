@@ -294,12 +294,13 @@ Devuelve el catálogo de las 16 herramientas semánticas con sus esquemas JSON d
 
 ---
 
-### Herramienta 12: `rosgrid_change_subscriber_rate_limit`
+### Herramienta 12: `rosgrid_change_rate_limit` (Alias: `rosgrid_change_subscriber_rate_limit`)
 - **Nivel de Riesgo:** Modificación Técnica de Ancho de Banda.
 - **Descripción:** Aplica un nuevo perfil de velocidad (Queue Simple / PCQ con parámetros de Burst) al equipo sin desconectar la sesión física.
 - **Argumentos:**
   - `subscriber_device_id` (UUID requerido).
   - `bandwidth_profile_id` (UUID requerido).
+  - `idempotency_key` (UUID opcional).
 
 ---
 

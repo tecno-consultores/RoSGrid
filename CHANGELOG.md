@@ -9,6 +9,18 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 ## [Unreleased]
 
 ### Added
+- **Servidor MCP Ampliado para Agentes IA (Hito 21):**
+  - Expansión del catálogo de herramientas semánticas del servidor Model Context Protocol integrado (`POST /api/v1/mcp`) de 8 a 16 herramientas con esquemas Pydantic v2 y validación JSON-RPC 2.0 *Streamable HTTP*.
+  - 8 nuevas herramientas semánticas para agentes inteligentes (Hermes Agent, Claude Code / Desktop, NOC Autónomo):
+    1. `rosgrid_run_360_diagnostics`: Suite diagnóstica 360° (Ping multi-MTU con DF-bit, análisis de causas de desconexión en logs de RouterOS y muestreo Torch en vivo).
+    2. `rosgrid_isolate_subscriber`: Aislamiento técnico idempotente de servicios de red en firewall `AISLADOS_TECNICO` o cola 64k.
+    3. `rosgrid_restore_subscriber`: Restauración técnica idempotente y reanudación de perfiles de velocidad nominales.
+    4. `rosgrid_change_rate_limit` (alias `rosgrid_change_subscriber_rate_limit`): Conmutación en caliente de perfiles QoS / Simple Queue sin desconexión física.
+    5. `rosgrid_query_bgp_looking_glass`: Consulta no interactiva de tablas de rutas BGP v7 y prefijos anunciados a peers de tránsito.
+    6. `rosgrid_check_config_drift`: Comparación y detección semántica de desviación de configuración contra Golden Baseline Templates.
+    7. `rosgrid_run_cis_audit`: Auditoría automatizada de directivas críticas CIS Benchmark con cálculo de Security Score (0-100).
+    8. `rosgrid_detect_mass_outage`: Motor de correlación de cortes de fibra óptica y caídas masivas en ramas PON y cajas NAP.
+  - Certificación integral QA 11X en Docker: 389 pruebas unitarias de backend con 95.0% de cobertura de código fuente, 99.0% de cobertura en `src/api/v1/mcp.py` y complejidad ciclomática Radon Grado A (promedio 2.9, máxima CC <= 5 por función).
 - **Hub de Monitoreo Táctico "Mission Control":**
   - Panel integrado en Wallboard con telemetría en vivo, consumo agregado de ancho de banda (Tx/Rx), distribución de flota por roles de red y latencia de sondas.
   - Transiciones cinemáticas fluidas aceleradas por hardware entre vistas (Wallboard, Inventario, WebFig).

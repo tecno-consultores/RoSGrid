@@ -22,6 +22,18 @@ from src.api.v1.backups import (
     _extract_raw_rsc_text,
     clean_rsc_export_comments,
 )
+from src.api.v1.bgp_looking_glass import (
+    get_looking_glass_advertised,
+    get_looking_glass_route,
+)
+from src.api.v1.compliance import check_config_drift, run_cis_audit
+from src.api.v1.diagnostics_360 import run_endpoint_360_diagnostics
+from src.api.v1.field_ops import detect_fiber_cuts_engine
+from src.api.v1.network_services import (
+    change_network_service_rate_limit,
+    isolate_network_service,
+    restore_network_service,
+)
 from src.api.v1.webfig_common import get_router_and_client
 from src.core.audit import write_audit_log
 from src.core.config import settings
@@ -35,11 +47,13 @@ from src.models.operations import (
     RouterBackup,
 )
 from src.redis_layer.client import get_redis_client
+from src.schemas.diagnostics_360 import Endpoint360Request
 from src.schemas.mcp import (
     McpJsonRpcError,
     McpJsonRpcRequest,
     McpJsonRpcResponse,
 )
+from src.schemas.network_services import ChangeRateLimitRequest
 
 logger = logging.getLogger(__name__)
 
@@ -379,6 +393,134 @@ async def _handle_propose_network_change(
     }
 
 
+async def _handle_run_360_diagnostics(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    claims: dict[str, Any],
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    router_id = uuid.UUID(str(args["router_id"]))
+    req = Endpoint360Request(
+        router_id=router_id,
+        target_ip=str(args["target_ip"]),
+        device_serial=args.get("device_serial"),
+        interface=args.get("interface"),
+    )
+    res = await run_endpoint_360_diagnostics(req, claims, db)
+    return res.model_dump()
+
+
+async def _handle_isolate_subscriber(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    claims: dict[str, Any],
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    service_id = uuid.UUID(str(args["subscriber_device_id"]))
+    ik = str(args.get("idempotency_key") or uuid.uuid4())
+    res = await isolate_network_service(service_id, ik, db, claims)
+    return res.model_dump()
+
+
+async def _handle_restore_subscriber(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    claims: dict[str, Any],
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    service_id = uuid.UUID(str(args["subscriber_device_id"]))
+    ik = str(args.get("idempotency_key") or uuid.uuid4())
+    res = await restore_network_service(service_id, ik, db, claims)
+    return res.model_dump()
+
+
+async def _handle_change_rate_limit(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    claims: dict[str, Any],
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    service_id = uuid.UUID(str(args["subscriber_device_id"]))
+    profile_id = uuid.UUID(str(args["bandwidth_profile_id"]))
+    ik = str(args.get("idempotency_key") or uuid.uuid4())
+    req = ChangeRateLimitRequest(bandwidth_profile_id=profile_id)
+    res = await change_network_service_rate_limit(service_id, req, ik, db, claims)
+    return res.model_dump()
+
+
+async def _handle_query_bgp_looking_glass(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    claims: dict[str, Any],
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    router_id = uuid.UUID(str(args["router_id"]))
+    qtype = str(args.get("query_type", "route")).lower()
+    refresh = bool(args.get("refresh", False))
+    if qtype == "advertised":
+        peer = str(args.get("peer_session") or args.get("peer") or "")
+        adv_res = await get_looking_glass_advertised(router_id, peer, refresh, claims, db)
+        return adv_res.model_dump()
+    prefix = str(args.get("prefix", "0.0.0.0/0"))
+    route_res = await get_looking_glass_route(router_id, prefix, refresh, claims, db)
+    return route_res.model_dump()
+
+
+async def _handle_check_config_drift(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    claims: dict[str, Any],
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    router_id = uuid.UUID(str(args["router_id"]))
+    res = await check_config_drift(router_id, db, claims)
+    return res.model_dump()
+
+
+async def _handle_run_cis_audit(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    claims: dict[str, Any],
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    router_id = uuid.UUID(str(args["router_id"]))
+    res = await run_cis_audit(router_id, db, claims)
+    return res.model_dump()
+
+
+def _serialize_incident(inc: Any) -> dict[str, Any]:
+    stat = inc.status.value if hasattr(inc.status, "value") else str(inc.status)
+    return {
+        "id": str(inc.id),
+        "router_id": str(inc.router_id),
+        "pon_port": inc.pon_port,
+        "optical_box": inc.optical_box,
+        "affected_onus_count": inc.affected_onus_count,
+        "status": stat,
+        "incident_summary": inc.incident_summary,
+    }
+
+
+async def _handle_detect_mass_outage(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    claims: dict[str, Any],
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    threshold = int(args.get("threshold_onus", 3))
+    incidents = await detect_fiber_cuts_engine(threshold, db, claims)
+    serialized = [_serialize_incident(i) for i in incidents]
+    return {"total_incidents": len(serialized), "incidents": serialized}
+
+
 TOOL_HANDLERS_MAP: dict[str, Callable[..., Coroutine[Any, Any, dict[str, Any]]]] = {
     "rosgrid_list_inventory": _handle_list_inventory,
     "rosgrid_get_router_health": _handle_get_router_health,
@@ -388,6 +530,15 @@ TOOL_HANDLERS_MAP: dict[str, Callable[..., Coroutine[Any, Any, dict[str, Any]]]]
     "rosgrid_compare_config_diff": _handle_config_diff,
     "rosgrid_reconnect_pppoe_client": _handle_reconnect_pppoe,
     "rosgrid_propose_network_change": _handle_propose_network_change,
+    "rosgrid_run_360_diagnostics": _handle_run_360_diagnostics,
+    "rosgrid_isolate_subscriber": _handle_isolate_subscriber,
+    "rosgrid_restore_subscriber": _handle_restore_subscriber,
+    "rosgrid_change_rate_limit": _handle_change_rate_limit,
+    "rosgrid_change_subscriber_rate_limit": _handle_change_rate_limit,
+    "rosgrid_query_bgp_looking_glass": _handle_query_bgp_looking_glass,
+    "rosgrid_check_config_drift": _handle_check_config_drift,
+    "rosgrid_run_cis_audit": _handle_run_cis_audit,
+    "rosgrid_detect_mass_outage": _handle_detect_mass_outage,
 }
 
 MCP_TOOLS_CATALOG: list[dict[str, Any]] = [
@@ -578,6 +729,187 @@ MCP_TOOLS_CATALOG: list[dict[str, Any]] = [
             "required": ["router_id", "category", "ros_path", "http_method", "payload", "justification"],
         },
     },
+    {
+        "name": "rosgrid_run_360_diagnostics",
+        "description": "Ejecuta suite de diagnóstico 360° en MikroTik v7: ping multi-MTU (64B, 512B, 1472B con DF-bit), análisis de /log de desconexiones y muestreo Torch de flujos activos.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "router_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID del router MikroTik",
+                },
+                "target_ip": {
+                    "type": "string",
+                    "description": "Dirección IP del abonado o dispositivo de destino",
+                },
+                "device_serial": {
+                    "type": "string",
+                    "description": "Serial de la ONU o equipo de cliente (opcional)",
+                },
+                "interface": {
+                    "type": "string",
+                    "description": "Nombre de la interfaz para muestreo Torch (opcional, ej. ether1)",
+                },
+            },
+            "required": ["router_id", "target_ip"],
+        },
+    },
+    {
+        "name": "rosgrid_isolate_subscriber",
+        "description": "Aísla técnicamente un servicio de red (agrega a lista de firewall AISLADOS_TECNICO y conmuta cola a 64k/64k) de manera idempotente.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "subscriber_device_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID del dispositivo o servicio de abonado",
+                },
+                "reason": {
+                    "type": "string",
+                    "description": "Motivo o justificación del aislamiento técnico",
+                },
+                "idempotency_key": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID opcional de idempotencia",
+                },
+            },
+            "required": ["subscriber_device_id"],
+        },
+    },
+    {
+        "name": "rosgrid_restore_subscriber",
+        "description": "Restaura técnicamente un servicio previamente aislado (elimina de AISLADOS_TECNICO y restituye colas nominales de QoS) de manera idempotente.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "subscriber_device_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID del dispositivo o servicio de abonado",
+                },
+                "idempotency_key": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID opcional de idempotencia",
+                },
+            },
+            "required": ["subscriber_device_id"],
+        },
+    },
+    {
+        "name": "rosgrid_change_rate_limit",
+        "description": "Modifica en caliente el perfil de ancho de banda y QoS (Simple Queue / PCQ con Burst) del abonado sin desconectar la sesión física.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "subscriber_device_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID del dispositivo o servicio de abonado",
+                },
+                "bandwidth_profile_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID del nuevo perfil de ancho de banda a aplicar",
+                },
+                "idempotency_key": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID opcional de idempotencia",
+                },
+            },
+            "required": ["subscriber_device_id", "bandwidth_profile_id"],
+        },
+    },
+    {
+        "name": "rosgrid_query_bgp_looking_glass",
+        "description": "Consulta la tabla de rutas BGP v7 o prefijos exportados a un peer en el MikroTik sin requerir acceso interactivo.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "router_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID del router MikroTik BGP",
+                },
+                "query_type": {
+                    "type": "string",
+                    "enum": ["route", "advertised"],
+                    "description": "Tipo de consulta (route o advertised)",
+                    "default": "route",
+                },
+                "prefix": {
+                    "type": "string",
+                    "description": "Prefijo o CIDR a consultar en la tabla de rutas (ej. 1.1.1.0/24)",
+                },
+                "peer_session": {
+                    "type": "string",
+                    "description": "Nombre o IP del peer BGP para consultar prefijos anunciados",
+                },
+                "refresh": {
+                    "type": "boolean",
+                    "description": "Evitar caché y consultar directamente en el router",
+                    "default": False,
+                },
+            },
+            "required": ["router_id"],
+        },
+    },
+    {
+        "name": "rosgrid_check_config_drift",
+        "description": "Audita la desviación de configuración (Config Drift) comparando la configuración activa contra la Golden Baseline homologada.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "router_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID del router MikroTik a auditar",
+                },
+            },
+            "required": ["router_id"],
+        },
+    },
+    {
+        "name": "rosgrid_run_cis_audit",
+        "description": "Ejecuta auditoría de seguridad CIS Benchmark para RouterOS v7 evaluando 10 directivas críticas y calculando el Security Score (0-100).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "router_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID del router MikroTik a auditar",
+                },
+            },
+            "required": ["router_id"],
+        },
+    },
+    {
+        "name": "rosgrid_detect_mass_outage",
+        "description": "Motor de correlación para detectar cortes de fibra óptica y caídas masivas agrupando ONUs fuera de línea por puerto PON o caja óptica.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "threshold_onus": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "default": 3,
+                    "description": "Mínimo de ONUs caídas en el mismo puerto/caja para considerar corte",
+                },
+                "tenant_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID opcional del tenant",
+                },
+            },
+            "required": [],
+        },
+    },
 ]
 
 
@@ -668,7 +1000,12 @@ async def _record_mcp_audit(
     args: dict[str, Any],
 ) -> None:
     rid_str = args.get("router_id")
-    target_rid = uuid.UUID(str(rid_str)) if rid_str else None
+    target_rid: uuid.UUID | None = None
+    if rid_str:
+        try:
+            target_rid = uuid.UUID(str(rid_str))
+        except (ValueError, TypeError):
+            target_rid = None
     await write_audit_log(
         session=db,
         tenant_id=tenant_id,

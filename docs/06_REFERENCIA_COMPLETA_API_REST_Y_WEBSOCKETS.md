@@ -341,10 +341,31 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
 - **Protocolo:** JSON-RPC 2.0 *Streamable HTTP*.
 - **Roles Exclusivos:** `SERVICE_ACCOUNT` (o `TENANT_ADMIN` / `SUPERADMIN_GLOBAL` en auditoría).
 - **Seguridad:** Requiere `ROSGRID_MCP_ENABLED=true` y verificación de origen contra la lista blanca CIDR.
-- **Rate-Limiting:** Máximo 30 peticiones por minuto por cuenta.
+- **Rate-Limiting:** Máximo 30 peticiones por minuto por cuenta en KeyDB.
 - **Métodos Soportados:** `initialize`, `ping`, `notifications/initialized`, `tools/list`, `tools/call`.
 
-*(La especificación técnica completa y ejemplos de las 8 Tools MCP se detallan en el manual `docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md`).*
+#### Catálogo de las 16 Herramientas Semánticas MCP:
+
+| # | Nombre de la Tool | Categoría | Descripción Técnica |
+| :--- | :--- | :--- | :--- |
+| **1** | `rosgrid_list_inventory` | Inventario | Lista routers MikroTik autorizados con estado en KeyDB y TOFU SSL. |
+| **2** | `rosgrid_get_router_health` | Telemetría | Consulta CPU%, RAM, Uptime, Temperatura láser y Voltaje. |
+| **3** | `rosgrid_check_sfp_optical_ddm` | Diagnóstico Óptico | Diagnóstico DDM (`rx/tx power` en dBm, clasificación óptica). |
+| **4** | `rosgrid_inspect_routing_bgp_ospf` | Enrutamiento | Resumen de sesiones BGP v7 y adyacencias OSPF. |
+| **5** | `rosgrid_run_live_diagnostic` | Diagnóstico Activo | Ejecuta ping o traceroute acotado (1 a 5 paquetes) hacia un destino. |
+| **6** | `rosgrid_compare_config_diff` | Forense | Diff estilo Git (`unified_diff`) entre respaldos `.rsc` o contra `LIVE`. |
+| **7** | `rosgrid_reconnect_pppoe_client` | Soporte N1 | Reinicia sesión PPPoE en `/ppp/active` con auditoría WORM. |
+| **8** | `rosgrid_propose_network_change` | **Maker-Checker (202)** | Encola propuesta de cambio para revisión humana (Safe Mode 60s). |
+| **9** | `rosgrid_run_360_diagnostics` | Diagnóstico 360° | Ping Multi-MTU (64B/512B/1472B DF), logs de desconexión y Torch. |
+| **10** | `rosgrid_isolate_subscriber` | QoS / Seguridad | Aislamiento idempotente en lista de firewall `AISLADOS_TECNICO` o cola 64k. |
+| **11** | `rosgrid_restore_subscriber` | QoS / Aprovisionamiento | Restauración idempotente y normalización de colas de abonado. |
+| **12** | `rosgrid_change_rate_limit` | QoS Dinámico | Modificación en caliente de perfil Simple Queue / PCQ sin desconexión física. |
+| **13** | `rosgrid_query_bgp_looking_glass` | Looking Glass BGP | Consulta de tabla de rutas y prefijos anunciados a peers BGP. |
+| **14** | `rosgrid_check_config_drift` | Cumplimiento | Detección de desviación de configuración contra la Golden Template. |
+| **15** | `rosgrid_run_cis_audit` | Ciberseguridad | Auditoría CIS Benchmark (10 directivas críticas y Security Score 0-100). |
+| **16** | `rosgrid_detect_mass_outage` | NOC / Incidentes | Correlación de cortes de fibra óptica y caídas masivas en ramas PON/cajas. |
+
+*(La especificación detallada, esquemas JSON y ejemplos de integración se detallan en el manual `docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md`).*
 
 ---
 
