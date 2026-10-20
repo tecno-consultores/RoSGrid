@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 RoSGrid Contributors
-# Script de Instalación No-Root para RoSGrid v1.0.0
+# Script de Instalación No-Root para RoSGrid v1.0.0 (Soporte Local y Remoto vía curl)
 
 set -euo pipefail
 
@@ -19,7 +19,25 @@ if ! groups | grep -qw docker; then
     exit 1
 fi
 
-clear
+# Función para leer entrada interactiva compatible con tuberías (curl ... | bash)
+leer_entrada() {
+    local prompt="$1"
+    local var_name="$2"
+    local valor_defecto="${3:-}"
+    local respuesta=""
+
+    if [[ -t 0 ]]; then
+        read -r -p "$prompt" respuesta || true
+    elif [[ -c /dev/tty ]] && read -r -p "$prompt" respuesta < /dev/tty 2>/dev/null; then
+        :
+    else
+        respuesta="$valor_defecto"
+    fi
+    respuesta="${respuesta:-$valor_defecto}"
+    printf -v "$var_name" '%s' "$respuesta"
+}
+
+clear 2>/dev/null || true
 echo "=============================================================================="
 echo "          🚀 Asistente de Instalación No-Root de RoSGrid v1.0.0              "
 echo "=============================================================================="
@@ -43,14 +61,51 @@ fi
 
 echo "✔ Docker, Docker Compose y dependencias locales verificadas."
 
-# 3. Configuración del archivo de variables de entorno (.env) y manejo de volúmenes
+# 3. Detección de Modo Dual: Local (repo clonado) vs Remoto Standalone (curl | bash)
+RAW_BASE_URL="https://raw.githubusercontent.com/tecno-consultores/RoSGrid/main"
+IS_REMOTE=false
+
+if [[ ! -f .env.example || ! -f docker-compose.prod.yml ]]; then
+    IS_REMOTE=true
+fi
+
+if [[ "$IS_REMOTE" == "true" ]]; then
+    INSTALL_DIR="${ROSGRID_INSTALL_DIR:-/opt/rosgrid}"
+    echo -e "\n[INFO] Modo de instalación remota standalone detectado."
+    echo "Directorio de destino: $INSTALL_DIR"
+
+    if [[ ! -d "$INSTALL_DIR" ]]; then
+        PARENT_DIR="$(dirname "$INSTALL_DIR")"
+        if [[ -w "$PARENT_DIR" ]]; then
+            mkdir -p "$INSTALL_DIR"
+        else
+            echo -e "\e[33m[INFO] Se requieren privilegios sudo únicamente para crear y asignar '$INSTALL_DIR' a tu usuario ($USER)...\e[0m"
+            if command -v sudo &>/dev/null; then
+                sudo mkdir -p "$INSTALL_DIR"
+                sudo chown -R "$USER:$(id -gn)" "$INSTALL_DIR"
+            else
+                echo -e "\e[31m[ERROR] El directorio '$INSTALL_DIR' no existe y 'sudo' no está disponible.\e[0m"
+                exit 1
+            fi
+        fi
+    fi
+
+    cd "$INSTALL_DIR"
+
+    echo "Descargando manifiestos de despliegue desde GitHub ($RAW_BASE_URL)..."
+    curl -fsSL "${RAW_BASE_URL}/.env.example" -o .env.example
+    curl -fsSL "${RAW_BASE_URL}/docker-compose.prod.yml" -o docker-compose.prod.yml
+    echo "✔ Manifiestos de despliegue descargados en $INSTALL_DIR."
+fi
+
+# 4. Configuración del archivo de variables de entorno (.env) y manejo de volúmenes
 echo -e "\n[2/5] Configurando variables de entorno y secretos criptográficos..."
 GENERAR_SECRETOS=true
 RECREAR_VOLUMENES=false
 
 if [[ -f .env ]]; then
-    read -r -p $'\e[33m[AVISO] Ya existe un archivo .env en la raíz. ¿Deseas sobrescribirlo y limpiar la BD? (s/N): \e[0m' respuesta
-    respuesta="${respuesta:-N}"
+    respuesta=""
+    leer_entrada $'\e[33m[AVISO] Ya existe un archivo .env en el directorio. ¿Deseas sobrescribirlo y limpiar la BD? (s/N): \e[0m' respuesta "N"
     if [[ "$respuesta" =~ ^[sS]$ ]]; then
         cp .env.example .env
         RECREAR_VOLUMENES=true
@@ -64,8 +119,8 @@ else
     # Si es una instalación nueva pero ya existía un volumen viejo, prevenimos conflictos de credenciales
     if docker volume inspect rosgrid_pg_data &>/dev/null; then
         echo -e "\e[33m[AVISO] Se detectó un volumen de PostgreSQL previo ('rosgrid_pg_data').\e[0m"
-        read -r -p "¿Deseas purgar el volumen anterior para evitar conflictos de contraseña? (S/n): " purgar
-        purgar="${purgar:-S}"
+        purgar=""
+        leer_entrada "¿Deseas purgar el volumen anterior para evitar conflictos de contraseña? (S/n): " purgar "S"
         if [[ "$purgar" =~ ^[sS]$ ]]; then
             RECREAR_VOLUMENES=true
         fi
@@ -73,7 +128,7 @@ else
     echo "✔ Archivo .env creado desde la plantilla base."
 fi
 
-# 4. Generación de entropía y secretos criptográficos automáticos de 256 bits
+# 5. Generación de entropía y secretos criptográficos automáticos de 256 bits
 echo -e "\n[3/5] Verificando llaves criptográficas de alta seguridad..."
 if [[ "$GENERAR_SECRETOS" == "true" ]]; then
     sed -i "s|POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$(openssl rand -hex 24)|" .env
@@ -97,7 +152,7 @@ if [[ "$RECREAR_VOLUMENES" == "true" ]]; then
     echo "✔ Volúmenes anteriores purgados exitosamente."
 fi
 
-# 5. Ejecución del auditor de infraestructura (Trivy IaC)
+# 6. Ejecución del auditor de infraestructura (Trivy IaC si existe localmente)
 if [[ -f ./auditar-infra.sh ]]; then
     echo -e "\n[4/5] Ejecutando auditoría de seguridad IaC (Trivy)..."
     chmod +x ./auditar-infra.sh
@@ -108,37 +163,43 @@ if [[ -f ./auditar-infra.sh ]]; then
         exit 1
     fi
 else
-    echo -e "\n[4/5] Omitiendo auditoría Trivy (script auditar-infra.sh no encontrado)."
+    echo -e "\n[4/5] Omitiendo auditoría Trivy (script auditar-infra.sh no encontrado en el entorno)."
 fi
 
-# 6. Despliegue de contenedores utilizando Docker Compose (Modo Producción o Local)
-echo -e "\n[5/5] Desplegando el stack de contenedores RoSGrid..."
-echo "Selecciona el modo de despliegue:"
-echo "  1) Producción Remota (Docker Hub: imágenes precompiladas oficiales)"
-echo "  2) Producción Local (Compilar y ejecutar imágenes de producción localmente sin Docker Hub) [Recomendado para pruebas]"
-echo "  3) Desarrollo / Laboratorio (Montaje de código fuente en vivo)"
-read -r -p "Ingresa tu opción (1, 2 o 3) [2]: " option
-option="${option:-2}"
-
+# 7. Despliegue de contenedores utilizando Docker Compose
 API_CONTAINER="rosgrid_api"
+option="1"
 
-if [[ "$option" == "1" ]]; then
-    echo "Desplegando con docker-compose.prod.yml..."
+if [[ "$IS_REMOTE" == "true" ]]; then
+    echo -e "\n[5/5] Desplegando el stack de contenedores RoSGrid (Producción Oficial Docker Hub)..."
     docker compose -f docker-compose.prod.yml pull
     docker compose -f docker-compose.prod.yml up -d
-elif [[ "$option" == "2" ]]; then
-    echo "Construyendo y desplegando con docker-compose.prod.local.yml..."
-    docker build -f fastapi/Dockerfile -t sinfallas/rosgrid-backend:local-test fastapi
-    docker build -f vue3/Dockerfile -t sinfallas/rosgrid-frontend:local-test vue3
-    docker compose -f docker-compose.prod.local.yml up -d
-    API_CONTAINER="rosgrid_api_local"
-elif [[ "$option" == "3" ]]; then
-    echo "Desplegando con docker-compose.yml (Desarrollo)..."
-    docker compose pull rosgrid-db rosgrid-redis rosgrid-api rosgrid-worker rosgrid-ui
-    docker compose up -d
 else
-    echo -e "\e[31m[ERROR] Opción no válida: '$option'. Debe ser 1, 2 o 3.\e[0m"
-    exit 1
+    echo -e "\n[5/5] Desplegando el stack de contenedores RoSGrid..."
+    echo "Selecciona el modo de despliegue:"
+    echo "  1) Producción Remota (Docker Hub: imágenes precompiladas oficiales)"
+    echo "  2) Producción Local (Compilar y ejecutar imágenes de producción localmente sin Docker Hub) [Recomendado para pruebas]"
+    echo "  3) Desarrollo / Laboratorio (Montaje de código fuente en vivo)"
+    leer_entrada "Ingresa tu opción (1, 2 o 3) [1]: " option "1"
+
+    if [[ "$option" == "1" ]]; then
+        echo "Desplegando con docker-compose.prod.yml..."
+        docker compose -f docker-compose.prod.yml pull
+        docker compose -f docker-compose.prod.yml up -d
+    elif [[ "$option" == "2" ]]; then
+        echo "Construyendo y desplegando con docker-compose.prod.local.yml..."
+        docker build -f fastapi/Dockerfile -t sinfallas/rosgrid-backend:local-test fastapi
+        docker build -f vue3/Dockerfile -t sinfallas/rosgrid-frontend:local-test vue3
+        docker compose -f docker-compose.prod.local.yml up -d
+        API_CONTAINER="rosgrid_api_local"
+    elif [[ "$option" == "3" ]]; then
+        echo "Desplegando con docker-compose.yml (Desarrollo)..."
+        docker compose pull rosgrid-db rosgrid-redis rosgrid-api rosgrid-worker rosgrid-ui
+        docker compose up -d
+    else
+        echo -e "\e[31m[ERROR] Opción no válida: '$option'. Debe ser 1, 2 o 3.\e[0m"
+        exit 1
+    fi
 fi
 
 echo -e "\nEsperando a que la API complete las migraciones de base de datos..."
@@ -155,10 +216,17 @@ if docker exec "$API_CONTAINER" python3 /app/scripts/crear_admin.py --check-only
 else
     echo -e "\e[33m[AVISO] No se detectó ningún usuario en la base de datos de RoSGrid.\e[0m"
     echo "Puedes crear el Super Administrador ahora desde la consola o hacerlo a través de la web."
-    read -r -p "¿Deseas ejecutar el asistente de creación del Super Administrador ahora? (S/n): " crear_adm
-    crear_adm="${crear_adm:-S}"
+    crear_adm=""
+    leer_entrada "¿Deseas ejecutar el asistente de creación del Super Administrador ahora? (S/n): " crear_adm "S"
     if [[ "$crear_adm" =~ ^[sS]$ ]]; then
-        docker exec -it "$API_CONTAINER" python3 /app/scripts/crear_admin.py
+        if [[ -t 0 ]]; then
+            docker exec -it "$API_CONTAINER" python3 /app/scripts/crear_admin.py
+        elif [[ -c /dev/tty ]]; then
+            docker exec -it "$API_CONTAINER" python3 /app/scripts/crear_admin.py < /dev/tty
+        else
+            echo "Terminal no interactiva detectada. Puedes crear el Super Administrador luego ejecutando:"
+            echo "  docker exec -it $API_CONTAINER python3 /app/scripts/crear_admin.py"
+        fi
     fi
 fi
 
@@ -173,5 +241,12 @@ fi
 echo "Accede a la consola web en: http://localhost:${PORT_DISPLAY} (o la IP/puerto configurado)"
 echo "Para verificar el estado de los logs ejecuta:"
 echo "  docker logs -f $API_CONTAINER"
+if [[ "$IS_REMOTE" == "true" ]]; then
+    echo -e "\nLos archivos de despliegue y configuración están en: $INSTALL_DIR"
+    echo "Comandos útiles desde $INSTALL_DIR:"
+    echo "  docker compose -f docker-compose.prod.yml ps"
+    echo "  docker compose -f docker-compose.prod.yml down"
+    echo "  docker compose -f docker-compose.prod.yml up -d"
+fi
 echo "=============================================================================="
 exit 0

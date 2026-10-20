@@ -9,6 +9,14 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 ## [Unreleased]
 
 ### Added
+- **Asistente de Instalación Standalone Remoto (`instalar-rosgrid.sh` vía `curl | bash`):**
+  - Soporte para instalación turnkey en 1 solo comando: `curl -fsSL https://raw.githubusercontent.com/tecno-consultores/RoSGrid/main/instalar-rosgrid.sh | bash`.
+  - Modo dual inteligente: detección automática entre repositorio local clonado y entorno remoto standalone.
+  - Aprovisionamiento automático y seguro del directorio `/opt/rosgrid` (o `$ROSGRID_INSTALL_DIR`) con privilegios mínimos y asignación exclusiva al usuario no-root.
+  - Descarga desatendida de manifiestos oficiales de producción (`.env.example` y `docker-compose.prod.yml`) desde la rama `main` de GitHub.
+  - Compatibilidad de terminal interactiva mediante lectura directa desde `/dev/tty` para soportar prompts y asistente de creación de Super Administrador sobre tuberías estándar.
+  - Generación de entropía y secretos criptográficos de 256 bits para PostgreSQL, KeyDB, Bóveda AES-256-GCM, JWT y CSRF con permisos estrictos `chmod 600 .env`.
+  - Auditoría estática con ShellCheck (`koalaman/shellcheck:stable`) con 0 errores y 0 advertencias.
 - **Endurecimiento de Seguridad Híbrida (FastAPI + Vue 3) y Protección contra Vectores de Ataque:**
   - **Mitigación de Cross-Site WebSocket Hijacking (CSWSH):** Validación previa obligatoria de la cabecera `Origin` (`_verify_ws_origin`) en los canales de telemetría (`/ws/v1/routers/{id}/live-telemetry`) y eventos (`/ws/v1/tenant/events`) antes de aceptar el socket (`ws.accept()`), rechazando orígenes no autorizados o ausentes en producción con código `4403`.
   - **Sanitización de Errores de Validación Pydantic (Anti-Enumeración 422):** Manejador de excepciones `RequestValidationError` en FastAPI que en entornos de producción oculta rutas internas de campos, nombres de columnas y expresiones regulares, devolviendo un mensaje genérico sanitizado.

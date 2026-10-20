@@ -172,16 +172,15 @@ Para una referencia exhaustiva de operación, seguridad y despliegue, consulta l
 RoSGrid opera bajo el principio de **infraestructura inmutable** y ejecuta las migraciones de base de datos automáticamente al iniciar o actualizar contenedores (protegidas mediante `pg_advisory_lock` en PostgreSQL). Consulta [INSTALL.md](./INSTALL.md) para ver los requisitos detallados y la configuración de **KeyDB** o **DragonflyDB**:
 
 ~~~bash
-# 1. Copiar la plantilla de variables de entorno y configurar secretos criptográficos
+# Opción 1 (Recomendada): Instalación Turnkey en 1 comando (descarga en /opt/rosgrid y despliegue oficial)
+curl -fsSL https://raw.githubusercontent.com/tecno-consultores/RoSGrid/main/instalar-rosgrid.sh | bash
+
+# Opción 2: Instalación local desde el repositorio clonado
+./instalar-rosgrid.sh
+
+# Opción 3: Despliegue manual directo con Docker Compose (Docker Hub)
 cp .env.example .env
-
-# 2. Auditar la configuración de infraestructura con Trivy
-./auditar-infra.sh
-
-# 3. Levantar toda la plataforma (entorno local / laboratorio)
-docker compose up -d
-
-# O desplegar directamente desde las imágenes oficiales en Docker Hub (sinfallas/rosgrid-*)
+# Configura tus secretos criptográficos en .env y levanta:
 docker compose -f docker-compose.prod.yml up -d
 ~~~
 

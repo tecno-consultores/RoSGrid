@@ -126,16 +126,25 @@ En `docker-compose.yml` o `docker-compose.prod.yml`, comenta el servicio `rosgri
 ## 4. Despliegue de RoSGrid
 
 ### 4.1 Despliegue de Producción Directo desde Docker Hub (`docker-compose.prod.yml`)
-Este método no requiere descargar el código fuente ni compilar imágenes localmente; descarga las imágenes inmutables oficiales:
+Este método no requiere descargar el código fuente ni compilar imágenes localmente; descarga las imágenes inmutables oficiales desde Docker Hub:
 
+#### Método Asistido en 1 Solo Comando (Recomendado):
+```bash
+curl -fsSL https://raw.githubusercontent.com/tecno-consultores/RoSGrid/main/instalar-rosgrid.sh | bash
+```
+El asistente crea y configura automáticamente `/opt/rosgrid`, descarga los manifiestos oficiales (`.env.example` y `docker-compose.prod.yml`), inyecta secretos criptográficos aleatorios de 256 bits (`chmod 600 .env`), descarga las imágenes oficiales y lanza el asistente interactivo para crear el Super Administrador.
+
+#### Método Manual Paso a Paso:
 ```bash
 # 1. Crear directorio del proyecto y descargar docker-compose.prod.yml
-mkdir -p /opt/rosgrid && cd /opt/rosgrid
+sudo mkdir -p /opt/rosgrid && sudo chown -R "$USER:$USER" /opt/rosgrid
+cd /opt/rosgrid
 curl -fsSL -o docker-compose.prod.yml https://raw.githubusercontent.com/tecno-consultores/RoSGrid/main/docker-compose.prod.yml
 
-# 2. Configurar variables de entorno
+# 2. Configurar variables de entorno y generar secretos criptográficos
 curl -fsSL -o .env https://raw.githubusercontent.com/tecno-consultores/RoSGrid/main/.env.example
-nano .env
+chmod 600 .env
+# Configura contraseñas y llaves de 256 bits (AES, JWT, CSRF) en .env
 
 # 3. Iniciar el stack de producción
 docker compose -f docker-compose.prod.yml up -d

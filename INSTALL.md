@@ -54,13 +54,31 @@ chmod 600 .env
 
 Para conocer todos los parámetros avanzados de despliegue, puertos y topologías de red, consulta [docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md](./docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md).
 
-### Método Asistido Rápido (Recomendado — 1 Solo Comando)
-Para una instalación turnkey sin fricción, ejecuta el asistente interactivo. Este valida automáticamente los prerrequisitos del host, genera claves criptográficas seguras de 256 bits en `.env`, corre la auditoría de seguridad Trivy IaC, levanta el stack Docker y guía la creación interactiva del Super Administrador:
+### Método Asistido Rápido (Recomendado — Turnkey en 1 Comando)
+Para una instalación turnkey sin fricción, dispones de dos alternativas asistidas:
+
+#### 1. Instalación Remota Standalone vía `curl` (Sin clonar el repositorio)
+Si te encuentras en un servidor nuevo y deseas desplegar RoSGrid sin clonar el repositorio de código fuente, ejecuta:
+
+~~~bash
+curl -fsSL https://raw.githubusercontent.com/tecno-consultores/RoSGrid/main/instalar-rosgrid.sh | bash
+~~~
+
+**¿Qué hace este comando automáticamente?**
+- Detecta la ejecución remota y crea el directorio de despliegue en `/opt/rosgrid` (solicitando `sudo` únicamente para crear la carpeta y asignarla a tu usuario no-root `$USER`).
+- Descarga los manifiestos oficiales de producción (`.env.example` y `docker-compose.prod.yml`) desde la rama `main` de GitHub.
+- Genera automáticamente secretos criptográficos de alta entropía (256 bits) para PostgreSQL, KeyDB, Bóveda AES-256-GCM, JWT y CSRF con permisos estrictos `chmod 600 .env`.
+- Descarga las imágenes oficiales inmutables de Docker Hub (`sinfallas/rosgrid-*`) y levanta los servicios.
+- Permite crear el Super Administrador inicial de forma interactiva a través de la terminal `/dev/tty`.
+
+#### 2. Instalación Local (Dentro del repositorio clonado)
+Si ya clonaste el repositorio con `git clone`:
 
 ~~~bash
 chmod +x ./instalar-rosgrid.sh
 ./instalar-rosgrid.sh
 ~~~
+*(El script detectará los archivos locales y te ofrecerá elegir entre despliegue oficial de Docker Hub, compilación local o entorno de desarrollo).*
 
 ---
 

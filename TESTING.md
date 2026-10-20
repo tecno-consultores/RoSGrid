@@ -523,3 +523,13 @@ Certificación integral ejecutada bajo la **Regla Cero** dentro del contenedor D
     - Despacho y verificación de herramientas en el Servidor MCP (`tools/list` y `tools/call`).
     - Verificación de cabeceras de proxy inverso `X-Forwarded-For` y `X-Forwarded-Proto` en `/ws/`.
 
+### C. Certificación QA 11X del Asistente de Instalación Standalone (`instalar-rosgrid.sh`)
+- **Auditoría Estática con ShellCheck (`koalaman/shellcheck:stable`):**
+  - Cero (0) errores y cero (0) advertencias en `instalar-rosgrid.sh` y en los 7 scripts Bash del sistema (`auditar-infra.sh`, `instalar-rosgrid.sh`, `build.sh`, `instalar-hooks.sh`, `limpieza.sh`, `probar-prod-local.sh`, `fastapi/scripts/entrypoint.sh`).
+  - Validación de compatibilidad POSIX, inicialización de variables de entrada y entrecomillado estricto.
+- **Prueba Automatizada de Descarga Remota y Generación de Entropía:**
+  - Verificada la descarga íntegra de `.env.example` y `docker-compose.prod.yml` desde la rama `main` de GitHub (`https://raw.githubusercontent.com/tecno-consultores/RoSGrid/main/`).
+  - Verificada la generación e inyección de 5 secretos criptográficos de alta entropía (256 bits) para PostgreSQL, KeyDB, Bóveda AES-256-GCM, JWT y CSRF con permisos estrictos `chmod 600 .env`.
+  - Verificada la función `leer_entrada` con soporte transparente para terminales `/dev/tty` bajo tuberías `curl -fsSL ... | bash` y modo dual inteligente (local en repositorio vs. remoto en `/opt/rosgrid`).
+
+
