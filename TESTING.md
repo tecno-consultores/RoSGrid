@@ -484,3 +484,42 @@ Certificación integral ejecutada bajo la **Regla Cero** garantizando cumplimien
   - Inspección de logs en busca de tracebacks en `rosgrid_api_local` y `rosgrid_worker_local`.
   - Verificación de aislamiento de puertos internos (5432 y 6379 cerrados al host).
   - Limpieza de volúmenes efímeros o entrega interactiva (`--keep-alive` / `--wizard`) con URLs corregidas.
+
+---
+
+## 18. Certificación QA 11X — Hito 22.5 (Mitigación Integral de Vectores de Ataque en Plataforma Híbrida Vue 3 + FastAPI)
+
+Certificación integral ejecutada bajo la **Regla Cero** dentro del contenedor Docker efímero `qa-backend` (`sinfallas/base-python-uv:3.13`) y validada en entorno de producción local (`./probar-prod-local.sh`).
+
+### A. Backend (`fastapi/`) — Docker `sinfallas/base-python-uv:3.13`
+- **Análisis Estático y Seguridad (SAST):**
+  - **Ruff (`ruff check src/ tests/`):** Cero (0) errores en código fuente y suites de prueba.
+  - **Ruff Format (`ruff format --check src/ tests/`):** 100% de los archivos de código fuente y pruebas formateados canónicamente.
+  - **Mypy Estricto (`mypy --strict src/`):** Cero (0) errores de tipado estricto en los 88 módulos de backend.
+- **Pruebas Unitarias y Cobertura (Pytest 9.1.1):**
+  - **Pruebas Ejecutadas:** **399 de 399 pruebas pasadas (100% exitosas)** en 30.22s.
+  - **Cobertura Total de Código:** **95.04%** (9,414 sentencias totales, 467 no ejecutadas), superando el umbral corporativo innegociable de `>= 95.0%`.
+  - **Mitigaciones Específicas Certificadas:**
+    1. **Anti-CSWSH (`test_websockets.unit.py`):**
+       - Rechazo con código de cierre de aplicación `4403` ante cabecera `Origin` no autorizada o ausente en modo producción antes de ejecutar `ws.accept()`.
+       - Conexión autorizada cuando el `Origin` coincide con `settings.ALLOWED_ORIGINS` o en modo desarrollo local.
+    2. **Sanitización de Errores 422 (`test_auth_and_2fa_endpoints.unit.py`):**
+       - Validación del interceptor global `RequestValidationError` en modo producción: enmascara la estructura interna devolviendo mensaje genérico mientras registra el traceback completo en los logs de servidor.
+    3. **Defensa Anti-SSRF (`test_alert_dispatcher_worker.unit.py`):**
+       - Validación de la función `is_safe_webhook_url()` bloqueando IPs privadas (RFC 1918), loopback (`127.0.0.1`), link-local (`169.254.169.254`), multicast y resoluciones DNS maliciosas.
+    4. **Bóveda SQL y Contexto de Tenant MCP (`test_mcp_endpoint.unit.py`):**
+       - Confirmación de inyección segura de `set_tenant_context()` utilizando parámetros bindeados seguros en lugar de interpolación de cadenas.
+    5. **Límite de Carga de Inventario CSV (`test_inventory_endpoints.unit.py`):**
+       - Rechazo con HTTP `413 Payload Too Large` cuando el archivo CSV excede el umbral de seguridad de 2 MB.
+
+### B. Validación de Integración en Producción Local (`./probar-prod-local.sh`)
+- **Suite de Contratos Front-Back (`validar_comunicacion_front_back.py`):**
+  - **Contratos Ejecutados:** **22 de 22 contratos aprobados (100% exitosos)** contra el stack completo en contenedores (`postgres`, `keydb`, `fastapi`, `worker`, `nginx`).
+  - **Endpoints y Flujos Verificados:**
+    - Bootstrap inicial y creación de Superadmin.
+    - Autenticación con cookies `__Host-` y verificación 2FA TOTP.
+    - Acceso a inventario, routers y métricas de salud física.
+    - Endpoints de cumplimiento corporativo (CIS Benchmark, Config Drift y SD-WAN).
+    - Despacho y verificación de herramientas en el Servidor MCP (`tools/list` y `tools/call`).
+    - Verificación de cabeceras de proxy inverso `X-Forwarded-For` y `X-Forwarded-Proto` en `/ws/`.
+

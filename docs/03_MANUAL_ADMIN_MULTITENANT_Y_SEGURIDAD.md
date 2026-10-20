@@ -219,3 +219,29 @@ El Superadmin accede a `TenantsManagementView.vue` y hace clic en el botón tác
 2. Permite conmutar en caliente los switches organizados por grupos temáticos.
 3. Al guardar, el backend persiste los cambios en PostgreSQL e invalida inmediatamente la clave KeyDB `rg:{tenant_id}:features`.
 4. En la interfaz web, el menú lateral (`RgResponsiveShell.vue`) y la paleta de comandos (`RgCommandPalette.vue`) reaccionan automáticamente ocultando o mostrando los módulos asociados a través de `useAuthStore.isFeatureEnabled`.
+
+---
+
+## 8. Arquitectura de Defensa en Plataforma Híbrida (Vue 3 + FastAPI)
+
+La combinación de una aplicación SPA en Vue 3 con un backend asíncrono en FastAPI introduce vectores de ataque específicos que RoSGrid neutraliza sistemáticamente:
+
+### 8.1 Mitigación de Asignación Masiva (*Mass Assignment*)
+- Para prevenir que peticiones HTTP inyecten campos reservados (como `role`, `is_superuser`, `is_verified` o `tenant_id`) en formularios de login, registro o actualización de usuarios, todos los esquemas Pydantic v2 de entrada declaran `model_config = ConfigDict(extra="forbid")`.
+- El backend rechaza de forma estricta cualquier atributo no especificado en el modelo con HTTP `422 Unprocessable Entity`.
+
+### 8.2 Protección Anti-CSWSH (*Cross-Site WebSocket Hijacking*)
+- Dado que los navegadores adjuntan cookies automáticamente en el apretón de manos WebSocket sin importar el origen de la página que hace la petición, RoSGrid implementa verificación de origen obligatoria (`_verify_ws_origin`) en `fastapi/src/api/v1/websockets.py`.
+- Si la cabecera HTTP `Origin` no coincide con los dominios permitidos en `settings.ALLOWED_ORIGINS` o falta en entorno productivo, el servidor rechaza y cierra la conexión inmediatamente con código **`4403` ("Forbidden Origin")** antes de ejecutar `ws.accept()`.
+
+### 8.3 Sanitización de Respuestas de Error 422 en Producción
+- En entorno productivo (`ROSGRID_ENV=production`), los errores de validación de Pydantic se interceptan mediante un manejador global de `RequestValidationError`.
+- En lugar de exponer nombres de atributos internos, regexes y estructuras de datos, la API devuelve una respuesta uniforme y segura `{"detail": "Los datos proporcionados no cumplen con los requisitos de validación."}`, registrando el desglose completo en los logs de servidor.
+
+### 8.4 Defensa Anti-SSRF en Webhooks Salientes
+- Los webhooks configurados por los tenants en `alert_dispatcher_worker.py` se validan mediante la función `is_safe_webhook_url()`.
+- Esta directiva realiza resolución DNS del destino y descarta cualquier dirección IP perteneciente a redes privadas (RFC 1918), loopback (`127.0.0.0/8`), enlaces locales (`169.254.0.0/16`, impidiendo extracción de credenciales de metadatos en nubes públicas) o rangos de multidifusión.
+
+### 8.5 Límite Estricto de Carga de Archivos de Inventario (2 MB)
+- La importación masiva de routers mediante archivo CSV (`POST /api/v1/inventory/routers/import-csv`) valida el tamaño del flujo en el primer chunk y aborta con HTTP `413 Payload Too Large` si supera **2 MB**, previniendo ataques de denegación de servicio por agotamiento de memoria RAM en el contenedor backend.
+

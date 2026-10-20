@@ -35,7 +35,12 @@
 - **Otras Respuestas:**
   - 401 Unauthorized: `{"detail": "Credenciales inválidas o empresa no encontrada"}`
   - 403 Forbidden: `{"detail": "Cuenta pendiente de aprobación por el Administrador"}` (si el usuario fue creado vía auto-registro y aún no ha sido aprobado).
+  - 422 Unprocessable Entity: En desarrollo devuelve el array de errores de validación Pydantic. En producción (`ROSGRID_ENV=production`), se intercepta globalmente con `RequestValidationError` y devuelve `{"detail": "Los datos proporcionados no cumplen con los requisitos de validación."}`, ocultando la estructura interna mientras registra el detalle en los logs del contenedor.
   - 423 Locked: `{"detail": "Cuenta bloqueada temporalmente por múltiples intentos fallidos. Intenta en 15 minutos."}`
+
+- **Protección contra Asignación Masiva (*Mass Assignment*):**
+  - Todos los modelos de entrada (`LoginStep1Request`, `RegisterOperatorRequest`, `UserCreate`, `UserUpdate`, etc.) implementan `model_config = ConfigDict(extra="forbid")`, rechazando cualquier atributo adicional enviado por el cliente (como `role`, `is_superuser`, etc.).
+
 
 - **Auditoría Forense Inmutable WORM de Autenticación:**
   - Todos los intentos fallidos de inicio de sesión (`LOGIN_FAILED_USER_NOT_FOUND`, `LOGIN_FAILED_INVALID_PASSWORD`, `LOGIN_FAILED_ACCOUNT_LOCKED`, `LOGIN_FAILED_USER_INACTIVE`, `2FA_VERIFICATION_FAILED`) se registran atómicamente en `audit_logs` con su hash encadenado SHA-256, IP y User-Agent del actor.

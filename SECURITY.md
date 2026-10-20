@@ -77,6 +77,27 @@ RoSGrid administra infraestructura crítica de telecomunicaciones e ISP (routers
 - El endpoint de inicio de sesión rechaza con `403 Forbidden` cualquier intento de autenticación hasta que un `SUPERADMIN_GLOBAL` o `TENANT_ADMIN` apruebe explícitamente al operador (`PUT /api/v1/users/{id}/approve`) y le asigne un rol RBAC adecuado.
 - Un switch global en KeyDB (`rosgrid:registration_enabled`) permite al Superadmin desactivar completamente el auto-registro público cuando no se esperan nuevos operadores.
 
+### 3.11 Mitigación Integral de Vectores de Ataque en Plataforma Híbrida (Vue 3 + FastAPI)
+La integración entre una SPA en Vue 3 y una API asíncrona en FastAPI introduce una superficie de ataque híbrida que RoSGrid neutraliza mediante directivas arquitectónicas de endurecimiento:
+- **Prevención de Asignación Masiva (*Mass Assignment / Over-posting*):**
+  - Todos los esquemas de entrada Pydantic v2 configuran `model_config = ConfigDict(extra="forbid")`.
+  - Los modelos de entrada (`RegisterOperatorRequest`, `UserCreate`, `UserUpdate`, `RouterCreateRequest`) están estrictamente desacoplados de los modelos de base de datos (`UserInDB`, `RouterInDB`) y modelos públicos (`UserPublic`, `RouterResponse`), impidiendo la inyección arbitraria de campos como `role`, `is_superuser` o `is_verified`.
+- **Protección Anti-CSWSH (*Cross-Site WebSocket Hijacking*):**
+  - Los WebSockets no aplican las restricciones de la política SOP del navegador. Si un atacante aloja un sitio malicioso y el usuario tiene la cookie de sesión activa, un script malicioso podría iniciar un apretón de manos WebSocket.
+  - RoSGrid implementa `_verify_ws_origin(ws)` en `fastapi/src/api/v1/websockets.py` que inspecciona la cabecera `Origin` **antes** de ejecutar `await ws.accept()`. Si el origen no coincide con los dominios autorizados en `settings.ALLOWED_ORIGINS` o falta en entorno de producción, la conexión se aborta inmediatamente con código de cierre de aplicación `4403` ("Forbidden Origin"), sin llegar a establecer el canal.
+- **Sanitización de Errores de Validación 422 (`RequestValidationError`):**
+  - En desarrollo, FastAPI devuelve un desglose detallado de campos esperados, regex y estructuras de datos en respuestas 422. En producción (`ROSGRID_ENV=production`), esta información facilita el reconocimiento de la arquitectura interna de la API.
+  - Se implementó un manejador global de excepciones para `RequestValidationError` que registra el traceback y detalle en los logs del servidor (Docker stdout) y devuelve al cliente una respuesta genérica y segura: `{"detail": "Los datos proporcionados no cumplen con los requisitos de validación."}`.
+- **Defensa Anti-SSRF en Webhooks y Notificaciones Salientes:**
+  - En `alert_dispatcher_worker.py`, las URLs de webhooks configuradas por los tenants se validan mediante `is_safe_webhook_url()`.
+  - La validación resuelve el hostname por DNS antes de emitir la petición y bloquea incondicionalmente cualquier IP que pertenezca a rangos privados (RFC 1918: `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), loopback (`127.0.0.0/8`), link-local (`169.254.0.0/16`), rangos reservados o direcciones multicast, impidiendo que el atacante use RoSGrid como pivote para escanear redes internas o consultar metadatos de proveedores de nube (como `169.254.169.254`).
+- **Sentencias Parametrizadas Seguras en Contexto de Tenant MCP:**
+  - En `src/api/v1/mcp.py`, el cambio de contexto para sesiones de agentes IA se realiza mediante `set_tenant_context(session, tenant_id)` utilizando `bindparam` seguro en lugar de interpolación cruda de cadenas (`f-strings`), eliminando cualquier riesgo de inyección SQL.
+- **Límite Estricto de Carga de Archivos (CSV):**
+  - El endpoint de importación masiva de inventario (`POST /api/v1/inventory/routers/import-csv`) impone una cuota máxima de 2 MB por archivo, rechazando peticiones que excedan este umbral con HTTP `413 Payload Too Large` y evitando saturación de memoria RAM en el backend.
+- **Preservación de Cabeceras de Proxy Inverso en Nginx:**
+  - El bloque `location /ws/` en la configuración de Nginx (`vue3/nginx/default.conf`) incluye explícitamente `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;` y `proxy_set_header X-Forwarded-Proto $scheme;`, garantizando la correcta trazabilidad de IPs de clientes y protocolos en conexiones WebSocket en tiempo real.
+
 ---
 
 ## 4. Barreras Automatizadas DevSecOps

@@ -30,6 +30,13 @@ El sistema traslada la experiencia operativa y técnica de **WinBox / WebFig** a
 - **Control de Sesiones en Vivo (*Kill-Switch*):** Panel en tiempo real para que Administradores y Supervisores visualicen qué técnicos están conectados, desde qué IP/dispositivo y qué MikroTik están operando, con botón de expulsión instantánea en KeyDB y cierre forzoso de WebSockets.
 - **Flujo de Auto-Registro Web y Aprobación Maker-Checker:** Interfaz accesible en el login para que nuevos operadores soliciten acceso. Las solicitudes ingresan en estado `PENDING_APPROVAL` (bloqueo 403 preventivo) y requieren la aprobación explícita del Superadmin con asignación de rol, gobernado por un interruptor global de registro en KeyDB.
 - **Superficie de Ataque Cero en Producción:** En modo `ROSGRID_ENV=production`, la documentación interactiva Swagger/ReDoc/OpenAPI se desactiva por completo (consulta la especificación estática en `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`).
+- **Arquitectura de Defensa en Plataforma Híbrida (Vue 3 + FastAPI):**
+  - **Mitigación Anti-CSWSH (*Cross-Site WebSocket Hijacking*):** Validación pre-handshake de la cabecera `Origin` en todos los canales WebSocket (`/ws/v1/*`), cerrando con código HTTP 4403 ante orígenes no autorizados antes de ejecutar `accept()`.
+  - **Sanitización de Errores 422 en Producción:** Intercepción global de `RequestValidationError` para enmascarar detalles internos de esquemas y modelos en producción, registrando el detalle en logs de servidor y respondiendo con mensajes seguros.
+  - **Protección contra Asignación Masiva (*Mass Assignment*):** Todos los esquemas de entrada de Pydantic v2 aplican `ConfigDict(extra="forbid")` para impedir la inyección arbitraria de roles o atributos no declarados.
+  - **Defensa Anti-SSRF en Webhooks:** Validación estricta con resolución DNS y bloqueo incondicional de direcciones privadas (RFC 1918), loopback, link-local y rangos multicast en despachos de alertas externas.
+  - **Aislamiento SQL y Límites de Carga:** Inyección de contexto de Tenant en MCP mediante sentencias parametrizadas seguras y límite estricto de 2 MB en cargas de inventario CSV para prevenir denegación de servicio por memoria.
+
 
 ### 2. Bóveda de Credenciales AES-256-GCM, Rotación Automática y Pinning SSL (TOFU)
 - **Cifrado Autenticado con AAD:** Las credenciales de la REST API de cada MikroTik se almacenan cifradas con `AES-256-GCM` vinculadas criptográficamente al `tenant_id` y `router_id`.

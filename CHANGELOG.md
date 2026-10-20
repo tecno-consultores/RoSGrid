@@ -9,6 +9,15 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 ## [Unreleased]
 
 ### Added
+- **Endurecimiento de Seguridad Híbrida (FastAPI + Vue 3) y Protección contra Vectores de Ataque:**
+  - **Mitigación de Cross-Site WebSocket Hijacking (CSWSH):** Validación previa obligatoria de la cabecera `Origin` (`_verify_ws_origin`) en los canales de telemetría (`/ws/v1/routers/{id}/live-telemetry`) y eventos (`/ws/v1/tenant/events`) antes de aceptar el socket (`ws.accept()`), rechazando orígenes no autorizados o ausentes en producción con código `4403`.
+  - **Sanitización de Errores de Validación Pydantic (Anti-Enumeración 422):** Manejador de excepciones `RequestValidationError` en FastAPI que en entornos de producción oculta rutas internas de campos, nombres de columnas y expresiones regulares, devolviendo un mensaje genérico sanitizado.
+  - **Consultas Parametrizadas Seguras en Servidor MCP:** Eliminación de interpolación cruda `f-string` en consultas SQL de cambio de contexto de inquilino (`SET LOCAL app.current_tenant_id`), sustituyéndola por llamadas enlazadas a `set_tenant_context()`.
+  - **Protección Anti-SSRF en Despacho de Webhooks:** Validador `is_safe_webhook_url()` en `alert_dispatcher_worker.py` bloqueando loopback, rangos de IP privadas RFC 1918 e IPs de metadatos de nube (`169.254.169.254`).
+  - **Límite de Carga de Archivos (Anti-DoS en Memoria):** Validación estricta de tamaño máximo de 2 MB en cargas CSV de onboarding (`/inventory/import-csv/commit`).
+  - **Endurecimiento de CORS en Producción:** Bloqueo de combinaciones laxas de wildcard con credenciales (`allow_origins=[]`, `allow_credentials=False`) en entornos productivos.
+  - **Sincronización de Proxy Inverso Nginx:** Inclusión de `X-Forwarded-For` y `X-Forwarded-Proto` en la directiva `location /ws/` de `vue3/nginx/default.conf`.
+  - **Plantilla Predefinida de Cliente NTP:** Configuración masiva de sincronización horaria mediante NTP en routers MikroTik.
 - **Auditoría Forense de Intentos Fallidos y Política de Sesión Única:**
   - Registro forense inmutable WORM HMAC-SHA256 para todos los eventos e intentos fallidos de autenticación (`LOGIN_FAILED_USER_NOT_FOUND`, `LOGIN_FAILED_INVALID_PASSWORD`, `LOGIN_FAILED_ACCOUNT_LOCKED`, `LOGIN_FAILED_USER_INACTIVE`, `2FA_VERIFICATION_FAILED`) con IP y User-Agent del actor.
   - Forzado estricto de la política de sesión única en KeyDB: revocación automática de sesiones activas anteriores ante un nuevo inicio de sesión con emisión de evento forense `SESSION_KILLED_DUPLICATE_LOGIN` y notificación vía WebSockets.

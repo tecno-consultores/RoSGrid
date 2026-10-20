@@ -37,8 +37,10 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
 | `403 Forbidden` | Rol RBAC insuficiente, router no autorizado en la matriz de permisos o IP no autorizada en CIDR whitelist. |
 | `404 Not Found` | Router, usuario, respaldo o recurso REST no encontrado en el Tenant actual. |
 | `409 Conflict` | Conflicto de unicidad (ej. nombre de usuario, IP de router o nombre de regla duplicado). |
-| `422 Unprocessable` | Validación fallida de esquema Pydantic v2 (parámetros requeridos faltantes o tipos erróneos). |
+| `413 Payload Too Large` | Carga de archivo excede el límite máximo permitido (ej. CSV de inventario > 2 MB). |
+| `422 Unprocessable` | Validación fallida de esquema Pydantic v2 (en producción `ROSGRID_ENV=production` se sanitiza a un mensaje genérico para evitar fuga de estructura interna). |
 | `429 Too Many Requests` | Límite de tasa excedido en KeyDB (ej. más de 30 req/min en el endpoint MCP). |
+
 
 ---
 
@@ -372,6 +374,11 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
 ## 3. Especificación de Canales WebSocket (`/ws/v1/*`)
 
 Los canales WebSocket de RoSGrid requieren pasar la cookie `__Host-rg_at` durante el apretón de manos inicial (`Upgrade: websocket`) y operan frames codificados en JSON ultrarrápido con **`orjson`**.
+
+### 3.0 Seguridad Pre-Handshake y Mitigación Anti-CSWSH
+- **Validación de Origen (`Origin`):** Para neutralizar ataques de secuestro de WebSocket de sitio cruzado (*Cross-Site WebSocket Hijacking*), el servidor valida la cabecera `Origin` contra `ALLOWED_ORIGINS` antes de aceptar la conexión. Si no coincide o está ausente en modo producción, se cierra de inmediato con código de aplicación **`4403 Forbidden Origin`**.
+- **Cabeceras de Proxy Inverso Nginx:** El bloque `/ws/` propaga `X-Forwarded-For` y `X-Forwarded-Proto` hacia FastAPI para auditoría y trazabilidad IP.
+- **Cierre por Kill-Switch:** Si la sesión es terminada por un administrador, el canal se cierra automáticamente con código **`4401 Session Revoked`**.
 
 ### 3.1 Canal de Telemetría en Vivo de Router
 

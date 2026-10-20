@@ -19,7 +19,11 @@
 
    - Cada worker WebSocket permanece suscrito al canal rg:pubsub:events:\{tenant\_id\}. Si recibe un evento SESSION\_KILLED cuyo target\_session\_id o target\_user\_id coincide con el de la conexión actual, cierra el socket inmediatamente con código 4401 ("Sesión revocada por un Administrador/Supervisor").
 
+3. **Mitigación Anti-CSWSH (*Cross-Site WebSocket Hijacking*) y Validación de Origen:**
 
+   - Antes de ejecutar `await ws.accept()`, la función `_verify_ws_origin(ws)` comprueba que la cabecera HTTP `Origin` provenga de un dominio autorizado en `settings.ALLOWED_ORIGINS`.
+   - Si la cabecera `Origin` es nula o no autorizada en modo de producción (`ROSGRID_ENV=production`), el servidor cierra inmediatamente la conexión con el código de aplicación **`4403` ("Forbidden Origin")**, abortando el apretón de manos antes de consumir recursos de multiplexación o publicar estados de telemetría.
+   - En Nginx, el bloque `/ws/` garantiza el reenvío de `X-Forwarded-For` y `X-Forwarded-Proto` para auditar la procedencia de la conexión.
 
 
 ## **2. Canal WebSocket 1: Telemetría Efímera Estilo WinBox (/ws/v1/routers/\{router\_id\}/live-telemetry)**
@@ -221,9 +225,11 @@ Lee los canales habilitados en notification\_channels del Tenant (desencriptando
 
    - Envío asíncrono con plantilla HTML/Texto limpia a la lista de destinatarios configurada por el Tenant.
 
-3. **Webhook HTTP Genérico Firmado (GENERIC\_WEBHOOK):**
+3. **Webhook HTTP Genérico Firmado (GENERIC\_WEBHOOK) con Defensa Anti-SSRF:**
 
    - Envía un POST JSON con cabecera X-RoSGrid-Signature-256 (HMAC-SHA256 del payload usando el secreto del canal) para integración segura con n8n, Slack, Discord o Mattermost.
+   - **Validación Anti-SSRF (`is_safe_webhook_url`):** Antes de iniciar la conexión HTTP saliente, la función resuelve la dirección IP del host destino mediante DNS y rechaza de forma estricta IPs de loopback (`127.0.0.0/8`), redes privadas (RFC 1918: `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), enlaces locales (`169.254.0.0/16`, protegiendo metadatos de AWS/GCP/Azure) y direcciones multicast/reservadas.
+
 
 4. **Notificación Web en Vivo (Wallboard NOC):**
 

@@ -336,5 +336,14 @@
 
 - [x] **22.1** Auditar los `Dockerfile`, `docker-compose*.yml` e infraestructura con `./auditar-infra.sh` y escaneo Trivy de imágenes (`CRITICAL,HIGH = 0`).
 - [x] **22.2** **Especificación y Endurecimiento de Pruebas Smoke Locales (`probar-prod-local.sh`):** Actualización de especificaciones (`specs/31`), manual operativo (`docs/08`) y bitácora QA 11X (`TESTING.md`) incorporando la ejecución obligatoria de la suite de 24 contratos Front-Back (`validar_comunicacion_front_back.py`), validación del proxy inverso Nginx (`:${UI_PORT}/api/...`), sondeo real JSON-RPC 2.0 MCP (`POST /api/v1/mcp`), supervisión activa de healthchecks y logs de `rosgrid-worker`, verificación de ocultamiento HTTP 404 de Swagger/OpenAPI en producción, pruebas negativas de autenticación (401) y verificación de aislamiento de puertos internos DB/KeyDB.
+- [x] **22.5** **Endurecimiento de Seguridad Híbrida (FastAPI + Vue 3) y Protección contra Vectores de Ataque:**
+  - Mitigación de Cross-Site WebSocket Hijacking (CSWSH) mediante validación obligatoria de la cabecera `Origin` (`_verify_ws_origin`) previa a la aceptación del WebSocket (`ws.accept()`), rechazando orígenes no autorizados o ausentes en producción con código `4403`.
+  - Sanitización de errores `RequestValidationError` (422) de Pydantic en producción, previniendo la enumeración de esquemas, expresiones regulares y nombres internos de columnas.
+  - Parametrización segura de contexto de inquilino SQL en el servidor MCP (`set_tenant_context`) con eliminación de cadenas interpoladas crudas.
+  - Protección Anti-SSRF en el despachador de webhooks (`is_safe_webhook_url`), bloqueando localhost, redes privadas RFC 1918 y servicios de metadatos de nube (`169.254.169.254`).
+  - Límite estricto de carga de archivos (2 MB) en el onboarding CSV para prevenir ataques de agotamiento de memoria RAM.
+  - Endurecimiento de CORS en producción con descarte de credenciales ante configuraciones abiertas (`allow_origins=[]`, `allow_credentials=False`).
+  - Sincronización de cabeceras de proxy inverso en Nginx para WebSockets (`X-Forwarded-For`, `X-Forwarded-Proto`).
+  - Incorporación de plantilla predefinida `Cliente NTP` para configuración masiva automatizada de sincronización horaria en routers MikroTik.
 - [ ] **22.3** Actualizar `CHANGELOG.md` consolidando los cambios de `[Unreleased]` dentro del lanzamiento oficial `[1.0.0]` con las métricas certificadas en `TESTING.md`.
 - [ ] **22.4** Ejecutar `./build.sh` (como usuario no-root) con `docker buildx` (`container-builder` + `tonistiigi/binfmt`) para construir y publicar `sinfallas/rosgrid-backend:latest` (`:1.0.0`) y `sinfallas/rosgrid-frontend:latest` (`:1.0.0`) en Docker Hub y limpiar cachés con `prune -af`.

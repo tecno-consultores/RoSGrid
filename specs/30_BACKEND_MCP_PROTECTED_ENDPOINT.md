@@ -25,6 +25,8 @@ Todo el código generado DEBE mantener complejidad ciclomática **Grado A (`CC <
    - La herramienta `rosgrid_propose_network_change` inserta la propuesta **forzosamente en la bandeja `approval_requests` (`status = "AWAITING_APPROVAL"`, HTTP `202 Accepted`)** y notifica a los supervisores humanos para que un `SUPERVISOR`, `SUPPORT_L3` o `TENANT_ADMIN` revise el Diff y lo apruebe ejecutándolo con **Safe Mode (60s)**.
 6. **Auditoría Forense Inmutable WORM (`audit_logs`):**
    - Toda invocación a `tools/call` en `/api/v1/mcp` genera un registro firmado con `SHA-256` en `audit_logs` con `action_category = "MCP_AI_TOOL_CALL"`, indicando el nombre de la herramienta, el `router_id` y los argumentos sanitizados.
+7. **Aislamiento de Tenant con Sentencias SQL Parametrizadas Seguras:**
+   - La inyección de `SET LOCAL app.current_tenant_id` en las sesiones de base de datos se realiza a través de la función segura `set_tenant_context(session, tenant_id)`, garantizando que el `tenant_id` se enlace mediante `bindparam` y previniendo cualquier riesgo de inyección SQL.
 
 ---
 
