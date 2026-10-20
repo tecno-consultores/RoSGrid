@@ -39,7 +39,8 @@ pre-commit:
     leaks-check:
       glob: "**/*"
       # Busca patrones comunes de contraseñas y tokens en archivos antes del commit
-      run: if grep -qiE "(password|secret|api_key|token)[=:] *[\"'][a-zA-Z0-9]{8,}[\"']" {staged_files}; then echo "🚨 ERROR: Posible secreto hardcodeado detectado."; exit 1; fi
+      run: |
+        if grep -qiE "(password|secret|api_key|token)[=:] *[\"'][a-zA-Z0-9]{8,}[\"']" {staged_files}; then echo "🚨 ERROR: Posible secreto hardcodeado detectado."; exit 1; fi
 
 commit-msg:
   commands:
