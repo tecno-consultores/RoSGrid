@@ -18,7 +18,7 @@ El sistema traslada la experiencia operativa y técnica de **WinBox / WebFig** a
 - **Cero almacenamiento de métricas históricas en base de datos:** Para series históricas a largo plazo existen herramientas dedicadas como Zabbix o Prometheus. En RoSGrid, las gráficas de CPU, RAM y tráfico en vivo funcionan exactamente igual que en **WinBox**: se alimentan por WebSocket y se acumulan en memoria RAM del navegador (`RingBuffer` de hasta 3 horas renderizado en `<canvas>` 2D) mientras el técnico mantiene la consola del router abierta, reiniciándose al salir sin consumir disco en PostgreSQL.
 
 ```mermaid
-graph TB
+flowchart TB
     subgraph "Clientes y Actores Operativos"
         NOC["🖥️ Pantalla Gigante NOC Wallboard"]
         PC["💻 Consola WinBox PC (32px)"]
@@ -66,6 +66,7 @@ graph TB
 ## ✨ Características Principales
 
 ### 1. Seguridad Criptográfica e Identidad Multi-Tenant
+
 - **Aislamiento Estricto por Empresa (Tenant):** Cada organización opera en un entorno aislado mediante políticas **Row-Level Security (RLS)** forzadas a nivel de motor en PostgreSQL 17.
 - **Autenticación *Split-Credential* + 2FA TOTP Obligatorio:**
   - Inicio de sesión mediante Identificador de Empresa (`tenant_slug`) + Correo/Usuario + Contraseña (`Argon2id`) + Código 2FA TOTP.
@@ -81,14 +82,15 @@ graph TB
   - **Defensa Anti-SSRF en Webhooks:** Validación estricta con resolución DNS y bloqueo incondicional de direcciones privadas (RFC 1918), loopback, link-local y rangos multicast en despachos de alertas externas.
   - **Aislamiento SQL y Límites de Carga:** Inyección de contexto de Tenant en MCP mediante sentencias parametrizadas seguras y límite estricto de 2 MB en cargas de inventario CSV para prevenir denegación de servicio por memoria.
 
-
 ### 2. Bóveda de Credenciales AES-256-GCM, Rotación Automática y Pinning SSL (TOFU)
+
 - **Cifrado Autenticado con AAD:** Las credenciales de la REST API de cada MikroTik se almacenan cifradas con `AES-256-GCM` vinculadas criptográficamente al `tenant_id` y `router_id`.
 - **Rotación Automática de Contraseñas API:** RoSGrid puede rotar periódicamente (o bajo demanda) la contraseña del usuario API dentro del MikroTik por llaves aleatorias de 32 caracteres, conservando la clave inmediatamente anterior como respaldo transaccional.
 - **Consulta Protegida con *Step-Up Auth* (30 Segundos):** Solo los 2 perfiles más altos (`SUPERADMIN_GLOBAL` y `TENANT_ADMIN`) pueden revelar una clave de la bóveda tras validar su código 2FA TOTP en vivo, dejando traza inmutable en auditoría y autodestruyendo la clave en memoria a los 30 segundos.
 - **Certificados SSL Autofirmados con TOFU (*Trust On First Use*):** Acepta certificados autofirmados de RouterOS v7 capturando su huella SHA-256 en la primera conexión y bloqueando cualquier cambio no autorizado de certificado (*MitM protection*).
 
 ### 3. Consola Centralizada WebFig de Doble Capa y Alto Rendimiento (RouterOS v7+)
+
 - **Capa 1 — Módulos Nativos Especializados (con Pestañas en Memoria `KeepAlive`, *Virtual Scrolling* y Densidad Dual WinBox/Móvil):**
   - **Dashboard en Vivo:** Gráficas efímeras estilo WinBox sobre `<canvas>` 2D acelerado con `requestAnimationFrame` (CPU, RAM, Disco, Temperatura, Voltaje y Tráfico bps/pps por interfaz).
   - **Interfaces & Óptica SFP:** Ethernet, diagnóstico óptico **SFP/SFP+ DDM** (potencia láser TX/RX en dBm, temperatura y salud óptica), test de cables TDR, VLANs 802.1Q, Bridges, WireGuard y tabla de registro WiFi.
@@ -101,18 +103,22 @@ graph TB
   - Renderizador automático de tablas y formularios para el **100% restante de submenús `/rest/*` de RouterOS v7** (MPLS, VXLAN, ZeroTier, Containers, CAPsMAN, User-Manager, RADIUS, SNMP, Certificates).
 
 ### 4. Protección Anti-Bloqueo (*Safe Mode*), *Maker-Checker* y Operaciones Masivas
+
 - **Safe Mode vía *Dead Man's Switch* (`/system/scheduler`):** Antes de aplicar un cambio delicado de red o firewall, RoSGrid inyecta un scheduler temporal de reversión a 60 segundos en el propio MikroTik. Si el cambio deja incomunicado al router, el MikroTik revierte el cambio por sí solo y recupera la conexión automáticamente.
 - **Flujo de Aprobación (*Maker-Checker*):** Las 7 categorías de acciones críticas ejecutadas por niveles operativos intermedios se interceptan hacia una bandeja de aprobación para que un Supervisor o Soporte N3 las autorice revisando el Diff previo (con segregación estricta de funciones `maker != checker`).
 - **Backups Nocturnos Deduplicados y Comparador Diff Estilo Git (`.rsc`):** Retención de 30 días con deduplicación por hash SHA-256 y visor lado a lado estilo Git para auditar qué líneas exactas cambiaron en un router entre dos fechas o frente al estado en vivo (`LIVE`).
 - **Mapa Interactivo OpenStreetMap (Leaflet) y Wallboard NOC:** Georreferenciación 100% gratuita sin API Keys, ventanas de mantenimiento programadas y alertas *Zero-Storage* hacia **Telegram, Correo SMTP, Webhooks HMAC-SHA256 y Pantalla NOC**.
 
 ### 5. Servidor MCP Protegido para Agentes de IA (`Hermes Agent`, `Claude Desktop / Code`)
+
 - **Model Context Protocol (JSON-RPC 2.0 Streamable HTTP):** Endpoint `POST /api/v1/mcp` protegido por lista blanca CIDR, tokens de cuenta `SERVICE_ACCOUNT` y límite de tasa en KeyDB (`30 req/min`).
 - **Catálogo de 16 Tools Semánticas:** Inventario (`rosgrid_list_inventory`), salud física (`rosgrid_get_router_health`), óptica SFP DDM (`rosgrid_check_sfp_optical_ddm`), enrutamiento BGP/OSPF (`rosgrid_inspect_routing_bgp_ospf`), diagnóstico en vivo (`rosgrid_run_live_diagnostic`), comparador Diff Git `.rsc` (`rosgrid_compare_config_diff`), reconexión PPPoE (`rosgrid_reconnect_pppoe_client`), propuesta de mutaciones de red (`rosgrid_propose_network_change`), diagnóstico 360° (`rosgrid_run_360_diagnostics`), aislamiento técnico (`rosgrid_isolate_subscriber`), restauración técnica (`rosgrid_restore_subscriber`), cambio de rate-limit (`rosgrid_change_subscriber_rate_limit`), consultas BGP Looking Glass (`rosgrid_query_bgp_looking_glass`), detección de desviación de configuración (`rosgrid_check_config_drift`), auditoría CIS Benchmark (`rosgrid_run_cis_audit`) y detección de caídas masivas (`rosgrid_detect_mass_outage`).
 - **NOC Autónomo 24/7 y Gobierno Maker-Checker:** Las propuestas de mutación generadas por agentes IA se retienen automáticamente como `202 Accepted` (`AWAITING_APPROVAL`) para autorización humana previa, protegidas por *Safe Mode (60s)* y registradas en la bitácora forense WORM (`MCP_AI_TOOL_CALL`). Consulta `docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md`.
 
 ### 6. Gobernanza Modular (Feature Flags): Operación Dual ISP y Corporativa
+
 Una sola instalación de RoSGrid se adapta instantáneamente a las necesidades de cada organización mediante el panel de Feature Flags por Tenant administrado por el Superadmin:
+
 - **Modo Proveedor de Internet (ISP / WISP / FTTH):**
   - **Cero Facturación y Cero Datos Personales:** Identificación técnica exclusiva por `device_serial` y `endpoint_identifier`. Desacoplamiento total con sistemas de facturación/CRM externos.
   - **QoS Técnico & Perfiles de Tráfico:** Modelado de Simple Queues y PCQ con tasas nominales, Burst (limit, threshold, time) y prioridades (1-8).
@@ -165,7 +171,7 @@ Una pregunta frecuente de colaboradores y operadores acostumbrados a WinBox/WebF
 
 ## 🗂️ Estructura del Repositorio
 
-~~~text
+```text
 rosgrid/
 ├── LICENSE                         # Licencia GNU GPLv3
 ├── README.md                       # Documentación principal del proyecto y ADR de seguridad
@@ -191,7 +197,7 @@ rosgrid/
 ├── docs/                           # Manuales técnicos, operativos y referencia completa de la API
 ├── fastapi/                        # Ecosistema Backend (FastAPI + SQLAlchemy 2.0 + KeyDB + QA 11X)
 └── vue3/                           # Ecosistema Frontend (Vue 3 + TypeScript + Pinia + Leaflet + QA 11X)
-~~~
+```
 
 ### 📖 Enciclopedia Documental de Producción (`docs/`)
 
@@ -217,7 +223,7 @@ Para una referencia exhaustiva de operación, seguridad y despliegue, consulta l
 
 RoSGrid opera bajo el principio de **infraestructura inmutable** y ejecuta las migraciones de base de datos automáticamente al iniciar o actualizar contenedores (protegidas mediante `pg_advisory_lock` en PostgreSQL). Consulta [INSTALL.md](./INSTALL.md) para ver los requisitos detallados y la configuración de **KeyDB** o **DragonflyDB**:
 
-~~~bash
+```bash
 # Opción 1 (Recomendada): Instalación Turnkey en 1 comando (descarga en /opt/rosgrid y despliegue oficial)
 curl -fsSL https://raw.githubusercontent.com/tecno-consultores/RoSGrid/main/instalar-rosgrid.sh | bash
 
@@ -228,7 +234,7 @@ curl -fsSL https://raw.githubusercontent.com/tecno-consultores/RoSGrid/main/inst
 cp .env.example .env
 # Configura tus secretos criptográficos en .env y levanta:
 docker compose -f docker-compose.prod.yml up -d
-~~~
+```
 
 ---
 

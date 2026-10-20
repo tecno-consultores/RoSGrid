@@ -53,6 +53,7 @@
 ## 3. Comandos Oficiales de Ejecución Efímera (Cero Instalación Local)
 
 ### A. Auditoría Global de Infraestructura, Secretos y Scripts en Bash
+
 ```bash
 # 1. Auditoría de Infraestructura como Código (IaC) y Vulnerabilidades en File System (Trivy)
 ./auditar-infra.sh
@@ -80,9 +81,11 @@ docker run --rm -v "$(pwd):/mnt" koalaman/shellcheck:stable \
 # Modo Seguridad: Ejecuta Trivy IaC/CVEs previo al despliegue y mapea a puerto personalizado
 ./probar-prod-local.sh --audit --port 8090
 ```
+
 > Consulta el manual operativo completo en [docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md).
 
 ### B. Ecosistema Backend (`cd fastapi`)
+
 ```bash
 # Ingestión de Contexto IA (Graphify MCP)
 docker compose -f docker-compose.qa.yml --profile graphify run --rm graphify bash -c "uvx graphifyy extract"
@@ -100,6 +103,7 @@ docker compose -f docker-compose.qa.yml down --remove-orphans
 ```
 
 ### C. Ecosistema Frontend (`cd vue3`)
+
 ```bash
 # Ingestión de Contexto IA (Graphify MCP)
 docker compose -f docker-compose.qa.yml --profile graphify run --rm graphify bash -c "uvx graphifyy extract"
@@ -159,7 +163,7 @@ docker compose -f docker-compose.qa.yml down --remove-orphans
 | **Hito 20** | Suite Corporativa: Config Drift Auto-Revert, SD-WAN WireGuard, Hardening CIS, Rogue DHCP, SLA y WiFi | **95.0%** (381 tests Backend)<br>**96.5%** (240 tests Frontend) | N/A | CIS Benchmark Score + Safe Mode Revert | ✅ Certificado |
 | **Hito 21** | Servidor MCP Ampliado a 16 Tools para Agentes IA (Hermes / Claude) y Certificación Final | **95.0%** (393 tests Backend)<br>**100%** (242 tests Frontend) | Stryker + Mutmut | Ruff (0 err) + Mypy Strict (0 err) + Prettier + Vue-TSC (0 err) | ✅ **Certificado** |
 | **Hito 22** | Auditoría IaC, Endurecimiento Docker, Mitigación Plataforma Híbrida y Matriz Smoke Tests 11X | **95.04%** (399 tests Backend)<br>**100%** (22 contratos locales) | N/A | Trivy IaC + FS (0 CVEs) + Hadolint (0 err) + ShellCheck (0 err) | ✅ **Certificado** |
-| **Hito 22.6** | Asistente de Instalación Standalone Remoto con Modo Dual (`curl -fsSL ... | bash` en `/opt/rosgrid`) | N/A | N/A | ShellCheck (0 err) + Entropía 256 bits + chmod 600 | ✅ **Certificado** |
+| **Hito 22.6** | Asistente de Instalación Standalone Remoto con Modo Dual (`curl -fsSL ... \| bash` en `/opt/rosgrid`) | N/A | N/A | ShellCheck (0 err) + Entropía 256 bits + chmod 600 | ✅ **Certificado** |
 | **Hito 22.7** | Cobertura BDD Integral Karate Labs (100% de la Interfaz Web — 16 Escenarios E2E en Docker) | **100%** (16/16 BDD UI)<br>**100%** (262 tests Vitest) | N/A | Karate Labs CDP + Vitest (38 suites) + vue-tsc (0 err) | ✅ **Certificado** |
 | **Hito 22.8** | Enriquecimiento Visual con Diagramas Mermaid en el 100% de los Manuales del Sistema | N/A | N/A | 30+ Diagramas Mermaid en specs/ y docs/ | ✅ **Certificado** |
 | **Hito 22.9** | Investigación Técnica y Hojas de Ruta de Migración a Python 3.15 y Node.js 26 LTS | N/A | N/A | Reportes técnicos docs/10 y docs/11 aprobados | ✅ **Certificado** |
@@ -171,6 +175,7 @@ docker compose -f docker-compose.qa.yml down --remove-orphans
 ## 5. Desglose Exhaustivo de Resultados de Certificación — Hito 15
 
 ### A. Sub-tarea 15.3 — Backend FastAPI (`fastapi/`)
+
 - **Análisis Estático y Calidad de Código (`make qa-lint`):**
   - **Ruff:** 0 errores de formato y estilo.
   - **Mypy Strict:** 0 errores en 79 archivos analizados.
@@ -190,6 +195,7 @@ docker compose -f docker-compose.qa.yml down --remove-orphans
   - **Resultado:** 90 peticiones concurrentes completadas con 0 fallos (0.00% tasa de fallo) y latencia media de 22ms.
 
 ### B. Sub-tarea 15.4 — Frontend Unitario y Mutación (`vue3/`)
+
 - **Análisis Estático y Tipado Estricto:**
   - **Prettier (`format:check`):** 0 inconsistencias de formato.
   - **Vue-TSC (`type-check`):** 0 errores de tipado TypeScript estricto.
@@ -207,6 +213,7 @@ docker compose -f docker-compose.qa.yml down --remove-orphans
   - **Mutation Score:** **62.46%** (62.79% cubierto), 0 errores de ejecución.
 
 ### C. Sub-tarea 15.5 — E2E, Accesibilidad WCAG 2.1 AA, Lighthouse CI y Karate UI (`vue3/`)
+
 - **Compilación de Producción:**
   - `pnpm run build` completado sin errores; artefactos generados en `vue3/dist` y servidos por `nginx:alpine` (`ui-prod` en puerto 8085).
 - **Regresión E2E y Accesibilidad WCAG 2.1 AA (Playwright + `@axe-core/playwright`):**
@@ -231,6 +238,7 @@ docker compose -f docker-compose.qa.yml down --remove-orphans
   - **Verificación:** Carga de vista Dashboard, comprobación de selectores táctiles accesibles, interacción con el botón "Actualizar Datos" y validación de estado exitoso en tiempo real.
 
 ### D. Pruebas Estáticas de Scripts en Bash y Pipeline de Producción Local
+
 - **Auditoría Estática con ShellCheck (`koalaman/shellcheck:stable`):**
   - **Scripts Auditados:** 7 archivos (`auditar-infra.sh`, `instalar-rosgrid.sh`, `build.sh`, `instalar-hooks.sh`, `limpieza.sh`, `probar-prod-local.sh`, `fastapi/scripts/entrypoint.sh`).
   - **Resultado:** Cero (0) errores y cero (0) advertencias (100% de cumplimiento en directivas POSIX, entrecomillado estricto de variables y mitigación de comodines SC2035).
@@ -243,6 +251,7 @@ docker compose -f docker-compose.qa.yml down --remove-orphans
     - Verificado que `/api/v1/auth/bootstrap-status` transiciona a `is_bootstrapped: true` y bloquea intentos posteriores con HTTP `403 Forbidden`.
 
 ### E. Smoke Test de Arranque Inmutable (--no-dev) y Plan Maestro UAT Manual
+
 - **Smoke Test de Arranque Estricto de Producción (`fastapi/scripts/test_production_boot_smoke.py`):**
   - Valida la importación incondicional de los 80 submódulos de `src/` en entorno con dependencias exclusivas de producción.
   - Comprueba la ausencia de dependencias de desarrollo (`pytest`, `radon`, `hypothesis`, etc.) en memoria de ejecución.
@@ -260,6 +269,7 @@ docker compose -f docker-compose.qa.yml down --remove-orphans
 Certificación ejecutada bajo la **Regla Cero** dentro del contenedor Docker efímero `qa-backend` (`sinfallas/base-python-uv:3.15`).
 
 ### A. Capacidades y Módulos de Conectividad y Bóveda Criptográfica
+
 - **Conector Asíncrono RouterOS v7 (`src/mikrotik/client.py`, `src/mikrotik/normalizers.py`):**
   - Cliente HTTP asíncrono sobre `httpx` para `/rest/*` con normalización de tipos booleanos, tiempos y listas, y fallback transaccional de contraseña anterior ante rotación fallida.
   - Verificador de huella digital TLS SHA-256 (*Trust On First Use* — TOFU) con estados `PENDING_TOFU`, `TRUSTED_PINNED` y `FINGERPRINT_MISMATCH`.
@@ -282,6 +292,7 @@ Certificación ejecutada bajo la **Regla Cero** dentro del contenedor Docker ef�
 Certificación ejecutada bajo la **Regla Cero** dentro del contenedor Docker efímero `qa-backend` (`sinfallas/base-python-uv:3.15`).
 
 ### A. Consola WebFig Capa 1 — Módulos de Red y Diagnóstico Físico
+
 - **Interfaces y Diagnóstico Óptico SFP DDM (`src/api/v1/webfig_interfaces.py`):**
   - Telemetría de interfaces físicas y lógicas, prueba de cable TDR y diagnóstico DDM láser (potencia Tx/Rx en dBm, sesgo de corriente, voltaje y temperatura) con clasificación de salud óptica.
   - Gestión de VLAN 802.1Q, Bridges con RSTP/MSTP, túneles WireGuard y tabla de registro Wi-Fi.
@@ -304,6 +315,7 @@ Certificación ejecutada bajo la **Regla Cero** dentro del contenedor Docker ef�
 Certificación ejecutada bajo la **Regla Cero** dentro del contenedor Docker efímero `qa-backend` (`sinfallas/base-python-uv:3.15`).
 
 ### A. Motor Universal Dinámico y Gobernanza Operativa
+
 - **Motor WebFig Capa 2 Universal (`src/api/v1/webfig_layer2.py`):**
   - Catálogo dinámico `/webfig/layer2/catalog` con inspección de esquemas y bloqueo de rutas prohibidas `FORBIDDEN_L2_PATHS`.
 - **Bandeja de Aprobación Maker-Checker (`src/api/v1/approvals.py`):**
@@ -327,6 +339,7 @@ Certificación ejecutada bajo la **Regla Cero** dentro del contenedor Docker ef�
 Certificación ejecutada bajo la **Regla Cero** dentro del contenedor Docker efímero `qa-vue3` (`sinfallas/base-node-ionic:26`).
 
 ### A. Arquitectura Frontend, Rendimiento y Accesibilidad Táctica
+
 - **Núcleo Zero-Trust y Stores Pinia (`vue3/src/api/httpClient.ts`, `src/stores/`):**
   - Los 4 interceptores de seguridad: `X-CSRF-Token`, `Idempotency-Key` (UUIDv7), Refresh Token transparente y captura de `202 Accepted` Maker-Checker.
   - 6 Stores en Pinia con reactividad superficial `shallowRef` para buffers masivos de telemetría y tablas extensas de flota.
@@ -350,11 +363,13 @@ Certificación ejecutada bajo la **Regla Cero** dentro del contenedor Docker ef�
 Certificación ejecutada bajo la **Regla Cero** combinando análisis AST Graphify en Docker y validación en hardware MikroTik real / CHR v7.21.5.
 
 ### A. Documentación Técnica Integral Basada en Graphify AST
+
 - Generación de grafos semánticos en `fastapi/graphify-out/GRAPH_REPORT.md` y `vue3/graphify-out/GRAPH_REPORT.md`.
 - Redacción exhaustiva de los manuales del sistema (`docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md` a `docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md`), incluyendo especificación completa de API REST/WS y guía de integración para agentes de inteligencia artificial (Hermes / Claude).
 - Enriquecimiento con diagramas de flujo y arquitectura Mermaid.
 
 ### B. Estabilización Operativa en Hardware Real MikroTik RouterOS v7.21.5
+
 - **Conectividad REST API:** Corrección de la política `rest-api` en el grupo de usuarios de MikroTik RouterOS v7.13+.
 - **Auto-Registro de Operadores con Maker-Checker:** Solicitud de acceso web en `LoginView.vue`, bloqueo 403 preventivo y aprobación por Superadmin.
 - **Preservación de Inmutabilidad WORM:** Soft-revocación segura en eliminación de usuarios con registros históricos en `audit_logs`.
@@ -366,6 +381,7 @@ Certificación ejecutada bajo la **Regla Cero** combinando análisis AST Graphif
 ## 11. Certificación Estándar QA 11X — Hito 16 (Gobernanza Modular, Feature Flags y Purga de Datos)
 
 ### A. Backend (`fastapi/`) — Docker `sinfallas/base-python-uv:3.15`
+
 - **Análisis Estático y Seguridad:**
   - **Ruff (`ruff check src/ tests/`):** Cero (0) errores.
   - **Ruff Format (`ruff format --check src/ tests/`):** 125 archivos formateados limpiamente (0 diffs).
@@ -382,6 +398,7 @@ Certificación ejecutada bajo la **Regla Cero** combinando análisis AST Graphif
     - Purga estricta de PII (nombres, documentos y direcciones físicas eliminadas; identificación técnica exclusiva por `endpoint_identifier`).
 
 ### B. Frontend (`vue3/`) — Docker `sinfallas/base-node-ionic:26`
+
 - **Análisis Estático y Tipado Estricto:**
   - **Vue-TSC (`type-check`):** Cero (0) errores de tipado TypeScript estricto.
   - **ESLint:** Cero (0) errores y cero (0) advertencias en los componentes y vistas modificados (`TenantsManagementView.vue`, `RgCommandPalette.vue`, `LoginView.vue`, `RgResponsiveShell.vue`).
@@ -401,6 +418,7 @@ Certificación ejecutada bajo la **Regla Cero** combinando análisis AST Graphif
 Certificación integral ejecutada bajo la **Regla Cero** dentro de los contenedores Docker efímeros `fastapi-qa-backend` (`sinfallas/base-python-uv:3.15`) y `vue_qa_frontend` (`sinfallas/base-node-ionic:26`).
 
 ### A. Backend (`fastapi/`) — Docker `sinfallas/base-python-uv:3.15`
+
 - **Análisis Estático y Seguridad (SAST):**
   - **Ruff (`ruff check src/ tests/`):** Cero (0) errores.
   - **Ruff Format (`ruff format --check src/ tests/`):** 129 archivos formateados limpiamente (0 diffs).
@@ -417,6 +435,7 @@ Certificación integral ejecutada bajo la **Regla Cero** dentro de los contenedo
     - Eventos técnicos de red: `DEVICE_ACTIVATED_GPS`, `DEVICE_ISOLATED`, `DEVICE_RESTORED` y `MASS_OUTAGE_TRIGGERED`.
 
 ### B. Frontend (`vue3/`) — Docker `sinfallas/base-node-ionic:26`
+
 - **Análisis Estático y Tipado Estricto:**
   - **Vue-TSC (`type-check`):** Cero (0) errores de tipado TypeScript estricto.
   - **Prettier (`format:check`):** Código 100% formateado y consistente.
@@ -432,6 +451,7 @@ Certificación integral ejecutada bajo la **Regla Cero** dentro de los contenedo
 Certificación integral ejecutada bajo la **Regla Cero** dentro de los contenedores Docker efímeros `qa-backend` (`sinfallas/base-python-uv:3.15`) y `qa-vue3` (`sinfallas/base-node-ionic:26`).
 
 ### A. Backend (`fastapi/`) — Docker `sinfallas/base-python-uv:3.15`
+
 - **Análisis Estático y Seguridad (SAST):**
   - **Ruff (`ruff check src/ tests/`):** Cero (0) errores.
   - **Ruff Format (`ruff format --check src/ tests/`):** 136 archivos formateados limpiamente (0 diffs).
@@ -448,6 +468,7 @@ Certificación integral ejecutada bajo la **Regla Cero** dentro de los contenedo
     - `src/schemas/diagnostics_360.py`, `src/schemas/bgp_looking_glass.py`, `src/schemas/traffic_flow.py`: Esquemas Pydantic v2 con 100% de cobertura.
 
 ### B. Frontend (`vue3/`) — Docker `sinfallas/base-node-ionic:26`
+
 - **Análisis Estático y Tipado Estricto:**
   - **Vue-TSC (`type-check`):** Cero (0) errores de tipado TypeScript estricto.
   - **Prettier (`format:check`):** 100% de los archivos con estilo y formato verificado.
@@ -465,6 +486,7 @@ Certificación integral ejecutada bajo la **Regla Cero** dentro de los contenedo
 Certificación integral ejecutada bajo la **Regla Cero** dentro de los contenedores Docker efímeros `qa-backend` (`sinfallas/base-python-uv:3.15`) y `qa-vue3` (`sinfallas/base-node-ionic:26`).
 
 ### A. Backend (`fastapi/`) — Docker `sinfallas/base-python-uv:3.15`
+
 - **Análisis Estático y Seguridad (SAST):**
   - **Ruff (`ruff check`):** Cero (0) errores en código fuente y scripts auxiliares.
   - **Mypy Estricto (`mypy --strict src/`):** Cero (0) errores en los 97 módulos de código fuente (`Success: no issues found in 97 source files`).
@@ -477,6 +499,7 @@ Certificación integral ejecutada bajo la **Regla Cero** dentro de los contenedo
     - `fastapi/tests/api/test_hito19_mass_outage_and_maps.unit.py`: Suite de validación exhaustiva con 100% de cobertura en flujos de corte masivo y certificación con coordenadas GPS.
 
 ### B. Frontend (`vue3/`) — Docker `sinfallas/base-node-ionic:26`
+
 - **Análisis Estático y Calidad de Código:**
   - **Vue-TSC (`type-check`):** Cero (0) errores de tipado TypeScript estricto.
   - **ESLint (`pnpm exec eslint`):** Cero (0) errores y cero (0) advertencias en los componentes y suites de prueba de Hito 19.
@@ -499,6 +522,7 @@ Certificación integral ejecutada bajo la **Regla Cero** dentro de los contenedo
 Certificación integral ejecutada bajo la **Regla Cero** dentro de los contenedores Docker efímeros `qa-backend` (`sinfallas/base-python-uv:3.15`) y `qa-vue3` (`sinfallas/base-node-ionic:26`).
 
 ### A. Backend (`fastapi/`) — Docker `sinfallas/base-python-uv:3.15`
+
 - **Análisis Estático y Seguridad (SAST):**
   - **Ruff (`ruff check src/`):** Cero (0) errores en código fuente y suites de prueba.
   - **Ruff Format (`ruff format --check src/`):** 103 archivos de código fuente perfectamente formateados.
@@ -515,6 +539,7 @@ Certificación integral ejecutada bajo la **Regla Cero** dentro de los contenedo
     - `fastapi/tests/api/test_hito20_enterprise_suite.unit.py`: Suite exhaustiva con 11 casos de prueba cubriendo las 6 sub-tareas de Hito 20.
 
 ### B. Frontend (`vue3/`) — Docker `sinfallas/base-node-ionic:26`
+
 - **Análisis Estático y Calidad de Código:**
   - **Vue-TSC (`pnpm type-check`):** Cero (0) errores de tipado TypeScript estricto.
   - **ESLint (`pnpm eslint`):** Cero (0) errores y cero (0) advertencias en los nuevos componentes de Hito 20 (`EnterpriseComplianceView.vue`, `enterpriseComplianceView.unit.ts`).
@@ -532,6 +557,7 @@ Certificación integral ejecutada bajo la **Regla Cero** dentro de los contenedo
 Certificación integral ejecutada bajo la **Regla Cero** dentro de los contenedores Docker efímeros `qa-backend` (`sinfallas/base-python-uv:3.15`) y `qa-vue3` (`sinfallas/base-node-ionic:26`).
 
 ### A. Backend (`fastapi/`) — Docker `sinfallas/base-python-uv:3.15`
+
 - **Análisis Estático y Seguridad (SAST):**
   - **Ruff (`ruff check src/ tests/`):** Cero (0) errores en código fuente y suites de prueba.
   - **Ruff Format (`ruff format --check src/ tests/`):** 100% de los archivos de código fuente y pruebas formateados canónicamente.
@@ -562,6 +588,7 @@ Certificación integral ejecutada bajo la **Regla Cero** dentro de los contenedo
     16. `rosgrid_detect_mass_outage`: Motor de correlación de caídas masivas en PON y cajas.
 
 ### B. Frontend (`vue3/`) — Docker `sinfallas/base-node-ionic:26`
+
 - **Análisis Estático y Tipado Estricto:**
   - **Vue-TSC (`pnpm type-check`):** Cero (0) errores de tipado TypeScript estricto.
   - **Prettier (`pnpm format:check`):** 100% de los archivos con estilo y formato verificado (`All matched files use Prettier code style!`).
@@ -580,6 +607,7 @@ Certificación integral ejecutada bajo la **Regla Cero** dentro de los contenedo
 Certificación integral ejecutada bajo la **Regla Cero** garantizando cumplimiento de estándares estáticos, seguridad de contenedores y robustez de compuertas de despliegue local.
 
 ### A. Auditoría Estática de Infraestructura y Scripts
+
 - **Trivy IaC (`./auditar-infra.sh`):**
   - **Dockerfiles y Compose:** Cero (0) fallos de configuración en `fastapi/Dockerfile`, `vue3/Dockerfile`, `docker-compose.yml`, `docker-compose.prod.yml` y `docker-compose.prod.local.yml`.
 - **Trivy FileSystem (`uv.lock` y `pnpm-lock.yaml`):**
@@ -591,6 +619,7 @@ Certificación integral ejecutada bajo la **Regla Cero** garantizando cumplimien
   - Cero (0) errores y cero (0) advertencias en el 100% de los scripts del proyecto (`auditar-infra.sh`, `instalar-rosgrid.sh`, `build.sh`, `instalar-hooks.sh`, `limpieza.sh`, `probar-prod-local.sh`, `fastapi/scripts/entrypoint.sh`).
 
 ### B. Especificación y Endurecimiento de la Matriz Smoke Tests (`probar-prod-local.sh`)
+
 - **Fase 1 (Auditoría e Imágenes):** Escaneo Trivy opcional + compilación multi-stage local con etiquetado `:local-test`.
 - **Fase 2 (Despliegue Sintético):** Aislamiento de red interna con `pull_policy: never`.
 - **Fase 3 (Healthchecks):** Sondeo activo de salud para PostgreSQL 17, KeyDB Multi-Hilo, FastAPI y `rosgrid-worker`.
@@ -619,6 +648,7 @@ Certificación integral ejecutada bajo la **Regla Cero** garantizando cumplimien
 Certificación integral ejecutada bajo la **Regla Cero** dentro del contenedor Docker efímero `qa-backend` (`sinfallas/base-python-uv:3.15`) y validada en entorno de producción local (`./probar-prod-local.sh`).
 
 ### A. Backend (`fastapi/`) — Docker `sinfallas/base-python-uv:3.15`
+
 - **Análisis Estático y Seguridad (SAST):**
   - **Ruff (`ruff check src/ tests/`):** Cero (0) errores en código fuente y suites de prueba.
   - **Ruff Format (`ruff format --check src/ tests/`):** 100% de los archivos de código fuente y pruebas formateados canónicamente.
@@ -640,6 +670,7 @@ Certificación integral ejecutada bajo la **Regla Cero** dentro del contenedor D
        - Rechazo con HTTP `413 Payload Too Large` cuando el archivo CSV excede el umbral de seguridad de 2 MB.
 
 ### B. Validación de Integración en Producción Local (`./probar-prod-local.sh`)
+
 - **Suite de Contratos Front-Back (`validar_comunicacion_front_back.py`):**
   - **Contratos Ejecutados:** **22 de 22 contratos aprobados (100% exitosos)** contra el stack completo en contenedores (`postgres`, `keydb`, `fastapi`, `worker`, `nginx`).
   - **Endpoints y Flujos Verificados:**
@@ -651,6 +682,7 @@ Certificación integral ejecutada bajo la **Regla Cero** dentro del contenedor D
     - Verificación de cabeceras de proxy inverso `X-Forwarded-For` y `X-Forwarded-Proto` en `/ws/`.
 
 ### C. Certificación QA 11X del Asistente de Instalación Standalone (`instalar-rosgrid.sh`)
+
 - **Auditoría Estática con ShellCheck (`koalaman/shellcheck:stable`):**
   - Cero (0) errores y cero (0) advertencias en `instalar-rosgrid.sh` y en los 7 scripts Bash del sistema (`auditar-infra.sh`, `instalar-rosgrid.sh`, `build.sh`, `instalar-hooks.sh`, `limpieza.sh`, `probar-prod-local.sh`, `fastapi/scripts/entrypoint.sh`).
   - Validación de compatibilidad POSIX, inicialización de variables de entrada y entrecomillado estricto.
@@ -687,6 +719,7 @@ Certificación ejecutada bajo la **Regla Cero** dentro de los contenedores efím
 | **16** | Cumplimiento Normativo Corporativo (Compliance) | `/enterprise/compliance` | Auditoría de directivas CIS Benchmark con Security Score (0-100), detección de Config Drift y orquestación SD-WAN WireGuard. |
 
 ### B. Certificación de Calidad y No-Regresión en Contenedor Efímero
+
 - **Análisis de Tipos TypeScript (`vue-tsc --noEmit`):** Cero (0) errores de tipado estricto.
 - **Formateo y Estilo de Código (`prettier --check`):** 100% de conformidad con las directivas corporativas.
 - **Suite Unitaria Vitest (`pnpm test:unit`):** **38 de 38 suites aprobadas (100%)** con **262 de 262 pruebas unitarias exitosas**.
@@ -724,7 +757,7 @@ Certificación ejecutada bajo la **Regla Cero** dentro de los contenedores efím
 | **20. Diagnóstico 360°** | `/api/v1/diagnostics/endpoint-360` | Ping multi-MTU, parser de motivos de corte en logs RouterOS y muestreo Torch en tiempo real. |
 | **21. BGP Looking Glass** | `/api/v1/bgp/looking-glass/route`, `/advertised` | Consulta segura de tablas BGP v7 y prefijos anunciados a proveedores sin SSH. |
 | **22. Tráfico IPFIX** | `/api/v1/traffic-flow/anomalies`, `/mitigate` | Detección de anomalías de flujo y mitigación rápida FastDrop / Blackhole bajo Safe Mode. |
-| **23. Compliance CIS & Drift**| `/api/v1/compliance/cis-benchmark`, `/drift` | Auditoría de directivas CIS, Security Score (0-100) y detección de desviación contra Golden Baseline. |
+| **23. Compliance CIS & Drift** | `/api/v1/compliance/cis-benchmark`, `/drift` | Auditoría de directivas CIS, Security Score (0-100) y detección de desviación contra Golden Baseline. |
 | **24. SD-WAN WireGuard** | `/api/v1/sdwan/topologies`, `/sdwan/deploy` | Orquestación de topologías Hub & Spoke con enrutamiento OSPF sobre túneles WireGuard. |
 | **25. Switching & Rogue DHCP** | `/api/v1/switching/dhcp-snooping/events`, `/isolate` | Eventos de DHCP Snooping, alerta de servidor rogue y aislamiento de puerto comprometido. |
 | **26. Monitoreo SLA** | `/api/v1/sla/metrics`, `/sla/reports/monthly` | Sondas de latencia, jitter y disponibilidad con generación de reportes mensuales de penalización. |
@@ -732,6 +765,7 @@ Certificación ejecutada bajo la **Regla Cero** dentro de los contenedores efím
 | **28. Matriz RBAC** | `/api/v1/rbac/roles`, `/rbac/users/{id}/matrix` | Catálogo de los 11 roles y matriz granular de permisos por router. |
 
 ### B. Sincronización y Conformidad
+
 - **Sincronización:** Los archivos de pruebas BDD de API en `fastapi/test/api_test.feature` y su réplica de referencia en `examples/fastapi/test/api_test.feature` permanecen 100% sincronizados bit a bit.
 
 ---
@@ -741,6 +775,7 @@ Certificación ejecutada bajo la **Regla Cero** dentro de los contenedores efím
 Certificación ejecutada bajo la **Regla Cero** dentro de los contenedores Docker efímeros `sinfallas/base-python-uv:3.15` y `sinfallas/base-node-ionic:26`.
 
 ### A. Backend (`fastapi/`) — Docker `sinfallas/base-python-uv:3.15`
+
 - **Adopción de Runtime:**
   - `fastapi/Dockerfile`: Actualizado a `FROM sinfallas/base-python-uv:3.15` (multi-stage no-root `10001:10001`).
   - `fastapi/pyproject.toml`: Declaración de motor de lenguaje `requires-python = ">=3.15"`.
@@ -756,6 +791,7 @@ Certificación ejecutada bajo la **Regla Cero** dentro de los contenedores Docke
   - **BDD API:** **54 de 54 escenarios aprobados (100%)** con Karate Labs en Docker.
 
 ### B. Frontend (`vue3/`) — Docker `sinfallas/base-node-ionic:26`
+
 - **Adopción de Runtime:**
   - `vue3/Dockerfile`: Actualizado a `FROM sinfallas/base-node-ionic:26 AS builder`.
   - `vue3/package.json`: Gobernanza declarativa con `"engines": { "node": ">=26.0.0", "pnpm": ">=9.0.0" }`.
@@ -769,11 +805,7 @@ Certificación ejecutada bajo la **Regla Cero** dentro de los contenedores Docke
   - **BDD UI:** **16 de 16 escenarios aprobados (100%)** con Karate Labs CDP en Docker.
 
 ### C. Sincronización Global de Infraestructura y Orquestadores
+
 - Actualización íntegra de `docker-compose.yml`, `fastapi/docker-compose.qa.yml`, `vue3/docker-compose.qa.yml` y réplicas en `examples/`.
 - Sincronización de los reportes técnicos de investigación `docs/10_REPORTE_INVESTIGACION_PYTHON_3_15.md` y `docs/11_REPORTE_INVESTIGACION_NODE_26.md` pasando a estado **Migración Ejecutada e Implementada en RoSGrid**.
 - Gobernanza raíz (`README.md`, `INSTALL.md`, `RESOURCES.md`, `CHANGELOG.md`, `ROADMAP.md` y especificaciones `specs/00`, `specs/01`, `specs/24`, `specs/27`) completamente alineada con Python 3.15 y Node.js 26 LTS.
-
-
-
-
-

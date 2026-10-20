@@ -347,6 +347,7 @@ def test_ssrf_validation_rejects_loopback_and_metadata() -> None:
         assert validate_router_target_url(url) == url
 
     # Verify CreateRouterRequest schema enforces it via field validator
+    today = date.today()
     with pytest.raises(ValueError, match="no permitid"):
         CreateRouterRequest(
             display_name="R-Blocked",
@@ -356,7 +357,7 @@ def test_ssrf_validation_rejects_loopback_and_metadata() -> None:
             api_password="pwd",
             network_role="EDGE",
             physical_location="NOC",
-            online_since_date=date.today(),
+            online_since_date=today,
             serial_number="SN-TEST",
         )
 

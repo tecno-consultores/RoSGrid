@@ -73,9 +73,9 @@ def _verify_host_ssrf(host: str) -> None:
 
 def validate_router_target_url(v: str | None) -> str | None:
     """Valida la URL/IP destino del router bloqueando SSRF hacia loopback, metadatos e infra interna."""
-    if not v or not str(v).strip():
+    if not v or not v.strip():
         return v
-    v_str = str(v).strip()
+    v_str = v.strip()
     parsed = urlparse(v_str if "://" in v_str else f"https://{v_str}")
     host = (parsed.hostname or v_str).strip()
     if host:

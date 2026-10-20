@@ -137,11 +137,12 @@
     const itemsHtml = grp.routers
       .map((r) => {
         const color = getStatusColor(r);
-        const stateText = !r.is_reachable
-          ? 'Desconectado'
-          : r.admin_state === 'MAINTENANCE'
-            ? 'Mantenimiento'
-            : 'Operativo';
+        let stateText = 'Operativo';
+        if (!r.is_reachable) {
+          stateText = 'Desconectado';
+        } else if (r.admin_state === 'MAINTENANCE') {
+          stateText = 'Mantenimiento';
+        }
         const displayName = escapeHtml(r.display_name);
         const rosIdentity = escapeHtml(r.ros_identity || r.display_name);
         const networkRole = escapeHtml(r.network_role || 'GENERAL');
@@ -189,7 +190,7 @@
   }
 
   function getSpiderfiedPositions(center: L.LatLng, count: number): L.LatLng[] {
-    if (!mapInstance) return Array(count).fill(center);
+    if (!mapInstance) return new Array(count).fill(center);
     if (count <= 1) return [center];
 
     const centerPoint = mapInstance.latLngToLayerPoint(center);
@@ -269,15 +270,9 @@
     return R * c;
   }
 
-  function renderMarkers() {
-    if (!mapInstance || !markersLayer) return;
-    markersLayer.clearLayers();
-    clearSpiderLayer();
-
-    // Agrupar routers co-ubicados (mismo sitio, POP o coordenadas compartidas <= 25 metros)
+  function buildLocationGroups(routers: RouterItem[]): LocationGroup[] {
     const groups: LocationGroup[] = [];
-
-    for (const r of props.routers) {
+    for (const r of routers) {
       if (
         r.latitude !== undefined &&
         r.latitude !== null &&
@@ -288,7 +283,7 @@
       ) {
         const lat = Number(r.latitude);
         const lng = Number(r.longitude);
-        if (!isNaN(lat) && !isNaN(lng)) {
+        if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
           const match = groups.find((g) => getDistanceMeters(g.lat, g.lng, lat, lng) <= 25);
           if (match) {
             match.routers.push(r);
@@ -298,39 +293,50 @@
         }
       }
     }
+    return groups;
+  }
 
+  function renderGroupMarker(grp: LocationGroup): void {
+    if (!markersLayer) return;
+
+    if (grp.routers.length === 1) {
+      const r = grp.routers[0];
+      const color = getStatusColor(r);
+      const icon = createRouterIcon(color, r.display_name);
+      const marker = L.marker([grp.lat, grp.lng], { icon });
+
+      marker.bindPopup(createSingleRouterPopup(r));
+      marker.on('click', () => {
+        clearSpiderLayer();
+        emit('select-router', r.id);
+      });
+
+      markersLayer.addLayer(marker);
+    } else {
+      const groupColor = getGroupStatusColor(grp.routers);
+      const icon = createMultiRouterIcon(groupColor, grp.routers);
+      const clusterMarker = L.marker([grp.lat, grp.lng], { icon });
+
+      clusterMarker.bindPopup(createMultiRouterPopup(grp));
+      clusterMarker.on('click', () => {
+        if (grp.routers.length > 0) {
+          emit('select-router', grp.routers[0].id);
+        }
+        spiderfyGroup(grp);
+      });
+
+      markersLayer.addLayer(clusterMarker);
+    }
+  }
+
+  function renderMarkers() {
+    if (!mapInstance || !markersLayer) return;
+    markersLayer.clearLayers();
+    clearSpiderLayer();
+
+    const groups = buildLocationGroups(props.routers);
     for (const grp of groups) {
-      if (grp.routers.length === 1) {
-        // Un solo router en esta ubicación
-        const r = grp.routers[0];
-        const color = getStatusColor(r);
-        const icon = createRouterIcon(color, r.display_name);
-        const marker = L.marker([grp.lat, grp.lng], { icon });
-
-        marker.bindPopup(createSingleRouterPopup(r));
-        marker.on('click', () => {
-          clearSpiderLayer();
-          emit('select-router', r.id);
-        });
-
-        markersLayer.addLayer(marker);
-      } else {
-        // 2 o más routers en la MISMA ubicación: Agrupamiento con Badge y Spiderfy
-        const groupColor = getGroupStatusColor(grp.routers);
-        const icon = createMultiRouterIcon(groupColor, grp.routers);
-        const clusterMarker = L.marker([grp.lat, grp.lng], { icon });
-
-        clusterMarker.bindPopup(createMultiRouterPopup(grp));
-
-        clusterMarker.on('click', () => {
-          if (grp.routers.length > 0) {
-            emit('select-router', grp.routers[0].id);
-          }
-          spiderfyGroup(grp);
-        });
-
-        markersLayer.addLayer(clusterMarker);
-      }
+      renderGroupMarker(grp);
     }
 
     // Auto-encuadre si hay múltiples nodos en el territorio
@@ -379,7 +385,7 @@
         btn.onclick = (ev) => {
           ev.preventDefault();
           ev.stopPropagation();
-          const rId = btn.getAttribute('data-router-id');
+          const rId = btn.dataset.routerId;
           if (rId) emit('open-webfig', rId);
         };
       });
@@ -390,7 +396,7 @@
         btn.onclick = (ev) => {
           ev.preventDefault();
           ev.stopPropagation();
-          const rId = btn.getAttribute('data-router-id');
+          const rId = btn.dataset.routerId;
           if (rId) emit('select-router', rId);
         };
       });
@@ -413,7 +419,7 @@
     if (webfigBtn) {
       ev.preventDefault();
       ev.stopPropagation();
-      const rId = webfigBtn.getAttribute('data-router-id');
+      const rId = webfigBtn.dataset.routerId;
       if (rId) {
         emit('open-webfig', rId);
       }
@@ -424,11 +430,10 @@
     if (selectBtn) {
       ev.preventDefault();
       ev.stopPropagation();
-      const rId = selectBtn.getAttribute('data-router-id');
+      const rId = selectBtn.dataset.routerId;
       if (rId) {
         emit('select-router', rId);
       }
-      return;
     }
   }
 
@@ -602,16 +607,16 @@
     }
   }
 
-  .leaflet-popup-content-wrapper {
-    background: #111827 !important;
-    color: #f8fafc !important;
+  .leaflet-popup .leaflet-popup-content-wrapper {
+    background: #111827;
+    color: #f8fafc;
     border: 1px solid #1e293b;
     border-radius: 6px;
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
   }
 
-  .leaflet-popup-tip {
-    background: #111827 !important;
+  .leaflet-popup .leaflet-popup-tip {
+    background: #111827;
   }
 
   .rg-map-popup {
@@ -732,10 +737,11 @@
 
   .badge-role {
     font-size: 0.65rem;
-    background: rgba(34, 211, 238, 0.12);
-    color: #22d3ee;
+    background: #083344;
+    color: #67e8f9;
     padding: 2px 6px;
     border-radius: 4px;
+    font-weight: 600;
   }
 
   .router-item-details {
@@ -757,9 +763,9 @@
 
   .btn-popup-select {
     flex: 1;
-    background: rgba(255, 255, 255, 0.08);
+    background: #1e293b;
     border: 1px solid #334155;
-    color: #cbd5e1;
+    color: #f1f5f9;
     padding: 4px 8px;
     border-radius: 4px;
     font-size: 0.72rem;
@@ -769,9 +775,9 @@
   }
 
   .btn-popup-select:hover {
-    background: rgba(34, 211, 238, 0.15);
+    background: #0e7490;
     border-color: #22d3ee;
-    color: #22d3ee;
+    color: #ffffff;
   }
 
   /* Filtro de bajo encandilamiento para temas dark y noc-high-contrast */

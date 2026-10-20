@@ -33,7 +33,7 @@ Si descubres una vulnerabilidad de seguridad en el motor criptográfico, el aisl
 RoSGrid administra infraestructura crítica de telecomunicaciones e ISP (routers de borde BGP, BRAS PPPoE y firewalls). Por ello, implementa **8 capas de defensa en profundidad**:
 
 ```mermaid
-graph TD
+flowchart TD
     subgraph "Capa 1: Red y Perímetro"
         L1["Nginx 1.27 Non-Root :8080<br>Anti-CSWSH | CSP Estricta | Límite 2MB"]
     end
@@ -62,39 +62,48 @@ graph TD
 ```
 
 ### 3.1 Aislamiento Multi-Tenant a Nivel de Motor (`FORCE ROW LEVEL SECURITY`)
+
 - Todas las tablas operativas en PostgreSQL 17 aplican políticas `ENABLE` y `FORCE ROW LEVEL SECURITY (RLS)`.
 - Cada transacción inyecta `SET LOCAL app.current_tenant_id = '<uuid>'`, impidiendo matemáticamente fugas de datos cruzadas entre empresas (Tenants) incluso ante errores en consultas de la capa de aplicación.
 
 ### 3.2 Autenticación *Split-Credential*, 2FA TOTP y Cookies `__Host-`
+
 - **Contraseñas de Usuario:** Hash con `Argon2id` de alta dureza de memoria.
 - **Segundo Factor Obligatorio (2FA):** TOTP conforme al RFC 6238 para todos los operadores humanos.
 - **Cero Tokens en `localStorage`:** Los tokens de sesión viajan exclusivamente en cookies `__Host-rg_at` y `__Host-rg_rt` con banderas `HttpOnly; Secure; SameSite=Strict`, acompañadas de validación `X-CSRF-Token` firmada con `HMAC-SHA256`.
 - **Detección de Robo de Sesión (*Reuse Detection*) y *Kill-Switch*:** KeyDB invalida automáticamente toda la familia de Refresh Tokens si detecta el reúso de un token rotado y permite la expulsión instantánea en vivo (`SESSION_KILLED` con cierre de WebSockets código `4401`).
 
 ### 3.3 Bóveda Criptográfica `AES-256-GCM` y *Step-Up Auth* (30s)
+
 - Las credenciales de la REST API de cada router MikroTik se cifran con `AES-256-GCM` vinculando criptográficamente el `tenant_id|router_id` como *Additional Authenticated Data (AAD)*.
 - **Rotación Automática Transaccional:** El worker de bóveda rota las contraseñas API por llaves aleatorias de 32 caracteres manteniendo `previous_password` para recuperación ante cortes de red.
 - **Revelación Efímera (30 Segundos):** Solo los roles `SUPERADMIN_GLOBAL` y `TENANT_ADMIN` pueden consultar una clave tras superar un desafío **Step-Up 2FA TOTP en vivo**. El Frontend purga la clave de la memoria RAM automáticamente tras 30 segundos.
 
 ### 3.4 Pinning TLS *Trust On First Use* (TOFU) sobre `/rest/*`
+
 - RoSGrid se comunica exclusivamente mediante HTTPS (`/ip/service/www-ssl`) contra la REST API de RouterOS v7.1+ reutilizando pools persistentes `Keep-Alive` TLS verificados.
 - En el primer contacto verificado se fija la huella `SHA-256` del certificado X.509 del MikroTik (`TRUSTED_PINNED`). Si la huella cambia sin autorización previa (`FINGERPRINT_MISMATCH`), RoSGrid aborta la conexión y dispara una alerta crítica de posible ataque *Man-in-the-Middle (MitM)*.
 
 ### 3.5 *Safe Mode (Dead Man's Switch)* y Protección Anti-Suicidio
+
 - Toda mutación delicada inyecta previamente una tarea temporal `rosgrid_safemode_*` en `/rest/system/scheduler` a 60 segundos antes de aplicar el cambio. Si el cambio corta la conectividad de gestión, el propio MikroTik revierte la operación automáticamente.
 - El sistema bloquea cualquier intento de deshabilitar o alterar el servicio `www-ssl` desde Capa 1 o Capa 2 (`FORBIDDEN_L2_PATHS`).
 
 ### 3.6 Segregación de Funciones (*Maker-Checker*) y Cadena Forense WORM (Índice `BRIN`)
+
 - Los cambios en las 7 categorías críticas realizados por roles intermedios se retienen con estado `202 Accepted` (`AWAITING_APPROVAL`). Ningún usuario puede aprobar su propia solicitud (`maker_user_id != checker_user_id`).
 - La tabla `audit_logs` cuenta con un trigger en PostgreSQL (`trg_immutable_audit_logs`) que prohíbe `UPDATE`, `DELETE` y `TRUNCATE`, encadenando cada registro con `SHA-256` (`prev_record_hash -> record_sha256_hash`), sanitizando secretos (`[REDACTED]`) e indexando cronológicamente con un índice `BRIN` de alta velocidad.
 
 ### 3.7 Exclusión Deliberada de Terminal CLI / SSH Libre
+
 - Por diseño de seguridad, RoSGrid **no incluye ni aceptará** terminales interactivas SSH/Telnet ni consolas CLI libres que permitan a un operador evadir el modelo *Split-Credential*, el interceptor *Maker-Checker*, el *Safe Mode* o la auditoría estructurada `before_state` / `after_state`.
 
 ### 3.8 Desactivación Estricta de Swagger / ReDoc / OpenAPI en Producción
+
 - Cuando el contenedor se ejecuta con `ROSGRID_ENV=production`, FastAPI inicializa con `docs_url=None`, `redoc_url=None` y `openapi_url=None` para impedir el reconocimiento automatizado de esquemas y endpoints por parte de terceros (consulta `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`).
 
 ### 3.9 Servidor MCP Protegido para Agentes IA (`POST /api/v1/mcp`) y Gobierno Autónomo
+
 - **Autenticación Machine-to-Machine Restringida:** El endpoint JSON-RPC 2.0 Streamable HTTP solo acepta autenticación `Bearer` proveniente del rol `SERVICE_ACCOUNT`.
 - **Lista Blanca de Red (CIDR):** La IP del agente IA (Hermes Agent o Claude) debe pertenecer estrictamente a la subred declarada en `user.allowed_cidr`. Cualquier intento fuera de rango responde `403 Forbidden`.
 - **Rate-Limiting en KeyDB:** La variable `ROSGRID_MCP_RATE_LIMIT_PER_MIN` (por defecto `30` req/min) previene sobrecargas al plano de control del MikroTik.
@@ -102,12 +111,15 @@ graph TD
 - **Contención de Mutaciones (Maker-Checker Obligatorio):** Cualquier herramienta de cambio destructivo o mutación de red (`rosgrid_propose_network_change`) no se ejecuta inmediatamente en el router; se retiene con estado `202 Accepted` (`AWAITING_APPROVAL`) para que un operador humano la revise y apruebe, respaldada por *Safe Mode (60s)*. Consulta `docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md`.
 
 ### 3.10 Gobernanza de Auto-Registro de Operadores (Maker-Checker)
+
 - Para prevenir registros descontrolados, el auto-registro web (`POST /api/v1/auth/register`) almacena a los solicitantes con bandera inactiva y estado `PENDING_APPROVAL`.
 - El endpoint de inicio de sesión rechaza con `403 Forbidden` cualquier intento de autenticación hasta que un `SUPERADMIN_GLOBAL` o `TENANT_ADMIN` apruebe explícitamente al operador (`PUT /api/v1/users/{id}/approve`) y le asigne un rol RBAC adecuado.
 - Un switch global en KeyDB (`rosgrid:registration_enabled`) permite al Superadmin desactivar completamente el auto-registro público cuando no se esperan nuevos operadores.
 
 ### 3.11 Mitigación Integral de Vectores de Ataque en Plataforma Híbrida (Vue 3 + FastAPI)
+
 La integración entre una SPA en Vue 3 y una API asíncrona en FastAPI introduce una superficie de ataque híbrida que RoSGrid neutraliza mediante directivas arquitectónicas de endurecimiento:
+
 - **Prevención de Asignación Masiva (*Mass Assignment / Over-posting*):**
   - Todos los esquemas de entrada Pydantic v2 configuran `model_config = ConfigDict(extra="forbid")`.
   - Los modelos de entrada (`RegisterOperatorRequest`, `UserCreate`, `UserUpdate`, `RouterCreateRequest`) están estrictamente desacoplados de los modelos de base de datos (`UserInDB`, `RouterInDB`) y modelos públicos (`UserPublic`, `RouterResponse`), impidiendo la inyección arbitraria de campos como `role`, `is_superuser` o `is_verified`.
@@ -142,6 +154,7 @@ La integración entre una SPA en Vue 3 y una API asíncrona en FastAPI introduce
 ## 4. Barreras Automatizadas DevSecOps
 
 Antes de cada commit, push o publicación de imagen en Docker Hub (`./build.sh`), el código supera:
+
 - **Detección de Secretos:** `gitleaks` vía `lefthook.yml`.
 - **SAST Backend & Frontend:** `Bandit` (Python) y `eslint-plugin-security` (Vue 3 / TypeScript), más `.npmrc` con `ignore-scripts=true`.
 - **Auditoría IaC y Contenedores:** `Trivy` (`./auditar-infra.sh`) exigiendo `0` vulnerabilidades `HIGH` o `CRITICAL` y ejecución con usuarios sin privilegios (`non-root`).
@@ -152,6 +165,7 @@ Antes de cada commit, push o publicación de imagen en Docker Hub (`./build.sh`)
 ## 5. Manuales Oficiales de Referencia de Seguridad (`docs/`)
 
 Para una inspección profunda de los controles y auditorías de RoSGrid:
+
 - [docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md](./docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md) — Generación de llaves AES-256-GCM / JWT y despliegue inmutable.
 - [docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md](./docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md) — Hardening de RouterOS v7, política `rest-api` (v7.13+), pinning SSL TOFU y Safe Mode.
 - [docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md](./docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md) — Aislamiento RLS en PostgreSQL 17, matriz de 11 roles RBAC, Bóveda 2FA, Kill-Switch y Auto-Registro.
@@ -160,4 +174,3 @@ Para una inspección profunda de los controles y auditorías de RoSGrid:
 - [docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md](./docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md) — Arquitectura de seguridad del servidor Model Context Protocol.
 - [docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md](./docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md) — Pipeline de validación local y suite de 24 pruebas de integración UI-API.
 - [docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md](./docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md) — Plan maestro de pruebas de aceptación UAT 11X (28 casos E2E).
-

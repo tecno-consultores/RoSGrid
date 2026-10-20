@@ -7,6 +7,7 @@ Este documento centraliza las referencias técnicas, imágenes oficiales de Dock
 ## 1. Documentación Interna del Repositorio
 
 ### Manuales Operativos, de Despliegue y Referencia de API (`docs/`)
+
 - `docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md` — Variables `.env`, generación de llaves criptográficas, motor **KeyDB Multi-Hilo** predeterminado vs. perfil **DragonflyDB** de alta escala, despliegue Docker Compose, auto-migración con `pg_advisory_lock` y compilación con `./build.sh`.
 - `docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md` — Configuración paso a paso de RouterOS v7.1+ (`www-ssl`, certificados autofirmados para TOFU, permisos API y funcionamiento del *Safe Mode*).
 - `docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md` — Gestión de empresas (Tenants), los 11 roles RBAC, matriz de permisos por router, Bóveda *Step-Up Auth* (30s) y *Kill-Switch*.
@@ -16,6 +17,7 @@ Este documento centraliza las referencias técnicas, imágenes oficiales de Dock
 - `docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md` — Manual técnico del servidor MCP protegido (`POST /api/v1/mcp` JSON-RPC 2.0 Streamable HTTP) para conectar **Hermes Agent** y **Claude**, con catálogo de las 8 Tools semánticas, flujo NOC autónomo 24/7 y gobierno Maker-Checker.
 
 ### Enciclopedia de Especificaciones (`specs/`)
+
 - `specs/00` a `specs/08` — Gobernanza 11X, infraestructura Docker inmutable, esquema PostgreSQL 17 RLS/WORM/BRIN, KeyDB/RESP, criptografía, RBAC de 11 roles y cliente RouterOS v7 TOFU/Safe Mode con pool TLS Keep-Alive.
 - `specs/09` a `specs/17` — Arquitectura Backend FastAPI (`ORJSONResponse` + `uvloop`), endpoints de Capa 1, motor universal de Capa 2, Maker-Checker, Backups Diff Git, WebSockets de telemetría efímera y Workers asíncronos.
 - `specs/18` a `specs/23` — Arquitectura Frontend Vue 3 Zero-Trust (`shallowRef`), sistema de diseño táctico NOC (`WCAG 2.1 AA` + *Virtual Scrolling*), mapa OpenStreetMap (`Leaflet`), consola WebFig con `<KeepAlive :max="5">` y `TelemetryRingBuffer` sobre `<canvas>` 2D.
@@ -64,6 +66,7 @@ Este documento centraliza las referencias técnicas, imágenes oficiales de Dock
 ## 5. Laboratorio Recomendado para Pruebas (EVE-NG + MikroTik CHR)
 
 Para validar RoSGrid en entornos de pre-producción se recomienda una topología en **EVE-NG** con al menos 3 nodos **MikroTik Cloud Hosted Router (CHR) v7.1+**:
+
 1. **`R1-CORE-EVENG`:** Enrutador de borde con sesiones BGP e interfaces de subida ECMP.
 2. **`R2-BORDE-EVENG`:** Enrutador de distribución con adyacencias OSPF, VLANs 802.1Q y reglas de Firewall/Mangle.
 3. **`R3-BRAS-EVENG`:** Concentrador de última milla con servidor PPPoE activo, `Simple Queues` y perfiles de clientes.

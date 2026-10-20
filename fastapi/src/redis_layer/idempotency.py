@@ -137,23 +137,29 @@ def _decode_actors_from_token(token: str) -> tuple[str | None, str | None]:
         return None, None
 
 
-def _resolve_idempotency_actors(request: Request) -> tuple[str, str]:
-    tenant_id = getattr(request.state, "tenant_id", None)
-    user_id = getattr(request.state, "user_id", None)
-    if tenant_id and user_id:
-        return str(tenant_id), str(user_id)
+def _populate_actors_from_token(request: Request, raw_token: str) -> None:
+    tid, sub = _decode_actors_from_token(raw_token)
+    if tid and not getattr(request.state, "tenant_id", None):
+        request.state.tenant_id = tid
+    if sub and not getattr(request.state, "user_id", None):
+        request.state.user_id = sub
 
+
+def _extract_and_populate_token_actors(request: Request) -> None:
     raw_token = _extract_raw_token_idemp(request)
     if raw_token:
-        tid, sub = _decode_actors_from_token(raw_token)
-        if tid and not tenant_id:
-            tenant_id = tid
-            request.state.tenant_id = tenant_id
-        if sub and not user_id:
-            user_id = sub
-            request.state.user_id = user_id
+        _populate_actors_from_token(request, raw_token)
 
-    return str(tenant_id) if tenant_id else "global", str(user_id) if user_id else "anonymous"
+
+def _resolve_idempotency_actors(request: Request) -> tuple[str, str]:
+    tid = getattr(request.state, "tenant_id", None)
+    uid = getattr(request.state, "user_id", None)
+    if tid and uid:
+        return str(tid), str(uid)
+    _extract_and_populate_token_actors(request)
+    return str(getattr(request.state, "tenant_id", None) or "global"), str(
+        getattr(request.state, "user_id", None) or "anonymous"
+    )
 
 
 class IdempotencyMiddleware(BaseHTTPMiddleware):
