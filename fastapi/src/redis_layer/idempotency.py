@@ -20,6 +20,7 @@ _EXCLUDED_PATHS = {
     "/api/v1/auth/refresh",
     "/api/v1/auth/logout",
     "/api/v1/auth/bootstrap",
+    "/api/v1/mcp",
     "/metrics",
     "/health",
     "/docs",
