@@ -272,4 +272,37 @@ describe('RgResponsiveShell.vue — Doble Contexto & Barra Inferior Móvil', () 
     expect(githubLink.exists()).toBe(true);
     expect(githubLink.attributes('aria-label')).toContain('GitHub');
   });
+
+  it('renderiza Empresas (Tenants) en el menú lateral directamente debajo de Auditoría WORM para SUPERADMIN_GLOBAL', () => {
+    const authStore = useAuthStore();
+    authStore.setAuth({
+      id: 'usr-super',
+      username: 'superadmin',
+      email: 'admin@rosgrid.local',
+      role: 'SUPERADMIN_GLOBAL',
+      tenant_id: 't-1',
+      tenant_slug: 'demo',
+      totp_enabled: true,
+    });
+
+    const wrapper = mount(RgResponsiveShell, {
+      global: {
+        stubs: {
+          RouterLink: { template: '<a class="rail-link"><slot /></a>' },
+          RouterView: true,
+          RgCommandPalette: true,
+          RgSafeModeBanner: true,
+        },
+      },
+    });
+
+    expect(wrapper.text()).toContain('Empresas (Tenants)');
+    const allText = wrapper.text();
+    const auditPos = allText.indexOf('Auditoría WORM');
+    const tenantsPos = allText.indexOf('Empresas (Tenants)');
+    const compliancePos = allText.indexOf('Flota & Seguridad');
+    expect(auditPos).toBeGreaterThan(-1);
+    expect(tenantsPos).toBeGreaterThan(auditPos);
+    expect(compliancePos).toBeGreaterThan(tenantsPos);
+  });
 });

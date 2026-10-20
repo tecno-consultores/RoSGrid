@@ -7,6 +7,7 @@
   import type { TenantItem, TenantFeatureFlags } from '@/types';
   import { useAuthStore, defaultTenantFeatures } from '@/stores/useAuthStore';
 
+  const authStore = useAuthStore();
   const isLoading = ref(false);
   const errorMessage = ref('');
   const successMessage = ref('');
@@ -56,7 +57,6 @@
       );
       const updatedFeatures = res.data || { ...tenantFeaturesForm.value };
       selectedTenant.value.features = updatedFeatures;
-      const authStore = useAuthStore();
       if (authStore.user?.tenant_id === selectedTenant.value.id) {
         authStore.updateTenantFeatures(updatedFeatures);
       }
@@ -114,21 +114,19 @@
     isCreating.value = true;
     errorMessage.value = '';
     try {
-      const res = await http.post<{ tenant: TenantItem }>('/api/v1/tenants', newTenant.value);
-      tenants.value.push(
-        res.data.tenant || {
-          id: `t-${Date.now()}`,
-          slug: newTenant.value.slug,
-          name: newTenant.value.name,
-          tax_id: newTenant.value.tax_id,
-          status: 'ACTIVE',
-          max_routers_quota: newTenant.value.max_routers_quota,
-          max_users_quota: newTenant.value.max_users_quota,
-          active_routers_count: 0,
-          active_users_count: 1,
-          default_safemode_seconds: newTenant.value.default_safemode_seconds,
-        },
+      const res = await http.post<TenantItem | { tenant: TenantItem }>(
+        '/api/v1/tenants',
+        newTenant.value,
       );
+      const created =
+        res.data && 'tenant' in res.data && res.data.tenant
+          ? res.data.tenant
+          : (res.data as TenantItem);
+
+      if (created && created.id) {
+        tenants.value.push(created);
+      }
+      await loadTenants();
 
       isCreateModalOpen.value = false;
       successMessage.value = `Empresa "${newTenant.value.name}" creada exitosamente.`;
@@ -166,7 +164,13 @@
           Gestión de organizaciones, cuotas de hardware MikroTik y suspensión de Tenants.
         </p>
       </div>
-      <button type="button" class="btn-create" @click="isCreateModalOpen = true">
+      <button
+        v-if="authStore.currentRole === 'SUPERADMIN_GLOBAL'"
+        id="btn-open-create-tenant"
+        type="button"
+        class="btn-create"
+        @click="isCreateModalOpen = true"
+      >
         + Registrar Empresa
       </button>
     </header>

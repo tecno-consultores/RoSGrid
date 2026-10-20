@@ -675,3 +675,91 @@ async def test_register_user_disabled(
     finally:
         await fake_redis.delete("rg:config:public_registration_enabled")
         app.dependency_overrides.pop(get_db_session, None)
+
+
+@pytest.mark.asyncio
+async def test_login_failure_writes_audit_log_user_not_found(async_client: AsyncClient, sample_tenant: Tenant) -> None:
+    session = MockAsyncSession(tenant=sample_tenant, user=None)
+    app.dependency_overrides[get_db_session] = lambda: session
+    try:
+        res = await async_client.post(
+            "/api/v1/auth/login",
+            json={"tenant_slug": sample_tenant.slug, "email": "nonexistent@acme.com", "password": "pass"},
+        )
+        assert res.status_code == 401
+        audit_events = [x for x in session.added if hasattr(x, "event_action")]
+        assert len(audit_events) >= 1
+        assert any(e.event_action == "LOGIN_FAILED_USER_NOT_FOUND" for e in audit_events)
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)
+
+
+@pytest.mark.asyncio
+async def test_login_failure_writes_audit_log_invalid_password(
+    async_client: AsyncClient, sample_tenant: Tenant, sample_user: User
+) -> None:
+    session = MockAsyncSession(tenant=sample_tenant, user=sample_user)
+    app.dependency_overrides[get_db_session] = lambda: session
+    try:
+        res = await async_client.post(
+            "/api/v1/auth/login",
+            json={"tenant_slug": sample_tenant.slug, "email": sample_user.email, "password": "WrongPassword!"},
+        )
+        assert res.status_code == 401
+        audit_events = [x for x in session.added if hasattr(x, "event_action")]
+        assert len(audit_events) >= 1
+        assert any(e.event_action == "LOGIN_FAILED_INVALID_PASSWORD" for e in audit_events)
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)
+
+
+@pytest.mark.asyncio
+async def test_login_failure_writes_audit_log_account_locked(
+    async_client: AsyncClient, sample_tenant: Tenant, sample_user: User
+) -> None:
+    sample_user.is_locked = True
+    sample_user.locked_until = datetime.fromtimestamp(time.time() + 600, UTC)
+
+    session = MockAsyncSession(tenant=sample_tenant, user=sample_user)
+    app.dependency_overrides[get_db_session] = lambda: session
+    try:
+        res = await async_client.post(
+            "/api/v1/auth/login",
+            json={"tenant_slug": sample_tenant.slug, "email": sample_user.email, "password": "AnyPassword!"},
+        )
+        assert res.status_code == 423
+        audit_events = [x for x in session.added if hasattr(x, "event_action")]
+        assert any(e.event_action == "LOGIN_FAILED_ACCOUNT_LOCKED" for e in audit_events)
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)
+
+
+@pytest.mark.asyncio
+async def test_verify_2fa_failure_writes_audit_log(
+    async_client: AsyncClient, sample_tenant: Tenant, sample_user: User, fake_redis: FakeAsyncRedis
+) -> None:
+    session = MockAsyncSession(tenant=sample_tenant, user=sample_user)
+    app.dependency_overrides[get_db_session] = lambda: session
+    try:
+        challenge_id = "test-challenge-audit-fail"
+        secret = pyotp.random_base32()
+        preauth_key = f"rg:{sample_tenant.id}:preauth:{challenge_id}"
+        await fake_redis.hset(
+            preauth_key,
+            mapping={
+                "user_id": str(sample_user.id),
+                "tenant_id": str(sample_tenant.id),
+                "tenant_slug": sample_tenant.slug,
+                "status": "ENROLL_2FA_REQUIRED",
+                "temp_totp_secret": secret,
+            },
+        )
+        res = await async_client.post(
+            "/api/v1/auth/2fa/verify",
+            json={"challenge_id": challenge_id, "totp_code": "000000"},
+        )
+        assert res.status_code == 401
+        audit_events = [x for x in session.added if hasattr(x, "event_action")]
+        assert any(e.event_action == "2FA_VERIFICATION_FAILED" for e in audit_events)
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)

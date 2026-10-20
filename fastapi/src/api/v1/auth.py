@@ -2,6 +2,7 @@
 # Copyright (C) 2026 RoSGrid Contributors
 
 import hashlib
+import logging
 import secrets
 import time
 import uuid
@@ -15,6 +16,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_current_user_claims
+from src.core.audit import write_audit_log
 from src.core.config import settings
 from src.core.crypto import (
     decrypt_aes_gcm,
@@ -46,6 +48,7 @@ from src.schemas.auth import (
 )
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
+logger = logging.getLogger(__name__)
 
 
 def create_jwt_access_token(
@@ -144,6 +147,40 @@ async def _get_active_tenant(db: AsyncSession, slug: str) -> Tenant:
     return tenant
 
 
+async def _log_login_event(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    actor_username: str,
+    actor_role: SystemRoleEnum,
+    event_action: str,
+    status_code: int,
+    request: Request | None = None,
+    actor_user_id: uuid.UUID | None = None,
+    error_message: str | None = None,
+    extra_details: dict[str, Any] | None = None,
+) -> None:
+    ip_addr = request.client.host if (request and request.client) else "127.0.0.1"
+    ua = request.headers.get("User-Agent") if request else None
+    try:
+        await write_audit_log(
+            session=db,
+            tenant_id=tenant_id,
+            actor_user_id=actor_user_id,
+            actor_username=actor_username[:64],
+            actor_role=actor_role,
+            actor_ip=ip_addr,
+            actor_user_agent=ua,
+            event_category="AUTHENTICATION",
+            event_action=event_action,
+            status_code=status_code,
+            error_message=error_message,
+            after_state=extra_details,
+        )
+        await db.commit()
+    except Exception as exc:
+        logger.warning("No se pudo registrar log de auditoría de autenticación: %s", exc)
+
+
 def _validate_user_lock(user: User) -> None:
     now_utc = datetime.now(UTC)
     if user.is_locked and user.locked_until and user.locked_until > now_utc:
@@ -153,23 +190,70 @@ def _validate_user_lock(user: User) -> None:
         )
 
 
-async def _verify_user_credentials(db: AsyncSession, user: User, password: str) -> None:
-    _validate_user_lock(user)
+async def _verify_user_credentials(
+    db: AsyncSession,
+    user: User,
+    password: str,
+    request: Request | None = None,
+) -> None:
+    now_utc = datetime.now(UTC)
+    if user.is_locked and user.locked_until and user.locked_until > now_utc:
+        await _log_login_event(
+            db=db,
+            tenant_id=user.tenant_id,
+            actor_username=user.username,
+            actor_role=user.role,
+            actor_user_id=user.id,
+            event_action="LOGIN_FAILED_ACCOUNT_LOCKED",
+            status_code=423,
+            error_message="Cuenta bloqueada temporalmente por múltiples intentos fallidos",
+            request=request,
+        )
+        raise HTTPException(
+            status_code=423,
+            detail="Cuenta bloqueada temporalmente por múltiples intentos fallidos. Intenta en 15 minutos.",
+        )
+
     if not verify_password(password, user.password_hash):
         user.failed_login_attempts += 1
         if user.failed_login_attempts >= 5:
             user.is_locked = True
             user.locked_until = datetime.fromtimestamp(time.time() + 900, UTC)
         await db.commit()
+        await _log_login_event(
+            db=db,
+            tenant_id=user.tenant_id,
+            actor_username=user.username,
+            actor_role=user.role,
+            actor_user_id=user.id,
+            event_action="LOGIN_FAILED_INVALID_PASSWORD",
+            status_code=401,
+            error_message="Credenciales inválidas",
+            extra_details={"failed_attempts": user.failed_login_attempts, "locked": user.is_locked},
+            request=request,
+        )
         raise HTTPException(
             status_code=401,
             detail="Credenciales inválidas",
         )
+
     if not user.is_active:
+        await _log_login_event(
+            db=db,
+            tenant_id=user.tenant_id,
+            actor_username=user.username,
+            actor_role=user.role,
+            actor_user_id=user.id,
+            event_action="LOGIN_FAILED_USER_INACTIVE",
+            status_code=403,
+            error_message="Cuenta inactiva pendiente de aprobación",
+            request=request,
+        )
         raise HTTPException(
             status_code=403,
             detail="Tu cuenta está pendiente de aprobación por el Administrador. No puedes ingresar hasta que sea autorizada y se te asigne un rol.",
         )
+
     user.failed_login_attempts = 0
     await db.commit()
 
@@ -218,6 +302,7 @@ async def _dispatch_preauth_challenge(redis: Any, tenant: Tenant, user: User) ->
 @router.post("/login", response_model=LoginStep1Response)
 async def login_step1(
     body: LoginStep1Request,
+    request: Request,
     db: AsyncSession = Depends(get_db_session),
 ) -> LoginStep1Response:
     tenant = await _get_active_tenant(db, body.tenant_slug)
@@ -231,9 +316,20 @@ async def login_step1(
     res_user = await db.execute(stmt_user)
     user = res_user.scalar_one_or_none()
     if not user:
+        await _log_login_event(
+            db=db,
+            tenant_id=tenant.id,
+            actor_username=ident,
+            actor_role=SystemRoleEnum.AUDITOR,
+            actor_user_id=None,
+            event_action="LOGIN_FAILED_USER_NOT_FOUND",
+            status_code=401,
+            error_message="Credenciales inválidas o empresa no encontrada",
+            request=request,
+        )
         raise HTTPException(status_code=401, detail="Credenciales inválidas o empresa no encontrada")
 
-    await _verify_user_credentials(db, user, body.password)
+    await _verify_user_credentials(db, user, body.password, request=request)
     redis = get_redis_client()
     return await _dispatch_preauth_challenge(redis, tenant, user)
 
@@ -288,18 +384,31 @@ async def _build_auth_session_response(
     tenant_slug: str,
     tenant_name: str,
     user: User,
+    db: AsyncSession | None = None,
     features: dict[str, Any] | None = None,
 ) -> AuthSessionResponse:
     ip_addr = request.client.host if request.client else "127.0.0.1"
     ua = request.headers.get("User-Agent", "Unknown")
 
     # Política de Sesión Única: revocar cualquier sesión activa previa del usuario
-    await kill_all_user_sessions(
+    killed_count = await kill_all_user_sessions(
         str(tenant_id),
         str(user.id),
         killed_by="AUTH_LOGIN",
         reason="Nueva sesión iniciada (política de sesión única)",
     )
+    if killed_count > 0 and db is not None:
+        await _log_login_event(
+            db=db,
+            tenant_id=tenant_id,
+            actor_username=user.username,
+            actor_role=user.role,
+            actor_user_id=user.id,
+            event_action="SESSION_KILLED_DUPLICATE_LOGIN",
+            status_code=200,
+            extra_details={"killed_sessions_count": killed_count},
+            request=request,
+        )
 
     session_id, _family_id, initial_rt = await create_session(
         str(tenant_id),
@@ -320,6 +429,19 @@ async def _build_auth_session_response(
     )
     csrf_token = generate_csrf_token(session_id, str(tenant_id))
     set_auth_cookies(response, access_token, initial_rt, csrf_token, is_secure=(request.url.scheme == "https"))
+
+    if db is not None:
+        await _log_login_event(
+            db=db,
+            tenant_id=tenant_id,
+            actor_username=user.username,
+            actor_role=user.role,
+            actor_user_id=user.id,
+            event_action="LOGIN_SUCCESSFUL",
+            status_code=200,
+            extra_details={"session_id": session_id},
+            request=request,
+        )
 
     return AuthSessionResponse(
         session_id=session_id,
@@ -360,11 +482,25 @@ async def verify_2fa(
         raise HTTPException(status_code=401, detail="Usuario no encontrado")
 
     aad = f"{tenant_id}:{user.id}".encode()
-    if preauth_data.get("status") == "ENROLL_2FA_REQUIRED":
-        secret = str(preauth_data.get("temp_totp_secret", ""))
-        await _execute_2fa_enrollment(db, user, body.totp_code, secret, aad)
-    else:
-        await _execute_2fa_verification(db, user, body.totp_code, aad)
+    try:
+        if preauth_data.get("status") == "ENROLL_2FA_REQUIRED":
+            secret = str(preauth_data.get("temp_totp_secret", ""))
+            await _execute_2fa_enrollment(db, user, body.totp_code, secret, aad)
+        else:
+            await _execute_2fa_verification(db, user, body.totp_code, aad)
+    except HTTPException as exc:
+        await _log_login_event(
+            db=db,
+            tenant_id=tenant_id,
+            actor_username=user.username,
+            actor_role=user.role,
+            actor_user_id=user.id,
+            event_action="2FA_VERIFICATION_FAILED",
+            status_code=exc.status_code,
+            error_message=str(exc.detail),
+            request=request,
+        )
+        raise
 
     await redis.delete(preauth_key)
 
@@ -392,7 +528,7 @@ async def verify_2fa(
     }
 
     return await _build_auth_session_response(
-        request, response, tenant_id, tenant_obj.slug, tenant_obj.name, user, features=features
+        request, response, tenant_id, tenant_obj.slug, tenant_obj.name, user, db=db, features=features
     )
 
 

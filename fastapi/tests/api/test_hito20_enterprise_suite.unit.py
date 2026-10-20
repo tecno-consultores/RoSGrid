@@ -240,9 +240,7 @@ async def test_audit_router_cis_benchmark_score_and_auto_hardening(
         patch("src.api.v1.compliance.execute_safe_mutation", AsyncMock(return_value={"status": "ok"})) as mock_safe,
         patch("src.api.v1.compliance.write_audit_log", AsyncMock(return_value=mock_audit_entry)) as mock_audit,
     ):
-        harden_payload = CisAutoHardenRequest(
-            router_id=router_id, directive_codes_to_apply=["CIS-1.1", "CIS-1.3"]
-        )
+        harden_payload = CisAutoHardenRequest(router_id=router_id, directive_codes_to_apply=["CIS-1.1", "CIS-1.3"])
         harden_res = await auto_harden_router(
             router_id=router_id, payload=harden_payload, request=mock_request, db=db, claims=sample_claims
         )
@@ -459,9 +457,7 @@ async def test_rogue_dhcp_detection_and_port_isolation(
 
 
 @pytest.mark.asyncio
-async def test_sla_metrics_query_and_probe_trigger(
-    sample_tenant_id: uuid.UUID, sample_claims: dict[str, str]
-) -> None:
+async def test_sla_metrics_query_and_probe_trigger(sample_tenant_id: uuid.UUID, sample_claims: dict[str, str]) -> None:
     db = AsyncMock()
     router_id = uuid.uuid4()
     mock_router = Router(
@@ -523,9 +519,7 @@ async def test_sla_metrics_query_and_probe_trigger(
 
 
 @pytest.mark.asyncio
-async def test_export_sla_compliance_report(
-    sample_tenant_id: uuid.UUID, sample_claims: dict[str, str]
-) -> None:
+async def test_export_sla_compliance_report(sample_tenant_id: uuid.UUID, sample_claims: dict[str, str]) -> None:
     db = AsyncMock()
     mock_metric = SlaProbeMetric(
         id=uuid.uuid4(),
@@ -557,9 +551,7 @@ async def test_export_sla_compliance_report(
 
 
 @pytest.mark.asyncio
-async def test_capsman_overview_ssids_and_clients(
-    sample_tenant_id: uuid.UUID, sample_claims: dict[str, str]
-) -> None:
+async def test_capsman_overview_ssids_and_clients(sample_tenant_id: uuid.UUID, sample_claims: dict[str, str]) -> None:
     db = AsyncMock()
     router_id = uuid.uuid4()
     mock_router = Router(

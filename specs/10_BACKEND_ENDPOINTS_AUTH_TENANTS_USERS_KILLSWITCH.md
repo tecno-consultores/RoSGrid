@@ -37,6 +37,14 @@
   - 403 Forbidden: `{"detail": "Cuenta pendiente de aprobación por el Administrador"}` (si el usuario fue creado vía auto-registro y aún no ha sido aprobado).
   - 423 Locked: `{"detail": "Cuenta bloqueada temporalmente por múltiples intentos fallidos. Intenta en 15 minutos."}`
 
+- **Auditoría Forense Inmutable WORM de Autenticación:**
+  - Todos los intentos fallidos de inicio de sesión (`LOGIN_FAILED_USER_NOT_FOUND`, `LOGIN_FAILED_INVALID_PASSWORD`, `LOGIN_FAILED_ACCOUNT_LOCKED`, `LOGIN_FAILED_USER_INACTIVE`, `2FA_VERIFICATION_FAILED`) se registran atómicamente en `audit_logs` con su hash encadenado SHA-256, IP y User-Agent del actor.
+  - Al completar exitosamente el flujo de autenticación se registra el evento `LOGIN_SUCCESSFUL`.
+
+- **Política de Sesión Única Estricta:**
+  - Cada operador o usuario solo puede tener una (1) sola sesión activa simultánea en KeyDB.
+  - El inicio de una nueva sesión revoca forzosamente cualquier sesión previa del usuario mediante el Kill-Switch global `kill_all_user_sessions()`, notificando al canal WebSocket vía `SESSION_KILLED` y registrando el evento forense `SESSION_KILLED_DUPLICATE_LOGIN`.
+
 ### **1.1B POST /api/v1/auth/register — Auto-Registro Web de Operadores (Maker-Checker)**
 
 - **Acceso:** Público (sujeto al switch global en KeyDB `rosgrid:registration_enabled`). Si está deshabilitado responde HTTP 403 Forbidden.

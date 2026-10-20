@@ -422,41 +422,88 @@ Connection: Upgrade
 
 ## 4. Endpoints de Gobernanza Modular, Feature Flags y Operaciones
 
-### 4.1 Feature Flags por Empresa (`/api/v1/tenants/{id}/features`)
+### 4.1 Gestión Integral de Empresas Multi-Tenant (`/api/v1/tenants`)
 
-Permite la gobernanza modular de capacidades por organización. La consulta se acelera mediante la capa L2 de KeyDB (`rg:{id}:features`) con invalidación en caliente ante mutaciones.
+Permite la administración global de organizaciones, control de cuotas de hardware MikroTik, suspensión/activación y gobernanza modular de capacidades por organización.
 
-- **`GET /api/v1/tenants/{id}/features`**
-  - **Roles:** `SUPERADMIN_GLOBAL` o miembros del propio tenant (`TENANT_ADMIN`, etc.).
-  - **Salida (200 OK):**
-
-    ```json
+#### `GET /api/v1/tenants`
+- **Roles:** Exclusivo `SUPERADMIN_GLOBAL`.
+- **Propósito:** Listar todas las organizaciones registradas con sus cuotas de routers, usuarios activos y estado operativo.
+- **Salida (200 OK):**
+  ```json
+  [
     {
-      "isp_module_enabled": true,
-      "bgp_looking_glass_enabled": false,
-      "sfp_ddm_telemetry_enabled": true,
-      "ipfix_analytics_enabled": false,
-      "enforce_maker_checker": true,
-      "auto_safemode_enforced": true,
-      "ai_mcp_integration_enabled": true,
-      "nightly_backups_enabled": true,
-      "outbound_webhooks_enabled": true,
-      "config_drift_monitoring_enabled": false,
-      "cis_audit_enabled": true,
-      "sdwan_orchestrator_enabled": false,
-      "capsman_wifi_enabled": false,
-      "sla_tracker_enabled": false,
-      "mass_outage_threshold": 10,
-      "default_locale": "es"
+      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "slug": "isp-andino",
+      "name": "ISP Andino C.A.",
+      "tax_id": "J-12345678-9",
+      "status": "ACTIVE",
+      "max_routers_quota": 50,
+      "max_users_quota": 20,
+      "active_routers_count": 12,
+      "active_users_count": 5,
+      "default_safemode_seconds": 60,
+      "created_at": "2026-10-19T20:00:00Z"
     }
-    ```
+  ]
+  ```
 
-- **`PATCH /api/v1/tenants/{id}/features`**
-  - **Roles:** Exclusivo `SUPERADMIN_GLOBAL`.
-  - **Cabecera Requerida:** `Idempotency-Key: {uuid}`.
-  - **Entrada:** Cualquier subconjunto de los 16 atributos del esquema anterior.
-  - **Comportamiento:** Persiste en PostgreSQL, invalida la caché KeyDB y genera traza forense inmutable WORM en `audit_logs` con `event_action: "UPDATE_TENANT_FEATURE_FLAGS"`.
-  - **Salida (200 OK):** Objeto con el estado consolidado de los Feature Flags del tenant.
+#### `POST /api/v1/tenants`
+- **Roles:** Exclusivo `SUPERADMIN_GLOBAL`.
+- **Propósito:** Registrar una nueva empresa en el sistema, asignándole sus cuotas y aprovisionando automáticamente a su primer `TENANT_ADMIN`.
+- **Payload de Entrada:**
+  ```json
+  {
+    "slug": "isp-andino",
+    "name": "ISP Andino C.A.",
+    "tax_id": "J-12345678-9",
+    "admin_username": "admin_andino",
+    "admin_email": "admin@ispandino.net",
+    "admin_full_name": "Administrador Andino",
+    "admin_password": "ClaveTemporalSegura2026!",
+    "max_routers_quota": 50,
+    "max_users_quota": 20,
+    "require_2fa_all_users": true,
+    "default_safemode_seconds": 60
+  }
+  ```
+- **Salida (201 Created):** Retorna el objeto `TenantResponse` creado.
+
+#### `PATCH /api/v1/tenants/{tenant_id}`
+- **Roles:** Exclusivo `SUPERADMIN_GLOBAL`.
+- **Propósito:** Modificar nombre, RIF, cuotas o suspender/reactivar un Tenant (`status: "ACTIVE" | "SUSPENDED" | "MAINTENANCE"`).
+- **Salida (200 OK):** Retorna el objeto `TenantResponse` actualizado.
+
+#### `GET /api/v1/tenants/{id}/features`
+- **Roles:** `SUPERADMIN_GLOBAL` o miembros del propio tenant (`TENANT_ADMIN`, etc.).
+- **Salida (200 OK):**
+  ```json
+  {
+    "isp_module_enabled": true,
+    "bgp_looking_glass_enabled": false,
+    "sfp_ddm_telemetry_enabled": true,
+    "ipfix_analytics_enabled": false,
+    "enforce_maker_checker": true,
+    "auto_safemode_enforced": true,
+    "ai_mcp_integration_enabled": true,
+    "nightly_backups_enabled": true,
+    "outbound_webhooks_enabled": true,
+    "config_drift_monitoring_enabled": false,
+    "cis_audit_enabled": true,
+    "sdwan_orchestrator_enabled": false,
+    "capsman_wifi_enabled": false,
+    "sla_tracker_enabled": false,
+    "mass_outage_threshold": 10,
+    "default_locale": "es"
+  }
+  ```
+
+#### `PATCH /api/v1/tenants/{id}/features`
+- **Roles:** Exclusivo `SUPERADMIN_GLOBAL`.
+- **Cabecera Requerida:** `Idempotency-Key: {uuid}`.
+- **Entrada:** Cualquier subconjunto de los 16 atributos del esquema anterior.
+- **Comportamiento:** Persiste en PostgreSQL, invalida la caché KeyDB y genera traza forense inmutable WORM en `audit_logs` con `event_action: "TENANT_FEATURE_FLAGS_UPDATED"`.
+- **Salida (200 OK):** Objeto con el estado consolidado de los Feature Flags del tenant.
 
 ---
 

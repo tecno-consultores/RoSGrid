@@ -9,6 +9,14 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 ## [Unreleased]
 
 ### Added
+- **Auditoría Forense de Intentos Fallidos y Política de Sesión Única:**
+  - Registro forense inmutable WORM HMAC-SHA256 para todos los eventos e intentos fallidos de autenticación (`LOGIN_FAILED_USER_NOT_FOUND`, `LOGIN_FAILED_INVALID_PASSWORD`, `LOGIN_FAILED_ACCOUNT_LOCKED`, `LOGIN_FAILED_USER_INACTIVE`, `2FA_VERIFICATION_FAILED`) con IP y User-Agent del actor.
+  - Forzado estricto de la política de sesión única en KeyDB: revocación automática de sesiones activas anteriores ante un nuevo inicio de sesión con emisión de evento forense `SESSION_KILLED_DUPLICATE_LOGIN` y notificación vía WebSockets.
+  - Registro de auditoría `LOGIN_SUCCESSFUL` al establecer exitosamente la sesión.
+- **Gobernanza de Empresas / Tenants y Navegación:**
+  - Reubicación de la sección "Empresas (Tenants)" en el menú lateral principal (`RgResponsiveShell.vue`) directamente debajo de "Auditoría WORM" accesible exclusivamente para `SUPERADMIN_GLOBAL`.
+  - Protección y desacoplamiento de la acción `+ Registrar Empresa` (`#btn-open-create-tenant`) en `TenantsManagementView.vue` condicionado al rol `SUPERADMIN_GLOBAL`.
+  - Sincronización y documentación exhaustiva de los endpoints CRUD de Tenants (`GET /api/v1/tenants`, `POST /api/v1/tenants`, `PATCH /api/v1/tenants/{tenant_id}`) en la especificación de la API REST (`docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`).
 - **Servidor MCP Ampliado para Agentes IA (Hito 21):**
   - Expansión del catálogo de herramientas semánticas del servidor Model Context Protocol integrado (`POST /api/v1/mcp`) de 8 a 16 herramientas con esquemas Pydantic v2 y validación JSON-RPC 2.0 *Streamable HTTP*.
   - 8 nuevas herramientas semánticas para agentes inteligentes (Hermes Agent, Claude Code / Desktop, NOC Autónomo):

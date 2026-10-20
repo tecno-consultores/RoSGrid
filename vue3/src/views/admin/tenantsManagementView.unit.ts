@@ -6,10 +6,13 @@ import { mount, flushPromises } from '@vue/test-utils';
 import { setActivePinia, createPinia } from 'pinia';
 import TenantsManagementView from './TenantsManagementView.vue';
 import { http } from '@/api/httpClient';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 describe('TenantsManagementView.vue — Gestión de Empresas Multi-Tenant', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
+    const authStore = useAuthStore();
+    authStore.currentRole = 'SUPERADMIN_GLOBAL';
     vi.restoreAllMocks();
     vi.useFakeTimers();
   });
@@ -324,5 +327,21 @@ describe('TenantsManagementView.vue — Gestión de Empresas Multi-Tenant', () =
     // Cerrar modal con botón cancelar
     await wrapper.find('.rg-modal--features .btn-cancel').trigger('click');
     expect(wrapper.find('.rg-modal--features').exists()).toBe(false);
+  });
+
+  it('oculta el botón de registrar empresa si el usuario no tiene rol SUPERADMIN_GLOBAL', async () => {
+    const authStore = useAuthStore();
+    authStore.currentRole = 'TENANT_ADMIN';
+
+    vi.spyOn(http, 'get').mockResolvedValueOnce({
+      status: 200,
+      data: { items: [] },
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(TenantsManagementView);
+    await flushPromises();
+
+    expect(wrapper.find('#btn-open-create-tenant').exists()).toBe(false);
   });
 });
