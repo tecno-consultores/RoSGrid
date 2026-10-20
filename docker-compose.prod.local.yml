@@ -8,9 +8,9 @@ services:
     image: postgres:17-alpine
     container_name: rosgrid_db_local
     hostname: rosgrid_db
-    restart: unless-stopped
+    restart: "${restart:-unless-stopped}"
     environment:
-      TZ: "America/Caracas"
+      TZ: "${TZDATA:-America/Caracas}"
       POSTGRES_DB: "${POSTGRES_DB:-rosgrid}"
       POSTGRES_USER: "${POSTGRES_USER:-rosgrid_user}"
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-cambiar_en_entorno_local}"
@@ -28,9 +28,9 @@ services:
     image: eqalpha/keydb:alpine
     container_name: rosgrid_redis_local
     hostname: rosgrid_redis
-    restart: unless-stopped
+    restart: "${restart:-unless-stopped}"
     environment:
-      TZ: "America/Caracas"
+      TZ: "${TZDATA:-America/Caracas}"
       REDIS_PASSWORD: "${REDIS_PASSWORD:-cambiar_en_entorno_local}"
     command:
       - keydb-server
@@ -64,15 +64,15 @@ services:
     container_name: rosgrid_api_local
     hostname: rosgrid_api
     pull_policy: never
-    restart: unless-stopped
+    restart: "${restart:-unless-stopped}"
     depends_on:
       rosgrid-db:
         condition: service_healthy
       rosgrid-redis:
         condition: service_healthy
     environment:
-      TZ: "America/Caracas"
-      ROSGRID_ENV: "production"
+      TZ: "${TZDATA:-America/Caracas}"
+      ROSGRID_ENV: "${ROSGRID_ENV:-production}"
       ROSGRID_DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-rosgrid_user}:${POSTGRES_PASSWORD:-cambiar_en_entorno_local}@rosgrid_db:5432/${POSTGRES_DB:-rosgrid}"
       ROSGRID_SYNC_DATABASE_URL: "postgresql://${POSTGRES_USER:-rosgrid_user}:${POSTGRES_PASSWORD:-cambiar_en_entorno_local}@rosgrid_db:5432/${POSTGRES_DB:-rosgrid}"
       ROSGRID_REDIS_URL: "redis://:${REDIS_PASSWORD:-cambiar_en_entorno_local}@rosgrid_redis:6379/0"
@@ -100,13 +100,13 @@ services:
     container_name: rosgrid_worker_local
     hostname: rosgrid_worker
     pull_policy: never
-    restart: unless-stopped
+    restart: "${restart:-unless-stopped}"
     depends_on:
       rosgrid-api:
         condition: service_healthy
     environment:
-      TZ: "America/Caracas"
-      ROSGRID_ENV: "production"
+      TZ: "${TZDATA:-America/Caracas}"
+      ROSGRID_ENV: "${ROSGRID_ENV:-production}"
       ROSGRID_DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-rosgrid_user}:${POSTGRES_PASSWORD:-cambiar_en_entorno_local}@rosgrid_db:5432/${POSTGRES_DB:-rosgrid}"
       ROSGRID_REDIS_URL: "redis://:${REDIS_PASSWORD:-cambiar_en_entorno_local}@rosgrid_redis:6379/0"
       ROSGRID_MASTER_VAULT_KEY: "${ROSGRID_MASTER_VAULT_KEY:-MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=}"
@@ -129,12 +129,12 @@ services:
     container_name: rosgrid_ui_local
     hostname: rosgrid_ui
     pull_policy: never
-    restart: unless-stopped
+    restart: "${restart:-unless-stopped}"
     depends_on:
       rosgrid-api:
         condition: service_healthy
     environment:
-      TZ: "America/Caracas"
+      TZ: "${TZDATA:-America/Caracas}"
     volumes:
       - rosgrid_nginx_logs_local:/var/log/nginx
     ports:

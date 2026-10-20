@@ -3,9 +3,9 @@ services:
     image: postgres:17-alpine
     container_name: rosgrid_db
     hostname: rosgrid_db
-    restart: unless-stopped
+    restart: "${restart:-unless-stopped}"
     environment:
-      TZ: "America/Caracas"
+      TZ: "${TZDATA:-America/Caracas}"
       POSTGRES_DB: "${POSTGRES_DB:-rosgrid}"
       POSTGRES_USER: "${POSTGRES_USER:-rosgrid_user}"
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Debes definir POSTGRES_PASSWORD en .env}"
@@ -23,9 +23,9 @@ services:
     image: eqalpha/keydb:alpine
     container_name: rosgrid_redis
     hostname: rosgrid_redis
-    restart: unless-stopped
+    restart: "${restart:-unless-stopped}"
     environment:
-      TZ: "America/Caracas"
+      TZ: "${TZDATA:-America/Caracas}"
       REDIS_PASSWORD: "${REDIS_PASSWORD:?Debes definir REDIS_PASSWORD en .env}"
     command:
       - keydb-server
@@ -57,9 +57,9 @@ services:
   #   image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
   #   container_name: rosgrid_redis
   #   hostname: rosgrid_redis
-  #   restart: unless-stopped
+  #   restart: "${restart:-unless-stopped}"
   #   environment:
-  #     TZ: "America/Caracas"
+  #     TZ: "${TZDATA:-America/Caracas}"
   #     REDIS_PASSWORD: "${REDIS_PASSWORD:?Debes definir REDIS_PASSWORD en .env}"
   #   ulimits:
   #     memlock: -1
@@ -84,15 +84,15 @@ services:
     container_name: rosgrid_api
     hostname: rosgrid_api
     pull_policy: always
-    restart: unless-stopped
+    restart: "${restart:-unless-stopped}"
     depends_on:
       rosgrid-db:
         condition: service_healthy
       rosgrid-redis:
         condition: service_healthy
     environment:
-      TZ: "America/Caracas"
-      ROSGRID_ENV: "production"
+      TZ: "${TZDATA:-America/Caracas}"
+      ROSGRID_ENV: "${ROSGRID_ENV:-production}"
       ROSGRID_DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-rosgrid_user}:${POSTGRES_PASSWORD}@rosgrid_db:5432/${POSTGRES_DB:-rosgrid}"
       ROSGRID_SYNC_DATABASE_URL: "postgresql://${POSTGRES_USER:-rosgrid_user}:${POSTGRES_PASSWORD}@rosgrid_db:5432/${POSTGRES_DB:-rosgrid}"
       ROSGRID_REDIS_URL: "redis://:${REDIS_PASSWORD}@rosgrid_redis:6379/0"
@@ -111,13 +111,13 @@ services:
     container_name: rosgrid_worker
     hostname: rosgrid_worker
     pull_policy: always
-    restart: unless-stopped
+    restart: "${restart:-unless-stopped}"
     depends_on:
       rosgrid-api:
         condition: service_healthy
     environment:
-      TZ: "America/Caracas"
-      ROSGRID_ENV: "production"
+      TZ: "${TZDATA:-America/Caracas}"
+      ROSGRID_ENV: "${ROSGRID_ENV:-production}"
       ROSGRID_DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-rosgrid_user}:${POSTGRES_PASSWORD}@rosgrid_db:5432/${POSTGRES_DB:-rosgrid}"
       ROSGRID_REDIS_URL: "redis://:${REDIS_PASSWORD}@rosgrid_redis:6379/0"
       ROSGRID_MASTER_VAULT_KEY: "${ROSGRID_MASTER_VAULT_KEY}"
@@ -137,12 +137,12 @@ services:
     container_name: rosgrid_ui
     hostname: rosgrid_ui
     pull_policy: always
-    restart: unless-stopped
+    restart: "${restart:-unless-stopped}"
     depends_on:
       rosgrid-api:
         condition: service_healthy
     environment:
-      TZ: "America/Caracas"
+      TZ: "${TZDATA:-America/Caracas}"
     volumes:
       - rosgrid_nginx_logs:/var/log/nginx
     ports:
