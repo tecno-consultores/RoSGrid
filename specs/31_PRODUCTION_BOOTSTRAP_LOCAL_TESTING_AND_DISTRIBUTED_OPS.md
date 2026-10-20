@@ -9,7 +9,9 @@ Todo script o código relacionado DEBE cumplir con la **Regla Cero** (cero ejecu
 ## 1. Arquitectura de Inicialización (Bootstrap y Seeder)
 
 ### 1.1 El Problema del Primer Usuario en Sistemas Zero-Trust
+
 En una base de datos recién migrada por Alembic (`alembic upgrade head`), las tablas `tenants` y `users` están vacías. Debido a las políticas de seguridad estrictas:
+
 - El endpoint de login (`POST /api/v1/auth/login`) requiere un `tenant_slug` activo existente.
 - La creación de tenants (`POST /api/v1/tenants/`) exige autenticación previa con el rol `SUPERADMIN_GLOBAL`.
 - La creación de usuarios (`POST /api/v1/users`) exige `SUPERADMIN_GLOBAL` o `TENANT_ADMIN`.
@@ -17,7 +19,7 @@ En una base de datos recién migrada por Alembic (`alembic upgrade head`), las t
 Para evitar bloqueos al desplegar instalaciones limpias, RoSGrid implementa una **doble compuerta de inicialización**:
 
 ```mermaid
-graph TD
+flowchart TD
     Start[Instalación Limpia de RoSGrid] --> Check{¿Existen usuarios en la BD?}
     Check -->|COUNT == 0| Choice[Vía de Inicialización]
     Check -->|COUNT > 0| Locked[Bootstrap Bloqueado permanentemente HTTP 403]
@@ -34,6 +36,7 @@ graph TD
 ```
 
 ### 1.2 Endpoints Seguros de Bootstrap en FastAPI
+
 1. **`GET /api/v1/auth/bootstrap-status`:**
    - Público (no requiere cookies ni tokens).
    - Realiza un conteo atómico: `SELECT COUNT(id) FROM users`.
@@ -49,11 +52,15 @@ graph TD
    - Devuelve HTTP `201 Created` con el secreto TOTP en texto plano, la URI de aprovisionamiento para el código QR y la lista de códigos de respaldo.
 
 ### 1.3 Script CLI Seeder (`fastapi/scripts/crear_admin.py`)
+
 Permite aprovisionar el Super Administrador directamente en el servidor sin requerir navegador:
+
 ```bash
 docker exec -it rosgrid_api python3 /app/scripts/crear_admin.py
 ```
+
 O de forma desatendida mediante parámetros:
+
 ```bash
 docker exec rosgrid_api python3 /app/scripts/crear_admin.py \
     --tenant-name "Organización Principal" \
@@ -71,11 +78,14 @@ docker exec rosgrid_api python3 /app/scripts/crear_admin.py \
 Los agentes autónomos como **Hermes Agent** o **Claude Desktop** que interactúan con `POST /api/v1/mcp` no pueden resolver desafíos 2FA interactivos ni manipular cookies de navegador.
 
 Para aprovisionar su acceso de forma segura:
+
 1. El Super Administrador crea una cuenta con rol `SERVICE_ACCOUNT` asignándole una lista blanca CIDR (ej. `["10.0.10.50/32"]`) y permisos de routers específicos.
 2. Ejecuta el script de emisión de tokens:
+
    ```bash
    docker exec rosgrid_api python3 /app/scripts/generar_token_mcp.py --username mcp-hermes --expiry-days 365
    ```
+
 3. El script:
    - Valida que el usuario exista y pertenezca al rol `SERVICE_ACCOUNT`.
    - Genera un `session_id` UUID único y registra la sesión activa en KeyDB (`rg:{tenant_id}:sess:{session_id}`) con un TTL correspondiente a los días de vigencia solicitados.
@@ -89,7 +99,8 @@ Para aprovisionar su acceso de forma segura:
 Por directiva innegociable de gobernanza QA 11X:
 > **Regla de Scripts:** Todo script con extensión `.sh` presente en el repositorio DEBE ser sometido a análisis estático con ShellCheck dentro de un contenedor Docker efímero (`koalaman/shellcheck:stable`), garantizando **cero (0) errores y cero (0) advertencias**.
 
-### Comando de Verificación Oficial:
+### Comando de Verificación Oficial
+
 ```bash
 docker run --rm -v "$(pwd):/mnt" koalaman/shellcheck:stable \
     /mnt/auditar-infra.sh \
@@ -101,7 +112,8 @@ docker run --rm -v "$(pwd):/mnt" koalaman/shellcheck:stable \
     /mnt/fastapi/scripts/entrypoint.sh
 ```
 
-### Reglas de Escritura de Scripts:
+### Reglas de Escritura de Scripts
+
 1. Usar siempre `set -euo pipefail` y `LC_ALL=C`.
 2. No usar `rm -f *.log` sin calificar el directorio (usar `./*.log` o rutas absolutas) para evitar la advertencia `SC2035`.
 3. Comprobar siempre privilegios de usuario (`EUID != 0` para scripts de usuario habitual, `EUID == 0` solo si es estrictamente necesario).
@@ -149,17 +161,19 @@ Para comprobar que las imágenes construidas con `Dockerfile` funcionan correcta
 RoSGrid soporta dos modelos operativos según la infraestructura del cliente:
 
 ### 5.1 Opción A: Proxy Reverso en la Misma Origen (Recomendada)
+
 - **Servidor 1 (Frontend Nginx en DMZ):** `https://noc.empresa.com`
 - **Servidor 2 (Backend FastAPI en LAN/VPC):** `http://backend.internal:8000`
 - Nginx actúa como terminador TLS y reenvía `/api/` y `/ws/` al Servidor 2 por red interna.
 - Las cookies de sesión conservan `__Host-rg_at` con `SameSite=Strict` y `Secure`.
 
 ### 5.2 Opción B: Dominios Cruzados / Cross-Origin Directo (CORS)
+
 - **Frontend:** `https://app.empresa.com`
 - **Backend:** `https://api.empresa.com`
 - **Configuración en Backend (`.env`):**
-  * `ROSGRID_CORS_ORIGINS="https://app.empresa.com,http://localhost:8080"`
-  * `ROSGRID_CROSS_ORIGIN_COOKIES=true`
+  - `ROSGRID_CORS_ORIGINS="https://app.empresa.com,http://localhost:8080"`
+  - `ROSGRID_CROSS_ORIGIN_COOKIES=true`
 - **Comportamiento:**
   - FastAPI activa `CORSMiddleware` con `allow_origins=settings.cors_origins_list` y `allow_credentials=True`.
   - Las cookies se emiten como `rg_at`, `rg_rt`, `rg_csrf` con `SameSite=None; Secure; Path=/` (ya que las cookies con prefijo `__Host-` o `SameSite=Strict` son rechazadas por los navegadores en peticiones cruzadas).

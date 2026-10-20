@@ -10,8 +10,8 @@ Todo el código generado DEBE mantener complejidad ciclomática **Grado A (`CC <
 
 1. **Superficie de Ataque Cero por Defecto (`ROSGRID_MCP_ENABLED`):**
    - En `fastapi/src/core/config.py` y `.env.example` se definen dos parámetros:
-     * `ROSGRID_MCP_ENABLED: bool = False` (Deshabilitado por defecto).
-     * `ROSGRID_MCP_RATE_LIMIT_PER_MIN: int = 30` (Límite de peticiones MCP por minuto por `SERVICE_ACCOUNT` en KeyDB).
+     - `ROSGRID_MCP_ENABLED: bool = False` (Deshabilitado por defecto).
+     - `ROSGRID_MCP_RATE_LIMIT_PER_MIN: int = 30` (Límite de peticiones MCP por minuto por `SERVICE_ACCOUNT` en KeyDB).
    - Si `settings.ROSGRID_MCP_ENABLED` es `False`, el endpoint `POST /api/v1/mcp` devuelve inmediatamente HTTP `404 Not Found` (`{"detail": "MCP endpoint is disabled"}`) sin procesar el payload.
 2. **Autenticación Exclusiva vía `SERVICE_ACCOUNT` + Validación CIDR:**
    - El endpoint `/api/v1/mcp` exige un token Bearer válido perteneciente **exclusivamente** al rol #11 **`SERVICE_ACCOUNT`** (o `TENANT_ADMIN` / `SUPERADMIN_GLOBAL` en modo auditoría explícita).
@@ -88,6 +88,7 @@ class McpJsonRpcResponse(BaseModel):
 2. **`ping` / `notifications/initialized`:** Devuelve `{}` confirmando estado activo de la sesión MCP.
 3. **`tools/list`:** Devuelve el arreglo de las **8 Tools semánticas de RoSGrid** con sus respectivos JSON Schemas de entrada (`inputSchema`).
 4. **`tools/call`:** Recibe `params: {"name": "<tool_name>", "arguments": {...}}`, valida permisos sobre el `router_id`, registra la acción en la bitácora WORM, ejecuta el servicio interno y devuelve:
+
    ~~~json
    {
      "jsonrpc": "2.0",
@@ -126,6 +127,7 @@ Para mantener la complejidad ciclomática **Grado A (`CC <= 5`)**, cada herramie
 ## 4. Requisitos de Pruebas Unitarias (`fastapi/tests/test_mcp_endpoint.unit.py`)
 
 Antigravity DEBE crear el archivo `fastapi/tests/test_mcp_endpoint.unit.py` verificando:
+
 1. Que `POST /api/v1/mcp` devuelva `404` cuando `ROSGRID_MCP_ENABLED == False`.
 2. Que rechace con `403 Forbidden` a roles que no estén autorizados o IPs fuera del rango CIDR del `SERVICE_ACCOUNT`.
 3. Que aplique el límite de tasa en KeyDB (`429 Too Many Requests` al exceder `ROSGRID_MCP_RATE_LIMIT_PER_MIN`).
