@@ -3,7 +3,8 @@
 ## 📍 Punto de Control Actual (Checkpoint)
 
 - **Hito Actual en Curso:** Hito 22 (Cierre de `CHANGELOG.md`, Auditoría Trivy y Publicación en Docker Hub `build.sh`)
-- **Estado General del Sistema:** Hitos 0 al 21 COMPLETADOS (100%) y Hito 22 (Sub-tareas 22.1, 22.2, 22.5, 22.6, 22.7, 22.8, 22.9, 22.10, 22.11, 22.12) COMPLETADOS.
+- **Estado General del Sistema:** Hitos 0 al 21 COMPLETADOS (100%) y Hito 22 (Sub-tareas 22.1, 22.2, 22.5, 22.6, 22.7, 22.8, 22.9, 22.10, 22.11, 22.12, 22.13) COMPLETADOS.
+- **Hito 22.13 (Consolidación de Calidad, Resolución de Diagnósticos y Robustecimiento DevOps):** COMPLETADO al 100% y certificado en Docker. Normalización con markdownlint-cli, modernización a Mermaid flowchart, Type Narrowing en escapeHtml, eliminación de tests/ huérfana en vue3, script verificar-secretos.sh para Lefthook con ShellCheck y backend con 404 tests unitarios y 95.07% de cobertura.
 - **Hito 22.12 (Auditoría Integral de Ciberseguridad y Mitigación de Vulnerabilidades):** COMPLETADO al 100% y certificado en Docker. Mitigaciones CSRF, XSS en Leaflet, SSRF en routers, concurrencia en refresh tokens y aislamiento de idempotencia implementados.
 - **Hito 22.11 (Migración Integral de Runtime a Python 3.15 y Node.js 26 LTS):** COMPLETADO al 100% y certificado en Docker. Registro histórico integral de hitos consolidado en `TESTING.md`.
 - **Hito 21 (Servidor MCP Ampliado para Agentes IA y Certificación QA 11X Final):** COMPLETADO al 100% y certificado en Docker:
@@ -362,6 +363,11 @@
   - Tolerancia a carreras concurrentes (*Grace Period Leeway* de 5 segundos) en rotación de refresh tokens (`rotate_refresh_token`), eliminando falsos positivos de robo por múltiples pestañas.
   - Aislamiento multi-tenant y por operador en `IdempotencyMiddleware` mediante llaves con prefijo `rg:{tenant_id}:{user_id}:idemp:{key}`.
   - Endurecimiento de la expresión regular de CORS en desarrollo a `(localhost|127.0.0.1)`.
+- [x] **22.13** **Consolidación de Calidad, Resolución Integral de Diagnósticos y Robustecimiento DevOps:**
+  - Normalización y certificación estricta con `markdownlint-cli` (0 errores) y diagramas Mermaid modernos (`flowchart`) en toda la enciclopedia técnica de `specs/` y `docs/`.
+  - Tipado estricto en frontend con *Type Narrowing* en `escapeHtml` (`vue3/src/utils/security.ts`) para cumplimiento total de `@typescript-eslint/no-base-to-string` y manejo seguro de objetos con prototipo nulo (`Object.create(null)`).
+  - Limpieza arquitectónica en frontend: eliminación de carpeta huérfana de scaffolding `vue3/tests/` consolidando la arquitectura de pruebas unitarias co-localizadas en `src/` (`*.unit.ts`, 38 suites, 267 pruebas unitarias 100% exitosas) y sincronización de scripts en `vue3/package.json`.
+  - Extracción de barrera de seguridad de credenciales hardcodeadas al script ejecutable independiente `verificar-secretos.sh` con normalización de sintaxis YAML en `lefthook.yml` y certificación ShellCheck (0 errores, 0 advertencias).
+  - Cobertura de backend mantenida en 95.07% con 404 pruebas unitarias aprobadas (`pytest`), 0 errores en `ruff` y `mypy --strict`.
 - [ ] **22.3** Actualizar `CHANGELOG.md` consolidando los cambios de `[Unreleased]` dentro del lanzamiento oficial `[1.0.0]` con las métricas certificadas en `TESTING.md`.
 - [ ] **22.4** Ejecutar `./build.sh` (como usuario no-root) con `docker buildx` (`container-builder` + `tonistiigi/binfmt`) para construir y publicar `sinfallas/rosgrid-backend:latest` (`:1.0.0`) y `sinfallas/rosgrid-frontend:latest` (`:1.0.0`) en Docker Hub y limpiar cachés con `prune -af`.
-

@@ -2,7 +2,7 @@
 
 **Licencia:** GPL-3.0-only  
 **Estándar Aplicado:** QA Testing Blueprints (Nivel 11X)  
-**Estado Actual:** Hito 22 Completado y Certificado al 100% (Sub-tareas 22.1 a 22.11) en Contenedores Docker Efímeros — Plataforma Migrada a Python 3.15 y Node.js 26 LTS.
+**Estado Actual:** Hito 22 Completado y Certificado al 100% (Sub-tareas 22.1 a 22.13) en Contenedores Docker Efímeros — Plataforma Migrada a Python 3.15 y Node.js 26 LTS.
 
 ---
 
@@ -29,7 +29,7 @@
    - Backups `.rsc`/`.backup` con deduplicación SHA-256, retención de 30 días, comparador visual Diff estilo Git y Auditoría Inmutable WORM (`audit_logs`).
 6. **Endpoint MCP Protegido para Agentes IA (`POST /api/v1/mcp`):**
    - Protocolo JSON-RPC 2.0 Streamable HTTP para Hermes Agent y Claude con autenticación `SERVICE_ACCOUNT`, filtrado CIDR y rate-limiting en KeyDB.
-   - Exposición de 8 herramientas de diagnóstico y operación con intercepción mandatoria *Maker-Checker* y *Safe Mode*.
+   - Exposición de 16 herramientas de diagnóstico y operación con intercepción mandatoria *Maker-Checker* y *Safe Mode*.
 
 ---
 
@@ -42,7 +42,7 @@
 - **Pruebas de Mutación:** 0 mutantes críticos sobrevivientes en lógica de negocio crítica.
 - **Accesibilidad y Rendimiento UI:** 0 violaciones WCAG 2.1 A/AA en `@axe-core/playwright`, regresión visual determinista, y Lighthouse CI con Performance `>= 0.90`, Accessibility `>= 0.95`, Best-Practices `>= 0.90` y SEO `>= 0.90`.
 - **Regla Cero de Host:** Cero ejecuciones de entornos en el host local; ejecución 100% encapsulada en contenedores Docker efímeros.
-- **Auditoría Estática de Scripts en Bash (ShellCheck):** Cero (0) errores y cero (0) advertencias en `ShellCheck` (`koalaman/shellcheck:stable`) sobre el 100% de los scripts `.sh` del monorepo (`auditar-infra.sh`, `instalar-rosgrid.sh`, `build.sh`, `instalar-hooks.sh`, `limpieza.sh`, `probar-prod-local.sh`, `fastapi/scripts/entrypoint.sh`).
+- **Auditoría Estática de Scripts en Bash (ShellCheck):** Cero (0) errores y cero (0) advertencias en `ShellCheck` (`koalaman/shellcheck:stable`) sobre el 100% de los scripts `.sh` del monorepo (`auditar-infra.sh`, `instalar-rosgrid.sh`, `build.sh`, `instalar-hooks.sh`, `limpieza.sh`, `probar-prod-local.sh`, `verificar-secretos.sh`, `fastapi/scripts/entrypoint.sh`).
 - **Tolerancia Cero a Diagnósticos de IDE y Linters Estáticos:** Cero (0) errores y cero (0) advertencias en Pyrefly, SonarLint, Hadolint y ESLint sobre todo archivo versionado en el repositorio.
 - **Certificación de Arranque Estricto de Producción (`--no-dev`):** Validación obligatoria por AST (`test_production_no_dev_cleanliness.unit.py`) y Smoke Test inmutable en contenedor (`test_production_boot_smoke.py`) asegurando cero dependencias de desarrollo en el runtime de producción.
 - **Compuerta de Validación Integral de Producción Local (`probar-prod-local.sh`):** Ejecución obligatoria de las 6 fases de validación pre-publicación (`./probar-prod-local.sh`) certificando: liveness `/health`, Prometheus `/metrics`, transición de bootstrap (`false` a `true`), validación del proxy inverso Nginx (`:${UI_PORT}/api/...`), ocultamiento HTTP 404 de Swagger/OpenAPI en producción, prueba negativa 401 sin Bearer token, emisión y autenticación de token MCP, sondeo JSON-RPC 2.0 (`POST /api/v1/mcp`), runner `rosgrid-worker` sin excepciones, aislamiento de puertos de base de datos (5432 y 6379 cerrados al host) y ejecución exitosa (100%) de la suite de 24 contratos Front-Back (`validar_comunicacion_front_back.py`).
