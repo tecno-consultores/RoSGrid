@@ -109,6 +109,7 @@ docker run --rm -v "$(pwd):/mnt" koalaman/shellcheck:stable \
     /mnt/instalar-hooks.sh \
     /mnt/limpieza.sh \
     /mnt/probar-prod-local.sh \
+    /mnt/verificar-secretos.sh \
     /mnt/fastapi/scripts/entrypoint.sh
 ```
 
