@@ -93,14 +93,19 @@ services:
     environment:
       TZ: "${TZDATA:-America/Caracas}"
       ROSGRID_ENV: "${ROSGRID_ENV:-production}"
-      ROSGRID_DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-rosgrid_user}:${POSTGRES_PASSWORD}@rosgrid_db:5432/${POSTGRES_DB:-rosgrid}"
-      ROSGRID_SYNC_DATABASE_URL: "postgresql://${POSTGRES_USER:-rosgrid_user}:${POSTGRES_PASSWORD}@rosgrid_db:5432/${POSTGRES_DB:-rosgrid}"
-      ROSGRID_REDIS_URL: "redis://:${REDIS_PASSWORD}@rosgrid_redis:6379/0"
+      ROSGRID_DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-rosgrid_user}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-rosgrid_db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-rosgrid}"
+      ROSGRID_SYNC_DATABASE_URL: "postgresql://${POSTGRES_USER:-rosgrid_user}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-rosgrid_db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-rosgrid}"
+      ROSGRID_REDIS_URL: "redis://:${REDIS_PASSWORD}@${REDIS_HOST:-rosgrid_redis}:${REDIS_PORT:-6379}/0"
       ROSGRID_MASTER_VAULT_KEY: "${ROSGRID_MASTER_VAULT_KEY:?Debes definir ROSGRID_MASTER_VAULT_KEY}"
       ROSGRID_JWT_SECRET_KEY: "${ROSGRID_JWT_SECRET_KEY:?Debes definir ROSGRID_JWT_SECRET_KEY}"
       ROSGRID_CSRF_HMAC_SECRET: "${ROSGRID_CSRF_HMAC_SECRET:?Debes definir ROSGRID_CSRF_HMAC_SECRET}"
+      ROSGRID_MIKROTIK_TIMEOUT_SECONDS: "${ROSGRID_MIKROTIK_TIMEOUT_SECONDS:-10}"
+      ROSGRID_SAFEMODE_ROLLBACK_SECONDS: "${ROSGRID_SAFEMODE_ROLLBACK_SECONDS:-60}"
+      ROSGRID_BACKUP_RETENTION_DAYS: "${ROSGRID_BACKUP_RETENTION_DAYS:-30}"
       ROSGRID_MCP_ENABLED: "${ROSGRID_MCP_ENABLED:-false}"
       ROSGRID_MCP_RATE_LIMIT_PER_MIN: "${ROSGRID_MCP_RATE_LIMIT_PER_MIN:-30}"
+      ROSGRID_CORS_ORIGINS: "${ROSGRID_CORS_ORIGINS:-*}"
+      ROSGRID_CROSS_ORIGIN_COOKIES: "${ROSGRID_CROSS_ORIGIN_COOKIES:-false}"
     volumes:
       - rosgrid_backups_storage:/var/lib/rosgrid/backups
     networks:
@@ -118,9 +123,12 @@ services:
     environment:
       TZ: "${TZDATA:-America/Caracas}"
       ROSGRID_ENV: "${ROSGRID_ENV:-production}"
-      ROSGRID_DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-rosgrid_user}:${POSTGRES_PASSWORD}@rosgrid_db:5432/${POSTGRES_DB:-rosgrid}"
-      ROSGRID_REDIS_URL: "redis://:${REDIS_PASSWORD}@rosgrid_redis:6379/0"
+      ROSGRID_DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-rosgrid_user}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-rosgrid_db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-rosgrid}"
+      ROSGRID_REDIS_URL: "redis://:${REDIS_PASSWORD}@${REDIS_HOST:-rosgrid_redis}:${REDIS_PORT:-6379}/0"
       ROSGRID_MASTER_VAULT_KEY: "${ROSGRID_MASTER_VAULT_KEY}"
+      ROSGRID_MIKROTIK_TIMEOUT_SECONDS: "${ROSGRID_MIKROTIK_TIMEOUT_SECONDS:-10}"
+      ROSGRID_SAFEMODE_ROLLBACK_SECONDS: "${ROSGRID_SAFEMODE_ROLLBACK_SECONDS:-60}"
+      ROSGRID_BACKUP_RETENTION_DAYS: "${ROSGRID_BACKUP_RETENTION_DAYS:-30}"
     volumes:
       - rosgrid_backups_storage:/var/lib/rosgrid/backups
     entrypoint: ["python3", "-m", "src.workers.runner"]

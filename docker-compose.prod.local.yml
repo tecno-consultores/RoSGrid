@@ -73,12 +73,15 @@ services:
     environment:
       TZ: "${TZDATA:-America/Caracas}"
       ROSGRID_ENV: "${ROSGRID_ENV:-production}"
-      ROSGRID_DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-rosgrid_user}:${POSTGRES_PASSWORD:-cambiar_en_entorno_local}@rosgrid_db:5432/${POSTGRES_DB:-rosgrid}"
-      ROSGRID_SYNC_DATABASE_URL: "postgresql://${POSTGRES_USER:-rosgrid_user}:${POSTGRES_PASSWORD:-cambiar_en_entorno_local}@rosgrid_db:5432/${POSTGRES_DB:-rosgrid}"
-      ROSGRID_REDIS_URL: "redis://:${REDIS_PASSWORD:-cambiar_en_entorno_local}@rosgrid_redis:6379/0"
+      ROSGRID_DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-rosgrid_user}:${POSTGRES_PASSWORD:-cambiar_en_entorno_local}@${POSTGRES_HOST:-rosgrid_db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-rosgrid}"
+      ROSGRID_SYNC_DATABASE_URL: "postgresql://${POSTGRES_USER:-rosgrid_user}:${POSTGRES_PASSWORD:-cambiar_en_entorno_local}@${POSTGRES_HOST:-rosgrid_db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-rosgrid}"
+      ROSGRID_REDIS_URL: "redis://:${REDIS_PASSWORD:-cambiar_en_entorno_local}@${REDIS_HOST:-rosgrid_redis}:${REDIS_PORT:-6379}/0"
       ROSGRID_MASTER_VAULT_KEY: "${ROSGRID_MASTER_VAULT_KEY:-MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=}"
       ROSGRID_JWT_SECRET_KEY: "${ROSGRID_JWT_SECRET_KEY:-qa_jwt_secret_key_for_ephemeral_testing_only}"
       ROSGRID_CSRF_HMAC_SECRET: "${ROSGRID_CSRF_HMAC_SECRET:-qa_csrf_hmac_secret_for_ephemeral_testing_only}"
+      ROSGRID_MIKROTIK_TIMEOUT_SECONDS: "${ROSGRID_MIKROTIK_TIMEOUT_SECONDS:-10}"
+      ROSGRID_SAFEMODE_ROLLBACK_SECONDS: "${ROSGRID_SAFEMODE_ROLLBACK_SECONDS:-60}"
+      ROSGRID_BACKUP_RETENTION_DAYS: "${ROSGRID_BACKUP_RETENTION_DAYS:-30}"
       ROSGRID_MCP_ENABLED: "${ROSGRID_MCP_ENABLED:-true}"
       ROSGRID_MCP_RATE_LIMIT_PER_MIN: "${ROSGRID_MCP_RATE_LIMIT_PER_MIN:-30}"
       ROSGRID_CORS_ORIGINS: "${ROSGRID_CORS_ORIGINS:-*}"
@@ -107,9 +110,12 @@ services:
     environment:
       TZ: "${TZDATA:-America/Caracas}"
       ROSGRID_ENV: "${ROSGRID_ENV:-production}"
-      ROSGRID_DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-rosgrid_user}:${POSTGRES_PASSWORD:-cambiar_en_entorno_local}@rosgrid_db:5432/${POSTGRES_DB:-rosgrid}"
-      ROSGRID_REDIS_URL: "redis://:${REDIS_PASSWORD:-cambiar_en_entorno_local}@rosgrid_redis:6379/0"
+      ROSGRID_DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-rosgrid_user}:${POSTGRES_PASSWORD:-cambiar_en_entorno_local}@${POSTGRES_HOST:-rosgrid_db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-rosgrid}"
+      ROSGRID_REDIS_URL: "redis://:${REDIS_PASSWORD:-cambiar_en_entorno_local}@${REDIS_HOST:-rosgrid_redis}:${REDIS_PORT:-6379}/0"
       ROSGRID_MASTER_VAULT_KEY: "${ROSGRID_MASTER_VAULT_KEY:-MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=}"
+      ROSGRID_MIKROTIK_TIMEOUT_SECONDS: "${ROSGRID_MIKROTIK_TIMEOUT_SECONDS:-10}"
+      ROSGRID_SAFEMODE_ROLLBACK_SECONDS: "${ROSGRID_SAFEMODE_ROLLBACK_SECONDS:-60}"
+      ROSGRID_BACKUP_RETENTION_DAYS: "${ROSGRID_BACKUP_RETENTION_DAYS:-30}"
     volumes:
       - rosgrid_backups_local:/var/lib/rosgrid/backups
     entrypoint: ["python3", "-m", "src.workers.runner"]

@@ -9,11 +9,11 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 ## [Unreleased]
 
 ### Added
-- **Exposición y Documentación de Variables de Entorno en `.env.example` y Scripts de Despliegue:**
+- **Exposición, Armonización y Documentación de Variables de Entorno en Docker Compose y `.env.example`:**
   - Inclusión explícita de `ROSGRID_INSTALL_DIR` (`/opt/rosgrid` por defecto) en `.env.example`, permitiendo personalizar el directorio de instalación desatendida en modo standalone vía `instalar-rosgrid.sh`.
-  - Agrupación estructurada de variables en `.env.example` por bloques temáticos (`--- Entorno y Puertos de Despliegue ---`, `--- Configuración de Orígenes Cruzados (CORS) y Despliegue Separado ---`, `--- Parámetros de Contenedores y Sistema ---`).
-  - Incorporación en `.env.example` de `ROSGRID_CORS_ORIGINS` y `ROSGRID_CROSS_ORIGIN_COOKIES` para despliegues desacoplados o con proxies inversos externos.
-  - Sincronización de la tabla 2.1 en `docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md` e `INSTALL.md`.
+  - Incorporación en `.env.example` de `POSTGRES_HOST` (`rosgrid_db`), `POSTGRES_PORT` (`5432`), `REDIS_HOST` (`rosgrid_redis`), `REDIS_PORT` (`6379`) y `VITE_API_BASE_URL` (`http://localhost:8080`), habilitando la conexión nativa a bases de datos o clústeres Redis externos sin alterar los manifiestos YAML.
+  - Armonización e inyección bidireccional en `docker-compose.yml`, `docker-compose.prod.yml` y `docker-compose.prod.local.yml` de los parámetros operativos de FastAPI y Celery/Worker (`ROSGRID_MIKROTIK_TIMEOUT_SECONDS`, `ROSGRID_SAFEMODE_ROLLBACK_SECONDS`, `ROSGRID_BACKUP_RETENTION_DAYS`, `ROSGRID_MCP_ENABLED`, `ROSGRID_MCP_RATE_LIMIT_PER_MIN`, `ROSGRID_CORS_ORIGINS`, `ROSGRID_CROSS_ORIGIN_COOKIES`, `TZDATA`, `restart`).
+  - Sincronización exhaustiva de la tabla 2.1 del *Catálogo Completo de Variables* en `docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md` e `INSTALL.md`.
 - **Migración Integral de Runtime a Python 3.15 y Node.js 26 LTS (Hito 22.11):**
   - **Backend (`fastapi/`):** Migración oficial a la imagen base corporativa inmutable `sinfallas/base-python-uv:3.15`, soporte de CPython Free-Threaded (PEP 703 Tier-1), PEP 649 (evaluación diferida de anotaciones) y actualización de metadatos en `pyproject.toml` (`requires-python = ">=3.15"`).
   - **Frontend (`vue3/`):** Migración oficial a la imagen base corporativa inmutable `sinfallas/base-node-ionic:26`, adopción del motor V8 14.x y declaración de gobernanza en `package.json` (`"engines": { "node": ">=26.0.0", "pnpm": ">=9.0.0" }`).

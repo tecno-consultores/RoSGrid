@@ -54,9 +54,13 @@ chmod 600 .env
 | `ROSGRID_ENV` | String | `production` | Entorno de ejecución (`production`, `qa_test`, `development`). En `production`, Swagger y OpenAPI se ocultan permanentemente. |
 | `ROSGRID_HTTP_PORT` | Entero | `8080` | Puerto en el host donde escuchará el servidor Nginx de RoSGrid. |
 | `ROSGRID_INSTALL_DIR` | String | `/opt/rosgrid` | Directorio de destino en el host para instalación remota o standalone desatendida vía curl (`instalar-rosgrid.sh`). |
+| `POSTGRES_HOST` | String | `rosgrid_db` | Hostname o dirección IP del servidor PostgreSQL 17 (permite conectar clústeres externos o DB administrada). |
+| `POSTGRES_PORT` | Entero | `5432` | Puerto de conexión al servicio PostgreSQL. |
 | `POSTGRES_DB` | String | `rosgrid` | Nombre de la base de datos central en PostgreSQL 17. |
 | `POSTGRES_USER` | String | `rosgrid_user` | Usuario de PostgreSQL con permisos RLS. |
 | `POSTGRES_PASSWORD` | String | *(Obligatorio)* | Contraseña segura para el usuario de PostgreSQL. |
+| `REDIS_HOST` | String | `rosgrid_redis` | Hostname del motor en memoria KeyDB o DragonflyDB (permite conectar nodos externos). |
+| `REDIS_PORT` | Entero | `6379` | Puerto de conexión al servicio KeyDB / Redis. |
 | `REDIS_PASSWORD` | String | *(Obligatorio)* | Clave de autenticación para KeyDB o DragonflyDB. |
 | `ROSGRID_MASTER_VAULT_KEY` | Base64 (32 B) | *(Obligatorio)* | Llave criptográfica maestra para cifrar/descifrar credenciales de routers con `AES-256-GCM`. |
 | `ROSGRID_JWT_SECRET_KEY` | String (64+ B) | *(Obligatorio)* | Secreto para firma de tokens JWT (`HS256`) con verificación de sesión en KeyDB. |
@@ -68,6 +72,9 @@ chmod 600 .env
 | `ROSGRID_MCP_RATE_LIMIT_PER_MIN` | Entero | `30` | Límite de peticiones MCP por minuto por cuenta `SERVICE_ACCOUNT`. |
 | `ROSGRID_CORS_ORIGINS` | String | `*` | Lista de orígenes permitidos separados por comas para despliegues con Backend y Frontend en servidores separados (ej. `https://app.tuempresa.com,http://localhost:8080`). |
 | `ROSGRID_CROSS_ORIGIN_COOKIES` | Booleano | `false` | Si es `true`, emite cookies de sesión sin prefijo `__Host-` con `SameSite=None; Secure` para permitir autenticación cross-domain. |
+| `VITE_API_BASE_URL` | String | `http://localhost:8080` | URL base del Backend API para compilación de la SPA Vue 3 si se despliega desacoplada del proxy Nginx. |
+| `TZDATA` | String | `America/Caracas` | Zona horaria inyectada en los contenedores (`TZ`) para bitácoras y reloj local. |
+| `restart` | String | `unless-stopped` | Política de reinicio de contenedores Docker Compose (`always`, `unless-stopped`, `no`, `on-failure`). |
 
 ### 2.2 Generación Criptográfica de Secretos
 Ejecuta los siguientes comandos en tu terminal para generar llaves criptográficas de alta entropía:
