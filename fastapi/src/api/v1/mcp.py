@@ -12,7 +12,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_current_user_claims
@@ -37,7 +37,7 @@ from src.api.v1.network_services import (
 from src.api.v1.webfig_common import get_router_and_client
 from src.core.audit import write_audit_log
 from src.core.config import settings
-from src.db.session import get_tenant_db_session
+from src.db.session import get_tenant_db_session, set_tenant_context
 from src.models.core import SystemRoleEnum, User, UserRouterPermission
 from src.models.inventory import Router
 from src.models.operations import (
@@ -1084,5 +1084,5 @@ async def mcp_endpoint(
     client_ip = _extract_client_ip(request)
     await _verify_mcp_user_access(db, tenant_id, user_id, client_ip)
     await _check_mcp_rate_limit(tenant_id, user_id)
-    await db.execute(text(f"SET LOCAL app.current_tenant_id = '{tenant_id}'"))
+    await set_tenant_context(db, tenant_id, is_superadmin=False)
     return await _dispatch_mcp_method(body, db, tenant_id, user_id, claims, client_ip)

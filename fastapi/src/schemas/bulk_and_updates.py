@@ -71,7 +71,6 @@ class ConfigTemplatePresetResponse(StrictBaseModel):
     ros_command_template: str | None = None
 
 
-
 # ============================================================================
 # TRABAJOS MASIVOS MULTI-ROUTER (BULK JOBS)
 # ============================================================================

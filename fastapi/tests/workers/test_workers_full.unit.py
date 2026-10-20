@@ -4,6 +4,7 @@
 """Suite Completa de Pruebas Unitarias para los Workers en Segundo Plano (Hito 10)."""
 
 import asyncio
+import hashlib
 import json
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -24,6 +25,7 @@ from src.workers.alert_dispatcher_worker import (
     _dispatch_webhook,
     _process_alert_payload,
     alert_dispatcher_worker_loop,
+    is_safe_webhook_url,
 )
 from src.workers.health_monitor_worker import (
     _check_router_in_maintenance,
@@ -195,8 +197,25 @@ async def test_health_monitor_cycle_and_loop() -> None:
         await run_health_monitor_cycle()
         mock_eval.assert_awaited_once()
 
-    # Loop cancellation test
+    # Router evaluation error inside cycle
+    with (
+        patch("src.workers.health_monitor_worker.get_redis_client", return_value=AsyncMock()),
+        patch("src.workers.health_monitor_worker.async_session_maker", return_value=MockContextManager()),
+        patch("src.workers.health_monitor_worker._evaluate_single_router", side_effect=RuntimeError("eval fail")),
+    ):
+        await run_health_monitor_cycle()
+
+    # Loop cancellation and exception handling
     with patch("src.workers.health_monitor_worker.run_health_monitor_cycle", side_effect=asyncio.CancelledError):
+        await health_monitor_worker_loop()
+
+    with (
+        patch(
+            "src.workers.health_monitor_worker.run_health_monitor_cycle",
+            side_effect=[RuntimeError("loop fail"), asyncio.CancelledError],
+        ),
+        patch("asyncio.sleep", new_callable=AsyncMock),
+    ):
         await health_monitor_worker_loop()
 
 
@@ -244,6 +263,32 @@ async def test_alert_dispatcher_decryption_and_dispatchers() -> None:
         await _dispatch_webhook(webhook_conf, alert)
         mock_post.assert_awaited_once()
 
+    # Webhook dispatch with empty url
+    await _dispatch_webhook({"webhook_url": ""}, alert)
+
+    # Webhook dispatch blocked by SSRF
+    assert is_safe_webhook_url("https://hooks.slack.com/services/T00/B00/X00") is True
+    assert is_safe_webhook_url("http://127.0.0.1:8000/internal") is False
+    assert is_safe_webhook_url("http://localhost:8000/internal") is False
+    assert is_safe_webhook_url("http://169.254.169.254/latest/meta-data") is False
+    assert is_safe_webhook_url("http://10.0.0.1/admin") is False
+    assert is_safe_webhook_url("ftp://example.com") is False
+    assert is_safe_webhook_url("not-a-valid-url") is False
+    assert is_safe_webhook_url("http://") is False
+    with patch("urllib.parse.urlparse", side_effect=ValueError("bad url")):
+        assert is_safe_webhook_url("https://example.com") is False
+
+    webhook_conf_ssrf = {"webhook_url": "http://169.254.169.254/latest/meta-data", "secret": "s3cr3t"}
+    with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
+        await _dispatch_webhook(webhook_conf_ssrf, alert)
+        mock_post.assert_not_called()
+
+    # Telegram dispatch with missing config
+    await _dispatch_telegram({"bot_token": ""}, alert)
+
+    # SMTP dispatch sync with missing to_addresses
+    _dispatch_smtp_sync({"to_addresses": []}, alert)
+
     # SMTP dispatch sync
     smtp_conf = {
         "smtp_host": "smtp.example.com",
@@ -284,6 +329,44 @@ async def test_alert_dispatcher_channel_selection_and_process() -> None:
     with patch("src.workers.alert_dispatcher_worker._dispatch_telegram", new_callable=AsyncMock) as mock_tel:
         await _dispatch_to_channel(t_id, ch, alert)
         mock_tel.assert_awaited_once()
+
+    # Unsubscribed event
+    unsubscribed_alert = {"event_name": "ROUTER_UP", "router_display_name": "R1"}
+    await _dispatch_to_channel(t_id, ch, unsubscribed_alert)
+
+    # SMTP channel dispatch
+    ch_smtp = NotificationChannel(
+        id=ch_id,
+        tenant_id=t_id,
+        name="SMTP NOC",
+        channel_type=AlertChannelTypeEnum.SMTP_EMAIL,
+        config_ciphertext=ct,
+        config_iv=iv,
+        config_tag=tag,
+        subscribed_events=["ROUTER_DOWN"],
+    )
+    with patch("asyncio.to_thread", new_callable=AsyncMock) as mock_smtp:
+        await _dispatch_to_channel(t_id, ch_smtp, alert)
+        mock_smtp.assert_awaited_once()
+
+    # Webhook channel dispatch
+    ch_webhook = NotificationChannel(
+        id=ch_id,
+        tenant_id=t_id,
+        name="Webhook NOC",
+        channel_type=AlertChannelTypeEnum.GENERIC_WEBHOOK,
+        config_ciphertext=ct,
+        config_iv=iv,
+        config_tag=tag,
+        subscribed_events=["ROUTER_DOWN"],
+    )
+    with patch("src.workers.alert_dispatcher_worker._dispatch_webhook", new_callable=AsyncMock) as mock_wh:
+        await _dispatch_to_channel(t_id, ch_webhook, alert)
+        mock_wh.assert_awaited_once()
+
+    # Exception handling during dispatch
+    with patch("src.workers.alert_dispatcher_worker._dispatch_telegram", side_effect=RuntimeError("telegram error")):
+        await _dispatch_to_channel(t_id, ch, alert)
 
     # Process alert payload with DB lookup
     fake_session = AsyncMock()
@@ -367,6 +450,21 @@ async def test_nightly_backup_single_router_and_cycle() -> None:
         await _backup_single_router(session, router_obj)
         session.add.assert_called_once()
 
+    # Case 1b: Router without vault returns None
+    router_no_vault = Router(id=uuid.uuid4(), tenant_id=uuid.uuid4(), display_name="R-NoVault")
+    router_no_vault.vault = None
+    await _backup_single_router(session, router_no_vault)
+
+    # Case 1c: Deduplication branch (identical hash)
+    cleaned_rsc = "/ip address\nadd address=10.0.0.1/24 interface=ether1\n"
+    rsc_hash = hashlib.sha256(cleaned_rsc.encode("utf-8")).hexdigest()
+    identical_b = MagicMock(rsc_sha256_hash=rsc_hash)
+    session_dup = AsyncMock()
+    session_dup.execute.return_value = MockDbResult([identical_b], single=identical_b)
+    with patch("src.workers.nightly_backup_worker._create_client_from_vault", return_value=fake_client):
+        await _backup_single_router(session_dup, router_obj)
+        assert identical_b.last_verified_identical_at is not None
+
     # Case 2: Run cycle
     fake_session = AsyncMock()
     fake_session.execute.return_value = MockDbResult([router_obj])
@@ -386,8 +484,25 @@ async def test_nightly_backup_single_router_and_cycle() -> None:
         await run_nightly_backup_cycle()
         mock_bk.assert_awaited_once()
 
-    # Case 3: Loop cancellation
+    # Case 2b: Cycle exception handling
+    with (
+        patch("src.workers.nightly_backup_worker.async_session_maker", return_value=MockContextManager()),
+        patch("src.workers.nightly_backup_worker._backup_single_router", side_effect=RuntimeError("backup fail")),
+        patch("src.workers.nightly_backup_worker._purge_expired_backups", new_callable=AsyncMock, return_value=0),
+    ):
+        await run_nightly_backup_cycle()
+
+    # Case 3: Loop cancellation and exception handling
     with patch("src.workers.nightly_backup_worker.run_nightly_backup_cycle", side_effect=asyncio.CancelledError):
+        await nightly_backup_worker_loop()
+
+    with (
+        patch(
+            "src.workers.nightly_backup_worker.run_nightly_backup_cycle",
+            side_effect=[RuntimeError("loop fail"), asyncio.CancelledError],
+        ),
+        patch("asyncio.sleep", new_callable=AsyncMock),
+    ):
         await nightly_backup_worker_loop()
 
 
@@ -440,8 +555,17 @@ async def test_vault_rotation_single_and_cycle() -> None:
         await run_vault_rotation_cycle()
         mock_rot.assert_awaited_once()
 
-    # Loop cancellation
+    # Loop cancellation and exception handling
     with patch("src.workers.vault_rotation_worker.run_vault_rotation_cycle", side_effect=asyncio.CancelledError):
+        await vault_rotation_worker_loop()
+
+    with (
+        patch(
+            "src.workers.vault_rotation_worker.run_vault_rotation_cycle",
+            side_effect=[RuntimeError("cycle err"), asyncio.CancelledError],
+        ),
+        patch("asyncio.sleep", new_callable=AsyncMock),
+    ):
         await vault_rotation_worker_loop()
 
 
@@ -455,6 +579,12 @@ async def test_workers_runner() -> None:
     stop_event = asyncio.Event()
     _setup_signal_handlers(stop_event)
 
+    # Signal handlers on platforms raising NotImplementedError
+    fake_loop = MagicMock()
+    fake_loop.add_signal_handler.side_effect = NotImplementedError
+    with patch("asyncio.get_running_loop", return_value=fake_loop):
+        _setup_signal_handlers(stop_event)
+
     with (
         patch("src.workers.runner.health_monitor_worker_loop", new_callable=AsyncMock),
         patch("src.workers.runner.alert_dispatcher_worker_loop", new_callable=AsyncMock),
@@ -465,7 +595,6 @@ async def test_workers_runner() -> None:
         # Trigger stop_event immediately
         runner_task = asyncio.create_task(main_workers_runner())
         await asyncio.sleep(0.01)
-        # Find stop_event through closure or simulate signal
         runner_task.cancel()
         try:
             await runner_task
@@ -478,3 +607,11 @@ async def test_workers_runner() -> None:
     ):
         main()
         mock_run.assert_called_once()
+
+    # KeyboardInterrupt in main()
+    with (
+        patch("asyncio.run", side_effect=KeyboardInterrupt),
+        patch("sys.exit") as mock_exit,
+    ):
+        main()
+        mock_exit.assert_called_once_with(0)

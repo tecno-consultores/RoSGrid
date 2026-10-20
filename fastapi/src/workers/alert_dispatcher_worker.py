@@ -6,9 +6,11 @@
 import asyncio
 import hashlib
 import hmac
+import ipaddress
 import json
 import logging
 import smtplib
+import urllib.parse
 import uuid
 from email.message import EmailMessage
 from typing import Any, cast
@@ -76,10 +78,33 @@ def _dispatch_smtp_sync(config: dict[str, Any], alert: dict[str, Any]) -> None:
         server.send_message(msg)
 
 
+def is_safe_webhook_url(url: str) -> bool:
+    """Verifica que la URL no apunte a esquemas no válidos o direcciones IP privadas / locales (Anti-SSRF)."""
+    try:
+        parsed = urllib.parse.urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            return False
+        hostname = (parsed.hostname or "").strip().lower()
+        if not hostname or hostname in ("localhost", "127.0.0.1", "::1"):
+            return False
+        try:
+            ip = ipaddress.ip_address(hostname)
+            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
+                return False
+        except ValueError:
+            pass
+        return True
+    except Exception:
+        return False
+
+
 async def _dispatch_webhook(config: dict[str, Any], alert: dict[str, Any]) -> None:
     webhook_url = config.get("webhook_url")
     secret = config.get("secret", "").encode("utf-8")
     if not webhook_url:
+        return
+    if not is_safe_webhook_url(webhook_url):
+        logger.warning("Despacho de webhook cancelado por validación de seguridad SSRF: %s", webhook_url)
         return
 
     body = json.dumps(alert).encode("utf-8")

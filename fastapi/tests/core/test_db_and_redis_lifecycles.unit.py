@@ -77,3 +77,23 @@ def test_create_app_configurations() -> None:
         assert app_prod.docs_url is None
         assert app_prod.redoc_url is None
         assert app_prod.openapi_url is None
+
+
+@pytest.mark.asyncio
+async def test_main_lifespan_and_health_checks() -> None:
+    from fastapi import FastAPI
+
+    from src.main import _check_database_health, lifespan
+
+    app = FastAPI()
+    with patch("src.main.close_redis_client", new_callable=AsyncMock) as mock_close:
+        async with lifespan(app):
+            pass
+        mock_close.assert_awaited_once()
+
+    # Success database health
+    with patch("src.main.engine") as mock_engine:
+        mock_ctx = AsyncMock()
+        mock_engine.connect.return_value.__aenter__.return_value = mock_ctx
+        res = await _check_database_health()
+        assert res == "connected"

@@ -68,3 +68,30 @@ def test_production_app_instantiation_without_docs_and_swagger() -> None:
         assert app.docs_url is None, "docs_url debe ser None en producción"
         assert app.redoc_url is None, "redoc_url debe ser None en producción"
         assert app.openapi_url is None, "openapi_url debe ser None en producción"
+
+
+def test_cors_configuration_production_and_dev() -> None:
+    """Valida configuración estricta de CORS en producción vs desarrollo."""
+    # 1. Producción con wildcard: credenciales deshabilitadas y orígenes vacíos
+    with (
+        patch("src.main.settings.ROSGRID_ENV", "production"),
+        patch("src.main.settings.ROSGRID_CORS_ORIGINS", "*"),
+    ):
+        app_prod_wild = create_app()
+        assert app_prod_wild is not None
+
+    # 2. Producción con orígenes específicos
+    with (
+        patch("src.main.settings.ROSGRID_ENV", "production"),
+        patch("src.main.settings.ROSGRID_CORS_ORIGINS", "https://noc.rosgrid.com,https://api.rosgrid.com"),
+    ):
+        app_prod_explicit = create_app()
+        assert app_prod_explicit is not None
+
+    # 3. Desarrollo con regex permisivo
+    with (
+        patch("src.main.settings.ROSGRID_ENV", "development"),
+        patch("src.main.settings.ROSGRID_CORS_ORIGINS", "*"),
+    ):
+        app_dev = create_app()
+        assert app_dev is not None

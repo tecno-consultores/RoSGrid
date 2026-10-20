@@ -227,8 +227,7 @@ _DEFAULT_STARTER_TEMPLATES = [
         "category": "NETWORK",
         "description": "Configura servidores DNS redundantes (Quad9 y Cloudflare) y vacía la caché de resolución.",
         "ros_command_template": (
-            "/ip dns set servers={{ dns_servers }} allow-remote-requests={{ allow_remote }}\n"
-            "/ip dns cache flush"
+            "/ip dns set servers={{ dns_servers }} allow-remote-requests={{ allow_remote }}\n/ip dns cache flush"
         ),
         "variables_schema": [
             {
@@ -399,7 +398,6 @@ async def seed_default_templates(
         )
         for t in templates
     ]
-
 
 
 @router.get("/templates/{template_id}", response_model=ConfigTemplateResponse)

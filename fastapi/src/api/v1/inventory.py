@@ -700,6 +700,8 @@ async def import_csv_commit(
         if upload is None or not hasattr(upload, "read"):
             raise HTTPException(status_code=400, detail="Debe proporcionar un archivo CSV en el campo 'file'")
         content = await upload.read()
+        if len(content) > 2 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="El archivo excede el tamaño máximo permitido de 2 MB")
         try:
             decoded = content.decode("utf-8-sig")
         except UnicodeDecodeError as exc:

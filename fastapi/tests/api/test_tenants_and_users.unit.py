@@ -641,4 +641,3 @@ async def test_tenant_admin_cannot_escalate_to_superadmin(
         assert res_extra.status_code == 422
     finally:
         app.dependency_overrides.pop(get_db_session, None)
-

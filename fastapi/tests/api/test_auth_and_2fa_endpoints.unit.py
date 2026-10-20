@@ -803,4 +803,3 @@ async def test_register_and_login_reject_mass_assignment(
         assert "extra_forbidden" in str(res_login.json())
     finally:
         app.dependency_overrides.pop(get_db_session, None)
-

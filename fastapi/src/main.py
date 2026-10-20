@@ -77,21 +77,34 @@ def users_me_alias(
 def _setup_cors(app: FastAPI) -> None:
     """Configura CORS para despliegue distribuido o monolítico."""
     cors_origins = settings.cors_origins_list
+    is_prod = settings.ROSGRID_ENV == "production"
+
     if cors_origins == ["*"]:
-        app.add_middleware(
-            CORSMiddleware,
-            allow_origin_regex=r"^https?://.*",
-            allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
-        )
+        if is_prod:
+            # En producción, si no se especifican orígenes explícitos en lista blanca,
+            # no se permiten credenciales abiertas para cualquier origen arbitrario.
+            app.add_middleware(
+                CORSMiddleware,
+                allow_origins=[],
+                allow_credentials=False,
+                allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+                allow_headers=["*"],
+            )
+        else:
+            app.add_middleware(
+                CORSMiddleware,
+                allow_origin_regex=r"^https?://.*",
+                allow_credentials=True,
+                allow_methods=["*"],
+                allow_headers=["*"],
+            )
     else:
         app.add_middleware(
             CORSMiddleware,
             allow_origins=cors_origins,
             allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
+            allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+            allow_headers=["Authorization", "Content-Type", "X-CSRF-Token", "Idempotency-Key", "Accept"],
         )
 
 

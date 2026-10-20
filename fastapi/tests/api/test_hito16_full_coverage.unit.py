@@ -685,6 +685,15 @@ async def test_inventory_csv_commit_edge_branches(fake_request: MagicMock) -> No
         await import_csv_commit(fake_request, claims=claims, db=db)
     assert exc_empty.value.status_code == 400
 
+    # 4. Oversized CSV file (> 2 MB)
+    fake_upload_oversized = MagicMock(spec=UploadFile)
+    fake_upload_oversized.read = AsyncMock(return_value=b"x" * (2 * 1024 * 1024 + 1))
+    fake_form.get.return_value = fake_upload_oversized
+    with pytest.raises(HTTPException) as exc_oversized:
+        await import_csv_commit(fake_request, claims=claims, db=db)
+    assert exc_oversized.value.status_code == 400
+    assert "2 MB" in exc_oversized.value.detail
+
 
 @pytest.mark.asyncio
 async def test_subscribers_alias_and_delete() -> None:
