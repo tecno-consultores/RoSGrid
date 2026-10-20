@@ -90,7 +90,7 @@ curl -fsSL https://raw.githubusercontent.com/tecno-consultores/RoSGrid/main/inst
 ~~~
 
 **¿Qué hace este comando automáticamente?**
-- Detecta la ejecución remota y crea el directorio de despliegue en `/opt/rosgrid` (solicitando `sudo` únicamente para crear la carpeta y asignarla a tu usuario no-root `$USER`).
+- Detecta la ejecución remota y crea el directorio de despliegue en `/opt/rosgrid` (personalizable exportando `ROSGRID_INSTALL_DIR`, solicitando `sudo` únicamente para crear la carpeta y asignarla a tu usuario no-root `$USER`).
 - Descarga los manifiestos oficiales de producción (`.env.example` y `docker-compose.prod.yml`) desde la rama `main` de GitHub.
 - Genera automáticamente secretos criptográficos de alta entropía (256 bits) para PostgreSQL, KeyDB, Bóveda AES-256-GCM, JWT y CSRF con permisos estrictos `chmod 600 .env`.
 - Descarga las imágenes oficiales inmutables de Docker Hub (`sinfallas/rosgrid-*`) y levanta los servicios.

@@ -53,6 +53,7 @@ chmod 600 .env
 | :--- | :--- | :--- | :--- |
 | `ROSGRID_ENV` | String | `production` | Entorno de ejecución (`production`, `qa_test`, `development`). En `production`, Swagger y OpenAPI se ocultan permanentemente. |
 | `ROSGRID_HTTP_PORT` | Entero | `8080` | Puerto en el host donde escuchará el servidor Nginx de RoSGrid. |
+| `ROSGRID_INSTALL_DIR` | String | `/opt/rosgrid` | Directorio de destino en el host para instalación remota o standalone desatendida vía curl (`instalar-rosgrid.sh`). |
 | `POSTGRES_DB` | String | `rosgrid` | Nombre de la base de datos central en PostgreSQL 17. |
 | `POSTGRES_USER` | String | `rosgrid_user` | Usuario de PostgreSQL con permisos RLS. |
 | `POSTGRES_PASSWORD` | String | *(Obligatorio)* | Contraseña segura para el usuario de PostgreSQL. |
