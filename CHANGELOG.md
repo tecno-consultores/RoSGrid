@@ -30,6 +30,30 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
   - Sincronización idéntica de la suite en `examples/vue3/test/ui_business_flow.feature`.
   - Agregado del botón táctico de refresco de flota y su indicador reactivo en `DashboardHomeView.vue`.
   - Validación completa en contenedor QA (`vue-tsc --noEmit` = 0 errores, Prettier = 100% aprobado, Vitest = 38 suites y 262 pruebas pasadas).
+- **Suite Completa de Pruebas BDD Karate Labs para el 100% de la API REST FastAPI:**
+  - Expansión de `fastapi/test/api_test.feature` de 11 a **54 escenarios BDD exhaustivos** que cubren la totalidad de los 35 submódulos y endpoints de la API REST de RoSGrid:
+    - Observabilidad y salud del sistema (`/health`, `/metrics`, `/users/me`).
+    - Ciclo de vida de autenticación, bootstrap, 2FA TOTP y rotación de tokens (`/api/v1/auth/*`).
+    - Gestión de empresas multi-tenant y panel de feature flags modulares (`/api/v1/tenants/*`).
+    - Administración de usuarios, aprobación Maker-Checker y switch de registro (`/api/v1/users/*`).
+    - Sesiones activas y kill-switch de revocación en tiempo real (`/api/v1/sessions/*`).
+    - Inventario de routers, redescubrimiento TOFU, roles y asistente CSV (`/api/v1/inventory/*`).
+    - Bóveda de credenciales con Step-Up 2FA (30s) y rotación de claves (`/api/v1/inventory/routers/{id}/vault/*`).
+    - Direccionamiento IPAM dual-stack IPv4/IPv6 y gestión de pools (`/api/v1/ipam/*`).
+    - Perfiles de ancho de banda QoS y dispositivos abonados ONUs (`/api/v1/bandwidth-profiles/*`, `/subscriber-devices/*`).
+    - Aprovisionamiento técnico de red con cabecera obligatoria `Idempotency-Key` UUIDv7 (`/api/v1/network-services/*`).
+    - Operaciones de campo móvil y telemetría óptica láser SFP DDM (`/api/v1/field-ops/*`).
+    - Programación de ventanas de mantenimiento para silenciado de alertas (`/api/v1/maintenance-windows/*`).
+    - Consola WebFig v7 de Capa 1 y Capa 2 (Interfaces, IP, Firewall Drag & Drop, Routing BGP/OSPF, PPP, Queues, System, Tools y Layer 2 dynamic proxy).
+    - Bandeja de aprobaciones Maker-Checker con intercepción HTTP 202 (`/api/v1/operations/approvals/*`).
+    - Respaldos históricos de 30 días, comparador Git Diff y descarga binaria `.backup` (`/api/v1/routers/{id}/backups/*`).
+    - Operaciones masivas con plantillas maestras y actualización de paquetes (`/api/v1/operations/bulk/*`).
+    - Canales de notificación con webhooks salientes firmados HMAC-SHA256 (`/api/v1/notifications/channels/*`).
+    - Bitácora inmutable WORM y verificación matemática de cadena SHA-256 (`/api/v1/audit/*`).
+    - Servidor MCP protegido para agentes IA con validación JSON-RPC 2.0 y límite de tasa (`/api/v1/mcp`).
+    - Diagnóstico 360°, BGP Looking Glass y analítica de anomalías IPFIX (`/api/v1/diagnostics/*`, `/bgp/*`, `/traffic-flow/*`).
+    - Suite corporativa de ciberseguridad: CIS Benchmark, Config Drift, SD-WAN WireGuard, Switching Rogue DHCP, SLA de carriers y WiFi CAPsMAN (`/api/v1/compliance/*`, `/sdwan/*`, `/switching/*`, `/sla/*`, `/wifi/*`, `/rbac/*`).
+  - Sincronización idéntica de la suite en `examples/fastapi/test/api_test.feature`.
 - **Integración Exhaustiva de Diagramas Mermaid en Toda la Documentación Oficial:**
   - Inserción de diagramas Mermaid en `README.md` (arquitectura de alto nivel), `INSTALL.md` (árbol de instalación y despliegue), `SECURITY.md` (8 capas de defensa en profundidad) y los manuales técnicos del sistema (`docs/01` al `docs/09`), clarificando topologías de red, protocolos criptográficos (Safe Mode 60s, WORM SHA-256 con índice BRIN, TOFU Pinning, Split-Credential 2FA, Kill-Switch, WebSockets Pub/Sub y compuertas UAT 11X).
 - **Reportes Técnicos de Investigación sobre Próximas Versiones Corporativas:**

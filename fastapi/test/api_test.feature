@@ -1,85 +1,446 @@
-Feature: Validación BDD Caja Negra de la API FastAPI de RoSGrid y Seguridad Multi-Tenant
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright (C) 2026 RoSGrid Contributors
+
+Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Seguridad Multi-Tenant
 
   Background:
     * url 'http://api:8000'
     * configure headers = { 'Content-Type': 'application/json' }
 
-  Scenario: 1. Verificar que la API responda correctamente al healthcheck con estructura validada
+  # ==============================================================================
+  # Grupo 1: Observabilidad, Salud y Endpoint Raíz
+  # ==============================================================================
+
+  Scenario: 1. Healthcheck activo de la API con estado de PostgreSQL y KeyDB
     Given path '/health'
     When method get
     Then status 200
-    And match response == { status: '#string', service: '#string' }
     And match response.status == 'healthy'
     And match response.service == 'rosgrid-api'
+    And match response.database == '#string'
+    And match response.redis == '#string'
 
-  Scenario: 2. Verificar que el endpoint de observabilidad Prometheus (/metrics) esté expuesto
+  Scenario: 2. Métricas del sistema expuestas en formato estándar Prometheus
     Given path '/metrics'
     When method get
     Then status 200
     And match response contains 'http_requests_total'
 
-  Scenario: 3. Intento de acceso a ruta protegida sin cookie HttpOnly devuelve 401
+  Scenario: 3. Consulta de identidad del usuario actual sin cookie de sesión devuelve 401
     Given path '/users/me'
     When method get
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
-  Scenario: 4. Enviar un payload malformado al login (Pydantic validation failure) devuelve HTTP 422
+  # ==============================================================================
+  # Grupo 2: Ciclo de Vida de Autenticación, Bootstrap y Registro
+  # ==============================================================================
+
+  Scenario: 4. Consulta de estado de inicialización del clúster (bootstrap-status)
+    Given path '/api/v1/auth/bootstrap-status'
+    When method get
+    Then status 200
+    And match response == { is_bootstrapped: '#boolean', tenants_count: '#number', users_count: '#number', registration_enabled: '#boolean', default_tenant_slug: '##string', default_tenant_name: '##string', message: '#string' }
+
+  Scenario: 5. Envío de credenciales incompletas al login genera error de validación 422
     Given path '/api/v1/auth/login'
     And request { username: "solouser_sinpassword" }
     When method post
     Then status 422
     And match response.detail[0].type == '#string'
 
-  Scenario: 5. Petición mutable sin cabecera Idempotency-Key es rechazada con HTTP 400
+  Scenario: 6. Solicitud de auto-registro con campos faltantes devuelve HTTP 422
+    Given path '/api/v1/auth/register'
+    And request { username: "operador_nuevo" }
+    When method post
+    Then status 422
+    And match response.detail[0].type == '#string'
+
+  Scenario: 7. Verificación de segundo factor 2FA con payload inválido devuelve HTTP 422
+    Given path '/api/v1/auth/2fa/verify'
+    And request { challenge_id: "invalido", totp_code: "12" }
+    When method post
+    Then status 422
+    And match response.detail[0].type == '#string'
+
+  Scenario: 8. Rotación de Refresh Token sin cookie de sesión activa devuelve 401
+    Given path '/api/v1/auth/refresh'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 9. Cierre de sesión (logout) sin sesión previa devuelve 401
+    Given path '/api/v1/auth/logout'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  # ==============================================================================
+  # Grupo 3: Gestión Multi-Tenant y Gobernanza de Feature Flags
+  # ==============================================================================
+
+  Scenario: 10. Listado de empresas (Tenants) sin rol SUPERADMIN_GLOBAL devuelve 401
+    Given path '/api/v1/tenants'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 11. Creación de nueva empresa sin cabecera Idempotency-Key devuelve 400
+    Given path '/api/v1/tenants'
+    And request { name: "Tenant Test", slug: "tenant-test" }
+    When method post
+    Then status 400
+    And match response == { detail: 'Cabecera Idempotency-Key (UUID) obligatoria para operaciones mutables' }
+
+  Scenario: 12. Modificación de Feature Flags de tenant sin autenticación devuelve 401
+    Given path '/api/v1/tenants/00000000-0000-0000-0000-000000000001/features'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000010'
+    And request { isp_module_enabled: true, enforce_maker_checker: true }
+    When method patch
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  # ==============================================================================
+  # Grupo 4: Usuarios, Aprobación Maker-Checker y Switch de Registro
+  # ==============================================================================
+
+  Scenario: 13. Catálogo de usuarios y operadores del tenant sin autenticación devuelve 401
+    Given path '/api/v1/users'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 14. Conmutación en caliente del switch de registro público sin credenciales devuelve 401
+    Given path '/api/v1/users/registration-toggle'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000011'
+    And request { enabled: false }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 15. Aprobación de operador pendiente sin privilegios devuelve 401
+    Given path '/api/v1/users/00000000-0000-0000-0000-000000000001/approve'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000012'
+    And request { role: 'SUPPORT_L2', has_all_routers_access: true }
+    When method put
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  # ==============================================================================
+  # Grupo 5: Sesiones Activas y Kill-Switch de Expulsión
+  # ==============================================================================
+
+  Scenario: 16. Monitor de sesiones concurrentes sin autenticación devuelve 401
+    Given path '/api/v1/sessions/active'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 17. Invocación del Kill-Switch de sesión sin credenciales de administrador devuelve 401
+    Given path '/api/v1/sessions/sess-test-uuid'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000013'
+    When method delete
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  # ==============================================================================
+  # Grupo 6: Inventario de Routers, Pinning TOFU y Asistente CSV
+  # ==============================================================================
+
+  Scenario: 18. Listado de flota de routers sin autenticación devuelve 401
+    Given path '/api/v1/inventory/routers'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 19. Alta de nuevo router sin cabecera Idempotency-Key obligatoria devuelve 400
     Given path '/api/v1/inventory/routers'
     And request { display_name: 'RB4011-Test' }
     When method post
     Then status 400
     And match response == { detail: 'Cabecera Idempotency-Key (UUID) obligatoria para operaciones mutables' }
 
-  Scenario: 6. Aislamiento Multi-Tenant RLS: Acceso a inventario de routers sin autenticación devuelve 401
-    Given path '/api/v1/inventory/routers'
+  Scenario: 20. Redescubrimiento dinámico de certificados SSL TOFU sin sesión devuelve 401
+    Given path '/api/v1/inventory/routers/00000000-0000-0000-0000-000000000001/discover'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000014'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 21. Catálogo de roles personalizados de infraestructura sin sesión devuelve 401
+    Given path '/api/v1/inventory/roles'
     When method get
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
-  Scenario: 7. Bóveda Criptográfica: Intento de revelación de clave sin Step-Up 2FA devuelve 401
+  # ==============================================================================
+  # Grupo 7: Bóveda Criptográfica (Split-Credential) y Step-Up 2FA
+  # ==============================================================================
+
+  Scenario: 22. Revelación de clave de router sin Step-Up 2FA TOTP devuelve 401
     Given path '/api/v1/inventory/routers/00000000-0000-0000-0000-000000000001/vault/reveal'
-    And header Idempotency-Key = '01928900-0000-7000-8000-000000000001'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000015'
     And request { totp_code: '123456', reason: 'Auditoría no autorizada' }
     When method post
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
-  Scenario: 8. Maker-Checker: Acceso a la bandeja de aprobaciones sin credenciales devuelve 401
+  Scenario: 23. Disparo de rotación automática transaccional de clave sin autenticación devuelve 401
+    Given path '/api/v1/inventory/routers/00000000-0000-0000-0000-000000000001/vault/rotate'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000016'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  # ==============================================================================
+  # Grupo 8: IPAM Dual-Stack (IPv4 / IPv6) y Pools
+  # ==============================================================================
+
+  Scenario: 24. Inspección de subredes IPAM sin sesión devuelve 401
+    Given path '/api/v1/ipam/subnets'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 25. Creación de subred sin cabecera Idempotency-Key devuelve 400
+    Given path '/api/v1/ipam/subnets'
+    And request { cidr: '10.50.0.0/24', name: 'Pool-NOC' }
+    When method post
+    Then status 400
+    And match response == { detail: 'Cabecera Idempotency-Key (UUID) obligatoria para operaciones mutables' }
+
+  # ==============================================================================
+  # Grupo 9: Perfiles QoS y Dispositivos de Abonados (ONUs / CPEs)
+  # ==============================================================================
+
+  Scenario: 26. Catálogo de perfiles de ancho de banda QoS sin sesión devuelve 401
+    Given path '/api/v1/bandwidth-profiles'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 27. Inventario técnico de abonados (ONUs) sin sesión devuelve 401
+    Given path '/api/v1/subscriber-devices'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  # ==============================================================================
+  # Grupo 10: Aprovisionamiento Técnico Idempotente de Red
+  # ==============================================================================
+
+  Scenario: 28. Aislamiento técnico de servicio sin cabecera Idempotency-Key devuelve 400
+    Given path '/api/v1/network-services/00000000-0000-0000-0000-000000000001/isolate'
+    And request { reason: 'Mora técnica' }
+    When method post
+    Then status 400
+    And match response == { detail: 'Cabecera Idempotency-Key (UUID) obligatoria para operaciones mutables' }
+
+  Scenario: 29. Restauración técnica de servicio sin autenticación devuelve 401
+    Given path '/api/v1/network-services/00000000-0000-0000-0000-000000000001/restore'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000017'
+    And request { reason: 'Pago conciliado' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  # ==============================================================================
+  # Grupo 11: Operaciones de Campo (Field Ops) y Diagnóstico SFP
+  # ==============================================================================
+
+  Scenario: 30. Registro de coordenadas GPS de abonado sin Idempotency-Key devuelve 400
+    Given path '/api/v1/field-ops/register-gps'
+    And request { device_id: '00000000-0000-0000-0000-000000000001', latitude: 10.48, longitude: -66.90 }
+    When method post
+    Then status 400
+    And match response == { detail: 'Cabecera Idempotency-Key (UUID) obligatoria para operaciones mutables' }
+
+  Scenario: 31. Telemetría óptica SFP DDM en vivo sin autenticación devuelve 401
+    Given path '/api/v1/field-ops/diagnostics/00000000-0000-0000-0000-000000000001/sfp-sfpplus1'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  # ==============================================================================
+  # Grupo 12: Ventanas de Mantenimiento Programadas
+  # ==============================================================================
+
+  Scenario: 32. Consulta de ventanas de mantenimiento sin autenticación devuelve 401
+    Given path '/api/v1/maintenance-windows'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  # ==============================================================================
+  # Grupo 13: Consola WebFig v7 de Doble Capa (Layer 1 y Layer 2)
+  # ==============================================================================
+
+  Scenario: 33. Consulta de interfaces y óptica SFP en router sin autenticación devuelve 401
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/interfaces'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 34. Consulta de reglas de firewall sin autenticación devuelve 401
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/firewall/filter'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 35. Proxy universal de Capa 2 RouterOS v7 sin autenticación devuelve 401
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/layer2/interface/bridge'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  # ==============================================================================
+  # Grupo 14: Bandeja de Aprobaciones Maker-Checker
+  # ==============================================================================
+
+  Scenario: 36. Acceso a la bandeja de aprobaciones Maker-Checker sin credenciales devuelve 401
     Given path '/api/v1/operations/approvals'
     When method get
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
-  Scenario: 9. Endpoint MCP Protegido: Petición JSON-RPC 2.0 sin autenticación Bearer devuelve 401
+  # ==============================================================================
+  # Grupo 15: Respaldos Cifrados y Comparador Git Diff
+  # ==============================================================================
+
+  Scenario: 37. Listado del historial de 30 días de respaldos sin sesión devuelve 401
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/backups'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 38. Disparo manual de generación de respaldo sin Idempotency-Key devuelve 400
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/backups'
+    And request { backup_type: 'rsc' }
+    When method post
+    Then status 400
+    And match response == { detail: 'Cabecera Idempotency-Key (UUID) obligatoria para operaciones mutables' }
+
+  # ==============================================================================
+  # Grupo 16: Operaciones Masivas y Golden Templates
+  # ==============================================================================
+
+  Scenario: 39. Aplicación de plantilla masiva sin Idempotency-Key devuelve 400
+    Given path '/api/v1/operations/bulk/apply-template'
+    And request { template_id: '00000000-0000-0000-0000-000000000001', router_ids: [] }
+    When method post
+    Then status 400
+    And match response == { detail: 'Cabecera Idempotency-Key (UUID) obligatoria para operaciones mutables' }
+
+  # ==============================================================================
+  # Grupo 17: Canales de Alerta y Webhooks HMAC
+  # ==============================================================================
+
+  Scenario: 40. Consulta de canales de notificación sin sesión devuelve 401
+    Given path '/api/v1/notifications/channels'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  # ==============================================================================
+  # Grupo 18: Auditoría Inmutable WORM y Certificación Criptográfica
+  # ==============================================================================
+
+  Scenario: 41. Búsqueda en bitácora inmutable WORM sin rol AUDITOR devuelve 401
+    Given path '/api/v1/audit/logs'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 42. Verificación matemática de la cadena SHA-256 sin autenticación devuelve 401
+    Given path '/api/v1/audit/verify-chain'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  # ==============================================================================
+  # Grupo 19: Servidor MCP Protegido para Agentes IA (JSON-RPC 2.0)
+  # ==============================================================================
+
+  Scenario: 43. Endpoint MCP: Petición JSON-RPC 2.0 sin autenticación Bearer devuelve 401
     Given path '/api/v1/mcp'
-    And header Idempotency-Key = '01928900-0000-7000-8000-000000000002'
-    And request { jsonrpc: '2.0', id: 'karate-test-1', method: 'initialize', params: {} }
+    And request { jsonrpc: '2.0', id: 'karate-test-1', method: 'tools/list', params: {} }
     When method post
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
-  Scenario: 10. Endpoint MCP Protegido: Token Bearer inválido o corrupto devuelve 401
+  Scenario: 44. Endpoint MCP: Token Bearer inválido o corrupto devuelve 401
     Given path '/api/v1/mcp'
-    And header Authorization = 'Bearer token_invalido_123'
-    And header Idempotency-Key = '01928900-0000-7000-8000-000000000003'
-    And request { jsonrpc: '2.0', id: 'karate-test-2', method: 'initialize', params: {} }
+    And header Authorization = 'Bearer token_invalido_corrupto_123'
+    And request { jsonrpc: '2.0', id: 'karate-test-2', method: 'tools/list', params: {} }
     When method post
     Then status 401
     And match response.detail contains 'Token de acceso inválido'
 
-  Scenario: 11. Login 2FA: Enviar código 2FA con payload malformado devuelve HTTP 422
-    Given path '/api/v1/auth/2fa/verify'
-    And header Idempotency-Key = '01928900-0000-7000-8000-000000000004'
-    And request { codigo_invalido: 123456 }
-    When method post
-    Then status 422
-    And match response.detail[0].type == '#string'
+  # ==============================================================================
+  # Grupo 20: Diagnóstico 360°, BGP Looking Glass e IPFIX
+  # ==============================================================================
 
+  Scenario: 45. Invocación de suite de diagnóstico 360° sin Idempotency-Key devuelve 400
+    Given path '/api/v1/diagnostics/endpoint-360'
+    And request { router_id: '00000000-0000-0000-0000-000000000001', target_ip: '8.8.8.8' }
+    When method post
+    Then status 400
+    And match response == { detail: 'Cabecera Idempotency-Key (UUID) obligatoria para operaciones mutables' }
+
+  Scenario: 46. Consulta de rutas BGP en Looking Glass sin sesión devuelve 401
+    Given path '/api/v1/bgp/looking-glass/route'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 47. Consulta de anomalías de flujo de tráfico IPFIX sin autenticación devuelve 401
+    Given path '/api/v1/traffic-flow/anomalies'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  # ==============================================================================
+  # Grupo 21: Cumplimiento Corporativo, SD-WAN, Switching, SLA y WiFi
+  # ==============================================================================
+
+  Scenario: 48. Escaneo de auditoría CIS Benchmark sin autenticación devuelve 401
+    Given path '/api/v1/compliance/cis-benchmark'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 49. Detección de desviación de configuración (Config Drift) sin sesión devuelve 401
+    Given path '/api/v1/compliance/drift'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 50. Consulta de topologías SD-WAN WireGuard Hub & Spoke sin sesión devuelve 401
+    Given path '/api/v1/sdwan/topologies'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 51. Consulta de eventos de Rogue DHCP Snooping en switches sin autenticación devuelve 401
+    Given path '/api/v1/switching/dhcp-snooping/events'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 52. Consulta de métricas SLA de carriers sin autenticación devuelve 401
+    Given path '/api/v1/sla/metrics'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 53. Consulta de radios WiFi corporativos CAPsMAN sin autenticación devuelve 401
+    Given path '/api/v1/wifi/capsman/radios'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 54. Catálogo de los 11 roles del sistema RBAC sin autenticación devuelve 401
+    Given path '/api/v1/rbac/roles'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }

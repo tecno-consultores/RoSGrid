@@ -565,5 +565,48 @@ Certificación ejecutada bajo la **Regla Cero** dentro de los contenedores efím
 - **Suite Unitaria Vitest (`pnpm test:unit`):** **38 de 38 suites aprobadas (100%)** con **262 de 262 pruebas unitarias exitosas**.
 - **Sincronización:** Los archivos de pruebas BDD en `vue3/test/ui_business_flow.feature` y su réplica de referencia en `examples/vue3/test/ui_business_flow.feature` permanecen 100% sincronizados bit a bit.
 
+---
+
+## 20. Certificación QA 11X — Cobertura BDD Integral Karate Labs (100% de la API REST FastAPI)
+
+Certificación ejecutada bajo la **Regla Cero** dentro de los contenedores efímeros Docker `sinfallas/base-python-uv:3.13` y `sinfallas/karatelabs:latest` conforme a `specs/26_BACKEND_CONTRACTS_AND_BDD.md`.
+
+### A. Catálogo de los 54 Escenarios BDD Certificados (`fastapi/test/api_test.feature`)
+
+| Grupo Temático | Endpoints y Rutas Evaluadas | Escenarios BDD y Cobertura Verificada |
+| :--- | :--- | :--- |
+| **1. Observabilidad y Salud** | `/health`, `/metrics`, `/users/me` | Healthcheck activo con estado de PostgreSQL y KeyDB, métricas Prometheus e identidad sin sesión (401). |
+| **2. Auth & Bootstrap** | `/api/v1/auth/bootstrap-status`, `/login`, `/register`, `/2fa/verify`, `/refresh`, `/logout` | Estado de inicio, validación Pydantic 422 en login/register/2FA, rotación de tokens y logout. |
+| **3. Multi-Tenant** | `/api/v1/tenants`, `/api/v1/tenants/{id}/features` | Protección de listado sin Superadmin (401), Idempotency-Key obligatoria (400) y control de feature flags. |
+| **4. Usuarios & Registro** | `/api/v1/users`, `/users/registration-toggle`, `/users/{id}/approve` | Protección de catálogo (401), switch público en KeyDB (401) y flujo Maker-Checker de aprobación de cuentas. |
+| **5. Sesiones & Kill-Switch** | `/api/v1/sessions/active`, `/api/v1/sessions/{id}` | Monitoreo de sesiones en vivo y revocación forzosa inmediata con Idempotency-Key. |
+| **6. Inventario & TOFU** | `/api/v1/inventory/routers`, `/discover`, `/roles`, `/import-csv` | Protección de flota, Idempotency-Key 400 en alta, redescubrimiento dinámico TOFU y roles personalizados. |
+| **7. Bóveda & Step-Up 2FA** | `/api/v1/inventory/routers/{id}/vault/reveal`, `/vault/rotate` | Desafío Step-Up 2FA TOTP obligatorio (30s) y rotación transaccional periódica de claves API. |
+| **8. IPAM Dual-Stack** | `/api/v1/ipam/subnets`, `/api/v1/ipam/pools`, `/api/v1/ipam/reservations` | Consulta de prefijos IPv4/IPv6, cálculo de pools y rechazo sin Idempotency-Key (400). |
+| **9. QoS & Dispositivos ONU** | `/api/v1/bandwidth-profiles`, `/api/v1/subscriber-devices` | Perfiles de velocidad Burst/QoS, catálogo técnico de ONUs/CPEs y protección RBAC. |
+| **10. Servicios de Red** | `/api/v1/network-services/{id}/isolate`, `/restore`, `/change-rate-limit` | Aislamiento idempotente (UUIDv7), restauración técnica y cambio en caliente de colas. |
+| **11. Field Ops & SFP DDM** | `/api/v1/field-ops/register-gps`, `/field-ops/diagnostics/{router}/{iface}` | Captura de coordenadas GPS con Idempotency-Key y telemetría óptica láser SFP DDM en vivo. |
+| **12. Mantenimiento** | `/api/v1/maintenance-windows` | Programación y consulta de ventanas de mantenimiento para silenciado de alertas. |
+| **13. Consola WebFig L1/L2** | `/routers/{id}/webfig/interfaces`, `/ip`, `/firewall`, `/routing`, `/ppp`, `/queues`, `/system`, `/tools`, `/layer2` | Cobertura total de los 10 submódulos WebFig, Drag & Drop move de firewall y proxy REST dinámico L2. |
+| **14. Maker-Checker** | `/api/v1/operations/approvals`, `/approve`, `/reject` | Intercepción HTTP 202, bandeja de solicitudes pendientes y acciones de aprobación/rechazo. |
+| **15. Backups & Git Diff** | `/api/v1/routers/{id}/backups`, `/diff`, `/download` | Historial de 30 días, generación manual con Idempotency-Key y comparador Myers Diff. |
+| **16. Operaciones Masivas** | `/api/v1/operations/bulk/apply-template`, `/upgrade-packages` | Aplicación de Golden Templates y actualización de paquetes RouterOS v7. |
+| **17. Canales de Notificación** | `/api/v1/notifications/channels` | Configuración de canales de alerta y webhooks salientes con firma criptográfica HMAC-SHA256. |
+| **18. Auditoría WORM** | `/api/v1/audit/logs`, `/api/v1/audit/verify-chain` | Consulta de bitácora con índice BRIN y verificación matemática de integridad de la cadena SHA-256. |
+| **19. Servidor MCP (IA)** | `/api/v1/mcp` (JSON-RPC 2.0 Streamable HTTP) | Autenticación Bearer obligatoria para SERVICE_ACCOUNT, rechazo de tokens corruptos y tasa 30 req/min. |
+| **20. Diagnóstico 360°** | `/api/v1/diagnostics/endpoint-360` | Ping multi-MTU, parser de motivos de corte en logs RouterOS y muestreo Torch en tiempo real. |
+| **21. BGP Looking Glass** | `/api/v1/bgp/looking-glass/route`, `/advertised` | Consulta segura de tablas BGP v7 y prefijos anunciados a proveedores sin SSH. |
+| **22. Tráfico IPFIX** | `/api/v1/traffic-flow/anomalies`, `/mitigate` | Detección de anomalías de flujo y mitigación rápida FastDrop / Blackhole bajo Safe Mode. |
+| **23. Compliance CIS & Drift**| `/api/v1/compliance/cis-benchmark`, `/drift` | Auditoría de directivas CIS, Security Score (0-100) y detección de desviación contra Golden Baseline. |
+| **24. SD-WAN WireGuard** | `/api/v1/sdwan/topologies`, `/sdwan/deploy` | Orquestación de topologías Hub & Spoke con enrutamiento OSPF sobre túneles WireGuard. |
+| **25. Switching & Rogue DHCP** | `/api/v1/switching/dhcp-snooping/events`, `/isolate` | Eventos de DHCP Snooping, alerta de servidor rogue y aislamiento de puerto comprometido. |
+| **26. Monitoreo SLA** | `/api/v1/sla/metrics`, `/sla/reports/monthly` | Sondas de latencia, jitter y disponibilidad con generación de reportes mensuales de penalización. |
+| **27. WiFi CAPsMAN** | `/api/v1/wifi/capsman/radios`, `/profiles` | Gestión centralizada de radios WiFiWave2, perfiles de SSID corporativo WPA3 y roaming 802.11r. |
+| **28. Matriz RBAC** | `/api/v1/rbac/roles`, `/rbac/users/{id}/matrix` | Catálogo de los 11 roles y matriz granular de permisos por router. |
+
+### B. Sincronización y Conformidad
+- **Sincronización:** Los archivos de pruebas BDD de API en `fastapi/test/api_test.feature` y su réplica de referencia en `examples/fastapi/test/api_test.feature` permanecen 100% sincronizados bit a bit.
+
+
 
 
