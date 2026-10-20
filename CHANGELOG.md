@@ -9,6 +9,7 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 ## [Unreleased]
 
 ### Added
+
 - **Exposición, Armonización y Documentación de Variables de Entorno en Docker Compose y `.env.example`:**
   - Inclusión explícita de `ROSGRID_INSTALL_DIR` (`/opt/rosgrid` por defecto) en `.env.example`, permitiendo personalizar el directorio de instalación desatendida en modo standalone vía `instalar-rosgrid.sh`.
   - Incorporación en `.env.example` de `POSTGRES_HOST` (`rosgrid_db`), `POSTGRES_PORT` (`5432`), `REDIS_HOST` (`rosgrid_redis`), `REDIS_PORT` (`6379`) y `VITE_API_BASE_URL` (`http://localhost:8080`), habilitando la conexión nativa a bases de datos o clústeres Redis externos sin alterar los manifiestos YAML.
@@ -145,10 +146,12 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
   - Documentación técnica sobre arquitectura de almacenamiento de respaldos en base de datos PostgreSQL vs AWS S3 / MinIO con cifrado `AES-256-GCM` del lado del cliente.
 
 ### Fixed
+
 - **Descarga de Respaldos Binarios `.backup`:** Corrección del endpoint para evitar servir scripts `.rsc` renombrados cuando no existe respaldo binario nativo, y configuración de `responseType: 'blob'` en frontend para prevenir corrupción de bytes.
 - **Botón "Abrir WebFig" en Wallboard:** Conexión del evento `@open-webfig` entre `OsmRouterMap` y el enrutador de Vue para navegación inmediata al router seleccionado.
 
 ### Pendiente para publicación oficial
+
 - Auditoría final de vulnerabilidades Trivy (`CRITICAL,HIGH = 0`) en imágenes Docker de producción (Hito 16).
 - Publicación multi-arquitectura con `./build.sh` hacia Docker Hub (`sinfallas/rosgrid-backend:1.0.0` y `sinfallas/rosgrid-frontend:1.0.0`).
 
@@ -156,7 +159,8 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ## [1.0.0-rc.2] - 2026-10-17
 
-### Added
+### Added (v1.0.0-rc.2)
+
 - **Flujo de Auto-Registro Web de Operadores y Aprobación Maker-Checker:**
   - Formulario público accesible en `LoginView.vue` para solicitar acceso (`POST /api/v1/auth/register`).
   - Bloqueo preventivo HTTP 403 a usuarios con estado `PENDING_APPROVAL`.
@@ -168,7 +172,8 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 - **Suite Automatizada de Validación Front-Back (`validar_comunicacion_front_back.py`):**
   - 24 contratos de prueba verificando exhaustivamente que todas las rutas y funciones de la UI se comunican con FastAPI y con el MikroTik físico/CHR (100% de éxito).
 
-### Fixed
+### Fixed (v1.0.0-rc.2)
+
 - **Compatibilidad con RouterOS v7.13+ (`rest-api` Policy):**
   - Detección y normalización de error HTTP 401 debido a la ausencia del flag `rest-api` en el grupo de usuarios de RouterOS v7.13+.
   - Documentación detallada en manuales operativos.
@@ -180,9 +185,12 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 - **Telemetría y Pestañas de WebFig en Hardware Real:**
   - Corrección de mapeo de métricas reales de CPU, memoria y lectura de 10 interfaces vivas desde el router físico/CHR.
 
+---
+
 ## [1.0.0] - 2026-10-15
 
 ### Added (Nuevas Características)
+
 - **Arquitectura Multi-Tenant con Aislamiento RLS e Índice BRIN:** Esquema en PostgreSQL 17 con `FORCE ROW LEVEL SECURITY` inyectando `app.current_tenant_id` por sesión transaccional, índice `BRIN` de alta velocidad sobre `audit_logs(created_at)` y migraciones automáticas protegidas por `pg_advisory_lock`.
 - **Motor en Memoria KeyDB Multi-Hilo y Perfil DragonflyDB:** Configuración predeterminada con `eqalpha/keydb:alpine` (`--server-threads 2`), serialización rápida en Rust con `ORJSONResponse`, event loop `uvloop` + `httptools`, pipelines en lote y soporte documentado para **DragonflyDB** en despliegues ISP de gran escala.
 - **Matriz RBAC de 11 Roles y Asignación Granular:** Soporte nativo para `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`, `SUPERVISOR`, `SUPPORT_L3`, `SUPPORT_L2`, `SUPPORT_L1`, `FIELD_TECH`, `INVENTORY_MANAGER`, `AUDITOR`, `NOC_MONITOR` y `SERVICE_ACCOUNT`.
@@ -203,6 +211,7 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 - **Alertas Multi-Canal *Zero-Storage* y Wallboard NOC:** Máquina de estados efímera en KeyDB (~200 bytes/router), respeto de ventanas de mantenimiento y despacho a Telegram Bot, Correo SMTP, Webhooks firmados (`HMAC-SHA256`) y pantalla NOC 24/7.
 
 ### Security (Seguridad Criptográfica y DevSecOps)
+
 - **Modelo *Split-Credential* y Bóveda `AES-256-GCM`:** Credenciales API cifradas con `AAD` (`tenant_id|router_id`), rotación transaccional automática de claves de 32 caracteres y revelación restringida con **Step-Up Auth (2FA TOTP en vivo)** y autodestrucción en memoria a los 30 segundos.
 - **Sesiones Blindadas y *Kill-Switch* en Vivo:** Contraseñas con `Argon2id`, cookies `__Host-` (`HttpOnly; Secure; SameSite=Strict`), protección `X-CSRF-Token` (`HMAC-SHA256`), detección de robo de Refresh Token en KeyDB y expulsión instantánea de sesiones activas.
 - **Bitácora Forense Inmutable WORM (`audit_logs`):** Trigger en PostgreSQL que impide `UPDATE`/`DELETE`/`TRUNCATE`, cadena criptográfica `SHA-256` (`prev_record_hash`), sanitización automática `[REDACTED]` y verificador matemático de integridad para el rol `AUDITOR`.
