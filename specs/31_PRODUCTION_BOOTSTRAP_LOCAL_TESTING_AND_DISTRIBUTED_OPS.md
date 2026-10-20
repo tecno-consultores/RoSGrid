@@ -118,13 +118,27 @@ Para comprobar que las imágenes construidas con `Dockerfile` funcionan correcta
    - Utiliza las etiquetas locales `sinfallas/rosgrid-backend:local-test` y `sinfallas/rosgrid-frontend:local-test`.
    - Configura `pull_policy: never` para evitar descargas accidentales desde registros remotos.
 2. **Pipeline Automatizado Bajo Demanda (`probar-prod-local.sh`):**
-   - Ejecuta las 6 fases de validación pre-publicación:
-     1. **Auditoría e Imágenes:** Opcional con `--audit` (`./auditar-infra.sh` Trivy) y compilación local de `sinfallas/rosgrid-backend:local-test` y `sinfallas/rosgrid-frontend:local-test` (omissible con `--skip-build`).
+   - Ejecuta las 6 fases de validación pre-publicación con estándar de calidad QA 11X:
+     1. **Auditoría e Imágenes:** Opcional con `--audit` (`./auditar-infra.sh` Trivy IaC, FS y Hadolint) y compilación local de `sinfallas/rosgrid-backend:local-test` y `sinfallas/rosgrid-frontend:local-test` (omissible con `--skip-build`).
      2. **Despliegue Aislado:** Levantamiento de `docker-compose.prod.local.yml` en red interna con `pull_policy: never`.
-     3. **Healthchecks Activos:** Verificación continua hasta 45 intentos de PostgreSQL 17, KeyDB Multi-Hilo y FastAPI.
-     4. **Pruebas Sintéticas HTTP:** `/health`, `/metrics`, `/api/v1/auth/bootstrap-status` (`false`), y Nginx UI en puerto configurado (`--port`, por defecto 8085).
-     5. **Aprovisionamiento E2E y Token Bearer MCP:** Ejecución de `crear_admin.py`, confirmación de transición a `is_bootstrapped: true`, emisión de token JWT Bearer con `generar_token_mcp.py --raw-token`, validación de sesión en KeyDB mediante llamada autenticada a `GET /api/v1/auth/me`, y auditoría de ausencia de tracebacks en logs.
-     6. **Finalización:** Purga de volúmenes efímeros o entrega de entorno persistente (`--keep-alive`) para inspección manual en el navegador.
+     3. **Healthchecks Activos:** Verificación continua hasta 45 intentos de PostgreSQL 17, KeyDB Multi-Hilo, FastAPI y runner de segundo plano `rosgrid-worker`.
+     4. **Pruebas Sintéticas HTTP, Hardening y Proxy Reverso:**
+        - Smoke test estricto `--no-dev` (`test_production_boot_smoke.py`: verificación AST de cero dependencias dev e importación limpia de todos los módulos).
+        - Liveness `/health` (HTTP 200) y exportación de métricas Prometheus `/metrics`.
+        - Estado de bootstrap inicial `/api/v1/auth/bootstrap-status` (`is_bootstrapped: false`).
+        - Servidor Nginx UI en puerto configurado (`--port`, por defecto 8085) verificando cabeceras de seguridad (`X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`).
+        - Validación del proxy inverso Nginx hacia la API: `GET http://127.0.0.1:${UI_PORT}/api/v1/auth/bootstrap-status` respondiendo HTTP 200 sin saltarse Nginx.
+        - Verificación de ocultamiento estricto de documentación en producción: `GET /docs`, `/redoc` y `/openapi.json` deben retornar HTTP 404.
+        - Prueba negativa de autenticación (Fail-Closed): `GET /api/v1/auth/me` sin cabecera de autenticación debe retornar HTTP 401.
+     5. **Aprovisionamiento E2E, Token Bearer MCP, Invocación JSON-RPC 2.0 y Contratos UI-API:**
+        - Ejecución de `crear_admin.py` y confirmación de transición a `is_bootstrapped: true`.
+        - Emisión de token JWT Bearer con `generar_token_mcp.py --raw-token` y validación de sesión en KeyDB mediante llamada autenticada a `GET /api/v1/auth/me`.
+        - Invocación real del endpoint MCP (`POST /api/v1/mcp` con JSON-RPC 2.0 `tools/list`) certificando el protocolo de agentes IA, rate limiting en KeyDB y exposición de las 16 tools operativas.
+        - Ejecución obligatoria de la suite de 24 contratos Front-Back (`fastapi/scripts/validar_comunicacion_front_back.py`) dentro del contenedor `rosgrid_api_local` con 100% de éxito.
+     6. **Diagnóstico de Logs, Aislamiento de Red y Finalización:**
+        - Inspección de logs en busca de `Traceback` y `CRITICAL` tanto en `rosgrid_api_local` como en `rosgrid_worker_local`.
+        - Verificación de aislamiento estricto de puertos internos (PostgreSQL 5432 y KeyDB 6379 cerrados al host).
+        - Purga de volúmenes efímeros o entrega de entorno persistente (`--keep-alive` / `--wizard`) para inspección manual en el navegador.
    - **Gatekeeper en `build.sh`:** El script de compilación multi-plataforma invoca `./probar-prod-local.sh` como Paso 0 mandatorio previo a publicar a Docker Hub.
    - **Manual Operativo:** Especificación completa en [docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md).
 

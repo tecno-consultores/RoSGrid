@@ -37,11 +37,11 @@ flowchart TD
 | Fase | Título | Acciones Ejecutadas | Criterio de Éxito |
 | :--- | :--- | :--- | :--- |
 | **1/6** | **Auditoría e Imágenes** | Opcional: Escaneo Trivy (`./auditar-infra.sh`). Construcción local de `sinfallas/rosgrid-backend:local-test` y `sinfallas/rosgrid-frontend:local-test`. | 0 vulnerabilidades CRITICAL/HIGH y compilación multi-stage exitosa. |
-| **2/6** | **Despliegue Sintético** | Limpieza de huérfanos y arranque de PostgreSQL 17, KeyDB, FastAPI API, Worker y Nginx UI. | Contenedores creados e iniciados sin conflicto de puertos. |
-| **3/6** | **Healthchecks** | Sondeo activo con `docker inspect` hasta 45 intentos (intervalos de 3s). | Los tres servicios de fondo reportan `healthy`. |
-| **4/6** | **Pruebas Sintéticas y Smoke Test** | Ejecución de `test_production_boot_smoke.py` (`--no-dev`), consultas `curl` a `/health`, `/metrics`, `/api/v1/auth/bootstrap-status` y `/` (UI Nginx). | 80 submódulos importados sin dependencias dev, HTTP 200, métricas exportadas, `is_bootstrapped: false` y bundle servido. |
-| **5/6** | **Aprovisionamiento E2E y Validación Front-Back** | Ejecución de `crear_admin.py`, consulta de transición a `is_bootstrapped: true`, emisión de token MCP y validación de sesión autenticada. Ejecución de `validar_comunicacion_front_back.py` (24 contratos de rutas y funciones de la UI contra FastAPI y RouterOS real). | Super Admin creado con 2FA, token Bearer validado en KeyDB, y 100% de éxito (24/24) en rutas UI-API. |
-| **6/6** | **Cierre y Limpieza** | Inspección de logs en busca de `Traceback` y purga de volúmenes con `docker compose down -v`. | 0 excepciones no controladas en logs y host limpio. |
+| **2/6** | **Despliegue Sintético** | Limpieza de huérfanos y arranque de PostgreSQL 17, KeyDB, FastAPI API, Worker y Nginx UI con `docker-compose.prod.local.yml`. | Contenedores creados e iniciados sin conflicto de puertos. |
+| **3/6** | **Healthchecks** | Sondeo activo con `docker inspect` hasta 45 intentos de PostgreSQL 17, KeyDB, FastAPI y `rosgrid-worker`. | Los cuatro servicios reportan estado `healthy`. |
+| **4/6** | **Pruebas Sintéticas y Hardening** | Ejecución de `test_production_boot_smoke.py` (`--no-dev`), consultas `curl` a `/health`, `/metrics`, `/api/v1/auth/bootstrap-status`, bundle servido en `/` (UI Nginx), **validación de proxy inverso Nginx** (`http://127.0.0.1:${UI_PORT}/api/...`), **ocultamiento estricto de Swagger/OpenAPI** (`/docs` y `/openapi.json` = HTTP 404) y **prueba negativa de autenticación** (`/api/v1/auth/me` sin token = HTTP 401). | 80 submódulos importados sin dependencias dev, HTTP 200 en endpoints operativos, HTTP 404 en Swagger, HTTP 401 en llamadas no autenticadas y bundle Nginx servido con cabeceras de seguridad. |
+| **5/6** | **Aprovisionamiento E2E, MCP y Contratos Front-Back** | Ejecución de `crear_admin.py`, consulta de transición a `is_bootstrapped: true`, emisión de token MCP y validación en `/api/v1/auth/me`. **Invocación JSON-RPC 2.0 a `POST /api/v1/mcp`** (`tools/list`). Ejecución de **`validar_comunicacion_front_back.py`** (24 contratos de rutas y funciones de la UI contra FastAPI y RouterOS real). | Super Admin creado con 2FA, token Bearer validado en KeyDB, motor JSON-RPC 2.0 respondiendo catálogo de tools y 100% de éxito (24/24) en rutas UI-API. |
+| **6/6** | **Cierre, Aislamiento y Limpieza** | Inspección de logs en `rosgrid_api_local` y `rosgrid_worker_local` en busca de `Traceback`, **verificación de aislamiento de puertos internos** (5432 y 6379 inaccesibles desde el host) y purga de volúmenes con `docker compose down -v` (o modo interactivo con `-k`). | 0 excepciones no controladas en logs, puertos internos protegidos y host limpio. |
 
 ---
 
@@ -57,6 +57,7 @@ Uso: ./probar-prod-local.sh [OPCIONES]
 | :--- | :--- | :--- |
 | `-h` | `--help` | Muestra el menú de ayuda con descripción de fases y ejemplos. |
 | `-k` | `--keep-alive` | **Modo Interactivo:** No apaga los contenedores al terminar. Muestra las credenciales creadas y los enlaces para acceder desde el navegador. |
+| `-w` | `--wizard` | **Modo Asistente Inicial:** Omite la creación de admin_local y mantiene el sistema activo en `is_bootstrapped: false` para registrarse manualmente desde el navegador (incluye `--keep-alive` implícito). |
 | `-s` | `--skip-build` | **Modo Rápido:** Omite la compilación Docker si las imágenes ya existen en la caché local. Reduce el tiempo a solo unos segundos. |
 | `-a` | `--audit` | **Modo Seguridad:** Ejecuta `./auditar-infra.sh` (ShellCheck + Trivy IaC, CVEs y secretos) previo al despliegue. |
 | `-p` | `--port <PUERTO>` | Define el puerto TCP del host para exponer la interfaz de usuario Nginx (Predeterminado: `8085` o `$ROSGRID_HTTP_PORT`). |
@@ -87,7 +88,8 @@ Al finalizar, el script mostrará en consola:
 ==============================================================================
 El stack permanece ACTIVO (--keep-alive) para tu inspección interactiva:
   • Interfaz Web (NOC):    http://localhost:8085
-  • API Swagger/Docs:      http://localhost:8000/docs
+  • API Backend:           http://localhost:8000 (Docs desactivado en producción)
+  • Endpoint MCP IA:       http://localhost:8000/api/v1/mcp (JSON-RPC 2.0)
   • Organización (Slug):   isp-local
   • Usuario Super Admin:   admin_local
   • Contraseña:            ClaveSegura123!

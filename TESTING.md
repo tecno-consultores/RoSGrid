@@ -45,6 +45,7 @@
 - **Auditoría Estática de Scripts en Bash (ShellCheck):** Cero (0) errores y cero (0) advertencias en `ShellCheck` (`koalaman/shellcheck:stable`) sobre el 100% de los scripts `.sh` del monorepo (`auditar-infra.sh`, `instalar-rosgrid.sh`, `build.sh`, `instalar-hooks.sh`, `limpieza.sh`, `probar-prod-local.sh`, `fastapi/scripts/entrypoint.sh`).
 - **Tolerancia Cero a Diagnósticos de IDE y Linters Estáticos:** Cero (0) errores y cero (0) advertencias en Pyrefly, SonarLint, Hadolint y ESLint sobre todo archivo versionado en el repositorio.
 - **Certificación de Arranque Estricto de Producción (`--no-dev`):** Validación obligatoria por AST (`test_production_no_dev_cleanliness.unit.py`) y Smoke Test inmutable en contenedor (`test_production_boot_smoke.py`) asegurando cero dependencias de desarrollo en el runtime de producción.
+- **Compuerta de Validación Integral de Producción Local (`probar-prod-local.sh`):** Ejecución obligatoria de las 6 fases de validación pre-publicación (`./probar-prod-local.sh`) certificando: liveness `/health`, Prometheus `/metrics`, transición de bootstrap (`false` a `true`), validación del proxy inverso Nginx (`:${UI_PORT}/api/...`), ocultamiento HTTP 404 de Swagger/OpenAPI en producción, prueba negativa 401 sin Bearer token, emisión y autenticación de token MCP, sondeo JSON-RPC 2.0 (`POST /api/v1/mcp`), runner `rosgrid-worker` sin excepciones, aislamiento de puertos de base de datos (5432 y 6379 cerrados al host) y ejecución exitosa (100%) de la suite de 24 contratos Front-Back (`validar_comunicacion_front_back.py`).
 - **Plan Maestro de Pruebas de Aceptación Manual (UAT 11X):** Ejecución protocolizada de [docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md) sobre hardware físico o MikroTik CHR v7 antes de cada release.
 
 ---
@@ -143,6 +144,8 @@ docker compose -f docker-compose.qa.yml down --remove-orphans
 | **Hito 13** | Vistas Frontend (Parte B), WebFig Canvas, Endpoint MCP y Dockerfiles | >= 95% | N/A | Graphify AST + Trivy FS Clean | ✅ Certificado |
 | **Hito 14** | Manuales Oficiales en `docs/`, Mermaid, API REST/WS y Guía MCP | N/A | N/A | Alineación 100% con Graphify AST | ✅ Certificado |
 | **Hito 15** | **Certificación Integral QA 11X:** BDD, DAST, Caos, Vitest, Stryker, E2E, Axe y LHCI | **95.22%** (Backend)<br>**99.93%** (Frontend) | **Stryker (62.46%)**<br>(353 mutantes abatidos) | **Axe-core: 0 Violaciones WCAG 2.1 AA**<br>**Lighthouse CI >= 0.90 / >= 0.95**<br>**OWASP ZAP: 0 Fallos** | ✅ **Certificado** |
+| **Hito 21** | Servidor MCP Ampliado para Agentes IA y Certificación Final | **95.0%** (393 tests Backend)<br>**100%** (242 tests Frontend) | Stryker + Mutmut | Ruff (0 err) + Mypy Strict (0 err) + Prettier + Vue-TSC (0 err) | ✅ **Certificado** |
+| **Hito 22** | Auditoría IaC, Endurecimiento Docker y Matriz Smoke Tests 11X | **95.0%** (Suite completa) | N/A | Trivy IaC + FS (0 CVEs) + Hadolint (0 err) + ShellCheck (0 err) | ✅ **Certificado** |
 
 ---
 
@@ -443,7 +446,41 @@ Certificación integral ejecutada bajo la **Regla Cero** dentro de los contenedo
     - Verificación del posicionamiento de "Empresas (Tenants)" directamente debajo de "Auditoría WORM" en `RgResponsiveShell.unit.ts` exclusivamente para `SUPERADMIN_GLOBAL`.
     - Verificación de la visibilidad y restricción del botón `+ Registrar Empresa` en `tenantsManagementView.unit.ts` para perfiles no administrativos.
 
+---
 
+## 17. Certificación QA 11X — Hito 22 (Auditoría IaC, Endurecimiento Docker y Matriz de Pruebas Smoke Locales)
 
+Certificación integral ejecutada bajo la **Regla Cero** garantizando cumplimiento de estándares estáticos, seguridad de contenedores y robustez de compuertas de despliegue local.
 
+### A. Auditoría Estática de Infraestructura y Scripts
+- **Trivy IaC (`./auditar-infra.sh`):**
+  - **Dockerfiles y Compose:** Cero (0) fallos de configuración en `fastapi/Dockerfile`, `vue3/Dockerfile`, `docker-compose.yml`, `docker-compose.prod.yml` y `docker-compose.prod.local.yml`.
+- **Trivy FileSystem (`uv.lock` y `pnpm-lock.yaml`):**
+  - **Vulnerabilidades:** Cero (0) vulnerabilidades `HIGH` o `CRITICAL` en la cadena de dependencias de Python y Node.js.
+- **Hadolint Dockerfile Linter (`hadolint/hadolint:latest-debian`):**
+  - `fastapi/Dockerfile`: 0 errores, 0 advertencias (`USER 10001:10001` no-root, curl healthcheck).
+  - `vue3/Dockerfile`: 0 errores, 0 advertencias (`USER 101:101` nginx no-root, wget healthcheck).
+- **ShellCheck en Docker (`koalaman/shellcheck:stable`):**
+  - Cero (0) errores y cero (0) advertencias en el 100% de los scripts del proyecto (`auditar-infra.sh`, `instalar-rosgrid.sh`, `build.sh`, `instalar-hooks.sh`, `limpieza.sh`, `probar-prod-local.sh`, `fastapi/scripts/entrypoint.sh`).
 
+### B. Especificación y Endurecimiento de la Matriz Smoke Tests (`probar-prod-local.sh`)
+- **Fase 1 (Auditoría e Imágenes):** Escaneo Trivy opcional + compilación multi-stage local con etiquetado `:local-test`.
+- **Fase 2 (Despliegue Sintético):** Aislamiento de red interna con `pull_policy: never`.
+- **Fase 3 (Healthchecks):** Sondeo activo de salud para PostgreSQL 17, KeyDB Multi-Hilo, FastAPI y `rosgrid-worker`.
+- **Fase 4 (Pruebas Sintéticas y Hardening):**
+  - Arranque estricto `--no-dev` (`test_production_boot_smoke.py`).
+  - Liveness `/health` (HTTP 200) y Prometheus `/metrics`.
+  - Transición inicial `/api/v1/auth/bootstrap-status` (`is_bootstrapped: false`).
+  - Bundle Nginx UI en puerto configurado con cabeceras de seguridad CSP.
+  - Verificación de proxy inverso Nginx hacia backend (`:${UI_PORT}/api/...`).
+  - Ocultamiento estricto de documentación en producción (`/docs`, `/redoc`, `/openapi.json` = HTTP 404).
+  - Prueba negativa de autenticación (Fail-Closed: `/api/v1/auth/me` sin token = HTTP 401).
+- **Fase 5 (Aprovisionamiento, MCP y Contratos Front-Back):**
+  - Creación de Superadmin con `crear_admin.py` y confirmación `is_bootstrapped: true`.
+  - Emisión de Token MCP con `generar_token_mcp.py` y validación de sesión Bearer en KeyDB.
+  - Invocación real del endpoint MCP JSON-RPC 2.0 (`POST /api/v1/mcp` con `tools/list`).
+  - Ejecución obligatoria de la suite de 24 contratos Front-Back (`fastapi/scripts/validar_comunicacion_front_back.py`) dentro del contenedor con 100% de éxito.
+- **Fase 6 (Diagnóstico y Cierre Limpio):**
+  - Inspección de logs en busca de tracebacks en `rosgrid_api_local` y `rosgrid_worker_local`.
+  - Verificación de aislamiento de puertos internos (5432 y 6379 cerrados al host).
+  - Limpieza de volúmenes efímeros o entrega interactiva (`--keep-alive` / `--wizard`) con URLs corregidas.
