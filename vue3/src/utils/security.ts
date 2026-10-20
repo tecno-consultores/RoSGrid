@@ -91,7 +91,23 @@ export function escapeHtml(value: unknown): string {
   if (value === null || value === undefined) {
     return '';
   }
-  const str = typeof value === 'string' ? value : String(value);
+  let str: string;
+  if (typeof value === 'string') {
+    str = value;
+  } else if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+    str = String(value);
+  } else if (typeof value === 'object') {
+    const hasCustomToString =
+      'toString' in value &&
+      typeof value.toString === 'function' &&
+      value.toString !== Object.prototype.toString;
+    str = hasCustomToString
+      ? (value as { toString: () => string }).toString()
+      : (JSON.stringify(value) ?? '');
+  } else {
+    str = '';
+  }
+
   return str
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
