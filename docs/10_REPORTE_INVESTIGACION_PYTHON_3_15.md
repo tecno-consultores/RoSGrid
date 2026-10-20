@@ -135,24 +135,16 @@ La imagen corporativa `sinfallas/base-python-uv:3.15` proporciona:
 
 ## 5. Cambios Concretos Requeridos en el Código de RoSGrid
 
-### 5.1 Actualización de `fastapi/Dockerfile` y `fastapi/Dockerfile.prod`
+### 5.1 Actualización de `fastapi/Dockerfile`
 
-Modificación de la directiva `FROM` en ambas fases (compilación y runtime):
+Modificación de la directiva `FROM` en el Dockerfile de producción:
 
 ```diff
--FROM sinfallas/base-python-uv:3.13 AS builder
-+FROM sinfallas/base-python-uv:3.15 AS builder
+-FROM sinfallas/base-python-uv:3.13
++FROM sinfallas/base-python-uv:3.15
 
- WORKDIR /app
- COPY pyproject.toml uv.lock ./
--RUN uv sync --frozen --no-install-project --no-dev
-+RUN uv sync --frozen --no-install-project --no-dev --compile-bytecode
-
--FROM sinfallas/base-python-uv:3.13-slim AS runner
-+FROM sinfallas/base-python-uv:3.15-slim AS runner
-
- USER rosgrid:rosgrid
- WORKDIR /app
+ ARG BUILD_DATE="unknown"
+ LABEL org.opencontainers.image.title="RoSGrid Backend API & Workers" \
 ```
 
 ---

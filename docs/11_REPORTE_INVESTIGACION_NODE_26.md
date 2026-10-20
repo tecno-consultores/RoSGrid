@@ -109,26 +109,16 @@ El frontend táctico de RoSGrid utiliza dependencias modernas de alto rendimient
 
 ## 5. Cambios Concretos Requeridos en RoSGrid Frontend
 
-### 5.1 Actualización de `vue3/Dockerfile` y `vue3/Dockerfile.prod`
+### 5.1 Actualización de `vue3/Dockerfile`
 
-Modificación de la directiva `FROM` en las etapas de compilación multi-stage:
+Modificación de la directiva `FROM` en la etapa de compilación:
 
 ```diff
+ # --- Etapa 1: Compilación de la SPA Vue 3 + TypeScript ---
 -FROM sinfallas/base-node-ionic:22 AS builder
 +FROM sinfallas/base-node-ionic:26 AS builder
 
  WORKDIR /app
- COPY package.json pnpm-lock.yaml ./
--RUN pnpm install --frozen-lockfile
-+RUN pnpm install --frozen-lockfile --prefer-offline
-
- COPY . .
- RUN pnpm build
-
--FROM nginx:1.27-alpine-slim AS runner
-+FROM nginx:1.27-alpine-slim AS runner
-
- COPY --from=builder /app/dist /usr/share/nginx/html
 ```
 
 ---
