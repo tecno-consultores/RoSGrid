@@ -34,25 +34,24 @@ Toda llave en Redis DEBE incluir el prefijo rg: seguido del tenant\_id (para ais
 
 Toda petición mutable (POST, PUT, PATCH, DELETE) enviada desde Vue 3 hacia endpoints que modifican la base de datos o un equipo MikroTik DEBE incluir la cabecera Idempotency-Key con un UUIDv7 válido.
 
-### **2.1 Flujo Atómico de Idempotencia**
+### **2.1 Flujo Atómico de Idempotencia y Aislamiento Multi-Tenant**
 
-1. **Validación de Formato:** Si falta la cabecera Idempotency-Key o no es un UUID válido en una ruta mutable protegida, FastAPI responde inmediatamente HTTP 400 Bad Request (\{"detail": "Cabecera Idempotency-Key (UUID) obligatoria para operaciones mutables"\}).
+1. **Validación de Formato:** Si falta la cabecera `Idempotency-Key` o no es un UUID válido en una ruta mutable protegida, FastAPI responde inmediatamente HTTP 400 Bad Request (`{"detail": "Cabecera Idempotency-Key (UUID) obligatoria para operaciones mutables"}`).
 
-2. **Huella del Payload (request\_hash):** Se calcula el SHA-256 de f"\{request.method\}:\{request.url.path\}:\{raw\_body\_bytes\}".
+2. **Resolución Segura de Actores Multi-Tenant:**
+   - Para evitar colisiones entre diferentes inquilinos u operadores que puedan generar o reutilizar un mismo identificador, el middleware extrae de forma autónoma `tenant_id` y `user_id` decodificando el JWT presente en la cookie de sesión (`__Host-rg_at` / `rg_at`) o la cabecera `Authorization: Bearer`.
+   - Si la petición es anónima o previa a autenticación, se utiliza un espacio de nombres aislado `anonymous`.
 
-3. **Adquisición Atómica en Redis:**
+3. **Huella del Payload (request_hash):** Se calcula el SHA-256 de `f"{request.method}:{request.url.path}:{raw_body_bytes}"`.
 
-   - Llave: rg:\{tenant\_id\}:idemp:\{user\_id\}:\{idempotency\_key\}
+4. **Adquisición Atómica en Redis:**
+   - Llave canónica: `rg:{tenant_id}:{user_id}:idemp:{idempotency_key}`
+   - Si la llave **no existe**, se crea atómicamente con estado `status = "IN_PROGRESS"`, `request_hash = <sha256>`, y `EXPIRE 60` segundos mientras se ejecuta la operación en el MikroTik.
+   - Si la llave **ya existe** y su `request_hash` **no coincide** con el de la nueva petición, devuelve HTTP 422 Unprocessable Entity (`{"detail": "Conflicto de Idempotency-Key: la llave ya fue utilizada con un payload diferente"}`).
+   - Si la llave **ya existe** con `status = "IN_PROGRESS"`, devuelve HTTP 409 Conflict (`{"detail": "La operación con esta Idempotency-Key ya se encuentra en ejecución en el router"}`).
+   - Si la llave **ya existe** con `status = "COMPLETED"`, FastAPI devuelve exactamente el mismo `status_code` y `response_json` almacenado, añadiendo la cabecera `X-Idempotent-Replay: true`, **sin volver a tocar el MikroTik ni PostgreSQL**.
 
-   - Si la llave **no existe**, se crea atómicamente con estado status = "IN\_PROGRESS", request\_hash = \<sha256\>, y EXPIRE 60 segundos mientras se ejecuta la operación en el MikroTik.
-
-   - Si la llave **ya existe** y su request\_hash **no coincide** con el de la nueva petición, devuelve HTTP 422 Unprocessable Entity (\{"detail": "Conflicto de Idempotency-Key: la llave ya fue utilizada con un payload diferente"\}).
-
-   - Si la llave **ya existe** con status = "IN\_PROGRESS", devuelve HTTP 409 Conflict (\{"detail": "La operación con esta Idempotency-Key ya se encuentra en ejecución en el router"\}).
-
-   - Si la llave **ya existe** con status = "COMPLETED", FastAPI devuelve exactamente el mismo status\_code y response\_json almacenado, añadiendo la cabecera X-Idempotent-Replay: true, **sin volver a tocar el MikroTik ni PostgreSQL**.
-
-4. **Finalización:** Al completarse la operación con código 2xx (o 202 Accepted si fue a Maker-Checker), se actualiza el Hash en Redis con status = "COMPLETED", status\_code, response\_json y se ajusta el TTL a 86400 segundos (24 horas). Si ocurre un error de red transitorio 502/504, se elimina la llave en Redis para permitir que el operador reintente limpiamente.
+5. **Finalización:** Al completarse la operación con código 2xx (o 202 Accepted si fue a Maker-Checker), se actualiza el Hash en Redis con `status = "COMPLETED"`, `status_code`, `response_json` y se ajusta el TTL a 86400 segundos (24 horas). Si ocurre un error de red transitorio 502/504, se elimina la llave en Redis para permitir que el operador reintente limpiamente.
 
 
 

@@ -7,10 +7,12 @@ import uuid
 from collections.abc import AsyncIterator
 from typing import Any
 
+import jwt
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
+from src.core.config import settings
 from src.redis_layer.client import get_redis_client
 
 _MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
@@ -110,6 +112,50 @@ async def _cache_completed_idempotency(redis: Any, redis_key: str, response: Res
         await redis.delete(redis_key)
 
 
+def _extract_raw_token_idemp(request: Request) -> str | None:
+    token = request.cookies.get("__Host-rg_at") or request.cookies.get("rg_at")
+    if token:
+        return token
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        return auth_header[7:].strip()
+    return None
+
+
+def _decode_actors_from_token(token: str) -> tuple[str | None, str | None]:
+    try:
+        payload = jwt.decode(
+            token,
+            settings.ROSGRID_JWT_SECRET_KEY,
+            algorithms=["HS256"],
+            options={"verify_signature": True},
+        )
+        tid = payload.get("tid")
+        sub = payload.get("sub")
+        return str(tid) if tid else None, str(sub) if sub else None
+    except Exception:
+        return None, None
+
+
+def _resolve_idempotency_actors(request: Request) -> tuple[str, str]:
+    tenant_id = getattr(request.state, "tenant_id", None)
+    user_id = getattr(request.state, "user_id", None)
+    if tenant_id and user_id:
+        return str(tenant_id), str(user_id)
+
+    raw_token = _extract_raw_token_idemp(request)
+    if raw_token:
+        tid, sub = _decode_actors_from_token(raw_token)
+        if tid and not tenant_id:
+            tenant_id = tid
+            request.state.tenant_id = tenant_id
+        if sub and not user_id:
+            user_id = sub
+            request.state.user_id = user_id
+
+    return str(tenant_id) if tenant_id else "global", str(user_id) if user_id else "anonymous"
+
+
 class IdempotencyMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         if _should_bypass_idempotency(request.method, request.url.path):
@@ -122,9 +168,8 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
                 content={"detail": "Cabecera Idempotency-Key (UUID) obligatoria para operaciones mutables"},
             )
 
-        tenant_id = getattr(request.state, "tenant_id", "global")
-        user_id = getattr(request.state, "user_id", "anonymous")
-        redis_key = f"rg:{tenant_id}:idemp:{user_id}:{idemp_key}"
+        tenant_id_str, user_id_str = _resolve_idempotency_actors(request)
+        redis_key = f"rg:{tenant_id_str}:idemp:{user_id_str}:{idemp_key}"
 
         body = await request.body()
         req_hash = compute_request_hash(request.method, request.url.path, body)

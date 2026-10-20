@@ -6,6 +6,7 @@ import hmac
 import os
 import time
 
+import jwt
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -61,21 +62,51 @@ def validate_csrf_token(
     return hmac.compare_digest(signature, expected_sig)
 
 
+def _extract_cookie_session(request: Request) -> tuple[str | None, str | None]:
+    raw_cookie = request.cookies.get("__Host-rg_at") or request.cookies.get("rg_at")
+    session_id = getattr(request.state, "session_id", None)
+    tenant_id = getattr(request.state, "tenant_id", None)
+
+    if not raw_cookie and not (session_id and tenant_id and not request.headers.get("Authorization")):
+        return None, None
+
+    if session_id and tenant_id:
+        return str(session_id), str(tenant_id)
+
+    if raw_cookie:
+        try:
+            payload = jwt.decode(
+                raw_cookie,
+                settings.ROSGRID_JWT_SECRET_KEY,
+                algorithms=["HS256"],
+                options={"verify_signature": True},
+            )
+            sid = payload.get("sid")
+            tid = payload.get("tid")
+            sub = payload.get("sub")
+            if sid and tid:
+                request.state.session_id = str(sid)
+                request.state.tenant_id = str(tid)
+                if sub:
+                    request.state.user_id = str(sub)
+                return str(sid), str(tid)
+        except Exception:
+            pass
+
+    return None, None
+
+
 class CSRFProtectionMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         if request.method not in _MUTATING_METHODS or request.url.path in _EXCLUDED_PATHS:
             return await call_next(request)
 
-        # Si no hay sesión autenticada o viene de un endpoint público no excluido
-        session_id = getattr(request.state, "session_id", None)
-        tenant_id = getattr(request.state, "tenant_id", None)
-
-        # Si aún no tiene session_id adjunto pero tiene header X-CSRF-Token o viene con cookie
+        session_id, tenant_id = _extract_cookie_session(request)
         csrf_header = request.headers.get("X-CSRF-Token")
         if (
             session_id
             and tenant_id
-            and (not csrf_header or not validate_csrf_token(csrf_header, str(session_id), str(tenant_id)))
+            and (not csrf_header or not validate_csrf_token(csrf_header, session_id, tenant_id))
         ):
             return JSONResponse(status_code=403, content={"detail": "Fallo de validación criptográfica CSRF"})
 

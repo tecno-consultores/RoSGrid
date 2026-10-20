@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     ROSGRID_MASTER_VAULT_KEY: str = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
     ROSGRID_JWT_SECRET_KEY: str = "qa_jwt_secret_key_for_ephemeral_testing_only"
     ROSGRID_CSRF_HMAC_SECRET: str = "qa_csrf_hmac_secret_for_ephemeral_testing_only"
+    ROSGRID_REFRESH_TOKEN_GRACE_PERIOD_SECONDS: int = 5
 
     # MikroTik & Operaciones
     ROSGRID_MIKROTIK_TIMEOUT_SECONDS: int = 10

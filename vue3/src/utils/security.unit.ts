@@ -2,7 +2,7 @@
 // Copyright (C) 2026 RoSGrid Contributors
 
 import { describe, it, expect } from 'vitest';
-import { isSafeUrl, sanitizeUrl, sanitizeObject, createSafeRecord } from './security';
+import { isSafeUrl, sanitizeUrl, sanitizeObject, createSafeRecord, escapeHtml } from './security';
 
 describe('Security Utilities (XSS and Prototype Pollution Defense)', () => {
   describe('isSafeUrl', () => {
@@ -94,6 +94,32 @@ describe('Security Utilities (XSS and Prototype Pollution Defense)', () => {
       record['key'] = 'val';
       expect(record['key']).toBe('val');
       expect(record['toString']).toBeUndefined();
+    });
+  });
+
+  describe('escapeHtml (XSS Defense)', () => {
+    it('escapes dangerous HTML characters to prevent XSS execution', () => {
+      const payload = '<script>alert("XSS")</script>';
+      expect(escapeHtml(payload)).toBe('&lt;script&gt;alert(&quot;XSS&quot;)&lt;/script&gt;');
+    });
+
+    it('escapes image onerror payloads', () => {
+      const payload = '<img src=x onerror=alert(1)>';
+      expect(escapeHtml(payload)).toBe('&lt;img src=x onerror=alert(1)&gt;');
+    });
+
+    it('escapes ampersands and single quotes', () => {
+      expect(escapeHtml("Tom & Jerry's")).toBe('Tom &amp; Jerry&#039;s');
+    });
+
+    it('handles null and undefined gracefully', () => {
+      expect(escapeHtml(null)).toBe('');
+      expect(escapeHtml(undefined)).toBe('');
+    });
+
+    it('converts numbers and booleans safely to string', () => {
+      expect(escapeHtml(12345)).toBe('12345');
+      expect(escapeHtml(true)).toBe('true');
     });
   });
 });

@@ -4,10 +4,12 @@
 import time
 from unittest.mock import AsyncMock
 
+import jwt
 import pytest
 from fastapi import Request, Response
 from starlette.datastructures import Headers
 
+from src.core.config import settings
 from src.core.csrf import (
     CSRFProtectionMiddleware,
     generate_csrf_token,
@@ -183,3 +185,45 @@ async def test_csrf_middleware_blocks_invalid_or_missing_token() -> None:
     res2 = await middleware.dispatch(req2, call_next)
     assert res2.status_code == 403
     assert call_next.await_count == 0
+
+
+@pytest.mark.asyncio
+async def test_csrf_middleware_extracts_jwt_from_cookies_and_validates() -> None:
+    middleware = CSRFProtectionMiddleware(app=None)  # type: ignore[arg-type]
+    call_next = AsyncMock(return_value=Response(content="OK", status_code=200))
+
+    token_csrf = generate_csrf_token("sess-jwt-1", "tenant-jwt-1")
+    jwt_token = jwt.encode(
+        {"sid": "sess-jwt-1", "tid": "tenant-jwt-1", "sub": "user-1"},
+        settings.ROSGRID_JWT_SECRET_KEY,
+        algorithm="HS256",
+    )
+
+    # 1. Petición mutable con cookie JWT y cabecera CSRF válida
+    headers = Headers({"cookie": f"rg_at={jwt_token}", "x-csrf-token": token_csrf})
+    scope = {
+        "type": "http",
+        "method": "POST",
+        "path": "/api/v1/routers",
+        "headers": headers.raw,
+    }
+    req = Request(scope)
+
+    res = await middleware.dispatch(req, call_next)
+    assert res.status_code == 200
+    assert req.state.session_id == "sess-jwt-1"
+    assert req.state.tenant_id == "tenant-jwt-1"
+
+    # 2. Petición mutable con cookie JWT pero SIN cabecera CSRF -> 403 Forbidden
+    call_next_blocked = AsyncMock()
+    headers_no_csrf = Headers({"cookie": f"rg_at={jwt_token}"})
+    scope_no_csrf = {
+        "type": "http",
+        "method": "POST",
+        "path": "/api/v1/routers",
+        "headers": headers_no_csrf.raw,
+    }
+    req_blocked = Request(scope_no_csrf)
+    res_blocked = await middleware.dispatch(req_blocked, call_next_blocked)
+    assert res_blocked.status_code == 403
+    assert call_next_blocked.await_count == 0

@@ -80,9 +80,9 @@ No utiliza Google Maps ni requiere API Keys de pago. Utiliza **Leaflet (L.map)**
 
      - **Azul (\#38BDF8)**: En ventana de mantenimiento (MAINTENANCE)
 
-3. **Popup Técnico al Hacer Clic en un Pin:**
-
-   - Muestra: Nombre, Identity, Rol en la Red, Ubicación Física, Serial, Versión de RouterOS, CPU/RAM instantáneos del último chequeo en Redis y dos botones: **"Entrar a WebFig"** y **"Ejecutar Ping Rápido"**.
+3. **Popup Técnico y Sanitización Obligatoria Anti-XSS (escapeHtml):**
+   - Muestra: Nombre, Identity, Rol en la Red, Ubicación Física, Serial, Versión de RouterOS, CPU/RAM instantáneos del último chequeo en Redis y botones de acción ("Entrar a WebFig" y "Ejecutar Ping Rápido").
+   - **Prevención de XSS en Popups Leaflet:** Debido a que Leaflet renderiza HTML crudo en `popupContent.innerHTML`, todos los valores dinámicos provenientes del inventario o telemetría (`display_name`, `ros_identity`, `serial_number`, `physical_location`, etc.) son sanitizados estrictamente mediante `escapeHtml()` (`vue3/src/utils/security.ts`) antes de su inserción en el DOM, neutralizando cualquier inyección maliciosa `<script>`, `onload` o tags HTML en nombres de routers u ONUs.
 
 4. **Selector Interactivo de Coordenadas en el Formulario de Alta/Edición:**
 

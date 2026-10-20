@@ -5,7 +5,9 @@ import hashlib
 import json
 import secrets
 import time
+from typing import Any
 
+from src.core.config import settings
 from src.redis_layer.client import get_redis_client
 
 SESSION_TTL_SECONDS = 28800  # 8 horas
@@ -134,8 +136,30 @@ async def kill_all_user_sessions(
     return count
 
 
+async def _handle_token_reuse(
+    tenant_id: str,
+    family_data: dict[Any, Any],
+    received_hash: str,
+    used_hashes_timed: dict[str, Any],
+    grace_period_seconds: int,
+) -> tuple[bool, str | None, str | None]:
+    now = int(time.time())
+    rotation_ts = used_hashes_timed.get(received_hash)
+    if rotation_ts is not None and grace_period_seconds > 0 and (now - int(rotation_ts) <= grace_period_seconds):
+        last_issued = family_data.get("last_issued_rt")
+        if last_issued:
+            return True, None, str(last_issued)
+
+    session_id = str(family_data.get("session_id", ""))
+    await kill_session(tenant_id, session_id, killed_by="SECURITY_ROBOT", reason="Reúso de Refresh Token detectado")
+    return False, "REUSE_DETECTED", None
+
+
 async def rotate_refresh_token(
-    tenant_id: str, family_id: str, received_token: str
+    tenant_id: str,
+    family_id: str,
+    received_token: str,
+    grace_period_seconds: int | None = None,
 ) -> tuple[bool, str | None, str | None]:
     redis = get_redis_client()
     rt_key = f"rg:{tenant_id}:rt_family:{family_id}"
@@ -146,17 +170,25 @@ async def rotate_refresh_token(
     received_hash = compute_token_hash(received_token)
     current_hash = str(family_data.get("current_rt_hash", ""))
     used_hashes_str = str(family_data.get("used_rt_hashes", "[]"))
+    used_hashes_timed_str = str(family_data.get("used_rt_hashes_timed", "{}"))
 
     try:
         used_hashes = json.loads(used_hashes_str)
     except json.JSONDecodeError:
         used_hashes = []
 
-    if received_hash in used_hashes:
-        # ROBO DE TOKEN DETECTADO -> Kill Switch inmediato
-        session_id = str(family_data.get("session_id", ""))
-        await kill_session(tenant_id, session_id, killed_by="SECURITY_ROBOT", reason="Reúso de Refresh Token detectado")
-        return False, "REUSE_DETECTED", None
+    try:
+        used_hashes_timed = json.loads(used_hashes_timed_str)
+    except json.JSONDecodeError:
+        used_hashes_timed = {}
+
+    if grace_period_seconds is None:
+        grace_period_seconds = settings.ROSGRID_REFRESH_TOKEN_GRACE_PERIOD_SECONDS
+
+    now = int(time.time())
+
+    if received_hash in used_hashes or received_hash in used_hashes_timed:
+        return await _handle_token_reuse(tenant_id, family_data, received_hash, used_hashes_timed, grace_period_seconds)
 
     if received_hash != current_hash:
         return False, "HASH_MISMATCH", None
@@ -164,13 +196,16 @@ async def rotate_refresh_token(
     new_token = secrets.token_urlsafe(32)
     new_token_hash = compute_token_hash(new_token)
     used_hashes.append(received_hash)
+    used_hashes_timed[received_hash] = now
 
     pipe = redis.pipeline()
     pipe.hset(
         rt_key,
         mapping={
             "current_rt_hash": new_token_hash,
+            "last_issued_rt": new_token,
             "used_rt_hashes": json.dumps(used_hashes),
+            "used_rt_hashes_timed": json.dumps(used_hashes_timed),
         },
     )
     pipe.expire(rt_key, SESSION_TTL_SECONDS)

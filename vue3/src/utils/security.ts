@@ -82,3 +82,19 @@ export function sanitizeObject<T>(input: T): T {
 export function createSafeRecord<V = unknown>(): Record<string, V> {
   return Object.create(null) as Record<string, V>;
 }
+
+/**
+ * Sanitiza y escapa caracteres especiales HTML para prevenir Cross-Site Scripting (XSS)
+ * en inyecciones directas de DOM (ej. Popups de Leaflet, tooltips o manipulación innerHTML).
+ */
+export function escapeHtml(value: unknown): string {
+  if (value === null || value === undefined) {
+    return '';
+  }
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}

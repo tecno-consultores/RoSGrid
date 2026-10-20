@@ -22,6 +22,7 @@ from src.schemas.inventory import (
     CsvCommitRowItem,
     RouterResponse,
     UpdateRouterRequest,
+    validate_router_target_url,
 )
 
 logger = logging.getLogger(__name__)
@@ -189,6 +190,11 @@ def validate_single_csv_row(
         errors.append("display_name es obligatorio")
     if not raw_url.startswith("https://"):
         errors.append("api_base_url debe comenzar con https://")
+    else:
+        try:
+            validate_router_target_url(raw_url)
+        except ValueError as err:
+            errors.append(str(err))
     _check_csv_serial(sn, existing_serials, seen_serials, errors)
     if not pwd:
         errors.append("api_password es obligatorio")

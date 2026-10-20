@@ -3,11 +3,13 @@
 
 """Esquemas Pydantic v2 para Inventario MikroTik, CSV, Bóveda Step-Up y Mantenimiento."""
 
+import ipaddress
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
+from urllib.parse import urlparse
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from src.models.inventory import (
     RouterAdminStateEnum,
@@ -43,6 +45,44 @@ class NetworkRolesListResponse(StrictBaseModel):
     custom_roles: list[CustomNetworkRoleItem]
 
 
+_BLOCKED_ROUTER_HOSTS = {
+    "localhost",
+    "rosgrid-db",
+    "rosgrid-redis",
+    "rosgrid-api",
+    "rosgrid-worker",
+    "rosgrid-keydb",
+}
+
+
+def _verify_host_ssrf(host: str) -> None:
+    host_lower = host.lower()
+    if host_lower in _BLOCKED_ROUTER_HOSTS or host_lower.endswith((".local", ".internal")):
+        raise ValueError(f"Host de infraestructura interna no permitido para routers: '{host}'")
+
+    try:
+        ip = ipaddress.ip_address(host)
+        if ip.is_loopback:
+            raise ValueError(f"Dirección loopback no permitida para routers: '{host}'")
+        if ip.is_link_local:
+            raise ValueError(f"Dirección link-local / metadatos cloud no permitida para routers: '{host}'")
+    except ValueError as err:
+        if "no permitida" in str(err):
+            raise err
+
+
+def validate_router_target_url(v: str | None) -> str | None:
+    """Valida la URL/IP destino del router bloqueando SSRF hacia loopback, metadatos e infra interna."""
+    if not v or not str(v).strip():
+        return v
+    v_str = str(v).strip()
+    parsed = urlparse(v_str if "://" in v_str else f"https://{v_str}")
+    host = (parsed.hostname or v_str).strip()
+    if host:
+        _verify_host_ssrf(host)
+    return v
+
+
 class CreateRouterRequest(StrictBaseModel):
     display_name: str = Field(..., min_length=2, max_length=120)
     api_base_url: str = Field(..., min_length=5, max_length=255)
@@ -63,6 +103,11 @@ class CreateRouterRequest(StrictBaseModel):
     rotation_interval_days: int = Field(default=30, ge=1, le=365)
     connect_and_discover_now: bool = True
 
+    @field_validator("api_base_url")
+    @classmethod
+    def check_api_base_url(cls, v: str) -> str:
+        return validate_router_target_url(v) or v
+
 
 class UpdateRouterRequest(StrictBaseModel):
     display_name: str | None = Field(default=None, min_length=2, max_length=120)
@@ -80,6 +125,11 @@ class UpdateRouterRequest(StrictBaseModel):
     site_contact_info: str | None = Field(default=None, max_length=255)
     auto_rotate_credentials: bool | None = None
     rotation_interval_days: int | None = Field(default=None, ge=1, le=365)
+
+    @field_validator("api_base_url")
+    @classmethod
+    def check_api_base_url(cls, v: str | None) -> str | None:
+        return validate_router_target_url(v)
 
 
 class RouterResponse(BaseModel):
@@ -169,6 +219,11 @@ class CsvCommitRowItem(StrictBaseModel):
     tags: list[str] = Field(default_factory=list)
     auto_rotate_credentials: bool = True
     rotation_interval_days: int = Field(default=30, ge=1, le=365)
+
+    @field_validator("api_base_url")
+    @classmethod
+    def check_api_base_url(cls, v: str) -> str:
+        return validate_router_target_url(v) or v
 
 
 class CsvCommitRequest(StrictBaseModel):

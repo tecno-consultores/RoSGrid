@@ -3,7 +3,8 @@
 ## 📍 Punto de Control Actual (Checkpoint)
 
 - **Hito Actual en Curso:** Hito 22 (Cierre de `CHANGELOG.md`, Auditoría Trivy y Publicación en Docker Hub `build.sh`)
-- **Estado General del Sistema:** Hitos 0 al 21 COMPLETADOS (100%) y Hito 22 (Sub-tareas 22.1, 22.2, 22.5, 22.6, 22.7, 22.8, 22.9, 22.10, 22.11) COMPLETADOS.
+- **Estado General del Sistema:** Hitos 0 al 21 COMPLETADOS (100%) y Hito 22 (Sub-tareas 22.1, 22.2, 22.5, 22.6, 22.7, 22.8, 22.9, 22.10, 22.11, 22.12) COMPLETADOS.
+- **Hito 22.12 (Auditoría Integral de Ciberseguridad y Mitigación de Vulnerabilidades):** COMPLETADO al 100% y certificado en Docker. Mitigaciones CSRF, XSS en Leaflet, SSRF en routers, concurrencia en refresh tokens y aislamiento de idempotencia implementados.
 - **Hito 22.11 (Migración Integral de Runtime a Python 3.15 y Node.js 26 LTS):** COMPLETADO al 100% y certificado en Docker. Registro histórico integral de hitos consolidado en `TESTING.md`.
 - **Hito 21 (Servidor MCP Ampliado para Agentes IA y Certificación QA 11X Final):** COMPLETADO al 100% y certificado en Docker:
   - Servidor Model Context Protocol (MCP) Integrado en FastAPI (`POST /api/v1/mcp`) ampliado a 16 herramientas semánticas con esquemas Pydantic v2 y validación JSON-RPC 2.0 *Streamable HTTP*.
@@ -354,5 +355,13 @@
   - `docs/11_REPORTE_INVESTIGACION_NODE_26.md`: Investigación sobre Native Type Stripping, V8 14.x, Temporal API y migración a `sinfallas/base-node-ionic:26`.
 - [x] **22.10** **Suite de Pruebas BDD Integral Karate Labs para el 100% de la API REST FastAPI:** Expansión de `fastapi/test/api_test.feature` a 54 escenarios BDD exhaustivos cubriendo todos y cada uno de los 35 submódulos y endpoints de la API REST (Observabilidad, Auth, Multi-Tenant, Usuarios, Sesiones, Inventario, TOFU, Bóveda 2FA, IPAM, QoS, Dispositivos ONU, Servicios de Red, Field Ops, Mantenimiento, WebFig L1/L2, Maker-Checker, Backups, Operaciones Masivas, Notificaciones, WORM, MCP JSON-RPC 2.0, Diagnóstico 360°, BGP Looking Glass, Tráfico IPFIX, Compliance CIS/Drift, SD-WAN, Switching, SLA, WiFi y RBAC), sincronización idéntica en `examples/fastapi/test/api_test.feature` y certificación en `TESTING.md`.
 - [x] **22.11** **Migración Integral de Runtime a Python 3.15 y Node.js 26 LTS:** Actualización de `fastapi/Dockerfile` (`sinfallas/base-python-uv:3.15`), `vue3/Dockerfile` (`sinfallas/base-node-ionic:26`), `docker-compose.yml`, `fastapi/docker-compose.qa.yml`, `vue3/docker-compose.qa.yml`, metadatos en `pyproject.toml` (`requires-python = ">=3.15"`) y `package.json` (`engines: { "node": ">=26.0.0" }`), sincronización completa de la bitácora histórica de hitos (Hitos 0 al 22.11) en `TESTING.md`, gobernanza raíz y reportes técnicos `docs/10` y `docs/11`.
+- [x] **22.12** **Auditoría Integral de Ciberseguridad y Mitigación de Vulnerabilidades (FastAPI + Vue 3):**
+  - Desacoplamiento de `CSRFProtectionMiddleware` para extracción autónoma de JWT desde cookies (`__Host-rg_at` / `rg_at`) y exención de clientes API puros con token Bearer según directrices OWASP.
+  - Sanitización estricta anti-XSS mediante `escapeHtml` en popups Leaflet OpenStreetMap (`OsmRouterMap.vue` y `OsmOnuMap.vue`).
+  - Validación anti-SSRF integral en el direccionamiento de routers (`validate_router_target_url`) bloqueando loopback, cloud metadata y hostnames de contenedores Docker tanto en la API como en el asistente CSV masivo.
+  - Tolerancia a carreras concurrentes (*Grace Period Leeway* de 5 segundos) en rotación de refresh tokens (`rotate_refresh_token`), eliminando falsos positivos de robo por múltiples pestañas.
+  - Aislamiento multi-tenant y por operador en `IdempotencyMiddleware` mediante llaves con prefijo `rg:{tenant_id}:{user_id}:idemp:{key}`.
+  - Endurecimiento de la expresión regular de CORS en desarrollo a `(localhost|127.0.0.1)`.
 - [ ] **22.3** Actualizar `CHANGELOG.md` consolidando los cambios de `[Unreleased]` dentro del lanzamiento oficial `[1.0.0]` con las métricas certificadas en `TESTING.md`.
 - [ ] **22.4** Ejecutar `./build.sh` (como usuario no-root) con `docker buildx` (`container-builder` + `tonistiigi/binfmt`) para construir y publicar `sinfallas/rosgrid-backend:latest` (`:1.0.0`) y `sinfallas/rosgrid-frontend:latest` (`:1.0.0`) en Docker Hub y limpiar cachés con `prune -af`.
+

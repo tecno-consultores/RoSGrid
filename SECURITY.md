@@ -126,6 +126,16 @@ La integración entre una SPA en Vue 3 y una API asíncrona en FastAPI introduce
   - El endpoint de importación masiva de inventario (`POST /api/v1/inventory/routers/import-csv`) impone una cuota máxima de 2 MB por archivo, rechazando peticiones que excedan este umbral con HTTP `413 Payload Too Large` y evitando saturación de memoria RAM en el backend.
 - **Preservación de Cabeceras de Proxy Inverso en Nginx:**
   - El bloque `location /ws/` en la configuración de Nginx (`vue3/nginx/default.conf`) incluye explícitamente `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;` y `proxy_set_header X-Forwarded-Proto $scheme;`, garantizando la correcta trazabilidad de IPs de clientes y protocolos en conexiones WebSocket en tiempo real.
+- **Desacoplamiento de Middleware Anti-CSRF y Protección Escopada:**
+  - El middleware `CSRFProtectionMiddleware` extrae el JWT de sesión directamente desde las cookies del navegador (`__Host-rg_at` / `rg_at`) de forma autónoma respecto a `request.state`, previniendo omisiones (*bypasses*). Se alinea con OWASP CSRF Prevention eximiendo de validación CSRF a las peticiones basadas en cabecera `Authorization: Bearer` (usadas por agentes IA, automatizaciones y el endpoint MCP `/api/v1/mcp`).
+- **Sanitización Estricta Anti-XSS en Capa Cartográfica Leaflet / OpenStreetMap:**
+  - La utilidad `escapeHtml` (`vue3/src/utils/security.ts`) sanitiza obligatoriamente cualquier dato dinámico (`display_name`, `ros_identity`, `serial_number`, `physical_location`) antes de inyectarlo en `popupContent.innerHTML` de `OsmRouterMap.vue` y `OsmOnuMap.vue`, neutralizando cualquier vector de inyección de scripts HTML en nombres o identidades de equipos.
+- **Validación Anti-SSRF en Direccionamiento de Routers MikroTik:**
+  - El validador `validate_router_target_url` en esquemas Pydantic y en el asistente CSV masivo descarta esquemas no seguros, loopback (`127.0.0.0/8`, `::1`), metadatos de nube y link-local (`169.254.0.0/16`, `fe80::/10`) y nombres de contenedor Docker internos (`localhost`, `rosgrid-db`, `rosgrid-redis`, `rosgrid-keydb`, `rosgrid-api`, `rosgrid-worker`).
+- **Tolerancia a Carreras Concurrentes (*Grace Period Leeway* de 5s) en Refresh Tokens:**
+  - Se añade `ROSGRID_REFRESH_TOKEN_GRACE_PERIOD_SECONDS` (por defecto 5 segundos) en `rotate_refresh_token` (`src/redis_layer/sessions.py`), eliminando falsos positivos de `REUSE_DETECTED` y revocaciones accidentales de sesión ante refrescos simultáneos en múltiples pestañas.
+- **Aislamiento Multi-Tenant y por Operador en Llaves de Idempotencia:**
+  - `IdempotencyMiddleware` decodifica claims del JWT para estructurar llaves en KeyDB bajo `rg:{tenant_id}:{user_id}:idemp:{key}`, evitando colisiones cruzadas entre inquilinos u operadores que envíen el mismo UUIDv7.
 
 ---
 

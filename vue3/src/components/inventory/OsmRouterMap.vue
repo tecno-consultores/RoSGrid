@@ -5,6 +5,7 @@
   import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
   import L from 'leaflet';
   import type { RouterItem } from '@/types';
+  import { escapeHtml } from '@/utils/security';
 
   interface LocationGroup {
     lat: number;
@@ -96,13 +97,20 @@
   function createSingleRouterPopup(r: RouterItem): HTMLElement {
     const popupContent = document.createElement('div');
     popupContent.className = 'rg-map-popup';
+    const displayName = escapeHtml(r.display_name);
+    const rosIdentity = escapeHtml(r.ros_identity || r.display_name);
+    const networkRole = escapeHtml(r.network_role || 'GENERAL');
+    const ipAddress = escapeHtml(r.ip_address);
+    const rosVersion = escapeHtml(r.ros_version || '7.x');
+    const routerId = escapeHtml(r.id);
+
     popupContent.innerHTML = `
-      <div class="popup-title"><strong>${r.display_name}</strong></div>
-      <div class="popup-identity">Identity: <code>${r.ros_identity || r.display_name}</code></div>
-      <div class="popup-role">Rol: <span class="badge-role">${r.network_role || 'GENERAL'}</span></div>
-      <div class="popup-meta">IP: <code>${r.ip_address}</code> | v${r.ros_version || '7.x'}</div>
+      <div class="popup-title"><strong>${displayName}</strong></div>
+      <div class="popup-identity">Identity: <code>${rosIdentity}</code></div>
+      <div class="popup-role">Rol: <span class="badge-role">${networkRole}</span></div>
+      <div class="popup-meta">IP: <code>${ipAddress}</code> | v${rosVersion}</div>
       <div class="popup-actions">
-        <button type="button" class="btn-popup-webfig" data-router-id="${r.id}">
+        <button type="button" class="btn-popup-webfig" data-router-id="${routerId}">
           Abrir WebFig →
         </button>
       </div>
@@ -134,23 +142,29 @@
           : r.admin_state === 'MAINTENANCE'
             ? 'Mantenimiento'
             : 'Operativo';
+        const displayName = escapeHtml(r.display_name);
+        const rosIdentity = escapeHtml(r.ros_identity || r.display_name);
+        const networkRole = escapeHtml(r.network_role || 'GENERAL');
+        const ipAddress = escapeHtml(r.ip_address);
+        const rosVersion = escapeHtml(r.ros_version || '7.x');
+        const routerId = escapeHtml(r.id);
 
         return `
-          <div class="popup-router-item" data-router-id="${r.id}">
+          <div class="popup-router-item" data-router-id="${routerId}">
             <div class="router-item-header">
               <span class="status-indicator" style="background-color: ${color};" title="${stateText}"></span>
-              <strong class="router-item-name" title="${r.display_name}">${r.display_name}</strong>
-              <span class="badge-role">${r.network_role || 'GENERAL'}</span>
+              <strong class="router-item-name" title="${displayName}">${displayName}</strong>
+              <span class="badge-role">${networkRole}</span>
             </div>
             <div class="router-item-details">
-              <div>Identity: <code>${r.ros_identity || r.display_name}</code></div>
-              <div>IP: <code>${r.ip_address}</code> | v${r.ros_version || '7.x'}</div>
+              <div>Identity: <code>${rosIdentity}</code></div>
+              <div>IP: <code>${ipAddress}</code> | v${rosVersion}</div>
             </div>
             <div class="router-item-actions">
-              <button type="button" class="btn-popup-select" data-router-id="${r.id}">
+              <button type="button" class="btn-popup-select" data-router-id="${routerId}">
                 🔍 Seleccionar
               </button>
-              <button type="button" class="btn-popup-webfig" data-router-id="${r.id}">
+              <button type="button" class="btn-popup-webfig" data-router-id="${routerId}">
                 ⚡ WebFig →
               </button>
             </div>

@@ -5,6 +5,7 @@
   import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
   import L from 'leaflet';
   import type { SubscriberDeviceItem } from '@/types';
+  import { escapeHtml } from '@/utils/security';
 
   interface LocationGroup {
     lat: number;
@@ -133,20 +134,20 @@
       color === '#22C55E' ? '🟢 Óptimo' : color === '#F97316' ? '🟠 Degradado' : '🔴 Caído';
 
     popupContent.innerHTML = `
-      <div class="popup-title"><strong>${serial}</strong></div>
-      <div class="popup-identity">Cliente: <code>${client}</code></div>
+      <div class="popup-title"><strong>${escapeHtml(serial)}</strong></div>
+      <div class="popup-identity">Cliente: <code>${escapeHtml(client)}</code></div>
       <div class="popup-role">Estado: <span class="badge-status">${colorBadge}</span></div>
       <div class="popup-meta">
-        PON: <code>${onu.pon_port || 'N/A'}</code> | Caja: <code>${onu.optical_box || 'N/A'}</code>
+        PON: <code>${escapeHtml(onu.pon_port || 'N/A')}</code> | Caja: <code>${escapeHtml(onu.optical_box || 'N/A')}</code>
       </div>
       <div class="popup-telemetry">
-        Ping: <strong>${latMs}</strong> | Pérdida: <strong>${lossPct}</strong>
+        Ping: <strong>${escapeHtml(latMs)}</strong> | Pérdida: <strong>${escapeHtml(lossPct)}</strong>
       </div>
       <div class="popup-actions">
-        <button type="button" class="btn-popup-test" data-onu-id="${onu.id}">
+        <button type="button" class="btn-popup-test" data-onu-id="${escapeHtml(onu.id)}">
           ⚡ Test 1-Click
         </button>
-        <button type="button" class="btn-popup-diag360" data-onu-id="${onu.id}">
+        <button type="button" class="btn-popup-diag360" data-onu-id="${escapeHtml(onu.id)}">
           🔬 360°
         </button>
       </div>
@@ -183,13 +184,15 @@
     const itemsHtml = grp.onus
       .map((onu) => {
         const color = getZeroMetricsColor(onu);
-        const serial = onu.onu_serial_number || onu.device_serial || 'ONU';
-        const client = onu.customer_name || onu.customer_code || 'Cliente';
+        const serial = escapeHtml(onu.onu_serial_number || onu.device_serial || 'ONU');
+        const client = escapeHtml(onu.customer_name || onu.customer_code || 'Cliente');
+        const ponPort = escapeHtml(onu.pon_port || 'PON');
+        const onuId = escapeHtml(onu.id);
         const stateText =
           color === '#22C55E' ? 'Óptimo' : color === '#F97316' ? 'Degradado' : 'Caído';
 
         return `
-          <div class="popup-onu-item" data-onu-id="${onu.id}">
+          <div class="popup-onu-item" data-onu-id="${onuId}">
             <div class="onu-item-header">
               <span class="onu-status-bullet" style="background: ${color};"></span>
               <strong>${serial}</strong>
@@ -197,7 +200,7 @@
             </div>
             <div class="onu-item-meta">
               <span>${client}</span> |
-              <code>${onu.pon_port || 'PON'}</code>
+              <code>${ponPort}</code>
             </div>
           </div>
         `;

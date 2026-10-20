@@ -484,9 +484,14 @@ async def test_refresh_token_missing_cookies(async_client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_refresh_token_success_and_reuse(
-    async_client: AsyncClient, sample_tenant: Tenant, sample_user: User, fake_redis: FakeAsyncRedis
+    async_client: AsyncClient,
+    sample_tenant: Tenant,
+    sample_user: User,
+    fake_redis: FakeAsyncRedis,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from src.api.v1.auth import create_jwt_access_token
+    from src.core.config import settings
     from src.redis_layer.sessions import create_session
 
     session_id, _family_id, initial_rt = await create_session(
@@ -511,7 +516,13 @@ async def test_refresh_token_success_and_reuse(
     assert res.status_code == 200
     assert res.json()["status"] == "refreshed"
 
-    # Reuse attack: reutilizar el token anterior 'initial_rt'
+    # Concurrent retry within grace period succeeds without killing session
+    res_grace = await async_client.post("/api/v1/auth/refresh", cookies=cookies)
+    assert res_grace.status_code == 200
+    assert res_grace.json()["status"] == "refreshed"
+
+    # Reuse attack: reutilizar el token anterior fuera del período de gracia (grace_period = 0)
+    monkeypatch.setattr(settings, "ROSGRID_REFRESH_TOKEN_GRACE_PERIOD_SECONDS", 0)
     res_reuse = await async_client.post("/api/v1/auth/refresh", cookies=cookies)
     assert res_reuse.status_code == 401
     assert "Fallo de rotación" in res_reuse.json()["detail"]

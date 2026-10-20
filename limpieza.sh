@@ -21,34 +21,34 @@ docker compose -f docker-compose.prod.local.yml down --remove-orphans -v 2>/dev/
 docker ps -q --filter "name=rosgrid" | xargs -r docker stop 2>/dev/null || true
 
 echo "[2/4] Eliminando artefactos temporales del Backend (fastapi)..."
-rm -f fastapi/.coverage
-rm -rf fastapi/.coverage.*
-rm -rf fastapi/.mypy_cache
-rm -rf fastapi/.pytest_cache
-rm -rf fastapi/.ruff_cache
-rm -rf fastapi/.hypothesis
-rm -rf fastapi/.schemathesis
-rm -rf fastapi/.tox
-rm -rf fastapi/.uv
-rm -rf fastapi/htmlcov
-rm -rf fastapi/mutants
-rm -rf fastapi/.mutmut-cache
-rm -rf fastapi/target
-rm -rf fastapi/test/target
-rm -f fastapi/zap-report.html
-rm -f fastapi/zap.yaml
-rm -f fastapi/chaos-report.html
-rm -f fastapi/profile.svg
+rm -f fastapi/.coverage 2>/dev/null || true
+rm -rf fastapi/.coverage.* 2>/dev/null || true
+rm -rf fastapi/.mypy_cache 2>/dev/null || docker run --rm -v "$(pwd)/fastapi:/app" alpine rm -rf /app/.mypy_cache 2>/dev/null || true
+rm -rf fastapi/.pytest_cache 2>/dev/null || docker run --rm -v "$(pwd)/fastapi:/app" alpine rm -rf /app/.pytest_cache 2>/dev/null || true
+rm -rf fastapi/.ruff_cache 2>/dev/null || docker run --rm -v "$(pwd)/fastapi:/app" alpine rm -rf /app/.ruff_cache 2>/dev/null || true
+rm -rf fastapi/.hypothesis 2>/dev/null || true
+rm -rf fastapi/.schemathesis 2>/dev/null || true
+rm -rf fastapi/.tox 2>/dev/null || true
+rm -rf fastapi/.uv 2>/dev/null || true
+rm -rf fastapi/htmlcov 2>/dev/null || docker run --rm -v "$(pwd)/fastapi:/app" alpine rm -rf /app/htmlcov 2>/dev/null || true
+rm -rf fastapi/mutants 2>/dev/null || true
+rm -rf fastapi/.mutmut-cache 2>/dev/null || true
+rm -rf fastapi/target 2>/dev/null || true
+rm -rf fastapi/test/target 2>/dev/null || true
+rm -f fastapi/zap-report.html 2>/dev/null || true
+rm -f fastapi/zap.yaml 2>/dev/null || true
+rm -f fastapi/chaos-report.html 2>/dev/null || true
+rm -f fastapi/profile.svg 2>/dev/null || true
 rm -f fastapi/*.log 2>/dev/null || true
-rm -rf fastapi/prometheus_data
+rm -rf fastapi/prometheus_data 2>/dev/null || true
 find fastapi -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 find fastapi -type f -name "*.py[cod]" -delete 2>/dev/null || true
 
 echo "[3/4] Eliminando artefactos temporales del Frontend (vue3)..."
 rm -rf vue3/dist 2>/dev/null || docker run --rm -v "$(pwd)/vue3:/app" alpine rm -rf /app/dist 2>/dev/null || true
-rm -rf vue3/.vite
-rm -rf vue3/coverage
-rm -rf vue3/.stryker-tmp
+rm -rf vue3/.vite 2>/dev/null || docker run --rm -v "$(pwd)/vue3:/app" alpine rm -rf /app/.vite 2>/dev/null || true
+rm -rf vue3/coverage 2>/dev/null || docker run --rm -v "$(pwd)/vue3:/app" alpine rm -rf /app/coverage 2>/dev/null || true
+rm -rf vue3/.stryker-tmp 2>/dev/null || true
 rm -rf vue3/test-results
 rm -rf vue3/playwright-report
 rm -rf vue3/blob-report

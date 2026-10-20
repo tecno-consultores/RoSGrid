@@ -60,52 +60,40 @@ Para lograr el mecanismo más seguro actualmente en producción entre **FastAPI*
 
 
 
-## **2. Rotación Estricta de Refresh Tokens con Detección de Robo (*Reuse Detection*)**
+## **2. Rotación Estricta de Refresh Tokens con Detección de Robo (*Reuse Detection*) y Período de Gracia (*Leeway*)**
 
-Cada vez que el Access Token (rg\_at) vence (cada 10 minutos), el interceptor de Vue 3 invoca silenciosamente POST /api/v1/auth/refresh:
+Cada vez que el Access Token (rg_at) vence (cada 10 minutos), el interceptor de Vue 3 invoca silenciosamente POST /api/v1/auth/refresh:
 
-
-1. El navegador envía automáticamente la cookie rg\_rt (gracias a Path=/api/v1/auth/refresh).
-
-2. FastAPI calcula el SHA-256 del token recibido y busca la familia en Redis (rg:\{tid\}:rt\_family:\{family\_id\}).
-
-3. **Caso Normal (Hash coincide con current\_rt\_hash):**
-
-   - Se genera un nuevo Refresh Token opaco, se actualiza current\_rt\_hash en Redis guardando el anterior en used\_rt\_hashes, y se emiten nuevas cookies rg\_at, rg\_rt y rg\_csrf.
-
-4. **Caso de Robo Detectado (El token recibido ya figura en used\_rt\_hashes):**
-
-   - Significa que el Refresh Token fue clonado y usado dos veces.
-
-   - **Acción Inmediata de Contención:** FastAPI ejecuta el protocolo **Kill-Switch** sobre toda la sesión (DEL rg:\{tid\}:sess:\{sid\} y DEL rg:\{tid\}:rt\_family:\{family\_id\}), registra una alerta crítica en audit\_logs (REFRESH\_TOKEN\_REUSE\_DETECTED) y responde HTTP 401 Unauthorized borrando las cookies.
-
-
+1. El navegador envía automáticamente la cookie rg_rt (gracias a Path=/api/v1/auth/refresh).
+2. FastAPI calcula el SHA-256 del token recibido y busca la familia en Redis (rg:{tid}:rt_family:{family_id}).
+3. **Caso Normal (Hash coincide con current_rt_hash):**
+   - Se genera un nuevo Refresh Token opaco, se actualiza current_rt_hash en Redis guardando el anterior en used_rt_hashes y registrando su marca de tiempo en used_rt_hashes_timed, y se emiten nuevas cookies rg_at, rg_rt y rg_csrf.
+4. **Manejo de Concurrencia Multi-Pestaña (*Grace Period Leeway*):**
+   - Para prevenir falsos positivos de robo cuando múltiples pestañas del navegador o peticiones simultáneas intentan refrescar la sesión al mismo tiempo, el sistema aplica una ventana de tolerancia configurable (`ROSGRID_REFRESH_TOKEN_GRACE_PERIOD_SECONDS`, por defecto 5 segundos).
+   - Si el hash recibido figura en `used_rt_hashes_timed` y el tiempo transcurrido desde la rotación es menor o igual al período de gracia, FastAPI devuelve el token vigente recién emitido (`last_issued_rt`) con status 200 sin invalidar la sesión.
+5. **Caso de Robo Confirmado (*Reuse Attack* fuera del período de gracia):**
+   - Si el token recibido ya figura en used_rt_hashes y ha expirado la ventana de gracia, indica que el token fue clonado por un tercero no sincronizado.
+   - **Acción Inmediata de Contención:** FastAPI ejecuta el protocolo **Kill-Switch** sobre toda la sesión (DEL rg:{tid}:sess:{sid} y DEL rg:{tid}:rt_family:{family_id}), registra una alerta crítica en audit_logs (REFRESH_TOKEN_REUSE_DETECTED) y responde HTTP 401 Unauthorized borrando las cookies.
 
 
 ## **3. Protección Criptográfica Anti-CSRF (X-CSRF-Token)**
 
 Para proteger todas las rutas mutables (POST, PUT, PATCH, DELETE) contra ataques Cross-Site Request Forgery:
 
-
 1. **Generación del Token:**
+   - csrf_payload = f"{session_id}:{tenant_id}:{random_nonce_16b}:{issued_epoch}"
+   - signature = hmac.new(CSRF_HMAC_SECRET, csrf_payload.encode(), hashlib.sha256).hexdigest()
+   - csrf_token = f"{random_nonce_16b}.{issued_epoch}.{signature}"
 
-   - csrf\_payload = f"\{session\_id\}:\{tenant\_id\}:\{random\_nonce\_16b\}:\{issued\_epoch\}"
+2. **Validación Autónoma en Middleware FastAPI (fastapi/src/core/csrf.py):**
+   - El middleware `CSRFProtectionMiddleware` opera antes del enrutador de FastAPI y desacopla la extracción del JWT del ciclo de inyección de dependencias `request.state`.
+   - **Ámbito Exclusivo de Navegador:** Se inspecciona la presencia de cookies de sesión (`__Host-rg_at` o `rg_at`). Si la petición no utiliza cookies del navegador y en su lugar se autentica puramente mediante cabecera `Authorization: Bearer <JWT>` (como agentes de IA, scripts de automatización o el endpoint MCP `/api/v1/mcp`), la validación CSRF se omite de forma segura (conforme a OWASP CSRF Prevention Cheat Sheet, las peticiones sin credenciales ambientales en cookies son inmunes a CSRF).
+   - Para toda petición mutable originada desde navegador (con cookie de sesión), el middleware extrae:
+     - El valor de la cabecera `X-CSRF-Token` enviada por el interceptor Axios/Fetch de Vue 3.
+     - El `session_id` y `tenant_id` decodificados del JWT presente en la cookie de sesión.
+   - Recalcula el HMAC-SHA256 en tiempo constante (`hmac.compare_digest`).
+   - Si falta la cabecera o la firma no coincide con la sesión activa del usuario, rechaza la petición con HTTP 403 Forbidden (`{"detail": "Fallo de validación criptográfica CSRF"}`) y escribe en audit_logs.
 
-   - signature = hmac.new(CSRF\_HMAC\_SECRET, csrf\_payload.encode(), hashlib.sha256).hexdigest()
-
-   - csrf\_token = f"\{random\_nonce\_16b\}.\{issued\_epoch\}.\{signature\}"
-
-2. **Validación en Middleware FastAPI (fastapi/src/core/csrf.py):**
-
-   - En toda petición POST, PUT, PATCH o DELETE (excepto /api/v1/auth/login y /api/v1/auth/2fa/verify que usan su propio challenge\_id firmado), el middleware extrae:
-
-     - El valor de la cabecera X-CSRF-Token enviada por el interceptor Axios/Fetch de Vue 3.
-
-     - El session\_id y tenant\_id del Access Token validado.
-
-   - Recalcula el HMAC-SHA256 en tiempo constante (hmac.compare\_digest).
-
-   - Si falta la cabecera o la firma no coincide con la sesión activa del usuario, rechaza la petición con HTTP 403 Forbidden (\{"detail": "Fallo de validación criptográfica CSRF"\}) y escribe en audit\_logs.
 
 
 

@@ -121,14 +121,45 @@ async def test_rotate_refresh_token_lifecycle(fake_redis: FakeAsyncRedis) -> Non
         assert success is False
         assert err == "HASH_MISMATCH"
 
-        # 3. Detección de reúso de refresh token (Token Reuse Attack)
+        # 3. Detección de reúso de refresh token (Token Reuse Attack fuera de grace period)
         # Intentar volver a usar initial_rt que ya fue utilizado en el paso 1
-        success, err, _ = await rotate_refresh_token("tenant-1", family_id, initial_rt)
+        success, err, _ = await rotate_refresh_token("tenant-1", family_id, initial_rt, grace_period_seconds=0)
         assert success is False
         assert err == "REUSE_DETECTED"
 
         # La sesión debe haber sido liquidada por el Kill Switch
         assert await get_session("tenant-1", session_id) is None
+
+
+@pytest.mark.asyncio
+async def test_rotate_refresh_token_grace_period_success(fake_redis: FakeAsyncRedis) -> None:
+    with patch("src.redis_layer.sessions.get_redis_client", return_value=fake_redis):
+        session_id, family_id, initial_rt = await create_session(
+            tenant_id="tenant-1",
+            user_id="user-1",
+            username="admin",
+            full_name="Admin User",
+            role="SUPERADMIN_GLOBAL",
+            ip_address="192.168.1.100",
+            user_agent="Mozilla/5.0",
+        )
+
+        # Rotación 1
+        success, err, new_rt = await rotate_refresh_token("tenant-1", family_id, initial_rt, grace_period_seconds=10)
+        assert success is True
+        assert new_rt is not None
+
+        # Reintento concurrente con initial_rt dentro de los 10s de gracia
+        success2, err2, replayed_rt = await rotate_refresh_token(
+            "tenant-1", family_id, initial_rt, grace_period_seconds=10
+        )
+        assert success2 is True
+        assert err2 is None
+        assert replayed_rt == new_rt
+
+        # La sesión NO debe haber sido liquidada
+        sess = await get_session("tenant-1", session_id)
+        assert sess is not None
 
 
 @pytest.mark.asyncio

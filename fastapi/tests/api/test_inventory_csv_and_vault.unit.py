@@ -33,8 +33,10 @@ from src.models.inventory import (
     SSLTrustStatusEnum,
 )
 from src.schemas.inventory import (
+    CreateRouterRequest,
     CsvCommitRowItem,
     UpdateRouterRequest,
+    validate_router_target_url,
 )
 
 
@@ -317,3 +319,59 @@ def test_maintenance_window_filters(test_router: Router) -> None:
 
     filtered_inactive = _apply_window_filters(q, router_id=test_router.id, is_active=False, is_cancelled=True)
     assert filtered_inactive is not None
+
+
+def test_ssrf_validation_rejects_loopback_and_metadata() -> None:
+    blocked_urls = [
+        "https://127.0.0.1:443",
+        "https://127.0.1.1",
+        "https://localhost:8443",
+        "https://169.254.169.254/latest/meta-data",
+        "https://rosgrid-db:5432",
+        "https://rosgrid-redis:6379",
+        "https://internal-service.local",
+    ]
+    for url in blocked_urls:
+        with pytest.raises(ValueError, match="no permitid"):
+            validate_router_target_url(url)
+
+    # Valid external and telecommunications IPs should pass
+    allowed_urls = [
+        "https://10.0.0.1:443",
+        "https://192.168.88.1:443",
+        "https://172.16.50.1",
+        "https://200.1.1.1:443",
+        "https://router.empresa.com:8443",
+    ]
+    for url in allowed_urls:
+        assert validate_router_target_url(url) == url
+
+    # Verify CreateRouterRequest schema enforces it via field validator
+    with pytest.raises(ValueError, match="no permitid"):
+        CreateRouterRequest(
+            display_name="R-Blocked",
+            api_base_url="https://127.0.0.1:443",
+            api_port=443,
+            api_username="admin",
+            api_password="pwd",
+            network_role="EDGE",
+            physical_location="NOC",
+            online_since_date=date.today(),
+            serial_number="SN-TEST",
+        )
+
+
+def test_csv_row_ssrf_validation() -> None:
+    existing: set[str] = set()
+    seen: set[str] = set()
+
+    # CSV row apuntando a metadata cloud (169.254.169.254)
+    ssrf_row = {
+        "display_name": "R-SSRF",
+        "api_base_url": "https://169.254.169.254/latest/meta-data",
+        "serial_number": "SN_SSRF_TEST",
+        "api_password": "valid_password",
+    }
+    is_valid, errors = validate_single_csv_row(ssrf_row, existing, seen)
+    assert is_valid is False
+    assert any("link-local" in e or "no permitid" in e for e in errors)

@@ -44,6 +44,15 @@
 }
 ```
 
+- **Validación Anti-SSRF Obligatoria de `api_base_url`:**
+  - El campo `api_base_url` es analizado estrictamente con `validate_router_target_url` tanto en peticiones individuales (`CreateRouterRequest`, `UpdateRouterRequest`) como en el onboarding CSV masivo (`validate_single_csv_row`, `CsvCommitRowItem`).
+  - **Bloqueo de Vectores SSRF:**
+    - Esquemas no seguros: solo se permite `https://` (o `http://` en desarrollo/QA).
+    - Direcciones de loopback: `127.0.0.0/8`, `::1`.
+    - Metadatos de nube y enlace local (Link-Local / AWS / GCP / Azure): `169.254.0.0/16`, `fe80::/10`.
+    - Nombres de host internos de la infraestructura de contenedores Docker: `localhost`, `rosgrid-db`, `rosgrid-redis`, `rosgrid-keydb`, `rosgrid-api`, `rosgrid-worker`.
+  - Ante cualquier coincidencia, el validador emite un `ValueError` descriptivo rechazando la petición con código 422 Unprocessable Entity o reportando el error en el informe del *Dry-Run* CSV.
+
 - **Proceso:**
   1. Verifica cuota disponible en `tenants.max_routers_quota`.
   2. Inserta el router en `routers` y sus etiquetas en `router_tags`.
