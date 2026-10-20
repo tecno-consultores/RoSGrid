@@ -10,6 +10,7 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     Enum,
+    Float,
     ForeignKey,
     Integer,
     LargeBinary,
@@ -285,3 +286,69 @@ class AuditLog(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("NOW()"), index=True
     )
+
+
+class GoldenConfigTemplate(Base):
+    __tablename__ = "golden_config_templates"
+    __table_args__ = (UniqueConstraint("tenant_id", "name", name="uq_golden_template_tenant_name"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    network_role: Mapped[str] = mapped_column(String(64), nullable=False, default="BRANCH")
+    baseline_rsc_content: Mapped[str] = mapped_column(Text, nullable=False)
+    enforce_strict_firewall: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    enforce_ntp_dns: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+
+
+class SdwanSpokeTunnel(Base):
+    __tablename__ = "sdwan_spoke_tunnels"
+    __table_args__ = (UniqueConstraint("tenant_id", "spoke_router_id", name="uq_sdwan_spoke_router"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    hub_router_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("routers.id", ondelete="CASCADE"), nullable=False
+    )
+    spoke_router_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("routers.id", ondelete="CASCADE"), nullable=False
+    )
+    spoke_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    interface_name: Mapped[str] = mapped_column(String(64), nullable=False, default="wg-sdwan0")
+    allocated_subnet: Mapped[str] = mapped_column(String(64), nullable=False)
+    hub_endpoint: Mapped[str] = mapped_column(String(128), nullable=False)
+    spoke_public_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    routing_protocol: Mapped[str] = mapped_column(String(32), nullable=False, default="OSPF")
+    multi_wan_failover_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="ACTIVE")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
+
+
+class SlaProbeMetric(Base):
+    __tablename__ = "sla_probe_metrics"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    router_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("routers.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    target_host: Mapped[str] = mapped_column(String(128), nullable=False)
+    target_name: Mapped[str] = mapped_column(String(120), nullable=False, default="Carrier Gateway")
+    uptime_percent: Mapped[float] = mapped_column(Float, nullable=False, default=100.0)
+    avg_latency_ms: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    p95_latency_ms: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    p99_latency_ms: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    jitter_ms: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    packet_loss_pct: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    sla_threshold_ms: Mapped[float] = mapped_column(Float, nullable=False, default=50.0)
+    compliance_status: Mapped[str] = mapped_column(String(32), nullable=False, default="COMPLIANT")
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))

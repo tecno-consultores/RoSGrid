@@ -751,3 +751,240 @@ export interface SubscriberDeviceItem {
   packet_loss_pct?: number | null;
   zero_metrics_state?: ZeroMetricsState;
 }
+
+// ============================================================================
+// Hito 20: Enterprise Fleet Management & Security Compliance
+// ============================================================================
+
+export interface GoldenConfigTemplate {
+  id: string;
+  tenant_id: string;
+  name: string;
+  network_role: string;
+  baseline_rsc_content: string;
+  enforce_strict_firewall: boolean;
+  enforce_ntp_dns: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConfigDriftCheckResponse {
+  router_id: string;
+  router_name: string;
+  network_role: string;
+  drift_detected: boolean;
+  baseline_template_name: string;
+  added_lines: string[];
+  removed_lines: string[];
+  diff_unified: string;
+  total_drift_lines: number;
+  checked_at: string;
+}
+
+export interface ConfigDriftRevertRequest {
+  router_id: string;
+  template_id?: string | null;
+  enforce_safemode?: boolean;
+}
+
+export interface ConfigDriftRevertResponse {
+  router_id: string;
+  status: string;
+  executed_safemode: boolean;
+  audit_log_id: string;
+  remediation_summary: string;
+}
+
+export interface CisDirectiveResult {
+  code: string;
+  title: string;
+  passed: boolean;
+  weight: number;
+  finding: string;
+  remediation_cmd: string;
+}
+
+export interface CisAuditResponse {
+  router_id: string;
+  router_name: string;
+  security_score: number;
+  compliance_grade: string;
+  total_directives: number;
+  passed_directives: number;
+  failed_directives: number;
+  directives: CisDirectiveResult[];
+  audited_at: string;
+}
+
+export interface CisAutoHardenRequest {
+  router_id: string;
+  directive_codes_to_apply?: string[] | null;
+}
+
+export interface CisAutoHardenResponse {
+  router_id: string;
+  new_security_score: number;
+  applied_directives_count: number;
+  executed_under_safemode: boolean;
+  remediation_script: string;
+  audit_log_id: string;
+}
+
+export interface SdwanSpokeTunnel {
+  id: string;
+  hub_router_id: string;
+  spoke_router_id: string;
+  spoke_name: string;
+  interface_name: string;
+  allocated_subnet: string;
+  hub_endpoint: string;
+  spoke_public_key: string;
+  routing_protocol: string;
+  multi_wan_failover_enabled: boolean;
+  status: 'ACTIVE' | 'DEGRADED' | 'DOWN' | string;
+  rx_bytes?: number;
+  tx_bytes?: number;
+  latency_ms?: number;
+  created_at: string;
+}
+
+export interface SdwanTopologyResponse {
+  tenant_id: string;
+  total_spokes: number;
+  active_spokes: number;
+  degraded_spokes: number;
+  down_spokes: number;
+  tunnels: SdwanSpokeTunnel[];
+}
+
+export interface SdwanProvisionSpokeRequest {
+  hub_router_id: string;
+  spoke_router_id: string;
+  spoke_name: string;
+  allocated_subnet?: string | null;
+  hub_endpoint?: string | null;
+  spoke_public_key?: string | null;
+  routing_protocol?: 'BGP' | 'OSPF' | 'STATIC' | string;
+  multi_wan_failover_enabled?: boolean;
+}
+
+export interface SdwanMultiWanFailoverRequest {
+  router_id: string;
+  primary_wan_interface: string;
+  backup_wan_interface: string;
+  check_host: string;
+  failover_threshold_ms: number;
+}
+
+export interface SdwanMultiWanFailoverResponse {
+  router_id: string;
+  failover_policy_deployed: boolean;
+  netwatch_script_id: string;
+  deployed_under_safemode: boolean;
+}
+
+export interface DhcpSnoopingState {
+  bridge_name: string;
+  dhcp_snooping_enabled: boolean;
+  trusted_ports: string[];
+  untrusted_ports: string[];
+}
+
+export interface DhcpSnoopingEnableRequest {
+  router_id: string;
+  bridge_name: string;
+  trusted_ports: string[];
+}
+
+export interface RogueDhcpAlertItem {
+  id: string;
+  router_id: string;
+  bridge_name: string;
+  interface_name: string;
+  rogue_server_mac: string;
+  rogue_server_ip: string;
+  detected_at: string;
+  status: string;
+}
+
+export interface RogueDhcpIsolatePortRequest {
+  router_id: string;
+  interface_name: string;
+  reason?: string;
+}
+
+export interface RogueDhcpIsolatePortResponse {
+  router_id: string;
+  interface_name: string;
+  isolated: boolean;
+  executed_under_safemode: boolean;
+  audit_log_id: string;
+}
+
+export interface SlaMetricItem {
+  id: string;
+  router_id: string;
+  target_host: string;
+  target_name: string;
+  uptime_percent: number;
+  avg_latency_ms: number;
+  p95_latency_ms: number;
+  p99_latency_ms: number;
+  jitter_ms: number;
+  packet_loss_pct: number;
+  sla_threshold_ms: number;
+  compliance_status: 'COMPLIANT' | 'BREACHED' | string;
+  recorded_at: string;
+}
+
+export interface SlaProbeRunRequest {
+  router_id: string;
+  target_host: string;
+  target_name?: string;
+  count?: number;
+  sla_threshold_ms?: number;
+}
+
+export interface SlaReportSummary {
+  tenant_name: string;
+  period: string;
+  total_targets_monitored: number;
+  global_uptime_percent: number;
+  total_contract_breaches: number;
+  total_downtime_minutes: number;
+  metrics: SlaMetricItem[];
+  exported_at: string;
+}
+
+export interface CapsmanOverviewResponse {
+  router_id: string;
+  capsman_running: boolean;
+  active_radios_count: number;
+  managed_aps_count: number;
+  connected_clients_count: number;
+}
+
+export interface WifiSsidProfile {
+  id: string;
+  name: string;
+  ssid: string;
+  security_type: string;
+  vlan_id?: number | null;
+  client_isolation: boolean;
+  rate_limit_profile?: string | null;
+}
+
+export interface WifiClientItem {
+  mac_address: string;
+  ip_address?: string | null;
+  hostname?: string | null;
+  ap_name: string;
+  ssid: string;
+  signal_rssi_dbm: number;
+  snr_db: number;
+  wifi_standard: string;
+  tx_rate_mbps: number;
+  rx_rate_mbps: number;
+  fast_roaming_supported: boolean;
+  connected_duration_seconds: number;
+}

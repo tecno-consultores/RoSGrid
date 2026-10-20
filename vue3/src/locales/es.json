@@ -35,7 +35,8 @@
     "sessions_killswitch": "Sesiones & Kill-Switch",
     "users_rbac": "Usuarios & RBAC",
     "audit_worm": "Auditoría WORM",
-    "tenants": "Empresas (Tenants)"
+    "tenants": "Empresas (Tenants)",
+    "compliance": "Flota & Seguridad"
   },
   "subscribers_map": {
     "title": "Mapa de Clientes y ONUs de Última Milla",
@@ -97,5 +98,22 @@
     "logout": "Salir",
     "switch_to_en": "Switch to English",
     "switch_to_es": "Cambiar a Español"
+  },
+  "enterprise": {
+    "title": "Gestión de Flota & Cumplimiento Normativo",
+    "subtitle": "Config Drift, Auditoría CIS Benchmark, SD-WAN WireGuard, Rogue DHCP, SLA & Wi-Fi",
+    "tab_drift": "Config Drift & Baselines",
+    "tab_cis": "CIS Benchmark Hardening",
+    "tab_sdwan": "SD-WAN Hub & Spoke",
+    "tab_switching": "Seguridad L2 & Rogue DHCP",
+    "tab_sla": "Telemetría de SLA",
+    "tab_wifi": "Wi-Fi CAPsMAN",
+    "revert_drift": "Revertir a Plantilla Homologada",
+    "auto_harden": "Endurecer Router (Auto-Hardening)",
+    "safemode_notice": "Operación protegida bajo Safe Mode (60s)",
+    "isolate_port": "Aislar Puerto Comprometido",
+    "export_sla": "Exportar Reporte Formal de SLA",
+    "deploy_failover": "Desplegar Failover Multi-WAN",
+    "provision_spoke": "Aprovisionar Spoke WireGuard"
   }
 }

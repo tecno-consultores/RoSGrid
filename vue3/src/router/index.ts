@@ -280,6 +280,15 @@ const routes: RouteRecordRaw[] = [
       title: 'Mapa Exclusivo de Clientes y ONUs — RoSGrid',
     },
   },
+  {
+    path: '/enterprise/compliance',
+    name: 'EnterpriseCompliance',
+    component: () => import('@/views/EnterpriseComplianceView.vue'),
+    meta: {
+      requiresAuth: true,
+      title: 'Gestión de Flota & Cumplimiento Normativo — RoSGrid',
+    },
+  },
 ];
 
 export const router = createRouter({

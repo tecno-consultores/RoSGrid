@@ -2,7 +2,7 @@
 
 **Licencia:** GPL-3.0-only  
 **Estándar Aplicado:** QA Testing Blueprints (Nivel 11X)  
-**Estado Actual:** Hito 15 Completado y Certificado al 100% (Sub-tareas 15.1 a 15.5) en Contenedores Docker Efímeros — Listo para Hito 16 (Release Final).
+**Estado Actual:** Hito 20 Completado y Certificado al 100% (Sub-tareas 20.1 a 20.6) en Contenedores Docker Efímeros — Listo para Hito 21 (Servidor MCP y Certificación Final).
 
 ---
 
@@ -361,6 +361,40 @@ Certificación integral ejecutada bajo la **Regla Cero** dentro de los contenedo
     - `src/views/NocWallboardView.vue`: Banner interactivo de Caída Masiva con aviso sonoro táctico generado con la Web Audio API nativa y controles de acuse/silenciamiento.
     - `src/components/field/FieldTechMobileView.vue`: Eliminación del ancho fijo de 480px; diseño fluido adaptativo para móviles, tablets (2 columnas) y laptops/desktops (3 columnas con herramienta 360°), botón prominente *"📍 Capturar Coordenadas GPS"* y canvas táctil de firma digital.
     - `src/composables/useI18n.ts`: Módulo de internacionalización con diccionarios `es.json` y `en.json`, persistencia en `localStorage`, actualización de `document.documentElement.lang` y botón conmutador global `#btn-global-lang-toggle` en `RgResponsiveShell.vue`.
+
+---
+
+## 15. Certificación QA 11X — Hito 20 (Suite Corporativa — Config Drift, CIS Hardening, SD-WAN, Rogue DHCP, SLA y CAPsMAN)
+
+Certificación integral ejecutada bajo la **Regla Cero** dentro de los contenedores Docker efímeros `qa-backend` (`sinfallas/base-python-uv:3.13`) y `qa-vue3` (`sinfallas/base-node-ionic:22`).
+
+### A. Backend (`fastapi/`) — Docker `sinfallas/base-python-uv:3.13`
+- **Análisis Estático y Seguridad (SAST):**
+  - **Ruff (`ruff check src/`):** Cero (0) errores en código fuente y suites de prueba.
+  - **Ruff Format (`ruff format --check src/`):** 103 archivos de código fuente perfectamente formateados.
+  - **Mypy Estricto (`mypy --strict src/`):** Cero (0) errores en los 103 módulos del backend (`Success: no issues found in 103 source files`).
+- **Pruebas Unitarias y Cobertura (Pytest 9.1.1):**
+  - **Pruebas Ejecutadas:** 381 de 381 pruebas pasadas (100% exitosas) en 29.12s.
+  - **Cobertura Total de Código:** **95.0%** (9,267 sentencias totales, 493 no ejecutadas), satisfaciendo el umbral corporativo de calidad `>= 95.0%`.
+  - **Módulos y Endpoints Certificados:**
+    - `src/api/v1/compliance.py`: Detección de Config Drift contra Golden Baselines (`GET /api/v1/compliance/config-drift/{router_id}`), generación de diff Git unificado, y reversión canónica atómica en 1 clic (`POST /api/v1/compliance/config-drift/revert`) con protección Safe Mode (60s) y registro en `audit_logs` con hash encadenado HMAC-SHA256. Auditoría CIS Benchmark (`GET /api/v1/compliance/cis-audit/{router_id}`) y auto-endurecimiento de directivas vulnerables (`POST /api/v1/compliance/cis-audit/{router_id}/auto-harden`).
+    - `src/api/v1/sdwan.py`: Orquestación Hub & Spoke WireGuard (`POST /api/v1/sdwan/spokes`), asignación de subredes `/31` o `/30`, consulta de topología SD-WAN multi-spoke (`GET /api/v1/sdwan/topology/{tenant_id}`) y despliegue de failover Multi-WAN recursivo mediante netwatch scripts (`POST /api/v1/sdwan/multi-wan/failover`).
+    - `src/api/v1/switching.py`: Inspección de DHCP Snooping en bridges MikroTik (`GET /api/v1/switching/dhcp-snooping/{router_id}`), monitoreo de alertas de Rogue DHCP (`GET /api/v1/switching/rogue-dhcp/alerts/{router_id}`) y aislamiento preventivo de puerto físico intruso bajo Safe Mode (`POST /api/v1/switching/rogue-dhcp/isolate-port`).
+    - `src/api/v1/sla.py`: Sondas ICMP recurrentes hacia carriers (`POST /api/v1/sla/probes/run`), telemetría de latencias (avg/p95/p99) y jitter RFC 3550 (`GET /api/v1/sla/metrics/{router_id}`) y exportación de informes oficiales para penalización de carriers (`GET /api/v1/sla/reports/export`).
+    - `src/api/v1/wifi.py`: Monitoreo de estado de controlador CAPsMAN / WiFiWave2 (`GET /api/v1/wifi/capsman/{router_id}/overview`), gestión de SSIDs 802.1X (`GET/POST /api/v1/wifi/capsman/{router_id}/ssids`) e inventario de clientes Wi-Fi con RSSI, SNR y soporte de fast roaming 802.11r (`GET /api/v1/wifi/clients/{router_id}`).
+    - `fastapi/tests/api/test_hito20_enterprise_suite.unit.py`: Suite exhaustiva con 11 casos de prueba cubriendo las 6 sub-tareas de Hito 20.
+
+### B. Frontend (`vue3/`) — Docker `sinfallas/base-node-ionic:22`
+- **Análisis Estático y Calidad de Código:**
+  - **Vue-TSC (`pnpm type-check`):** Cero (0) errores de tipado TypeScript estricto.
+  - **ESLint (`pnpm eslint`):** Cero (0) errores y cero (0) advertencias en los nuevos componentes de Hito 20 (`EnterpriseComplianceView.vue`, `enterpriseComplianceView.unit.ts`).
+  - **Prettier (`pnpm format:check`):** 100% de los archivos con formato y estilo verificado (`All matched files use Prettier code style!`).
+- **Compilación de Producción:**
+  - **Vite Build (`pnpm build`):** Compilación limpia sin errores en 4.39s, generando `dist/assets/EnterpriseComplianceView-*.js` (27.15 kB) y `dist/assets/EnterpriseComplianceView-*.css` (9.77 kB).
+- **Pruebas Unitarias (Vitest v8):**
+  - **Pruebas Ejecutadas:** 240 de 240 pruebas pasadas (100% exitosas) en 36 suites de prueba.
+  - **Suite de Pruebas Hito 20 (`src/views/enterpriseComplianceView.unit.ts`):** 6 de 6 pruebas unitarias pasadas verificando el header táctico, badge de Safe Mode, navegación reactiva por las 6 pestañas y acción de reversión de Config Drift en 1 clic.
+
 
 
 

@@ -40,8 +40,11 @@ from src.models.operations import (
     BulkJobStatusEnum,
     ConfigTemplate,
     CriticalActionTypeEnum,
+    GoldenConfigTemplate,
     NotificationChannel,
     RouterBackup,
+    SdwanSpokeTunnel,
+    SlaProbeMetric,
 )
 
 __all__ = [
@@ -63,6 +66,7 @@ __all__ = [
     "FiberCutStatusEnum",
     "FieldInstallationOrder",
     "FieldOrderStatusEnum",
+    "GoldenConfigTemplate",
     "IPAddressStatusEnum",
     "IPAMAddress",
     "IPAMPrefix",
@@ -80,6 +84,8 @@ __all__ = [
     "RouterNetworkRoleEnum",
     "RouterTag",
     "SSLTrustStatusEnum",
+    "SdwanSpokeTunnel",
+    "SlaProbeMetric",
     "SystemRoleEnum",
     "Tenant",
     "TenantStatusEnum",

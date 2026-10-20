@@ -9,6 +9,7 @@ from src.api.v1.auth import router as auth_router
 from src.api.v1.backups import router as backups_router
 from src.api.v1.bgp_looking_glass import router as bgp_looking_glass_router
 from src.api.v1.bulk_and_updates import router as bulk_updates_router
+from src.api.v1.compliance import router as compliance_router
 from src.api.v1.diagnostics_360 import router as diagnostics_360_router
 from src.api.v1.field_ops import router as field_ops_router
 from src.api.v1.inventory import router as inventory_router
@@ -18,8 +19,11 @@ from src.api.v1.mcp import router as mcp_router
 from src.api.v1.network_services import router as network_services_router
 from src.api.v1.notification_channels import router as notification_channels_router
 from src.api.v1.rbac import router as rbac_router
+from src.api.v1.sdwan import router as sdwan_router
 from src.api.v1.sessions import router as sessions_router
+from src.api.v1.sla import router as sla_router
 from src.api.v1.subscribers import bandwidth_router, subscribers_router
+from src.api.v1.switching import router as switching_router
 from src.api.v1.tenants import router as tenants_router
 from src.api.v1.traffic_flow import router as traffic_flow_router
 from src.api.v1.users import router as users_router
@@ -37,6 +41,7 @@ from src.api.v1.webfig_system_tools import (
 from src.api.v1.webfig_system_tools import (
     tools_router as webfig_tools_router,
 )
+from src.api.v1.wifi import router as wifi_router
 
 api_v1_router = APIRouter(prefix="/api/v1")
 api_v1_router.include_router(auth_router)
@@ -70,3 +75,8 @@ api_v1_router.include_router(rbac_router)
 api_v1_router.include_router(diagnostics_360_router)
 api_v1_router.include_router(bgp_looking_glass_router)
 api_v1_router.include_router(traffic_flow_router)
+api_v1_router.include_router(compliance_router)
+api_v1_router.include_router(sdwan_router)
+api_v1_router.include_router(switching_router)
+api_v1_router.include_router(sla_router)
+api_v1_router.include_router(wifi_router)

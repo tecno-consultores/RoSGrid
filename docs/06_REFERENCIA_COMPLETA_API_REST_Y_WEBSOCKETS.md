@@ -709,13 +709,165 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
   }
   ```
 
-### 4.5 Suite Corporativa & Enterprise
+### 4.5 Suite Corporativa & Cumplimiento Normativo (Hito 20)
 
-- `POST /api/v1/compliance/drift-check/{router_id}`: Compara la configuración en ejecución contra la Plantilla Maestra (*Golden Baseline*). Retorna diff semántico en formato Git.
-- `POST /api/v1/compliance/drift-revert/{router_id}`: Aplica reversión a la configuración canónica con Safe Mode y Maker-Checker.
-- `POST /api/v1/compliance/cis-audit/{router_id}`: Evalúa las 10 directivas críticas CIS y genera Security Score (0 a 100).
-- `POST /api/v1/compliance/cis-harden/{router_id}`: Ejecuta auto-endurecimiento cerrando servicios vulnerables.
-- `POST /api/v1/sdwan/mesh-provision`: Genera llaves WireGuard, asigna `/30` y despliega adyacencia de enrutamiento dinámico Hub & Spoke.
-- `GET /api/v1/switching/rogue-dhcp-alerts`: Lista eventos de DHCP Snooping y puertos con intrusos detectados.
-- `GET /api/v1/sla/reports/monthly`: Genera reporte auditable de disponibilidad y latencia P95/P99 para reclamos a carriers.
-- `GET/POST /api/v1/wifi/capsman/profiles`: Gestiona perfiles centralizados de SSIDs Corporativo (802.1X), Invitados e IoT.
+#### 4.5.1 Config Drift & Golden Baselines (`/api/v1/compliance`)
+
+##### `GET /api/v1/compliance/golden-templates`
+- **Propósito:** Listar las plantillas maestras (*Golden Templates*) de configuración homologada del Tenant.
+- **Rol Mínimo:** `OPERATOR`.
+- **Respuesta (200 OK):** Array de `GoldenConfigTemplate` (`id`, `name`, `network_role`, `baseline_rsc_content`, `enforce_strict_firewall`, `enforce_ntp_dns`, etc.).
+
+##### `POST /api/v1/compliance/golden-templates`
+- **Propósito:** Crear una nueva plantilla maestra de configuración para un rol de red.
+- **Rol Mínimo:** `TENANT_ADMIN`.
+- **Payload Entrada:**
+  ```json
+  {
+    "name": "Baseline-CORE-Strict",
+    "network_role": "CORE",
+    "baseline_rsc_content": "/ip service set telnet disabled=yes\n/ip service set ftp disabled=yes",
+    "enforce_strict_firewall": true,
+    "enforce_ntp_dns": true
+  }
+  ```
+
+##### `GET /api/v1/compliance/config-drift/{router_id}`
+- **Propósito:** Comparar la configuración exportada en vivo (`/export verbose`) del router contra su plantilla maestra homologada.
+- **Rol Mínimo:** `OPERATOR`.
+- **Respuesta (200 OK):**
+  ```json
+  {
+    "router_id": "7b8d4f10-1234-4567-89ab-cdef01234567",
+    "router_name": "Core-CCR2004",
+    "network_role": "CORE",
+    "drift_detected": true,
+    "baseline_template_name": "Baseline-CORE-Strict",
+    "added_lines": ["/ip service set telnet disabled=no"],
+    "removed_lines": [],
+    "diff_unified": "--- golden\n+++ active\n@@ -1 +1 @@\n-/ip service set telnet disabled=yes\n+/ip service set telnet disabled=no",
+    "total_drift_lines": 1,
+    "checked_at": "2026-10-19T20:00:00Z"
+  }
+  ```
+
+##### `POST /api/v1/compliance/config-drift/revert`
+- **Propósito:** Revertir la configuración del router a la plantilla homologada en 1 clic (*Auto-Revert*).
+- **Protección:** Safe Mode (60s) forzoso y registro forense inmutable WORM HMAC-SHA256.
+- **Rol Mínimo:** `TENANT_ADMIN` (sujeto a interceptor Maker-Checker en producción).
+- **Payload Entrada:**
+  ```json
+  {
+    "router_id": "7b8d4f10-1234-4567-89ab-cdef01234567",
+    "template_id": "tpl-uuid-optional",
+    "enforce_safemode": true
+  }
+  ```
+
+#### 4.5.2 Auditoría & Auto-Hardening CIS Benchmark (`/api/v1/compliance`)
+
+##### `GET /api/v1/compliance/cis-audit/{router_id}`
+- **Propósito:** Auditar las 10 directivas críticas de seguridad para MikroTik RouterOS v7.
+- **Rol Mínimo:** `OPERATOR`.
+- **Respuesta (200 OK):**
+  ```json
+  {
+    "router_id": "7b8d4f10-1234-4567-89ab-cdef01234567",
+    "router_name": "Core-CCR2004",
+    "security_score": 85,
+    "compliance_grade": "B",
+    "total_directives": 10,
+    "passed_directives": 8,
+    "failed_directives": 2,
+    "directives": [
+      {
+        "code": "CIS-1.1",
+        "title": "Deshabilitar Telnet",
+        "passed": false,
+        "weight": 15,
+        "finding": "Telnet está activo en puerto 23",
+        "remediation_cmd": "/ip service set telnet disabled=yes"
+      }
+    ],
+    "audited_at": "2026-10-19T20:00:00Z"
+  }
+  ```
+
+##### `POST /api/v1/compliance/cis-audit/{router_id}/auto-harden`
+- **Propósito:** Auto-endurecimiento en 1 clic aplicando las directivas CIS fallidas bajo Safe Mode (60s).
+- **Rol Mínimo:** `TENANT_ADMIN`.
+
+#### 4.5.3 Orquestación SD-WAN WireGuard Hub & Spoke (`/api/v1/sdwan`)
+
+##### `POST /api/v1/sdwan/spokes`
+- **Propósito:** Aprovisionamiento dinámico de un nuevo spoke SD-WAN WireGuard con cálculo de subred `/31` o `/30`.
+- **Rol Mínimo:** `TENANT_ADMIN`.
+- **Payload Entrada:**
+  ```json
+  {
+    "hub_router_id": "hub-uuid",
+    "spoke_router_id": "spoke-uuid",
+    "spoke_name": "Maracaibo-Branch",
+    "routing_protocol": "BGP",
+    "multi_wan_failover_enabled": true
+  }
+  ```
+
+##### `GET /api/v1/sdwan/topology/{tenant_id}`
+- **Propósito:** Obtener el grafo de topología SD-WAN del tenant con estado operativo de túneles y spokes.
+- **Rol Mínimo:** `OPERATOR`.
+
+##### `POST /api/v1/sdwan/multi-wan/failover`
+- **Propósito:** Desplegar política de conmutación Multi-WAN recursiva mediante scripts `netwatch` en RouterOS v7.
+- **Rol Mínimo:** `TENANT_ADMIN`.
+
+#### 4.5.4 Seguridad L2 & Detección de Rogue DHCP (`/api/v1/switching`)
+
+##### `GET /api/v1/switching/dhcp-snooping/{router_id}`
+- **Propósito:** Inspeccionar estado de DHCP Snooping en bridges y lista de puertos confiables/no-confiables.
+- **Rol Mínimo:** `SUPPORT_L2`.
+
+##### `GET /api/v1/switching/rogue-dhcp/alerts/{router_id}`
+- **Propósito:** Listar alertas de servidores DHCP no autorizados detectados en bridges del router.
+- **Rol Mínimo:** `SUPPORT_L2`.
+
+##### `POST /api/v1/switching/rogue-dhcp/isolate-port`
+- **Propósito:** Aislamiento inmediato en 1 clic del puerto del intruso bajo Safe Mode (60s).
+- **Rol Mínimo:** `SUPPORT_L2`.
+- **Payload Entrada:**
+  ```json
+  {
+    "router_id": "7b8d4f10-1234-4567-89ab-cdef01234567",
+    "interface_name": "ether4",
+    "reason": "Servidor DHCP rogue no autorizado detectado en bridge1"
+  }
+  ```
+
+#### 4.5.5 Monitor de Cumplimiento de SLA para Enlaces Dedicados (`/api/v1/sla`)
+
+##### `POST /api/v1/sla/probes/run`
+- **Propósito:** Ejecutar ciclo inmediato de sondeo de latencia mínima/promedio/máxima/p95/p99 y jitter hacia el carrier.
+- **Rol Mínimo:** `SUPPORT_L2`.
+
+##### `GET /api/v1/sla/metrics/{router_id}`
+- **Propósito:** Listar mediciones históricas de SLA y estado de cumplimiento contractual (`COMPLIANT` / `BREACH`).
+- **Rol Mínimo:** `SUPPORT_L2`.
+
+##### `GET /api/v1/sla/reports/export`
+- **Propósito:** Generar informe oficial de cumplimiento de SLA para auditoría y reclamo de penalizaciones por caída/degradación.
+- **Rol Mínimo:** `OPERATOR`.
+
+#### 4.5.6 Wi-Fi Corporativo CAPsMAN / WiFiWave2 (`/api/v1/wifi`)
+
+##### `GET /api/v1/wifi/capsman/{router_id}/overview`
+- **Propósito:** Consultar el estado operativo del controlador central CAPsMAN, radios y APs activos.
+- **Rol Mínimo:** `OPERATOR`.
+
+##### `GET /api/v1/wifi/capsman/{router_id}/ssids` y `POST /api/v1/wifi/capsman/{router_id}/ssids`
+- **Propósito:** Gestionar perfiles de SSID centralizados (WPA3-Enterprise 802.1X, Invitados, IoT).
+- **Rol Mínimo:** `TENANT_ADMIN`.
+
+##### `GET /api/v1/wifi/clients/{router_id}`
+- **Propósito:** Telemetría en tiempo real de clientes Wi-Fi conectados con niveles de señal RSSI (dBm), SNR (dB) y soporte de roaming rápido 802.11r/k/v.
+- **Rol Mínimo:** `OPERATOR`.
+

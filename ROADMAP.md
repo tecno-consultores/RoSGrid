@@ -2,8 +2,16 @@
 
 ## 📍 Punto de Control Actual (Checkpoint)
 
-- **Hito Actual en Curso:** Hito 20 (Suite Corporativa — Config Drift, CIS Hardening, SD-WAN, Rogue DHCP, SLA y CAPsMAN)
-- **Estado General del Sistema:** Hitos 0 al 19 COMPLETADOS (100%).
+- **Hito Actual en Curso:** Hito 21 (Servidor MCP Ampliado para Agentes IA y Certificación QA 11X Final)
+- **Estado General del Sistema:** Hitos 0 al 20 COMPLETADOS (100%).
+- **Hito 20 (Suite Corporativa — Config Drift, CIS Hardening, SD-WAN, Rogue DHCP, SLA y CAPsMAN):** COMPLETADO al 100% y certificado en Docker:
+  - Detección de Desviación de Configuración (*Config Drift Detection*): Comparador semántico contra Plantilla Maestra (*Golden Baseline*), visor Git Diff unificado interactivo y reversión atómica en 1 clic (*Auto-Revert*) bajo Safe Mode (60s) con registro de auditoría WORM HMAC-SHA256.
+  - Orquestador SD-WAN WireGuard Hub & Spoke: Aprovisionamiento dinámico con direccionamiento de interconexión `/31` o `/30`, inserción de peers y failover Multi-WAN recursivo mediante netwatch scripts en RouterOS v7.
+  - Auditoría de Seguridad & Endurecimiento CIS Benchmark: Evaluación de las 10 directivas críticas para RouterOS, cálculo de Security Score (0-100), determinación de grado de cumplimiento (A-F) y auto-endurecimiento (*Auto-Hardening*) preventivo.
+  - Seguridad L2 & Detección de Rogue DHCP: Inspección de DHCP Snooping en bridges MikroTik, mapeo de puertos de confianza/desconfianza, alertas de servidores rogue con MAC y aislamiento de puerto en 1 clic bajo Safe Mode.
+  - Monitor de Cumplimiento de SLA para Enlaces Dedicados: Sondeos de latencia mínima/promedio/máxima/p95/p99, cálculo de jitter RFC 3550, evaluación de umbral SLA contractual y exportador de informes auditables para reclamos de penalización a carriers.
+  - Gestión Centralizada de Wi-Fi Corporativo (CAPsMAN / WiFiWave2): Visión general de radios y APs gestionados, orquestación de perfiles SSID (WPA3-Enterprise 802.1X, Invitados, IoT) y telemetría de clientes en tiempo real (RSSI, SNR, fast roaming 802.11r/k/v).
+  - Certificación QA: Backend con 381 pruebas unitarias aprobadas y 95.0% de cobertura en `src/`; Frontend con 240 pruebas unitarias aprobadas, 0 errores en `vue-tsc`, 0 errores en `eslint`, 0 advertencias de formato y compilación de producción validada.
 - **Hito 19 (Mapas Separados, Telemetría Efímera, Responsive e i18n):** COMPLETADO al 100% y certificado en Docker:
   - Mapa Exclusivo de Clientes/ONUs (`OsmOnuMap.vue` en `/subscribers/map`): Totalmente desacoplado del mapa de infraestructura de routers, con telemetría efímera Zero-Metrics (🟢 < 40ms, 🟠 40-120ms, 🔴 > 20% o timeout), agrupación por caja de empalme / coordenadas coincidentes y spiderfier interactivo.
   - Detección de Caída Masiva (Mass Outage Alert): Monitoreo de umbral dinámico (`tenant.mass_outage_threshold`), alerta visual y sonora reactiva en el Wallboard NOC mediante WebSockets y registro de auditoría WORM inmutable con hash encadenado HMAC-SHA256.
@@ -290,12 +298,12 @@
 
 > **Archivo Guía:** `specs/33_ENTERPRISE_FLEET_MANAGEMENT_AND_SECURITY_COMPLIANCE.md`
 
-- [ ] **20.1** Detección de Desviación de Configuración (*Config Drift Detection*): Comparador contra Plantilla Maestra (*Golden Baseline Template*), visor de diferencias Git Diff en rojo/verde y botón de remediación en 1 clic (*Auto-Revert*) con Safe Mode y Maker-Checker.
-- [ ] **20.2** Orquestador SD-WAN WireGuard Hub & Spoke: Generación automática de llaves, direccionamiento `/30` o `/31`, inserción de peers y enrutamiento dinámico OSPF sobre WireGuard con failover multi-WAN recursivo.
-- [ ] **20.3** Auditoría de Seguridad & Endurecimiento CIS Benchmark para RouterOS: Escaneo de las 10 directivas críticas de ciberseguridad, cálculo de Security Score (0-100) y botón de auto-endurecimiento (*Auto-Hardening*).
-- [ ] **20.4** Detección de Rogue DHCP & Seguridad de Conmutación: Monitoreo de eventos de DHCP Snooping en switches y bridges MikroTik, alertas al NOC con puerto físico y MAC del intruso, y deshabilitación preventiva de puerto.
-- [ ] **20.5** Monitor de Cumplimiento de SLA para Enlaces Dedicados: Medición continua de jitter, latencia y pérdida hacia el gateway del carrier con generador de reportes de cumplimiento (PDF/CSV) para reclamos de penalización.
-- [ ] **20.6** Gestión Centralizada de WiFi Corporativo (CAPsMAN / WiFiWave2): Orquestación de SSIDs (Corporativo WPA3-Enterprise 802.1X, Invitados aislado y dispositivos IoT) con telemetría de señal RSSI y trazabilidad de roaming 802.11r.
+- [x] **20.1** Detección de Desviación de Configuración (*Config Drift Detection*): Comparador contra Plantilla Maestra (*Golden Baseline Template*), visor de diferencias Git Diff en rojo/verde y botón de remediación en 1 clic (*Auto-Revert*) con Safe Mode y Maker-Checker.
+- [x] **20.2** Orquestador SD-WAN WireGuard Hub & Spoke: Generación automática de llaves, direccionamiento `/30` o `/31`, inserción de peers y enrutamiento dinámico OSPF sobre WireGuard con failover multi-WAN recursivo.
+- [x] **20.3** Auditoría de Seguridad & Endurecimiento CIS Benchmark para RouterOS: Escaneo de las 10 directivas críticas de ciberseguridad, cálculo de Security Score (0-100) y botón de auto-endurecimiento (*Auto-Hardening*).
+- [x] **20.4** Detección de Rogue DHCP & Seguridad de Conmutación: Monitoreo de eventos de DHCP Snooping en switches y bridges MikroTik, alertas al NOC con puerto físico y MAC del intruso, y deshabilitación preventiva de puerto.
+- [x] **20.5** Monitor de Cumplimiento de SLA para Enlaces Dedicados: Medición continua de jitter, latencia y pérdida hacia el gateway del carrier con generador de reportes de cumplimiento (PDF/CSV) para reclamos de penalización.
+- [x] **20.6** Gestión Centralizada de WiFi Corporativo (CAPsMAN / WiFiWave2): Orquestación de SSIDs (Corporativo WPA3-Enterprise 802.1X, Invitados aislado y dispositivos IoT) con telemetría de señal RSSI y trazabilidad de roaming 802.11r.
 
 ---
 

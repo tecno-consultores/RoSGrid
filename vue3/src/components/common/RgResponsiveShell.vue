@@ -111,6 +111,12 @@
         label: t('nav.audit_worm', 'Auditoría WORM'),
         icon: '📜',
       },
+      {
+        name: 'EnterpriseCompliance',
+        path: '/enterprise/compliance',
+        label: t('nav.compliance', 'Flota & Seguridad'),
+        icon: '🛡️',
+      },
     );
 
     if (authStore.currentRole === 'SUPERADMIN_GLOBAL') {
