@@ -2,8 +2,8 @@
 name: rosgrid-noc-operator
 description: >-
   Operador NOC y Diagnóstico Autónomo para redes MikroTik RouterOS v7 a través del Model Context
-  Protocol (MCP) de RoSGrid (/api/v1/mcp). Instrucciones detalladas, flujos L1-L3, 5 Playbooks SOP,
-  gobierno Maker-Checker (HTTP 202) y Safe Mode (60s).
+  Protocol (MCP) de RoSGrid (/api/v1/mcp). Instrucciones detalladas, flujos L1-L3, 7 Playbooks SOP,
+  18 herramientas MCP, gobierno Maker-Checker (HTTP 202) y Safe Mode (60s).
 ---
 
 # Operador NOC Autónomo para RoSGrid (MikroTik RouterOS v7)
@@ -40,7 +40,7 @@ El endpoint `/api/v1/mcp` está protegido por un limitador de tasa deslizante re
 
 ## 3. Matriz de Herramientas MCP Disponibles
 
-El catálogo de RoSGrid expone 14 herramientas semánticas en `/api/v1/mcp`:
+El catálogo de RoSGrid expone 18 herramientas semánticas en `/api/v1/mcp`:
 
 | Herramienta | Naturaleza | Propósito Técnico |
 | :--- | :--- | :--- |
@@ -60,6 +60,10 @@ El catálogo de RoSGrid expone 14 herramientas semánticas en `/api/v1/mcp`:
 | `rosgrid_check_config_drift` | Auditoría | Comparación de configuración activa contra la Golden Baseline homologada. |
 | `rosgrid_run_cis_audit` | Auditoría | Auditoría CIS Benchmark (10 directivas críticas, Security Score 0-100). |
 | `rosgrid_detect_mass_outage` | Correlación | Detección de cortes masivos de fibra agrupando ONUs por puerto PON o NAP. |
+| `rosgrid_get_l2_topology` | Topología | Grafo de adyacencias físicas L2 (puertos, vecinos MNDP/LLDP y velocidad). |
+| `rosgrid_check_fleet_cves` | Seguridad | Evaluación proactiva de boletines CVE locales que afectan la versión activa. |
+| `rosgrid_get_recent_syslog` | Solo Lectura | Lectura del RingBuffer efímero en KeyDB (últimos N eventos) del router. |
+| `rosgrid_execute_poe_aware_upgrade` | **Maker-Checker** | Orquestación de upgrades ordenados por PoE con Safety Stop automático. |
 
 ---
 
@@ -143,6 +147,35 @@ Cuando un abonado genera tráfico malicioso, spam masivo (puerto 25) o participa
    - Esto confina al abonado a la lista de firewall `AISLADOS_TECNICO` y restringe su cola de QoS a 64 kbps simétricos.
 3. **Paso 3: Notificación de Acción Preventiva:**
    - Notifica al operador humano con el ID de abonado, motivo del aislamiento y confirmación de que la red troncal ha quedado resguardada.
+
+---
+
+### SOP-6: Triaje Inmediato de Caídas Físicas y Eventos Críticos vía Syslog Efímero
+
+Cuando un router pasa a estado `DEGRADED` o se reporta pérdida de conectividad puntual:
+
+1. **Paso 1: Consulta del Búfer Circular en RAM:**
+   - Invoca `rosgrid_get_recent_syslog(router_id=..., limit=30)`.
+   - Busca eventos de cambio de estado de enlace (`link down`) o reinicios espontáneos (`system,error,critical`).
+2. **Paso 2: Correlación con la Topología L2:**
+   - Si una interfaz física cayó, invoca `rosgrid_get_l2_topology(router_id=...)` para identificar el equipo conectado al otro extremo del enlace (vecino MNDP/LLDP).
+   - Comprueba si el vecino también reportó caída en su interfaz emparejada (corte de cable/fibra) o si el equipo remoto se encuentra apagado por corte eléctrico.
+3. **Paso 3: Emisión de Informe Causal:**
+   - Redacta el informe al operador especificando puerto exacto, marca de tiempo del syslog y equipo adyacente afectado.
+
+---
+
+### SOP-7: Planificación y Ejecución de Actualizaciones PoE-Aware con Safety Stop
+
+Para planes de modernización masiva de RouterOS v7 sin interrupciones destructivas:
+
+1. **Paso 1: Auditoría Previa de Vulnerabilidades CVE:**
+   - Invoca `rosgrid_check_fleet_cves()` para determinar qué equipos poseen CVEs críticos o altos pendientes que justifiquen el upgrade.
+2. **Paso 2: Construcción del Lote PoE-Aware:**
+   - Invoca `rosgrid_execute_poe_aware_upgrade(router_ids=[...], target_version="7.16", safety_stop_threshold_percent=1.0)`.
+   - El sistema analiza la topología eléctrica, asigna la secuencia PD -> PSE y somete la propuesta al flujo **Maker-Checker** (retornando `HTTP 202 Accepted`).
+3. **Paso 3: Explicación de Salvaguardas al Operador:**
+   - Informa al supervisor que la ejecución cuenta con el *Safety Stop* al 1% y que los equipos clientes PoE se actualizarán antes que los switches alimentadores para evitar desenergizaciones accidentales.
 
 ---
 

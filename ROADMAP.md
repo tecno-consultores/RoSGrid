@@ -1,9 +1,10 @@
-# 🗺️ ROADMAP GRANULAR DE EJECUCIÓN (31 SPECS) — RoSGrid
+# 🗺️ ROADMAP GRANULAR DE EJECUCIÓN (36 SPECS) — RoSGrid
 
 ## 📍 Punto de Control Actual (Checkpoint)
 
-- **Hito Actual en Curso:** Hito 22 (Cierre de `CHANGELOG.md`, Auditoría Trivy y Publicación en Docker Hub `build.sh`)
-- **Estado General del Sistema:** Hitos 0 al 21 COMPLETADOS (100%) y Hito 22 (Sub-tareas 22.1, 22.2, 22.5, 22.6, 22.7, 22.8, 22.9, 22.10, 22.11, 22.12, 22.13, 22.14, 22.15) COMPLETADOS.
+- **Hito Actual en Curso:** Hito 23 (Automatización de Flota, Topología L2, Syslog Efímero, Exportador Prometheus y Seguridad CVE — Planificación & Arquitectura)
+- **Estado General del Sistema:** Hitos 0 al 22 COMPLETADOS (100%).
+- **Hito 23 (Planificación & Arquitectura Avanzada de Flota):** En progreso. Especificación `specs/35_FLEET_AUTOMATION_TOPOLOGY_L2_SYSLOG_AND_PROMETHEUS.md`, manual `docs/12_DISENO_TOPOLOGIA_L2_SYSLOG_Y_AUTOMATIZACION.md`, ampliación del catálogo MCP a 18 herramientas y 7 playbooks SOP en la Skill `rosgrid-noc-operator`.
 - **Hito 22.15 (Skill Oficial de Operaciones NOC para Agentes IA):** COMPLETADO al 100% y certificado en Docker. Arquitectura portable en `.agents/skills/rosgrid-noc-operator/SKILL.md` y global en `~/.gemini/config/skills/`, 5 Playbooks SOP (Diagnóstico 360°, cortes de fibra PON, inestabilidad BGP/OSPF, auditoría CIS y drift, aislamiento preventivo), catálogo de 14 herramientas MCP, referencias de flags RouterOS v7, configs para Claude Desktop y Hermes Agent, distribución remota en `instalar-rosgrid.sh` (`/opt/rosgrid/skills/`), botones de descarga/copiado en `RgMcpTokenModal.vue` y endpoint público `GET /api/v1/mcp/skill`.
 - **Hito 22.14 (Generador de Tokens MCP, Supervisión de Sesiones IA y Panel de Notificaciones):** COMPLETADO al 100% y certificado en Docker. Emisión visual de Bearer Tokens MCP en `RgMcpTokenModal.vue`, Kill-Switch de agentes IA en `ActiveSessionsKillSwitchView.vue`, paridad frontend total con `NotificationChannelsPanel.vue` (Telegram, SMTP, Webhooks) y 406 tests backend / 278 tests frontend aprobados.
 - **Hito 22.13 (Consolidación de Calidad, Resolución de Diagnósticos y Robustecimiento DevOps):** COMPLETADO al 100% y certificado en Docker. Normalización con markdownlint-cli, modernización a Mermaid flowchart, Type Narrowing en escapeHtml, eliminación de tests/ huérfana en vue3, script verificar-secretos.sh para Lefthook con ShellCheck y backend con 404 tests unitarios y 95.07% de cobertura.
@@ -377,5 +378,45 @@
   - Sincronización del script CLI `generar_token_mcp.py` con el registro de sesiones activas.
   - Implementación del componente `NotificationChannelsPanel.vue` integrado como 7ª pestaña en `EnterpriseComplianceView.vue` para administración completa y despacho de pruebas (`POST /{id}/test`) de canales de Telegram, SMTP y Webhooks cifrados en AES-256-GCM.
   - Certificación QA 11X en Docker: 406 pruebas backend aprobadas (95% cobertura), 278 pruebas frontend aprobadas en 40 archivos, 0 errores en ESLint y Vue-TSC.
-- [ ] **22.3** Actualizar `CHANGELOG.md` consolidando los cambios de `[Unreleased]` dentro del lanzamiento oficial `[1.0.0]` con las métricas certificadas en `TESTING.md`.
-- [ ] **22.4** Ejecutar `./build.sh` (como usuario no-root) con `docker buildx` (`container-builder` + `tonistiigi/binfmt`) para construir y publicar `sinfallas/rosgrid-backend:latest` (`:1.0.0`) y `sinfallas/rosgrid-frontend:latest` (`:1.0.0`) en Docker Hub y limpiar cachés con `prune -af`.
+- [x] **22.15** **Skill Oficial de Operaciones NOC para Agentes IA (`rosgrid-noc-operator`):**
+  - Creación de la Skill portable en `.agents/skills/rosgrid-noc-operator/SKILL.md` con 5 Playbooks SOP (Diagnóstico 360°, cortes PON, flapping BGP/OSPF, CIS/drift, aislamiento).
+  - Catálogo de herramientas MCP en `references/mcp_tools.md`, banderas de RouterOS v7 en `references/routeros_flags.md` y configuraciones para Claude Desktop y Hermes Agent.
+  - Distribución multicanal: descarga remota en `instalar-rosgrid.sh` (`/opt/rosgrid/skills/`), botones en `RgMcpTokenModal.vue` y endpoint público `GET /api/v1/mcp/skill`.
+
+---
+
+## ⚡ HITO 23: Automatización de Flota, Topología L2, Syslog Efímero, Exportador Prometheus y Seguridad CVE (Planificación & Arquitectura)
+
+> **Archivos Guía:** `specs/35_FLEET_AUTOMATION_TOPOLOGY_L2_SYSLOG_AND_PROMETHEUS.md` y `docs/12_DISENO_TOPOLOGIA_L2_SYSLOG_Y_AUTOMATIZACION.md`
+
+- [x] **23.1** **Especificación Técnica y Arquitectura de Datos (`specs/35` y `docs/12`):**
+  - Definición integral de estructuras de datos en memoria, preservando estrictamente la premisa *Zero-Metrics Storage* (cero almacenamiento de series temporales en PostgreSQL 17).
+  - Especificación del Grafo Acíclico Dirigido (DAG) para dependencias de energía PoE, ordenamiento inverso de actualización (Hojas PD primero, Raíces PSE al final) y circuito de corte de emergencia *Fleet Safety Stop* (umbral 1% de fallos post-reinicio).
+  - Definición del modelo de cruce local de boletines CVE (`cve_catalog_ros.json`) con cero exposición de telemetría a la nube exterior.
+  - Diseño del receptor asíncrono Syslog en puerto no privilegiado 5514 (UDP/TCP) con RingBuffer volátil en KeyDB (`MAXLEN 500`) y filtro de eventos críticos en vuelo (*linkDown*, *bgp drop*, *login attack*).
+  - Diseño del puente de métricas hacia Prometheus (`GET /api/v1/metrics/fleet`) autenticado por token, habilitando dashboards en Grafana sin saturación de disco local.
+- [x] **23.2** **Plantilla Estandarizada para Enrolamiento Masivo de Syslog RouterOS v7:**
+  - Creación del script predefinido para `/system/logging/action` y `/system/logging` adaptable con variables `{{ROSGRID_SERVER_IP}}` y `{{ROSGRID_SYSLOG_PORT}}` para despliegue desatendido mediante *Bulk Ops*.
+- [x] **23.3** **Ampliación del Servidor MCP y Skill Oficial (`rosgrid-noc-operator`):**
+  - Incorporación al diseño del servidor MCP de 4 nuevas herramientas semánticas: `rosgrid_get_l2_topology`, `rosgrid_check_fleet_cves`, `rosgrid_get_recent_syslog` y `rosgrid_execute_poe_aware_upgrade` (total 18 herramientas).
+  - Actualización de la Skill `.agents/skills/rosgrid-noc-operator/SKILL.md` incorporando SOP-6 (Triaje de caídas de enlace vía Syslog) y SOP-7 (Planificación PoE-Aware con Safety Stop).
+  - Sincronización idéntica en el catálogo global de Antigravity (`~/.gemini/config/skills/rosgrid-noc-operator/`).
+- [ ] **23.4** **Implementación Backend & Modelos:**
+  - Migración y catálogo local de CVEs (`cve_catalog_ros.json`).
+  - Colector Syslog UDP/TCP 5514 con RingBuffer en KeyDB y rate-limiting anti-spoofing.
+  - Endpoints de topología L2 (`/api/v1/topology/l2`), cruce de CVEs (`/api/v1/inventory/cves`) y métricas de flota para Prometheus (`/api/v1/metrics/fleet`).
+  - Orquestador de trabajos masivos PoE-aware con Safety Stop.
+- [ ] **23.5** **Implementación Frontend (Vue 3 + Pinia):**
+  - Vista interactiva de Topología L2 con Canvas/SVG (`L2TopologyView.vue`).
+  - Insignias de riesgo CVE en tabla de inventario (`RgDataTable.vue`).
+  - Terminal de eventos Syslog en vivo en la consola WebFig del router.
+  - Asistente de actualización masiva con conmutador *PoE-Aware* y selector de umbral *Safety Stop*.
+
+---
+
+## 📦 HITO 24: Cierre de `CHANGELOG.md`, Auditoría Trivy y Publicación en Docker Hub (`build.sh`)
+
+> **Archivo Guía:** `specs/01_DOCKER_INFRASTRUCTURE_AND_IMMUTABLE_IMAGES.md`
+
+- [ ] **24.1** Actualizar `CHANGELOG.md` consolidando los cambios de `[Unreleased]` dentro del lanzamiento oficial `[1.0.0]` con las métricas certificadas en `TESTING.md`.
+- [ ] **24.2** Ejecutar `./build.sh` (como usuario no-root) con `docker buildx` (`container-builder` + `tonistiigi/binfmt`) para construir y publicar `sinfallas/rosgrid-backend:latest` (`:1.0.0`) y `sinfallas/rosgrid-frontend:latest` (`:1.0.0`) en Docker Hub y limpiar cachés con `prune -af`.

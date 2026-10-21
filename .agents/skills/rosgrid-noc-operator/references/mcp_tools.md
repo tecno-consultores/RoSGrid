@@ -1,6 +1,6 @@
 # Catálogo de Herramientas MCP de RoSGrid (`/api/v1/mcp`)
 
-Este documento detalla los parámetros de entrada, esquemas y directrices de uso de las 14 herramientas MCP expuestas por el servidor RoSGrid para agentes de Inteligencia Artificial.
+Este documento detalla los parámetros de entrada, esquemas y directrices de uso de las 18 herramientas MCP expuestas por el servidor RoSGrid para agentes de Inteligencia Artificial.
 
 ---
 
@@ -149,3 +149,37 @@ Este documento detalla los parámetros de entrada, esquemas y directrices de uso
   - `http_method` (string enum: `["POST", "PATCH", "DELETE", "PUT"]`, obligatorio).
   - `payload` (object, obligatorio): Objeto JSON con los atributos de configuración de RouterOS v7.
   - `justification` (string, obligatorio): Justificación técnica formal visible en la interfaz para el aprobador.
+
+---
+
+## 7. Herramientas de Topología Física L2, Automatización PoE y Syslog Efímero
+
+### `rosgrid_get_l2_topology`
+
+- **Descripción:** Consulta el grafo de interconexión física de Capa 2 descubierto mediante paquetes MNDP, LLDP y CDP entre los enrutadores y switches del tenant. Devuelve las aristas verificadas puerto a puerto (ej. `RouterA:sfp1 <---> SwitchB:sfp24`), estado de enlace y velocidad negociada.
+- **Parámetros:**
+  - `router_id` (string UUID, opcional): Si se especifica, filtra solo las adyacencias directas de ese router; si se omite, retorna la matriz de toda la flota.
+
+### `rosgrid_check_fleet_cves`
+
+- **Descripción:** Evalúa de forma proactiva la versión activa de RouterOS de cada equipo contra el catálogo local soberano de vulnerabilidades CVE (sin fugas hacia servicios de nube externos).
+- **Parámetros:**
+  - `router_id` (string UUID, opcional): Filtrar por un router particular.
+  - `min_severity` (string enum: `["CRITICAL", "HIGH", "MEDIUM", "ALL"]`, opcional, por defecto `"HIGH"`).
+
+### `rosgrid_get_recent_syslog`
+
+- **Descripción:** Lee del RingBuffer volátil en RAM de KeyDB los últimos eventos Syslog registrados para un router específico (máximo 500 retendidos en memoria). Permite identificar caídas físicas instantáneas (`link down`), desconexiones BGP y reinicios.
+- **Parámetros:**
+  - `router_id` (string UUID, obligatorio): Identificador del router.
+  - `limit` (integer, opcional, rango 10 a 100, por defecto 30): Número de eventos recientes a retornar.
+  - `topic_filter` (string, opcional): Filtrar por tópico (ej. `"interface"`, `"route,bgp"`, `"system,error"`).
+
+### `rosgrid_execute_poe_aware_upgrade`
+
+- **Descripción:** Genera una solicitud de actualización masiva con ordenamiento consciente de dependencias PoE (equipos alimentados PD se actualizan antes que los alimentadores PSE) y freno de seguridad (*Safety Stop*) ante fallos post-reinicio. Sometido al flujo Maker-Checker (`HTTP 202 Accepted`).
+- **Parámetros:**
+  - `router_ids` (array de string UUID, obligatorio): Lista de routers a actualizar.
+  - `target_version` (string, obligatorio): Versión destino de RouterOS v7 (ej. `"7.16.1"`).
+  - `safety_stop_threshold_percent` (float, opcional, por defecto 1.0): Porcentaje de fallos post-reinicio que detendrá automáticamente el resto del lote.
+  - `justification` (string, obligatorio): Justificación formal del mantenimiento.

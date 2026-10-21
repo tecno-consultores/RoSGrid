@@ -1,0 +1,223 @@
+# 35 — AUTOMATIZACIÓN DE FLOTA, TOPOLOGÍA FÍSICA L2, RECEPTOR SYSLOG EFÍMERO Y EXPORTADOR PROMETHEUS (RoSGrid)
+
+> **[DIRECTIVA DE SISTEMA]:** Esta especificación define la arquitectura técnica y el diseño conceptual para la siguiente evolución de capacidades operativas de RoSGrid:
+>
+> 1. Motor de Actualizaciones Masivas con Ordenamiento Consciente de PoE (*PoE-Aware Upgrades*) y Parada de Emergencia Automática (*Fleet Safety Stop*).
+> 2. Cruce Proactivo de Vulnerabilidades CVE sobre el Inventario con Base de Conocimiento Local (Cero Fuga a Nube Externa).
+> 3. Receptor Syslog Centralizado Efímero (UDP/TCP en puerto 5514) con Alertas en Vuelo y Cero Almacenamiento en Disco PostgreSQL (RingBuffer KeyDB).
+> 4. Plantilla Estandarizada para Enrolamiento Masivo de Routers al Receptor Syslog.
+> 5. Descubrimiento y Mapeo Visual Dinámico de Topología Física Capa 2 (MNDP/LLDP) sin Guardar Series Temporales.
+> 6. Puente de Telemetría de Flota hacia Prometheus (`GET /api/v1/metrics/fleet`) para Grafana, preservando la premisa *Zero-Metrics Storage* en PostgreSQL.
+> 7. Ampliación del Servidor MCP y de la Skill `rosgrid-noc-operator` para Agentes IA autónomos.
+> 8. Marco Integral de Ciberseguridad, Mitigación de Vulnerabilidades y Análisis de Riesgos.
+
+---
+
+## 1. Actualizaciones Masivas PoE-Aware y Parada de Emergencia de Flota (*Safety Stop*)
+
+### 1.1. Grafo de Dependencia Energética y Topológica
+
+En entornos de telecomunicaciones (torres WISP, nodos FTTH, redes de distribución), es común que routers o switches MikroTik energicen a otros equipos aguas abajo mediante PoE (*Power over Ethernet* / `poe-out`). Si se actualiza y reinicia primero el equipo que suministra energía (*Power Sourcing Equipment* - PSE), se corta el suministro eléctrico a los equipos alimentados (*Powered Devices* - PD) en pleno proceso de escritura de firmware/RouterBOARD, pudiendo corromper el sistema operativo del equipo dependiente (*bricking*).
+
+```mermaid
+flowchart TD
+    PSE["Router/Switch PSE (Alimentador PoE)\n(ej. netPower 16P / CRS328)"] -->|"PoE-Out ether2"| PD1["Antena Radio / Switch PD 1\n(ej. NetMetal / hEX PoE in)"]
+    PSE -->|"PoE-Out ether3"| PD2["Router Acceso PD 2\n(ej. RB5009 PoE in)"]
+    
+    subgraph Fase1 ["Fase 1: Hojas (PD) Primero"]
+        PD1
+        PD2
+    end
+    
+    subgraph Fase2 ["Fase 2: Raíz (PSE) al Final"]
+        PSE
+    end
+```
+
+#### Reglas del Algoritmo de Ordenamiento
+
+1. **Detección de Relación PoE:** A partir del descubrimiento L2 (MNDP/LLDP) y el estado de `/rest/interface/ethernet/poe` (`poe-out-status = "delivering-power"`), el sistema construye un Grafo Acíclico Dirigido (DAG) de dependencias eléctricas.
+2. **Secuencia de Ejecución:**
+   * **Nivel 0 (Hojas / PD):** Se actualizan, reinician y verifican primero los equipos alimentados que no energizan a ningún otro nodo.
+   * **Nivel 1..N (Nodos Intermedios):** Se actualizan secuencialmente por capas de abajo hacia arriba.
+   * **Nivel Raíz (PSE):** El router o switch proveedor de energía solo se actualiza una vez que todos sus clientes PoE hayan reiniciado exitosamente y reportado estado `ONLINE`.
+
+### 1.2. Parada de Emergencia Automática (*Fleet Safety Stop Circuit-Breaker*)
+
+Para evitar catástrofes operativas en actualizaciones masivas de cientos de routers:
+
+* **Umbral de Tolerancia:** Se configura un porcentaje de fallo máximo por lote (por defecto `1%` o un valor absoluto configurable, ej. `1 router fallido`).
+* **Verificación Post-Reinicio:** Tras enviar `/system/package/update/install` y el posterior reinicio del equipo, el worker espera un periodo de gracia (ej. 180 segundos). Si el router no restablece su conexión HTTPS REST y su huella SSL TOFU dentro de ese tiempo:
+  * El router se marca como `UPGRADE_FAILED_POST_REBOOT`.
+  * Si la tasa de fallos acumulada supera el umbral de `Safety Stop`:
+    * Se **cancela de forma inmediata y automática** el resto de la cola de actualización del lote.
+    * Se emite una alerta prioritaria `CRITICAL_SAFETY_STOP_TRIGGERED` a través de los canales de notificación configurados (Telegram, Webhook, Wallboard NOC).
+    * Se registra el incidente en la bitácora inmutable WORM (`audit_logs`) con firma HMAC-SHA256.
+
+### 1.3. Gobernanza Maker-Checker
+
+* Cualquier trabajo masivo de actualización de firmware o paquetes clasifica como categoría crítica `SYSTEM_PACKAGE_UPGRADE_OR_RESET`.
+* Exige aprobación de dos operadores distintos (`maker != checker`) generando una respuesta inicial `HTTP 202 Accepted`.
+
+---
+
+## 2. Cruce Proactivo de Vulnerabilidades CVE en el Inventario
+
+### 2.1. Arquitectura de Cero Exposición Externa (Zero-Telemetry Leak)
+
+Para preservar la confidencialidad absoluta de la infraestructura:
+
+* **Prohibido:** Enviar modelos o versiones de routers a servicios en la nube de terceros.
+* **Modelo Adoptado:** RoSGrid mantendrá un archivo de base de datos local embebida (`cve_catalog_ros.json`) dentro del backend.
+  * Cada registro contiene: `cve_id`, `cvss_score`, `severity` (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`), `affected_versions_expr`, `description_es`, `remediation_ros_version`, `published_date`.
+  * El motor de cruce evalúa en memoria la versión instalada (`routers.ros_version`) contra las expresiones de versiones afectadas sin realizar peticiones salientes a internet.
+
+### 2.2. Visualización en Inventario y Alertas
+
+* **Insignias Tácticas de Riesgo:** En la grilla de inventario (`RgDataTable.vue`), si un router tiene CVEs pendientes, se muestra una insignia de advertencia:
+  * 🔴 `CRITICAL (CVSS >= 9.0)`: ej. vulnerabilidades de ejecución remota o escalada de privilegios en WebFig/REST.
+  * 🟠 `HIGH (CVSS 7.0 - 8.9)`: DoS en BGP/WireGuard.
+  * 🟡 `MEDIUM (CVSS 4.0 - 6.9)`.
+* **Modal de Detalles CVE:** Al hacer clic, se listan los boletines aplicables, el resumen de la vulnerabilidad y la versión recomendada para mitigación.
+
+---
+
+## 3. Receptor Syslog Centralizado Efímero (UDP/TCP 5514)
+
+### 3.1. Cumplimiento Estricto de "Zero-Metrics Storage"
+
+* **Problema:** En flotas con cientos de routers, almacenar texto de Syslog indiscriminadamente en PostgreSQL satura el almacenamiento y genera cuellos de botella de I/O.
+* **Solución Arquitectónica:**
+  1. **Receptor Asíncrono no Privilegiado:** El worker backend expone un puerto no privilegiado (UDP y TCP en el puerto `5514`), mapeado externamente a `514` o `5514`.
+  2. **Búfer Circular en KeyDB (Cero Disco):** Cada router almacena únicamente sus últimos `500` eventos en un RingBuffer en memoria RAM de KeyDB (clave `rg:{tenant_id}:router:{router_id}:syslog:ring` con estructura de lista circular o Redis Stream con `MAXLEN 500`).
+  3. **Auto-Expiración y Memoria Fija:** Máximo ~20 MB de RAM en KeyDB para toda la flota. Cero bytes escritos en PostgreSQL.
+
+### 3.2. Motor de Alertas en Vuelo (*Filter-in-Flight*)
+
+El receptor analiza cada mensaje entrante en memoria en microsegundos:
+
+* **Patrones Críticos:**
+  * Caídas de interfaz física: `interface,warning.*link down`
+  * Desconexiones BGP/OSPF: `route,bgp,warning.*state changed to (Idle|Active)`
+  * Fuerza bruta o accesos fallidos: `system,error,critical.*login failure`
+  * Agotamiento de recursos: `dhcp,critical.*pool.*is exhausted` o `system,critical.*out of memory`
+* **Acción Inmediata:** Si coincide con un patrón crítico:
+  * Despacha un evento WebSocket prioritario a la consola del Wallboard NOC.
+  * Dispara alerta por Telegram/Webhook si el canal está activo.
+  * El mensaje rutinario (`system,info`, etc.) solo se retiene en el búfer circular volátil de KeyDB para consulta diagnóstica del operador.
+
+---
+
+## 4. Plantilla Estandarizada para Enrolamiento Masivo de Routers al Syslog
+
+Para que los routers envíen sus logs a RoSGrid, se incorpora al catálogo de plantillas (*Config Templates*) la plantilla oficial de aprovisionamiento Syslog:
+
+```routeros
+# ==============================================================================
+# Plantilla RoSGrid: Enrolamiento de Syslog Remoto Efímero (RouterOS v7)
+# Parámetros: {{ROSGRID_SERVER_IP}}, {{ROSGRID_SYSLOG_PORT}} (por defecto 5514)
+# ==============================================================================
+
+/system logging action
+remove [find name="rosgrid-syslog"]
+add name="rosgrid-syslog" target=remote remote={{ROSGRID_SERVER_IP}} remote-port={{ROSGRID_SYSLOG_PORT}} bsd-syslog=yes facility=daemon sys-ident=yes
+
+/system logging
+remove [find action="rosgrid-syslog"]
+add topics=interface,warning,critical action="rosgrid-syslog"
+add topics=route,bgp,warning action="rosgrid-syslog"
+add topics=route,ospf,warning action="rosgrid-syslog"
+add topics=system,error,critical action="rosgrid-syslog"
+add topics=dhcp,critical action="rosgrid-syslog"
+add topics=firewall,warning action="rosgrid-syslog"
+```
+
+Esta plantilla puede desplegarse en 1 clic sobre 50 o 500 routers mediante el módulo de Operaciones Masivas (*Bulk Ops*) bajo Safe Mode.
+
+---
+
+## 5. Descubrimiento y Grafo Visual de Topología Física Capa 2 (MNDP/LLDP)
+
+### 5.1. Recolección y Cruce de Vecinos L2
+
+* El backend consulta periódicamente o bajo demanda el endpoint `/rest/ip/neighbor` de todos los routers adoptados en el tenant.
+* **Correlación de Enlaces:**
+  * Router A reporta en su interfaz `sfp-sfpplus1` un vecino con identidad `SW-CORE-01` y MAC `48:8F:5A:xx:xx:xx`.
+  * RoSGrid busca en la tabla `routers` del tenant cuál router posee esa identidad o MAC.
+  * Se establece una arista en el grafo topológico: `RouterA [sfp-sfpplus1] <---> [sfp-sfpplus2] SwitchCore`.
+  * Se extrae la velocidad de negociación (`10Gbps`, `1Gbps`), estado del enlace y tipo de vecino (MikroTik MNDP o estándar LLDP/CDP).
+
+### 5.2. Renderizado Táctico en Frontend
+
+* **Visualizador en Canvas / SVG Interactivo:**
+  * Vista disponible en `/topology/l2` con físicas suaves (fuerza de repulsión entre nodos).
+  * Los nodos representan routers/switches con su estado en vivo (`ONLINE` en verde cyan, `DEGRADED` en naranja, `OFFLINE` en rojo).
+  * Al hacer clic en un enlace, muestra el par de puertos interconectados y la velocidad reportada.
+  * **Cero almacenamiento de métricas:** El grafo se construye y resuelve en memoria de la sesión del usuario.
+
+---
+
+## 6. Exportador de Métricas de Flota para Prometheus (`/api/v1/metrics/fleet`)
+
+### 6.1. Puente de Memoria KeyDB -> Prometheus Exposition Format
+
+Para permitir a organizaciones que ya operan Grafana o Zabbix graficar tendencias a largo plazo sin que RoSGrid deba almacenar series en PostgreSQL:
+
+* **Endpoint:** `GET /api/v1/metrics/fleet`
+* **Mecanismo:** Al ser consultado por Prometheus (scrape HTTP), el backend lee el estado más reciente de la máquina de estados en KeyDB y genera en microsegundos el texto en formato estándar de Prometheus:
+
+```prometheus
+# HELP rosgrid_router_status Estado de conectividad del router (1=ONLINE, 0=OFFLINE, 2=DEGRADED)
+# TYPE rosgrid_router_status gauge
+rosgrid_router_status{tenant_id="tenant-acme",router_id="uuid-1",identity="RTR-BOG-01",model="CCR2004-16G-2S+"} 1
+
+# HELP rosgrid_router_cpu_percent Uso de CPU del router reportado por el monitor efímero
+# TYPE rosgrid_router_cpu_percent gauge
+rosgrid_router_cpu_percent{tenant_id="tenant-acme",router_id="uuid-1",identity="RTR-BOG-01"} 14.5
+
+# HELP rosgrid_router_memory_usage_ratio Proporción de memoria RAM utilizada (0.0 a 1.0)
+# TYPE rosgrid_router_memory_usage_ratio gauge
+rosgrid_router_memory_usage_ratio{tenant_id="tenant-acme",router_id="uuid-1",identity="RTR-BOG-01"} 0.32
+
+# HELP rosgrid_router_active_cves_count Cantidad de vulnerabilidades CVE pendientes por severidad
+# TYPE rosgrid_router_active_cves_count gauge
+rosgrid_router_active_cves_count{tenant_id="tenant-acme",router_id="uuid-1",severity="critical"} 0
+rosgrid_router_active_cves_count{tenant_id="tenant-acme",router_id="uuid-1",severity="high"} 1
+
+# HELP rosgrid_router_syslog_critical_events_total Contador de eventos críticos detectados en vuelo
+# TYPE rosgrid_router_syslog_critical_events_total counter
+rosgrid_router_syslog_critical_events_total{tenant_id="tenant-acme",router_id="uuid-1",event_type="link_down"} 3
+```
+
+* **Seguridad del Scrape:** Requiere autenticación mediante Bearer Token específico para Prometheus (`ROSGRID_PROMETHEUS_SCRAPE_TOKEN`) o pertenencia a una red de monitoreo permitida, impidiendo enumeración no autorizada de la flota.
+
+---
+
+## 7. Ampliación del Servidor MCP y de la Skill `rosgrid-noc-operator`
+
+Para capacitar a los agentes autónomos de Inteligencia Artificial (Hermes Agent, Claude Desktop, Antigravity) en estas nuevas capacidades, se incorporan 4 herramientas semánticas al catálogo MCP (`/api/v1/mcp`):
+
+| Herramienta MCP | Parámetros | Propósito Operativo para el Agente IA |
+| :--- | :--- | :--- |
+| `rosgrid_get_l2_topology` | `tenant_id` (opcional), `router_id` (opcional) | Devuelve el grafo de adyacencias físicas L2 (puertos, vecinos MNDP/LLDP y velocidad) para análisis de topología. |
+| `rosgrid_check_fleet_cves` | `router_id` (opcional), `min_severity` (opcional: `CRITICAL`, `HIGH`, `ALL`) | Consulta vulnerabilidades CVE aplicables a uno o todos los routers de la flota según su versión activa. |
+| `rosgrid_get_recent_syslog` | `router_id` (obligatorio), `limit` (opcional, 10-100), `filter_topic` (opcional) | Lee el RingBuffer efímero en KeyDB con los últimos eventos registrados por el router para diagnóstico de causa raíz. |
+| `rosgrid_execute_poe_aware_upgrade` | `router_ids` (lista UUID), `target_version` (string), `safety_stop_threshold_percent` (float) | Propone un trabajo masivo de actualización ordenado por PoE con parada de emergencia bajo flujo Maker-Checker. |
+
+---
+
+## 8. Marco de Ciberseguridad, Mitigación de Vulnerabilidades y Análisis de Riesgos
+
+Para evitar la introducción de vectores de ataque en estas nuevas funciones:
+
+1. **Prevención de Suplantación (*Spoofing*) en Syslog UDP:**
+   * Dado que UDP no valida el origen del paquete, el colector Syslog coteja la IP de origen del paquete contra la IP registrada del router en el inventario del tenant.
+   * Si la IP no pertenece a ningún router adoptado, el paquete se descarta de inmediato para prevenir ataques de inyección de logs falsos o saturación de memoria.
+2. **Limitación de Tasa (*Rate-Limiting*) en Recepción Syslog:**
+   * Se impone un límite estricto de paquetes por segundo (PPS) por IP de router para neutralizar tormentas de logs que intenten saturar el búfer de KeyDB o el CPU del backend.
+3. **Autenticación Fuerte en `/api/v1/metrics/fleet`:**
+   * El endpoint de métricas no expone secretos, pero sí identidades y topología de red. Queda blindado con token Bearer obligatorio y exención de CSRF según directrices de API.
+4. **Protección Anti-SSRF en la Plantilla de Syslog:**
+   * Al renderizar la plantilla de configuración de Syslog, la IP del servidor RoSGrid se valida mediante las utilidades anti-SSRF ya certificadas (`validate_router_target_url`), impidiendo apuntar a servicios internos no autorizados.
+5. **Aislamiento Multi-Tenant en el Grafo L2:**
+   * El cruce de vecinos L2 únicamente asocia routers pertenecientes a la misma organización (`tenant_id`), previniendo fugas de información entre inquilinos.

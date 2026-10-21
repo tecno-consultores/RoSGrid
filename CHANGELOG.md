@@ -10,6 +10,17 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Added
 
+- **Planificación y Diseño Arquitectónico: Automatización de Flota, Topología L2, Syslog Efímero, Exportador Prometheus y Seguridad CVE (Hito 23):**
+  - **Especificación Técnica y Arquitectura de Datos (`specs/35` y `docs/12`):** Diseño formal de estructuras en memoria para preservar estrictamente el modelo *Zero-Metrics Storage* (cero almacenamiento de series de tiempo en PostgreSQL 17).
+  - **Motor de Actualizaciones Masivas PoE-Aware con Safety Stop:** Modelado de Grafo Acíclico Dirigido (DAG) de dependencias eléctricas PoE para ordenar la actualización de dispositivos cliente (PD) antes que los conmutadores/routers alimentadores (PSE), evitando cortes eléctricos durante el flasheo de firmware. Incluye circuito de corte de emergencia (*Safety Stop Circuit-Breaker*) que congela el lote si la tasa de fallos post-reinicio supera el 1%.
+  - **Cruce Proactivo de Vulnerabilidades CVE en Inventario:** Catálogo embebido local (`cve_catalog_ros.json`) para cruce automático contra la versión instalada (`ros_version`) con cálculo de nivel de riesgo CVSS e insignias en interfaz, sin fuga de telemetría ni consultas a servicios en la nube externa.
+  - **Receptor Syslog Centralizado Efímero (UDP/TCP 5514) con Alertas en Vuelo:** Colector asíncrono sobre puerto no privilegiado 5514 que almacena únicamente los últimos 500 eventos por router en un RingBuffer en la memoria RAM de KeyDB (cero bytes en disco), con evaluador regex en vuelo para despacho inmediato de caídas de interfaz (*linkDown*) y tormentas de acceso al Wallboard NOC vía WebSockets.
+  - **Plantilla Masiva de Enrolamiento Syslog:** Script predefinido de configuración para RouterOS v7 (`/system/logging/action` y `/system/logging`) listo para aprovisionamiento desatendido mediante *Bulk Ops*.
+  - **Descubrimiento y Visualización de Topología Física Capa 2:** Motor de correlación de adyacencias puerto a puerto a partir de `/rest/ip/neighbor` (MNDP, LLDP y CDP) y diseño de interfaz gráfica interactiva en Canvas/SVG con físicas suaves sin guardar históricos.
+  - **Puente de Telemetría hacia Prometheus (`GET /api/v1/metrics/fleet`):** Exposición de métricas de flota en formato estándar de Prometheus a partir de la memoria de KeyDB para graficación a largo plazo en Grafana, sin persistencia de métricas en PostgreSQL.
+  - **Ampliación del Servidor MCP y de la Skill `rosgrid-noc-operator`:** Incorporación de 4 nuevas herramientas semánticas (`rosgrid_get_l2_topology`, `rosgrid_check_fleet_cves`, `rosgrid_get_recent_syslog` y `rosgrid_execute_poe_aware_upgrade`), alcanzando 18 herramientas operativas, y adición de SOP-6 y SOP-7 a la Skill oficial.
+  - **Marco de Ciberseguridad y Mitigación de Riesgos:** Prevención de suplantación UDP en Syslog mediante validación estricta de IP contra el inventario del tenant, rate-limiting contra inundación de logs, autenticación de scrape para Prometheus y salvaguardas anti-SSRF.
+
 - **Skill Oficial de Operaciones NOC para Agentes IA (`rosgrid-noc-operator`) (Hito 22.15):**
   - **Skill Portable de Operación Autónoma (`.agents/skills/rosgrid-noc-operator/SKILL.md`):** Arquitectura y manual operativo completo para capacitar a agentes de Inteligencia Artificial (Antigravity, Claude Desktop, Claude Code, Hermes Agent) como Ingenieros NOC Tier-2/Tier-3 certificados sobre flotas MikroTik RouterOS v7.
   - **5 Playbooks Operativos Estándar (SOP):** Procedimientos guiados paso a paso para:

@@ -1,6 +1,6 @@
 # 00 — ÍNDICE MAESTRO, GOBERNANZA ARQUITECTÓNICA Y ESTÁNDAR 11X (RoSGrid)
 
-> **[DIRECTIVA DE SISTEMA PARA AGENTES DE IA / ANTIGRAVITY]:** Actúa como un Principal Systems Architect, Staff Backend/Frontend Engineer y Staff QA Automation Engineer. Lee, analiza y aplica de forma estricta e innegociable todas las especificaciones contenidas en esta enciclopedia documental de 31 archivos ubicada en `specs/` para construir **RoSGrid**: Plataforma Centralizada Multi-Tenant de Gestión Técnica y Operativa para Flotas MikroTik RouterOS v7+. Procesa la lógica al máximo nivel de razonamiento técnico y genera todo el código, comentarios, commits y documentación en **Español**.
+> **[DIRECTIVA DE SISTEMA PARA AGENTES DE IA / ANTIGRAVITY]:** Actúa como un Principal Systems Architect, Staff Backend/Frontend Engineer y Staff QA Automation Engineer. Lee, analiza y aplica de forma estricta e innegociable todas las especificaciones contenidas en esta enciclopedia documental de 36 archivos ubicada en `specs/` para construir **RoSGrid**: Plataforma Centralizada Multi-Tenant de Gestión Técnica y Operativa para Flotas MikroTik RouterOS v7+. Procesa la lógica al máximo nivel de razonamiento técnico y genera todo el código, comentarios, commits y documentación en **Español**.
 
 ---
 
@@ -10,10 +10,12 @@
 * **Propósito:** Consola web centralizada Multi-Tenant de alta seguridad que permite administrar, diagnosticar, auditar, respaldar y operar flotas de routers MikroTik con **RouterOS v7.1+** exclusivamente a través de su **REST API nativa sobre HTTPS (`/rest/*`)**, replicando la capacidad técnica de WebFig/WinBox sin almacenar métricas históricas en base de datos ni incluir módulos de facturación, e incorporando un conector **MCP Protegido (`/api/v1/mcp`)** para agentes IA (`Hermes Agent`, `Claude`).
 * **Licencia Obligatoria:** **GNU General Public License v3.0 (`GPL-3.0-only`)**.
   * Todo archivo de código fuente (`.py`, `.ts`, `.vue`, `.sh`, `Dockerfile`) DEBE incluir el encabezado SPDX estándar en sus primeras líneas:
+
     ~~~text
     # SPDX-License-Identifier: GPL-3.0-only
     # Copyright (C) 2026 RoSGrid Contributors
     ~~~
+
   * Debe existir un archivo `LICENSE` en la raíz del repositorio con el texto íntegro de la licencia GPLv3.
 
 ---
@@ -85,7 +87,7 @@ rosgrid/
 ├── auditar-infra.sh                         # Escáner efímero Trivy IaC + FS (CRITICAL/HIGH = Exit 1)
 │
 ├── specs/                                   # PLANOS ARQUITECTÓNICOS Y REGLAS PARA ANTIGRAVITY
-│   ├── 00..30_*.md                          # Enciclopedia de 31 archivos de especificación RoSGrid
+│   ├── 00..35_*.md                          # Enciclopedia de 36 archivos de especificación RoSGrid
 │   └── qa-11x/                              # Documentación oficial del Blueprint QA 11X
 │
 ├── examples/                                # PLANTILLAS BASE 11X (SOLO LECTURA — NO MODIFICAR)
@@ -149,26 +151,30 @@ rosgrid/
 
 ---
 
-## 4. Índice Maestro de los 31 Archivos de Especificación (Carpeta `specs/`)
+## 4. Índice Maestro de los 36 Archivos de Especificación (Carpeta `specs/`)
 
 Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `specs/` siguiendo rigurosamente el orden de los 5 Bloques listados a continuación:
 
 ### Bloque 0: Gobernanza, Arquitectura Global y Despliegue Inmutable
+
 * `specs/00_MASTER_INDEX_AND_11X_GOVERNANCE.md` *(Este documento)* — Reglas globales, licencia GPLv3, estructura del monorepo y mandamientos del Estándar 11X.
 * `specs/01_DOCKER_INFRASTRUCTURE_AND_IMMUTABLE_IMAGES.md` — Orquestación con imágenes `sinfallas/*`, KeyDB Multi-Hilo por defecto y perfil DragonflyDB, redes IPv4, migraciones automáticas con `pg_advisory_lock`, `Dockerfile` de producción, `build.sh` y cumplimiento de `Trivy`.
 
 ### Bloque 1: Base de Datos (PostgreSQL 17) y Estado Efímero (KeyDB Multi-Hilo)
+
 * `specs/02_DB_SCHEMA_CORE_TENANTS_AND_RLS.md` — Tablas Multi-Tenant (`tenants`, `users`, `roles`, `user_router_permissions`) y políticas *Row-Level Security (RLS)*.
 * `specs/03_DB_SCHEMA_INVENTORY_VAULT_AND_MAINTENANCE.md` — Tablas de inventario MikroTik, bóveda `AES-256-GCM`, rotación de credenciales, TOFU SSL SHA-256 y ventanas de mantenimiento.
 * `specs/04_DB_SCHEMA_OPERATIONS_BACKUPS_AND_IMMUTABLE_AUDIT.md` — Tablas de Maker-Checker, backups `.rsc`/`.backup` con deduplicación SHA-256 (30 días), plantillas, trabajos masivos y `audit_logs` inmutable con índice `BRIN`.
 * `specs/05_REDIS_KEYS_IDEMPOTENCY_AND_ZERO_METRICS.md` — Estructura de llaves KeyDB/RESP: idempotencia HTTP, familias de Refresh Tokens, *Kill-Switch* de sesiones, Pub/Sub de gráficas en vivo y máquina de estados *Zero-Metrics* con `pipeline()`.
 
 ### Bloque 2: Seguridad, Matriz RBAC (11 Roles) y Conector RouterOS v7
+
 * `specs/06_SECURITY_SPLIT_CREDENTIAL_2FA_AND_STEPUP.md` — Patrón *Split-Credential* con cookies `__Host-`, CSRF firmado, 2FA TOTP, *Step-Up Auth* de 30s para revelar claves y cabeceras HTTP para OWASP ZAP.
 * `specs/07_RBAC_11_ROLES_MATRIX_AND_MAKER_CHECKER.md` — Permisos granulares de los 11 roles y catálogo de acciones críticas sujetas a aprobación *Maker-Checker*.
 * `specs/08_MIKROTIK_REST_V7_CLIENT_TOFU_AND_SAFEMODE.md` — Conector asíncrono `httpx` con pool TLS `Keep-Alive` para RouterOS v7 (`/rest/*`), pinning SSL TOFU y motor *Dead Man's Switch (Safe Mode)* mediante `/system/scheduler`.
 
 ### Bloque 3: Fases de Construcción, Catálogo de Endpoints y Servidor MCP del Backend (`fastapi/`)
+
 * `specs/09_BACKEND_PHASE_1_SKELETON_OBSERVABILITY_AND_MIGRATIONS.md` — Fase 1 Backend: fusión 11X desde `examples/fastapi/`, `/metrics`, `ORJSONResponse`, auto-migración Alembic, middlewares e inyección de dependencias.
 * `specs/10_BACKEND_ENDPOINTS_AUTH_TENANTS_USERS_KILLSWITCH.md` — Endpoints de Login Multi-Tenant, 2FA, gestión de usuarios, permisos por equipo y expulsión de sesiones en vivo.
 * `specs/11_BACKEND_ENDPOINTS_INVENTORY_CSV_VAULT_AND_ROTATION.md` — Endpoints de inventario, autodescubrimiento, importación masiva CSV en 2 pasos, Bóveda *Step-Up Auth*, rotación de claves y mantenimiento.
@@ -181,6 +187,7 @@ Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `
 * `specs/30_BACKEND_MCP_PROTECTED_ENDPOINT.md` — Endpoint MCP Protegido (`POST /api/v1/mcp` JSON-RPC 2.0 Streamable HTTP) para agentes IA (`Hermes Agent`, `Claude`) con cuenta `SERVICE_ACCOUNT` + CIDR, Rate-Limit en KeyDB, 8 Tools semánticas y freno obligatorio *Maker-Checker*.
 
 ### Bloque 4: Fases de Construcción y Especificación del Frontend (`vue3/`)
+
 * `specs/18_FRONTEND_PHASE_1_SETUP_ZERO_TRUST_AND_INTERCEPTORS.md` — Fase 1 Frontend: fusión `.npmrc` Zero-Trust, stores Pinia con `shallowRef`, interceptores de seguridad/idempotencia/Kill-Switch y arquitectura PWA Mobile/Tablet.
 * `specs/19_FRONTEND_DESIGN_SYSTEM_ACCESSIBILITY_AND_PERFORMANCE.md` — Sistema de diseño *Tactical NOC Cyan*, Densidad Dual (`32px`/`44px`), *Virtual Scrolling* nativo, buscador `Ctrl+K`, cumplimiento WCAG 2.1 AA (`@axe-core`) y Lighthouse >= 90.
 * `specs/20_FRONTEND_VIEWS_AUTH_USERS_PERMISSIONS_AND_SESSIONS.md` — Pantallas de Login Multi-Tenant + 2FA, gestión de usuarios, asignación de routers y panel de sesiones activas en tiempo real.
@@ -189,6 +196,7 @@ Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `
 * `specs/23_FRONTEND_VIEWS_APPROVALS_DIFF_BULK_NOC_AND_AUDITOR.md` — Vistas de Maker-Checker, visor Diff de `.rsc`, asistente de Acciones Masivas/Updates, modo **Wallboard NOC** y consola del rol **Auditor**.
 
 ### Bloque 5: Suite de Pruebas y Certificación del Estándar 11X
+
 * `specs/24_QA_11X_FASTAPI_INFRA_MAKEFILE_AND_CONFIGS.md` — Orquestador `fastapi/docker-compose.qa.yml`, `Makefile`, `pyproject.toml` y `tox.ini`.
 * `specs/25_QA_11X_FASTAPI_UNIT_MUTATION_AND_MOCK_CATALOG.md` — Pruebas unitarias `.unit.py` (>= 95%), pruebas de mutación `mutmut` y catálogo de mocks para RouterOS v7.
 * `specs/26_QA_11X_FASTAPI_CONTRACTS_BDD_DAST_AND_CHAOS.md` — Contratos `Schemathesis`, BDD `Karate Labs`, `OWASP ZAP`, profiling `py-spy` y caos con `Pumba + Locust + Prometheus`.
@@ -198,27 +206,29 @@ Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `
 * `specs/31_PRODUCTION_BOOTSTRAP_LOCAL_TESTING_AND_DISTRIBUTED_OPS.md` — Procedimiento de bootstrap en DB virgen, arquitectura distribuida Cross-Origin Direct y pipeline de validación local `./probar-prod-local.sh`.
 
 ### Bloque 6: Operaciones ISP, Gestión Corporativa de Flotas y Gobernanza Modular
+
 * `specs/32_ISP_OPERATIONS_TECHNICAL_QOS_AND_FIELD_TOOLKIT.md` — Módulo ISP técnico: QoS con Burst/PCQ, API de aprovisionamiento externa (Isolate/Restore/Rate-limit) con idempotencia, diagnóstico 360°, mapa de ONUs con telemetría efímera, alerta masiva, toolkit de campo responsive con GPS y arquitectura i18n.
 * `specs/33_ENTERPRISE_FLEET_MANAGEMENT_AND_SECURITY_COMPLIANCE.md` — Módulo Corporativo / Enterprise: Detección de Desviación de Configuración (Config Drift vs Golden Baseline), Orquestador SD-WAN y Malla WireGuard Hub & Spoke, Auditoría CIS Benchmark (Score 0-100), Detección de Rogue DHCP / Seguridad LAN, Monitor de Cumplimiento de SLA y Gestión Centralizada WiFi (CAPsMAN / WiFiWave2).
 * `specs/34_TENANT_FEATURE_FLAGS_AND_GOVERNANCE_PANEL.md` — Panel de Gobernanza de Feature Flags por Empresa: Modelo de datos en `tenants`, control de acceso por SuperAdmin, guardias de API y conmutación dinámica de la interfaz para operar como ISP, Entorno Corporativo o Mixto.
+* `specs/35_FLEET_AUTOMATION_TOPOLOGY_L2_SYSLOG_AND_PROMETHEUS.md` — Automatización de Flota, Topología Física L2, Receptor Syslog Efímero y Exportador Prometheus: Actualizaciones PoE-aware, Safety Stop, cruce local de CVEs, receptor UDP/TCP 5514 en KeyDB, visualizador L2 MNDP/LLDP, puente de telemetría `/metrics/fleet` sin almacenamiento en Postgres y ampliación MCP.
 
 ---
 
 ## 5. Políticas Complementarias de Gobernanza 11X (Linters, Smoke Test --no-dev y UAT)
 
 1. **Política Innegociable de Cero Diagnósticos de IDE y Linters Estáticos:**
-   - Todo archivo versionado en el repositorio debe mantener 0 errores y 0 advertencias en:
-     - **Pyrefly / IDE:** Analizador estático tipado de Python con búsqueda configurada en `pyrefly.toml`.
-     - **SonarLint / Radon:** Complejidad cognitiva máxima de 15 por función y complejidad ciclomática Grado A (`< 5`).
-     - **Hadolint / Docker Linter:** Prohibición de comodines (*globs*) en instrucciones `COPY` (ej. `COPY uv.lock*`) para prevenir fugas de ficheros no previstos.
-     - **ShellCheck (`koalaman/shellcheck:stable`):** Cero advertencias y cero errores en la totalidad de scripts `.sh` del monorepo.
+   * Todo archivo versionado en el repositorio debe mantener 0 errores y 0 advertencias en:
+     * **Pyrefly / IDE:** Analizador estático tipado de Python con búsqueda configurada en `pyrefly.toml`.
+     * **SonarLint / Radon:** Complejidad cognitiva máxima de 15 por función y complejidad ciclomática Grado A (`< 5`).
+     * **Hadolint / Docker Linter:** Prohibición de comodines (*globs*) en instrucciones `COPY` (ej. `COPY uv.lock*`) para prevenir fugas de ficheros no previstos.
+     * **ShellCheck (`koalaman/shellcheck:stable`):** Cero advertencias y cero errores en la totalidad de scripts `.sh` del monorepo.
 
 2. **Protocolo de Dependencias Inmutables y Validación de Arranque en Producción (`--no-dev`):**
-   - El contenedor de producción instala estrictamente mediante `uv sync --frozen --no-dev --compile-bytecode` en `/app/.venv`.
-   - Se prohíbe terminantemente la presencia de paquetes de prueba o desarrollo (`pytest`, `radon`, `freezegun`, `unittest.mock`) en el código fuente de `src/`.
-   - **Compuertas de Verificación:**
-     - Test unitario AST [test_production_no_dev_cleanliness.unit.py](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/fastapi/tests/core/test_production_no_dev_cleanliness.unit.py) ejecutado en la suite de `pytest`.
-     - Smoke test inmutable [test_production_boot_smoke.py](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/fastapi/scripts/test_production_boot_smoke.py) ejecutado dentro del contenedor de producción verificando 80 submódulos sin paquetes dev.
+   * El contenedor de producción instala estrictamente mediante `uv sync --frozen --no-dev --compile-bytecode` en `/app/.venv`.
+   * Se prohíbe terminantemente la presencia de paquetes de prueba o desarrollo (`pytest`, `radon`, `freezegun`, `unittest.mock`) en el código fuente de `src/`.
+   * **Compuertas de Verificación:**
+     * Test unitario AST [test_production_no_dev_cleanliness.unit.py](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/fastapi/tests/core/test_production_no_dev_cleanliness.unit.py) ejecutado en la suite de `pytest`.
+     * Smoke test inmutable [test_production_boot_smoke.py](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/fastapi/scripts/test_production_boot_smoke.py) ejecutado dentro del contenedor de producción verificando 80 submódulos sin paquetes dev.
 
 3. **Plan Maestro de Pruebas Manuales y Aceptación de Usuario (UAT 11X):**
-   - Antes de cada pase a producción o liberación de release con `./build.sh`, es requisito mandatorio ejecutar y registrar la bitácora de aceptación formal definida en [docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md), evaluando el comportamiento en hardware MikroTik v7+ físico o CHR.
+   * Antes de cada pase a producción o liberación de release con `./build.sh`, es requisito mandatorio ejecutar y registrar la bitácora de aceptación formal definida en [docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md), evaluando el comportamiento en hardware MikroTik v7+ físico o CHR.
