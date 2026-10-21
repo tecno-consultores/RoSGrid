@@ -267,3 +267,45 @@ Siguiendo las lecciones aprendidas en auditorías previas (Hitos 22.5 y 22.12):
    * La IP de destino configurada en los routers debe someterse a `validate_router_target_url` para impedir que un operador desvíe el tráfico Syslog a direcciones restringidas.
 5. **Gobernanza Maker-Checker y Safe Mode (60s):**
    * Todas las operaciones masivas de actualización y despliegue de plantillas requieren validación a cuatro ojos (`maker != checker`) y cuentan con reversión automática ante pérdida de conectividad.
+
+---
+
+## 10. Implementación Frontend Vue 3 + Pinia (Hito 23.5)
+
+El Hito 23.5 traslada toda la arquitectura de datos efímera a componentes tácticos de alta densidad visual siguiendo el estándar *Tactical NOC Cyan*:
+
+1. **`FleetCveMatrix.vue` (`/inventory/cves`):**
+   - 4 Tarjetas KPI con tipografía numérica alineada (`tabular-nums`) para auditoría inmediata.
+   - Filtro reactivo por severidad (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`) y búsqueda textual en vivo.
+   - Detalle expandible con descripción de vulnerabilidad en español, vector CVSS v3 y versiones recomendadas.
+   - Conexión directa al sincronizador NVD (`POST /api/v1/inventory/cves/sync`) y botón de remediación que enlaza con las operaciones masivas.
+
+2. **`L2TopologyView.vue` (`/topology/l2`):**
+   - Lienzo Canvas 2D acelerado a 60 FPS con Pan/Zoom, cuadrícula táctica y físicas de nodos.
+   - Enlaces físicos con indicación visual de consumo PoE en vatios (`⚡ W`) y diferenciación de nodos PSE (inyectores de energía) vs clientes PD.
+   - Drawer lateral accesible con detalles de interconexión y acceso a WebFig.
+
+3. **`RouterSyslogTerminalView.vue` (`/routers/:id/webfig/syslog`):**
+   - Terminal embebido en la consola WebFig que consume el RingBuffer efímero en KeyDB (500 eventos por router, 0 persistencia en PostgreSQL).
+   - Detección de patrones críticos (`CRIT 🚨`), auto-scroll inteligente que detecta inspección manual y modal con script CLI de enrolamiento.
+
+4. **`BulkOperationsAndUpdatesView.vue` (`/bulk-ops`):**
+   - Conmutador táctico *PoE-Aware* para ejecución en orden topológico inverso (hojas primero, switch PoE al final).
+   - Selector de umbral de emergencia *Safety Stop* (1%, 2%, 5%) que aborta la cola ante caídas post-reinicio.
+
+---
+
+## 11. Cobertura BDD y Certificación con Karate Labs (API & UI)
+
+La totalidad de los contratos REST y flujos de usuario del Hito 23 cuentan con pruebas automatizadas en **Karate Labs**:
+
+### 11.1 Pruebas de Contratos REST API (`fastapi/test/api_test.feature`)
+
+- **Escenarios 55-61:** Cobertura de las rutas `/api/v1/inventory/cves`, `/api/v1/inventory/cves/sync`, `/api/v1/topology/l2`, `/api/v1/routers/syslog/template`, `/api/v1/routers/{id}/syslog`, `/api/v1/metrics/fleet` y `/api/v1/operations/ros-updates/execute`.
+- **Resultado:** 61 de 61 escenarios aprobados (100%).
+
+### 11.2 Pruebas de Interfaz de Usuario UI (`vue3/test/ui_business_flow.feature`)
+
+- **Escenarios 17-20:** Cobertura integral de la Topología L2, Matriz de Vulnerabilidades CVE, Consola Syslog Terminal y el Asistente de Actualización Masiva PoE-Aware con Safety Stop.
+- **Resultado:** 20 de 20 escenarios aprobados (100%).
+

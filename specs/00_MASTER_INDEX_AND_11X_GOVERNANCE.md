@@ -94,16 +94,21 @@ rosgrid/
 │   ├── fastapi/                             # Archivos .example, README.md y compose base de FastAPI
 │   └── vue3/                                # Archivos .example, README.md y compose base de Vue 3
 │
-├── docs/                                    # DOCUMENTACIÓN OFICIAL DE ROSGRID (HITO 14)
+├── docs/                                    # DOCUMENTACIÓN OFICIAL DE ROSGRID
 │   ├── 01_GUIA_DESPLIEGUE_Y_ENTORNO.md
 │   ├── 02_PREPARACION_MIKROTIK_ROUTEROS_V7.md
 │   ├── 03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md
 │   ├── 04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md
 │   ├── 05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md
 │   ├── 06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md
-│   └── 07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md
+│   ├── 07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md
+│   ├── 08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md
+│   ├── 09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md
+│   ├── 10_REPORTE_INVESTIGACION_PYTHON_3_15.md
+│   ├── 11_REPORTE_INVESTIGACION_NODE_26.md
+│   └── 12_DISENO_TOPOLOGIA_L2_SYSLOG_Y_AUTOMATIZACION.md
 │
-├── fastapi/                                 # ECOSISTEMA BACKEND REAL (Python 3.13 + FastAPI + SQLAlchemy 2.0)
+├── fastapi/                                 # ECOSISTEMA BACKEND REAL (Python 3.15 + FastAPI + SQLAlchemy 2.0)
 │   ├── Dockerfile                           # Imagen multi-stage no-root para sinfallas/rosgrid-backend
 │   ├── docker-compose.qa.yml                # Orquestador efímero 11X para Backend (con KeyDB)
 │   ├── Makefile                             # Comandos: qa-lint, qa-unit, qa-mutation, qa-all, clean-cache

@@ -35,6 +35,7 @@ graph TD
 4. **`RoutingBgpOspfView.vue`:** Resumen de sesiones BGP v7 (estado `established`, prefijos anunciados/recibidos, uptime) y adyacencias OSPF activas.
 5. **`PppAndQueuesView.vue`:** Monitor de sesiones PPPoE activas con opción de reinicio controlado para soporte N1 y gestión de colas simples (*Simple Queues*).
 6. **`LiveToolsDiagnosticsView.vue`:** Consola de ejecución de utilidades de red (`/tool/ping`, `/tool/traceroute`) acotadas para prevenir saturación de CPU.
+7. **`RouterSyslogTerminalView.vue`:** Consola de eventos Syslog en vivo en tiempo real que consume el RingBuffer efímero en KeyDB (UDP/TCP 5514, 500 eventos sin almacenamiento en disco), con badges de severidad (`CRIT 🚨`, `WARN ⚠️`), auto-scroll inteligente y modal con script de enrolamiento CLI.
 
 ### 1.2 Capa 2: Renderizador Universal Dinámico (`DynamicLayer2ResourceView.vue`)
 
@@ -221,3 +222,25 @@ flowchart TD
 - **Apertura Directa de WebFig:** Al seleccionar un router en el mapa interactivo (Leaflet / OpenStreetMap), el popup de inspección rápida incluye el botón **"Abrir WebFig"**, que redirige inmediatamente a la consola operativa en vivo (`/routers/:id/webfig/live`) del equipo seleccionado.
 - **Diseño *Dark High-Contrast*:** Fondo oscuro profundo con acentos Cyan tácticos para visualización clara a distancia.
 - **Alertas Sonoras y Visuales:** Emite tonos discretos y destellos perimetrales en tiempo real ante caídas de routers (`OFFLINE`), enlaces caídos o degradación óptica en módulos SFP.
+
+---
+
+## 8. Topología Física Layer 2, Matriz de Vulnerabilidades CVE y Operaciones PoE-Aware (Hito 23)
+
+### 8.1 Visualizador Táctico de Topología Física Capa 2 (`L2TopologyView.vue` en `/topology/l2`)
+
+- **Lienzo Gráfico Acelerado:** Canvas 2D interactivo a 60 FPS con Pan/Zoom y cuadrícula táctica, diseñado para inspeccionar adyacencias puerto a puerto (MNDP/LLDP) sin sobrecargar la CPU del cliente.
+- **Distribución de Energía PoE:** Enlaces con entrega de energía activos renderizados en amarillo eléctrico con indicación de potencia en tiempo real (`⚡ W`). Nodos alimentadores PSE identificados con halo dorado y radio ampliado.
+- **Drawer de Detalles y WebFig:** Al seleccionar un nodo o enlace en el lienzo, se despliega un panel lateral con información de interfaces interconectadas, velocidad de enlace y acceso directo a la consola WebFig del router.
+
+### 8.2 Matriz de Vulnerabilidades CVE de Flota (`FleetCveMatrix.vue` en `/inventory/cves`)
+
+- **Evaluación Local Zero-Leak:** Cruce proactivo del catálogo oficial embebido contra las versiones RouterOS instaladas en la flota sin enviar telemetría a la nube externa.
+- **Tarjetas KPI y Filtro de Severidad:** Muestra el recuento de routers evaluados, vulnerables y críticos, junto con la versión de firmware recomendada. Permite filtrar por severidad (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`).
+- **Remediación en 1 Clic:** Botón directo `[ 🚀 Actualizar Flota Afectada ]` que preconfigura el asistente de operaciones masivas.
+
+### 8.3 Asistente de Actualización Masiva PoE-Aware (`BulkOperationsAndUpdatesView.vue` en `/bulk-ops`)
+
+- **Conmutador PoE-Aware:** Reordena la cola de actualización invirtiendo el DAG de dependencias eléctricas para actualizar primero los dispositivos alimentados (PD) antes que los conmutadores alimentadores (PSE), previniendo apagones accidentales durante el flasheo de firmware.
+- **Circuito Safety Stop:** Monitorea la tasa de fallos post-reinicio y congela automáticamente el lote si se supera el umbral configurado (1%, 2% o 5%), emitiendo alertas inmediatas al NOC.
+
