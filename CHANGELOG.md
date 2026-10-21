@@ -21,6 +21,10 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
   - **Catálogo Exhaustivo de Herramientas MCP (`references/mcp_tools.md`):** Especificación completa de parámetros, tipos, precondiciones y restricciones operativas para las 14 herramientas del servidor MCP `/api/v1/mcp`.
   - **Guía de Banderas RouterOS v7 (`references/routeros_flags.md`):** Interpretación estricta de banderas nativas (`[D]`, `[X]`, `[I]`, `[R]`) e identificadores internos hexadecimales (`*1`, `*1A`).
   - **Plantillas de Configuración Listas para Producción (`configs/`):** Manifiestos de despliegue para Claude Desktop (`claude_desktop.json`) y Hermes Agent (`hermes_agent.yaml`).
+  - **Distribución Multicanal para Despliegues Remotos y Frontend:**
+    - **Endpoint Público REST (`GET /api/v1/mcp/skill`):** Exposición de las directrices y playbooks de la Skill con empaquetado autocontenido en la imagen Docker (`fastapi/src/api/v1/SKILL.md`) soportando salida Markdown o JSON (`?format=json`).
+    - **Botones de Descarga y Copiado en Interfaz Web (`RgMcpTokenModal.vue`):** Integración en el modal del token MCP de botones para copiar el System Prompt al portapapeles y descargar el archivo `SKILL.md` con 1 clic sin necesidad de consola.
+    - **Descarga Automatizada en Instalación Remota (`instalar-rosgrid.sh`):** Aprovisionamiento desatendido de los manifiestos, esquemas y configuraciones de la Skill en `/opt/rosgrid/skills/rosgrid-noc-operator/` y documentación en el banner final de instalación.
   - **Sincronización Global Antigravity:** Replicación en `~/.gemini/config/skills/rosgrid-noc-operator/` para disponibilidad universal entre workspaces.
   - **Sincronización Documental:** Actualización integral de `specs/30_BACKEND_MCP_PROTECTED_ENDPOINT.md` y `docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md`.
 

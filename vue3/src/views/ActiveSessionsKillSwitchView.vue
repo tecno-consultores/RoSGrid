@@ -6,7 +6,7 @@
   import { http } from '@/api/httpClient';
   import { useAuthStore } from '@/stores/useAuthStore';
   import { useNocEventsStore } from '@/stores/useNocEventsStore';
-  import type { ActiveSessionItem } from '@/types';
+  import type { ActiveSessionItem, SystemRole } from '@/types';
 
   const authStore = useAuthStore();
   const nocEventsStore = useNocEventsStore();
@@ -51,6 +51,49 @@
 
   let pollInterval: ReturnType<typeof setInterval> | null = null;
 
+  function asString(val: unknown, fallback = ''): string {
+    return typeof val === 'string' && val.length > 0 ? val : fallback;
+  }
+
+  function calculateSecondsSince(item: Record<string, unknown>): number {
+    if (typeof item.seconds_since_active === 'number') {
+      return item.seconds_since_active;
+    }
+    if (item.last_activity_at) {
+      const elapsed = (Date.now() - new Date(String(item.last_activity_at)).getTime()) / 1000;
+      return Math.max(0, Math.floor(elapsed));
+    }
+    return 0;
+  }
+
+  function parseSessionItem(item: Record<string, unknown>): ActiveSessionItem {
+    const nowIso = new Date().toISOString();
+    return {
+      session_id: asString(item.session_id),
+      user_id: asString(item.user_id),
+      username: asString(item.username, 'unknown'),
+      full_name: typeof item.full_name === 'string' ? item.full_name : undefined,
+      role: (item.role || 'GUEST') as SystemRole,
+      ip_address: asString(item.ip_address, '127.0.0.1'),
+      user_agent: asString(item.user_agent),
+      current_router_id:
+        typeof item.current_router_id === 'string' ? item.current_router_id : undefined,
+      current_router_name:
+        typeof item.current_router_name === 'string' ? item.current_router_name : undefined,
+      current_view_path:
+        typeof item.current_view_path === 'string' ? item.current_view_path : undefined,
+      created_at: asString(item.created_at, asString(item.login_at, nowIso)),
+      last_active_at: asString(item.last_active_at, asString(item.last_activity_at, nowIso)),
+      seconds_since_active: calculateSecondsSince(item),
+      is_service_account: Boolean(item.is_service_account || item.role === 'SERVICE_ACCOUNT'),
+      issued_by_username:
+        typeof item.issued_by_username === 'string' ? item.issued_by_username : undefined,
+      allowed_cidr_list: Array.isArray(item.allowed_cidr_list)
+        ? (item.allowed_cidr_list as string[])
+        : undefined,
+    };
+  }
+
   async function loadActiveSessions() {
     isLoading.value = true;
     errorMessage.value = '';
@@ -58,40 +101,10 @@
       const res = await http.get<{ items?: ActiveSessionItem[] } | ActiveSessionItem[]>(
         '/api/v1/sessions/active',
       );
-      const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
-      sessions.value = raw.map((item: Partial<ActiveSessionItem> & Record<string, unknown>) => ({
-        ...item,
-        session_id: String(item.session_id || ''),
-        user_id: String(item.user_id || ''),
-        username: String(item.username || 'unknown'),
-        tenant_slug: String(item.tenant_slug || ''),
-        role: String(item.role || 'GUEST'),
-        ip_address: String(item.ip_address || '127.0.0.1'),
-        user_agent: String(item.user_agent || ''),
-        login_at: String(item.login_at || new Date().toISOString()),
-        mfa_verified: Boolean(item.mfa_verified),
-        is_current: Boolean(item.is_current),
-        is_service_account: Boolean(item.is_service_account || item.role === 'SERVICE_ACCOUNT'),
-        issued_by_username:
-          typeof item.issued_by_username === 'string' ? item.issued_by_username : null,
-        allowed_cidr_list: Array.isArray(item.allowed_cidr_list)
-          ? (item.allowed_cidr_list as string[])
-          : [],
-        last_active_at: String(
-          item.last_active_at || item.last_activity_at || new Date().toISOString(),
-        ),
-        seconds_since_active:
-          typeof item.seconds_since_active === 'number'
-            ? item.seconds_since_active
-            : item.last_activity_at
-              ? Math.max(
-                  0,
-                  Math.floor(
-                    (Date.now() - new Date(String(item.last_activity_at)).getTime()) / 1000,
-                  ),
-                )
-              : 0,
-      }));
+      const raw = ((Array.isArray(res.data) ? res.data : res.data?.items || []) as unknown) as Array<
+        Record<string, unknown>
+      >;
+      sessions.value = raw.map(parseSessionItem);
     } catch {
       // Sin datos de demostración en producción
       sessions.value = [];

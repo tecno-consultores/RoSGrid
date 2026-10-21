@@ -21,6 +21,8 @@
   const errorMessage = ref('');
   const generatedTokenData = ref<McpTokenResponse | null>(null);
   const isCopied = ref(false);
+  const isSkillCopied = ref(false);
+  const isDownloadingSkill = ref(false);
 
   function resetState() {
     expiryDays.value = 365;
@@ -28,6 +30,8 @@
     errorMessage.value = '';
     generatedTokenData.value = null;
     isCopied.value = false;
+    isSkillCopied.value = false;
+    isDownloadingSkill.value = false;
   }
 
   watch(
@@ -84,6 +88,44 @@
     } catch {
       // Fallback si clipboard API no está disponible
       isCopied.value = true;
+    }
+  }
+
+  async function handleCopySkill() {
+    try {
+      const res = await http.get<string>('/api/v1/mcp/skill');
+      const skillText = typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(skillText);
+      }
+      isSkillCopied.value = true;
+      setTimeout(() => {
+        isSkillCopied.value = false;
+      }, 3000);
+    } catch {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(`${window.location.origin}/api/v1/mcp/skill`);
+      }
+      isSkillCopied.value = true;
+      setTimeout(() => {
+        isSkillCopied.value = false;
+      }, 3000);
+    }
+  }
+
+  function handleDownloadSkill() {
+    isDownloadingSkill.value = true;
+    try {
+      const link = document.createElement('a');
+      link.href = '/api/v1/mcp/skill';
+      link.setAttribute('download', 'SKILL.md');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } finally {
+      setTimeout(() => {
+        isDownloadingSkill.value = false;
+      }, 1000);
     }
   }
 
@@ -194,6 +236,32 @@
             </ul>
           </div>
 
+          <!-- Acceso a la Skill Oficial desde el Formulario -->
+          <div class="skill-info-banner">
+            <div class="skill-info-text">
+              <span class="skill-mini-badge">🧠 Skill Oficial</span>
+              <span><strong>rosgrid-noc-operator:</strong> Playbooks L1-L3, 5 SOPs y Safe Mode 60s.</span>
+            </div>
+            <div class="skill-mini-actions">
+              <button
+                type="button"
+                class="btn-skill-mini"
+                :class="{ 'btn-skill-mini--copied': isSkillCopied }"
+                @click="handleCopySkill"
+              >
+                {{ isSkillCopied ? '✔ ¡Copiada!' : '📋 Copiar' }}
+              </button>
+              <button
+                type="button"
+                class="btn-skill-mini"
+                :disabled="isDownloadingSkill"
+                @click="handleDownloadSkill"
+              >
+                ⬇️ Descargar
+              </button>
+            </div>
+          </div>
+
           <footer class="modal-footer">
             <button type="button" class="btn-cancel" @click="emit('close')">Cancelar</button>
             <button type="submit" class="btn-generate" :disabled="isGenerating">
@@ -289,6 +357,35 @@
 }</code></pre>
             </div>
           </details>
+
+          <!-- Skill Oficial de Operaciones para Agentes IA -->
+          <div class="skill-download-box">
+            <div class="skill-header">
+              <span class="skill-badge">🧠 Skill Oficial</span>
+              <span class="skill-name">rosgrid-noc-operator</span>
+            </div>
+            <p class="skill-desc">
+              Instrucciones operativas, 5 Playbooks SOP (Diagnóstico 360°, cortes de fibra PON, inestabilidad BGP/OSPF, auditoría CIS y aislamiento) y gobierno Maker-Checker con Safe Mode (60s).
+            </p>
+            <div class="skill-actions">
+              <button
+                type="button"
+                class="btn-skill-action btn-skill-copy"
+                :class="{ 'btn-skill-action--copied': isSkillCopied }"
+                @click="handleCopySkill"
+              >
+                {{ isSkillCopied ? '✔ ¡Instrucciones Copiadas!' : '📋 Copiar System Prompt / Skill' }}
+              </button>
+              <button
+                type="button"
+                class="btn-skill-action btn-skill-download"
+                :disabled="isDownloadingSkill"
+                @click="handleDownloadSkill"
+              >
+                {{ isDownloadingSkill ? 'Descargando...' : '⬇️ Descargar SKILL.md' }}
+              </button>
+            </div>
+          </div>
 
           <footer class="modal-footer">
             <button type="button" class="btn-primary" @click="emit('close')">
@@ -678,5 +775,156 @@
   .btn-generate:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+  }
+
+  .skill-info-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.65rem 0.85rem;
+    background: #090d16;
+    border: 1px solid #1e293b;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: #cbd5e1;
+    margin-top: 0.75rem;
+  }
+
+  .skill-info-text {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .skill-mini-badge {
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: 4px;
+    padding: 0.15rem 0.4rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+
+  .skill-mini-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+  }
+
+  .btn-skill-mini {
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #e2e8f0;
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn-skill-mini:hover:not(:disabled) {
+    background: #334155;
+    color: #38bdf8;
+    border-color: #38bdf8;
+  }
+
+  .btn-skill-mini--copied {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: #10b981;
+    color: #34d399;
+  }
+
+  .skill-download-box {
+    margin-top: 1rem;
+    padding: 0.85rem 1rem;
+    background: #090d16;
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .skill-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .skill-badge {
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: 4px;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .skill-name {
+    color: #f1f5f9;
+    font-family: monospace;
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+
+  .skill-desc {
+    margin: 0;
+    font-size: 0.78rem;
+    color: #94a3b8;
+    line-height: 1.4;
+  }
+
+  .skill-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+    flex-wrap: wrap;
+  }
+
+  .btn-skill-action {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.85rem;
+    border-radius: 4px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn-skill-copy {
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #f8fafc;
+  }
+
+  .btn-skill-copy:hover {
+    background: #334155;
+    border-color: #38bdf8;
+    color: #38bdf8;
+  }
+
+  .btn-skill-action--copied {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: #10b981;
+    color: #34d399;
+  }
+
+  .btn-skill-download {
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    color: #38bdf8;
+  }
+
+  .btn-skill-download:hover:not(:disabled) {
+    background: rgba(56, 189, 248, 0.2);
+    border-color: #38bdf8;
   }
 </style>

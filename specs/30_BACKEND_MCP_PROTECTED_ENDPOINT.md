@@ -155,3 +155,6 @@ Para garantizar que los agentes operen bajo procedimientos estándar (SOP) sin r
 - **Ruta Global Antigravity:** `~/.gemini/config/skills/rosgrid-noc-operator/SKILL.md`
 - **Referencias y Esquemas:** `.agents/skills/rosgrid-noc-operator/references/mcp_tools.md` y `routeros_flags.md`
 - **Configuraciones de Clientes:** Snippets listos para Claude Desktop (`claude_desktop.json`) y Hermes Agent (`hermes_agent.yaml`).
+- **Endpoint Público de Consulta:** `GET /api/v1/mcp/skill` (retorna el Markdown de la skill por defecto o JSON con `?format=json`).
+- **Distribución en Interfaz Web:** Botones de descarga y copiado directo en el modal de emisión de tokens MCP (`RgMcpTokenModal.vue`).
+- **Distribución en Instalación Remota:** Descarga desatendida en `/opt/rosgrid/skills/rosgrid-noc-operator/` mediante `instalar-rosgrid.sh`.

@@ -1172,3 +1172,34 @@ async def test_tool_rosgrid_detect_mass_outage(mcp_context: dict[str, Any]) -> N
         assert content["status"] == "OK"
         assert content["data"]["total_incidents"] == 1
         assert content["data"]["incidents"][0]["pon_port"] == "gpon1"
+
+
+@pytest.mark.asyncio
+async def test_get_mcp_skill_markdown() -> None:
+    resp = await api_mcp.get_mcp_skill()
+    assert resp.status_code == 200
+    assert "text/markdown" in resp.media_type
+    assert resp.headers.get("content-disposition") == "inline; filename=SKILL.md"
+    body_text = resp.body.decode("utf-8")
+    assert "rosgrid-noc-operator" in body_text
+    assert "Playbook" in body_text or "Operador NOC" in body_text
+
+
+@pytest.mark.asyncio
+async def test_get_mcp_skill_json() -> None:
+    resp = await api_mcp.get_mcp_skill(format="json")
+    assert resp.status_code == 200
+    data = json.loads(resp.body.decode("utf-8"))
+    assert data["name"] == "rosgrid-noc-operator"
+    assert data["version"] == "1.0.0"
+    assert "rosgrid-noc-operator" in data["content"]
+
+
+def test_load_skill_markdown_fallback() -> None:
+    from pathlib import Path
+    non_existent = (Path("/tmp/non_existent_skill_path_12345/SKILL.md"),)
+    with patch.object(api_mcp, "_SKILL_CANDIDATE_PATHS", non_existent):
+        text = api_mcp._load_skill_markdown()
+        assert "rosgrid-noc-operator" in text
+        assert "Consulta https://github.com/tecno-consultores/RoSGrid" in text
+

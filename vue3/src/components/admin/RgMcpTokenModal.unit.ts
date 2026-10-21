@@ -13,14 +13,14 @@ const MOCK_USERNAME = 'ai-agent-noc';
 const mockUser: UserManagementItem = {
   id: MOCK_USER_ID,
   username: MOCK_USERNAME,
+  email: 'hermes@rosgrid.local',
   full_name: 'Hermes AI Assistant',
   role: 'SERVICE_ACCOUNT',
   is_active: true,
-  allowed_ip_range: '10.0.0.0/24',
-  two_factor_enabled: false,
-  force_password_change: false,
+  allowed_cidr_list: ['10.0.0.0/24'],
+  totp_enabled: false,
+  has_all_routers_access: true,
   created_at: '2026-01-01T00:00:00Z',
-  updated_at: '2026-01-01T00:00:00Z',
 };
 
 const mockMcpResponse: McpTokenResponse = {
@@ -147,5 +147,53 @@ describe('RgMcpTokenModal.vue — Emisión de Tokens MCP para Agentes IA', () =>
 
     await wrapper.find('.btn-close').trigger('click');
     expect(wrapper.emitted('close')).toBeTruthy();
+  });
+
+  it('permite copiar la Skill oficial llamando a GET /api/v1/mcp/skill', async () => {
+    const getSpy = vi.spyOn(http, 'get').mockResolvedValueOnce({
+      data: '# Skill rosgrid-noc-operator markdown content',
+      status: 200,
+      headers: new Headers(),
+    } as unknown as ApiResponse);
+
+    const writeTextSpy = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: writeTextSpy,
+      },
+    });
+
+    const wrapper = mount(RgMcpTokenModal, {
+      props: {
+        isOpen: true,
+        user: mockUser,
+      },
+    });
+
+    const copyBtn = wrapper.find('.btn-skill-mini');
+    expect(copyBtn.exists()).toBe(true);
+    await copyBtn.trigger('click');
+    await flushPromises();
+
+    expect(getSpy).toHaveBeenCalledWith('/api/v1/mcp/skill');
+    expect(writeTextSpy).toHaveBeenCalledWith('# Skill rosgrid-noc-operator markdown content');
+    expect(wrapper.text()).toContain('¡Copiada!');
+  });
+
+  it('permite descargar el archivo SKILL.md al hacer clic en Descargar', async () => {
+    const createElementSpy = vi.spyOn(document, 'createElement');
+
+    const wrapper = mount(RgMcpTokenModal, {
+      props: {
+        isOpen: true,
+        user: mockUser,
+      },
+    });
+
+    const downloadBtn = wrapper.findAll('.btn-skill-mini')[1];
+    expect(downloadBtn.exists()).toBe(true);
+    await downloadBtn.trigger('click');
+
+    expect(createElementSpy).toHaveBeenCalledWith('a');
   });
 });

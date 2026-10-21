@@ -462,3 +462,11 @@ La skill capacita al agente como un **Ingeniero NOC Tier-2/Tier-3 certificado** 
 - **Antigravity / Gemini CLI:** Se detecta de forma nativa en `.agents/skills/rosgrid-noc-operator/` o a nivel global en `~/.gemini/config/skills/rosgrid-noc-operator/`.
 - **Claude Desktop / Claude Code:** Copia las directrices de `SKILL.md` en el campo *System Prompt* de tu proyecto o asistente.
 - **Hermes Agent:** Enlaza el manifiesto preconfigurado en `.agents/skills/rosgrid-noc-operator/configs/hermes_agent.yaml`.
+
+### 6.3 Canales de Acceso y Distribución en Instalaciones Remotas
+
+Para usuarios que despliegan RoSGrid mediante el instalador desatendido (`curl -fsSL .../instalar-rosgrid.sh | bash`) sin clonar el repositorio, la Skill está accesible de 3 maneras:
+
+1. **Desde la Interfaz Gráfica (1 Clic):** En el modal de emisión de tokens MCP (`RgMcpTokenModal.vue`), mediante los botones *📋 Copiar System Prompt / Skill* y *⬇️ Descargar SKILL.md*.
+2. **Vía Endpoint REST Público:** Consulta directa sin desafíos de autenticación mediante `GET /api/v1/mcp/skill` (Markdown nativo) o `GET /api/v1/mcp/skill?format=json`.
+3. **En el Servidor Local:** El instalador `instalar-rosgrid.sh` descarga automáticamente la suite completa en `/opt/rosgrid/skills/rosgrid-noc-operator/`.

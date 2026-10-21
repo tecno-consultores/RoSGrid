@@ -9,9 +9,11 @@ import logging
 import uuid
 from collections.abc import Callable, Coroutine
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import JSONResponse, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -1086,3 +1088,52 @@ async def mcp_endpoint(
     await _check_mcp_rate_limit(tenant_id, user_id)
     await set_tenant_context(db, tenant_id, is_superadmin=False)
     return await _dispatch_mcp_method(body, db, tenant_id, user_id, claims, client_ip)
+
+
+_SKILL_CANDIDATE_PATHS: tuple[Path, ...] = (
+    Path(__file__).resolve().parent / "SKILL.md",
+    Path("/opt/rosgrid/skills/rosgrid-noc-operator/SKILL.md"),
+    Path(__file__).resolve().parents[4] / ".agents" / "skills" / "rosgrid-noc-operator" / "SKILL.md",
+)
+
+_EMBEDDED_SKILL_FALLBACK = """---
+name: rosgrid-noc-operator
+description: Operador NOC Autónomo para MikroTik RouterOS v7 con RoSGrid
+---
+# Operador NOC Autónomo para RoSGrid (MikroTik RouterOS v7)
+Consulta https://github.com/tecno-consultores/RoSGrid para la documentación oficial.
+"""
+
+
+def _load_skill_markdown() -> str:
+    for candidate in _SKILL_CANDIDATE_PATHS:
+        if candidate.is_file():
+            try:
+                return candidate.read_text(encoding="utf-8")
+            except OSError:
+                continue
+    return _EMBEDDED_SKILL_FALLBACK
+
+
+@router.get("/skill", summary="Consulta pública de la Skill oficial rosgrid-noc-operator")
+async def get_mcp_skill(format: str | None = None) -> Response:
+    """Retorna las instrucciones operativas (SKILL.md) de la Skill oficial rosgrid-noc-operator.
+
+    Permite a operadores y agentes remotos descargar o inspeccionar los playbooks SOP
+    y guías de RouterOS v7 sin necesidad de autenticación previa.
+    """
+    skill_text = _load_skill_markdown()
+    if format == "json":
+        return JSONResponse(
+            content={
+                "name": "rosgrid-noc-operator",
+                "version": "1.0.0",
+                "content": skill_text,
+            }
+        )
+    return Response(
+        content=skill_text,
+        media_type="text/markdown; charset=utf-8",
+        headers={"Content-Disposition": "inline; filename=SKILL.md"},
+    )
+

@@ -114,6 +114,15 @@ if [[ "$IS_REMOTE" == "true" ]]; then
     curl -fsSL "${RAW_BASE_URL}/.env.example" -o .env.example
     curl -fsSL "${RAW_BASE_URL}/docker-compose.prod.yml" -o docker-compose.prod.yml
     echo "✔ Manifiestos de despliegue descargados en $INSTALL_DIR."
+
+    echo "Descargando Skill oficial para Agentes IA (rosgrid-noc-operator)..."
+    mkdir -p skills/rosgrid-noc-operator/references skills/rosgrid-noc-operator/configs
+    curl -fsSL "${RAW_BASE_URL}/.agents/skills/rosgrid-noc-operator/SKILL.md" -o skills/rosgrid-noc-operator/SKILL.md || true
+    curl -fsSL "${RAW_BASE_URL}/.agents/skills/rosgrid-noc-operator/references/mcp_tools.md" -o skills/rosgrid-noc-operator/references/mcp_tools.md || true
+    curl -fsSL "${RAW_BASE_URL}/.agents/skills/rosgrid-noc-operator/references/routeros_flags.md" -o skills/rosgrid-noc-operator/references/routeros_flags.md || true
+    curl -fsSL "${RAW_BASE_URL}/.agents/skills/rosgrid-noc-operator/configs/claude_desktop.json" -o skills/rosgrid-noc-operator/configs/claude_desktop.json || true
+    curl -fsSL "${RAW_BASE_URL}/.agents/skills/rosgrid-noc-operator/configs/hermes_agent.yaml" -o skills/rosgrid-noc-operator/configs/hermes_agent.yaml || true
+    echo "✔ Skill oficial rosgrid-noc-operator descargada en $INSTALL_DIR/skills/rosgrid-noc-operator."
 fi
 
 # 4. Configuración del archivo de variables de entorno (.env) y manejo de volúmenes
@@ -271,6 +280,11 @@ if [[ "$IS_REMOTE" == "true" ]]; then
     echo "  docker compose -f docker-compose.prod.yml ps"
     echo "  docker compose -f docker-compose.prod.yml down"
     echo "  docker compose -f docker-compose.prod.yml up -d"
+fi
+if [[ -d skills/rosgrid-noc-operator ]]; then
+    echo -e "\n🤖 Skill Oficial para Agentes IA (rosgrid-noc-operator):"
+    echo "  Directorio local: $(pwd)/skills/rosgrid-noc-operator"
+    echo "  Consulta pública vía API: http://localhost:${PORT_DISPLAY}/api/v1/mcp/skill"
 fi
 echo "=============================================================================="
 exit 0
