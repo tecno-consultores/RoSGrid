@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "rosgrid-noc": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://rosgrid.tu-empresa.com/api/v1/mcp"
+      ],
+      "env": {
+        "MCP_HEADERS": "{\"Authorization\": \"Bearer <TU_TOKEN_MCP_AQUI>\"}"
+      }
+    }
+  }
+}

@@ -10,6 +10,20 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Added
 
+- **Skill Oficial de Operaciones NOC para Agentes IA (`rosgrid-noc-operator`) (Hito 22.15):**
+  - **Skill Portable de Operación Autónoma (`.agents/skills/rosgrid-noc-operator/SKILL.md`):** Arquitectura y manual operativo completo para capacitar a agentes de Inteligencia Artificial (Antigravity, Claude Desktop, Claude Code, Hermes Agent) como Ingenieros NOC Tier-2/Tier-3 certificados sobre flotas MikroTik RouterOS v7.
+  - **5 Playbooks Operativos Estándar (SOP):** Procedimientos guiados paso a paso para:
+    1. *SOP-1 (Degradación de Abonado):* Diagnóstico 360°, pruebas multi-MTU (64B vs 1472B DF-bit), potencia óptica SFP DDM y reconexión limpia de PPPoE.
+    2. *SOP-2 (Cortes Masivos de Fibra):* Correlación espacial de caídas masivas agrupando ONUs por puerto PON o caja NAP.
+    3. *SOP-3 (Inestabilidad BGP/OSPF):* Inspección de adyacencias, Looking Glass FIB y comparación Git-style contra la configuración previa.
+    4. *SOP-4 (Auditoría CIS y Drift):* Evaluación de seguridad (Score 0-100), detección de desvíos contra la Golden Baseline y propuestas de hardening.
+    5. *SOP-5 (Aislamiento Preventivo):* Contención inmediata e idempotente de clientes comprometidos con cola 64k/64k y lista `AISLADOS_TECNICO`.
+  - **Catálogo Exhaustivo de Herramientas MCP (`references/mcp_tools.md`):** Especificación completa de parámetros, tipos, precondiciones y restricciones operativas para las 14 herramientas del servidor MCP `/api/v1/mcp`.
+  - **Guía de Banderas RouterOS v7 (`references/routeros_flags.md`):** Interpretación estricta de banderas nativas (`[D]`, `[X]`, `[I]`, `[R]`) e identificadores internos hexadecimales (`*1`, `*1A`).
+  - **Plantillas de Configuración Listas para Producción (`configs/`):** Manifiestos de despliegue para Claude Desktop (`claude_desktop.json`) y Hermes Agent (`hermes_agent.yaml`).
+  - **Sincronización Global Antigravity:** Replicación en `~/.gemini/config/skills/rosgrid-noc-operator/` para disponibilidad universal entre workspaces.
+  - **Sincronización Documental:** Actualización integral de `specs/30_BACKEND_MCP_PROTECTED_ENDPOINT.md` y `docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md`.
+
 - **Generador de Tokens MCP, Supervisión de Sesiones IA con Kill-Switch y Panel de Notificaciones (Hito 22.14):**
   - **Generador Visual de Tokens MCP (`RgMcpTokenModal.vue`):** Modal interactivo integrado en la pantalla de Usuarios y Permisos (`UsersAndPermissionsView.vue`) para la emisión de Bearer Tokens de larga duración (30 a 730 días) para cuentas de servicio (`SERVICE_ACCOUNT`, `TENANT_ADMIN`, `SUPERADMIN_GLOBAL`). Muestra metadatos de sesión, advertencias de gobernanza y snippets de configuración de 1-clic para Claude Desktop (`claude_desktop_config.json`) y Hermes Agent (`config.yaml`).
   - **Supervisión y Kill-Switch de Agentes IA (`ActiveSessionsKillSwitchView.vue`):** Pestañas de filtrado táctico (*Todas*, *Operadores Humanos*, *Agentes IA MCP*), badges distintivos de cuenta de servicio, linaje del operador que autorizó el token (`Por: @usuario`), lista blanca CIDR y botón de revocación en caliente en tiempo real en KeyDB/Redis.

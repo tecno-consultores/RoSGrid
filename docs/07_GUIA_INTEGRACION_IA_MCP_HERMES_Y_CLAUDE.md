@@ -440,3 +440,25 @@ sequenceDiagram
     RoSGrid-->>Supervisor: Sesión BGP reestablecida con éxito
     Note over RoSGrid: Evento firmado en WORM (MCP_AI_TOOL_CALL)
 ```
+
+---
+
+## 6. Skill Oficial de Operaciones: `rosgrid-noc-operator`
+
+Para que los agentes de IA no solo conozcan los esquemas sintácticos de las herramientas MCP sino que también dominen las mejores prácticas de ingeniería de redes MikroTik, RoSGrid provee la Skill oficial **`rosgrid-noc-operator`** ubicada en `.agents/skills/rosgrid-noc-operator/SKILL.md`.
+
+### 6.1 Contenido y Playbooks Incluidos
+
+La skill capacita al agente como un **Ingeniero NOC Tier-2/Tier-3 certificado** e incluye:
+
+1. **SOP-1 (Degradación de Abonado):** Diagnóstico 360°, detección de fallas de MTU con ping multi-MTU (64B vs 1472B DF-bit), potencia óptica SFP DDM y reconexión limpia de PPPoE.
+2. **SOP-2 (Cortes Masivos de Fibra):** Correlación de caídas masivas agrupando ONUs por puerto PON o caja NAP para despacho eficiente de cuadrillas.
+3. **SOP-3 (Inestabilidad BGP/OSPF):** Inspección de adyacencias, Looking Glass FIB y comparación Git-style contra la configuración previa.
+4. **SOP-4 (Auditoría CIS y Drift):** Evaluación de seguridad (Score 0-100), detección de desvíos contra la Golden Baseline y propuestas de hardening.
+5. **SOP-5 (Aislamiento Preventivo):** Contención inmediata e idempotente de clientes comprometidos con cola 64k/64k y lista de firewall `AISLADOS_TECNICO`.
+
+### 6.2 Integración Rápida por Plataforma
+
+- **Antigravity / Gemini CLI:** Se detecta de forma nativa en `.agents/skills/rosgrid-noc-operator/` o a nivel global en `~/.gemini/config/skills/rosgrid-noc-operator/`.
+- **Claude Desktop / Claude Code:** Copia las directrices de `SKILL.md` en el campo *System Prompt* de tu proyecto o asistente.
+- **Hermes Agent:** Enlaza el manifiesto preconfigurado en `.agents/skills/rosgrid-noc-operator/configs/hermes_agent.yaml`.

@@ -1,0 +1,17 @@
+# Configuración de Hermes Agent para RoSGrid MCP
+version: "1.0"
+agent:
+  name: "rosgrid-noc-operator"
+  description: "Operador NOC Autónomo para MikroTik RouterOS v7 con RoSGrid"
+  system_prompt_ref: "../SKILL.md"
+  
+mcp_servers:
+  - name: "rosgrid"
+    transport: "http"
+    url: "https://rosgrid.tu-empresa.com/api/v1/mcp"
+    headers:
+      Authorization: "Bearer <TU_TOKEN_MCP_AQUI>"
+      Content-Type: "application/json"
+    timeout_seconds: 30
+    rate_limit:
+      requests_per_minute: 25
