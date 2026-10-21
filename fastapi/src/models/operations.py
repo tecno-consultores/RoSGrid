@@ -257,7 +257,7 @@ class AuditLog(Base):
     )
 
     actor_user_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+        UUID(as_uuid=True), nullable=True, index=True
     )
     actor_username: Mapped[str] = mapped_column(String(64), nullable=False)
     actor_role: Mapped[SystemRoleEnum] = mapped_column(
@@ -269,7 +269,7 @@ class AuditLog(Base):
     event_category: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     event_action: Mapped[str] = mapped_column(String(128), nullable=False)
     router_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("routers.id", ondelete="SET NULL"), nullable=True
+        UUID(as_uuid=True), nullable=True, index=True
     )
     router_display_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
 

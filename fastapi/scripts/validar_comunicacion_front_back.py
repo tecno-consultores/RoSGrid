@@ -257,6 +257,9 @@ async def verify_core_resources(client: httpx.AsyncClient, auth_headers: dict[st
                 if r_commit.status_code == 200:
                     commit_data = r_commit.json()
                     imported_count = commit_data.get("imported_count", 0)
+                    created_ids = commit_data.get("created_router_ids", [])
+                    if created_ids:
+                        router_id = str(created_ids[0])
                     log_test("POST /api/v1/inventory/import-csv/commit (Transaccional en PostgreSQL)", True, f"Importados: {imported_count} routers (Rol L1 registrado)")
                 else:
                     log_test("POST /api/v1/inventory/import-csv/commit", False, f"HTTP {r_commit.status_code}: {r_commit.text}")
@@ -429,6 +432,19 @@ async def verify_router_specific_endpoints(client: httpx.AsyncClient, auth_heade
             log_test(f"GET /api/v1/routers/{router_id}/webfig/interfaces", False, f"HTTP {r_ifaces.status_code}")
     except Exception as e:
         log_test(f"GET /api/v1/routers/{router_id}/webfig/interfaces", False, str(e))
+
+    # Limpieza higiénica del equipo de prueba
+    try:
+        delete_headers = {**auth_headers, "Idempotency-Key": str(uuid.uuid4())}
+        async with httpx.AsyncClient(base_url=API_BASE, timeout=15.0) as clean_client:
+            r_del = await clean_client.delete(f"/api/v1/inventory/routers/{router_id}", headers=delete_headers)
+            log_test(
+                f"DELETE /api/v1/inventory/routers (Higiene y Limpieza de Equipos de Prueba)",
+                r_del.status_code == 204,
+                f"HTTP {r_del.status_code}",
+            )
+    except Exception as e:
+        log_test("DELETE /api/v1/inventory/routers", False, f"{type(e).__name__}: {repr(e)}")
 
 
 async def verify_nginx_frontend_and_csp() -> None:

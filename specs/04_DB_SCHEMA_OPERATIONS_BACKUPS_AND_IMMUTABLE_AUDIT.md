@@ -564,40 +564,26 @@ CREATE TABLE audit\_logs (
     
 
 
-    -- Quién, desde dónde y con qué rol
+    -- Quién, desde dónde y con qué rol (Desacoplado de FK cascade para preservar inmutabilidad WORM e integridad hash)
+    actor_user_id UUID,
 
+    actor_username VARCHAR(64) NOT NULL,
 
-    actor\_user\_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    actor_role system_role_enum NOT NULL,
 
+    actor_ip INET NOT NULL,
 
-    actor\_username VARCHAR(64) NOT NULL,
-
-
-    actor\_role system\_role\_enum NOT NULL,
-
-
-    actor\_ip INET NOT NULL,
-
-
-    actor\_user\_agent VARCHAR(512),
-
-
-    
-
+    actor_user_agent VARCHAR(512),
 
     -- Qué hizo y sobre qué equipo/recurso
+    event_category VARCHAR(64) NOT NULL, -- AUTH, VAULT, INVENTORY, WEBFIG_L1, WEBFIG_L2, MAKER_CHECKER, SAFEMODE, SESSION_KILL
 
+    event_action VARCHAR(128) NOT NULL,  -- Ej. CREDENTIAL_REVEALED, FIREWALL_RULE_UPDATED, SESSION_TERMINATED
 
-    event\_category VARCHAR(64) NOT NULL, -- AUTH, VAULT, INVENTORY, WEBFIG\_L1, WEBFIG\_L2, MAKER\_CHECKER, SAFEMODE, SESSION\_KILL
+    -- Identificador del router histórico (Desacoplado de FK para permitir eliminación en routers sin violar WORM)
+    router_id UUID,
 
-
-    event\_action VARCHAR(128) NOT NULL,  -- Ej. CREDENTIAL\_REVEALED, FIREWALL\_RULE\_UPDATED, SESSION\_TERMINATED
-
-
-    router\_id UUID REFERENCES routers(id) ON DELETE SET NULL,
-
-
-    router\_display\_name VARCHAR(120),
+    router_display_name VARCHAR(120),
 
 
     

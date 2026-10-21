@@ -10,6 +10,11 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Fixed
 
+- **Corrección de Conflicto en Auditoría Inmutable WORM y Eliminación de Routers (Alembic 0009):**
+  - **Desacoplamiento de Claves Foráneas en `audit_logs`:** Creada y aplicada la migración `0009_audit_logs_worm_decouple_fk.py` que elimina las restricciones `audit_logs_router_id_fkey` y `audit_logs_actor_user_id_fkey`.
+  - **Resolución de Conflicto WORM:** Se resolvió la excepción 42501 provocada porque la cláusula `ON DELETE SET NULL` de PostgreSQL ejecutaba una sentencia `UPDATE` sobre `audit_logs`, la cual era abortada por el trigger `trg_immutable_audit_logs` a nivel de sentencia (`FOR EACH STATEMENT`).
+  - **Preservación Forense Criptográfica:** Garantiza que los registros históricos de auditoría conserven intactos los UUIDs de routers o usuarios eliminados sin alterar el hash SHA-256 (`record_sha256_hash`), permitiendo a su vez la eliminación limpia de equipos en el inventario.
+
 - **Corrección de Error HTTP 500 en Importación Masiva CSV con Roles Personalizados (Alembic 0008):**
   - **Migración Faltante `tenant_custom_roles`:** Creada y aplicada la migración de Alembic `0008_tenant_custom_roles.py` que genera la tabla `tenant_custom_roles` con Row Level Security (RLS) forzado y política de aislamiento multi-tenant.
   - **Evolución del Tipo de Columna `routers.network_role`:** Modificado el tipo de columna en PostgreSQL de `router_network_role_enum` a `VARCHAR(64)` mediante `ALTER TABLE routers ALTER COLUMN network_role TYPE VARCHAR(64) USING network_role::text;`, permitiendo el registro y persistencia de roles tácticos definidos dinámicamente por los operadores (ej. `L1`).
@@ -27,7 +32,7 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 - **Ampliación de Pruebas Automatizadas y Detección de Regresiones (Karate Labs, Contratos y Unitarias):**
   - **Pruebas BDD API (Karate Labs):** Incorporados los escenarios 62 (Dry-Run CSV), 63 (Commit Transaccional CSV) y 64 (Consulta de Catálogo de Roles Personalizados) en `fastapi/test/api_test.feature` y `examples/fastapi/test/api_test.feature`.
   - **Pruebas BDD UI (Karate Labs):** Incorporados los escenarios 21 (Apertura, inspección y cierre del modal asistente de importación CSV) y 22 (Verificación estructural del pie de página en login sin solapamiento) en `vue3/test/ui_business_flow.feature` y `examples/vue3/test/ui_business_flow.feature`.
-  - **Contrato Front-Back (`validar_comunicacion_front_back.py`):** Ampliado con carga multipart/form-data idéntica a la UI Vue 3 para dry-run y commit transaccional de CSV con rol `L1`, consulta del catálogo `GET /api/v1/inventory/network-roles` y resolución dinámica de tokens para entornos wizard, alcanzando 25/25 pruebas aprobadas (100%).
+  - **Contrato Front-Back (`validar_comunicacion_front_back.py`):** Ampliado con carga multipart/form-data idéntica a la UI Vue 3 para dry-run y commit transaccional de CSV con rol `L1`, consulta del catálogo `GET /api/v1/inventory/network-roles`, resolución dinámica de tokens para entornos wizard y prueba de eliminación `DELETE /api/v1/inventory/routers/{router_id}` (HTTP 204) con `Idempotency-Key` y cliente desacoplado, alcanzando 26/26 pruebas aprobadas (100%) y garantizando la higiene absoluta del inventario.
   - **Pruebas Unitarias de Backend (`test_inventory_csv_and_vault.unit.py`):** Añadidas validaciones de roles dinámicos en CSV y verificación del modelo `TenantCustomRole` en metadatos de SQLAlchemy.
   - **Pruebas Unitarias de Frontend (`loginView.unit.ts`):** Añadida prueba de orden jerárquico DOM entre `.login-card` y `.login-footer`.
 

@@ -936,8 +936,8 @@ Certificación integral ejecutada de extremo a extremo bajo la **Regla Cero** (c
    - **Escenario 22:** Estructura y posicionamiento del pie de página institucional en pantalla de Login sin solapamiento.
    - **Total Karate Labs UI:** **22 de 22 escenarios aprobados (100%)**.
 3. **Contratos Front-Back (`validar_comunicacion_front_back.py`):**
-   - Ejecución completa en Docker `rosgrid_api_local` con carga `multipart/form-data`, validación `dry-run`, `commit` transaccional con rol `L1`, consulta del catálogo `GET /api/v1/inventory/network-roles` y resolución dinámica de tokens para entornos wizard.
-   - **Total Contratos Front-Back:** **25 de 25 pruebas aprobadas (100%)**.
+   - Ejecución completa en Docker `rosgrid_api_local` con carga `multipart/form-data`, validación `dry-run`, `commit` transaccional con rol `L1`, consulta del catálogo `GET /api/v1/inventory/network-roles`, resolución dinámica de tokens para entornos wizard y prueba de eliminación higiénica `DELETE /api/v1/inventory/routers/{router_id}` (HTTP 204) con `Idempotency-Key` y cliente desacoplado.
+   - **Total Contratos Front-Back:** **26 de 26 pruebas aprobadas (100%)** con inventario 100% limpio.
 4. **Pruebas Unitarias de Backend y Frontend:**
    - Backend (`test_inventory_csv_and_vault.unit.py`): 16 pruebas aprobadas (100%), validando roles dinámicos y registro en metadatos de SQLAlchemy.
    - Frontend (`loginView.unit.ts`): 20 pruebas aprobadas (100%), validando orden jerárquico DOM de la tarjeta y pie de página.
