@@ -254,6 +254,7 @@ RoSGrid incorpora de forma nativa el estándar abierto de **Gobernanza para Agen
   - [`mandatory_qa_pyramid_and_doc_sync.md`](./.agents/rules/mandatory_qa_pyramid_and_doc_sync.md): Obligación de crear pruebas multi-capa (unitarias, DB real, contratos y Karate Labs) y sincronización documental continua.
   - [`secure_development_and_testing_guidelines.md`](./.agents/rules/secure_development_and_testing_guidelines.md): Prevención de mocks ciegos de BD, forzado de RLS en PostgreSQL, protección anti-SSRF y bóveda criptográfica.
   - [`frontend_parity_and_closure.md`](./.agents/rules/frontend_parity_and_closure.md): Paridad terminal-UI y protocolo de cierre.
+  - [`continuous_agent_evolution.md`](./.agents/rules/continuous_agent_evolution.md): Evolución y optimización autónoma y continua de directivas, habilidades y scripts en `.agents/`.
 - **[`.agents/skills/`](./.agents/skills/):** Playbooks especializados de dominio (Operador NOC RouterOS v7, Certificador Docker QA 11X, Safe Mode, etc.).
 - **[`.agents/scripts/`](./.agents/scripts/):** Herramientas de automatización como `verify_alembic_orm_parity.py` (auditoría ORM vs Alembic) y `certify_task_completion.sh`.
 

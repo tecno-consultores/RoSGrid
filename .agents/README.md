@@ -14,7 +14,8 @@ Este directorio implementa el estándar abierto y emergente de la industria para
 ├── rules/                                            # Reglas y directivas de comportamiento forzadas
 │   ├── mandatory_qa_pyramid_and_doc_sync.md          # Pirámide de pruebas multi-capa y sync documental
 │   ├── secure_development_and_testing_guidelines.md  # Anti-Mocks ciegos, RLS forzado, SSRF y bóveda
-│   └── frontend_parity_and_closure.md                # Paridad terminal-UI y protocolo de cierre
+│   ├── frontend_parity_and_closure.md                # Paridad terminal-UI y protocolo de cierre
+│   └── continuous_agent_evolution.md                 # Evolución y actualización autónoma y continua de .agents/
 ├── skills/                                           # Habilidades y Playbooks de dominio
 │   ├── rosgrid-noc-operator/                         # Operador NOC y diagnóstico autónomo vía MCP (RouterOS v7)
 │   ├── qa-11x-docker-certifier/                      # Certificación 11X en Docker efímero (95% cobertura)

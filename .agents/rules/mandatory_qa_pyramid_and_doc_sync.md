@@ -36,6 +36,7 @@ Whenever code is added, updated, or refactored, simultaneously update:
    - **`ROADMAP.md`:** Update milestone checkpoints and sub-task statuses.
    - **`TESTING.md`:** Update test metrics, coverage percentages, and scenario counts.
    - **`README.md`:** Update if user-facing features, installation, or architecture change.
+4. **`.agents/`:** Proactively update directives, skills, and automation scripts upon identifying improvement opportunities, unhandled edge cases, or automation potential (see [continuous_agent_evolution.md](file:///.agents/rules/continuous_agent_evolution.md)).
 
 ---
 

@@ -27,6 +27,9 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
    - **Terminal ↔ Frontend Parity:** Zero console-only actions or orphan API endpoints without a matching Vue 3 interface.
    - **Closure Protocol:** Full ephemeral Docker test suite execution, security scan, and doc sync before commit/push.
 
+4. [continuous_agent_evolution.md](file:///.agents/rules/continuous_agent_evolution.md):
+   - **Autonomous Evolution of `.agents/`:** Proactively update rules, skills, and automation scripts whenever discovering an improvement opportunity, unhandled edge case, procedure automation, or token optimization without waiting for user prompting.
+
 ---
 
 ## 2. Rule Zero: Ephemeral Docker Execution
