@@ -133,3 +133,21 @@ Para campus, centros de distribución, clínicas y edificios corporativos:
 - Visor centralizado de clientes inalámbricos conectados:
   - Nivel de señal RSSI (dBm), relación señal a ruido (SNR) y estándar en uso (802.11ax / ac / n).
   - Trazabilidad de eventos de itinerancia (*Fast Roaming 802.11r/k/v*) entre puntos de acceso sin cortes de llamada en VoIP.
+
+---
+
+## 7. Integración de Canales de Alerta y Notificación Multicanal (`NotificationChannelsPanel.vue`)
+
+Para alertamiento corporativo en tiempo real ante eventos de desconexión de routers, deriva de configuración, ataques de rogue DHCP y caídas de enlaces WAN:
+
+### 7.1. Arquitectura de Canales Cifrados (AES-256-GCM)
+
+- **Pestaña Táctica en Enterprise Compliance:** Integrada como 7.ª pestaña interactiva en `EnterpriseComplianceView.vue`.
+- **Tipos de Canales Soportados:**
+  - **Telegram Bot (`TELEGRAM_BOT`):** Token del bot y Chat ID con entrega inmediata mediante API de Telegram.
+  - **Servidor de Correo SMTP (`SMTP_EMAIL`):** Servidor, puerto TLS/STARTTLS, credenciales autenticadas y lista de destinatarios.
+  - **Webhook Genérico HTTP (`GENERIC_WEBHOOK`):** Endpoint HTTPS receptor de alertas estructuradas en JSON con cabecera de autenticación opcional.
+- **Suscripción Selectiva de Eventos:**
+  - `ROUTER_OFFLINE`, `ROUTER_ONLINE`, `DEGRADED_HIGH_LOAD`, `SSL_MISMATCH`, `CONFIG_DRIFT_DETECTED`, `ROGUE_DHCP_ALERT`.
+- **Despacho Interactivo de Pruebas en Vivo:**
+  - Ejecución de `POST /api/v1/operations/notification-channels/{id}/test` desde la interfaz para verificar conectividad y credenciales sin necesidad de generar una alerta real en la red.

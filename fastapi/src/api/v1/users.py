@@ -389,6 +389,18 @@ async def generate_user_mcp_token(
     if not target_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
 
+    if not target_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No se puede emitir un token MCP para un usuario inactivo o deshabilitado.",
+        )
+
+    if target_user.is_locked:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No se puede emitir un token MCP para un usuario bloqueado por seguridad.",
+        )
+
     allowed_mcp_roles = {
         SystemRoleEnum.SERVICE_ACCOUNT,
         SystemRoleEnum.TENANT_ADMIN,

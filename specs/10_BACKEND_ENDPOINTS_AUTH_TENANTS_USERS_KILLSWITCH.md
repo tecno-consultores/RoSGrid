@@ -41,7 +41,6 @@
 - **Protección contra Asignación Masiva (*Mass Assignment*):**
   - Todos los modelos de entrada (`LoginStep1Request`, `RegisterOperatorRequest`, `UserCreate`, `UserUpdate`, etc.) implementan `model_config = ConfigDict(extra="forbid")`, rechazando cualquier atributo adicional enviado por el cliente (como `role`, `is_superuser`, etc.).
 
-
 - **Auditoría Forense Inmutable WORM de Autenticación:**
   - Todos los intentos fallidos de inicio de sesión (`LOGIN_FAILED_USER_NOT_FOUND`, `LOGIN_FAILED_INVALID_PASSWORD`, `LOGIN_FAILED_ACCOUNT_LOCKED`, `LOGIN_FAILED_USER_INACTIVE`, `2FA_VERIFICATION_FAILED`) se registran atómicamente en `audit_logs` con su hash encadenado SHA-256, IP y User-Agent del actor.
   - Al completar exitosamente el flujo de autenticación se registra el evento `LOGIN_SUCCESSFUL`.
@@ -232,11 +231,46 @@ Reemplaza o sincroniza de forma atómica los equipos MikroTik que ese técnico t
   - Alterna el estado en KeyDB y audita el evento `REGISTRATION_SWITCH_TOGGLED`.
   - Retorna el nuevo estado booleano.
 
+### **3.8 POST /api/v1/users/{user_id}/mcp-token — Emisión de Tokens MCP y Registro de Sesión KeyDB**
+
+- **Roles Permitidos:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`.
+- **Validaciones de Seguridad:**
+  - Verifica que el usuario pertenezca al Tenant del solicitante (a menos que sea `SUPERADMIN_GLOBAL`).
+  - Requiere que el usuario esté activo (`is_active = True`) y desbloqueado (`is_locked = False`).
+  - Rol de usuario restringido a: `SERVICE_ACCOUNT`, `TENANT_ADMIN` o `SUPERADMIN_GLOBAL`.
+- **Request Body (GenerateMcpTokenRequest):**
+
+```json
+{
+  "expiry_days": 365
+}
+```
+
+- **Respuesta 200 OK (McpTokenResponse):**
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "Bearer",
+  "session_id": "01928b4c-9988-7d11-9000-112233445566",
+  "expires_at": "2027-10-20T20:00:00Z",
+  "expiry_days": 365,
+  "user_id": "01928a10-4b22-7c00-8123-9876543210ab",
+  "username": "ai-agent-noc",
+  "tenant_slug": "isp-norte",
+  "role": "SERVICE_ACCOUNT",
+  "allowed_cidr_list": ["10.0.10.0/24"],
+  "issued_by": "admin-alice"
+}
+```
+
+- **Proceso Interno:** Registra la sesión en KeyDB (`rg:{tenant_id}:sess:{sid}`), añade a `active_sessions` (`ZADD`) y `user_sessions` (`SADD`) con TTL equivalente en segundos, y genera registro de auditoría WORM `MCP_TOKEN_ISSUED`.
+
 ## **4. Router de Control de Sesiones en Vivo y *Kill-Switch* (/api/v1/sessions)**
 
-Permite al **Administrador de Tenant** y al **Supervisor** auditar en tiempo real quién está conectado a RoSGrid, qué MikroTik está visualizando y expulsarlo en el acto.
+Permite al **Administrador de Tenant** y al **Supervisor** auditar en tiempo real quién está conectado a RoSGrid, qué MikroTik está visualizando y expulsarlo en el acto (incluyendo agentes IA autónomos).
 
-### **4.1 GET /api/v1/sessions/active — Listar Técnicos Conectados en Tiempo Real**
+### **4.1 GET /api/v1/sessions/active — Listar Técnicos y Agentes Conectados en Tiempo Real**
 
 - **Roles Permitidos:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`, `SUPERVISOR`, `AUDITOR`.
 - **Fuente de Datos:** Lee directamente el índice `rg:{tenant_id}:active_sessions` y los hashes `rg:{tenant_id}:sess:*` en Redis.
@@ -249,16 +283,16 @@ Permite al **Administrador de Tenant** y al **Supervisor** auditar en tiempo rea
     {
       "session_id": "01928b4c-9988-7d11-9000-112233445566",
       "user_id": "01928a10-4b22-7c00-8123-9876543210ab",
-      "username": "stecnico1",
-      "full_name": "Carlos Mendoza",
-      "role": "SUPPORT_L1",
-      "ip_address": "192.168.20.14",
-      "user_agent": "Mozilla/5.0 (Linux; Android 14; Pixel 8)...",
-      "current_router_id": "01928900-aaaa-7bbb-8ccc-111122223333",
-      "current_router_name": "RB4011-Nodo-Valencia",
-      "current_view_path": "/routers/01928900-.../interfaces",
-      "created_at": "2026-10-14T16:30:00Z",
-      "last_activity_at": "2026-10-14T18:18:10Z"
+      "username": "ai-agent-noc",
+      "full_name": "Hermes Autonomous Agent",
+      "role": "SERVICE_ACCOUNT",
+      "ip_address": "10.0.10.55",
+      "user_agent": "RoSGrid-MCP-Daemon/1.0",
+      "is_service_account": true,
+      "issued_by_username": "admin-alice",
+      "allowed_cidr_list": ["10.0.10.0/24"],
+      "created_at": "2026-10-20T20:00:00Z",
+      "last_activity_at": "2026-10-20T20:05:00Z"
     }
   ]
 }

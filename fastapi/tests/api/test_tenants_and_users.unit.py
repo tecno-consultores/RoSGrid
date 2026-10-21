@@ -735,5 +735,27 @@ async def test_generate_user_mcp_token_rejects_unauthorized_role(
         )
         assert res.status_code == 400
         assert "roles permitidos" in res.json()["detail"]
+
+        # Usuario inactivo debe ser rechazado con 400
+        support_user.role = SystemRoleEnum.SERVICE_ACCOUNT
+        support_user.is_active = False
+        res_inactive = await async_client.post(
+            f"/api/v1/users/{user_id}/mcp-token",
+            json={"expiry_days": 30},
+            headers={**superadmin_auth, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res_inactive.status_code == 400
+        assert "usuario inactivo" in res_inactive.json()["detail"]
+
+        # Usuario bloqueado debe ser rechazado con 400
+        support_user.is_active = True
+        support_user.is_locked = True
+        res_locked = await async_client.post(
+            f"/api/v1/users/{user_id}/mcp-token",
+            json={"expiry_days": 30},
+            headers={**superadmin_auth, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res_locked.status_code == 400
+        assert "usuario bloqueado" in res_locked.json()["detail"]
     finally:
         app.dependency_overrides.pop(get_db_session, None)

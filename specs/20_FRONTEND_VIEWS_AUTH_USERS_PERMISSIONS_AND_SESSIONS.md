@@ -105,19 +105,36 @@ Cumple el requerimiento de que **el administrador asigne a cada usuario exactame
   - **Acción "Aprobar" (Verde):** Ejecuta `PUT /api/v1/users/{user_id}/approve`, activando la cuenta y registrando el evento de auditoría WORM.
   - **Acción "Rechazar" (Rojo):** Ejecuta `DELETE /api/v1/users/{user_id}/reject` con confirmación, eliminando o revocando la solicitud de manera limpia y sin corromper la inmutabilidad de la base de datos.
 
+### **3.4 Modal Interactivo de Emisión de Tokens MCP (RgMcpTokenModal.vue)**
+
+Permite a los administradores generar y entregar Bearer Tokens JWT de larga duración para agentes de IA (Claude Desktop, Hermes Agent, scripts de automatización) sin depender exclusivamente del terminal:
+
+- **Activación:** Botón táctico **`⚡ Token MCP`** en cada fila de usuario autorizado (`SERVICE_ACCOUNT`, `TENANT_ADMIN`, `SUPERADMIN_GLOBAL`).
+- **Selector de Vigencia:** Presets de 30, 90, 180, 365 (1 año) y 730 (2 años) días.
+- **Validaciones Visuales:** Alerta de seguridad si la cuenta de servicio no tiene segmentos de red configurados en su lista blanca CIDR.
+- **Emisión Segura:** Invoca `POST /api/v1/users/{user_id}/mcp-token` con clave de idempotencia y registra la sesión directamente en KeyDB.
+- **Entrega Segura y Snippets de 1-Clic:**
+  - Campo de solo lectura para copiar el token JWT con botón interactivo.
+  - Bloque preformateado para `claude_desktop_config.json` con comando `npx -y @modelcontextprotocol/server-fetch`.
+  - Variables de entorno para agentes autónomos (Hermes Agent / `config.yaml`).
+  - Advertencia de que el token es mostrado por única vez.
+
 ## **4. Panel de Control de Sesiones Activas y *Kill-Switch* en Tiempo Real (vue3/src/views/admin/ActiveSessionsKillSwitchView.vue)**
 
 - **Ruta:** `/admin/active-sessions`
 - **Roles Permitidos:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`, `SUPERVISOR` (y `AUDITOR` en modo lectura).
 - **Actualización en Vivo:** Consulta `GET /api/v1/sessions/active` y se mantiene sincronizada mediante el WebSocket `/ws/v1/tenant/events`.
+- **Filtros Tácticos:** Pestañas superiores para segmentar la visualización:
+  - **Todas:** Listado unificado con indicador numérico.
+  - **Operadores Humanos:** Filtra usuarios técnicos y administradores interactivos.
+  - **Agentes IA MCP:** Filtra exclusivamente sesiones de cuentas de servicio y daemons MCP.
 
 ### **4.1 Columnas de la Tabla de Sesiones en Vivo**
 
-1. **Técnico / Usuario:** Nombre completo, @username y badge de color con su Rol.
-2. **Origen y Dispositivo:** Dirección IP (`ip_address`) e icono de sistema operativo/navegador parseado del `user_agent` (PC Linux/Windows, Tablet o Móvil).
-3. **Actividad Actual en Vivo:**
-   - Muestra el nombre del MikroTik que el técnico tiene abierto en ese instante (`current_router_name` con enlace directo) y el submenú exacto (`current_view_path`, ej. Firewall > Filter Rules).
-4. **Tiempo de Sesión y Última Acción:** Hora de inicio y hace cuántos segundos interactuó por última vez.
+1. **Técnico / Agente IA:** Nombre completo, @username, badge de color con su Rol y distintivo especial `[🤖 MCP SERVICE ACCOUNT]` para agentes inteligentes.
+2. **Autoría y Linaje:** Badge `Por: @usuario` indicando qué operador emitió el token (o `CLI (Terminal)` si provino del script de mantenimiento).
+3. **Origen y Seguridad CIDR:** Dirección IP (`ip_address`), segmentos de red permitidos (`allowed_cidr_list`) e icono de cliente parseado del `user_agent` (ej. `RoSGrid-MCP-Daemon/1.0`).
+4. **Actividad y Vigencia:** Última actividad registrada, tiempo transcurrido y fecha de expiración de la sesión en KeyDB.
 5. **Acciones de Contención Inmediata (*Kill-Switch*):**
-   - Botón rojo **"Revocar Sesión"** (`DELETE /api/v1/sessions/{session_id}`): Solicita motivo breve, destruye la sesión en Redis y cierra en el acto el WebSocket y la pantalla del técnico.
+   - Botón rojo **"Revocar Sesión"** (`DELETE /api/v1/sessions/{session_id}`): Destruye la sesión en KeyDB y expulsa al técnico o agente de inmediato.
    - Botón crítico **"Expulsar de Todos los Dispositivos y Bloquear Cuenta"** (`DELETE /api/v1/sessions/user/{user_id}/all`).
