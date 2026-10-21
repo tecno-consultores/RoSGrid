@@ -91,7 +91,10 @@ fastapi/tests/
     ├── test\_backups\_diff\_and\_bulk\_ops.unit.py    \# Deduplicación SHA-256 de .rsc, cálculo de unified diff y pre-backup obligatorio en upgrade
 
 
-    └── test\_websockets\_multiplexer.unit.py       \# Activación de poller con 1.er suscriptor y apagado instantáneo cuando SCARD == 0
+    ├── test\_websockets\_multiplexer.unit.py       \# Activación de poller con 1.er suscriptor y apagado instantáneo cuando SCARD == 0
+    ├── test\_hito23\_cve\_and\_syslog.unit.py        \# Cruce semver CVEs, catálogo offline, parsing BSD syslog, UDP protocol y RingBuffer KeyDB
+    ├── test\_hito23\_topology\_and\_fleet.unit.py    \# Grafo L2, filtrado por router, DAG PoE inverso, scrape Prometheus y caché KeyDB
+    └── test\_hito23\_mcp\_tools.unit.py             \# Herramientas semánticas MCP de topología L2, CVEs, syslog y upgrade PoE-aware
 
 
 

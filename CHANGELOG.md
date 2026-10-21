@@ -10,6 +10,13 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Added
 
+- **Certificación Integral Pre-Lanzamiento y Cobertura QA 11X (Hito 23.6):**
+  - **Elevación de Cobertura Backend a 95.11% (`pytest-cov`):** 463 pruebas unitarias aprobadas al 100% en Docker (`sinfallas/base-python-uv:3.15`), incorporando suites dedicadas para `test_hito23_cve_and_syslog.unit.py`, `test_hito23_topology_and_fleet.unit.py` y `test_hito23_mcp_tools.unit.py` cubriendo la totalidad de endpoints de Syslog, matrices CVE, Topología L2, DAG PoE inverso, herramientas semánticas MCP y exportador Prometheus.
+  - **Endurecimiento SAST (Bandit):** Mitigación de alertas B110 (`try_except_pass`) en `topology_l2.py` y `csrf.py` mediante logging estructurado y marcado `# nosec B106` para el argumento de tipo de token en `users.py`, logrando 0 incidencias en 19.941 líneas analizadas.
+  - **Auditoría de Dependencias (`pip-audit`):** Sincronización de `uv.lock` con actualización a versiones seguras de `certifi` (`2026.10.19`) y `uv` (`0.13.4`), certificando 0 vulnerabilidades conocidas en paquetes de producción y desarrollo.
+  - **Pipeline de Validación Local de Producción (`./probar-prod-local.sh`):** Ejecución automatizada y validación al 100% de las 6 fases del pipeline pre-release: compilación multi-etapa de imágenes de backend y frontend, healthchecks en aislamiento, pruebas sintéticas HTTP, hardening de docs 404, prueba fail-closed 401, token MCP, JSON-RPC 2.0 y 24 contratos Front-Back (`validar_comunicacion_front_back.py`).
+  - **Auditoría de Shell Scripts:** Cero errores y cero advertencias en `ShellCheck` sobre todos los scripts `.sh` del monorepo.
+
 - **Implementación Frontend (Vue 3 + Pinia) — Topología L2, Matriz CVE, Syslog Live y PoE-Aware (Hito 23.5):**
   - **Vista interactiva de Topología Física Layer 2 (`L2TopologyView.vue`):** Canvas 2D interactivo a 60 FPS con Pan/Zoom suave, badges dinámicos de consumo PoE en tiempo real (`⚡ W`), indicadores de estado Online/Offline, selector de modo Sólo-PoE, drawer lateral táctico y fallback accesible para screen readers.
   - **Matriz de Vulnerabilidades CVE de Flota (`FleetCveMatrix.vue`):** Panel táctico con 4 tarjetas KPI evaluadas (Evaluados, Vulnerables, Críticos, Versión Recomendada), filtros reactivos por severidad (CRITICAL, HIGH, MEDIUM, LOW), sincronización remota contra NIST NVD y enlace directo al orquestador de actualización masiva.

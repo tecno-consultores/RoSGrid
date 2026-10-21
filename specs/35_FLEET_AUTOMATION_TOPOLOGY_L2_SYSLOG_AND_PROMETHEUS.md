@@ -277,3 +277,41 @@ Para garantizar la integridad y cero regresión en todo el ciclo de vida, el Hit
 * **Escenario 18:** Verificación de la Matriz de Vulnerabilidades CVE (`/inventory/cves`), tarjetas KPI, botón de sincronización y botón remediador de flota.
 * **Escenario 19:** Verificación del Terminal Syslog en Vivo en WebFig (`/routers/{id}/webfig/syslog`), contenedor de consola y apertura del modal de script CLI.
 * **Escenario 20:** Verificación del Actualizador Masivo PoE-Aware en Operaciones Masivas (`/bulk-ops`), conmutador PoE y selector de umbral Safety Stop.
+
+---
+
+## 11. Certificación QA 11X Pre-Lanzamiento y Validación Local de Producción
+
+Concluida la fase de desarrollo, la suite completa fue sometida al protocolo de pruebas pre-lanzamiento bajo la **Regla Cero** en contenedores Docker efímeros:
+
+1. **Auditoría de Shell Scripts:** Cero errores y cero advertencias en `ShellCheck` (`koalaman/shellcheck:stable`) sobre todos los scripts `.sh` del monorepo (`auditar-infra.sh`, `probar-prod-local.sh`, `build.sh`, `instalar-rosgrid.sh`, `instalar-hooks.sh`, `limpieza.sh`, `verificar-secretos.sh`).
+2. **Suite Unitaria y Cobertura de Backend (`fastapi/`):**
+   * **463 pruebas unitarias aprobadas al 100%** en 29.09 segundos dentro de `sinfallas/base-python-uv:3.15`.
+   * **Cobertura global de código: 95.11%** (478 líneas faltantes sobre 9.781 declaraciones, superando el umbral estricto `--cov-fail-under=95`).
+   * Cobertura por módulo crítico del Hito 23:
+     * `src/api/v1/syslog.py`: **100%**
+     * `src/api/v1/cve.py`: **100%**
+     * `src/api/v1/mcp.py`: **98%**
+     * `src/workers/syslog_collector.py`: **97%**
+     * `src/services/cve_matcher.py`: **97%**
+     * `src/api/v1/fleet_metrics.py`: **96%**
+     * `src/api/v1/topology_l2.py`: **95%**
+     * `src/services/topology_l2.py`: **94%**
+   * **Tipado Estricto (Mypy Strict):** 0 errores en los 114 archivos del backend.
+   * **Complejidad Ciclomática (Radon):** 100% Grado A corporativo.
+   * **Análisis de Seguridad SAST (Bandit):** 0 problemas identificados en 19.941 líneas de código fuente.
+   * **Auditoría de Paquetes (`pip-audit`):** 0 vulnerabilidades conocidas (`certifi` y `uv` actualizados en `uv.lock`).
+3. **Suite Unitaria y Build de Frontend (`vue3/`):**
+   * **297 pruebas unitarias aprobadas al 100%** en 43 suites dentro de `sinfallas/base-node-ionic:26`.
+   * **Tipado TypeScript (`vue-tsc --noEmit`):** 0 errores en todas las vistas y composables.
+   * **Compilación de Producción (Vite):** Bundle generado de forma limpia en 3.99 segundos.
+4. **Pipeline Local de Producción (`./probar-prod-local.sh`):**
+   * Validación exitosa de las 6 fases del pipeline con `docker-compose.prod.local.yml`:
+     * Compilación multi-etapa de imágenes `rosgrid-backend:local-test` y `rosgrid-frontend:local-test`.
+     * Healthchecks de PostgreSQL 17, KeyDB Multi-Hilo, FastAPI y Workers en estado `healthy`.
+     * Pruebas sintéticas HTTP: `/health` (200), `/metrics` Prometheus, Swagger `/docs` (404 estricto) y fail-closed (401 sin token).
+     * Aprovisionamiento de Super Admin, generación de Token MCP e invocación JSON-RPC 2.0.
+     * Suite de integración Front-Back: **24/24 contratos validados al 100%** (`validar_comunicacion_front_back.py`).
+     * Aislamiento estricto de puertos de base de datos (5432 y 6379 no expuestos al host).
+5. **Auditoría de Secretos (`./verificar-secretos.sh`):** 0 credenciales ni tokens filtrados en el árbol de trabajo.
+

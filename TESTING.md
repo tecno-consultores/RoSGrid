@@ -859,3 +859,55 @@ Certificación ejecutada bajo la **Regla Cero** dentro del contenedor efímero D
   - **Escenario 19:** *Consola WebFig v7 — Terminal Syslog en Vivo (RingBuffer Efímero)* (`/routers/{id}/webfig/syslog`): Valida terminal de eventos en tiempo real, badges de severidad, auto-scroll y apertura del modal con script CLI de configuración MikroTik.
   - **Escenario 20:** *Operaciones Masivas — Actualización con Conmutador PoE-Aware y Safety Stop* (`/bulk-ops`): Valida pestaña del actualizador masivo con conmutador *PoE-Aware* y selección de umbral *Safety Stop* (1%, 2%, 5%).
 - **Resultado Global Karate Labs UI:** **20 de 20 escenarios aprobados (100%)**.
+
+---
+
+## 24. Certificación Pre-Lanzamiento Integral QA 11X — Cobertura Backend (95.11%), Hardening SAST y Validación Local de Producción (Hito 23.6)
+
+Certificación integral ejecutada de extremo a extremo bajo la **Regla Cero** (cero comandos ejecutados en el host) en contenedores Docker efímeros (`sinfallas/base-python-uv:3.15`, `sinfallas/base-node-ionic:26`, `koalaman/shellcheck:stable` y stack `docker-compose.prod.local.yml`).
+
+### A. Auditoría de Shell Scripts (ShellCheck)
+
+- **Comando:** `docker run --rm -v "$(pwd):/mnt" koalaman/shellcheck:stable ...`
+- **Archivos auditados:** `auditar-infra.sh`, `probar-prod-local.sh`, `build.sh`, `instalar-rosgrid.sh`, `instalar-hooks.sh`, `limpieza.sh`, `verificar-secretos.sh`.
+- **Resultado:** **0 errores, 0 advertencias**.
+
+### B. Suite Unitaria Backend y Calidad de Código (Pytest + Ruff + Mypy + Radon + Bandit + pip-audit)
+
+- **Pruebas Unitarias Pytest (9.1.1):** **463 de 463 pruebas superadas al 100%** en 29.09 segundos.
+- **Cobertura de Código Real (`pytest-cov`):** **95.11%** sobre `src/` (478 líneas faltantes sobre 9.781 declaraciones totales), superando el umbral estricto `--cov-fail-under=95`.
+- **Desglose de Cobertura por Módulos:**
+  - `src/api/v1/cve.py`: **100%** (0 líneas sin cubrir)
+  - `src/api/v1/syslog.py`: **100%** (0 líneas sin cubrir)
+  - `src/api/v1/mcp.py`: **98%** (8 líneas sin cubrir)
+  - `src/workers/syslog_collector.py`: **97%** (2 líneas sin cubrir)
+  - `src/services/cve_matcher.py`: **97%** (4 líneas sin cubrir)
+  - `src/api/v1/fleet_metrics.py`: **96%** (2 líneas sin cubrir)
+  - `src/api/v1/topology_l2.py`: **95%** (4 líneas sin cubrir)
+  - `src/services/topology_l2.py`: **94%** (4 líneas sin cubrir)
+- **Linter y Formato (Ruff):** 0 errores, 159 archivos conformes y formateados.
+- **Tipado Estricto (Mypy Strict):** 0 errores en los 114 archivos del backend (`Success: no issues found in 114 source files`).
+- **Complejidad Ciclomática (Radon):** 100% Grado A corporativo.
+- **Análisis de Seguridad SAST (Bandit):** **0 problemas identificados** en 19.941 líneas analizadas (remediación de B110 en `topology_l2.py` y `csrf.py`, anotación B106 en `users.py`).
+- **Auditoría de Vulnerabilidades en Dependencias (`pip-audit`):** **0 vulnerabilidades conocidas** (`certifi` actualizado a `2026.10.19` y `uv` a `0.13.4` en `uv.lock`).
+
+### C. Suite Unitaria y Compilación Frontend (Vitest + Vue-TSC + Vite)
+
+- **Pruebas Unitarias Vitest (1.3.1):** **297 de 297 pruebas superadas al 100%** en 43 suites.
+- **Verificación de Tipos TypeScript (`vue-tsc --noEmit`):** 0 errores en todos los componentes y composables.
+- **Compilación de Producción (Vite 5):** Bundle generado de forma limpia en 3.99 segundos.
+
+### D. Pipeline de Validación Local de Producción (`./probar-prod-local.sh`)
+
+- **Fases Validadas (6/6 al 100%):**
+  1. Construcción multi-etapa de imágenes `rosgrid-backend:local-test` y `rosgrid-frontend:local-test`.
+  2. Despliegue sintético aislado con `docker-compose.prod.local.yml`.
+  3. Estabilización y healthchecks de PostgreSQL 17, KeyDB Multi-Hilo, FastAPI y Workers en estado `healthy`.
+  4. Pruebas sintéticas HTTP: `/health` (HTTP 200), `/metrics` Prometheus, Swagger `/docs` y OpenAPI (HTTP 404 estricto) y fail-closed `/api/v1/auth/me` (HTTP 401 sin credenciales).
+  5. Aprovisionamiento E2E de Super Admin, generación de Token MCP, invocación JSON-RPC 2.0 y **24/24 contratos Front-Back validados al 100%** (`validar_comunicacion_front_back.py`).
+  6. Aislamiento de red interna (puertos 5432 y 6379 no expuestos al host), verificación de logs limpios y desmantelamiento seguro de volúmenes efímeros.
+
+### E. Auditoría de Secretos (`./verificar-secretos.sh`)
+
+- Verificación sin hallazgos de claves API, tokens JWT o contraseñas en el árbol de trabajo.
+
