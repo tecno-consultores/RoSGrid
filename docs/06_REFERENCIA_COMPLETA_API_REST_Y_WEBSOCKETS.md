@@ -236,6 +236,13 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
 - **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN` (con Step-Up Auth TOTP obligatorio del administrador).
 - **Propósito:** Reiniciar el segundo factor de un operador que haya extraviado su dispositivo.
 
+#### `POST /api/v1/users/{user_id}/mcp-token`
+
+- **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`.
+- **Propósito:** Emisión criptográfica de Bearer Tokens JWT (HS256) de larga duración para agentes de IA (Claude Desktop, Hermes Agent, scripts de automatización). Registra la sesión en KeyDB con TTL, control de lista blanca CIDR y auditoría WORM (`MCP_TOKEN_ISSUED`).
+- **Body (`GenerateMcpTokenRequest`):** `{"expiry_days": 365}` (validado `1 <= expiry_days <= 3650`).
+- **Respuesta 200 OK (`McpTokenResponse`):** Token JWT, Session ID, fecha de expiración, claims y autoría.
+
 ---
 
 ### 2.3 Gestión de Inventario y Bóveda (`/api/v1/inventory`, `/api/v1/routers`)
@@ -364,6 +371,31 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
   "side_by_side_hunks": []
 }
 ```
+
+#### `GET /api/v1/operations/notification-channels`
+
+- **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`, `SUPERVISOR`.
+- **Propósito:** Lista los canales de notificación configurados para el Tenant (Telegram, SMTP, Webhooks). Los secretos permanecen protegidos bajo cifrado AES-256-GCM.
+
+#### `POST /api/v1/operations/notification-channels`
+
+- **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`, `SUPERVISOR`.
+- **Propósito:** Crea un nuevo canal de alertas, cifrando sus credenciales (`bot_token`, contraseñas SMTP, tokens webhook) con AES-256-GCM y AAD de Tenant.
+
+#### `PATCH /api/v1/operations/notification-channels/{channel_id}`
+
+- **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`, `SUPERVISOR`.
+- **Propósito:** Actualiza nombre, estado (`is_enabled`), eventos suscritos o configuración cifrada.
+
+#### `DELETE /api/v1/operations/notification-channels/{channel_id}`
+
+- **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`, `SUPERVISOR`.
+- **Propósito:** Elimina de forma permanente un canal de notificación.
+
+#### `POST /api/v1/operations/notification-channels/{channel_id}/test`
+
+- **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`, `SUPERVISOR`.
+- **Propósito:** Despacha un mensaje interactivo de prueba al canal para validar credenciales y conectividad en tiempo real sin disparar una alarma real.
 
 ---
 

@@ -27,6 +27,9 @@ Todo el código generado DEBE mantener complejidad ciclomática **Grado A (`CC <
    - Toda invocación a `tools/call` en `/api/v1/mcp` genera un registro firmado con `SHA-256` en `audit_logs` con `action_category = "MCP_AI_TOOL_CALL"`, indicando el nombre de la herramienta, el `router_id` y los argumentos sanitizados.
 7. **Aislamiento de Tenant con Sentencias SQL Parametrizadas Seguras:**
    - La inyección de `SET LOCAL app.current_tenant_id` en las sesiones de base de datos se realiza a través de la función segura `set_tenant_context(session, tenant_id)`, garantizando que el `tenant_id` se enlace mediante `bindparam` y previniendo cualquier riesgo de inyección SQL.
+8. **Emisión de Tokens y Supervisión de Sesiones (Frontend y Terminal):**
+   - Emisión criptográfica de tokens Bearer JWT de larga duración mediante el endpoint `POST /api/v1/users/{user_id}/mcp-token` o la interfaz web `RgMcpTokenModal.vue` en `UsersAndPermissionsView.vue`.
+   - Supervisión y Kill-Switch en vivo en `ActiveSessionsKillSwitchView.vue`, con trazabilidad de autoría (`issued_by_username`), filtro por agente y revocación en caliente en KeyDB.
 
 ---
 
