@@ -155,3 +155,26 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And waitFor("button.btn-poe-upgrade")
     And match text("button.btn-poe-upgrade") contains 'Actualizar Flota Seleccionada con PoE-Aware'
     And waitFor(".checkbox-poe")
+
+  Scenario: 21. Modal Asistente de Importación Masiva CSV en Inventario
+    Given driver baseUrl + '/inventory'
+    And waitFor("//h1[contains(., 'Inventario de Equipos')]")
+    And waitFor("button.btn-import-csv")
+    When click("button.btn-import-csv")
+    Then waitFor(".rg-modal-dialog")
+    And match text("//h2[contains(., 'Asistente de Importación Masiva CSV')]") contains 'Paso 1 de 2'
+    And waitFor("button.btn-download-template")
+    And waitFor("#csv-file-input")
+    When click("button.btn-close")
+    Then waitUntil("!document.querySelector('.rg-modal-dialog')")
+
+  Scenario: 22. Estructura y Posicionamiento del Pie de Página en Pantalla de Login
+    Given driver baseUrl + '/login'
+    And waitFor(".login-wrapper")
+    And waitFor(".login-card")
+    And waitFor(".login-footer")
+    Then match text(".login-footer") contains 'Elaborado por Tecno Consultores'
+    And waitFor("#tenant-slug")
+    And waitFor("#login-email")
+    And waitFor("#login-password")
+

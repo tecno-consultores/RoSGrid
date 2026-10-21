@@ -1,185 +1,165 @@
-# Catálogo de Herramientas MCP de RoSGrid (`/api/v1/mcp`)
+# RoSGrid MCP Tools Catalog (`/api/v1/mcp`)
 
-Este documento detalla los parámetros de entrada, esquemas y directrices de uso de las 18 herramientas MCP expuestas por el servidor RoSGrid para agentes de Inteligencia Artificial.
+This document details the input parameters, schemas, and usage directives for all 20 MCP tools exposed by the RoSGrid server for AI agents.
 
 ---
 
-## 1. Herramientas de Observabilidad e Inventario
+## 1. Observability & Fleet Inventory
 
 ### `rosgrid_list_inventory`
-
-- **Descripción:** Lista los enrutadores MikroTik autorizados para el Tenant con su ID, nombre, identidad RouterOS, modelo, versión de firmware v7, estado de conexión en KeyDB y estado TOFU SSL.
-- **Parámetros:**
-  - `status_filter` (string, opcional): Filtrar por estado (ej. `ONLINE`, `OFFLINE`, `DEGRADED_HIGH_LOAD`).
-  - `role_filter` (string, opcional): Filtrar por etiqueta o rol (ej. `CORE_BGP`, `DISTRIBUTION`, `ACCESS_PPPOE`).
+- **Description:** Lists authorized MikroTik routers for the tenant with ID, name, identity, model, RouterOS v7 version, KeyDB health status, and TOFU SSL certificate state.
+- **Parameters:**
+  - `status_filter` (string, optional): Filter by status (e.g. `ONLINE`, `OFFLINE`, `DEGRADED_HIGH_LOAD`).
+  - `role_filter` (string, optional): Filter by label or role (e.g. `CORE_BGP`, `DISTRIBUTION`, `ACCESS_PPPOE`).
 
 ### `rosgrid_get_router_health`
-
-- **Descripción:** Consulta el estado efímero en KeyDB y `/rest/system/resource` + `/rest/system/health`, devolviendo CPU%, RAM%, espacio en disco, Uptime, Temperatura (°C) y Voltaje (V).
-- **Parámetros:**
-  - `router_id` (string UUID, obligatorio): Identificador del router.
+- **Description:** Queries ephemeral KeyDB state and `/rest/system/resource` + `/rest/system/health`, returning CPU%, RAM%, disk space, Uptime, Temperature (°C), and Voltage (V).
+- **Parameters:**
+  - `router_id` (string UUID, required): Router identifier.
 
 ### `rosgrid_check_sfp_optical_ddm`
-
-- **Descripción:** Consulta el diagnóstico óptico DDM de transceptores SFP/SFP+ (potencias `tx-power` y `rx-power` en dBm, temperatura del láser y clasificación de salud: `OPTIMAL`, `WARNING`, `CRITICAL_LOW_LIGHT`).
-- **Parámetros:**
-  - `router_id` (string UUID, obligatorio): Identificador del router.
-  - `interface_name` (string, obligatorio): Nombre de la interfaz SFP (ej. `sfp-sfpplus1`).
+- **Description:** Queries DDM optical diagnostics for SFP/SFP+ transceivers (`tx-power` and `rx-power` in dBm, laser temperature, and health rating: `OPTIMAL`, `WARNING`, `CRITICAL_LOW_LIGHT`).
+- **Parameters:**
+  - `router_id` (string UUID, required): Router identifier.
+  - `interface_name` (string, required): SFP interface name (e.g. `sfp-sfpplus1`).
 
 ---
 
-## 2. Herramientas de Ruteo y Diagnóstico de Red
+## 2. Routing & Network Diagnostics
 
 ### `rosgrid_inspect_routing_bgp_ospf`
-
-- **Descripción:** Devuelve el resumen de sesiones BGP RouterOS v7 (estado `established`, conteo de prefijos recibidos, uptime) y adyacencias OSPF activas.
-- **Parámetros:**
-  - `router_id` (string UUID, obligatorio): Identificador del router.
-  - `protocol` (string enum: `["bgp", "ospf", "all"]`, opcional, por defecto `all`).
+- **Description:** Summarizes RouterOS v7 BGP sessions (state `established`, received prefix count, uptime) and active OSPF adjacencies.
+- **Parameters:**
+  - `router_id` (string UUID, required): Router identifier.
+  - `protocol` (string enum: `["bgp", "ospf", "all"]`, optional, default `all`).
 
 ### `rosgrid_query_bgp_looking_glass`
-
-- **Descripción:** Consulta la tabla de rutas FIB o los prefijos anunciados a un vecino BGP específico sin requerir acceso SSH interactivo.
-- **Parámetros:**
-  - `router_id` (string UUID, obligatorio): Identificador del router.
-  - `query_type` (string enum: `["route", "advertised"]`, opcional, por defecto `route`).
-  - `prefix` (string, opcional): Prefijo IPv4/IPv6 o CIDR a consultar (ej. `1.1.1.0/24`).
-  - `peer_session` (string, opcional): Nombre o IP del vecino BGP.
-  - `refresh` (boolean, opcional, por defecto `false`): Si es `true`, evade la caché de KeyDB y consulta directamente el router.
+- **Description:** Queries FIB routing table or advertised prefixes to a specific BGP neighbor without interactive SSH.
+- **Parameters:**
+  - `router_id` (string UUID, required): Router identifier.
+  - `query_type` (string enum: `["route", "advertised"]`, optional, default `route`).
+  - `prefix` (string, optional): IPv4/IPv6 prefix or CIDR (e.g. `1.1.1.0/24`).
+  - `peer_session` (string, optional): BGP peer name or IP.
+  - `refresh` (boolean, optional, default `false`): If `true`, bypasses KeyDB cache and directly queries the router.
 
 ### `rosgrid_run_live_diagnostic`
-
-- **Descripción:** Ejecuta Ping o Traceroute acotado desde el enrutador hacia un destino específico, midiendo latencia (mínima, promedio, máxima) y porcentaje de pérdida de paquetes.
-- **Parámetros:**
-  - `router_id` (string UUID, obligatorio): Identificador del router.
-  - `tool` (string enum: `["ping", "traceroute"]`, obligatorio).
-  - `target` (string, obligatorio): IP de destino o nombre de dominio (FQDN).
-  - `count` (integer, opcional, rango 1 a 5, por defecto 4): Número de sondas.
+- **Description:** Executes bounded Ping or Traceroute from the router to a target host, reporting latency (min, avg, max) and packet loss percentage.
+- **Parameters:**
+  - `router_id` (string UUID, required): Router identifier.
+  - `tool` (string enum: `["ping", "traceroute"]`, required).
+  - `target` (string, required): Destination IP or FQDN.
+  - `count` (integer, optional, range 1-5, default 4): Number of probes.
 
 ### `rosgrid_run_360_diagnostics`
-
-- **Descripción:** Suite de diagnóstico 360° en MikroTik v7: ping multi-MTU (64B, 512B, 1472B con flag DF-bit para detectar problemas de MTU), análisis del `/log` de desconexiones y muestreo Torch de flujos activos.
-- **Parámetros:**
-  - `router_id` (string UUID, obligatorio): Identificador del router.
-  - `target_ip` (string, obligatorio): Dirección IP del abonado o CPE.
-  - `device_serial` (string, opcional): Serial de la ONU o equipo de cliente.
-  - `interface` (string, opcional): Nombre de la interfaz para muestreo Torch (ej. `ether1`).
+- **Description:** Comprehensive 360° diagnostics suite: multi-MTU Ping (64B, 512B, 1472B DF-bit to diagnose MTU/fragmentation), disconnect logs from `/log`, and Torch active flow sampling.
+- **Parameters:**
+  - `router_id` (string UUID, required): Router identifier.
+  - `target_ip` (string, required): Subscriber or CPE IP address.
+  - `device_serial` (string, optional): ONU or CPE serial number.
+  - `interface` (string, optional): Interface name for Torch sampling (e.g. `ether1`).
 
 ---
 
-## 3. Herramientas de Correlación y Gestión de Planta Externa
+## 3. Outside Plant & Outage Correlation
 
 ### `rosgrid_detect_mass_outage`
-
-- **Descripción:** Motor de correlación espacial para detectar caídas masivas y cortes de fibra óptica, agrupando ONUs fuera de línea por puerto PON, OLT o caja NAP.
-- **Parámetros:**
-  - `threshold_onus` (integer, opcional, mínimo 1, por defecto 3): Umbral mínimo de equipos caídos en el mismo agrupador para clasificar corte.
-  - `tenant_id` (string UUID, opcional).
+- **Description:** Spatial correlation engine detecting mass fiber cuts by clustering offline ONUs by PON port, OLT, or NAP box.
+- **Parameters:**
+  - `threshold_onus` (integer, optional, min 1, default 3): Minimum down ONUs in same cluster to declare outage.
+  - `tenant_id` (string UUID, optional).
 
 ---
 
-## 4. Herramientas de Operación y Mitigación de Servicios
+## 4. Subscriber Management & Service Mitigation
 
 ### `rosgrid_reconnect_pppoe_client`
-
-- **Descripción:** Busca la sesión activa del cliente en `/ppp/active`, solicita su terminación limpia para forzar reconexión LCP y registra el evento en los logs de auditoría inmutables (WORM).
-- **Parámetros:**
-  - `router_id` (string UUID, obligatorio): Identificador del router.
-  - `pppoe_username` (string, obligatorio): Nombre de usuario PPPoE de la sesión.
-  - `reason` (string, obligatorio): Justificación técnica del reinicio.
+- **Description:** Locates active subscriber session in `/ppp/active`, requests graceful termination to trigger clean LCP renegotiation, and logs to immutable WORM audit trail.
+- **Parameters:**
+  - `router_id` (string UUID, required): Router identifier.
+  - `pppoe_username` (string, required): Subscriber PPPoE username.
+  - `reason` (string, required): Technical reason for reset.
 
 ### `rosgrid_isolate_subscriber`
-
-- **Descripción:** Aplica aislamiento técnico preventivo sobre un abonado comprometido: lo incorpora a la lista de firewall `AISLADOS_TECNICO` y conmuta su cola de ancho de banda a 64k/64k simétricos.
-- **Parámetros:**
-  - `subscriber_device_id` (string UUID, obligatorio): Identificador del dispositivo o servicio.
-  - `reason` (string, opcional): Motivo del aislamiento (ej. "Tráfico masivo SMTP puerto 25 detectado").
-  - `idempotency_key` (string UUID, opcional): Llave de idempotencia para evitar duplicados.
+- **Description:** Quarantines a compromised subscriber: adds IP to `AISLADOS_TECNICO` firewall list and switches QoS queue to 64k/64k.
+- **Parameters:**
+  - `subscriber_device_id` (string UUID, required): Subscriber device or service ID.
+  - `reason` (string, optional): Reason for isolation (e.g. "Outbound port 25 SMTP spam flood").
+  - `idempotency_key` (string UUID, optional): Idempotency key to prevent duplicates.
 
 ### `rosgrid_restore_subscriber`
-
-- **Descripción:** Restaura el servicio de un abonado previamente aislado: lo retira de `AISLADOS_TECNICO` y restablece su perfil nominal de ancho de banda y QoS.
-- **Parámetros:**
-  - `subscriber_device_id` (string UUID, obligatorio): Identificador del dispositivo o servicio.
-  - `idempotency_key` (string UUID, opcional): Llave de idempotencia.
+- **Description:** Restores service for a quarantined subscriber: removes from `AISLADOS_TECNICO` and re-applies nominal bandwidth/QoS profile.
+- **Parameters:**
+  - `subscriber_device_id` (string UUID, required): Subscriber device ID.
+  - `idempotency_key` (string UUID, optional): Idempotency key.
 
 ### `rosgrid_change_rate_limit`
-
-- **Descripción:** Modifica en caliente el perfil de ancho de banda (Simple Queue / PCQ con Burst) del abonado sin interrumpir la conexión física ni desconectar la sesión PPPoE/IP.
-- **Parámetros:**
-  - `subscriber_device_id` (string UUID, obligatorio): Identificador del dispositivo o servicio.
-  - `bandwidth_profile_id` (string UUID, obligatorio): Identificador del nuevo perfil.
-  - `idempotency_key` (string UUID, opcional): Llave de idempotencia.
+- **Description:** Dynamically modifies subscriber bandwidth profile (Simple Queue / PCQ with Burst) without dropping physical link or resetting PPPoE session.
+- **Parameters:**
+  - `subscriber_device_id` (string UUID, required): Subscriber device ID.
+  - `bandwidth_profile_id` (string UUID, required): New bandwidth profile ID.
+  - `idempotency_key` (string UUID, optional): Idempotency key.
 
 ---
 
-## 5. Herramientas de Auditoría, Diff y Seguridad
+## 5. Configuration Drift, Diff & Security Audits
 
 ### `rosgrid_compare_config_diff`
-
-- **Descripción:** Ejecuta el motor Diff estilo Git (`unified_diff`) sobre respaldos `.rsc` para que el operador o la IA identifiquen qué líneas cambiaron antes de un incidente.
-- **Parámetros:**
-  - `router_id` (string UUID, obligatorio): Identificador del router.
-  - `base_backup_id` (string UUID, obligatorio): Identificador del respaldo de origen.
-  - `target_backup_id` (string UUID o `"LIVE"`, opcional): Respaldo de destino o configuración activa en vivo.
+- **Description:** Runs Git-style `unified_diff` across `.rsc` backups or against `LIVE` running configuration.
+- **Parameters:**
+  - `router_id` (string UUID, required): Router identifier.
+  - `base_backup_id` (string UUID, required): Origin backup ID.
+  - `target_backup_id` (string UUID or `"LIVE"`, optional): Target backup ID or live config.
 
 ### `rosgrid_check_config_drift`
-
-- **Descripción:** Audita desviaciones de configuración comparando el estado actual del router contra la Golden Baseline homologada por la empresa.
-- **Parámetros:**
-  - `router_id` (string UUID, obligatorio): Identificador del router.
+- **Description:** Audits configuration drift by comparing running router state against the approved corporate Golden Baseline.
+- **Parameters:**
+  - `router_id` (string UUID, required): Router identifier.
 
 ### `rosgrid_run_cis_audit`
-
-- **Descripción:** Ejecuta la auditoría automatizada de seguridad CIS Benchmark para RouterOS v7, evaluando 10 directivas críticas y calculando el Security Score (0-100).
-- **Parámetros:**
-  - `router_id` (string UUID, obligatorio): Identificador del router.
+- **Description:** Executes automated CIS Benchmark security audit for RouterOS v7, evaluating 10 critical security controls and computing the Security Score (0-100).
+- **Parameters:**
+  - `router_id` (string UUID, required): Router identifier.
 
 ---
 
-## 6. Herramienta de Gobierno y Mutación Controlada
+## 6. Governed Mutations & Maker-Checker
 
 ### `rosgrid_propose_network_change`
-
-- **Descripción:** Propone una mutación de red sometida al flujo Maker-Checker (retorna `HTTP 202 Accepted`). Inserta la propuesta en la cola de aprobación humana y garantiza Safe Mode (60 segundos) al ser ejecutada.
-- **Parámetros:**
-  - `router_id` (string UUID, obligatorio): Identificador del router.
-  - `category` (string, obligatorio): Categoría crítica del cambio (ej. `FIREWALL_INPUT_OR_SERVICE_PORT_CHANGE`, `ROUTING_BGP_OSPF_DEFAULT_CHANGE`).
-  - `ros_path` (string, obligatorio): Ruta REST de RouterOS (ej. `/ip/firewall/filter`, `/ip/service`).
-  - `http_method` (string enum: `["POST", "PATCH", "DELETE", "PUT"]`, obligatorio).
-  - `payload` (object, obligatorio): Objeto JSON con los atributos de configuración de RouterOS v7.
-  - `justification` (string, obligatorio): Justificación técnica formal visible en la interfaz para el aprobador.
+- **Description:** Submits a network mutation to the Maker-Checker authorization queue (returns `HTTP 202 Accepted`). Enforces 60-second Safe Mode upon human approval.
+- **Parameters:**
+  - `router_id` (string UUID, required): Router identifier.
+  - `category` (string, required): Change category (e.g. `FIREWALL_INPUT_OR_SERVICE_PORT_CHANGE`, `ROUTING_BGP_OSPF_DEFAULT_CHANGE`).
+  - `ros_path` (string, required): RouterOS REST path (e.g. `/ip/firewall/filter`, `/ip/service`).
+  - `http_method` (string enum: `["POST", "PATCH", "DELETE", "PUT"]`, required).
+  - `payload` (object, required): JSON object containing RouterOS v7 configuration attributes.
+  - `justification` (string, required): Formal technical justification for the human approver.
 
 ---
 
-## 7. Herramientas de Topología Física L2, Automatización PoE y Syslog Efímero
+## 7. Layer 2 Topology, PoE Automation & Ephemeral Syslog
 
 ### `rosgrid_get_l2_topology`
-
-- **Descripción:** Consulta el grafo de interconexión física de Capa 2 descubierto mediante paquetes MNDP, LLDP y CDP entre los enrutadores y switches del tenant. Devuelve las aristas verificadas puerto a puerto (ej. `RouterA:sfp1 <---> SwitchB:sfp24`), estado de enlace y velocidad negociada.
-- **Parámetros:**
-  - `router_id` (string UUID, opcional): Si se especifica, filtra solo las adyacencias directas de ese router; si se omite, retorna la matriz de toda la flota.
+- **Description:** Queries Layer 2 physical interconnection graph discovered via MNDP, LLDP, and CDP. Returns verified port-to-port links (`RouterA:sfp1 <---> SwitchB:sfp24`), link state, and negotiated speed.
+- **Parameters:**
+  - `router_id` (string UUID, optional): When specified, filters direct adjacencies for that router; when omitted, returns full tenant topology.
 
 ### `rosgrid_check_fleet_cves`
-
-- **Descripción:** Evalúa de forma proactiva la versión activa de RouterOS de cada equipo contra el catálogo local soberano de vulnerabilidades CVE (sin fugas hacia servicios de nube externos).
-- **Parámetros:**
-  - `router_id` (string UUID, opcional): Filtrar por un router particular.
-  - `min_severity` (string enum: `["CRITICAL", "HIGH", "MEDIUM", "ALL"]`, opcional, por defecto `"HIGH"`).
+- **Description:** Proactively evaluates active RouterOS versions against the local sovereign CVE vulnerability catalog.
+- **Parameters:**
+  - `router_id` (string UUID, optional): Filter by router ID.
+  - `min_severity` (string enum: `["CRITICAL", "HIGH", "MEDIUM", "ALL"]`, optional, default `"HIGH"`).
 
 ### `rosgrid_get_recent_syslog`
-
-- **Descripción:** Lee del RingBuffer volátil en RAM de KeyDB los últimos eventos Syslog registrados para un router específico (máximo 500 retendidos en memoria). Permite identificar caídas físicas instantáneas (`link down`), desconexiones BGP y reinicios.
-- **Parámetros:**
-  - `router_id` (string UUID, obligatorio): Identificador del router.
-  - `limit` (integer, opcional, rango 10 a 100, por defecto 30): Número de eventos recientes a retornar.
-  - `topic_filter` (string, opcional): Filtrar por tópico (ej. `"interface"`, `"route,bgp"`, `"system,error"`).
+- **Description:** Reads recent Syslog events from the volatile KeyDB RingBuffer (up to 500 events per router in RAM). Rapidly surfaces interface down flaps and kernel reboots.
+- **Parameters:**
+  - `router_id` (string UUID, required): Router identifier.
+  - `limit` (integer, optional, range 10-100, default 30): Number of recent entries to return.
+  - `topic_filter` (string, optional): Filter by topic (e.g. `"interface"`, `"route,bgp"`, `"system,error"`).
 
 ### `rosgrid_execute_poe_aware_upgrade`
-
-- **Descripción:** Genera una solicitud de actualización masiva con ordenamiento consciente de dependencias PoE (equipos alimentados PD se actualizan antes que los alimentadores PSE) y freno de seguridad (*Safety Stop*) ante fallos post-reinicio. Sometido al flujo Maker-Checker (`HTTP 202 Accepted`).
-- **Parámetros:**
-  - `router_ids` (array de string UUID, obligatorio): Lista de routers a actualizar.
-  - `target_version` (string, obligatorio): Versión destino de RouterOS v7 (ej. `"7.16.1"`).
-  - `safety_stop_threshold_percent` (float, opcional, por defecto 1.0): Porcentaje de fallos post-reinicio que detendrá automáticamente el resto del lote.
-  - `justification` (string, obligatorio): Justificación formal del mantenimiento.
+- **Description:** Initiates mass firmware upgrade with PoE-aware topological ordering (PD devices before PSE switches) and automatic Safety Stop upon post-reboot failure. Enforces Maker-Checker workflow (`HTTP 202 Accepted`).
+- **Parameters:**
+  - `router_ids` (array of string UUID, required): Target router IDs.
+  - `target_version` (string, required): Target RouterOS v7 version (e.g. `"7.16.1"`).
+  - `safety_stop_threshold_percent` (float, optional, default 1.0): Failure percentage threshold to halt execution.
+  - `justification` (string, required): Formal maintenance justification.

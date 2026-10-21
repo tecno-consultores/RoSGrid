@@ -1,30 +1,30 @@
-# Banderas Nativas e Identificadores en MikroTik RouterOS v7
+# MikroTik RouterOS v7 Native Flags & Identifiers Reference
 
-Guía de referencia rápida para que el agente interprete la nomenclatura y estados de RouterOS devueltos en las respuestas JSON de la API REST (`/rest/*`) y del servidor MCP.
+Quick reference guide for AI agents to interpret RouterOS states and nomenclature returned in REST API (`/rest/*`) and MCP tool payloads.
 
 ---
 
-## 1. Banderas Estándar de RouterOS (Flags)
+## 1. Standard RouterOS Flags
 
-En las tablas de configuración (firewall, interfaces, rutas, pools, colas), RouterOS etiqueta los registros con flags uniletéricas que el agente debe respetar:
+In RouterOS configuration tables (firewall, interfaces, routes, queues, pools), entries are tagged with single-letter flags that agents must honor:
 
 - **`[D]` (*Dynamic*):**
-  - **Significado:** Registro generado automáticamente por un demonio o protocolo (ej. rutas BGP/OSPF aprendidas, direcciones asignadas por DHCP Client, leases activos, colas dinámicas PPPoE).
-  - **Regla del Agente:** **Prohibido modificar o eliminar directamente registros `[D]`.** Para cambiar un parámetro dinámico, se debe modificar el perfil padre o la configuración del servicio emisor.
+  - **Meaning:** Entry generated automatically by a system daemon or routing protocol (e.g. learned BGP/OSPF routes, DHCP client IP, active leases, dynamic PPPoE queues).
+  - **Agent Directive:** **Never attempt to edit or delete `[D]` entries directly.** To modify a dynamic attribute, change the parent profile or originating service configuration.
 - **`[X]` (*Disabled*):**
-  - **Significado:** Registro desactivado administrativamente (`disabled=true`).
-  - **Regla del Agente:** La regla no procesa tráfico ni afecta el enrutamiento. Si se requiere reactivar, se debe emitir un `PATCH` con `{"disabled": false}` mediante el flujo Maker-Checker.
+  - **Meaning:** Entry administratively disabled (`disabled=true`).
+  - **Agent Directive:** The rule does not process traffic. To reactivate, submit a `PATCH` with `{"disabled": false}` via Maker-Checker.
 - **`[I]` (*Invalid*):**
-  - **Significado:** Registro que apunta a un recurso inexistente o mal configurado (ej. regla de firewall asociada a una interfaz eliminada, o ruta estática con gateway inalcanzable).
-  - **Regla del Agente:** Debe ser señalada como anomalía prioritaria en auditorías y reportes de diagnóstico.
+  - **Meaning:** Entry referencing a non-existent or misconfigured resource (e.g. firewall rule bound to a deleted interface, or static route with unreachable gateway).
+  - **Agent Directive:** Flag as high-priority anomaly in audits and diagnostics reports.
 - **`[R]` (*Running*):**
-  - **Significado:** Interfaz física o lógica activa con enlace arriba (*link up*).
-  - **Regla del Agente:** Si un puerto SFP o Ethernet no tiene el flag `[R]`, existe un problema en Capa 1 (cable desconectado, SFP sin potencia óptica o puerto apagado con `[X]`).
+  - **Meaning:** Physical or logical interface with carrier established (*link up*).
+  - **Agent Directive:** If an Ethernet or SFP port lacks `[R]`, a Layer 1 issue exists (unplugged cable, dark fiber, missing optical power, or administratively disabled with `[X]`).
 
 ---
 
-## 2. Identificadores Internos de RouterOS (`.id`)
+## 2. RouterOS Internal Identifiers (`.id`)
 
-- RouterOS v7 utiliza identificadores internos hexadecimales precedidos por un asterisco: `*1`, `*1A`, `*2B`.
-- Al realizar mutaciones vía `rosgrid_propose_network_change` o consultas REST específicas, siempre que se haga referencia a un registro existente, debe utilizarse el `.id` exacto o el selector único (ej. `numbers`).
-- Los `.id` son efímeros entre reinicios del enrutador o tras la eliminación de registros; nunca deben asumirse fijos a través del tiempo.
+- RouterOS v7 uses internal hexadecimal identifiers prefixed with an asterisk: `*1`, `*1A`, `*2B`.
+- When submitting mutations via `rosgrid_propose_network_change` or targeted REST queries, always use the exact `.id` or unique selector.
+- `.id` values are ephemeral across router reboots or item deletions; never assume they remain constant over time.

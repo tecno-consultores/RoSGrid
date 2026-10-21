@@ -113,7 +113,39 @@ Como acordamos en el diseño, el onboarding por CSV es de **baja complejidad** r
 
 ### **2.2 POST /api/v1/inventory/import-csv/commit — Paso 2: Confirmación e Importación Transaccional**
 
-- Recibe la lista de filas validadas, cifra cada contraseña con AES-256-GCM, inserta en bloque en PostgreSQL, registra el lote en `audit_logs` y encola en el worker el autodescubrimiento TOFU en segundo plano para los nuevos routers.
+- **Roles Permitidos:** SUPERADMIN_GLOBAL, TENANT_ADMIN, SUPERVISOR, SUPPORT_L3, INVENTORY_MANAGER.
+- **Cabeceras Requeridas:** X-CSRF-Token, Idempotency-Key.
+- **Formatos de Entrada Compatibles:**
+  - `multipart/form-data` con campo `file`: procesa y valida el archivo CSV directamente (formato predeterminado del frontend Vue 3 `CsvOnboardingWizardModal.vue`).
+  - `application/json` con payload `{"rows": [CsvCommitRowItem, ...]}`: inserción directa de ítems validados.
+- **Auto-registro de Roles Dinámicos (Alembic 0008):**
+  - Cualquier rol en el CSV que no pertenezca a los roles estándar (`CORE`, `EDGE_BGP`, `WAN_BALANCER`, `BRAS_PPPOE`, `DISTRIBUTION_SWITCH`, `TOWER_AP`, `CORPORATE_CPE`) es detectado automáticamente (ej. `L1`).
+  - Se registra de manera transparente en la tabla `tenant_custom_roles` aislada por tenant en PostgreSQL y se persiste en `routers.network_role`.
+- **Proceso:**
+  - Cifra cada contraseña con AES-256-GCM (AAD = `f"{tenant_id}:{router_id}"`).
+  - Inserta en bloque en PostgreSQL dentro de una transacción atómica.
+  - Registra el lote en `audit_logs` con `action="ROUTERS_IMPORTED_CSV"`.
+  - Dispara en background el descubrimiento inicial TOFU para capturar huellas SSL y telemetría de hardware.
+- **Response 200 OK (CsvCommitResponse):** `{"imported_count": 3, "created_ids": ["uuid-1", "uuid-2", "uuid-3"]}`.
+
+### **2.3 GET /api/v1/inventory/network-roles — Catálogo Unificado de Roles de Red**
+
+- **Roles Permitidos:** Todos los roles autenticados del Tenant.
+- **Respuesta:** Lista combinada de roles del sistema (`standard_roles`) y roles personalizados registrados en `tenant_custom_roles` (`custom_roles`).
+- **Response 200 OK:**
+```json
+{
+  "standard_roles": ["CORE", "EDGE_BGP", "WAN_BALANCER", "BRAS_PPPOE", "DISTRIBUTION_SWITCH", "TOWER_AP", "CORPORATE_CPE"],
+  "custom_roles": [
+    {
+      "id": "uuid",
+      "role_name": "L1",
+      "description": "Auto-registrado vía Onboarding CSV",
+      "created_at": "2026-10-21T22:30:00Z"
+    }
+  ]
+}
+```
 
 ## **3. Endpoints de Bóveda Criptográfica y Rotación de Claves (/api/v1/inventory/routers/{router_id}/vault)**
 

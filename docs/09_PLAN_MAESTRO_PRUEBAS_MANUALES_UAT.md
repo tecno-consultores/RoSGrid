@@ -312,6 +312,61 @@ flowchart TD
 
 ---
 
+### Módulo 26: Topología Física Layer 2 y Telemetría PoE
+
+| ID | Caso de Prueba | Precondición | Pasos de Ejecución | Resultado Esperado |
+| :--- | :--- | :--- | :--- | :--- |
+| **UAT-76** | Visualización Interactiva Canvas 2D (Pan & Zoom) | Routers con vecinos MNDP/LLDP | 1. Acceder a *Topología L2* (`/topology/l2`). 2. Interactuar con la rueda del ratón (zoom in/out) y arrastrar con clic sostenido (pan). 3. Probar el botón *"Centrar"* y conmutador *"Sólo Enlaces PoE"*. | Renderizado fluido a 60 FPS sin parpadeo. Los nodos muestran estado cromático en vivo (Verde Online / Rojo Offline) y enlaces con grosor proporcional al ancho de banda. |
+| **UAT-77** | Telemetría PoE en Tiempo Real y Drawer de Detalles | Router alimentando equipos vía PoE (PSE/PD) | 1. Hacer clic sobre un router en el grafo. 2. Inspeccionar el drawer lateral táctico emergente. 3. Observar las insignias de consumo PoE (`⚡ W`). | El drawer se abre con animación suave mostrando interfaces, potencia consumida por puerto en vatios, vecinos conectados y botón de acceso directo a la consola WebFig. |
+
+---
+
+### Módulo 27: Matriz de Vulnerabilidades CVE de Flota
+
+| ID | Caso de Prueba | Precondición | Pasos de Ejecución | Resultado Esperado |
+| :--- | :--- | :--- | :--- | :--- |
+| **UAT-78** | Auditoría y Tarjetas KPI de Vulnerabilidades | Flota con routers de distintas versiones RouterOS v7 | 1. Ir a *Matriz de CVEs* (`/inventory/cves`). 2. Observar las 4 tarjetas KPI: *Dispositivos Evaluados*, *Equipos Vulnerables*, *CVEs Críticos*, y *Versión Homologada Recomendada*. 3. Filtrar por severidad (`CRITICAL`, `HIGH`, `MEDIUM`). | Los contadores coinciden con el inventario. La lista filtra instantáneamente sin llamadas de red adicionales utilizando el motor semver local. |
+| **UAT-79** | Sincronización NVD y Remediación en 1-Clic | Conectividad a Internet / Catálogo local | 1. Hacer clic en *"🔄 Sincronizar Catálogo CVE"*. 2. Observar la notificación toast. 3. En un router vulnerable, presionar *"🚀 Actualizar Firmware"*. | Se actualiza la base de firmas y el botón redirige de inmediato al orquestador de actualizaciones masivas con los routers afectados preseleccionados. |
+
+---
+
+### Módulo 28: Terminal Syslog en Vivo en WebFig (KeyDB RingBuffer)
+
+| ID | Caso de Prueba | Precondición | Pasos de Ejecución | Resultado Esperado |
+| :--- | :--- | :--- | :--- | :--- |
+| **UAT-80** | Recepción de Logs en RAM sin Persistencia | Consola WebFig abierta en un router | 1. En el menú lateral WebFig, hacer clic en *Syslog Live* (`/routers/:id/webfig/syslog`). 2. Observar el stream de eventos en vivo. 3. Probar selector de auto-scroll. | Los eventos se muestran en tiempo real desde el RingBuffer de KeyDB (máx 500 eventos) con insignias tácticas (`CRIT`, `WARN`, `INFO`). No se satura el disco de PostgreSQL. |
+| **UAT-81** | Modal con Plantilla CLI de Enrolamiento | Vista de Syslog abierta | 1. Hacer clic en *"📋 Script de Enrolamiento"*. 2. Observar el script predefinido para `/system/logging/action` y `/system/logging`. 3. Presionar *"Copiar al Portapapeles"*. | El modal genera el comando RouterOS con la IP y puerto no privilegiado (5514) del servidor RoSGrid listo para pegar en la terminal de MikroTik. |
+
+---
+
+### Módulo 29: Actualización Masiva PoE-Aware con Safety Stop
+
+| ID | Caso de Prueba | Precondición | Pasos de Ejecución | Resultado Esperado |
+| :--- | :--- | :--- | :--- | :--- |
+| **UAT-82** | Planificación DAG Topológico Inverso (PD antes de PSE) | Topología L2 con switches PoE y routers clientes | 1. Ir a *Acciones Masivas* -> *Actualización de Firmware*. 2. Activar el conmutador *"Modo PoE-Aware"*. 3. Iniciar simulación. | El orquestador ordena la cola de actualización garantizando que los dispositivos alimentados (PD) se reinicien antes que los conmutadores suministradores (PSE), evitando cortes eléctricos durante el flasheo. |
+| **UAT-83** | Disparo de Circuito de Corte (*Safety Stop*) | Actualización en lote con fallo inducido | 1. Configurar selector de umbral Safety Stop en `1%`. 2. Simular fallo de reconexión post-reinicio en un equipo del lote inicial. | El circuito de corte se activa de inmediato congelando el despliegue para el resto de la flota y disparando alarma en el Wallboard NOC. |
+
+---
+
+### Módulo 30: Generador de Tokens MCP, Kill-Switch de IA y Skill Oficial
+
+| ID | Caso de Prueba | Precondición | Pasos de Ejecución | Resultado Esperado |
+| :--- | :--- | :--- | :--- | :--- |
+| **UAT-84** | Emisión Visual de Bearer Token MCP | Rol `SUPERADMIN` o `TENANT_ADMIN` | 1. En *Usuarios y Permisos* (`/users`), hacer clic en *"🔑 Generar Token MCP"*. 2. Seleccionar vigencia (ej. 90 días) y cuenta de servicio. 3. Generar. | Se muestra el Bearer Token en pantalla con snippets de configuración para Claude Desktop (`claude_desktop_config.json`) y Hermes Agent (`config.yaml`). |
+| **UAT-85** | Descarga y Consulta de Skill Oficial (`rosgrid-noc-operator`) | Modal de Token MCP abierto | 1. Probar el botón *"Descargar SKILL.md"*. 2. Probar *"Copiar System Prompt"*. 3. En otra pestaña, consultar `GET /api/v1/mcp/skill`. | El archivo se descarga en formato Markdown completo con los 7 Playbooks SOP. El endpoint público responde el contenido estructurado de la Skill. |
+| **UAT-86** | Supervisión y Revocación de Sesiones IA | Agente IA con token emitido | 1. Ir a *Sesiones Activas* (`/sessions`). 2. Filtrar por pestaña *"Agentes IA MCP"*. 3. Observar linaje (*"Por: @admin_local"*). 4. Presionar *"Revocar Sesión"*. | La sesión se elimina instantáneamente de KeyDB. Toda petición subsiguiente con dicho token responde HTTP 401 Unauthorized. |
+
+---
+
+### Módulo 31: Canales de Notificación Multicanal (Telegram, SMTP, Webhooks)
+
+| ID | Caso de Prueba | Precondición | Pasos de Ejecución | Resultado Esperado |
+| :--- | :--- | :--- | :--- | :--- |
+| **UAT-87** | Configuración de Bot de Telegram y Prueba de Envío | Token de Bot y Chat ID de Telegram | 1. Ir a *Canales de Notificación* (`/notifications`). 2. Configurar Bot Token y Chat ID. 3. Presionar *"Enviar Notificación de Prueba"*. | La notificación llega en milisegundos al canal o grupo de Telegram con formato Markdown y cabecera táctica RoSGrid. |
+| **UAT-88** | Configuración SMTP y Webhooks con Firma HMAC | Servidor SMTP y URL receptora | 1. Configurar credenciales SMTP y URL de Webhook. 2. Presionar *"Probar Conexión"*. | Se recibe correo de prueba con plantilla HTML de alta densidad y el webhook entrega el payload de prueba firmado con `X-RoSGrid-Signature`. |
+
+---
+
 ## 4. Plantilla de Bitácora de Ejecución (Sign-off)
 
 ```markdown

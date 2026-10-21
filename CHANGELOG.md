@@ -8,7 +8,27 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ## [Unreleased]
 
-### Added
+### Fixed
+
+- **Corrección de Error HTTP 500 en Importación Masiva CSV con Roles Personalizados (Alembic 0008):**
+  - **Migración Faltante `tenant_custom_roles`:** Creada y aplicada la migración de Alembic `0008_tenant_custom_roles.py` que genera la tabla `tenant_custom_roles` con Row Level Security (RLS) forzado y política de aislamiento multi-tenant.
+  - **Evolución del Tipo de Columna `routers.network_role`:** Modificado el tipo de columna en PostgreSQL de `router_network_role_enum` a `VARCHAR(64)` mediante `ALTER TABLE routers ALTER COLUMN network_role TYPE VARCHAR(64) USING network_role::text;`, permitiendo el registro y persistencia de roles tácticos definidos dinámicamente por los operadores (ej. `L1`).
+- **Corrección de Geometría y Disposición CSS en Pantalla de Login (`LoginView.vue`):**
+  - Se corrigió la superposición del pie de página institucional sobre la tarjeta de credenciales añadiendo `flex-direction: column` a `.login-wrapper`, `margin: auto 0` a `.login-card` y `width: 100%` a `.login-footer`, garantizando un flujo vertical limpio y sticky al fondo.
+
+- **Gobernanza de Agentes IA y Optimización de Tokens (`.agents/` y `AGENTS.md`):**
+  - Implementación del marco de gobernanza técnica y directivas operativas para asistentes IA (Google Antigravity, Claude Code, Hermes Agent, Cursor) bajo el estándar corporativo Nivel 11X.
+  - Redacción de reglas en `.agents/rules/` (`mandatory_qa_pyramid_and_doc_sync.md`, `secure_development_and_testing_guidelines.md`, `frontend_parity_and_closure.md`) y `AGENTS.md` en inglés técnico compacto de alta densidad (reduciendo ~35% el consumo de tokens en el context window del LLM) con directiva forzada de interacción y respuestas al usuario en español.
+  - Despliegue y optimización lingüística de las 6 habilidades de dominio en `.agents/skills/` (`rosgrid-noc-operator`, `qa-11x-docker-certifier`, `mikrotik-webfig-safemode`, `vue3-wcag-tactical-ui`, `docker-trivy-keydb-hardening` y `graphify-docs-api-writer`) y sus documentos de referencia técnica (`mcp_tools.md`, `routeros_flags.md`) en inglés técnico de alta densidad.
+  - Inclusión de sección explicativa de arquitectura en `.agents/README.md` detallando la justificación de la optimización de tokens (ahorro $\approx 35\%$ en context window, menor latencia y mayor adherencia semántica) manteniendo la directiva forzada `OUTPUT LANGUAGE CONSTRAINT` para respuestas y documentación en español.
+  - Creación de compuertas automatizadas en `.agents/scripts/`: `verify_alembic_orm_parity.py` (verificación de 25/25 modelos ORM vs migraciones Alembic) y `certify_task_completion.sh` (compuerta pre-commit integral sin ejecución en host).
+
+- **Ampliación de Pruebas Automatizadas y Detección de Regresiones (Karate Labs, Contratos y Unitarias):**
+  - **Pruebas BDD API (Karate Labs):** Incorporados los escenarios 62 (Dry-Run CSV), 63 (Commit Transaccional CSV) y 64 (Consulta de Catálogo de Roles Personalizados) en `fastapi/test/api_test.feature` y `examples/fastapi/test/api_test.feature`.
+  - **Pruebas BDD UI (Karate Labs):** Incorporados los escenarios 21 (Apertura, inspección y cierre del modal asistente de importación CSV) y 22 (Verificación estructural del pie de página en login sin solapamiento) en `vue3/test/ui_business_flow.feature` y `examples/vue3/test/ui_business_flow.feature`.
+  - **Contrato Front-Back (`validar_comunicacion_front_back.py`):** Ampliado con carga multipart/form-data idéntica a la UI Vue 3 para dry-run y commit transaccional de CSV con rol `L1`, consulta del catálogo `GET /api/v1/inventory/network-roles` y resolución dinámica de tokens para entornos wizard, alcanzando 25/25 pruebas aprobadas (100%).
+  - **Pruebas Unitarias de Backend (`test_inventory_csv_and_vault.unit.py`):** Añadidas validaciones de roles dinámicos en CSV y verificación del modelo `TenantCustomRole` en metadatos de SQLAlchemy.
+  - **Pruebas Unitarias de Frontend (`loginView.unit.ts`):** Añadida prueba de orden jerárquico DOM entre `.login-card` y `.login-footer`.
 
 - **Certificación Integral Pre-Lanzamiento y Cobertura QA 11X (Hito 23.6):**
   - **Elevación de Cobertura Backend a 95.11% (`pytest-cov`):** 463 pruebas unitarias aprobadas al 100% en Docker (`sinfallas/base-python-uv:3.15`), incorporando suites dedicadas para `test_hito23_cve_and_syslog.unit.py`, `test_hito23_topology_and_fleet.unit.py` y `test_hito23_mcp_tools.unit.py` cubriendo la totalidad de endpoints de Syslog, matrices CVE, Topología L2, DAG PoE inverso, herramientas semánticas MCP y exportador Prometheus.

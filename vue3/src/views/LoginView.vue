@@ -1074,10 +1074,12 @@
   .login-wrapper {
     min-height: 100vh;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: var(--rg-space-4, 16px);
+    padding: var(--rg-space-6, 24px) var(--rg-space-4, 16px);
     background-color: var(--rg-bg-canvas, #0b0f19);
+    box-sizing: border-box;
   }
 
   .login-card {
@@ -1088,6 +1090,7 @@
     border-radius: var(--rg-radius-lg, 8px);
     padding: var(--rg-space-6, 24px);
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    margin: auto 0;
   }
 
   .login-header {
@@ -1404,6 +1407,7 @@
 
   /* Pie de página Institucional (Subtarea 16.5) */
   .login-footer {
+    width: 100%;
     margin-top: var(--rg-space-6, 24px);
     text-align: center;
     font-size: 0.75rem;

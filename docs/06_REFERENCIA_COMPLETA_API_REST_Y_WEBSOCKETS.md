@@ -310,6 +310,24 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
 }
 ```
 
+#### `POST /api/v1/inventory/import-csv/dry-run`
+
+- **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`, `SUPERVISOR`, `SUPPORT_L3`, `INVENTORY_MANAGER`.
+- **Entrada:** `multipart/form-data` con archivo `.csv` (máximo 500 filas, 2 MB).
+- **Salida (200):** Objeto `CsvDryRunResponse` con `total_rows`, `valid_rows_count`, `invalid_rows_count`, `can_proceed` y `rows_preview` con validación exhaustiva anti-SSRF, formato y duplicados.
+
+#### `POST /api/v1/inventory/import-csv/commit`
+
+- **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`, `SUPERVISOR`, `SUPPORT_L3`, `INVENTORY_MANAGER`.
+- **Cabeceras:** `X-CSRF-Token`, `Idempotency-Key`.
+- **Entrada:** `multipart/form-data` con archivo `file` o JSON `{"rows": [CsvCommitRowItem, ...]}`.
+- **Salida (200):** `{"imported_count": 3, "created_ids": ["uuid-1", "uuid-2", "uuid-3"]}`. Auto-registra roles dinámicos (ej. `L1`) en `tenant_custom_roles` y cifra credenciales en Bóveda AES-256-GCM.
+
+#### `GET /api/v1/inventory/network-roles`
+
+- **Roles:** Todos los usuarios autenticados.
+- **Salida (200):** Catálogo unificado que incluye los roles estándar del sistema (`CORE`, `EDGE_BGP`, `WAN_BALANCER`, `BRAS_PPPOE`, `DISTRIBUTION_SWITCH`, `TOWER_AP`, `CORPORATE_CPE`) y los roles personalizados registrados por el tenant (`custom_roles`).
+
 ---
 
 ### 2.4 Consola WebFig Capa 1 y Capa 2 (`/api/v1/routers/{id}/...`)

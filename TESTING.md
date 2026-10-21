@@ -910,3 +910,35 @@ Certificación integral ejecutada de extremo a extremo bajo la **Regla Cero** (c
 ### E. Auditoría de Secretos (`./verificar-secretos.sh`)
 
 - Verificación sin hallazgos de claves API, tokens JWT o contraseñas en el árbol de trabajo.
+
+---
+
+## 25. Hardening de Onboarding CSV con Roles Dinámicos (Alembic 0008), Prevención de Regresiones y Ampliación Karate Labs (Hito 23.7)
+
+### A. Diagnóstico y Remediación de Esquema en PostgreSQL 17
+- **Fallo Detectado en UAT:** Error `HTTP 500: Internal Server Error` al confirmar importación CSV con roles personalizados (ej. `L1`). La tabla `tenant_custom_roles` no había sido creada mediante migración de Alembic y la columna `routers.network_role` estaba restringida por el tipo estático `router_network_role_enum`.
+- **Acción Correctiva:**
+  - Migración [fastapi/migrations/versions/0008_tenant_custom_roles.py](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/fastapi/migrations/versions/0008_tenant_custom_roles.py) creada y aplicada en PostgreSQL, estableciendo la tabla `tenant_custom_roles` con Row Level Security (RLS) forzado y política de aislamiento multi-tenant.
+  - Modificación del tipo de columna de `routers.network_role` a `VARCHAR(64)` en PostgreSQL real para aceptar roles dinámicos registrados por cada organización.
+
+### B. Corrección de Geometría Visual en Pantalla de Login (`LoginView.vue`)
+- **Fallo Detectado en UAT:** El pie de página institucional solapaba la tarjeta de acceso de credenciales debido a la falta de dirección flex vertical en `.login-wrapper`.
+- **Acción Correctiva:** Configuración de `flex-direction: column` en `.login-wrapper`, `margin: auto 0` en `.login-card` y `width: 100%` en `.login-footer`, manteniendo el pie de página visible al fondo sin colapso.
+
+### C. Ampliación de Suites de Pruebas Multi-Capa (Karate Labs, Contratos y Unitarias)
+1. **Karate Labs API BDD (`fastapi/test/api_test.feature` y `examples/fastapi/test/api_test.feature`):**
+   - **Escenario 62:** Validación en seco de CSV (`/api/v1/inventory/import-csv/dry-run`) sin autenticación devuelve HTTP 401.
+   - **Escenario 63:** Confirmación transaccional (`/api/v1/inventory/import-csv/commit`) sin autenticación devuelve HTTP 401.
+   - **Escenario 64:** Consulta de catálogo de roles de red y roles personalizados (`/api/v1/inventory/network-roles`) sin autenticación devuelve HTTP 401.
+   - **Total Karate Labs API:** **64 de 64 escenarios aprobados (100%)**.
+2. **Karate Labs UI BDD (`vue3/test/ui_business_flow.feature` y `examples/vue3/test/ui_business_flow.feature`):**
+   - **Escenario 21:** Apertura, inspección del asistente de importación masiva CSV (Paso 1 de 2), verificación de plantilla descargable y cierre.
+   - **Escenario 22:** Estructura y posicionamiento del pie de página institucional en pantalla de Login sin solapamiento.
+   - **Total Karate Labs UI:** **22 de 22 escenarios aprobados (100%)**.
+3. **Contratos Front-Back (`validar_comunicacion_front_back.py`):**
+   - Ejecución completa en Docker `rosgrid_api_local` con carga `multipart/form-data`, validación `dry-run`, `commit` transaccional con rol `L1`, consulta del catálogo `GET /api/v1/inventory/network-roles` y resolución dinámica de tokens para entornos wizard.
+   - **Total Contratos Front-Back:** **25 de 25 pruebas aprobadas (100%)**.
+4. **Pruebas Unitarias de Backend y Frontend:**
+   - Backend (`test_inventory_csv_and_vault.unit.py`): 16 pruebas aprobadas (100%), validando roles dinámicos y registro en metadatos de SQLAlchemy.
+   - Frontend (`loginView.unit.ts`): 20 pruebas aprobadas (100%), validando orden jerárquico DOM de la tarjeta y pie de página.
+

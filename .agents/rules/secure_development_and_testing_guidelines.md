@@ -1,0 +1,73 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright (C) 2026 RoSGrid Contributors
+
+# Mandatory Directive: Security-by-Design & Multi-Layer Testing (QA 11X)
+
+> **CORE GOVERNANCE DIRECTIVE:**
+> Applies to all AI agents and developers modifying or extending RoSGrid. No task is complete if any requirement here is unmet.
+> **OUTPUT LANGUAGE CONSTRAINT:** Always communicate with the user and write final explanations in Spanish.
+
+---
+
+## 1. Multi-Layer Testing & Anti-Mock Blindness
+
+Unit isolation with mocks measures quick logical coverage but creates blind spots if disconnected from real infrastructure:
+
+1. **ORM vs PostgreSQL Schema Invariant:**
+   - **Zero Schema Drift:** Modifying `src/models/*.py` or column types never alters the database automatically.
+   - **Mandatory Alembic Migration:** Any new model, table, constraint (`UniqueConstraint`), or column type change requires an immediate versioned migration in `fastapi/migrations/versions/`.
+   - **Real PostgreSQL Verification:** Always verify tables, column types, and indices via `\d <table>` in real PostgreSQL (`rosgrid_db_local`). Never assume `AsyncMock` passing guarantees SQL execution.
+
+2. **3-Layer Endpoint & Component Verification Pyramid:**
+   - **Layer 1: Isolated Unit Tests:**
+     - Backend: `fastapi/tests/**/*.unit.py` (Pytest, coverage `>= 95%`).
+     - Frontend: `vue3/src/**/*.unit.ts` (Vitest, composables and component logic).
+   - **Layer 2: Real Front-Back Integration Contracts:**
+     - Update and run `fastapi/scripts/validar_comunicacion_front_back.py` inside Docker `rosgrid_api_local`. Send the exact payload (multipart form or JSON) used by the UI and verify DB persistence.
+   - **Layer 3: Black-Box Acceptance BDD (Karate Labs):**
+     - Backend: Scenarios in `fastapi/test/api_test.feature` & `examples/` verifying 401 unauth, 422 malformed, and 200/201 success contracts.
+     - Frontend: Scenarios in `vue3/test/ui_business_flow.feature` & `examples/` testing interactive UI, modals, and navigation.
+
+3. **Anti-JSDOM Geometry Blindness:**
+   - JSDOM does NOT calculate CSS Flexbox/Grid layouts, element coordinates, or viewport bounding boxes.
+   - Prevent overlapping elements (e.g. login footer collapsing over form cards or uncentered modals) by asserting DOM hierarchy in unit tests and inspecting real browser viewport visibility/clickability in Karate UI or Playwright.
+
+---
+
+## 2. Security-by-Design & OWASP Guidelines
+
+Apply these non-negotiable security directives before writing any code:
+
+1. **Multi-Tenant Isolation & Row Level Security (RLS):**
+   - Every tenant table MUST include `tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE`.
+   - Alembic migrations MUST execute:
+     `ENABLE ROW LEVEL SECURITY;` and `FORCE ROW LEVEL SECURITY;`
+     along with isolation policy: `USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)`.
+   - Backend DB sessions MUST use `get_tenant_db_session` to ensure `app.current_tenant_id` is set.
+
+2. **Strict SSRF Prevention:**
+   - Any user-supplied or CSV-imported host/IP/URL (`api_base_url`, webhooks, syslog targets) MUST pass through `validate_router_target_url`.
+   - Strictly reject: `127.0.0.0/8`, `::1`, `localhost`, link-local, cloud metadata (`169.254.0.0/16`, `fe80::/10`), and internal Docker container hostnames (`rosgrid-db`, `rosgrid-redis`, `rosgrid-api`, `rosgrid-worker`).
+
+3. **Zero Plaintext Secrets & Vault Cryptography:**
+   - Router passwords are NEVER stored in plaintext. Encrypt with AES-256-GCM using tenant-bound AAD (`f"{tenant_id}:{router_id}"`).
+   - User passwords must use Argon2id. TOTP secret keys must be encrypted symmetrically.
+   - Router password decryption is restricted to `SUPERADMIN_GLOBAL` and `TENANT_ADMIN` via TOTP Step-Up Auth with 30s ephemeral in-memory TTL.
+
+4. **Idempotency for Mutating Operations:**
+   - All critical `POST`, `PUT`, `DELETE` operations (router creation, CSV onboarding, config mutations, Maker-Checker approvals) MUST require an `Idempotency-Key` (UUIDv7) header, processed via KeyDB/Redis idempotency manager.
+
+5. **CSRF & Hardened Session Cookies:**
+   - Session cookies: `__Host-rg_at` and `__Host-rg_rt` with `HttpOnly; Secure; SameSite=Strict; Path=/`.
+   - All browser mutation requests require `X-CSRF-Token` HMAC-SHA256 signature verification.
+
+---
+
+## 3. Pre-Commit 11X Checklist
+
+Before declaring a task done or creating a commit/PR:
+- [ ] New/modified ORM models? -> Alembic migration applied and verified in PostgreSQL (`\d <table>`).
+- [ ] Endpoints verified with real payloads using `validar_comunicacion_front_back.py`?
+- [ ] Added scenarios in Karate Labs API (`api_test.feature`) and Karate Labs UI (`ui_business_flow.feature`)?
+- [ ] Executed `./verificar-secretos.sh` and ShellCheck clean?
+- [ ] Synchronized `specs/`, `docs/`, `CHANGELOG.md`, `ROADMAP.md`, and `TESTING.md`?

@@ -492,3 +492,26 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  # ==============================================================================
+  # Grupo 12: Onboarding Masivo CSV y Catálogo de Roles de Red Dinámicos
+  # ==============================================================================
+
+  Scenario: 62. Validación en seco (dry-run) de importación masiva CSV sin autenticación devuelve 401
+    Given path '/api/v1/inventory/import-csv/dry-run'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 63. Confirmación transaccional (commit) de importación masiva CSV sin autenticación devuelve 401
+    Given path '/api/v1/inventory/import-csv/commit'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 64. Consulta de catálogo de roles de red y roles personalizados sin autenticación devuelve 401
+    Given path '/api/v1/inventory/network-roles'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+

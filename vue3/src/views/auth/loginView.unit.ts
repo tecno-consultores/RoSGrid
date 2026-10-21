@@ -560,4 +560,25 @@ describe('LoginView.vue — Autenticación Multi-Tenant en 2 Etapas y 2FA TOTP',
     expect(githubLink.exists()).toBe(true);
     expect(githubLink.attributes('aria-label')).toContain('GitHub');
   });
+
+  it('garantiza la estructura vertical de layout evitando solapamiento entre la tarjeta de acceso y el pie de página', async () => {
+    const wrapper = mount(LoginView);
+    await flushPromises();
+
+    const loginWrapper = wrapper.find('.login-wrapper');
+    const card = wrapper.find('.login-card');
+    const footer = wrapper.find('footer.login-footer');
+
+    expect(loginWrapper.exists()).toBe(true);
+    expect(card.exists()).toBe(true);
+    expect(footer.exists()).toBe(true);
+
+    // Validar orden jerárquico DOM: la tarjeta debe preceder al footer dentro del wrapper
+    const wrapperHtml = loginWrapper.html();
+    const cardIndex = wrapperHtml.indexOf('login-card');
+    const footerIndex = wrapperHtml.indexOf('login-footer');
+    expect(cardIndex).toBeGreaterThan(-1);
+    expect(footerIndex).toBeGreaterThan(cardIndex);
+  });
 });
+

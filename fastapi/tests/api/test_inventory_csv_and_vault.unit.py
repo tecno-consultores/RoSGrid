@@ -250,6 +250,65 @@ def test_build_router_from_csv(test_tenant_id: uuid.UUID, test_user_id: uuid.UUI
     assert plain == "SuperSecretPassword"
 
 
+def test_validate_single_csv_row_with_custom_network_role() -> None:
+    existing: set[str] = set()
+    seen: set[str] = set()
+
+    custom_row = {
+        "display_name": "Switch-Distribucion-Piso2",
+        "ip_address": "10.250.3.10",
+        "api_port": "443",
+        "ros_username": "admin",
+        "ros_password": "Password123!",
+        "network_role": "L1",
+        "serial_number": "SN-L1-CUSTOM-001",
+    }
+    is_valid, errors = validate_single_csv_row(custom_row, existing, seen)
+    assert is_valid is True
+    assert len(errors) == 0
+
+    item = row_to_commit_item(custom_row)
+    assert item.display_name == "Switch-Distribucion-Piso2"
+    assert item.network_role == "L1"
+    assert item.serial_number == "SN-L1-CUSTOM-001"
+
+
+def test_build_router_from_csv_with_custom_role(test_tenant_id: uuid.UUID, test_user_id: uuid.UUID) -> None:
+    item = CsvCommitRowItem(
+        display_name="Router-Custom-Role",
+        api_base_url="https://10.250.3.11",
+        api_port=443,
+        network_role="L1",
+        admin_state=RouterAdminStateEnum.PRODUCTION,
+        physical_location="Nodo Secundario",
+        online_since_date=date.today(),
+        serial_number="SN-CUSTOM-L1-002",
+        api_username="admin",
+        api_password="StrongPassword123!",
+    )
+    r, tags, vault = build_router_from_csv(item, test_tenant_id, test_user_id)
+    assert r.display_name == "Router-Custom-Role"
+    assert r.network_role == "L1"
+    assert vault.api_username == "admin"
+
+
+def test_tenant_custom_role_model_metadata() -> None:
+    from sqlalchemy import String
+    from src.models.base import Base
+    from src.models.inventory import TenantCustomRole
+
+    # Validar registro en Base.metadata
+    assert "tenant_custom_roles" in Base.metadata.tables
+    table = Base.metadata.tables["tenant_custom_roles"]
+    assert "tenant_id" in table.c
+    assert "role_name" in table.c
+
+    # Validar que routers.network_role es de tipo String en SQLAlchemy para admitir roles dinámicos
+    routers_table = Base.metadata.tables["routers"]
+    assert isinstance(routers_table.c.network_role.type, String)
+
+
+
 # ============================================================================
 # VAULT ENDPOINTS AND LOGIC
 # ============================================================================

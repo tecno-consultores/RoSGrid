@@ -29,7 +29,7 @@ Cada transacción en la base de datos inyecta de forma atómica la variable de s
 SET LOCAL app.current_tenant_id = 'c1234567-89ab-cdef-0123-456789abcdef';
 ```
 
-Todas las tablas críticas (`routers`, `router_backups`, `approval_requests`, `audit_logs`, `users`, etc.) cuentan con políticas RLS activadas (`ENABLE ROW LEVEL SECURITY; FORCE ROW LEVEL SECURITY;`), impidiendo que incluso un fallo en la capa de aplicación pueda devolver o mutar registros de otra empresa.
+Todas las tablas críticas (`routers`, `tenant_custom_roles`, `router_backups`, `approval_requests`, `audit_logs`, `users`, etc.) cuentan con políticas RLS activadas (`ENABLE ROW LEVEL SECURITY; FORCE ROW LEVEL SECURITY;`), impidiendo que incluso un fallo en la capa de aplicación pueda devolver o mutar registros de otra empresa.
 
 ---
 

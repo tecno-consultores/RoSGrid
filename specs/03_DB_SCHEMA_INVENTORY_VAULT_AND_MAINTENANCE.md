@@ -116,13 +116,11 @@ CREATE TABLE routers (
     
 
 
-    -- Clasificación Administrativa (Manual)
+    -- Clasificación Administrativa (Manual o Dinámica)
+    -- En PostgreSQL 17 evolucionado a VARCHAR(64) (Alembic 0008) para admitir roles estándar y personalizados
+    network_role VARCHAR(64) NOT NULL DEFAULT 'CORE',
 
-
-    network\_role router\_network\_role\_enum NOT NULL,
-
-
-    admin\_state router\_admin\_state\_enum NOT NULL DEFAULT 'PRODUCTION',
+    admin_state router_admin_state_enum NOT NULL DEFAULT 'PRODUCTION',
 
 
     physical\_location VARCHAR(255) NOT NULL,
@@ -271,7 +269,31 @@ CREATE INDEX idx\_routers\_tenant\_coords ON routers (tenant\_id, latitude, long
 
 
 
-## **3. Tabla router\_tags (Etiquetado Libre para Filtros y Acciones Masivas)**
+## **2b. Tabla tenant_custom_roles (Catálogo de Roles de Red Personalizados por Tenant)**
+
+Permite a los operadores registrar roles de red dinámicos (ej. `L1`, `AP-Sectorial`) que extienden el catálogo estándar sin alterar el código base, gobernados con Row Level Security (RLS) estricto.
+
+```sql
+CREATE TABLE tenant_custom_roles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    role_name VARCHAR(64) NOT NULL,
+    description VARCHAR(255),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT uq_tenant_custom_role UNIQUE (tenant_id, role_name)
+);
+
+CREATE INDEX idx_tenant_custom_roles_lookup ON tenant_custom_roles (tenant_id, role_name);
+
+ALTER TABLE tenant_custom_roles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tenant_custom_roles FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation_custom_roles ON tenant_custom_roles
+    USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid)
+    WITH CHECK (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
+```
+
+## **3. Tabla router_tags (Etiquetado Libre para Filtros y Acciones Masivas)**
 
 CREATE TABLE router\_tags (
 

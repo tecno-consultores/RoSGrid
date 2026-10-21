@@ -245,6 +245,23 @@ Toda prueba unitaria, de mutación, análisis estático, accesibilidad WCAG 2.1 
 
 ---
 
+## 🤖 Gobernanza de IA, Directivas y la Carpeta `.agents/`
+
+RoSGrid incorpora de forma nativa el estándar abierto de **Gobernanza para Agentes de Inteligencia Artificial** y asistentes de desarrollo (Google Antigravity, Claude Code, Cursor, Hermes Agent, Windsurf):
+
+- **[`AGENTS.md`](./AGENTS.md):** Manifiesto principal de gobernanza y directivas técnicas para agentes y colaboradores.
+- **[`.agents/rules/`](./.agents/rules/):** Reglas activas innegociables:
+  - [`mandatory_qa_pyramid_and_doc_sync.md`](./.agents/rules/mandatory_qa_pyramid_and_doc_sync.md): Obligación de crear pruebas multi-capa (unitarias, DB real, contratos y Karate Labs) y sincronización documental continua.
+  - [`secure_development_and_testing_guidelines.md`](./.agents/rules/secure_development_and_testing_guidelines.md): Prevención de mocks ciegos de BD, forzado de RLS en PostgreSQL, protección anti-SSRF y bóveda criptográfica.
+  - [`frontend_parity_and_closure.md`](./.agents/rules/frontend_parity_and_closure.md): Paridad terminal-UI y protocolo de cierre.
+- **[`.agents/skills/`](./.agents/skills/):** Playbooks especializados de dominio (Operador NOC RouterOS v7, Certificador Docker QA 11X, Safe Mode, etc.).
+- **[`.agents/scripts/`](./.agents/scripts/):** Herramientas de automatización como `verify_alembic_orm_parity.py` (auditoría ORM vs Alembic) y `certify_task_completion.sh`.
+
+Cualquier desarrollador que clone el repositorio puede utilizar estos recursos para calibrar a su agente de IA o ejecutar las compuertas de calidad localmente. Consulta [`.agents/README.md`](./.agents/README.md) para más detalles.
+
+---
+
 ## 📄 Licencia
 
 Este proyecto es Software Libre distribuido bajo los términos de la **GNU General Public License v3.0 (GPL-3.0-only)**. Consulta el archivo [LICENSE](./LICENSE) para más detalles.
+
