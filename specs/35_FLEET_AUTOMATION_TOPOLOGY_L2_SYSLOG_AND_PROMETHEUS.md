@@ -228,32 +228,32 @@ Para evitar la introducción de vectores de ataque en estas nuevas funciones:
 
 ### 9.1. Matriz de Vulnerabilidades CVE de Flota (`FleetCveMatrix.vue` en `/inventory/cves`)
 
-- **Objetivo:** Panel táctico centralizado de riesgos de seguridad de la flota MikroTik.
-- **Métricas KPI:** 4 tarjetas tácticas con tipografía `tabular-nums` que resumen: *Total Routers Evaluados*, *Routers Vulnerables*, *Amenazas Críticas Pendientes* y *Versión de Firmware Recomendada*.
-- **Controles y Filtros:** Búsqueda en vivo por ID de CVE, descripción o nombre de router; filtro desplegable por severidad (`ALL`, `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`).
-- **Detalle Táctico:** Fila expandible con descripción en español, vector CVSS v3, versiones afectadas y botón de mitigación.
-- **Acciones Directas:** Sincronizador manual contra NIST NVD (`POST /api/v1/inventory/cves/sync`) y botón de acceso directo `[ 🚀 Actualizar Flota Afectada ]` enlazado al asistente de operaciones masivas.
+* **Objetivo:** Panel táctico centralizado de riesgos de seguridad de la flota MikroTik.
+* **Métricas KPI:** 4 tarjetas tácticas con tipografía `tabular-nums` que resumen: *Total Routers Evaluados*, *Routers Vulnerables*, *Amenazas Críticas Pendientes* y *Versión de Firmware Recomendada*.
+* **Controles y Filtros:** Búsqueda en vivo por ID de CVE, descripción o nombre de router; filtro desplegable por severidad (`ALL`, `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`).
+* **Detalle Táctico:** Fila expandible con descripción en español, vector CVSS v3, versiones afectadas y botón de mitigación.
+* **Acciones Directas:** Sincronizador manual contra NIST NVD (`POST /api/v1/inventory/cves/sync`) y botón de acceso directo `[ 🚀 Actualizar Flota Afectada ]` enlazado al asistente de operaciones masivas.
 
 ### 9.2. Topología Física Capa 2 en Canvas 2D (`L2TopologyView.vue` en `/topology/l2`)
 
-- **Objetivo:** Visualización táctica de enlaces físicos y distribución de energía PoE.
-- **Lienzo Acelerado:** Canvas 2D con renderizado a 60 FPS, soporte de Pan (arrastrar fondo) y Zoom continuo (0.3x a 3.0x).
-- **Indicadores de Nodos:** Radio diferenciado para equipos alimentadores PSE (32px) vs clientes PD (28px), anillo de selección Cyan (`#22D3EE`), halo dorado para PSE (`#F59E0B`), y LED de conectividad en tiempo real (verde = `ONLINE`, rojo = `OFFLINE`).
-- **Enlaces y PoE:** Líneas dinámicas con grosor dependiente de selección; enlaces con entrega de energía representados en amarillo eléctrico (`#FACC15`) con badge central que indica el consumo en vatios (`⚡ X.X W`).
-- **Accesibilidad y Fallback:** Atributo `role="region"` con alternativa oculta para lectores de pantalla (`aria-live="polite"`) que lista todos los nodos y enlaces en formato tabular semántico.
+* **Objetivo:** Visualización táctica de enlaces físicos y distribución de energía PoE.
+* **Lienzo Acelerado:** Canvas 2D con renderizado a 60 FPS, soporte de Pan (arrastrar fondo) y Zoom continuo (0.3x a 3.0x).
+* **Indicadores de Nodos:** Radio diferenciado para equipos alimentadores PSE (32px) vs clientes PD (28px), anillo de selección Cyan (`#22D3EE`), halo dorado para PSE (`#F59E0B`), y LED de conectividad en tiempo real (verde = `ONLINE`, rojo = `OFFLINE`).
+* **Enlaces y PoE:** Líneas dinámicas con grosor dependiente de selección; enlaces con entrega de energía representados en amarillo eléctrico (`#FACC15`) con badge central que indica el consumo en vatios (`⚡ X.X W`).
+* **Accesibilidad y Fallback:** Atributo `role="region"` con alternativa oculta para lectores de pantalla (`aria-live="polite"`) que lista todos los nodos y enlaces en formato tabular semántico.
 
 ### 9.3. Terminal de Eventos Syslog en Vivo (`RouterSyslogTerminalView.vue` en `/routers/:id/webfig/syslog`)
 
-- **Objetivo:** Diagnóstico de bajo nivel en tiempo real para soporte NOC y resolución de incidentes de conectividad.
-- **Consumo Efímero:** Polling automático cada 3 segundos contra el RingBuffer de 500 eventos en KeyDB (`GET /api/v1/routers/:id/syslog?limit=200`).
-- **Resaltado Táctico de Severidad:** Badges coloreados por criticidad (`CRIT 🚨`, `WARN ⚠️`, `INFO ℹ️`).
-- **Auto-Scroll Inteligente:** Desplazamiento automático al fondo que se pausa de inmediato si el operador sube la barra de scroll para inspeccionar un log previo.
-- **Asistente de Enrolamiento:** Modal con el script CLI oficial de MikroTik para aprovisionar el syslog remoto con 1 clic de copiado al portapapeles.
+* **Objetivo:** Diagnóstico de bajo nivel en tiempo real para soporte NOC y resolución de incidentes de conectividad.
+* **Consumo Efímero:** Polling automático cada 3 segundos contra el RingBuffer de 500 eventos en KeyDB (`GET /api/v1/routers/:id/syslog?limit=200`).
+* **Resaltado Táctico de Severidad:** Badges coloreados por criticidad (`CRIT 🚨`, `WARN ⚠️`, `INFO ℹ️`).
+* **Auto-Scroll Inteligente:** Desplazamiento automático al fondo que se pausa de inmediato si el operador sube la barra de scroll para inspeccionar un log previo.
+* **Asistente de Enrolamiento:** Modal con el script CLI oficial de MikroTik para aprovisionar el syslog remoto con 1 clic de copiado al portapapeles.
 
 ### 9.4. Actualizaciones Masivas PoE-Aware (`BulkOperationsAndUpdatesView.vue` en `/bulk-ops`)
 
-- **Conmutador PoE-Aware:** Alternador booleano que instruye al orquestador a calcular el DAG de dependencias eléctricas e invertir la secuencia de actualización (hojas PD primero, switch PSE al final).
-- **Selector de Umbral Safety Stop:** Menú de opciones (1%, 2%, 5%) que congela automáticamente el lote si los fallos post-reinicio superan dicho porcentaje.
+* **Conmutador PoE-Aware:** Alternador booleano que instruye al orquestador a calcular el DAG de dependencias eléctricas e invertir la secuencia de actualización (hojas PD primero, switch PSE al final).
+* **Selector de Umbral Safety Stop:** Menú de opciones (1%, 2%, 5%) que congela automáticamente el lote si los fallos post-reinicio superan dicho porcentaje.
 
 ---
 
@@ -263,18 +263,17 @@ Para garantizar la integridad y cero regresión en todo el ciclo de vida, el Hit
 
 ### 10.1. Contratos REST de Backend (`fastapi/test/api_test.feature` y réplica en `examples/`)
 
-- **Escenario 55:** Validación 401 en `/api/v1/inventory/cves` sin autenticación.
-- **Escenario 56:** Validación 401 en `/api/v1/inventory/cves/sync` sin autenticación.
-- **Escenario 57:** Validación 401 en `/api/v1/topology/l2` sin autenticación.
-- **Escenario 58:** Validación 401 en `/api/v1/routers/syslog/template` sin autenticación.
-- **Escenario 59:** Validación 401 en `/api/v1/routers/{id}/syslog` sin autenticación.
-- **Escenario 60:** Scraping OpenMetrics `/api/v1/metrics/fleet` devuelve 200 y métrica `rosgrid_router_status`.
-- **Escenario 61:** Actualización masiva PoE-aware `/api/v1/operations/ros-updates/execute` sin autenticación devuelve 401.
+* **Escenario 55:** Validación 401 en `/api/v1/inventory/cves` sin autenticación.
+* **Escenario 56:** Validación 401 en `/api/v1/inventory/cves/sync` sin autenticación.
+* **Escenario 57:** Validación 401 en `/api/v1/topology/l2` sin autenticación.
+* **Escenario 58:** Validación 401 en `/api/v1/routers/syslog/template` sin autenticación.
+* **Escenario 59:** Validación 401 en `/api/v1/routers/{id}/syslog` sin autenticación.
+* **Escenario 60:** Scraping OpenMetrics `/api/v1/metrics/fleet` devuelve 200 y métrica `rosgrid_router_status`.
+* **Escenario 61:** Actualización masiva PoE-aware `/api/v1/operations/ros-updates/execute` sin autenticación devuelve 401.
 
 ### 10.2. Flujos de Interfaz Web E2E (`vue3/test/ui_business_flow.feature` y réplica en `examples/`)
 
-- **Escenario 17:** Verificación de carga de Topología L2 (`/topology/l2`), renderizado del canvas y leyenda de inyector PSE.
-- **Escenario 18:** Verificación de la Matriz de Vulnerabilidades CVE (`/inventory/cves`), tarjetas KPI, botón de sincronización y botón remediador de flota.
-- **Escenario 19:** Verificación del Terminal Syslog en Vivo en WebFig (`/routers/{id}/webfig/syslog`), contenedor de consola y apertura del modal de script CLI.
-- **Escenario 20:** Verificación del Actualizador Masivo PoE-Aware en Operaciones Masivas (`/bulk-ops`), conmutador PoE y selector de umbral Safety Stop.
-
+* **Escenario 17:** Verificación de carga de Topología L2 (`/topology/l2`), renderizado del canvas y leyenda de inyector PSE.
+* **Escenario 18:** Verificación de la Matriz de Vulnerabilidades CVE (`/inventory/cves`), tarjetas KPI, botón de sincronización y botón remediador de flota.
+* **Escenario 19:** Verificación del Terminal Syslog en Vivo en WebFig (`/routers/{id}/webfig/syslog`), contenedor de consola y apertura del modal de script CLI.
+* **Escenario 20:** Verificación del Actualizador Masivo PoE-Aware en Operaciones Masivas (`/bulk-ops`), conmutador PoE y selector de umbral Safety Stop.

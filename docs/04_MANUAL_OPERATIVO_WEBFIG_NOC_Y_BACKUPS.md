@@ -9,7 +9,7 @@ Este manual describe la operación diaria de la interfaz de usuario de **RoSGrid
 RoSGrid replica y supera la experiencia nativa de WinBox y WebFig dentro de un entorno web seguro, dividiendo la gestión del router en dos niveles arquitectónicos:
 
 ```mermaid
-graph TD
+flowchart TD
     User[Operador / Ingeniero de Red] --> RouterLayout[Consola WebFig / RouterWebFigLayout.vue]
     RouterLayout --> TabsBar[Barra de Pestañas en Memoria KeepAlive max:5]
     
@@ -243,4 +243,3 @@ flowchart TD
 
 - **Conmutador PoE-Aware:** Reordena la cola de actualización invirtiendo el DAG de dependencias eléctricas para actualizar primero los dispositivos alimentados (PD) antes que los conmutadores alimentadores (PSE), previniendo apagones accidentales durante el flasheo de firmware.
 - **Circuito Safety Stop:** Monitorea la tasa de fallos post-reinicio y congela automáticamente el lote si se supera el umbral configurado (1%, 2% o 5%), emitiendo alertas inmediatas al NOC.
-
