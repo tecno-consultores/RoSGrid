@@ -910,4 +910,3 @@ Certificación integral ejecutada de extremo a extremo bajo la **Regla Cero** (c
 ### E. Auditoría de Secretos (`./verificar-secretos.sh`)
 
 - Verificación sin hallazgos de claves API, tokens JWT o contraseñas en el árbol de trabajo.
-
