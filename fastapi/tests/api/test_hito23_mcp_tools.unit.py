@@ -9,6 +9,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from fastapi import HTTPException
 from httpx import ASGITransport, AsyncClient
 
 import src.api.v1.mcp as api_mcp
@@ -172,3 +173,100 @@ async def test_mcp_skill_public_endpoint():
         assert resp.status_code == 200
         assert "rosgrid-noc-operator" in resp.text
         assert "rosgrid_get_l2_topology" in resp.text
+
+        # Test format=json
+        resp_json = await client.get("/api/v1/mcp/skill?format=json")
+        assert resp_json.status_code == 200
+        data = resp_json.json()
+        assert data["name"] == "rosgrid-noc-operator"
+        assert "content" in data
+
+
+@pytest.mark.asyncio
+async def test_handle_get_l2_topology_live(mcp_context):
+    t_id = mcp_context["tenant_id"]
+    db = AsyncMock()
+
+    mock_topo = L2TopologyResponse(
+        nodes=[], edges=[], total_nodes=0, total_edges=0, timestamp=datetime.now(timezone.utc)
+    )
+    with patch("src.api.v1.mcp._fetch_and_cache_live_topology", AsyncMock(return_value=mock_topo)):
+        res = await api_mcp._handle_get_l2_topology(
+            db, t_id, mcp_context["user_id"], mcp_context["claims"], {"refresh": True}
+        )
+        assert res["total_nodes"] == 0
+        assert res["total_edges"] == 0
+
+
+@pytest.mark.asyncio
+async def test_handle_check_fleet_cves_full_fleet(mcp_context):
+    t_id = mcp_context["tenant_id"]
+    db = AsyncMock()
+    mock_res = MagicMock()
+    mock_res.scalars.return_value.all.return_value = [mcp_context["router_obj"]]
+    db.execute.return_value = mock_res
+
+    res = await api_mcp._handle_check_fleet_cves(db, t_id, mcp_context["user_id"], mcp_context["claims"], {})
+    assert res["total_evaluated_routers"] == 1
+
+
+@pytest.mark.asyncio
+async def test_handle_check_fleet_cves_not_found(mcp_context):
+    t_id = mcp_context["tenant_id"]
+    db = AsyncMock()
+    mock_res = MagicMock()
+    mock_res.scalar_one_or_none.return_value = None
+    db.execute.return_value = mock_res
+
+    with pytest.raises(HTTPException) as exc:
+        await api_mcp._handle_check_fleet_cves(
+            db, t_id, mcp_context["user_id"], mcp_context["claims"], {"router_id": str(uuid.uuid4())}
+        )
+    assert exc.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_handle_get_recent_syslog_missing_router_id(mcp_context):
+    db = AsyncMock()
+    with pytest.raises(HTTPException) as exc:
+        await api_mcp._handle_get_recent_syslog(
+            db, mcp_context["tenant_id"], mcp_context["user_id"], mcp_context["claims"], {}
+        )
+    assert exc.value.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_handle_execute_poe_aware_upgrade_missing_ids(mcp_context):
+    db = AsyncMock()
+    with pytest.raises(HTTPException) as exc:
+        await api_mcp._handle_execute_poe_aware_upgrade(
+            db, mcp_context["tenant_id"], mcp_context["user_id"], mcp_context["claims"], {"router_ids": []}
+        )
+    assert exc.value.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_record_mcp_audit_invalid_uuid(mcp_context):
+    db = AsyncMock()
+    with patch("src.api.v1.mcp.write_audit_log", AsyncMock()):
+        await api_mcp._record_mcp_audit(
+            db,
+            mcp_context["tenant_id"],
+            mcp_context["user_id"],
+            mcp_context["claims"],
+            "127.0.0.1",
+            "test_tool",
+            {"router_id": "not-a-valid-uuid"},
+        )
+        assert db.commit.called
+
+
+def test_matches_status_filter_none():
+    assert api_mcp._matches_status_filter(True, None) is True
+    assert api_mcp._matches_status_filter(False, "") is True
+
+
+def test_load_skill_markdown_fallback():
+    with patch("src.api.v1.mcp._SKILL_CANDIDATE_PATHS", ()):
+        content = api_mcp._load_skill_markdown()
+        assert "rosgrid-noc-operator" in content

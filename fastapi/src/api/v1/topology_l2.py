@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 RoSGrid Contributors
 
+import logging
 import uuid
 from typing import Any
 
@@ -20,6 +21,8 @@ from src.services.topology_l2 import (
     process_topology_graph,
     save_cached_topology,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/topology/l2", tags=["Layer 2 Topology"])
 
@@ -67,8 +70,8 @@ async def _fetch_router_poe(
                     for item in res_eth
                     if isinstance(item, dict) and "poe-out" in item
                 }
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("Fallo al consultar PoE de %s: %s", router_obj.id, exc)
     return {}
 
 

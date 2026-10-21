@@ -538,8 +538,7 @@ async def _handle_detect_mass_outage(
 def _format_topology_mcp_result(topology: L2TopologyResponse, router_id: uuid.UUID | None) -> dict[str, Any]:
     """Formatea el grafo L2 para la respuesta del servidor MCP."""
     edges = [
-        e for e in topology.edges
-        if not router_id or e.source_router_id == router_id or e.target_router_id == router_id
+        e for e in topology.edges if not router_id or e.source_router_id == router_id or e.target_router_id == router_id
     ]
     return {
         "total_nodes": topology.total_nodes,

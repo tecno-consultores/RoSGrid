@@ -6,20 +6,25 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from fastapi import HTTPException
 
-from src.api.v1.cve import get_fleet_cves_summary, sync_cve_database
-from src.api.v1.syslog import get_syslog_provisioning_template
+from src.api.v1.cve import get_fleet_cves_summary, get_router_cves, sync_cve_database
+from src.api.v1.syslog import get_router_syslog, get_syslog_provisioning_template
 from src.models.core import Tenant, TenantStatusEnum
+from src.models.inventory import Router
 from src.schemas.cve import CveSyncResponse, FleetCveSummary, RouterCveEvaluation
 from src.services.cve_matcher import (
+    _check_single_clause,
     compare_ros_versions,
     evaluate_fleet_cves,
     evaluate_router_cves,
     is_version_affected,
     load_cve_catalog,
     parse_ros_version,
+    sync_cve_catalog,
 )
 from src.workers.syslog_collector import (
+    SyslogUdpProtocol,
     get_router_syslog_events,
     parse_syslog_message,
     push_event_to_ringbuffer,
@@ -38,8 +43,11 @@ def test_compare_semver():
     v1 = (7, 12, 0)
     v2 = (7, 13, 0)
     assert compare_ros_versions(v1, "<", v2) is True
+    assert compare_ros_versions(v1, "<=", v2) is True
+    assert compare_ros_versions(v2, ">", v1) is True
     assert compare_ros_versions(v1, ">=", v2) is False
     assert compare_ros_versions(v1, "==", (7, 12, 0)) is True
+    assert compare_ros_versions(v1, "!=", v2) is False
 
 
 def test_is_version_affected():
@@ -49,6 +57,8 @@ def test_is_version_affected():
     assert is_version_affected("7.16.2", expr) is False
     assert is_version_affected("6.49", expr) is False
     assert is_version_affected(None, expr) is False
+    assert _check_single_clause((7, 15, 0), "invalid_clause") is False
+    assert _check_single_clause((7, 15, 0), ">=invalid_version") is False
 
 
 def test_cve_catalog_loading():
@@ -164,3 +174,220 @@ async def test_syslog_api_template_endpoint(sample_tenant, sample_claims):
     res = await get_syslog_provisioning_template(claims=sample_claims, db=db)
     assert "/system logging action" in res.template_content
     assert res.default_port == 5514
+
+
+@pytest.mark.asyncio
+async def test_syslog_api_template_tenant_not_found(sample_claims):
+    db = AsyncMock()
+    db.get.return_value = None
+    with pytest.raises(HTTPException) as exc:
+        await get_syslog_provisioning_template(claims=sample_claims, db=db)
+    assert exc.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_syslog_api_template_feature_disabled(sample_tenant, sample_claims):
+    sample_tenant.syslog_collector_enabled = False
+    db = AsyncMock()
+    db.get.return_value = sample_tenant
+    with pytest.raises(HTTPException) as exc:
+        await get_syslog_provisioning_template(claims=sample_claims, db=db)
+    assert exc.value.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_get_router_syslog_endpoint(sample_tenant, sample_claims):
+    db = AsyncMock()
+    db.get.return_value = sample_tenant
+    router_id = uuid.uuid4()
+    mock_router = Router(id=router_id, tenant_id=sample_tenant.id, display_name="R-Test", is_reachable=True)
+    mock_res = MagicMock()
+    mock_res.scalar_one_or_none.return_value = mock_router
+    db.execute.return_value = mock_res
+
+    with patch("src.api.v1.syslog.get_router_syslog_events", AsyncMock(return_value=[])):
+        res = await get_router_syslog(router_id=router_id, limit=20, claims=sample_claims, db=db)
+        assert res.router_id == router_id
+        assert res.total_in_buffer == 0
+
+
+@pytest.mark.asyncio
+async def test_get_router_syslog_router_not_found(sample_tenant, sample_claims):
+    db = AsyncMock()
+    db.get.return_value = sample_tenant
+    mock_res = MagicMock()
+    mock_res.scalar_one_or_none.return_value = None
+    db.execute.return_value = mock_res
+
+    with pytest.raises(HTTPException) as exc:
+        await get_router_syslog(router_id=uuid.uuid4(), limit=20, claims=sample_claims, db=db)
+    assert exc.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_get_router_syslog_tenant_not_found(sample_claims):
+    db = AsyncMock()
+    db.get.return_value = None
+    with pytest.raises(HTTPException) as exc:
+        await get_router_syslog(router_id=uuid.uuid4(), limit=20, claims=sample_claims, db=db)
+    assert exc.value.status_code == 404
+
+
+def test_parse_syslog_local_facility():
+    # pri 134: facility = 134 >> 3 = 16 (local0), severity = 134 & 7 = 6 (info)
+    msg = "<134>Feb 20 10:00:00 MikroTik system,info local facility test"
+    event = parse_syslog_message(msg)
+    assert event.facility == "local16"
+    assert event.severity == "info"
+
+
+@pytest.mark.asyncio
+async def test_push_event_to_ringbuffer_handles_redis_error():
+    ev = parse_syslog_message("<11> critical down")
+    with patch("src.workers.syslog_collector.get_redis_client", side_effect=Exception("Redis down")):
+        # Should not raise exception
+        await push_event_to_ringbuffer(uuid.uuid4(), uuid.uuid4(), ev)
+
+
+@pytest.mark.asyncio
+async def test_get_router_syslog_events_handles_redis_error():
+    with patch("src.workers.syslog_collector.get_redis_client", side_effect=Exception("Redis down")):
+        events = await get_router_syslog_events(uuid.uuid4(), uuid.uuid4())
+        assert events == []
+
+
+def test_syslog_udp_protocol():
+    tid = uuid.uuid4()
+    rid = uuid.uuid4()
+    ip_map = {"192.168.1.1": (tid, rid)}
+    proto = SyslogUdpProtocol(ip_map)
+
+    # Unknown IP dropped
+    proto.datagram_received(b"<14>test", ("10.0.0.99", 5514))
+
+    # Known IP processed
+    with patch("src.workers.syslog_collector.push_event_to_ringbuffer", AsyncMock()):
+        proto.datagram_received(b"<14>test known", ("192.168.1.1", 5514))
+
+    # Error handling during decode / parse
+    with patch("src.workers.syslog_collector.parse_syslog_message", side_effect=Exception("parse error")):
+        proto.datagram_received(b"broken", ("192.168.1.1", 5514))
+
+
+def test_cve_catalog_loading_missing_and_corrupt(tmp_path):
+    with patch("src.services.cve_matcher._CATALOG_PATH", tmp_path / "nonexistent.json"):
+        cat = load_cve_catalog(force_reload=True)
+        assert cat == []
+
+    corrupt_file = tmp_path / "corrupt.json"
+    corrupt_file.write_text("not json content", encoding="utf-8")
+    with patch("src.services.cve_matcher._CATALOG_PATH", corrupt_file):
+        cat_corrupt = load_cve_catalog(force_reload=True)
+        assert cat_corrupt == []
+
+
+@pytest.mark.asyncio
+async def test_sync_cve_catalog(tmp_path):
+    # Successful mock response
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = [
+        {
+            "cve_id": "CVE-2026-9999",
+            "title": "Mock Vulnerability",
+            "cvss_score": 8.0,
+            "severity": "HIGH",
+            "affected_versions_expr": ">=7.0.0,<7.20.0",
+            "fixed_in_version": "7.20.0",
+            "description_es": "Descripción de prueba",
+            "remediation": "Actualizar RouterOS",
+            "published_date": "2026-01-01",
+        }
+    ]
+
+    mock_client = AsyncMock()
+    mock_client.get.return_value = mock_resp
+    mock_client.__aenter__.return_value = mock_client
+    mock_client.__aexit__.return_value = None
+
+    mock_catalog_file = tmp_path / "mock_catalog.json"
+    with (
+        patch("httpx.AsyncClient", return_value=mock_client),
+        patch("src.services.cve_matcher._CATALOG_PATH", mock_catalog_file),
+    ):
+        res = await sync_cve_catalog("https://example.com/cve-feed")
+        assert res.success is True
+        assert res.total_cves == 1
+
+    # Failure fallback to local catalog
+    mock_fail_client = AsyncMock()
+    mock_fail_client.get.side_effect = Exception("Network timeout")
+    mock_fail_client.__aenter__.return_value = mock_fail_client
+    mock_fail_client.__aexit__.return_value = None
+
+    with patch("httpx.AsyncClient", return_value=mock_fail_client):
+        res_fail = await sync_cve_catalog("https://invalid.local")
+        assert res_fail.success is False
+        assert res_fail.total_cves >= 0
+
+
+@pytest.mark.asyncio
+async def test_get_router_cves_endpoint(sample_tenant, sample_claims):
+    db = AsyncMock()
+    db.get.return_value = sample_tenant
+    r_id = uuid.uuid4()
+    mock_r = Router(id=r_id, tenant_id=sample_tenant.id, display_name="R1", ros_version="7.10")
+    mock_res = MagicMock()
+    mock_res.scalar_one_or_none.return_value = mock_r
+    db.execute.return_value = mock_res
+
+    res = await get_router_cves(router_id=r_id, claims=sample_claims, db=db)
+    assert res.router_id == r_id
+    assert res.total_vulnerabilities > 0
+
+
+@pytest.mark.asyncio
+async def test_get_router_cves_not_found(sample_tenant, sample_claims):
+    db = AsyncMock()
+    db.get.return_value = sample_tenant
+    mock_res = MagicMock()
+    mock_res.scalar_one_or_none.return_value = None
+    db.execute.return_value = mock_res
+
+    with pytest.raises(HTTPException) as exc:
+        await get_router_cves(router_id=uuid.uuid4(), claims=sample_claims, db=db)
+    assert exc.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_cve_endpoints_tenant_not_found_and_disabled(sample_tenant, sample_claims):
+    db = AsyncMock()
+    db.get.return_value = None
+
+    with pytest.raises(HTTPException) as exc:
+        await get_fleet_cves_summary(claims=sample_claims, db=db)
+    assert exc.value.status_code == 404
+
+    with pytest.raises(HTTPException) as exc:
+        await sync_cve_database(claims=sample_claims, db=db)
+    assert exc.value.status_code == 404
+
+    with pytest.raises(HTTPException) as exc:
+        await get_router_cves(router_id=uuid.uuid4(), claims=sample_claims, db=db)
+    assert exc.value.status_code == 404
+
+    # Feature disabled
+    sample_tenant.cve_scanner_enabled = False
+    db.get.return_value = sample_tenant
+
+    with pytest.raises(HTTPException) as exc:
+        await get_fleet_cves_summary(claims=sample_claims, db=db)
+    assert exc.value.status_code == 403
+
+    with pytest.raises(HTTPException) as exc:
+        await sync_cve_database(claims=sample_claims, db=db)
+    assert exc.value.status_code == 403
+
+    with pytest.raises(HTTPException) as exc:
+        await get_router_cves(router_id=uuid.uuid4(), claims=sample_claims, db=db)
+    assert exc.value.status_code == 403

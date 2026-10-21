@@ -3,6 +3,7 @@
 
 import hashlib
 import hmac
+import logging
 import os
 import time
 
@@ -12,6 +13,8 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from src.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 _EXCLUDED_PATHS = {
     "/api/v1/auth/login",
@@ -90,8 +93,8 @@ def _extract_cookie_session(request: Request) -> tuple[str | None, str | None]:
                 if sub:
                     request.state.user_id = str(sub)
                 return str(sid), str(tid)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Error extrayendo cookie session: %s", exc)
 
     return None, None
 

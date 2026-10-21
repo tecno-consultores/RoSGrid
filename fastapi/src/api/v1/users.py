@@ -495,7 +495,7 @@ async def generate_user_mcp_token(
 
     return McpTokenResponse(
         token=token,
-        token_type="Bearer",
+        token_type="Bearer",  # nosec B106
         session_id=session_id,
         expires_at=exp_iso,
         expiry_days=expiry_days,
