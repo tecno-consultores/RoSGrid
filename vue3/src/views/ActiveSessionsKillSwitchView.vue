@@ -22,6 +22,27 @@
   const sessions = ref<ActiveSessionItem[]>([]);
   const isRevoking = ref(false);
 
+  // Filtros de Sesiones (Humanos vs Agentes IA MCP)
+  type SessionFilterType = 'ALL' | 'HUMAN' | 'MCP';
+  const currentFilter = ref<SessionFilterType>('ALL');
+
+  const mcpSessionsCount = computed(
+    () => sessions.value.filter((s) => s.is_service_account || s.role === 'SERVICE_ACCOUNT').length,
+  );
+  const humanSessionsCount = computed(
+    () =>
+      sessions.value.filter((s) => !s.is_service_account && s.role !== 'SERVICE_ACCOUNT').length,
+  );
+  const filteredSessions = computed(() => {
+    if (currentFilter.value === 'MCP') {
+      return sessions.value.filter((s) => s.is_service_account || s.role === 'SERVICE_ACCOUNT');
+    }
+    if (currentFilter.value === 'HUMAN') {
+      return sessions.value.filter((s) => !s.is_service_account && s.role !== 'SERVICE_ACCOUNT');
+    }
+    return sessions.value;
+  });
+
   // Modal para revocar con motivo
   const isRevokeModalOpen = ref(false);
   const sessionToRevoke = ref<ActiveSessionItem | null>(null);
@@ -34,19 +55,42 @@
     isLoading.value = true;
     errorMessage.value = '';
     try {
-      const res = await http.get<{ items: any[] } | any[]>('/api/v1/sessions/active');
+      const res = await http.get<{ items?: ActiveSessionItem[] } | ActiveSessionItem[]>(
+        '/api/v1/sessions/active',
+      );
       const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
-      sessions.value = raw.map((item: any) => ({
+      sessions.value = raw.map((item: Partial<ActiveSessionItem> & Record<string, unknown>) => ({
         ...item,
-        last_active_at: item.last_active_at || item.last_activity_at || new Date().toISOString(),
+        session_id: String(item.session_id || ''),
+        user_id: String(item.user_id || ''),
+        username: String(item.username || 'unknown'),
+        tenant_slug: String(item.tenant_slug || ''),
+        role: String(item.role || 'GUEST'),
+        ip_address: String(item.ip_address || '127.0.0.1'),
+        user_agent: String(item.user_agent || ''),
+        login_at: String(item.login_at || new Date().toISOString()),
+        mfa_verified: Boolean(item.mfa_verified),
+        is_current: Boolean(item.is_current),
+        is_service_account: Boolean(item.is_service_account || item.role === 'SERVICE_ACCOUNT'),
+        issued_by_username:
+          typeof item.issued_by_username === 'string' ? item.issued_by_username : null,
+        allowed_cidr_list: Array.isArray(item.allowed_cidr_list)
+          ? (item.allowed_cidr_list as string[])
+          : [],
+        last_active_at: String(
+          item.last_active_at || item.last_activity_at || new Date().toISOString(),
+        ),
         seconds_since_active:
-          item.seconds_since_active ??
-          (item.last_activity_at
-            ? Math.max(
-                0,
-                Math.floor((Date.now() - new Date(item.last_activity_at).getTime()) / 1000),
-              )
-            : 0),
+          typeof item.seconds_since_active === 'number'
+            ? item.seconds_since_active
+            : item.last_activity_at
+              ? Math.max(
+                  0,
+                  Math.floor(
+                    (Date.now() - new Date(String(item.last_activity_at)).getTime()) / 1000,
+                  ),
+                )
+              : 0,
       }));
     } catch {
       // Sin datos de demostración en producción
@@ -56,7 +100,10 @@
     }
   }
 
-  function parseUserAgent(ua: string): string {
+  function parseUserAgent(ua: string, isMcp?: boolean): string {
+    if (isMcp || ua.includes('MCP') || ua.includes('Daemon')) {
+      return '🤖 Agente IA (MCP)';
+    }
     if (ua.includes('iPhone') || ua.includes('Android') || ua.includes('Mobile')) {
       return '📱 Móvil / Tablet';
     }
@@ -75,9 +122,13 @@
   function openRevokeModal(session: ActiveSessionItem, allDevices = false) {
     sessionToRevoke.value = session;
     revokeAllForUser.value = allDevices;
-    revokeReason.value = allDevices
-      ? 'Comportamiento sospechoso o bloqueo de cuenta'
-      : 'Cierre forzado de sesión';
+    if (session.is_service_account || session.role === 'SERVICE_ACCOUNT') {
+      revokeReason.value = 'Revocación de credenciales del Agente MCP (Kill-Switch)';
+    } else {
+      revokeReason.value = allDevices
+        ? 'Comportamiento sospechoso o bloqueo de cuenta'
+        : 'Cierre forzado de sesión';
+    }
     isRevokeModalOpen.value = true;
   }
 
@@ -158,33 +209,85 @@
       {{ successMessage }}
     </div>
 
+    <!-- Selector de Filtros: Humanos vs Agentes IA MCP -->
+    <div class="session-filters">
+      <button
+        type="button"
+        class="filter-tab"
+        :class="{ 'filter-tab--active': currentFilter === 'ALL' }"
+        @click="currentFilter = 'ALL'"
+      >
+        🌐 Todas las Sesiones ({{ sessions.length }})
+      </button>
+      <button
+        type="button"
+        class="filter-tab"
+        :class="{ 'filter-tab--active': currentFilter === 'HUMAN' }"
+        @click="currentFilter = 'HUMAN'"
+      >
+        👤 Operadores Humanos ({{ humanSessionsCount }})
+      </button>
+      <button
+        type="button"
+        class="filter-tab filter-tab--mcp"
+        :class="{ 'filter-tab--active': currentFilter === 'MCP' }"
+        @click="currentFilter = 'MCP'"
+      >
+        🤖 Agentes IA MCP ({{ mcpSessionsCount }})
+      </button>
+    </div>
+
     <div class="table-container">
       <table class="rg-table" aria-label="Tabla de sesiones activas en KeyDB">
         <thead>
           <tr>
-            <th scope="col">Operador / Rol</th>
+            <th scope="col">Operador / Agente IA</th>
             <th scope="col">Origen IP y Dispositivo</th>
-            <th scope="col">Actividad en Vivo (MikroTik)</th>
+            <th scope="col">Actividad en Vivo (MikroTik / MCP)</th>
             <th scope="col">Última Acción</th>
             <th scope="col">Inicio de Sesión</th>
             <th scope="col" class="col-actions">Acciones Kill-Switch</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="s in sessions" :key="s.session_id">
+          <tr v-for="s in filteredSessions" :key="s.session_id">
             <td class="cell-user">
-              <strong>{{ s.full_name || s.username }}</strong>
+              <div class="user-name-line">
+                <strong>{{ s.full_name || s.username }}</strong>
+                <span
+                  v-if="s.is_service_account"
+                  class="badge-mcp-tag"
+                  title="Agente IA conectado vía MCP"
+                >
+                  🤖 MCP
+                </span>
+              </div>
               <div class="user-meta">
                 <code>@{{ s.username }}</code>
                 <span class="badge-role">{{ s.role }}</span>
+                <span
+                  v-if="s.issued_by_username"
+                  class="badge-lineage"
+                  title="Administrador que emitió el token"
+                >
+                  Por: @{{ s.issued_by_username }}
+                </span>
               </div>
             </td>
             <td class="cell-origin">
-              <span class="ip-address">{{ s.ip_address }}</span>
-              <span class="user-agent">{{ parseUserAgent(s.user_agent) }}</span>
+              <span class="ip-address">{{ s.ip_address || '127.0.0.1' }}</span>
+              <span class="user-agent">{{
+                parseUserAgent(s.user_agent, s.is_service_account)
+              }}</span>
+              <span v-if="s.allowed_cidr_list && s.allowed_cidr_list.length > 0" class="cidr-list">
+                CIDR: {{ s.allowed_cidr_list.join(', ') }}
+              </span>
             </td>
             <td class="cell-activity">
-              <template v-if="s.current_router_name">
+              <span v-if="s.is_service_account" class="mcp-live-indicator">
+                ⚡ Invocaciones JSON-RPC 2.0 (/api/v1/mcp)
+              </span>
+              <template v-else-if="s.current_router_name">
                 <router-link
                   :to="s.current_view_path || `/routers/${s.current_router_id}/webfig`"
                   class="router-link"
@@ -206,12 +309,18 @@
                 <button
                   type="button"
                   class="btn-kill-session"
-                  aria-label="Revocar esta sesión individual"
+                  :class="{ 'btn-kill-session--mcp': s.is_service_account }"
+                  :aria-label="
+                    s.is_service_account
+                      ? 'Revocar Token MCP de este agente'
+                      : 'Revocar esta sesión individual'
+                  "
                   @click="openRevokeModal(s, false)"
                 >
-                  Revocar
+                  {{ s.is_service_account ? '🛑 Revocar Token' : 'Revocar' }}
                 </button>
                 <button
+                  v-if="!s.is_service_account"
                   type="button"
                   class="btn-kill-user"
                   aria-label="Expulsar de todos los dispositivos y bloquear"
@@ -223,8 +332,16 @@
               <span v-else class="text-readonly">Solo Lectura</span>
             </td>
           </tr>
-          <tr v-if="sessions.length === 0 && !isLoading">
-            <td colspan="6" class="cell-empty">No hay sesiones activas registradas en KeyDB.</td>
+          <tr v-if="filteredSessions.length === 0 && !isLoading">
+            <td colspan="6" class="cell-empty">
+              {{
+                currentFilter === 'MCP'
+                  ? 'No hay agentes MCP activos registrados en KeyDB.'
+                  : currentFilter === 'HUMAN'
+                    ? 'No hay operadores humanos conectados en este momento.'
+                    : 'No hay sesiones activas registradas en KeyDB.'
+              }}
+            </td>
           </tr>
         </tbody>
       </table>
@@ -621,5 +738,104 @@
   .btn-confirm-kill:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+  }
+
+  /* Filtros de Sesiones */
+  .session-filters {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .filter-tab {
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--rg-border-grid, #1e293b);
+    color: var(--rg-text-muted, #94a3b8);
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .filter-tab:hover {
+    color: var(--rg-text-primary, #f8fafc);
+    border-color: #334155;
+  }
+
+  .filter-tab--active {
+    background: rgba(34, 211, 238, 0.12);
+    border-color: var(--rg-accent-cyan, #22d3ee);
+    color: var(--rg-accent-cyan, #22d3ee);
+  }
+
+  .filter-tab--mcp.filter-tab--active {
+    background: rgba(168, 85, 247, 0.15);
+    border-color: #a855f7;
+    color: #c084fc;
+  }
+
+  /* Elementos Visuales MCP */
+  .user-name-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .badge-mcp-tag {
+    background: rgba(168, 85, 247, 0.15);
+    color: #c084fc;
+    border: 1px solid #9333ea;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-lineage {
+    background: rgba(34, 211, 238, 0.1);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 500;
+  }
+
+  .cidr-list {
+    display: block;
+    font-size: 0.72rem;
+    color: #10b981;
+    font-family: monospace;
+    margin-top: 2px;
+  }
+
+  .mcp-live-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #a855f7;
+    font-family: monospace;
+    background: rgba(168, 85, 247, 0.08);
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(168, 85, 247, 0.25);
+  }
+
+  .btn-kill-session--mcp {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid #ef4444;
+    color: #fca5a5;
+    font-weight: 700;
+  }
+
+  .btn-kill-session--mcp:hover {
+    background: #ef4444;
+    color: #ffffff;
   }
 </style>

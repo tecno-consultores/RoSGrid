@@ -1,24 +1,31 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 RoSGrid Contributors
 
+import json
 import secrets
+import time
 import uuid
 from typing import Any
 
+import jwt
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import require_roles
+from src.core.audit import write_audit_log
+from src.core.config import settings
 from src.core.crypto import hash_password
 from src.db.session import get_db_session, set_tenant_context
-from src.models.core import SystemRoleEnum, User, UserRouterPermission
+from src.models.core import SystemRoleEnum, Tenant, User, UserRouterPermission
 from src.redis_layer.client import get_redis_client
 from src.redis_layer.sessions import kill_all_user_sessions
 from src.schemas.users import (
     AssignUserRoutersRequest,
     CreateUserRequest,
+    GenerateMcpTokenRequest,
+    McpTokenResponse,
     UserResponse,
 )
 
@@ -350,3 +357,140 @@ async def reject_user(
             u_reload.username = f"rejected_{u_reload.username}_{rnd_suffix}"
             u_reload.email = f"rejected_{rnd_suffix}_{u_reload.email}"
             await db.commit()
+
+
+@router.post("/{user_id}/mcp-token", response_model=McpTokenResponse)
+async def generate_user_mcp_token(
+    user_id: uuid.UUID,
+    body: GenerateMcpTokenRequest | None = None,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+        )
+    ),
+    db: AsyncSession = Depends(get_db_session),
+) -> McpTokenResponse:
+    """Emite un token Bearer JWT de larga duración para operar el endpoint MCP y registra la sesión en KeyDB."""
+    caller_role = claims.get("rol")
+    caller_tenant_id = uuid.UUID(claims["tid"])
+    caller_username = claims.get("preferred_username") or claims.get("sub") or "admin"
+    is_sa = caller_role == SystemRoleEnum.SUPERADMIN_GLOBAL.value
+
+    await set_tenant_context(db, caller_tenant_id, is_superadmin=is_sa)
+
+    if is_sa:
+        stmt = select(User).where(User.id == user_id)
+    else:
+        stmt = select(User).where(User.id == user_id, User.tenant_id == caller_tenant_id)
+
+    res = await db.execute(stmt)
+    target_user = res.scalar_one_or_none()
+    if not target_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
+
+    allowed_mcp_roles = {
+        SystemRoleEnum.SERVICE_ACCOUNT,
+        SystemRoleEnum.TENANT_ADMIN,
+        SystemRoleEnum.SUPERADMIN_GLOBAL,
+    }
+    if target_user.role not in allowed_mcp_roles:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"El usuario con rol '{target_user.role.value}' no tiene permitido operar el endpoint MCP (roles permitidos: SERVICE_ACCOUNT, TENANT_ADMIN, SUPERADMIN_GLOBAL)",
+        )
+
+    stmt_t = select(Tenant).where(Tenant.id == target_user.tenant_id)
+    res_t = await db.execute(stmt_t)
+    tenant = res_t.scalar_one_or_none()
+    tenant_slug = tenant.slug if tenant else "default"
+
+    expiry_days = body.expiry_days if body else 365
+    session_id = str(uuid.uuid4())
+    redis = get_redis_client()
+    now = int(time.time())
+    ttl_seconds = expiry_days * 86400
+    now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now))
+    exp_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now + ttl_seconds))
+
+    allowed_ip = (
+        target_user.allowed_cidr_list[0]
+        if (target_user.allowed_cidr_list and len(target_user.allowed_cidr_list) > 0)
+        else "127.0.0.1"
+    )
+
+    sess_key = f"rg:{target_user.tenant_id}:sess:{session_id}"
+    active_sess_key = f"rg:{target_user.tenant_id}:active_sessions"
+    user_sess_key = f"rg:{target_user.tenant_id}:user_sessions:{target_user.id}"
+
+    mapping = {
+        "session_id": session_id,
+        "user_id": str(target_user.id),
+        "username": target_user.username,
+        "full_name": target_user.full_name or target_user.username,
+        "role": target_user.role.value,
+        "tenant_id": str(target_user.tenant_id),
+        "created_at": now_iso,
+        "last_activity_at": now_iso,
+        "ip_address": allowed_ip,
+        "user_agent": "RoSGrid-MCP-Daemon/1.0",
+        "is_service_account": "true",
+        "issued_by_username": str(caller_username),
+        "allowed_cidr_list": json.dumps(target_user.allowed_cidr_list),
+    }
+
+    pipe = redis.pipeline()
+    pipe.hset(sess_key, mapping=mapping)  # type: ignore[arg-type]
+    pipe.expire(sess_key, ttl_seconds)
+    pipe.zadd(active_sess_key, {session_id: float(now)})
+    pipe.sadd(user_sess_key, session_id)
+    pipe.expire(user_sess_key, ttl_seconds)
+    await pipe.execute()
+
+    payload = {
+        "sub": str(target_user.id),
+        "tid": str(target_user.tenant_id),
+        "tslug": tenant_slug,
+        "sid": session_id,
+        "rol": target_user.role.value,
+        "all_r": target_user.has_all_routers_access,
+        "preferred_username": target_user.username,
+        "iat": now,
+        "exp": now + ttl_seconds,
+    }
+    token = jwt.encode(payload, settings.ROSGRID_JWT_SECRET_KEY, algorithm="HS256")
+
+    await write_audit_log(
+        session=db,
+        tenant_id=target_user.tenant_id,
+        actor_username=str(caller_username),
+        actor_role=str(caller_role or "ADMIN"),
+        actor_ip=str(claims.get("ip_address") or "127.0.0.1"),
+        event_category="MCP_TOKEN_ISSUED",
+        event_action="GENERATE_MCP_TOKEN",
+        actor_user_id=uuid.UUID(claims["sub"]),
+        after_state={
+            "target_user_id": str(target_user.id),
+            "target_username": target_user.username,
+            "role": target_user.role.value,
+            "expiry_days": expiry_days,
+            "session_id": session_id,
+            "allowed_cidr_list": target_user.allowed_cidr_list,
+        },
+        status_code=200,
+    )
+    await db.commit()
+
+    return McpTokenResponse(
+        token=token,
+        token_type="Bearer",
+        session_id=session_id,
+        expires_at=exp_iso,
+        expiry_days=expiry_days,
+        user_id=target_user.id,
+        username=target_user.username,
+        tenant_slug=tenant_slug,
+        role=target_user.role.value,
+        allowed_cidr_list=target_user.allowed_cidr_list,
+        issued_by=str(caller_username),
+    )

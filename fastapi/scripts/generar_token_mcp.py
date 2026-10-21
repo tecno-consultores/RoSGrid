@@ -9,6 +9,7 @@ registrando la sesión activa en KeyDB sin requerir interacción web ni códigos
 
 import argparse
 import asyncio
+import json
 import sys
 import time
 import uuid
@@ -76,17 +77,33 @@ async def generate_mcp_token(
         user.allowed_cidr_list[0] if (user.allowed_cidr_list and len(user.allowed_cidr_list) > 0) else "127.0.0.1"
     )
 
+    now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now))
+    active_sess_key = f"rg:{user.tenant_id}:active_sessions"
+    user_sess_key = f"rg:{user.tenant_id}:user_sessions:{user.id}"
+
     mapping = {
+        "session_id": session_id,
         "user_id": str(user.id),
-        "tenant_id": str(user.tenant_id),
+        "username": user.username,
+        "full_name": user.full_name or user.username,
         "role": user.role.value,
-        "created_at": str(now),
+        "tenant_id": str(user.tenant_id),
+        "created_at": now_iso,
+        "last_activity_at": now_iso,
+        "ip_address": allowed_ip,
         "ip": allowed_ip,
         "user_agent": "RoSGrid-MCP-Daemon/1.0",
         "is_service_account": "true",
+        "issued_by_username": "CLI (Terminal)",
+        "allowed_cidr_list": json.dumps(user.allowed_cidr_list),
     }
-    await redis.hset(sess_key, mapping=mapping)
-    await redis.expire(sess_key, ttl_seconds)
+    pipe = redis.pipeline()
+    pipe.hset(sess_key, mapping=mapping)  # type: ignore[arg-type]
+    pipe.expire(sess_key, ttl_seconds)
+    pipe.zadd(active_sess_key, {session_id: float(now)})
+    pipe.sadd(user_sess_key, session_id)
+    pipe.expire(user_sess_key, ttl_seconds)
+    await pipe.execute()
 
     # 5. Emitir JWT de larga duración
     payload = {

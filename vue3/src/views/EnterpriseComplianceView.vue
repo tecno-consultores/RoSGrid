@@ -26,11 +26,13 @@
     WifiSsidProfile,
   } from '@/types';
 
+  import NotificationChannelsPanel from '@/components/operations/NotificationChannelsPanel.vue';
+
   const { t } = useI18n();
   const authStore = useAuthStore();
   const inventoryStore = useInventoryStore();
 
-  type TabType = 'drift' | 'cis' | 'sdwan' | 'switching' | 'sla' | 'wifi';
+  type TabType = 'drift' | 'cis' | 'sdwan' | 'switching' | 'sla' | 'wifi' | 'notifications';
   const activeTab = ref<TabType>('drift');
 
   const selectedRouterId = ref<string>('');
@@ -166,6 +168,9 @@
   async function loadTabData() {
     errorMessage.value = '';
     successMessage.value = '';
+    if (activeTab.value === 'notifications') {
+      return;
+    }
     if (!selectedRouterId.value) return;
 
     isLoading.value = true;
@@ -520,6 +525,20 @@
       >
         <span class="tab-icon">📶</span>
         <span>{{ t('enterprise.tab_wifi', 'Wi-Fi CAPsMAN') }}</span>
+      </button>
+
+      <button
+        id="tab-btn-notifications"
+        type="button"
+        class="tab-btn"
+        :class="{ active: activeTab === 'notifications' }"
+        :aria-selected="activeTab === 'notifications'"
+        role="tab"
+        aria-controls="panel-notifications"
+        @click="activeTab = 'notifications'"
+      >
+        <span class="tab-icon">🔔</span>
+        <span>{{ t('enterprise.tab_notifications', 'Canales de Alerta & Notificación') }}</span>
       </button>
     </nav>
 
@@ -1137,6 +1156,19 @@
             </tbody>
           </table>
         </div>
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- TAB 7: Canales de Notificación y Alertas                          -->
+      <!-- ================================================================= -->
+      <section
+        v-else-if="activeTab === 'notifications'"
+        id="panel-notifications"
+        role="tabpanel"
+        aria-labelledby="tab-btn-notifications"
+        class="tab-pane"
+      >
+        <NotificationChannelsPanel />
       </section>
     </div>
   </main>

@@ -18,6 +18,9 @@ class ActiveSessionItem(BaseModel):
     current_view_path: str | None = None
     created_at: str
     last_activity_at: str
+    is_service_account: bool = False
+    issued_by_username: str | None = None
+    allowed_cidr_list: list[str] = Field(default_factory=list)
 
 
 class ActiveSessionsListResponse(BaseModel):

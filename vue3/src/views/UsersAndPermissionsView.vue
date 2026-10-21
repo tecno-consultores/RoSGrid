@@ -6,10 +6,11 @@
   import { useRoute, useRouter } from 'vue-router';
   import { http } from '@/api/httpClient';
   import { useAuthStore } from '@/stores/useAuthStore';
-  import type { SystemRole, UserManagementItem } from '@/types';
+  import type { SystemRole, UserManagementItem, McpTokenResponse } from '@/types';
   import RgStepUp2FAModal from '@/components/common/RgStepUp2FAModal.vue';
   import UserRouterMatrixModal from '@/components/admin/UserRouterMatrixModal.vue';
   import RbacRoleMatrixPanel from '@/components/admin/RbacRoleMatrixPanel.vue';
+  import RgMcpTokenModal from '@/components/admin/RgMcpTokenModal.vue';
 
   const route = useRoute();
   const router = useRouter();
@@ -61,6 +62,22 @@
   // Modal Matriz de Routers
   const isMatrixModalOpen = ref(false);
   const selectedUserForMatrix = ref<UserManagementItem | null>(null);
+
+  // Modal Generador de Token MCP (Agentes IA)
+  const isMcpTokenModalOpen = ref(false);
+  const targetUserForMcp = ref<UserManagementItem | null>(null);
+
+  function openMcpTokenModal(user: UserManagementItem) {
+    targetUserForMcp.value = user;
+    isMcpTokenModalOpen.value = true;
+  }
+
+  function handleMcpTokenGenerated(res: McpTokenResponse) {
+    successMessage.value = `Token MCP generado exitosamente para @${res.username}.`;
+    setTimeout(() => {
+      successMessage.value = '';
+    }, 4000);
+  }
 
   // 11 Roles Oficiales del Sistema RoSGrid
   const availableRoles: SystemRole[] = [
@@ -624,6 +641,21 @@
                   >
                     ↺ Reset 2FA
                   </button>
+
+                  <button
+                    v-if="
+                      isWriteAuthorized &&
+                      (u.role === 'SERVICE_ACCOUNT' ||
+                        u.role === 'TENANT_ADMIN' ||
+                        u.role === 'SUPERADMIN_GLOBAL')
+                    "
+                    type="button"
+                    class="btn-mcp"
+                    aria-label="Generar Token de Acceso MCP para agentes IA"
+                    @click="openMcpTokenModal(u)"
+                  >
+                    ⚡ Token MCP
+                  </button>
                 </template>
               </td>
             </tr>
@@ -878,6 +910,14 @@
         </form>
       </div>
     </div>
+
+    <!-- Modal para Generación de Token MCP para Agentes IA -->
+    <RgMcpTokenModal
+      :is-open="isMcpTokenModalOpen"
+      :user="targetUserForMcp"
+      @close="isMcpTokenModalOpen = false"
+      @token-generated="handleMcpTokenGenerated"
+    />
   </div>
 </template>
 
@@ -1402,5 +1442,25 @@
     line-height: 1.35;
     color: var(--rg-text-secondary, #cbd5e1);
     margin: 0;
+  }
+
+  .btn-mcp {
+    background: rgba(56, 189, 248, 0.12);
+    color: #38bdf8;
+    border: 1px solid #0284c7;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      background-color 0.15s,
+      color 0.15s;
+    white-space: nowrap;
+  }
+
+  .btn-mcp:hover {
+    background-color: #0284c7;
+    color: #ffffff;
   }
 </style>

@@ -210,6 +210,9 @@ export interface ActiveSessionItem {
   created_at: string;
   last_active_at: string;
   seconds_since_active: number;
+  is_service_account?: boolean;
+  issued_by_username?: string;
+  allowed_cidr_list?: string[];
 }
 
 export interface CsvDryRunRow {
@@ -987,4 +990,55 @@ export interface WifiClientItem {
   rx_rate_mbps: number;
   fast_roaming_supported: boolean;
   connected_duration_seconds: number;
+}
+
+export interface GenerateMcpTokenRequest {
+  expiry_days: number;
+}
+
+export interface McpTokenResponse {
+  token: string;
+  token_type: string;
+  session_id: string;
+  expires_at: string;
+  expiry_days: number;
+  user_id: string;
+  username: string;
+  tenant_slug: string;
+  role: string;
+  allowed_cidr_list: string[];
+  issued_by: string;
+}
+
+export type AlertChannelType = 'TELEGRAM_BOT' | 'SMTP_EMAIL' | 'GENERIC_WEBHOOK';
+
+export interface NotificationChannelItem {
+  id: string;
+  tenant_id: string;
+  name: string;
+  channel_type: AlertChannelType;
+  is_enabled: boolean;
+  subscribed_events: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NotificationChannelCreateRequest {
+  name: string;
+  channel_type: AlertChannelType;
+  is_enabled: boolean;
+  config: Record<string, any>;
+  subscribed_events: string[];
+}
+
+export interface NotificationChannelUpdateRequest {
+  name?: string;
+  is_enabled?: boolean;
+  config?: Record<string, any>;
+  subscribed_events?: string[];
+}
+
+export interface NotificationTestResponse {
+  status: 'SUCCESS' | 'FAILED';
+  detail: string;
 }

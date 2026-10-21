@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 RoSGrid Contributors
 
+import json
 import uuid
 from typing import Any
 
@@ -42,6 +43,18 @@ async def list_active_sessions(
         sid_str = sid.decode("utf-8") if isinstance(sid, bytes) else str(sid)
         sess_data = await redis.hgetall(f"rg:{tenant_id}:sess:{sid_str}")
         if sess_data:
+            is_sa = str(sess_data.get("is_service_account", "")).lower() in ("true", "1")
+            raw_cidrs = sess_data.get("allowed_cidr_list")
+            parsed_cidrs: list[str] = []
+            if raw_cidrs:
+                try:
+                    loaded = json.loads(str(raw_cidrs))
+                    if isinstance(loaded, list):
+                        parsed_cidrs = [str(c) for c in loaded]
+                except Exception:
+                    parsed_cidrs = [c.strip() for c in str(raw_cidrs).split(",") if c.strip()]
+
+            issued_by_val = sess_data.get("issued_by_username")
             items.append(
                 ActiveSessionItem(
                     session_id=str(sess_data.get("session_id", sid_str)),
@@ -49,7 +62,7 @@ async def list_active_sessions(
                     username=str(sess_data.get("username", "")),
                     full_name=str(sess_data.get("full_name", "")),
                     role=str(sess_data.get("role", "")),
-                    ip_address=str(sess_data.get("ip_address", "")),
+                    ip_address=str(sess_data.get("ip_address") or sess_data.get("ip") or ""),
                     user_agent=str(sess_data.get("user_agent", "")),
                     current_router_id=str(sess_data.get("current_router_id"))
                     if sess_data.get("current_router_id")
@@ -62,6 +75,9 @@ async def list_active_sessions(
                     else None,
                     created_at=str(sess_data.get("created_at", "")),
                     last_activity_at=str(sess_data.get("last_activity_at", "")),
+                    is_service_account=is_sa,
+                    issued_by_username=str(issued_by_val) if issued_by_val else None,
+                    allowed_cidr_list=parsed_cidrs,
                 )
             )
 

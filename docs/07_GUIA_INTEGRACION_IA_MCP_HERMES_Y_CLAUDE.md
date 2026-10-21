@@ -54,31 +54,35 @@ flowchart TB
 
 ### 1.2 ¿De Dónde Sale el Token Bearer y Cómo se Genera?
 
-Para que un agente de IA pueda interactuar de manera desatendida y continua con `POST /api/v1/mcp` sin requerir interacción con navegador web ni desafíos 2FA manuales, RoSGrid implementa un flujo de emisión de **Tokens de Servicio de Larga Duración**:
+Para que un agente de IA pueda interactuar de manera desatendida y continua con `POST /api/v1/mcp` sin requerir interacción con navegador web ni desafíos 2FA manuales, RoSGrid implementa dos vías de emisión de **Tokens de Servicio de Larga Duración**, ambas con registro de sesión y supervisión activa en KeyDB:
 
-1. **Paso 1 — Creación de la Cuenta de Servicio en RoSGrid:**
-   - Un usuario con rol `SUPERADMIN_GLOBAL` o `TENANT_ADMIN` crea una cuenta con el rol especial **`SERVICE_ACCOUNT`** desde la interfaz web (*Usuarios y Permisos*) o mediante la API `POST /api/v1/users`.
-   - Durante la creación, se define la lista blanca de segmentos de red permitidos (`allowed_cidr_list`, ej. `["192.168.1.50/32"]`). Si la petición proviene de otra IP, la API la rechazará automáticamente.
+#### Método A — Interfaz Gráfica Web (Recomendado)
 
-2. **Paso 2 — Emisión del Token con el Script Oficial `generar_token_mcp.py`:**
-   - En el servidor donde corre RoSGrid, ejecuta el script dentro del contenedor de la API:
+1. Ingrese a la plataforma RoSGrid con un rol administrativo (`SUPERADMIN_GLOBAL` o `TENANT_ADMIN`).
+2. Diríjase al menú **Usuarios y Permisos** (`/users`).
+3. Localice la fila de la cuenta de servicio (`SERVICE_ACCOUNT`) y presione el botón **⚡ Token MCP**.
+4. En el modal interactivo:
+   - Seleccione el período de vigencia deseado: **30 días**, **90 días**, **180 días**, **365 días (1 año)** o **730 días (2 años)**.
+   - Revise la lista blanca CIDR asociada al agente para garantizar que su IP de origen esté autorizada.
+   - Haga clic en **⚡ Generar Token de Acceso MCP**.
+5. Copie el token JWT generado o expanda el acordeón de configuración para obtener los bloques JSON listos para **Claude Desktop** (`claude_desktop_config.json`) o variables de entorno para **Hermes Agent**.
 
-     ```bash
-     docker exec -it rosgrid_api python3 /app/scripts/generar_token_mcp.py --username <NOMBRE_SERVICE_ACCOUNT> --expiry-days 365
-     ```
+> [!TIP]
+> **Supervisión y Kill-Switch en Tiempo Real:** Todos los tokens generados se registran de inmediato en la pantalla de **Sesiones Activas & Kill-Switch** (`/sessions`). En la pestaña **Agentes IA MCP** podrá visualizar la vigencia restante, la autoría de emisión (`Por: @usuario`), los CIDR autorizados y revocar el acceso en 1 clic en caso de comportamiento anómalo.
 
-   - **¿Qué hace este script internamente?**
-     - Localiza la cuenta de servicio y verifica que posea el rol `SERVICE_ACCOUNT`.
-     - Genera un identificador de sesión criptográfico (`session_id` UUIDv4) y registra la sesión activa en KeyDB (`rg:{tenant_id}:sess:{session_id}`) con un tiempo de vida (TTL) equivalente al número de días configurado.
-     - Construye y firma criptográficamente un token JWT (`HS256`) utilizando la llave secreta `ROSGRID_JWT_SECRET_KEY`, inyectando los claims `sub` (User ID), `tid` (Tenant ID), `tslug` (Slug del Tenant), `sid` (Session ID) y `rol` (`SERVICE_ACCOUNT`).
-     - Entrega en la terminal la cabecera completa lista para copiar y pegar:
+#### Método B — Terminal CLI (Dentro del Contenedor)
 
-       ```http
-       Authorization: Bearer eyJhbGciOiJIUzI1NiIsIn...
-       ```
+En el servidor donde corre RoSGrid, puede ejecutar el script de mantenimiento dentro del contenedor de la API:
 
-3. **Paso 3 — Configuración en el Agente IA:**
-   - El token generado se inyecta en la variable de entorno o cabecera `AUTHORIZATION` de la configuración del cliente MCP (Hermes Agent, Claude Desktop, etc.).
+```bash
+docker exec -it rosgrid_api python3 /app/scripts/generar_token_mcp.py --username <NOMBRE_SERVICE_ACCOUNT> --expiry-days 365
+```
+
+- **¿Qué hace internamente?**
+  - Valida la cuenta y su rol `SERVICE_ACCOUNT`.
+  - Genera un `session_id` UUIDv4 y registra la sesión activa en KeyDB (`rg:{tenant_id}:sess:{session_id}`) con TTL y metadatos de autoría (`issued_by_username: "CLI (Terminal)"`).
+  - Emite el JWT `HS256` con los claims requeridos (`sub`, `tid`, `tslug`, `sid`, `rol`).
+  - La sesión también se refleja en la vista de **Sesiones Activas** del frontend para su revocación centralizada.
 
 ---
 

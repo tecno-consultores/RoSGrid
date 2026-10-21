@@ -368,6 +368,12 @@
   - Tipado estricto en frontend con *Type Narrowing* en `escapeHtml` (`vue3/src/utils/security.ts`) para cumplimiento total de `@typescript-eslint/no-base-to-string` y manejo seguro de objetos con prototipo nulo (`Object.create(null)`).
   - Limpieza arquitectónica en frontend: eliminación de carpeta huérfana de scaffolding `vue3/tests/` consolidando la arquitectura de pruebas unitarias co-localizadas en `src/` (`*.unit.ts`, 38 suites, 267 pruebas unitarias 100% exitosas) y sincronización de scripts en `vue3/package.json`.
   - Extracción de barrera de seguridad de credenciales hardcodeadas al script ejecutable independiente `verificar-secretos.sh` con normalización de sintaxis YAML en `lefthook.yml` y certificación ShellCheck (0 errores, 0 advertencias).
-  - Cobertura de backend mantenida en 95.07% con 404 pruebas unitarias aprobadas (`pytest`), 0 errores en `ruff` y `mypy --strict`.
+- [x] **22.14** **Generador Visual de Tokens MCP, Supervisión con Kill-Switch y Panel de Canales de Alerta:**
+  - Modal interactivo de generación de tokens MCP (`RgMcpTokenModal.vue`) integrado en `UsersAndPermissionsView.vue` para cuentas de servicio (`SERVICE_ACCOUNT`, `TENANT_ADMIN`, `SUPERADMIN_GLOBAL`) con selección de vigencia (30 a 730 días) y snippets para Claude Desktop y Hermes Agent.
+  - Supervisión en tiempo real de sesiones de agentes IA en `ActiveSessionsKillSwitchView.vue` con pestañas de filtro, visualización de autoría (`Por: @usuario`), lista blanca CIDR y botón de revocación en caliente (*Kill-Switch*).
+  - Endpoint `POST /api/v1/users/{user_id}/mcp-token` con firma criptográfica JWT HS256, registro en KeyDB (`active_sessions`) y auditoría inmutable WORM.
+  - Sincronización del script CLI `generar_token_mcp.py` con el registro de sesiones activas.
+  - Implementación del componente `NotificationChannelsPanel.vue` integrado como 7ª pestaña en `EnterpriseComplianceView.vue` para administración completa y despacho de pruebas (`POST /{id}/test`) de canales de Telegram, SMTP y Webhooks cifrados en AES-256-GCM.
+  - Certificación QA 11X en Docker: 406 pruebas backend aprobadas (95% cobertura), 278 pruebas frontend aprobadas en 40 archivos, 0 errores en ESLint y Vue-TSC.
 - [ ] **22.3** Actualizar `CHANGELOG.md` consolidando los cambios de `[Unreleased]` dentro del lanzamiento oficial `[1.0.0]` con las métricas certificadas en `TESTING.md`.
 - [ ] **22.4** Ejecutar `./build.sh` (como usuario no-root) con `docker buildx` (`container-builder` + `tonistiigi/binfmt`) para construir y publicar `sinfallas/rosgrid-backend:latest` (`:1.0.0`) y `sinfallas/rosgrid-frontend:latest` (`:1.0.0`) en Docker Hub y limpiar cachés con `prune -af`.

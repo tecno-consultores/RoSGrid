@@ -641,3 +641,99 @@ async def test_tenant_admin_cannot_escalate_to_superadmin(
         assert res_extra.status_code == 422
     finally:
         app.dependency_overrides.pop(get_db_session, None)
+
+
+@pytest.mark.asyncio
+async def test_generate_user_mcp_token_success(
+    async_client: AsyncClient, superadmin_auth: dict[str, str], fake_redis: FakeAsyncRedis
+) -> None:
+    tid = uuid.uuid4()
+    user_id = uuid.uuid4()
+    tenant = Tenant(id=tid, name="ISP Alpha", slug="isp-alpha", status=TenantStatusEnum.ACTIVE)
+    sa_user = User(
+        id=user_id,
+        tenant_id=tid,
+        username="mcp_daemon",
+        email="mcp@isp.test",
+        full_name="MCP Daemon Agent",
+        password_hash="argon2_hash",
+        role=SystemRoleEnum.SERVICE_ACCOUNT,
+        is_active=True,
+        is_locked=False,
+        failed_login_attempts=0,
+        totp_enabled=False,
+        has_all_routers_access=True,
+        allowed_cidr_list=["192.168.1.100/32"],
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+
+    db = MockDbSession(tenants=[tenant], users=[sa_user])
+    app.dependency_overrides[get_db_session] = lambda: db
+    try:
+        res = await async_client.post(
+            f"/api/v1/users/{user_id}/mcp-token",
+            json={"expiry_days": 180},
+            headers={**superadmin_auth, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res.status_code == 200, res.text
+        data = res.json()
+        assert data["token_type"] == "Bearer"
+        assert len(data["token"]) > 30
+        assert data["username"] == "mcp_daemon"
+        assert data["tenant_slug"] == "isp-alpha"
+        assert data["role"] == "SERVICE_ACCOUNT"
+        assert data["expiry_days"] == 180
+        assert data["allowed_cidr_list"] == ["192.168.1.100/32"]
+        assert "issued_by" in data
+
+        # Verificar que la sesión se registró en Redis y en active_sessions
+        session_id = data["session_id"]
+        sess_key = f"rg:{tid}:sess:{session_id}"
+        sess_redis = await fake_redis.hgetall(sess_key)
+        assert sess_redis["is_service_account"] == "true"
+        assert sess_redis["role"] == "SERVICE_ACCOUNT"
+
+        active_sessions = await fake_redis.zrange(f"rg:{tid}:active_sessions", 0, -1)
+        assert session_id in active_sessions
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)
+
+
+@pytest.mark.asyncio
+async def test_generate_user_mcp_token_rejects_unauthorized_role(
+    async_client: AsyncClient, superadmin_auth: dict[str, str], fake_redis: FakeAsyncRedis
+) -> None:
+    tid = uuid.uuid4()
+    user_id = uuid.uuid4()
+    tenant = Tenant(id=tid, name="ISP Alpha", slug="isp-alpha", status=TenantStatusEnum.ACTIVE)
+    support_user = User(
+        id=user_id,
+        tenant_id=tid,
+        username="tech_l1",
+        email="tech@isp.test",
+        full_name="Tech L1",
+        password_hash="argon2_hash",
+        role=SystemRoleEnum.SUPPORT_L1,
+        is_active=True,
+        is_locked=False,
+        failed_login_attempts=0,
+        totp_enabled=False,
+        has_all_routers_access=False,
+        allowed_cidr_list=[],
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+
+    db = MockDbSession(tenants=[tenant], users=[support_user])
+    app.dependency_overrides[get_db_session] = lambda: db
+    try:
+        res = await async_client.post(
+            f"/api/v1/users/{user_id}/mcp-token",
+            json={"expiry_days": 30},
+            headers={**superadmin_auth, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res.status_code == 400
+        assert "roles permitidos" in res.json()["detail"]
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)

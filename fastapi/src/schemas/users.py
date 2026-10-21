@@ -102,3 +102,25 @@ class UserResponse(BaseModel):
     last_login_at: datetime | None
     created_at: datetime
     updated_at: datetime
+
+
+class GenerateMcpTokenRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    expiry_days: int = Field(default=365, ge=1, le=3650, description="Días de validez del token MCP")
+
+
+class McpTokenResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    token: str
+    token_type: str = "Bearer"
+    session_id: str
+    expires_at: str
+    expiry_days: int
+    user_id: uuid.UUID
+    username: str
+    tenant_slug: str
+    role: str
+    allowed_cidr_list: list[str]
+    issued_by: str
