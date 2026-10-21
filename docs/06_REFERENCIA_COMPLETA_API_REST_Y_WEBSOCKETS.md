@@ -1076,3 +1076,157 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
 
 - **Propósito:** Telemetría en tiempo real de clientes Wi-Fi conectados con niveles de señal RSSI (dBm), SNR (dB) y soporte de roaming rápido 802.11r/k/v.
 - **Rol Mínimo:** `OPERATOR`.
+
+---
+
+### 4.6 Automatización Táctica de Flota, Topología L2, Syslog, CVEs y Prometheus (Hito 23.4)
+
+#### 4.6.1 Matriz de Vulnerabilidades CVE (`/api/v1/inventory/cves`)
+
+##### `GET /api/v1/inventory/cves`
+
+- **Propósito:** Evalúa en tiempo real toda la flota adoptada del tenant contra el catálogo de firmas CVE de RouterOS v7.
+- **Feature Flag:** `cve_scanner_enabled`.
+- **Rol Mínimo:** `OPERATOR`.
+- **Respuesta (200 OK):**
+
+  ```json
+  {
+    "total_evaluated_routers": 45,
+    "vulnerable_routers_count": 8,
+    "critical_routers_count": 2,
+    "high_routers_count": 6,
+    "total_unique_cves": 4,
+    "summary_by_severity": { "CRITICAL": 2, "HIGH": 6 },
+    "vulnerable_routers": [
+      {
+        "router_id": "7b8d4f10-1234-4567-89ab-cdef01234567",
+        "display_name": "Edge-CCR2004",
+        "ros_version": "7.15.3",
+        "total_vulnerabilities": 2,
+        "critical_count": 1,
+        "high_count": 1,
+        "medium_count": 0,
+        "max_cvss_score": 9.8,
+        "recommended_target_version": "7.16.2",
+        "vulnerabilities": [
+          {
+            "cve_id": "CVE-2023-32154",
+            "title": "Desbordamiento de búfer en IPv6 Router Advertisement",
+            "cvss_score": 9.8,
+            "severity": "CRITICAL",
+            "affected_versions_expr": ">=7.0.0,<7.9.2",
+            "fixed_in_version": "7.9.2",
+            "description_es": "Desbordamiento en el procesamiento de paquetes IPv6 Neighbor Discovery.",
+            "remediation": "Actualizar a RouterOS 7.9.2 o superior, o deshabilitar IPv6 temporalmente.",
+            "published_date": "2023-05-22"
+          }
+        ]
+      }
+    ],
+    "timestamp": "2026-10-20T21:00:00Z"
+  }
+  ```
+
+##### `POST /api/v1/inventory/cves/sync`
+
+- **Propósito:** Sincroniza y actualiza el catálogo local de firmas de vulnerabilidades desde el feed oficial (NIST NVD / GitHub Advisory).
+- **Feature Flag:** `cve_scanner_enabled`.
+- **Rol Mínimo:** `TENANT_ADMIN`.
+- **Respuesta (200 OK):**
+
+  ```json
+  {
+    "success": true,
+    "source_url": "https://services.nvd.nist.gov/rest/json/cves/2.0",
+    "total_cves": 6,
+    "updated_at": "2026-10-20T21:00:00Z",
+    "message": "Catálogo de CVEs actualizado exitosamente con 6 boletines."
+  }
+  ```
+
+##### `GET /api/v1/inventory/cves/routers/{router_id}`
+
+- **Propósito:** Evaluación detallada individual de vulnerabilidades para un router específico.
+- **Feature Flag:** `cve_scanner_enabled`.
+- **Rol Mínimo:** `OPERATOR`.
+
+#### 4.6.2 Topología Física Layer 2 (`/api/v1/topology/l2`)
+
+##### `GET /api/v1/topology/l2`
+
+- **Propósito:** Descubrimiento y generación del grafo de interconexión física Layer 2 cruzando adyacencias MNDP/LLDP y telemetría PoE (PSE vs PD) de la flota.
+- **Feature Flag:** `l2_topology_enabled`.
+- **Rol Mínimo:** `OPERATOR`.
+- **Query Params:** `refresh={bool}` (por defecto `false`, caché de 60s en KeyDB).
+- **Respuesta (200 OK):**
+
+  ```json
+  {
+    "nodes": [
+      {
+        "id": "7b8d4f10-1234-4567-89ab-cdef01234567",
+        "display_name": "SW-PoE-Core",
+        "ros_identity": "SW-Core",
+        "model_name": "CRS328-24P-4S+RM",
+        "board_name": "CRS328",
+        "ros_version": "7.16",
+        "status": "ONLINE",
+        "ip_address": "10.0.0.1",
+        "is_pse": true
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge:7b8d...:ether1-8c9e...:ether1",
+        "source_router_id": "7b8d4f10-1234-4567-89ab-cdef01234567",
+        "source_interface": "ether1",
+        "target_router_id": "8c9e1a2b-3456-789a-bcde-f0123456789a",
+        "target_interface": "ether1",
+        "link_speed": "1Gbps",
+        "is_poe_delivering": true,
+        "poe_power_watts": 14.5,
+        "protocol": "MNDP"
+      }
+    ],
+    "total_nodes": 12,
+    "total_edges": 15,
+    "timestamp": "2026-10-20T21:00:00Z"
+  }
+  ```
+
+#### 4.6.3 Receptor Syslog Efímero BSD (`/api/v1/routers/syslog`)
+
+##### `GET /api/v1/routers/syslog/template`
+
+- **Propósito:** Genera la plantilla CLI de aprovisionamiento en RouterOS v7 para reenviar eventos syslog en formato BSD RFC 3164 hacia el puerto UDP/TCP 5514 de RoSGrid.
+- **Feature Flag:** `syslog_collector_enabled`.
+- **Rol Mínimo:** `SUPPORT_L2`.
+- **Respuesta (200 OK):** Devuelve comandos `/system logging action add ...` listos para aplicar.
+
+##### `GET /api/v1/routers/{router_id}/syslog`
+
+- **Propósito:** Consulta los eventos recientes de syslog almacenados en el RingBuffer circular de KeyDB (máx 500 entradas, sin persistencia en Postgres).
+- **Feature Flag:** `syslog_collector_enabled`.
+- **Rol Mínimo:** `OPERATOR`.
+- **Query Params:** `limit={int}` (1 a 200, por defecto 50).
+
+#### 4.6.4 Exportador Prometheus OpenMetrics (`/api/v1/metrics/fleet`)
+
+##### `GET /api/v1/metrics/fleet`
+
+- **Propósito:** Endpoint de scraping dinámico para Prometheus / Grafana que expone la telemetría viva de la flota (estado, CPU, RAM, CVEs activos) extrayéndola de KeyDB en microsegundos, sin almacenamiento en PostgreSQL.
+- **Headers:** `Authorization: Bearer <token>` (opcional, requerido si `ROSGRID_PROMETHEUS_SCRAPE_TOKEN` está configurado).
+- **Respuesta (200 OK / text/plain):**
+  - Métricas: `rosgrid_router_status`, `rosgrid_router_cpu_percent`, `rosgrid_router_memory_usage_ratio`, `rosgrid_router_active_cves_count`.
+
+#### 4.6.5 Actualizaciones Masivas PoE-Aware con Safety Stop (`/api/v1/operations/ros-updates/execute`)
+
+##### `POST /api/v1/operations/ros-updates/execute`
+
+- **Propósito:** Ejecuta actualizaciones masivas de RouterOS v7 ordenadas topológicamente mediante DAG inverso (dispositivos terminales alimentados por PoE primero, switches inyectores intermedios después, core al final).
+- **Parámetros Clave:**
+  - `poe_aware: bool` (por defecto `true`).
+  - `safety_stop_threshold_pct: float` (por defecto `1.0%`).
+- **Gobernanza:** Si supera el umbral de fallos, activa el *Safety Stop*, aborta las etapas posteriores y emite alertas de alta prioridad.
+

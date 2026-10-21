@@ -225,7 +225,7 @@ async def test_mcp_tools_list(mcp_context: dict[str, Any]) -> None:
         assert resp.id == 2
         assert resp.result is not None
         tools = resp.result.get("tools", [])
-        assert len(tools) == 16
+        assert len(tools) == 20
         names = {t["name"] for t in tools}
         assert "rosgrid_list_inventory" in names
         assert "rosgrid_get_router_health" in names
@@ -243,6 +243,10 @@ async def test_mcp_tools_list(mcp_context: dict[str, Any]) -> None:
         assert "rosgrid_check_config_drift" in names
         assert "rosgrid_run_cis_audit" in names
         assert "rosgrid_detect_mass_outage" in names
+        assert "rosgrid_get_l2_topology" in names
+        assert "rosgrid_check_fleet_cves" in names
+        assert "rosgrid_get_recent_syslog" in names
+        assert "rosgrid_execute_poe_aware_upgrade" in names
 
 
 # ============================================================================
@@ -1197,9 +1201,9 @@ async def test_get_mcp_skill_json() -> None:
 
 def test_load_skill_markdown_fallback() -> None:
     from pathlib import Path
+
     non_existent = (Path("/tmp/non_existent_skill_path_12345/SKILL.md"),)
     with patch.object(api_mcp, "_SKILL_CANDIDATE_PATHS", non_existent):
         text = api_mcp._load_skill_markdown()
         assert "rosgrid-noc-operator" in text
         assert "Consulta https://github.com/tecno-consultores/RoSGrid" in text
-

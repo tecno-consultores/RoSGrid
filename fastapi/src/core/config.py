@@ -68,6 +68,10 @@ class Settings(BaseSettings):
     ROSGRID_MCP_ENABLED: bool = False
     ROSGRID_MCP_RATE_LIMIT_PER_MIN: int = 30
 
+    # Syslog & Telemetría Prometheus (Spec 35)
+    ROSGRID_SYSLOG_PORT: int = 5514
+    ROSGRID_PROMETHEUS_SCRAPE_TOKEN: str = ""
+
     # Configuración de Orígenes Cruzados (CORS) y Despliegue Separado
     ROSGRID_CORS_ORIGINS: str = "*"
     ROSGRID_CROSS_ORIGIN_COOKIES: bool = False

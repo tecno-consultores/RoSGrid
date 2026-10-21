@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.api.deps import get_current_user_claims
 from src.api.v1.backups import (
@@ -28,6 +29,7 @@ from src.api.v1.bgp_looking_glass import (
     get_looking_glass_advertised,
     get_looking_glass_route,
 )
+from src.api.v1.bulk_and_updates import _process_upgrade_stages, _resolve_upgrade_stages
 from src.api.v1.compliance import check_config_drift, run_cis_audit
 from src.api.v1.diagnostics_360 import run_endpoint_360_diagnostics
 from src.api.v1.field_ops import detect_fiber_cuts_engine
@@ -36,6 +38,7 @@ from src.api.v1.network_services import (
     isolate_network_service,
     restore_network_service,
 )
+from src.api.v1.topology_l2 import _collect_live_topology_data
 from src.api.v1.webfig_common import get_router_and_client
 from src.core.audit import write_audit_log
 from src.core.config import settings
@@ -49,6 +52,7 @@ from src.models.operations import (
     RouterBackup,
 )
 from src.redis_layer.client import get_redis_client
+from src.schemas.bulk_and_updates import RosUpdateExecuteRequest
 from src.schemas.diagnostics_360 import Endpoint360Request
 from src.schemas.mcp import (
     McpJsonRpcError,
@@ -56,6 +60,14 @@ from src.schemas.mcp import (
     McpJsonRpcResponse,
 )
 from src.schemas.network_services import ChangeRateLimitRequest
+from src.schemas.topology_l2 import L2TopologyResponse
+from src.services.cve_matcher import evaluate_fleet_cves, evaluate_router_cves
+from src.services.topology_l2 import (
+    get_cached_topology,
+    process_topology_graph,
+    save_cached_topology,
+)
+from src.workers.syslog_collector import get_router_syslog_events
 
 logger = logging.getLogger(__name__)
 
@@ -523,6 +535,125 @@ async def _handle_detect_mass_outage(
     return {"total_incidents": len(serialized), "incidents": serialized}
 
 
+def _format_topology_mcp_result(topology: L2TopologyResponse, router_id: uuid.UUID | None) -> dict[str, Any]:
+    """Formatea el grafo L2 para la respuesta del servidor MCP."""
+    edges = [
+        e for e in topology.edges
+        if not router_id or e.source_router_id == router_id or e.target_router_id == router_id
+    ]
+    return {
+        "total_nodes": topology.total_nodes,
+        "total_edges": len(edges),
+        "nodes": [n.model_dump() for n in topology.nodes],
+        "edges": [e.model_dump() for e in edges],
+    }
+
+
+async def _fetch_and_cache_live_topology(db: AsyncSession, tenant_id: uuid.UUID) -> L2TopologyResponse:
+    """Consulta switches/routers y construye el grafo topológico en vivo."""
+    query = select(Router).options(selectinload(Router.vault)).where(Router.tenant_id == tenant_id)
+    routers = list((await db.execute(query)).scalars().all())
+    neighbors_map, poe_map = await _collect_live_topology_data(tenant_id, routers)
+    topology = process_topology_graph(routers, neighbors_map, poe_map)
+    await save_cached_topology(tenant_id, topology)
+    return topology
+
+
+async def _handle_get_l2_topology(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    claims: dict[str, Any],
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    router_id_str = args.get("router_id")
+    router_id = uuid.UUID(str(router_id_str)) if router_id_str else None
+    if not bool(args.get("refresh", False)):
+        cached = await get_cached_topology(tenant_id)
+        if cached:
+            return _format_topology_mcp_result(cached, router_id)
+
+    topology = await _fetch_and_cache_live_topology(db, tenant_id)
+    return _format_topology_mcp_result(topology, router_id)
+
+
+async def _handle_check_fleet_cves(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    claims: dict[str, Any],
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    router_id_str = args.get("router_id")
+    if router_id_str:
+        rid = uuid.UUID(str(router_id_str))
+        stmt = select(Router).where(Router.id == rid, Router.tenant_id == tenant_id)
+        r = (await db.execute(stmt)).scalar_one_or_none()
+        if not r:
+            raise HTTPException(status_code=404, detail=f"Router {rid} no encontrado")
+        res = evaluate_router_cves(r.id, r.display_name, r.ros_version)
+        return res.model_dump(mode="json")
+
+    fleet_stmt = select(Router).where(Router.tenant_id == tenant_id)
+    routers = list((await db.execute(fleet_stmt)).scalars().all())
+    routers_data = [{"id": r.id, "display_name": r.display_name, "ros_version": r.ros_version} for r in routers]
+    summary = evaluate_fleet_cves(routers_data)
+    return summary.model_dump(mode="json")
+
+
+async def _handle_get_recent_syslog(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    claims: dict[str, Any],
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    router_id_str = args.get("router_id")
+    if not router_id_str:
+        raise HTTPException(status_code=400, detail="router_id es requerido")
+    rid = uuid.UUID(str(router_id_str))
+    limit = min(int(args.get("limit", 50)), 200)
+    events = await get_router_syslog_events(tenant_id, rid, limit=limit)
+    return {
+        "router_id": str(rid),
+        "total_events": len(events),
+        "events": [e.model_dump() for e in events],
+    }
+
+
+async def _handle_execute_poe_aware_upgrade(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    claims: dict[str, Any],
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    raw_ids = args.get("router_ids", [])
+    if not raw_ids:
+        raise HTTPException(status_code=400, detail="router_ids no puede estar vacío")
+    rids = [uuid.UUID(str(x)) for x in raw_ids]
+    poe_aware = bool(args.get("poe_aware", True))
+    auto_firmware = bool(args.get("auto_upgrade_firmware", True))
+    threshold = float(args.get("safety_stop_threshold_percent", 1.0))
+
+    req = RosUpdateExecuteRequest(
+        router_ids=rids,
+        auto_upgrade_firmware=auto_firmware,
+        poe_aware=poe_aware,
+        safety_stop_threshold_percent=threshold,
+    )
+    ordered_stages = await _resolve_upgrade_stages(tenant_id, req.router_ids, req.poe_aware)
+    results, safety_stop_triggered = await _process_upgrade_stages(ordered_stages, req, claims, db, tenant_id, user_id)
+    await db.commit()
+    return {
+        "status": "SAFETY_STOPPED" if safety_stop_triggered else "COMPLETED",
+        "safety_stop_triggered": safety_stop_triggered,
+        "processed_count": len(results),
+        "poe_stages": [[str(r) for r in s] for s in ordered_stages] if poe_aware else None,
+        "results": results,
+    }
+
+
 TOOL_HANDLERS_MAP: dict[str, Callable[..., Coroutine[Any, Any, dict[str, Any]]]] = {
     "rosgrid_list_inventory": _handle_list_inventory,
     "rosgrid_get_router_health": _handle_get_router_health,
@@ -541,6 +672,10 @@ TOOL_HANDLERS_MAP: dict[str, Callable[..., Coroutine[Any, Any, dict[str, Any]]]]
     "rosgrid_check_config_drift": _handle_check_config_drift,
     "rosgrid_run_cis_audit": _handle_run_cis_audit,
     "rosgrid_detect_mass_outage": _handle_detect_mass_outage,
+    "rosgrid_get_l2_topology": _handle_get_l2_topology,
+    "rosgrid_check_fleet_cves": _handle_check_fleet_cves,
+    "rosgrid_get_recent_syslog": _handle_get_recent_syslog,
+    "rosgrid_execute_poe_aware_upgrade": _handle_execute_poe_aware_upgrade,
 }
 
 MCP_TOOLS_CATALOG: list[dict[str, Any]] = [
@@ -912,6 +1047,95 @@ MCP_TOOLS_CATALOG: list[dict[str, Any]] = [
             "required": [],
         },
     },
+    {
+        "name": "rosgrid_get_l2_topology",
+        "description": "Obtiene el grafo de topología física Layer 2 (nodos, interfaces, enlaces MNDP/LLDP y alimentación PoE activa) de la flota o centrado en un router.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "router_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID opcional de un router para filtrar adyacencias directas",
+                },
+                "refresh": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "Forzar sondeo en vivo evadiendo la caché de 60s en KeyDB",
+                },
+            },
+            "required": [],
+        },
+    },
+    {
+        "name": "rosgrid_check_fleet_cves",
+        "description": "Evalúa vulnerabilidades de seguridad CVE conocidas de MikroTik RouterOS v7 en la flota o en un router individual basándose en su versión instalada.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "router_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID opcional de un router específico a evaluar. Si se omite, evalúa toda la flota",
+                },
+            },
+            "required": [],
+        },
+    },
+    {
+        "name": "rosgrid_get_recent_syslog",
+        "description": "Obtiene los últimos eventos Syslog (enlaces caídos, caídas BGP, fallos de login, etc.) almacenados en el RingBuffer efímero de KeyDB para un router.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "router_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID del router a consultar",
+                },
+                "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 200,
+                    "default": 50,
+                    "description": "Cantidad máxima de eventos recientes a retornar",
+                },
+            },
+            "required": ["router_id"],
+        },
+    },
+    {
+        "name": "rosgrid_execute_poe_aware_upgrade",
+        "description": "Ejecuta actualización masiva de RouterOS v7 con ordenamiento PoE-aware (DAG inverso: PD alimentados primero, PSE al final) y parada de emergencia de flota.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "router_ids": {
+                    "type": "array",
+                    "items": {"type": "string", "format": "uuid"},
+                    "description": "Lista de UUIDs de los routers a actualizar",
+                },
+                "auto_upgrade_firmware": {
+                    "type": "boolean",
+                    "default": True,
+                    "description": "Si es True, actualiza automáticamente el firmware RouterBOOT tras reiniciar",
+                },
+                "poe_aware": {
+                    "type": "boolean",
+                    "default": True,
+                    "description": "Si es True, procesa en etapas DAG evitando cortes de energía a equipos dependientes",
+                },
+                "safety_stop_threshold_percent": {
+                    "type": "number",
+                    "minimum": 0.1,
+                    "maximum": 100.0,
+                    "default": 1.0,
+                    "description": "Porcentaje de fallos permitido antes de abortar la actualización del resto de la flota",
+                },
+            },
+            "required": ["router_ids"],
+        },
+    },
 ]
 
 
@@ -1136,4 +1360,3 @@ async def get_mcp_skill(format: str | None = None) -> Response:
         media_type="text/markdown; charset=utf-8",
         headers={"Content-Disposition": "inline; filename=SKILL.md"},
     )
-

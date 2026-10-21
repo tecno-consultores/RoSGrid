@@ -47,6 +47,8 @@ from src.schemas.bulk_and_updates import (
     TemplateRenderPreviewRequest,
     TemplateRenderPreviewResponse,
 )
+from src.services.poe_aware_upgrade import evaluate_safety_stop, order_routers_by_poe_stages
+from src.services.topology_l2 import get_cached_topology
 
 logger = logging.getLogger(__name__)
 
@@ -794,36 +796,94 @@ async def get_fleet_updates_status(
     )
 
 
+async def _resolve_upgrade_stages(
+    tenant_id: uuid.UUID,
+    router_ids: list[uuid.UUID],
+    poe_aware: bool,
+) -> list[list[uuid.UUID]]:
+    """Determina las etapas ordenadas por PoE o etapa única."""
+    if not poe_aware:
+        return [router_ids]
+    cached = await get_cached_topology(tenant_id)
+    edges = cached.edges if cached else []
+    return order_routers_by_poe_stages(router_ids, edges)
+
+
+async def _execute_single_router_upgrade(
+    rid: uuid.UUID,
+    payload: RosUpdateExecuteRequest,
+    claims: dict[str, Any],
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    stage_idx: int,
+) -> tuple[dict[str, Any], bool]:
+    """Ejecuta backup e instalación para un router individual. Retorna (resultado, fue_exitoso)."""
+    try:
+        r_obj, client = await get_router_and_client(rid, claims, db)
+        backup_ok = await _perform_pre_upgrade_backup(client, r_obj, tenant_id, user_id, db)
+        if not backup_ok:
+            return {"router_id": str(rid), "status": "ABORTED_PRE_BACKUP_FAILED", "stage": stage_idx}, False
+
+        if payload.auto_upgrade_firmware:
+            await client.patch("system/routerboard/settings", {"auto-upgrade": "yes"})
+
+        update_res = await client.post("system/package/update/install", {})
+        return {"router_id": str(rid), "status": "UPGRADE_TRIGGERED", "detail": update_res, "stage": stage_idx}, True
+    except Exception as exc:
+        return {"router_id": str(rid), "status": "FAILED", "error": str(exc), "stage": stage_idx}, False
+
+
+async def _process_upgrade_stages(
+    ordered_stages: list[list[uuid.UUID]],
+    payload: RosUpdateExecuteRequest,
+    claims: dict[str, Any],
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> tuple[list[dict[str, Any]], bool]:
+    """Itera etapas aplicando Safety Stop."""
+    results: list[dict[str, Any]] = []
+    failed_count = 0
+    total_processed = 0
+
+    for stage_idx, stage in enumerate(ordered_stages):
+        for rid in stage:
+            total_processed += 1
+            res_dict, ok = await _execute_single_router_upgrade(rid, payload, claims, db, tenant_id, user_id, stage_idx)
+            results.append(res_dict)
+            if not ok:
+                failed_count += 1
+            if evaluate_safety_stop(failed_count, total_processed, payload.safety_stop_threshold_percent):
+                return results, True
+    return results, False
+
+
 @router.post("/ros-updates/execute", response_model=RosUpdateExecuteResponse)
 async def execute_fleet_updates(
     payload: RosUpdateExecuteRequest,
     claims: dict[str, Any] = Depends(require_roles(*_ADMIN_OPERATIONS_ROLES)),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> RosUpdateExecuteResponse:
-    """Lanza la actualización segura de RouterOS con backup previo obligatorio."""
+    """Lanza la actualización segura de RouterOS con backup previo obligatorio y orden PoE-aware."""
     tenant_id = uuid.UUID(claims["tid"])
     user_id = uuid.UUID(claims["sub"])
-    results: list[dict[str, Any]] = []
 
-    for rid in payload.router_ids:
-        try:
-            r_obj, client = await get_router_and_client(rid, claims, db)
-            backup_ok = await _perform_pre_upgrade_backup(client, r_obj, tenant_id, user_id, db)
-            if not backup_ok:
-                results.append({"router_id": str(rid), "status": "ABORTED_PRE_BACKUP_FAILED"})
-                continue
-
-            if payload.auto_upgrade_firmware:
-                await client.patch("system/routerboard/settings", {"auto-upgrade": "yes"})
-
-            update_res = await client.post("system/package/update/install", {})
-            results.append({"router_id": str(rid), "status": "UPGRADE_TRIGGERED", "detail": update_res})
-        except Exception as exc:
-            results.append({"router_id": str(rid), "status": "FAILED", "error": str(exc)})
-
+    ordered_stages = await _resolve_upgrade_stages(tenant_id, payload.router_ids, payload.poe_aware)
+    results, safety_stop_triggered = await _process_upgrade_stages(
+        ordered_stages, payload, claims, db, tenant_id, user_id
+    )
     await db.commit()
+
+    poe_stages = [[str(r) for r in s] for s in ordered_stages] if payload.poe_aware else None
+    msg = f"Procesadas {len(results)}/{len(payload.router_ids)} solicitudes de actualización"
+    if safety_stop_triggered:
+        msg += " (Detenido por Safety Stop de flota)"
+
     return RosUpdateExecuteResponse(
-        status="COMPLETED",
-        message=f"Procesadas {len(payload.router_ids)} solicitudes de actualización",
+        status="SAFETY_STOPPED" if safety_stop_triggered else "COMPLETED",
+        message=msg,
         results=results,
+        poe_stages=poe_stages,
+        safety_stop_triggered=safety_stop_triggered,
     )

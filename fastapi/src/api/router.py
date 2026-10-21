@@ -10,8 +10,10 @@ from src.api.v1.backups import router as backups_router
 from src.api.v1.bgp_looking_glass import router as bgp_looking_glass_router
 from src.api.v1.bulk_and_updates import router as bulk_updates_router
 from src.api.v1.compliance import router as compliance_router
+from src.api.v1.cve import router as cve_router
 from src.api.v1.diagnostics_360 import router as diagnostics_360_router
 from src.api.v1.field_ops import router as field_ops_router
+from src.api.v1.fleet_metrics import router as fleet_metrics_router
 from src.api.v1.inventory import router as inventory_router
 from src.api.v1.ipam import router as ipam_router
 from src.api.v1.maintenance import router as maintenance_router
@@ -24,7 +26,9 @@ from src.api.v1.sessions import router as sessions_router
 from src.api.v1.sla import router as sla_router
 from src.api.v1.subscribers import bandwidth_router, subscribers_router
 from src.api.v1.switching import router as switching_router
+from src.api.v1.syslog import router as syslog_router
 from src.api.v1.tenants import router as tenants_router
+from src.api.v1.topology_l2 import router as topology_l2_router
 from src.api.v1.traffic_flow import router as traffic_flow_router
 from src.api.v1.users import router as users_router
 from src.api.v1.vault import router as vault_router
@@ -80,3 +84,7 @@ api_v1_router.include_router(sdwan_router)
 api_v1_router.include_router(switching_router)
 api_v1_router.include_router(sla_router)
 api_v1_router.include_router(wifi_router)
+api_v1_router.include_router(cve_router)
+api_v1_router.include_router(topology_l2_router)
+api_v1_router.include_router(syslog_router)
+api_v1_router.include_router(fleet_metrics_router)

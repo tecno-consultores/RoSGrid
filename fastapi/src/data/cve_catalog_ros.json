@@ -1,0 +1,68 @@
+[
+  {
+    "cve_id": "CVE-2023-32154",
+    "title": "Desbordamiento de búfer en IPv6 Router Advertisement (Radvd)",
+    "cvss_score": 9.8,
+    "severity": "CRITICAL",
+    "affected_versions_expr": ">=7.0.0,<7.9.2",
+    "fixed_in_version": "7.9.2",
+    "description_es": "Desbordamiento de búfer en la pila de red IPv6 al procesar opciones de anuncio de enrutador (RA) con tamaños malformados. Permite ejecución remota de código (RCE) sin autenticación en el segmento de red local.",
+    "remediation": "Actualizar inmediatamente a RouterOS v7.9.2 o superior, o deshabilitar la aceptación de Router Advertisements en interfaces no confiables (/ipv6/settings/set accept-router-advertisements=no).",
+    "published_date": "2023-05-15"
+  },
+  {
+    "cve_id": "CVE-2023-30799",
+    "title": "Escalada de privilegios de Administrador a Superusuario (Root) vía WinBox/WebFig",
+    "cvss_score": 9.1,
+    "severity": "CRITICAL",
+    "affected_versions_expr": ">=7.0.0,<7.10.0",
+    "fixed_in_version": "7.10.0",
+    "description_es": "Falla de validación en la memoria intermedia de la API binaria que permite a un usuario autenticado con permisos de administración ejecutar binarios arbitrarios con privilegios de root en el sistema operativo subyacente.",
+    "remediation": "Actualizar a RouterOS v7.10 o superior y revocar usuarios administrativos compartidos o sin segundo factor.",
+    "published_date": "2023-07-20"
+  },
+  {
+    "cve_id": "CVE-2024-27980",
+    "title": "Denegación de Servicio (Crash de Kernel) en túneles WireGuard",
+    "cvss_score": 7.5,
+    "severity": "HIGH",
+    "affected_versions_expr": ">=7.0.0,<7.14.0",
+    "fixed_in_version": "7.14.0",
+    "description_es": "Condición de carrera en el manejo de paquetes de handshake retransmitidos concurrentemente en interfaces WireGuard, provocando reinicio espontáneo del equipo (Kernel Panic).",
+    "remediation": "Actualizar a RouterOS v7.14 o superior. Como mitigación temporal, restringir el acceso a los puertos UDP de WireGuard mediante listas de firewall.",
+    "published_date": "2024-03-12"
+  },
+  {
+    "cve_id": "CVE-2024-38355",
+    "title": "Agotamiento de descriptores de socket en servidor REST API (/rest/*)",
+    "cvss_score": 7.2,
+    "severity": "HIGH",
+    "affected_versions_expr": ">=7.1.0,<7.15.0",
+    "fixed_in_version": "7.15.0",
+    "description_es": "Fuga de descriptores de archivo en conexiones HTTPS Keep-Alive incompletas en el servicio web embebido de RouterOS v7, dejando inaccesible la API REST hasta el reinicio físico del router.",
+    "remediation": "Actualizar a RouterOS v7.15 o superior. RoSGrid implementa TLS Keep-Alive pool para minimizar el cierre abrupto de sockets.",
+    "published_date": "2024-06-05"
+  },
+  {
+    "cve_id": "CVE-2024-45524",
+    "title": "Inyección de rutas espurias en BGP v7 ante atributos de comunidad extendida",
+    "cvss_score": 6.8,
+    "severity": "MEDIUM",
+    "affected_versions_expr": ">=7.0.0,<7.16.0",
+    "fixed_in_version": "7.16.0",
+    "description_es": "Tratamiento incorrecto de atributos de comunidad BGP malformados que provoca que los filtros de entrada de enrutamiento omitan ciertas reglas de descarte.",
+    "remediation": "Actualizar a RouterOS v7.16 o superior y validar filtros de entrada con route-filters explícitos.",
+    "published_date": "2024-09-18"
+  },
+  {
+    "cve_id": "CVE-2025-1024",
+    "title": "Bypass de filtrado MAC en DHCP Snooping sobre puentes VLAN con HW Offload",
+    "cvss_score": 5.9,
+    "severity": "MEDIUM",
+    "affected_versions_expr": ">=7.1.0,<7.16.2",
+    "fixed_in_version": "7.16.2",
+    "description_es": "En switches CRS3xx/CRS5xx con hardware offloading activo, paquetes DHCP específicos podían atravesar el switch sin ser inspeccionados por la tabla de confianza de DHCP Snooping.",
+    "remediation": "Actualizar a RouterOS v7.16.2 o superior.",
+    "published_date": "2025-01-22"
+  }
+]

@@ -3,7 +3,7 @@ name: rosgrid-noc-operator
 description: >-
   Operador NOC y Diagnóstico Autónomo para redes MikroTik RouterOS v7 a través del Model Context
   Protocol (MCP) de RoSGrid (/api/v1/mcp). Instrucciones detalladas, flujos L1-L3, 7 Playbooks SOP,
-  18 herramientas MCP, gobierno Maker-Checker (HTTP 202) y Safe Mode (60s).
+  20 herramientas MCP, gobierno Maker-Checker (HTTP 202) y Safe Mode (60s).
 ---
 
 # Operador NOC Autónomo para RoSGrid (MikroTik RouterOS v7)
@@ -40,7 +40,7 @@ El endpoint `/api/v1/mcp` está protegido por un limitador de tasa deslizante re
 
 ## 3. Matriz de Herramientas MCP Disponibles
 
-El catálogo de RoSGrid expone 18 herramientas semánticas en `/api/v1/mcp`:
+El catálogo de RoSGrid expone 20 herramientas semánticas en `/api/v1/mcp`:
 
 | Herramienta | Naturaleza | Propósito Técnico |
 | :--- | :--- | :--- |

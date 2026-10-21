@@ -142,9 +142,13 @@ class RosFleetUpdateStatusResponse(StrictBaseModel):
 class RosUpdateExecuteRequest(StrictBaseModel):
     router_ids: list[uuid.UUID] = Field(..., min_length=1)
     auto_upgrade_firmware: bool = True
+    poe_aware: bool = False
+    safety_stop_threshold_percent: float = Field(1.0, ge=0.1, le=100.0)
 
 
 class RosUpdateExecuteResponse(StrictBaseModel):
     status: str
     message: str
     results: list[dict[str, Any]] = Field(default_factory=list)
+    poe_stages: list[list[str]] | None = None
+    safety_stop_triggered: bool = False

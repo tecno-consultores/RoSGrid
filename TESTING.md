@@ -169,6 +169,7 @@ docker compose -f docker-compose.qa.yml down --remove-orphans
 | **Hito 22.9** | Investigación Técnica y Hojas de Ruta de Migración a Python 3.15 y Node.js 26 LTS | N/A | N/A | Reportes técnicos docs/10 y docs/11 aprobados | ✅ **Certificado** |
 | **Hito 22.10** | Cobertura BDD Integral Karate Labs (100% de la API REST FastAPI — 54 Escenarios Exhaustivos en Docker) | **100%** (54/54 BDD REST)<br>**95.04%** (399 tests Pytest) | N/A | Karate Labs API + Cobertura de 35 submódulos | ✅ **Certificado** |
 | **Hito 22.11** | Migración Integral de Runtime a Python 3.15 (`base-python-uv:3.15`) y Node.js 26 LTS (`base-node-ionic:26`) | **95.04%** (399 tests Pytest)<br>**100%** (262 tests Vitest) | Stryker + Mutmut | Free-Threading PEP 703 Tier-1 + V8 14.x + vue-tsc (0 err) | ✅ **Certificado** |
+| **Hito 23.4** | Automatización Táctica de Flota, Topología L2, Syslog Efímero, Cruce CVEs, Exporter Prometheus y 20 Herramientas MCP | **95.12%** (422 tests Backend)<br>**100%** (61/61 BDD REST) | N/A | Radon CC <= 5 (100% Grado A) + Mypy Strict (0 err) + Karate Labs Grupo 22 | ✅ **Certificado** |
 
 ---
 
@@ -809,3 +810,30 @@ Certificación ejecutada bajo la **Regla Cero** dentro de los contenedores Docke
 - Actualización íntegra de `docker-compose.yml`, `fastapi/docker-compose.qa.yml`, `vue3/docker-compose.qa.yml` y réplicas en `examples/`.
 - Sincronización de los reportes técnicos de investigación `docs/10_REPORTE_INVESTIGACION_PYTHON_3_15.md` y `docs/11_REPORTE_INVESTIGACION_NODE_26.md` pasando a estado **Migración Ejecutada e Implementada en RoSGrid**.
 - Gobernanza raíz (`README.md`, `INSTALL.md`, `RESOURCES.md`, `CHANGELOG.md`, `ROADMAP.md` y especificaciones `specs/00`, `specs/01`, `specs/24`, `specs/27`) completamente alineada con Python 3.15 y Node.js 26 LTS.
+
+---
+
+## 22. Certificación QA 11X — Automatización de Flota, Topología L2, Syslog, Cruce CVEs y Prometheus (Hito 23.4)
+
+Certificación ejecutada bajo la **Regla Cero** dentro del contenedor efímero Docker `sinfallas/base-python-uv:3.15` y `sinfallas/karatelabs:latest` conforme a `specs/35_FLEET_AUTOMATION_TOPOLOGY_L2_SYSLOG_AND_PROMETHEUS.md` y `docs/12_DISENO_TOPOLOGIA_L2_SYSLOG_Y_AUTOMATIZACION.md`.
+
+### A. Resultados de Pruebas Unitarias y Análisis Estático (Pytest 9.1.1 + Ruff + Mypy + Radon)
+
+- **Pruebas Unitarias Backend:** **422 de 422 pruebas pasadas (100% exitosas)** (23 pruebas exclusivas añadidas para el Hito 23.4 cubriendo semver de MikroTik, ordenamiento topológico DAG PoE, parsing BSD Syslog y las 4 nuevas herramientas MCP).
+- **Análisis Estático SAST (Ruff):** Cero (0) errores en `src/` y `tests/`.
+- **Tipado Estricto (Mypy Strict):** Cero (0) errores en la totalidad de los 114 archivos del backend (`Success: no issues found in 114 source files`).
+- **Complejidad Ciclomática (Radon):** Cero (0) funciones con complejidad superior a C ($CC \le 5$, 100% Grado A corporativo).
+- **Arquitectura Zero-Metrics:** Verificación formal de almacenamiento efímero en KeyDB (RingBuffers de 500 eventos syslog por router y caché topológico L2 de 60s) con **cero inserciones de métricas o telemetría en PostgreSQL**.
+
+### B. Pruebas BDD de Contrato y Aceptación con Karate Labs (Grupo 22)
+
+- **Escenarios de Prueba en `fastapi/test/api_test.feature` y réplica en `examples/fastapi/test/api_test.feature`:**
+  - **Escenario 55:** Consulta de matriz CVE de flota `/api/v1/inventory/cves` sin autenticación devuelve 401.
+  - **Escenario 56:** Sincronización del catálogo CVE `/api/v1/inventory/cves/sync` sin autenticación devuelve 401.
+  - **Escenario 57:** Consulta de topología física Layer 2 `/api/v1/topology/l2` sin autenticación devuelve 401.
+  - **Escenario 58:** Consulta de plantilla de enrolamiento Syslog `/api/v1/routers/syslog/template` sin autenticación devuelve 401.
+  - **Escenario 59:** Consulta de RingBuffer Syslog de router `/api/v1/routers/{id}/syslog` sin autenticación devuelve 401.
+  - **Escenario 60:** Scraping de telemetría OpenMetrics Prometheus `/api/v1/metrics/fleet` devuelve 200 y métrica `rosgrid_router_status`.
+  - **Escenario 61:** Actualización masiva con ordenamiento PoE-aware `/api/v1/operations/ros-updates/execute` sin autenticación devuelve 401.
+- **Resultado Global Karate Labs API:** **61 de 61 escenarios aprobados (100%)**.
+

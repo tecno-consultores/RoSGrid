@@ -27,6 +27,10 @@ TENANT_FEATURE_DEFAULTS: dict[str, Any] = {
     "sla_tracker_enabled": False,
     "mass_outage_threshold": 10,
     "default_locale": "es",
+    "l2_topology_enabled": True,
+    "syslog_collector_enabled": True,
+    "cve_scanner_enabled": True,
+    "prometheus_fleet_exporter_enabled": True,
 }
 
 SUPPORTED_LOCALES_PATTERN = r"^(es|en)$"
@@ -78,6 +82,10 @@ class UpdateTenantFeaturesRequest(BaseModel):
     sla_tracker_enabled: bool | None = None
     mass_outage_threshold: int | None = Field(None, ge=1, le=1000)
     default_locale: str | None = Field(None, pattern=SUPPORTED_LOCALES_PATTERN)
+    l2_topology_enabled: bool | None = None
+    syslog_collector_enabled: bool | None = None
+    cve_scanner_enabled: bool | None = None
+    prometheus_fleet_exporter_enabled: bool | None = None
 
 
 class UpdateTenantRequest(UpdateTenantFeaturesRequest):
@@ -111,6 +119,10 @@ class TenantFeatureFlagsMixin(BaseModel):
     sla_tracker_enabled: bool = False
     mass_outage_threshold: int = 10
     default_locale: str = "es"
+    l2_topology_enabled: bool = True
+    syslog_collector_enabled: bool = True
+    cve_scanner_enabled: bool = True
+    prometheus_fleet_exporter_enabled: bool = True
 
     @model_validator(mode="before")
     @classmethod

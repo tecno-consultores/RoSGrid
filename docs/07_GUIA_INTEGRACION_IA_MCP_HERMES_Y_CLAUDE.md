@@ -144,11 +144,11 @@ Verificación de latencia y confirmación de sesión:
 
 ### 2.3 Método `tools/list`
 
-Devuelve el catálogo de las 16 herramientas semánticas con sus esquemas JSON de entrada (`inputSchema`).
+Devuelve el catálogo de las 20 herramientas semánticas con sus esquemas JSON de entrada (`inputSchema`).
 
 ---
 
-## 3. Catálogo Detallado de las 16 Herramientas Semánticas MCP
+## 3. Catálogo Detallado de las 20 Herramientas Semánticas MCP
 
 ### Herramienta 1: `rosgrid_list_inventory`
 
@@ -373,6 +373,48 @@ Devuelve el catálogo de las 16 herramientas semánticas con sus esquemas JSON d
 
 ---
 
+### Herramienta 17: `rosgrid_get_l2_topology`
+
+- **Nivel de Riesgo:** Solo Lectura / Topología.
+- **Descripción:** Obtiene el grafo de topología física Layer 2 generado mediante el cruce de adyacencias MNDP/LLDP y telemetría PoE (PSE vs PD) de la flota. Permite filtrar los enlaces adyacentes a un router específico.
+- **Argumentos:**
+  - `router_id` (UUID opcional): Filtra nodos y aristas adyacentes a este equipo.
+  - `refresh` (booleano opcional, por defecto `false`): Si es `true`, fuerza la recolección en vivo invalidando la caché efímera de 60s en KeyDB.
+
+---
+
+### Herramienta 18: `rosgrid_check_fleet_cves`
+
+- **Nivel de Riesgo:** Auditoría de Seguridad.
+- **Descripción:** Evalúa la flota o un router específico contra la base de datos de firmas CVE conocidas de MikroTik RouterOS v7. Retorna vulnerabilidades activas, puntuación CVSS máxima y versión target recomendada.
+- **Argumentos:**
+  - `router_id` (UUID opcional): Si se omite, evalúa el inventario completo del tenant.
+
+---
+
+### Herramienta 19: `rosgrid_get_recent_syslog`
+
+- **Nivel de Riesgo:** Diagnóstico / Telemetría Efímera.
+- **Descripción:** Consulta el RingBuffer circular en memoria KeyDB (últimos 500 eventos) para un router MikroTik receptor de Syslog BSD. Permite al agente identificar caídas de interfaces (`link down`), errores OSPF o inicios de sesión en tiempo real.
+- **Argumentos:**
+  - `router_id` (UUID requerido).
+  - `limit` (entero opcional, entre 1 y 200, por defecto 50).
+
+---
+
+### Herramienta 20: `rosgrid_execute_poe_aware_upgrade`
+
+- **Nivel de Riesgo:** Acción Crítica / Maker-Checker (HTTP 202).
+- **Descripción:** Orquesta la actualización masiva de RouterOS respetando la jerarquía de alimentación eléctrica PoE (hojas PD primero, switches PSE intermedios después, core final) con Safety Stop automático del 1%.
+- **Argumentos:**
+  - `router_ids` (lista de UUIDs requerida).
+  - `channel` (cadena: `"stable"`, `"testing"` o `"long-term"`).
+  - `target_version` (cadena opcional, ej. `"7.19"`).
+  - `poe_aware` (booleano opcional, por defecto `true`).
+  - `safety_stop_threshold_pct` (flotante opcional, por defecto `1.0`).
+
+---
+
 ## 4. Configuración en Clientes IA
 
 ### 4.1 Configuración para Hermes Agent
@@ -456,6 +498,8 @@ La skill capacita al agente como un **Ingeniero NOC Tier-2/Tier-3 certificado** 
 3. **SOP-3 (Inestabilidad BGP/OSPF):** Inspección de adyacencias, Looking Glass FIB y comparación Git-style contra la configuración previa.
 4. **SOP-4 (Auditoría CIS y Drift):** Evaluación de seguridad (Score 0-100), detección de desvíos contra la Golden Baseline y propuestas de hardening.
 5. **SOP-5 (Aislamiento Preventivo):** Contención inmediata e idempotente de clientes comprometidos con cola 64k/64k y lista de firewall `AISLADOS_TECNICO`.
+6. **SOP-6 (Triaje de Caídas de Enlace vía Syslog):** Análisis en tiempo real de eventos `interface,warning` y `link down` mediante `rosgrid_get_recent_syslog` correlacionando fallas físicas y adyacencias L2.
+7. **SOP-7 (Planificación de Actualizaciones PoE-Aware con Safety Stop):** Identificación de vulnerabilidades con `rosgrid_check_fleet_cves`, consulta de topología física con `rosgrid_get_l2_topology` y orquestación con ordenamiento DAG inverso y detención preventiva al superar el 1% de error.
 
 ### 6.2 Integración Rápida por Plataforma
 

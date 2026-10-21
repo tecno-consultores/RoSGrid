@@ -444,3 +444,51 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     When method get
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  # ==============================================================================
+  # Grupo 22: Automatización de Flota, Topología L2, Syslog, CVEs y Exporter Prometheus (Hito 23.4)
+  # ==============================================================================
+
+  Scenario: 55. Consulta de matriz CVE de flota sin autenticación devuelve 401
+    Given path '/api/v1/inventory/cves'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 56. Sincronización del catálogo CVE sin autenticación devuelve 401
+    Given path '/api/v1/inventory/cves/sync'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 57. Consulta de topología física Layer 2 sin autenticación devuelve 401
+    Given path '/api/v1/topology/l2'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 58. Consulta de plantilla de enrolamiento Syslog sin autenticación devuelve 401
+    Given path '/api/v1/routers/syslog/template'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 59. Consulta de RingBuffer Syslog de un router sin autenticación devuelve 401
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/syslog'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 60. Endpoint de métricas de flota en formato OpenMetrics Prometheus /api/v1/metrics/fleet
+    Given path '/api/v1/metrics/fleet'
+    When method get
+    Then status 200
+    And match response contains 'rosgrid_router_status'
+
+  Scenario: 61. Ejecución de actualización masiva con orden PoE-aware sin autenticación devuelve 401
+    Given path '/api/v1/operations/ros-updates/execute'
+    And request { router_ids: ['00000000-0000-0000-0000-000000000001'], poe_aware: true }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+

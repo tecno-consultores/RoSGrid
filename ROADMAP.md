@@ -401,11 +401,15 @@
   - Incorporación al diseño del servidor MCP de 4 nuevas herramientas semánticas: `rosgrid_get_l2_topology`, `rosgrid_check_fleet_cves`, `rosgrid_get_recent_syslog` y `rosgrid_execute_poe_aware_upgrade` (total 18 herramientas).
   - Actualización de la Skill `.agents/skills/rosgrid-noc-operator/SKILL.md` incorporando SOP-6 (Triaje de caídas de enlace vía Syslog) y SOP-7 (Planificación PoE-Aware con Safety Stop).
   - Sincronización idéntica en el catálogo global de Antigravity (`~/.gemini/config/skills/rosgrid-noc-operator/`).
-- [ ] **23.4** **Implementación Backend & Modelos:**
-  - Migración y catálogo local de CVEs (`cve_catalog_ros.json`).
-  - Colector Syslog UDP/TCP 5514 con RingBuffer en KeyDB y rate-limiting anti-spoofing.
-  - Endpoints de topología L2 (`/api/v1/topology/l2`), cruce de CVEs (`/api/v1/inventory/cves`) y métricas de flota para Prometheus (`/api/v1/metrics/fleet`).
-  - Orquestador de trabajos masivos PoE-aware con Safety Stop.
+- [x] **23.4** **Implementación Backend & Modelos:**
+  - Migración Alembic `0007_fleet_automation_l2_syslog_flags.py` con 4 feature flags tácticos en `Tenant`.
+  - Catálogo local base inmutable de CVEs (`cve_catalog_ros.json`) con 6 firmas de RouterOS v7, motor semver `cve_matcher.py` y sincronizador dinámico `POST /api/v1/inventory/cves/sync`.
+  - Colector Syslog efímero UDP/TCP 5514 BSD (`syslog_collector.py`) con RingBuffer KeyDB (500 eventos por router, 0 persistencia en Postgres) y endpoint de plantilla `/api/v1/routers/syslog/template`.
+  - Motor de topología física Layer 2 (`topology_l2.py`) cruzando MNDP/LLDP y detección de alimentación PoE PSE/PD con endpoint `/api/v1/topology/l2` y caché KeyDB de 60s.
+  - Exportador Prometheus OpenMetrics `/api/v1/metrics/fleet` sin almacenamiento en base de datos.
+  - Orquestador de actualizaciones masivas PoE-aware en orden topológico inverso con Safety Stop automático del 1%.
+  - Expansión del servidor MCP a 20 herramientas (`rosgrid_get_l2_topology`, `rosgrid_check_fleet_cves`, `rosgrid_get_recent_syslog`, `rosgrid_execute_poe_aware_upgrade`).
+  - Suite de pruebas de contratos y BDD en Karate Labs (`fastapi/test/api_test.feature` y `examples/fastapi/test/api_test.feature`, Escenarios 55-61) y 23 tests unitarios Pytest en Docker (100% pasando, Grado A Radon CC <= 5, 0 errores Mypy Strict).
 - [ ] **23.5** **Implementación Frontend (Vue 3 + Pinia):**
   - Vista interactiva de Topología L2 con Canvas/SVG (`L2TopologyView.vue`).
   - Insignias de riesgo CVE en tabla de inventario (`RgDataTable.vue`).

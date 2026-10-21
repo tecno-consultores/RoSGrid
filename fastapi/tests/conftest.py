@@ -48,6 +48,14 @@ class FakePipeline:
         self.commands.append(("zrem", (name, members)))
         return self
 
+    def lpush(self, name: str, *values: Any) -> "FakePipeline":
+        self.commands.append(("lpush", (name, values)))
+        return self
+
+    def ltrim(self, name: str, start: int, stop: int) -> "FakePipeline":
+        self.commands.append(("ltrim", (name, start, stop)))
+        return self
+
     def publish(self, channel: str, message: str) -> "FakePipeline":
         self.commands.append(("publish", (channel, message)))
         return self
@@ -84,6 +92,14 @@ class FakePipeline:
                 for mem in members:
                     await self.fake_redis.zrem(name, mem)
                 results.append(1)
+            elif cmd == "lpush":
+                name, vals = args
+                res = await self.fake_redis.lpush(name, *vals)
+                results.append(res)
+            elif cmd == "ltrim":
+                name, start, stop = args
+                res = await self.fake_redis.ltrim(name, start, stop)
+                results.append(res)
             elif cmd == "publish":
                 results.append(1)
         self.commands.clear()
@@ -96,6 +112,31 @@ class FakeAsyncRedis:
         self.hashes: dict[str, dict[str, str]] = {}
         self.sets: dict[str, set[str]] = {}
         self.zsets: dict[str, dict[str, float]] = {}
+        self.lists: dict[str, list[str]] = {}
+
+    async def lpush(self, name: str, *values: Any) -> int:
+        if name not in self.lists:
+            self.lists[name] = []
+        for v in values:
+            self.lists[name].insert(0, str(v))
+        return len(self.lists[name])
+
+    async def ltrim(self, name: str, start: int, stop: int) -> bool:
+        if name in self.lists:
+            lst = self.lists[name]
+            if stop == -1:
+                self.lists[name] = lst[start:]
+            else:
+                self.lists[name] = lst[start : stop + 1]
+        return True
+
+    async def lrange(self, name: str, start: int, stop: int) -> list[str]:
+        if name not in self.lists:
+            return []
+        lst = self.lists[name]
+        if stop == -1:
+            return lst[start:]
+        return lst[start : stop + 1]
 
     async def get(self, name: str) -> str | None:
         return self.strings.get(name)
@@ -278,6 +319,9 @@ def fake_redis(monkeypatch: pytest.MonkeyPatch) -> FakeAsyncRedis:
     monkeypatch.setattr("src.api.v1.tenants.get_redis_client", lambda: fake)
     monkeypatch.setattr("src.api.v1.websockets.get_redis_client", lambda: fake)
     monkeypatch.setattr("src.services.telemetry_multiplexer.get_redis_client", lambda: fake)
+    monkeypatch.setattr("src.workers.syslog_collector.get_redis_client", lambda: fake)
+    monkeypatch.setattr("src.services.topology_l2.get_redis_client", lambda: fake)
+    monkeypatch.setattr("src.api.v1.fleet_metrics.get_redis_client", lambda: fake)
     return fake
 
 
