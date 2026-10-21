@@ -71,14 +71,14 @@ describe('FleetCveMatrix.vue — Hito 23.5 Matriz de Vulnerabilidades CVE', () =
     vi.restoreAllMocks();
     mockPush.mockReset();
 
-    vi.spyOn(http, 'get').mockImplementation(async (url: string) => {
+    vi.spyOn(http, 'get').mockImplementation((url: string) => {
       if (url.includes('/api/v1/inventory/cves')) {
-        return { data: sampleCveSummary, status: 200, headers: new Headers() } as unknown as ApiResponse;
+        return Promise.resolve({ data: sampleCveSummary, status: 200, headers: new Headers() } as unknown as ApiResponse);
       }
-      return { data: {}, status: 200, headers: new Headers() } as unknown as ApiResponse;
+      return Promise.resolve({ data: {}, status: 200, headers: new Headers() } as unknown as ApiResponse);
     });
 
-    vi.spyOn(http, 'post').mockImplementation(async (url: string) => {
+    vi.spyOn(http, 'post').mockImplementation((url: string) => {
       if (url.includes('/api/v1/inventory/cves/sync')) {
         const syncRes: CveSyncResponse = {
           success: true,
@@ -87,9 +87,9 @@ describe('FleetCveMatrix.vue — Hito 23.5 Matriz de Vulnerabilidades CVE', () =
           updated_at: '2026-10-20T21:00:00Z',
           message: 'Sincronizado exitosamente con 6 boletines.',
         };
-        return { data: syncRes, status: 200, headers: new Headers() } as unknown as ApiResponse;
+        return Promise.resolve({ data: syncRes, status: 200, headers: new Headers() } as unknown as ApiResponse);
       }
-      return { data: {}, status: 200, headers: new Headers() } as unknown as ApiResponse;
+      return Promise.resolve({ data: {}, status: 200, headers: new Headers() } as unknown as ApiResponse);
     });
   });
 

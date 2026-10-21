@@ -859,5 +859,3 @@ Certificación ejecutada bajo la **Regla Cero** dentro del contenedor efímero D
   - **Escenario 19:** *Consola WebFig v7 — Terminal Syslog en Vivo (RingBuffer Efímero)* (`/routers/{id}/webfig/syslog`): Valida terminal de eventos en tiempo real, badges de severidad, auto-scroll y apertura del modal con script CLI de configuración MikroTik.
   - **Escenario 20:** *Operaciones Masivas — Actualización con Conmutador PoE-Aware y Safety Stop* (`/bulk-ops`): Valida pestaña del actualizador masivo con conmutador *PoE-Aware* y selección de umbral *Safety Stop* (1%, 2%, 5%).
 - **Resultado Global Karate Labs UI:** **20 de 20 escenarios aprobados (100%)**.
-
-

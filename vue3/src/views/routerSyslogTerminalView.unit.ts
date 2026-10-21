@@ -55,14 +55,14 @@ describe('RouterSyslogTerminalView.vue — Hito 23.5 Consola Syslog en Vivo', ()
     setActivePinia(createPinia());
     vi.restoreAllMocks();
 
-    vi.spyOn(http, 'get').mockImplementation(async (url: string) => {
+    vi.spyOn(http, 'get').mockImplementation((url: string) => {
       if (url.includes('/syslog/template')) {
-        return { data: sampleTemplate, status: 200, headers: new Headers() } as unknown as ApiResponse;
+        return Promise.resolve({ data: sampleTemplate, status: 200, headers: new Headers() } as unknown as ApiResponse);
       }
       if (url.includes('/syslog')) {
-        return { data: sampleSyslogData, status: 200, headers: new Headers() } as unknown as ApiResponse;
+        return Promise.resolve({ data: sampleSyslogData, status: 200, headers: new Headers() } as unknown as ApiResponse);
       }
-      return { data: {}, status: 200, headers: new Headers() } as unknown as ApiResponse;
+      return Promise.resolve({ data: {}, status: 200, headers: new Headers() } as unknown as ApiResponse);
     });
   });
 

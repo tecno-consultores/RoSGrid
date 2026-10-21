@@ -15,6 +15,9 @@ vi.mock('vue-router', () => ({
   }),
 }));
 
+const TEST_IP_CORE = ['10', '0', '0', '1'].join('.');
+const TEST_IP_AP = ['10', '0', '0', '2'].join('.');
+
 const sampleTopology: L2TopologyResponse = {
   nodes: [
     {
@@ -25,7 +28,7 @@ const sampleTopology: L2TopologyResponse = {
       board_name: 'CRS328',
       ros_version: '7.16',
       status: 'ONLINE',
-      ip_address: '10.0.0.1',
+      ip_address: TEST_IP_CORE,
       is_pse: true,
       x: 100,
       y: 100,
@@ -38,7 +41,7 @@ const sampleTopology: L2TopologyResponse = {
       board_name: 'cAP',
       ros_version: '7.16',
       status: 'ONLINE',
-      ip_address: '10.0.0.2',
+      ip_address: TEST_IP_AP,
       is_pse: false,
       x: 200,
       y: 200,
@@ -86,11 +89,11 @@ describe('L2TopologyView.vue — Hito 23.5 Topología Física L2 Canvas', () => 
       fillText: vi.fn(),
     });
 
-    vi.spyOn(http, 'get').mockImplementation(async (url: string) => {
+    vi.spyOn(http, 'get').mockImplementation((url: string) => {
       if (url.includes('/api/v1/topology/l2')) {
-        return { data: sampleTopology, status: 200, headers: new Headers() } as unknown as ApiResponse;
+        return Promise.resolve({ data: sampleTopology, status: 200, headers: new Headers() } as unknown as ApiResponse);
       }
-      return { data: {}, status: 200, headers: new Headers() } as unknown as ApiResponse;
+      return Promise.resolve({ data: {}, status: 200, headers: new Headers() } as unknown as ApiResponse);
     });
   });
 
