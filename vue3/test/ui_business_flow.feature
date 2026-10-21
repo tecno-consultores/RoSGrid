@@ -123,3 +123,35 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And waitFor(".safemode-badge")
     Then match text(".safemode-badge") contains 'Safe Mode (60s) Activo'
     And waitFor("#compliance-router-select")
+
+  Scenario: 17. Mapa de Topología Física Layer 2 y Enlaces PoE
+    Given driver baseUrl + '/topology/l2'
+    And waitFor("//h1[contains(., 'Topología Física Layer 2')]")
+    And waitFor("canvas.topology-canvas")
+    And waitFor(".btn-refresh-topo")
+    Then match text(".legend-wrap") contains 'Inyector PSE'
+
+  Scenario: 18. Matriz de Vulnerabilidades CVE de Flota y Remediación Táctica
+    Given driver baseUrl + '/inventory/cves'
+    And waitFor("//h1[contains(., 'Matriz de Vulnerabilidades CVE')]")
+    And waitFor(".kpi-grid")
+    And waitFor("button.btn-sync-cve")
+    And waitFor("button.btn-remediate-fleet")
+    Then match text("button.btn-remediate-fleet") contains 'Actualizar Flota Afectada'
+
+  Scenario: 19. Consola WebFig v7 — Terminal Syslog en Vivo (RingBuffer Efímero)
+    Given driver baseUrl + '/routers/01928900-aaaa-7bbb-8ccc-111122223333/webfig/syslog'
+    And waitFor(".syslog-view")
+    And waitFor("//h2[contains(., 'Consola Syslog en Vivo')]")
+    And waitFor(".terminal-container")
+    And waitFor("button.btn-template")
+    Then match text("button.btn-template") contains 'Script RouterOS'
+
+  Scenario: 20. Operaciones Masivas — Actualización con Conmutador PoE-Aware y Safety Stop
+    Given driver baseUrl + '/bulk-ops'
+    And waitFor("//h1[contains(., 'Operaciones Masivas')]")
+    When click("//button[contains(@class, 'tab-btn') and contains(., 'Actualizador de RouterOS')]")
+    Then waitFor(".poe-safety-card")
+    And waitFor("button.btn-poe-upgrade")
+    And match text("button.btn-poe-upgrade") contains 'Actualizar Flota Seleccionada con PoE-Aware'
+    And waitFor(".checkbox-poe")

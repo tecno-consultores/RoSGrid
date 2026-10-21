@@ -252,6 +252,15 @@
 
         <button
           type="button"
+          class="btn-cve-matrix"
+          aria-label="Ver matriz de vulnerabilidades CVE"
+          @click="router.push('/inventory/cves')"
+        >
+          🛡️ Matriz de CVEs
+        </button>
+
+        <button
+          type="button"
           class="btn btn-primary"
           aria-label="Actualizar datos de la flota"
           @click="handleManualRefresh"
@@ -503,6 +512,23 @@
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
+  }
+
+  .btn-cve-matrix {
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid #f59e0b;
+    color: #fbbf24;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-cve-matrix:hover {
+    background: rgba(245, 158, 11, 0.25);
+    color: #fff;
   }
 
   .btn-manage-roles {

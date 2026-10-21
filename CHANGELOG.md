@@ -10,6 +10,15 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Added
 
+- **Implementación Frontend (Vue 3 + Pinia) — Topología L2, Matriz CVE, Syslog Live y PoE-Aware (Hito 23.5):**
+  - **Vista interactiva de Topología Física Layer 2 (`L2TopologyView.vue`):** Canvas 2D interactivo a 60 FPS con Pan/Zoom suave, badges dinámicos de consumo PoE en tiempo real (`⚡ W`), indicadores de estado Online/Offline, selector de modo Sólo-PoE, drawer lateral táctico y fallback accesible para screen readers.
+  - **Matriz de Vulnerabilidades CVE de Flota (`FleetCveMatrix.vue`):** Panel táctico con 4 tarjetas KPI evaluadas (Evaluados, Vulnerables, Críticos, Versión Recomendada), filtros reactivos por severidad (CRITICAL, HIGH, MEDIUM, LOW), sincronización remota contra NIST NVD y enlace directo al orquestador de actualización masiva.
+  - **Acceso Directo CVE en Inventario (`RouterInventoryView.vue`):** Botón táctico `[ 🛡️ Matriz de CVEs ]` para auditoría inmediata de vulnerabilidades de toda la flota.
+  - **Terminal Syslog en Vivo en WebFig (`RouterSyslogTerminalView.vue`):** Consola embebida en la vista de router que consume en tiempo real el RingBuffer efímero de KeyDB (500 eventos) sin persistencia en base de datos, con alertas visuales de severidad crítica, auto-scroll inteligente y modal con plantilla CLI de enrolamiento MikroTik.
+  - **Orquestador de Actualización Masiva PoE-Aware con Safety Stop (`BulkOperationsAndUpdatesView.vue`):** Conmutador táctico PoE-Aware para actualización de clientes PD antes que switches PSE y selector de umbral Safety Stop (1%, 2%, 5%).
+  - **Navegación Táctica:** Enlace a Topología L2 y Matriz CVE en el shell responsive principal (`RgResponsiveShell.vue`) y acceso a Syslog Live en el menú lateral de WebFig (`RouterSidebarMenu.vue`).
+  - **Certificación QA 11X:** 297 tests unitarios Vitest (100% pasando en 43 suites), 20 escenarios BDD Karate Labs UI, cero errores en `vue-tsc --noEmit` y cero violaciones ESLint / SonarJS.
+
 - **Planificación y Diseño Arquitectónico: Automatización de Flota, Topología L2, Syslog Efímero, Exportador Prometheus y Seguridad CVE (Hito 23):**
   - **Especificación Técnica y Arquitectura de Datos (`specs/35` y `docs/12`):** Diseño formal de estructuras en memoria para preservar estrictamente el modelo *Zero-Metrics Storage* (cero almacenamiento de series de tiempo en PostgreSQL 17).
   - **Motor de Actualizaciones Masivas PoE-Aware con Safety Stop:** Modelado de Grafo Acíclico Dirigido (DAG) de dependencias eléctricas PoE para ordenar la actualización de dispositivos cliente (PD) antes que los conmutadores/routers alimentadores (PSE), evitando cortes eléctricos durante el flasheo de firmware. Incluye circuito de corte de emergencia (*Safety Stop Circuit-Breaker*) que congela el lote si la tasa de fallos post-reinicio supera el 1%.

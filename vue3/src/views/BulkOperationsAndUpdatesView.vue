@@ -385,6 +385,9 @@
 
   // Pestaña Updates de RouterOS
   const targetRosVersion = ref('7.16.1');
+  const poeAware = ref(true);
+  const safetyStopThreshold = ref(1.0);
+  const updatingFleet = ref(false);
   const upgradingRouterId = ref<string | null>(null);
   const updateSuccess = ref<string | null>(null);
 
@@ -395,6 +398,9 @@
       await http.post('/api/v1/operations/ros-updates/execute', {
         router_ids: [router.id],
         auto_upgrade_firmware: true,
+        poe_aware: poeAware.value,
+        safety_stop_threshold_pct: safetyStopThreshold.value,
+        target_version: targetRosVersion.value,
       });
       updateSuccess.value = `Actualización de ${router.identity} iniciada. Se guardó respaldo obligatorio.`;
       router.ros_version = targetRosVersion.value;
@@ -406,6 +412,39 @@
       setTimeout(() => {
         updateSuccess.value = null;
       }, 5000);
+    }
+  }
+
+  async function triggerFleetPoeUpdate() {
+    const pendingRouters = fleetRouters.value.filter(
+      (r) => r.ros_version !== targetRosVersion.value && r.selected,
+    );
+    if (pendingRouters.length === 0) {
+      alert('No hay routers pendientes de actualización seleccionados.');
+      return;
+    }
+    updatingFleet.value = true;
+    updateSuccess.value = null;
+    try {
+      await http.post('/api/v1/operations/ros-updates/execute', {
+        router_ids: pendingRouters.map((r) => r.id),
+        auto_upgrade_firmware: true,
+        poe_aware: poeAware.value,
+        safety_stop_threshold_pct: safetyStopThreshold.value,
+        target_version: targetRosVersion.value,
+      });
+      updateSuccess.value = `Actualización masiva iniciada para ${pendingRouters.length} equipos con ordenamiento PoE-Aware (Safety Stop: ${safetyStopThreshold.value}%).`;
+      pendingRouters.forEach((r) => {
+        r.ros_version = targetRosVersion.value;
+      });
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { detail?: string } }; message?: string };
+      updateSuccess.value = `Error en actualización masiva: ${errorObj.response?.data?.detail || errorObj.message || 'Fallo de conexión'}`;
+    } finally {
+      updatingFleet.value = false;
+      setTimeout(() => {
+        updateSuccess.value = null;
+      }, 7000);
     }
   }
 </script>
@@ -758,6 +797,38 @@
         </div>
       </div>
 
+      <!-- Tarjeta de Control PoE-Aware y Safety Stop -->
+      <div class="poe-safety-card">
+        <div class="poe-safety-options">
+          <label class="toggle-poe-label">
+            <input v-model="poeAware" type="checkbox" class="checkbox-poe" />
+            <span class="font-bold">⚡ Ordenamiento PoE-Aware (Hojas PD primero, Switches PSE intermedios, Core final)</span>
+          </label>
+
+          <div class="safety-stop-selector">
+            <label class="form-label">
+              Freno de Emergencia (Safety Stop):
+              <select v-model.number="safetyStopThreshold" class="form-select select-sm">
+                <option :value="1.0">1.0% de fallos (Estricto)</option>
+                <option :value="2.0">2.0% de fallos</option>
+                <option :value="5.0">5.0% de fallos (Permisivo)</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          class="btn btn--primary btn-poe-upgrade"
+          :disabled="updatingFleet"
+          aria-label="Actualizar flota con ordenamiento PoE-Aware"
+          @click="triggerFleetPoeUpdate"
+        >
+          <span v-if="updatingFleet">⏳ Procesando etapas PoE...</span>
+          <span v-else>⚡ Actualizar Flota Seleccionada con PoE-Aware</span>
+        </button>
+      </div>
+
       <table class="fleet-table">
         <thead>
           <tr>
@@ -926,6 +997,51 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 1rem;
+  }
+
+  .poe-safety-card {
+    background: #0f172a;
+    border: 1px solid rgba(250, 204, 21, 0.3);
+    border-radius: 6px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .poe-safety-options {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .toggle-poe-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: #facc15;
+    cursor: pointer;
+  }
+
+  .safety-stop-selector .select-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  .btn-poe-upgrade {
+    background-color: #0284c7;
+    color: #ffffff;
+    font-weight: 600;
+    padding: 0.55rem 1.15rem;
+    border-radius: 6px;
+  }
+
+  .btn-poe-upgrade:hover:not(:disabled) {
+    background-color: #0369a1;
   }
 
   .step-title {

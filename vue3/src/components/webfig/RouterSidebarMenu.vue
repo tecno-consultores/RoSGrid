@@ -203,6 +203,16 @@
           <button
             type="button"
             class="nav-item"
+            :class="{ 'nav-item--active': route.path.includes('/syslog') }"
+            @click="navigateTo('syslog')"
+          >
+            <span class="item-icon">📜</span>
+            <span class="item-text">Syslog Live (RingBuffer)</span>
+          </button>
+
+          <button
+            type="button"
+            class="nav-item"
             :class="{ 'nav-item--active': route.path.includes('/backups') }"
             @click="navigateTo('backups')"
           >

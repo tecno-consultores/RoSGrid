@@ -51,6 +51,10 @@ export interface TenantFeatureFlags {
   sla_tracker_enabled: boolean;
   mass_outage_threshold: number;
   default_locale: string;
+  l2_topology_enabled?: boolean;
+  syslog_collector_enabled?: boolean;
+  cve_scanner_enabled?: boolean;
+  prometheus_fleet_exporter_enabled?: boolean;
 }
 
 export interface UserInfo {
@@ -1041,4 +1045,112 @@ export interface NotificationChannelUpdateRequest {
 export interface NotificationTestResponse {
   status: 'SUCCESS' | 'FAILED';
   detail: string;
+}
+
+// ==============================================================================
+// Tipos para Automatización Táctica de Flota, Topología L2, Syslog y CVEs (Hito 23.5)
+// ==============================================================================
+
+export type CveSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+
+export interface CveItem {
+  cve_id: string;
+  title: string;
+  cvss_score: number;
+  severity: CveSeverity;
+  affected_versions_expr: string;
+  fixed_in_version: string;
+  description_es: string;
+  remediation: string;
+  published_date: string;
+}
+
+export interface RouterCveEvaluation {
+  router_id: string;
+  display_name: string;
+  ros_version: string | null;
+  total_vulnerabilities: number;
+  critical_count: number;
+  high_count: number;
+  medium_count: number;
+  max_cvss_score: number;
+  vulnerabilities: CveItem[];
+  recommended_target_version?: string | null;
+}
+
+export interface FleetCveSummary {
+  total_evaluated_routers: number;
+  vulnerable_routers_count: number;
+  critical_routers_count: number;
+  high_routers_count: number;
+  total_unique_cves: number;
+  summary_by_severity: Record<string, number>;
+  vulnerable_routers: RouterCveEvaluation[];
+  timestamp: string;
+}
+
+export interface CveSyncResponse {
+  success: boolean;
+  source_url: string;
+  total_cves: number;
+  updated_at: string;
+  message: string;
+}
+
+export interface TopologyNode {
+  id: string;
+  display_name: string;
+  ros_identity: string;
+  model_name?: string | null;
+  board_name?: string | null;
+  ros_version?: string | null;
+  status: string;
+  ip_address: string;
+  is_pse: boolean;
+  x?: number;
+  y?: number;
+}
+
+export interface TopologyEdge {
+  id: string;
+  source_router_id: string;
+  source_interface: string;
+  target_router_id: string;
+  target_interface: string;
+  link_speed?: string | null;
+  is_poe_delivering: boolean;
+  poe_power_watts?: number | null;
+  protocol: string;
+}
+
+export interface L2TopologyResponse {
+  nodes: TopologyNode[];
+  edges: TopologyEdge[];
+  total_nodes: number;
+  total_edges: number;
+  timestamp: string;
+}
+
+export interface SyslogEvent {
+  timestamp: string;
+  facility: string;
+  severity: string;
+  topics: string;
+  message: string;
+  is_critical: boolean;
+  raw: string;
+}
+
+export interface RouterSyslogResponse {
+  router_id: string;
+  total_events: number;
+  critical_count: number;
+  events: SyslogEvent[];
+}
+
+export interface SyslogTemplateResponse {
+  template_content: string;
+  default_port: number;
+  protocol: string;
+  instructions: string;
 }

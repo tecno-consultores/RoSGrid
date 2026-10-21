@@ -37,6 +37,15 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/inventory/cves',
+    name: 'FleetCveMatrix',
+    component: () => import('@/views/FleetCveMatrix.vue'),
+    meta: {
+      requiresAuth: true,
+      title: 'Matriz de Vulnerabilidades CVE — RoSGrid',
+    },
+  },
+  {
     path: '/routers/:routerId/webfig',
     name: 'RouterWebFig',
     component: () => import('@/views/RouterWebFigLayout.vue'),
@@ -157,6 +166,17 @@ const routes: RouteRecordRaw[] = [
           title: 'Respaldos y Comparador Diff — RoSGrid',
           tabLabel: 'Respaldos',
           tabIcon: '💾',
+        },
+      },
+      {
+        path: 'syslog',
+        name: 'RouterSyslogLive',
+        component: () => import('@/views/RouterSyslogTerminalView.vue'),
+        meta: {
+          requiresAuth: true,
+          title: 'Syslog Live — RoSGrid',
+          tabLabel: 'Syslog Live',
+          tabIcon: '📜',
         },
       },
     ],
@@ -287,6 +307,16 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       title: 'Gestión de Flota & Cumplimiento Normativo — RoSGrid',
+    },
+  },
+  {
+    path: '/topology/l2',
+    alias: ['/topology'],
+    name: 'L2Topology',
+    component: () => import('@/views/L2TopologyView.vue'),
+    meta: {
+      requiresAuth: true,
+      title: 'Topología Física Layer 2 — RoSGrid',
     },
   },
 ];

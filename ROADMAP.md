@@ -410,11 +410,14 @@
   - Orquestador de actualizaciones masivas PoE-aware en orden topológico inverso con Safety Stop automático del 1%.
   - Expansión del servidor MCP a 20 herramientas (`rosgrid_get_l2_topology`, `rosgrid_check_fleet_cves`, `rosgrid_get_recent_syslog`, `rosgrid_execute_poe_aware_upgrade`).
   - Suite de pruebas de contratos y BDD en Karate Labs (`fastapi/test/api_test.feature` y `examples/fastapi/test/api_test.feature`, Escenarios 55-61) y 23 tests unitarios Pytest en Docker (100% pasando, Grado A Radon CC <= 5, 0 errores Mypy Strict).
-- [ ] **23.5** **Implementación Frontend (Vue 3 + Pinia):**
-  - Vista interactiva de Topología L2 con Canvas/SVG (`L2TopologyView.vue`).
-  - Insignias de riesgo CVE en tabla de inventario (`RgDataTable.vue`).
-  - Terminal de eventos Syslog en vivo en la consola WebFig del router.
-  - Asistente de actualización masiva con conmutador *PoE-Aware* y selector de umbral *Safety Stop*.
+- [x] **23.5** **Implementación Frontend (Vue 3 + Pinia):**
+  - Vista interactiva de Topología L2 con Canvas 2D táctica (`L2TopologyView.vue`), renderizado a 60 FPS con Pan/Zoom, badges de PoE (Watts), indicadores LED de estado Online/Offline, drawer táctico de detalles y fallback accesible para screen readers (`role="region"`).
+  - Matriz de Vulnerabilidades CVE táctica (`FleetCveMatrix.vue`), 4 tarjetas KPI evaluadas (Evaluados, Vulnerables, Críticos, Versión Recomendada), filtro reactivo por severidad (CRITICAL/HIGH/MEDIUM/LOW), sincronización remota contra NIST NVD y botón directo a remediación masiva.
+  - Insignia y botón de acceso directo `[ 🛡️ Matriz de CVEs ]` en la tabla de inventario (`RouterInventoryView.vue`).
+  - Terminal de eventos Syslog en vivo en la consola WebFig del router (`RouterSyslogTerminalView.vue`), lectura de RingBuffer efímero en KeyDB (UDP/TCP 5514), badges tácticos de severidad (CRIT, WARN, INFO), auto-scroll inteligente y modal con script CLI de enrolamiento MikroTik.
+  - Asistente de actualización masiva con conmutador *PoE-Aware* y selector de umbral *Safety Stop* (1%, 2%, 5%) (`BulkOperationsAndUpdatesView.vue`).
+  - Menú lateral WebFig v7 actualizado con enlace directo a Syslog Live RingBuffer (`RouterSidebarMenu.vue`) y barra de navegación responsive global con Topología L2 y CVEs (`RgResponsiveShell.vue`).
+  - Suite de pruebas de contratos y BDD en Karate Labs UI (`vue3/test/ui_business_flow.feature` y `examples/vue3/test/ui_business_flow.feature`, Escenarios 17-20) y 17 tests unitarios Vitest en Docker (100% pasando, 0 violaciones ESLint/SonarJS, 0 errores TypeScript strict).
 
 ---
 

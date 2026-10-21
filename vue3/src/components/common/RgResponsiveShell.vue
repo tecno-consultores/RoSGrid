@@ -82,6 +82,18 @@
 
     items.push(
       {
+        name: 'L2Topology',
+        path: '/topology/l2',
+        label: t('nav.l2_topology', 'Topología L2'),
+        icon: '🗺️',
+      },
+      {
+        name: 'FleetCveMatrix',
+        path: '/inventory/cves',
+        label: t('nav.cve_matrix', 'Matriz de CVEs'),
+        icon: '🛡️',
+      },
+      {
         name: 'RscGitDiff',
         path: '/backups',
         label: t('nav.backups_diff', 'Respaldos Diff'),

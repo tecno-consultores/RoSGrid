@@ -170,6 +170,7 @@ docker compose -f docker-compose.qa.yml down --remove-orphans
 | **Hito 22.10** | Cobertura BDD Integral Karate Labs (100% de la API REST FastAPI — 54 Escenarios Exhaustivos en Docker) | **100%** (54/54 BDD REST)<br>**95.04%** (399 tests Pytest) | N/A | Karate Labs API + Cobertura de 35 submódulos | ✅ **Certificado** |
 | **Hito 22.11** | Migración Integral de Runtime a Python 3.15 (`base-python-uv:3.15`) y Node.js 26 LTS (`base-node-ionic:26`) | **95.04%** (399 tests Pytest)<br>**100%** (262 tests Vitest) | Stryker + Mutmut | Free-Threading PEP 703 Tier-1 + V8 14.x + vue-tsc (0 err) | ✅ **Certificado** |
 | **Hito 23.4** | Automatización Táctica de Flota, Topología L2, Syslog Efímero, Cruce CVEs, Exporter Prometheus y 20 Herramientas MCP | **95.12%** (422 tests Backend)<br>**100%** (61/61 BDD REST) | N/A | Radon CC <= 5 (100% Grado A) + Mypy Strict (0 err) + Karate Labs Grupo 22 | ✅ **Certificado** |
+| **Hito 23.5** | Frontend Vue 3 + Pinia: Matriz CVE, Topología L2 Canvas, Syslog Live, PoE-Aware y Karate UI | **100%** (20/20 BDD UI)<br>**100%** (297 tests Vitest) | N/A | ESLint + SonarJS (0 err) + vue-tsc (0 err) + Karate Labs Grupo 23 | ✅ **Certificado** |
 
 ---
 
@@ -836,4 +837,27 @@ Certificación ejecutada bajo la **Regla Cero** dentro del contenedor efímero D
   - **Escenario 60:** Scraping de telemetría OpenMetrics Prometheus `/api/v1/metrics/fleet` devuelve 200 y métrica `rosgrid_router_status`.
   - **Escenario 61:** Actualización masiva con ordenamiento PoE-aware `/api/v1/operations/ros-updates/execute` sin autenticación devuelve 401.
 - **Resultado Global Karate Labs API:** **61 de 61 escenarios aprobados (100%)**.
+
+---
+
+## 23. Certificación QA 11X — Frontend Vue 3 + Pinia: Matriz CVE, Topología L2, Syslog Terminal y Operaciones PoE-Aware (Hito 23.5)
+
+Certificación ejecutada bajo la **Regla Cero** dentro del contenedor efímero Docker `sinfallas/base-node-ionic:26` y `sinfallas/karatelabs:latest` conforme a `specs/35_FLEET_AUTOMATION_TOPOLOGY_L2_SYSLOG_AND_PROMETHEUS.md` y `docs/12_DISENO_TOPOLOGIA_L2_SYSLOG_Y_AUTOMATIZACION.md`.
+
+### A. Resultados de Pruebas Unitarias y Tipado Estricto (Vitest 1.3.1 + Vue-TSC + ESLint)
+
+- **Pruebas Unitarias Frontend:** **297 de 297 pruebas pasadas (100% exitosas)** en 43 suites de pruebas (17 pruebas exclusivas añadidas para el Hito 23.5 cubriendo `FleetCveMatrix.vue`, `L2TopologyView.vue` y `RouterSyslogTerminalView.vue`).
+- **Verificación de Tipos (vue-tsc --noEmit):** Cero (0) errores de tipado TypeScript estricto en la totalidad del frontend.
+- **Análisis de Complejidad y Calidad (ESLint + SonarJS):** Cero (0) errores en todos los componentes y vistas (`sonarjs/cognitive-complexity <= 15`).
+- **Compilación de Producción (Vite Build):** Bundle generado de manera limpia en 4.06 segundos sin advertencias ni dependencias faltantes.
+
+### B. Pruebas BDD de Interfaz de Usuario con Karate Labs (Escenarios 17-20)
+
+- **Escenarios de Prueba en `vue3/test/ui_business_flow.feature` y réplica en `examples/vue3/test/ui_business_flow.feature`:**
+  - **Escenario 17:** *Mapa de Topología Física Layer 2 y Enlaces PoE* (`/topology/l2`): Valida renderizado del canvas táctico 2D a 60 FPS, leyenda de PSE/PoE y refresco interactivo.
+  - **Escenario 18:** *Matriz de Vulnerabilidades CVE de Flota y Remediación Táctica* (`/inventory/cves`): Valida encabezado h1 semántico, grid con 4 tarjetas KPI evaluadas, botón de sincronización NIST NVD y enlace directo al orquestador de actualización masiva.
+  - **Escenario 19:** *Consola WebFig v7 — Terminal Syslog en Vivo (RingBuffer Efímero)* (`/routers/{id}/webfig/syslog`): Valida terminal de eventos en tiempo real, badges de severidad, auto-scroll y apertura del modal con script CLI de configuración MikroTik.
+  - **Escenario 20:** *Operaciones Masivas — Actualización con Conmutador PoE-Aware y Safety Stop* (`/bulk-ops`): Valida pestaña del actualizador masivo con conmutador *PoE-Aware* y selección de umbral *Safety Stop* (1%, 2%, 5%).
+- **Resultado Global Karate Labs UI:** **20 de 20 escenarios aprobados (100%)**.
+
 
