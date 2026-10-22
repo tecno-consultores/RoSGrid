@@ -107,6 +107,7 @@ flowchart TB
 - **Safe Mode vía *Dead Man's Switch* (`/system/scheduler`):** Antes de aplicar un cambio delicado de red o firewall, RoSGrid inyecta un scheduler temporal de reversión a 60 segundos en el propio MikroTik. Si el cambio deja incomunicado al router, el MikroTik revierte el cambio por sí solo y recupera la conexión automáticamente.
 - **Flujo de Aprobación (*Maker-Checker*):** Las 7 categorías de acciones críticas ejecutadas por niveles operativos intermedios se interceptan hacia una bandeja de aprobación para que un Supervisor o Soporte N3 las autorice revisando el Diff previo (con segregación estricta de funciones `maker != checker`).
 - **Backups Nocturnos Deduplicados y Comparador Diff Estilo Git (`.rsc`):** Retención de 30 días con deduplicación por hash SHA-256 y visor lado a lado estilo Git para auditar qué líneas exactas cambiaron en un router entre dos fechas o frente al estado en vivo (`LIVE`).
+- **Operaciones Masivas y Plantillas (*Golden Configs*):** Catálogo de plantillas predefinidas (`CLIENTE_NTP`, `DNS_CORPORATIVO_RESILIENTE`, `SNMP_V2C_MONITOREO_NOC`, `SYSLOG_CENTRALIZADO_ROSGRID`) con parametrización dinámica de variables (IP de servidor RoSGrid, puertos, comunidades), previsualización de comandos REST/CLI y ejecución por lotes protegida por *Safe Mode (60s)*.
 - **Mapa Interactivo OpenStreetMap (Leaflet) y Wallboard NOC:** Georreferenciación 100% gratuita sin API Keys, ventanas de mantenimiento programadas y alertas *Zero-Storage* hacia **Telegram, Correo SMTP, Webhooks HMAC-SHA256 y Pantalla NOC**.
 
 ### 5. Servidor MCP Protegido para Agentes de IA (`Hermes Agent`, `Claude Desktop / Code`)
@@ -202,21 +203,22 @@ rosgrid/
 
 ### 📖 Enciclopedia Documental de Producción (`docs/`)
 
-Para una referencia exhaustiva de operación, seguridad y despliegue, consulta los 11 manuales e informes oficiales del sistema:
+Para una referencia exhaustiva de operación, seguridad y despliegue, consulta los 12 manuales e informes oficiales del sistema:
 
 | Manual | Descripción Técnica |
 | :--- | :--- |
 | **[`docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md`](./docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md)** | Variables `.env`, entropía criptográfica, arquitectura **KeyDB Multi-Hilo por defecto** vs. perfil **DragonflyDB**, Compose y `./build.sh`. |
 | **[`docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md`](./docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md)** | Comandos CLI RouterOS v7.1+, política obligatoria `rest-api` (v7.13+), certificados TLS para Pinning TOFU (`SHA-256`), `/ip/service/www-ssl` y Safe Mode. |
 | **[`docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md`](./docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md)** | Aislamiento RLS en PostgreSQL 17, matriz de 11 roles RBAC, permisos por router, Bóveda 2FA (30s), Kill-Switch y Auto-Registro con Maker-Checker. |
-| **[`docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md`](./docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md)** | Consola WebFig L1/L2, pestañas `<KeepAlive :max="5">`, gráficas Canvas 2D, Maker-Checker, comparador Git Diff `.rsc` y Wallboard. |
+| **[`docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md`](./docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md)** | Consola WebFig L1/L2, pestañas `<KeepAlive :max="5">`, gráficas Canvas 2D, Maker-Checker, comparador Git Diff `.rsc`, Wallboard y Plantillas Golden Configs masivas. |
 | **[`docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md`](./docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md)** | Perfil Auditor, cadena WORM SHA-256 e índice BRIN, ADR sobre la exclusión de terminal CLI/SSH y diagramas Mermaid AST. |
-| **[`docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`](./docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md)** | Especificación completa de endpoints `/api/v1/*` (incluyendo `/api/v1/auth/register`, `/users/*` y `/api/v1/mcp`) y WebSockets `/ws/v1/*`. |
+| **[`docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`](./docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md)** | Especificación completa de endpoints `/api/v1/*` (incluyendo `/api/v1/operations/templates*`, `/bulk-jobs*`, `/auth/register` y `/api/v1/mcp`) y WebSockets `/ws/v1/*`. |
 | **[`docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md`](./docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md)** | Servidor MCP protegido (`POST /api/v1/mcp`), catálogo de 16 tools semánticas, configuración Hermes/Claude y NOC Autónomo 24/7. |
 | **[`docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md`](./docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md)** | Pipeline local `./probar-prod-local.sh`, verificación sintética en 6 fases y suite de 24 pruebas de integración UI-API (`validar_comunicacion_front_back.py`). |
 | **[`docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md`](./docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md)** | Plan maestro de pruebas de aceptación de usuario (UAT 11X), 28 casos manuales E2E, redescubrimiento TOFU y bitácora de sign-off. |
 | **[`docs/10_REPORTE_INVESTIGACION_PYTHON_3_15.md`](./docs/10_REPORTE_INVESTIGACION_PYTHON_3_15.md)** | Investigación técnica sobre Python 3.15 (Free-Threading / No-GIL PEP 703, Tier-2 JIT, PEP 649) y migración a `sinfallas/base-python-uv:3.15`. |
 | **[`docs/11_REPORTE_INVESTIGACION_NODE_26.md`](./docs/11_REPORTE_INVESTIGACION_NODE_26.md)** | Investigación técnica sobre Node.js 26 LTS (Native Type Stripping, V8 14.x, Temporal API) y migración a `sinfallas/base-node-ionic:26`. |
+| **[`docs/12_DISENO_TOPOLOGIA_L2_SYSLOG_Y_AUTOMATIZACION.md`](./docs/12_DISENO_TOPOLOGIA_L2_SYSLOG_Y_AUTOMATIZACION.md)** | Topología física L2 (MNDP/LLDP), actualizaciones PoE-Aware con Safety Stop, receptor Syslog efímero (UDP 5514), plantilla Golden Config y métricas Prometheus. |
 
 ---
 

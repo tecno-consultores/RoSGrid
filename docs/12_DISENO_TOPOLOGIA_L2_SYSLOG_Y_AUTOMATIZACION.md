@@ -159,9 +159,31 @@ flowchart TD
 
 ---
 
-## 5. Plantilla de Aprovisionamiento Masivo Syslog
+## 5. Plantilla de Aprovisionamiento Masivo Syslog (`SYSLOG_CENTRALIZADO_ROSGRID`)
 
-Para que un router recién incorporado reporte sus eventos a RoSGrid, se incorpora a la biblioteca de plantillas la siguiente configuración estandarizada:
+### 5.1. Definición Formal del Preset en Catálogo
+
+Para que cualquier router de la flota reporte de inmediato sus eventos al receptor centralizado en memoria de RoSGrid, se incorpora al catálogo oficial de plantillas predefinidas (*Golden Configs*) el identificador `SYSLOG_CENTRALIZADO_ROSGRID` (`fastapi/src/api/v1/bulk_and_updates.py` y `vue3/src/components/operations/templatePresets.ts`):
+
+- **Identificador Técnico:** `SYSLOG_CENTRALIZADO_ROSGRID`
+- **Categoría:** `SECURITY`
+- **Esquema de Variables Requeridas (`variables_schema`):**
+  - `rosgrid_server_ip`: (Tipo `string`, obligatorio) Dirección IP o FQDN alcanzable del host RoSGrid desde la red de gestión del MikroTik.
+  - `rosgrid_syslog_port`: (Tipo `integer`, opcional, por defecto `5514`) Puerto UDP de escucha del colector en segundo plano.
+- **Sustitución de Variables Insensible a Mayúsculas/Minúsculas:** Tanto el backend (`_render_template_steps`) como el frontend (`substituteVariables`) resuelven de forma idéntica expresiones `{{ rosgrid_server_ip }}` o `{{ ROSGRID_SERVER_IP }}`.
+
+### 5.2. Pasos REST de Configuración v7 (`PUT /rest/*`)
+
+El trabajo masivo ejecuta 7 pasos transaccionales ordenados:
+1. `PUT /system/logging/action/rosgrid-syslog`: Crea o actualiza la acción remota `rosgrid-syslog` (`target: "remote"`, `remote: "{{ rosgrid_server_ip }}"`, `remote-port: "{{ rosgrid_syslog_port }}"`, `bsd-syslog: "yes"`, `facility: "daemon"`, `sys-ident: "yes"`).
+2. `PUT /system/logging/rosgrid-interface`: Envía alertas críticas de corte de enlaces físicos (`topics: "interface,warning,critical"`).
+3. `PUT /system/logging/rosgrid-bgp`: Reporta caídas de adyacencia de enrutamiento exterior (`topics: "route,bgp,warning"`).
+4. `PUT /system/logging/rosgrid-ospf`: Reporta eventos de topología interna (`topics: "route,ospf,warning"`).
+5. `PUT /system/logging/rosgrid-system`: Captura errores críticos de CPU, watchdog y almacenamiento (`topics: "system,error,critical"`).
+6. `PUT /system/logging/rosgrid-dhcp`: Advierte sobre agotamiento de pools y conflictos IP (`topics: "dhcp,critical"`).
+7. `PUT /system/logging/rosgrid-firewall`: Reporta paquetes dropeados en listas de bloqueo perimetral (`topics: "firewall,warning"`).
+
+### 5.3. Script CLI Nativo Equivalente (RouterOS v7)
 
 ```routeros
 # ==============================================================================
@@ -183,7 +205,7 @@ add topics=dhcp,critical action="rosgrid-syslog"
 add topics=firewall,warning action="rosgrid-syslog"
 ```
 
-Esta plantilla se distribuye mediante el asistente de **Operaciones Masivas (*Bulk Ops*)**, protegiendo la ejecución con **Safe Mode (60s)**.
+Esta plantilla se distribuye de forma masiva mediante el asistente de **Operaciones Masivas (*Bulk Ops*)**, protegiendo incondicionalmente la ejecución con **Safe Mode (60s)**.
 
 ---
 

@@ -1248,3 +1248,57 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
   - `safety_stop_threshold_pct: float` (por defecto `1.0%`).
 - **Gobernanza:** Si supera el umbral de fallos, activa el *Safety Stop*, aborta las etapas posteriores y emite alertas de alta prioridad.
 
+#### 4.6.6 Plantillas de Configuración y Trabajos Masivos (`/api/v1/operations/templates*` y `/api/v1/operations/bulk-jobs*`)
+
+##### `GET /api/v1/operations/templates`
+- **Propósito:** Lista todas las plantillas de configuración disponibles para el tenant actual (`config_templates`). Si la tabla está vacía, autosembra de forma determinista el catálogo inicial de plantillas del sistema.
+- **Roles Autorizados:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`, `SUPERVISOR`, `SUPPORT_L3`, `SUPPORT_L2`.
+- **Respuesta (200 OK):** Array de objetos plantilla con `id`, `name`, `description`, `target_category`, `variables_schema` y `steps`.
+
+##### `GET /api/v1/operations/templates/presets`
+- **Propósito:** Devuelve el catálogo inmutable de plantillas predefinidas provistas por el sistema (`CLIENTE_NTP`, `DNS_CORPORATIVO_RESILIENTE`, `SNMP_V2C_MONITOREO_NOC`, `SYSLOG_CENTRALIZADO_ROSGRID`).
+- **Roles Autorizados:** Todos los roles autenticados con acceso al módulo de operaciones.
+- **Respuesta (200 OK):** Array de presets con variables tipadas, pasos REST y scripts CLI correspondientes.
+
+##### `POST /api/v1/operations/templates`
+- **Propósito:** Crea una nueva plantilla de configuración personalizada para el tenant.
+- **Roles Autorizados:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`, `SUPERVISOR`, `SUPPORT_L3`.
+- **Payload:** `TemplateCreateRequest` (`name`, `description`, `target_category`, `variables_schema`, `steps`).
+- **Respuesta (201 Created):** Objeto plantilla creado.
+
+##### `POST /api/v1/operations/templates/seed-defaults`
+- **Propósito:** Sembrado explícito e idempotente de las plantillas predefinidas del sistema en la base de datos del tenant sin sobrescribir plantillas existentes.
+- **Roles Autorizados:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`, `SUPPORT_L3`.
+- **Respuesta (200 OK):** `{"seeded": int, "templates": [...]}`.
+
+##### `GET /api/v1/operations/templates/{template_id}`
+- **Propósito:** Obtiene el detalle completo y pasos REST de una plantilla específica.
+- **Respuesta (200 OK):** Objeto plantilla con esquema de variables y lista de pasos.
+
+##### `PUT /api/v1/operations/templates/{template_id}`
+- **Propósito:** Actualiza el nombre, descripción, esquema de variables o pasos de una plantilla existente.
+- **Roles Autorizados:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`, `SUPERVISOR`, `SUPPORT_L3`.
+
+##### `DELETE /api/v1/operations/templates/{template_id}`
+- **Propósito:** Elimina de forma segura una plantilla personalizada. Las plantillas del sistema protegen la integridad referencial de trabajos históricos.
+- **Roles Autorizados:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`.
+
+##### `POST /api/v1/operations/bulk-jobs`
+- **Propósito:** Encola y ejecuta un trabajo de configuración masiva sobre una lista seleccionada de routers empleando una plantilla de configuración.
+- **Roles Autorizados:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`, `SUPERVISOR`, `SUPPORT_L3`.
+- **Payload:** `BulkJobCreateRequest` (`template_id: UUID`, `target_router_ids: list[UUID]`, `variable_values: dict`, `use_safe_mode: bool = true`, `timeout_seconds: int = 60`).
+- **Comportamiento:**
+  - Sustituye de forma insensible a mayúsculas/minúsculas las variables ingresadas en cada paso REST (`_render_template_steps`).
+  - Aplica un *Dead Man's Switch* Safe Mode en cada router (`rosgrid_safemode_*`).
+  - Registra el resultado por router (`SUCCESS`, `FAILED`, `ROLLED_BACK`) en la base de datos y la bitácora WORM.
+- **Respuesta (201 Created):** Objeto `BulkJobSummary` con `job_id`, `status`, `total_routers`, `success_count`, `failure_count` y marcas temporales.
+
+##### `GET /api/v1/operations/bulk-jobs`
+- **Propósito:** Consulta el historial paginado de trabajos masivos ejecutados en el tenant.
+- **Respuesta (200 OK):** Lista de trabajos con estado global y conteos de éxito/error.
+
+##### `GET /api/v1/operations/bulk-jobs/{job_id}`
+- **Propósito:** Obtiene el reporte detallado router por router de la ejecución de un trabajo masivo.
+- **Respuesta (200 OK):** Detalle del trabajo incluyendo trazas de error individuales en caso de fallo.
+
+

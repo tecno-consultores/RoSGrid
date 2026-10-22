@@ -225,21 +225,39 @@ flowchart TD
 
 ---
 
-## 8. Topología Física Layer 2, Matriz de Vulnerabilidades CVE y Operaciones PoE-Aware (Hito 23)
+## 9. Topología Física Layer 2, Matriz de Vulnerabilidades CVE y Operaciones Masivas (Hitos 22 y 23)
 
-### 8.1 Visualizador Táctico de Topología Física Capa 2 (`L2TopologyView.vue` en `/topology/l2`)
+### 9.1 Visualizador Táctico de Topología Física Capa 2 (`L2TopologyView.vue` en `/topology/l2`)
 
 - **Lienzo Gráfico Acelerado:** Canvas 2D interactivo a 60 FPS con Pan/Zoom y cuadrícula táctica, diseñado para inspeccionar adyacencias puerto a puerto (MNDP/LLDP) sin sobrecargar la CPU del cliente.
 - **Distribución de Energía PoE:** Enlaces con entrega de energía activos renderizados en amarillo eléctrico con indicación de potencia en tiempo real (`⚡ W`). Nodos alimentadores PSE identificados con halo dorado y radio ampliado.
 - **Drawer de Detalles y WebFig:** Al seleccionar un nodo o enlace en el lienzo, se despliega un panel lateral con información de interfaces interconectadas, velocidad de enlace y acceso directo a la consola WebFig del router.
 
-### 8.2 Matriz de Vulnerabilidades CVE de Flota (`FleetCveMatrix.vue` en `/inventory/cves`)
+### 9.2 Matriz de Vulnerabilidades CVE de Flota (`FleetCveMatrix.vue` en `/inventory/cves`)
 
 - **Evaluación Local Zero-Leak:** Cruce proactivo del catálogo oficial embebido contra las versiones RouterOS instaladas en la flota sin enviar telemetría a la nube externa.
 - **Tarjetas KPI y Filtro de Severidad:** Muestra el recuento de routers evaluados, vulnerables y críticos, junto con la versión de firmware recomendada. Permite filtrar por severidad (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`).
 - **Remediación en 1 Clic:** Botón directo `[ 🚀 Actualizar Flota Afectada ]` que preconfigura el asistente de operaciones masivas.
 
-### 8.3 Asistente de Actualización Masiva PoE-Aware (`BulkOperationsAndUpdatesView.vue` en `/bulk-ops`)
+### 9.3 Asistente de Actualización Masiva PoE-Aware (`BulkOperationsAndUpdatesView.vue` en `/bulk-ops`)
 
 - **Conmutador PoE-Aware:** Reordena la cola de actualización invirtiendo el DAG de dependencias eléctricas para actualizar primero los dispositivos alimentados (PD) antes que los conmutadores alimentadores (PSE), previniendo apagones accidentales durante el flasheo de firmware.
 - **Circuito Safety Stop:** Monitorea la tasa de fallos post-reinicio y congela automáticamente el lote si se supera el umbral configurado (1%, 2% o 5%), emitiendo alertas inmediatas al NOC.
+
+### 9.4 Catálogo de Plantillas Golden Configs y Enrolamiento Syslog Masivo
+
+El asistente de operaciones masivas (`/bulk-ops`) incorpora un catálogo de plantillas de configuración estandarizadas (*Golden Configs*) gobernadas por el motor de **Safe Mode (60s)**:
+
+- **Presets Nativos Disponibles:**
+  1. `CLIENTE_NTP`: Sincronización horaria contra servidores NTP primarios y de respaldo.
+  2. `DNS_CORPORATIVO_RESILIENTE`: Servidores DNS locales y de contingencia con caché dimensionada.
+  3. `SNMP_V2C_MONITOREO_NOC`: Comunidad SNMP v2c protegida por lista blanca de direcciones IP.
+  4. `SYSLOG_CENTRALIZADO_ROSGRID`: Enrolamiento de telemetría Syslog hacia el receptor centralizado de RoSGrid en UDP 5514.
+- **Parametrización Dinámica de Syslog:**
+  - `rosgrid_server_ip`: Dirección IP alcanzable del servidor RoSGrid (ingresada dinámicamente por el operador).
+  - `rosgrid_syslog_port`: Puerto del receptor en KeyDB (por defecto `5514`).
+  - La sustitución de variables es insensible a mayúsculas/minúsculas (`{{ rosgrid_server_ip }}` o `{{ ROSGRID_SERVER_IP }}`).
+- **Previsualización de Comandos Dual REST y CLI:**
+  - El operador puede alternar entre la vista de llamadas estructuradas REST (`PUT /rest/system/logging/*`) y el script CLI nativo equivalente antes de la ejecución.
+- **Ejecución Protegida por Safe Mode:**
+  - Cada router aplica los 7 pasos de configuración bajo un temporizador transaccional de reversión automática a 60 segundos (`rosgrid_safemode_*`), impidiendo que un error de sintaxis o bloqueo de firewall interrumpa la conectividad administrativa de la flota.
