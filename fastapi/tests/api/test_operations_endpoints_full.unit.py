@@ -471,7 +471,7 @@ async def test_bulk_templates_and_jobs(fake_op_context: dict[str, Any]) -> None:
 
     # Test presets endpoint
     presets = await api_bulk.list_template_presets(claims=claims)
-    assert len(presets) >= 3
+    assert len(presets) >= 4
     ntp_preset = next(p for p in presets if p["name"] == "CLIENTE_NTP")
     assert ntp_preset["category"] == "SYSTEM"
     assert ntp_preset["description"] == "Activa el cliente NTP"
@@ -479,6 +479,19 @@ async def test_bulk_templates_and_jobs(fake_op_context: dict[str, Any]) -> None:
     assert len(ntp_preset["rest_steps_template"]) == 5
     assert ntp_preset["rest_steps_template"][0]["endpoint"] == "system/ntp/client"
     assert ntp_preset["rest_steps_template"][1]["endpoint"] == "system/ntp/client/servers"
+
+    syslog_preset = next(p for p in presets if p["name"] == "SYSLOG_CENTRALIZADO_ROSGRID")
+    assert syslog_preset["category"] == "SECURITY"
+    assert "Syslog remoto" in syslog_preset["description"]
+    assert len(syslog_preset["variables_schema"]) == 2
+    assert syslog_preset["variables_schema"][0]["key"] == "rosgrid_server_ip"
+    assert syslog_preset["variables_schema"][1]["key"] == "rosgrid_syslog_port"
+    assert len(syslog_preset["rest_steps_template"]) == 7
+    assert syslog_preset["rest_steps_template"][0]["endpoint"] == "system/logging/action"
+    assert syslog_preset["rest_steps_template"][0]["method"] == "PUT"
+    assert syslog_preset["rest_steps_template"][1]["endpoint"] == "system/logging"
+    assert syslog_preset["rest_steps_template"][1]["method"] == "PUT"
+    assert syslog_preset["requires_safemode"] is True
 
     # Test seed_default_templates
     seed_res = await api_bulk.seed_default_templates(claims=claims, db=db)

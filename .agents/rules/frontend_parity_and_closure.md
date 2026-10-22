@@ -28,9 +28,9 @@ Before exposing new endpoints or frontend views:
 
 ---
 
-## 3. Mandatory Task Closure Protocol
+## 3. Mandatory Task Closure Protocol & Autonomous Git Publication
 
-Before marking tasks complete or pushing to GitHub:
+After **EVERY** task or turn that adds, edits, or removes code or configuration files, the AI agent **MUST** autonomously execute this protocol and publish to Git without waiting for user prompting:
 
 1. **Full Ephemeral Docker Test Execution:**
    - Backend: `uv run pytest tests/ --cov=src` (coverage `>= 95%`).
@@ -40,5 +40,9 @@ Before marking tasks complete or pushing to GitHub:
 3. **Secret & Parity Certification:**
    - Run `./verificar-secretos.sh`.
    - Run `./.agents/scripts/certify_task_completion.sh`.
-4. **Git Commit & Push:**
-   - Follow Conventional Commits (`feat:`, `fix:`, `docs:`) and push to `origin/main`.
+4. **Mandatory Git Commit & Push:**
+   - Run `git add .`
+   - Create a commit following Conventional Commits in Spanish: `git commit -m "<type>(<scope>): <message_in_spanish>"`
+   - Push immediately to remote: `git push origin <current_branch>`
+   - **Never leave uncommitted or unpushed code changes** in the workspace at the end of a response.
+

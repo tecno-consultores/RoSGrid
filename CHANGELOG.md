@@ -10,6 +10,14 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Added
 
+- **Plantilla Oficial de Acciones Masivas para Enrolamiento Syslog (`SYSLOG_CENTRALIZADO_ROSGRID`):**
+  - **Catálogo de Plantillas Predefinidas (Backend & Frontend):** Incorporada la plantilla predefinida `SYSLOG_CENTRALIZADO_ROSGRID` en `fastapi/src/api/v1/bulk_and_updates.py` (`_DEFAULT_STARTER_TEMPLATES`) y en `vue3/src/components/operations/templatePresets.ts` (`PREDEFINED_TEMPLATES`), facilitando el despliegue masivo y seguro de configuración Syslog bajo Safe Mode de 60 segundos.
+  - **Parametrización Flexible de Servidor RoSGrid:** Definición del esquema tipado de variables con `rosgrid_server_ip` (Dirección IP del servidor RoSGrid) y `rosgrid_syslog_port` (Puerto UDP centralizado, por defecto `5514`), permitiendo al operador ingresar la IP exacta del colector en el asistente de ejecución masiva.
+  - **Pasos REST y Comandos CLI RouterOS v7:** Configuración integral de la acción `/system/logging/action` remota (BSD syslog, daemon, sys-ident) y 6 reglas de tópicos críticos (`interface`, `route/bgp`, `route/ospf`, `system/error`, `dhcp`, `firewall`) tanto en pasos de la API REST (`PUT /rest/system/logging/*`) como en scripts CLI de RouterOS.
+  - **Resolución Insensible a Mayúsculas/Minúsculas:** Renderizado de plantillas optimizado en backend (`_render_template_steps`) y frontend (`substituteVariables`), permitiendo sustitución automática tanto de `{{ rosgrid_server_ip }}` como de `{{ ROSGRID_SERVER_IP }}`.
+  - **Integración en Modal Editor y Mapeo Fallback:** Selector de presets en `ConfigTemplateEditorModal.vue` ampliado con `📜 Syslog Centralizado RoSGrid [SECURITY]`, y tabla de mapeo de comandos CLI fallback en `BulkOperationsAndUpdatesView.vue` optimizada con `Map` (cero vulnerabilidades de inyección de objetos y complejidad cognitiva Grado A).
+
+
 - **Clarificación Táctica y Guía Visual en Pad de Firma Digital (`FieldTechMobileView.vue`):**
   - **Firma Manuscrita Táctil (HTML5 Canvas):** Se incorporó una marca de agua translúcida orientativa (`✍️ Dibujar firma manuscrita aquí` y línea base `✕ ────────────────────────`) que se oculta automáticamente al iniciar el trazo.
   - **Instrucción de Interacción:** Se añadió la etiqueta explicativa clara *"El cliente debe dibujar su firma con el dedo, stylus o ratón"* para disipar dudas operativas sobre la naturaleza del recuadro (táctil manuscrita, no carga de fotografía estática).

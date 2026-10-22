@@ -382,6 +382,9 @@
                   🌐 DNS Corporativo Resiliente [NETWORK]
                 </option>
                 <option value="SNMP_V2C_MONITOREO_NOC">🛡️ SNMP v2c Monitoreo NOC [SECURITY]</option>
+                <option value="SYSLOG_CENTRALIZADO_ROSGRID">
+                  📜 Syslog Centralizado RoSGrid [SECURITY]
+                </option>
               </select>
             </div>
           </div>

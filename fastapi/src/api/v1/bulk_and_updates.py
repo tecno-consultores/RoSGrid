@@ -74,10 +74,12 @@ def _render_template_steps(steps: list[dict[str, Any]], vars_dict: dict[str, Any
     rendered: list[dict[str, Any]] = []
     raw_str = json.dumps(steps)
     for k, v in vars_dict.items():
-        placeholder = f"{{{{ {k} }}}}"
-        raw_str = raw_str.replace(placeholder, str(v))
-        placeholder_no_space = f"{{{{{k}}}}}"
-        raw_str = raw_str.replace(placeholder_no_space, str(v))
+        variants = {str(k), str(k).upper(), str(k).lower()}
+        for var_key in variants:
+            placeholder = f"{{{{ {var_key} }}}}"
+            raw_str = raw_str.replace(placeholder, str(v))
+            placeholder_no_space = f"{{{{{var_key}}}}}"
+            raw_str = raw_str.replace(placeholder_no_space, str(v))
     rendered = json.loads(raw_str)
     return rendered
 
@@ -292,6 +294,95 @@ _DEFAULT_STARTER_TEMPLATES = [
                 "cli_command": (
                     "/snmp community set [find default=yes] name={{ snmp_community }} addresses={{ snmp_addresses }}"
                 ),
+            },
+        ],
+        "requires_safemode": True,
+    },
+    {
+        "name": "SYSLOG_CENTRALIZADO_ROSGRID",
+        "category": "SECURITY",
+        "description": (
+            "Configura el reenvío de logs críticos y de seguridad vía Syslog remoto hacia el receptor centralizado de RoSGrid."
+        ),
+        "ros_command_template": (
+            '/system logging action remove [find name="rosgrid-syslog"]\n'
+            '/system logging action add name="rosgrid-syslog" target=remote remote={{ rosgrid_server_ip }} remote-port={{ rosgrid_syslog_port }} bsd-syslog=yes facility=daemon sys-ident=yes\n'
+            '/system logging remove [find action="rosgrid-syslog"]\n'
+            '/system logging add topics=interface,warning,critical action="rosgrid-syslog"\n'
+            '/system logging add topics=route,bgp,warning action="rosgrid-syslog"\n'
+            '/system logging add topics=route,ospf,warning action="rosgrid-syslog"\n'
+            '/system logging add topics=system,error,critical action="rosgrid-syslog"\n'
+            '/system logging add topics=dhcp,critical action="rosgrid-syslog"\n'
+            '/system logging add topics=firewall,warning action="rosgrid-syslog"'
+        ),
+        "variables_schema": [
+            {
+                "key": "rosgrid_server_ip",
+                "label": "Dirección IP Servidor RoSGrid",
+                "default_val": "192.168.1.100",
+                "var_type": "string",
+            },
+            {
+                "key": "rosgrid_syslog_port",
+                "label": "Puerto UDP Syslog RoSGrid",
+                "default_val": "5514",
+                "var_type": "string",
+            },
+        ],
+        "rest_steps_template": [
+            {
+                "method": "PUT",
+                "endpoint": "system/logging/action",
+                "payload": {
+                    "name": "rosgrid-syslog",
+                    "target": "remote",
+                    "remote": "{{ rosgrid_server_ip }}",
+                    "remote-port": "{{ rosgrid_syslog_port }}",
+                    "bsd-syslog": "yes",
+                    "facility": "daemon",
+                    "sys-ident": "yes",
+                },
+                "cli_command": (
+                    '/system logging action add name="rosgrid-syslog" target=remote '
+                    "remote={{ rosgrid_server_ip }} remote-port={{ rosgrid_syslog_port }} "
+                    "bsd-syslog=yes facility=daemon sys-ident=yes"
+                ),
+            },
+            {
+                "method": "PUT",
+                "endpoint": "system/logging",
+                "payload": {"topics": "interface,warning,critical", "action": "rosgrid-syslog"},
+                "cli_command": '/system logging add topics=interface,warning,critical action="rosgrid-syslog"',
+            },
+            {
+                "method": "PUT",
+                "endpoint": "system/logging",
+                "payload": {"topics": "route,bgp,warning", "action": "rosgrid-syslog"},
+                "cli_command": '/system logging add topics=route,bgp,warning action="rosgrid-syslog"',
+            },
+            {
+                "method": "PUT",
+                "endpoint": "system/logging",
+                "payload": {"topics": "route,ospf,warning", "action": "rosgrid-syslog"},
+                "cli_command": '/system logging add topics=route,ospf,warning action="rosgrid-syslog"',
+            },
+            {
+                "method": "PUT",
+                "endpoint": "system/logging",
+                "payload": {"topics": "system,error,critical", "action": "rosgrid-syslog"},
+                "cli_command": '/system logging add topics=system,error,critical action="rosgrid-syslog"',
+            },
+            {
+                "method": "PUT",
+                "endpoint": "system/logging",
+                "payload": {"topics": "dhcp,critical", "action": "rosgrid-syslog"},
+                "cli_command": '/system logging add topics=dhcp,critical action="rosgrid-syslog"',
+            },
+            {
+                "method": "PUT",
+                "endpoint": "system/logging",
+                "payload": {"topics": "firewall,warning", "action": "rosgrid-syslog"},
+                "cli_command": '/system logging add topics=firewall,warning action="rosgrid-syslog"',
             },
         ],
         "requires_safemode": True,

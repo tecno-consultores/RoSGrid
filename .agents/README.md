@@ -90,3 +90,15 @@ Para certificar localmente que una tarea cumple con todos los requisitos antes d
 # Auditar que no existen modelos ORM huérfanos sin migración
 docker exec -t rosgrid_api_local python scripts/verify_alembic_orm_parity.py
 ```
+
+---
+
+## 📦 Publicación Obligatoria en Git (`git commit & push`)
+
+Por gobernanza innegociable, tras **CADA** tarea que modifique código o configuraciones, el agente de IA debe:
+1. Superar el protocolo de pruebas y certificación.
+2. Registrar los cambios con `git add .`.
+3. Crear el commit con mensaje semántico en español (`git commit -m "<tipo>(<ámbito>): <mensaje>"`).
+4. Publicar inmediatamente en Git (`git push origin <rama>`).
+Queda estrictamente prohibido concluir un turno dejando código modificado sin confirmar en el repositorio.
+

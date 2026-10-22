@@ -396,7 +396,7 @@
   - Diseño del receptor asíncrono Syslog en puerto no privilegiado 5514 (UDP/TCP) con RingBuffer volátil en KeyDB (`MAXLEN 500`) y filtro de eventos críticos en vuelo (*linkDown*, *bgp drop*, *login attack*).
   - Diseño del puente de métricas hacia Prometheus (`GET /api/v1/metrics/fleet`) autenticado por token, habilitando dashboards en Grafana sin saturación de disco local.
 - [x] **23.2** **Plantilla Estandarizada para Enrolamiento Masivo de Syslog RouterOS v7:**
-  - Creación del script predefinido para `/system/logging/action` y `/system/logging` adaptable con variables `{{ROSGRID_SERVER_IP}}` y `{{ROSGRID_SYSLOG_PORT}}` para despliegue desatendido mediante *Bulk Ops*.
+  - Creación del script predefinido para `/system/logging/action` y `/system/logging` adaptable con variables `{{rosgrid_server_ip}}` y `{{rosgrid_syslog_port}}` (5514) incorporado como preset oficial `SYSLOG_CENTRALIZADO_ROSGRID` en backend (`_DEFAULT_STARTER_TEMPLATES`) y frontend (`PREDEFINED_TEMPLATES` / `ConfigTemplateEditorModal.vue` / `BulkOperationsAndUpdatesView.vue`) para despliegue masivo y seguro bajo Safe Mode.
 - [x] **23.3** **Ampliación del Servidor MCP y Skill Oficial (`rosgrid-noc-operator`):**
   - Incorporación al diseño del servidor MCP de 4 nuevas herramientas semánticas: `rosgrid_get_l2_topology`, `rosgrid_check_fleet_cves`, `rosgrid_get_recent_syslog` y `rosgrid_execute_poe_aware_upgrade` (total 18 herramientas).
   - Actualización de la Skill `.agents/skills/rosgrid-noc-operator/SKILL.md` incorporando SOP-6 (Triaje de caídas de enlace vía Syslog) y SOP-7 (Planificación PoE-Aware con Safety Stop).

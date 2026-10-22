@@ -971,4 +971,26 @@ Certificación integral ejecutada de extremo a extremo bajo la **Regla Cero** (c
 3. **Contratos Front-Back (`validar_comunicacion_front_back.py`):** **26 de 26 contratos aprobados (100%)** en contenedor Docker real.
 4. **Validación Visual en Navegador:** Verificado en `http://localhost:8085/inventory` con captura de pantalla forense.
 
+---
+
+## 27. Plantilla Oficial de Acciones Masivas para Syslog (`SYSLOG_CENTRALIZADO_ROSGRID`)
+
+### A. Diagnóstico y Necesidad Operativa
+- **Requerimiento:** Facilitar el aprovisionamiento y enrolamiento de Syslog remoto en routers MikroTik RouterOS v7 mediante el módulo de Operaciones Masivas (*Bulk Ops*), permitiendo al operador ingresar dinámicamente la dirección IP donde reside el servidor RoSGrid y el puerto UDP (5514).
+- **Acción Realizada:**
+  - Incorporación del preset `SYSLOG_CENTRALIZADO_ROSGRID` al catálogo de plantillas iniciales del sistema en `fastapi/src/api/v1/bulk_and_updates.py` (`_DEFAULT_STARTER_TEMPLATES`) y en frontend `vue3/src/components/operations/templatePresets.ts` (`PREDEFINED_TEMPLATES`).
+  - Esquema de variables parametrizables: `rosgrid_server_ip` (Dirección IP del servidor RoSGrid) y `rosgrid_syslog_port` (puerto UDP 5514).
+  - 7 pasos REST (`system/logging/action` y 6 reglas de tópicos en `system/logging`) y comando CLI RouterOS v7 equivalente bajo Safe Mode de 60s.
+  - Soporte de renderizado de variables insensible a mayúsculas/minúsculas en backend (`_render_template_steps`) y frontend (`substituteVariables`), permitiendo indistintamente `{{ rosgrid_server_ip }}` y `{{ ROSGRID_SERVER_IP }}`.
+  - Tabla de formateo CLI fallback en `BulkOperationsAndUpdatesView.vue` optimizada con estructura `Map` para garantizar 0 errores de ESLint SonarJS (complejidad cognitiva Grado A) y protección anti-object injection sink.
+
+### B. Certificación y Verificación en Docker Efímero
+1. **Pruebas Unitarias Backend (`test_operations_endpoints_full.unit.py`):** **7 de 7 suites aprobadas (100%)** verificando que `list_template_presets` expone `SYSLOG_CENTRALIZADO_ROSGRID` con categoría `SECURITY`, variables de IP y puerto, 7 pasos REST y Safe Mode obligatorio.
+2. **Pruebas Unitarias Frontend (`ConfigTemplateEditorModal.unit.ts`):** **9 de 9 pruebas aprobadas (100%)** validando la presencia del preset en `PREDEFINED_TEMPLATES`, la selección interactiva en el dropdown modal y la carga de valores por defecto.
+3. **Control Estricto de Calidad y Tipos:**
+   - `mypy --strict`: 0 errores en `fastapi/src/api/v1/bulk_and_updates.py`.
+   - `ruff check` & `ruff format --check`: 100% aprobado.
+   - `vue-tsc --noEmit`: 0 errores de tipos TypeScript.
+   - `eslint` & `prettier`: 0 errores de sintaxis y complejidad.
+
 

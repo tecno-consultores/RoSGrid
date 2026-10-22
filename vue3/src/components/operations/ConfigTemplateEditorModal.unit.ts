@@ -59,6 +59,47 @@ describe('ConfigTemplateEditorModal.vue — Predefined Templates & Golden Config
     expect(ntpPreset?.rest_steps_template[1].method).toBe('PUT');
   });
 
+  it('contiene la plantilla predefinida SYSLOG_CENTRALIZADO_ROSGRID con IP de servidor y 7 pasos REST', () => {
+    const syslogPreset = PREDEFINED_TEMPLATES.find((p) => p.name === 'SYSLOG_CENTRALIZADO_ROSGRID');
+    expect(syslogPreset).toBeDefined();
+    expect(syslogPreset?.category).toBe('SECURITY');
+    expect(syslogPreset?.variables_schema.length).toBe(2);
+    expect(syslogPreset?.variables_schema[0].key).toBe('rosgrid_server_ip');
+    expect(syslogPreset?.variables_schema[1].key).toBe('rosgrid_syslog_port');
+    expect(syslogPreset?.rest_steps_template.length).toBe(7);
+    expect(syslogPreset?.rest_steps_template[0].endpoint).toBe('system/logging/action');
+    expect(syslogPreset?.rest_steps_template[0].method).toBe('PUT');
+    expect(syslogPreset?.rest_steps_template[1].endpoint).toBe('system/logging');
+    expect(syslogPreset?.rest_steps_template[1].method).toBe('PUT');
+    expect(syslogPreset?.requires_safemode).toBe(true);
+  });
+
+  it('carga la plantilla predefinida SYSLOG_CENTRALIZADO_ROSGRID al seleccionarla en el dropdown', async () => {
+    const wrapper = mount(ConfigTemplateEditorModal, {
+      props: {
+        isOpen: true,
+      },
+    });
+
+    const presetSelect = wrapper.find(PRESET_SELECT_ID);
+    expect(presetSelect.exists()).toBe(true);
+
+    await presetSelect.setValue('SYSLOG_CENTRALIZADO_ROSGRID');
+    await presetSelect.trigger('change');
+    await flushPromises();
+
+    const nameInput = wrapper.find('#tpl-name').element as HTMLInputElement;
+    expect(nameInput.value).toBe('SYSLOG_CENTRALIZADO_ROSGRID');
+
+    const descInput = wrapper.find('#tpl-desc').element as HTMLTextAreaElement;
+    expect(descInput.value).toContain('Syslog remoto');
+
+    const categorySelect = wrapper.find('#tpl-category').element as HTMLSelectElement;
+    expect(categorySelect.value).toBe('SECURITY');
+
+    expect(wrapper.find('.alert--success').text()).toContain('SYSLOG_CENTRALIZADO_ROSGRID');
+  });
+
   it('carga la plantilla predefinida CLIENTE_NTP al seleccionarla en el dropdown', async () => {
     const wrapper = mount(ConfigTemplateEditorModal, {
       props: {

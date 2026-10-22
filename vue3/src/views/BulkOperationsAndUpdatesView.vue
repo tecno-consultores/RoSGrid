@@ -249,32 +249,45 @@
       .join(' ');
   }
 
-  function formatStepToRosCli(st: RenderedStep, vars: Record<string, string>): string {
-    if (st.cli_command) {
-      let cmdStr = st.cli_command;
-      Object.entries(vars).forEach(([k, v]) => {
-        cmdStr = cmdStr.replaceAll(`{{${k}}}`, v).replaceAll(`{{ ${k} }}`, v);
+  function substituteVariables(templateText: string, vars: Record<string, string>): string {
+    let result = templateText;
+    Object.entries(vars).forEach(([k, v]) => {
+      [k, k.toUpperCase(), k.toLowerCase()].forEach((varKey) => {
+        result = result.replaceAll(`{{${varKey}}}`, v).replaceAll(`{{ ${varKey} }}`, v);
       });
-      return cmdStr;
+    });
+    return result;
+  }
+
+  const FALLBACK_COMMAND_MAP = new Map<string, (params: string) => string>([
+    ['system/ntp/client:PATCH', (p) => `/system ntp client set ${p}`],
+    ['system/ntp/client/servers:PUT', (p) => `/system ntp client servers add ${p}`],
+    ['system/ntp/client/servers:POST', (p) => `/system ntp client servers add ${p}`],
+    ['ip/dns:PATCH', (p) => `/ip dns set ${p}`],
+    ['ip/dns/cache/flush:POST', () => '/ip dns cache flush'],
+    ['system/logging/action:PUT', (p) => `/system logging action add ${p}`],
+    ['system/logging/action:POST', (p) => `/system logging action add ${p}`],
+    ['system/logging:PUT', (p) => `/system logging add ${p}`],
+    ['system/logging:POST', (p) => `/system logging add ${p}`],
+  ]);
+
+  function formatFallbackRestStep(st: RenderedStep): string {
+    const key = `${st.endpoint}:${st.method}`;
+    const formatter = FALLBACK_COMMAND_MAP.get(key);
+    if (formatter) {
+      return formatter(formatPayloadToParams(st.payload));
     }
-    const ep = st.endpoint;
-    const m = st.method;
-    if (ep === 'system/ntp/client' && m === 'PATCH') {
-      return `/system ntp client set ${formatPayloadToParams(st.payload)}`;
-    }
-    if (ep === 'system/ntp/client/servers' && (m === 'PUT' || m === 'POST')) {
-      return `/system ntp client servers add ${formatPayloadToParams(st.payload)}`;
-    }
-    if (ep === 'ip/dns' && m === 'PATCH') {
-      return `/ip dns set ${formatPayloadToParams(st.payload)}`;
-    }
-    if (ep === 'ip/dns/cache/flush') {
-      return '/ip dns cache flush';
-    }
-    if (ep === 'snmp' && m === 'PATCH') {
+    if (st.endpoint === 'snmp' && st.method === 'PATCH') {
       return `/snmp set enabled=${String(st.payload?.enabled || 'yes')}`;
     }
-    return `# ${m} /rest/${ep} ${JSON.stringify(st.payload || {})}`;
+    return `# ${st.method} /rest/${st.endpoint} ${JSON.stringify(st.payload || {})}`;
+  }
+
+  function formatStepToRosCli(st: RenderedStep, vars: Record<string, string>): string {
+    if (st.cli_command) {
+      return substituteVariables(st.cli_command, vars);
+    }
+    return formatFallbackRestStep(st);
   }
 
   function generatePreview() {
@@ -286,10 +299,10 @@
 
     let renderedSteps: RenderedStep[] = [];
     try {
-      let rawStr = JSON.stringify(tpl.rest_steps_template || []);
-      Object.entries(templateVars.value).forEach(([k, v]) => {
-        rawStr = rawStr.replaceAll(`{{${k}}}`, v).replaceAll(`{{ ${k} }}`, v);
-      });
+      const rawStr = substituteVariables(
+        JSON.stringify(tpl.rest_steps_template || []),
+        templateVars.value,
+      );
       renderedSteps = JSON.parse(rawStr);
     } catch {
       renderedSteps = [];
@@ -297,12 +310,9 @@
 
     const cliCommands = renderedSteps.map((st) => formatStepToRosCli(st, templateVars.value));
 
-    let legacyCmd = tpl.ros_command_template || '';
-    if (legacyCmd) {
-      Object.entries(templateVars.value).forEach(([k, v]) => {
-        legacyCmd = legacyCmd.replaceAll(`{{${k}}}`, v).replaceAll(`{{ ${k} }}`, v);
-      });
-    }
+    const legacyCmd = tpl.ros_command_template
+      ? substituteVariables(tpl.ros_command_template, templateVars.value)
+      : '';
 
     previewPayload.value = JSON.stringify(
       {
@@ -802,7 +812,10 @@
         <div class="poe-safety-options">
           <label class="toggle-poe-label">
             <input v-model="poeAware" type="checkbox" class="checkbox-poe" />
-            <span class="font-bold">⚡ Ordenamiento PoE-Aware (Hojas PD primero, Switches PSE intermedios, Core final)</span>
+            <span class="font-bold"
+              >⚡ Ordenamiento PoE-Aware (Hojas PD primero, Switches PSE intermedios, Core
+              final)</span
+            >
           </label>
 
           <div class="safety-stop-selector">

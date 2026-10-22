@@ -25,7 +25,7 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
 
 3. [frontend_parity_and_closure.md](file:///.agents/rules/frontend_parity_and_closure.md):
    - **Terminal ↔ Frontend Parity:** Zero console-only actions or orphan API endpoints without a matching Vue 3 interface.
-   - **Closure Protocol:** Full ephemeral Docker test suite execution, security scan, and doc sync before commit/push.
+   - **Closure Protocol & Mandatory Git Push:** Full ephemeral Docker test suite execution, security scan, and doc sync followed obligatorily by `git add`, `git commit` (Conventional Commits in Spanish), and `git push`.
 
 4. [continuous_agent_evolution.md](file:///.agents/rules/continuous_agent_evolution.md):
    - **Autonomous Evolution of `.agents/`:** Proactively update rules, skills, and automation scripts whenever discovering an improvement opportunity, unhandled edge case, procedure automation, or token optimization without waiting for user prompting.
@@ -53,3 +53,18 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
 
 - `verify_alembic_orm_parity.py`: Automated parity validator between SQLAlchemy ORM models and Alembic migrations (detects schema drift).
 - `certify_task_completion.sh`: End-to-end certification gate enforcing secret scanning, ORM parity, front-back contracts, and documentation sync.
+
+---
+
+## 5. Mandatory Git Publication Directive
+
+> **INNEGOCIABLE:** Tras **CADA** tarea o solicitud del usuario que modifique, añada o corrija código fuente (`fastapi/`, `vue3/`, scripts o configuraciones), el agente de IA **DEBE** ejecutar de forma autónoma el Protocolo de Cierre y realizar inmediatamente la publicación en Git:
+> 1. Verificar pruebas y linters en Docker efímero (`Rule Zero`).
+> 2. Sincronizar documentación (`CHANGELOG.md`, `ROADMAP.md`, `TESTING.md`, `specs/`, `docs/`).
+> 3. Ejecutar `./verificar-secretos.sh`.
+> 4. Registrar los cambios con `git add .`
+> 5. Crear el commit siguiendo Conventional Commits en español: `git commit -m "<tipo>(<ámbito>): <descripción_en_español>"`
+> 6. Publicar en el repositorio remoto: `git push origin <rama_actual>`
+>
+> **Bajo ninguna circunstancia** el agente debe finalizar una respuesta con modificaciones de código pendientes de confirmar (*uncommitted changes*) en el árbol de trabajo.
+

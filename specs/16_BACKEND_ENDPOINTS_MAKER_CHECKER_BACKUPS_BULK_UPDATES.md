@@ -208,7 +208,7 @@
 
 - GET /api/v1/operations/templates: Lista plantillas del Tenant (ej. *"Hardening SSH/WinBox"*, *"Crear VLAN Clientes"*, *"Actualizar Servidores DNS"*, *"Cliente NTP"*).
 
-- GET /api/v1/operations/templates/presets: Catálogo inmutable de plantillas predefinidas (*presets*) provistas por el sistema (`CLIENTE_NTP`, `DNS_CORPORATIVO_RESILIENTE`, `SNMP_V2C_MONITOREO_NOC`).
+- GET /api/v1/operations/templates/presets: Catálogo inmutable de plantillas predefinidas (*presets*) provistas por el sistema (`CLIENTE_NTP`, `DNS_CORPORATIVO_RESILIENTE`, `SNMP_V2C_MONITOREO_NOC`, `SYSLOG_CENTRALIZADO_ROSGRID`).
 
 - POST /api/v1/operations/templates/seed-defaults: Siembra idempotente de plantillas predefinidas en la base de datos del Tenant actual, evitando duplicados si ya existen.
 
