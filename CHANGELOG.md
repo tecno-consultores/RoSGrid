@@ -10,6 +10,21 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Added
 
+- **Refactorización Táctica del Centro de Mando y Menú Desplegable de Usuario (`RgResponsiveShell.vue` y `DashboardHomeView.vue`):**
+  - **Depuración Visual del Centro de Mando:** Eliminación del texto redundantemente anglosajón *"Mission Control"* (quedando exclusivamente *"Centro de Mando"* / *"Command Center"*), erradicación de la etiqueta estática *"Tactical NOC v1.0"*, eliminación del indicador superfluo *"NOC EN VIVO"* y remoción de la hora secundaria pequeña UTC en el reloj táctico para dejar una única lectura horaria nítida.
+  - **Menú Desplegable de Usuario Superior Derecho:** Sustitución de la etiqueta de rol técnico por el nombre de usuario (`username`) interactivo con avatar y chevron indicador. Al hacer clic, despliega un menú contextual con:
+    - Selector de formato horario en caliente: **24 Horas** vs **12h AM/PM** (sincronizado reactivamente con el reloj del Centro de Mando y persistido en `useThemeAndLayoutStore`).
+    - Conmutador de tema visual: **Oscuro Táctico**, **Modo Claro** y **Alto Contraste NOC** movidos al menú.
+    - Conmutador de idioma: **Español** e **English** movido a la cabecera del menú.
+    - Acción de seguridad personal: **Cambiar Mi Clave** con modal accesible (`ChangePasswordModal.vue`).
+    - Acción de seguridad personal: **Resetear Mi 2FA** (`RgStepUp2FAModal.vue`).
+    - Acción de integración autónoma: **Token de Acceso MCP** (`RgMcpTokenModal.vue`) para clientes Hermes Agent y Claude.
+    - Botón de **Cerrar Sesión** ubicado limpiamente al pie del menú.
+  - **Paridad y No Regresión en Administración de Usuarios y RBAC (`/users`):** Se integró el botón `🔑 Clave` en la tabla de operadores preservando intactos los accesos a `↺ Reset 2FA` y `⚡ Token MCP`.
+  - **Navegación al Centro de Mando desde el Logo:** El logotipo y marca corporativa *"RoSGrid"* en la barra de navegación superior ahora enlazan reactivamente al Centro de Mando (`/`).
+  - **Limpieza de Identidad de Organización:** Remoción del prefijo redundante *"Organización: "* en el subtítulo del dashboard y del prefijo *"Tenant: "* en la barra superior, mostrando únicamente el slug de la empresa.
+  - **Endpoint de Cambio de Contraseña en Backend (`POST /api/v1/users/change-password`):** Soporte dual de auto-cambio validando contraseña actual con `argon2` y reseteo administrativo directo, con registro inmutable en auditoría WORM (`USER_SECURITY` / `CHANGE_PASSWORD`).
+
 - **Plantilla Oficial de Acciones Masivas para Enrolamiento Syslog (`SYSLOG_CENTRALIZADO_ROSGRID`):**
   - **Catálogo de Plantillas Predefinidas (Backend & Frontend):** Incorporada la plantilla predefinida `SYSLOG_CENTRALIZADO_ROSGRID` en `fastapi/src/api/v1/bulk_and_updates.py` (`_DEFAULT_STARTER_TEMPLATES`) y en `vue3/src/components/operations/templatePresets.ts` (`PREDEFINED_TEMPLATES`), facilitando el despliegue masivo y seguro de configuración Syslog bajo Safe Mode de 60 segundos.
   - **Parametrización Flexible de Servidor RoSGrid:** Definición del esquema tipado de variables con `rosgrid_server_ip` (Dirección IP del servidor RoSGrid) y `rosgrid_syslog_port` (Puerto UDP centralizado, por defecto `5514`), permitiendo al operador ingresar la IP exacta del colector en el asistente de ejecución masiva.

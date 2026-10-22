@@ -759,3 +759,178 @@ async def test_generate_user_mcp_token_rejects_unauthorized_role(
         assert "usuario bloqueado" in res_locked.json()["detail"]
     finally:
         app.dependency_overrides.pop(get_db_session, None)
+
+
+@pytest.mark.asyncio
+async def test_change_password_self_success_and_failures(
+    async_client: AsyncClient,
+    superadmin_auth: dict[str, str],
+    fake_redis: FakeAsyncRedis,
+) -> None:
+    tenant_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    session_id = f"sess-self-{uuid.uuid4().hex[:6]}"
+    tenant = Tenant(
+        id=tenant_id,
+        name="Global Admin Tenant",
+        slug="global",
+        status=TenantStatusEnum.ACTIVE,
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    user = User(
+        id=user_id,
+        tenant_id=tenant_id,
+        username="self_user",
+        email="self@rosgrid.local",
+        password_hash=hash_password("OldPassword123!"),
+        role=SystemRoleEnum.SUPPORT_L2,
+        is_active=True,
+        is_locked=False,
+        failed_login_attempts=0,
+        totp_enabled=False,
+        has_all_routers_access=False,
+        allowed_cidr_list=[],
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+
+    db = MockDbSession(tenants=[tenant], users=[user])
+    app.dependency_overrides[get_db_session] = lambda: db
+
+    # Registrar sesión activa en fake_redis
+    sess_key = f"rg:{tenant_id}:sess:{session_id}"
+    await fake_redis.hset(
+        sess_key,
+        mapping={
+            "session_id": session_id,
+            "user_id": str(user_id),
+            "username": "self_user",
+            "role": SystemRoleEnum.SUPPORT_L2.value,
+        },
+    )
+
+    token = create_jwt_access_token(
+        str(user_id), str(tenant_id), "global", session_id, SystemRoleEnum.SUPPORT_L2.value, True
+    )
+    user_auth = {"Authorization": f"Bearer {token}"}
+
+    try:
+        # 1. Error: Falta current_password al cambiar su propia clave
+        res_missing = await async_client.post(
+            "/api/v1/users/change-password",
+            json={"new_password": "NewSecretPassword123!"},
+            headers={**user_auth, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res_missing.status_code == 400
+        assert "contraseña actual" in res_missing.json()["detail"]
+
+        # 2. Error: Contraseña actual incorrecta
+        res_wrong = await async_client.post(
+            "/api/v1/users/change-password",
+            json={
+                "current_password": "IncorrectPassword999!",
+                "new_password": "NewSecretPassword123!",
+            },
+            headers={**user_auth, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res_wrong.status_code == 400
+        assert "incorrecta" in res_wrong.json()["detail"]
+
+        # 3. Éxito: Cambio de clave propio
+        res_ok = await async_client.post(
+            "/api/v1/users/change-password",
+            json={
+                "current_password": "OldPassword123!",
+                "new_password": "NewSecretPassword123!",
+            },
+            headers={**user_auth, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res_ok.status_code == 200
+        assert "actualizada exitosamente" in res_ok.json()["message"]
+        assert db.committed is True
+
+        # 4. Admin resetea la contraseña de otro usuario sin requerir current_password
+        res_admin_reset = await async_client.post(
+            "/api/v1/users/change-password",
+            json={
+                "user_id": str(user_id),
+                "new_password": "AdminSetPassword456!",
+            },
+            headers={**superadmin_auth, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res_admin_reset.status_code == 200
+        assert "actualizada exitosamente" in res_admin_reset.json()["message"]
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)
+
+
+@pytest.mark.asyncio
+async def test_reset_2fa_self_user_allowed(
+    async_client: AsyncClient,
+    fake_redis: FakeAsyncRedis,
+) -> None:
+    tenant_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    session_id = f"sess-totp-{uuid.uuid4().hex[:6]}"
+    tenant = Tenant(
+        id=tenant_id,
+        name="Global Admin Tenant",
+        slug="global",
+        status=TenantStatusEnum.ACTIVE,
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    user = User(
+        id=user_id,
+        tenant_id=tenant_id,
+        username="totp_user",
+        email="totp@rosgrid.local",
+        password_hash=hash_password("TotpSecret123!"),
+        role=SystemRoleEnum.SUPPORT_L1,
+        is_active=True,
+        is_locked=False,
+        failed_login_attempts=0,
+        totp_enabled=True,
+        totp_secret_ciphertext=b"encrypted_secret",
+        totp_secret_iv=b"iv123",
+        totp_secret_tag=b"tag123",
+        has_all_routers_access=False,
+        allowed_cidr_list=[],
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+
+    db = MockDbSession(tenants=[tenant], users=[user])
+    app.dependency_overrides[get_db_session] = lambda: db
+
+    # Registrar sesión activa en fake_redis
+    sess_key = f"rg:{tenant_id}:sess:{session_id}"
+    await fake_redis.hset(
+        sess_key,
+        mapping={
+            "session_id": session_id,
+            "user_id": str(user_id),
+            "username": "totp_user",
+            "role": SystemRoleEnum.SUPPORT_L1.value,
+        },
+    )
+
+    token = create_jwt_access_token(
+        str(user_id), str(tenant_id), "global", session_id, SystemRoleEnum.SUPPORT_L1.value, True
+    )
+    user_auth = {"Authorization": f"Bearer {token}"}
+
+    try:
+        res = await async_client.post(
+            f"/api/v1/users/{user_id}/reset-2fa",
+            headers={**user_auth, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res.status_code == 200
+        assert res.json()["status"] == "2fa_reset_completed"
+        assert user.totp_enabled is False
+        assert user.totp_secret_ciphertext is None
+        assert db.committed is True
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)
+

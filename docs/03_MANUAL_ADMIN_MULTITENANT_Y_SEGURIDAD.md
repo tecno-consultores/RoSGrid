@@ -195,6 +195,22 @@ El Superadmin o Tenant Admin puede habilitar o deshabilitar las solicitudes exte
 
 El script de terminal en `fastapi/scripts/crear_admin.py` se mantiene 100% operativo como alternativa para aprovisionamiento directo por consola cuando no se dispone de acceso web o en entornos de contingencia.
 
+### 6.3 Menú Táctico de Usuario y Auto-Gestión de Credenciales
+
+En la barra de navegación superior (`RgResponsiveShell.vue`), cada operador autenticado dispone de un menú contextual interactivo accesible al hacer clic sobre su nombre de usuario (`username`):
+
+1. **Preferencias en Caliente:**
+   - **Formato Horario:** Conmutador inmediato entre **24 Horas** y **12h AM/PM**, reflejado de forma reactiva en el reloj del Centro de Mando y almacenado localmente en `useThemeAndLayoutStore`.
+   - **Tema Gráfico:** Selección entre **Oscuro Táctico**, **Modo Claro** y **Alto Contraste NOC**.
+   - **Idioma:** Alternancia entre **Español** e **English** con traducción dinámica de todas las vistas operativas vía `useI18n`.
+2. **Acciones de Seguridad y Credenciales:**
+   - **Cambiar Mi Clave:** Despliega el modal táctico `ChangePasswordModal.vue`, permitiendo al usuario actualizar su contraseña validando la clave actual con `argon2id` (`POST /api/v1/users/change-password`).
+   - **Resetear Mi 2FA:** Permite reiniciar el segundo factor TOTP personal con revocación inmediata de sesiones activas en KeyDB.
+   - **Token de Acceso MCP:** Permite emitir o renovar el Bearer Token JWT de larga duración para asistentes de IA (`RgMcpTokenModal.vue`).
+   - **Cerrar Sesión:** Salida limpia del sistema con invalidación de cookies de sesión y redirección segura a `/login`.
+3. **Paridad Administrativa:**
+   - Los administradores (`SUPERADMIN_GLOBAL` y `TENANT_ADMIN`) conservan las opciones equivalentes para todos los operadores de la organización desde la tabla de **Usuarios y Permisos** (`/users`), incluyendo el botón `[ 🔑 Clave ]`, `[ ↺ Reset 2FA ]` y `[ ⚡ Token MCP ]`.
+
 ---
 
 ## 7. Gobernanza Modular y Panel de Feature Flags por Tenant

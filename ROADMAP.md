@@ -424,6 +424,13 @@
   - Frontend QA (`sinfallas/base-node-ionic:26`): 297 pruebas unitarias aprobadas al 100% en 43 suites con Vitest, vue-tsc (0 errores de tipos TypeScript) y compilación de producción con Vite limpia en 3.99s.
   - Validación de Producción Local (`./probar-prod-local.sh`): 6 fases completadas exitosamente al 100% (construcción de imágenes locales, healthchecks de contenedores en aislamiento, pruebas sintéticas HTTP, endpoints de documentación 404 estricto, fail-closed 401, Bearer token MCP, invocación JSON-RPC 2.0 y 24/24 contratos Front-Back validados con `validar_comunicacion_front_back.py`).
   - Verificación de secretos (`./verificar-secretos.sh`): Árbol de trabajo auditado con 0 credenciales ni tokens expuestos.
+- [x] **23.8** **Refactorización Táctica del Centro de Mando, Menú Desplegable de Usuario y Gestión de Seguridad:**
+  - Depuración del Centro de Mando (`DashboardHomeView.vue`): remoción del término anglosajón redundante *"Mission Control"*, erradicación del tag estático *"Tactical NOC v1.0"*, eliminación del indicador superfluo *"NOC EN VIVO"*, simplificación del reloj operativo a una sola lectura y supresión de prefijos de organización redundantes.
+  - Despliegue del menú táctico de usuario en `RgResponsiveShell.vue` disparado por el `username` del operador autenticado: selectores en caliente de formato horario (24 Horas vs 12h AM/PM), tema gráfico (Oscuro, Claro, NOC) e idioma (ES/EN); acciones de auto-gestión (Cambio de Clave, Reset 2FA, Token MCP) y botón de cierre de sesión al pie.
+  - Enlace del logotipo y marca *"RoSGrid"* directamente al Centro de Mando (`/`).
+  - Paridad estricta y no regresión: preservación de accesos en el módulo de Usuarios y RBAC (`/users`), incorporando el modal `ChangePasswordModal.vue` mediante el botón `[ 🔑 Clave ]`.
+  - Backend seguro `POST /api/v1/users/change-password` con verificación de contraseña actual mediante `argon2id`, soporte de reseteo administrativo y auditoría inmutable WORM (`USER_SECURITY` / `CHANGE_PASSWORD`).
+  - Certificación 11X en Docker efímero: 319 pruebas Vitest aprobadas al 100% en 45 suites, 0 errores en `vue-tsc --noEmit`, 12 pruebas Pytest aprobadas al 100% y bundle de producción generado en 3.69s.
 
 ---
 

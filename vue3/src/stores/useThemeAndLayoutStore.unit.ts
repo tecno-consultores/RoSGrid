@@ -79,4 +79,18 @@ describe('useThemeAndLayoutStore — Densidad Dual & Temas WCAG 2.1 AA', () => {
     store.closeCommandPalette();
     expect(store.isCommandPaletteOpen).toBe(false);
   });
+
+  it('controla el formato de hora (24h vs 12h) y su alternancia', () => {
+    const store = useThemeAndLayoutStore();
+    expect(store.timeFormat).toBe('24h');
+
+    store.setTimeFormat('12h');
+    expect(store.timeFormat).toBe('12h');
+
+    store.toggleTimeFormat();
+    expect(store.timeFormat).toBe('24h');
+
+    store.toggleTimeFormat();
+    expect(store.timeFormat).toBe('12h');
+  });
 });

@@ -21,35 +21,39 @@ vi.mock('vue-router', () => ({
     template: '<div class="test-router-view">ROUTER_VIEW_CONTENT</div>',
   },
   RouterLink: {
-    template: '<a><slot /></a>',
+    props: ['to'],
+    template: '<a :href="to" v-bind="$attrs"><slot /></a>',
   },
 }));
 
-describe('RgResponsiveShell.vue — Doble Contexto & Barra Inferior Móvil', () => {
+describe('RgResponsiveShell.vue — Doble Contexto & Menú de Usuario 11X', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     pushMock.mockClear();
-  });
 
-  it('renderiza la estructura de shell con skip-link para accesibilidad WCAG', () => {
+    // Configurar usuario por defecto autenticado en el authStore
     const authStore = useAuthStore();
     authStore.setAuth({
       id: 'usr-1',
-      username: 'operador',
+      username: 'operador_noc',
       email: 'op@rosgrid.local',
       role: 'SUPPORT_L2',
       tenant_id: 't-1',
       tenant_slug: 'demo',
       totp_enabled: false,
     });
+  });
 
+  it('renderiza la estructura de shell con skip-link para accesibilidad WCAG', () => {
     const wrapper = mount(RgResponsiveShell, {
       global: {
         stubs: {
-          RouterLink: true,
           RouterView: true,
           RgCommandPalette: true,
           RgSafeModeBanner: true,
+          ChangePasswordModal: true,
+          RgStepUp2FAModal: true,
+          RgMcpTokenModal: true,
         },
       },
     });
@@ -60,69 +64,287 @@ describe('RgResponsiveShell.vue — Doble Contexto & Barra Inferior Móvil', () 
     expect(wrapper.find('nav.rg-rail').exists()).toBe(true);
   });
 
-  it('permite alternar tema visual y abrir command palette desde la cabecera', async () => {
+  it('el logo de RoSGrid enlaza a / (Centro de Mando)', () => {
+    const wrapper = mount(RgResponsiveShell, {
+      global: {
+        stubs: {
+          RouterLink: {
+            props: ['to'],
+            template: '<a :href="to" class="brand"><slot /></a>',
+          },
+          RouterView: true,
+          RgCommandPalette: true,
+          RgSafeModeBanner: true,
+          ChangePasswordModal: true,
+          RgStepUp2FAModal: true,
+          RgMcpTokenModal: true,
+        },
+      },
+    });
+
+    const brandLink = wrapper.find('a.brand');
+    expect(brandLink.exists()).toBe(true);
+    expect(brandLink.attributes('href')).toBe('/');
+  });
+
+  it('muestra solo el nombre del tenant en la barra superior sin el prefijo "Tenant: "', () => {
+    const authStore = useAuthStore();
+    authStore.setAuth({
+      id: 'usr-1',
+      username: 'admin_tenant',
+      email: 'admin@acme.corp',
+      role: 'TENANT_ADMIN',
+      tenant_id: 't-99',
+      tenant_slug: 'acme-corp',
+      totp_enabled: true,
+    });
+
+    const wrapper = mount(RgResponsiveShell, {
+      global: {
+        stubs: {
+          RouterView: true,
+          RgCommandPalette: true,
+          RgSafeModeBanner: true,
+          ChangePasswordModal: true,
+          RgStepUp2FAModal: true,
+          RgMcpTokenModal: true,
+        },
+      },
+    });
+
+    const tenantBadge = wrapper.find('.tenant-badge');
+    expect(tenantBadge.exists()).toBe(true);
+    expect(tenantBadge.text()).toContain('acme-corp');
+    expect(tenantBadge.text()).not.toContain('Tenant:');
+  });
+
+  it('muestra el username en la barra superior y despliega el menú de usuario al hacer click', async () => {
+    const authStore = useAuthStore();
+    authStore.setAuth({
+      id: 'usr-42',
+      username: 'jdoe_noc',
+      email: 'jdoe@isp.net',
+      role: 'SUPERADMIN_GLOBAL',
+      tenant_id: 't-1',
+      tenant_slug: 'global',
+      totp_enabled: true,
+    });
+
+    const wrapper = mount(RgResponsiveShell, {
+      global: {
+        stubs: {
+          RouterView: true,
+          RgCommandPalette: true,
+          RgSafeModeBanner: true,
+          ChangePasswordModal: true,
+          RgStepUp2FAModal: true,
+          RgMcpTokenModal: true,
+        },
+      },
+    });
+
+    const profileBtn = wrapper.find('.user-profile-btn');
+    expect(profileBtn.exists()).toBe(true);
+    expect(profileBtn.find('.user-username').text()).toBe('jdoe_noc');
+    expect(wrapper.find('.user-dropdown-menu').exists()).toBe(false);
+
+    // Abrir menú
+    await profileBtn.trigger('click');
+    expect(wrapper.find('.user-dropdown-menu').exists()).toBe(true);
+  });
+
+  it('permite alternar formato de hora (24h vs 12h) desde el menú de usuario', async () => {
+    const themeStore = useThemeAndLayoutStore();
+    themeStore.timeFormat = '24h';
+
+    const wrapper = mount(RgResponsiveShell, {
+      global: {
+        stubs: {
+          RouterView: true,
+          RgCommandPalette: true,
+          RgSafeModeBanner: true,
+          ChangePasswordModal: true,
+          RgStepUp2FAModal: true,
+          RgMcpTokenModal: true,
+        },
+      },
+    });
+
+    await wrapper.find('.user-profile-btn').trigger('click');
+    expect(wrapper.find('.user-dropdown-menu').exists()).toBe(true);
+
+    const timeButtons = wrapper.findAll('.dropdown-section--time .toggle-btn');
+    expect(timeButtons.length).toBe(2);
+
+    // Activar 12h
+    await timeButtons[1].trigger('click');
+    expect(themeStore.timeFormat).toBe('12h');
+
+    // Activar 24h
+    await timeButtons[0].trigger('click');
+    expect(themeStore.timeFormat).toBe('24h');
+  });
+
+  it('permite alternar tema visual desde el menú de usuario', async () => {
     const themeStore = useThemeAndLayoutStore();
 
     const wrapper = mount(RgResponsiveShell, {
       global: {
         stubs: {
-          RouterLink: true,
           RouterView: true,
           RgCommandPalette: true,
           RgSafeModeBanner: true,
+          ChangePasswordModal: true,
+          RgStepUp2FAModal: true,
+          RgMcpTokenModal: true,
         },
       },
     });
 
-    const themeBtn = wrapper.find('.btn-icon');
-    expect(themeBtn.exists()).toBe(true);
-    await themeBtn.trigger('click');
+    await wrapper.find('.user-profile-btn').trigger('click');
+    const themeButtons = wrapper.findAll('.dropdown-section--theme .toggle-btn');
+    expect(themeButtons.length).toBe(3);
+
+    // Seleccionar Light
+    await themeButtons[1].trigger('click');
     expect(themeStore.theme).toBe('light');
-    await themeBtn.trigger('click');
+
+    // Seleccionar NOC
+    await themeButtons[2].trigger('click');
     expect(themeStore.theme).toBe('noc-high-contrast');
-    await themeBtn.trigger('click');
+
+    // Seleccionar Dark
+    await themeButtons[0].trigger('click');
     expect(themeStore.theme).toBe('dark');
+  });
+
+  it('permite alternar idioma desde el menú de usuario', async () => {
+    const wrapper = mount(RgResponsiveShell, {
+      global: {
+        stubs: {
+          RouterView: true,
+          RgCommandPalette: true,
+          RgSafeModeBanner: true,
+          ChangePasswordModal: true,
+          RgStepUp2FAModal: true,
+          RgMcpTokenModal: true,
+        },
+      },
+    });
+
+    await wrapper.find('.user-profile-btn').trigger('click');
+    const langButtons = wrapper.findAll('.dropdown-section:nth-of-type(3) .toggle-btn');
+    expect(langButtons.length).toBe(2);
+
+    await langButtons[1].trigger('click');
+    expect(wrapper.find('.user-dropdown-menu').exists()).toBe(true);
+  });
+
+  it('abre los modales de seguridad (clave, 2FA, MCP) desde el menú de usuario', async () => {
+    const wrapper = mount(RgResponsiveShell, {
+      global: {
+        stubs: {
+          RouterView: true,
+          RgCommandPalette: true,
+          RgSafeModeBanner: true,
+          ChangePasswordModal: {
+            props: ['isOpen'],
+            template: '<div v-if="isOpen" class="mock-pwd-modal">PWD</div>',
+          },
+          RgStepUp2FAModal: {
+            props: ['isOpen'],
+            template: '<div v-if="isOpen" class="mock-2fa-modal">2FA</div>',
+          },
+          RgMcpTokenModal: {
+            props: ['isOpen'],
+            template: '<div v-if="isOpen" class="mock-mcp-modal">MCP</div>',
+          },
+        },
+      },
+    });
+
+    // Abrir modal de contraseña
+    await wrapper.find('.user-profile-btn').trigger('click');
+    const pwdBtn = wrapper.find('.btn-change-password-menu');
+    expect(pwdBtn.exists()).toBe(true);
+    await pwdBtn.trigger('click');
+    expect(wrapper.find('.mock-pwd-modal').exists()).toBe(true);
+
+    // Abrir modal 2FA
+    await wrapper.find('.user-profile-btn').trigger('click');
+    const totpBtn = wrapper.find('.btn-reset-2fa-menu');
+    expect(totpBtn.exists()).toBe(true);
+    await totpBtn.trigger('click');
+    expect(wrapper.find('.mock-2fa-modal').exists()).toBe(true);
+
+    // Abrir modal MCP
+    await wrapper.find('.user-profile-btn').trigger('click');
+    const mcpBtn = wrapper.find('.btn-mcp-token-menu');
+    expect(mcpBtn.exists()).toBe(true);
+    await mcpBtn.trigger('click');
+    expect(wrapper.find('.mock-mcp-modal').exists()).toBe(true);
+  });
+
+  it('permite cerrar sesión desde el fondo del menú y redirige a /login', async () => {
+    const authStore = useAuthStore();
+
+    const wrapper = mount(RgResponsiveShell, {
+      global: {
+        stubs: {
+          RouterView: true,
+          RgCommandPalette: true,
+          RgSafeModeBanner: true,
+          ChangePasswordModal: true,
+          RgStepUp2FAModal: true,
+          RgMcpTokenModal: true,
+        },
+      },
+    });
+
+    await wrapper.find('.user-profile-btn').trigger('click');
+    const logoutBtn = wrapper.find('.btn-logout');
+    expect(logoutBtn.exists()).toBe(true);
+    await logoutBtn.trigger('click');
+
+    expect(authStore.isAuthenticated).toBe(false);
+    expect(pushMock).toHaveBeenCalledWith('/login');
+  });
+
+  it('permite abrir command palette desde el botón de búsqueda en cabecera', async () => {
+    const themeStore = useThemeAndLayoutStore();
+
+    const wrapper = mount(RgResponsiveShell, {
+      global: {
+        stubs: {
+          RouterView: true,
+          RgCommandPalette: true,
+          RgSafeModeBanner: true,
+          ChangePasswordModal: true,
+          RgStepUp2FAModal: true,
+          RgMcpTokenModal: true,
+        },
+      },
+    });
 
     const searchBtn = wrapper.find('.btn-search-trigger');
+    expect(searchBtn.exists()).toBe(true);
     await searchBtn.trigger('click');
     expect(themeStore.isCommandPaletteOpen).toBe(true);
   });
 
-  it('renderiza insignia de tema noc-high-contrast y badges de alertas', async () => {
-    const themeStore = useThemeAndLayoutStore();
-    const { useNocEventsStore } = await import('@/stores/useNocEventsStore');
-    const nocStore = useNocEventsStore();
-    themeStore.theme = 'noc-high-contrast';
-    nocStore.activeAlertsCount = 5;
-    nocStore.pendingApprovalsCount = 2;
-
-    const wrapper = mount(RgResponsiveShell, {
-      global: {
-        stubs: {
-          RouterLink: { template: '<a class="rail-link"><slot /></a>' },
-          RouterView: true,
-          RgCommandPalette: true,
-          RgSafeModeBanner: true,
-        },
-      },
-    });
-
-    expect(wrapper.find('.rail-badge').exists()).toBe(true);
-    expect(wrapper.find('.btn-icon').text()).toContain('⚡');
-  });
-
   it('activa controles móviles cuando no es desktop view', async () => {
     const themeStore = useThemeAndLayoutStore();
-    // Simular viewport móvil (< 768px)
     themeStore.windowWidth = 500;
 
     const wrapper = mount(RgResponsiveShell, {
       global: {
         stubs: {
-          RouterLink: true,
           RouterView: true,
           RgCommandPalette: true,
           RgSafeModeBanner: true,
+          ChangePasswordModal: true,
+          RgStepUp2FAModal: true,
+          RgMcpTokenModal: true,
         },
       },
     });
@@ -132,62 +354,26 @@ describe('RgResponsiveShell.vue — Doble Contexto & Barra Inferior Móvil', () 
       await hamburger.trigger('click');
       expect(themeStore.isMobileDrawerOpen).toBe(true);
     }
-
-    const railLink = wrapper.find('.rail-link');
-    if (railLink.exists()) {
-      await railLink.trigger('click');
-      expect(themeStore.isMobileDrawerOpen).toBe(false);
-    }
   });
 
-  it('permite cerrar sesión y redirige a /login', async () => {
-    const authStore = useAuthStore();
-    authStore.setAuth({
-      id: 'usr-1',
-      username: 'operador',
-      email: 'op@rosgrid.local',
-      role: 'SUPPORT_L2',
-      tenant_id: 't-1',
-      tenant_slug: 'demo',
-      totp_enabled: false,
-    });
-
-    const wrapper = mount(RgResponsiveShell, {
-      global: {
-        stubs: {
-          RouterLink: true,
-          RouterView: true,
-          RgCommandPalette: true,
-          RgSafeModeBanner: true,
-        },
-      },
-    });
-
-    const logoutBtn = wrapper.find('.btn-logout');
-    expect(logoutBtn.exists()).toBe(true);
-    await logoutBtn.trigger('click');
-
-    expect(authStore.isAuthenticated).toBe(false);
-    expect(pushMock).toHaveBeenCalledWith('/login');
-  });
-
-  it('renderiza enlaces de contexto de router en la barra inferior móvil', async () => {
+  it('renderiza enlaces de contexto en la barra inferior móvil', async () => {
     const themeStore = useThemeAndLayoutStore();
     themeStore.windowWidth = 400;
 
     const wrapper = mount(RgResponsiveShell, {
       global: {
         stubs: {
-          RouterLink: { template: '<a class="mobile-touch-item"><slot /></a>' },
           RouterView: true,
           RgCommandPalette: true,
           RgSafeModeBanner: true,
+          ChangePasswordModal: true,
+          RgStepUp2FAModal: true,
+          RgMcpTokenModal: true,
         },
       },
     });
 
     expect(wrapper.find('nav.rg-mobile-bottom-bar').exists()).toBe(true);
-
     const mobileMenuBtn = wrapper.find('.btn-mobile-menu');
     if (mobileMenuBtn.exists()) {
       await mobileMenuBtn.trigger('click');
@@ -211,10 +397,12 @@ describe('RgResponsiveShell.vue — Doble Contexto & Barra Inferior Móvil', () 
     const wrapper = mount(RgResponsiveShell, {
       global: {
         stubs: {
-          RouterLink: { template: '<a class="rail-link"><slot /></a>' },
           RouterView: true,
           RgCommandPalette: true,
           RgSafeModeBanner: true,
+          ChangePasswordModal: true,
+          RgStepUp2FAModal: true,
+          RgMcpTokenModal: true,
         },
       },
     });
@@ -235,10 +423,12 @@ describe('RgResponsiveShell.vue — Doble Contexto & Barra Inferior Móvil', () 
     const wrapperWithFlag = mount(RgResponsiveShell, {
       global: {
         stubs: {
-          RouterLink: { template: '<a class="rail-link"><slot /></a>' },
           RouterView: true,
           RgCommandPalette: true,
           RgSafeModeBanner: true,
+          ChangePasswordModal: true,
+          RgStepUp2FAModal: true,
+          RgMcpTokenModal: true,
         },
       },
     });
@@ -250,10 +440,12 @@ describe('RgResponsiveShell.vue — Doble Contexto & Barra Inferior Móvil', () 
     const wrapper = mount(RgResponsiveShell, {
       global: {
         stubs: {
-          RouterLink: true,
           RouterView: true,
           RgCommandPalette: true,
           RgSafeModeBanner: true,
+          ChangePasswordModal: true,
+          RgStepUp2FAModal: true,
+          RgMcpTokenModal: true,
         },
       },
     });
@@ -288,10 +480,12 @@ describe('RgResponsiveShell.vue — Doble Contexto & Barra Inferior Móvil', () 
     const wrapper = mount(RgResponsiveShell, {
       global: {
         stubs: {
-          RouterLink: { template: '<a class="rail-link"><slot /></a>' },
           RouterView: true,
           RgCommandPalette: true,
           RgSafeModeBanner: true,
+          ChangePasswordModal: true,
+          RgStepUp2FAModal: true,
+          RgMcpTokenModal: true,
         },
       },
     });

@@ -7,6 +7,7 @@
   import { useInventoryStore } from '@/stores/useInventoryStore';
   import { useAuthStore } from '@/stores/useAuthStore';
   import { useNocEventsStore } from '@/stores/useNocEventsStore';
+  import { useThemeAndLayoutStore } from '@/stores/useThemeAndLayoutStore';
   import { useI18n } from '@/composables/useI18n';
   import type { SystemRole } from '@/types';
 
@@ -14,20 +15,22 @@
   const inventoryStore = useInventoryStore();
   const authStore = useAuthStore();
   const nocStore = useNocEventsStore();
+  const themeStore = useThemeAndLayoutStore();
   const { t, locale } = useI18n();
 
   // Reloj táctico en tiempo real
   const currentTime = ref('');
-  const currentUtc = ref('');
   let clockTimer: ReturnType<typeof setInterval> | null = null;
 
   function updateClock() {
     const now = new Date();
     currentTime.value = now.toLocaleTimeString(locale.value === 'en' ? 'en-US' : 'es-ES', {
-      hour12: false,
+      hour12: themeStore.timeFormat === '12h',
     });
-    currentUtc.value = now.toISOString().substring(11, 19) + ' UTC';
   }
+
+  // Inicialización inmediata
+  updateClock();
 
   onMounted(() => {
     updateClock();
@@ -191,23 +194,15 @@
         <div class="hub-title-row">
           <span class="hub-badge-pulse" aria-hidden="true"></span>
           <h1 class="hub-title">{{ t('dashboard.title') }}</h1>
-          <span class="hub-version-tag">Tactical NOC v1.0</span>
         </div>
         <p class="hub-subtitle">
-          {{ t('dashboard.subtitle') }} | Organización:
-          <strong class="text-cyan">{{ authStore.tenantSlug || 'Global' }}</strong>
+          {{ t('dashboard.subtitle') }}
         </p>
       </div>
 
       <div class="hub-status-bar">
         <div class="clock-card" aria-label="Hora actual de operaciones">
           <div class="clock-time">{{ currentTime }}</div>
-          <div class="clock-utc">{{ currentUtc }}</div>
-        </div>
-
-        <div class="telemetry-pill" :class="{ 'telemetry-pill--connected': nocStore.isConnected }">
-          <span class="status-dot"></span>
-          <span>{{ nocStore.isConnected ? 'NOC EN VIVO' : 'WS RECONECTANDO' }}</span>
         </div>
 
         <button
@@ -542,8 +537,10 @@
     background: var(--rg-bg-surface, #111827);
     border: 1px solid var(--rg-border-panel, #334155);
     border-radius: 6px;
-    padding: 6px 14px;
-    text-align: right;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-family: var(--rg-font-mono, monospace);
   }
 
@@ -551,32 +548,7 @@
     font-size: 1.15rem;
     font-weight: 700;
     color: var(--rg-accent-cyan, #22d3ee);
-    line-height: 1.1;
-  }
-
-  .clock-utc {
-    font-size: 0.7rem;
-    color: var(--rg-text-muted, #94a3b8);
-  }
-
-  .telemetry-pill {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(100, 116, 139, 0.2);
-    border: 1px solid rgba(100, 116, 139, 0.35);
-    color: var(--rg-text-muted, #94a3b8);
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-family: var(--rg-font-mono, monospace);
-  }
-
-  .telemetry-pill--connected {
-    background: rgba(16, 185, 129, 0.15);
-    border-color: rgba(16, 185, 129, 0.4);
-    color: #6ee7b7;
+    line-height: 1;
   }
 
   .status-dot {

@@ -194,7 +194,7 @@
     "deleted_ok": "Router \"{name}\" deleted successfully."
   },
   "dashboard": {
-    "title": "Command Center — Mission Control",
+    "title": "Command Center",
     "subtitle": "Centralized network infrastructure supervision, security, and fleet telemetry",
     "refresh_data": "Refresh Data",
     "refreshing": "Refreshing...",

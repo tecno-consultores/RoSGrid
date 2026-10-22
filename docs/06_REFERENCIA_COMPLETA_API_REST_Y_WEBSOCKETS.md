@@ -233,8 +233,22 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
 
 #### `POST /api/v1/users/{user_id}/reset-2fa`
 
-- **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN` (con Step-Up Auth TOTP obligatorio del administrador).
-- **Propósito:** Reiniciar el segundo factor de un operador que haya extraviado su dispositivo.
+- **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`, o el **propio usuario autenticado** (`caller_id == user_id`).
+- **Propósito:** Reiniciar el segundo factor de autenticación TOTP de un operador. Al completarse, invalida el secreto cifrado en base de datos y ejecuta el Kill-Switch de sesiones activas en KeyDB.
+
+#### `POST /api/v1/users/change-password`
+
+- **Roles:** Todos los roles autenticados (auto-cambio de contraseña personal) o `SUPERADMIN_GLOBAL` / `TENANT_ADMIN` (reseteo administrativo a otros usuarios).
+- **Cabeceras Obligatorias:** `Authorization: Bearer <token>`, `Idempotency-Key: <UUIDv7>`.
+- **Body (`ChangePasswordRequest`):**
+  ```json
+  {
+    "user_id": "opcional-uuid-para-admin",
+    "current_password": "clave_actual_obligatoria_si_es_auto_cambio",
+    "new_password": "nueva_clave_minimo_8_caracteres"
+  }
+  ```
+- **Auditoría WORM:** Registra evento `USER_SECURITY` / `CHANGE_PASSWORD` en `audit_logs` con hash seguro Argon2id.
 
 #### `POST /api/v1/users/{user_id}/mcp-token`
 

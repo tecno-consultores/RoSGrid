@@ -8,6 +8,7 @@
   import { useAuthStore } from '@/stores/useAuthStore';
   import type { SystemRole, UserManagementItem, McpTokenResponse } from '@/types';
   import RgStepUp2FAModal from '@/components/common/RgStepUp2FAModal.vue';
+  import ChangePasswordModal from '@/components/common/ChangePasswordModal.vue';
   import UserRouterMatrixModal from '@/components/admin/UserRouterMatrixModal.vue';
   import RbacRoleMatrixPanel from '@/components/admin/RbacRoleMatrixPanel.vue';
   import RgMcpTokenModal from '@/components/admin/RgMcpTokenModal.vue';
@@ -66,6 +67,22 @@
   // Modal Generador de Token MCP (Agentes IA)
   const isMcpTokenModalOpen = ref(false);
   const targetUserForMcp = ref<UserManagementItem | null>(null);
+
+  // Modal de Cambio de Clave
+  const isChangePasswordModalOpen = ref(false);
+  const targetUserForPassword = ref<{ id: string; username: string } | null>(null);
+
+  function openChangePasswordModal(user: UserManagementItem) {
+    targetUserForPassword.value = { id: user.id, username: user.username };
+    isChangePasswordModalOpen.value = true;
+  }
+
+  function handlePasswordChanged() {
+    successMessage.value = `Contraseña actualizada exitosamente.`;
+    setTimeout(() => {
+      successMessage.value = '';
+    }, 4000);
+  }
 
   function openMcpTokenModal(user: UserManagementItem) {
     targetUserForMcp.value = user;
@@ -633,6 +650,16 @@
                   </button>
 
                   <button
+                    v-if="isWriteAuthorized"
+                    type="button"
+                    class="btn-change-password"
+                    aria-label="Cambiar o restablecer contraseña de este operador"
+                    @click="openChangePasswordModal(u)"
+                  >
+                    🔑 Clave
+                  </button>
+
+                  <button
                     v-if="isWriteAuthorized && u.totp_enabled"
                     type="button"
                     class="btn-reset-2fa"
@@ -917,6 +944,14 @@
       :user="targetUserForMcp"
       @close="isMcpTokenModalOpen = false"
       @token-generated="handleMcpTokenGenerated"
+    />
+
+    <!-- Modal para Cambio de Contraseña -->
+    <ChangePasswordModal
+      :is-open="isChangePasswordModalOpen"
+      :target-user="targetUserForPassword"
+      @close="isChangePasswordModalOpen = false"
+      @password-changed="handlePasswordChanged"
     />
   </div>
 </template>
@@ -1226,6 +1261,41 @@
     border-radius: 4px;
     font-size: 0.75rem;
     cursor: pointer;
+    margin-right: 6px;
+  }
+
+  .btn-change-password {
+    background: transparent;
+    border: 1px solid #38bdf8;
+    color: #38bdf8;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    margin-right: 6px;
+    transition: background-color 0.15s, color 0.15s;
+  }
+
+  .btn-change-password:hover {
+    background: rgba(56, 189, 248, 0.15);
+    color: #fff;
+  }
+
+  .btn-mcp {
+    background: transparent;
+    border: 1px solid #a855f7;
+    color: #c084fc;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    margin-right: 6px;
+    transition: background-color 0.15s, color 0.15s;
+  }
+
+  .btn-mcp:hover {
+    background: rgba(168, 85, 247, 0.15);
+    color: #fff;
   }
 
   .cell-empty {

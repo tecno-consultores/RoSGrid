@@ -993,4 +993,41 @@ Certificación integral ejecutada de extremo a extremo bajo la **Regla Cero** (c
    - `vue-tsc --noEmit`: 0 errores de tipos TypeScript.
    - `eslint` & `prettier`: 0 errores de sintaxis y complejidad.
 
+---
+
+## 28. Refactorización Táctica del Centro de Mando, Menú de Usuario y Gestión de Seguridad (Hito 23.8)
+
+### A. Diagnóstico y Mejoras Tácticas de Interfaz
+- **Centro de Mando (`DashboardHomeView.vue`):**
+  - Eliminación de la redundancia anglosajona *"Mission Control"* en cabecera y enrutador (`router/index.ts`). Título unificado a *"Centro de Mando"* / *"Command Center"*.
+  - Erradicación de elementos estáticos obsoletos: tag *"Tactical NOC v1.0"* e indicador superfluo *"NOC EN VIVO"*.
+  - Optimización del reloj operativo: eliminación de la hora secundaria UTC (`clock-utc`), dejando una única lectura horaria nítida que conmuta en caliente entre formato 24 Horas y 12h AM/PM.
+  - Supresión del prefijo *"Organización: "* en el subtítulo del dashboard y del prefijo *"Tenant: "* en la barra superior.
+- **Barra Superior y Menú Desplegable de Usuario (`RgResponsiveShell.vue`):**
+  - Reemplazo de la etiqueta estática de rol por el `username` del operador autenticado con avatar y chevron de estado.
+  - Al hacer clic en el nombre de usuario, despliega un menú táctico que concentra:
+    - Selector de formato horario (24 Horas vs 12h AM/PM).
+    - Selector de temas gráficos (Oscuro Táctico, Modo Claro y Alto Contraste NOC).
+    - Selector de idioma (Español / English).
+    - Acciones modales de auto-gestión: Cambiar Mi Clave (`ChangePasswordModal.vue`), Resetear Mi 2FA (`RgStepUp2FAModal.vue`) y Token MCP (`RgMcpTokenModal.vue`).
+    - Botón de Cerrar Sesión ubicado al fondo del menú.
+  - Enlace del logotipo *"RoSGrid"* directamente al Centro de Mando (`/`).
+- **No Regresión en Administración de Usuarios y RBAC (`/users`):**
+  - Incorporación del botón de acción `[ 🔑 Clave ]` en la tabla de usuarios sin eliminar las opciones existentes de reset de 2FA y generación de Token MCP.
+- **Backend Seguro de Cambio de Contraseña (`POST /api/v1/users/change-password`):**
+  - Implementación con verificación estricta de contraseña actual con `argon2id` para auto-cambio, soporte de reseteo directo para administradores (`SUPERADMIN_GLOBAL` y `TENANT_ADMIN`), e inscripción obligatoria en la bitácora inmutable de auditoría WORM (`USER_SECURITY` / `CHANGE_PASSWORD`).
+
+### B. Certificación en Contenedores Docker Efímeros
+1. **Frontend Vitest v8 (`sinfallas/base-node-ionic:26`):**
+   - **45 de 45 suites aprobadas (100%)** con **319 de 319 pruebas unitarias exitosas**.
+   - Nuevas suites: `DashboardHomeView.unit.ts` (3 tests) y `ChangePasswordModal.unit.ts` (6 tests).
+   - Cobertura ampliada en `RgResponsiveShell.unit.ts` (14 tests) y `useThemeAndLayoutStore.unit.ts` (5 tests).
+2. **Chequeo Estricto de Tipos TypeScript:**
+   - `vue-tsc --noEmit`: 0 errores en 100% de componentes y composables.
+3. **Backend Pytest (`sinfallas/base-python-uv:3.15`):**
+   - **12 de 12 pruebas aprobadas (100%)** en `fastapi/tests/api/test_tenants_and_users.unit.py`, incluyendo las pruebas de cambio de clave y reinicio de 2FA por el propio usuario.
+4. **Compilación de Producción:**
+   - `vite build`: bundle optimizado generado en 3.69 segundos y desplegado en caliente en `rosgrid_ui_local`.
+
+
 

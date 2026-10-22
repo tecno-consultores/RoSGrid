@@ -13,6 +13,10 @@ export const useThemeAndLayoutStore = defineStore('themeAndLayout', () => {
   const isMobileDrawerOpen = ref<boolean>(false);
   const isCommandPaletteOpen = ref<boolean>(false);
 
+  // Formato de hora táctico ('24h' o '12h' AM/PM) con persistencia
+  const savedTimeFormat = typeof localStorage !== 'undefined' ? localStorage.getItem('rg_time_format') : null;
+  const timeFormat = ref<'24h' | '12h'>(savedTimeFormat === '12h' ? '12h' : '24h');
+
   // Listener reactivo de redimensionamiento
   if (typeof window !== 'undefined') {
     window.addEventListener('resize', () => {
@@ -50,6 +54,18 @@ export const useThemeAndLayoutStore = defineStore('themeAndLayout', () => {
     tableDensityMode.value = current === 'compact' ? 'comfortable' : 'compact';
   }
 
+  function setTimeFormat(format: '24h' | '12h'): void {
+    timeFormat.value = format;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('rg_time_format', format);
+    }
+  }
+
+  function toggleTimeFormat(): void {
+    const next = timeFormat.value === '24h' ? '12h' : '24h';
+    setTimeFormat(next);
+  }
+
   function toggleMobileDrawer(): void {
     isMobileDrawerOpen.value = !isMobileDrawerOpen.value;
   }
@@ -80,9 +96,12 @@ export const useThemeAndLayoutStore = defineStore('themeAndLayout', () => {
     isDesktopView,
     isMobileDrawerOpen,
     isCommandPaletteOpen,
+    timeFormat,
     setTheme,
     setTableDensityMode,
     toggleTableDensity,
+    setTimeFormat,
+    toggleTimeFormat,
     toggleMobileDrawer,
     closeMobileDrawer,
     openCommandPalette,

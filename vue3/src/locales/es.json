@@ -194,7 +194,7 @@
     "deleted_ok": "Router \"{name}\" eliminado correctamente."
   },
   "dashboard": {
-    "title": "Centro de Mando — Mission Control",
+    "title": "Centro de Mando",
     "subtitle": "Supervisión centralizada de infraestructura de red, seguridad y telemetría de flota",
     "refresh_data": "Actualizar Datos",
     "refreshing": "Actualizando...",

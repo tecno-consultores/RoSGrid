@@ -16,13 +16,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.api.deps import require_roles
 from src.core.audit import write_audit_log
 from src.core.config import settings
-from src.core.crypto import hash_password
+from src.core.crypto import hash_password, verify_password
 from src.db.session import get_db_session, set_tenant_context
 from src.models.core import SystemRoleEnum, Tenant, User, UserRouterPermission
 from src.redis_layer.client import get_redis_client
 from src.redis_layer.sessions import kill_all_user_sessions
 from src.schemas.users import (
     AssignUserRoutersRequest,
+    ChangePasswordRequest,
     CreateUserRequest,
     GenerateMcpTokenRequest,
     McpTokenResponse,
@@ -251,15 +252,41 @@ async def assign_router_permissions(
 @router.post("/{user_id}/reset-2fa")
 async def reset_user_2fa(
     user_id: uuid.UUID,
-    body: Reset2FARequest,
-    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)),
+    body: Reset2FARequest | None = None,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
+            SystemRoleEnum.FIELD_TECH,
+            SystemRoleEnum.INVENTORY_MANAGER,
+            SystemRoleEnum.AUDITOR,
+            SystemRoleEnum.NOC_MONITOR,
+            SystemRoleEnum.SERVICE_ACCOUNT,
+        )
+    ),
     db: AsyncSession = Depends(get_db_session),
 ) -> dict[str, str]:
+    caller_id = uuid.UUID(claims["sub"])
+    caller_role = claims["rol"]
     tenant_id = uuid.UUID(claims["tid"])
-    is_sa = claims["rol"] == SystemRoleEnum.SUPERADMIN_GLOBAL.value
+    is_sa = caller_role == SystemRoleEnum.SUPERADMIN_GLOBAL.value
+    is_admin = caller_role in (SystemRoleEnum.SUPERADMIN_GLOBAL.value, SystemRoleEnum.TENANT_ADMIN.value)
+
+    if not is_admin and caller_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para reiniciar el 2FA de otro usuario.",
+        )
+
     await set_tenant_context(db, tenant_id, is_superadmin=is_sa)
 
-    stmt = select(User).where(User.id == user_id, User.tenant_id == tenant_id)
+    stmt = select(User).where(User.id == user_id)
+    if not is_sa:
+        stmt = stmt.where(User.tenant_id == tenant_id)
     res = await db.execute(stmt)
     target_user = res.scalar_one_or_none()
     if not target_user:
@@ -275,6 +302,89 @@ async def reset_user_2fa(
     await kill_all_user_sessions(str(tenant_id), str(user_id), killed_by=claims["sub"], reason="Reinicio de 2FA")
 
     return {"status": "2fa_reset_completed"}
+
+
+@router.post("/change-password")
+async def change_password(
+    body: ChangePasswordRequest,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
+            SystemRoleEnum.FIELD_TECH,
+            SystemRoleEnum.INVENTORY_MANAGER,
+            SystemRoleEnum.AUDITOR,
+            SystemRoleEnum.NOC_MONITOR,
+            SystemRoleEnum.SERVICE_ACCOUNT,
+        )
+    ),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict[str, str]:
+    caller_id = uuid.UUID(claims["sub"])
+    caller_role = claims["rol"]
+    tenant_id = uuid.UUID(claims["tid"])
+    is_sa = caller_role == SystemRoleEnum.SUPERADMIN_GLOBAL.value
+    is_admin = caller_role in (SystemRoleEnum.SUPERADMIN_GLOBAL.value, SystemRoleEnum.TENANT_ADMIN.value)
+
+    target_user_id = body.user_id or caller_id
+    is_self = target_user_id == caller_id
+
+    if not is_self and not is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para modificar la contraseña de otro usuario.",
+        )
+
+    await set_tenant_context(db, tenant_id, is_superadmin=is_sa)
+    stmt = select(User).where(User.id == target_user_id)
+    if not is_sa:
+        stmt = stmt.where(User.tenant_id == tenant_id)
+    res = await db.execute(stmt)
+    user = res.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
+
+    if is_self:
+        if not body.current_password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Debes ingresar tu contraseña actual para cambiarla.",
+            )
+        if not verify_password(body.current_password, user.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="La contraseña actual ingresada es incorrecta.",
+            )
+
+    if len(body.new_password.strip()) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La nueva contraseña debe tener al menos 8 caracteres.",
+        )
+
+    user.password_hash = hash_password(body.new_password.strip())
+    user.failed_login_attempts = 0
+    user.is_locked = False
+
+    await write_audit_log(
+        session=db,
+        tenant_id=user.tenant_id,
+        actor_username=str(claims.get("preferred_username") or user.username),
+        actor_role=str(caller_role),
+        actor_ip=str(claims.get("ip_address") or "127.0.0.1"),
+        event_category="USER_SECURITY",
+        event_action="CHANGE_PASSWORD",
+        actor_user_id=caller_id,
+        after_state={"target_user_id": str(user.id), "username": user.username, "self_change": is_self},
+        status_code=200,
+    )
+    await db.commit()
+
+    return {"status": "password_changed", "message": "Contraseña actualizada exitosamente."}
 
 
 @router.post("/registration-toggle")

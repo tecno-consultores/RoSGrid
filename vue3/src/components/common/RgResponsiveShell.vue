@@ -2,14 +2,18 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { computed } from 'vue';
+  import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
   import { useAuthStore } from '@/stores/useAuthStore';
   import { useNocEventsStore } from '@/stores/useNocEventsStore';
   import { useThemeAndLayoutStore } from '@/stores/useThemeAndLayoutStore';
   import { useI18n } from '@/composables/useI18n';
+  import { http } from '@/api/httpClient';
   import RgCommandPalette from './RgCommandPalette.vue';
   import RgSafeModeBanner from './RgSafeModeBanner.vue';
+  import ChangePasswordModal from '@/components/common/ChangePasswordModal.vue';
+  import RgStepUp2FAModal from '@/components/common/RgStepUp2FAModal.vue';
+  import RgMcpTokenModal from '@/components/admin/RgMcpTokenModal.vue';
 
   const route = useRoute();
   const router = useRouter();
@@ -20,6 +24,75 @@
 
   const isRouterContext = computed(() => route.path.includes('/routers/'));
   const currentRouterId = computed(() => String(route.params.routerId || ''));
+
+  // Estado del Menú Desplegable de Usuario
+  const isUserMenuOpen = ref(false);
+  const userMenuRef = ref<HTMLElement | null>(null);
+
+  // Modales de Gestión de Cuenta y Seguridad
+  const isChangePasswordModalOpen = ref(false);
+  const isReset2FAModalOpen = ref(false);
+  const isMcpTokenModalOpen = ref(false);
+
+  function toggleUserMenu(): void {
+    isUserMenuOpen.value = !isUserMenuOpen.value;
+  }
+
+  function closeUserMenu(): void {
+    isUserMenuOpen.value = false;
+  }
+
+  function openChangePasswordModal(): void {
+    closeUserMenu();
+    isChangePasswordModalOpen.value = true;
+  }
+
+  function openReset2FAModal(): void {
+    closeUserMenu();
+    isReset2FAModalOpen.value = true;
+  }
+
+  function openMcpTokenModal(): void {
+    closeUserMenu();
+    isMcpTokenModalOpen.value = true;
+  }
+
+  async function handleStepUpReset2FA(totpCode: string): Promise<void> {
+    if (!authStore.user?.id) return;
+    try {
+      await http.post(`/api/v1/users/${authStore.user.id}/reset-2fa`, { admin_totp_code: totpCode });
+      isReset2FAModalOpen.value = false;
+      handleLogout();
+    } catch {
+      // Manejado por el modal
+    }
+  }
+
+  function onDocumentClick(e: MouseEvent): void {
+    if (userMenuRef.value && !userMenuRef.value.contains(e.target as Node)) {
+      isUserMenuOpen.value = false;
+    }
+  }
+
+  function onKeydown(e: KeyboardEvent): void {
+    if (e.key === 'Escape' && isUserMenuOpen.value) {
+      isUserMenuOpen.value = false;
+    }
+  }
+
+  onMounted(() => {
+    if (typeof document !== 'undefined') {
+      document.addEventListener('click', onDocumentClick);
+      document.addEventListener('keydown', onKeydown);
+    }
+  });
+
+  onBeforeUnmount(() => {
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('click', onDocumentClick);
+      document.removeEventListener('keydown', onKeydown);
+    }
+  });
 
   interface NavItem {
     name: string;
@@ -176,15 +249,13 @@
         >
           ☰
         </button>
-        <div class="brand">
+        <router-link to="/" class="brand" aria-label="Ir al Centro de Mando">
           <span class="brand-icon" aria-hidden="true">🌐</span>
           <span class="brand-name">RoSGrid</span>
           <span class="brand-version">v1.0</span>
-        </div>
-        <div v-if="authStore.tenantSlug" class="tenant-badge">
-          <span
-            >Tenant: <strong>{{ authStore.tenantSlug }}</strong></span
-          >
+        </router-link>
+        <div v-if="authStore.tenantSlug" class="tenant-badge" :title="`Organización: ${authStore.tenantSlug}`">
+          <strong>{{ authStore.tenantSlug }}</strong>
         </div>
       </div>
 
@@ -201,44 +272,168 @@
           <kbd class="search-kbd" aria-hidden="true">Ctrl K</kbd>
         </button>
 
-        <!-- Conmutador de Temas -->
-        <button
-          type="button"
-          class="btn-icon"
-          :aria-label="`Tema actual: ${themeStore.theme}. Cambiar tema visual`"
-          @click="
-            themeStore.setTheme(
-              themeStore.theme === 'dark'
-                ? 'light'
-                : themeStore.theme === 'light'
-                  ? 'noc-high-contrast'
-                  : 'dark',
-            )
-          "
-        >
-          <span v-if="themeStore.theme === 'dark'" aria-hidden="true">🌙</span>
-          <span v-else-if="themeStore.theme === 'light'" aria-hidden="true">☀️</span>
-          <span v-else aria-hidden="true">⚡</span>
-        </button>
-
-        <!-- Conmutador Táctico de Idioma i18n (ES / EN) -->
-        <button
-          type="button"
-          class="btn-icon btn-lang-toggle"
-          id="btn-global-lang-toggle"
-          :aria-label="`Idioma actual: ${locale.toUpperCase()}. Presione para alternar idioma entre Español e Inglés`"
-          :title="locale === 'es' ? 'Switch to English' : 'Cambiar a Español'"
-          @click="toggleLocale"
-        >
-          <span class="lang-text">{{ locale.toUpperCase() }}</span>
-        </button>
-
-        <!-- Info Usuario & Salir -->
-        <div v-if="authStore.user" class="user-info">
-          <span class="user-role-badge">{{ authStore.user.role }}</span>
-          <button type="button" class="btn-logout" aria-label="Cerrar sesión" @click="handleLogout">
-            Salir
+        <!-- Menú Desplegable Táctico de Usuario -->
+        <div v-if="authStore.user" class="user-menu-container" ref="userMenuRef">
+          <button
+            type="button"
+            class="user-profile-btn"
+            id="user-profile-trigger"
+            :aria-expanded="isUserMenuOpen"
+            aria-haspopup="true"
+            aria-label="Menú de perfil y preferencias del usuario"
+            @click="toggleUserMenu"
+          >
+            <span class="user-avatar-badge" aria-hidden="true">👤</span>
+            <span class="user-username">{{ authStore.user.username }}</span>
+            <span
+              class="dropdown-chevron"
+              :class="{ 'dropdown-chevron--open': isUserMenuOpen }"
+              aria-hidden="true"
+            >▾</span>
           </button>
+
+          <div
+            v-if="isUserMenuOpen"
+            class="user-dropdown-menu"
+            role="menu"
+            aria-labelledby="user-profile-trigger"
+          >
+            <!-- Encabezado de Usuario -->
+            <div class="dropdown-user-header">
+              <div class="dropdown-user-name">
+                {{ authStore.user.username }}
+              </div>
+              <div class="dropdown-user-role-tag">{{ authStore.user.role }}</div>
+            </div>
+
+            <div class="dropdown-divider"></div>
+
+            <!-- Preferencia 1: Formato de Hora (24h vs 12h AM/PM) -->
+            <div class="dropdown-section dropdown-section--time">
+              <span class="dropdown-section-title">🕒 Formato de Hora</span>
+              <div class="dropdown-toggle-group" role="radiogroup" aria-label="Formato de reloj">
+                <button
+                  type="button"
+                  class="toggle-btn"
+                  :class="{ 'toggle-btn--active': themeStore.timeFormat === '24h' }"
+                  @click="themeStore.setTimeFormat('24h')"
+                >
+                  24 Horas
+                </button>
+                <button
+                  type="button"
+                  class="toggle-btn"
+                  :class="{ 'toggle-btn--active': themeStore.timeFormat === '12h' }"
+                  @click="themeStore.setTimeFormat('12h')"
+                >
+                  12h AM/PM
+                </button>
+              </div>
+            </div>
+
+            <!-- Preferencia 2: Tema Gráfico -->
+            <div class="dropdown-section dropdown-section--theme">
+              <span class="dropdown-section-title">🎨 Tema Visual</span>
+              <div class="dropdown-toggle-group" role="radiogroup" aria-label="Tema visual">
+                <button
+                  type="button"
+                  class="toggle-btn"
+                  :class="{ 'toggle-btn--active': themeStore.theme === 'dark' }"
+                  title="Oscuro Táctico"
+                  @click="themeStore.setTheme('dark')"
+                >
+                  🌙 Oscuro
+                </button>
+                <button
+                  type="button"
+                  class="toggle-btn"
+                  :class="{ 'toggle-btn--active': themeStore.theme === 'light' }"
+                  title="Modo Claro"
+                  @click="themeStore.setTheme('light')"
+                >
+                  ☀️ Claro
+                </button>
+                <button
+                  type="button"
+                  class="toggle-btn"
+                  :class="{ 'toggle-btn--active': themeStore.theme === 'noc-high-contrast' }"
+                  title="Alto Contraste NOC"
+                  @click="themeStore.setTheme('noc-high-contrast')"
+                >
+                  ⚡ NOC
+                </button>
+              </div>
+            </div>
+
+            <!-- Preferencia 3: Idioma -->
+            <div class="dropdown-section dropdown-section--lang">
+              <span class="dropdown-section-title">🌐 Idioma</span>
+              <div class="dropdown-toggle-group" role="radiogroup" aria-label="Idioma del sistema">
+                <button
+                  type="button"
+                  class="toggle-btn"
+                  :class="{ 'toggle-btn--active': locale === 'es' }"
+                  @click="locale !== 'es' && toggleLocale()"
+                >
+                  Español
+                </button>
+                <button
+                  type="button"
+                  class="toggle-btn"
+                  :class="{ 'toggle-btn--active': locale === 'en' }"
+                  @click="locale !== 'en' && toggleLocale()"
+                >
+                  English
+                </button>
+              </div>
+            </div>
+
+            <div class="dropdown-divider"></div>
+
+            <!-- Acciones de Cuenta y Seguridad -->
+            <button
+              type="button"
+              class="dropdown-item btn-change-password-menu"
+              role="menuitem"
+              @click="openChangePasswordModal"
+            >
+              <span class="dropdown-item-icon" aria-hidden="true">🔑</span>
+              <span>Cambiar Mi Clave</span>
+            </button>
+
+            <button
+              type="button"
+              class="dropdown-item btn-reset-2fa-menu"
+              role="menuitem"
+              @click="openReset2FAModal"
+            >
+              <span class="dropdown-item-icon" aria-hidden="true">↺</span>
+              <span>Resetear Mi 2FA</span>
+            </button>
+
+            <button
+              type="button"
+              class="dropdown-item btn-mcp-token-menu"
+              role="menuitem"
+              @click="openMcpTokenModal"
+            >
+              <span class="dropdown-item-icon" aria-hidden="true">⚡</span>
+              <span>Token de Acceso MCP</span>
+            </button>
+
+            <div class="dropdown-divider"></div>
+
+            <!-- Salir / Cerrar Sesión al fondo -->
+            <button
+              type="button"
+              class="dropdown-item dropdown-item--logout btn-logout"
+              role="menuitem"
+              @click="handleLogout"
+            >
+              <span class="dropdown-item-icon" aria-hidden="true">🚪</span>
+              <span>Cerrar Sesión</span>
+            </button>
+          </div>
         </div>
       </div>
     </header>
@@ -371,6 +566,26 @@
 
     <!-- Modal Command Palette Global (Ctrl+K) -->
     <RgCommandPalette />
+
+    <!-- Modales de Cuenta Invocados desde el Menú de Usuario -->
+    <ChangePasswordModal
+      :is-open="isChangePasswordModalOpen"
+      :target-user="{ id: authStore.user?.id || '', username: authStore.user?.username || '' }"
+      @close="isChangePasswordModalOpen = false"
+    />
+
+    <RgStepUp2FAModal
+      :is-open="isReset2FAModalOpen"
+      title="Step-Up 2FA: Confirmar Reseteo de 2FA"
+      @close="isReset2FAModalOpen = false"
+      @submit-totp="handleStepUpReset2FA"
+    />
+
+    <RgMcpTokenModal
+      :is-open="isMcpTokenModalOpen"
+      :user="authStore.user as any"
+      @close="isMcpTokenModalOpen = false"
+    />
   </div>
 </template>
 
@@ -413,6 +628,13 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+  }
+
+  .brand:hover {
+    opacity: 0.85;
   }
 
   .brand-icon {
@@ -470,61 +692,190 @@
     border: 1px solid var(--rg-border-panel);
   }
 
-  .btn-icon {
-    background: transparent;
-    border: 1px solid var(--rg-border-panel);
-    color: var(--rg-text-primary);
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
+  /* Menú Desplegable de Usuario Táctico */
+  .user-menu-container {
+    position: relative;
+    display: inline-block;
   }
 
-  .btn-lang-toggle {
-    font-family: var(--rg-font-mono);
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--rg-accent-cyan);
-    letter-spacing: 0.5px;
-    transition: all 0.2s ease;
-  }
-
-  .btn-lang-toggle:hover {
-    border-color: var(--rg-accent-cyan);
-    background: rgba(0, 243, 255, 0.12);
-  }
-
-  .user-info {
+  .user-profile-btn {
     display: flex;
     align-items: center;
     gap: 8px;
-  }
-
-  .user-role-badge {
-    font-size: 11px;
-    font-family: var(--rg-font-mono);
-    background: var(--rg-bg-elevated);
-    color: var(--rg-accent-cyan);
-    padding: 3px 6px;
-    border-radius: 4px;
-    border: 1px solid var(--rg-border-grid);
-  }
-
-  .btn-logout {
-    background: transparent;
-    border: 1px solid var(--rg-status-critical);
-    color: var(--rg-status-critical);
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-size: 12px;
+    background: var(--rg-bg-canvas, #0b0f19);
+    border: 1px solid var(--rg-border-panel, #1f293d);
+    color: var(--rg-text-primary, #f9fafb);
+    padding: 6px 12px;
+    border-radius: 6px;
     cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
   }
 
-  .btn-logout:hover {
-    background: var(--rg-status-critical-bg);
+  .user-profile-btn:hover,
+  .user-profile-btn[aria-expanded="true"] {
+    border-color: var(--rg-accent-cyan, #00f3ff);
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.15);
+  }
+
+  .user-avatar-badge {
+    font-size: 1rem;
+  }
+
+  .user-username {
+    font-family: var(--rg-font-mono, monospace);
+    color: var(--rg-accent-cyan, #00f3ff);
+  }
+
+  .dropdown-chevron {
+    font-size: 0.75rem;
+    color: var(--rg-text-muted, #9ca3af);
+    transition: transform 0.2s ease;
+  }
+
+  .dropdown-chevron--open {
+    transform: rotate(180deg);
+  }
+
+  .user-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background-color: var(--rg-bg-surface, #111827);
+    border: 1px solid var(--rg-border, #1f293d);
+    border-radius: 10px;
+    width: 280px;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65);
+    z-index: 2000;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    animation: fadeInMenu 0.15s ease-out;
+  }
+
+  @keyframes fadeInMenu {
+    from {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .dropdown-user-header {
+    padding: 4px 6px;
+  }
+
+  .dropdown-user-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--rg-text-primary, #fff);
+  }
+
+  .dropdown-user-role-tag {
+    font-size: 0.75rem;
+    font-family: var(--rg-font-mono, monospace);
+    color: var(--rg-accent-cyan, #00f3ff);
+    margin-top: 2px;
+  }
+
+  .dropdown-divider {
+    height: 1px;
+    background-color: var(--rg-border-grid, #1f293d);
+    margin: 4px 0;
+  }
+
+  .dropdown-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 2px 4px;
+  }
+
+  .dropdown-section-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--rg-text-muted, #94a3b8);
+  }
+
+  .dropdown-toggle-group {
+    display: flex;
+    gap: 4px;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 3px;
+    border-radius: 6px;
+    border: 1px solid var(--rg-border, #1f293d);
+  }
+
+  .toggle-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--rg-text-secondary, #cbd5e1);
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 5px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: center;
+  }
+
+  .toggle-btn:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .toggle-btn--active {
+    background: var(--rg-accent-cyan, #00f3ff) !important;
+    color: #000 !important;
+    font-weight: 700;
+  }
+
+  .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--rg-text-primary, #f3f4f6);
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+    text-align: left;
+  }
+
+  .dropdown-item:hover {
+    background: rgba(0, 243, 255, 0.08);
+    color: var(--rg-accent-cyan, #00f3ff);
+  }
+
+  .dropdown-item-icon {
+    font-size: 1rem;
+    width: 20px;
+    text-align: center;
+  }
+
+  .dropdown-item--logout {
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    background: rgba(239, 68, 68, 0.06);
+    margin-top: 2px;
+  }
+
+  .dropdown-item--logout:hover {
+    background: rgba(239, 68, 68, 0.18);
+    color: #fff;
   }
 
   .rg-shell-body {

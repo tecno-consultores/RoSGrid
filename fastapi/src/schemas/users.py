@@ -57,6 +57,14 @@ class UpdateUserRequest(BaseModel):
     allowed_cidr_list: list[str] | None = None
 
 
+class ChangePasswordRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    user_id: uuid.UUID | None = Field(default=None, description="ID del usuario objetivo (opcional si es auto-cambio)")
+    current_password: str | None = Field(default=None, description="Contraseña actual (obligatoria para auto-cambio)")
+    new_password: str = Field(..., min_length=8, max_length=128, description="Nueva contraseña")
+
+
 class RouterAssignmentItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

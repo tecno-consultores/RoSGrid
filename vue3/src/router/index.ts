@@ -23,7 +23,7 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/DashboardHomeView.vue'),
     meta: {
       requiresAuth: true,
-      title: 'Centro de Mando — Mission Control — RoSGrid',
+      title: 'Centro de Mando — RoSGrid',
     },
   },
   {
