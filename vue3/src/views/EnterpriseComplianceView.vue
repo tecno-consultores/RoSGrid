@@ -24,6 +24,7 @@
     SlaReportSummary,
     WifiClientItem,
     WifiSsidProfile,
+    TenantFeatureFlags,
   } from '@/types';
 
   import NotificationChannelsPanel from '@/components/operations/NotificationChannelsPanel.vue';
@@ -33,7 +34,37 @@
   const inventoryStore = useInventoryStore();
 
   type TabType = 'drift' | 'cis' | 'sdwan' | 'switching' | 'sla' | 'wifi' | 'notifications';
-  const activeTab = ref<TabType>('drift');
+
+  interface TabDef {
+    id: TabType;
+    flag?: keyof TenantFeatureFlags;
+  }
+
+  const allTabs: TabDef[] = [
+    { id: 'drift', flag: 'config_drift_monitoring_enabled' },
+    { id: 'cis', flag: 'cis_audit_enabled' },
+    { id: 'sdwan', flag: 'sdwan_orchestrator_enabled' },
+    { id: 'switching' },
+    { id: 'sla', flag: 'sla_tracker_enabled' },
+    { id: 'wifi', flag: 'capsman_wifi_enabled' },
+    { id: 'notifications', flag: 'outbound_webhooks_enabled' },
+  ];
+
+  const availableTabs = computed(() => {
+    return allTabs.filter((tab) => !tab.flag || authStore.isFeatureEnabled(tab.flag));
+  });
+
+  const activeTab = ref<TabType>(availableTabs.value[0]?.id || 'switching');
+
+  watch(
+    availableTabs,
+    (tabs) => {
+      if (tabs.length > 0 && !tabs.some((t) => t.id === activeTab.value)) {
+        activeTab.value = tabs[0].id;
+      }
+    },
+    { immediate: true },
+  );
 
   const selectedRouterId = ref<string>('');
   const isLoading = ref<boolean>(false);
@@ -168,6 +199,12 @@
   async function loadTabData() {
     errorMessage.value = '';
     successMessage.value = '';
+    if (!availableTabs.value.some((t) => t.id === activeTab.value)) {
+      if (availableTabs.value.length > 0) {
+        activeTab.value = availableTabs.value[0].id;
+      }
+      return;
+    }
     if (activeTab.value === 'notifications') {
       return;
     }
@@ -441,9 +478,10 @@
       <span>{{ successMessage }}</span>
     </div>
 
-    <!-- Barra de Pestañas Tácticas (6 Módulos de Hito 20) -->
+    <!-- Barra de Pestañas Tácticas (Módulos dinámicos por Feature Flags) -->
     <nav class="tactical-tabs-nav" aria-label="Módulos de Cumplimiento">
       <button
+        v-if="authStore.isFeatureEnabled('config_drift_monitoring_enabled')"
         id="tab-btn-drift"
         type="button"
         class="tab-btn"
@@ -458,6 +496,7 @@
       </button>
 
       <button
+        v-if="authStore.isFeatureEnabled('cis_audit_enabled')"
         id="tab-btn-cis"
         type="button"
         class="tab-btn"
@@ -472,6 +511,7 @@
       </button>
 
       <button
+        v-if="authStore.isFeatureEnabled('sdwan_orchestrator_enabled')"
         id="tab-btn-sdwan"
         type="button"
         class="tab-btn"
@@ -500,6 +540,7 @@
       </button>
 
       <button
+        v-if="authStore.isFeatureEnabled('sla_tracker_enabled')"
         id="tab-btn-sla"
         type="button"
         class="tab-btn"
@@ -514,6 +555,7 @@
       </button>
 
       <button
+        v-if="authStore.isFeatureEnabled('capsman_wifi_enabled')"
         id="tab-btn-wifi"
         type="button"
         class="tab-btn"
@@ -528,6 +570,7 @@
       </button>
 
       <button
+        v-if="authStore.isFeatureEnabled('outbound_webhooks_enabled')"
         id="tab-btn-notifications"
         type="button"
         class="tab-btn"

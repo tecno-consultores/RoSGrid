@@ -550,6 +550,7 @@ async def test_runner_orchestrator_main() -> None:
         patch("src.workers.runner.alert_dispatcher_worker_loop", side_effect=asyncio.CancelledError),
         patch("src.workers.runner.nightly_backup_worker_loop", side_effect=asyncio.CancelledError),
         patch("src.workers.runner.vault_rotation_worker_loop", side_effect=asyncio.CancelledError),
+        patch("src.workers.runner.syslog_collector_worker_loop", side_effect=asyncio.CancelledError),
         patch("src.workers.runner.close_redis_client") as mock_close,
         patch("src.workers.runner._setup_signal_handlers") as mock_setup,
     ):

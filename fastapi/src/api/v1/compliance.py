@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.deps import get_current_user_claims, require_roles
+from src.api.deps import get_current_user_claims, require_feature, require_roles
 from src.api.v1.webfig_common import execute_safe_mutation, get_router_and_client
 from src.core.audit import audit_actor_from_claims, write_audit_log
 from src.db.session import get_tenant_db_session
@@ -240,7 +240,10 @@ async def create_golden_template(
     "/config-drift/{router_id}",
     response_model=ConfigDriftCheckResponse,
     summary="Analizar desviación de configuración de un router respecto a la plantilla homologada",
-    dependencies=[Depends(require_roles(*_COMPLIANCE_READ_ROLES))],
+    dependencies=[
+        Depends(require_roles(*_COMPLIANCE_READ_ROLES)),
+        Depends(require_feature("config_drift_monitoring_enabled")),
+    ],
 )
 async def check_config_drift(
     router_id: uuid.UUID,
@@ -335,7 +338,10 @@ async def check_config_drift(
     "/config-drift/revert",
     response_model=ConfigDriftRevertResponse,
     summary="Remediación en 1 clic: Revertir configuración a la plantilla homologada",
-    dependencies=[Depends(require_roles(*_COMPLIANCE_WRITE_ROLES))],
+    dependencies=[
+        Depends(require_roles(*_COMPLIANCE_WRITE_ROLES)),
+        Depends(require_feature("config_drift_monitoring_enabled")),
+    ],
 )
 async def revert_config_drift(
     payload: ConfigDriftRevertRequest,
@@ -483,11 +489,23 @@ CIS_DIRECTIVES_DEF: list[dict[str, Any]] = [
 ]
 
 
+@router.get(
+    "/cis-audit/{router_id}",
+    response_model=CisAuditResponse,
+    summary="Consultar o ejecutar escaneo de seguridad CIS Benchmark para RouterOS (Security Score 0-100)",
+    dependencies=[
+        Depends(require_roles(*_COMPLIANCE_READ_ROLES)),
+        Depends(require_feature("cis_audit_enabled")),
+    ],
+)
 @router.post(
     "/cis-audit/{router_id}",
     response_model=CisAuditResponse,
     summary="Ejecutar escaneo de seguridad CIS Benchmark para RouterOS (Security Score 0-100)",
-    dependencies=[Depends(require_roles(*_COMPLIANCE_READ_ROLES))],
+    dependencies=[
+        Depends(require_roles(*_COMPLIANCE_READ_ROLES)),
+        Depends(require_feature("cis_audit_enabled")),
+    ],
 )
 async def run_cis_audit(
     router_id: uuid.UUID,
@@ -597,7 +615,10 @@ async def run_cis_audit(
     "/cis-audit/{router_id}/auto-harden",
     response_model=CisAutoHardenResponse,
     summary="Endurecer Router Automáticamente (Auto-Hardening) bajo Safe Mode (60s)",
-    dependencies=[Depends(require_roles(*_COMPLIANCE_WRITE_ROLES))],
+    dependencies=[
+        Depends(require_roles(*_COMPLIANCE_WRITE_ROLES)),
+        Depends(require_feature("cis_audit_enabled")),
+    ],
 )
 async def auto_harden_router(
     router_id: uuid.UUID,

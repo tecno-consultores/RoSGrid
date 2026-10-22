@@ -131,6 +131,8 @@ services:
       ROSGRID_BACKUP_RETENTION_DAYS: "${ROSGRID_BACKUP_RETENTION_DAYS:-30}"
     volumes:
       - rosgrid_backups_storage:/var/lib/rosgrid/backups
+    ports:
+      - "${ROSGRID_SYSLOG_PORT:-5514}:5514/udp"
     entrypoint: ["python3", "-m", "src.workers.runner"]
     healthcheck:
       test: ["CMD", "python3", "-c", "import os; os.kill(1, 0)"]

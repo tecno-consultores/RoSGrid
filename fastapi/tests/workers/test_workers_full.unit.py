@@ -590,6 +590,7 @@ async def test_workers_runner() -> None:
         patch("src.workers.runner.alert_dispatcher_worker_loop", new_callable=AsyncMock),
         patch("src.workers.runner.nightly_backup_worker_loop", new_callable=AsyncMock),
         patch("src.workers.runner.vault_rotation_worker_loop", new_callable=AsyncMock),
+        patch("src.workers.runner.syslog_collector_worker_loop", new_callable=AsyncMock),
         patch("src.workers.runner.close_redis_client", new_callable=AsyncMock),
     ):
         # Trigger stop_event immediately

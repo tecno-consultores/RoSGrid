@@ -7,12 +7,14 @@
   import { useInventoryStore } from '@/stores/useInventoryStore';
   import { useAuthStore } from '@/stores/useAuthStore';
   import { useNocEventsStore } from '@/stores/useNocEventsStore';
+  import { useI18n } from '@/composables/useI18n';
   import type { SystemRole } from '@/types';
 
   const router = useRouter();
   const inventoryStore = useInventoryStore();
   const authStore = useAuthStore();
   const nocStore = useNocEventsStore();
+  const { t, locale } = useI18n();
 
   // Reloj táctico en tiempo real
   const currentTime = ref('');
@@ -21,7 +23,9 @@
 
   function updateClock() {
     const now = new Date();
-    currentTime.value = now.toLocaleTimeString('es-ES', { hour12: false });
+    currentTime.value = now.toLocaleTimeString(locale.value === 'en' ? 'en-US' : 'es-ES', {
+      hour12: false,
+    });
     currentUtc.value = now.toISOString().substring(11, 19) + ' UTC';
   }
 
@@ -32,6 +36,8 @@
       inventoryStore.fetchRouters();
     }
     inventoryStore.fetchNetworkRoles();
+    nocStore.connectEventsWebSocket();
+    nocStore.fetchRecentAuditLogs();
   });
 
   onBeforeUnmount(() => {
@@ -63,95 +69,87 @@
 
   const userRole = computed<SystemRole>(() => authStore.currentRole || 'AUDITOR');
 
-  const tools: ToolCard[] = [
+  const tools = computed<ToolCard[]>(() => [
     {
       id: 'inventory',
-      title: 'Inventario de Flota',
-      category: 'INFRAESTRUCTURA',
-      description:
-        'Supervisión de hardware RouterOS v7, mapa geográfico OSM y acceso a consola WebFig.',
+      title: t('dashboard.tools.inventory_title'),
+      category: t('dashboard.tools.inventory_cat'),
+      description: t('dashboard.tools.inventory_desc'),
       icon: '🖥️',
       route: '/inventory',
     },
     {
       id: 'wallboard',
-      title: 'Wallboard NOC en Vivo',
-      category: 'MONITOREO',
-      description:
-        'Telemetría de CPU, memoria y tráfico en tiempo real, alarmas sonoras y modo TV.',
+      title: t('dashboard.tools.wallboard_title'),
+      category: t('dashboard.tools.wallboard_cat'),
+      description: t('dashboard.tools.wallboard_desc'),
       icon: '📊',
       route: '/noc-wallboard',
       badge:
-        computed(() => nocStore.activeAlertsCount).value > 0
-          ? `${nocStore.activeAlertsCount} Alertas`
+        nocStore.activeAlertsCount > 0
+          ? t('dashboard.tools.wallboard_alerts_badge', { count: nocStore.activeAlertsCount })
           : undefined,
       badgeType: 'critical',
     },
     {
       id: 'maker-checker',
-      title: 'Aprobaciones Maker-Checker',
-      category: 'SEGURIDAD & GOBERNANZA',
-      description:
-        'Flujo de autorización de 4 ojos para comandos de alto impacto y reversión segura.',
+      title: t('dashboard.tools.maker_checker_title'),
+      category: t('dashboard.tools.maker_checker_cat'),
+      description: t('dashboard.tools.maker_checker_desc'),
       icon: '🛡️',
       route: '/approvals',
       badge:
-        computed(() => nocStore.pendingApprovalsCount).value > 0
-          ? `${nocStore.pendingApprovalsCount} Pendientes`
+        nocStore.pendingApprovalsCount > 0
+          ? t('dashboard.tools.maker_checker_pending_badge', { count: nocStore.pendingApprovalsCount })
           : undefined,
       badgeType: 'warning',
     },
     {
       id: 'backups',
-      title: 'Respaldos RSC & Git Diff',
-      category: 'CONTINUIDAD',
-      description:
-        'Snapshots .rsc exportados de la flota, versionado Git de diferencias y respaldo WORM.',
+      title: t('dashboard.tools.backups_title'),
+      category: t('dashboard.tools.backups_cat'),
+      description: t('dashboard.tools.backups_desc'),
       icon: '📦',
       route: '/backups',
     },
     {
       id: 'bulk-ops',
-      title: 'Acciones Masivas & Scripts',
-      category: 'OPERACIONES EN LOTE',
-      description:
-        'Despliegue simultáneo de configuraciones con Safe Mode integrado y dry-run pre-vuelo.',
+      title: t('dashboard.tools.bulk_ops_title'),
+      category: t('dashboard.tools.bulk_ops_cat'),
+      description: t('dashboard.tools.bulk_ops_desc'),
       icon: '⚡',
       route: '/bulk-ops',
     },
     {
       id: 'sessions',
-      title: 'Sesiones & Kill-Switch',
-      category: 'DEFENSA ACTIVA',
-      description:
-        'Control de conexiones concurrentes y revocación inmediata de sesiones comprometidas.',
+      title: t('dashboard.tools.sessions_title'),
+      category: t('dashboard.tools.sessions_cat'),
+      description: t('dashboard.tools.sessions_desc'),
       icon: '🛑',
       route: '/sessions',
       requiredRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'SECURITY_OFFICER'],
     },
     {
       id: 'users',
-      title: 'Usuarios & Matriz RBAC',
-      category: 'ACCESO',
-      description:
-        'Gestión de operadores, asignación de roles y control de acceso router por router.',
+      title: t('dashboard.tools.users_title'),
+      category: t('dashboard.tools.users_cat'),
+      description: t('dashboard.tools.users_desc'),
       icon: '👥',
       route: '/users',
       requiredRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN'],
     },
     {
       id: 'audit',
-      title: 'Auditoría Forense WORM',
-      category: 'CUMPLIMIENTO',
-      description:
-        'Bitácora inmutable de eventos, autenticación 2FA y revelaciones de credenciales.',
+      title: t('dashboard.tools.audit_title'),
+      category: t('dashboard.tools.audit_cat'),
+      description: t('dashboard.tools.audit_desc'),
       icon: '📜',
       route: '/audit-logs',
     },
-  ];
+  ]);
 
   const authorizedTools = computed(() => {
-    return tools.filter((tool) => {
+    return tools.value.filter((tool) => {
       if (!tool.requiredRoles) return true;
       return tool.requiredRoles.includes(userRole.value);
     });
@@ -165,13 +163,23 @@
     router.push(`/routers/${routerId}/webfig/live`);
   }
 
+  const isRefreshing = ref(false);
   const isFleetUpdated = ref(false);
 
-  function refreshFleetData() {
-    isFleetUpdated.value = true;
-    setTimeout(() => {
-      isFleetUpdated.value = false;
-    }, 4000);
+  async function refreshFleetData() {
+    isRefreshing.value = true;
+    try {
+      await Promise.allSettled([
+        inventoryStore.fetchRouters(),
+        nocStore.fetchRecentAuditLogs(true),
+      ]);
+      isFleetUpdated.value = true;
+      setTimeout(() => {
+        isFleetUpdated.value = false;
+      }, 3500);
+    } finally {
+      isRefreshing.value = false;
+    }
   }
 </script>
 
@@ -182,11 +190,11 @@
       <div class="hub-identity">
         <div class="hub-title-row">
           <span class="hub-badge-pulse" aria-hidden="true"></span>
-          <h1 class="hub-title">Centro de Mando — Mission Control</h1>
+          <h1 class="hub-title">{{ t('dashboard.title') }}</h1>
           <span class="hub-version-tag">Tactical NOC v1.0</span>
         </div>
         <p class="hub-subtitle">
-          Supervisión unificada de flota MikroTik RouterOS v7 | Organización:
+          {{ t('dashboard.subtitle') }} | Organización:
           <strong class="text-cyan">{{ authStore.tenantSlug || 'Global' }}</strong>
         </p>
       </div>
@@ -205,14 +213,20 @@
         <button
           type="button"
           class="btn btn-primary"
+          :class="{ 'btn-primary--loading': isRefreshing }"
+          :disabled="isRefreshing"
           aria-label="Actualizar datos de la flota"
           @click="refreshFleetData"
         >
-          Actualizar Datos
+          <span v-if="isRefreshing" class="btn-spinner" aria-hidden="true">⏳</span>
+          <span v-else class="btn-icon" aria-hidden="true">🔄</span>
+          <span>{{ isRefreshing ? t('dashboard.refreshing') : t('dashboard.refresh_data') }}</span>
         </button>
 
-        <div v-if="isFleetUpdated" class="status-indicator success" role="status">
-          <span class="status-text">Actualizado</span>
+        <div v-if="isFleetUpdated" class="status-indicator success" role="status" aria-live="polite">
+          <span class="status-dot"></span>
+          <span class="status-icon" aria-hidden="true">✓</span>
+          <span class="status-text">{{ t('dashboard.updated') }}</span>
         </div>
       </div>
     </header>
@@ -222,15 +236,15 @@
       <div class="kpi-card" @click="navigateTo('/inventory')">
         <div class="kpi-icon-wrap kpi-icon--cyan">🖥️</div>
         <div class="kpi-content">
-          <span class="kpi-label">Flota MikroTik</span>
+          <span class="kpi-label">{{ t('dashboard.kpi_fleet') }}</span>
           <div class="kpi-value-row">
             <span class="kpi-value">{{ totalRouters }}</span>
-            <span class="kpi-subtext">equipos</span>
+            <span class="kpi-subtext">{{ t('dashboard.devices') }}</span>
           </div>
           <div class="kpi-micro-status">
-            <span class="micro-online">● {{ onlineRouters }} online</span>
+            <span class="micro-online">● {{ onlineRouters }} {{ t('common.online').toLowerCase() }}</span>
             <span class="micro-sep">|</span>
-            <span class="micro-offline">● {{ offlineRouters }} offline</span>
+            <span class="micro-offline">● {{ offlineRouters }} {{ t('common.offline').toLowerCase() }}</span>
           </div>
         </div>
       </div>
@@ -243,14 +257,14 @@
           ⚡
         </div>
         <div class="kpi-content">
-          <span class="kpi-label">Disponibilidad Flota</span>
+          <span class="kpi-label">{{ t('dashboard.kpi_availability') }}</span>
           <div class="kpi-value-row">
             <span class="kpi-value">{{ availabilityPct }}%</span>
             <span
               class="kpi-badge"
               :class="availabilityPct >= 90 ? 'badge--online' : 'badge--warning'"
             >
-              {{ availabilityPct >= 90 ? 'OPTIMO' : 'REVISIÓN' }}
+              {{ availabilityPct >= 90 ? t('dashboard.optimal') : t('dashboard.review') }}
             </span>
           </div>
           <div class="kpi-progress-bar">
@@ -267,17 +281,17 @@
           🚨
         </div>
         <div class="kpi-content">
-          <span class="kpi-label">Alertas NOC Activas</span>
+          <span class="kpi-label">{{ t('dashboard.kpi_alerts') }}</span>
           <div class="kpi-value-row">
             <span class="kpi-value">{{ nocStore.activeAlertsCount }}</span>
             <span
               class="kpi-badge"
               :class="nocStore.activeAlertsCount > 0 ? 'badge--critical' : 'badge--online'"
             >
-              {{ nocStore.activeAlertsCount > 0 ? 'EN CURSO' : 'DESPEJADO' }}
+              {{ nocStore.activeAlertsCount > 0 ? t('dashboard.in_progress') : t('dashboard.clear') }}
             </span>
           </div>
-          <span class="kpi-subtext">Wallboard en tiempo real</span>
+          <span class="kpi-subtext">{{ t('dashboard.wallboard_realtime') }}</span>
         </div>
       </div>
 
@@ -289,17 +303,17 @@
           🛡️
         </div>
         <div class="kpi-content">
-          <span class="kpi-label">Maker-Checker</span>
+          <span class="kpi-label">{{ t('dashboard.maker_checker') }}</span>
           <div class="kpi-value-row">
             <span class="kpi-value">{{ nocStore.pendingApprovalsCount }}</span>
             <span
               class="kpi-badge"
               :class="nocStore.pendingApprovalsCount > 0 ? 'badge--warning' : 'badge--online'"
             >
-              {{ nocStore.pendingApprovalsCount > 0 ? 'PENDIENTES' : 'AL DÍA' }}
+              {{ nocStore.pendingApprovalsCount > 0 ? t('dashboard.pending') : t('dashboard.up_to_date') }}
             </span>
           </div>
-          <span class="kpi-subtext">Aprobaciones de 4 ojos</span>
+          <span class="kpi-subtext">{{ t('dashboard.approvals_4eyes') }}</span>
         </div>
       </div>
     </section>
@@ -309,10 +323,10 @@
       <div class="section-header">
         <h2 class="section-title">
           <span class="section-icon" aria-hidden="true">🎛️</span>
-          Módulos y Herramientas del Operador
+          {{ t('dashboard.tools_title') }}
         </h2>
         <span class="section-count"
-          >{{ authorizedTools.length }} disponibles para tu rol:
+          >{{ t('dashboard.tools_available_for_role', { count: authorizedTools.length }) }}
           <strong>{{ userRole }}</strong></span
         >
       </div>
@@ -348,7 +362,7 @@
 
           <div class="tile-footer">
             <span class="tile-action-link">
-              Ingresar al módulo <span class="arrow" aria-hidden="true">→</span>
+              {{ t('dashboard.enter_module') }} <span class="arrow" aria-hidden="true">→</span>
             </span>
           </div>
         </article>
@@ -362,18 +376,18 @@
         <div class="card-header-bar">
           <h2 class="card-title">
             <span aria-hidden="true">⚡</span>
-            Equipos Principales de la Flota
+            {{ t('dashboard.main_fleet_routers') }}
           </h2>
           <button type="button" class="btn-link" @click="navigateTo('/inventory')">
-            Ver todo el inventario ({{ totalRouters }}) →
+            {{ t('dashboard.view_all_inventory', { count: totalRouters }) }}
           </button>
         </div>
 
         <div v-if="inventoryStore.routers.length === 0" class="empty-state">
           <span class="empty-icon">📡</span>
-          <p>No hay equipos registrados en el inventario.</p>
+          <p>{{ t('dashboard.no_routers_registered') }}</p>
           <button type="button" class="btn-primary-sm" @click="navigateTo('/inventory')">
-            + Importar Routers CSV
+            {{ t('dashboard.import_csv_btn') }}
           </button>
         </div>
 
@@ -387,7 +401,7 @@
                   :title="r.is_reachable ? 'Online' : 'Offline'"
                 ></span>
                 <span class="router-name">{{ r.display_name }}</span>
-                <span v-if="r.network_role" class="badge-role-sm">{{ r.network_role }}</span>
+                <span v-if="r.network_role" class="badge-role-sm">{{ t(`enums.network_role.${r.network_role}`, r.network_role) }}</span>
               </div>
               <div class="router-sub-line">
                 <span class="router-ip">{{ r.ip_address }}</span>
@@ -412,16 +426,16 @@
         <div class="card-header-bar">
           <h2 class="card-title">
             <span aria-hidden="true">📡</span>
-            Feed de Actividad NOC en Tiempo Real
+            {{ t('dashboard.realtime_feed_title') }}
           </h2>
           <button type="button" class="btn-link" @click="navigateTo('/audit-logs')">
-            Auditoría Forense WORM →
+            {{ t('dashboard.forensic_audit_link') }}
           </button>
         </div>
 
         <div v-if="nocStore.recentEvents.length === 0" class="empty-state">
           <span class="empty-icon">🛡️</span>
-          <p>Sin alertas críticas pendientes. Flota operando normalmente.</p>
+          <p>{{ t('dashboard.no_critical_alerts') }}</p>
         </div>
 
         <div v-else class="events-fast-list">
@@ -1116,5 +1130,92 @@
     color: var(--rg-text-muted, #94a3b8);
     font-family: var(--rg-font-mono, monospace);
     white-space: nowrap;
+  }
+
+  .btn.btn-primary,
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(34, 211, 238, 0.12);
+    border: 1px solid var(--rg-accent-cyan, #22d3ee);
+    color: var(--rg-accent-cyan, #22d3ee);
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn.btn-primary:hover:not(:disabled),
+  .btn-primary:hover:not(:disabled) {
+    background: rgba(34, 211, 238, 0.25);
+    border-color: #38bdf8;
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(34, 211, 238, 0.35);
+  }
+
+  .btn.btn-primary:active,
+  .btn-primary:active {
+    transform: scale(0.98);
+  }
+
+  .btn.btn-primary:disabled,
+  .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .status-indicator.success {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: rgba(16, 185, 129, 0.18);
+    border: 1px solid #10b981;
+    border-radius: 6px;
+    color: #34d399;
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    animation: fadeInScale 0.25s ease-out;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.25);
+  }
+
+  .status-indicator.success .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: #10b981;
+    box-shadow: 0 0 6px #10b981;
+    animation: pulseGlow 1.5s infinite;
+  }
+
+  .status-indicator.success .status-icon {
+    font-size: 0.85rem;
+    font-weight: 800;
+  }
+
+  @keyframes fadeInScale {
+    from {
+      opacity: 0;
+      transform: translateY(-2px) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes pulseGlow {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.5;
+      transform: scale(1.2);
+    }
   }
 </style>

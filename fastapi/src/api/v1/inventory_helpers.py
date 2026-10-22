@@ -29,11 +29,33 @@ logger = logging.getLogger(__name__)
 
 
 async def enrich_router_telemetry(redis: Any, tenant_id: uuid.UUID, r_id: uuid.UUID) -> dict[str, Any]:
-    """Obtiene el estado de telemetría en vivo desde Redis."""
+    """Obtiene el estado de telemetría en vivo y presencia Syslog desde KeyDB."""
     key = f"rg:{tenant_id}:mon_state:{r_id}"
-    data = await redis.hgetall(key)
+    syslog_active_key = f"rg:{tenant_id}:router:{r_id}:syslog:active"
+    syslog_ring_key = f"rg:{tenant_id}:router:{r_id}:syslog:ring"
+
+    try:
+        pipeline = redis.pipeline()
+        pipeline.hgetall(key)
+        pipeline.exists(syslog_active_key)
+        pipeline.llen(syslog_ring_key)
+        res = await pipeline.execute()
+        data = res[0] or {}
+        syslog_active = bool(res[1])
+        syslog_count = int(res[2]) if res[2] else 0
+    except Exception:
+        data = {}
+        syslog_active = False
+        syslog_count = 0
+
     if not data:
-        return {"operational_status": "OFFLINE", "cpu_load_percent": None, "memory_used_percent": None}
+        return {
+            "operational_status": "OFFLINE",
+            "cpu_load_percent": None,
+            "memory_used_percent": None,
+            "syslog_active": syslog_active,
+            "syslog_event_count": syslog_count,
+        }
     op_status = data.get("operational_status") or data.get("state", "ONLINE")
     cpu_val = data.get("last_cpu_load_pct") or data.get("cpu")
     cpu = int(cpu_val) if cpu_val and cpu_val.isdigit() else None
@@ -44,7 +66,13 @@ async def enrich_router_telemetry(redis: Any, tenant_id: uuid.UUID, r_id: uuid.U
     else:
         ram_val = data.get("ram")
         ram = int(ram_val) if ram_val and ram_val.isdigit() else None
-    return {"operational_status": op_status, "cpu_load_percent": cpu, "memory_used_percent": ram}
+    return {
+        "operational_status": op_status,
+        "cpu_load_percent": cpu,
+        "memory_used_percent": ram,
+        "syslog_active": syslog_active,
+        "syslog_event_count": syslog_count,
+    }
 
 
 async def _discover_identity(client: MikrotikRestClient, r: Router) -> None:
@@ -143,9 +171,11 @@ def build_router_response(r: Router, telemetry: dict[str, Any]) -> RouterRespons
         ssl_trust_status=r.ssl_trust_status,
         ssl_sha256_fingerprint=r.ssl_sha256_fingerprint,
         ssl_pinned_at=r.ssl_pinned_at,
-        operational_status=telemetry["operational_status"],
-        cpu_load_percent=telemetry["cpu_load_percent"],
-        memory_used_percent=telemetry["memory_used_percent"],
+        operational_status=telemetry.get("operational_status", "OFFLINE"),
+        cpu_load_percent=telemetry.get("cpu_load_percent"),
+        memory_used_percent=telemetry.get("memory_used_percent"),
+        syslog_active=telemetry.get("syslog_active", False),
+        syslog_event_count=telemetry.get("syslog_event_count", 0),
         created_at=r.created_at,
         updated_at=r.updated_at,
     )

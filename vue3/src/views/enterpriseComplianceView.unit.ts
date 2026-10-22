@@ -27,6 +27,22 @@ describe('EnterpriseComplianceView.vue — Hito 20 Suite Corporativa', () => {
       tenant_slug: 'corp-tenant',
       role: 'SUPERADMIN_GLOBAL',
       totp_enabled: true,
+      features: {
+        config_drift_monitoring_enabled: true,
+        cis_audit_enabled: true,
+        sdwan_orchestrator_enabled: true,
+        sla_tracker_enabled: true,
+        capsman_wifi_enabled: true,
+        outbound_webhooks_enabled: true,
+      },
+    };
+    authStore.tenantFeatures = {
+      config_drift_monitoring_enabled: true,
+      cis_audit_enabled: true,
+      sdwan_orchestrator_enabled: true,
+      sla_tracker_enabled: true,
+      capsman_wifi_enabled: true,
+      outbound_webhooks_enabled: true,
     };
 
     const inventoryStore = useInventoryStore();
@@ -325,5 +341,25 @@ describe('EnterpriseComplianceView.vue — Hito 20 Suite Corporativa', () => {
         expect.objectContaining({ router_id: 'r-1', enforce_safemode: true }),
       );
     });
+  });
+
+  it('oculta la pestaña Config Drift cuando el flag config_drift_monitoring_enabled es falso', async () => {
+    const authStore = useAuthStore();
+    authStore.tenantFeatures = {
+      config_drift_monitoring_enabled: false,
+      cis_audit_enabled: true,
+      sdwan_orchestrator_enabled: true,
+      sla_tracker_enabled: true,
+      capsman_wifi_enabled: true,
+      outbound_webhooks_enabled: true,
+    };
+
+    const wrapper = mount(EnterpriseComplianceView);
+    await vi.waitFor(() => {
+      expect(wrapper.find('#tab-btn-cis').exists()).toBe(true);
+    });
+
+    expect(wrapper.find('#tab-btn-drift').exists()).toBe(false);
+    expect(wrapper.find('#panel-drift').exists()).toBe(false);
   });
 });

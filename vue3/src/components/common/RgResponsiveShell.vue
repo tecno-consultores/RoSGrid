@@ -93,12 +93,18 @@
         label: t('nav.cve_matrix', 'Matriz de CVEs'),
         icon: '🛡️',
       },
-      {
+    );
+
+    if (authStore.isFeatureEnabled('nightly_backups_enabled')) {
+      items.push({
         name: 'RscGitDiff',
         path: '/backups',
         label: t('nav.backups_diff', 'Respaldos Diff'),
         icon: '📦',
-      },
+      });
+    }
+
+    items.push(
       {
         name: 'BulkOperations',
         path: '/bulk-ops',
@@ -125,7 +131,7 @@
       },
     );
 
-    if (authStore.currentRole === 'SUPERADMIN_GLOBAL') {
+    if (authStore.currentRole === 'SUPERADMIN_GLOBAL' || authStore.currentRole === 'TENANT_ADMIN') {
       items.push({
         name: 'TenantsManagement',
         path: '/admin/tenants',

@@ -40,20 +40,29 @@ export function useI18n() {
     return typeof current === 'string' ? current : undefined;
   }
 
-  function t(key: string, fallback?: string): string {
+  function t(
+    key: string,
+    fallbackOrParams?: string | Record<string, string | number>,
+    params?: Record<string, string | number>,
+  ): string {
+    const fallback = typeof fallbackOrParams === 'string' ? fallbackOrParams : undefined;
+    const interpolationParams =
+      typeof fallbackOrParams === 'object' && fallbackOrParams !== null
+        ? fallbackOrParams
+        : params;
+
     const currentDict = dictionaries[activeLocale.value] || dictionaries.es;
-    const val = getNestedValue(currentDict, key);
-    if (val !== undefined) {
-      return val;
+    let val = getNestedValue(currentDict, key);
+    if (val === undefined && activeLocale.value !== 'es') {
+      val = getNestedValue(dictionaries.es, key);
     }
-    // Fallback al diccionario en español si el idioma actual no tiene la clave
-    if (activeLocale.value !== 'es') {
-      const fallbackVal = getNestedValue(dictionaries.es, key);
-      if (fallbackVal !== undefined) {
-        return fallbackVal;
+    let result = val !== undefined ? val : fallback !== undefined ? fallback : key;
+    if (interpolationParams) {
+      for (const [k, v] of Object.entries(interpolationParams)) {
+        result = result.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
       }
     }
-    return fallback !== undefined ? fallback : key;
+    return result;
   }
 
   function setLocale(locale: SupportedLocale): void {

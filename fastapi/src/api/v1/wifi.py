@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.deps import get_current_user_claims, require_roles
+from src.api.deps import get_current_user_claims, require_feature, require_roles
 from src.api.v1.webfig_common import get_router_and_client
 from src.db.session import get_tenant_db_session
 from src.models.core import SystemRoleEnum
@@ -24,7 +24,11 @@ from src.schemas.enterprise import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/wifi", tags=["Enterprise WiFi & CAPsMAN"])
+router = APIRouter(
+    prefix="/wifi",
+    tags=["Enterprise WiFi & CAPsMAN"],
+    dependencies=[Depends(require_feature("capsman_wifi_enabled"))],
+)
 
 _WIFI_READ_ROLES = (
     SystemRoleEnum.SUPERADMIN_GLOBAL,

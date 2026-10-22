@@ -8,7 +8,56 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ## [Unreleased]
 
+### Added
+
+- **Clarificación Táctica y Guía Visual en Pad de Firma Digital (`FieldTechMobileView.vue`):**
+  - **Firma Manuscrita Táctil (HTML5 Canvas):** Se incorporó una marca de agua translúcida orientativa (`✍️ Dibujar firma manuscrita aquí` y línea base `✕ ────────────────────────`) que se oculta automáticamente al iniciar el trazo.
+  - **Instrucción de Interacción:** Se añadió la etiqueta explicativa clara *"El cliente debe dibujar su firma con el dedo, stylus o ratón"* para disipar dudas operativas sobre la naturaleza del recuadro (táctil manuscrita, no carga de fotografía estática).
+  - **Preservación Forense Inmutable:** El trazo en color cian táctico (`#00f3ff`) se codifica como PNG Base64 nativo y se sella junto a las coordenadas GPS del técnico de campo en el acta de instalación WORM.
+
+- **Centrado Táctico en Caracas y Renderizado Nítido en Mapa de ONUs (`OsmOnuMap.vue` y `SubscribersMapView.vue`):**
+  - **Eliminación del Cuadro Gris sin Abonados:** Cuando no existen ONUs registradas o georreferenciadas (`props.onus.length === 0`), el mapa inicializa y encuadra explícitamente sobre **Caracas, Venezuela** (`[10.4806, -66.9036]`, zoom 12) evitando que el viewport quede en blanco o gris.
+  - **Migración a Tiles de OpenStreetMap:** Homogeneizado el proveedor de teselas cartográficas a `https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png`, garantizando alta disponibilidad, visibilidad de calles y topografía urbana (Ávila, litoral y valles del Tuy).
+  - **Invocación de `invalidateSize()` en Ciclo de Vida:** Añadida re-computación diferida del contenedor Leaflet tras el montaje (`150ms` y `500ms`) y observación con `ResizeObserver` para erradicar el renderizado nulo del layout en navegación por pestañas.
+  - **Badge Táctico Informativo:** Indicador visual flotante `📍 Centrado en Caracas, D.C. — Sin ONUs georreferenciadas` cuando no hay abonados en la base de datos.
+
+- **Precarga y Sincronización Continua del Feed de Actividad NOC (`DashboardHomeView.vue` y `useNocEventsStore.ts`):**
+  - **Precarga Inmediata de Registros de Auditoría WORM:** Implementado `fetchRecentAuditLogs()` en `useNocEventsStore.ts`, resolviendo el estado vacío en frío (*cold start*) en el recuadro inferior derecho del Centro de Mando (`DashboardHomeView.vue`). Ahora los últimos 5 eventos de auditoría e inventario se visualizan al instante al cargar la página sin esperar eventos push.
+  - **Sincronización Bidireccional en Vivo:** Los eventos nuevos recibidos por WebSocket se agregan reactivamente a la cabecera de la lista en tiempo real, mientras que el botón de refresco táctico (`Actualizar Datos`) sincroniza en paralelo el inventario y la bitácora forense.
+
+- **Soporte de Auto-Refresco Continuo 24/7 y Reloj Táctico en Wallboard NOC (`NocWallboardView.vue`):**
+  - **Auto-refresco Autónomo sin Intervención Humana:** Implementado bucle de sondeo silencioso en segundo plano cada 15 segundos (`performAutoRefresh`) que actualiza la flota de routers y registros de auditoría sin congelar la interfaz ni parpadear la pantalla.
+  - **Reloj Digital Táctico en Vivo:** Visualización en cabecera de la hora local en tiempo real con segundos (`🕒 HH:MM:SS`) y etiqueta reactiva de última sincronización exitosa (`Sinc: HH:MM:SS`), permitiendo al personal de guardia en salas de control verificar visualmente que el monitor o Smart TV está activo.
+  - **Suscripción de Eventos Críticos en Tiempo Real por WebSocket:** Integración reactiva con `useNocEventsStore` (`/ws/v1/tenant/events`) para inyectar al instante alertas críticas de caída (`ROUTER_DOWN`) y disparar la alarma acústica / visual de Caída Masiva (*Mass Outage*) sin esperar el ciclo de 15 segundos.
+  - **Gestión Limpia del Ciclo de Vida:** Limpieza garantizada de todos los temporizadores de fondo (`autoRefreshTimer`, `clockTimer`, `eventSimulationTimer`) en el hook `onUnmounted` para prevenir fugas de memoria en navegadores de pantalla continua.
+
+- **Gobernanza de Acceso a Feature Flags y Control de Capacidades para Tenant Admin:**
+  - **Permisos en API (`fastapi/src/api/v1/tenants.py`):** Los endpoints `GET /api/v1/tenants` y `PATCH /api/v1/tenants/{tenant_id}/features` ahora admiten tanto a `SUPERADMIN_GLOBAL` como a `TENANT_ADMIN`. Los administradores de empresa (`TENANT_ADMIN`) pueden consultar y gestionar de forma autónoma los módulos y capacidades técnicas exclusivas de su propia organización con aislamiento estricto de tenant.
+  - **Control en Enrutador Frontend (`vue3/src/router/index.ts`):** Ruta `/admin/tenants` ampliada para `allowedRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN']`.
+  - **Navegación Táctica (`RgResponsiveShell.vue`):** Enlace a la gestión de empresa visible para `TENANT_ADMIN` y `SUPERADMIN_GLOBAL`, adaptando las acciones disponibles (creación de empresa y suspensión restringidas exclusivamente a superadministradores globales).
+  - **Sincronización Reactiva de Capacidades (`useAuthStore.ts` y `App.vue`):** Implementado el método `fetchTenantFeatures()` para actualizar los flags del tenant en KeyDB y LocalStorage al autenticar o refrescar la pantalla, sincronizando los estados de módulos en caliente sin requerir re-inicio de sesión.
+
+- **Activación de Receptor Continuo Syslog UDP 5514 en Worker y Telemetría en Inventario:**
+  - **Colector Continuo Syslog UDP 5514 (`syslog_collector.py` & `runner.py`):** Integración de `SyslogCollectorWorker` en el orquestador principal del worker, escuchando datagramas UDP en `0.0.0.0:5514` y manteniendo sincronizado el mapa de direcciones IP (`ip_router_map`) para todos los routers registrados.
+  - **Mapeo de Presencia y Eventos en KeyDB:** Cada datagrama UDP recibido actualiza una clave efímera de presencia con TTL de 300 segundos (`rg:{tenant}:router:{router_id}:syslog:active`) e inserta el evento en el RingBuffer en memoria RAM de KeyDB (límite 500 eventos por router, cero almacenamiento en disco).
+  - **Exposición de Puertos en Docker Compose:** Mapeo de `5514:5514/udp` en `rosgrid-worker` en `docker-compose.prod.local.yml` y `docker-compose.prod.yml`.
+  - **Enriquecimiento de Telemetría en Inventario (`inventory_helpers.py`):** Pipeline optimizado de KeyDB que consulta de forma atómica el estado de monitorización, la bandera de presencia `syslog_active` y la longitud del RingBuffer `syslog_event_count`.
+  - **Indicador Táctico y Acceso Rápido en Vue 3 (`RouterInventoryView.vue`):** Columna de estado Syslog (`🟢 Activo (N)` o `⚪ Sin Syslog`) y botón directo `[ 📜 Syslog ]` en cada fila del inventario para acceso inmediato a la consola de logs efímeros.
+  - **Optimización de Timeout en Sincronización CVE (`cve_matcher.py`):** Configurado un timeout de 4.0s (connect=2.0s) en consultas remotas a NIST NVD para mitigar errores HTTP 504 Gateway Time-out de NGINX, garantizando fallback instantáneo al catálogo offline local embebido (`cve_catalog_ros.json`).
+
+- **Internacionalización y Reactividad Multilingüe (Español / Inglés) en Vistas Operativas:**
+  - **Soporte Global Reactivo con `useI18n`:** Homogeneización de cadenas de texto y etiquetas tácticas en `RouterInventoryView.vue`, `DashboardHomeView.vue` y `NocWallboardView.vue` utilizando el composable nativo `useI18n`.
+  - **Conmutación Dinámica en Caliente:** Al alternar el selector de idioma en la barra superior (ES / EN), las columnas de inventario (`Syslog`, estados, acciones), los módulos del Centro de Mando, los relojes forenses y las métricas del Wallboard se traducen instantáneamente sin requerir recargar la página.
+  - **Ampliación de Diccionarios (`es.json` y `en.json`):** Incorporadas claves completas para estados Syslog (`syslog_active`, `syslog_inactive`, `action_syslog_active`), tarjetas de herramientas operativas, descripciones de permisos RBAC y banners de alerta crítica.
+
 ### Fixed
+
+- **Corrección de Reactividad en Feature Flags y Ocultamiento de Módulos Inactivos (`EnterpriseComplianceView.vue` & API):**
+  - **Filtrado Dinámico de Pestañas en Cumplimiento:** Las pestañas de `Config Drift & Baselines`, `SD-WAN Hub & Spoke`, `Telemetría SLA`, `Wi-Fi CAPsMAN` y `Canales de Notificación` ahora evalúan `authStore.isFeatureEnabled(...)`. Si una casilla está apagada en el panel de gobernanza, su pestaña correspondiente desaparece de inmediato de la interfaz.
+  - **Resolución Automática de Pestaña Activa:** La vista calcula `availableTabs` en tiempo de ejecución; si el módulo por defecto (`drift`) está desactivado para el tenant, la selección inicial y el cambio dinámico de estado apuntan automáticamente a la primera pestaña habilitada (`CIS Benchmark Hardening` o `Seguridad L2`).
+  - **Protección a Nivel de API (`require_feature`):** Se blindaron los endpoints de backend en `compliance.py` (`/compliance/config-drift/*` con `config_drift_monitoring_enabled` y `/compliance/cis-audit/*` con `cis_audit_enabled`), `sdwan.py` (`sdwan_orchestrator_enabled`), `sla.py` (`sla_tracker_enabled`) y `wifi.py` (`capsman_wifi_enabled`), retornando HTTP 403 `FEATURE_MODULE_DISABLED` si se invocan estando desactivados.
+  - **Soporte GET en Auditoría CIS (`compliance.py`):** Se habilitó el método `GET` en `/api/v1/compliance/cis-audit/{router_id}` para resolver el fallo `405 Method Not Allowed` al consultar el puntaje de seguridad desde la interfaz.
+  - **Filtrado de Respaldos Git Diff en Menú Lateral:** La entrada `RscGitDiff` (`/backups`) en `RgResponsiveShell.vue` ahora se condiciona dinámicamente al flag `nightly_backups_enabled`.
 
 - **Corrección de Conflicto en Auditoría Inmutable WORM y Eliminación de Routers (Alembic 0009):**
   - **Desacoplamiento de Claves Foráneas en `audit_logs`:** Creada y aplicada la migración `0009_audit_logs_worm_decouple_fk.py` que elimina las restricciones `audit_logs_router_id_fkey` y `audit_logs_actor_user_id_fkey`.

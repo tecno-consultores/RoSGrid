@@ -109,6 +109,32 @@ export const useNocEventsStore = defineStore('nocEvents', () => {
     isConnected.value = false;
   }
 
+  async function fetchRecentAuditLogs(force = false): Promise<void> {
+    try {
+      const { http } = await import('@/api/httpClient');
+      const res = await http.get<{ items: any[] } | any[]>('/api/v1/audit/logs');
+      const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
+      if (items.length > 0 && (recentEvents.value.length === 0 || force)) {
+        const mapped: NocEventItem[] = items.slice(0, 20).map((log: any) => ({
+          id: String(log.id),
+          eventName: log.event_action || log.event_category || 'AUDIT_LOG',
+          routerId: log.router_id,
+          routerDisplayName: log.router_display_name || log.actor_username || 'Sistema',
+          severity:
+            log.status_code >= 400 || log.event_action?.includes('OUTAGE') || log.event_action?.includes('FAILED')
+              ? 'WARNING'
+              : 'INFO',
+          message: `${log.event_action || 'Operación'} (${log.event_category || 'SISTEMA'}): ${log.actor_username || 'usuario'}`,
+          timestampIso: log.created_at || new Date().toISOString(),
+        }));
+        recentEvents.value = mapped;
+        triggerRef(recentEvents);
+      }
+    } catch {
+      // Ignorar fallback si falla la red
+    }
+  }
+
   function clearEvents(): void {
     recentEvents.value = [];
     activeAlertsCount.value = 0;
@@ -123,6 +149,7 @@ export const useNocEventsStore = defineStore('nocEvents', () => {
     handleIncomingEvent,
     connectEventsWebSocket,
     disconnectEventsWebSocket,
+    fetchRecentAuditLogs,
     clearEvents,
   };
 });

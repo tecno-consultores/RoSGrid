@@ -294,7 +294,12 @@
         (Number(o.latitude) !== 0 || Number(o.longitude) !== 0),
     );
 
-    if (validOnus.length === 0) return;
+    if (validOnus.length === 0) {
+      if (mapInstance) {
+        mapInstance.setView(props.centerCoordinates, props.zoomLevel);
+      }
+      return;
+    }
 
     // Agrupar por coordenadas coincidentes
     const groupsMap = new Map<string, LocationGroup>();
@@ -370,9 +375,10 @@
       attributionControl: false,
     });
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png', {
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
-      subdomains: 'abcd',
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors',
     }).addTo(mapInstance);
 
     markersLayer = L.layerGroup().addTo(mapInstance);
@@ -392,6 +398,19 @@
 
   onMounted(() => {
     initMap();
+    setTimeout(() => {
+      if (mapInstance) {
+        mapInstance.invalidateSize();
+        if (props.onus.length === 0) {
+          mapInstance.setView(props.centerCoordinates, props.zoomLevel);
+        }
+      }
+    }, 150);
+    setTimeout(() => {
+      if (mapInstance) {
+        mapInstance.invalidateSize();
+      }
+    }, 500);
   });
 
   onBeforeUnmount(() => {
@@ -425,6 +444,11 @@
     <!-- Overlay Táctico Informativo Zero-Metrics -->
     <div class="map-zero-metrics-badge" aria-hidden="true">
       <span class="zero-dot">●</span> Telemetría Efímera RAM (Zero-Metrics)
+    </div>
+
+    <!-- Indicador Táctico cuando no hay ONUs registradas -->
+    <div v-if="props.onus.length === 0" class="map-no-devices-badge" role="status">
+      <span>📍 Centrado en Caracas, D.C. — Sin ONUs georreferenciadas</span>
     </div>
 
     <!-- Leyenda Cromática Rápida -->
@@ -471,6 +495,23 @@
     padding: 0.3rem 0.65rem;
     border-radius: 6px;
     backdrop-filter: blur(4px);
+    pointer-events: none;
+  }
+
+  .map-no-devices-badge {
+    position: absolute;
+    bottom: 38px;
+    left: 12px;
+    z-index: 1000;
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    color: #e2e8f0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
     pointer-events: none;
   }
 

@@ -57,7 +57,11 @@
       );
       const updatedFeatures = res.data || { ...tenantFeaturesForm.value };
       selectedTenant.value.features = updatedFeatures;
-      if (authStore.user?.tenant_id === selectedTenant.value.id) {
+      if (
+        authStore.user?.tenant_id === selectedTenant.value.id ||
+        authStore.tenantSlug === selectedTenant.value.slug ||
+        authStore.currentRole === 'SUPERADMIN_GLOBAL'
+      ) {
         authStore.updateTenantFeatures(updatedFeatures);
       }
       isFeaturesModalOpen.value = false;
@@ -251,6 +255,7 @@
                 ⚙️ Módulos
               </button>
               <button
+                v-if="authStore.currentRole === 'SUPERADMIN_GLOBAL'"
                 type="button"
                 class="btn-action"
                 :class="{ 'btn-action--danger': t.status === 'ACTIVE' }"

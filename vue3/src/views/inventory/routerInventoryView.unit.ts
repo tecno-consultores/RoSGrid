@@ -224,4 +224,51 @@ describe('RouterInventoryView.vue — Inventario y Modos Tabla, Mapa y Dividido'
 
     expect(wrapper.find('.btn-row-action--vault').exists()).toBe(false);
   });
+
+  it('muestra indicador de Syslog y permite navegar a la consola Syslog Live', async () => {
+    const inventoryStore = useInventoryStore();
+    inventoryStore.setRouters([
+      {
+        id: 'r-syslog-1',
+        tenant_id: 't-1',
+        display_name: 'Core-CCR2004',
+        ip_address: '10.250.3.8',
+        api_port: 443,
+        ros_version: '7.16.2',
+        admin_state: 'PRODUCTION',
+        is_reachable: true,
+        syslog_active: true,
+        syslog_event_count: 42,
+      },
+    ]);
+
+    const wrapper = mount(RouterInventoryView, {
+      global: {
+        stubs: {
+          RgDataTable: {
+            template: `
+              <div class="rg-datatable-stub">
+                <slot name="actions" :row="inventoryStore.routers[0]" />
+              </div>
+            `,
+            props: ['columns', 'rows'],
+            computed: {
+              inventoryStore() {
+                return useInventoryStore();
+              },
+            },
+          },
+          OsmRouterMap: true,
+          CsvOnboardingWizardModal: true,
+          VaultRevealModal: true,
+        },
+      },
+    });
+
+    const syslogBtn = wrapper.find('.btn-row-action--syslog');
+    expect(syslogBtn.exists()).toBe(true);
+    expect(syslogBtn.text()).toContain('Syslog');
+    await syslogBtn.trigger('click');
+    expect(mockPush).toHaveBeenCalledWith('/routers/r-syslog-1/webfig/syslog');
+  });
 });

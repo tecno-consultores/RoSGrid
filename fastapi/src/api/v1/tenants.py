@@ -31,13 +31,23 @@ router = APIRouter(prefix="/tenants", tags=["Tenants"])
 
 @router.get("", response_model=list[TenantResponse])
 async def list_tenants(
-    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL)),
+    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)),
     db: AsyncSession = Depends(get_db_session),
 ) -> list[TenantResponse]:
-    await set_tenant_context(db, None, is_superadmin=True)
-    stmt = select(Tenant).order_by(Tenant.created_at.desc())
-    result = await db.execute(stmt)
-    return [TenantResponse.model_validate(t) for t in result.scalars().all()]
+    user_role = claims.get("rol")
+    if user_role == SystemRoleEnum.SUPERADMIN_GLOBAL.value:
+        await set_tenant_context(db, None, is_superadmin=True)
+        stmt = select(Tenant).order_by(Tenant.created_at.desc())
+        result = await db.execute(stmt)
+        return [TenantResponse.model_validate(t) for t in result.scalars().all()]
+    else:
+        user_tid = claims.get("tid")
+        if not user_tid:
+            raise HTTPException(status_code=403, detail="Contexto de empresa no disponible")
+        await set_tenant_context(db, uuid.UUID(str(user_tid)), is_superadmin=False)
+        stmt = select(Tenant).where(Tenant.id == uuid.UUID(str(user_tid)))
+        result = await db.execute(stmt)
+        return [TenantResponse.model_validate(t) for t in result.scalars().all()]
 
 
 @router.get("/{tenant_id}", response_model=TenantResponse)
@@ -97,9 +107,17 @@ async def update_tenant_features(
     tenant_id: uuid.UUID,
     body: UpdateTenantFeaturesRequest,
     request: Request,
-    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL)),
+    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)),
     db: AsyncSession = Depends(get_db_session),
 ) -> TenantFeaturesResponse:
+    user_role = claims.get("rol")
+    user_tid = claims.get("tid")
+    if user_role != SystemRoleEnum.SUPERADMIN_GLOBAL.value and str(user_tid) != str(tenant_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No autorizado para modificar la configuración de otra empresa",
+        )
+
     tenant = await _load_tenant_or_404(db, tenant_id)
     before_state = extract_tenant_features(tenant)
 

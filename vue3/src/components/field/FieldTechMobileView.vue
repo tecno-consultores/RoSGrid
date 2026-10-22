@@ -23,6 +23,7 @@
   // Canvas de firma táctil
   const signatureCanvas = ref<HTMLCanvasElement | null>(null);
   const isDrawing = ref(false);
+  const hasDrawnSignature = ref(false);
 
   // Diagnóstico 360 rápido en desktop
   const isRunning360 = ref(false);
@@ -72,6 +73,7 @@
   // Lógica de Canvas de Firma
   function startDrawing(e: MouseEvent | TouchEvent) {
     isDrawing.value = true;
+    hasDrawnSignature.value = true;
     const canvas = signatureCanvas.value;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -108,6 +110,7 @@
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    hasDrawnSignature.value = false;
   }
 
   async function handleCertifyInstallation() {
@@ -490,24 +493,45 @@
             />
           </div>
 
-          <!-- Canvas de Firma Digital -->
+          <!-- Canvas de Firma Digital Manuscrita -->
           <div class="signature-wrapper">
-            <label class="signature-label">{{ t('field_tech.client_signature') }}:</label>
-            <canvas
-              ref="signatureCanvas"
-              width="340"
-              height="140"
-              class="signature-pad"
-              @mousedown="startDrawing"
-              @mousemove="draw"
-              @mouseup="stopDrawing"
-              @touchstart.prevent="startDrawing"
-              @touchmove.prevent="draw"
-              @touchend.prevent="stopDrawing"
-            />
-            <button type="button" class="btn-clear-sig" @click="clearSignature">
-              {{ t('field_tech.clear_signature') }}
-            </button>
+            <div class="signature-header">
+              <label class="signature-label" for="signature-canvas">
+                ✍️ {{ t('field_tech.client_signature') }}
+              </label>
+              <span class="signature-hint">
+                El cliente debe dibujar su firma con el dedo, stylus o ratón
+              </span>
+            </div>
+
+            <div class="signature-canvas-container">
+              <canvas
+                id="signature-canvas"
+                ref="signatureCanvas"
+                width="340"
+                height="140"
+                class="signature-pad"
+                aria-label="Área táctil para rúbrica o firma manuscrita de conformidad del abonado"
+                @mousedown="startDrawing"
+                @mousemove="draw"
+                @mouseup="stopDrawing"
+                @touchstart.prevent="startDrawing"
+                @touchmove.prevent="draw"
+                @touchend.prevent="stopDrawing"
+              />
+              <div v-if="!hasDrawnSignature" class="signature-watermark" aria-hidden="true">
+                <span class="watermark-icon">✍️</span>
+                <span class="watermark-text">Dibujar firma manuscrita aquí</span>
+                <span class="watermark-baseline">✕ ────────────────────────</span>
+              </div>
+            </div>
+
+            <div class="signature-footer">
+              <button type="button" class="btn-clear-sig" @click="clearSignature">
+                🗑️ {{ t('field_tech.clear_signature') }}
+              </button>
+              <span class="signature-audit-note">Exportado en PNG nativo para auditoría WORM</span>
+            </div>
           </div>
 
           <button
@@ -1018,13 +1042,33 @@
   .signature-wrapper {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.45rem;
+    margin: 0.5rem 0;
+  }
+
+  .signature-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
   }
 
   .signature-label {
-    font-size: 0.85rem;
-    color: #94a3b8;
-    font-weight: 600;
+    font-size: 0.88rem;
+    color: #e2e8f0;
+    font-weight: 700;
+  }
+
+  .signature-hint {
+    font-size: 0.75rem;
+    color: #00f3ff;
+    font-weight: 500;
+  }
+
+  .signature-canvas-container {
+    position: relative;
+    width: 100%;
+    max-width: 340px;
+    height: 140px;
   }
 
   .signature-pad {
@@ -1032,21 +1076,76 @@
     max-width: 340px;
     height: 140px;
     background: #03060b;
-    border: 1px dashed #00f3ff;
+    border: 1.5px dashed rgba(0, 243, 255, 0.5);
     border-radius: 6px;
     touch-action: none;
+    cursor: crosshair;
+    position: relative;
+    z-index: 2;
+  }
+
+  .signature-watermark {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    pointer-events: none;
+    z-index: 1;
+    color: rgba(148, 163, 184, 0.4);
+    user-select: none;
+  }
+
+  .watermark-icon {
+    font-size: 1.5rem;
+    opacity: 0.6;
+  }
+
+  .watermark-text {
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+
+  .watermark-baseline {
+    font-size: 0.75rem;
+    color: rgba(0, 243, 255, 0.35);
+    margin-top: 0.25rem;
+    letter-spacing: -0.05em;
+  }
+
+  .signature-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 340px;
+    gap: 0.5rem;
   }
 
   .btn-clear-sig {
     background: transparent;
-    border: 1px solid #64748b;
+    border: 1px solid #475569;
     color: #94a3b8;
-    padding: 0.35rem;
+    padding: 0.3rem 0.6rem;
     font-size: 0.75rem;
     border-radius: 4px;
     cursor: pointer;
-    align-self: flex-start;
-    min-height: 36px;
+    min-height: 32px;
+    transition: all 0.2s ease;
+  }
+
+  .btn-clear-sig:hover {
+    border-color: #ef4444;
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+  }
+
+  .signature-audit-note {
+    font-size: 0.68rem;
+    color: #64748b;
+    text-align: right;
   }
 
   /* MEDIA QUERIES RESPONSIVAS */

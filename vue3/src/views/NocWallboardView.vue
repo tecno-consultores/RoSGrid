@@ -2,13 +2,17 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { ref, computed, onMounted, onUnmounted } from 'vue';
+  import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
   import { useRouter } from 'vue-router';
   import OsmRouterMap from '@/components/inventory/OsmRouterMap.vue';
   import type { RouterItem } from '@/types';
   import { http } from '@/api/httpClient';
+  import { useNocEventsStore } from '@/stores/useNocEventsStore';
+  import { useI18n } from '@/composables/useI18n';
 
   const router = useRouter();
+  const nocEventsStore = useNocEventsStore();
+  const { t } = useI18n();
 
   interface NocEvent {
     id: string;
@@ -126,6 +130,50 @@
   }
 
   let eventSimulationTimer: ReturnType<typeof setInterval> | null = null;
+  let autoRefreshTimer: ReturnType<typeof setInterval> | null = null;
+  let clockTimer: ReturnType<typeof setInterval> | null = null;
+
+  const currentClock = ref(new Date().toLocaleTimeString());
+  const lastSyncTime = ref(new Date().toLocaleTimeString());
+  const isRefreshing = ref(false);
+
+  async function performAutoRefresh() {
+    if (isRefreshing.value) return;
+    isRefreshing.value = true;
+    try {
+      await Promise.allSettled([loadRouters(), loadEvents()]);
+      lastSyncTime.value = new Date().toLocaleTimeString();
+    } finally {
+      isRefreshing.value = false;
+    }
+  }
+
+  watch(
+    () => nocEventsStore.recentEvents,
+    (events) => {
+      if (events && events.length > 0) {
+        const latest = events[0];
+        const newEvt: NocEvent = {
+          id: latest.id,
+          timestamp: new Date(latest.timestampIso).toLocaleTimeString(),
+          type:
+            latest.eventName.includes('DOWN')
+              ? 'ROUTER_DOWN'
+              : latest.eventName.includes('UP')
+                ? 'ROUTER_UP'
+                : 'MAINTENANCE',
+          router_identity: latest.routerDisplayName || 'Sistema',
+          message: latest.message,
+          severity: (latest.severity.toLowerCase() as any) || 'info',
+        };
+        liveEvents.value = [newEvt, ...liveEvents.value.slice(0, 19)];
+        if (latest.severity === 'CRITICAL' && !massOutageAlert.value.active) {
+          playTacticalChime();
+        }
+      }
+    },
+    { deep: true },
+  );
 
   async function loadRouters() {
     try {
@@ -237,11 +285,32 @@
   onMounted(() => {
     loadRouters();
     loadEvents();
+    lastSyncTime.value = new Date().toLocaleTimeString();
+
+    // Actualización de reloj táctico cada segundo
+    clockTimer = setInterval(() => {
+      currentClock.value = new Date().toLocaleTimeString();
+    }, 1000);
+
+    // Auto-refresco autónomo 24/7 cada 15 segundos sin intervención de usuario
+    autoRefreshTimer = setInterval(() => {
+      performAutoRefresh();
+    }, 15000);
+
+    // Conectar WebSocket de eventos en vivo
+    nocEventsStore.connectEventsWebSocket();
+
     document.addEventListener('fullscreenchange', handleFullscreenChange);
   });
 
   onUnmounted(() => {
     document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    if (clockTimer) {
+      clearInterval(clockTimer);
+    }
+    if (autoRefreshTimer) {
+      clearInterval(autoRefreshTimer);
+    }
     if (eventSimulationTimer) {
       clearInterval(eventSimulationTimer);
     }
@@ -259,38 +328,44 @@
     <!-- Encabezado KPI Gigante -->
     <header class="wallboard-header">
       <div class="wallboard-brand">
-        <h1 class="brand-title">RoSGrid NOC Wallboard</h1>
-        <span class="live-indicator"> <span class="pulse-dot"></span> EN VIVO 24/7 </span>
+        <h1 class="brand-title">{{ t('wallboard.title') }}</h1>
+        <span class="live-indicator"> <span class="pulse-dot"></span> {{ t('wallboard.live_indicator') }} </span>
+        <div class="wallboard-clock font-mono" aria-label="Reloj táctico y última sincronización">
+          <span class="clock-time">🕒 {{ currentClock }}</span>
+          <span class="clock-sync" :class="{ 'clock-sync--active': isRefreshing }">
+            {{ isRefreshing ? t('wallboard.syncing') : t('wallboard.sync', { time: lastSyncTime }) }}
+          </span>
+        </div>
       </div>
 
       <div class="kpi-strip" role="group" aria-label="Indicadores clave de rendimiento">
         <div class="kpi-card">
-          <span class="kpi-label">TOTAL</span>
+          <span class="kpi-label">{{ t('wallboard.kpi_total') }}</span>
           <span class="kpi-value text-cyan">{{ totalRouters }}</span>
         </div>
 
         <div class="kpi-card">
-          <span class="kpi-label">ONLINE</span>
+          <span class="kpi-label">{{ t('wallboard.kpi_online') }}</span>
           <span class="kpi-value text-green">{{ onlineRouters }}</span>
         </div>
 
         <div class="kpi-card">
-          <span class="kpi-label">CARGA ALTA</span>
+          <span class="kpi-label">{{ t('wallboard.kpi_high_load') }}</span>
           <span class="kpi-value text-yellow">{{ highLoadRouters }}</span>
         </div>
 
         <div class="kpi-card" :class="{ 'kpi-card--critical': offlineRouters > 0 }">
-          <span class="kpi-label">OFFLINE</span>
+          <span class="kpi-label">{{ t('wallboard.kpi_offline') }}</span>
           <span class="kpi-value text-red">{{ offlineRouters }}</span>
         </div>
 
         <div class="kpi-card">
-          <span class="kpi-label">MANTENIMIENTO</span>
+          <span class="kpi-label">{{ t('wallboard.kpi_maintenance') }}</span>
           <span class="kpi-value text-blue">{{ maintenanceRouters }}</span>
         </div>
 
         <div class="kpi-card" :class="{ 'kpi-card--alert': sslAlertRouters > 0 }">
-          <span class="kpi-label">ALERTA TOFU</span>
+          <span class="kpi-label">{{ t('wallboard.kpi_ssl_alerts') }}</span>
           <span class="kpi-value text-red">{{ sslAlertRouters }}</span>
         </div>
       </div>
@@ -301,7 +376,7 @@
         :aria-label="isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa NOC'"
         @click="toggleFullscreen"
       >
-        {{ isFullscreen ? '🗗 Salir TV' : '🖥️ Modo TV' }}
+        {{ isFullscreen ? t('wallboard.exit_tv') : t('wallboard.mode_tv') }}
       </button>
     </header>
 
@@ -342,7 +417,7 @@
             id="btn-ack-mass-outage"
             @click="acknowledgeOutage"
           >
-            Reconocer Alarma
+            {{ t('mass_outage.acknowledge') }}
           </button>
         </div>
       </div>
@@ -620,6 +695,33 @@
       opacity: 0.4;
       transform: scale(1.2);
     }
+  }
+
+  .wallboard-clock {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 0.78rem;
+  }
+
+  .clock-time {
+    color: var(--rg-accent-cyan, #22d3ee);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+
+  .clock-sync {
+    color: var(--rg-text-muted, #94a3b8);
+    font-size: 0.72rem;
+  }
+
+  .clock-sync--active {
+    color: #34d399;
+    animation: pulse 1s infinite;
   }
 
   .kpi-strip {

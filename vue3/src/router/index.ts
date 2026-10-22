@@ -199,6 +199,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       title: 'Respaldos y Comparador Diff — RoSGrid',
+      requiredFeature: 'nightly_backups_enabled',
     },
   },
   {
@@ -246,7 +247,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       title: 'Administración de Empresas — RoSGrid',
-      allowedRoles: ['SUPERADMIN_GLOBAL'],
+      allowedRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN'],
     },
   },
   {

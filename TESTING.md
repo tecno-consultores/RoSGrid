@@ -942,3 +942,33 @@ Certificación integral ejecutada de extremo a extremo bajo la **Regla Cero** (c
    - Backend (`test_inventory_csv_and_vault.unit.py`): 16 pruebas aprobadas (100%), validando roles dinámicos y registro en metadatos de SQLAlchemy.
    - Frontend (`loginView.unit.ts`): 20 pruebas aprobadas (100%), validando orden jerárquico DOM de la tarjeta y pie de página.
 
+---
+
+## 26. Colector Continuo Syslog UDP 5514, Telemetría Efímera en KeyDB y Optimización CVE (Hito 23.8)
+
+### A. Diagnóstico y Activación del Colector Syslog UDP en Segundo Plano
+- **Fallo Operativo:** El colector Syslog UDP (`SyslogUdpProtocol`) no estaba instanciado en el bucle principal de workers (`fastapi/src/workers/runner.py`) y el puerto 5514/udp no estaba expuesto en `docker-compose.prod.local.yml`, impidiendo a los routers MikroTik de la red transmitir registros en vivo a RoSGrid.
+- **Acción Correctiva:**
+  - Integración de `SyslogCollectorWorker` en `runner.py`, ejecutando `loop.create_datagram_endpoint(SyslogUdpProtocol, local_addr=('0.0.0.0', 5514))`.
+  - Rutina `load_ip_router_map()` para recargar cada 60s el mapa de IPs de routers en base de datos (`ip_router_map`) para el mapeo sin suplantación de identidad.
+  - Registro de presencia activa en KeyDB (`rg:{tenant_id}:router:{router_id}:syslog:active = "1"`, TTL 300s) y cola circular RingBuffer de 500 eventos (`rg:{tenant_id}:router:{router_id}:syslog:ring`).
+  - Mapeo de puertos `5514:5514/udp` en el servicio `rosgrid-worker` en `docker-compose.prod.local.yml` y `docker-compose.prod.yml`.
+
+### B. Enriquecimiento de Telemetría y Paridad en Frontend (`RouterInventoryView.vue`)
+- **Backend:** En `fastapi/src/api/v1/inventory_helpers.py`, se enriquecieron los datos de inventario consultando en un solo pipeline atómico de KeyDB la presencia de Syslog activo y la cantidad de eventos en buffer.
+- **Frontend:**
+  - Nueva columna táctica **Syslog** con badge `🟢 Activo (N)` o `⚪ Sin Syslog`.
+  - Botón de acción rápida `[ 📜 Syslog ]` / `[ 🟢 Syslog ]` en cada fila del inventario que enlaza directamente a la consola WebFig Syslog (`/routers/:id/webfig/syslog`).
+  - Soporte completo de internacionalización reactiva (`useI18n`) en Español e Inglés.
+
+### C. Optimización de Timeout en Sincronización CVE (`cve_matcher.py`)
+- **Diagnóstico:** Consultas remotas a NIST NVD generaban bloqueos prolongados y errores HTTP 504 Gateway Time-out en el proxy NGINX.
+- **Acción Correctiva:** Se configuró un timeout estricto de 4.0s (connect=2.0s), permitiendo el fallback inmediato y transparente al catálogo local estático (`cve_catalog_ros.json`).
+
+### D. Certificación y Verificación en Docker
+1. **Pruebas Unitarias de Backend (`test_hito23_cve_and_syslog.unit.py`):** **54 de 54 pruebas aprobadas (100%)** cubriendo el ciclo del worker UDP, `connection_made`, `load_ip_router_map`, RingBuffer de KeyDB y endpoints de CVE.
+2. **Pruebas Unitarias de Frontend (`routerInventoryView.unit.ts`):** **3 de 3 pruebas aprobadas (100%)** validando la representación visual de la columna Syslog.
+3. **Contratos Front-Back (`validar_comunicacion_front_back.py`):** **26 de 26 contratos aprobados (100%)** en contenedor Docker real.
+4. **Validación Visual en Navegador:** Verificado en `http://localhost:8085/inventory` con captura de pantalla forense.
+
+

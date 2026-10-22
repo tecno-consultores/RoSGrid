@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.deps import get_current_user_claims, require_roles
+from src.api.deps import get_current_user_claims, require_feature, require_roles
 from src.api.v1.webfig_common import execute_safe_mutation, get_router_and_client
 from src.core.audit import audit_actor_from_claims, write_audit_log
 from src.db.session import get_tenant_db_session
@@ -31,7 +31,11 @@ from src.schemas.enterprise import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/sdwan", tags=["SD-WAN WireGuard Hub & Spoke"])
+router = APIRouter(
+    prefix="/sdwan",
+    tags=["SD-WAN WireGuard Hub & Spoke"],
+    dependencies=[Depends(require_feature("sdwan_orchestrator_enabled"))],
+)
 
 _SDWAN_READ_ROLES = (
     SystemRoleEnum.SUPERADMIN_GLOBAL,

@@ -56,6 +56,22 @@ class FakePipeline:
         self.commands.append(("ltrim", (name, start, stop)))
         return self
 
+    def set(self, name: str, value: Any, ex: int | None = None) -> "FakePipeline":
+        self.commands.append(("set", (name, value, ex)))
+        return self
+
+    def exists(self, *names: str) -> "FakePipeline":
+        self.commands.append(("exists", names))
+        return self
+
+    def llen(self, name: str) -> "FakePipeline":
+        self.commands.append(("llen", (name,)))
+        return self
+
+    def hgetall(self, name: str) -> "FakePipeline":
+        self.commands.append(("hgetall", (name,)))
+        return self
+
     def publish(self, channel: str, message: str) -> "FakePipeline":
         self.commands.append(("publish", (channel, message)))
         return self
@@ -102,6 +118,21 @@ class FakePipeline:
                 results.append(res)
             elif cmd == "publish":
                 results.append(1)
+            elif cmd == "set":
+                name, val, ex = args
+                await self.fake_redis.set(name, val, ex=ex)
+                results.append(True)
+            elif cmd == "exists":
+                res = await self.fake_redis.exists(*args)
+                results.append(res)
+            elif cmd == "llen":
+                (name,) = args
+                res = await self.fake_redis.llen(name)
+                results.append(res)
+            elif cmd == "hgetall":
+                (name,) = args
+                res = await self.fake_redis.hgetall(name)
+                results.append(res)
         self.commands.clear()
         return results
 
@@ -205,9 +236,12 @@ class FakeAsyncRedis:
     async def exists(self, *names: str) -> int:
         count = 0
         for n in names:
-            if n in self.strings or n in self.hashes or n in self.sets or n in self.zsets:
+            if n in self.strings or n in self.hashes or n in self.sets or n in self.zsets or n in self.lists:
                 count += 1
         return count
+
+    async def llen(self, name: str) -> int:
+        return len(self.lists.get(name, []))
 
     async def sadd(self, name: str, *values: Any) -> int:
         if name not in self.sets:

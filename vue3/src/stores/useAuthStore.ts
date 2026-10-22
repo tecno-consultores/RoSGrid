@@ -4,6 +4,7 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import type { SystemRole, TenantFeatureFlags, UserInfo } from '@/types';
+import { http } from '@/api/httpClient';
 
 export const defaultTenantFeatures: TenantFeatureFlags = {
   isp_module_enabled: true,
@@ -126,6 +127,19 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function fetchTenantFeatures(): Promise<void> {
+    const tid = user.value?.tenant_id;
+    if (!tid) return;
+    try {
+      const res = await http.get<TenantFeatureFlags>(`/api/v1/tenants/${tid}/features`);
+      if (res.data) {
+        updateTenantFeatures(res.data);
+      }
+    } catch {
+      // Ignora errores si no hay conexión o no está autenticado aún
+    }
+  }
+
   function isFeatureEnabled(flagName: string): boolean {
     return Boolean((tenantFeatures.value as Record<string, unknown>)[flagName]);
   }
@@ -177,6 +191,7 @@ export const useAuthStore = defineStore('auth', () => {
     setCsrfToken,
     clearAuth,
     updateTenantFeatures,
+    fetchTenantFeatures,
     isFeatureEnabled,
     hasCapability,
     forceKillSwitchLogout,

@@ -6,6 +6,7 @@
   import { useRouter } from 'vue-router';
   import { useInventoryStore } from '@/stores/useInventoryStore';
   import { useAuthStore } from '@/stores/useAuthStore';
+  import { useI18n } from '@/composables/useI18n';
   import { http } from '@/api/httpClient';
   import type { RouterItem, TableColumn } from '@/types';
   import RgDataTable from '@/components/common/RgDataTable.vue';
@@ -17,6 +18,7 @@
   const router = useRouter();
   const inventoryStore = useInventoryStore();
   const authStore = useAuthStore();
+  const { t } = useI18n();
 
   const isVaultAuthorized = computed(() => {
     const r = authStore.currentRole;
@@ -85,14 +87,22 @@
     });
   });
 
-  // Columnas para RgDataTable
-  const tableColumns: TableColumn<Record<string, unknown>>[] = [
-    { key: 'display_name', label: 'Nombre / Identity', sortable: true },
-    { key: 'network_role', label: 'Rol de Red' },
-    { key: 'ip_address', label: 'Dirección IP / Puerto' },
+  // Columnas reactivas para RgDataTable
+  const tableColumns = computed<TableColumn<Record<string, unknown>>[]>(() => [
+    { key: 'display_name', label: t('inventory.col_name'), sortable: true },
+    {
+      key: 'network_role',
+      label: t('inventory.col_role'),
+      formatter: (row: Record<string, unknown>) => {
+        const r = row as unknown as RouterItem;
+        if (!r.network_role) return '—';
+        return t(`enums.network_role.${r.network_role}`, r.network_role);
+      },
+    },
+    { key: 'ip_address', label: t('inventory.col_ip') },
     {
       key: 'hardware',
-      label: 'Modelo y Arquitectura',
+      label: t('inventory.col_hardware'),
       formatter: (row: Record<string, unknown>) => {
         const r = row as unknown as RouterItem;
         const model = r.model || (r as any).model_name || r.board_name || 'CHR';
@@ -100,11 +110,37 @@
         return `${model}${arch}`;
       },
     },
-    { key: 'serial_number', label: 'Serial' },
-    { key: 'ros_version', label: 'RouterOS' },
-    { key: 'ssl_trust_status', label: 'SSL TOFU' },
-    { key: 'admin_state', label: 'Estado' },
-  ];
+    { key: 'serial_number', label: t('inventory.col_serial') },
+    { key: 'ros_version', label: t('inventory.col_routeros') },
+    {
+      key: 'syslog_status',
+      label: t('inventory.col_syslog'),
+      formatter: (row: Record<string, unknown>) => {
+        const r = row as unknown as RouterItem;
+        if (r.syslog_active) {
+          const count = r.syslog_event_count ? ` (${r.syslog_event_count})` : '';
+          return `${t('inventory.syslog_active')}${count}`;
+        }
+        return t('inventory.syslog_inactive');
+      },
+    },
+    {
+      key: 'ssl_trust_status',
+      label: t('inventory.col_ssl_tofu'),
+      formatter: (row: Record<string, unknown>) => {
+        const r = row as unknown as RouterItem;
+        return t(`enums.ssl_trust_status.${r.ssl_trust_status}`, r.ssl_trust_status);
+      },
+    },
+    {
+      key: 'admin_state',
+      label: t('inventory.col_state'),
+      formatter: (row: Record<string, unknown>) => {
+        const r = row as unknown as RouterItem;
+        return t(`enums.admin_state.${r.admin_state}`, r.admin_state);
+      },
+    },
+  ]);
 
   function openWebFig(routerId: string) {
     router.push(`/routers/${routerId}/webfig/live`);
@@ -132,7 +168,7 @@
       if (res.data) {
         inventoryStore.updateRouter(res.data);
       }
-      actionMessage.value = `Autodescubrimiento TOFU completado para ${targetRouter.display_name}.`;
+      actionMessage.value = t('inventory.discovery_ok', { name: targetRouter.display_name });
       setTimeout(() => {
         actionMessage.value = '';
       }, 4000);
@@ -144,7 +180,7 @@
 
   async function handleDeleteRouter(targetRouter: RouterItem) {
     if (
-      !confirm(`¿Está seguro de eliminar permanentemente el equipo "${targetRouter.display_name}"?`)
+      !confirm(t('inventory.confirm_delete', { name: targetRouter.display_name }))
     ) {
       return;
     }
@@ -152,7 +188,7 @@
     actionError.value = '';
     try {
       await http.delete(`/api/v1/inventory/routers/${targetRouter.id}`);
-      actionMessage.value = `Router "${targetRouter.display_name}" eliminado correctamente.`;
+      actionMessage.value = t('inventory.deleted_ok', { name: targetRouter.display_name });
       await inventoryStore.fetchRouters();
       setTimeout(() => {
         actionMessage.value = '';
@@ -171,14 +207,20 @@
     }, 4000);
   }
 
+  const isRefreshing = ref(false);
   const isFleetUpdated = ref(false);
 
-  function handleManualRefresh() {
-    inventoryStore.fetchRouters();
-    isFleetUpdated.value = true;
-    setTimeout(() => {
-      isFleetUpdated.value = false;
-    }, 4000);
+  async function handleManualRefresh() {
+    isRefreshing.value = true;
+    try {
+      await inventoryStore.fetchRouters();
+      isFleetUpdated.value = true;
+      setTimeout(() => {
+        isFleetUpdated.value = false;
+      }, 3500);
+    } finally {
+      isRefreshing.value = false;
+    }
   }
 
   onMounted(() => {
@@ -193,9 +235,9 @@
   <div class="inventory-view">
     <header class="inventory-header">
       <div>
-        <h1 class="inventory-title">Inventario de Equipos — Flota MikroTik</h1>
+        <h1 class="inventory-title">{{ t('inventory.title') }}</h1>
         <p class="inventory-subtitle">
-          Supervisión de hardware RouterOS v7, mapa geográfico OpenStreetMap y gestión de acceso.
+          {{ t('inventory.subtitle') }}
         </p>
       </div>
 
@@ -209,7 +251,7 @@
             aria-label="Ver solo tabla"
             @click="currentViewMode = 'table'"
           >
-            📋 Tabla
+            {{ t('inventory.view_table') }}
           </button>
           <button
             type="button"
@@ -218,7 +260,7 @@
             aria-label="Ver modo dividido (tabla y mapa)"
             @click="currentViewMode = 'split'"
           >
-            ◫ Dividida
+            {{ t('inventory.view_split') }}
           </button>
           <button
             type="button"
@@ -227,7 +269,7 @@
             aria-label="Ver solo mapa geográfico"
             @click="currentViewMode = 'map'"
           >
-            🗺 Mapa
+            {{ t('inventory.view_map') }}
           </button>
         </div>
 
@@ -238,7 +280,7 @@
           aria-label="Personalizar roles de red de equipos"
           @click="isRolesModalOpen = true"
         >
-          🏷️ Roles de Red
+          {{ t('inventory.btn_roles') }}
         </button>
 
         <button
@@ -247,7 +289,7 @@
           aria-label="Abrir asistente de importación CSV"
           @click="isCsvModalOpen = true"
         >
-          📂 Importar CSV
+          {{ t('inventory.btn_import_csv') }}
         </button>
 
         <button
@@ -256,20 +298,25 @@
           aria-label="Ver matriz de vulnerabilidades CVE"
           @click="router.push('/inventory/cves')"
         >
-          🛡️ Matriz de CVEs
+          {{ t('inventory.btn_cve_matrix') }}
         </button>
 
         <button
           type="button"
           class="btn btn-primary"
+          :class="{ 'btn-primary--loading': isRefreshing }"
+          :disabled="isRefreshing"
           aria-label="Actualizar datos de la flota"
           @click="handleManualRefresh"
         >
-          Actualizar Datos
+          <span v-if="isRefreshing" class="btn-spinner" aria-hidden="true">⏳</span>
+          <span v-else class="btn-icon" aria-hidden="true">🔄</span>
+          <span>{{ isRefreshing ? t('inventory.btn_refreshing') : t('inventory.btn_refresh') }}</span>
         </button>
 
-        <div v-if="isFleetUpdated" class="status-indicator success" role="status">
-          <span class="status-text">Actualizado</span>
+        <div v-if="isFleetUpdated" class="status-indicator success" role="status" aria-live="polite">
+          <span class="status-icon" aria-hidden="true">✓</span>
+          <span class="status-text">{{ t('inventory.updated') }}</span>
         </div>
       </div>
     </header>
@@ -284,19 +331,19 @@
     <!-- Barra de Filtros Accesibles -->
     <div class="filters-bar">
       <div class="filter-item">
-        <label for="inv-search" class="filter-label">Buscar Router:</label>
+        <label for="inv-search" class="filter-label">{{ t('inventory.filter_search_label') }}</label>
         <input
           id="inv-search"
           v-model="searchFilter"
           type="search"
-          placeholder="Nombre, identity, IP, serial o modelo..."
+          :placeholder="t('inventory.filter_search_placeholder')"
           class="filter-input"
         />
       </div>
 
       <div class="filter-item">
         <div class="filter-label-wrap">
-          <label for="inv-role" class="filter-label">Rol en la Red:</label>
+          <label for="inv-role" class="filter-label">{{ t('inventory.filter_role_label') }}</label>
           <button
             v-if="isVaultAuthorized"
             type="button"
@@ -304,33 +351,36 @@
             title="Gestionar roles de red personalizados"
             @click="isRolesModalOpen = true"
           >
-            ⚙️ Personalizar
+            {{ t('inventory.filter_customize') }}
           </button>
         </div>
         <select id="inv-role" v-model="networkRoleFilter" class="filter-select">
-          <option value="ALL">Todos los Roles</option>
-          <option v-for="role in networkRoles" :key="role" :value="role">{{ role }}</option>
+          <option value="ALL">{{ t('enums.network_role.ALL') }}</option>
+          <option v-for="role in networkRoles" :key="role" :value="role">
+            {{ t(`enums.network_role.${role}`, role) }}
+          </option>
         </select>
       </div>
 
       <div class="filter-item">
-        <label for="inv-admin-state" class="filter-label">Estado Administrativo:</label>
+        <label for="inv-admin-state" class="filter-label">{{ t('inventory.filter_admin_label') }}</label>
         <select id="inv-admin-state" v-model="adminStateFilter" class="filter-select">
-          <option value="ALL">Todos</option>
-          <option value="PRODUCTION">Producción</option>
-          <option value="MAINTENANCE">Mantenimiento</option>
-          <option value="PROVISIONING">Aprovisionamiento</option>
-          <option value="DECOMMISSIONED">Retirado</option>
+          <option value="ALL">{{ t('enums.admin_state.ALL') }}</option>
+          <option value="PRODUCTION">{{ t('enums.admin_state.PRODUCTION') }}</option>
+          <option value="MAINTENANCE">{{ t('enums.admin_state.MAINTENANCE') }}</option>
+          <option value="STAGING_LAB">{{ t('enums.admin_state.STAGING_LAB') }}</option>
+          <option value="PROVISIONING">{{ t('enums.admin_state.PROVISIONING') }}</option>
+          <option value="DECOMMISSIONED">{{ t('enums.admin_state.DECOMMISSIONED') }}</option>
         </select>
       </div>
 
       <div class="filter-item">
-        <label for="inv-operational" class="filter-label">Salud Operativa:</label>
+        <label for="inv-operational" class="filter-label">{{ t('inventory.filter_operational_label') }}</label>
         <select id="inv-operational" v-model="operationalFilter" class="filter-select">
-          <option value="ALL">Todos los Estados</option>
-          <option value="ONLINE">Online (Reachable)</option>
-          <option value="OFFLINE">Offline / Inalcanzable</option>
-          <option value="SSL_MISMATCH">SSL Mismatch</option>
+          <option value="ALL">{{ t('enums.operational.ALL') }}</option>
+          <option value="ONLINE">{{ t('enums.operational.ONLINE') }}</option>
+          <option value="OFFLINE">{{ t('enums.operational.OFFLINE') }}</option>
+          <option value="SSL_MISMATCH">{{ t('enums.operational.SSL_MISMATCH') }}</option>
         </select>
       </div>
     </div>
@@ -353,7 +403,7 @@
           <RgDataTable
             :columns="tableColumns"
             :rows="filteredRouters as unknown as Record<string, unknown>[]"
-            caption="Listado de MikroTiks registrados en RoSGrid"
+            :caption="t('inventory.table_caption')"
             :show-density-toggle="true"
           >
             <template #actions="{ row }">
@@ -364,7 +414,17 @@
                   aria-label="Abrir consola WebFig"
                   @click="openWebFig(String(row.id))"
                 >
-                  📡 WebFig
+                  {{ t('inventory.action_webfig') }}
+                </button>
+
+                <button
+                  type="button"
+                  class="btn-row-action btn-row-action--syslog"
+                  :class="{ 'btn-row-action--syslog-active': (row as unknown as RouterItem).syslog_active }"
+                  :aria-label="`Abrir consola Syslog de ${(row as unknown as RouterItem).display_name}`"
+                  @click="router.push(`/routers/${String(row.id)}/webfig/syslog`)"
+                >
+                  {{ (row as unknown as RouterItem).syslog_active ? t('inventory.action_syslog_active') : t('inventory.action_syslog') }}
                 </button>
 
                 <button
@@ -374,7 +434,7 @@
                   aria-label="Centrar en el mapa"
                   @click="focusOnMap(String(row.id))"
                 >
-                  📍 Mapa
+                  {{ t('inventory.action_map') }}
                 </button>
 
                 <button
@@ -384,7 +444,7 @@
                   aria-label="Consultar Bóveda de credenciales"
                   @click="openVaultModal(row as unknown as RouterItem)"
                 >
-                  🔐 Bóveda
+                  {{ t('inventory.action_vault') }}
                 </button>
 
                 <button
@@ -393,7 +453,7 @@
                   aria-label="Disparar autodescubrimiento"
                   @click="triggerDiscovery(row as unknown as RouterItem)"
                 >
-                  🔍 TOFU
+                  {{ t('inventory.action_tofu') }}
                 </button>
 
                 <button
@@ -403,7 +463,7 @@
                   aria-label="Eliminar router del inventario"
                   @click="handleDeleteRouter(row as unknown as RouterItem)"
                 >
-                  🗑️ Eliminar
+                  {{ t('inventory.action_delete') }}
                 </button>
               </div>
             </template>
@@ -682,6 +742,18 @@
     color: var(--rg-accent-cyan, #22d3ee);
   }
 
+  .btn-row-action--syslog {
+    border-color: #38bdf8;
+    color: #38bdf8;
+  }
+
+  .btn-row-action--syslog-active {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: #10b981;
+    color: #34d399;
+    font-weight: 600;
+  }
+
   .btn-row-action--vault {
     border-color: #fbbf24;
     color: #fbbf24;
@@ -696,16 +768,88 @@
     background: rgba(239, 68, 68, 0.15);
   }
 
+  .btn.btn-primary,
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(34, 211, 238, 0.12);
+    border: 1px solid var(--rg-accent-cyan, #22d3ee);
+    color: var(--rg-accent-cyan, #22d3ee);
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn.btn-primary:hover:not(:disabled),
+  .btn-primary:hover:not(:disabled) {
+    background: rgba(34, 211, 238, 0.25);
+    border-color: #38bdf8;
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(34, 211, 238, 0.35);
+  }
+
+  .btn.btn-primary:active,
+  .btn-primary:active {
+    transform: scale(0.98);
+  }
+
+  .btn.btn-primary:disabled,
+  .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
   .status-indicator.success {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 12px;
-    background: rgba(16, 185, 129, 0.15);
-    border: 1px solid #10b981;
-    border-radius: 4px;
+    padding: 6px 4px;
+    background: transparent;
+    border: none;
     color: #34d399;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     font-weight: 600;
+    letter-spacing: 0.02em;
+    animation: fadeInScale 0.25s ease-out;
+  }
+
+  .status-indicator.success .status-icon {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #10b981;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+
+  .status-indicator.success .status-text {
+    line-height: 1;
+  }
+
+  @keyframes fadeInScale {
+    from {
+      opacity: 0;
+      transform: translateY(-2px) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes pulseGlow {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.5;
+      transform: scale(1.2);
+    }
   }
 </style>

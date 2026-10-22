@@ -344,4 +344,37 @@ describe('TenantsManagementView.vue — Gestión de Empresas Multi-Tenant', () =
 
     expect(wrapper.find('#btn-open-create-tenant').exists()).toBe(false);
   });
+
+  it('para TENANT_ADMIN oculta suspender y registrar, pero muestra configuración de módulos', async () => {
+    const authStore = useAuthStore();
+    authStore.currentRole = 'TENANT_ADMIN';
+
+    vi.spyOn(http, 'get').mockResolvedValueOnce({
+      status: 200,
+      data: {
+        items: [
+          {
+            id: 't-10',
+            slug: 'mi-empresa',
+            name: 'Mi Empresa',
+            tax_id: 'J-12345678',
+            status: 'ACTIVE',
+            max_routers_quota: 50,
+            max_users_quota: 10,
+            active_routers_count: 3,
+            active_users_count: 1,
+            default_safemode_seconds: 60,
+          },
+        ],
+      },
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(TenantsManagementView);
+    await flushPromises();
+
+    expect(wrapper.find('#btn-open-create-tenant').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain('Suspender');
+    expect(wrapper.find('.btn-action--features').exists()).toBe(true);
+  });
 });

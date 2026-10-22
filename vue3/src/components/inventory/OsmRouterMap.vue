@@ -719,7 +719,7 @@
     gap: 6px;
   }
 
-  .status-indicator {
+  .router-item-header .status-indicator {
     width: 8px;
     height: 8px;
     border-radius: 50%;

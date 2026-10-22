@@ -245,6 +245,8 @@
       <OsmOnuMap
         :onus="filteredOnus"
         :selected-onu-id="selectedOnuId"
+        :center-coordinates="[10.4806, -66.9036]"
+        :zoom-level="12"
         @select-onu="handleSelectOnu"
         @verify-onu="handleVerifyOnu"
         @diagnose-onu="handleDiagnoseOnu"

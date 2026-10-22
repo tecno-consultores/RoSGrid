@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 RoSGrid Contributors
 
+import asyncio
 import uuid
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -26,8 +27,10 @@ from src.services.cve_matcher import (
 from src.workers.syslog_collector import (
     SyslogUdpProtocol,
     get_router_syslog_events,
+    load_ip_router_map,
     parse_syslog_message,
     push_event_to_ringbuffer,
+    syslog_collector_worker_loop,
 )
 
 
@@ -391,3 +394,107 @@ async def test_cve_endpoints_tenant_not_found_and_disabled(sample_tenant, sample
     with pytest.raises(HTTPException) as exc:
         await get_router_cves(router_id=uuid.uuid4(), claims=sample_claims, db=db)
     assert exc.value.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_load_ip_router_map_success():
+    tid = uuid.uuid4()
+    rid = uuid.uuid4()
+    mock_session = AsyncMock()
+    mock_result = MagicMock()
+    mock_result.all.return_value = [
+        (rid, tid, "https://10.250.3.8:443"),
+        (uuid.uuid4(), tid, "http://192.168.88.1/rest"),
+        (uuid.uuid4(), tid, ""),
+    ]
+    mock_session.execute.return_value = mock_result
+
+    class MockSessionFactory:
+        async def __aenter__(self):
+            return mock_session
+
+        async def __aexit__(self, *args):
+            pass
+
+    with patch("src.db.session.async_session_maker", return_value=MockSessionFactory()):
+        ip_map = await load_ip_router_map()
+        assert "10.250.3.8" in ip_map
+        assert ip_map["10.250.3.8"] == (tid, rid)
+        assert "192.168.88.1" in ip_map
+
+
+@pytest.mark.asyncio
+async def test_load_ip_router_map_handles_error():
+    with patch("src.db.session.async_session_maker", side_effect=Exception("DB error")):
+        ip_map = await load_ip_router_map()
+        assert ip_map == {}
+
+
+@pytest.mark.asyncio
+async def test_syslog_collector_worker_loop_bind_and_cancel():
+    mock_transport = MagicMock()
+    mock_transport.is_closing.return_value = False
+    mock_proto = MagicMock()
+    mock_proto.ip_router_map = {}
+
+    with (
+        patch("src.workers.syslog_collector.load_ip_router_map", AsyncMock(return_value={"10.0.0.1": (uuid.uuid4(), uuid.uuid4())})),
+        patch("asyncio.get_running_loop") as mock_get_loop,
+    ):
+        mock_loop = MagicMock()
+        mock_loop.create_datagram_endpoint = AsyncMock(return_value=(mock_transport, mock_proto))
+        mock_get_loop.return_value = mock_loop
+
+        task = asyncio.create_task(syslog_collector_worker_loop())
+        await asyncio.sleep(0.01)
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+        mock_transport.close.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_syslog_collector_worker_loop_bind_error():
+    with (
+        patch("src.workers.syslog_collector.load_ip_router_map", AsyncMock(return_value={})),
+        patch("asyncio.get_running_loop") as mock_get_loop,
+    ):
+        mock_loop = MagicMock()
+        mock_loop.create_datagram_endpoint = AsyncMock(side_effect=OSError("Address already in use"))
+        mock_get_loop.return_value = mock_loop
+
+        # Should log and return cleanly without crashing
+        await syslog_collector_worker_loop()
+
+
+def test_syslog_udp_protocol_connection_made():
+    proto = SyslogUdpProtocol({})
+    transport = MagicMock()
+    proto.connection_made(transport)
+    assert proto.transport is transport
+
+
+@pytest.mark.asyncio
+async def test_enrich_router_telemetry_with_syslog():
+    from src.api.v1.inventory_helpers import enrich_router_telemetry
+
+    tid = uuid.uuid4()
+    rid = uuid.uuid4()
+    mock_redis = MagicMock()
+    mock_pipe = MagicMock()
+    mock_pipe.execute = AsyncMock(return_value=[
+        {"operational_status": "ONLINE", "last_cpu_load_pct": "12", "last_free_memory_pct": "60"},
+        1,  # exists -> True
+        5,  # llen -> 5
+    ])
+    mock_redis.pipeline.return_value = mock_pipe
+
+    res = await enrich_router_telemetry(mock_redis, tid, rid)
+    assert res["operational_status"] == "ONLINE"
+    assert res["syslog_active"] is True
+    assert res["syslog_event_count"] == 5
+    assert res["cpu_load_percent"] == 12
+    assert res["memory_used_percent"] == 40
+

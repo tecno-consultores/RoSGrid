@@ -20,6 +20,7 @@
     themeStore.setTheme(themeStore.theme);
     if (authStore.isAuthenticated) {
       nocStore.connectEventsWebSocket();
+      authStore.fetchTenantFeatures();
     }
   });
 
@@ -28,6 +29,7 @@
     (isAuth) => {
       if (isAuth) {
         nocStore.connectEventsWebSocket();
+        authStore.fetchTenantFeatures();
       } else {
         nocStore.disconnectEventsWebSocket();
       }

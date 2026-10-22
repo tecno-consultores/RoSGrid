@@ -96,6 +96,8 @@ export interface RouterItem {
   is_reachable: boolean;
   last_seen_at?: string;
   ssl_trust_status?: 'PENDING_TOFU' | 'TRUSTED_PINNED' | 'FINGERPRINT_MISMATCH';
+  syslog_active?: boolean;
+  syslog_event_count?: number;
 }
 
 export interface MaintenanceWindowItem {

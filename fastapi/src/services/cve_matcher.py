@@ -193,7 +193,8 @@ async def sync_cve_catalog(feed_url: str | None = None) -> CveSyncResponse:
     )
     now_utc = datetime.now(timezone.utc)
     try:
-        async with httpx.AsyncClient(timeout=8.0) as client:
+        timeout_cfg = httpx.Timeout(4.0, connect=2.0)
+        async with httpx.AsyncClient(timeout=timeout_cfg) as client:
             resp = await client.get(url)
             if resp.status_code == 200:
                 raw_data = resp.json()

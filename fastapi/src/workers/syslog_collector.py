@@ -76,12 +76,14 @@ async def push_event_to_ringbuffer(
     try:
         redis = get_redis_client()
         key = f"rg:{tenant_id}:router:{router_id}:syslog:ring"
+        active_key = f"rg:{tenant_id}:router:{router_id}:syslog:active"
         payload = event.model_dump_json()
 
         pipeline = redis.pipeline()
         pipeline.lpush(key, payload)
         pipeline.ltrim(key, 0, SYSLOG_RINGBUFFER_MAXLEN - 1)
         pipeline.expire(key, SYSLOG_KEY_TTL_SECONDS)
+        pipeline.set(active_key, "1", ex=300)
 
         if event.is_critical:
             alert_payload = json.dumps(
@@ -122,6 +124,10 @@ class SyslogUdpProtocol(asyncio.DatagramProtocol):
 
     def __init__(self, ip_router_map: dict[str, tuple[uuid.UUID, uuid.UUID]]) -> None:
         self.ip_router_map = ip_router_map
+        self.transport: asyncio.DatagramTransport | None = None
+
+    def connection_made(self, transport: asyncio.DatagramTransport) -> None:
+        self.transport = transport
 
     def datagram_received(self, data: bytes, addr: tuple[str, int]) -> None:
         src_ip = addr[0]
@@ -137,3 +143,73 @@ class SyslogUdpProtocol(asyncio.DatagramProtocol):
             asyncio.create_task(push_event_to_ringbuffer(tenant_id, router_id, event))
         except Exception as exc:
             logger.debug("Error procesando datagrama Syslog de %s: %s", src_ip, exc)
+
+
+async def load_ip_router_map() -> dict[str, tuple[uuid.UUID, uuid.UUID]]:
+    """Consulta la base de datos para mapear IPs de routers activos a (tenant_id, router_id)."""
+    from sqlalchemy import select
+    from src.db.session import async_session_maker
+    from src.models.inventory import Router, RouterAdminStateEnum
+
+    ip_map: dict[str, tuple[uuid.UUID, uuid.UUID]] = {}
+    try:
+        async with async_session_maker() as session:
+            stmt = select(Router.id, Router.tenant_id, Router.api_base_url).where(
+                Router.admin_state != RouterAdminStateEnum.RETIRED
+            )
+            rows = (await session.execute(stmt)).all()
+            for r_id, t_id, base_url in rows:
+                if base_url:
+                    clean = (
+                        base_url.replace("https://", "")
+                        .replace("http://", "")
+                        .split("/")[0]
+                        .split(":")[0]
+                        .strip()
+                    )
+                    if clean:
+                        ip_map[clean] = (t_id, r_id)
+    except Exception as exc:
+        logger.warning("Fallo al sincronizar mapa IP de routers para Syslog: %s", exc)
+    return ip_map
+
+
+async def syslog_collector_worker_loop() -> None:
+    """Worker en segundo plano que escucha datagramas UDP 5514 y refresca el mapa de enrutadores."""
+    from src.core.config import settings
+
+    port = getattr(settings, "ROSGRID_SYSLOG_PORT", 5514)
+    logger.info("=== Iniciando Colector Syslog UDP en 0.0.0.0:%d ===", port)
+
+    ip_map = await load_ip_router_map()
+    loop = asyncio.get_running_loop()
+
+    transport = None
+    protocol = None
+    try:
+        transport, protocol = await loop.create_datagram_endpoint(
+            lambda: SyslogUdpProtocol(ip_map),
+            local_addr=("0.0.0.0", port),
+        )
+        logger.info(
+            "Colector Syslog escuchando en UDP 0.0.0.0:%d con %d router(s) mapeado(s).",
+            port,
+            len(ip_map),
+        )
+    except Exception as exc:
+        logger.error("Error al enlazar socket UDP 0.0.0.0:%d para Syslog: %s", port, exc)
+        return
+
+    try:
+        while True:
+            await asyncio.sleep(60)
+            new_map = await load_ip_router_map()
+            if protocol and hasattr(protocol, "ip_router_map"):
+                protocol.ip_router_map.clear()
+                protocol.ip_router_map.update(new_map)
+                logger.debug("Mapa de IPs Syslog refrescado: %d routers.", len(new_map))
+    except asyncio.CancelledError:
+        logger.info("Cerrando listener Syslog UDP 0.0.0.0:%d...", port)
+    finally:
+        if transport and not transport.is_closing():
+            transport.close()

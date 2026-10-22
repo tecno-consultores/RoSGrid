@@ -168,6 +168,8 @@ class RouterResponse(BaseModel):
     operational_status: str = "OFFLINE"
     cpu_load_percent: int | None = None
     memory_used_percent: int | None = None
+    syslog_active: bool = False
+    syslog_event_count: int = 0
 
     created_at: datetime
     updated_at: datetime

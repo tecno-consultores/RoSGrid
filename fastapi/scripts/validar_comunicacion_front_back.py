@@ -139,7 +139,8 @@ async def verify_core_resources(client: httpx.AsyncClient, auth_headers: dict[st
         log_test("GET /api/v1/auth/me", False, str(e))
 
     # 4. GET /api/v1/inventory/routers
-    router_id = None
+    existing_router_id = None
+    created_test_router_id = None
     try:
         r_routers = await client.get("/api/v1/inventory/routers", headers=auth_headers)
         if r_routers.status_code == 200:
@@ -147,7 +148,7 @@ async def verify_core_resources(client: httpx.AsyncClient, auth_headers: dict[st
             is_valid_list = isinstance(routers_data, list)
             log_test("GET /api/v1/inventory/routers (Inventario Real)", is_valid_list, f"Recibidos {len(routers_data)} routers reales (Sin routers mock hardcodeados)")
             if is_valid_list and len(routers_data) > 0:
-                router_id = routers_data[0].get("id")
+                existing_router_id = routers_data[0].get("id")
         else:
             log_test("GET /api/v1/inventory/routers", False, f"HTTP {r_routers.status_code}")
     except Exception as e:
@@ -238,7 +239,7 @@ async def verify_core_resources(client: httpx.AsyncClient, auth_headers: dict[st
         rand_hex = uuid.uuid4().hex[:6]
         unique_sn = f"SN{rand_hex.upper()}X"
         unique_name = f"Router-Test-{rand_hex}"
-        unique_ip = f"https://10.250.3.{int(rand_hex[:2], 16) % 200 + 10}"
+        unique_ip = f"https://192.168.{int(rand_hex[:2], 16) % 250 + 1}.{int(rand_hex[2:4], 16) % 250 + 1}"
         csv_content = (
             "display_name,api_base_url,api_port,api_username,api_password,network_role,admin_state,physical_location,latitude,longitude,serial_number\n"
             f"{unique_name},{unique_ip},443,admin,clave123,L1,PRODUCTION,Nodo Central,10.25,-68.01,{unique_sn}\n"
@@ -259,7 +260,7 @@ async def verify_core_resources(client: httpx.AsyncClient, auth_headers: dict[st
                     imported_count = commit_data.get("imported_count", 0)
                     created_ids = commit_data.get("created_router_ids", [])
                     if created_ids:
-                        router_id = str(created_ids[0])
+                        created_test_router_id = str(created_ids[0])
                     log_test("POST /api/v1/inventory/import-csv/commit (Transaccional en PostgreSQL)", True, f"Importados: {imported_count} routers (Rol L1 registrado)")
                 else:
                     log_test("POST /api/v1/inventory/import-csv/commit", False, f"HTTP {r_commit.status_code}: {r_commit.text}")
@@ -281,7 +282,8 @@ async def verify_core_resources(client: httpx.AsyncClient, auth_headers: dict[st
     except Exception as e:
         log_test("GET /api/v1/inventory/network-roles", False, str(e))
 
-    return router_id
+    return existing_router_id, created_test_router_id
+
 
 
 async def verify_user_lifecycle_and_maker_checker(client: httpx.AsyncClient, auth_headers: dict[str, str], tenant_slug: str = "isp-local") -> None:
@@ -386,10 +388,15 @@ async def verify_user_lifecycle_and_maker_checker(client: httpx.AsyncClient, aut
             log_test(f"DELETE /api/v1/users/{test_operator_id}/reject", False, str(e))
 
 
-async def verify_router_specific_endpoints(client: httpx.AsyncClient, auth_headers: dict[str, str], router_id: str | None) -> None:
+async def verify_router_specific_endpoints(
+    client: httpx.AsyncClient,
+    auth_headers: dict[str, str],
+    router_id: str | None,
+    test_router_to_clean: str | None = None,
+) -> None:
     """Valida los endpoints específicos de un router: backups, redescubrimiento TOFU e interfaces vivas."""
     if not router_id:
-        log_test("Pruebas por Router Específico (/backups, /discover, /webfig/interfaces)", True, "Omitido limpiamente (No hay routers creados)")
+        log_test("Pruebas por Router Específico (/backups, /discover, /webfig/interfaces)", True, "Omitido limpiamente (No hay routers)")
         return
 
     # Backups
@@ -433,18 +440,22 @@ async def verify_router_specific_endpoints(client: httpx.AsyncClient, auth_heade
     except Exception as e:
         log_test(f"GET /api/v1/routers/{router_id}/webfig/interfaces", False, str(e))
 
-    # Limpieza higiénica del equipo de prueba
-    try:
-        delete_headers = {**auth_headers, "Idempotency-Key": str(uuid.uuid4())}
-        async with httpx.AsyncClient(base_url=API_BASE, timeout=15.0) as clean_client:
-            r_del = await clean_client.delete(f"/api/v1/inventory/routers/{router_id}", headers=delete_headers)
-            log_test(
-                f"DELETE /api/v1/inventory/routers (Higiene y Limpieza de Equipos de Prueba)",
-                r_del.status_code == 204,
-                f"HTTP {r_del.status_code}",
-            )
-    except Exception as e:
-        log_test("DELETE /api/v1/inventory/routers", False, f"{type(e).__name__}: {repr(e)}")
+    # Limpieza higiénica EXCLUSIVAMENTE del equipo de prueba temporal (nunca de inventario preexistente)
+    if test_router_to_clean:
+        try:
+            delete_headers = {**auth_headers, "Idempotency-Key": str(uuid.uuid4())}
+            async with httpx.AsyncClient(base_url=API_BASE, timeout=15.0) as clean_client:
+                r_del = await clean_client.delete(f"/api/v1/inventory/routers/{test_router_to_clean}", headers=delete_headers)
+                log_test(
+                    f"DELETE /api/v1/inventory/routers (Higiene y Limpieza de Equipos de Prueba)",
+                    r_del.status_code == 204,
+                    f"HTTP {r_del.status_code}",
+                )
+        except Exception as e:
+            log_test("DELETE /api/v1/inventory/routers", False, f"{type(e).__name__}: {repr(e)}")
+    else:
+        log_test("DELETE /api/v1/inventory/routers (Protección de Equipos Reales)", True, "Omitido limpiamente (No se borran routers reales del inventario)")
+
 
 
 async def verify_nginx_frontend_and_csp() -> None:
@@ -492,9 +503,10 @@ async def run_suite():
             "Authorization": f"Bearer {access_token}",
             "X-CSRF-Token": "test_csrf_token_for_front_back_validation",
         }
-        router_id = await verify_core_resources(client, auth_headers)
+        existing_router_id, created_test_router_id = await verify_core_resources(client, auth_headers)
         await verify_user_lifecycle_and_maker_checker(client, auth_headers)
-        await verify_router_specific_endpoints(client, auth_headers, router_id)
+        target_router_id = created_test_router_id or existing_router_id
+        await verify_router_specific_endpoints(client, auth_headers, target_router_id, test_router_to_clean=created_test_router_id)
 
     await verify_nginx_frontend_and_csp()
 

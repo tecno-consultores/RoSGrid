@@ -96,6 +96,8 @@ export const useInventoryStore = defineStore('inventory', () => {
             : ''),
         ros_version: item.ros_version || 'v7',
         is_reachable: item.is_reachable ?? false,
+        syslog_active: Boolean(item.syslog_active),
+        syslog_event_count: Number(item.syslog_event_count || 0),
       }));
       setRouters(items);
     } catch {
