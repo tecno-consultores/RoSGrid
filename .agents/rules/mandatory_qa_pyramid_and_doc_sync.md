@@ -4,45 +4,87 @@
 # Mandatory QA Pyramid & Autonomous Documentation Sync Directive
 
 > **SUPREME DIRECTIVE FOR AI AGENTS & CONTRIBUTORS:**
-> Never conclude a task, suggest commits, or finish execution turns without proactively fulfilling the following two non-negotiable requirements. Do not wait for user prompting.
+> Never conclude a task, suggest commits, or finish execution turns without proactively fulfilling the following three non-negotiable requirements whenever code is created or modified. Do not wait for user prompting.
 > **OUTPUT LANGUAGE CONSTRAINT:** Always communicate with the user and write final explanations in Spanish.
 
 ---
 
-## 1. Mandatory Multi-Layer Test Pyramid (No-Mock Blindness)
+## 1. Mandatory 11X Test Creation (Using `examples/` as Blueprints)
 
-Features are invalid without coverage across the full test pyramid:
+Any modification, addition, or bugfix in source code (`fastapi/src/` or `vue3/src/`) MUST be accompanied by corresponding tests across the full 11X test pyramid. The AI agent MUST consult and strictly replicate the blueprints, configurations, and test designs provided in `examples/`:
 
-| Test Layer | Location | Requirement |
-| :--- | :--- | :--- |
-| **1. Backend Unit** | `fastapi/tests/**/*.unit.py` | Coverage `>= 95%` (`pytest-cov`). Test nominal, edge, and error branches. |
-| **2. Frontend Unit** | `vue3/src/**/*.unit.ts` | 100% pass rate in Vitest. Test composables, Pinia stores, and form validation. |
-| **3. Real DB & Migration** | `fastapi/migrations/versions/` | **Anti-Mock Invariant:** Never validate ORM changes (`src/models/`) with `AsyncMock` alone. You MUST generate an Alembic migration and verify actual column types (`\d <table>`) and RLS in real PostgreSQL. |
-| **4. Front-Back Contracts** | `fastapi/scripts/validar_comunicacion_front_back.py` | Run inside Docker `rosgrid_api_local`. Send the exact payload (multipart form or JSON) used by the UI and verify DB persistence. |
-| **5. Karate Labs API BDD** | `fastapi/test/api_test.feature` & `examples/fastapi/test/` | Black-box Gherkin scenarios testing 401 unauth, 422 malformed payloads, and 200/201 success contracts. |
-| **6. Karate Labs UI BDD** | `vue3/test/ui_business_flow.feature` & `examples/vue3/test/` | Real browser acceptance scenarios with Chrome CDP (button clicks, modal flows, navigation). |
-| **7. Visual Geometry** | DOM Hierarchy & Viewport Layout | **Anti-JSDOM Blindness:** JSDOM does not render Flexbox/Grid boxes. Test DOM order and verify that sticky footers (`.login-footer`) or modals never overlap content. |
+- **Backend Blueprints (`examples/fastapi/`):**
+  - Unit & mocking standards (`pytest`, `pytest-cov`, `pytest-mock` in `fastapi/tests/**/*.unit.py` with `>= 95%` coverage).
+  - API black-box behavioral scenarios (`Karate Labs` `.feature` in `examples/fastapi/test/api_test.feature`).
+  - SAST & complexity auditing (`bandit`, `radon`, `mypy --strict`, `ruff`).
+  - Contract & Fuzzing testing (`schemathesis`, `OWASP ZAP` baseline).
+  - Chaos engineering & Prometheus observability (`Pumba`, `Locust`, `prometheus_fastapi_instrumentator`).
+- **Frontend Blueprints (`examples/vue3/`):**
+  - Isolated unit tests (`Vitest` + `jsdom` in `vue3/src/**/*.unit.ts` with `>= 95%` coverage).
+  - UI Business Flow BDD (`Karate Labs` in `examples/vue3/test/ui_business_flow.feature`).
+  - E2E & Accessibility (`Playwright` + `@axe-core/playwright` in `examples/vue3/e2e/accessibility.spec.ts`).
+  - Cognitive complexity and static security (`eslint-plugin-sonarjs`, `eslint-plugin-security`).
+  - Frontend mutation testing (`Stryker` preconfigured in `stryker.conf.json.example`).
+
+### 1.1 Complete Multi-Layer Test Pyramid
+
+| Test Layer | Location | Blueprint Reference | Requirement |
+| :--- | :--- | :--- | :--- |
+| **1. Backend Unit** | `fastapi/tests/**/*.unit.py` | `examples/fastapi/README.md` | Coverage `>= 95%` (`pytest-cov`). Test nominal, edge, and error branches. |
+| **2. Frontend Unit** | `vue3/src/**/*.unit.ts` | `examples/vue3/README.md` | 100% pass rate in Vitest. Test composables, Pinia stores, and form validation. |
+| **3. Real DB & Migration** | `fastapi/migrations/versions/` | `specs/02` & `alembic` | **Anti-Mock Invariant:** Never validate ORM changes (`src/models/`) with `AsyncMock` alone. Generate an Alembic migration and verify actual column types (`\d <table>`) and RLS in real PostgreSQL. |
+| **4. Front-Back Contracts** | `fastapi/scripts/validar_comunicacion_front_back.py` | `docs/08` | Run inside Docker `rosgrid_api_local`. Send the exact payload (multipart form or JSON) used by the UI and verify DB persistence. |
+| **5. Karate Labs API BDD** | `fastapi/test/api_test.feature` | `examples/fastapi/test/api_test.feature` | Black-box Gherkin scenarios testing 401 unauth, 422 malformed payloads, and 200/201 success contracts. |
+| **6. Karate Labs UI BDD** | `vue3/test/ui_business_flow.feature` | `examples/vue3/test/ui_business_flow.feature` | Real browser acceptance scenarios with Chrome CDP (button clicks, modal flows, navigation). |
+| **7. Visual Geometry** | DOM Hierarchy & Viewport Layout | `examples/vue3/e2e/` | **Anti-JSDOM Blindness:** JSDOM does not render Flexbox/Grid boxes. Test DOM order and inspect viewports in real browser sessions to ensure modals and sticky footers never overlap content. |
 
 ---
 
-## 2. Autonomous & Continuous Documentation Sync
+## 2. Mandatory Test Execution Upon Task Completion
 
-Whenever code is added, updated, or refactored, simultaneously update:
+It is **STRICTLY MANDATORY** to execute all relevant tests in ephemeral Docker containers (`Rule Zero`) before finishing any task that touches code:
 
-1. **`specs/`:** Update all affected domain specifications (`specs/03`, `specs/11`, `specs/20`, etc.).
-2. **`docs/`:** Update operational manuals, security guides, and `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`.
+```bash
+# Backend unit tests & coverage (>= 95%)
+docker compose -f docker-compose.qa.yml run --rm qa-backend uv run pytest tests/ --cov=src --cov-fail-under=95
+
+# Frontend unit tests & type check (100% pass, 0 type errors)
+docker compose -f docker-compose.qa.yml run --rm qa-vue3 pnpm run test:unit
+docker compose -f docker-compose.qa.yml run --rm qa-vue3 pnpm run type-check
+
+# Linters & Static Analysis
+docker compose -f docker-compose.qa.yml run --rm qa-backend uv run ruff check .
+docker compose -f docker-compose.qa.yml run --rm qa-backend uv run mypy src/ --strict
+docker compose -f docker-compose.qa.yml run --rm qa-vue3 pnpm run lint
+```
+
+Never conclude a task if any test fails, coverage drops below 95%, or linters report errors.
+
+---
+
+## 3. Autonomous & Mandatory Documentation Sync
+
+Whenever code is added, updated, or refactored, the AI agent **MUST OBLIGATORILY** update all corresponding documentation files simultaneously:
+
+1. **`docs/` Directory:**
+   - Update operational manuals (`docs/01` through `docs/05`, `docs/12`).
+   - Update complete REST/WebSockets reference in `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md` whenever endpoints, query params, or schemas change.
+   - Update AI integration guides (`docs/07`) when MCP tools change.
+2. **`specs/` Directory:**
+   - Update all affected domain and functional specifications (`specs/01` through `specs/34`).
 3. **Monorepo Root:**
-   - **`CHANGELOG.md`:** Document changes under `## [Unreleased]` (`Added`, `Fixed`, `Changed`).
-   - **`ROADMAP.md`:** Update milestone checkpoints and sub-task statuses.
+   - **`CHANGELOG.md`:** Document changes under `## [Unreleased]` (`Added`, `Fixed`, `Changed`) with technical detail.
+   - **`ROADMAP.md`:** Update milestone checkpoints, sub-task statuses, and deliverables.
    - **`TESTING.md`:** Update test metrics, coverage percentages, and scenario counts.
-   - **`README.md`:** Update if user-facing features, installation, or architecture change.
-4. **`.agents/`:** Proactively update directives, skills, and automation scripts upon identifying improvement opportunities, unhandled edge cases, or automation potential (see [continuous_agent_evolution.md](file:///.agents/rules/continuous_agent_evolution.md)).
+   - **`README.md` & Root Docs:** Update user-facing features, installation guidelines, architecture descriptions, or table of contents whenever applicable.
+4. **`.agents/` Directory:**
+   - Proactively update directives, skills, and automation scripts upon identifying improvement opportunities, unhandled edge cases, or automation potential (see [continuous_agent_evolution.md](file:///.agents/rules/continuous_agent_evolution.md)).
 
 ---
 
-## 3. Pre-Commit Verification Gate
+## 4. Pre-Commit Verification Gate
 
-Before concluding any task:
+Before concluding any task and proceeding to Git publication:
 ```bash
 ./verificar-secretos.sh
 ./.agents/scripts/certify_task_completion.sh

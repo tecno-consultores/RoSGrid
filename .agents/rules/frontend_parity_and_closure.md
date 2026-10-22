@@ -32,17 +32,27 @@ Before exposing new endpoints or frontend views:
 
 After **EVERY** task or turn that adds, edits, or removes code or configuration files, the AI agent **MUST** autonomously execute this protocol and publish to Git without waiting for user prompting:
 
-1. **Full Ephemeral Docker Test Execution:**
-   - Backend: `uv run pytest tests/ --cov=src` (coverage `>= 95%`).
-   - Frontend: `npx vitest run` & `npx vue-tsc --noEmit` (100% pass, 0 type errors).
-2. **Autonomous Documentation Sync:**
-   - Update `specs/`, `docs/`, `CHANGELOG.md`, `ROADMAP.md`, and `TESTING.md`.
-3. **Secret & Parity Certification:**
-   - Run `./verificar-secretos.sh`.
+1. **Mandatory 11X Test Creation (Blueprints in `examples/`):**
+   - For backend mutations: add/update unit tests in `fastapi/tests/**/*.unit.py` and behavioral scenarios following `examples/fastapi/`.
+   - For frontend mutations: add/update unit tests in `vue3/src/**/*.unit.ts` and scenarios following `examples/vue3/`.
+2. **Full Ephemeral Docker Test Execution (`Rule Zero`):**
+   - Backend: `docker compose -f docker-compose.qa.yml run --rm qa-backend uv run pytest tests/ --cov=src --cov-fail-under=95`
+   - Frontend: `docker compose -f docker-compose.qa.yml run --rm qa-vue3 pnpm run test:unit` & `type-check` (100% pass, 0 type errors).
+   - Linters: `ruff check`, `mypy --strict`, `eslint`, `prettier`.
+3. **Autonomous & Mandatory Multi-Layer Documentation Sync:**
+   - Update affected operational and technical manuals in `docs/` (including `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`).
+   - Update affected specifications in `specs/`.
+   - Update `CHANGELOG.md` under `## [Unreleased]`.
+   - Update `ROADMAP.md` task checkpoints and deliverables.
+   - Update `TESTING.md` metrics and counts.
+   - Update `README.md` and root documentation when user-facing interfaces or architectures change.
+4. **Secret & Parity Certification:**
+   - Run `./verificar-secretos.sh` (0 secret leaks).
    - Run `./.agents/scripts/certify_task_completion.sh`.
-4. **Mandatory Git Commit & Push:**
+5. **Mandatory Git Commit & Push:**
    - Run `git add .`
-   - Create a commit following Conventional Commits in Spanish: `git commit -m "<type>(<scope>): <message_in_spanish>"`
+   - Create a commit following Conventional Commits in Spanish: `git commit -m "<tipo>(<ámbito>): <descripción_en_español>"`
    - Push immediately to remote: `git push origin <current_branch>`
    - **Never leave uncommitted or unpushed code changes** in the workspace at the end of a response.
+
 

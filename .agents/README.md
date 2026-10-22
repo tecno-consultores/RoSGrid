@@ -93,12 +93,31 @@ docker exec -t rosgrid_api_local python scripts/verify_alembic_orm_parity.py
 
 ---
 
-## 📦 Publicación Obligatoria en Git (`git commit & push`)
+## 📦 Protocolo de Cierre Obligatorio y Publicación en Git (`git commit & push`)
 
-Por gobernanza innegociable, tras **CADA** tarea que modifique código o configuraciones, el agente de IA debe:
-1. Superar el protocolo de pruebas y certificación.
-2. Registrar los cambios con `git add .`.
-3. Crear el commit con mensaje semántico en español (`git commit -m "<tipo>(<ámbito>): <mensaje>"`).
-4. Publicar inmediatamente en Git (`git push origin <rama>`).
-Queda estrictamente prohibido concluir un turno dejando código modificado sin confirmar en el repositorio.
+Por gobernanza innegociable de Nivel 11X, tras **CADA** tarea o solicitud que modifique, añada o corrija código fuente (`fastapi/`, `vue3/`, scripts o configuraciones), el agente de IA **DEBE** ejecutar de forma autónoma el siguiente protocolo:
+
+1. **Creación Obligatoria de Pruebas 11X (Blueprints en `examples/`):**
+   - Utilizar de forma obligatoria los ejemplos y patrones de `examples/fastapi/` (pytest, pytest-cov, pytest-mock, Karate Labs API BDD, mutmut, schemathesis) y `examples/vue3/` (Vitest, SonarJS, Stryker, Playwright e2e, @axe-core A11y, Karate Labs UI BDD).
+   - Toda mutación de backend requiere pruebas en `fastapi/tests/**/*.unit.py` con cobertura `>= 95%`.
+   - Toda mutación de frontend requiere pruebas en `vue3/src/**/*.unit.ts` con 100% pass en Vitest.
+2. **Ejecución Obligatoria de Pruebas en Docker Efímero (`Rule Zero`):**
+   - Ejecutar la suite en contenedores efímeros (`docker-compose.qa.yml` o `Makefile`) validando que no existan fallos ni degradación de cobertura.
+3. **Sincronización Documental Obligatoria:**
+   - Actualizar los manuales técnicos afectados en `docs/` (incluyendo `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`).
+   - Actualizar las especificaciones de arquitectura en `specs/`.
+   - Actualizar el historial de cambios en `CHANGELOG.md` (bajo `## [Unreleased]`).
+   - Actualizar el estado de hitos y sub-tareas en `ROADMAP.md`.
+   - Actualizar las métricas y conteo de pruebas en `TESTING.md`.
+   - Actualizar `README.md` y documentación en la raíz cuando aplique.
+4. **Auditoría de Secretos y Paridad ORM:**
+   - Ejecutar `./verificar-secretos.sh` (0 secretos expuestos).
+   - Ejecutar `./.agents/scripts/certify_task_completion.sh`.
+5. **Registro y Publicación Remota Inmediata:**
+   - Registrar los cambios con `git add .`.
+   - Crear el commit con mensaje semántico en español (`git commit -m "<tipo>(<ámbito>): <descripción_en_español>"`).
+   - Publicar inmediatamente en Git (`git push origin <rama_actual>`).
+
+**Queda estrictamente prohibido concluir un turno dejando código modificado sin confirmar (*uncommitted changes*) ni con documentación desfasada en el repositorio.**
+
 

@@ -27,7 +27,7 @@ docker cp "${REPO_ROOT}/fastapi/scripts/validar_comunicacion_front_back.py" rosg
 docker exec -t rosgrid_api_local python scripts/validar_comunicacion_front_back.py
 
 # 4. Verificación de Sincronización Documental
-echo -e "\n📚 [4/4] Verificando sincronización de documentación obligatoria..."
+echo -e "\n📚 [4/4] Verificando sincronización de documentación y pruebas obligatorias..."
 CODE_CHANGES=$(git diff --name-only HEAD 2>/dev/null | grep -E '^(fastapi/src|vue3/src)' || true)
 
 if [ -n "${CODE_CHANGES}" ]; then
@@ -36,9 +36,19 @@ if [ -n "${CODE_CHANGES}" ]; then
     [ -n "${line}" ] && echo "  - ${line}"
   done <<< "${CODE_CHANGES}"
 
-  DOC_CHANGES=$(git diff --name-only HEAD 2>/dev/null | grep -E '^(specs/|docs/|CHANGELOG\.md|ROADMAP\.md|TESTING\.md)' || true)
+  TEST_CHANGES=$(git diff --name-only HEAD 2>/dev/null | grep -E '^(fastapi/tests/|vue3/src/.*\.unit\.ts|fastapi/test/|vue3/test/)' || true)
+  if [ -z "${TEST_CHANGES}" ]; then
+    echo "⚠️ ADVERTENCIA: Se modificó código fuente pero NO se detectan pruebas unitarias/BDD nuevas o modificadas (Pirámide 11X)."
+  else
+    echo "✔ Pruebas 11X detectadas en paralelo:"
+    while IFS= read -r t_line; do
+      [ -n "${t_line}" ] && echo "  - ${t_line}"
+    done <<< "${TEST_CHANGES}"
+  fi
+
+  DOC_CHANGES=$(git diff --name-only HEAD 2>/dev/null | grep -E '^(specs/|docs/|CHANGELOG\.md|ROADMAP\.md|TESTING\.md|README\.md)' || true)
   if [ -z "${DOC_CHANGES}" ]; then
-    echo "⚠️ ADVERTENCIA: Se modificó código pero NO se han actualizado specs/, docs/, CHANGELOG.md, ROADMAP.md o TESTING.md."
+    echo "⚠️ ADVERTENCIA: Se modificó código pero NO se han actualizado specs/, docs/, CHANGELOG.md, ROADMAP.md, TESTING.md o README.md."
     echo "Recuerda la Directiva Suprema: la documentación debe sincronizarse con cada cambio."
   else
     echo "✔ Documentación actualizada en paralelo:"
