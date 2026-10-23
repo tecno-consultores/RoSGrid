@@ -79,6 +79,11 @@ Todas las tablas de Capa 1 utilizan `RgDataTable.vue` con **Densidad Dual Adapta
    - En `Simple Queues`, editor visual de velocidades (`Target Upload / Download`, `Max-Limit`, `Burst`) con conversión legible (`Mbps` / `Gbps`) y reordenamiento con Safe Mode.
 5. **`LiveToolsDiagnosticsView.vue`:**
    - Consola unificada con sub-pestañas para **Ping**, **Traceroute**, **Torch por Interfaz** y **Log del Router** con resaltado semántico de líneas `error` / `critical` / `warning`.
+6. **`BridgeView.vue` (Gestor Bridge & VLAN Switching Capa 2):**
+   - 4 sub-pestañas de trabajo: `Bridges`, `Puertos Miembro`, `Tabla VLANs` y `Hosts / FDB MAC`.
+   - Modales tácticos de alta densidad para creación de Bridges y Puertos bajo Safe Mode de 60 segundos con Dead Man's Switch automático.
+   - Parámetros avanzados soportados: Modo STP (`protocol_mode: rstp/stp/mstp/none`), `vlan_filtering` (v7 Hardware Offload) e `ingress_filtering`.
+   - Cierre automático de modales y renderizado instantáneo en `RgDataTable.vue` al confirmar la mutación en RouterOS v7.
 
 ---
 

@@ -106,8 +106,41 @@
 
 *(El campo calculado optical\_health devuelve "OPTIMAL" si sfp\_rx\_power\_dbm \>= -20, "WARNING" entre -20 y -25, y "CRITICAL\_LOW\_LIGHT" si es \< -25 dBm).*
 
+### **2.2 Esquemas Pydantic: Gestión de Bridges y Puertos Capa 2**
 
+Los esquemas de validación estricta (`StrictBaseModel`, `extra='forbid'`) garantizan que los parámetros enviados desde el frontend cumplan estrictamente con las especificaciones de RouterOS v7:
 
+- **BridgeCreateRequest (`fastapi/src/schemas/webfig_l1_net.py`):**
+  ```json
+  {
+    "name": "bridge1",
+    "protocol_mode": "rstp",
+    "vlan_filtering": true,
+    "mtu": 1500,
+    "comment": "Bridge principal LAN con RSTP"
+  }
+  ```
+  - `name`: Nombre de la interfaz bridge (1-64 caracteres, obligatorio).
+  - `protocol_mode`: Modo del Spanning Tree Protocol (`rstp`, `stp`, `mstp`, `none`, opcional). Mapeado a `protocol-mode` en RouterOS v7.
+  - `vlan_filtering`: Booleano (por defecto `false`), convertido a `"yes"` / `"no"` para RouterOS v7 REST API.
+  - `mtu`: Tamaño máximo de unidad de transmisión (68-65535, opcional).
+  - `comment`: Comentario de auditoría o descripción técnica.
+
+- **BridgeUpdateRequest (`fastapi/src/schemas/webfig_l1_net.py`):**
+  - Permite actualización parcial bajo Safe Mode de `name`, `protocol_mode`, `vlan_filtering`, `disabled`, `mtu` y `comment`.
+
+- **BridgePortCreateRequest (`fastapi/src/schemas/webfig_l1_net.py`):**
+  ```json
+  {
+    "bridge": "bridge1",
+    "interface": "ether2",
+    "pvid": 100,
+    "hw": true,
+    "frame_types": "admit-all",
+    "ingress_filtering": true
+  }
+  ```
+  - `ingress_filtering`: Booleano (por defecto `false`), convertido a `"yes"` / `"no"` en RouterOS v7 para descarte estricto de tramas no etiquetadas o ajenas a la PVID.
 
 ## **3. Módulo de Direccionamiento IP, ARP, Pools, DHCP, DNS y Servicios (/api/v1/routers/\{router\_id\}/webfig/ip)**
 

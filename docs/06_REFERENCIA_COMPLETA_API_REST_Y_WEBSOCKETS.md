@@ -369,6 +369,62 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
   - Si la regla afecta la cadena `input` crítica: **HTTP 202 Accepted** (Derivada a Maker-Checker).
   - Si el usuario cuenta con `bypass_maker_checker`: **HTTP 200 OK** (Ejecutada con Safe Mode de 60s).
 
+#### `POST /api/v1/routers/{id}/webfig/interfaces/bridge`
+
+- **Roles:** `SUPPORT_L2`, `SUPPORT_L3`, `TENANT_ADMIN`, `SUPERADMIN_GLOBAL`.
+- **Protección:** **Safe Mode obligatorio (60s Dead Man's Switch)**.
+- **Entrada (`BridgeCreateRequest`, extra='forbid'):**
+
+```json
+{
+  "name": "bridge1",
+  "protocol_mode": "rstp",
+  "vlan_filtering": true,
+  "mtu": 1500,
+  "comment": "Bridge LAN con filtrado VLAN y RSTP"
+}
+```
+
+- **Comportamiento:**
+  - Valida el modo Spanning Tree (`protocol_mode`: `rstp`, `stp`, `mstp`, `none`).
+  - Convierte flags booleanos (`vlan_filtering`) al formato nativo `"yes"` / `"no"` de RouterOS v7.
+  - Ejecuta la creación atómica bajo Safe Mode en `/rest/interface/bridge`.
+- **Salida (200 / 201):** Objeto con `.id` retornado por RouterOS (ej. `{"ret": "*1"}`).
+
+#### `PATCH /api/v1/routers/{id}/webfig/interfaces/bridge/{item_id}`
+
+- **Roles:** `SUPPORT_L3`, `TENANT_ADMIN` (o derivación Maker-Checker si es crítico).
+- **Protección:** **Safe Mode obligatorio (60s)**.
+- **Entrada (`BridgeUpdateRequest`, extra='forbid'):**
+
+```json
+{
+  "protocol_mode": "rstp",
+  "vlan_filtering": true,
+  "disabled": false,
+  "comment": "Actualización de protocolo STP"
+}
+```
+
+#### `POST /api/v1/routers/{id}/webfig/interfaces/bridge/ports`
+
+- **Roles:** `SUPPORT_L2`, `SUPPORT_L3`, `TENANT_ADMIN`.
+- **Protección:** **Safe Mode obligatorio (60s)**.
+- **Entrada (`BridgePortCreateRequest`, extra='forbid'):**
+
+```json
+{
+  "bridge": "bridge1",
+  "interface": "ether2",
+  "pvid": 10,
+  "hw": true,
+  "frame_types": "admit-all",
+  "ingress_filtering": true
+}
+```
+
+- **Salida (200 / 201):** Identificador del puerto creado en RouterOS.
+
 #### `GET/POST/PATCH/DELETE /api/v1/routers/{id}/layer2/{resource_path}`
 
 - **Roles:** `can_write_layer2` en matriz de permisos.

@@ -1129,11 +1129,18 @@ Certificación integral ejecutada de extremo a extremo bajo la **Regla Cero** (c
    - **7 de 7 pruebas unitarias aprobadas al 100%** en `fastapi/tests/api/test_webfig_endpoints_full.unit.py`, validando creación de bridges con `protocol_mode="rstp"`, `vlan_filtering=True` y puertos con `ingress_filtering=True`.
    - `ruff check`: 0 errores (*All checks passed!*).
    - `mypy`: 0 errores (*Success: no issues found in 2 source files*).
-2. **Frontend Compilación y Tipos (`node:22-alpine`):**
-   - `vue-tsc --noEmit`: 0 errores de tipado.
-   - `vite build`: Compilación limpia en 5.18s.
+2. **Frontend Vitest v8 y Compilación (`sinfallas/base-node-ionic:26`):**
+   - **19 de 19 pruebas unitarias aprobadas al 100%** en `src/views/webfigViews.unit.ts`, validando la navegación por pestañas de `BridgeView.vue`, el formulario modal con `protocol_mode: 'rstp'`, el modal de puertos con `ingress_filtering: true`, la activación del Safe Mode de 60s y el cierre inmediato de los modales tras la mutación.
+   - `vue-tsc --noEmit`: 0 errores de tipado estricto.
+   - `vite build`: Compilación de producción limpia en 3.94s.
 3. **Validación Visual en Router MikroTik Real (`browser_subagent`):**
    - Ejecución en vivo en `http://localhost:8085/routers/74028f62-04b1-4073-b7e9-781dfd9628e2/webfig/bridge` conectado a `r1` (10.250.3.8).
    - Creación exitosa de los bridges `bridge12` y `bridge13` con Safe Mode (60s), RSTP y VLAN Filtering.
    - Confirmación visual de cierre del modal sin retrasos y listado instantáneo de los recursos creados en la tabla con sus banderas `[D] [R]`, MAC y estado activo.
+4. **Sincronización Arquitectónica y Operativa:**
+   - `specs/12_BACKEND_ENDPOINTS_WEBFIG_L1_INTERFACES_AND_IP.md`: Sección 2.2 incorporada con contratos de `BridgeCreateRequest`, `BridgeUpdateRequest` y `BridgePortCreateRequest`.
+   - `specs/22_FRONTEND_VIEWS_WEBFIG_CONSOLE_RINGBUFFER_AND_LAYERS.md`: Documentada la vista especializada `BridgeView.vue` en la Capa 1.
+   - `docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md`: Manual operativo actualizado con la operativa de Bridges y Safe Mode.
+   - `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`: Sección 2.4 enriquecida con los endpoints formales REST `/webfig/interfaces/bridge` y `/ports`.
+
 

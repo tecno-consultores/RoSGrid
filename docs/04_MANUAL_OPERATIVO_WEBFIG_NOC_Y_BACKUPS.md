@@ -36,6 +36,7 @@ flowchart TD
 5. **`PppAndQueuesView.vue`:** Monitor de sesiones PPPoE activas con opción de reinicio controlado para soporte N1 y gestión de colas simples (*Simple Queues*).
 6. **`LiveToolsDiagnosticsView.vue`:** Consola de ejecución de utilidades de red (`/tool/ping`, `/tool/traceroute`) acotadas para prevenir saturación de CPU.
 7. **`RouterSyslogTerminalView.vue`:** Consola de eventos Syslog en vivo en tiempo real que consume el RingBuffer efímero en KeyDB (UDP/TCP 5514, 500 eventos sin almacenamiento en disco), con badges de severidad (`CRIT 🚨`, `WARN ⚠️`), auto-scroll inteligente y modal con script de enrolamiento CLI.
+8. **`BridgeView.vue`:** Gestor táctico de conmutación de Capa 2 con 4 sub-pestañas operativas (`Bridges`, `Puertos Miembro`, `Tabla VLANs` y `Hosts / FDB MAC`). Incorpora creación atómica de bridges con selección de protocolo Spanning Tree (`RSTP`, `STP`, `MSTP`, `none`), activación de `VLAN Filtering` (Hardware Offload v7) y puertos con `Ingress Filtering`, todo protegido automáticamente con **Safe Mode (60s)** y cierre interactivo instantáneo de modal.
 
 ### 1.2 Capa 2: Renderizador Universal Dinámico (`DynamicLayer2ResourceView.vue`)
 

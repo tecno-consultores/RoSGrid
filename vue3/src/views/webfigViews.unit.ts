@@ -944,7 +944,7 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
       ],
       headers: new Headers(),
     });
-    vi.spyOn(http, 'post').mockResolvedValue({
+    const postSpy = vi.spyOn(http, 'post').mockResolvedValue({
       status: 201,
       data: { status: 'success' },
       headers: new Headers(),
@@ -963,6 +963,25 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
     await tabs[1].trigger('click');
     await flushPromises();
 
+    // Abrir modal de nuevo puerto y enviar con ingress_filtering
+    const btnCreatePort = wrapper.find('.btn-primary');
+    if (btnCreatePort.exists()) {
+      await btnCreatePort.trigger('click');
+      expect(wrapper.find('.modal-card').exists()).toBe(true);
+      const portForm = wrapper.find('form.modal-form');
+      if (portForm.exists()) {
+        await portForm.trigger('submit.prevent');
+        await flushPromises();
+        expect(postSpy).toHaveBeenCalledWith(
+          expect.stringContaining('/webfig/interfaces/bridge/ports'),
+          expect.objectContaining({
+            ingress_filtering: expect.any(Boolean),
+          }),
+        );
+        expect(wrapper.find('.modal-card').exists()).toBe(false);
+      }
+    }
+
     // Cambiar a pestaña vlans
     await tabs[2].trigger('click');
     await flushPromises();
@@ -971,7 +990,7 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
     await tabs[3].trigger('click');
     await flushPromises();
 
-    // Volver a bridges y abrir modal
+    // Volver a bridges y abrir modal de creación
     await tabs[0].trigger('click');
     await flushPromises();
     const btnCreate = wrapper.find('.btn-primary');
@@ -982,6 +1001,15 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
       if (form.exists()) {
         await form.trigger('submit.prevent');
         await flushPromises();
+        expect(postSpy).toHaveBeenCalledWith(
+          expect.stringContaining('/webfig/interfaces/bridge'),
+          expect.objectContaining({
+            name: expect.any(String),
+            protocol_mode: 'rstp',
+          }),
+        );
+        // El modal debe haberse cerrado exitosamente
+        expect(wrapper.find('.modal-card').exists()).toBe(false);
       }
     }
   });
