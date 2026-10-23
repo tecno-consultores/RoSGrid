@@ -7,7 +7,6 @@ import { setActivePinia, createPinia } from 'pinia';
 import DashboardHomeView from './DashboardHomeView.vue';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
-import { useThemeAndLayoutStore } from '@/stores/useThemeAndLayoutStore';
 
 const pushMock = vi.fn();
 vi.mock('vue-router', () => ({
@@ -61,10 +60,7 @@ describe('DashboardHomeView.vue — Centro de Mando Táctico 11X', () => {
     expect(subtitle.text()).not.toContain('Organización:');
   });
 
-  it('el reloj muestra solo una hora y respeta el formato configurado 24h vs 12h', async () => {
-    const themeStore = useThemeAndLayoutStore();
-    themeStore.timeFormat = '24h';
-
+  it('el reloj fue trasladado a la barra superior global y no se renderiza en la pantalla principal', async () => {
     const wrapper = mount(DashboardHomeView, {
       global: {
         stubs: {
@@ -74,21 +70,8 @@ describe('DashboardHomeView.vue — Centro de Mando Táctico 11X', () => {
       },
     });
 
-    const clockCard = wrapper.find('.clock-card');
-    expect(clockCard.exists()).toBe(true);
-    expect(clockCard.find('.clock-time').exists()).toBe(true);
-    // Eliminación de la hora pequeña UTC
-    expect(clockCard.find('.clock-utc').exists()).toBe(false);
-
-    // En formato 24h debe ser HH:MM (sin segundos)
-    const timeText24 = clockCard.find('.clock-time').text();
-    expect(timeText24).toMatch(/^\d{1,2}:\d{2}$/);
-
-    // Cambiar a formato 12h
-    themeStore.timeFormat = '12h';
-    await wrapper.vm.$nextTick();
-    const timeText12 = clockCard.find('.clock-time').text();
-    expect(timeText12).toMatch(/^\d{1,2}:\d{2}(\s?(AM|PM|a\.\sm\.|p\.\sm\.))?$/i);
+    // El reloj ya no se muestra en el hub principal
+    expect(wrapper.find('.clock-card').exists()).toBe(false);
   });
 
   it('permite actualizar datos de la flota con el botón de refresco', async () => {

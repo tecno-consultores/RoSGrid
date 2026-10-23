@@ -541,6 +541,15 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
 
     expect(wrapper.find('.brand-title').text()).toContain('NOC Wallboard');
 
+    // Validación de eliminación de elementos innecesarios
+    expect(wrapper.find('.live-indicator').exists()).toBe(false);
+    expect(wrapper.find('.wallboard-clock').exists()).toBe(false);
+    expect(wrapper.find('.clock-time').exists()).toBe(false);
+    expect(wrapper.find('.clock-sync').exists()).toBe(false);
+    expect(wrapper.find('.events-subtitle').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain('/ws/v1/tenant/events');
+    expect(wrapper.text()).not.toContain('EN VIVO 24/7');
+
     // Seleccionar router desde mapa OsmRouterMap stub
     const osmMap = wrapper.findComponent({ name: 'OsmRouterMap' });
     if (osmMap.exists()) {
@@ -628,6 +637,42 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
     const btnAck = wrapper.find('#btn-ack-mass-outage');
     await btnAck.trigger('click');
     expect(wrapper.find('.mass-outage-banner').exists()).toBe(false);
+  });
+
+  it('NocWallboardView — traduce eventos crudos como LOGIN_FAILED_USER_INACTIVE a descripciones amigables', async () => {
+    vi.spyOn(http, 'get').mockImplementation(async (url: string) => {
+      if (url.includes('/api/v1/inventory/routers')) {
+        return { status: 200, data: { items: [] }, headers: new Headers() };
+      }
+      if (url.includes('/api/v1/audit/logs')) {
+        return {
+          status: 200,
+          data: {
+            items: [
+              {
+                id: 'log-1',
+                event_action: 'LOGIN_FAILED_USER_INACTIVE',
+                actor_username: 'operador_prueba',
+                status_code: 403,
+                created_at: new Date().toISOString(),
+              },
+            ],
+          },
+          headers: new Headers(),
+        };
+      }
+      return { status: 200, data: [], headers: new Headers() };
+    });
+
+    const wrapper = mount(NocWallboardView, {
+      global: {
+        stubs: { OsmRouterMap: true },
+      },
+    });
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Acceso denegado: Usuario inactivo o deshabilitado');
+    expect(wrapper.text()).not.toContain('LOGIN_FAILED_USER_INACTIVE registrada por');
   });
 
   it('ImmutableAuditLogsView — busca registros forenses, verifica cadena WORM y exporta', async () => {

@@ -10,6 +10,16 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Added
 
+- **Optimización y Depuración Visual de Wallboard NOC y Reloj Global del Sistema (`NocWallboardView.vue`, `RgResponsiveShell.vue`, `DashboardHomeView.vue`, `eventFormatter.ts`):**
+  - **Reloj Operativo Global en Barra Superior (`RgResponsiveShell.vue`):** Reubicado el reloj digital táctico (HH:MM sin segundos) a la barra de navegación superior derecha (antes del buscador y perfil de usuario), garantizando su visibilidad persistente en toda la aplicación con reactividad inmediata al formato configurado (24 Horas vs 12h AM/PM).
+  - **Limpieza del Centro de Mando (`DashboardHomeView.vue`):** Eliminada la tarjeta local del reloj (`.clock-card`) en el cuerpo del dashboard para evitar redundancia visual con la barra superior.
+  - **Depuración del Encabezado del Wallboard NOC (`NocWallboardView.vue`):**
+    - Eliminado el óvalo e indicador *"EN VIVO 24/7"* del encabezado del Wallboard para maximizar la superficie útil.
+    - Eliminado el reloj local de la pantalla del Wallboard (`.clock-time`).
+    - Eliminado el texto redundante de sincronización/inicio *"since / Sinc: "* (`.clock-sync`).
+    - Eliminada la exposición de la URL interna del WebSocket (`/ws/v1/tenant/events`) en el panel de eventos críticos.
+  - **Mapeo y Formateo Descriptivo de Eventos (`eventFormatter.ts`):** Transformación automática de códigos internos inmutables de auditoría (ej. `LOGIN_FAILED_USER_INACTIVE`, `MASS_OUTAGE_TRIGGERED`, `ROUTER_DOWN`) a descripciones claras y amigables para el operador en español (*"Acceso denegado: Usuario inactivo o deshabilitado"*, *"Alerta de caída masiva activada"*, *"Router fuera de línea"*), preservando la inmutabilidad de la base de datos y mejorando drásticamente la legibilidad en el ticker del Wallboard.
+
 - **Perfeccionamiento Visual y Funcional de Inventario y Consola WebFig (`RouterInventoryView.vue`, `ManageNetworkRolesModal.vue`, `CsvOnboardingWizardModal.vue`, `RouterSidebarMenu.vue` y `RouterContextHeader.vue`):**
   - **Eliminación de Texto Redundante en Título:** Eliminado el sufijo superfluo *" — Flota MikroTik"* del título principal en `RouterInventoryView.vue` y del diccionario i18n (`es.json`: *"Inventario de Equipos"* / `en.json`: *"Equipment Inventory"*), así como en el metadato del router (`router/index.ts`).
   - **Alineación Milimétrica en Modal de Roles de Red (`ManageNetworkRolesModal.vue`):** Corregido el desfase vertical de los campos en el formulario de creación de roles mediante un layout estandarizado con inputs y botón a 38px de altura, etiquetas uniformes (16px), espaciador invisible en la columna de acción y reubicación del texto explicativo (`.help-text`) debajo de la fila horizontal.

@@ -1040,11 +1040,11 @@ Certificación integral ejecutada de extremo a extremo bajo la **Regla Cero** (c
 
 ### B. Certificación en Contenedores Docker Efímeros
 1. **Frontend Vitest v8 (`sinfallas/base-node-ionic:26`):**
-   - **46 de 46 suites aprobadas (100%)** con **333 de 333 pruebas unitarias exitosas**.
-   - Nueva suite: `manageNetworkRolesModal.unit.ts` (10 pruebas unitarias cubriendo renderizado, layout, validaciones y CRUD).
-   - Suites ampliadas: `RgResponsiveShell.unit.ts` (traducción reactiva del menú y enlaces L2/CVE), `DashboardHomeView.unit.ts` (verificación de formato HH:MM sin segundos en 24h y 12h), `csvOnboardingWizardModal.unit.ts`, `webfigViews.unit.ts` y `router.unit.ts`.
+   - **47 de 47 suites aprobadas (100%)** con **340 de 340 pruebas unitarias exitosas**.
+   - Nueva suite: `eventFormatter.unit.ts` (5 pruebas unitarias cubriendo transformación de códigos de auditoría WORM a texto descriptivo en español, soporte 2FA, caídas masivas y fallback amigable).
+   - Suites ampliadas: `RgResponsiveShell.unit.ts` (reloj global en barra superior con reactividad a 24h y 12h), `DashboardHomeView.unit.ts` (ausencia de tarjeta de reloj local), y `operationsViews.unit.ts` (depuración de encabezado Wallboard, eliminación de textos redundantes y traducción de eventos crudos como `LOGIN_FAILED_USER_INACTIVE`).
 2. **Chequeo Estricto de Tipos TypeScript:**
-   - `vue-tsc --noEmit`: 0 errores en 100% de componentes, stores y vistas.
+   - `vue-tsc --noEmit`: 0 errores en 100% de componentes, stores, utilidades y vistas.
 3. **Backend Pytest (`sinfallas/base-python-uv:3.15`):**
    - **17 de 17 pruebas aprobadas (100%)** en `fastapi/tests/api/test_inventory_csv_and_vault.unit.py`, incluyendo `test_download_inventory_csv_template_endpoint`.
 4. **Contratos Front-Back y Paridad ORM:**
@@ -1053,7 +1053,13 @@ Certificación integral ejecutada de extremo a extremo bajo la **Regla Cero** (c
 5. **Auditoría de Secretos:**
    - `./verificar-secretos.sh`: 0 secretos detectados en el árbol de trabajo.
 6. **Validación Visual en Navegador Real:**
-   - Verificado con `browser_subagent` en `http://localhost:8085/inventory`, validando cabecera limpia, modal de roles con alineación perfecta, modal de importación CSV con descarga sin corrupción y consola WebFig con alternancia fluida inglés/español.
+   - Verificado con `browser_subagent` en `http://localhost:8085/noc-wallboard` y `http://localhost:8085/`:
+     - Encabezado de Wallboard limpio sin óvalo ni texto *"EN VIVO 24/7"*.
+     - Reloj local y texto *"Sinc: / since"* eliminados del Wallboard.
+     - Subtítulo técnico */ws/v1/tenant/events* eliminado del panel de eventos.
+     - Eventos de auditoría con nombres y mensajes descriptivos en español (*"Inicio de sesión exitoso (por sinfallas)"*, *"Sesión finalizada por ingreso concurrente (por sinfallas)"*).
+     - Reloj global persistente en la barra superior en formato HH:MM reactivo a 24h y 12h.
+     - Centro de Mando libre de tarjetas redundantes de reloj.
 
 
 

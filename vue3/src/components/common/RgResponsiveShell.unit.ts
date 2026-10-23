@@ -186,6 +186,37 @@ describe('RgResponsiveShell.vue — Doble Contexto & Menú de Usuario 11X', () =
     expect(themeStore.timeFormat).toBe('24h');
   });
 
+  it('el reloj global en la barra superior siempre está visible y respeta el formato 24h vs 12h', async () => {
+    const themeStore = useThemeAndLayoutStore();
+    themeStore.timeFormat = '24h';
+
+    const wrapper = mount(RgResponsiveShell, {
+      global: {
+        stubs: {
+          RouterView: true,
+          RgCommandPalette: true,
+          RgSafeModeBanner: true,
+          ChangePasswordModal: true,
+          RgStepUp2FAModal: true,
+          RgMcpTokenModal: true,
+        },
+      },
+    });
+
+    const clock = wrapper.find('.header-clock');
+    expect(clock.exists()).toBe(true);
+    const clockTime = clock.find('.clock-time');
+    expect(clockTime.exists()).toBe(true);
+
+    // Formato 24h: HH:MM sin segundos
+    expect(clockTime.text()).toMatch(/^\d{1,2}:\d{2}$/);
+
+    // Alternar a 12h
+    themeStore.timeFormat = '12h';
+    await wrapper.vm.$nextTick();
+    expect(clockTime.text()).toMatch(/^\d{1,2}:\d{2}(\s?(AM|PM|a\.\sm\.|p\.\sm\.))?$/i);
+  });
+
   it('permite alternar tema visual desde el menú de usuario', async () => {
     const themeStore = useThemeAndLayoutStore();
 

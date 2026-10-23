@@ -9,6 +9,7 @@
   import { http } from '@/api/httpClient';
   import { useNocEventsStore } from '@/stores/useNocEventsStore';
   import { useI18n } from '@/composables/useI18n';
+  import { formatEventAction, formatEventMessage } from '@/utils/eventFormatter';
 
   const router = useRouter();
   const nocEventsStore = useNocEventsStore();
@@ -131,10 +132,6 @@
 
   let eventSimulationTimer: ReturnType<typeof setInterval> | null = null;
   let autoRefreshTimer: ReturnType<typeof setInterval> | null = null;
-  let clockTimer: ReturnType<typeof setInterval> | null = null;
-
-  const currentClock = ref(new Date().toLocaleTimeString());
-  const lastSyncTime = ref(new Date().toLocaleTimeString());
   const isRefreshing = ref(false);
 
   async function performAutoRefresh() {
@@ -142,7 +139,6 @@
     isRefreshing.value = true;
     try {
       await Promise.allSettled([loadRouters(), loadEvents()]);
-      lastSyncTime.value = new Date().toLocaleTimeString();
     } finally {
       isRefreshing.value = false;
     }
@@ -153,6 +149,7 @@
     (events) => {
       if (events && events.length > 0) {
         const latest = events[0];
+        const actionDesc = formatEventAction(latest.eventName);
         const newEvt: NocEvent = {
           id: latest.id,
           timestamp: new Date(latest.timestampIso).toLocaleTimeString(),
@@ -163,7 +160,7 @@
                 ? 'ROUTER_UP'
                 : 'MAINTENANCE',
           router_identity: latest.routerDisplayName || 'Sistema',
-          message: latest.message,
+          message: latest.message ? formatEventMessage(latest.message, latest.routerDisplayName) : actionDesc,
           severity: (latest.severity.toLowerCase() as any) || 'info',
         };
         liveEvents.value = [newEvt, ...liveEvents.value.slice(0, 19)];
@@ -246,7 +243,7 @@
               ? 'ROUTER_UP'
               : 'MAINTENANCE',
         router_identity: log.router_display_name || log.actor_username || 'Sistema',
-        message: `${log.event_action || 'Operación'} registrada por ${log.actor_username || 'usuario'}`,
+        message: formatEventMessage(log.event_action, log.actor_username),
         severity:
           log.event_action === 'MASS_OUTAGE_TRIGGERED' ||
           log.event_action === 'MASS_OUTAGE_DETECTED'
@@ -282,17 +279,28 @@
     selectedRouterId.value = id;
   }
 
+  function getBadgeLabel(type: string): string {
+    switch (type) {
+      case 'ROUTER_DOWN':
+        return 'CAÍDA';
+      case 'ROUTER_UP':
+        return 'OPERATIVO';
+      case 'HIGH_CPU':
+        return 'CARGA ALTA';
+      case 'SSL_MISMATCH':
+        return 'ALERTA SSL';
+      case 'MAINTENANCE':
+        return 'MANTENIMIENTO';
+      default:
+        return formatEventAction(type);
+    }
+  }
+
   onMounted(() => {
     loadRouters();
     loadEvents();
-    lastSyncTime.value = new Date().toLocaleTimeString();
 
-    // Actualización de reloj táctico cada segundo
-    clockTimer = setInterval(() => {
-      currentClock.value = new Date().toLocaleTimeString();
-    }, 1000);
-
-    // Auto-refresco autónomo 24/7 cada 15 segundos sin intervención de usuario
+    // Auto-refresco autónomo cada 15 segundos sin intervención de usuario
     autoRefreshTimer = setInterval(() => {
       performAutoRefresh();
     }, 15000);
@@ -305,9 +313,6 @@
 
   onUnmounted(() => {
     document.removeEventListener('fullscreenchange', handleFullscreenChange);
-    if (clockTimer) {
-      clearInterval(clockTimer);
-    }
     if (autoRefreshTimer) {
       clearInterval(autoRefreshTimer);
     }
@@ -329,13 +334,6 @@
     <header class="wallboard-header">
       <div class="wallboard-brand">
         <h1 class="brand-title">{{ t('wallboard.title') }}</h1>
-        <span class="live-indicator"> <span class="pulse-dot"></span> {{ t('wallboard.live_indicator') }} </span>
-        <div class="wallboard-clock font-mono" aria-label="Reloj táctico y última sincronización">
-          <span class="clock-time">🕒 {{ currentClock }}</span>
-          <span class="clock-sync" :class="{ 'clock-sync--active': isRefreshing }">
-            {{ isRefreshing ? t('wallboard.syncing') : t('wallboard.sync', { time: lastSyncTime }) }}
-          </span>
-        </div>
       </div>
 
       <div class="kpi-strip" role="group" aria-label="Indicadores clave de rendimiento">
@@ -484,7 +482,6 @@
       <section class="wallboard-events-panel" aria-labelledby="events-panel-title">
         <div class="events-header">
           <h2 id="events-panel-title" class="events-title">Cinta de Eventos Críticos</h2>
-          <span class="events-subtitle">/ws/v1/tenant/events</span>
         </div>
 
         <div v-if="liveEvents.length === 0" class="events-empty-state">
@@ -499,7 +496,7 @@
           >
             <div class="event-meta">
               <span class="event-time font-mono">{{ evt.timestamp }}</span>
-              <span class="event-type-badge font-mono">{{ evt.type }}</span>
+              <span class="event-type-badge font-mono">{{ getBadgeLabel(evt.type) }}</span>
             </div>
             <div class="event-body">
               <strong class="event-router">{{ evt.router_identity }}</strong>
@@ -662,66 +659,6 @@
     letter-spacing: -0.025em;
     color: #38bdf8;
     margin: 0;
-  }
-
-  .live-indicator {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: #4ade80;
-    background: rgba(34, 197, 94, 0.15);
-    padding: 0.2rem 0.5rem;
-    border-radius: 9999px;
-  }
-
-  .pulse-dot {
-    width: 8px;
-    height: 8px;
-    background-color: #22c55e;
-    border-radius: 50%;
-    box-shadow: 0 0 8px #22c55e;
-    animation: pulse 1.5s infinite;
-  }
-
-  @keyframes pulse {
-    0%,
-    100% {
-      opacity: 1;
-      transform: scale(1);
-    }
-    50% {
-      opacity: 0.4;
-      transform: scale(1.2);
-    }
-  }
-
-  .wallboard-clock {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(15, 23, 42, 0.8);
-    border: 1px solid rgba(56, 189, 248, 0.3);
-    border-radius: 6px;
-    padding: 3px 8px;
-    font-size: 0.78rem;
-  }
-
-  .clock-time {
-    color: var(--rg-accent-cyan, #22d3ee);
-    font-weight: 700;
-    letter-spacing: 0.05em;
-  }
-
-  .clock-sync {
-    color: var(--rg-text-muted, #94a3b8);
-    font-size: 0.72rem;
-  }
-
-  .clock-sync--active {
-    color: #34d399;
-    animation: pulse 1s infinite;
   }
 
   .kpi-strip {
@@ -989,12 +926,6 @@
     font-weight: 700;
     color: #e5e7eb;
     margin: 0;
-  }
-
-  .events-subtitle {
-    font-family: monospace;
-    font-size: 0.75rem;
-    color: #6b7280;
   }
 
   .events-list {

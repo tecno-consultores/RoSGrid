@@ -2,12 +2,11 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
+  import { ref, computed, onMounted } from 'vue';
   import { useRouter } from 'vue-router';
   import { useInventoryStore } from '@/stores/useInventoryStore';
   import { useAuthStore } from '@/stores/useAuthStore';
   import { useNocEventsStore } from '@/stores/useNocEventsStore';
-  import { useThemeAndLayoutStore } from '@/stores/useThemeAndLayoutStore';
   import { useI18n } from '@/composables/useI18n';
   import type { SystemRole } from '@/types';
 
@@ -15,45 +14,15 @@
   const inventoryStore = useInventoryStore();
   const authStore = useAuthStore();
   const nocStore = useNocEventsStore();
-  const themeStore = useThemeAndLayoutStore();
-  const { t, locale } = useI18n();
-
-  // Reloj táctico en tiempo real (solo HH:MM)
-  const currentTime = ref('');
-  let clockTimer: ReturnType<typeof setInterval> | null = null;
-
-  function updateClock() {
-    const now = new Date();
-    currentTime.value = now.toLocaleTimeString(locale.value === 'en' ? 'en-US' : 'es-ES', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: themeStore.timeFormat === '12h',
-    });
-  }
-
-  // Inicialización inmediata y reactiva
-  updateClock();
-
-  watch(
-    () => [themeStore.timeFormat, locale.value],
-    () => {
-      updateClock();
-    },
-  );
+  const { t } = useI18n();
 
   onMounted(() => {
-    updateClock();
-    clockTimer = setInterval(updateClock, 1000);
     if (inventoryStore.routers.length === 0) {
       inventoryStore.fetchRouters();
     }
     inventoryStore.fetchNetworkRoles();
     nocStore.connectEventsWebSocket();
     nocStore.fetchRecentAuditLogs();
-  });
-
-  onBeforeUnmount(() => {
-    if (clockTimer) clearInterval(clockTimer);
   });
 
   // Métricas calculadas
@@ -210,10 +179,6 @@
       </div>
 
       <div class="hub-status-bar">
-        <div class="clock-card" aria-label="Hora actual de operaciones">
-          <div class="clock-time">{{ currentTime }}</div>
-        </div>
-
         <button
           type="button"
           class="btn btn-primary"
@@ -540,24 +505,6 @@
     display: flex;
     align-items: center;
     gap: 14px;
-  }
-
-  .clock-card {
-    background: var(--rg-bg-surface, #111827);
-    border: 1px solid var(--rg-border-panel, #334155);
-    border-radius: 6px;
-    padding: 8px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: var(--rg-font-mono, monospace);
-  }
-
-  .clock-time {
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: var(--rg-accent-cyan, #22d3ee);
-    line-height: 1;
   }
 
   .status-dot {

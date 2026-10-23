@@ -2,7 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+  import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
   import { useAuthStore } from '@/stores/useAuthStore';
   import { useNocEventsStore } from '@/stores/useNocEventsStore';
@@ -28,6 +28,28 @@
   // Estado del Menú Desplegable de Usuario
   const isUserMenuOpen = ref(false);
   const userMenuRef = ref<HTMLElement | null>(null);
+
+  // Reloj Global del Sistema en Barra Superior (HH:MM sin segundos, reactivo a 24h/12h)
+  const currentHeaderTime = ref('');
+  let headerClockTimer: ReturnType<typeof setInterval> | null = null;
+
+  function updateHeaderClock(): void {
+    const now = new Date();
+    currentHeaderTime.value = now.toLocaleTimeString(locale.value === 'en' ? 'en-US' : 'es-ES', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: themeStore.timeFormat === '12h',
+    });
+  }
+
+  updateHeaderClock();
+
+  watch(
+    () => [themeStore.timeFormat, locale.value],
+    () => {
+      updateHeaderClock();
+    },
+  );
 
   // Modales de Gestión de Cuenta y Seguridad
   const isChangePasswordModalOpen = ref(false);
@@ -81,6 +103,7 @@
   }
 
   onMounted(() => {
+    headerClockTimer = setInterval(updateHeaderClock, 1000);
     if (typeof document !== 'undefined') {
       document.addEventListener('click', onDocumentClick);
       document.addEventListener('keydown', onKeydown);
@@ -88,6 +111,9 @@
   });
 
   onBeforeUnmount(() => {
+    if (headerClockTimer) {
+      clearInterval(headerClockTimer);
+    }
     if (typeof document !== 'undefined') {
       document.removeEventListener('click', onDocumentClick);
       document.removeEventListener('keydown', onKeydown);
@@ -260,6 +286,12 @@
       </div>
 
       <div class="header-right">
+        <!-- Reloj Global del Sistema (HH:MM según 24h / 12h) -->
+        <div class="header-clock font-mono" aria-label="Hora actual del sistema">
+          <span class="clock-icon" aria-hidden="true">🕒</span>
+          <span class="clock-time">{{ currentHeaderTime }}</span>
+        </div>
+
         <!-- Botón Buscador Global Ctrl+K -->
         <button
           type="button"
@@ -613,6 +645,28 @@
     display: flex;
     align-items: center;
     gap: 12px;
+  }
+
+  .header-clock {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--rg-bg-canvas, rgba(15, 23, 42, 0.6));
+    border: 1px solid var(--rg-border-panel, rgba(56, 189, 248, 0.25));
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 0.85rem;
+    color: var(--rg-accent-cyan, #22d3ee);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+
+  .header-clock .clock-icon {
+    font-size: 0.85rem;
+  }
+
+  .header-clock .clock-time {
+    line-height: 1;
   }
 
   .btn-hamburger {
