@@ -148,6 +148,7 @@ class SyslogUdpProtocol(asyncio.DatagramProtocol):
 async def load_ip_router_map() -> dict[str, tuple[uuid.UUID, uuid.UUID]]:
     """Consulta la base de datos para mapear IPs de routers activos a (tenant_id, router_id)."""
     from sqlalchemy import select
+
     from src.db.session import async_session_maker
     from src.models.inventory import Router, RouterAdminStateEnum
 

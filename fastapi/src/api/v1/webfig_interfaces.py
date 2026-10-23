@@ -344,7 +344,12 @@ async def create_bridge(
 ) -> Any:
     """Crea un nuevo Bridge bajo Safe Mode."""
     _, client = await get_router_and_client(router_id, claims, db)
-    body: dict[str, Any] = {"name": payload.name, "vlan-filtering": payload.vlan_filtering}
+    body: dict[str, Any] = {
+        "name": payload.name,
+        "vlan-filtering": "yes" if payload.vlan_filtering else "no",
+    }
+    if payload.protocol_mode:
+        body["protocol-mode"] = payload.protocol_mode
     if payload.mtu:
         body["mtu"] = payload.mtu
     if payload.comment:
@@ -382,9 +387,11 @@ async def update_bridge(
     if payload.mtu:
         patch_data["mtu"] = payload.mtu
     if payload.vlan_filtering is not None:
-        patch_data["vlan-filtering"] = payload.vlan_filtering
+        patch_data["vlan-filtering"] = "yes" if payload.vlan_filtering else "no"
+    if payload.protocol_mode is not None:
+        patch_data["protocol-mode"] = payload.protocol_mode
     if payload.disabled is not None:
-        patch_data["disabled"] = payload.disabled
+        patch_data["disabled"] = "yes" if payload.disabled else "no"
     if payload.comment is not None:
         patch_data["comment"] = payload.comment
 
@@ -440,6 +447,8 @@ async def create_bridge_port(
     }
     if payload.frame_types:
         body["frame-types"] = payload.frame_types
+    if payload.ingress_filtering is not None:
+        body["ingress-filtering"] = "yes" if payload.ingress_filtering else "no"
     async with client:
         return await execute_safe_mutation(
             client=client,

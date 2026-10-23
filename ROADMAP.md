@@ -444,7 +444,11 @@
   - Ejecución diferida automática al aprobar (`approve_request`): si la solicitud es `BULK_MULTI_ROUTER_EXECUTION`, ejecuta la plantilla Golden Config sobre los routers, actualiza `BulkJob` y `BulkJobItem`, e inyecta el `execution_result` estructurado.
   - Manejo de endpoints singulares en RouterOS v7: fallback automático de `PATCH` a `POST <endpoint>/set` para recursos de configuración única (ej. `/system/ntp/client`, `/ip/dns`).
   - Panel visual de resultados en frontend (`ApprovalsInboxView.vue`): despliegue del resumen de ejecución en tiempo real en la pestaña de solicitudes "Aprobadas y Ejecutadas".
-  - Certificación 11X en Docker efímero: 340 pruebas Vitest aprobadas (100% en 47 suites), 20 pruebas Pytest de operaciones y backups aprobadas (100%), 0 errores en `vue-tsc --noEmit`, 0 errores `ruff` y `mypy`, y verificación en vivo en routers MikroTik.
+- [x] **23.11** **Robustecimiento y Paridad de la Consola WebFig L1 Bridge & Safe Mode (`webfig_interfaces.py`, `webfig_l1_net.py`, `BridgeView.vue`):**
+  - Soporte de configuración de Spanning Tree Protocol (`protocol_mode`) y validación de puertos (`ingress_filtering`) en esquemas Pydantic v2 estrictos (`BridgeCreateRequest`, `BridgeUpdateRequest`, `BridgePortCreateRequest`).
+  - Mapeo nativo de parámetros de puente a la API REST de RouterOS v7 (`protocol-mode`, `vlan-filtering: "yes"/"no"`).
+  - Cierre instantáneo del modal de creación en la consola WebFig y activación transparente del Dead Man's Switch (Safe Mode de 60 segundos).
+  - Certificación 11X en Docker: 7/7 pruebas unitarias de endpoints WebFig aprobadas al 100%, 0 errores de tipado `mypy`, 0 errores `ruff` y verificación de creación en vivo en equipos CHR MikroTik.
 
 ---
 

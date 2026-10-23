@@ -81,6 +81,7 @@ class BridgeCreateRequest(StrictBaseModel):
     name: str = Field(..., min_length=1, max_length=64)
     mtu: int | None = Field(default=None, ge=68, le=65535)
     vlan_filtering: bool = False
+    protocol_mode: str | None = Field(default=None, max_length=16)
     comment: str | None = None
 
 
@@ -88,6 +89,7 @@ class BridgeUpdateRequest(StrictBaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=64)
     mtu: int | None = Field(default=None, ge=68, le=65535)
     vlan_filtering: bool | None = None
+    protocol_mode: str | None = Field(default=None, max_length=16)
     disabled: bool | None = None
     comment: str | None = None
 
@@ -98,6 +100,7 @@ class BridgePortCreateRequest(StrictBaseModel):
     pvid: int = Field(default=1, ge=1, le=4094)
     hw: bool = True
     frame_types: str | None = None
+    ingress_filtering: bool = False
 
 
 class WireGuardCreateRequest(StrictBaseModel):

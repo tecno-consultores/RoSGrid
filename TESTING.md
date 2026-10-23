@@ -1100,3 +1100,40 @@ Certificación integral ejecutada de extremo a extremo bajo la **Regla Cero** (c
 3. **Verificación en Flota MikroTik Real:**
    - Comprobada ejecución en vivo sobre los routers `r1` (10.250.3.8), `r2` (10.250.3.13) y `r3` (10.250.3.14).
    - `GET /system/ntp/client` en `r1` confirmó `enabled: 'true'` y los servidores `0.pool.ntp.org` a `3.pool.ntp.org` correctamente registrados y resueltos.
+
+---
+
+## 31. Robustecimiento y Paridad de la Consola WebFig L1 Bridge & Safe Mode (Hito 23.11)
+
+### A. Diagnóstico y Causa Raíz
+- **Problema Reportado:** Al hacer clic en *"Crear con Safe Mode"* en el modal de creación de Bridge en la consola WebFig (`/routers/{id}/webfig/bridge`), el modal permanecía congelado en pantalla, no desaparecía y los cambios no se aplicaban en el router MikroTik, presentando el mensaje: *"Los datos proporcionados no cumplen con los requisitos de validación."*
+- **Causa Raíz:**
+  1. En `vue3/src/views/BridgeView.vue`, el formulario enviaba el objeto `newBridge` con los atributos `{ name, protocol_mode, vlan_filtering, comment }`.
+  2. En `fastapi/src/schemas/webfig_l1_net.py`, `BridgeCreateRequest` y `BridgeUpdateRequest` heredan de `StrictBaseModel` con directiva `extra='forbid'`, pero no tenían declarado el campo `protocol_mode` (ni `ingress_filtering` en `BridgePortCreateRequest`).
+  3. Al recibir `protocol_mode: "rstp"`, FastAPI arrojaba error de validación `HTTP 422 Unprocessable Entity` (*"Extra inputs are not permitted: protocol_mode"*). Al rechazar la promesa, el bloque `catch` del frontend interrumpía el flujo sin cerrar el modal (`isCreateBridgeModalOpen.value = false`) ni aplicar la mutación segura en RouterOS v7.
+
+### B. Solución Técnica Implementada
+1. **Ampliación de Esquemas Pydantic v2 (`fastapi/src/schemas/webfig_l1_net.py`):**
+   - Declarado `protocol_mode: str | None = Field(default=None, max_length=16)` en `BridgeCreateRequest` y `BridgeUpdateRequest`.
+   - Declarado `ingress_filtering: bool = False` en `BridgePortCreateRequest`.
+2. **Mapeo REST en RouterOS v7 (`fastapi/src/api/v1/webfig_interfaces.py`):**
+   - Inyección de `protocol-mode` hacia `/rest/interface/bridge`.
+   - Conversión adecuada de booleanos (`vlan_filtering`, `disabled`, `ingress_filtering`) al formato nativo `"yes"` / `"no"` de RouterOS v7.
+3. **Flujo de Mutación Segura y Frontend:**
+   - Cierre instantáneo del modal tras disparar la mutación.
+   - Activación automática del banner de Safe Mode (*Dead Man's Switch* de 60 segundos) en la parte superior.
+   - Incorporación instantánea del nuevo Bridge en la tabla de interfaces Capa 2.
+
+### C. Certificación en Contenedores Docker Efímeros
+1. **Backend Pytest (`sinfallas/base-python-uv:3.15`):**
+   - **7 de 7 pruebas unitarias aprobadas al 100%** en `fastapi/tests/api/test_webfig_endpoints_full.unit.py`, validando creación de bridges con `protocol_mode="rstp"`, `vlan_filtering=True` y puertos con `ingress_filtering=True`.
+   - `ruff check`: 0 errores (*All checks passed!*).
+   - `mypy`: 0 errores (*Success: no issues found in 2 source files*).
+2. **Frontend Compilación y Tipos (`node:22-alpine`):**
+   - `vue-tsc --noEmit`: 0 errores de tipado.
+   - `vite build`: Compilación limpia en 5.18s.
+3. **Validación Visual en Router MikroTik Real (`browser_subagent`):**
+   - Ejecución en vivo en `http://localhost:8085/routers/74028f62-04b1-4073-b7e9-781dfd9628e2/webfig/bridge` conectado a `r1` (10.250.3.8).
+   - Creación exitosa de los bridges `bridge12` y `bridge13` con Safe Mode (60s), RSTP y VLAN Filtering.
+   - Confirmación visual de cierre del modal sin retrasos y listado instantáneo de los recursos creados en la tabla con sus banderas `[D] [R]`, MAC y estado activo.
+

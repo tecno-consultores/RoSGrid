@@ -10,6 +10,11 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Added
 
+- **Soporte de Parámetros STP y Validación de Puertos en Consola WebFig L1 Bridge (`webfig_interfaces.py`, `webfig_l1_net.py`, `BridgeView.vue`):**
+  - **Ampliación de Esquemas Pydantic v2 (`BridgeCreateRequest`, `BridgeUpdateRequest`, `BridgePortCreateRequest`):** Incorporado el atributo `protocol_mode: str | None = Field(default=None, max_length=16)` para configuración de Spanning Tree Protocol (RSTP, STP, MSTP, none) y `ingress_filtering: bool = False` para puertos bridge, resolviendo la incompatibilidad con esquemas estrictos (`extra='forbid'`) que generaban un error de validación HTTP 422 (*"Extra inputs are not permitted: protocol_mode"*).
+  - **Mapeo Nativo a RouterOS v7 REST API:** Adaptación del payload en `create_bridge` y `update_bridge` para transformar `protocol_mode` a `protocol-mode` y convertir flags booleanos (`vlan_filtering`, `disabled`, `ingress_filtering`) al formato nativo `"yes"`/`"no"` requerido por RouterOS v7.
+  - **Cierre Instantáneo de Modal y Creación Fluida:** Solventado el bloqueo en el frontend (`BridgeView.vue`) donde el error 422 impedía que la promesa cerrara el modal `Crear Nuevo Bridge MikroTik`. El modal ahora se oculta de inmediato al pulsar *"Crear con Safe Mode"*, activando la cuenta regresiva del Dead Man's Switch (60s) e incorporando el nuevo Bridge en la tabla de Capa 2 en tiempo real.
+
 - **Motor de Ejecución en Flota para Aprobaciones Masivas Maker-Checker (`approvals.py`, `bulk_and_updates.py`, `ApprovalsInboxView.vue`):**
   - **Despacho Automático en Routers MikroTik:** Implementado el despachador `execute_bulk_job_on_fleet` que conecta dinámicamente con cada router de la flota objetivo vía `MikrotikRestClient` empleando las credenciales de la bóveda AES-256-GCM.
   - **Resolución y Renderizado de Plantillas Golden Config:** Sustitución automática de variables y ejecución secuencial de pasos REST con tolerancia nativa a menús singulares de RouterOS v7 (fallback automático a `POST <endpoint>/set` cuando RouterOS rechaza `PATCH` en recursos sin identificador, ej. `/system/ntp/client`).

@@ -139,18 +139,28 @@ async def test_webfig_interfaces_endpoints(fake_client_and_router: tuple[Router,
         assert await api_wf_interfaces.delete_vlan(r.id, "*1", claims=claims, db=db) == {"ret": "*1"}
 
         assert await api_wf_interfaces.list_bridges(r.id, refresh=False, claims=claims, db=db) == [{"name": "ether1"}]
-        assert await api_wf_interfaces.create_bridge(r.id, BridgeCreateRequest(name="br0"), claims=claims, db=db) == {
-            "ret": "*1"
-        }
+        assert await api_wf_interfaces.create_bridge(
+            r.id,
+            BridgeCreateRequest(name="br0", vlan_filtering=True, protocol_mode="rstp", comment="prueba"),
+            claims=claims,
+            db=db,
+        ) == {"ret": "*1"}
         assert await api_wf_interfaces.update_bridge(
-            r.id, "*1", BridgeUpdateRequest(comment="br0"), claims=claims, db=db
+            r.id,
+            "*1",
+            BridgeUpdateRequest(comment="br0", protocol_mode="rstp", vlan_filtering=True),
+            claims=claims,
+            db=db,
         ) == {"ret": "*1"}
 
         assert await api_wf_interfaces.list_bridge_ports(r.id, refresh=False, claims=claims, db=db) == [
             {"name": "ether1"}
         ]
         assert await api_wf_interfaces.create_bridge_port(
-            r.id, BridgePortCreateRequest(bridge="br0", interface="ether1"), claims=claims, db=db
+            r.id,
+            BridgePortCreateRequest(bridge="br0", interface="ether1", ingress_filtering=True),
+            claims=claims,
+            db=db,
         ) == {"ret": "*1"}
         assert await api_wf_interfaces.list_bridge_vlans(r.id, refresh=False, claims=claims, db=db) == [
             {"name": "ether1"}
