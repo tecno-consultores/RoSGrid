@@ -40,11 +40,21 @@
     isLoading.value = true;
     errorMessage.value = '';
     try {
-      const res = await http.get<{ items: ApprovalRequestItem[] } | ApprovalRequestItem[]>(
+      const res = await http.get<{ items: any[] } | any[]>(
         '/api/v1/operations/approvals',
       );
       const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
-      requests.value = raw;
+      requests.value = raw.map((item: any) => ({
+        ...item,
+        id: String(item.id),
+        requested_by: String(item.requested_by || ''),
+        requested_by_username: item.requested_by_username || 'operador_solicitante',
+        requested_by_role: item.requested_by_role || 'SUPPORT_L2',
+        router_id: item.router_id ? String(item.router_id) : 'N/A',
+        router_name: item.router_name || item.summary || 'Router MikroTik',
+        justification: item.justification || item.requester_justification || item.summary || 'Operación técnica',
+        status: item.status === 'PENDING' ? 'AWAITING_APPROVAL' : (item.status?.startsWith('APPROVED') ? 'APPROVED' : item.status),
+      }));
     } catch {
       // Sin datos de demostración en producción
       requests.value = [];
@@ -64,7 +74,7 @@
     if (isSelfApproval(request)) return;
     try {
       await http.post(`/api/v1/operations/approvals/${request.id}/approve`, {
-        comment: reviewComment.value || 'Aprobado con Safe Mode (60s)',
+        review_comment: reviewComment.value || 'Aprobado con Safe Mode (60s)',
       });
       request.status = 'APPROVED';
       actionMessage.value = `Solicitud ${request.id} aprobada y ejecutada en ${request.router_name}.`;
@@ -84,7 +94,7 @@
   async function handleReject(request: ApprovalRequestItem) {
     try {
       await http.post(`/api/v1/operations/approvals/${request.id}/reject`, {
-        comment: reviewComment.value || 'Rechazado por incumplimiento de política de seguridad',
+        review_comment: reviewComment.value || 'Rechazado por incumplimiento de política de seguridad',
       });
       request.status = 'REJECTED';
       actionMessage.value = `Solicitud ${request.id} rechazada.`;

@@ -21,7 +21,13 @@ from src.core.audit import write_audit_log
 from src.db.session import get_tenant_db_session
 from src.mikrotik.client import MikrotikRestClient
 from src.models.core import SystemRoleEnum
-from src.models.operations import ApprovalRequest, ApprovalStatusEnum
+from src.models.operations import (
+    ApprovalRequest,
+    ApprovalStatusEnum,
+    BulkJob,
+    BulkJobStatusEnum,
+    CriticalActionTypeEnum,
+)
 from src.schemas.approvals import (
     ApprovalListResponse,
     ApprovalRequestResponse,
@@ -251,6 +257,12 @@ async def approve_request(
 
     event_action, stat_code = await _execute_approval_lifecycle(client, approval, now_utc)
 
+    if approval.action_type == CriticalActionTypeEnum.BULK_MULTI_ROUTER_EXECUTION:
+        stmt_job = select(BulkJob).where(BulkJob.approval_request_id == approval.id)
+        job_obj = (await db.execute(stmt_job)).scalar_one_or_none()
+        if job_obj:
+            job_obj.status = BulkJobStatusEnum.QUEUED
+
     await _log_approval_audit(
         db, tenant_id, claims, request, checker_user_id, approval, router_name, event_action, stat_code
     )
@@ -320,6 +332,12 @@ async def reject_request(
         router_id=approval.router_id,
         status_code=200,
     )
+    if approval.action_type == CriticalActionTypeEnum.BULK_MULTI_ROUTER_EXECUTION:
+        stmt_job = select(BulkJob).where(BulkJob.approval_request_id == approval.id)
+        job_obj = (await db.execute(stmt_job)).scalar_one_or_none()
+        if job_obj:
+            job_obj.status = BulkJobStatusEnum.FAILED
+
     await db.commit()
     await db.refresh(approval)
 

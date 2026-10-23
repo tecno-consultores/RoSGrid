@@ -10,6 +10,11 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Added
 
+- **Paridad y Sincronización Integral en Bandeja Maker-Checker (`ApprovalsInboxView.vue` y `approvals.py`):**
+  - **Normalización de Estados de Solicitud en Frontend:** Corregida la discrepancia entre el estado en base de datos (`PENDING`) y el filtro de pestaña del frontend (`AWAITING_APPROVAL`), mapeando bidireccionalmente los estados de forma que las solicitudes pendientes de firma se listen de inmediato al ingresar.
+  - **Paridad de Contrato en Aprobación y Rechazo:** Actualizados los métodos `handleApprove` y `handleReject` en `ApprovalsInboxView.vue` para enviar el campo tipado estricto `review_comment` (en lugar de `comment`), cumpliendo con el esquema Pydantic v2 `ApproveRequestPayload` (`extra='forbid'`).
+  - **Sincronización de Trabajos Masivos (`BulkJob`):** Al aprobar una solicitud de tipo `BULK_MULTI_ROUTER_EXECUTION`, el backend actualiza atómicamente el estado del `BulkJob` a `QUEUED` para su despacho; si es rechazada, se actualiza a `FAILED`.
+
 - **Optimización y Depuración Visual de Wallboard NOC y Reloj Global del Sistema (`NocWallboardView.vue`, `RgResponsiveShell.vue`, `DashboardHomeView.vue`, `eventFormatter.ts`):**
   - **Reloj Operativo Global en Barra Superior (`RgResponsiveShell.vue`):** Reubicado el reloj digital táctico (HH:MM sin segundos) a la barra de navegación superior derecha (antes del buscador y perfil de usuario), garantizando su visibilidad persistente en toda la aplicación con reactividad inmediata al formato configurado (24 Horas vs 12h AM/PM).
   - **Limpieza del Centro de Mando (`DashboardHomeView.vue`):** Eliminada la tarjeta local del reloj (`.clock-card`) en el cuerpo del dashboard para evitar redundancia visual con la barra superior.
