@@ -32,9 +32,10 @@ Before exposing new endpoints or frontend views:
 
 After **EVERY** task or turn that adds, edits, or removes code or configuration files, the AI agent **MUST** autonomously execute this protocol and publish to Git without waiting for user prompting:
 
-1. **Mandatory 11X Test Creation (Blueprints in `examples/`):**
-   - For backend mutations: add/update unit tests in `fastapi/tests/**/*.unit.py` and behavioral scenarios following `examples/fastapi/`.
-   - For frontend mutations: add/update unit tests in `vue3/src/**/*.unit.ts` and scenarios following `examples/vue3/`.
+1. **Mandatory 11X Test Creation (Including Karate Labs for API & UI):**
+   - For backend mutations: add/update unit tests in `fastapi/tests/**/*.unit.py` AND mandatory BDD scenarios in `fastapi/test/api_test.feature` (mirrored in `examples/fastapi/`).
+   - For frontend mutations: add/update unit tests in `vue3/src/**/*.unit.ts` AND mandatory BDD scenarios in `vue3/test/ui_business_flow.feature` (mirrored in `examples/vue3/`).
+   - **Karate Labs Invariant:** Every single code change MUST include corresponding Karate Labs API and/or UI scenarios.
 2. **Full Ephemeral Docker Test Execution (`Rule Zero`):**
    - Backend: `docker compose -f docker-compose.qa.yml run --rm qa-backend uv run pytest tests/ --cov=src --cov-fail-under=95`
    - Frontend: `docker compose -f docker-compose.qa.yml run --rm qa-vue3 pnpm run test:unit` & `type-check` (100% pass, 0 type errors).

@@ -1181,5 +1181,7 @@ Certificación integral ejecutada de extremo a extremo bajo la **Regla Cero** (c
    - Sincronizada la documentación de API en `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`.
    - Registro de cambios en `CHANGELOG.md` y `ROADMAP.md`.
    - `./verificar-secretos.sh`: 0 secretos detectados.
+5. **Invariante de Calidad Karate Labs Reforzada:**
+   - Actualizadas las directivas de gobernanza en `AGENTS.md`, `.agents/rules/mandatory_qa_pyramid_and_doc_sync.md`, `.agents/rules/frontend_parity_and_closure.md`, `.agents/README.md` y `.agents/scripts/certify_task_completion.sh` para exigir incondicionalmente la inclusión y sincronización de escenarios BDD de Karate Labs (`fastapi/test/` y `vue3/test/`, reflejados en `examples/`) ante cualquier mutación de código en la plataforma.
 
 

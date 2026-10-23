@@ -97,10 +97,11 @@ docker exec -t rosgrid_api_local python scripts/verify_alembic_orm_parity.py
 
 Por gobernanza innegociable de Nivel 11X, tras **CADA** tarea o solicitud que modifique, añada o corrija código fuente (`fastapi/`, `vue3/`, scripts o configuraciones), el agente de IA **DEBE** ejecutar de forma autónoma el siguiente protocolo:
 
-1. **Creación Obligatoria de Pruebas 11X (Blueprints en `examples/`):**
-   - Utilizar de forma obligatoria los ejemplos y patrones de `examples/fastapi/` (pytest, pytest-cov, pytest-mock, Karate Labs API BDD, mutmut, schemathesis) y `examples/vue3/` (Vitest, SonarJS, Stryker, Playwright e2e, @axe-core A11y, Karate Labs UI BDD).
-   - Toda mutación de backend requiere pruebas en `fastapi/tests/**/*.unit.py` con cobertura `>= 95%`.
-   - Toda mutación de frontend requiere pruebas en `vue3/src/**/*.unit.ts` con 100% pass en Vitest.
+1. **Creación Obligatoria de Pruebas 11X (Incluyendo SIEMPRE Karate Labs):**
+   - Utilizar de forma obligatoria los ejemplos y patrones canónicos de `examples/fastapi/` y `examples/vue3/`.
+   - Toda mutación de backend requiere pruebas en `fastapi/tests/**/*.unit.py` con cobertura `>= 95%` y escenarios BDD en `fastapi/test/api_test.feature` (espejo en `examples/fastapi/`).
+   - Toda mutación de frontend requiere pruebas en `vue3/src/**/*.unit.ts` con 100% pass en Vitest y escenarios BDD en `vue3/test/ui_business_flow.feature` (espejo en `examples/vue3/`).
+   - **Invariante Karate Labs:** Todo cambio de endpoints o vistas de interfaz DEBE incorporar o actualizar escenarios BDD en Karate Labs sin excepción.
 2. **Ejecución Obligatoria de Pruebas en Docker Efímero (`Rule Zero`):**
    - Ejecutar la suite en contenedores efímeros (`docker-compose.qa.yml` o `Makefile`) validando que no existan fallos ni degradación de cobertura.
 3. **Sincronización Documental Obligatoria:**

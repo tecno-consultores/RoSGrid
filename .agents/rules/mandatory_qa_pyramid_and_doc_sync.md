@@ -34,9 +34,16 @@ Any modification, addition, or bugfix in source code (`fastapi/src/` or `vue3/sr
 | **2. Frontend Unit** | `vue3/src/**/*.unit.ts` | `examples/vue3/README.md` | 100% pass rate in Vitest. Test composables, Pinia stores, and form validation. |
 | **3. Real DB & Migration** | `fastapi/migrations/versions/` | `specs/02` & `alembic` | **Anti-Mock Invariant:** Never validate ORM changes (`src/models/`) with `AsyncMock` alone. Generate an Alembic migration and verify actual column types (`\d <table>`) and RLS in real PostgreSQL. |
 | **4. Front-Back Contracts** | `fastapi/scripts/validar_comunicacion_front_back.py` | `docs/08` | Run inside Docker `rosgrid_api_local`. Send the exact payload (multipart form or JSON) used by the UI and verify DB persistence. |
-| **5. Karate Labs API BDD** | `fastapi/test/api_test.feature` | `examples/fastapi/test/api_test.feature` | Black-box Gherkin scenarios testing 401 unauth, 422 malformed payloads, and 200/201 success contracts. |
-| **6. Karate Labs UI BDD** | `vue3/test/ui_business_flow.feature` | `examples/vue3/test/ui_business_flow.feature` | Real browser acceptance scenarios with Chrome CDP (button clicks, modal flows, navigation). |
+| **5. Karate Labs API BDD** | `fastapi/test/api_test.feature` | `examples/fastapi/test/api_test.feature` | **MANDATORY FOR ALL API CHANGES:** Black-box Gherkin scenarios testing 401 unauth, 422 malformed payloads, and 200/201 success contracts. Always include. |
+| **6. Karate Labs UI BDD** | `vue3/test/ui_business_flow.feature` | `examples/vue3/test/ui_business_flow.feature` | **MANDATORY FOR ALL UI CHANGES:** Real browser acceptance scenarios with Chrome CDP (button clicks, modal flows, navigation, critical links). Always include. |
 | **7. Visual Geometry** | DOM Hierarchy & Viewport Layout | `examples/vue3/e2e/` | **Anti-JSDOM Blindness:** JSDOM does not render Flexbox/Grid boxes. Test DOM order and inspect viewports in real browser sessions to ensure modals and sticky footers never overlap content. |
+
+### 1.2 Mandatory Inclusion of Karate Labs Scenarios for All Changes
+
+**ZERO EXCEPTIONS INVARIANT:** Every single task or turn that adds, modifies, or fixes code MUST include Karate Labs scenarios:
+1. **API Changes (Endpoints, Schemas, Logic):** MUST add or update black-box BDD scenarios in `fastapi/test/api_test.feature` AND mirror them identically in `examples/fastapi/test/api_test.feature`.
+2. **Frontend Changes (Views, Modals, Buttons, Links, Tables):** MUST add or update interactive BDD scenarios in `vue3/test/ui_business_flow.feature` AND mirror them identically in `examples/vue3/test/ui_business_flow.feature`.
+3. An AI agent or developer MUST NEVER consider a task completed without verifying that both Karate Labs feature files have been updated with scenarios covering the newly introduced functionality.
 
 ---
 

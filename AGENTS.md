@@ -16,7 +16,7 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
 ## 1. Active Rules in `.agents/rules/`
 
 1. [mandatory_qa_pyramid_and_doc_sync.md](file:///.agents/rules/mandatory_qa_pyramid_and_doc_sync.md):
-   - **Supreme Directive — Creación Obligatoria de Pruebas 11X:** Todo cambio o adición de código DEBE ir acompañado innegociablemente de sus pruebas correspondientes en todas las capas de la pirámide de calidad 11X, tomando como **blueprints canónicos obligatorios** los ejemplos provistos en `examples/` (`examples/fastapi/` y `examples/vue3/`). Incluye pruebas unitarias backend (`fastapi/tests/**/*.unit.py` con cobertura `>= 95%`), pruebas unitarias frontend (`vue3/src/**/*.unit.ts` Vitest 100% pass), verificación real de esquema PostgreSQL y Alembic, contratos de integración front-back, y escenarios BDD Karate Labs.
+   - **Supreme Directive — Creación Obligatoria de Pruebas 11X:** Todo cambio o adición de código DEBE ir acompañado innegociablemente de sus pruebas correspondientes en todas las capas de la pirámide de calidad 11X, tomando como **blueprints canónicos obligatorios** los ejemplos provistos en `examples/` (`examples/fastapi/` y `examples/vue3/`). Incluye pruebas unitarias backend (`fastapi/tests/**/*.unit.py` con cobertura `>= 95%`), pruebas unitarias frontend (`vue3/src/**/*.unit.ts` Vitest 100% pass), verificación real de esquema PostgreSQL y Alembic, contratos de integración front-back, y **SIEMPRE escenarios BDD Karate Labs** tanto en API (`fastapi/test/api_test.feature`) como en UI (`vue3/test/ui_business_flow.feature`), sincronizados en `examples/`.
    - **Ejecución Obligatoria de Pruebas:** Es OBLIGATORIO ejecutar y aprobar la suite de pruebas completa en contenedores efímeros (`Rule Zero`) tras CADA tarea que cambie código antes de darla por finalizada.
    - **Sincronización Documental Continua Obligatoria:** Es OBLIGATORIO actualizar de forma autónoma y continua tras cualquier modificación de código:
      - Todos los manuales y guías técnicas afectadas en `docs/`.
@@ -68,8 +68,8 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
 
 > **INNEGOCIABLE:** Tras **CADA** tarea o solicitud del usuario que modifique, añada o corrija código fuente (`fastapi/`, `vue3/`, scripts o configuraciones), el agente de IA **DEBE** ejecutar de forma autónoma el siguiente protocolo de 7 pasos antes de concluir su turno:
 >
-> 1. **Creación Obligatoria de Pruebas 11X:** Crear o ampliar las pruebas unitarias e integración en `fastapi/tests/` y `vue3/src/`, empleando obligatoriamente los blueprints y patrones de `examples/` (`examples/fastapi/` y `examples/vue3/`).
-> 2. **Ejecución Obligatoria de Pruebas:** Ejecutar la suite de pruebas completa en contenedores Docker efímeros (`Rule Zero`), certificando cobertura `>= 95%`, 100% de aserciones aprobadas y 0 errores de tipado/linting (`ruff`, `mypy`, `eslint`, `vue-tsc`).
+> 1. **Creación Obligatoria de Pruebas 11X (Incluyendo SIEMPRE Karate Labs):** Crear o ampliar las pruebas unitarias e integración en `fastapi/tests/` y `vue3/src/`, e **incorporar SIEMPRE escenarios BDD Karate Labs** en `fastapi/test/api_test.feature` (API) y `vue3/test/ui_business_flow.feature` (UI), replicándolos obligatoriamente en los blueprints canónicos de `examples/` (`examples/fastapi/` y `examples/vue3/`).
+> 2. **Ejecución Obligatoria de Pruebas:** Ejecutar la suite de pruebas completa en contenedores Docker efímeros (`Rule Zero`), certificando cobertura `>= 95%`, 100% de aserciones aprobadas, validación de contratos BDD en Karate Labs y 0 errores de tipado/linting (`ruff`, `mypy`, `eslint`, `vue-tsc`).
 > 3. **Sincronización Documental Obligatoria:** Actualizar incondicionalmente todos los archivos afectados en:
 >    - `docs/` (manuales operativos, guías y especificación de API REST/WebSockets).
 >    - `specs/` (especificaciones arquitectónicas de dominio).

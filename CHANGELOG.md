@@ -10,6 +10,11 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Added
 
+- **Gobernanza de Calidad 11X — Invariante Obligatoria de Pruebas Karate Labs (`AGENTS.md`, `.agents/rules/`, `.agents/README.md`, `.agents/scripts/`):**
+  - **Exigencia Estricta de Karate Labs en Cada Cambio:** Establecida la invariante incondicional en `AGENTS.md` (Directiva Suprema y Protocolo de 7 pasos), `mandatory_qa_pyramid_and_doc_sync.md` y `frontend_parity_and_closure.md`, obligando a todo agente de IA y desarrollador a crear o actualizar escenarios BDD de Karate Labs en `fastapi/test/api_test.feature` (API) y `vue3/test/ui_business_flow.feature` (UI) ante **CADA** cambio de código o endpoint.
+  - **Sincronización Canónica con Blueprints:** Obligatoriedad de reflejar idénticamente cada nuevo escenario en los blueprints canónicos de `examples/fastapi/test/` y `examples/vue3/test/`.
+  - **Auditoría Pre-Commit en Script de Certificación:** Ampliado `certify_task_completion.sh` con inspección automatizada de archivos `.feature` de Karate Labs en Git diff, emitiendo advertencia de bloqueo si se modifica código sin adjuntar escenarios BDD correspondientes.
+
 - **Sustitución de Feed Remoto CVE Obsoleto por Fuentes Oficiales MikroTik Security y Búsqueda NIST NVD (`config.py`, `cve_matcher.py`, `cve_catalog_ros.json`, `FleetCveMatrix.vue`):**
   - **Desacoplamiento del Endpoint Obsoleto NVD:** Eliminado el intento de consulta directa a la API REST bloqueada por Cloudflare/rate-limit de NIST (`https://services.nvd.nist.gov/rest/json/cves/2.0`).
   - **Integración del Feed Oficial MikroTik Security (`https://mikrotik.com/supportsec`):** Implementado parser XML de alta resiliencia para el feed RSS oficial de MikroTik (`https://cdn.mikrotik.com/web-assets/supportsec/rss.xml`), enriqueciendo dinámicamente el catálogo de vulnerabilidades con boletines vigentes y reglas de versiones RouterOS v7.

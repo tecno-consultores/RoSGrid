@@ -36,14 +36,25 @@ if [ -n "${CODE_CHANGES}" ]; then
     [ -n "${line}" ] && echo "  - ${line}"
   done <<< "${CODE_CHANGES}"
 
-  TEST_CHANGES=$(git diff --name-only HEAD 2>/dev/null | grep -E '^(fastapi/tests/|vue3/src/.*\.unit\.ts|fastapi/test/|vue3/test/)' || true)
+  TEST_CHANGES=$(git diff --name-only HEAD 2>/dev/null | grep -E '^(fastapi/tests/|vue3/src/.*\.unit\.ts)' || true)
   if [ -z "${TEST_CHANGES}" ]; then
-    echo "⚠️ ADVERTENCIA: Se modificó código fuente pero NO se detectan pruebas unitarias/BDD nuevas o modificadas (Pirámide 11X)."
+    echo "⚠️ ADVERTENCIA: Se modificó código fuente pero NO se detectan pruebas unitarias nuevas o modificadas (fastapi/tests/ o vue3/src/)."
   else
-    echo "✔ Pruebas 11X detectadas en paralelo:"
+    echo "✔ Pruebas unitarias 11X detectadas en paralelo:"
     while IFS= read -r t_line; do
       [ -n "${t_line}" ] && echo "  - ${t_line}"
     done <<< "${TEST_CHANGES}"
+  fi
+
+  KARATE_CHANGES=$(git diff --name-only HEAD 2>/dev/null | grep -E '^(fastapi/test/.*\.feature|vue3/test/.*\.feature|examples/fastapi/test/|examples/vue3/test/)' || true)
+  if [ -z "${KARATE_CHANGES}" ]; then
+    echo "⚠️ ADVERTENCIA: Se modificó código fuente pero NO se detectan escenarios BDD Karate Labs (fastapi/test/ o vue3/test/)."
+    echo "Recuerda la Invariante Karate Labs: cada cambio de API o UI DEBE incluir sus escenarios BDD correspondientes."
+  else
+    echo "✔ Escenarios BDD Karate Labs detectados en paralelo:"
+    while IFS= read -r k_line; do
+      [ -n "${k_line}" ] && echo "  - ${k_line}"
+    done <<< "${KARATE_CHANGES}"
   fi
 
   DOC_CHANGES=$(git diff --name-only HEAD 2>/dev/null | grep -E '^(specs/|docs/|CHANGELOG\.md|ROADMAP\.md|TESTING\.md|README\.md)' || true)
