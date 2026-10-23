@@ -33,7 +33,7 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/RouterInventoryView.vue'),
     meta: {
       requiresAuth: true,
-      title: 'Inventario de Equipos MikroTik — RoSGrid',
+      title: 'Inventario de Equipos — RoSGrid',
     },
   },
   {

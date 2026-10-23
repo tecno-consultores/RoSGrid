@@ -5,6 +5,7 @@
   import { ref, onMounted } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
   import { http } from '@/api/httpClient';
+  import { useI18n } from '@/composables/useI18n';
   import type { Layer2CatalogItem } from '@/types';
 
   const props = defineProps<{
@@ -18,6 +19,7 @@
 
   const route = useRoute();
   const router = useRouter();
+  const { t } = useI18n();
 
   const layer2Catalog = ref<Layer2CatalogItem[]>([
     { ros_path: 'mpls', title: 'MPLS & VPLS', category: 'Transport', is_singleton: false },
@@ -98,14 +100,14 @@
     <aside
       class="router-sidebar"
       :class="{ 'router-sidebar--open-mobile': isOpenMobile }"
-      aria-label="Menú de navegación de módulos RouterOS"
+      :aria-label="t('webfig.sidebar_aria')"
     >
       <div class="sidebar-header">
-        <span class="sidebar-title">Módulos WebFig v7</span>
+        <span class="sidebar-title">{{ t('webfig.sidebar_title') }}</span>
         <button
           type="button"
           class="btn-close-sidebar"
-          aria-label="Cerrar menú lateral"
+          :aria-label="t('webfig.close_sidebar')"
           @click="emit('close-mobile')"
         >
           ✕
@@ -115,7 +117,7 @@
       <nav class="sidebar-nav">
         <!-- Sección 1: Principal -->
         <div class="nav-group">
-          <span class="group-label">Principal</span>
+          <span class="group-label">{{ t('webfig.group_main') }}</span>
           <button
             type="button"
             class="nav-item"
@@ -123,13 +125,13 @@
             @click="navigateTo('live')"
           >
             <span class="item-icon">📊</span>
-            <span class="item-text">Dashboard en Vivo</span>
+            <span class="item-text">{{ t('webfig.nav_live') }}</span>
           </button>
         </div>
 
         <!-- Sección 2: Capa 1 Nativos -->
         <div class="nav-group">
-          <span class="group-label">Capa 1 — Red y Seguridad</span>
+          <span class="group-label">{{ t('webfig.group_layer1') }}</span>
           <button
             type="button"
             class="nav-item"
@@ -137,7 +139,7 @@
             @click="navigateTo('interfaces')"
           >
             <span class="item-icon">🔌</span>
-            <span class="item-text">Interfaces & SFP DDM</span>
+            <span class="item-text">{{ t('webfig.nav_interfaces') }}</span>
           </button>
 
           <button
@@ -147,7 +149,7 @@
             @click="navigateTo('bridge')"
           >
             <span class="item-icon">🌉</span>
-            <span class="item-text">Bridge (VLANs, Puertos & FDB)</span>
+            <span class="item-text">{{ t('webfig.nav_bridge') }}</span>
           </button>
 
           <button
@@ -157,7 +159,7 @@
             @click="navigateTo('wireguard')"
           >
             <span class="item-icon">🛡️</span>
-            <span class="item-text">WireGuard VPN & Peers</span>
+            <span class="item-text">{{ t('webfig.nav_wireguard') }}</span>
           </button>
 
           <button
@@ -167,7 +169,7 @@
             @click="navigateTo('firewall')"
           >
             <span class="item-icon">🛡️</span>
-            <span class="item-text">Firewall (Filter, NAT, RAW)</span>
+            <span class="item-text">{{ t('webfig.nav_firewall') }}</span>
           </button>
 
           <button
@@ -177,7 +179,7 @@
             @click="navigateTo('routing')"
           >
             <span class="item-icon">🌐</span>
-            <span class="item-text">Routing v7 (BGP / OSPF)</span>
+            <span class="item-text">{{ t('webfig.nav_routing') }}</span>
           </button>
 
           <button
@@ -187,7 +189,7 @@
             @click="navigateTo('ppp')"
           >
             <span class="item-icon">⚡</span>
-            <span class="item-text">PPPoE & Colas de Ancho de Banda</span>
+            <span class="item-text">{{ t('webfig.nav_ppp') }}</span>
           </button>
 
           <button
@@ -197,7 +199,7 @@
             @click="navigateTo('tools')"
           >
             <span class="item-icon">🛠️</span>
-            <span class="item-text">Tools (Ping, Torch, Logs)</span>
+            <span class="item-text">{{ t('webfig.nav_tools') }}</span>
           </button>
 
           <button
@@ -207,7 +209,7 @@
             @click="navigateTo('syslog')"
           >
             <span class="item-icon">📜</span>
-            <span class="item-text">Syslog Live (RingBuffer)</span>
+            <span class="item-text">{{ t('webfig.nav_syslog') }}</span>
           </button>
 
           <button
@@ -217,13 +219,13 @@
             @click="navigateTo('backups')"
           >
             <span class="item-icon">💾</span>
-            <span class="item-text">Respaldos & Git Diff</span>
+            <span class="item-text">{{ t('webfig.nav_backups') }}</span>
           </button>
         </div>
 
         <!-- Sección 3: Capa 2 Dinámica -->
         <div class="nav-group">
-          <span class="group-label">Capa 2 — Motor Universal</span>
+          <span class="group-label">{{ t('webfig.group_layer2') }}</span>
           <button
             v-for="item in layer2Catalog"
             :key="item.ros_path"

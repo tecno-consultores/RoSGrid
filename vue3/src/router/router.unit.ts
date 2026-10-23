@@ -55,7 +55,7 @@ describe('Router — Navigation Guards & RBAC 11 Roles', () => {
 
     await router.push('/inventory');
     expect(router.currentRoute.value.path).toBe('/inventory');
-    expect(document.title).toContain('Inventario de Equipos MikroTik');
+    expect(document.title).toContain('Inventario de Equipos');
   });
 
   it('bloquea ruta con RBAC cuando el rol no está permitido y redirige a /inventory', async () => {

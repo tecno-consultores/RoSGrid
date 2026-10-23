@@ -6,7 +6,7 @@
 import uuid
 from datetime import UTC, date, datetime
 from decimal import Decimal
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pyotp
 import pytest
@@ -106,14 +106,21 @@ def test_vault(test_tenant_id: uuid.UUID, test_router: Router, test_user_id: uui
 
 @pytest.mark.asyncio
 async def test_enrich_router_telemetry_online_and_offline() -> None:
-    fake_redis = AsyncMock()
-    fake_redis.hgetall.return_value = {"state": "ONLINE", "cpu": "25", "ram": "40"}
+    fake_pipeline = MagicMock()
+    fake_pipeline.execute = AsyncMock(
+        return_value=[{"state": "ONLINE", "cpu": "25", "last_free_memory_pct": "60"}, 1, 10]
+    )
+    fake_redis = MagicMock()
+    fake_redis.pipeline.return_value = fake_pipeline
+
     res = await enrich_router_telemetry(fake_redis, uuid.uuid4(), uuid.uuid4())
     assert res["operational_status"] == "ONLINE"
     assert res["cpu_load_percent"] == 25
     assert res["memory_used_percent"] == 40
+    assert res["syslog_active"] is True
+    assert res["syslog_event_count"] == 10
 
-    fake_redis.hgetall.return_value = {}
+    fake_pipeline.execute = AsyncMock(return_value=[{}, 0, 0])
     res_off = await enrich_router_telemetry(fake_redis, uuid.uuid4(), uuid.uuid4())
     assert res_off["operational_status"] == "OFFLINE"
     assert res_off["cpu_load_percent"] is None
@@ -435,3 +442,18 @@ def test_csv_row_ssrf_validation() -> None:
     is_valid, errors = validate_single_csv_row(ssrf_row, existing, seen)
     assert is_valid is False
     assert any("link-local" in e or "no permitid" in e for e in errors)
+
+
+@pytest.mark.asyncio
+async def test_download_inventory_csv_template_endpoint() -> None:
+    from src.api.v1.inventory import download_inventory_csv_template
+
+    claims = {"sub": str(uuid.uuid4()), "tid": str(uuid.uuid4()), "role": "TENANT_ADMIN"}
+    response = await download_inventory_csv_template(claims=claims)
+    assert response.status_code == 200
+    assert response.headers["Content-Disposition"] == 'attachment; filename="rosgrid-inventario-plantilla.csv"'
+    assert response.headers["Content-Type"] == "text/csv; charset=utf-8"
+    decoded_body = response.body.decode("utf-8-sig")
+    assert "display_name,ip_address,api_port" in decoded_body
+    assert "CCR2004-Edge-Norte" in decoded_body
+    assert "RB5009-Tower-Sur" in decoded_body

@@ -17,6 +17,7 @@ from fastapi import (
     File,
     HTTPException,
     Request,
+    Response,
     UploadFile,
     status,
 )
@@ -604,6 +605,25 @@ async def repin_ssl(
 # ============================================================================
 # IMPORTACIÓN MASIVA CSV
 # ============================================================================
+
+
+@router.get("/template-csv")
+async def download_inventory_csv_template(
+    claims: dict[str, Any] = Depends(get_current_user_claims),
+) -> Response:
+    """Descarga la plantilla CSV oficial RFC 4180 para importación masiva de routers."""
+    headers = "display_name,ip_address,api_port,ros_username,ros_password,network_role,serial_number,latitude,longitude,tags"
+    sample1 = 'CCR2004-Edge-Norte,192.168.10.1,8728,api_admin,ClaveSegura123!,EDGE_BGP,HE4011ABC123,10.4806,-66.9036,"core;zona-norte"'
+    sample2 = 'RB5009-Tower-Sur,192.168.20.1,8728,api_admin,SuperClave987!,TOWER_AP,RB5009XYZ789,10.4850,-66.9100,"torre;sur"'
+    content = f"\ufeff{headers}\r\n{sample1}\r\n{sample2}\r\n"
+    return Response(
+        content=content.encode("utf-8"),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": 'attachment; filename="rosgrid-inventario-plantilla.csv"',
+            "Content-Type": "text/csv; charset=utf-8",
+        },
+    )
 
 
 @router.post("/import-csv/dry-run", response_model=CsvDryRunResponse)

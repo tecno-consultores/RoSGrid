@@ -19,9 +19,11 @@
 
   import { useRoute } from 'vue-router';
   import { http } from '@/api/httpClient';
+  import { useI18n } from '@/composables/useI18n';
 
   const route = useRoute();
   const routerId = computed(() => String(route.params.routerId || ''));
+  const { t } = useI18n();
 
   const selectedIface = ref('all-interfaces');
   const availableInterfaces = ref<string[]>(['all-interfaces']);
@@ -251,10 +253,13 @@
   <div class="live-dashboard">
     <header class="dashboard-header">
       <div class="header-titles">
-        <h2 class="dashboard-title">Dashboard & Telemetría en Vivo</h2>
+        <h2 class="dashboard-title">{{ t('webfig.live_dashboard_title') }}</h2>
         <p class="dashboard-subtitle">
-          Telemetría en memoria RAM (RingBuffer {{ ringBuffer.rawPoints.value.length }} / 5400
-          puntos) estilo WinBox
+          {{
+            t('webfig.live_dashboard_subtitle', {
+              count: ringBuffer.rawPoints.value.length,
+            })
+          }}
         </p>
       </div>
 
@@ -281,41 +286,41 @@
     <!-- Resumen de Tarjetas Métricas Rápidas -->
     <section class="kpi-grid font-tabular" aria-label="Métricas del sistema">
       <div class="kpi-card">
-        <span class="kpi-title">Carga CPU</span>
+        <span class="kpi-title">{{ t('webfig.kpi_cpu_load') }}</span>
         <div class="kpi-value text-cyan">
           {{ Math.round(ringBuffer.latestPoint.value?.cpuLoadPct ?? 0) }}%
         </div>
-        <span class="kpi-sub">Multi-Core</span>
+        <span class="kpi-sub">{{ t('webfig.kpi_multicore') }}</span>
       </div>
 
       <div class="kpi-card">
-        <span class="kpi-title">RAM Libre</span>
+        <span class="kpi-title">{{ t('webfig.kpi_ram_free') }}</span>
         <div class="kpi-value text-emerald">
           {{ Math.round(ringBuffer.latestPoint.value?.freeMemoryPct ?? 0) }}%
         </div>
-        <span class="kpi-sub">Memoria del Sistema</span>
+        <span class="kpi-sub">{{ t('webfig.kpi_system_memory') }}</span>
       </div>
 
       <div class="kpi-card">
-        <span class="kpi-title">Tráfico RX</span>
+        <span class="kpi-title">{{ t('webfig.kpi_rx_traffic') }}</span>
         <div class="kpi-value text-cyan">{{ formatBps(ringBuffer.latestPoint.value?.rxBps) }}</div>
-        <span class="kpi-sub">Descarga en interfaz</span>
+        <span class="kpi-sub">{{ t('webfig.kpi_download_iface') }}</span>
       </div>
 
       <div class="kpi-card">
-        <span class="kpi-title">Tráfico TX</span>
+        <span class="kpi-title">{{ t('webfig.kpi_tx_traffic') }}</span>
         <div class="kpi-value text-emerald">
           {{ formatBps(ringBuffer.latestPoint.value?.txBps) }}
         </div>
-        <span class="kpi-sub">Subida en interfaz</span>
+        <span class="kpi-sub">{{ t('webfig.kpi_upload_iface') }}</span>
       </div>
 
       <div class="kpi-card">
-        <span class="kpi-title">Temperatura</span>
+        <span class="kpi-title">{{ t('webfig.kpi_temperature') }}</span>
         <div class="kpi-value text-amber">
           {{ ringBuffer.latestPoint.value?.temperatureC ?? 40 }}°C
         </div>
-        <span class="kpi-sub">Salud Térmica</span>
+        <span class="kpi-sub">{{ t('webfig.kpi_thermal_health') }}</span>
       </div>
     </section>
 
@@ -324,8 +329,8 @@
       <!-- Gráfica 1: Carga de CPU -->
       <div class="chart-panel">
         <div class="panel-header">
-          <h3 class="panel-title">📈 Historial de Carga CPU (%)</h3>
-          <span class="panel-tag font-tabular">Ventana: {{ currentWindow }}</span>
+          <h3 class="panel-title">{{ t('webfig.chart_cpu_history') }}</h3>
+          <span class="panel-tag font-tabular">{{ t('webfig.chart_window_tag', { w: currentWindow }) }}</span>
         </div>
         <div class="canvas-container">
           <canvas
@@ -341,7 +346,7 @@
       <div class="chart-panel">
         <div class="panel-header">
           <div class="traffic-title-group">
-            <h3 class="panel-title">📊 Tráfico en Vivo RX / TX</h3>
+            <h3 class="panel-title">{{ t('webfig.chart_traffic_history') }}</h3>
             <div class="traffic-legend font-tabular">
               <span class="legend-rx">■ RX</span>
               <span class="legend-tx">■ TX</span>

@@ -4,6 +4,7 @@
 <script setup lang="ts">
   import { useRoute, useRouter } from 'vue-router';
   import { useWebFigStore } from '@/stores/useWebFigStore';
+  import { useI18n } from '@/composables/useI18n';
 
   const props = defineProps<{
     routerId: string;
@@ -16,6 +17,27 @@
   const route = useRoute();
   const router = useRouter();
   const webFigStore = useWebFigStore();
+  const { t } = useI18n();
+
+  const ROUTE_TAB_I18N: Record<string, string> = {
+    RouterLiveDashboard: 'webfig.nav_live',
+    InterfacesAndSfp: 'webfig.nav_interfaces',
+    BridgeSwitching: 'webfig.nav_bridge',
+    WireGuardVpn: 'webfig.nav_wireguard',
+    FirewallRules: 'webfig.nav_firewall',
+    RoutingBgpOspf: 'webfig.nav_routing',
+    PppAndQueues: 'webfig.nav_ppp',
+    LiveToolsDiagnostics: 'webfig.nav_tools',
+    RouterSyslogLive: 'webfig.nav_syslog',
+    RouterBackupsGitDiff: 'webfig.nav_backups',
+  };
+
+  function getTabLabel(tab: { routeName?: string; label: string }): string {
+    if (tab.routeName && ROUTE_TAB_I18N[tab.routeName]) {
+      return t(ROUTE_TAB_I18N[tab.routeName]);
+    }
+    return tab.label;
+  }
 
   function handleTabClick(tabId: string): void {
     const tab = webFigStore.openRouterTabs.find((t) => t.tabId === tabId);
@@ -51,7 +73,7 @@
     <nav
       class="webfig-tabs-bar"
       role="tablist"
-      aria-label="Pestañas de trabajo abiertas del router (máximo 5 en RAM)"
+      :aria-label="t('webfig.tabs_aria_label')"
     >
       <div
         v-for="tab in webFigStore.openRouterTabs"
@@ -65,12 +87,12 @@
         @keydown.enter="handleTabClick(tab.tabId)"
       >
         <span class="tab-icon" aria-hidden="true">{{ tab.icon || '📄' }}</span>
-        <span class="tab-label">{{ tab.label }}</span>
+        <span class="tab-label">{{ getTabLabel(tab) }}</span>
         <button
           v-if="tab.closable"
           type="button"
           class="btn-close-tab"
-          :aria-label="`Cerrar pestaña ${tab.label}`"
+          :aria-label="t('webfig.tabs_close_aria', { name: getTabLabel(tab) })"
           @click.stop="handleCloseTab(tab.tabId)"
         >
           ✕
@@ -79,59 +101,54 @@
     </nav>
 
     <!-- Barra Inferior Fija para Móviles (< 768px) -->
-    <nav class="mobile-bottom-bar" aria-label="Navegación rápida móvil de WebFig">
+    <nav class="mobile-bottom-bar" :aria-label="t('webfig.mobile_nav_aria')">
       <button
         type="button"
         class="bottom-bar-btn"
         :class="{ 'bottom-bar-btn--active': route.path.includes('/webfig/live') }"
-        aria-label="Ir a Dashboard en Vivo"
         @click="navigateQuick('live')"
       >
         <span class="btn-icon">📊</span>
-        <span class="btn-text">Vivo</span>
+        <span class="btn-text">{{ t('webfig.tab_live_short') }}</span>
       </button>
 
       <button
         type="button"
         class="bottom-bar-btn"
         :class="{ 'bottom-bar-btn--active': route.path.includes('/webfig/interfaces') }"
-        aria-label="Ir a Interfaces y SFP"
         @click="navigateQuick('interfaces')"
       >
         <span class="btn-icon">🔌</span>
-        <span class="btn-text">SFP/Red</span>
+        <span class="btn-text">{{ t('webfig.tab_sfp_short') }}</span>
       </button>
 
       <button
         type="button"
         class="bottom-bar-btn"
         :class="{ 'bottom-bar-btn--active': route.path.includes('/webfig/ppp') }"
-        aria-label="Ir a PPP y Colas"
         @click="navigateQuick('ppp')"
       >
         <span class="btn-icon">⚡</span>
-        <span class="btn-text">PPP</span>
+        <span class="btn-text">{{ t('webfig.tab_ppp_short') }}</span>
       </button>
 
       <button
         type="button"
         class="bottom-bar-btn"
         :class="{ 'bottom-bar-btn--active': route.path.includes('/webfig/tools') }"
-        aria-label="Ir a Herramientas y Diagnóstico"
         @click="navigateQuick('tools')"
       >
         <span class="btn-icon">🛠️</span>
-        <span class="btn-text">Tools</span>
+        <span class="btn-text">{{ t('webfig.tab_tools_short') }}</span>
       </button>
 
       <button
         type="button"
         class="bottom-bar-btn btn-menu-toggle"
-        aria-label="Abrir menú completo de módulos RouterOS"
         @click="emit('toggle-sidebar')"
       >
         <span class="btn-icon">☰</span>
-        <span class="btn-text">Menú</span>
+        <span class="btn-text">{{ t('webfig.tab_menu_short') }}</span>
       </button>
     </nav>
   </div>

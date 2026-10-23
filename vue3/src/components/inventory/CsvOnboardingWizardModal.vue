@@ -37,20 +37,14 @@
     }
   }
 
-  function downloadCsvTemplate() {
-    const headers =
-      'display_name,ip_address,api_port,ros_username,ros_password,network_role,serial_number,latitude,longitude,tags';
-    const sample =
-      'CCR2004-Edge-Norte,192.168.10.1,8728,api_admin,ClaveSegura123!,EDGE_BGP,HE4011ABC123,10.4806,-66.9036,core;zona-norte';
-    const content = `\uFEFF${headers}\r\n${sample}\r\n`;
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+  function triggerBlobDownload(blob: Blob, filename: string) {
     const url =
       typeof URL.createObjectURL === 'function' ? URL.createObjectURL(blob) : 'blob:sample';
     const link = document.createElement('a');
     link.style.display = 'none';
     link.href = url;
-    link.download = 'rosgrid-inventario-plantilla.csv';
-    link.setAttribute('download', 'rosgrid-inventario-plantilla.csv');
+    link.download = filename;
+    link.setAttribute('download', filename);
     if (typeof document !== 'undefined' && document.body) {
       document.body.appendChild(link);
     }
@@ -63,6 +57,24 @@
         URL.revokeObjectURL(url);
       }
     }, 15000);
+  }
+
+  async function downloadCsvTemplate() {
+    try {
+      const res = await http.get<string>('/api/v1/inventory/template-csv');
+      const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8' });
+      triggerBlobDownload(blob, 'rosgrid-inventario-plantilla.csv');
+    } catch {
+      const headers =
+        'display_name,ip_address,api_port,ros_username,ros_password,network_role,serial_number,latitude,longitude,tags';
+      const sample1 =
+        'CCR2004-Edge-Norte,192.168.10.1,8728,api_admin,ClaveSegura123!,EDGE_BGP,HE4011ABC123,10.4806,-66.9036,"core;zona-norte"';
+      const sample2 =
+        'RB5009-Tower-Sur,192.168.20.1,8728,api_admin,SuperClave987!,TOWER_AP,RB5009XYZ789,10.4850,-66.9100,"torre;sur"';
+      const content = `\uFEFF${headers}\r\n${sample1}\r\n${sample2}\r\n`;
+      const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
+      triggerBlobDownload(blob, 'rosgrid-inventario-plantilla.csv');
+    }
   }
 
   async function handleDryRunSubmit() {

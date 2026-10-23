@@ -431,6 +431,12 @@
   - Paridad estricta y no regresión: preservación de accesos en el módulo de Usuarios y RBAC (`/users`), incorporando el modal `ChangePasswordModal.vue` mediante el botón `[ 🔑 Clave ]`.
   - Backend seguro `POST /api/v1/users/change-password` con verificación de contraseña actual mediante `argon2id`, soporte de reseteo administrativo y auditoría inmutable WORM (`USER_SECURITY` / `CHANGE_PASSWORD`).
   - Certificación 11X en Docker efímero: 319 pruebas Vitest aprobadas al 100% en 45 suites, 0 errores en `vue-tsc --noEmit`, 12 pruebas Pytest aprobadas al 100% y bundle de producción generado en 3.69s.
+- [x] **23.9** **Refinamiento de Inventario MikroTik, Alineación de Roles, Plantilla CSV y Soporte i18n WebFig:**
+  - Depuración de cabeceras de Inventario (`RouterInventoryView.vue` y catálogos `es.json` / `en.json`): eliminación del sufijo redundante *" — Flota MikroTik"*, normalizando el título a *"Inventario de Equipos"* / *"Equipment Inventory"*.
+  - Alineación pixel-perfect de campos y botón en el modal de personalización de roles de red (`ManageNetworkRolesModal.vue`): corrección de desfase vertical, estandarización de alturas a 38px, etiquetas de 16px con spacer y reubicación de texto de ayuda.
+  - Asistente de importación masiva CSV (`CsvOnboardingWizardModal.vue` y `fastapi/src/api/v1/inventory.py`): resolución de archivo corrupto mediante nuevo endpoint `GET /api/v1/inventory/template-csv` emitiendo MIME `text/csv; charset=utf-8` con BOM UTF-8 y fallback frontend libre de caracteres residuales.
+  - Internacionalización completa y reactiva de la Consola WebFig (`RouterSidebarMenu.vue`, `RouterContextHeader.vue`, `RouterWorkspaceTabsBar.vue`, `RouterLiveDashboardView.vue` y locales `es.json` / `en.json`): soporte en caliente de cambio de idioma a inglés sin recargar el navegador ni perder pestañas.
+  - Certificación 11X en Docker: 332 pruebas Vitest aprobadas (100% en 46 suites), 17 pruebas Pytest de inventario/CSV aprobadas (100%), 0 errores en `vue-tsc --noEmit`, 26/26 contratos front-back y validación visual multi-pantalla con navegador.
 
 ---
 

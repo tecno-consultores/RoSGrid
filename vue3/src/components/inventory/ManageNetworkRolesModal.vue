@@ -161,7 +161,6 @@
                 :disabled="isSubmitting"
                 @input="formatRoleInput(($event.target as HTMLInputElement).value)"
               />
-              <span class="help-text">Se normaliza en MAYÚSCULAS_CON_GUIONES</span>
             </div>
 
             <div class="form-group flex-3">
@@ -178,6 +177,7 @@
             </div>
 
             <div class="form-group flex-btn">
+              <label class="form-label form-label-spacer" aria-hidden="true">&nbsp;</label>
               <button
                 type="submit"
                 class="btn-primary"
@@ -187,6 +187,7 @@
               </button>
             </div>
           </div>
+          <span class="help-text">Se normaliza automáticamente en MAYÚSCULAS_CON_GUIONES</span>
         </form>
 
         <!-- Listado de roles actuales -->
@@ -357,12 +358,15 @@
     border: 1px solid rgba(148, 163, 184, 0.15);
     border-radius: 6px;
     padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
   }
 
   .form-row {
     display: flex;
     gap: 0.75rem;
-    align-items: flex-end;
+    align-items: flex-start;
     flex-wrap: wrap;
   }
 
@@ -383,7 +387,9 @@
   }
 
   .flex-btn {
-    align-self: flex-end;
+    display: flex;
+    flex-direction: column;
+    min-width: 130px;
   }
 
   .form-label {
@@ -392,6 +398,15 @@
     color: #cbd5e1;
     font-family: monospace;
     text-transform: uppercase;
+    line-height: 1.2;
+    height: 16px;
+    display: flex;
+    align-items: center;
+  }
+
+  .form-label-spacer {
+    visibility: hidden;
+    user-select: none;
   }
 
   .required {
@@ -402,10 +417,13 @@
     background: #020617;
     border: 1px solid rgba(148, 163, 184, 0.3);
     border-radius: 4px;
-    padding: 0.45rem 0.75rem;
+    padding: 0 0.75rem;
+    height: 38px;
     color: #f8fafc;
     font-size: 0.85rem;
     font-family: monospace;
+    box-sizing: border-box;
+    width: 100%;
   }
 
   .form-control:focus {
@@ -417,6 +435,7 @@
   .help-text {
     font-size: 0.7rem;
     color: #64748b;
+    margin-top: 0.1rem;
   }
 
   .btn-primary {
@@ -425,7 +444,8 @@
     border: none;
     font-weight: 700;
     font-size: 0.85rem;
-    padding: 0.5rem 1rem;
+    padding: 0 1.25rem;
+    height: 38px;
     border-radius: 4px;
     cursor: pointer;
     font-family: monospace;
@@ -433,6 +453,10 @@
       background-color 0.15s,
       transform 0.1s;
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
   }
 
   .btn-primary:hover:not(:disabled) {

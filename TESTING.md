@@ -1017,17 +1017,39 @@ Certificación integral ejecutada de extremo a extremo bajo la **Regla Cero** (c
 - **Backend Seguro de Cambio de Contraseña (`POST /api/v1/users/change-password`):**
   - Implementación con verificación estricta de contraseña actual con `argon2id` para auto-cambio, soporte de reseteo directo para administradores (`SUPERADMIN_GLOBAL` y `TENANT_ADMIN`), e inscripción obligatoria en la bitácora inmutable de auditoría WORM (`USER_SECURITY` / `CHANGE_PASSWORD`).
 
+---
+
+## 29. Refinamiento de Inventario MikroTik, Alineación de Roles, Plantilla CSV y Soporte i18n WebFig (Hito 23.9)
+
+### A. Diagnóstico y Mejoras Tácticas de Interfaz y Backend
+- **Depuración de Título en Inventario:**
+  - Eliminación de la coletilla redundante *" — Flota MikroTik"* en los catálogos de traducción (`vue3/src/locales/es.json` y `en.json`) y en la configuración del enrutador (`vue3/src/router/index.ts`), normalizando el título a *"Inventario de Equipos"* / *"Equipment Inventory"*.
+- **Corrección de Alineación Vertical en Roles de Red (`ManageNetworkRolesModal.vue`):**
+  - Corrección del desfase visual de los campos de entrada y botón de acción. Se estandarizaron los inputs y el botón a una altura estricta de `height: 38px`, etiquetas con altura idéntica de `16px`, inserción de espaciador invisible `<label class="form-label form-label-spacer">&nbsp;</label>` en la columna del botón y reubicación del `.help-text` fuera de la fila horizontal (`.form-row`), garantizando alineación horizontal perfecta.
+- **Descarga Fiable de Plantilla CSV (`CsvOnboardingWizardModal.vue` & Backend):**
+  - **Fallo previo:** La descarga local incorporaba un MIME type con punto y coma residual (`text/csv;charset=utf-8;`) y cabeceras inconsistentes que producían archivos corruptos en ciertos navegadores o suites ofimáticas.
+  - **Acción Correctiva:** Implementación del endpoint oficial `GET /api/v1/inventory/template-csv` en `fastapi/src/api/v1/inventory.py` devolviendo `Response` con MIME `text/csv; charset=utf-8`, Content-Disposition con RFC 4180 y BOM UTF-8 (`\ufeff`) para compatibilidad universal con Excel y Calc. En el frontend, `downloadCsvTemplate()` ahora consume el endpoint vía HTTP con fallback local sanitizado.
+- **Internacionalización Dinámica de la Consola WebFig:**
+  - Creación del diccionario completo `"webfig"` en `es.json` y `en.json`.
+  - Integración de `useI18n()` en `RouterSidebarMenu.vue`, `RouterContextHeader.vue`, `RouterWorkspaceTabsBar.vue` (traducción reactiva en caliente de pestañas existentes sin recargar estado) y `RouterLiveDashboardView.vue` (KPIs, títulos y gráficos).
+
 ### B. Certificación en Contenedores Docker Efímeros
 1. **Frontend Vitest v8 (`sinfallas/base-node-ionic:26`):**
-   - **45 de 45 suites aprobadas (100%)** con **319 de 319 pruebas unitarias exitosas**.
-   - Nuevas suites: `DashboardHomeView.unit.ts` (3 tests) y `ChangePasswordModal.unit.ts` (6 tests).
-   - Cobertura ampliada en `RgResponsiveShell.unit.ts` (14 tests) y `useThemeAndLayoutStore.unit.ts` (5 tests).
+   - **46 de 46 suites aprobadas (100%)** con **332 de 332 pruebas unitarias exitosas**.
+   - Nueva suite: `manageNetworkRolesModal.unit.ts` (11 pruebas unitarias cubriendo renderizado, layout, validaciones y CRUD).
+   - Suites ampliadas: `csvOnboardingWizardModal.unit.ts` (tests de descarga y fallback), `webfigViews.unit.ts` (conmutación reactiva a inglés) y `router.unit.ts` (nuevo título de inventario).
 2. **Chequeo Estricto de Tipos TypeScript:**
-   - `vue-tsc --noEmit`: 0 errores en 100% de componentes y composables.
+   - `vue-tsc --noEmit`: 0 errores en 100% de componentes, stores y vistas.
 3. **Backend Pytest (`sinfallas/base-python-uv:3.15`):**
-   - **12 de 12 pruebas aprobadas (100%)** en `fastapi/tests/api/test_tenants_and_users.unit.py`, incluyendo las pruebas de cambio de clave y reinicio de 2FA por el propio usuario.
-4. **Compilación de Producción:**
-   - `vite build`: bundle optimizado generado en 3.69 segundos y desplegado en caliente en `rosgrid_ui_local`.
+   - **17 de 17 pruebas aprobadas (100%)** en `fastapi/tests/api/test_inventory_csv_and_vault.unit.py`, incluyendo `test_download_inventory_csv_template_endpoint`.
+4. **Contratos Front-Back y Paridad ORM:**
+   - **26 de 26 contratos aprobados (100%)** en `validar_comunicacion_front_back.py`.
+   - **25 de 25 tablas en estricta paridad ORM con migraciones Alembic** (`verify_alembic_orm_parity.py`).
+5. **Auditoría de Secretos:**
+   - `./verificar-secretos.sh`: 0 secretos detectados en el árbol de trabajo.
+6. **Validación Visual en Navegador Real:**
+   - Verificado con `browser_subagent` en `http://localhost:8085/inventory`, validando cabecera limpia, modal de roles con alineación perfecta, modal de importación CSV con descarga sin corrupción y consola WebFig con alternancia fluida inglés/español.
+
 
 
 

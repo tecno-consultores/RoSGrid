@@ -7,6 +7,7 @@
   import type { RouterItem, TelemetryPoint } from '@/types';
   import { useInventoryStore } from '@/stores/useInventoryStore';
   import { useWebFigStore } from '@/stores/useWebFigStore';
+  import { useI18n } from '@/composables/useI18n';
 
   const props = defineProps<{
     router: RouterItem | null;
@@ -20,6 +21,7 @@
   const vueRouter = useRouter();
   const inventoryStore = useInventoryStore();
   const webFigStore = useWebFigStore();
+  const { t } = useI18n();
 
   const formattedUptime = computed(() => {
     return props.router?.ros_identity ? '14d 06:32:11' : '00:00:00';
@@ -46,7 +48,7 @@
 </script>
 
 <template>
-  <header class="router-context-header" role="banner" aria-label="Información técnica del router">
+  <header class="router-context-header" role="banner" :aria-label="t('webfig.header_role_banner')">
     <!-- Identidad y Selector de Equipo -->
     <div class="header-section header-identity">
       <div class="identity-badge">
@@ -57,7 +59,7 @@
         <div class="identity-text">
           <h1 class="router-title">
             {{ router?.display_name || 'MikroTik RouterOS' }}
-            <span class="router-ros-id">({{ router?.ros_identity || 'sin-identidad' }})</span>
+            <span class="router-ros-id">({{ router?.ros_identity || t('webfig.header_no_identity') }})</span>
           </h1>
           <div class="router-specs font-tabular">
             <span>{{ router?.model || router?.board_name || 'RouterBOARD' }}</span>
@@ -73,15 +75,15 @@
 
       <!-- Selector rápido de router -->
       <div class="router-switcher">
-        <label for="header-router-switcher" class="sr-only">Cambiar de Router:</label>
+        <label for="header-router-switcher" class="sr-only">{{ t('webfig.header_switch_router') }}</label>
         <select
           id="header-router-switcher"
           class="select-switcher"
           :value="router?.id || ''"
-          aria-label="Seleccionar otro router para gestionar"
+          :aria-label="t('webfig.header_select_another')"
           @change="handleSelectRouter"
         >
-          <option value="" disabled>Cambiar de Router...</option>
+          <option value="" disabled>{{ t('webfig.header_switch_router') }}</option>
           <option v-for="r in inventoryStore.routers" :key="r.id" :value="r.id">
             {{ r.display_name }} ({{ r.ip_address }})
           </option>
@@ -92,17 +94,17 @@
     <!-- Medidores en Vivo (CPU, RAM, Temp, Voltaje) -->
     <div class="header-section header-telemetry font-tabular">
       <div class="telemetry-chip" :class="{ 'chip-warning': cpuValue > 80 }">
-        <span class="chip-label">CPU:</span>
+        <span class="chip-label">{{ t('webfig.header_cpu') }}</span>
         <strong class="chip-val">{{ cpuValue }}%</strong>
       </div>
 
       <div class="telemetry-chip">
-        <span class="chip-label">RAM Libre:</span>
+        <span class="chip-label">{{ t('webfig.header_ram_free') }}</span>
         <strong class="chip-val">{{ ramFreeValue }}%</strong>
       </div>
 
       <div class="telemetry-chip">
-        <span class="chip-label">Temp:</span>
+        <span class="chip-label">{{ t('webfig.header_temp') }}</span>
         <strong class="chip-val">{{ tempValue }}°C</strong>
       </div>
 
@@ -111,15 +113,19 @@
         type="button"
         class="safemode-badge"
         :class="{ 'safemode-badge--active': webFigStore.isSafeModeActive }"
-        :aria-label="webFigStore.isSafeModeActive ? 'Safe Mode activo (60s)' : 'Safe Mode inactivo'"
+        :aria-label="
+          webFigStore.isSafeModeActive
+            ? t('webfig.header_safemode_active_aria', { s: webFigStore.safeModeCountdownSeconds })
+            : t('webfig.header_safemode_inactive_aria')
+        "
         @click="emit('toggle-safemode')"
       >
         <span class="safemode-icon">🛡️</span>
         <span class="safemode-text">
           {{
             webFigStore.isSafeModeActive
-              ? `Safe Mode (${webFigStore.safeModeCountdownSeconds}s)`
-              : 'Safe Mode'
+              ? t('webfig.header_safemode_active', { s: webFigStore.safeModeCountdownSeconds })
+              : t('webfig.header_safemode')
           }}
         </span>
       </button>

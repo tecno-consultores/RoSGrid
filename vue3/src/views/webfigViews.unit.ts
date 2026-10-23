@@ -5,6 +5,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { setActivePinia, createPinia } from 'pinia';
 import { http } from '@/api/httpClient';
+import { useI18n } from '@/composables/useI18n';
 
 import RouterContextHeader from '@/components/webfig/RouterContextHeader.vue';
 import RouterWorkspaceTabsBar from '@/components/webfig/RouterWorkspaceTabsBar.vue';
@@ -227,6 +228,45 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
     });
     await flushPromises();
     expect(wrapper.exists()).toBe(true);
+  });
+
+  it('RouterSidebarMenu & RouterContextHeader — conmutan dinámicamente a inglés al cambiar el locale', async () => {
+    const { setLocale } = useI18n();
+    setLocale('en');
+
+    const wrapperSidebar = mount(RouterSidebarMenu, {
+      props: { routerId: 'r-01', isOpenMobile: false },
+    });
+    await flushPromises();
+
+    expect(wrapperSidebar.text()).toContain('WebFig v7 Modules');
+    expect(wrapperSidebar.text()).toContain('Live Dashboard');
+    expect(wrapperSidebar.text()).toContain('Interfaces & SFP DDM');
+
+    const wrapperHeader = mount(RouterContextHeader, {
+      props: {
+        router: {
+          id: 'r-01',
+          tenant_id: 't-01',
+          display_name: 'Core-01',
+          ip_address: '10.0.0.1',
+          api_port: 8728,
+          network_role: 'CORE',
+          admin_state: 'PRODUCTION',
+          ssl_trust_status: 'TRUSTED_PINNED',
+          ros_version: '7.16',
+          is_reachable: true,
+          tags: [],
+        },
+        latestTelemetry: null,
+      },
+    });
+
+    expect(wrapperHeader.text()).toContain('Switch Router...');
+    expect(wrapperHeader.text()).toContain('Free RAM:');
+
+    // Restaurar a español
+    setLocale('es');
   });
 
   it('RouterWebFigLayout — coordina cabecera, tabs, mock telemetry tick y ciclo de vida', async () => {
