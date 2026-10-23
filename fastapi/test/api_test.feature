@@ -514,4 +514,30 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 65. Descarga de plantilla CSV oficial de inventario devuelve 200 con cabecera de adjunto
+    Given path '/api/v1/inventory/template-csv'
+    When method get
+    Then status 200
+    And match responseHeaders['Content-Disposition'][0] contains 'rosgrid-inventario-plantilla.csv'
+
+  Scenario: 66. Aprobación de solicitud Maker-Checker sin autenticación devuelve 401
+    Given path '/api/v1/operations/approvals/00000000-0000-0000-0000-000000000001/approve'
+    And request { review_comment: 'Aprobación autorizada' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 67. Rechazo de solicitud Maker-Checker sin autenticación devuelve 401
+    Given path '/api/v1/operations/approvals/00000000-0000-0000-0000-000000000001/reject'
+    And request { review_comment: 'Rechazo por política' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 68. Consulta de interfaces Bridge Layer 1 sin autenticación devuelve 401
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/interfaces/bridge'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
 

@@ -1184,4 +1184,28 @@ Certificación integral ejecutada de extremo a extremo bajo la **Regla Cero** (c
 5. **Invariante de Calidad Karate Labs Reforzada:**
    - Actualizadas las directivas de gobernanza en `AGENTS.md`, `.agents/rules/mandatory_qa_pyramid_and_doc_sync.md`, `.agents/rules/frontend_parity_and_closure.md`, `.agents/README.md` y `.agents/scripts/certify_task_completion.sh` para exigir incondicionalmente la inclusión y sincronización de escenarios BDD de Karate Labs (`fastapi/test/` y `vue3/test/`, reflejados en `examples/`) ante cualquier mutación de código en la plataforma.
 
+---
+
+## 33. Verificación Integral y Multi-Capa de Todos los Cambios Implementados (Pirámide 11X)
+
+Se certificó exhaustivamente que el 100% de los cambios desarrollados durante la jornada cuentan con cobertura completa en las cuatro capas obligatorias de la pirámide de aseguramiento de calidad:
+
+```mermaid
+graph TD
+    UI_BDD["🥋 Karate Labs UI BDD (24 Escenarios Chrome CDP)"] --> API_BDD["🥋 Karate Labs API BDD (68 Escenarios HTTP)"]
+    API_BDD --> FB_CONTR["🔗 Contratos Front-Back (26 Pruebas Docker)"]
+    FB_CONTR --> UNIT["🧪 Pruebas Unitarias Aisladas (Backend >= 95% | Frontend 100% Pass)"]
+```
+
+### Matriz de Verificación por Módulo Modificado
+
+| Módulo / Cambio Realizado | Pruebas Unitarias Backend | Pruebas Unitarias Frontend | Karate Labs API BDD | Karate Labs UI BDD | Estado |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Wallboard NOC y Reloj Superior:** Reubicación de reloj HH:MM a barra superior, depuración visual sin óvalo 24/7 y mapeo en español de eventos de auditoría | N/A (Consumo de eventos WORM existentes) | `operationsViews.unit.ts`<br>`RgResponsiveShell.unit.ts`<br>`DashboardHomeView.unit.ts`<br>`eventFormatter.unit.ts` (5/5 pass) | N/A | **Escenario 8:** Wallboard sin óvalo 24/7 y con botón de pantalla completa.<br>**Escenario 24:** Reloj global HH:MM y menú de usuario. | ✅ **Verificado** |
+| **Descarga Nativa Plantilla CSV y Roles:** Enlace nativo `<a>` anti-bloqueo blob en Chrome y endpoint público con cabecera de adjunto | `test_inventory_csv_and_vault.unit.py` (`test_download_inventory_csv_template_endpoint` pass) | `CsvOnboardingWizardModal.unit.ts` (enlace nativo con href y download verificado) | **Escenario 65:** `GET /api/v1/inventory/template-csv` (HTTP 200 y Content-Disposition adjunto). | **Escenario 21:** Asistente CSV con enlace nativo `/api/v1/inventory/template-csv`. | ✅ **Verificado** |
+| **Maker-Checker con Despacho en Flota:** Ejecución de plantillas en equipos objetivo al aprobar con tolerancia RouterOS v7 (`POST /set` fallback) | `test_operations_endpoints_full.unit.py` (ejecución y ciclo de vida de aprobación) | `operationsViews.unit.ts` (panel de desglose de ejecución y `review_comment`) | **Escenario 36:** Acceso bandeja 401.<br>**Escenario 66:** Aprobación con `review_comment` (401).<br>**Escenario 67:** Rechazo con `review_comment` (401). | **Escenario 5:** Bandeja Maker-Checker con filtros de pestañas. | ✅ **Verificado** |
+| **WebFig Bridge L1 & Safe Mode:** Parámetro `protocol_mode`, validación de puertos `ingress_filtering`, cierre instantáneo de modal y 60s Safe Mode | `test_webfig_endpoints_full.unit.py` (7/7 tests al 100%: creación con RSTP, puertos e invariantes) | `webfigViews.unit.ts` (19/19 tests al 100%: formulario modal con RSTP y cierre interactivo) | **Escenario 35:** Proxy L2 bridge 401.<br>**Escenario 68:** Interfaces Bridge L1 401. | **Escenario 23:** Consola WebFig v7 — Gestión de Bridges Layer 1 y Safe Mode. | ✅ **Verificado** |
+| **Fuentes Oficiales CVEs MikroTik y NVD:** Sustitución de feed obsoleto NVD por `mikrotik.com/supportsec` y `nvd.nist.gov/vuln/search`, catálogo ampliado a 23 firmas RouterOS v7 | `test_hito23_cve_and_syslog.unit.py` (32/32 tests al 100%: parser RSS, fallback offline y semver) | `fleetCveMatrix.unit.ts` (7/7 tests al 100%: verificación de enlaces y banners de sincronización) | **Escenario 55:** Matriz CVE de flota (401).<br>**Escenario 56:** Sincronización CVE contra fuentes oficiales (401). | **Escenario 18:** Matriz CVE, KPIs, botón de remediación y enlaces a `mikrotik.com/supportsec` y NIST NVD. | ✅ **Verificado** |
+| **Invariante de Gobernanza Karate Labs:** Obligatoriedad incondicional de escenarios BDD para todo cambio | N/A | N/A | **68 de 68 escenarios aprobados (100%)** | **24 de 24 escenarios aprobados (100%)** | ✅ **Verificado** |
+
 

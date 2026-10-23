@@ -68,12 +68,11 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     When click("//button[contains(@class, 'tab-btn') and contains(., 'Actualizador de RouterOS')]")
     Then match attribute("//button[contains(@class, 'tab-btn') and contains(., 'Actualizador de RouterOS')]", 'class') contains 'tab-btn--active'
 
-  Scenario: 8. Muro Táctico Wallboard NOC 24/7 y KPIs en Tiempo Real
+  Scenario: 8. Muro Táctico Wallboard NOC y KPIs en Tiempo Real
     Given driver baseUrl + '/noc-wallboard'
     And waitFor("//h1[contains(., 'RoSGrid NOC Wallboard')]")
-    And waitFor(".live-indicator")
-    Then match text(".live-indicator") contains 'EN VIVO 24/7'
     And waitFor(".kpi-strip")
+    And waitFor("button.btn-fullscreen")
 
   Scenario: 9. Consola Forense de Auditoría Inmutable (WORM)
     Given driver baseUrl + '/audit-logs'
@@ -165,7 +164,8 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     When click("button.btn-import-csv")
     Then waitFor(".rg-modal-dialog")
     And match text("//h2[contains(., 'Asistente de Importación Masiva CSV')]") contains 'Paso 1 de 2'
-    And waitFor("button.btn-download-template")
+    And waitFor("a.btn-download-template")
+    And match attribute("a.btn-download-template", 'href') contains '/api/v1/inventory/template-csv'
     And waitFor("#csv-file-input")
     When click("button.btn-close")
     Then waitUntil("!document.querySelector('.rg-modal-dialog')")
@@ -179,4 +179,22 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And waitFor("#tenant-slug")
     And waitFor("#login-email")
     And waitFor("#login-password")
+
+  Scenario: 23. Consola WebFig v7 — Gestión de Bridges Layer 1 y Safe Mode
+    Given driver baseUrl + '/routers/01928900-aaaa-7bbb-8ccc-111122223333/webfig/bridge'
+    And waitFor(".bridges-view")
+    And waitFor("//h2[contains(., 'Interfaces Bridge y Puertos') or contains(., 'Bridge')]")
+    And waitFor("button.btn-create-bridge")
+    And waitFor(".bridges-table-container")
+
+  Scenario: 24. Barra Superior Táctica — Menú Desplegable de Usuario y Reloj HH:MM
+    Given driver baseUrl + '/'
+    And waitFor(".global-clock-badge")
+    And waitFor(".user-menu-trigger")
+    When click(".user-menu-trigger")
+    Then waitFor(".user-dropdown-menu")
+    And waitFor(".time-format-toggle")
+    And waitFor(".theme-selector")
+    And waitFor(".lang-selector")
+
 
