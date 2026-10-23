@@ -3,7 +3,7 @@
 
 <script setup lang="ts">
   import { ref } from 'vue';
-  import { http } from '@/api/httpClient';
+  import { http, resolveUrl } from '@/api/httpClient';
   import type { CsvDryRunResponse } from '@/types';
 
   defineProps<{
@@ -14,6 +14,8 @@
     (e: 'close'): void;
     (e: 'imported', count: number): void;
   }>();
+
+  const templateDownloadUrl = resolveUrl('/api/v1/inventory/template-csv');
 
   const step = ref<1 | 2>(1);
   const isProcessing = ref(false);
@@ -34,46 +36,6 @@
     if (target.files && target.files.length > 0) {
       selectedFile.value = target.files[0];
       errorMessage.value = '';
-    }
-  }
-
-  function triggerBlobDownload(blob: Blob, filename: string) {
-    const url =
-      typeof URL.createObjectURL === 'function' ? URL.createObjectURL(blob) : 'blob:sample';
-    const link = document.createElement('a');
-    link.style.display = 'none';
-    link.href = url;
-    link.download = filename;
-    link.setAttribute('download', filename);
-    if (typeof document !== 'undefined' && document.body) {
-      document.body.appendChild(link);
-    }
-    link.click();
-    setTimeout(() => {
-      if (link.parentNode) {
-        link.parentNode.removeChild(link);
-      }
-      if (typeof URL.revokeObjectURL === 'function') {
-        URL.revokeObjectURL(url);
-      }
-    }, 15000);
-  }
-
-  async function downloadCsvTemplate() {
-    try {
-      const res = await http.get<string>('/api/v1/inventory/template-csv');
-      const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8' });
-      triggerBlobDownload(blob, 'rosgrid-inventario-plantilla.csv');
-    } catch {
-      const headers =
-        'display_name,ip_address,api_port,ros_username,ros_password,network_role,serial_number,latitude,longitude,tags';
-      const sample1 =
-        'CCR2004-Edge-Norte,192.168.10.1,8728,api_admin,ClaveSegura123!,EDGE_BGP,HE4011ABC123,10.4806,-66.9036,"core;zona-norte"';
-      const sample2 =
-        'RB5009-Tower-Sur,192.168.20.1,8728,api_admin,SuperClave987!,TOWER_AP,RB5009XYZ789,10.4850,-66.9100,"torre;sur"';
-      const content = `\uFEFF${headers}\r\n${sample1}\r\n${sample2}\r\n`;
-      const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
-      triggerBlobDownload(blob, 'rosgrid-inventario-plantilla.csv');
     }
   }
 
@@ -165,9 +127,13 @@
 
           <div class="template-box">
             <span>¿No tienes la plantilla oficial?</span>
-            <button type="button" class="btn-download-template" @click="downloadCsvTemplate">
+            <a
+              :href="templateDownloadUrl"
+              download="rosgrid-inventario-plantilla.csv"
+              class="btn-download-template"
+            >
               📄 Descargar Plantilla .CSV
-            </button>
+            </a>
           </div>
 
           <div class="file-drop-area">
@@ -379,6 +345,15 @@
     border-radius: 4px;
     cursor: pointer;
     font-size: 0.8rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .btn-download-template:hover {
+    background: rgba(34, 211, 238, 0.1);
   }
 
   .file-drop-area {

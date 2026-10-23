@@ -448,8 +448,7 @@ def test_csv_row_ssrf_validation() -> None:
 async def test_download_inventory_csv_template_endpoint() -> None:
     from src.api.v1.inventory import download_inventory_csv_template
 
-    claims = {"sub": str(uuid.uuid4()), "tid": str(uuid.uuid4()), "role": "TENANT_ADMIN"}
-    response = await download_inventory_csv_template(claims=claims)
+    response = await download_inventory_csv_template()
     assert response.status_code == 200
     assert response.headers["Content-Disposition"] == 'attachment; filename="rosgrid-inventario-plantilla.csv"'
     assert response.headers["Content-Type"] == "text/csv; charset=utf-8"

@@ -608,9 +608,7 @@ async def repin_ssl(
 
 
 @router.get("/template-csv")
-async def download_inventory_csv_template(
-    claims: dict[str, Any] = Depends(get_current_user_claims),
-) -> Response:
+async def download_inventory_csv_template() -> Response:
     """Descarga la plantilla CSV oficial RFC 4180 para importación masiva de routers."""
     headers = "display_name,ip_address,api_port,ros_username,ros_password,network_role,serial_number,latitude,longitude,tags"
     sample1 = 'CCR2004-Edge-Norte,192.168.10.1,8728,api_admin,ClaveSegura123!,EDGE_BGP,HE4011ABC123,10.4806,-66.9036,"core;zona-norte"'

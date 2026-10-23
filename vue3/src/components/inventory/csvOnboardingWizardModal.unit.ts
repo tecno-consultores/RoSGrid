@@ -217,33 +217,23 @@ describe('CsvOnboardingWizardModal.vue — Asistente de Importación CSV en 2 Pa
     expect(wrapper.emitted('imported')).toBeTruthy();
   });
 
-  it('descarga plantilla CSV llamando al endpoint del backend', async () => {
-    const getSpy = vi.spyOn(http, 'get').mockResolvedValueOnce({
-      status: 200,
-      data: 'display_name,ip_address\nCCR,10.0.0.1',
-      headers: new Headers(),
-    });
-
+  it('proporciona enlace de descarga nativa con href a /api/v1/inventory/template-csv y nombre correcto', () => {
     const wrapper = mount(CsvOnboardingWizardModal, {
       props: { isOpen: true },
     });
 
-    await wrapper.find('.btn-download-template').trigger('click');
-    await flushPromises();
-
-    expect(getSpy).toHaveBeenCalledWith('/api/v1/inventory/template-csv');
+    const link = wrapper.find('a.btn-download-template');
+    expect(link.exists()).toBe(true);
+    expect(link.attributes('href')).toContain('/api/v1/inventory/template-csv');
+    expect(link.attributes('download')).toBe('rosgrid-inventario-plantilla.csv');
   });
 
-  it('descarga plantilla CSV mediante fallback local si la petición HTTP falla', async () => {
-    vi.spyOn(http, 'get').mockRejectedValueOnce(new Error('Network error'));
-
+  it('permite invocar el clic sobre el enlace de descarga de plantilla sin errores', async () => {
     const wrapper = mount(CsvOnboardingWizardModal, {
       props: { isOpen: true },
     });
 
-    // No debe lanzar excepción no manejada
     await wrapper.find('.btn-download-template').trigger('click');
-    await flushPromises();
     expect(wrapper.exists()).toBe(true);
   });
 });
