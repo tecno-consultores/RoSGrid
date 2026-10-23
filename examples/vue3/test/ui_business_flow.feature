@@ -137,6 +137,8 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And waitFor(".kpi-grid")
     And waitFor("button.btn-sync-cve")
     And waitFor("button.btn-remediate-fleet")
+    And waitFor("a[href='https://mikrotik.com/supportsec']")
+    And waitFor("a[href='https://nvd.nist.gov/vuln/search?keyword=mikrotik&resultType=records']")
     Then match text("button.btn-remediate-fleet") contains 'Actualizar Flota Afectada'
 
   Scenario: 19. Consola WebFig v7 — Terminal Syslog en Vivo (RingBuffer Efímero)

@@ -1173,7 +1173,10 @@ Certificación integral ejecutada de extremo a extremo bajo la **Regla Cero** (c
 2. **Frontend Vitest & Build (`sinfallas/base-node-ionic:26`):**
    - **7 de 7 pruebas unitarias aprobadas al 100%** en `vue3/src/views/fleetCveMatrix.unit.ts`.
    - `npm run build`: Compilación de producción exitosa en 3.96s con 0 errores TypeScript (`vue-tsc`).
-3. **Sincronización Documental y Secretos:**
+3. **Pruebas BDD de Aceptación con Karate Labs:**
+   - **Karate Labs API (`fastapi/test/api_test.feature` y `examples/fastapi/test/api_test.feature`):** Escenarios 55 y 56 validando contractualmente el acceso a `/api/v1/inventory/cves` y la sincronización en `/api/v1/inventory/cves/sync`.
+   - **Karate Labs UI (`vue3/test/ui_business_flow.feature` y `examples/vue3/test/ui_business_flow.feature`):** Escenario 18 enriquecido verificando la presencia en el DOM de los enlaces oficiales a MikroTik Security (`https://mikrotik.com/supportsec`) y NIST NVD Search (`https://nvd.nist.gov/vuln/search?keyword=mikrotik&resultType=records`).
+4. **Sincronización Documental y Secretos:**
    - Sincronizadas las especificaciones en `specs/35_FLEET_AUTOMATION_TOPOLOGY_L2_SYSLOG_AND_PROMETHEUS.md`.
    - Sincronizada la documentación de API en `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`.
    - Registro de cambios en `CHANGELOG.md` y `ROADMAP.md`.
