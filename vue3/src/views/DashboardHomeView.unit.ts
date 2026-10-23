@@ -80,12 +80,15 @@ describe('DashboardHomeView.vue — Centro de Mando Táctico 11X', () => {
     // Eliminación de la hora pequeña UTC
     expect(clockCard.find('.clock-utc').exists()).toBe(false);
 
-    // En formato 24h
-    expect(clockCard.find('.clock-time').text()).not.toBe('');
+    // En formato 24h debe ser HH:MM (sin segundos)
+    const timeText24 = clockCard.find('.clock-time').text();
+    expect(timeText24).toMatch(/^\d{1,2}:\d{2}$/);
 
     // Cambiar a formato 12h
     themeStore.timeFormat = '12h';
-    expect(themeStore.timeFormat).toBe('12h');
+    await wrapper.vm.$nextTick();
+    const timeText12 = clockCard.find('.clock-time').text();
+    expect(timeText12).toMatch(/^\d{1,2}:\d{2}(\s?(AM|PM|a\.\sm\.|p\.\sm\.))?$/i);
   });
 
   it('permite actualizar datos de la flota con el botón de refresco', async () => {

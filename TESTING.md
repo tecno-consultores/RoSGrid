@@ -1029,15 +1029,20 @@ Certificación integral ejecutada de extremo a extremo bajo la **Regla Cero** (c
 - **Descarga Fiable y Nativa de Plantilla CSV (`CsvOnboardingWizardModal.vue` & Backend):**
   - **Fallo previo:** La descarga mediante Blob URL programático (`URL.createObjectURL`) generaba pérdida de activación de usuario en Google Chrome y navegadores Chromium, lo que provocaba que el navegador ignorara el atributo `download`, asignara el UUID del blob como nombre de archivo sin extensión `.csv` y bloqueara la descarga con alerta de seguridad (círculo rojo de archivo peligroso/sospechoso).
   - **Acción Correctiva:** Implementación del endpoint público oficial `GET /api/v1/inventory/template-csv` en `fastapi/src/api/v1/inventory.py` devolviendo `Response` con MIME `text/csv; charset=utf-8`, cabecera `Content-Disposition: attachment; filename="rosgrid-inventario-plantilla.csv"` y BOM UTF-8 (`\ufeff`). En el frontend, se transformó el disparador en un enlace nativo directo `<a>` con atributos `href` y `download`, permitiendo al navegador descargar el archivo directamente por HTTP sin generar objetos Blob temporales en memoria.
+- **Reloj Operativo sin Segundos (HH:MM) y Reactividad Inmediata:**
+  - Actualización del algoritmo en `DashboardHomeView.vue` para restringir el formateo horario a `{ hour: '2-digit', minute: '2-digit' }` sin incluir segundos, vinculado a un `watch` reactivo para conmutar de inmediato ante cambios de formato (24h vs 12h) o idioma.
+- **Internacionalización Dinámica del Menú Desplegable de Usuario y Riel Lateral:**
+  - Creación del diccionario completo `"user_menu"` en `es.json` y `en.json` conectado reactivamente en `RgResponsiveShell.vue`.
+  - Incorporación de las traducciones oficiales `nav.l2_topology` (*"Topología L2"* / *"L2 Topology"*) y `nav.cve_matrix` (*"Matriz de CVEs"* / *"CVE Matrix"*).
 - **Internacionalización Dinámica de la Consola WebFig:**
   - Creación del diccionario completo `"webfig"` en `es.json` y `en.json`.
   - Integración de `useI18n()` en `RouterSidebarMenu.vue`, `RouterContextHeader.vue`, `RouterWorkspaceTabsBar.vue` (traducción reactiva en caliente de pestañas existentes sin recargar estado) y `RouterLiveDashboardView.vue` (KPIs, títulos y gráficos).
 
 ### B. Certificación en Contenedores Docker Efímeros
 1. **Frontend Vitest v8 (`sinfallas/base-node-ionic:26`):**
-   - **46 de 46 suites aprobadas (100%)** con **332 de 332 pruebas unitarias exitosas**.
-   - Nueva suite: `manageNetworkRolesModal.unit.ts` (11 pruebas unitarias cubriendo renderizado, layout, validaciones y CRUD).
-   - Suites ampliadas: `csvOnboardingWizardModal.unit.ts` (tests de descarga y fallback), `webfigViews.unit.ts` (conmutación reactiva a inglés) y `router.unit.ts` (nuevo título de inventario).
+   - **46 de 46 suites aprobadas (100%)** con **333 de 333 pruebas unitarias exitosas**.
+   - Nueva suite: `manageNetworkRolesModal.unit.ts` (10 pruebas unitarias cubriendo renderizado, layout, validaciones y CRUD).
+   - Suites ampliadas: `RgResponsiveShell.unit.ts` (traducción reactiva del menú y enlaces L2/CVE), `DashboardHomeView.unit.ts` (verificación de formato HH:MM sin segundos en 24h y 12h), `csvOnboardingWizardModal.unit.ts`, `webfigViews.unit.ts` y `router.unit.ts`.
 2. **Chequeo Estricto de Tipos TypeScript:**
    - `vue-tsc --noEmit`: 0 errores en 100% de componentes, stores y vistas.
 3. **Backend Pytest (`sinfallas/base-python-uv:3.15`):**

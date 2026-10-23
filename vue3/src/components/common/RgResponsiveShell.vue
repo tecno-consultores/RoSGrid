@@ -280,7 +280,7 @@
             id="user-profile-trigger"
             :aria-expanded="isUserMenuOpen"
             aria-haspopup="true"
-            aria-label="Menú de perfil y preferencias del usuario"
+            :aria-label="t('user_menu.aria_label')"
             @click="toggleUserMenu"
           >
             <span class="user-avatar-badge" aria-hidden="true">👤</span>
@@ -310,7 +310,7 @@
 
             <!-- Preferencia 1: Formato de Hora (24h vs 12h AM/PM) -->
             <div class="dropdown-section dropdown-section--time">
-              <span class="dropdown-section-title">🕒 Formato de Hora</span>
+              <span class="dropdown-section-title">{{ t('user_menu.time_format') }}</span>
               <div class="dropdown-toggle-group" role="radiogroup" aria-label="Formato de reloj">
                 <button
                   type="button"
@@ -318,7 +318,7 @@
                   :class="{ 'toggle-btn--active': themeStore.timeFormat === '24h' }"
                   @click="themeStore.setTimeFormat('24h')"
                 >
-                  24 Horas
+                  {{ t('user_menu.time_24h') }}
                 </button>
                 <button
                   type="button"
@@ -326,48 +326,48 @@
                   :class="{ 'toggle-btn--active': themeStore.timeFormat === '12h' }"
                   @click="themeStore.setTimeFormat('12h')"
                 >
-                  12h AM/PM
+                  {{ t('user_menu.time_12h') }}
                 </button>
               </div>
             </div>
 
             <!-- Preferencia 2: Tema Gráfico -->
             <div class="dropdown-section dropdown-section--theme">
-              <span class="dropdown-section-title">🎨 Tema Visual</span>
+              <span class="dropdown-section-title">{{ t('user_menu.visual_theme') }}</span>
               <div class="dropdown-toggle-group" role="radiogroup" aria-label="Tema visual">
                 <button
                   type="button"
                   class="toggle-btn"
                   :class="{ 'toggle-btn--active': themeStore.theme === 'dark' }"
-                  title="Oscuro Táctico"
+                  :title="t('user_menu.theme_dark_title')"
                   @click="themeStore.setTheme('dark')"
                 >
-                  🌙 Oscuro
+                  {{ t('user_menu.theme_dark') }}
                 </button>
                 <button
                   type="button"
                   class="toggle-btn"
                   :class="{ 'toggle-btn--active': themeStore.theme === 'light' }"
-                  title="Modo Claro"
+                  :title="t('user_menu.theme_light_title')"
                   @click="themeStore.setTheme('light')"
                 >
-                  ☀️ Claro
+                  {{ t('user_menu.theme_light') }}
                 </button>
                 <button
                   type="button"
                   class="toggle-btn"
                   :class="{ 'toggle-btn--active': themeStore.theme === 'noc-high-contrast' }"
-                  title="Alto Contraste NOC"
+                  :title="t('user_menu.theme_noc_title')"
                   @click="themeStore.setTheme('noc-high-contrast')"
                 >
-                  ⚡ NOC
+                  {{ t('user_menu.theme_noc') }}
                 </button>
               </div>
             </div>
 
             <!-- Preferencia 3: Idioma -->
             <div class="dropdown-section dropdown-section--lang">
-              <span class="dropdown-section-title">🌐 Idioma</span>
+              <span class="dropdown-section-title">{{ t('user_menu.language') }}</span>
               <div class="dropdown-toggle-group" role="radiogroup" aria-label="Idioma del sistema">
                 <button
                   type="button"
@@ -375,7 +375,7 @@
                   :class="{ 'toggle-btn--active': locale === 'es' }"
                   @click="locale !== 'es' && toggleLocale()"
                 >
-                  Español
+                  {{ t('user_menu.lang_es') }}
                 </button>
                 <button
                   type="button"
@@ -383,7 +383,7 @@
                   :class="{ 'toggle-btn--active': locale === 'en' }"
                   @click="locale !== 'en' && toggleLocale()"
                 >
-                  English
+                  {{ t('user_menu.lang_en') }}
                 </button>
               </div>
             </div>
@@ -398,7 +398,7 @@
               @click="openChangePasswordModal"
             >
               <span class="dropdown-item-icon" aria-hidden="true">🔑</span>
-              <span>Cambiar Mi Clave</span>
+              <span>{{ t('user_menu.change_password') }}</span>
             </button>
 
             <button
@@ -408,7 +408,7 @@
               @click="openReset2FAModal"
             >
               <span class="dropdown-item-icon" aria-hidden="true">↺</span>
-              <span>Resetear Mi 2FA</span>
+              <span>{{ t('user_menu.reset_2fa') }}</span>
             </button>
 
             <button
@@ -418,7 +418,7 @@
               @click="openMcpTokenModal"
             >
               <span class="dropdown-item-icon" aria-hidden="true">⚡</span>
-              <span>Token de Acceso MCP</span>
+              <span>{{ t('user_menu.mcp_token') }}</span>
             </button>
 
             <div class="dropdown-divider"></div>
@@ -431,7 +431,7 @@
               @click="handleLogout"
             >
               <span class="dropdown-item-icon" aria-hidden="true">🚪</span>
-              <span>Cerrar Sesión</span>
+              <span>{{ t('user_menu.logout') }}</span>
             </button>
           </div>
         </div>

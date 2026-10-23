@@ -436,7 +436,9 @@
   - Alineación pixel-perfect de campos y botón en el modal de personalización de roles de red (`ManageNetworkRolesModal.vue`): corrección de desfase vertical, estandarización de alturas a 38px, etiquetas de 16px con spacer y reubicación de texto de ayuda.
   - Asistente de importación masiva CSV (`CsvOnboardingWizardModal.vue` y `fastapi/src/api/v1/inventory.py`): resolución de archivo corrupto mediante nuevo endpoint `GET /api/v1/inventory/template-csv` emitiendo MIME `text/csv; charset=utf-8` con BOM UTF-8 y fallback frontend libre de caracteres residuales.
   - Internacionalización completa y reactiva de la Consola WebFig (`RouterSidebarMenu.vue`, `RouterContextHeader.vue`, `RouterWorkspaceTabsBar.vue`, `RouterLiveDashboardView.vue` y locales `es.json` / `en.json`): soporte en caliente de cambio de idioma a inglés sin recargar el navegador ni perder pestañas.
-  - Certificación 11X en Docker: 332 pruebas Vitest aprobadas (100% en 46 suites), 17 pruebas Pytest de inventario/CSV aprobadas (100%), 0 errores en `vue-tsc --noEmit`, 26/26 contratos front-back y validación visual multi-pantalla con navegador.
+  - Reloj operativo del Centro de Mando sin segundos (solo formato `HH:MM` en 24 Horas o 12h AM/PM reactivo ante cambios de preferencia e idioma).
+  - Internacionalización dinámica del menú desplegable de usuario (`user_menu.*`) y enlaces del riel lateral (`nav.l2_topology` / `nav.cve_matrix`).
+  - Certificación 11X en Docker: 333 pruebas Vitest aprobadas (100% en 46 suites), 17 pruebas Pytest de inventario/CSV aprobadas (100%), 0 errores en `vue-tsc --noEmit`, 26/26 contratos front-back y validación visual multi-pantalla con navegador.
 
 ---
 

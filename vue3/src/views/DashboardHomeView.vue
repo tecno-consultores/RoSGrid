@@ -2,7 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+  import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
   import { useRouter } from 'vue-router';
   import { useInventoryStore } from '@/stores/useInventoryStore';
   import { useAuthStore } from '@/stores/useAuthStore';
@@ -18,19 +18,28 @@
   const themeStore = useThemeAndLayoutStore();
   const { t, locale } = useI18n();
 
-  // Reloj táctico en tiempo real
+  // Reloj táctico en tiempo real (solo HH:MM)
   const currentTime = ref('');
   let clockTimer: ReturnType<typeof setInterval> | null = null;
 
   function updateClock() {
     const now = new Date();
     currentTime.value = now.toLocaleTimeString(locale.value === 'en' ? 'en-US' : 'es-ES', {
+      hour: '2-digit',
+      minute: '2-digit',
       hour12: themeStore.timeFormat === '12h',
     });
   }
 
-  // Inicialización inmediata
+  // Inicialización inmediata y reactiva
   updateClock();
+
+  watch(
+    () => [themeStore.timeFormat, locale.value],
+    () => {
+      updateClock();
+    },
+  );
 
   onMounted(() => {
     updateClock();

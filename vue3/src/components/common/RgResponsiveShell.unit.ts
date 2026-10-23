@@ -7,6 +7,7 @@ import { setActivePinia, createPinia } from 'pinia';
 import RgResponsiveShell from './RgResponsiveShell.vue';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useThemeAndLayoutStore } from '@/stores/useThemeAndLayoutStore';
+import { useI18n } from '@/composables/useI18n';
 
 const pushMock = vi.fn();
 vi.mock('vue-router', () => ({
@@ -499,4 +500,39 @@ describe('RgResponsiveShell.vue — Doble Contexto & Menú de Usuario 11X', () =
     expect(tenantsPos).toBeGreaterThan(auditPos);
     expect(compliancePos).toBeGreaterThan(tenantsPos);
   });
+
+  it('traduce el menú de usuario y los enlaces de navegación L2 Topology y CVE Matrix al cambiar a inglés', async () => {
+    const { setLocale } = useI18n();
+    setLocale('en');
+
+    const wrapper = mount(RgResponsiveShell, {
+      global: {
+        stubs: {
+          RouterView: true,
+          RgCommandPalette: true,
+          RgSafeModeBanner: true,
+          ChangePasswordModal: true,
+          RgStepUp2FAModal: true,
+          RgMcpTokenModal: true,
+        },
+      },
+    });
+
+    // Enlaces de navegación en inglés
+    expect(wrapper.text()).toContain('L2 Topology');
+    expect(wrapper.text()).toContain('CVE Matrix');
+
+    // Desplegar menú de usuario en inglés
+    await wrapper.find('.user-profile-btn').trigger('click');
+    expect(wrapper.text()).toContain('Time Format');
+    expect(wrapper.text()).toContain('Visual Theme');
+    expect(wrapper.text()).toContain('Change My Password');
+    expect(wrapper.text()).toContain('Reset My 2FA');
+    expect(wrapper.text()).toContain('MCP Access Token');
+    expect(wrapper.text()).toContain('Sign Out');
+
+    // Restaurar a español
+    setLocale('es');
+  });
 });
+
