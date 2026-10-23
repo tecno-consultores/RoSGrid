@@ -1218,7 +1218,7 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
 
 ##### `POST /api/v1/inventory/cves/sync`
 
-- **Propósito:** Sincroniza y actualiza el catálogo local de firmas de vulnerabilidades desde el feed oficial (NIST NVD / GitHub Advisory).
+- **Propósito:** Sincroniza y actualiza el catálogo local de firmas de vulnerabilidades desde los boletines oficiales de MikroTik Security (`https://mikrotik.com/supportsec`) y búsqueda autorizada de registros NIST NVD MikroTik (`https://nvd.nist.gov/vuln/search?keyword=mikrotik&resultType=records`).
 - **Feature Flag:** `cve_scanner_enabled`.
 - **Rol Mínimo:** `TENANT_ADMIN`.
 - **Respuesta (200 OK):**
@@ -1226,10 +1226,10 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
   ```json
   {
     "success": true,
-    "source_url": "https://services.nvd.nist.gov/rest/json/cves/2.0",
-    "total_cves": 6,
-    "updated_at": "2026-10-20T21:00:00Z",
-    "message": "Catálogo de CVEs actualizado exitosamente con 6 boletines."
+    "source_url": "https://mikrotik.com/supportsec",
+    "total_cves": 23,
+    "updated_at": "2026-10-22T22:00:00Z",
+    "message": "Catálogo de CVEs actualizado exitosamente desde MikroTik Security (https://mikrotik.com/supportsec y https://nvd.nist.gov/vuln/search?keyword=mikrotik&resultType=records) con 23 boletines oficiales."
   }
   ```
 

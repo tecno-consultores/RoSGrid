@@ -82,10 +82,11 @@ describe('FleetCveMatrix.vue — Hito 23.5 Matriz de Vulnerabilidades CVE', () =
       if (url.includes('/api/v1/inventory/cves/sync')) {
         const syncRes: CveSyncResponse = {
           success: true,
-          source_url: 'https://services.nvd.nist.gov/rest/json/cves/2.0',
-          total_cves: 6,
+          source_url: 'https://mikrotik.com/supportsec',
+          total_cves: 23,
           updated_at: '2026-10-20T21:00:00Z',
-          message: 'Sincronizado exitosamente con 6 boletines.',
+          message:
+            'Catálogo de CVEs actualizado exitosamente desde MikroTik Security (https://mikrotik.com/supportsec y https://nvd.nist.gov/vuln/search?keyword=mikrotik&resultType=records) con 23 boletines oficiales.',
         };
         return Promise.resolve({ data: syncRes, status: 200, headers: new Headers() } as unknown as ApiResponse);
       }
@@ -170,7 +171,8 @@ describe('FleetCveMatrix.vue — Hito 23.5 Matriz de Vulnerabilidades CVE', () =
 
     expect(http.post).toHaveBeenCalledWith('/api/v1/inventory/cves/sync');
     expect(wrapper.find('.banner-success').exists()).toBe(true);
-    expect(wrapper.find('.banner-success').text()).toContain('Sincronizado exitosamente');
+    expect(wrapper.find('.banner-success').text()).toContain('actualizado exitosamente');
+    expect(wrapper.find('.banner-success').text()).toContain('mikrotik.com/supportsec');
   });
 
   it('navega hacia operaciones masivas al pulsar botón de actualizar flota', async () => {

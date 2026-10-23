@@ -101,14 +101,14 @@ def test_evaluate_router_cves():
     assert any(c.cve_id == "CVE-2023-32154" for c in res.vulnerabilities)
 
     # Version segura reciente
-    res_clean = evaluate_router_cves(uuid.uuid4(), "Edge-Router", "7.19")
+    res_clean = evaluate_router_cves(uuid.uuid4(), "Edge-Router", "7.25")
     assert res_clean.total_vulnerabilities == 0
 
 
 def test_evaluate_fleet_cves():
     fleet = [
         {"id": uuid.uuid4(), "display_name": "R1", "ros_version": "7.10"},
-        {"id": uuid.uuid4(), "display_name": "R2", "ros_version": "7.18"},
+        {"id": uuid.uuid4(), "display_name": "R2", "ros_version": "7.25"},
     ]
     summary = evaluate_fleet_cves(fleet)
     assert isinstance(summary, FleetCveSummary)
@@ -168,6 +168,43 @@ async def test_cve_api_endpoints(sample_tenant, sample_claims):
     with patch("src.api.v1.cve.sync_cve_catalog", AsyncMock(return_value=fake_sync)):
         sync_res = await sync_cve_database(claims=sample_claims, db=db)
         assert sync_res.total_cves == 6
+
+
+@pytest.mark.asyncio
+async def test_sync_cve_catalog_mikrotik_rss_success():
+    sample_rss = """<?xml version="1.0" encoding="utf-8"?>
+    <rss version="2.0">
+      <channel>
+        <item>
+          <title>CVE-2026-99999</title>
+          <pubDate>Tue, 20 Oct 2026 00:00:00 +0000</pubDate>
+          <description>Critical vulnerability in WebFig fixed in: 7.24.2</description>
+        </item>
+      </channel>
+    </rss>"""
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.text = sample_rss
+
+    with patch("httpx.AsyncClient.get", AsyncMock(return_value=mock_resp)):
+        res = await sync_cve_catalog()
+        assert res.success is True
+        assert res.source_url == "https://mikrotik.com/supportsec"
+        assert "mikrotik.com/supportsec" in res.message
+        assert "nvd.nist.gov" in res.message
+        assert res.total_cves >= 23
+
+
+@pytest.mark.asyncio
+async def test_sync_cve_catalog_offline_fallback():
+    with patch("httpx.AsyncClient.get", AsyncMock(side_effect=Exception("Connection refused"))):
+        res = await sync_cve_catalog()
+        assert res.success is False
+        assert res.source_url == "https://mikrotik.com/supportsec"
+        assert "https://mikrotik.com/supportsec" in res.message
+        assert "https://nvd.nist.gov/vuln/search" in res.message
+        assert res.total_cves >= 20
 
 
 @pytest.mark.asyncio

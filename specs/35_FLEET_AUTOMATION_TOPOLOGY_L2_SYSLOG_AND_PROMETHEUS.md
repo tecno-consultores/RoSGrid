@@ -232,7 +232,7 @@ Para evitar la introducción de vectores de ataque en estas nuevas funciones:
 * **Métricas KPI:** 4 tarjetas tácticas con tipografía `tabular-nums` que resumen: *Total Routers Evaluados*, *Routers Vulnerables*, *Amenazas Críticas Pendientes* y *Versión de Firmware Recomendada*.
 * **Controles y Filtros:** Búsqueda en vivo por ID de CVE, descripción o nombre de router; filtro desplegable por severidad (`ALL`, `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`).
 * **Detalle Táctico:** Fila expandible con descripción en español, vector CVSS v3, versiones afectadas y botón de mitigación.
-* **Acciones Directas:** Sincronizador manual contra NIST NVD (`POST /api/v1/inventory/cves/sync`) y botón de acceso directo `[ 🚀 Actualizar Flota Afectada ]` enlazado al asistente de operaciones masivas.
+* **Acciones Directas:** Sincronizador manual contra boletines oficiales de MikroTik Security Advisories (`https://mikrotik.com/supportsec`) y búsqueda de registros NIST NVD MikroTik (`https://nvd.nist.gov/vuln/search?keyword=mikrotik&resultType=records`) vía (`POST /api/v1/inventory/cves/sync`) y botón de acceso directo `[ 🚀 Actualizar Flota Afectada ]` enlazado al asistente de operaciones masivas.
 
 ### 9.2. Topología Física Capa 2 en Canvas 2D (`L2TopologyView.vue` en `/topology/l2`)
 

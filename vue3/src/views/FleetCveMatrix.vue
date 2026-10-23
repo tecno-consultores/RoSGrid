@@ -140,10 +140,23 @@ onMounted(() => {
   <main class="cve-matrix-view" aria-labelledby="cve-matrix-title">
     <!-- Encabezado de Vista -->
     <header class="cve-header">
-      <div>
+      <div class="cve-header-text">
         <h1 id="cve-matrix-title" class="cve-title">Matriz de Vulnerabilidades CVE — Flota MikroTik</h1>
         <p class="cve-subtitle">
-          Auditoría proactiva de boletines de seguridad RouterOS v7 y remediación PoE-aware
+          Auditoría proactiva de boletines RouterOS v7 | Fuentes oficiales:
+          <a
+            href="https://mikrotik.com/supportsec"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="cve-source-link"
+          >MikroTik Security Advisories</a>
+          y
+          <a
+            href="https://nvd.nist.gov/vuln/search?keyword=mikrotik&resultType=records"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="cve-source-link"
+          >NIST NVD MikroTik</a>
         </p>
       </div>
 
@@ -388,6 +401,18 @@ onMounted(() => {
   font-size: 0.875rem;
   color: var(--rg-text-secondary, #cbd5e1);
   margin: 0;
+}
+
+.cve-source-link {
+  color: var(--rg-accent-cyan, #22d3ee);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.cve-source-link:hover {
+  color: var(--rg-cyan-300, #67e8f9);
 }
 
 .cve-actions {

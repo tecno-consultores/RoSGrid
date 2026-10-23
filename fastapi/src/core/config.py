@@ -72,6 +72,11 @@ class Settings(BaseSettings):
     ROSGRID_SYSLOG_PORT: int = 5514
     ROSGRID_PROMETHEUS_SCRAPE_TOKEN: str = ""
 
+    # Fuentes Oficiales de Boletines y Vulnerabilidades CVE
+    ROSGRID_CVE_PRIMARY_SOURCE: str = "https://mikrotik.com/supportsec"
+    ROSGRID_CVE_RSS_SOURCE: str = "https://cdn.mikrotik.com/web-assets/supportsec/rss.xml"
+    ROSGRID_CVE_NVD_SEARCH_SOURCE: str = "https://nvd.nist.gov/vuln/search?keyword=mikrotik&resultType=records"
+
     # Configuración de Orígenes Cruzados (CORS) y Despliegue Separado
     ROSGRID_CORS_ORIGINS: str = "*"
     ROSGRID_CROSS_ORIGIN_COOKIES: bool = False

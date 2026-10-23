@@ -10,6 +10,13 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Added
 
+- **Sustitución de Feed Remoto CVE Obsoleto por Fuentes Oficiales MikroTik Security y Búsqueda NIST NVD (`config.py`, `cve_matcher.py`, `cve_catalog_ros.json`, `FleetCveMatrix.vue`):**
+  - **Desacoplamiento del Endpoint Obsoleto NVD:** Eliminado el intento de consulta directa a la API REST bloqueada por Cloudflare/rate-limit de NIST (`https://services.nvd.nist.gov/rest/json/cves/2.0`).
+  - **Integración del Feed Oficial MikroTik Security (`https://mikrotik.com/supportsec`):** Implementado parser XML de alta resiliencia para el feed RSS oficial de MikroTik (`https://cdn.mikrotik.com/web-assets/supportsec/rss.xml`), enriqueciendo dinámicamente el catálogo de vulnerabilidades con boletines vigentes y reglas de versiones RouterOS v7.
+  - **Enlace a Búsqueda Oficial NIST NVD:** Incorporado enlace directo y trazabilidad a `https://nvd.nist.gov/vuln/search?keyword=mikrotik&resultType=records` como fuente secundaria de verificación.
+  - **Enriquecimiento del Catálogo Base Local:** Actualizado el catálogo embebido (`cve_catalog_ros.json`) de 6 a 23 boletines oficiales verificados de RouterOS v7 (incluyendo CVEs críticos y altos de 2025 y 2026 como CVE-2026-88464, CVE-2026-84411, CVE-2026-67279, CVE-2025-10948, CVE-2024-38355, etc.).
+  - **Transparencia en Frontend y Pruebas Unitarias:** Visibilidad clara de ambas fuentes en el encabezado de `FleetCveMatrix.vue` mediante enlaces accesibles con `target="_blank"` y `rel="noopener noreferrer"`. Cobertura y aserciones de sincronización certificadas al 100% en backend (`test_hito23_cve_and_syslog.unit.py`) y frontend (`fleetCveMatrix.unit.ts`).
+
 - **Soporte de Parámetros STP y Validación de Puertos en Consola WebFig L1 Bridge (`webfig_interfaces.py`, `webfig_l1_net.py`, `BridgeView.vue`):**
   - **Ampliación de Esquemas Pydantic v2 (`BridgeCreateRequest`, `BridgeUpdateRequest`, `BridgePortCreateRequest`):** Incorporado el atributo `protocol_mode: str | None = Field(default=None, max_length=16)` para configuración de Spanning Tree Protocol (RSTP, STP, MSTP, none) y `ingress_filtering: bool = False` para puertos bridge, resolviendo la incompatibilidad con esquemas estrictos (`extra='forbid'`) que generaban un error de validación HTTP 422 (*"Extra inputs are not permitted: protocol_mode"*).
   - **Mapeo Nativo a RouterOS v7 REST API:** Adaptación del payload en `create_bridge` y `update_bridge` para transformar `protocol_mode` a `protocol-mode` y convertir flags booleanos (`vlan_filtering`, `disabled`, `ingress_filtering`) al formato nativo `"yes"`/`"no"` requerido por RouterOS v7.

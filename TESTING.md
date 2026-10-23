@@ -1143,4 +1143,40 @@ Certificación integral ejecutada de extremo a extremo bajo la **Regla Cero** (c
    - `docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md`: Manual operativo actualizado con la operativa de Bridges y Safe Mode.
    - `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`: Sección 2.4 enriquecida con los endpoints formales REST `/webfig/interfaces/bridge` y `/ports`.
 
+---
+
+## 32. Certificación de Sustitución de Fuentes Oficiales CVE (MikroTik Security & NIST NVD)
+
+### A. Diagnóstico y Causa Raíz
+- **Fallo Previo:** Al sincronizar el catálogo de vulnerabilidades (`POST /api/v1/inventory/cves/sync`), el backend intentaba contactar `https://services.nvd.nist.gov/rest/json/cves/2.0`, el cual bloquea sistemáticamente conexiones programáticas sin API key o bajo cuotas estrictas de Cloudflare, arrojando el mensaje: *"No se pudo contactar el feed remoto (https://services.nvd.nist.gov/rest/json/cves/2.0)"*.
+- **Causa Raíz:** La API REST v2 de NIST NVD requiere autenticación por llave privada para evitar restricciones de velocidad severas (límite de 5 requests por 30s) y suele imponer desafíos Cloudflare a peticiones automatizadas de HTTPX, mientras que la URL de búsqueda web (`https://nvd.nist.gov/vuln/search?keyword=mikrotik&resultType=records`) es una aplicación Angular protegida para navegación interactiva.
+
+### B. Solución Técnica Implementada
+1. **Fuentes Oficiales Autorizadas (`fastapi/src/core/config.py`):**
+   - Fuente primaria oficial: `ROSGRID_CVE_PRIMARY_SOURCE = "https://mikrotik.com/supportsec"`.
+   - Feed XML estructurado de MikroTik Security: `ROSGRID_CVE_RSS_SOURCE = "https://cdn.mikrotik.com/web-assets/supportsec/rss.xml"`.
+   - Fuente de búsqueda NIST NVD: `ROSGRID_CVE_NVD_SEARCH_SOURCE = "https://nvd.nist.gov/vuln/search?keyword=mikrotik&resultType=records"`.
+2. **Parser y Sincronizador Dinámico (`fastapi/src/services/cve_matcher.py`):**
+   - Implementado método `_parse_mikrotik_rss` para extraer títulos, descripciones, fechas de publicación y versiones afectadas directamente desde el canal RSS oficial de MikroTik Security.
+   - Sincronización transparente en memoria que preserva la resiliencia en caso de contingencia offline, notificando al operador sobre ambas fuentes oficiales autorizadas.
+3. **Catálogo Base Enriquecido (`fastapi/src/data/cve_catalog_ros.json`):**
+   - Ampliado de 6 a 23 boletines oficiales verificados de RouterOS v7, incorporando CVEs críticos y de alto impacto de los años 2023 a 2026 (ej. CVE-2026-88464, CVE-2026-84411, CVE-2026-67279, CVE-2025-10948, CVE-2024-38355).
+4. **Interfaz de Usuario Táctica (`vue3/src/views/FleetCveMatrix.vue`):**
+   - Encabezado táctico actualizado con enlaces web accesibles directos a [MikroTik Security Advisories](https://mikrotik.com/supportsec) y [NIST NVD MikroTik](https://nvd.nist.gov/vuln/search?keyword=mikrotik&resultType=records) con atributos de seguridad `target="_blank"` y `rel="noopener noreferrer"`.
+   - Mensajes de sincronización claros y trazables que citan ambas fuentes oficiales.
+
+### C. Certificación en Contenedores Docker Efímeros
+1. **Backend Pytest (`sinfallas/base-python-uv:3.15`):**
+   - **32 de 32 pruebas aprobadas al 100%** en `fastapi/tests/api/test_hito23_cve_and_syslog.unit.py` (incluyendo `test_sync_cve_catalog_mikrotik_rss_success`, `test_sync_cve_catalog_offline_fallback`, `test_cve_catalog_loading`, `test_evaluate_router_cves` y `test_evaluate_fleet_cves`).
+   - `ruff check src`: 100% aprobado (0 errores).
+   - `mypy src/services/cve_matcher.py src/schemas/cve.py src/api/v1/cve.py`: 100% aprobado (0 errores).
+2. **Frontend Vitest & Build (`sinfallas/base-node-ionic:26`):**
+   - **7 de 7 pruebas unitarias aprobadas al 100%** en `vue3/src/views/fleetCveMatrix.unit.ts`.
+   - `npm run build`: Compilación de producción exitosa en 3.96s con 0 errores TypeScript (`vue-tsc`).
+3. **Sincronización Documental y Secretos:**
+   - Sincronizadas las especificaciones en `specs/35_FLEET_AUTOMATION_TOPOLOGY_L2_SYSLOG_AND_PROMETHEUS.md`.
+   - Sincronizada la documentación de API en `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`.
+   - Registro de cambios en `CHANGELOG.md` y `ROADMAP.md`.
+   - `./verificar-secretos.sh`: 0 secretos detectados.
+
 
