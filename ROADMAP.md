@@ -439,6 +439,12 @@
   - Reloj operativo del Centro de Mando sin segundos (solo formato `HH:MM` en 24 Horas o 12h AM/PM reactivo ante cambios de preferencia e idioma).
   - Internacionalización dinámica del menú desplegable de usuario (`user_menu.*`) y enlaces del riel lateral (`nav.l2_topology` / `nav.cve_matrix`).
   - Certificación 11X en Docker: 333 pruebas Vitest aprobadas (100% en 46 suites), 17 pruebas Pytest de inventario/CSV aprobadas (100%), 0 errores en `vue-tsc --noEmit`, 26/26 contratos front-back y validación visual multi-pantalla con navegador.
+- [x] **23.10** **Motor de Ejecución en Flota para Aprobaciones Masivas Maker-Checker (`approvals.py`, `bulk_and_updates.py`, `ApprovalsInboxView.vue`):**
+  - Despachador masivo en flota `execute_bulk_job_on_fleet` que conecta mediante `MikrotikRestClient` a cada router objetivo empleando credenciales de la bóveda AES-256-GCM.
+  - Ejecución diferida automática al aprobar (`approve_request`): si la solicitud es `BULK_MULTI_ROUTER_EXECUTION`, ejecuta la plantilla Golden Config sobre los routers, actualiza `BulkJob` y `BulkJobItem`, e inyecta el `execution_result` estructurado.
+  - Manejo de endpoints singulares en RouterOS v7: fallback automático de `PATCH` a `POST <endpoint>/set` para recursos de configuración única (ej. `/system/ntp/client`, `/ip/dns`).
+  - Panel visual de resultados en frontend (`ApprovalsInboxView.vue`): despliegue del resumen de ejecución en tiempo real en la pestaña de solicitudes "Aprobadas y Ejecutadas".
+  - Certificación 11X en Docker efímero: 340 pruebas Vitest aprobadas (100% en 47 suites), 20 pruebas Pytest de operaciones y backups aprobadas (100%), 0 errores en `vue-tsc --noEmit`, 0 errores `ruff` y `mypy`, y verificación en vivo en routers MikroTik.
 
 ---
 

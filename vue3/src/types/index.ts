@@ -338,6 +338,7 @@ export interface ApprovalRequestItem {
   created_at: string;
   reviewed_at?: string;
   review_comment?: string;
+  execution_result?: Record<string, unknown> | null;
 }
 
 export interface BackupItem {

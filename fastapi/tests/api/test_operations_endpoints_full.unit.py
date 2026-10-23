@@ -845,3 +845,67 @@ async def test_notification_channels_crud(fake_op_context: dict[str, Any]) -> No
     with pytest.raises(HTTPException) as exc_tst_404:
         await api_channels.test_channel(uuid.uuid4(), NotificationTestRequest(), claims=claims, db=db)
     assert exc_tst_404.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_approvals_bulk_job_execution(fake_op_context: dict[str, Any]) -> None:
+    """Valida la ejecución y aprobación de solicitudes Maker-Checker para acciones masivas (BulkJob)."""
+    ctx = fake_op_context
+    claims = ctx["claims"]
+    db = ctx["db"]
+    fake_req = MagicMock()
+    fake_req.client.host = "127.0.0.1"
+
+    now_utc = datetime.now(UTC)
+    app = ApprovalRequest(
+        id=uuid.uuid4(),
+        tenant_id=ctx["tenant_id"],
+        router_id=None,
+        action_type=CriticalActionTypeEnum.BULK_MULTI_ROUTER_EXECUTION,
+        status=ApprovalStatusEnum.PENDING,
+        summary="Acción masiva: NTP rollout",
+        requester_justification="Despliegue flota",
+        ros_rest_method="BULK",
+        ros_rest_path="/operations/bulk-jobs",
+        request_payload={"parameters": {"variables": {"ntp_server_0": "0.pool.ntp.org"}}},
+        requested_by=uuid.uuid4(),
+        created_at=now_utc,
+        expires_at=now_utc + timedelta(hours=2),
+    )
+    db.get.return_value = app
+
+    fake_bulk_job = BulkJob(
+        id=uuid.uuid4(),
+        tenant_id=ctx["tenant_id"],
+        job_type="TEMPLATE_ROLLOUT",
+        title="CLIENTE_NTP",
+        status=BulkJobStatusEnum.AWAITING_APPROVAL,
+        execution_parameters={"variables": {"ntp_server_0": "0.pool.ntp.org"}},
+        target_router_ids=[str(ctx["router_id"])],
+        total_routers=1,
+        succeeded_count=1,
+        failed_count=0,
+        approval_request_id=app.id,
+        created_by=app.requested_by,
+    )
+
+    mock_exec_result = MagicMock()
+    mock_exec_result.scalar_one_or_none.return_value = fake_bulk_job
+    db.execute.return_value = mock_exec_result
+
+    completed_job = MagicMock()
+    completed_job.status = BulkJobStatusEnum.COMPLETED
+    completed_job.succeeded_count = 1
+    completed_job.failed_count = 0
+    completed_job.total_routers = 1
+
+    with (
+        patch("src.api.v1.approvals.execute_bulk_job_on_fleet", return_value=completed_job),
+        patch("src.api.v1.approvals.write_audit_log", new_callable=AsyncMock),
+    ):
+        approve_payload = ApproveRequestPayload(review_comment="Aprobado por Checker NOC")
+        app_res = await api_approvals.approve_request(app.id, approve_payload, fake_req, claims=claims, db=db)
+        assert app_res.status == ApprovalStatusEnum.APPROVED_AND_EXECUTED.value
+        assert app.execution_result["succeeded_count"] == 1
+        assert app.execution_result["job_status"] == BulkJobStatusEnum.COMPLETED.value
+

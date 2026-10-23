@@ -73,15 +73,19 @@
   async function handleApprove(request: ApprovalRequestItem) {
     if (isSelfApproval(request)) return;
     try {
-      await http.post(`/api/v1/operations/approvals/${request.id}/approve`, {
+      const res = await http.post<any>(`/api/v1/operations/approvals/${request.id}/approve`, {
         review_comment: reviewComment.value || 'Aprobado con Safe Mode (60s)',
       });
       request.status = 'APPROVED';
-      actionMessage.value = `Solicitud ${request.id} aprobada y ejecutada en ${request.router_name}.`;
+      if (res.data?.execution_result) {
+        request.execution_result = res.data.execution_result;
+      }
+      actionMessage.value = `Solicitud ${request.id} aprobada y ejecutada en la flota MikroTik.`;
       reviewComment.value = '';
       setTimeout(() => {
         actionMessage.value = '';
       }, 4000);
+      await loadApprovals();
     } catch (err: any) {
       errorMessage.value =
         err?.response?.data?.detail || err?.message || 'Error al aprobar solicitud en el servidor';
@@ -102,6 +106,7 @@
       setTimeout(() => {
         actionMessage.value = '';
       }, 4000);
+      await loadApprovals();
     } catch (err: any) {
       errorMessage.value =
         err?.response?.data?.detail || err?.message || 'Error al rechazar solicitud en el servidor';
@@ -276,6 +281,17 @@
               ✓ Aprobar y Ejecutar con Safe Mode (60s)
             </button>
           </div>
+        </div>
+
+        <!-- Resultado de la Ejecución en MikroTik -->
+        <div v-else-if="selectedRequest.execution_result" class="execution-result-panel">
+          <div class="result-header">
+            <span class="font-bold text-cyan">⚡ Resultado de la Ejecución en Flota MikroTik:</span>
+            <span class="badge" :class="selectedRequest.status === 'APPROVED' ? 'badge--approved' : 'badge--rejected'">
+              {{ selectedRequest.status === 'APPROVED' ? '✓ Ejecutado Exitosamente' : '✕ Fallo en la Ejecución' }}
+            </span>
+          </div>
+          <pre class="json-pre execution-json">{{ JSON.stringify(selectedRequest.execution_result, null, 2) }}</pre>
         </div>
       </div>
     </div>
@@ -578,6 +594,31 @@
 
   .font-bold {
     font-weight: 700;
+  }
+
+  .text-cyan {
+    color: var(--rg-accent-cyan, #06b6d4);
+  }
+
+  .execution-result-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: rgba(6, 182, 212, 0.05);
+    border: 1px solid rgba(6, 182, 212, 0.3);
+    border-radius: 6px;
+    padding: 12px;
+  }
+
+  .result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .execution-json {
+    max-height: 180px;
+    font-size: 0.75rem;
   }
 
   @media (max-width: 900px) {

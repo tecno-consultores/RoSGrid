@@ -13,6 +13,7 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_current_user_claims, require_roles
+from src.api.v1.bulk_and_updates import execute_bulk_job_on_fleet
 from src.api.v1.webfig_common import (
     execute_safe_mutation,
     get_router_and_client,
@@ -255,13 +256,39 @@ async def approve_request(
     approval.reviewed_at = now_utc
     approval.review_comment = payload.review_comment
 
-    event_action, stat_code = await _execute_approval_lifecycle(client, approval, now_utc)
-
     if approval.action_type == CriticalActionTypeEnum.BULK_MULTI_ROUTER_EXECUTION:
         stmt_job = select(BulkJob).where(BulkJob.approval_request_id == approval.id)
         job_obj = (await db.execute(stmt_job)).scalar_one_or_none()
         if job_obj:
-            job_obj.status = BulkJobStatusEnum.QUEUED
+            job_obj = await execute_bulk_job_on_fleet(job_obj, db, claims)
+            if job_obj.status in (BulkJobStatusEnum.COMPLETED, BulkJobStatusEnum.PARTIAL_FAILURE):
+                approval.status = ApprovalStatusEnum.APPROVED_AND_EXECUTED
+                approval.execution_result = {
+                    "succeeded_count": job_obj.succeeded_count,
+                    "failed_count": job_obj.failed_count,
+                    "total_routers": job_obj.total_routers,
+                    "job_status": job_obj.status.value,
+                }
+                event_action = "MAKER_CHECKER_APPROVED_AND_EXECUTED"
+                stat_code = 200
+            else:
+                approval.status = ApprovalStatusEnum.APPROVED_EXECUTION_FAILED
+                approval.execution_result = {
+                    "succeeded_count": job_obj.succeeded_count,
+                    "failed_count": job_obj.failed_count,
+                    "job_status": job_obj.status.value,
+                    "error": "Falló la ejecución de la plantilla en los routers objetivo",
+                }
+                event_action = "MAKER_CHECKER_EXECUTION_FAILED"
+                stat_code = 500
+        else:
+            approval.status = ApprovalStatusEnum.APPROVED_AND_EXECUTED
+            approval.execution_result = {"status": "NO_BULK_JOB_ATTACHED"}
+            event_action = "MAKER_CHECKER_APPROVED_AND_EXECUTED"
+            stat_code = 200
+        approval.executed_at = now_utc
+    else:
+        event_action, stat_code = await _execute_approval_lifecycle(client, approval, now_utc)
 
     await _log_approval_audit(
         db, tenant_id, claims, request, checker_user_id, approval, router_name, event_action, stat_code

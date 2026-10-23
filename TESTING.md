@@ -1061,6 +1061,42 @@ Certificación integral ejecutada de extremo a extremo bajo la **Regla Cero** (c
      - Reloj global persistente en la barra superior en formato HH:MM reactivo a 24h y 12h.
      - Centro de Mando libre de tarjetas redundantes de reloj.
 
+---
 
+## 30. Motor de Ejecución en Flota MikroTik para Solicitudes Masivas Maker-Checker (Hito 23.10)
 
+### A. Diagnóstico y Causa Raíz
+- **Problema Detectado:** Al aprobar una solicitud masiva de tipo `BULK_MULTI_ROUTER_EXECUTION` (ej. plantilla `CLIENTE_NTP` sobre 3 routers), la interfaz marcaba la solicitud como aprobada (`APPROVED`), pero los cambios no se aplicaban en los routers MikroTik de la flota (verificado con WinBox, donde el cliente NTP permanecía deshabilitado).
+- **Causa Raíz:**
+  1. En `fastapi/src/api/v1/approvals.py`, la función de ciclo de vida diferido `_execute_approval_lifecycle` únicamente operaba sobre peticiones asociadas a un solo router (`client is not None`). Para ejecuciones masivas (`router_id is None`), marcaba la solicitud como aprobada sin invocar a ningún motor de despacho hacia la flota.
+  2. En `fastapi/src/api/v1/bulk_and_updates.py`, el endpoint `create_bulk_job` registraba el `BulkJob` y sus `BulkJobItem`, pero carecía del ejecutor que conectara `MikrotikRestClient` con cada router de `target_router_ids` para aplicar secuencialmente los pasos de la plantilla Golden Config.
+  3. En RouterOS v7 REST API, menús singulares como `/system/ntp/client` o `/ip/dns` rechazan peticiones `PATCH` con código 400 (*"missing or invalid resource identifier"*), requiriendo de forma nativa `POST <endpoint>/set` con los parámetros correspondientes.
 
+### B. Solución Técnica Implementada
+1. **Despachador en Flota `execute_bulk_job_on_fleet` (`bulk_and_updates.py`):**
+   - Resuelve dinámicamente cada router objetivo por UUID y recupera sus credenciales de la bóveda AES-256-GCM.
+   - Resuelve variables en los pasos de la plantilla (`_render_template_steps`).
+   - Conecta a cada router mediante `MikrotikRestClient`.
+   - Incorpora la función `_execute_single_step` con fallback automático: si un paso `PATCH` falla por identificador ausente en RouterOS v7, reintenta inmediatamente vía `POST <endpoint>/set`.
+   - Actualiza atómicamente cada `BulkJobItem` a `SUCCESS` o `FAILED` con `response_summary` descriptivo en JSONB.
+   - Marca el `BulkJob` en `COMPLETED` (o `PARTIAL_FAILURE`/`FAILED`) con conteo de exitosos y fallidos.
+2. **Integración con Maker-Checker (`approvals.py`):**
+   - En `approve_request`: Si `approval.action_type == CriticalActionTypeEnum.BULK_MULTI_ROUTER_EXECUTION`, recupera el `BulkJob` y ejecuta `execute_bulk_job_on_fleet`.
+   - Devuelve en `execution_result` el resumen: `{ "job_status": "COMPLETED", "succeeded_count": N, "failed_count": 0, "total_routers": N }`.
+3. **Transparencia Visual en Frontend (`ApprovalsInboxView.vue`):**
+   - Incorporación del panel reactivo `.execution-result-panel` que visualiza en la pestaña "Aprobadas y Ejecutadas" el estado final del trabajo en los routers.
+   - Tipado TypeScript de `execution_result` en `ApprovalRequestItem` (`types/index.ts`).
+
+### C. Certificación en Contenedores Docker Efímeros
+1. **Backend Pytest (`sinfallas/base-python-uv:3.15`):**
+   - **8 de 8 pruebas aprobadas (100%)** en `fastapi/tests/api/test_operations_endpoints_full.unit.py`, incluyendo la nueva prueba `test_approvals_bulk_job_execution`.
+   - **12 de 12 pruebas aprobadas (100%)** en `fastapi/tests/api/test_backups_diff_and_bulk_ops.unit.py`.
+   - `ruff check`: 0 errores (*All checks passed!*).
+   - `mypy`: 0 errores (*Success: no issues found in 2 source files*).
+2. **Frontend Vitest v8 (`sinfallas/base-node-ionic:26`):**
+   - **47 de 47 suites aprobadas (100%)** con **340 de 340 pruebas unitarias exitosas**.
+   - `vue-tsc --noEmit`: 0 errores de tipado.
+   - `vite build`: Compilación limpia en 4.10s.
+3. **Verificación en Flota MikroTik Real:**
+   - Comprobada ejecución en vivo sobre los routers `r1` (10.250.3.8), `r2` (10.250.3.13) y `r3` (10.250.3.14).
+   - `GET /system/ntp/client` en `r1` confirmó `enabled: 'true'` y los servidores `0.pool.ntp.org` a `3.pool.ntp.org` correctamente registrados y resueltos.

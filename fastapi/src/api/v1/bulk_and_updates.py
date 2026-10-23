@@ -13,13 +13,14 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.api.deps import require_roles
-from src.api.v1.webfig_common import get_router_and_client
+from src.api.v1.webfig_common import _create_client_from_vault, get_router_and_client
 from src.core.audit import write_audit_log
 from src.core.crypto import encrypt_aes_gcm
 from src.db.session import get_tenant_db_session
-from src.mikrotik.client import MikrotikRestClient
+from src.mikrotik.client import MikrotikApiError, MikrotikRestClient
 from src.models.core import SystemRoleEnum
 from src.models.inventory import Router, RouterTag
 from src.models.operations import (
@@ -715,6 +716,149 @@ async def preview_template(
 # ============================================================================
 
 
+async def _execute_single_step(client: MikrotikRestClient, step: dict[str, Any]) -> Any:
+    """Ejecuta un paso individual REST tolerando endpoints singulares de RouterOS v7."""
+    method = step.get("method", "PATCH").upper()
+    endpoint = step.get("endpoint", "").strip("/")
+    payload = step.get("payload", {})
+
+    if method == "PUT":
+        return await client.put(endpoint, payload)
+    elif method == "POST":
+        return await client.post(endpoint, payload)
+    elif method == "DELETE":
+        return await client.delete(endpoint)
+    elif method == "PATCH":
+        try:
+            return await client.patch(endpoint, payload)
+        except MikrotikApiError as err:
+            # Fallback para menús singulares de RouterOS v7 (ej. system/ntp/client, ip/dns)
+            # donde RouterOS espera POST <endpoint>/set en lugar de PATCH
+            if "missing or invalid resource identifier" in str(err).lower():
+                return await client.post(f"{endpoint}/set", payload)
+            raise
+    elif method == "GET":
+        return await client.get(endpoint)
+    else:
+        raise ValueError(f"Método REST no soportado: {method}")
+
+
+async def execute_bulk_job_on_fleet(
+    job: BulkJob,
+    db: AsyncSession,
+    claims: dict[str, Any] | None = None,
+) -> BulkJob:
+    """Ejecuta una acción masiva multi-router aplicando la plantilla sobre cada router objetivo."""
+    job.status = BulkJobStatusEnum.RUNNING
+    job.started_at = datetime.now(UTC)
+    await db.flush()
+
+    template: ConfigTemplate | None = None
+    if job.template_id:
+        obj = await db.get(ConfigTemplate, job.template_id)
+        if isinstance(obj, ConfigTemplate):
+            template = obj
+
+    rest_steps_template: list[dict[str, Any]] = []
+    if template and getattr(template, "rest_steps_template", None):
+        rest_steps_template = list(template.rest_steps_template)
+    else:
+        # Búsqueda fallback por nombre de plantilla predefinida en el catálogo
+        title_str = str(job.title or "")
+        for st in _DEFAULT_STARTER_TEMPLATES:
+            if str(st["name"]) in title_str:
+                raw_steps = st["rest_steps_template"]
+                if isinstance(raw_steps, list):
+                    rest_steps_template = [dict(s) for s in raw_steps]
+                break
+
+    vars_dict: dict[str, Any] = {}
+    if job.execution_parameters and isinstance(job.execution_parameters, dict):
+        raw_vars = job.execution_parameters.get("variables", {})
+        if isinstance(raw_vars, dict):
+            vars_dict = raw_vars
+
+    rendered_steps = _render_template_steps(rest_steps_template, vars_dict) if rest_steps_template else []
+
+    stmt_items = select(BulkJobItem).where(BulkJobItem.bulk_job_id == job.id)
+    items_map: dict[uuid.UUID, BulkJobItem] = {
+        i.router_id: i for i in (await db.execute(stmt_items)).scalars().all()
+    }
+
+    succeeded_count = 0
+    failed_count = 0
+
+    for rid_str in (job.target_router_ids or []):
+        try:
+            rid = uuid.UUID(str(rid_str))
+        except Exception:
+            continue
+
+        item = items_map.get(rid)
+        if not item:
+            item = BulkJobItem(
+                tenant_id=job.tenant_id,
+                bulk_job_id=job.id,
+                router_id=rid,
+                status="PENDING",
+            )
+            db.add(item)
+            await db.flush()
+
+        item.status = "IN_PROGRESS"
+        item.started_at = datetime.now(UTC)
+        await db.flush()
+
+        stmt_r = (
+            select(Router)
+            .options(selectinload(Router.vault))
+            .where(Router.id == rid, Router.tenant_id == job.tenant_id)
+        )
+        router_obj = (await db.execute(stmt_r)).scalar_one_or_none()
+
+        if not router_obj or not router_obj.vault:
+            item.status = "FAILED"
+            item.error_detail = "Router no encontrado o sin credenciales en bóveda"
+            item.finished_at = datetime.now(UTC)
+            failed_count += 1
+            await db.flush()
+            continue
+
+        client: MikrotikRestClient | None = None
+        try:
+            client = _create_client_from_vault(router_obj, job.tenant_id)
+            for step in rendered_steps:
+                await _execute_single_step(client, step)
+
+            item.status = "SUCCESS"
+            item.response_summary = {"message": f"Aplicados {len(rendered_steps)} pasos con éxito"}
+            item.error_detail = None
+            succeeded_count += 1
+        except Exception as exc:
+            logger.error("Error al aplicar plantilla en router %s (%s): %s", router_obj.display_name, rid_str, exc)
+            item.status = "FAILED"
+            item.error_detail = str(exc)
+            failed_count += 1
+        finally:
+            if client:
+                await client.close()
+            item.finished_at = datetime.now(UTC)
+            await db.flush()
+
+    job.succeeded_count = succeeded_count
+    job.failed_count = failed_count
+    job.completed_at = datetime.now(UTC)
+    if failed_count == 0 and succeeded_count > 0:
+        job.status = BulkJobStatusEnum.COMPLETED
+    elif succeeded_count > 0:
+        job.status = BulkJobStatusEnum.PARTIAL_FAILURE
+    else:
+        job.status = BulkJobStatusEnum.FAILED
+
+    await db.flush()
+    return job
+
+
 @router.post("/bulk-jobs", response_model=BulkJobDetailResponse, status_code=status.HTTP_201_CREATED)
 async def create_bulk_job(
     payload: BulkJobCreateRequest,
@@ -780,6 +924,12 @@ async def create_bulk_job(
 
     await db.commit()
     await db.refresh(bulk_job)
+
+    # Si no requiere aprobación Maker-Checker, despachar inmediatamente en la flota
+    if not is_l2:
+        bulk_job = await execute_bulk_job_on_fleet(bulk_job, db, claims)
+        await db.commit()
+        await db.refresh(bulk_job)
 
     return await get_bulk_job(bulk_job.id, claims, db)
 
