@@ -194,15 +194,16 @@
         const pulseClass = health.pulseClass;
 
         const icon = L.divIcon({
-          className: 'rg-router-marker-container',
+          className: 'rg-map-pin-container',
           html: `
-            <div class="rg-router-marker ${pulseClass}" style="--marker-color: ${color};" title="${escapeHtml(r.display_name)}">
-              <span class="router-icon">🏢</span>
-              <span class="router-badge">${escapeHtml(r.display_name)}</span>
+            <div class="rg-map-pin" style="--pin-color: ${color};" role="button" tabindex="0" title="${escapeHtml(r.display_name)} (${health.label})">
+              <div class="pin-pulse ${pulseClass}"></div>
+              <div class="pin-dot"></div>
+              <span class="pin-router-label">${escapeHtml(r.display_name)}</span>
             </div>
           `,
-          iconSize: [44, 44],
-          iconAnchor: [22, 22],
+          iconSize: [24, 24],
+          iconAnchor: [12, 12],
         });
 
         const marker = L.marker([lat, lng], { icon });
@@ -815,6 +816,109 @@
   }
   100% {
     box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+  }
+}
+</style>
+
+<!-- Clases globales para marcadores inyectados dinámicamente en el DOM de Leaflet (Estilo Wallboard NOC) -->
+<style>
+.rg-map-pin-container {
+  background: transparent !important;
+  border: none !important;
+}
+
+.rg-map-pin {
+  width: 24px;
+  height: 24px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.pin-dot {
+  width: 14px;
+  height: 14px;
+  background-color: var(--pin-color, #10B981);
+  border-radius: 50%;
+  border: 2px solid #0B0F19;
+  box-shadow: 0 0 10px var(--pin-color, #10B981);
+  z-index: 2;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rg-map-pin:hover .pin-dot {
+  transform: scale(1.25);
+  box-shadow: 0 0 16px var(--pin-color, #10B981);
+}
+
+.pin-pulse {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: var(--pin-color, #10B981);
+  opacity: 0.4;
+  animation: pin-pulsate 2s infinite ease-out;
+}
+
+.pin-pulse.router-pulse-danger {
+  animation: pin-pulsate-danger 1.2s infinite ease-out;
+}
+
+.pin-pulse.router-pulse-warning {
+  animation: pin-pulsate-warning 1.6s infinite ease-out;
+}
+
+.pin-router-label {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 4px;
+  background: rgba(11, 15, 25, 0.9);
+  color: #F1F5F9;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.7rem;
+  padding: 1px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  pointer-events: none;
+  z-index: 3;
+}
+
+@keyframes pin-pulsate {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+@keyframes pin-pulsate-danger {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+@keyframes pin-pulsate-warning {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2.0);
+    opacity: 0;
   }
 }
 </style>
