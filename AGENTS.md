@@ -90,7 +90,7 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
 >    - `ROADMAP.md` (milestone and sub-task status).
 >    - `TESTING.md` (assurance metrics and test counts).
 >    - Repository root (`README.md`, etc., when applicable) or `docs/` (`INSTALL.md`, `FAQ.md`, `RESOURCES.md`).
-> 4. **Secret Scanning & ORM Parity:** Run `./scripts/verificar-secretos.sh` and certify ORM schema parity against PostgreSQL.
+> 4. **Secret Scanning, Local Dependency Audit & ORM Parity:** Run `./scripts/verificar-secretos.sh`, execute local vulnerability and IaC audit via `make audit` (`./scripts/auditar-infra.sh` in ephemeral Docker) certifying 0 CRITICAL/HIGH findings, and certify ORM schema parity against PostgreSQL.
 > 5. **Stage Changes:** Register all modifications via `git add .`.
 > 6. **Semantic Commit:** Create commit following Conventional Commits strictly in Spanish: `git commit -m "<tipo>(<ámbito>): <descripción_en_español>"`.
 > 7. **Immediate Remote Push:** Publish to remote repository via `git push origin <current_branch>`.

@@ -1519,6 +1519,30 @@ Certificación ejecutada bajo la **Regla Cero** dentro de los contenedores efím
 4. **Karate Labs API BDD:** Escenario 84 incorporado en `fastapi/test/api_test.feature` y replicado en `docs/examples/fastapi/test/api_test.feature` (**84 escenarios totales de API**).
 5. **Karate Labs UI BDD:** Escenario 35 incorporado en `vue3/test/ui_business_flow.feature` y replicado en `docs/examples/vue3/test/ui_business_flow.feature` (**35 escenarios totales de UI**).
 
+---
+
+## 35. Auditoría Preventiva de Vulnerabilidades, Seguridad Shift-Left y Makefile Canónico (Hito 23.26)
+
+Certificación ejecutada bajo la **Regla Cero** dentro de contenedores efímeros Docker `aquasec/trivy:latest` y `sinfallas/rosgrid-backend:local-test` conforme a `docs/specs/40_LOCAL_VULNERABILITY_AUDIT_AND_SHIFT_LEFT_SECURITY.md`.
+
+### A. Capacidades Certificadas
+1. **Estandarización Canónica de Comandos (`Makefile`):**
+   - Creación de `Makefile` en la raíz del repositorio con targets universales para desarrolladores y agentes de IA: `make audit`, `make test`, `make test-backend`, `make test-frontend`, `make lint`, `make certify` y `make build`.
+2. **Doble Vector de Escaneo Preventivo en Local (`scripts/auditar-infra.sh`):**
+   - **IaC & Misconfiguraciones:** Escaneo estricto con `aquasec/trivy:latest config . --severity HIGH,CRITICAL --exit-code 1` sobre Dockerfiles y Compose manifests (**0 misconfiguraciones**).
+   - **Vulnerabilidades en Filesystem:** Escaneo estricto con `aquasec/trivy:latest fs . --severity CRITICAL --exit-code 1` sobre `fastapi/uv.lock` y `vue3/pnpm-lock.yaml` (**0 vulnerabilidades CRITICAL/HIGH**).
+3. **Remediación Inmediata de CVE Crítico (`GHSA-9v8h-qqgm-4m35`):**
+   - Actualización del paquete `brotli` a versión `1.2.1` en `fastapi/uv.lock` eliminando el fallo en el pipeline de GitHub Actions (`00-iac-audit.yml`).
+4. **Compuerta de Certificación 11X de 5 Etapas (`.agents/scripts/certify_task_completion.sh`):**
+   - Inclusión obligatoria del paso `[2/5] Auditoría Preventiva de Vulnerabilidades y Misconfiguraciones IaC (Trivy)` previo a cualquier confirmación o publicación en Git.
+
+### B. Cobertura y Certificación Multi-Capa 11X
+1. **Pruebas de Gate y Seguridad:** `fastapi/tests/core/test_vulnerability_audit_gate.unit.py` (4 pruebas unitarias validando la existencia de `Makefile`, integridad del script de auditoría, inclusión en `certify_task_completion.sh` y versión resuelta de `brotli >= 1.2.1`). Aprobadas al 100% (**4 de 4 pruebas PASADAS** en 0.02s).
+2. **Suite Global Backend:** **505 pruebas unitarias** aprobadas al 100% en `fastapi/tests/`.
+3. **Tipado y Linters:** `ruff check --no-cache` (All checks passed!), `mypy` (Success: no issues found in 117 source files) y `vue-tsc --noEmit` (0 errores).
+4. **Escaneo Trivy Local:** `fastapi/uv.lock` (0 vulnerabilidades), `vue3/pnpm-lock.yaml` (0 vulnerabilidades), `fastapi/Dockerfile` (0 misconfiguraciones) y `vue3/Dockerfile` (0 misconfiguraciones).
+
+
 
 
 

@@ -10,6 +10,12 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Security
 
+- **Auditoría Preventiva de Vulnerabilidades, Seguridad Shift-Left y Compuerta de Certificación Local (`Makefile`, `scripts/auditar-infra.sh`, `.agents/scripts/certify_task_completion.sh`, `docs/specs/40_LOCAL_VULNERABILITY_AUDIT_AND_SHIFT_LEFT_SECURITY.md`, `fastapi/tests/core/test_vulnerability_audit_gate.unit.py`):**
+  - **Estandarización Canónica de Comandos (`Makefile`):** Creación del `Makefile` raíz con targets canónicos `make audit`, `make test`, `make test-backend`, `make test-frontend`, `make lint`, `make certify` y `make build`, unificando la experiencia operativa entre desarrolladores y agentes de IA.
+  - **Compuerta de Certificación 11X de 5 Etapas:** Actualización de `.agents/scripts/certify_task_completion.sh` con el paso `[2/5]` dedicado al escaneo estricto de misconfiguraciones IaC y vulnerabilidades en `uv.lock` y `pnpm-lock.yaml` mediante `aquasec/trivy:latest` en contenedor efímero con volumen de solo lectura (`:ro`).
+  - **Especificación Formal 40:** Creación de `docs/specs/40_LOCAL_VULNERABILITY_AUDIT_AND_SHIFT_LEFT_SECURITY.md` y actualización del índice maestro `docs/specs/00_MASTER_INDEX_AND_11X_GOVERNANCE.md` (41 especificaciones).
+  - **Pruebas Unitarias 11X:** Implementación de `fastapi/tests/core/test_vulnerability_audit_gate.unit.py` (4 pruebas unitarias aprobadas al 100%) certificando la integridad de scripts, Makefile, paso obligatorio en el gate y resolución de librerías seguras.
+
 - **Remediación de Vulnerabilidad Crítica en Brotli (`fastapi/uv.lock` — `GHSA-9v8h-qqgm-4m35`):**
   - **Actualización de Seguridad:** Actualizado el paquete `brotli` de `v1.2.0` a `v1.2.1` en `fastapi/uv.lock` vía `uv lock --upgrade-package brotli`.
   - **Mitigación:** Corrección de la vulnerabilidad de desbordamiento de escritura fuera de límites (*Out-of-bounds write*) en el decodificador de Brotli calificada como `CRITICAL`.

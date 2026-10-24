@@ -12,12 +12,17 @@ echo "   🤖 RoSGrid Agent Certification Gate (Regla Cero & QA 11X)        "
 echo "══════════════════════════════════════════════════════════════════════"
 
 # 1. Auditoría de Secretos
-echo -e "\n🔒 [1/4] Verificando que no existan secretos expuestos en Git..."
+echo -e "\n🔒 [1/5] Verificando que no existan secretos expuestos en Git..."
 "${REPO_ROOT}/scripts/verificar-secretos.sh"
 echo "✔ Cero secretos detectados."
 
-# 2. Paridad ORM vs Alembic en Docker
-echo -e "\n🗄️ [2/4] Verificando paridad entre modelos ORM y migraciones Alembic..."
+# 2. Auditoría Preventiva de Vulnerabilidades y Misconfiguraciones IaC (Trivy)
+echo -e "\n🛡️ [2/5] Ejecutando escaneo preventivo de vulnerabilidades y seguridad (Trivy)..."
+"${REPO_ROOT}/scripts/auditar-infra.sh"
+echo "✔ Cero vulnerabilidades críticas o de alto impacto detectadas."
+
+# 3. Paridad ORM vs Alembic en Docker
+echo -e "\n🗄️ [3/5] Verificando paridad entre modelos ORM y migraciones Alembic..."
 if docker ps --format '{{.Names}}' | grep -q "^rosgrid_api_local$"; then
     docker cp "${REPO_ROOT}/.agents/scripts/verify_alembic_orm_parity.py" rosgrid_api_local:/app/scripts/verify_alembic_orm_parity.py
     docker exec -t rosgrid_api_local python scripts/verify_alembic_orm_parity.py
@@ -25,8 +30,8 @@ else
     echo "ℹ️ Contenedor rosgrid_api_local inactivo (stack apagado); omitiendo verificación en vivo de ORM."
 fi
 
-# 3. Contratos de Integración Front-Back
-echo -e "\n🧪 [3/4] Ejecutando suite de Contratos Front-Back (25 pruebas)..."
+# 4. Contratos de Integración Front-Back
+echo -e "\n🧪 [4/5] Ejecutando suite de Contratos Front-Back (25 pruebas)..."
 if docker ps --format '{{.Names}}' | grep -q "^rosgrid_api_local$"; then
     docker cp "${REPO_ROOT}/fastapi/scripts/validar_comunicacion_front_back.py" rosgrid_api_local:/app/scripts/validar_comunicacion_front_back.py
     docker exec -t rosgrid_api_local python scripts/validar_comunicacion_front_back.py
@@ -34,8 +39,8 @@ else
     echo "ℹ️ Contenedor rosgrid_api_local inactivo (stack apagado); omitiendo validación en vivo de contratos front-back."
 fi
 
-# 4. Verificación de Sincronización Documental
-echo -e "\n📚 [4/4] Verificando sincronización de documentación y pruebas obligatorias..."
+# 5. Verificación de Sincronización Documental
+echo -e "\n📚 [5/5] Verificando sincronización de documentación y pruebas obligatorias..."
 CODE_CHANGES=$(git diff --name-only HEAD 2>/dev/null | grep -E '^(fastapi/src|vue3/src)' || true)
 
 if [ -n "${CODE_CHANGES}" ]; then

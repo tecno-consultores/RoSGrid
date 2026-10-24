@@ -39,12 +39,12 @@ This skill governs infrastructure configuration (`docker-compose*.yml`, `Dockerf
 
 ---
 
-## 3. Trivy IaC Compliance (`./scripts/auditar-infra.sh`) & Release (`./scripts/build.sh`)
+## 3. Trivy IaC & Dependency Vulnerability Compliance (`make audit` / `./scripts/auditar-infra.sh`) & Release (`./scripts/build.sh`)
 
-1. **Trivy Compliance (`HIGH,CRITICAL = 0`):**
-   - Strict IPv4 networks (`driver: bridge`; forbidden: `enable_ipv6: true`).
-   - Forbid `privileged: true`, `SYS_PTRACE`, or mounting `/var/run/docker.sock` in compose manifests.
-   - In `fastapi/Dockerfile` and `vue3/Dockerfile`, enforce non-root unprivileged users (`USER rosgrid` UID `10001` / `USER nginx`) with explicit `HEALTHCHECK` directives.
-   - Only `rosgrid-ui` exposes ports to the host; PostgreSQL and KeyDB remain fully isolated within `rosgrid_internal_net`.
+1. **Shift-Left Security & Trivy Compliance (`HIGH,CRITICAL = 0`):**
+   - Run `make audit` (or `./scripts/auditar-infra.sh`) in ephemeral Docker before any task conclusion.
+   - Dual inspection:
+     a) **IaC & Misconfigurations (`trivy config .`):** Strict IPv4 networks (`driver: bridge`; forbidden: `enable_ipv6: true`), no `privileged: true`, non-root users (`USER rosgrid` UID `10001` / `USER nginx`), and explicit `HEALTHCHECK` directives.
+     b) **File System & Dependency Vulnerabilities (`trivy fs .`):** Scans `fastapi/uv.lock` and `vue3/pnpm-lock.yaml` against GitHub Advisory Database and CVE feeds. Any `CRITICAL` or `HIGH` finding halts the pipeline locally (`exit 1`).
 2. **Multi-Stage `./scripts/build.sh` Script:**
    - Enforce non-root execution (`EUID != 0`), initialize `tonistiigi/binfmt` and `docker buildx` (`container-builder`), compile and publish `sinfallas/rosgrid-backend` and `sinfallas/rosgrid-frontend` (`:${VERSION}` and `:latest`), running `prune -af` upon completion.
