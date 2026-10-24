@@ -565,5 +565,22 @@ describe('RgResponsiveShell.vue — Doble Contexto & Menú de Usuario 11X', () =
     // Restaurar a español
     setLocale('es');
   });
+
+  it('renderiza el indicador táctico de salud del API (RgApiHealthBadge) en la barra superior', () => {
+    const wrapper = mount(RgResponsiveShell, {
+      global: {
+        stubs: {
+          RouterView: true,
+          RgCommandPalette: true,
+          RgSafeModeBanner: true,
+          ChangePasswordModal: true,
+          RgStepUp2FAModal: true,
+          RgMcpTokenModal: true,
+        },
+      },
+    });
+
+    expect(wrapper.findComponent({ name: 'RgApiHealthBadge' }).exists() || wrapper.find('#api-health-badge').exists()).toBe(true);
+  });
 });
 

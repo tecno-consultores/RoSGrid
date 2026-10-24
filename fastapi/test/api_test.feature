@@ -540,4 +540,15 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 69. Consulta optimizada de /health con soporte de forzado y respuesta estructurada
+    Given path '/health'
+    And param force = 'true'
+    When method get
+    Then status 200
+    And match response.status == 'healthy'
+    And match response.service == 'rosgrid-api'
+    And match response.database == '#string'
+    And match response.redis == '#string'
+
+
 

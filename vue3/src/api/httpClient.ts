@@ -182,11 +182,30 @@ export async function request<T = unknown>(
     credentials: 'include',
   };
 
+  const startTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
   let response: Response;
   try {
     response = await fetch(resolveUrl(url), init);
   } catch (netErr) {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('rosgrid:api-health-event', {
+          detail: { ok: false, status: 0, latencyMs: null, url },
+        }),
+      );
+    }
     throw new ApiError(0, 'NetworkError', null, (netErr as Error).message);
+  }
+
+  const durationMs = Math.round(
+    (typeof performance !== 'undefined' ? performance.now() : Date.now()) - startTime,
+  );
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('rosgrid:api-health-event', {
+        detail: { ok: response.ok, status: response.status, latencyMs: durationMs, url },
+      }),
+    );
   }
 
   // Interceptor 3: Manejo 401 con Singleton Refresh

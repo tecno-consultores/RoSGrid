@@ -108,6 +108,11 @@ Queda **prohibido** guardar tokens JWT en `localStorage` o `sessionStorage`. El 
 - Cuando cualquier operación sobre un MikroTik devuelve HTTP `202 Accepted` con `status === "INTERCEPTED_FOR_APPROVAL"`, el interceptor dispara automáticamente un toast informativo global en la interfaz:
   - *"Operación crítica enviada a aprobación (Maker-Checker). ID de solicitud: #..."* y actualiza el estado del formulario sin arrojar una excepción no controlada.
 
+### 2.5 Interceptor 5: Monitoreo Pasivo de Latencia y Disponibilidad (*Piggybacking*)
+- Mide el tiempo de ida y vuelta (*Round Trip Time*) de cada petición HTTP usando `performance.now()`.
+- Dispara en `window` el evento personalizado `rosgrid:api-health-event` con `{ ok, status, latencyMs, url }`.
+- Si la llamada es exitosa, el store `useApiHeartbeatStore` registra el estado `ONLINE`, actualiza la latencia y reinicia el temporizador de inactividad a 45s, garantizando que el usuario activo nunca genere peticiones de sondeo (*polling*) innecesarias hacia el servidor. Si ocurre un `NetworkError`, notifica de inmediato la pérdida de conectividad (`OFFLINE`).
+
 ---
 
 ## 3. Arquitectura de Stores en Pinia (`vue3/src/stores/`) y Optimización con `shallowRef`
@@ -130,6 +135,7 @@ Cada store DEBE tener su archivo de pruebas unitarias correspondiente (`*.unit.t
    - Incluye estado del indicador **Safe Mode (Dead Man's Switch)** (`safeModeCountdownSeconds`, `isSafeModeActive`) y el método `clearRouterWorkspace()` que se invoca al cambiar de `router_id` o salir del equipo.
 5. **`useLiveTelemetryStore.ts`** — **Almacenamiento 100% en RAM (`RingBuffer` con `shallowRef`)** de los puntos recibidos por WebSocket para las gráficas estilo WinBox. Incluye el hook de limpieza automática `resetChartsBuffer()` al salir del router.
 6. **`useNocEventsStore.ts`** — Conexión al WebSocket global `/ws/v1/tenant/events`, cola de alertas sonoras/visuales del NOC, contador en vivo de solicitudes *Maker-Checker* pendientes y escucha activa del evento `SESSION_KILLED`.
+7. **`useApiHeartbeatStore.ts`** — Monitoreo resiliente de salud del API con soporte de `BroadcastChannel` (canal `rosgrid_api_heartbeat` para compartir telemetría entre múltiples pestañas del navegador sin duplicar tráfico), pausa por `Page Visibility API` (`document.hidden`), sondeo en reposo a 45s con `AbortController` (4s timeout) e integración con el botón táctico `RgApiHealthBadge.vue`.
 
 ---
 

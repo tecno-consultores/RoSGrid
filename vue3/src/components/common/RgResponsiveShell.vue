@@ -7,10 +7,12 @@
   import { useAuthStore } from '@/stores/useAuthStore';
   import { useNocEventsStore } from '@/stores/useNocEventsStore';
   import { useThemeAndLayoutStore } from '@/stores/useThemeAndLayoutStore';
+  import { useApiHeartbeatStore } from '@/stores/useApiHeartbeatStore';
   import { useI18n } from '@/composables/useI18n';
   import { http } from '@/api/httpClient';
   import RgCommandPalette from './RgCommandPalette.vue';
   import RgSafeModeBanner from './RgSafeModeBanner.vue';
+  import RgApiHealthBadge from './RgApiHealthBadge.vue';
   import ChangePasswordModal from '@/components/common/ChangePasswordModal.vue';
   import RgStepUp2FAModal from '@/components/common/RgStepUp2FAModal.vue';
   import RgMcpTokenModal from '@/components/admin/RgMcpTokenModal.vue';
@@ -20,6 +22,7 @@
   const authStore = useAuthStore();
   const themeStore = useThemeAndLayoutStore();
   const nocStore = useNocEventsStore();
+  const heartbeatStore = useApiHeartbeatStore();
   const { t, locale, toggleLocale } = useI18n();
 
   const isRouterContext = computed(() => route.path.includes('/routers/'));
@@ -103,6 +106,7 @@
   }
 
   onMounted(() => {
+    heartbeatStore.startMonitoring();
     headerClockTimer = setInterval(updateHeaderClock, 1000);
     if (typeof document !== 'undefined') {
       document.addEventListener('click', onDocumentClick);
@@ -111,6 +115,7 @@
   });
 
   onBeforeUnmount(() => {
+    heartbeatStore.stopMonitoring();
     if (headerClockTimer) {
       clearInterval(headerClockTimer);
     }
@@ -286,6 +291,9 @@
       </div>
 
       <div class="header-right">
+        <!-- Indicador Táctico de Salud del API (Heartbeat/Ping) -->
+        <RgApiHealthBadge />
+
         <!-- Reloj Global del Sistema (HH:MM según 24h / 12h) -->
         <div class="header-clock font-mono" aria-label="Hora actual del sistema">
           <span class="clock-icon" aria-hidden="true">🕒</span>

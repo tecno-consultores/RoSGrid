@@ -1371,4 +1371,42 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
 - **Propósito:** Obtiene el reporte detallado router por router de la ejecución de un trabajo masivo.
 - **Respuesta (200 OK):** Detalle del trabajo incluyendo trazas de error individuales en caso de fallo.
 
+---
+
+## 8. Sondas de Salud, Diagnóstico y Observabilidad
+
+### 8.1 Sonda de Salud y Disponibilidad del Backend (`GET /health`)
+
+- **Propósito:** Endpoint de sonda de liveness y readiness para balanceadores de carga, Kubernetes/Docker y el indicador táctico de presencia en el frontend (`RgApiHealthBadge.vue`).
+- **Autenticación:** No requerida (público, exento de CSRF y de verificaciones de sesión).
+- **Parámetros de Consulta:**
+  - `force: bool = false` (opcional): Si se envía `?force=true`, omite la caché en memoria y ejecuta la comprobación directa de PostgreSQL y KeyDB.
+- **Caché en Memoria de Alto Rendimiento:**
+  - En entornos productivos (`ROSGRID_ENV=production`), el estado de salud se cachea en la memoria RAM del proceso durante **5.0 segundos** mediante un cerrojo asíncrono (`asyncio.Lock`), previniendo condiciones de *Thundering Herd* cuando cientos de interfaces o navegadores consultan la salud simultáneamente.
+- **Respuesta (200 OK — Sistema Operativo):**
+  ```json
+  {
+    "status": "healthy",
+    "service": "rosgrid-api",
+    "database": "connected",
+    "redis": "connected"
+  }
+  ```
+- **Respuesta (503 Service Unavailable — Sistema Degradado):**
+  ```json
+  {
+    "status": "unhealthy",
+    "service": "rosgrid-api",
+    "database": "disconnected",
+    "redis": "disconnected"
+  }
+  ```
+
+### 8.2 Métricas de Rendimiento en Formato Estándar Prometheus (`GET /metrics`)
+
+- **Propósito:** Exportación de métricas de tiempo de respuesta, recuento de peticiones HTTP, estado del colector y saturación del servidor vía `prometheus_fastapi_instrumentator`.
+- **Autenticación:** No requerida (restringida a nivel de red/reverse proxy).
+- **Respuesta (200 OK):** Texto plano en formato estándar OpenMetrics / Prometheus.
+
+
 

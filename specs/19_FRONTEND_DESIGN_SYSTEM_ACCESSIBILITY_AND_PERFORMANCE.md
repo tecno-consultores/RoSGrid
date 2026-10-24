@@ -87,6 +87,20 @@ Para evitar duplicación de código y mantener complejidad cognitiva baja en Son
   4. **Pie de Página Global Autenticado (`<footer id="app-global-footer">`):** Ubicado en la base del shell de navegación, presenta de forma discreta y elegante el crédito institucional: *"Elaborado por [Tecno Consultores 2023 C.A.](https://www.tecnoconsultores.net/) • Licencia GNU GPLv3"*, enlace al repositorio de GitHub (`https://github.com/tecno-consultores/RoSGrid/`) y número de versión activa, manteniendo ratio de contraste accesible `>= 4.5:1` (`--rg-text-muted`) sin interferir en la cuadrícula de trabajo.
 - Incluye todos los hitos semánticos HTML5 obligatorios para `@axe-core`: `<header>`, `<nav aria-label="Navegación principal">`, `<main id="main-content">` (con enlace *Saltar al contenido principal* al pulsar `Tab`), `<aside aria-label="Estado de sesión y alertas">` y `<footer id="app-global-footer">`.
 
+### 2.6 `RgApiHealthBadge.vue` (Indicador Táctico de Disponibilidad de API, Heartbeat y Popover Diagnóstico)
+
+- **Ubicación Estratégica:** Visible permanentemente en la barra superior de `RgResponsiveShell.vue` (junto al reloj del sistema `🕒`) y en la cabecera de acceso en `LoginView.vue`.
+- **Estados Semánticos y Micro-animaciones:**
+  - `ONLINE`: Punto verde esmeralda con respiración táctica suave (`box-shadow: 0 0 8px #10b981`) y latencia en milisegundos (`API XXms`).
+  - `OFFLINE`: Punto rojo carmesí con destello alternante de alerta NOC (`API OFFLINE`) ante fallos de red o caídas completas del backend.
+  - `DEGRADED`: Punto ámbar (`API DEGRADADO`) ante indisponibilidad de dependencias (PostgreSQL o KeyDB caídos con HTTP 503).
+  - `CHECKING`: Indicador cian interactivo mientras se evalúa la conexión (`PING...`).
+- **Arquitectura de Alto Rendimiento y Cero Sobrecarga (`useApiHeartbeatStore.ts`):**
+  - **Monitoreo Pasivo (Piggybacking):** Intercepta llamadas exitosas de `httpClient.ts` mediante eventos personalizados `rosgrid:api-health-event`, actualizando latencia sin generar peticiones HTTP adicionales mientras el operador trabaja activamente.
+  - **Sincronización Pestaña a Pestaña (`BroadcastChannel`):** Utiliza el canal `rosgrid_api_heartbeat` para que una sola pestaña consulte la API y propague el estado instantáneamente a todas las demás pestañas abiertas en el navegador.
+  - **Pausa Automática en Segundo Plano (`Page Visibility API`):** Pausa el sondeo por completo cuando la pestaña está oculta o minimizada (`document.hidden`), reanudando y evaluando frescura al volver al primer plano.
+  - **Popover Diagnóstico Táctico:** Despliegue interactivo con desglose de latencia, estado de FastAPI, PostgreSQL y KeyDB, y acción para reintentar ping manualmente de forma inmediata.
+
 ---
 
 ## 3. Reglas Estrictas de Accesibilidad para Aprobar `@axe-core/playwright` (0 Violaciones)

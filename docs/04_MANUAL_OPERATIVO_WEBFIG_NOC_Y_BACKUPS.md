@@ -262,3 +262,23 @@ El asistente de operaciones masivas (`/bulk-ops`) incorpora un catálogo de plan
   - El operador puede alternar entre la vista de llamadas estructuradas REST (`PUT /rest/system/logging/*`) y el script CLI nativo equivalente antes de la ejecución.
 - **Ejecución Protegida por Safe Mode:**
   - Cada router aplica los 7 pasos de configuración bajo un temporizador transaccional de reversión automática a 60 segundos (`rosgrid_safemode_*`), impidiendo que un error de sintaxis o bloqueo de firewall interrumpa la conectividad administrativa de la flota.
+
+---
+
+## 10. Indicador Táctico de Disponibilidad del API (Heartbeat/Ping) en la Barra Superior
+
+Para solventar la "ceguera de estado" en aplicaciones SPA donde el frontend sigue en memoria aunque el backend se apague, RoSGrid implementa un **indicador táctico de salud en tiempo real** (`RgApiHealthBadge.vue`) permanentemente visible en la barra superior (junto al reloj del sistema) y en la pantalla de inicio de sesión:
+
+- **Estados Semánticos Visibles:**
+  - 🟢 **ONLINE (`XXms`):** Backend operativo y respondiendo dentro de los parámetros de latencia normales.
+  - 🔴 **OFFLINE (`API OFFLINE`):** Servidor API inalcanzable, apagado o con fallo de red. El indicador emite una micro-animación de alerta intermitente.
+  - 🟡 **DEGRADADO (`API DEGRADADO`):** La API responde pero reporta que PostgreSQL o KeyDB están caídos (`503 Service Unavailable`).
+  - 🔵 **COMPROBANDO (`PING...`):** Transición breve durante la ejecución activa de una sonda.
+- **Interacción y Diagnóstico en Vivo:**
+  - Al hacer clic sobre el botón se despliega una **tarjeta emergente de telemetría** con el estado de FastAPI Core, conectividad con PostgreSQL y KeyDB, latencia exacta en milisegundos y un botón de acción rápida *"Reintentar Ping Ahora"*.
+- **Optimización de Cero Sobrecarga:**
+  - **Monitoreo Pasivo:** Mientras el operador interactúa con la aplicación, las peticiones HTTP normales alimentan el estado sin disparar consultas adicionales.
+  - **Sondeo en Reposo:** Si la app pasa 45 segundos sin tráfico, envía una sonda ultraligera con `AbortController` (timeout 4s).
+  - **Pestañas Inactivas:** La `Page Visibility API` suspende el sondeo cuando la pestaña se minimiza.
+  - **Sincronización Multitarea:** Mediante `BroadcastChannel`, si el operador tiene varias pestañas abiertas, una sola realiza el chequeo y sincroniza a las demás sin multiplicar el tráfico de red.
+

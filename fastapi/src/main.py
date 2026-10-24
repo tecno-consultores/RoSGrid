@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 RoSGrid Contributors
 
+import asyncio
 import logging
+import time
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
@@ -54,21 +56,54 @@ async def _check_redis_health() -> str:
         return "mocked" if is_test_env else "disconnected"
 
 
-async def health_check(response: Response) -> dict[str, str]:
-    """Endpoint de salud con verificación activa de PostgreSQL y KeyDB."""
-    db_status = await _check_database_health()
-    redis_status = await _check_redis_health()
-    is_healthy = db_status != "disconnected" and redis_status != "disconnected"
+# Caché en memoria para evitar Thundering Herd ante sondeos masivos de estado
+_health_cache_lock = asyncio.Lock()
+_last_health_check_time: float = 0.0
+_cached_health_payload: dict[str, str] = {}
+_cached_status_code: int = status.HTTP_200_OK
 
-    if not is_healthy:
-        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 
-    return {
-        "status": "healthy" if is_healthy else "unhealthy",
-        "service": "rosgrid-api",
-        "database": db_status,
-        "redis": redis_status,
-    }
+async def health_check(response: Response, force: bool = False) -> dict[str, str]:
+    """Endpoint de salud con verificación activa de PostgreSQL y KeyDB, optimizado con caché en memoria."""
+    global _last_health_check_time, _cached_health_payload, _cached_status_code
+
+    is_test_env = settings.ROSGRID_ENV.startswith("qa") or settings.ROSGRID_ENV == "test"
+    cache_ttl = 0.0 if is_test_env else 5.0
+
+    now = time.monotonic()
+    if not force and cache_ttl > 0.0 and (now - _last_health_check_time) < cache_ttl and _cached_health_payload:
+        if _cached_status_code != status.HTTP_200_OK:
+            response.status_code = _cached_status_code
+        return _cached_health_payload
+
+    async with _health_cache_lock:
+        now = time.monotonic()
+        if not force and cache_ttl > 0.0 and (now - _last_health_check_time) < cache_ttl and _cached_health_payload:
+            if _cached_status_code != status.HTTP_200_OK:
+                response.status_code = _cached_status_code
+            return _cached_health_payload
+
+        db_status = await _check_database_health()
+        redis_status = await _check_redis_health()
+        is_healthy = db_status != "disconnected" and redis_status != "disconnected"
+
+        status_code = status.HTTP_200_OK if is_healthy else status.HTTP_503_SERVICE_UNAVAILABLE
+        if not is_healthy:
+            response.status_code = status_code
+
+        payload = {
+            "status": "healthy" if is_healthy else "unhealthy",
+            "service": "rosgrid-api",
+            "database": db_status,
+            "redis": redis_status,
+        }
+
+        if cache_ttl > 0.0:
+            _cached_health_payload = payload
+            _cached_status_code = status_code
+            _last_health_check_time = now
+
+        return payload
 
 
 def users_me_alias(

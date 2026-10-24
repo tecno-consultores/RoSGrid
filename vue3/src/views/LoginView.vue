@@ -7,11 +7,14 @@
   import QRCode from 'qrcode';
   import { http } from '@/api/httpClient';
   import { useAuthStore } from '@/stores/useAuthStore';
+  import { useApiHeartbeatStore } from '@/stores/useApiHeartbeatStore';
+  import RgApiHealthBadge from '@/components/common/RgApiHealthBadge.vue';
   import type { UserInfo } from '@/types';
 
   const route = useRoute();
   const router = useRouter();
   const authStore = useAuthStore();
+  const heartbeatStore = useApiHeartbeatStore();
 
   // Estados de etapas de Login
   type LoginStep = 'CREDENTIALS' | 'ENROLL_2FA' | 'VERIFY_2FA' | 'BOOTSTRAP' | 'REGISTER';
@@ -104,6 +107,7 @@
 
   onBeforeUnmount(() => {
     stopCountdown();
+    heartbeatStore.stopMonitoring();
   });
 
   // Renderizar QR local con librería qrcode
@@ -451,6 +455,7 @@
   }
 
   onMounted(async () => {
+    heartbeatStore.startMonitoring();
     applyQueryTenant();
     try {
       const res = await http.get<{
@@ -468,6 +473,9 @@
 
 <template>
   <div class="login-wrapper">
+    <div class="login-top-bar">
+      <RgApiHealthBadge />
+    </div>
     <main id="main-content" class="login-card" role="main" aria-labelledby="login-heading">
       <header class="login-header">
         <div class="brand-logo" aria-hidden="true">⚡</div>
@@ -1080,6 +1088,14 @@
     padding: var(--rg-space-6, 24px) var(--rg-space-4, 16px);
     background-color: var(--rg-bg-canvas, #0b0f19);
     box-sizing: border-box;
+  }
+
+  .login-top-bar {
+    width: 100%;
+    max-width: 440px;
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 12px;
   }
 
   .login-card {

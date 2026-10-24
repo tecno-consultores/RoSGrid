@@ -197,4 +197,14 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And waitFor(".theme-selector")
     And waitFor(".lang-selector")
 
+  Scenario: 25. Barra Superior Táctica — Indicador de Salud del API (Heartbeat/Ping) y Popover
+    Given driver baseUrl + '/'
+    And waitFor("#api-health-badge")
+    Then match text("#api-health-badge") contains 'API'
+    When click("#api-health-badge")
+    Then waitFor(".rg-health-popover")
+    And match text(".rg-health-popover") contains 'Telemetría Backend'
+    And waitFor(".btn-ping-action")
+
+
 

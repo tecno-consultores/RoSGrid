@@ -301,10 +301,12 @@ def test_build_router_from_csv_with_custom_role(test_tenant_id: uuid.UUID, test_
 
 def test_tenant_custom_role_model_metadata() -> None:
     from sqlalchemy import String
+
     from src.models.base import Base
     from src.models.inventory import TenantCustomRole
 
-    # Validar registro en Base.metadata
+    # Validar registro en Base.metadata y modelo
+    assert TenantCustomRole.__tablename__ == "tenant_custom_roles"
     assert "tenant_custom_roles" in Base.metadata.tables
     table = Base.metadata.tables["tenant_custom_roles"]
     assert "tenant_id" in table.c
