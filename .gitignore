@@ -21,13 +21,17 @@
 # Python & FastAPI
 venv/
 .venv/
+**/venv/
+**/.venv/
 __pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 .Python
 build/
 develop-eggs/
 dist/
+**/dist/
 downloads/
 eggs/
 .eggs/
@@ -43,19 +47,31 @@ share/python-wheels/
 *.egg
 MANIFEST
 .tox/
+**/.tox/
 .coverage
 .coverage.*
 coverage.xml
 junit.xml
 htmlcov/
+**/htmlcov/
 .pytest_cache/
+**/.pytest_cache/
 .mypy_cache/
+**/.mypy_cache/
 .ruff_cache/
+**/.ruff_cache/
+.hypothesis/
+**/.hypothesis/
+.schemathesis/
+**/.schemathesis/
 .uv/
+**/.uv/
 
 # Mutación Backend (mutmut v3+)
 mutants/
+**/mutants/
 .mutmut-cache
+**/.mutmut-cache/
 mutmut-stats.json
 mutmut-cicd-stats.json
 *.meta
@@ -63,35 +79,51 @@ mutmut-cicd-stats.json
 
 # Node.js, TypeScript & Vue 3
 node_modules/
+**/node_modules/
 .pnpm-store/
 .pnp
 .pnp.js
 dist-ssr/
 .vite/
+**/.vite/
 *.tsbuildinfo
 .eslintcache
+**/.eslintcache
 coverage/
+**/coverage/
 .stryker-tmp/
+**/.stryker-tmp/
 reports/
+**/reports/
 test-results/
+**/test-results/
 playwright-report/
+**/playwright-report/
 blob-report/
+**/blob-report/
 playwright/.cache/
 .lighthouseci/
+**/.lighthouseci/
 lhci-reports/
+**/lhci-reports/
 .lhcache/
+**/.lhcache/
 
 # QA, BDD, Caos, Seguridad y Observabilidad
 target/
+**/target/
 test/target/
+**/test/target/
 *.log
+**/*.log
 zap-report.html
 zap.yaml
 chaos-report.html
 profile.svg
 graphify-out/
-!**/graphify-out/GRAPH_REPORT.md
+**/graphify-out/
 prometheus_data/
+**/prometheus_data/
 .trivycache/
 trivy-results*
 

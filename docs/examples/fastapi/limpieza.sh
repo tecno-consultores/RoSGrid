@@ -16,6 +16,7 @@ rm -rf .pytest_cache
 rm -rf .ruff_cache
 rm -rf .tox
 rm -rf .uv/
+rm -rf .venv venv/
 rm -rf dist
 rm -rf tests/__pycache__
 rm -rf src/*/__pycache__

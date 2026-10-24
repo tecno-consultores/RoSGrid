@@ -481,6 +481,11 @@
   - Detección continua de Syslog en `health_monitor_worker.py`: verificación periódica de presencia de la acción `rosgridsyslog` en el router y persistencia en KeyDB (`rg:{tenant}:router:{id}:syslog:configured`), eliminando el falso negativo `⚪ Sin Syslog` en el inventario para routers que no emiten logs continuos.
   - Corrección de límite de eventos en `syslog.py` (ampliado de 100 a 500) para resolver el error HTTP 422 generado por la petición del frontend (`limit=200`), paridad de contrato con campos `total_events` y `critical_count` en `schemas/syslog.py`, y exposición de puerto `5514/udp` en worker.
   - Certificación 11X multi-capa: 33/33 tests backend en `test_hito23_cve_and_syslog.unit.py`, 5/5 tests frontend en `routerSyslogTerminalView.unit.ts`, 26/26 contratos front-back y nuevos escenarios Karate Labs: Escenarios 73, 74 y 75 en API y Escenario 29 en UI sincronizados en `docs/examples/`.
+- [x] **23.18** **Robustecimiento de Scripts de Limpieza, Purga de Residuos `.venv` y Blindaje Global de `.gitignore`:**
+  - Actualización integral de `scripts/limpieza.sh` y `docs/examples/fastapi/limpieza.sh` con eliminación de entornos virtuales residuales (`.venv/`, `venv/`), doble capa de purga de bytecode `__pycache__` con contenedor Docker de rescate y depuración de caché intermedia de Graphify (`graphify-out/cache/`).
+  - Normalización determinista de permisos de usuario (`chown -R $(id -u):$(id -g)`) al final del ciclo de limpieza, eliminando bloqueos de permisos y candados gráficos en Nautilus sobre archivos versionados como `fastapi/uv.lock`.
+  - Actualización exhaustiva de `.gitignore` con exclusiones recursivas globales (`**/venv/`, `**/.venv/`, `**/__pycache__/`, `**/.pytest_cache/`, `**/.mypy_cache/`, `**/.ruff_cache/`, `**/.uv/`, `**/.stryker-tmp/`, `**/graphify-out/`, etc.).
+
 
 
 ---
