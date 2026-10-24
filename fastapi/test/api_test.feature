@@ -167,6 +167,13 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 20b. Validación de auto-pinning TOFU continuo y sincronización sin sesión devuelve 401
+    Given path '/api/v1/inventory/routers/00000000-0000-0000-0000-000000000001/sync-discovery'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000015'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
   Scenario: 21. Catálogo de roles personalizados de infraestructura sin sesión devuelve 401
     Given path '/api/v1/inventory/roles'
     When method get

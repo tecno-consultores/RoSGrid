@@ -8,6 +8,14 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ## [Unreleased]
 
+### Fixed
+
+- **Auto-Pinning TOFU Continuo y Autodescubrimiento Desatendido de Hardware (`health_monitor_worker.py`, `webfig_common.py`, `es.json`, `en.json`):**
+  - **Auto-Fijación Reactiva en Monitor de Salud Zero-Storage:** Cuando el worker en segundo plano (`health_monitor_worker`) sondea los routers y detecta que se encuentran alcanzables (`is_reachable = True`), si el router está en estado `PENDING_TOFU` o carece de huella digital fijada, extrae de inmediato la huella TLS SHA-256 observada (`_observed_fingerprint` o `client.ensure_ssl_verified()`), actualiza `ssl_sha256_fingerprint`, conmuta `ssl_trust_status = TRUSTED_PINNED`, registra la marca temporal `ssl_pinned_at` y ejecuta `discover_hardware` para completar automáticamente la versión de RouterOS, identidad y modelo de placa en PostgreSQL sin requerir acción manual.
+  - **Auto-Fijación Transparente al Abrir WebFig:** Optimizado `get_router_and_client` para que al acceder a cualquier vista de la consola WebFig sobre un router pendiente de TOFU, verifique la huella SSL mediante `client.ensure_ssl_verified()`, fije el certificado en base de datos (`TRUSTED_PINNED`) y persista los metadatos de hardware de forma transparente.
+  - **Localización Completa en la Grilla Táctica:** Incorporada la traducción de `PENDING_TOFU` en español (`es.json`: "Pendiente TOFU") e inglés (`en.json`: "Pending TOFU") para eliminar fallbacks de texto sin formatear en la tabla de inventario.
+  - **Aseguramiento de Calidad 11X:** Cobertura de pruebas unitarias al 100% en backend (`test_workers_full.unit.py` y `test_webfig_layer1_endpoints.unit.py`) y frontend (`routerInventoryView.unit.ts`), más escenarios BDD en Karate Labs: Escenario 20b en API (`fastapi/test/api_test.feature`) y Escenario 3b en UI (`vue3/test/ui_business_flow.feature`), sincronizados en `docs/examples/`.
+
 ### Changed
 
 - **Optimización y Guía Visual de Instalación Rápida en 3 Pasos (`README.md`):**

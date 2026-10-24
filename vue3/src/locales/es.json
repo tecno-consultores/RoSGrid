@@ -149,6 +149,7 @@
       "DECOMMISSIONED": "Retirado"
     },
     "ssl_trust_status": {
+      "PENDING_TOFU": "Pendiente TOFU",
       "TRUSTED_PINNED": "Certificado Válido (Pinned)",
       "TRUSTED_AUTO": "Auto-Aprobado",
       "FINGERPRINT_MISMATCH": "Error de Huella (Mismatch)",

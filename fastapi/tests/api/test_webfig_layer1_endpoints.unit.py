@@ -39,6 +39,7 @@ from src.api.v1.webfig_system_tools import (
     _filter_schedulers,
 )
 from src.core.crypto import encrypt_aes_gcm
+from src.mikrotik.client import MikrotikRestClient
 from src.models.core import SystemRoleEnum
 from src.models.inventory import Router, RouterCredentialsVault
 from src.schemas.webfig_firewall import FirewallRuleUpdateRequest
@@ -89,6 +90,30 @@ async def test_get_router_and_client(test_router: Router) -> None:
     assert r_obj.id == test_router.id
     assert client.username == "rosgrid_api"
     assert client.password == "admin_pass"
+
+
+@pytest.mark.asyncio
+async def test_get_router_and_client_auto_tofu(test_router: Router) -> None:
+    db = AsyncMock()
+
+    class MockResult:
+        def scalar_one_or_none(self) -> Router:
+            return test_router
+
+    db.execute.return_value = MockResult()
+    claims = {"tid": str(test_router.tenant_id), "sub": str(uuid.uuid4()), "rol": SystemRoleEnum.TENANT_ADMIN.value}
+
+    fake_client = AsyncMock(spec=MikrotikRestClient)
+    fake_client.ensure_ssl_verified = AsyncMock(return_value="cafebabe12345678")
+    fake_client.username = "rosgrid_api"
+    fake_client.password = "admin_pass"
+
+    with patch("src.api.v1.webfig_common._create_client_from_vault", return_value=fake_client):
+        r_obj, client = await get_router_and_client(test_router.id, claims, db)
+        assert r_obj.ssl_trust_status.value == "TRUSTED_PINNED"
+        assert r_obj.ssl_sha256_fingerprint == "cafebabe12345678"
+        assert client.ssl_pinned_fingerprint == "cafebabe12345678"
+        assert db.commit.await_count >= 1
 
 
 @pytest.mark.asyncio

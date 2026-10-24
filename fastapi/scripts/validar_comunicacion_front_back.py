@@ -505,7 +505,7 @@ async def run_suite():
         }
         existing_router_id, created_test_router_id = await verify_core_resources(client, auth_headers)
         await verify_user_lifecycle_and_maker_checker(client, auth_headers)
-        target_router_id = created_test_router_id or existing_router_id
+        target_router_id = existing_router_id or created_test_router_id
         await verify_router_specific_endpoints(client, auth_headers, target_router_id, test_router_to_clean=created_test_router_id)
 
     await verify_nginx_frontend_and_csp()

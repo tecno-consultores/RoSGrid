@@ -13,10 +13,11 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
+from src.api.v1.inventory_helpers import discover_hardware
 from src.api.v1.webfig_common import _create_client_from_vault
 from src.db.session import async_session_maker
 from src.mikrotik.client import MikrotikRestClient
-from src.models.inventory import MaintenanceWindow, Router, RouterAdminStateEnum
+from src.models.inventory import MaintenanceWindow, Router, RouterAdminStateEnum, SSLTrustStatusEnum
 from src.redis_layer.client import get_redis_client
 from src.redis_layer.zero_metrics_monitor import (
     evaluate_router_monitoring_cycle,
@@ -94,6 +95,25 @@ async def _evaluate_single_router(session: Any, redis: Any, r: Router) -> None:
     if r.vault:
         client = _create_client_from_vault(r, r.tenant_id)
         is_reachable, cpu, free_pct = await _ping_router_resource(client)
+        if is_reachable:
+            if r.ssl_trust_status == SSLTrustStatusEnum.PENDING_TOFU or not r.ssl_sha256_fingerprint:
+                fp = getattr(client, "_observed_fingerprint", None)
+                if not fp and hasattr(client, "ensure_ssl_verified"):
+                    try:
+                        fp = await client.ensure_ssl_verified()
+                    except Exception as ssl_err:
+                        logger.debug("Error extrayendo huella SSL en health monitor para %s: %s", r.display_name, ssl_err)
+                if fp:
+                    r.ssl_sha256_fingerprint = fp
+                    r.ssl_trust_status = SSLTrustStatusEnum.TRUSTED_PINNED
+                    r.ssl_pinned_at = datetime.now(UTC)
+                    logger.info("Auto-pinning TOFU exitoso en monitor de salud para router %s: %s", r.display_name, fp)
+            if not r.ros_version or not r.ros_identity:
+                try:
+                    await discover_hardware(client, r)
+                    r.last_discovery_sync_at = datetime.now(UTC)
+                except Exception as d_exc:
+                    logger.debug("Fallo en autodescubrimiento durante monitor de salud para %s: %s", r.display_name, d_exc)
         await client.close()
 
     new_status, alert, updated_state = evaluate_router_monitoring_cycle(

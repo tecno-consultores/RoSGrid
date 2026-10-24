@@ -271,4 +271,33 @@ describe('RouterInventoryView.vue — Inventario y Modos Tabla, Mapa y Dividido'
     await syslogBtn.trigger('click');
     expect(mockPush).toHaveBeenCalledWith('/routers/r-syslog-1/webfig/syslog');
   });
+
+  it('formatea correctamente los estados ssl_trust_status PENDING_TOFU y TRUSTED_PINNED', () => {
+    const wrapper = mount(RouterInventoryView, {
+      global: {
+        stubs: {
+          RgDataTable: {
+            name: 'RgDataTable',
+            template: '<div class="rg-datatable-stub"></div>',
+            props: ['columns', 'rows'],
+          },
+          OsmRouterMap: true,
+          CsvOnboardingWizardModal: true,
+          VaultRevealModal: true,
+        },
+      },
+    });
+
+    const dt = wrapper.findComponent({ name: 'RgDataTable' });
+    const cols = dt.props('columns') as Array<{ key: string; formatter?: (row: Record<string, unknown>) => string }>;
+    const sslCol = cols.find((c) => c.key === 'ssl_trust_status');
+    expect(sslCol).toBeDefined();
+    expect(sslCol?.formatter).toBeDefined();
+
+    const formattedPending = sslCol!.formatter!({ ssl_trust_status: 'PENDING_TOFU' });
+    expect(formattedPending).toBe('Pendiente TOFU');
+
+    const formattedPinned = sslCol!.formatter!({ ssl_trust_status: 'TRUSTED_PINNED' });
+    expect(formattedPinned).toBe('Certificado Válido (Pinned)');
+  });
 });

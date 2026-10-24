@@ -165,6 +165,8 @@ async def test_health_monitor_publish_and_evaluate() -> None:
     fake_client = AsyncMock(spec=MikrotikRestClient)
     fake_client.get.return_value = {"cpu-load": 20, "total-memory": 1000, "free-memory": 700}
     fake_client.close = AsyncMock()
+    fake_client._observed_fingerprint = "aabbcc112233"
+    fake_client.ensure_ssl_verified = AsyncMock(return_value="aabbcc112233")
 
     with (
         patch("src.workers.health_monitor_worker._create_client_from_vault", return_value=fake_client),
@@ -172,6 +174,8 @@ async def test_health_monitor_publish_and_evaluate() -> None:
     ):
         await _evaluate_single_router(session, redis, router_obj)
         assert router_obj.is_reachable is True
+        assert router_obj.ssl_trust_status.value == "TRUSTED_PINNED"
+        assert router_obj.ssl_sha256_fingerprint == "aabbcc112233"
         assert redis.hset.await_count == 1
         assert mock_pub.await_count >= 1
 

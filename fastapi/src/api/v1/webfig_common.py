@@ -8,6 +8,7 @@ import json
 import logging
 import uuid
 from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import HTTPException, status
@@ -19,7 +20,7 @@ from src.core.crypto import decrypt_aes_gcm
 from src.mikrotik.client import MikrotikRestClient
 from src.mikrotik.safemode import build_rollback_command, execute_with_safemode
 from src.models.core import SystemRoleEnum, UserRouterPermission
-from src.models.inventory import Router
+from src.models.inventory import Router, SSLTrustStatusEnum
 
 logger = logging.getLogger(__name__)
 
@@ -110,6 +111,27 @@ async def get_router_and_client(
         raise HTTPException(status_code=404, detail="Router no encontrado")
 
     client = _create_client_from_vault(r, tenant_id)
+
+    if r.ssl_trust_status == SSLTrustStatusEnum.PENDING_TOFU or not r.ssl_sha256_fingerprint:
+        try:
+            fp = await client.ensure_ssl_verified()
+            if fp:
+                r.ssl_sha256_fingerprint = fp
+                r.ssl_trust_status = SSLTrustStatusEnum.TRUSTED_PINNED
+                r.ssl_pinned_at = datetime.now(UTC)
+                client.ssl_pinned_fingerprint = fp
+                r.is_reachable = True
+                r.last_seen_at = datetime.now(UTC)
+                if not r.ros_version or not r.ros_identity:
+                    from src.api.v1.inventory_helpers import discover_hardware
+
+                    await discover_hardware(client, r)
+                    r.last_discovery_sync_at = datetime.now(UTC)
+                await db.commit()
+                logger.info("Auto-pinning TOFU exitoso en WebFig para router %s: %s", r.display_name, fp)
+        except Exception as exc:
+            logger.warning("Fallo al auto-fijar TOFU en WebFig para %s: %s", r.display_name, exc)
+
     return r, client
 
 

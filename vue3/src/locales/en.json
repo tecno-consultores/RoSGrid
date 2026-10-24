@@ -149,6 +149,7 @@
       "DECOMMISSIONED": "Retired"
     },
     "ssl_trust_status": {
+      "PENDING_TOFU": "Pending TOFU",
       "TRUSTED_PINNED": "Trusted (Pinned)",
       "TRUSTED_AUTO": "Auto-Trusted",
       "FINGERPRINT_MISMATCH": "Fingerprint Mismatch",

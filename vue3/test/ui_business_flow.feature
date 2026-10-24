@@ -40,6 +40,14 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     When click("//button[contains(@class, 'btn-toggle') and contains(., 'Tabla')]")
     Then match attribute("//button[contains(@class, 'btn-toggle') and contains(., 'Tabla')]", 'class') contains 'btn-toggle--active'
 
+  Scenario: 3b. Verificación de columna de Seguridad SSL TOFU en la tabla de inventario
+    Given driver baseUrl + '/inventory'
+    And waitFor("//h1[contains(., 'Inventario de Equipos')]")
+    And waitFor(".view-mode-toggle")
+    When click("//button[contains(@class, 'btn-toggle') and contains(., 'Tabla')]")
+    Then waitFor(".rg-datatable")
+    And match text(".rg-datatable") contains 'SSL / TOFU'
+
   Scenario: 4. Consola WebFig v7 y Pestañas en Memoria (KeepAlive)
     Given driver baseUrl + '/routers/01928900-aaaa-7bbb-8ccc-111122223333/webfig/live'
     And waitFor(".webfig-shell")
