@@ -10,6 +10,13 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Added
 
+- **Especificación de Diseño: Componente Unificado de Mapa (`UnifiedNetworkMap.vue`), 3 Toggles de Capas con Feature Flags, Causa Raíz (RCA) y Cerraduras en KeyDB (`docs/specs/38_UNIFIED_NETWORK_MAP_ROOT_CAUSE_AND_OPERATIONAL_LOCKING.md`, `docs/13_MANUAL_MAPA_RED_BIMODAL_Y_OPERACIONES_CAMPO.md`, `ROADMAP.md`):**
+  - **Unificación de Componente de Mapa:** Definición del componente único `UnifiedNetworkMap.vue` que consolida la cartografía de `/inventory/routers`, `/subscribers/map` y `/wallboard`.
+  - **3 Toggles de Capa Independientes:** `[ 🏢 Routers de Red ]`, `[ 📦 Cajas NAP FTTH ]` (excluido del DOM con `v-if="isp_module_enabled"` en empresas no-ISP) y `[ 💻 Dispositivos / Abonados ]`.
+  - **Gobernanza RBAC:** Restricción estricta para ocultar la consola WebFig y parámetros de gestión a técnicos de campo y soporte L1, manteniendo visibilidad de KPIs de salud.
+  - **Correlación de Causa Raíz (RCA):** Supresión automática de diagnósticos individuales sobre clientes si el router de cabecera está inalcanzable, con alerta táctica superior en el mapa y zoom a zona afectada.
+  - **Cerradura Operativa en KeyDB:** Registro efímero de atención (`TTL = 600s`) que previene traslados redundantes de brigadas de calle.
+
 - **Gobernanza Anti-Saturación de Diagnósticos de Red y Clientes (KeyDB Governor, Thundering-Herd Cache y Circuit Breaker Táctico) (`fastapi/src/services/diagnostic_governor.py`, `fastapi/src/api/v1/subscribers.py`, `fastapi/src/schemas/ipam.py`, `vue3/src/views/SubscribersMapView.vue`, `vue3/src/components/field/FieldTechMobileView.vue`, `vue3/src/stores/useFieldOpsStore.ts`, `vue3/src/types/index.ts`):**
   - **Protección de 5 Capas Tácticas:**
     - *Anti-Thundering Herd & Cooldown (KeyDB 15s):* Retorno inmediato de diagnósticos previos (< 2ms) con `is_cached: true` y `cache_ttl_remaining: N`.

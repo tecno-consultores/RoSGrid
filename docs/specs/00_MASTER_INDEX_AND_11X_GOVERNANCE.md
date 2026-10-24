@@ -1,6 +1,6 @@
 # 00 — ÍNDICE MAESTRO, GOBERNANZA ARQUITECTÓNICA Y ESTÁNDAR 11X (RoSGrid)
 
-> **[DIRECTIVA DE SISTEMA PARA AGENTES DE IA / ANTIGRAVITY]:** Actúa como un Principal Systems Architect, Staff Backend/Frontend Engineer y Staff QA Automation Engineer. Lee, analiza y aplica de forma estricta e innegociable todas las especificaciones contenidas en esta enciclopedia documental de 36 archivos ubicada en `docs/specs/` para construir **RoSGrid**: Plataforma Centralizada Multi-Tenant de Gestión Técnica y Operativa para Flotas MikroTik RouterOS v7+. Procesa la lógica al máximo nivel de razonamiento técnico y genera todo el código, comentarios, commits y documentación en **Español**.
+> **[DIRECTIVA DE SISTEMA PARA AGENTES DE IA / ANTIGRAVITY]:** Actúa como un Principal Systems Architect, Staff Backend/Frontend Engineer y Staff QA Automation Engineer. Lee, analiza y aplica de forma estricta e innegociable todas las especificaciones contenidas en esta enciclopedia documental de 39 archivos ubicada en `docs/specs/` (specs 00 a 38) para construir **RoSGrid**: Plataforma Centralizada Multi-Tenant de Gestión Técnica y Operativa para Flotas MikroTik RouterOS v7+. Procesa la lógica al máximo nivel de razonamiento técnico y genera todo el código, comentarios, commits y documentación en **Español**.
 
 ---
 
@@ -221,8 +221,10 @@ Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `
 * `docs/specs/35_FLEET_AUTOMATION_TOPOLOGY_L2_SYSLOG_AND_PROMETHEUS.md` — Automatización de Flota, Topología Física L2, Receptor Syslog Efímero y Exportador Prometheus: Actualizaciones PoE-aware, Safety Stop, cruce local de CVEs, receptor UDP/TCP 5514 en KeyDB, visualizador L2 MNDP/LLDP, puente de telemetría `/metrics/fleet` sin almacenamiento en Postgres y ampliación MCP.
 * `docs/specs/36_MCP_OFFICIAL_MIKROTIK_DOCS_GROUNDING.md` — Integración de Documentación Oficial de MikroTik RouterOS v7 en el Servidor MCP (Grounding IA): Endpoints oficiales `llms.txt` y `docs/*.md`, blindaje anti-SSRF, motor de caché inteligente en KeyDB (TTL 24h/7d) y Tools MCP `#21` (`rosgrid_search_mikrotik_docs`) y `#22` (`rosgrid_get_mikrotik_doc_topic`) para erradicar alucinaciones de sintaxis v6 vs v7.
 * `docs/specs/37_BIMODAL_NETWORK_MAP_AND_FTTH_FIELD_OPS.md` — Arquitectura Bimodal del Mapa de Red y Rediseño Táctico de Operaciones de Campo: Soporte dual Empresa (descubrimiento real DHCP, herencia de coordenadas de router, ping 1-Click) vs ISP (planta externa FTTH, Cajas NAP, matriz de puertos 1..16, aprovisionamiento de ONUs y telemetría óptica).
+* `docs/specs/38_UNIFIED_NETWORK_MAP_ROOT_CAUSE_AND_OPERATIONAL_LOCKING.md` — Componente Unificado de Mapa de Red Bimodal, Análisis de Causa Raíz (RCA) y Prevención de Colisión Operativa: Unificación de mapa (`UnifiedNetworkMap.vue`), 3 botones de capa independientes con gobernanza por Feature Flags (`isp_module_enabled`), restricción RBAC para ocultar WebFig a personal de campo, supresión inteligente de alarmas hijas/diagnósticos si el router está caído (estilo Zabbix) y cerraduras operativas efímeras en KeyDB para evitar duplicidad de cuadrillas.
 
 ---
+
 
 ## 5. Políticas Complementarias de Gobernanza 11X (Linters, Smoke Test --no-dev y UAT)
 

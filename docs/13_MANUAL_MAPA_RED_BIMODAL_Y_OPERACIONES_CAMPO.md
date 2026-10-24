@@ -132,3 +132,27 @@ Para garantizar que el uso masivo de diagnósticos 1-Click por parte de los téc
    * Si un router MikroTik pierde conectividad, se apaga o sufre timeouts repetitivos (3 fallas consecutivas), RoSGrid activa de inmediato el modo `CIRCUIT_OPEN` durante 30 segundos.
    * Esto previene que las peticiones se acumulen en el servidor esperando timeouts lentos (fail-fast táctico con HTTP 503), manteniendo la consola de campo ágil y fluida en todo momento.
 
+---
+
+## 6. Componente de Mapa Unificado, 3 Toggles Independientes y Correlación de Alarmas (RCA)
+
+### 6.1. Los 3 Toggles de Capas Independientes y Feature Flags
+En lugar de forzar al usuario a ver todo junto o nada, el mapa de red ofrece 3 botones independientes en la barra superior:
+* `[ 🏢 Routers de Red ]`: Muestra los equipos MikroTik de cabecera con su estado operativo en tiempo real.
+* `[ 📦 Cajas NAP FTTH ]`: Visible exclusivamente si el tenant tiene activo `isp_module_enabled: true`. En empresas estándar corporativas, este control no se renderiza.
+* `[ 💻 Dispositivos / Abonados ]`: Muestra los equipos clientes (terminales corporativos DHCP o abonados residenciales FTTH).
+
+### 6.2. Control de Acceso RBAC en el Mapa
+* **Técnicos de Campo (`FIELD_TECH` / `SUPPORT_L1`):** Al tocar un router en el mapa pueden ver su dirección IP, latencia, modelo y si se encuentra encendido o apagado para entender contingencias de zona, pero el botón de acceso a la consola **WebFig se encuentra completamente oculto y bloqueado**.
+* **Personal de Ingeniería / NOC (`TENANT_ADMIN`, `NETWORK_ADMIN`):** Disponen del botón de enlace directo para abrir WebFig, Safe Mode y Terminal.
+
+### 6.3. Correlación de Alarmas y Causa Raíz (RCA estilo Zabbix)
+* Si un router MikroTik se apaga o pierde conectividad con RoSGrid, el sistema detecta de forma inteligente la relación padre-hijo:
+  * El mapa despliega una barra de alerta superior: `🚨 ALERTA DE NODO: Router 'Core-01' CAÍDO (Afecta a 50 abonados de este mapa)`.
+  * Si un técnico intenta ejecutar una prueba sobre cualquiera de esos 50 abonados, el sistema **no emite ningún ping inútil hacia el equipo caído**, respondiendo de inmediato: *"Diagnóstico omitido: El router de cabecera 'Core-01' está inalcanzable. Resuelva primero la contingencia del nodo."*
+
+### 6.4. Prevención de Colisiones Operativas en Campo
+* Cuando un técnico ejecuta un diagnóstico sobre un cliente o abre su ficha de trabajo, RoSGrid activa una cerradura táctica efímera en KeyDB (`TTL = 10 minutos`).
+* Si un segundo técnico consulta ese mismo abonado, la interfaz despliega un aviso informativo: `👥 Atención en Curso: El técnico Carlos Mendoza ya ejecutó un diagnóstico hace 2 minutos`. Esto erradica traslados redundantes de brigadas de calle.
+
+
