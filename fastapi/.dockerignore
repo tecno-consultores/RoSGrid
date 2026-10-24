@@ -1,14 +1,85 @@
+# ==============================================================================
+# RoSGrid - FastAPI Backend .dockerignore (Estándar QA 11X)
+# Licencia: GPL-3.0-only
+# ==============================================================================
+
+# Entornos virtuales y gestores de paquetes
 .venv
+venv
+**/venv
+**/.venv
+.uv
+**/.uv
+
+# Bytecode de Python y artefactos de empaquetado
 __pycache__
-*.pyc
-.pytest_cache
-.ruff_cache
-.mypy_cache
+**/__pycache__
+*.py[cod]
+*$py.class
+.Python
+build/
+dist/
+*.egg-info/
+
+# Pruebas, Cobertura, Mutación y Linters
+tests/
+test/
+.pytest_cache/
+**/.pytest_cache/
+.mypy_cache/
+**/.mypy_cache/
+.ruff_cache/
+**/.ruff_cache/
+.hypothesis/
+**/.hypothesis/
+.schemathesis/
+**/.schemathesis/
+.tox/
+**/.tox/
 .coverage
 .coverage.*
-htmlcov
-mutants
-.mutmut-cache
-target
-prometheus_data
+coverage.xml
+junit.xml
+htmlcov/
+**/htmlcov/
+mutants/
+.mutmut-cache/
+mutmut-*.json
+*.meta
+*.spans
+
+# Reportes y logs temporales
+target/
+test/target/
 *.log
+**/*.log
+zap-report.html
+zap.yaml
+chaos-report.html
+profile.svg
+locustfile.py
+
+# Documentación, datos de monitoreo y análisis AST
+graphify-out/
+**/graphify-out/
+prometheus_data/
+
+# Secretos y respaldos de routers
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.backup
+*.rsc
+*.db
+*.sqlite*
+
+# Control de versiones e IDEs
+.git
+.gitignore
+.dockerignore
+.vscode
+.idea
+.DS_Store

@@ -10,12 +10,14 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Fixed
 
-- **Robustecimiento del Script de Limpieza, Purga de Residuos `.venv` y Blindaje Global de `.gitignore` (`scripts/limpieza.sh`, `.gitignore`, `docs/examples/fastapi/limpieza.sh`):**
+- **Robustecimiento del Script de Limpieza, Purga de Residuos `.venv` y Blindaje Global de `.gitignore` y `.dockerignore` (`scripts/limpieza.sh`, `.gitignore`, `fastapi/.dockerignore`, `vue3/.dockerignore`, `docs/examples/fastapi/limpieza.sh`):**
   - **Purga de Entornos Virtuales y Permisos Root:** Incorporada la eliminación forzada de `.venv/` y `venv/` (tanto en `fastapi/` como en la raíz) con contenedor Docker Alpine de rescate en caso de archivos creados por root durante montajes de volumen.
   - **Doble Capa de Eliminación de `__pycache__`:** Integrado comando `find` en contenedor Docker para erradicar directorios de bytecode `.pyc` pertenecientes a `root`, impidiendo la acumulación silenciosa de residuos tras la ejecución de pruebas en Docker efímero.
   - **Normalización Automática de Permisos (Anti-Candado en GUI/Nautilus):** Adicionado paso final en `limpieza.sh` que ejecuta `chown -R $(id -u):$(id -g)` sobre `fastapi/` y `vue3/`, devolviendo la propiedad al usuario del host (`1000:1000`) y erradicando bloqueos de edición o candados gráficos sobre archivos esenciales como `fastapi/uv.lock`.
   - **Purga de Caché Efímera de Graphify:** Adicionada la limpieza de `graphify-out/cache/` (más de 880 archivos JSON de análisis AST intermedio) preservando incondicionalmente los reportes maestros `GRAPH_REPORT.md`, `graph.html` y `graph.json`.
   - **Actualización Exhaustiva de `.gitignore`:** Blindadas todas las reglas de exclusión con comodines recursivos (`**/venv/`, `**/.venv/`, `**/__pycache__/`, `**/.mypy_cache/`, `**/.pytest_cache/`, `**/.ruff_cache/`, `**/.uv/`, `**/.stryker-tmp/`, `**/graphify-out/`, etc.) para asegurar un árbol de trabajo 100% limpio y libre de residuos.
+  - **Estandarización y Blindaje de `.dockerignore` en Backend y Frontend:** Actualizados exhaustivamente `fastapi/.dockerignore` y `vue3/.dockerignore` para excluir de forma recursiva suites de pruebas (`tests/`, `test/`, `e2e/`), artefactos de mutación, cachés de Graphify (`graphify-out/`), bytecode, temporales, linters y secretos, reduciendo el contexto de construcción de las imágenes Docker de producción.
+
 
 
 - **Idempotencia en Reglas de Syslog, Detección Continua en Inventario y Corrección de Límite en Consola Syslog Live (`bulk_and_updates.py`, `inventory_helpers.py`, `health_monitor_worker.py`, `syslog.py`, `schemas/syslog.py`, `docker-compose.yml`):**

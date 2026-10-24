@@ -1,13 +1,71 @@
-node_modules
-dist
-.pnpm-store
-.vite
-coverage
-.stryker-tmp
-test-results
-playwright-report
-blob-report
-.lighthouseci
-lhci-reports
-.lhcache
+# ==============================================================================
+# RoSGrid - Vue 3 Frontend .dockerignore (Estándar QA 11X)
+# Licencia: GPL-3.0-only
+# ==============================================================================
+
+# Dependencias y artefactos de compilación
+node_modules/
+**/node_modules/
+dist/
+dist-ssr/
+.pnpm-store/
+.pnp
+.pnp.js
+.vite/
+**/.vite/
+*.tsbuildinfo
+.eslintcache
+**/.eslintcache/
+
+# Pruebas, Cobertura, Mutación y E2E
+test/
+tests/
+e2e/
+coverage/
+**/coverage/
+.stryker-tmp/
+**/.stryker-tmp/
+reports/
+**/reports/
+test-results/
+**/test-results/
+playwright-report/
+**/playwright-report/
+blob-report/
+**/blob-report/
+playwright/.cache/
+.lighthouseci/
+**/.lighthouseci/
+lhci-reports/
+**/lhci-reports/
+.lhcache/
+**/.lhcache/
+target/
+test/target/
+
+# Documentación, datos de monitoreo y análisis AST
+graphify-out/
+**/graphify-out/
+prometheus_data/
+
+# Logs y reportes temporales
 *.log
+**/*.log
+
+# Secretos y respaldos de routers
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.backup
+*.rsc
+
+# Control de versiones e IDEs
+.git
+.gitignore
+.dockerignore
+.vscode
+.idea
+.DS_Store
