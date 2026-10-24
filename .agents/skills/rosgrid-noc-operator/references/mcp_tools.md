@@ -163,3 +163,21 @@ This document details the input parameters, schemas, and usage directives for al
   - `target_version` (string, required): Target RouterOS v7 version (e.g. `"7.16.1"`).
   - `safety_stop_threshold_percent` (float, optional, default 1.0): Failure percentage threshold to halt execution.
   - `justification` (string, required): Formal maintenance justification.
+
+---
+
+## 8. Official MikroTik Documentation & Grounding (`llms.txt`)
+
+### `rosgrid_search_mikrotik_docs`
+- **Description:** Searches the official MikroTik RouterOS v7 documentation index (`https://manual.mikrotik.com/llms.txt`). Returns titles, categories, snippets, and clean Markdown URLs to validate command parameters and syntax rules with zero hallucinations.
+- **Parameters:**
+  - `query` (string, required): RouterOS v7 command, menu, or concept (e.g. `"routing bgp template"`, `"interface wireguard"`, `"firewall raw"`).
+  - `category` (string, optional): Specific documentation category (e.g. `"Routing and Networking Protocols"`, `"CLI Reference"`).
+  - `max_results` (integer, optional, range 1-10, default 5): Maximum results to return.
+
+### `rosgrid_get_mikrotik_doc_topic`
+- **Description:** Retrieves the official Markdown documentation page from MikroTik (`https://manual.mikrotik.com/docs/*.md`). Delivers exact CLI parameters, property types, defaults, and syntax rules directly from the vendor manual.
+- **Parameters:**
+  - `doc_path_or_url` (string, required): Full URL or relative path ending in `.md` (e.g. `"/docs/cli-reference/routing/bgp/template.md"`).
+  - `max_characters` (integer, optional, default 8000): Maximum characters to return to prevent context window saturation.
+

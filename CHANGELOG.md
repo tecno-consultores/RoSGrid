@@ -29,6 +29,14 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Added
 
+- **Diseño Arquitectónico y Especificación de Grounding Oficial de Documentación MikroTik RouterOS v7 en Servidor MCP (`docs/specs/36`, `docs/07`, `SKILL.md`, `ROADMAP.md`):**
+  - **Especificación Formal 36 (`docs/specs/36_MCP_OFFICIAL_MIKROTIK_DOCS_GROUNDING.md`):** Arquitectura integral para dotar al servidor MCP (`POST /api/v1/mcp`) de acceso directo a la documentación oficial del fabricante sobre el estándar abierto `https://manual.mikrotik.com/llms.txt` y `docs/*.md`.
+  - **Blindaje de Seguridad Anti-SSRF:** Whitelist estricta exclusiva hacia `manual.mikrotik.com`, verificación con `ipaddress` para bloqueo de redes RFC 1918 / loopback / cloud metadata, prohibición de esquemas no-HTTPS y límites de carga de memoria (1 MB por tópico / 2 MB por índice).
+  - **Caché Inteligente en KeyDB Multi-Hilo:** Almacenamiento volátil del índice con TTL de 24 horas y tópicos Markdown con TTL de 7 días, garantizando tiempos de respuesta inferiores a 5 ms sin sobrecarga al portal de MikroTik ni dependencia de internet continua.
+  - **Expansión a 22 Tools Semánticas:** Incorporación de las herramientas #21 (`rosgrid_search_mikrotik_docs`) y #22 (`rosgrid_get_mikrotik_doc_topic`) para búsqueda en el índice y recuperación de sintaxis Markdown pura de RouterOS v7.
+  - **Nuevo Playbook SOP-8 en Skill Oficial (`rosgrid-noc-operator`):** Protocolo estricto para que los agentes de IA consulten la sintaxis oficial antes de formular propuestas de mutación en `rosgrid_propose_network_change`, erradicando alucinaciones entre RouterOS v6 y v7.
+  - **Planificación de Desarrollo:** Registrada la sub-tarea 23.14 en `ROADMAP.md` y actualizada la enciclopedia técnica en `docs/specs/00_MASTER_INDEX_AND_11X_GOVERNANCE.md` (37 especificaciones) y `README.md`.
+
 - **Indicador Táctico de Disponibilidad de API (Heartbeat/Ping) y Caché en Memoria Anti-Thundering Herd (`main.py`, `httpClient.ts`, `useApiHeartbeatStore.ts`, `RgApiHealthBadge.vue`, `RgResponsiveShell.vue`, `LoginView.vue`):**
   - **Sonda Ligera y Caché en Memoria (FastAPI):** Optimizado el endpoint `GET /health` con una caché en memoria de 5.0 segundos controlada por `asyncio.Lock` en producción, evitando sobrecarga y consultas repetidas a PostgreSQL y KeyDB ante ráfagas concurrentes de sondeo, con soporte del parámetro de forzado `?force=true`.
   - **Monitoreo Pasivo y Cero Sobrecarga (Vue 3 Interceptor):** Incorporado en `httpClient.ts` el cálculo de latencia de cada petición y emisión del evento `rosgrid:api-health-event`, permitiendo a `useApiHeartbeatStore` mantener actualizado el estado `ONLINE` sin necesidad de realizar peticiones de sondeo adicionales mientras el usuario esté activo.

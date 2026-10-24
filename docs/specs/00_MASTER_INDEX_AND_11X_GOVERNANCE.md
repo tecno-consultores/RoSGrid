@@ -158,7 +158,7 @@ rosgrid/
 
 ---
 
-## 4. Índice Maestro de los 36 Archivos de Especificación (Carpeta `docs/specs/`)
+## 4. Índice Maestro de los 37 Archivos de Especificación (Carpeta `docs/specs/`)
 
 Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `docs/specs/` siguiendo rigurosamente el orden de los 5 Bloques listados a continuación:
 
@@ -218,6 +218,7 @@ Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `
 * `docs/specs/33_ENTERPRISE_FLEET_MANAGEMENT_AND_SECURITY_COMPLIANCE.md` — Módulo Corporativo / Enterprise: Detección de Desviación de Configuración (Config Drift vs Golden Baseline), Orquestador SD-WAN y Malla WireGuard Hub & Spoke, Auditoría CIS Benchmark (Score 0-100), Detección de Rogue DHCP / Seguridad LAN, Monitor de Cumplimiento de SLA y Gestión Centralizada WiFi (CAPsMAN / WiFiWave2).
 * `docs/specs/34_TENANT_FEATURE_FLAGS_AND_GOVERNANCE_PANEL.md` — Panel de Gobernanza de Feature Flags por Empresa: Modelo de datos en `tenants`, control de acceso por SuperAdmin, guardias de API y conmutación dinámica de la interfaz para operar como ISP, Entorno Corporativo o Mixto.
 * `docs/specs/35_FLEET_AUTOMATION_TOPOLOGY_L2_SYSLOG_AND_PROMETHEUS.md` — Automatización de Flota, Topología Física L2, Receptor Syslog Efímero y Exportador Prometheus: Actualizaciones PoE-aware, Safety Stop, cruce local de CVEs, receptor UDP/TCP 5514 en KeyDB, visualizador L2 MNDP/LLDP, puente de telemetría `/metrics/fleet` sin almacenamiento en Postgres y ampliación MCP.
+* `docs/specs/36_MCP_OFFICIAL_MIKROTIK_DOCS_GROUNDING.md` — Integración de Documentación Oficial de MikroTik RouterOS v7 en el Servidor MCP (Grounding IA): Endpoints oficiales `llms.txt` y `docs/*.md`, blindaje anti-SSRF, motor de caché inteligente en KeyDB (TTL 24h/7d) y Tools MCP `#21` (`rosgrid_search_mikrotik_docs`) y `#22` (`rosgrid_get_mikrotik_doc_topic`) para erradicar alucinaciones de sintaxis v6 vs v7.
 
 ---
 

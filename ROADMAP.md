@@ -459,6 +459,12 @@
   - Centralización de los 7 scripts operativos raíz en el nuevo directorio `scripts/` (`auditar-infra.sh`, `build.sh`, `instalar-hooks.sh`, `instalar-rosgrid.sh`, `limpieza.sh`, `probar-prod-local.sh`, `verificar-secretos.sh`), con rutas internas normalizadas (`SCRIPT_DIR`, `REPO_ROOT`).
   - Consolidación y reubicación de manuales técnicos de la raíz (`INSTALL.md`, `FAQ.md`, `RESOURCES.md`) dentro de `docs/`.
   - Actualización exhaustiva de configuraciones CI/CD (`lefthook.yml`), directivas de IA (`AGENTS.md`, `.agents/rules/`, `.agents/skills/`), manuales (`docs/`), especificaciones arquitectónicas (`docs/specs/`) e índices maestros.
+- [ ] **23.14** **Integración de Documentación Oficial de MikroTik RouterOS v7 en el Servidor MCP (Grounding IA):**
+  - Especificación formal `docs/specs/36_MCP_OFFICIAL_MIKROTIK_DOCS_GROUNDING.md` para ingesta segura y contextual del estándar abierto `https://manual.mikrotik.com/llms.txt` y `docs/*.md`.
+  - Diseño de protección anti-SSRF innegociable con whitelist estricta a `manual.mikrotik.com` y límites de tamaño (1 MB por tópico / 2 MB índice).
+  - Mecanismo de caché inteligente en KeyDB (`mcp:docs:mikrotik:index` con TTL 24h y `mcp:docs:mikrotik:page:{hash}` con TTL 7d) para cero latencia (< 5ms) y resiliencia offline.
+  - Expansión de herramientas MCP a 22 tools: `rosgrid_search_mikrotik_docs` (búsqueda en índice oficial) y `rosgrid_get_mikrotik_doc_topic` (obtención de Markdown limpio) para erradicación de alucinaciones sintácticas v6 vs v7.
+  - Actualización de manual `docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md` y Skill oficial `.agents/skills/rosgrid-noc-operator/SKILL.md` (nuevo SOP-8 y catálogo ampliado a 22 tools).
 
 ---
 

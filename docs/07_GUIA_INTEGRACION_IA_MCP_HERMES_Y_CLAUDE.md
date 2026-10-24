@@ -144,11 +144,11 @@ Verificación de latencia y confirmación de sesión:
 
 ### 2.3 Método `tools/list`
 
-Devuelve el catálogo de las 20 herramientas semánticas con sus esquemas JSON de entrada (`inputSchema`).
+Devuelve el catálogo de las 22 herramientas semánticas con sus esquemas JSON de entrada (`inputSchema`).
 
 ---
 
-## 3. Catálogo Detallado de las 20 Herramientas Semánticas MCP
+## 3. Catálogo Detallado de las 22 Herramientas Semánticas MCP
 
 ### Herramienta 1: `rosgrid_list_inventory`
 
@@ -415,6 +415,29 @@ Devuelve el catálogo de las 20 herramientas semánticas con sus esquemas JSON d
 
 ---
 
+### Herramienta 21: `rosgrid_search_mikrotik_docs`
+
+- **Nivel de Riesgo:** Solo Lectura / Grounding Oficial de Conocimiento.
+- **Descripción:** Busca en el índice oficial de documentación de MikroTik RouterOS v7 (`https://manual.mikrotik.com/llms.txt`). Devuelve títulos, categorías, fragmentos de descripción y enlaces a la documentación Markdown oficial. Diseñada para que el agente valide sintaxis de comandos, routing filters, firewall y parámetros de RouterOS v7 sin alucinaciones.
+- **Argumentos:**
+  - `query` (cadena requerida, ej. `"routing bgp template"`, `"interface wireguard"`, `"firewall raw"`).
+  - `category` (cadena opcional, ej. `"Routing and Networking Protocols"`, `"CLI Reference"`).
+  - `max_results` (entero opcional, entre 1 y 10, por defecto 5).
+- **Caché y Seguridad:** Almacenado en KeyDB (`TTL 24h`) con validación estricta anti-SSRF exclusivamente hacia `manual.mikrotik.com`.
+
+---
+
+### Herramienta 22: `rosgrid_get_mikrotik_doc_topic`
+
+- **Nivel de Riesgo:** Solo Lectura / Grounding Oficial de Conocimiento.
+- **Descripción:** Recupera el contenido Markdown oficial de una página específica de la documentación de MikroTik RouterOS v7 (`https://manual.mikrotik.com/docs/*.md`). Permite al agente inspeccionar la sintaxis exacta, ejemplos de configuración, parámetros CLI y restricciones técnicas del fabricante.
+- **Argumentos:**
+  - `doc_path_or_url` (cadena requerida: URL completa o ruta relativa de la página `.md`, ej. `"/docs/cli-reference/routing/bgp/template.md"`).
+  - `max_characters` (entero opcional, por defecto 8000 caracteres para preservar la ventana de contexto).
+- **Caché y Seguridad:** Almacenado en KeyDB (`TTL 7d`) con límite de tamaño estricto de 1 MB y validación anti-SSRF.
+
+---
+
 ## 4. Configuración en Clientes IA
 
 ### 4.1 Configuración para Hermes Agent
@@ -500,6 +523,7 @@ La skill capacita al agente como un **Ingeniero NOC Tier-2/Tier-3 certificado** 
 5. **SOP-5 (Aislamiento Preventivo):** Contención inmediata e idempotente de clientes comprometidos con cola 64k/64k y lista de firewall `AISLADOS_TECNICO`.
 6. **SOP-6 (Triaje de Caídas de Enlace vía Syslog):** Análisis en tiempo real de eventos `interface,warning` y `link down` mediante `rosgrid_get_recent_syslog` correlacionando fallas físicas y adyacencias L2.
 7. **SOP-7 (Planificación de Actualizaciones PoE-Aware con Safety Stop):** Identificación de vulnerabilidades con `rosgrid_check_fleet_cves`, consulta de topología física con `rosgrid_get_l2_topology` y orquestación con ordenamiento DAG inverso y detención preventiva al superar el 1% de error.
+8. **SOP-8 (Grounding y Validación Sintáctica con Documentación Oficial de MikroTik):** Búsqueda en el índice oficial de RouterOS v7 (`https://manual.mikrotik.com/llms.txt`) mediante `rosgrid_search_mikrotik_docs` y consulta de fragmentos Markdown (`rosgrid_get_mikrotik_doc_topic`) para contrastar parámetros CLI, routing filters o estructuras de firewall antes de formular propuestas en `rosgrid_propose_network_change`, erradicando alucinaciones v6 vs v7.
 
 ### 6.2 Integración Rápida por Plataforma
 

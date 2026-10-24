@@ -2,8 +2,8 @@
 name: rosgrid-noc-operator
 description: >-
   NOC Operator & Autonomous Diagnostics for MikroTik RouterOS v7 networks via RoSGrid Model Context
-  Protocol (MCP) server (/api/v1/mcp). Detailed instructions, L1-L3 workflows, 7 SOP Playbooks,
-  20 MCP tools, Maker-Checker governance (HTTP 202), and 60s Safe Mode.
+  Protocol (MCP) server (/api/v1/mcp). Detailed instructions, L1-L3 workflows, 8 SOP Playbooks,
+  22 MCP tools, Maker-Checker governance (HTTP 202), and 60s Safe Mode.
 ---
 
 # Autonomous NOC Operator for RoSGrid (MikroTik RouterOS v7)
@@ -41,7 +41,7 @@ The `/api/v1/mcp` endpoint is protected by a KeyDB-backed sliding window rate li
 
 ## 3. MCP Semantic Tools Matrix
 
-The RoSGrid MCP server exposes 20 tools at `/api/v1/mcp`:
+The RoSGrid MCP server exposes 22 tools at `/api/v1/mcp`:
 
 | Tool | Type | Technical Purpose |
 | :--- | :--- | :--- |
@@ -65,6 +65,8 @@ The RoSGrid MCP server exposes 20 tools at `/api/v1/mcp`:
 | `rosgrid_check_fleet_cves` | Security | Proactive evaluation of local CVE advisories affecting running firmware. |
 | `rosgrid_get_recent_syslog` | Read-Only | Query KeyDB ephemeral RingBuffer (last N events) for a specific router. |
 | `rosgrid_execute_poe_aware_upgrade` | **Maker-Checker** | PoE-ordered firmware upgrades (PD before PSE) with Safety Stop. |
+| `rosgrid_search_mikrotik_docs` | Grounding | Search official RouterOS v7 documentation index (`llms.txt`) for syntax validation. |
+| `rosgrid_get_mikrotik_doc_topic` | Grounding | Fetch official Markdown documentation topic for exact CLI parameters and limits. |
 
 ---
 
@@ -177,6 +179,21 @@ For fleet-wide RouterOS v7 upgrades:
    - System sequences PD before PSE to prevent dropping powered devices, returning `HTTP 202 Accepted`.
 3. **Step 3: Operator Briefing:**
    - Explain that the 1% Safety Stop is active and powered clients upgrade before power-sourcing switches.
+
+---
+
+### SOP-8: Grounding & Syntax Verification via Official MikroTik Docs (`llms.txt`)
+
+Before proposing complex configuration changes or diagnosing protocol discrepancies:
+
+1. **Step 1: Search Official Index:**
+   - Call `rosgrid_search_mikrotik_docs(query="...")` with the specific command menu (e.g. `"routing bgp template"`, `"interface wireguard"`, `"firewall raw"`).
+   - Identify the official documentation path (`.md`).
+2. **Step 2: Inspect Official Syntax & Arguments:**
+   - Call `rosgrid_get_mikrotik_doc_topic(doc_path_or_url="...")` to read exact parameter names, data types, and default values.
+   - Cross-check against RouterOS v7 syntax rules (e.g., verifying that routing filters use `if (...) { ... }` blocks instead of v6 chains).
+3. **Step 3: Formulate Mutation with Zero Hallucinations:**
+   - Formulate the payload for `rosgrid_propose_network_change` using the verified properties, referencing the official manual URL in the change justification.
 
 ---
 
