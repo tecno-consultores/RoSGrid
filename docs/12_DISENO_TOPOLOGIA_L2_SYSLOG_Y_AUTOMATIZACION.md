@@ -174,14 +174,16 @@ Para que cualquier router de la flota reporte de inmediato sus eventos al recept
 
 ### 5.2. Pasos REST de Configuración v7 (`PUT /rest/*`)
 
-El trabajo masivo ejecuta 7 pasos transaccionales ordenados:
-1. `PUT /system/logging/action/rosgrid-syslog`: Crea o actualiza la acción remota `rosgrid-syslog` (`target: "remote"`, `remote: "{{ rosgrid_server_ip }}"`, `remote-port: "{{ rosgrid_syslog_port }}"`, `bsd-syslog: "yes"`, `facility: "daemon"`, `sys-ident: "yes"`).
-2. `PUT /system/logging/rosgrid-interface`: Envía alertas críticas de corte de enlaces físicos (`topics: "interface,warning,critical"`).
-3. `PUT /system/logging/rosgrid-bgp`: Reporta caídas de adyacencia de enrutamiento exterior (`topics: "route,bgp,warning"`).
-4. `PUT /system/logging/rosgrid-ospf`: Reporta eventos de topología interna (`topics: "route,ospf,warning"`).
-5. `PUT /system/logging/rosgrid-system`: Captura errores críticos de CPU, watchdog y almacenamiento (`topics: "system,error,critical"`).
-6. `PUT /system/logging/rosgrid-dhcp`: Advierte sobre agotamiento de pools y conflictos IP (`topics: "dhcp,critical"`).
-7. `PUT /system/logging/rosgrid-firewall`: Reporta paquetes dropeados en listas de bloqueo perimetral (`topics: "firewall,warning"`).
+El trabajo masivo ejecuta 7 pasos transaccionales ordenados con idempotencia garantizada:
+1. `PUT /system/logging/action`: Crea o actualiza la acción remota `rosgridsyslog` (`name: "rosgridsyslog"`, `target: "remote"`, `remote: "{{ rosgrid_server_ip }}"`, `remote-port: "{{ rosgrid_syslog_port }}"`, `remote-log-format: "syslog"`, `syslog-facility: "daemon"`).
+2. `PUT /system/logging`: Envía alertas críticas de corte de enlaces físicos (`topics: "interface,warning,critical"`, `action: "rosgridsyslog"`).
+3. `PUT /system/logging`: Reporta caídas de adyacencia de enrutamiento exterior (`topics: "route,bgp,warning"`, `action: "rosgridsyslog"`).
+4. `PUT /system/logging`: Reporta eventos de topología interna (`topics: "route,ospf,warning"`, `action: "rosgridsyslog"`).
+5. `PUT /system/logging`: Captura errores críticos de CPU, watchdog y almacenamiento (`topics: "system,error,critical"`, `action: "rosgridsyslog"`).
+6. `PUT /system/logging`: Advierte sobre agotamiento de pools y conflictos IP (`topics: "dhcp,critical"`, `action: "rosgridsyslog"`).
+7. `PUT /system/logging`: Reporta paquetes dropeados en listas de bloqueo perimetral (`topics: "firewall,warning"`, `action: "rosgridsyslog"`).
+
+El despachador de pasos en backend (`_execute_single_step`) verifica previamente las reglas instaladas para no crear reglas duplicadas ante re-ejecuciones.
 
 ### 5.3. Script CLI Nativo Equivalente (RouterOS v7)
 
@@ -192,17 +194,17 @@ El trabajo masivo ejecuta 7 pasos transaccionales ordenados:
 # ==============================================================================
 
 /system logging action
-remove [find name="rosgrid-syslog"]
-add name="rosgrid-syslog" target=remote remote={{ROSGRID_SERVER_IP}} remote-port={{ROSGRID_SYSLOG_PORT}} bsd-syslog=yes facility=daemon sys-ident=yes
+remove [find name="rosgridsyslog"]
+add name="rosgridsyslog" target=remote remote={{ROSGRID_SERVER_IP}} remote-port={{ROSGRID_SYSLOG_PORT}} remote-log-format=syslog syslog-facility=daemon
 
 /system logging
-remove [find action="rosgrid-syslog"]
-add topics=interface,warning,critical action="rosgrid-syslog"
-add topics=route,bgp,warning action="rosgrid-syslog"
-add topics=route,ospf,warning action="rosgrid-syslog"
-add topics=system,error,critical action="rosgrid-syslog"
-add topics=dhcp,critical action="rosgrid-syslog"
-add topics=firewall,warning action="rosgrid-syslog"
+remove [find action="rosgridsyslog"]
+add topics=interface,warning,critical action="rosgridsyslog"
+add topics=route,bgp,warning action="rosgridsyslog"
+add topics=route,ospf,warning action="rosgridsyslog"
+add topics=system,error,critical action="rosgridsyslog"
+add topics=dhcp,critical action="rosgridsyslog"
+add topics=firewall,warning action="rosgridsyslog"
 ```
 
 Esta plantilla se distribuye de forma masiva mediante el asistente de **Operaciones Masivas (*Bulk Ops*)**, protegiendo incondicionalmente la ejecución con **Safe Mode (60s)**.

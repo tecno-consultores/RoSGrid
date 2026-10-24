@@ -119,20 +119,20 @@ Para que los routers envíen sus logs a RoSGrid, se incorpora al catálogo de pl
 # ==============================================================================
 
 /system logging action
-remove [find name="rosgrid-syslog"]
-add name="rosgrid-syslog" target=remote remote={{ROSGRID_SERVER_IP}} remote-port={{ROSGRID_SYSLOG_PORT}} bsd-syslog=yes facility=daemon sys-ident=yes
+remove [find name="rosgridsyslog"]
+add name="rosgridsyslog" target=remote remote={{ROSGRID_SERVER_IP}} remote-port={{ROSGRID_SYSLOG_PORT}} remote-log-format=syslog syslog-facility=daemon
 
 /system logging
-remove [find action="rosgrid-syslog"]
-add topics=interface,warning,critical action="rosgrid-syslog"
-add topics=route,bgp,warning action="rosgrid-syslog"
-add topics=route,ospf,warning action="rosgrid-syslog"
-add topics=system,error,critical action="rosgrid-syslog"
-add topics=dhcp,critical action="rosgrid-syslog"
-add topics=firewall,warning action="rosgrid-syslog"
+remove [find action="rosgridsyslog"]
+add topics=interface,warning,critical action="rosgridsyslog"
+add topics=route,bgp,warning action="rosgridsyslog"
+add topics=route,ospf,warning action="rosgridsyslog"
+add topics=system,error,critical action="rosgridsyslog"
+add topics=dhcp,critical action="rosgridsyslog"
+add topics=firewall,warning action="rosgridsyslog"
 ```
 
-Esta plantilla puede desplegarse en 1 clic sobre 50 o 500 routers mediante el módulo de Operaciones Masivas (*Bulk Ops*) bajo Safe Mode.
+Esta plantilla puede desplegarse en 1 clic sobre 50 o 500 routers mediante el módulo de Operaciones Masivas (*Bulk Ops*) bajo Safe Mode. El despachador de pasos en backend garantiza idempotencia previa consultando `GET /system/logging` para evitar duplicar reglas existentes con idéntica acción y tópicos. Asimismo, el worker de salud detecta la presencia de la acción `rosgridsyslog` para asegurar la insignia `🟢 Activo` en el inventario.
 
 ---
 
