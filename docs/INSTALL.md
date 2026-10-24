@@ -194,6 +194,7 @@ Si tu operación requiere el motor *Shared-Nothing* sobre `io_uring` de **Dragon
 
 Antes de registrar un router en el inventario de RoSGrid (individualmente o por lote CSV), ejecuta estos comandos en la terminal del MikroTik para habilitar `www-ssl` con un certificado TLS para fijación **TOFU (*Trust On First Use*)**. Para una explicación detallada de políticas de firewall, grupos de permisos y Safe Mode, consulta [02_PREPARACION_MIKROTIK_ROUTEROS_V7.md](./02_PREPARACION_MIKROTIK_ROUTEROS_V7.md):
 
+```routeros
 # 1. Crear y autofirmar una CA local en el MikroTik
 /certificate add name="rosgrid-ca" common-name="RoSGrid Local CA" days-valid=3650 key-size=2048 key-usage=key-cert-sign,crl-sign
 /certificate sign "rosgrid-ca"
@@ -206,7 +207,7 @@ Antes de registrar un router en el inventario de RoSGrid (individualmente o por 
 /ip service set www-ssl certificate="rosgrid-tofu-cert" port=443 disabled=no
 /ip service set www disabled=yes
 
-# 3. Crear grupo con política REST API (obligatorio en RouterOS v7.13+) y usuario dedicado
+# 4. Crear grupo con política REST API (obligatorio en RouterOS v7.13+) y usuario dedicado
 /user group add name="rosgrid-api-group" policy=read,write,api,rest-api,test comment="Acceso REST para RoSGrid"
 /user add name="rosgrid_api" password="CambiarPorClaveInicialFuerte2026!" group="rosgrid-api-group" comment="Managed by RoSGrid Vault"
 ```

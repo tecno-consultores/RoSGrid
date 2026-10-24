@@ -316,7 +316,7 @@ Para que RoSGrid pueda gestionar un router mediante su REST API nativa sobre TLS
 /ip service set www-ssl certificate="rosgrid-tofu-cert" port=443 disabled=no
 /ip service set www disabled=yes
 
-# 3. Crear grupo de permisos y usuario API dedicado para RoSGrid
+# 4. Crear grupo de permisos y usuario API dedicado para RoSGrid
 /user group add name="rosgrid-api-group" policy=read,write,api,rest-api,test comment="Acceso REST para RoSGrid"
 /user add name="rosgrid_api" password="CambiarPorPasswordFuerte2026!" group="rosgrid-api-group" comment="Managed by RoSGrid Vault"
 ```
