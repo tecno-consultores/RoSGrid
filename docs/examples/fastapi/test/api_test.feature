@@ -679,6 +679,13 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 87. Remediación individual CIS-1.8 de defensa contra fuerza bruta (SSH/WinBox) sin autenticación devuelve 401
+    Given path '/api/v1/compliance/cis-audit/00000000-0000-0000-0000-000000000001/auto-harden'
+    And request { router_id: '00000000-0000-0000-0000-000000000001', directive_codes_to_apply: ['CIS-1.8'] }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
 
 
 

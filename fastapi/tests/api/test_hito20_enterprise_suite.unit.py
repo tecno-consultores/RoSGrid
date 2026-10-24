@@ -609,3 +609,72 @@ async def test_capsman_overview_ssids_and_clients(sample_tenant_id: uuid.UUID, s
     assert len(clients) >= 2
     assert clients[0].signal_rssi_dbm < 0
     assert clients[0].fast_roaming_supported is True
+
+
+@pytest.mark.asyncio
+async def test_cis_1_8_bruteforce_remediation_and_audit_reactivity(
+    sample_tenant_id: uuid.UUID, sample_claims: dict[str, str], mock_request: MagicMock
+) -> None:
+    db = AsyncMock()
+    router_id = uuid.uuid4()
+    mock_router = Router(
+        id=router_id,
+        tenant_id=sample_tenant_id,
+        display_name="Edge-Firewall-01",
+        network_role=RouterNetworkRoleEnum.CORE,
+        api_base_url="https://10.0.0.5:443",
+    )
+    db.execute.return_value = MockDbResult([mock_router])
+
+    mock_client = AsyncMock()
+    # Inicialmente el firewall no tiene reglas CIS-1.8
+    mock_client.get.return_value = [
+        {"name": "telnet", "disabled": True},
+        {"name": "ftp", "disabled": True},
+        {"name": "www", "disabled": True},
+        {"name": "api", "disabled": True},
+    ]
+
+    mock_redis = AsyncMock()
+    mock_redis.smembers.return_value = set()
+    mock_redis.sadd.return_value = 1
+
+    with (
+        patch("src.api.v1.compliance.get_router_and_client", return_value=(mock_router, mock_client)),
+        patch("src.api.v1.compliance.get_redis_client", return_value=mock_redis),
+    ):
+        initial_audit = await run_cis_audit(router_id=router_id, db=db, claims=sample_claims)
+        cis18_initial = next(d for d in initial_audit.directives if d.code == "CIS-1.8")
+        assert cis18_initial.passed is False
+        assert "Faltan listas negras" in cis18_initial.finding
+
+    # Remediación de CIS-1.8 bajo Safe Mode
+    mock_audit_entry = MagicMock()
+    mock_audit_entry.id = uuid.uuid4()
+    with (
+        patch("src.api.v1.compliance.get_router_and_client", return_value=(mock_router, mock_client)),
+        patch("src.api.v1.compliance.execute_safe_mutation", AsyncMock(return_value={"status": "ok"})) as mock_safe,
+        patch("src.api.v1.compliance.write_audit_log", AsyncMock(return_value=mock_audit_entry)),
+        patch("src.api.v1.compliance.get_redis_client", return_value=mock_redis),
+    ):
+        harden_payload = CisAutoHardenRequest(router_id=router_id, directive_codes_to_apply=["CIS-1.8"])
+        harden_res = await auto_harden_router(
+            router_id=router_id, payload=harden_payload, request=mock_request, db=db, claims=sample_claims
+        )
+        assert harden_res.new_security_score == 75
+        assert harden_res.applied_directives_count == 1
+        assert harden_res.executed_under_safemode is True
+        mock_safe.assert_called_once()
+        mock_redis.sadd.assert_called_once()
+
+    # Re-auditoría reactiva: con reglas presentes en el router o en KeyDB
+    mock_redis.smembers.return_value = {b"CIS-1.8"}
+    with (
+        patch("src.api.v1.compliance.get_router_and_client", return_value=(mock_router, mock_client)),
+        patch("src.api.v1.compliance.get_redis_client", return_value=mock_redis),
+    ):
+        re_audit = await run_cis_audit(router_id=router_id, db=db, claims=sample_claims)
+        cis18_re = next(d for d in re_audit.directives if d.code == "CIS-1.8")
+        assert cis18_re.passed is True
+        assert "Defensa activa" in cis18_re.finding
+

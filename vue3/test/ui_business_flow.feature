@@ -355,6 +355,14 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And waitFor(".tactical-table")
     And match text(".tactical-table") contains 'Acción'
 
+  Scenario: 38. Auditoría reactiva y remediación de CIS-1.8 contra ataques Brute-Force en Enterprise Compliance
+    Given driver baseUrl + '/enterprise-compliance'
+    And waitFor(".enterprise-compliance-view")
+    And click("#tab-btn-cis")
+    And waitFor(".tactical-table")
+    And match text(".tactical-table") contains 'CIS-1.8'
+
+
 
 
 

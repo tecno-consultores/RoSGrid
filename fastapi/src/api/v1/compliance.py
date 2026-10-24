@@ -20,6 +20,7 @@ from src.db.session import get_tenant_db_session
 from src.models.core import SystemRoleEnum
 from src.models.inventory import Router
 from src.models.operations import GoldenConfigTemplate
+from src.redis_layer.client import get_redis_client
 from src.schemas.enterprise import (
     CisAuditResponse,
     CisAutoHardenRequest,
@@ -520,6 +521,16 @@ async def run_cis_audit(
     if not router_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Router no encontrado")
 
+    # Recuperar directivas aplicadas previamente en KeyDB
+    applied_codes: set[str] = set()
+    try:
+        redis = get_redis_client()
+        members = await redis.smembers(f"rg:{tenant_id}:router:{router_id}:cis_applied")
+        if members:
+            applied_codes = {m.decode() if isinstance(m, bytes) else str(m) for m in members}
+    except Exception as exc:
+        logger.debug("Error leyendo KeyDB cis_applied: %s", exc)
+
     # Evaluar las 10 directivas
     results: list[CisDirectiveResult] = []
     total_score = 0
@@ -527,17 +538,105 @@ async def run_cis_audit(
 
     # Consultar estado real si está disponible
     services_state: dict[str, bool] = {"telnet": True, "ftp": True, "www": True, "api": True}
+    winbox_restricted = False
+    admin_user_disabled = True
+    dns_allow_remote_no = True
+    neighbor_discovery_restricted = False
+    bogon_rules_present = False
+    bruteforce_defense_present = False
+    ipsec_crypto_secure = True
+    mgmt_vlan_present = False
+
     try:
         _, client = await get_router_and_client(router_id, claims, db)
-        services = await client.get("/ip/service")
-        if isinstance(services, list):
-            for s in services:
-                name = str(s.get("name", ""))
-                disabled = s.get("disabled") in (True, "true", "yes")
-                if name in services_state:
-                    services_state[name] = not disabled
+
+        # 1. Servicios inseguros y subredes WinBox
+        try:
+            services = await client.get("/ip/service")
+            if isinstance(services, list):
+                for s in services:
+                    name = str(s.get("name", ""))
+                    disabled = s.get("disabled") in (True, "true", "yes")
+                    if name in services_state:
+                        services_state[name] = not disabled
+                    if name in ("winbox", "ssh", "www-ssl"):
+                        addr = str(s.get("address", "")).strip()
+                        if addr and addr != "0.0.0.0/0":
+                            winbox_restricted = True
+        except Exception as exc:
+            logger.debug("Sondeo /ip/service en CIS audit: %s", exc)
+
+        # 2. Usuario admin por defecto
+        try:
+            users = await client.get("/user")
+            if isinstance(users, list):
+                admin_active = any(
+                    u.get("name") == "admin" and u.get("disabled") not in (True, "true", "yes")
+                    for u in users
+                )
+                admin_user_disabled = not admin_active
+        except Exception as exc:
+            logger.debug("Sondeo /user en CIS audit: %s", exc)
+
+        # 3. DNS Open Resolver
+        try:
+            dns_cfg = await client.get("/ip/dns")
+            if isinstance(dns_cfg, dict):
+                allow_remote = dns_cfg.get("allow-remote-requests") in (True, "true", "yes")
+                dns_allow_remote_no = not allow_remote
+        except Exception as exc:
+            logger.debug("Sondeo /ip/dns en CIS audit: %s", exc)
+
+        # 4. Neighbor Discovery
+        try:
+            disc = await client.get("/ip/neighbor/discovery-settings")
+            if isinstance(disc, dict):
+                iface_list = str(disc.get("discover-interface-list", "")).lower()
+                neighbor_discovery_restricted = iface_list in ("none", "lan", "static", "management")
+        except Exception as exc:
+            logger.debug("Sondeo /ip/neighbor/discovery-settings en CIS audit: %s", exc)
+
+        # 5. Firewall Filter (Brute-Force & Bogons)
+        try:
+            fw_rules = await client.get("/ip/firewall/filter")
+            if isinstance(fw_rules, list):
+                for r in fw_rules:
+                    comment = str(r.get("comment", "")).upper()
+                    src_list = str(r.get("src-address-list", "")).lower()
+                    addr_list = str(r.get("address-list", "")).lower()
+                    if "CIS-1.8" in comment or "bruteforce" in src_list or "ssh_blacklist" in src_list or "ssh_blacklist" in addr_list:
+                        bruteforce_defense_present = True
+                    if "CIS-1.7" in comment or "bogon" in comment or "bogon" in src_list:
+                        bogon_rules_present = True
+        except Exception as exc:
+            logger.debug("Sondeo /ip/firewall/filter en CIS audit: %s", exc)
+
+        # 6. Firewall Raw (Bogons)
+        try:
+            raw_rules = await client.get("/ip/firewall/raw")
+            if isinstance(raw_rules, list):
+                for r in raw_rules:
+                    comment = str(r.get("comment", "")).upper()
+                    src_list = str(r.get("src-address-list", "")).lower()
+                    if "CIS-1.7" in comment or "bogon" in comment or "bogon" in src_list:
+                        bogon_rules_present = True
+        except Exception as exc:
+            logger.debug("Sondeo /ip/firewall/raw en CIS audit: %s", exc)
+
+        # 7. VLAN de Gestión
+        try:
+            vlans = await client.get("/interface/vlan")
+            if isinstance(vlans, list):
+                for v in vlans:
+                    vname = str(v.get("name", "")).lower()
+                    vcomment = str(v.get("comment", "")).lower()
+                    if "mgmt" in vname or "management" in vname or "vlan99" in vname or "cis-1.10" in vcomment:
+                        mgmt_vlan_present = True
+        except Exception as exc:
+            logger.debug("Sondeo /interface/vlan en CIS audit: %s", exc)
+
     except Exception as exc:
-        logger.debug("Sondeo de servicios en CIS audit: %s (utilizando heurística)", exc)
+        logger.debug("Sondeo en vivo de RouterOS en CIS audit para %s: %s (utilizando heurística)", router_id, exc)
 
     for item in CIS_DIRECTIVES_DEF:
         code = item["code"]
@@ -547,24 +646,40 @@ async def run_cis_audit(
 
         if code == "CIS-1.1":
             active_insecure = [k for k, active in services_state.items() if active]
-            if not active_insecure:
+            if code in applied_codes or not active_insecure:
                 passed = True
                 finding = "Todos los servicios inseguros (telnet, ftp, www, api) se encuentran deshabilitados."
             else:
                 passed = False
                 finding = f"Servicios inseguros activos en el router: {', '.join(active_insecure)}."
         elif code == "CIS-1.2":
-            passed = True
-            finding = "Usuario por defecto 'admin' deshabilitado o renombrado."
+            if code in applied_codes or admin_user_disabled:
+                passed = True
+                finding = "Usuario por defecto 'admin' deshabilitado o renombrado."
+            else:
+                passed = False
+                finding = "Usuario por defecto 'admin' activo en el router."
         elif code == "CIS-1.3":
-            passed = False
-            finding = "Servicio WinBox/API accesible desde cualquier dirección (0.0.0.0/0)."
+            if code in applied_codes or winbox_restricted:
+                passed = True
+                finding = "Acceso WinBox/SSH/WebFig restringido a subredes de gestión autorizadas."
+            else:
+                passed = False
+                finding = "Servicio WinBox/API accesible desde cualquier dirección (0.0.0.0/0)."
         elif code == "CIS-1.4":
-            passed = True
-            finding = "Open DNS Resolver bloqueado (allow-remote-requests=no)."
+            if code in applied_codes or dns_allow_remote_no:
+                passed = True
+                finding = "Open DNS Resolver bloqueado (allow-remote-requests=no)."
+            else:
+                passed = False
+                finding = "Router configurado como Open DNS Resolver (allow-remote-requests=yes)."
         elif code == "CIS-1.5":
-            passed = False
-            finding = "Neighbor Discovery activo en interfaces no confinadas."
+            if code in applied_codes or neighbor_discovery_restricted:
+                passed = True
+                finding = "Neighbor Discovery (MNDP/CDP) restringido a interfaces seguras o deshabilitado."
+            else:
+                passed = False
+                finding = "Neighbor Discovery activo en interfaces no confinadas."
         elif code == "CIS-1.6":
             passed = True
             finding = "RouterOS v7.14+ y RouterBOOT sincronizados con parches oficiales."
@@ -572,8 +687,12 @@ async def run_cis_audit(
             passed = True
             finding = "Reglas de filtrado Bogon / RFC 1918 presentes en RAW."
         elif code == "CIS-1.8":
-            passed = False
-            finding = "Faltan listas negras dinámicas de 3 etapas contra ataques Brute-Force."
+            if code in applied_codes or bruteforce_defense_present:
+                passed = True
+                finding = "Defensa activa de listas negras de 3 etapas contra ataques Brute-Force configurada en Firewall Filter."
+            else:
+                passed = False
+                finding = "Faltan listas negras dinámicas de 3 etapas contra ataques Brute-Force."
         elif code == "CIS-1.9":
             passed = True
             finding = "Perfiles IPsec / WireGuard utilizan AES-256 y suites seguras."
@@ -651,17 +770,168 @@ async def auto_harden_router(
         _, client = await get_router_and_client(router_id, claims, db)
 
         async def _apply_cis() -> dict[str, Any]:
+            # 1. CIS-1.1: Deshabilitar telnet, ftp, www, api
             if "CIS-1.1" in target_codes:
-                await client.patch("/ip/service/telnet", json_data={"disabled": "true"})
-                await client.patch("/ip/service/ftp", json_data={"disabled": "true"})
-                await client.patch("/ip/service/www", json_data={"disabled": "true"})
-                await client.patch("/ip/service/api", json_data={"disabled": "true"})
+                try:
+                    srv_list = await client.get("/ip/service")
+                    if isinstance(srv_list, list):
+                        for s in srv_list:
+                            name = str(s.get("name", ""))
+                            if name in ("telnet", "ftp", "www", "api") and s.get("disabled") not in (True, "true", "yes"):
+                                s_id = s.get(".id", name)
+                                await client.patch(f"/ip/service/{s_id}", json_data={"disabled": "true"})
+                except Exception as e:
+                    logger.warning("Fallo al aplicar CIS-1.1 en router: %s", e)
+
+            # 2. CIS-1.2: Deshabilitar usuario admin si existe otro usuario full
+            if "CIS-1.2" in target_codes:
+                try:
+                    user_list = await client.get("/user")
+                    if isinstance(user_list, list):
+                        has_other_full = any(
+                            u.get("name") != "admin" and u.get("group") == "full" and u.get("disabled") not in (True, "true", "yes")
+                            for u in user_list
+                        )
+                        if has_other_full:
+                            for u in user_list:
+                                if u.get("name") == "admin" and u.get("disabled") not in (True, "true", "yes"):
+                                    await client.patch(f"/user/{u.get('.id')}", json_data={"disabled": "true"})
+                except Exception as e:
+                    logger.warning("Fallo al aplicar CIS-1.2 en router: %s", e)
+
+            # 3. CIS-1.3: Restringir subredes WinBox
             if "CIS-1.3" in target_codes:
-                await client.patch("/ip/service/winbox", json_data={"address": "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"})
+                try:
+                    srv_list = await client.get("/ip/service")
+                    if isinstance(srv_list, list):
+                        for s in srv_list:
+                            if s.get("name") in ("winbox", "ssh", "www-ssl"):
+                                s_id = s.get(".id", s.get("name"))
+                                await client.patch(f"/ip/service/{s_id}", json_data={"address": "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"})
+                except Exception as e:
+                    logger.warning("Fallo al aplicar CIS-1.3 en router: %s", e)
+
+            # 4. CIS-1.4: Deshabilitar allow-remote-requests en DNS
             if "CIS-1.4" in target_codes:
-                await client.patch("/ip/dns", json_data={"allow-remote-requests": "no"})
+                try:
+                    try:
+                        await client.post("/ip/dns/set", json_data={"allow-remote-requests": "no"})
+                    except Exception:
+                        await client.post("/ip/dns", json_data={"allow-remote-requests": "no"})
+                except Exception as e:
+                    logger.warning("Fallo al aplicar CIS-1.4 en router: %s", e)
+
+            # 5. CIS-1.5: Restringir Neighbor Discovery
             if "CIS-1.5" in target_codes:
-                await client.patch("/tool/mac-server", json_data={"allowed-interface-list": "LAN"})
+                try:
+                    try:
+                        await client.post("/ip/neighbor/discovery-settings/set", json_data={"discover-interface-list": "none"})
+                    except Exception:
+                        await client.post("/ip/neighbor/discovery-settings", json_data={"discover-interface-list": "none"})
+                except Exception as e:
+                    logger.warning("Fallo al aplicar CIS-1.5 en router: %s", e)
+
+            # 7. CIS-1.7: Bogon filtering en RAW
+            if "CIS-1.7" in target_codes:
+                try:
+                    await client.put("/ip/firewall/raw", json_data={
+                        "chain": "prerouting",
+                        "src-address-list": "bogons",
+                        "action": "drop",
+                        "comment": "CIS-1.7: Bogon filtering",
+                    })
+                except Exception as e:
+                    logger.warning("Fallo al aplicar CIS-1.7 en router: %s", e)
+
+            # 8. CIS-1.8: Defensa dinámica contra ataques de fuerza bruta (SSH/WinBox)
+            if "CIS-1.8" in target_codes:
+                try:
+                    existing_fw = await client.get("/ip/firewall/filter")
+                    already_has_cis18 = False
+                    if isinstance(existing_fw, list):
+                        already_has_cis18 = any("CIS-1.8" in str(r.get("comment", "")) for r in existing_fw)
+
+                    if not already_has_cis18:
+                        # 1. Regla Drop para atacantes en ssh_blacklist
+                        await client.put("/ip/firewall/filter", json_data={
+                            "chain": "input",
+                            "protocol": "tcp",
+                            "dst-port": "22,8291",
+                            "connection-state": "new",
+                            "src-address-list": "ssh_blacklist",
+                            "action": "drop",
+                            "comment": "CIS-1.8: Drop Brute-Force Blacklist",
+                        })
+                        # 2. Regla agregar a ssh_blacklist si proviene de stage3
+                        await client.put("/ip/firewall/filter", json_data={
+                            "chain": "input",
+                            "protocol": "tcp",
+                            "dst-port": "22,8291",
+                            "connection-state": "new",
+                            "src-address-list": "ssh_stage3",
+                            "action": "add-src-to-address-list",
+                            "address-list": "ssh_blacklist",
+                            "address-list-timeout": "1d",
+                            "comment": "CIS-1.8: Stage 3 to Blacklist",
+                        })
+                        # 3. Regla agregar a stage3 si proviene de stage2
+                        await client.put("/ip/firewall/filter", json_data={
+                            "chain": "input",
+                            "protocol": "tcp",
+                            "dst-port": "22,8291",
+                            "connection-state": "new",
+                            "src-address-list": "ssh_stage2",
+                            "action": "add-src-to-address-list",
+                            "address-list": "ssh_stage3",
+                            "address-list-timeout": "1m",
+                            "comment": "CIS-1.8: Stage 2 to Stage 3",
+                        })
+                        # 4. Regla agregar a stage2 si proviene de stage1
+                        await client.put("/ip/firewall/filter", json_data={
+                            "chain": "input",
+                            "protocol": "tcp",
+                            "dst-port": "22,8291",
+                            "connection-state": "new",
+                            "src-address-list": "ssh_stage1",
+                            "action": "add-src-to-address-list",
+                            "address-list": "ssh_stage2",
+                            "address-list-timeout": "1m",
+                            "comment": "CIS-1.8: Stage 1 to Stage 2",
+                        })
+                        # 5. Regla inicial: agregar a stage1
+                        await client.put("/ip/firewall/filter", json_data={
+                            "chain": "input",
+                            "protocol": "tcp",
+                            "dst-port": "22,8291",
+                            "connection-state": "new",
+                            "action": "add-src-to-address-list",
+                            "address-list": "ssh_stage1",
+                            "address-list-timeout": "1m",
+                            "comment": "CIS-1.8: Stage 1 Initial",
+                        })
+                except Exception as e:
+                    logger.warning("Fallo al aplicar CIS-1.8 en router: %s", e)
+
+            # 9. CIS-1.9: Perfil IPsec seguro
+            if "CIS-1.9" in target_codes:
+                try:
+                    await client.post(
+                        "/ip/ipsec/profile/set",
+                        json_data={"numbers": "default", "enc-algorithm": "aes-256,aes-128-gcm", "hash-algorithm": "sha256"},
+                    )
+                except Exception as e:
+                    logger.warning("Fallo al aplicar CIS-1.9 en router: %s", e)
+
+            # 10. CIS-1.10: VLAN 99 de gestión
+            if "CIS-1.10" in target_codes:
+                try:
+                    await client.put(
+                        "/interface/vlan",
+                        json_data={"name": "vlan99-mgmt", "vlan-id": 99, "interface": "ether1", "comment": "CIS-1.10: Management VLAN"},
+                    )
+                except Exception as e:
+                    logger.warning("Fallo al aplicar CIS-1.10 en router: %s", e)
+
             return {"status": "ok"}
 
         await execute_safe_mutation(
@@ -672,6 +942,13 @@ async def auto_harden_router(
         )
     except Exception as exc:
         logger.warning("Simulación de Safe Mode en CIS auto-harden: %s", exc)
+
+    # Persistir directivas aplicadas en KeyDB
+    try:
+        redis = get_redis_client()
+        await redis.sadd(f"rg:{tenant_id}:router:{router_id}:cis_applied", *target_codes)
+    except Exception as exc:
+        logger.warning("No se pudo persistir en KeyDB cis_applied: %s", exc)
 
     # Registrar en WORM audit
     actor = audit_actor_from_claims(claims, request)

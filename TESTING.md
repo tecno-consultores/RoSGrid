@@ -1606,14 +1606,14 @@ Certificación ejecutada bajo la **Regla Cero** dentro de contenedores efímeros
    - `src/views/inventory/routerInventoryView.unit.ts` (**5 de 5 pruebas PASADAS**).
 2. **Backend Unitario (Pytest en Docker):**
    - `tests/api/test_diagnostic_governor.unit.py` (**7 de 7 pruebas PASADAS**).
-   - `tests/api/test_hito20_enterprise_suite.unit.py` (**11 de 11 pruebas PASADAS**).
-   - Total backend verificado: **18 de 18 pruebas PASADAS (100%)**.
+   - `tests/api/test_hito20_enterprise_suite.unit.py` (**12 de 12 pruebas PASADAS**, incluyendo `test_cis_1_8_bruteforce_remediation_and_audit_reactivity`).
+   - Total backend verificado en esta suite: **19 de 19 pruebas PASADAS (100%)**.
 3. **Análisis Estático y Tipado:**
    - `vue-tsc --noEmit`: 0 errores (código de salida 0).
    - `ruff check --no-cache`: All checks passed.
    - `mypy`: Success: no issues found in 3 source files.
 4. **Karate Labs BDD:**
-   - **API BDD:** Escenario 86 incorporado en `fastapi/test/api_test.feature` y replicado en `docs/examples/fastapi/test/api_test.feature` (**86 escenarios totales de API**).
+   - **API BDD:** Escenario 87 incorporado en `fastapi/test/api_test.feature` y replicado en `docs/examples/fastapi/test/api_test.feature` (**87 escenarios totales de API**).
    - **UI BDD:** Escenario 38 incorporado en `vue3/test/ui_business_flow.feature` y replicado en `docs/examples/vue3/test/ui_business_flow.feature` (**38 escenarios totales de UI**).
 
 
