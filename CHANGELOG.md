@@ -10,6 +10,11 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Added
 
+- **Especificación de Diseño: Sondeo Pasivo Escalonado de Fondo (Worker Jitter) y Notificación Reactiva WebSocket (`docs/specs/39_BACKGROUND_SUBSCRIBER_POLLING_AND_REALTIME_STATUS_WEBSOCKET.md`, `docs/13_MANUAL_MAPA_RED_BIMODAL_Y_OPERACIONES_CAMPO.md`, `ROADMAP.md`):**
+  - **Motor StaggeredSessionPoller en Worker:** Bucle periódico en `rosgrid-worker` cada 180s con espaciado temporal dinámico (*inter-router jitter* de 2 a 5s) para consultar las tablas nativas de sesiones (`/ip/dhcp-server/lease` y `/ppp/active`), eliminando picos de CPU y la necesidad de pulsado manual.
+  - **Filtro Delta de Base de Datos (Zero-Write):** Cero escrituras en PostgreSQL si el estado reachability del dispositivo se mantiene idéntico.
+  - **Canal Reactivo WebSocket:** Difusión instantánea de eventos `DEVICE_STATUS_CHANGED` hacia el mapa unificado (`UnifiedNetworkMap.vue`) y Wallboard NOC para actualización cromática inmediata a 60 FPS sin recarga de página.
+
 - **Mapa de Red Unificado (`UnifiedNetworkMap.vue`), 3 Toggles de Capas con Feature Flags, Análisis de Causa Raíz (RCA) y Cerraduras Operativas en KeyDB (`docs/specs/38_UNIFIED_NETWORK_MAP_ROOT_CAUSE_AND_OPERATIONAL_LOCKING.md`, `docs/13_MANUAL_MAPA_RED_BIMODAL_Y_OPERACIONES_CAMPO.md`, `vue3/src/components/network/UnifiedNetworkMap.vue`, `vue3/src/components/network/UnifiedNetworkMap.unit.ts`, `fastapi/src/services/diagnostic_governor.py`, `fastapi/src/api/v1/subscribers.py`, `fastapi/src/schemas/ipam.py`, `vue3/src/stores/useFieldOpsStore.ts`):**
   - **Unificación de Componente de Mapa Polimórfico:** Consolidación de un único componente `UnifiedNetworkMap.vue` que gobierna la cartografía de `/inventory/routers`, `/subscribers/map` y `/wallboard`, reutilizando instancias Leaflet y capas optimizadas.
   - **3 Toggles de Capas Independientes:** `[ 🏢 Routers de Red ]`, `[ 📦 Cajas NAP FTTH ]` (excluido del DOM con `v-if="isp_module_enabled"` en empresas no-ISP) y `[ 💻 Dispositivos / Abonados ]` (bimodal: clientes FTTH en ISPs, dispositivos DHCP de red en empresas).

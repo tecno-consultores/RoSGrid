@@ -535,6 +535,12 @@
   - Motor de Análisis de Causa Raíz (RCA estilo Zabbix): supresión automática de pruebas individuales en clientes si el router de cabecera está caído o con Circuit Breaker abierto, con barra superior táctica de alerta y zoom a zona afectada (`ROOT_CAUSE_SUPPRESSED`).
   - Prevención de colisión operativa entre brigadas mediante cerraduras efímeras en KeyDB (`TTL = 600s`) con aviso contextual de trabajo en curso.
   - Cobertura 11X certificada: 7 pruebas unitarias backend (`test_diagnostic_governor.unit.py`), 6 pruebas unitarias Vitest (`UnifiedNetworkMap.unit.ts`), 0 errores en `vue-tsc`, ESLint, Ruff y Mypy, Escenario 84 en Karate Labs API y Escenario 35 en Karate Labs UI.
+- [ ] **23.26** **Sondeo Pasivo Escalonado de Fondo (Worker Jitter) y Notificación Reactiva WebSocket:**
+  - Especificación formal `docs/specs/39_BACKGROUND_SUBSCRIBER_POLLING_AND_REALTIME_STATUS_WEBSOCKET.md` y manual operativo `docs/13_MANUAL_MAPA_RED_BIMODAL_Y_OPERACIONES_CAMPO.md` completados.
+  - Motor `StaggeredSessionPoller` en `rosgrid-worker` para lectura periódica de `/ip/dhcp-server/lease` y `/ppp/active` (intervalo 180s con jitter dinámico entre routers de 2 a 5s).
+  - Filtro delta de base de datos (*Zero-Write Optimization*): cero escrituras en PostgreSQL si el estado no cambió.
+  - Integración con vía rápida de eventos Syslog UDP 5514 ante desconexiones repentinas.
+  - Transmisión en tiempo real por canal WebSocket de eventos `DEVICE_STATUS_CHANGED` y actualización cromática en caliente en `UnifiedNetworkMap.vue` y Wallboard NOC.
 
 
 

@@ -159,7 +159,7 @@ rosgrid/
 
 ---
 
-## 4. Índice Maestro de los 37 Archivos de Especificación (Carpeta `docs/specs/`)
+## 4. Índice Maestro de los 40 Archivos de Especificación (00 a 39) (Carpeta `docs/specs/`)
 
 Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `docs/specs/` siguiendo rigurosamente el orden de los 5 Bloques listados a continuación:
 
@@ -222,6 +222,7 @@ Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `
 * `docs/specs/36_MCP_OFFICIAL_MIKROTIK_DOCS_GROUNDING.md` — Integración de Documentación Oficial de MikroTik RouterOS v7 en el Servidor MCP (Grounding IA): Endpoints oficiales `llms.txt` y `docs/*.md`, blindaje anti-SSRF, motor de caché inteligente en KeyDB (TTL 24h/7d) y Tools MCP `#21` (`rosgrid_search_mikrotik_docs`) y `#22` (`rosgrid_get_mikrotik_doc_topic`) para erradicar alucinaciones de sintaxis v6 vs v7.
 * `docs/specs/37_BIMODAL_NETWORK_MAP_AND_FTTH_FIELD_OPS.md` — Arquitectura Bimodal del Mapa de Red y Rediseño Táctico de Operaciones de Campo: Soporte dual Empresa (descubrimiento real DHCP, herencia de coordenadas de router, ping 1-Click) vs ISP (planta externa FTTH, Cajas NAP, matriz de puertos 1..16, aprovisionamiento de ONUs y telemetría óptica).
 * `docs/specs/38_UNIFIED_NETWORK_MAP_ROOT_CAUSE_AND_OPERATIONAL_LOCKING.md` — Componente Unificado de Mapa de Red Bimodal, Análisis de Causa Raíz (RCA) y Prevención de Colisión Operativa: Unificación de mapa (`UnifiedNetworkMap.vue`), 3 botones de capa independientes con gobernanza por Feature Flags (`isp_module_enabled`), restricción RBAC para ocultar WebFig a personal de campo, supresión inteligente de alarmas hijas/diagnósticos si el router está caído (estilo Zabbix) y cerraduras operativas efímeras en KeyDB para evitar duplicidad de cuadrillas.
+* `docs/specs/39_BACKGROUND_SUBSCRIBER_POLLING_AND_REALTIME_STATUS_WEBSOCKET.md` — Sondeo Pasivo Escalonado de Fondo (Worker Jitter) y Notificación Reactiva WebSocket en Tiempo Real: Bucle en `rosgrid-worker` para lectura de tablas nativas (`/ip/dhcp-server/lease` y `/ppp/active`), escalonamiento temporal con jitter anti-pico, optimizador delta sin escrituras redundantes en Postgres, y propagación instantánea de eventos `DEVICE_STATUS_CHANGED` vía WebSocket al mapa.
 
 ---
 

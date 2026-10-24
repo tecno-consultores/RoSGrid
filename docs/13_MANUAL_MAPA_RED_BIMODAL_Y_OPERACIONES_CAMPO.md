@@ -155,4 +155,29 @@ En lugar de forzar al usuario a ver todo junto o nada, el mapa de red ofrece 3 b
 * Cuando un técnico ejecuta un diagnóstico sobre un cliente o abre su ficha de trabajo, RoSGrid activa una cerradura táctica efímera en KeyDB (`TTL = 10 minutos`).
 * Si un segundo técnico consulta ese mismo abonado, la interfaz despliega un aviso informativo: `👥 Atención en Curso: El técnico Carlos Mendoza ya ejecutó un diagnóstico hace 2 minutos`. Esto erradica traslados redundantes de brigadas de calle.
 
+---
+
+## 7. Automatización de Sondeo de Fondo (Worker Jitter) y Actualización Reactiva por WebSocket
+
+Para que el mapa de red y el Wallboard NOC reflejen permanentemente el estado real de los equipos en verde o rojo sin requerir que un operador presione manualmente el botón `[ Sincronizar ]`, RoSGrid incorpora un motor de sondeo pasivo automatizado y un canal de notificación reactivo:
+
+### 7.1. Sondeo Pasivo Escalonado de Fondo (*Staggered Session Poller*)
+* El contenedor en segundo plano `rosgrid-worker` ejecuta un bucle periódico cada 3 minutos consultando las tablas nativas de sesiones de los routers (`/ip/dhcp-server/lease` en empresas y `/ppp/active` en ISPs).
+* **Escalonamiento Temporal (*Inter-Router Jitter*):** El worker no consulta a todos los routers al mismo tiempo. Distribuye las consultas a lo largo del intervalo de 3 minutos, espaciando cada router por varios segundos (jitter dinámico de 2 a 5s).
+* **Cero Pings en la Red:** La comprobación se basa exclusivamente en las tablas que el kernel de RouterOS mantiene en memoria. No se emite tráfico ICMP hacia los clientes.
+
+### 7.2. Filtro Delta de Base de Datos (*Zero-Write DB Optimization*)
+* RoSGrid compara el estado actual del dispositivo con el registrado previamente.
+* Si el cliente se mantiene en el mismo estado (`ONLINE` sigue en `ONLINE`, o `OFFLINE` sigue en `OFFLINE`), **no se ejecutan operaciones de escritura en PostgreSQL**, protegiendo la base de datos de saturación I/O.
+* Solo ante una transición de estado (`ONLINE -> OFFLINE` o viceversa), el sistema persiste el cambio y publica el evento en KeyDB.
+
+### 7.3. Notificación Instantánea vía Syslog UDP 5514 (*Fast Path*)
+* Si un cliente desconecta su cable o se apaga su terminal, el MikroTik envía de inmediato un evento Syslog al puerto UDP 5514 de RoSGrid.
+* El worker procesa el datagrama en $< 1\text{ ms}$ y conmuta el estado del cliente a `OFFLINE` de forma inmediata, sin tener que esperar al ciclo de sondeo de los 3 minutos.
+
+### 7.4. Actualización Visual Reactiva por WebSocket (60 FPS)
+* Las transiciones de estado se propagan al navegador mediante el canal de eventos WebSocket en tiempo real (`DEVICE_STATUS_CHANGED`).
+* El mapa unificado (`UnifiedNetworkMap.vue`) y el Wallboard reciben el evento y actualizan únicamente el color del marcador afectado (verde a rojo o rojo a verde) en memoria, sin recargar la página, sin peticiones HTTP y sin parpadeos visuales.
+
+
 
