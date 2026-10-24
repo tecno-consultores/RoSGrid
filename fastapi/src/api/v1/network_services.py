@@ -18,7 +18,7 @@ from src.api.v1.webfig_common import get_router_and_client
 from src.core.audit import write_audit_log
 from src.db.session import get_tenant_db_session
 from src.models.core import SystemRoleEnum
-from src.models.ipam import BandwidthProfile, SubscriberDevice
+from src.models.ipam import BandwidthProfile, CustomerServiceStatusEnum, SubscriberDevice
 from src.schemas.network_services import (
     ChangeRateLimitRequest,
     NetworkServiceActionResponse,
@@ -166,7 +166,7 @@ async def isolate_network_service(
         )
 
     # Actualizar estado en Base de Datos
-    device.status = "ISOLATED_ADMINISTRATIVE"
+    device.status = CustomerServiceStatusEnum.SUSPENDED
     device.updated_at = datetime.now(UTC)
     await db.commit()
 
@@ -284,7 +284,7 @@ async def restore_network_service(
         )
 
     # Actualizar estado en Base de Datos
-    device.status = "ACTIVE"
+    device.status = CustomerServiceStatusEnum.ACTIVE
     device.updated_at = datetime.now(UTC)
     await db.commit()
 

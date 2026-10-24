@@ -7,6 +7,7 @@ import logging
 import re
 import uuid
 from datetime import datetime, timezone
+from typing import cast
 
 from src.redis_layer.client import get_redis_client
 from src.schemas.syslog import SyslogEvent
@@ -126,8 +127,8 @@ class SyslogUdpProtocol(asyncio.DatagramProtocol):
         self.ip_router_map = ip_router_map
         self.transport: asyncio.DatagramTransport | None = None
 
-    def connection_made(self, transport: asyncio.DatagramTransport) -> None:
-        self.transport = transport
+    def connection_made(self, transport: asyncio.BaseTransport) -> None:
+        self.transport = cast(asyncio.DatagramTransport, transport)
 
     def datagram_received(self, data: bytes, addr: tuple[str, int]) -> None:
         src_ip = addr[0]

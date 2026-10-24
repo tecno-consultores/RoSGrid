@@ -268,7 +268,7 @@ async def certify_installation(
     stmt_svc = select(CustomerService).where(CustomerService.id == order.customer_service_id)
     svc = (await db.execute(stmt_svc)).scalar_one_or_none()
     if svc:
-        svc.status = CustomerServiceStatusEnum.ACTIVE.value
+        svc.status = CustomerServiceStatusEnum.ACTIVE
         svc.onu_serial_number = payload.onu_scanned_serial
         if payload.onu_scanned_mac:
             svc.onu_mac_address = payload.onu_scanned_mac

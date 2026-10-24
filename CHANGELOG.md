@@ -8,6 +8,13 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ## [Unreleased]
 
+### Security
+
+- **Remediación de Vulnerabilidad Crítica en Brotli (`fastapi/uv.lock` — `GHSA-9v8h-qqgm-4m35`):**
+  - **Actualización de Seguridad:** Actualizado el paquete `brotli` de `v1.2.0` a `v1.2.1` en `fastapi/uv.lock` vía `uv lock --upgrade-package brotli`.
+  - **Mitigación:** Corrección de la vulnerabilidad de desbordamiento de escritura fuera de límites (*Out-of-bounds write*) en el decodificador de Brotli calificada como `CRITICAL`.
+  - **Certificación de Regresión 11X:** 501 pruebas unitarias del backend ejecutadas y aprobadas al 100% en contenedor efímero de Docker, y 0 errores de tipado estricto en Mypy (`Success: no issues found in 117 source files`).
+
 ### Added
 
 - **Sondeo Pasivo Escalonado de Fondo (Worker Jitter), Notificación Reactiva WebSocket y Diagnóstico 360° en Toolkit de Campo (`fastapi/src/workers/subscriber_status_poller.py`, `fastapi/src/workers/runner.py`, `fastapi/src/services/diagnostic_governor.py`, `fastapi/src/api/v1/subscribers.py`, `fastapi/src/schemas/ipam.py`, `vue3/src/components/field/FieldTechMobileView.vue`, `vue3/src/components/network/UnifiedNetworkMap.vue`, `vue3/src/stores/useNocEventsStore.ts`, `vue3/src/stores/useFieldOpsStore.ts`, `vue3/src/types/index.ts`):**
