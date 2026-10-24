@@ -664,6 +664,15 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 85. Diagnóstico Integral 360° con Parámetros Force y Extended sin autenticación devuelve 401
+    Given path '/api/v1/subscriber-devices/00000000-0000-0000-0000-000000000001/ping'
+    And param force = true
+    And param extended = true
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
 
 
 

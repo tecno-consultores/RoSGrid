@@ -172,6 +172,8 @@ docker compose -f docker-compose.qa.yml down --remove-orphans
 | **Hito 22.11** | Migración Integral de Runtime a Python 3.15 (`base-python-uv:3.15`) y Node.js 26 LTS (`base-node-ionic:26`) | **95.04%** (399 tests Pytest)<br>**100%** (262 tests Vitest) | Stryker + Mutmut | Free-Threading PEP 703 Tier-1 + V8 14.x + vue-tsc (0 err) | ✅ **Certificado** |
 | **Hito 23.4** | Automatización Táctica de Flota, Topología L2, Syslog Efímero, Cruce CVEs, Exporter Prometheus y 20 Herramientas MCP | **95.12%** (422 tests Backend)<br>**100%** (61/61 BDD REST) | N/A | Radon CC <= 5 (100% Grado A) + Mypy Strict (0 err) + Karate Labs Grupo 22 | ✅ **Certificado** |
 | **Hito 23.5** | Frontend Vue 3 + Pinia: Matriz CVE, Topología L2 Canvas, Syslog Live, PoE-Aware y Karate UI | **100%** (20/20 BDD UI)<br>**100%** (297 tests Vitest) | N/A | ESLint + SonarJS (0 err) + vue-tsc (0 err) + Karate Labs Grupo 23 | ✅ **Certificado** |
+| **Hito 23.25** | Componente Unificado de Mapa (`UnifiedNetworkMap.vue`), 3 Toggles Feature Flags, Causa Raíz (RCA) y Cerraduras Operativas en KeyDB | **100%** (84/84 BDD API)<br>**100%** (35/35 BDD UI)<br>**100%** (7 tests Unitarios Backend) | N/A | 0 errores vue-tsc + Mypy Strict + ESLint + Vitest 100% | ✅ **Certificado** |
+| **Hito 23.26** | Sondeo Pasivo Escalonado de Fondo (Worker Jitter), Zero-Write Delta, WebSocket Reactivo, Diagnóstico 360° y Override de Cerraduras en Toolkit de Campo | **100%** (85/85 BDD API)<br>**100%** (36/36 BDD UI)<br>**100%** (11 tests Unitarios Backend + 15 tests Vitest) | N/A | StaggeredSessionPoller + Vite Build (0 err, 5.08s) + Mypy (0 err) | ✅ **Certificado** |
 
 ---
 

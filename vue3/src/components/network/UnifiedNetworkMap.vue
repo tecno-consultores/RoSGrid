@@ -7,6 +7,7 @@
   import type { OpticalBoxItem, RouterItem, SubscriberDeviceItem, OperationalStatusResponse } from '@/types';
   import { useAuthStore } from '@/stores/useAuthStore';
   import { useFieldOpsStore } from '@/stores/useFieldOpsStore';
+  import { useNocEventsStore } from '@/stores/useNocEventsStore';
   import { escapeHtml } from '@/utils/security';
 
   const props = withDefaults(
@@ -39,6 +40,7 @@
 
   const authStore = useAuthStore();
   const fieldOpsStore = useFieldOpsStore();
+  const nocEventsStore = useNocEventsStore();
 
   const isHeadlessTest = computed(
     () =>
@@ -273,6 +275,20 @@
   watch([showRouters, showBoxes, showSubscribers, statusFilter, () => props.routers, () => props.opticalBoxes, () => props.subscribers], () => {
     renderAllLayers();
   }, { deep: true });
+
+  // Escuchar eventos reactivos de cambio de estado en vivo emitidos por el Worker vía WebSocket
+  watch(
+    () => nocEventsStore.lastDeviceStatusEvent,
+    (ev) => {
+      if (!ev) return;
+      const target = props.subscribers.find((s) => s.id === ev.deviceId);
+      if (target) {
+        target.last_reachability_status = ev.status;
+        renderAllLayers();
+      }
+    },
+    { deep: true },
+  );
 
   onMounted(() => {
     initMap();

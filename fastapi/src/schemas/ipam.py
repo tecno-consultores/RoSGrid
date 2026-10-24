@@ -386,6 +386,10 @@ class SubscriberDevicePingResponse(BaseModel):
     status: str = "COMPLETED"
     root_cause_device_name: Optional[str] = None
     operational_lock: Optional[dict[str, Any]] = None
+    gateway_ping: Optional[dict[str, Any]] = None
+    internet_ping: Optional[dict[str, Any]] = None
+    dns_check: Optional[dict[str, Any]] = None
+    mtu_test: Optional[dict[str, Any]] = None
 
 
 class OperationalStatusResponse(BaseModel):

@@ -11,6 +11,13 @@ export const useNocEventsStore = defineStore('nocEvents', () => {
   const pendingApprovalsCount = ref<number>(0);
   const activeAlertsCount = ref<number>(0);
   const recentEvents = shallowRef<NocEventItem[]>([]);
+  const lastDeviceStatusEvent = ref<{
+    deviceId: string;
+    status: string;
+    routerId?: string;
+    endpointIdentifier?: string;
+    lastSeenAt?: string;
+  } | null>(null);
 
   let socket: WebSocket | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -19,6 +26,18 @@ export const useNocEventsStore = defineStore('nocEvents', () => {
     try {
       const payload = JSON.parse(rawMessage);
       const eventName = payload.event_name || payload.event || 'UNKNOWN';
+
+      // Captura reactiva de cambio de estado de abonados/clientes en tiempo real
+      if (eventName === 'DEVICE_STATUS_CHANGED') {
+        const p = payload.payload || payload;
+        lastDeviceStatusEvent.value = {
+          deviceId: p.device_id,
+          status: p.status,
+          routerId: p.router_id,
+          endpointIdentifier: p.endpoint_identifier,
+          lastSeenAt: p.last_seen_at,
+        };
+      }
 
       // Intercepción del Kill-Switch en vivo
       if (eventName === 'SESSION_KILLED') {
@@ -151,5 +170,6 @@ export const useNocEventsStore = defineStore('nocEvents', () => {
     disconnectEventsWebSocket,
     fetchRecentAuditLogs,
     clearEvents,
+    lastDeviceStatusEvent,
   };
 });

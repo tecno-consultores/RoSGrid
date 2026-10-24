@@ -12,6 +12,7 @@ from src.redis_layer.client import close_redis_client
 from src.workers.alert_dispatcher_worker import alert_dispatcher_worker_loop
 from src.workers.health_monitor_worker import health_monitor_worker_loop
 from src.workers.nightly_backup_worker import nightly_backup_worker_loop
+from src.workers.subscriber_status_poller import subscriber_status_poller_worker_loop
 from src.workers.syslog_collector import syslog_collector_worker_loop
 from src.workers.vault_rotation_worker import vault_rotation_worker_loop
 
@@ -32,7 +33,7 @@ def _setup_signal_handlers(stop_event: asyncio.Event) -> None:
 
 
 async def main_workers_runner() -> None:
-    """Inicia concurrentemente los 4 workers y gestiona el apagado ordenado."""
+    """Inicia concurrentemente los workers de RoSGrid y gestiona el apagado ordenado."""
     logger.info("=== Iniciando Orquestador de Workers RoSGrid ===")
     stop_event = asyncio.Event()
     _setup_signal_handlers(stop_event)
@@ -43,6 +44,7 @@ async def main_workers_runner() -> None:
         asyncio.create_task(nightly_backup_worker_loop(), name="NightlyBackupWorker"),
         asyncio.create_task(vault_rotation_worker_loop(), name="VaultRotationWorker"),
         asyncio.create_task(syslog_collector_worker_loop(), name="SyslogCollectorWorker"),
+        asyncio.create_task(subscriber_status_poller_worker_loop(), name="SubscriberStatusPollerWorker"),
     ]
 
     try:

@@ -87,6 +87,18 @@ class DiagnosticGovernor:
             logger.debug(f"Aviso al almacenar en caché diagnóstica para {device_id}: {e}")
 
     @classmethod
+    async def invalidate_cached_ping(
+        cls, tenant_id: uuid.UUID, device_id: uuid.UUID
+    ) -> None:
+        """Invalida la caché de diagnóstico previo para forzar una prueba inmediata (orden de NOC)."""
+        try:
+            redis = get_redis_client()
+            cache_key = f"rg:{tenant_id}:diag:cache:{device_id}"
+            await redis.delete(cache_key)
+        except Exception as e:
+            logger.debug(f"Aviso al invalidar caché diagnóstica para {device_id}: {e}")
+
+    @classmethod
     async def check_user_rate_limit(
         cls, tenant_id: uuid.UUID, user_id: uuid.UUID
     ) -> None:

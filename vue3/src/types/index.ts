@@ -1212,6 +1212,9 @@ export interface OperationalLock {
   action: string;
   locked_at: string;
   minutes_ago?: number;
+  is_locked?: boolean;
+  is_locked_by_other?: boolean;
+  message?: string | null;
 }
 
 export interface OperationalStatusResponse {
@@ -1243,6 +1246,10 @@ export interface SubscriberDevicePingResponse {
   status?: string;
   root_cause_device_name?: string | null;
   operational_lock?: OperationalLock | null;
+  gateway_ping?: { status: string; latency_ms?: number; target?: string } | null;
+  internet_ping?: { status: string; latency_ms?: number; target?: string } | null;
+  dns_check?: { status: string; domain?: string; resolved_ip?: string } | null;
+  mtu_test?: { status: string; size_bytes?: number; detail?: string } | null;
 }
 
 

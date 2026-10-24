@@ -315,6 +315,15 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And waitFor(".map-actions")
     And match text(".map-actions") contains 'Sincronizar DHCP'
 
+  Scenario: 36. Toolkit de Campo con Mapa de Zona Integrado, Diagnóstico 360° y Override de Cerradura Operativa
+    Given driver baseUrl + '/field-ops'
+    And waitFor(".field-mobile-view")
+    And waitFor("#tab-btn-map")
+    And match text("#tab-btn-map") contains 'Mapa de Zona'
+    And click("#tab-btn-map")
+    And waitFor(".tab-pane-map")
+
+
 
 
 

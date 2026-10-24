@@ -111,11 +111,13 @@ export const useFieldOpsStore = defineStore('fieldOps', () => {
     return res.data;
   }
 
-  async function pingSubscriberLive(deviceId: string): Promise<SubscriberDevicePingResponse> {
+  async function pingSubscriberLive(deviceId: string, force = false, extended = false): Promise<SubscriberDevicePingResponse> {
     isVerifying.value = true;
     try {
       const { http } = await import('@/api/httpClient');
-      const res = await http.post<SubscriberDevicePingResponse>(`/api/v1/subscriber-devices/${deviceId}/ping`);
+      const res = await http.post<SubscriberDevicePingResponse>(
+        `/api/v1/subscriber-devices/${deviceId}/ping?force=${force}&extended=${extended}`
+      );
       return res.data;
     } finally {
       isVerifying.value = false;

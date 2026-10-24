@@ -2,7 +2,7 @@
 // Copyright (C) 2026 RoSGrid Contributors
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { mount } from '@vue/test-utils';
+import { mount, flushPromises } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import FieldTechMobileView from './FieldTechMobileView.vue';
 import { useFieldOpsStore } from '@/stores/useFieldOpsStore';
@@ -167,7 +167,7 @@ describe('FieldTechMobileView.vue — Panel Responsive del Técnico de Campo FTT
     const btnPing = wrapper.find('.diag-action-bar button');
     await btnPing.trigger('click');
 
-    expect(pingSpy).toHaveBeenCalledWith('dev-1');
+    expect(pingSpy).toHaveBeenCalledWith('dev-1', false, false);
   });
 
   it('permite dibujar y limpiar la firma en el canvas táctil', async () => {
@@ -185,5 +185,95 @@ describe('FieldTechMobileView.vue — Panel Responsive del Técnico de Campo FTT
     const btnClear = wrapper.find('.sig-header button');
     await btnClear.trigger('click');
     expect(btnClear.exists()).toBe(true);
+  });
+
+  it('permite alternar a la pestaña de mapa de zona y renderiza la sección cartográfica', async () => {
+    const authStore = useAuthStore();
+    authStore.updateTenantFeatures({ isp_module_enabled: true });
+
+    const wrapper = mount(FieldTechMobileView, {
+      global: {
+        stubs: {
+          UnifiedNetworkMap: true,
+        },
+      },
+    });
+
+    const tabMap = wrapper.find('#tab-btn-map');
+    expect(tabMap.exists()).toBe(true);
+    await tabMap.trigger('click');
+
+    expect(wrapper.find('.tab-pane-map').exists()).toBe(true);
+    expect(wrapper.text()).toContain('Mapa de Zona & Topología FTTH');
+  });
+
+  it('muestra banner de advertencia cuando otro técnico atendió el servicio y permite forzar prueba', async () => {
+    const authStore = useAuthStore();
+    authStore.updateTenantFeatures({ isp_module_enabled: true });
+
+    const fieldStore = useFieldOpsStore();
+    fieldStore.recentInstallations = [
+      {
+        id: 'dev-1',
+        tenant_id: 't-1',
+        router_id: 'r-1',
+        service_type: 'FTTH_PPPOE',
+        auth_backend: 'ROUTEROS_LOCAL',
+        endpoint_identifier: 'CLI-001',
+        onu_mode: 'BRIDGE',
+        status: 'ACTIVE',
+        created_at: '2026-01-01',
+        updated_at: '2026-01-01',
+      },
+    ];
+    const pingSpy = vi.spyOn(fieldStore, 'pingSubscriberLive').mockResolvedValueOnce({
+      device_id: 'dev-1',
+      assigned_ipv4: '100.64.0.15',
+      last_reachability_status: 'ONLINE',
+      ping_latency_ms: 15,
+      packet_loss_pct: 0,
+      message: 'Ping previo en caché',
+      is_cached: true,
+      cache_ttl_remaining: 10,
+      operational_lock: {
+        technician_id: 'tech-99',
+        technician_name: 'Carlos Mendoza',
+        action: 'DIAGNOSTICO_ACTIVO',
+        locked_at: '2026-10-24T16:00:00Z',
+        minutes_ago: 3,
+        is_locked_by_other: true,
+      },
+    }).mockResolvedValueOnce({
+      device_id: 'dev-1',
+      assigned_ipv4: '100.64.0.15',
+      last_reachability_status: 'ONLINE',
+      ping_latency_ms: 12,
+      packet_loss_pct: 0,
+      message: 'Diagnóstico 360 forzado',
+      is_cached: false,
+      cache_ttl_remaining: 15,
+      gateway_ping: { status: 'PASS', latency_ms: 0.8, target: '10.0.0.1' },
+      internet_ping: { status: 'PASS', latency_ms: 14.5, target: '1.1.1.1' },
+      dns_check: { status: 'PASS', domain: 'google.com', resolved_ip: '142.250.190.46' },
+      mtu_test: { status: 'PASS', size_bytes: 1500 },
+    });
+
+    const wrapper = mount(FieldTechMobileView);
+    await wrapper.find('#tab-btn-diagnostics').trigger('click');
+    await wrapper.find('#diag-target-select').setValue('dev-1');
+
+    const btnPing = wrapper.find('.diag-btns-group button');
+    await btnPing.trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('.lock-override-banner').exists()).toBe(true);
+    expect(wrapper.text()).toContain('Carlos Mendoza');
+
+    const btnForce = wrapper.find('.lock-override-banner button');
+    expect(btnForce.exists()).toBe(true);
+    await btnForce.trigger('click');
+    await flushPromises();
+
+    expect(pingSpy).toHaveBeenLastCalledWith('dev-1', true, true);
   });
 });

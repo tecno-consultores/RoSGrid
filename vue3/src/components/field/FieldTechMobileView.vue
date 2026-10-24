@@ -8,6 +8,7 @@
   import { useInventoryStore } from '@/stores/useInventoryStore';
   import { useAuthStore } from '@/stores/useAuthStore';
   import { useI18n } from '@/composables/useI18n';
+  import UnifiedNetworkMap from '@/components/network/UnifiedNetworkMap.vue';
   import type { SubscriberDeviceItem, OperationalLock } from '@/types';
 
   const router = useRouter();
@@ -18,8 +19,8 @@
 
   const isIspEnabled = computed(() => authStore.isFeatureEnabled('isp_module_enabled'));
 
-  // Pestañas directas: 'nap' (Caja NAP), 'customer' (Cliente FTTH), 'diagnostics' (Diagnóstico y Certificación)
-  const activeTab = ref<'nap' | 'customer' | 'diagnostics'>('nap');
+  // Pestañas tácticas: 'nap' (Caja NAP), 'customer' (Cliente FTTH), 'diagnostics' (Diagnósticos), 'map' (Mapa de Zona)
+  const activeTab = ref<'nap' | 'customer' | 'diagnostics' | 'map'>('nap');
 
   // Estado GPS Global
   const isLocating = ref(false);
@@ -69,6 +70,10 @@
     cache_ttl_remaining?: number;
     root_cause_device_name?: string | null;
     operational_lock?: OperationalLock | null;
+    gateway_ping?: { status: string; latency_ms?: number; target?: string } | null;
+    internet_ping?: { status: string; latency_ms?: number; target?: string } | null;
+    dns_check?: { status: string; domain?: string; resolved_ip?: string } | null;
+    mtu_test?: { status: string; size_bytes?: number; detail?: string } | null;
   } | null>(null);
   const mtuTestResult = ref<'PASS' | 'FAIL' | null>(null);
   const sessionStatus = ref<'ACTIVE' | 'IDLE' | null>(null);
@@ -260,8 +265,8 @@
     }
   }
 
-  // Ejecutar Ping 1-Click desde MikroTik
-  async function handleRun1ClickPing() {
+  // Ejecutar Diagnóstico en Vivo desde MikroTik (Soporta force y extended)
+  async function handleRun1ClickPing(force = false, extended = false) {
     const devId = diagTargetId.value || selectedSubscriberForDiag.value?.id;
     if (!devId) {
       showMessage('Seleccione un cliente registrado para diagnosticar', 'error');
@@ -270,7 +275,7 @@
     isPinging.value = true;
     pingResult.value = null;
     try {
-      const res = await fieldStore.pingSubscriberLive(devId);
+      const res = await fieldStore.pingSubscriberLive(devId, force, extended);
       pingResult.value = {
         status: res.status === 'ROOT_CAUSE_SUPPRESSED' ? 'ROOT_CAUSE_SUPPRESSED' : (res.last_reachability_status === 'ONLINE' ? 'ONLINE' : 'OFFLINE'),
         latency_ms: res.ping_latency_ms,
@@ -280,10 +285,15 @@
         cache_ttl_remaining: res.cache_ttl_remaining,
         root_cause_device_name: res.root_cause_device_name,
         operational_lock: res.operational_lock,
+        gateway_ping: res.gateway_ping,
+        internet_ping: res.internet_ping,
+        dns_check: res.dns_check,
+        mtu_test: res.mtu_test,
       };
       sessionStatus.value = 'ACTIVE';
-      mtuTestResult.value = 'PASS';
-      showMessage('Diagnóstico de enlace MikroTik completado.', 'success');
+      mtuTestResult.value = res.mtu_test ? (res.mtu_test.status === 'PASS' ? 'PASS' : 'FAIL') : 'PASS';
+      const label = extended ? 'Diagnóstico 360° completado' : 'Test Ping completado';
+      showMessage(`${label} exitosamente.`, 'success');
     } catch (err: unknown) {
       pingResult.value = {
         status: 'OFFLINE',
@@ -293,10 +303,26 @@
       };
       sessionStatus.value = 'IDLE';
       mtuTestResult.value = 'FAIL';
-      showMessage('El equipo no respondió al ping.', 'error');
+      showMessage('El equipo no respondió al diagnóstico.', 'error');
     } finally {
       isPinging.value = false;
     }
+  }
+
+  // Forzar nueva prueba cuando el NOC lo solicita o para invalidar caché
+  async function handleForcePing() {
+    await handleRun1ClickPing(true, true);
+  }
+
+  // Selección de abonado desde el mapa de zona integrado
+  function handleSelectSubscriberFromMap(subId: string) {
+    diagTargetId.value = subId;
+    const found = fieldStore.recentInstallations.find((s) => s.id === subId);
+    if (found) {
+      selectedSubscriberForDiag.value = found;
+    }
+    activeTab.value = 'diagnostics';
+    showMessage(`Abonado seleccionado desde mapa: ${found?.endpoint_identifier || subId}`, 'success');
   }
 
   // Canvas de Firma
@@ -442,6 +468,14 @@
           @click="activeTab = 'diagnostics'"
         >
           ⚡ {{ t('field_tech.tab_diagnostics') }}
+        </button>
+        <button
+          id="tab-btn-map"
+          type="button"
+          :class="['nav-tab', { active: activeTab === 'map' }]"
+          @click="activeTab = 'map'"
+        >
+          🗺️ Mapa de Zona
         </button>
       </nav>
 
@@ -866,12 +900,12 @@
         <!-- ========================================== -->
         <!-- TAB 3: DIAGNÓSTICOS Y CERTIFICACIÓN        -->
         <!-- ========================================== -->
-        <section v-else class="tab-pane" aria-labelledby="tab-btn-diagnostics">
+        <section v-else-if="activeTab === 'diagnostics'" class="tab-pane" aria-labelledby="tab-btn-diagnostics">
           <div class="pane-grid">
             <div class="card-form">
               <h2 class="form-title">⚡ Diagnóstico en Tiempo Real y Certificación 1-Click</h2>
               <p class="form-desc">
-                Verifique conectividad ICMP desde el router MikroTik y selle la entrega con firma táctil.
+                Verifique conectividad ICMP, salto de gateway, salida a internet y resolución DNS desde el router MikroTik.
               </p>
 
               <div class="diag-action-bar">
@@ -893,14 +927,40 @@
                   </select>
                 </div>
 
+                <div class="diag-btns-group">
+                  <button
+                    type="button"
+                    class="btn-touch btn-touch--cyan"
+                    :disabled="isPinging || !diagTargetId"
+                    @click="handleRun1ClickPing(false, false)"
+                  >
+                    <span v-if="isPinging">⏳ Probando...</span>
+                    <span v-else>⚡ Ping 1-Click</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-touch btn-touch--green"
+                    :disabled="isPinging || !diagTargetId"
+                    @click="handleRun1ClickPing(false, true)"
+                  >
+                    <span v-if="isPinging">⏳ Diagnosticando...</span>
+                    <span v-else>🌐 Diagnóstico 360° (DNS+WAN)</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Aviso de Lock de otra cuadrilla con opción de Forzar Prueba (Instrucción de NOC) -->
+              <div v-if="pingResult?.operational_lock?.is_locked_by_other" class="lock-override-banner">
+                <div class="lock-override-text">
+                  <span>👥 <strong>Atención en Curso:</strong> El técnico {{ pingResult.operational_lock.technician_name }} ya atendió este servicio hace {{ pingResult.operational_lock.minutes_ago }}m.</span>
+                </div>
                 <button
                   type="button"
-                  class="btn-touch btn-touch--cyan align-self-end"
-                  :disabled="isPinging || !diagTargetId"
-                  @click="handleRun1ClickPing"
+                  class="btn-touch-xs btn-touch--orange"
+                  :disabled="isPinging"
+                  @click="handleForcePing"
                 >
-                  <span v-if="isPinging">⏳ Probando...</span>
-                  <span v-else>⚡ Test Ping 1-Click</span>
+                  ⚠️ Forzar Prueba Nueva (Instrucción de NOC)
                 </button>
               </div>
 
@@ -925,6 +985,18 @@
                     <span class="metric-val" :class="mtuTestResult === 'PASS' ? 'text-green' : 'text-red'">
                       {{ mtuTestResult || 'En espera' }}
                     </span>
+                  </div>
+                  <div v-if="pingResult.gateway_ping" class="diag-metric-box">
+                    <span class="metric-label">Gateway ({{ pingResult.gateway_ping.target }})</span>
+                    <span class="metric-val text-green">{{ pingResult.gateway_ping.status }} ({{ pingResult.gateway_ping.latency_ms }} ms)</span>
+                  </div>
+                  <div v-if="pingResult.internet_ping" class="diag-metric-box">
+                    <span class="metric-label">Internet WAN ({{ pingResult.internet_ping.target }})</span>
+                    <span class="metric-val text-green">{{ pingResult.internet_ping.status }} ({{ pingResult.internet_ping.latency_ms }} ms)</span>
+                  </div>
+                  <div v-if="pingResult.dns_check" class="diag-metric-box">
+                    <span class="metric-label">DNS ({{ pingResult.dns_check.domain }})</span>
+                    <span class="metric-val text-green">{{ pingResult.dns_check.status }} ({{ pingResult.dns_check.resolved_ip }})</span>
                   </div>
                 </div>
               </div>
@@ -997,6 +1069,27 @@
                 </article>
               </div>
             </div>
+          </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 4: MAPA DE RED UNIFICADO (ZONA TÉCNICA) -->
+        <!-- ========================================== -->
+        <section v-else-if="activeTab === 'map'" class="tab-pane tab-pane-map" aria-labelledby="tab-btn-map">
+          <div class="map-tab-header">
+            <h2 class="form-title">🗺️ Mapa de Zona & Topología FTTH</h2>
+            <p class="form-desc">
+              Visualice clientes y cajas NAP de su zona. Seleccione un abonado para diagnosticarlo. Los routers de cabecera muestran telemetría con acceso WebFig restringido.
+            </p>
+          </div>
+          <div class="map-embedded-container">
+            <UnifiedNetworkMap
+              mode="subscribers"
+              :routers="inventoryStore.routers"
+              :optical-boxes="fieldStore.opticalBoxes"
+              :subscribers="fieldStore.recentInstallations"
+              @select-subscriber="handleSelectSubscriberFromMap"
+            />
           </div>
         </section>
       </main>
@@ -1602,5 +1695,62 @@
   .pill--gray {
     background: rgba(148, 163, 184, 0.2);
     color: #94a3b8;
+  }
+
+  .diag-btns-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+
+  .lock-override-banner {
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .lock-override-text {
+    font-size: 0.85rem;
+    color: #fbbf24;
+  }
+
+  .tab-pane-map {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .map-tab-header {
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 0.875rem 1.25rem;
+  }
+
+  .map-tab-header h2 {
+    font-size: 1.15rem;
+    margin: 0 0 0.25rem 0;
+    color: #00f0ff;
+  }
+
+  .map-tab-header p {
+    font-size: 0.825rem;
+    margin: 0;
+    color: #94a3b8;
+  }
+
+  .map-embedded-container {
+    height: 600px;
+    min-height: 500px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(0, 240, 255, 0.2);
   }
 </style>
