@@ -1085,6 +1085,7 @@
           <div class="map-embedded-container">
             <UnifiedNetworkMap
               mode="subscribers"
+              :allow-webfig="false"
               :routers="inventoryStore.routers"
               :optical-boxes="fieldStore.opticalBoxes"
               :subscribers="fieldStore.recentInstallations"

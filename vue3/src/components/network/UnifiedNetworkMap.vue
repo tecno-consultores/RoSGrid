@@ -13,6 +13,7 @@
   const props = withDefaults(
     defineProps<{
       mode?: 'subscribers' | 'inventory' | 'wallboard';
+      allowWebfig?: boolean;
       routers?: RouterItem[];
       opticalBoxes?: OpticalBoxItem[];
       subscribers?: SubscriberDeviceItem[];
@@ -22,6 +23,7 @@
     }>(),
     {
       mode: 'subscribers',
+      allowWebfig: true,
       routers: () => [],
       opticalBoxes: () => [],
       subscribers: () => [],
@@ -50,12 +52,39 @@
 
   const isIspMode = computed<boolean>(() => Boolean(authStore.tenantFeatures?.isp_module_enabled));
 
-  // Control RBAC: Solo ingenieros de NOC y administradores pueden acceder a WebFig
+  // Control RBAC: Si allowWebfig es false (modo técnico de campo), WebFig está terminantemente prohibido
   const canAccessWebFig = computed<boolean>(() => {
+    if (!props.allowWebfig) return false;
     const role = authStore.currentRole || authStore.user?.role || '';
     const privileged = ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'SUPERVISOR', 'SUPPORT_L3', 'SUPPORT_L2'];
     return privileged.includes(role);
   });
+
+  // Semáforo de salud de Routers: Verde (Online), Naranja (Mantenimiento/Provisión), Rojo (Caído)
+  function getRouterHealth(r: RouterItem): { color: string; label: string; badgeClass: string; pulseClass: string } {
+    if (!r.is_reachable || r.admin_state === 'DECOMMISSIONED') {
+      return {
+        color: '#EF4444', // Rojo
+        label: 'CAÍDO / SIN ALCANCE',
+        badgeClass: 'badge-offline',
+        pulseClass: 'router-pulse-danger',
+      };
+    }
+    if (r.admin_state === 'MAINTENANCE' || r.admin_state === 'PROVISIONING') {
+      return {
+        color: '#F59E0B', // Naranja
+        label: 'EN MANTENIMIENTO / PROVISIÓN',
+        badgeClass: 'badge-warning',
+        pulseClass: 'router-pulse-warning',
+      };
+    }
+    return {
+      color: '#10B981', // Verde
+      label: 'ONLINE / OPERATIVO',
+      badgeClass: 'badge-online',
+      pulseClass: '',
+    };
+  }
 
   // Estado de los 3 Toggles de Capa Independientes
   const showRouters = ref<boolean>(props.mode === 'inventory' || props.mode === 'wallboard');
@@ -160,9 +189,9 @@
         const lng = Number(r.longitude);
         if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) return;
 
-        const isOnline = r.is_reachable && r.admin_state === 'PRODUCTION';
-        const color = isOnline ? '#00F0FF' : '#EF4444';
-        const pulseClass = isOnline ? '' : 'router-pulse-danger';
+        const health = getRouterHealth(r);
+        const color = health.color;
+        const pulseClass = health.pulseClass;
 
         const icon = L.divIcon({
           className: 'rg-router-marker-container',
@@ -400,18 +429,18 @@
             <button type="button" class="btn-close-card" @click="activeRouter = null">✖</button>
           </div>
           <div class="card-body">
-            <p><strong>IP de Gestión:</strong> {{ activeRouter.ip_address }}</p>
+            <p><strong>IP / Endpoint:</strong> {{ activeRouter.ip_address || activeRouter.api_base_url || '--' }}</p>
             <p><strong>Rol de Red:</strong> {{ activeRouter.network_role || 'DISTRIBUTION' }}</p>
             <p><strong>Identidad ROS:</strong> {{ activeRouter.ros_identity || activeRouter.board_name || 'MikroTik Router' }}</p>
             <p>
-              <strong>Estado de Enlace:</strong>
-              <span :class="activeRouter.is_reachable ? 'badge-online' : 'badge-offline'">
-                {{ activeRouter.is_reachable ? 'ONLINE' : 'CAÍDO / SIN ALCANCE' }}
+              <strong>Salud del Router:</strong>
+              <span class="router-health-pill font-mono" :class="getRouterHealth(activeRouter).badgeClass">
+                ● {{ getRouterHealth(activeRouter).label }}
               </span>
             </p>
 
-            <!-- Gobernanza RBAC: Campo NO tiene acceso a WebFig -->
-            <div class="webfig-access-section">
+            <!-- Gobernanza Estricta: En el mapa del técnico NUNCA se muestra el botón de WebFig -->
+            <div v-if="allowWebfig" class="webfig-access-section">
               <RouterLink
                 v-if="canAccessWebFig"
                 :to="'/routers/' + activeRouter.id + '/webfig'"
@@ -423,6 +452,10 @@
                 <span class="lock-icon">🔒</span>
                 <span>Acceso a configuración WebFig restringido para ingenieros de NOC.</span>
               </div>
+            </div>
+            <div v-else class="field-view-indicator">
+              <span class="field-indicator-dot" :style="{ backgroundColor: getRouterHealth(activeRouter).color }"></span>
+              <span class="field-indicator-text">Modo Operaciones de Campo: WebFig estrictamente deshabilitado.</span>
             </div>
           </div>
         </div>
@@ -727,8 +760,61 @@
   font-weight: 600;
 }
 
+.badge-warning {
+  color: #F59E0B;
+  font-weight: 600;
+}
+
 .badge-offline {
   color: #EF4444;
   font-weight: 600;
+}
+
+.router-health-pill {
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid currentColor;
+}
+
+.field-view-indicator {
+  margin-top: 1rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px dashed rgba(148, 163, 184, 0.3);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.field-indicator-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.field-indicator-text {
+  font-size: 0.725rem;
+  color: #94A3B8;
+}
+
+.router-pulse-warning {
+  animation: pulse-orange 1.5s infinite;
+}
+
+@keyframes pulse-orange {
+  0% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(245, 158, 11, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+  }
 }
 </style>

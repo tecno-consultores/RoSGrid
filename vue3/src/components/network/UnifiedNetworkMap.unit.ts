@@ -294,4 +294,38 @@ describe('UnifiedNetworkMap.vue — Mapa de Red Unificado & Gobierno RCA (Hito 2
     expect(wrapper.find('.btn-open-webfig').exists()).toBe(true);
     expect(wrapper.find('.rbac-restricted-box').exists()).toBe(false);
   });
+
+  it('cuando allowWebfig es false (modo técnico de campo), NUNCA muestra el botón de WebFig incluso para SUPERADMIN_GLOBAL', async () => {
+    const authStore = useAuthStore();
+    authStore.currentRole = 'SUPERADMIN_GLOBAL';
+    authStore.tenantFeatures = { isp_module_enabled: true };
+
+    const wrapper = mount(UnifiedNetworkMap, {
+      props: {
+        allowWebfig: false,
+        routers: mockRouters,
+        opticalBoxes: mockBoxes,
+        subscribers: mockSubscribers,
+      },
+      global: {
+        plugins: [pinia],
+        stubs: {
+          RouterLink: true,
+        },
+      },
+    });
+
+    // Simular selección de router
+    (wrapper.vm as unknown as { activeRouter: RouterItem }).activeRouter = mockRouters[0];
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find('.router-detail-card').exists()).toBe(true);
+    // El botón de WebFig NUNCA debe existir en el DOM
+    expect(wrapper.find('.btn-open-webfig').exists()).toBe(false);
+    expect(wrapper.find('.field-view-indicator').exists()).toBe(true);
+    expect(wrapper.text()).toContain('Modo Operaciones de Campo: WebFig estrictamente deshabilitado');
+    // Muestra el semáforo de salud del router
+    expect(wrapper.find('.router-health-pill').exists()).toBe(true);
+    expect(wrapper.text()).toContain('ONLINE / OPERATIVO');
+  });
 });
