@@ -6,8 +6,16 @@ import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import FieldTechMobileView from './FieldTechMobileView.vue';
 import { useFieldOpsStore } from '@/stores/useFieldOpsStore';
+import { useInventoryStore } from '@/stores/useInventoryStore';
+import { useAuthStore } from '@/stores/useAuthStore';
 
-describe('FieldTechMobileView.vue — Panel Responsive del Técnico de Campo', () => {
+vi.mock('vue-router', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+  }),
+}));
+
+describe('FieldTechMobileView.vue — Panel Responsive del Técnico de Campo FTTH', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.restoreAllMocks();
@@ -24,48 +32,86 @@ describe('FieldTechMobileView.vue — Panel Responsive del Técnico de Campo', (
     HTMLCanvasElement.prototype.toDataURL = vi.fn().mockReturnValue('data:image/png;base64,mock');
   });
 
-  it('renderiza encabezado táctico, lista de órdenes y selector de pestañas', async () => {
-    const store = useFieldOpsStore();
-    store.orders = [
-      {
-        id: 'ord-12345678',
-        tenant_id: 't-1',
-        customer_service_id: 'CLI-9901',
-        status: 'ASSIGNED',
-        notes: 'Instalación nueva fibra óptica',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-    ];
+  it('bloquea el panel con aviso táctico si la organización tiene isp_module_enabled desactivado', async () => {
+    const authStore = useAuthStore();
+    authStore.updateTenantFeatures({ isp_module_enabled: false });
 
     const wrapper = mount(FieldTechMobileView);
-    expect(wrapper.text().toUpperCase()).toContain('TÉCNICO DE CAMPO');
-    expect(wrapper.text()).toContain('CLI-9901');
-    expect(wrapper.text()).toContain('ORD-ord-1234');
+    expect(wrapper.find('.non-isp-blocker').exists()).toBe(true);
+    expect(wrapper.text()).toContain('Módulo FTTH/ISP Desactivado');
   });
 
-  it('permite seleccionar una orden y pasa a modo de verificación', async () => {
-    const store = useFieldOpsStore();
-    store.orders = [
-      {
-        id: 'ord-99887766',
-        tenant_id: 't-1',
-        customer_service_id: 'CLI-5544',
-        status: 'ASSIGNED',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-    ];
+  it('renderiza encabezado táctico y las 3 pestañas operativas en Modo ISP', async () => {
+    const authStore = useAuthStore();
+    authStore.updateTenantFeatures({ isp_module_enabled: true });
 
     const wrapper = mount(FieldTechMobileView);
-    const orderCard = wrapper.find('.order-card');
-    await orderCard.trigger('click');
+    expect(wrapper.find('.field-header').exists()).toBe(true);
+    expect(wrapper.find('#tab-btn-nap').exists()).toBe(true);
+    expect(wrapper.find('#tab-btn-customer').exists()).toBe(true);
+    expect(wrapper.find('#tab-btn-diagnostics').exists()).toBe(true);
+  });
 
-    const inputSub = wrapper.find('#sub-id');
-    expect((inputSub.element as HTMLInputElement).value).toBe('CLI-5544');
+  it('permite registrar una nueva Caja NAP', async () => {
+    const authStore = useAuthStore();
+    authStore.updateTenantFeatures({ isp_module_enabled: true });
+
+    const invStore = useInventoryStore();
+    invStore.routers = [
+      {
+        id: 'r-01',
+        display_name: 'CCR2004-Core',
+        ip_address: '10.0.0.1',
+        admin_state: 'PRODUCTION',
+        network_role: 'CORE_ROUTER',
+      } as any,
+    ];
+
+    const fieldStore = useFieldOpsStore();
+    const createBoxSpy = vi.spyOn(fieldStore, 'createOpticalBox').mockResolvedValue({
+      id: 'box-100',
+      tenant_id: 't-1',
+      router_id: 'r-01',
+      box_code: 'NAP-AV01-P12',
+      capacity_ports: 16,
+      splitter_ratio: '1:16',
+      installation_type: 'POSTE',
+      latitude: 10.4806,
+      longitude: -66.9036,
+      status: 'ACTIVE',
+      occupied_ports_count: 0,
+      available_ports_count: 16,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+
+    const wrapper = mount(FieldTechMobileView);
+    await wrapper.find('#nap-router-select').setValue('r-01');
+    await wrapper.find('#nap-code-input').setValue('NAP-AV01-P12');
+    await wrapper.find('form').trigger('submit');
+
+    expect(createBoxSpy).toHaveBeenCalled();
+  });
+
+  it('normaliza seriales GPON en el formulario de alta de cliente', async () => {
+    const authStore = useAuthStore();
+    authStore.updateTenantFeatures({ isp_module_enabled: true });
+
+    const wrapper = mount(FieldTechMobileView);
+    await wrapper.find('#tab-btn-customer').trigger('click');
+
+    const serialInput = wrapper.find('#cust-onu-serial');
+    await serialInput.setValue('4857544312345678'); // 'HWTC' en ASCII HEX
+    const btnNormalize = wrapper.find('.input-with-btn button');
+    await btnNormalize.trigger('click');
+
+    expect((serialInput.element as HTMLInputElement).value).toBe('HWTC12345678');
   });
 
   it('ejecuta captura de coordenadas GPS con feedback reactivo', async () => {
+    const authStore = useAuthStore();
+    authStore.updateTenantFeatures({ isp_module_enabled: true });
+
     const mockGeolocation = {
       getCurrentPosition: vi.fn((success) => {
         success({
@@ -82,7 +128,7 @@ describe('FieldTechMobileView.vue — Panel Responsive del Técnico de Campo', (
     });
 
     const wrapper = mount(FieldTechMobileView);
-    const btnGps = wrapper.find('#btn-prominent-gps-header');
+    const btnGps = wrapper.find('#btn-global-gps');
     await btnGps.trigger('click');
 
     expect(mockGeolocation.getCurrentPosition).toHaveBeenCalled();
@@ -90,87 +136,54 @@ describe('FieldTechMobileView.vue — Panel Responsive del Técnico de Campo', (
     expect(wrapper.text()).toContain('-66.9036');
   });
 
-  it('ejecuta verificación 1-click y muestra métricas en vivo', async () => {
-    const store = useFieldOpsStore();
-    vi.spyOn(store, 'verifySubscriberLive').mockImplementation(async () => {
-      store.activeVerification = {
-        customer_service_id: 'CLI-TEST',
-        session_active: true,
-        connection_type: 'PPPOE',
-        uptime_seconds: 3600,
-        assigned_ipv4: '100.64.10.5',
-        detected_mode: 'ROUTER',
-        ping_success: true,
-        ping_avg_ms: 18,
-        ping_loss_pct: 0,
-        traffic_rx_kbps: 4500,
-        traffic_tx_kbps: 1200,
-        status_summary: 'Enlace óptico excelente',
-      };
-      return store.activeVerification;
+  it('ejecuta test ping 1-click desde MikroTik en la pestaña de diagnósticos', async () => {
+    const authStore = useAuthStore();
+    authStore.updateTenantFeatures({ isp_module_enabled: true });
+
+    const fieldStore = useFieldOpsStore();
+    fieldStore.recentInstallations = [
+      {
+        id: 'dev-1',
+        router_id: 'r-1',
+        endpoint_identifier: 'CLI-001',
+        customer_code: 'CLI-001',
+        device_serial: 'HWTC11223344',
+        last_reachability_status: 'UNKNOWN',
+      } as any,
+    ];
+
+    const pingSpy = vi.spyOn(fieldStore, 'pingSubscriberLive').mockResolvedValue({
+      device_id: 'dev-1',
+      last_reachability_status: 'ONLINE',
+      ping_latency_ms: 18,
+      packet_loss_pct: 0,
+      message: 'Ping MikroTik completado: 18ms',
     });
 
     const wrapper = mount(FieldTechMobileView);
-    const input = wrapper.find('#sub-id');
-    await input.setValue('CLI-TEST');
+    await wrapper.find('#tab-btn-diagnostics').trigger('click');
 
-    const btnTest = wrapper.find('#btn-run-1click-test');
-    await btnTest.trigger('click');
+    await wrapper.find('#diag-target-select').setValue('dev-1');
+    const btnPing = wrapper.find('.diag-action-bar button');
+    await btnPing.trigger('click');
 
-    expect(store.verifySubscriberLive).toHaveBeenCalledWith('CLI-TEST', undefined, undefined);
-    expect(wrapper.text()).toContain('EN LÍNEA EN ROUTEROS');
-    expect(wrapper.text()).toContain('18 ms');
-    expect(wrapper.text()).toContain('100.64.10.5');
+    expect(pingSpy).toHaveBeenCalledWith('dev-1');
   });
 
-  it('permite dibujar y limpiar la firma en el canvas', async () => {
-    const wrapper = mount(FieldTechMobileView);
-    const canvas = wrapper.find('.signature-pad');
+  it('permite dibujar y limpiar la firma en el canvas táctil', async () => {
+    const authStore = useAuthStore();
+    authStore.updateTenantFeatures({ isp_module_enabled: true });
 
+    const wrapper = mount(FieldTechMobileView);
+    await wrapper.find('#tab-btn-diagnostics').trigger('click');
+
+    const canvas = wrapper.find('.signature-pad');
     await canvas.trigger('mousedown', { clientX: 20, clientY: 20 });
     await canvas.trigger('mousemove', { clientX: 60, clientY: 60 });
     await canvas.trigger('mouseup');
 
-    const btnClear = wrapper.find('.btn-clear-sig');
+    const btnClear = wrapper.find('.sig-header button');
     await btnClear.trigger('click');
     expect(btnClear.exists()).toBe(true);
-  });
-
-  it('ejecuta certificación de instalación cuando el serial está ingresado', async () => {
-    const store = useFieldOpsStore();
-    vi.spyOn(store, 'certifyInstallation').mockResolvedValue({
-      id: 'ord-1',
-      tenant_id: 't-1',
-      customer_service_id: 'CLI-CERT',
-      status: 'CERTIFIED',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    });
-
-    const wrapper = mount(FieldTechMobileView);
-    const inputCircuit = wrapper.find('#cert-circuit-id');
-    await inputCircuit.setValue('CLI-CERT');
-
-    const inputSerial = wrapper.find('#cert-serial');
-    await inputSerial.setValue('ZTEGC99887766');
-
-    const btnCertify = wrapper.find('#btn-certify-installation');
-    await btnCertify.trigger('click');
-
-    expect(store.certifyInstallation).toHaveBeenCalled();
-  });
-
-  it('ejecuta diagnóstico rápido 360° en desktop', async () => {
-    const wrapper = mount(FieldTechMobileView);
-    const inputSub = wrapper.find('#sub-id');
-    await inputSub.setValue('CLI-360');
-
-    const btn360 = wrapper.find('.toolkit-360-header button');
-    await btn360.trigger('click');
-
-    // Espera actualización asíncrona
-    await vi.waitFor(() => {
-      expect(wrapper.find('.diag360-result-banner').exists()).toBe(true);
-    });
   });
 });

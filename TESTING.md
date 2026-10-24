@@ -1426,4 +1426,43 @@ Se contrastó cada módulo del backend y frontend que interactúa con routers Mi
 5. **Karate Labs UI BDD:** Escenario 31 incorporado en `vue3/test/ui_business_flow.feature` y replicado en `docs/examples/vue3/test/ui_business_flow.feature` (**31 escenarios totales de UI**).
 6. **Validación en Vivo:** Certificada en navegador real sobre `http://localhost:8085/ipam` visualizando los 3 pools de `r1` (`pool-pcs`, `pool-aps`, `dhcp_pool2`) con sus rangos de IPs exactos (`192.168.10.2 - 192.168.10.254`, etc.) y 20 IPs asociadas.
 
+---
+
+## 32. Arquitectura Bimodal del Mapa de Red (No-ISP vs ISP) y Rediseño Táctico de Operaciones de Campo FTTH (Hito 23.23)
+
+Certificación ejecutada bajo la **Regla Cero** dentro de los contenedores efímeros Docker `sinfallas/rosgrid-backend:local-test` y `sinfallas/rosgrid-frontend:local-test` conforme a `docs/specs/37_BIMODAL_NETWORK_MAP_AND_FTTH_FIELD_OPS.md` y `docs/13_MANUAL_MAPA_RED_BIMODAL_Y_OPERACIONES_CAMPO.md`.
+
+### A. Diagnóstico y Arquitectura Bimodal
+1. **Dualidad de Red (Empresas Estándar vs Operadores FTTH):**
+   - **Modo Empresa No-ISP (`tenant.isp_module_enabled == false`):** Visualiza clientes de red corporativa obtenidos directamente de `/ip/dhcp-server/lease` de MikroTik (PCs, APs, CCTV, impresoras). Heredan automáticamente las coordenadas y sede física del router asignador. Los operadores pueden editar coordenadas puntuales (`is_custom_coordinates = true`) o pulsar `[ 📍 Copiar Coordenadas del Router ]`. Se verifica disponibilidad con Ping 1-Click desde MikroTik vía REST `POST /ping`. Se ocultan completamente las vistas y menús de fibra y campo FTTH.
+   - **Modo ISP (`tenant.isp_module_enabled == true`):** Visualiza la infraestructura FTTH con Cajas NAP georreferenciadas (postes/fachadas) con matriz de puertos 1..16 y badges de ocupación (`utilizados/capacidad`), junto con abonados y ONUs aprovisionados formalmente enlazados por líneas discontinuas (drop polylines).
+2. **Rediseño Integral de la Pantalla del Técnico de Campo (`/field-ops`):**
+   - Eliminación de la barrera de "0 órdenes de trabajo" mediante un flujo de 3 pestañas de acción inmediata:
+     - **Pestaña 1 (Registrar Caja NAP):** Captura GPS, código de caja, serial, marca, modelo, capacidad (8/16/24), splitter ratio, potencia óptica de entrada ($dBm$), tipo de anclaje (poste/fachada) y router MikroTik asignado.
+     - **Pestaña 2 (Registrar Nuevo Cliente FTTH):** Serial ONU con normalización automática GPON HEX->ASCII, selector dinámico de Caja NAP cercana con puertos libres disponibles, asignación de puerto de caja, modelo ONU, modo Bridge/Router, potencia óptica $Rx\text{ dBm}$ con semáforo dinámico (Verde $\ge -24$, Amarillo $-27$ a $-25$, Rojo $<-27$), metros de cable drop y captura GPS de domicilio.
+     - **Pestaña 3 (Diagnósticos y Certificación 1-Click):** Ping ICMP en vivo desde MikroTik, verificación de sesión activa RouterOS, test MTU 1500 DF pass y canvas táctil para firma digital del cliente y certificación de orden WORM.
+     - **Historial Inferior:** Visualización inmediata de las altas recientes realizadas durante el turno del técnico.
+
+### B. Implementación Técnica y Paridad de Base de Datos
+1. **Modelos ORM y Migración Alembic 0010 (`fastapi/migrations/versions/0010_optical_boxes_ftth.py`):**
+   - Creación de tabla `optical_boxes` con aislamiento estricto RLS por `tenant_id`, índices espaciales/bimodalidad, y relaciones con `routers` y `subscriber_devices`.
+   - Extensión de `subscriber_devices` con `optical_box_id`, `optical_box_port`, `rx_optical_power_dbm`, `drop_cable_meters` e `is_custom_coordinates`.
+   - Paridad ORM-Alembic certificada al 100% (26 de 26 tablas).
+2. **Endpoints REST FastAPI:**
+   - `optical_boxes_router` (`/api/v1/optical-boxes`): CRUD completo con cálculo dinámico de puertos y detalle de matriz 1..N protegido por `require_feature("isp_module_enabled")`.
+   - `subscribers_router` (`/api/v1/subscriber-devices`): Desacoplado de `require_feature` para operar en modo empresa, agregando `POST /sync-dhcp`, `POST /{device_id}/ping` y `PATCH /{device_id}` con soporte para `reset_to_router_coordinates`.
+3. **Frontend Vue 3 Táctico:**
+   - Componente `FieldTechMobileView.vue` con diseño responsive móvil para brigadas, soporte táctil, semáforo óptico y canvas de firma.
+   - Componente `OsmOnuMap.vue` y vista `SubscribersMapView.vue` con capas Leaflet modulares de Cajas NAP, trazado de líneas drop y drawer interactivo de matriz de puertos.
+
+### C. Cobertura y Certificación Multi-Capa 11X
+1. **Backend Unitario:** `fastapi/tests/api/test_optical_boxes_and_bimodal_ops.unit.py` (3 pruebas) y `test_subscribers.unit.py` (3 pruebas) aprobadas al 100% (**6 de 6 pruebas PASADAS**).
+2. **Frontend Unitario:** `FieldTechMobileView.unit.ts` (7 pruebas) y `subscribersMapView.unit.ts` (5 pruebas) aprobadas al 100% (**12 de 12 pruebas PASADAS**).
+3. **Análisis Estático y Tipado:** `vue-tsc --noEmit` (0 errores), `ruff check` (0 errores), `mypy` (0 errores) y `eslint` (0 errores).
+4. **Contratos Front-Back:** Suite de 26 pruebas de integración (`validar_comunicacion_front_back.py`) aprobadas al 100% (26/26).
+5. **Karate Labs API BDD:** Escenarios 78, 79, 80, 81 y 82 incorporados en `fastapi/test/api_test.feature` y replicados en `docs/examples/fastapi/test/api_test.feature` (**82 escenarios totales de API**).
+6. **Karate Labs UI BDD:** Escenarios 32 y 33 incorporados en `vue3/test/ui_business_flow.feature` y replicados en `docs/examples/vue3/test/ui_business_flow.feature` (**33 escenarios totales de UI**).
+7. **Auditoría de Secretos:** 0 secretos detectados con `./scripts/verificar-secretos.sh`.
+
+
 

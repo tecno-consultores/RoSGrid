@@ -204,6 +204,11 @@ class SubscriberDeviceCreate(BaseModel):
     optical_box: Optional[str] = Field(None, max_length=64)
     latitude: Optional[Decimal] = None
     longitude: Optional[Decimal] = None
+    optical_box_id: Optional[uuid.UUID] = None
+    optical_box_port: Optional[int] = None
+    rx_optical_power_dbm: Optional[Decimal] = None
+    drop_cable_meters: Optional[int] = None
+    is_custom_coordinates: bool = False
     # Compatibilidad con llamadas heredadas
     customer_name: Optional[str] = None
     customer_code: Optional[str] = None
@@ -226,6 +231,12 @@ class SubscriberDeviceUpdate(BaseModel):
     cpe_wifi_mac_address: Optional[str] = None
     pon_port: Optional[str] = None
     optical_box: Optional[str] = None
+    optical_box_id: Optional[uuid.UUID] = None
+    optical_box_port: Optional[int] = None
+    rx_optical_power_dbm: Optional[Decimal] = None
+    drop_cable_meters: Optional[int] = None
+    is_custom_coordinates: Optional[bool] = None
+    reset_to_router_coordinates: Optional[bool] = None
     status: Optional[str] = None
     latitude: Optional[Decimal] = None
     longitude: Optional[Decimal] = None
@@ -255,6 +266,11 @@ class SubscriberDeviceResponse(BaseModel):
     cpe_wifi_mac_address: Optional[str] = None
     pon_port: Optional[str] = None
     optical_box: Optional[str] = None
+    optical_box_id: Optional[uuid.UUID] = None
+    optical_box_port: Optional[int] = None
+    rx_optical_power_dbm: Optional[Decimal] = None
+    drop_cable_meters: Optional[int] = None
+    is_custom_coordinates: Optional[bool] = False
     last_reachability_status: str = "ONLINE"
     last_seen_at: Optional[datetime] = None
     status: str
@@ -272,3 +288,98 @@ class SubscriberDeviceResponse(BaseModel):
 CustomerServiceCreate = SubscriberDeviceCreate
 CustomerServiceUpdate = SubscriberDeviceUpdate
 CustomerServiceResponse = SubscriberDeviceResponse
+
+
+class OpticalBoxCreate(BaseModel):
+    router_id: uuid.UUID
+    box_code: str
+    brand: Optional[str] = None
+    model: Optional[str] = None
+    capacity_ports: int = 16
+    splitter_ratio: str = "1:16"
+    installation_type: str = "POLE"
+    physical_location: Optional[str] = None
+    input_power_dbm: Optional[Decimal] = None
+    latitude: Decimal
+    longitude: Decimal
+    status: str = "ACTIVE"
+    notes: Optional[str] = None
+
+
+class OpticalBoxUpdate(BaseModel):
+    box_code: Optional[str] = None
+    brand: Optional[str] = None
+    model: Optional[str] = None
+    capacity_ports: Optional[int] = None
+    splitter_ratio: Optional[str] = None
+    installation_type: Optional[str] = None
+    physical_location: Optional[str] = None
+    input_power_dbm: Optional[Decimal] = None
+    latitude: Optional[Decimal] = None
+    longitude: Optional[Decimal] = None
+    status: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class OpticalBoxResponse(BaseModel):
+    id: uuid.UUID
+    tenant_id: uuid.UUID
+    router_id: uuid.UUID
+    box_code: str
+    brand: Optional[str] = None
+    model: Optional[str] = None
+    capacity_ports: int
+    splitter_ratio: str
+    installation_type: str
+    physical_location: Optional[str] = None
+    input_power_dbm: Optional[Decimal] = None
+    latitude: Decimal
+    longitude: Decimal
+    status: str
+    notes: Optional[str] = None
+    occupied_ports_count: int = 0
+    available_ports_count: int = 16
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class OpticalBoxPortStatus(BaseModel):
+    port_number: int
+    is_occupied: bool
+    subscriber_id: Optional[uuid.UUID] = None
+    subscriber_identifier: Optional[str] = None
+    assigned_ipv4: Optional[str] = None
+    reachability_status: str = "FREE"
+    rx_power_dbm: Optional[Decimal] = None
+
+
+class OpticalBoxDetailResponse(OpticalBoxResponse):
+    ports: list[OpticalBoxPortStatus] = []
+    subscribers: list[SubscriberDeviceResponse] = []
+
+
+class SimulateSubscribersResponse(BaseModel):
+    created_count: int
+    updated_count: int
+    total_subscribers: int
+    message: str
+
+
+class SyncDhcpClientsResponse(BaseModel):
+    created_count: int
+    updated_count: int
+    total_subscribers: int
+    message: str
+
+
+class SubscriberDevicePingResponse(BaseModel):
+    device_id: uuid.UUID
+    assigned_ipv4: Optional[str] = None
+    last_reachability_status: str
+    ping_latency_ms: Optional[Decimal] = None
+    packet_loss_pct: Optional[Decimal] = None
+    message: str
+
+

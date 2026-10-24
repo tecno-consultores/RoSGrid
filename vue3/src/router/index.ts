@@ -297,8 +297,7 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/SubscribersMapView.vue'),
     meta: {
       requiresAuth: true,
-      requiredFeature: 'isp_module_enabled',
-      title: 'Mapa Exclusivo de Clientes y ONUs — RoSGrid',
+      title: 'Mapa de Red & Clientes — RoSGrid',
     },
   },
   {

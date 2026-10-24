@@ -616,5 +616,40 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  # ==============================================================================
+  # Grupo 24: Arquitectura Bimodal y Operaciones de Campo FTTH (Hito 23.23)
+  # ==============================================================================
+
+  Scenario: 78. Consulta de Cajas NAP de distribución óptica FTTH sin autenticación devuelve 401
+    Given path '/api/v1/optical-boxes'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 79. Creación de Caja NAP de fibra óptica sin autenticación devuelve 401
+    Given path '/api/v1/optical-boxes'
+    And request { "box_code": "NAP-NORTE-01", "capacity_ports": 16, "splitter_ratio": "1:16" }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 80. Consulta de detalle y matriz de puertos de Caja NAP sin autenticación devuelve 401
+    Given path '/api/v1/optical-boxes/00000000-0000-0000-0000-000000000001'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 81. Sincronización en vivo de dispositivos DHCP para Mapa de Red sin autenticación devuelve 401
+    Given path '/api/v1/subscriber-devices/sync-dhcp'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 82. Test Ping ICMP 1-Click hacia dispositivo de red sin autenticación devuelve 401
+    Given path '/api/v1/subscriber-devices/00000000-0000-0000-0000-000000000001/ping'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
 
 

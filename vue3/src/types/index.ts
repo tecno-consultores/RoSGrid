@@ -740,6 +740,7 @@ export interface SubscriberDeviceItem {
   ipv4_address_id?: string | null;
   ipv6_delegated_prefix?: string | null;
   bandwidth_profile_id?: string | null;
+  assigned_ipv4?: string | null;
   onu_mode: 'ROUTER' | 'BRIDGE' | string;
   onu_mac_address?: string | null;
   device_serial?: string | null;
@@ -747,6 +748,11 @@ export interface SubscriberDeviceItem {
   cpe_wifi_mac_address?: string | null;
   pon_port?: string | null;
   optical_box?: string | null;
+  optical_box_id?: string | null;
+  optical_box_port?: number | null;
+  rx_optical_power_dbm?: number | null;
+  drop_cable_meters?: number | null;
+  is_custom_coordinates?: boolean;
   last_reachability_status?: string | null;
   last_seen_at?: string | null;
   status: string;
@@ -760,6 +766,43 @@ export interface SubscriberDeviceItem {
   ping_latency_ms?: number | null;
   packet_loss_pct?: number | null;
   zero_metrics_state?: ZeroMetricsState;
+}
+
+export interface OpticalBoxItem {
+  id: string;
+  tenant_id: string;
+  router_id: string;
+  box_code: string;
+  brand?: string | null;
+  model?: string | null;
+  capacity_ports: number;
+  splitter_ratio: string;
+  installation_type: string;
+  physical_location?: string | null;
+  input_power_dbm?: number | null;
+  latitude: number;
+  longitude: number;
+  status: string;
+  notes?: string | null;
+  occupied_ports_count: number;
+  available_ports_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OpticalBoxPortStatus {
+  port_number: number;
+  is_occupied: boolean;
+  subscriber_id?: string | null;
+  subscriber_identifier?: string | null;
+  assigned_ipv4?: string | null;
+  reachability_status: 'FREE' | 'ONLINE' | 'OFFLINE' | 'DEGRADED' | string;
+  rx_power_dbm?: number | null;
+}
+
+export interface OpticalBoxDetailItem extends OpticalBoxItem {
+  ports: OpticalBoxPortStatus[];
+  subscribers: SubscriberDeviceItem[];
 }
 
 // ============================================================================

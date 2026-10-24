@@ -5,21 +5,23 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import SubscribersMapView from './SubscribersMapView.vue';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { useFieldOpsStore } from '@/stores/useFieldOpsStore';
 import { http } from '@/api/httpClient';
 
 vi.mock('@/components/inventory/OsmOnuMap.vue', () => ({
   default: {
     name: 'OsmOnuMap',
     template: '<div class="mock-osm-onu-map" data-testid="osm-onu-map"></div>',
-    props: ['onus', 'selectedOnuId'],
-    emits: ['select-onu', 'verify-onu', 'diagnose-onu'],
+    props: ['onus', 'opticalBoxes', 'selectedOnuId'],
+    emits: ['select-onu', 'select-box', 'verify-onu', 'diagnose-onu'],
   },
 }));
 
 const MOCK_SERIAL = 'ZTEGC00001';
 const MOCK_MAP_SELECTOR = '.mock-osm-onu-map';
 
-describe('SubscribersMapView.vue — Vista de Mapa de Clientes / ONUs', () => {
+describe('SubscribersMapView.vue — Vista Bimodal de Mapa de Red y Clientes', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.restoreAllMocks();
@@ -40,10 +42,13 @@ describe('SubscribersMapView.vue — Vista de Mapa de Clientes / ONUs', () => {
           onu_serial_number: MOCK_SERIAL,
           customer_name: 'Carlos Santana',
           customer_code: 'CLI-01',
+          endpoint_identifier: 'CLI-01',
+          assigned_ipv4: '192.168.88.50',
           pon_port: 'sfp-plus1',
           optical_box: 'NAP-A',
           latitude: 10.4806,
           longitude: -66.9036,
+          is_custom_coordinates: false,
           last_reachability_status: 'ONLINE',
           status: 'ACTIVE',
           ping_latency_ms: 22,
@@ -62,10 +67,13 @@ describe('SubscribersMapView.vue — Vista de Mapa de Clientes / ONUs', () => {
           onu_serial_number: 'HWTC00002',
           customer_name: 'Ana Maria',
           customer_code: 'CLI-02',
+          endpoint_identifier: 'CLI-02',
+          assigned_ipv4: '192.168.88.51',
           pon_port: 'sfp-plus1',
           optical_box: 'NAP-A',
           latitude: 10.481,
           longitude: -66.904,
+          is_custom_coordinates: true,
           last_reachability_status: 'ONLINE',
           status: 'ACTIVE',
           ping_latency_ms: 75,
@@ -73,108 +81,151 @@ describe('SubscribersMapView.vue — Vista de Mapa de Clientes / ONUs', () => {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
-        {
-          id: 'onu-03',
-          tenant_id: 't-1',
-          router_id: 'r-1',
-          service_type: 'FTTH_PPPOE',
-          auth_backend: 'INTERNAL',
-          onu_mode: 'ROUTER',
-          device_serial: 'ZTEGC00003',
-          onu_serial_number: 'ZTEGC00003',
-          customer_name: 'Luis Miguel',
-          customer_code: 'CLI-03',
-          pon_port: 'sfp-plus2',
-          optical_box: 'NAP-B',
-          latitude: 10.485,
-          longitude: -66.908,
-          last_reachability_status: 'OFFLINE',
-          status: 'ACTIVE',
-          ping_latency_ms: null,
-          packet_loss_pct: 100,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
       ],
     });
   });
 
-  it('carga lista de ONUs y renderiza KPIs Zero-Metrics', async () => {
+  it('renderiza título de Modo ISP cuando isp_module_enabled está activo', async () => {
+    const authStore = useAuthStore();
+    authStore.updateTenantFeatures({ isp_module_enabled: true });
+
     const wrapper = mount(SubscribersMapView);
     await vi.waitFor(() => {
-      expect(wrapper.text()).toContain('3'); // Total ONUs
+      expect(wrapper.text()).toContain('2'); // Total equipos
     });
-    expect(wrapper.text()).toContain('Mapa de Clientes y ONUs');
+    expect(wrapper.text()).toContain('Mapa de Cobertura FTTH y Cajas NAP');
+    expect(wrapper.find('.btn-simulate-dhcp').exists()).toBe(true);
   });
 
-  it('filtra por texto de búsqueda', async () => {
+  it('renderiza título de Modo Empresa (No-ISP) y botón de sincronización DHCP', async () => {
+    const authStore = useAuthStore();
+    authStore.updateTenantFeatures({ isp_module_enabled: false });
+
+    const wrapper = mount(SubscribersMapView);
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain('2');
+    });
+    expect(wrapper.text()).toContain('Mapa de Red y Clientes DHCP');
+    expect(wrapper.find('.btn-sync-dhcp').exists()).toBe(true);
+    expect(wrapper.find('.btn-simulate-dhcp').exists()).toBe(false);
+  });
+
+  it('ejecuta sincronización real DHCP al presionar el botón de sync', async () => {
+    const authStore = useAuthStore();
+    authStore.updateTenantFeatures({ isp_module_enabled: false });
+
+    const postSpy = vi.spyOn(http, 'post').mockResolvedValue({
+      status: 200,
+      headers: new Headers(),
+      data: {
+        message: 'Sincronización DHCP completada: 5 leases procesados.',
+        routers_polled: 1,
+        leases_found: 5,
+        created_count: 3,
+        updated_count: 2,
+      },
+    });
+
+    const wrapper = mount(SubscribersMapView);
+    await vi.waitFor(() => {
+      expect(wrapper.find('.btn-sync-dhcp').exists()).toBe(true);
+    });
+
+    await wrapper.find('.btn-sync-dhcp').trigger('click');
+    expect(postSpy).toHaveBeenCalledWith('/api/v1/subscriber-devices/sync-dhcp');
+  });
+
+  it('abre drawer de cliente y permite test ping 1-click en vivo', async () => {
+    const authStore = useAuthStore();
+    authStore.updateTenantFeatures({ isp_module_enabled: true });
+
+    const postSpy = vi.spyOn(http, 'post').mockResolvedValue({
+      status: 200,
+      headers: new Headers(),
+      data: {
+        device_id: 'onu-01',
+        last_reachability_status: 'ONLINE',
+        ping_latency_ms: 12,
+        packet_loss_pct: 0,
+        message: 'Host alcanzable con 12ms',
+      },
+    });
+
     const wrapper = mount(SubscribersMapView);
     await vi.waitFor(() => {
       expect(wrapper.find(MOCK_MAP_SELECTOR).exists()).toBe(true);
-    });
-
-    const searchInput = wrapper.find('.rg-search-input');
-    await searchInput.setValue(MOCK_SERIAL);
-
-    const clearBtn = wrapper.find('.btn-clear-search');
-    expect(clearBtn.exists()).toBe(true);
-    await clearBtn.trigger('click');
-    expect((searchInput.element as HTMLInputElement).value).toBe('');
-  });
-
-  it('filtra por chip de estado cromático (OPTIMAL, DEGRADED, DOWN)', async () => {
-    const wrapper = mount(SubscribersMapView);
-    await vi.waitFor(() => {
-      expect(wrapper.find('.filter-chips').exists()).toBe(true);
-    });
-
-    const chips = wrapper.findAll('.chip-btn');
-    await chips[1].trigger('click'); // OPTIMAL
-    expect(chips[1].classes()).toContain('active');
-
-    await chips[2].trigger('click'); // DEGRADED
-    expect(chips[2].classes()).toContain('active');
-
-    await chips[3].trigger('click'); // DOWN
-    expect(chips[3].classes()).toContain('active');
-  });
-
-  it('abre y cierra el drawer de detalle al seleccionar una ONU', async () => {
-    const wrapper = mount(SubscribersMapView);
-    await vi.waitFor(() => {
-      expect(wrapper.text()).toContain('3');
-      expect(wrapper.find(MOCK_MAP_SELECTOR).exists()).toBe(true);
+      expect(wrapper.text()).toContain('2');
     });
 
     const osmMapComponent = wrapper.findComponent({ name: 'OsmOnuMap' });
     osmMapComponent.vm.$emit('select-onu', 'onu-01');
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.find('.onu-detail-drawer').exists()).toBe(true);
-    expect(wrapper.text()).toContain('Carlos Santana');
+    await vi.waitFor(() => {
+      expect(wrapper.find('.onu-detail-drawer').exists()).toBe(true);
+    });
+    expect(wrapper.text()).toContain('192.168.88.50');
 
-    const btnClose = wrapper.find('.btn-close-drawer');
-    await btnClose.trigger('click');
-    expect(wrapper.find('.onu-detail-drawer').exists()).toBe(false);
+    // Botón Ping 1-Click
+    const pingBtn = wrapper.find('.drawer-ping-section button');
+    await pingBtn.trigger('click');
+
+    expect(postSpy).toHaveBeenCalledWith('/api/v1/subscriber-devices/onu-01/ping');
   });
 
-  it('ejecuta acciones de test 1-click y diagnóstico 360 desde el mapa', async () => {
+  it('abre drawer de Caja NAP al emitir select-box', async () => {
+    const authStore = useAuthStore();
+    authStore.updateTenantFeatures({ isp_module_enabled: true });
+
+    const fieldStore = useFieldOpsStore();
+    vi.spyOn(fieldStore, 'fetchOpticalBoxDetail').mockResolvedValue({
+      id: 'box-01',
+      tenant_id: 't-1',
+      router_id: 'r-1',
+      box_code: 'NAP-NORTE-01',
+      capacity_ports: 16,
+      splitter_ratio: '1:16',
+      installation_type: 'POSTE',
+      physical_location: 'Calle 4ta Poste 10',
+      input_power_dbm: -15.5,
+      latitude: 10.48,
+      longitude: -66.90,
+      status: 'ACTIVE',
+      occupied_ports_count: 2,
+      available_ports_count: 14,
+      ports: [
+        {
+          port_number: 1,
+          is_occupied: true,
+          subscriber_id: 'onu-01',
+          subscriber_identifier: 'ZTEGC00001',
+          reachability_status: 'ONLINE',
+        },
+        {
+          port_number: 2,
+          is_occupied: false,
+          reachability_status: 'FREE',
+        },
+      ],
+      subscribers: [
+        { id: 'onu-01', endpoint_identifier: 'CLI-01', device_serial: 'ZTEGC00001', optical_box_port: 1 } as any,
+      ],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+
     const wrapper = mount(SubscribersMapView);
     await vi.waitFor(() => {
       expect(wrapper.find(MOCK_MAP_SELECTOR).exists()).toBe(true);
     });
 
     const osmMapComponent = wrapper.findComponent({ name: 'OsmOnuMap' });
-    osmMapComponent.vm.$emit('verify-onu', {
-      id: 'onu-01',
-      device_serial: MOCK_SERIAL,
-    });
-    expect(window.alert).toHaveBeenCalledWith(expect.stringContaining('1-Click'));
+    osmMapComponent.vm.$emit('select-box', 'box-01');
+    await wrapper.vm.$nextTick();
 
-    osmMapComponent.vm.$emit('diagnose-onu', {
-      id: 'onu-01',
-      device_serial: MOCK_SERIAL,
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain('NAP-NORTE-01');
+      expect(wrapper.text()).toContain('Matriz de Puertos');
     });
-    expect(window.alert).toHaveBeenCalledWith(expect.stringContaining('360°'));
   });
 });

@@ -238,6 +238,41 @@ class BandwidthProfile(Base):
     )
 
 
+class OpticalBox(Base):
+    __tablename__ = "optical_boxes"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "box_code", name="uq_optical_boxes_tenant_code"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+    router_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("routers.id", ondelete="RESTRICT"), nullable=False
+    )
+    box_code: Mapped[str] = mapped_column(String(64), nullable=False)
+    brand: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    model: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    capacity_ports: Mapped[int] = mapped_column(Integer, nullable=False, default=16)
+    splitter_ratio: Mapped[str] = mapped_column(String(20), nullable=False, default="1:16")
+    installation_type: Mapped[str] = mapped_column(String(32), default="POLE")
+    physical_location: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    input_power_dbm: Mapped[Optional[Decimal]] = mapped_column(Numeric(5, 2), nullable=True)
+    latitude: Mapped[Decimal] = mapped_column(Numeric(9, 6), nullable=False)
+    longitude: Mapped[Decimal] = mapped_column(Numeric(9, 6), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="ACTIVE")
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), onupdate=datetime.now
+    )
+
+    subscribers: Mapped[list["SubscriberDevice"]] = relationship(
+        "SubscriberDevice", back_populates="optical_box_rel"
+    )
+
+
 class SubscriberDevice(Base):
     __tablename__ = "subscriber_devices"
     __table_args__ = (
@@ -280,9 +315,20 @@ class SubscriberDevice(Base):
     cpe_wifi_mac_address: Mapped[Optional[str]] = mapped_column(String(17), nullable=True)
     pon_port: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     optical_box: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    optical_box_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("optical_boxes.id", ondelete="SET NULL"), nullable=True
+    )
+    optical_box_port: Mapped[Optional[int]] = mapped_column(SmallInteger, nullable=True)
+    rx_optical_power_dbm: Mapped[Optional[Decimal]] = mapped_column(Numeric(5, 2), nullable=True)
+    drop_cable_meters: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    is_custom_coordinates: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     last_reachability_status: Mapped[str] = mapped_column(String(20), default="ONLINE")
     last_seen_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-    status: Mapped[str] = mapped_column(String(32), nullable=False, default="PENDING_ACTIVATION")
+    status: Mapped[CustomerServiceStatusEnum] = mapped_column(
+        Enum(CustomerServiceStatusEnum, name="customer_service_status_enum", create_type=False),
+        nullable=False,
+        default=CustomerServiceStatusEnum.PENDING_INSTALL,
+    )
     latitude: Mapped[Optional[Decimal]] = mapped_column(Numeric(9, 6), nullable=True)
     longitude: Mapped[Optional[Decimal]] = mapped_column(Numeric(9, 6), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
@@ -294,6 +340,7 @@ class SubscriberDevice(Base):
     bandwidth_profile: Mapped[Optional["BandwidthProfile"]] = relationship(
         "BandwidthProfile", back_populates="subscriber_devices"
     )
+    optical_box_rel: Mapped[Optional["OpticalBox"]] = relationship("OpticalBox", back_populates="subscribers")
     field_orders: Mapped[list["FieldInstallationOrder"]] = relationship(
         "FieldInstallationOrder", back_populates="subscriber_device", cascade="all, delete-orphan"
     )
@@ -325,6 +372,14 @@ class SubscriberDevice(Base):
     @assigned_ipv4.setter
     def assigned_ipv4(self, val: Optional[str]) -> None:
         self._assigned_ipv4_cache = val
+
+    @property
+    def customer_name(self) -> Optional[str]:
+        return self.endpoint_identifier
+
+    @property
+    def customer_code(self) -> Optional[str]:
+        return self.endpoint_identifier
 
 
 CustomerService = SubscriberDevice

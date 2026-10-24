@@ -4,7 +4,7 @@
 <script setup lang="ts">
   import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
   import L from 'leaflet';
-  import type { SubscriberDeviceItem } from '@/types';
+  import type { OpticalBoxItem, SubscriberDeviceItem } from '@/types';
   import { escapeHtml } from '@/utils/security';
 
   interface LocationGroup {
@@ -16,11 +16,13 @@
   const props = withDefaults(
     defineProps<{
       onus: SubscriberDeviceItem[];
+      opticalBoxes?: OpticalBoxItem[];
       selectedOnuId?: string | null;
       centerCoordinates?: [number, number];
       zoomLevel?: number;
     }>(),
     {
+      opticalBoxes: () => [],
       selectedOnuId: null,
       centerCoordinates: () => [10.4806, -66.9036], // Caracas por defecto
       zoomLevel: 13,
@@ -29,6 +31,7 @@
 
   const emit = defineEmits<{
     (e: 'select-onu', onuId: string): void;
+    (e: 'select-box', boxId: string): void;
     (e: 'verify-onu', onu: SubscriberDeviceItem): void;
     (e: 'diagnose-onu', onu: SubscriberDeviceItem): void;
   }>();
@@ -45,6 +48,8 @@
   let mapInstance: L.Map | null = null;
   let markersLayer: L.LayerGroup | null = null;
   let spiderLayer: L.LayerGroup | null = null;
+  let boxesLayer: L.LayerGroup | null = null;
+  let dropCableLayer: L.LayerGroup | null = null;
   let resizeObserver: ResizeObserver | null = null;
 
   /**
@@ -114,6 +119,63 @@
       iconSize: [26, 26],
       iconAnchor: [13, 13],
     });
+  }
+
+  function createOpticalBoxIcon(box: OpticalBoxItem): L.DivIcon {
+    return L.divIcon({
+      className: 'rg-box-pin-container',
+      html: `
+        <div class="rg-box-pin" role="button" tabindex="0" aria-label="Caja NAP ${escapeHtml(box.box_code)}">
+          <div class="box-pin-body">
+            <span class="box-icon">📦</span>
+            <span class="box-code-badge font-mono">${escapeHtml(box.box_code)}</span>
+          </div>
+          <div class="box-pin-capacity font-mono">${box.capacity_ports}p</div>
+        </div>
+      `,
+      iconSize: [44, 44],
+      iconAnchor: [22, 22],
+    });
+  }
+
+  function createOpticalBoxPopup(box: OpticalBoxItem): HTMLElement {
+    const popupContent = document.createElement('div');
+    popupContent.className = 'rg-map-popup rg-box-popup';
+    const code = escapeHtml(box.box_code);
+    const loc = escapeHtml(box.physical_location || 'Ubicación sin especificar');
+    const splitter = escapeHtml(box.splitter_ratio || '1:16');
+    const power = box.input_power_dbm !== undefined && box.input_power_dbm !== null
+      ? `${box.input_power_dbm} dBm`
+      : 'N/A';
+
+    popupContent.innerHTML = `
+      <div class="popup-title"><strong>📦 Caja NAP: ${code}</strong></div>
+      <div class="popup-identity">Ubicación: <code>${loc}</code></div>
+      <div class="popup-meta">
+        Capacidad: <strong>${box.capacity_ports} Puertos</strong> | Splitter: <code>${splitter}</code>
+      </div>
+      <div class="popup-telemetry">
+        Potencia Pin: <strong class="text-cyan">${power}</strong>
+      </div>
+      <div class="popup-actions">
+        <button type="button" class="btn-popup-inspect-box" data-box-id="${escapeHtml(box.id)}">
+          🔍 Ver Puertos y Abonados
+        </button>
+      </div>
+    `;
+
+    L.DomEvent.disableClickPropagation(popupContent);
+    const inspectBtn = popupContent.querySelector('.btn-popup-inspect-box') as HTMLButtonElement | null;
+    if (inspectBtn) {
+      L.DomEvent.disableClickPropagation(inspectBtn);
+      L.DomEvent.on(inspectBtn, 'click', (ev) => {
+        L.DomEvent.stopPropagation(ev);
+        L.DomEvent.preventDefault(ev);
+        emit('select-box', box.id);
+      });
+    }
+
+    return popupContent;
   }
 
   function createSingleOnuPopup(onu: SubscriberDeviceItem): HTMLElement {
@@ -277,31 +339,74 @@
     });
   }
 
-  function renderMarkers(): void {
-    if (!markersLayer || !mapInstance) return;
-    markersLayer.clearLayers();
-    if (spiderLayer) spiderLayer.clearLayers();
+  function renderOpticalBoxes(bounds: L.LatLngBounds): void {
+    if (!props.opticalBoxes || props.opticalBoxes.length === 0 || !boxesLayer) return;
+    const targetLayer = boxesLayer;
 
-    // Filtrar equipos con coordenadas válidas
-    const validOnus = props.onus.filter(
-      (o) =>
-        o.latitude !== undefined &&
-        o.latitude !== null &&
-        o.longitude !== undefined &&
-        o.longitude !== null &&
-        !isNaN(Number(o.latitude)) &&
-        !isNaN(Number(o.longitude)) &&
-        (Number(o.latitude) !== 0 || Number(o.longitude) !== 0),
-    );
+    props.opticalBoxes.forEach((box) => {
+      if (
+        box.latitude !== undefined &&
+        box.latitude !== null &&
+        box.longitude !== undefined &&
+        box.longitude !== null &&
+        !isNaN(Number(box.latitude)) &&
+        !isNaN(Number(box.longitude)) &&
+        (Number(box.latitude) !== 0 || Number(box.longitude) !== 0)
+      ) {
+        const boxLatLng = L.latLng(Number(box.latitude), Number(box.longitude));
+        bounds.extend(boxLatLng);
 
-    if (validOnus.length === 0) {
-      if (mapInstance) {
-        mapInstance.setView(props.centerCoordinates, props.zoomLevel);
+        const boxMarker = L.marker(boxLatLng, {
+          icon: createOpticalBoxIcon(box),
+        });
+
+        boxMarker.bindPopup(createOpticalBoxPopup(box), {
+          className: POPUP_CUSTOM_CLASS,
+          maxWidth: 300,
+        });
+
+        boxMarker.on('click', () => {
+          emit('select-box', box.id);
+        });
+
+        boxMarker.addTo(targetLayer);
       }
-      return;
-    }
+    });
+  }
 
-    // Agrupar por coordenadas coincidentes
+  function renderSelectedDropCable(): void {
+    if (!props.selectedOnuId || !dropCableLayer) return;
+    const targetCableLayer = dropCableLayer;
+
+    const selected = props.onus.find((o) => o.id === props.selectedOnuId);
+    if (!selected || !selected.optical_box_id || !selected.latitude || !selected.longitude) return;
+
+    const box = props.opticalBoxes?.find((b) => b.id === selected.optical_box_id);
+    if (!box || !box.latitude || !box.longitude) return;
+
+    const dropLine = L.polyline(
+      [
+        [Number(box.latitude), Number(box.longitude)],
+        [Number(selected.latitude), Number(selected.longitude)],
+      ],
+      {
+        color: '#00F3FF',
+        weight: 2.5,
+        dashArray: '5, 5',
+        opacity: 0.85,
+      },
+    );
+    const distLabel = selected.drop_cable_meters ? ` (${selected.drop_cable_meters}m drop)` : '';
+    dropLine.bindTooltip(
+      `Acometida Óptica: ${box.box_code} → Puerto ${selected.optical_box_port ?? '1'}${distLabel}`,
+      { sticky: true, className: 'rg-drop-tooltip font-mono' },
+    );
+    dropLine.addTo(targetCableLayer);
+  }
+
+  function renderSubscriberGroups(validOnus: SubscriberDeviceItem[], bounds: L.LatLngBounds): void {
+    if (!markersLayer) return;
+
     const groupsMap = new Map<string, LocationGroup>();
     validOnus.forEach((onu) => {
       const key = `${Number(onu.latitude).toFixed(4)}_${Number(onu.longitude).toFixed(4)}`;
@@ -314,8 +419,6 @@
       }
       groupsMap.get(key)!.onus.push(onu);
     });
-
-    const bounds = L.latLngBounds([]);
 
     groupsMap.forEach((grp) => {
       const latLng = L.latLng(grp.lat, grp.lng);
@@ -358,9 +461,39 @@
         marker.addTo(markersLayer!);
       }
     });
+  }
 
-    // Ajustar límites si hay coordenadas válidas
-    if (bounds.isValid() && validOnus.length > 1) {
+  function renderMarkers(): void {
+    if (!markersLayer || !mapInstance) return;
+    markersLayer.clearLayers();
+    if (spiderLayer) spiderLayer.clearLayers();
+    if (boxesLayer) boxesLayer.clearLayers();
+    if (dropCableLayer) dropCableLayer.clearLayers();
+
+    const bounds = L.latLngBounds([]);
+    renderOpticalBoxes(bounds);
+
+    const validOnus = props.onus.filter(
+      (o) =>
+        o.latitude !== undefined &&
+        o.latitude !== null &&
+        o.longitude !== undefined &&
+        o.longitude !== null &&
+        !isNaN(Number(o.latitude)) &&
+        !isNaN(Number(o.longitude)) &&
+        (Number(o.latitude) !== 0 || Number(o.longitude) !== 0),
+    );
+
+    renderSelectedDropCable();
+
+    if (validOnus.length === 0 && (!props.opticalBoxes || props.opticalBoxes.length === 0)) {
+      mapInstance.setView(props.centerCoordinates, props.zoomLevel);
+      return;
+    }
+
+    renderSubscriberGroups(validOnus, bounds);
+
+    if (bounds.isValid() && (validOnus.length > 1 || (props.opticalBoxes && props.opticalBoxes.length > 0))) {
       mapInstance.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
     }
   }
@@ -381,6 +514,8 @@
         '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors',
     }).addTo(mapInstance);
 
+    boxesLayer = L.layerGroup().addTo(mapInstance);
+    dropCableLayer = L.layerGroup().addTo(mapInstance);
     markersLayer = L.layerGroup().addTo(mapInstance);
     spiderLayer = L.layerGroup().addTo(mapInstance);
 
@@ -401,7 +536,7 @@
     setTimeout(() => {
       if (mapInstance) {
         mapInstance.invalidateSize();
-        if (props.onus.length === 0) {
+        if (props.onus.length === 0 && (!props.opticalBoxes || props.opticalBoxes.length === 0)) {
           mapInstance.setView(props.centerCoordinates, props.zoomLevel);
         }
       }
@@ -425,7 +560,7 @@
   });
 
   watch(
-    () => props.onus,
+    () => [props.onus, props.opticalBoxes, props.selectedOnuId],
     () => {
       renderMarkers();
     },
@@ -754,5 +889,76 @@
   .onu-item-meta {
     font-size: 0.7rem;
     color: #64748b;
+  }
+
+  /* Pines Tácticos de Cajas NAP */
+  .rg-box-pin-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .rg-box-pin {
+    background: #002233;
+    border: 2px solid #00f3ff;
+    border-radius: 6px;
+    padding: 2px 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 0 10px rgba(0, 243, 255, 0.4);
+    cursor: pointer;
+    transition: transform 0.2s ease;
+  }
+
+  .rg-box-pin:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 14px #00f3ff;
+  }
+
+  .box-pin-body {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .box-icon {
+    font-size: 11px;
+  }
+
+  .box-code-badge {
+    color: #00f3ff;
+    font-size: 9px;
+    font-weight: 800;
+  }
+
+  .box-pin-capacity {
+    font-size: 8px;
+    color: #f59e0b;
+    font-weight: 700;
+  }
+
+  .btn-popup-inspect-box {
+    background: #00f3ff;
+    color: #000;
+    font-weight: 700;
+    width: 100%;
+    padding: 0.35rem;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    margin-top: 0.25rem;
+  }
+
+  .btn-popup-inspect-box:hover {
+    background: #5cf6ff;
+  }
+
+  .rg-drop-tooltip {
+    background: #090e17 !important;
+    color: #00f3ff !important;
+    border: 1px solid #00f3ff !important;
+    font-size: 0.75rem !important;
+    border-radius: 4px !important;
   }
 </style>

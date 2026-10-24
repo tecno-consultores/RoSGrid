@@ -20,6 +20,7 @@ from src.api.v1.maintenance import router as maintenance_router
 from src.api.v1.mcp import router as mcp_router
 from src.api.v1.network_services import router as network_services_router
 from src.api.v1.notification_channels import router as notification_channels_router
+from src.api.v1.optical_boxes import optical_boxes_router
 from src.api.v1.rbac import router as rbac_router
 from src.api.v1.sdwan import router as sdwan_router
 from src.api.v1.sessions import router as sessions_router
@@ -56,6 +57,7 @@ api_v1_router.include_router(inventory_router)
 api_v1_router.include_router(ipam_router)
 api_v1_router.include_router(bandwidth_router)
 api_v1_router.include_router(subscribers_router)
+api_v1_router.include_router(optical_boxes_router)
 api_v1_router.include_router(network_services_router)
 api_v1_router.include_router(field_ops_router)
 api_v1_router.include_router(vault_router)

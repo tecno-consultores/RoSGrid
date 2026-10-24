@@ -358,11 +358,13 @@ async def test_subscribers_feature_flag_disabled_403(
     app.dependency_overrides[get_tenant_db_session] = lambda: mock_db
 
     try:
-        res = await async_client.get("/api/v1/subscriber-devices", headers=headers)
-        assert res.status_code == 403
-        assert "FEATURE_MODULE_DISABLED" in res.text or "isp_module_enabled" in res.text
-
+        # bandwidth-profiles requiere exclusivamente el módulo ISP
         res_bp = await async_client.get("/api/v1/bandwidth-profiles", headers=headers)
         assert res_bp.status_code == 403
+        assert "FEATURE_MODULE_DISABLED" in res_bp.text or "isp_module_enabled" in res_bp.text
+
+        # subscriber-devices es bimodal: accesible para empresas no-ISP para ver clientes DHCP en el mapa
+        res_devs = await async_client.get("/api/v1/subscriber-devices", headers=headers)
+        assert res_devs.status_code == 200
     finally:
         app.dependency_overrides.clear()

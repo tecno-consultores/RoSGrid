@@ -141,10 +141,21 @@ class MockIpamDbSession:
             return MockResult(self.addresses)
         elif "subscriber_devices" in stmt_str or "customer_services" in stmt_str:
             if "count(" in stmt_str:
-                if self.customer_services:
-                    r_id = self.customer_services[0].router_id
-                    return MockResult([(r_id, "gpon-olt1/1/1", "NAP-04", 4)])
-                return MockResult([])
+                if "group by" in stmt_str:
+                    if self.customer_services:
+                        r_id = self.customer_services[0].router_id
+                        return MockResult([(r_id, "gpon-olt1/1/1", "NAP-04", 4)])
+                    return MockResult([])
+                return MockResult([len(self.customer_services)])
+            if "endpoint_identifier" in stmt_str:
+                try:
+                    p_dict = stmt.compile().params
+                    target_ep = next((v for k, v in p_dict.items() if "endpoint" in k), None)
+                    if target_ep:
+                        matched = [s for s in self.customer_services if getattr(s, "endpoint_identifier", None) == target_ep]
+                        return MockResult(matched)
+                except Exception:
+                    pass
             return MockResult(self.customer_services)
         elif "field_installation_orders" in stmt_str:
             return MockResult(self.field_orders)
@@ -649,3 +660,59 @@ async def test_field_ops_orders_and_certification(
         assert resp_cert.json()["status"] == "CERTIFIED"
     finally:
         app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_simulate_subscribers_from_dhcp(
+    async_client: AsyncClient, fake_redis: FakeAsyncRedis, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.setattr("src.api.v1.subscribers.write_audit_log", fake_audit)
+
+    tenant_id = str(uuid.uuid4())
+    admin_id = str(uuid.uuid4())
+    session_admin = "sess-admin-sim-001"
+    await fake_redis.hset(
+        f"rg:{tenant_id}:sess:{session_admin}",
+        mapping={
+            "session_id": session_admin,
+            "user_id": admin_id,
+            "username": "noc_operator",
+            "role": SystemRoleEnum.TENANT_ADMIN.value,
+        },
+    )
+    token_admin = create_jwt_access_token(
+        admin_id, tenant_id, "test_tenant", session_admin, SystemRoleEnum.TENANT_ADMIN.value, True
+    )
+
+    mock_db = MockIpamDbSession(tenant_id)
+    app.dependency_overrides[get_tenant_db_session] = lambda: mock_db
+
+    try:
+        # 1. Simular clientes a partir de las IPs/DHCP del tenant
+        resp_sim = await async_client.post(
+            "/api/v1/subscriber-devices/simulate-from-dhcp?reset_existing=false",
+            headers=make_headers(token_admin),
+        )
+        assert resp_sim.status_code == 200
+        sim_data = resp_sim.json()
+        assert "created_count" in sim_data
+        assert "total_subscribers" in sim_data
+        assert sim_data["created_count"] >= 1
+        assert "clientes de laboratorio" in sim_data["message"]
+
+        # 2. Verificar que se puedan listar los clientes para el mapa
+        resp_list = await async_client.get(
+            "/api/v1/subscriber-devices",
+            headers=make_headers(token_admin),
+        )
+        assert resp_list.status_code == 200
+        devices = resp_list.json()
+        assert len(devices) >= 1
+        dev0 = devices[0]
+        assert "latitude" in dev0
+        assert "longitude" in dev0
+        assert "optical_box" in dev0
+        assert "last_reachability_status" in dev0
+    finally:
+        app.dependency_overrides.clear()
+

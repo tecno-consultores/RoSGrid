@@ -108,7 +108,8 @@ rosgrid/
 │   ├── 09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md
 │   ├── 10_REPORTE_INVESTIGACION_PYTHON_3_15.md
 │   ├── 11_REPORTE_INVESTIGACION_NODE_26.md
-│   └── 12_DISENO_TOPOLOGIA_L2_SYSLOG_Y_AUTOMATIZACION.md
+│   ├── 12_DISENO_TOPOLOGIA_L2_SYSLOG_Y_AUTOMATIZACION.md
+│   └── 13_MANUAL_MAPA_RED_BIMODAL_Y_OPERACIONES_CAMPO.md
 │
 ├── fastapi/                                 # ECOSISTEMA BACKEND REAL (Python 3.15 + FastAPI + SQLAlchemy 2.0)
 │   ├── Dockerfile                           # Imagen multi-stage no-root para sinfallas/rosgrid-backend
@@ -219,6 +220,7 @@ Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `
 * `docs/specs/34_TENANT_FEATURE_FLAGS_AND_GOVERNANCE_PANEL.md` — Panel de Gobernanza de Feature Flags por Empresa: Modelo de datos en `tenants`, control de acceso por SuperAdmin, guardias de API y conmutación dinámica de la interfaz para operar como ISP, Entorno Corporativo o Mixto.
 * `docs/specs/35_FLEET_AUTOMATION_TOPOLOGY_L2_SYSLOG_AND_PROMETHEUS.md` — Automatización de Flota, Topología Física L2, Receptor Syslog Efímero y Exportador Prometheus: Actualizaciones PoE-aware, Safety Stop, cruce local de CVEs, receptor UDP/TCP 5514 en KeyDB, visualizador L2 MNDP/LLDP, puente de telemetría `/metrics/fleet` sin almacenamiento en Postgres y ampliación MCP.
 * `docs/specs/36_MCP_OFFICIAL_MIKROTIK_DOCS_GROUNDING.md` — Integración de Documentación Oficial de MikroTik RouterOS v7 en el Servidor MCP (Grounding IA): Endpoints oficiales `llms.txt` y `docs/*.md`, blindaje anti-SSRF, motor de caché inteligente en KeyDB (TTL 24h/7d) y Tools MCP `#21` (`rosgrid_search_mikrotik_docs`) y `#22` (`rosgrid_get_mikrotik_doc_topic`) para erradicar alucinaciones de sintaxis v6 vs v7.
+* `docs/specs/37_BIMODAL_NETWORK_MAP_AND_FTTH_FIELD_OPS.md` — Arquitectura Bimodal del Mapa de Red y Rediseño Táctico de Operaciones de Campo: Soporte dual Empresa (descubrimiento real DHCP, herencia de coordenadas de router, ping 1-Click) vs ISP (planta externa FTTH, Cajas NAP, matriz de puertos 1..16, aprovisionamiento de ONUs y telemetría óptica).
 
 ---
 

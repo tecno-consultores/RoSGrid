@@ -284,5 +284,23 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And waitFor(".rg-table")
     And match text(".rg-table thead") contains 'Prefijo CIDR & Rango'
 
+  Scenario: 32. Operaciones de Campo FTTH — Pestañas de Caja NAP, Nuevo Cliente y Certificación de Enlace
+    Given driver baseUrl + '/field-ops'
+    And waitFor(".field-tech-view")
+    And waitFor(".tab-nav")
+    And waitFor("button.tab-btn--active")
+    Then match text(".tab-nav") contains 'Registrar Caja NAP'
+    And match text(".tab-nav") contains 'Registrar Cliente'
+    And match text(".tab-nav") contains 'Diagnóstico en Vivo'
+    And waitFor(".recent-history-section")
+    And match text(".recent-history-section") contains 'Altas Recientes de tu Turno'
+
+  Scenario: 33. Mapa de Red Bimodal — Visualización de Cajas NAP con Matriz de Puertos y Sincronización DHCP
+    Given driver baseUrl + '/subscribers/map'
+    And waitFor(".subscribers-map-view")
+    And waitFor(".map-container")
+    And waitFor(".map-actions")
+    And waitFor(".kpi-summary")
+
 
 

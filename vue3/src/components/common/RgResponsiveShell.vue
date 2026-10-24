@@ -169,13 +169,16 @@
       },
     ];
 
+    items.push({
+      name: 'SubscribersMap',
+      path: '/subscribers/map',
+      label: authStore.isFeatureEnabled('isp_module_enabled')
+        ? t('nav.subscribers_map_isp', 'Mapa Clientes FTTH')
+        : t('nav.subscribers_map_enterprise', 'Mapa Clientes DHCP'),
+      icon: '📍',
+    });
+
     if (authStore.isFeatureEnabled('isp_module_enabled')) {
-      items.push({
-        name: 'SubscribersMap',
-        path: '/subscribers/map',
-        label: t('nav.subscribers_map', 'Mapa Clientes (ONUs)'),
-        icon: '📍',
-      });
       items.push({
         name: 'FieldTechOperations',
         path: '/field-ops',

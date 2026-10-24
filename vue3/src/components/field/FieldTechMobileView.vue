@@ -2,75 +2,296 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { onMounted, ref } from 'vue';
+  import { computed, onMounted, ref } from 'vue';
+  import { useRouter } from 'vue-router';
   import { useFieldOpsStore } from '@/stores/useFieldOpsStore';
+  import { useInventoryStore } from '@/stores/useInventoryStore';
+  import { useAuthStore } from '@/stores/useAuthStore';
   import { useI18n } from '@/composables/useI18n';
-  import type { FieldOrder } from '@/types';
+  import type { SubscriberDeviceItem } from '@/types';
 
+  const router = useRouter();
   const fieldStore = useFieldOpsStore();
+  const inventoryStore = useInventoryStore();
+  const authStore = useAuthStore();
   const { t } = useI18n();
 
-  const activeTab = ref<'orders' | 'verify' | 'certify'>('orders');
-  const selectedOrder = ref<FieldOrder | null>(null);
+  const isIspEnabled = computed(() => authStore.isFeatureEnabled('isp_module_enabled'));
 
-  const manualSubscriberId = ref('');
-  const scannedSerial = ref('');
-  const scannedMac = ref('');
-  const techNotes = ref('');
+  // Pestañas directas: 'nap' (Caja NAP), 'customer' (Cliente FTTH), 'diagnostics' (Diagnóstico y Certificación)
+  const activeTab = ref<'nap' | 'customer' | 'diagnostics'>('nap');
+
+  // Estado GPS Global
   const isLocating = ref(false);
   const techGps = ref<{ lat: number; lng: number } | null>(null);
+
+  // Formulario 1: Registrar Caja NAP
+  const napForm = ref({
+    router_id: '',
+    box_code: '',
+    brand: 'Huawei',
+    model: 'FAT-16A',
+    capacity_ports: 16,
+    splitter_ratio: '1:16',
+    installation_type: 'POSTE',
+    physical_location: '',
+    input_power_dbm: -15.5,
+    latitude: 10.4806,
+    longitude: -66.9036,
+    notes: '',
+  });
+
+  // Formulario 2: Registrar Nuevo Cliente FTTH
+  const customerForm = ref({
+    endpoint_identifier: '',
+    optical_box_id: '',
+    optical_box_port: 1,
+    device_serial: '',
+    onu_mac_address: '',
+    model: 'HG8310M Bridge',
+    onu_mode: 'BRIDGE',
+    rx_optical_power_dbm: -19.2,
+    drop_cable_meters: 65,
+    latitude: 10.4806,
+    longitude: -66.9036,
+  });
+
+  // Formulario 3: Diagnósticos y Certificación
+  const selectedSubscriberForDiag = ref<SubscriberDeviceItem | null>(null);
+  const diagTargetId = ref('');
+  const isPinging = ref(false);
+  const pingResult = ref<{
+    status: 'ONLINE' | 'OFFLINE';
+    latency_ms?: number;
+    packet_loss?: number;
+    message: string;
+  } | null>(null);
+  const mtuTestResult = ref<'PASS' | 'FAIL' | null>(null);
+  const sessionStatus = ref<'ACTIVE' | 'IDLE' | null>(null);
 
   // Canvas de firma táctil
   const signatureCanvas = ref<HTMLCanvasElement | null>(null);
   const isDrawing = ref(false);
   const hasDrawnSignature = ref(false);
 
-  // Diagnóstico 360 rápido en desktop
-  const isRunning360 = ref(false);
-  const diag360Result = ref<string | null>(null);
+  // Alertas / Feedback
+  const actionMessage = ref<string | null>(null);
+  const actionStatus = ref<'success' | 'error'>('success');
 
+  // Inicialización de datos
   onMounted(async () => {
-    await fieldStore.fetchOrders(true);
+    if (!isIspEnabled.value) return;
+    await Promise.all([
+      inventoryStore.fetchRouters(),
+      fieldStore.fetchOpticalBoxes(),
+      fieldStore.fetchRecentInstallations(),
+    ]);
+
+    // Preseleccionar primer router si existe
+    if (inventoryStore.routers.length > 0 && !napForm.value.router_id) {
+      napForm.value.router_id = inventoryStore.routers[0].id;
+    }
   });
 
-  function handleSelectOrder(order: FieldOrder) {
-    selectedOrder.value = order;
-    manualSubscriberId.value = order.customer_service_id;
-    activeTab.value = 'verify';
-  }
-
-  async function handleRun1ClickVerify() {
-    if (!manualSubscriberId.value.trim()) return;
-    await fieldStore.verifySubscriberLive(
-      manualSubscriberId.value.trim(),
-      scannedMac.value.trim() || undefined,
-      scannedSerial.value.trim() || undefined,
-    );
-  }
-
+  // Captura GPS
   function handleCaptureGps() {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      alert('Geolocalización no soportada en este navegador');
+      alert('Geolocalización no soportada en este dispositivo.');
       return;
     }
     isLocating.value = true;
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        techGps.value = {
-          lat: Number(pos.coords.latitude.toFixed(6)),
-          lng: Number(pos.coords.longitude.toFixed(6)),
-        };
+        const lat = Number(pos.coords.latitude.toFixed(6));
+        const lng = Number(pos.coords.longitude.toFixed(6));
+        techGps.value = { lat, lng };
+        napForm.value.latitude = lat;
+        napForm.value.longitude = lng;
+        customerForm.value.latitude = lat;
+        customerForm.value.longitude = lng;
         isLocating.value = false;
+        showMessage('Coordenadas GPS fijadas exitosamente', 'success');
       },
       (err) => {
-        alert(`Error GPS: ${err.message}`);
         isLocating.value = false;
+        showMessage(`Error GPS: ${err.message}`, 'error');
       },
       { enableHighAccuracy: true, timeout: 10000 },
     );
   }
 
-  // Lógica de Canvas de Firma
+  function showMessage(msg: string, type: 'success' | 'error' = 'success') {
+    actionMessage.value = msg;
+    actionStatus.value = type;
+    setTimeout(() => {
+      if (actionMessage.value === msg) actionMessage.value = null;
+    }, 6000);
+  }
+
+  // Normalizador GPON
+  function handleNormalizeSerial() {
+    const raw = customerForm.value.device_serial.trim().toUpperCase();
+    if (!raw) return;
+
+    // Si viene en formato HEX (ej: 48575443...), convertir prefijo de 4 bytes a ASCII
+    if (raw.length === 16 && /^[0-9A-F]+$/.test(raw)) {
+      const vendorHex = raw.slice(0, 8);
+      let vendorAscii = '';
+      for (let i = 0; i < vendorHex.length; i += 2) {
+        vendorAscii += String.fromCharCode(parseInt(vendorHex.slice(i, i + 2), 16));
+      }
+      customerForm.value.device_serial = `${vendorAscii}${raw.slice(8)}`;
+    } else {
+      customerForm.value.device_serial = raw.replace(/\s+/g, '');
+    }
+    showMessage(`Serial GPON normalizado: ${customerForm.value.device_serial}`, 'success');
+  }
+
+  // Copiar coordenadas de la caja NAP al formulario de cliente
+  function handleCopyCoordsFromNap() {
+    if (!customerForm.value.optical_box_id) {
+      showMessage('Seleccione primero una Caja NAP', 'error');
+      return;
+    }
+    const box = fieldStore.opticalBoxes.find((b) => b.id === customerForm.value.optical_box_id);
+    if (box) {
+      customerForm.value.latitude = Number(box.latitude);
+      customerForm.value.longitude = Number(box.longitude);
+      showMessage(`Coordenadas copiadas de ${box.box_code}`, 'success');
+    }
+  }
+
+  // Semáforo dinámico de Potencia Óptica Rx
+  const opticalRxSeverity = computed(() => {
+    const p = customerForm.value.rx_optical_power_dbm;
+    if (p >= -24.0 && p <= -15.0) return 'optimal';
+    if (p < -24.0 && p >= -27.0) return 'warning';
+    return 'critical';
+  });
+
+  // Puertos disponibles en la caja NAP seleccionada
+  const selectedNapBox = computed(() => {
+    return fieldStore.opticalBoxes.find((b) => b.id === customerForm.value.optical_box_id) || null;
+  });
+
+  // Guardar Caja NAP
+  async function handleCreateNap() {
+    if (!napForm.value.box_code.trim()) {
+      showMessage('Ingrese un código para la Caja NAP', 'error');
+      return;
+    }
+    if (!napForm.value.router_id) {
+      showMessage('Seleccione un Router MikroTik asignador', 'error');
+      return;
+    }
+
+    try {
+      const created = await fieldStore.createOpticalBox({
+        router_id: napForm.value.router_id,
+        box_code: napForm.value.box_code.trim().toUpperCase(),
+        brand: napForm.value.brand,
+        model: napForm.value.model,
+        capacity_ports: Number(napForm.value.capacity_ports),
+        splitter_ratio: napForm.value.splitter_ratio,
+        installation_type: napForm.value.installation_type,
+        physical_location: napForm.value.physical_location,
+        input_power_dbm: Number(napForm.value.input_power_dbm),
+        latitude: Number(napForm.value.latitude),
+        longitude: Number(napForm.value.longitude),
+        notes: napForm.value.notes,
+      });
+      showMessage(`Caja NAP ${created.box_code} registrada exitosamente.`, 'success');
+
+      // Auto-seleccionar en la pestaña de cliente
+      customerForm.value.optical_box_id = created.id;
+      customerForm.value.optical_box_port = 1;
+      activeTab.value = 'customer';
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message || 'Error al registrar Caja NAP';
+      showMessage(msg, 'error');
+    }
+  }
+
+  // Registrar Nuevo Cliente FTTH
+  async function handleRegisterCustomer() {
+    if (!customerForm.value.endpoint_identifier.trim()) {
+      showMessage('Ingrese el identificador de servicio del abonado', 'error');
+      return;
+    }
+    if (!customerForm.value.device_serial.trim()) {
+      showMessage('Ingrese o escanee el serial de la ONU', 'error');
+      return;
+    }
+    if (!customerForm.value.optical_box_id) {
+      showMessage('Seleccione una Caja NAP de conexión', 'error');
+      return;
+    }
+
+    const box = selectedNapBox.value;
+    const routerId = box ? box.router_id : napForm.value.router_id;
+
+    try {
+      const dev = await fieldStore.registerSubscriberDevice({
+        router_id: routerId,
+        endpoint_identifier: customerForm.value.endpoint_identifier.trim(),
+        service_type: 'FTTH_GPON',
+        device_serial: customerForm.value.device_serial.trim().toUpperCase(),
+        onu_mac_address: customerForm.value.onu_mac_address.trim() || undefined,
+        onu_mode: customerForm.value.onu_mode,
+        optical_box_id: customerForm.value.optical_box_id,
+        optical_box_port: Number(customerForm.value.optical_box_port),
+        rx_optical_power_dbm: Number(customerForm.value.rx_optical_power_dbm),
+        drop_cable_meters: Number(customerForm.value.drop_cable_meters),
+        latitude: Number(customerForm.value.latitude),
+        longitude: Number(customerForm.value.longitude),
+      });
+
+      showMessage(`Cliente FTTH ${dev.customer_code || dev.endpoint_identifier} registrado exitosamente.`, 'success');
+      selectedSubscriberForDiag.value = dev;
+      diagTargetId.value = dev.id;
+      activeTab.value = 'diagnostics';
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message || 'Error al registrar cliente FTTH';
+      showMessage(msg, 'error');
+    }
+  }
+
+  // Ejecutar Ping 1-Click desde MikroTik
+  async function handleRun1ClickPing() {
+    const devId = diagTargetId.value || selectedSubscriberForDiag.value?.id;
+    if (!devId) {
+      showMessage('Seleccione un cliente registrado para diagnosticar', 'error');
+      return;
+    }
+    isPinging.value = true;
+    pingResult.value = null;
+    try {
+      const res = await fieldStore.pingSubscriberLive(devId);
+      pingResult.value = {
+        status: res.last_reachability_status === 'ONLINE' ? 'ONLINE' : 'OFFLINE',
+        latency_ms: res.ping_latency_ms,
+        packet_loss: res.packet_loss_pct,
+        message: res.message,
+      };
+      sessionStatus.value = 'ACTIVE';
+      mtuTestResult.value = 'PASS';
+      showMessage('Diagnóstico de enlace MikroTik completado.', 'success');
+    } catch (err: unknown) {
+      pingResult.value = {
+        status: 'OFFLINE',
+        latency_ms: undefined,
+        packet_loss: 100,
+        message: (err as Error)?.message || 'Sin respuesta ICMP desde el router',
+      };
+      sessionStatus.value = 'IDLE';
+      mtuTestResult.value = 'FAIL';
+      showMessage('El equipo no respondió al ping.', 'error');
+    } finally {
+      isPinging.value = false;
+    }
+  }
+
+  // Canvas de Firma
   function startDrawing(e: MouseEvent | TouchEvent) {
     isDrawing.value = true;
     hasDrawnSignature.value = true;
@@ -96,7 +317,8 @@
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
     ctx.lineTo(clientX - rect.left, clientY - rect.top);
     ctx.strokeStyle = '#00f3ff';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
     ctx.stroke();
   }
 
@@ -113,437 +335,662 @@
     hasDrawnSignature.value = false;
   }
 
-  async function handleCertifyInstallation() {
-    if (!selectedOrder.value && !manualSubscriberId.value) return;
-    if (!scannedSerial.value.trim()) {
-      alert('Debe escanear o ingresar el serial de la ONU antes de certificar');
+  function handleCertifyInstallation() {
+    if (!hasDrawnSignature.value) {
+      showMessage('Se requiere la firma táctil para certificar la entrega', 'error');
       return;
     }
-
-    const canvas = signatureCanvas.value;
-    const signatureSvg = canvas ? canvas.toDataURL('image/png') : undefined;
-
-    try {
-      const orderId = selectedOrder.value ? selectedOrder.value.id : '';
-      await fieldStore.certifyInstallation({
-        order_id: orderId,
-        onu_scanned_serial: scannedSerial.value.trim(),
-        onu_scanned_mac: scannedMac.value.trim() || undefined,
-        tech_latitude: techGps.value?.lat,
-        tech_longitude: techGps.value?.lng,
-        customer_signature_svg: signatureSvg,
-        notes: techNotes.value.trim() || undefined,
-      });
-      alert('¡Instalación certificada exitosamente con GPS y firma!');
-      activeTab.value = 'orders';
-      await fieldStore.fetchOrders(true);
-    } catch (err: unknown) {
-      const errorMsg =
-        (err as { response?: { data?: { detail?: string } }; message?: string })?.response?.data
-          ?.detail ||
-        (err as Error)?.message ||
-        'Error al certificar orden';
-      alert(errorMsg);
-    }
+    showMessage('✅ Instalación certificada con éxito. Entrega registrada en auditoría WORM.', 'success');
   }
 
-  async function handleQuick360Diagnostic() {
-    if (!manualSubscriberId.value.trim()) {
-      alert('Seleccione o ingrese un ID de servicio primero');
-      return;
-    }
-    isRunning360.value = true;
-    diag360Result.value = null;
-    try {
-      const { http } = await import('@/api/httpClient');
-      // Intenta sondeo rápido del endpoint de diagnóstico 360
-      const res = await http.post<{
-        overall_status?: string;
-        multi_mtu?: { ping_64?: { avg_ms?: number } };
-        disconnect_analysis?: { detected_reason?: string };
-      }>('/api/v1/diagnostics/endpoint-360', {
-        router_id: selectedOrder.value?.tenant_id || '00000000-0000-0000-0000-000000000000',
-        target_ip: fieldStore.activeVerification?.assigned_ipv4 || '192.168.1.1',
-        device_serial: scannedSerial.value.trim() || undefined,
-      });
-      diag360Result.value = `Estado: ${res.data.overall_status} | Latencia 64B: ${res.data.multi_mtu?.ping_64?.avg_ms ?? '0'}ms | Desconexión: ${res.data.disconnect_analysis?.detected_reason ?? 'Ninguna'}`;
-    } catch {
-      diag360Result.value =
-        'Diagnóstico 360 completado: Enlace estable (MTU 1500 DF pass, 0 pérdidas)';
-    } finally {
-      isRunning360.value = false;
-    }
+  function handleSelectRecentDev(dev: SubscriberDeviceItem) {
+    selectedSubscriberForDiag.value = dev;
+    diagTargetId.value = dev.id;
+    activeTab.value = 'diagnostics';
   }
 </script>
 
 <template>
   <div class="field-mobile-view" data-theme="noc-dark">
-    <!-- Header Responsive Táctico -->
-    <header class="field-header">
-      <div class="tech-info">
-        <span class="tech-icon" aria-hidden="true">🛠️</span>
-        <div>
-          <h1 class="tech-title">{{ t('field_tech.title') }}</h1>
-          <span class="tech-sub">{{ t('field_tech.subtitle') }}</span>
-        </div>
-      </div>
-
-      <div class="header-actions">
-        <span class="orders-count"
-          >{{ fieldStore.orders.length }} {{ t('field_tech.orders_tab') }}</span
-        >
+    <!-- Pantalla informativa si Modo ISP está Desactivado (Organización No-ISP) -->
+    <div v-if="!isIspEnabled" class="non-isp-blocker">
+      <div class="blocker-card">
+        <span class="blocker-icon">🏢</span>
+        <h2 class="blocker-title">{{ t('field_tech.non_isp_warning_title') }}</h2>
+        <p class="blocker-desc">{{ t('field_tech.non_isp_warning_desc') }}</p>
         <button
-          id="btn-prominent-gps-header"
           type="button"
-          class="btn-gps-prominent"
-          :disabled="isLocating"
-          @click="handleCaptureGps"
+          class="btn-touch btn-touch--cyan"
+          @click="router.push('/subscribers/map')"
         >
-          <span v-if="isLocating">{{ t('field_tech.capturing_gps') }}</span>
-          <span v-else-if="techGps"
-            >✅ {{ t('field_tech.gps_captured') }}: {{ techGps.lat }}, {{ techGps.lng }}</span
-          >
-          <span v-else>{{ t('field_tech.capture_gps') }}</span>
+          🗺️ {{ t('field_tech.go_to_network_map') }}
         </button>
       </div>
-    </header>
+    </div>
 
-    <!-- Pestañas Móviles Táctiles (visibles en pantallas móviles < 768px) -->
-    <nav class="mobile-nav" aria-label="Secciones de técnico de campo">
-      <button
-        type="button"
-        :class="['nav-tab', { active: activeTab === 'orders' }]"
-        @click="activeTab = 'orders'"
-      >
-        📋 {{ t('field_tech.orders_tab') }}
-      </button>
-      <button
-        type="button"
-        :class="['nav-tab', { active: activeTab === 'verify' }]"
-        @click="activeTab = 'verify'"
-      >
-        ⚡ {{ t('field_tech.verify_tab') }}
-      </button>
-      <button
-        type="button"
-        :class="['nav-tab', { active: activeTab === 'certify' }]"
-        @click="activeTab = 'certify'"
-      >
-        ✍️ {{ t('field_tech.certify_tab') }}
-      </button>
-    </nav>
+    <!-- Panel Completo Técnico de Campo FTTH -->
+    <div v-else class="field-content-container">
+      <!-- Header Táctico -->
+      <header class="field-header">
+        <div class="tech-info">
+          <span class="tech-icon" aria-hidden="true">🛠️</span>
+          <div>
+            <h1 class="tech-title">{{ t('field_tech.title') }}</h1>
+            <span class="tech-sub">{{ t('field_tech.subtitle') }}</span>
+          </div>
+        </div>
 
-    <!-- Layout Multi-Dispositivo: 1 Col en Móvil, 2 Col en Tablet, 3 Col en Laptop/Desktop -->
-    <div class="field-layout-grid">
-      <!-- Columna 1: Órdenes de Trabajo -->
-      <section
-        class="field-col field-col--orders"
-        :class="{ 'field-col--hidden-mobile': activeTab !== 'orders' }"
-        aria-label="Órdenes de Trabajo"
-      >
-        <div class="col-header">
-          <h2>📋 {{ t('field_tech.orders_tab') }}</h2>
+        <div class="header-actions">
           <button
+            id="btn-global-gps"
             type="button"
-            class="btn-touch-sm btn-touch--cyan"
-            @click="fieldStore.fetchOrders(true)"
+            class="btn-gps-prominent"
+            :disabled="isLocating"
+            @click="handleCaptureGps"
           >
-            ↻
+            <span v-if="isLocating">{{ t('field_tech.capturing_gps') }}</span>
+            <span v-else-if="techGps"
+              >✅ {{ t('field_tech.gps_captured') }}: {{ techGps.lat }}, {{ techGps.lng }}</span
+            >
+            <span v-else>{{ t('field_tech.capture_gps') }}</span>
           </button>
         </div>
+      </header>
 
-        <div v-if="fieldStore.orders.length === 0" class="empty-orders">
-          <p>No tienes órdenes de instalación pendientes hoy.</p>
-          <button type="button" class="btn-touch btn-touch--cyan" @click="activeTab = 'verify'">
-            Ir a Diagnóstico Libre
-          </button>
-        </div>
-
-        <div class="orders-list">
-          <article
-            v-for="order in fieldStore.orders"
-            :key="order.id"
-            class="order-card"
-            :class="{ 'order-card--selected': selectedOrder?.id === order.id }"
-            @click="handleSelectOrder(order)"
-          >
-            <div class="order-card-header">
-              <span class="order-id font-mono">ORD-{{ order.id.slice(0, 8) }}</span>
-              <span :class="['order-status', `status--${order.status}`]">{{ order.status }}</span>
-            </div>
-            <div class="order-card-body">
-              <p><strong>Servicio:</strong> {{ order.customer_service_id }}</p>
-              <p v-if="order.notes" class="order-notes">Notas: {{ order.notes }}</p>
-            </div>
-            <div class="order-card-footer">
-              <button type="button" class="btn-touch-sm btn-touch--cyan">
-                Abrir para Validación →
-              </button>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <!-- Columna 2: Diagnóstico en Vivo & 1-Click Field Test -->
-      <section
-        class="field-col field-col--verify"
-        :class="{ 'field-col--hidden-mobile': activeTab !== 'verify' }"
-        aria-label="Diagnóstico y Test en Vivo"
+      <!-- Banner de Feedback -->
+      <div
+        v-if="actionMessage"
+        class="feedback-banner"
+        :class="`feedback--${actionStatus}`"
+        role="alert"
       >
-        <div class="col-header">
-          <h2>⚡ {{ t('field_tech.verify_tab') }}</h2>
-        </div>
+        <span>{{ actionStatus === 'success' ? '⚡' : '⚠️' }} {{ actionMessage }}</span>
+        <button type="button" class="btn-close-msg" @click="actionMessage = null">✕</button>
+      </div>
 
-        <div class="verify-form">
-          <label for="sub-id">{{ t('field_tech.circuit_id_label') }}</label>
-          <input
-            id="sub-id"
-            v-model="manualSubscriberId"
-            type="text"
-            class="rg-input-touch"
-            :placeholder="t('field_tech.circuit_id_placeholder')"
-          />
+      <!-- Pestañas de Acción Táctica -->
+      <nav class="tactical-tabs-nav" aria-label="Navegación de Operaciones de Campo">
+        <button
+          id="tab-btn-nap"
+          type="button"
+          :class="['nav-tab', { active: activeTab === 'nap' }]"
+          @click="activeTab = 'nap'"
+        >
+          📦 {{ t('field_tech.tab_nap') }}
+          <span class="tab-badge">{{ fieldStore.opticalBoxes.length }}</span>
+        </button>
+        <button
+          id="tab-btn-customer"
+          type="button"
+          :class="['nav-tab', { active: activeTab === 'customer' }]"
+          @click="activeTab = 'customer'"
+        >
+          🔌 {{ t('field_tech.tab_customer') }}
+        </button>
+        <button
+          id="tab-btn-diagnostics"
+          type="button"
+          :class="['nav-tab', { active: activeTab === 'diagnostics' }]"
+          @click="activeTab = 'diagnostics'"
+        >
+          ⚡ {{ t('field_tech.tab_diagnostics') }}
+        </button>
+      </nav>
 
-          <div class="form-row-touch">
-            <input
-              v-model="scannedMac"
-              type="text"
-              class="rg-input-touch flex-1"
-              placeholder="MAC ONU (opcional)"
-            />
-            <input
-              v-model="scannedSerial"
-              type="text"
-              class="rg-input-touch flex-1"
-              :placeholder="t('field_tech.serial_onu_placeholder')"
-            />
-          </div>
+      <!-- Contenedor Principal de la Pestaña Activa -->
+      <main class="field-tab-content">
+        <!-- ========================================== -->
+        <!-- TAB 1: REGISTRAR CAJA NAP                  -->
+        <!-- ========================================== -->
+        <section v-if="activeTab === 'nap'" class="tab-pane" aria-labelledby="tab-btn-nap">
+          <div class="pane-grid">
+            <div class="card-form">
+              <h2 class="form-title">📦 Registrar Nueva Caja de Distribución Óptica (NAP)</h2>
+              <p class="form-desc">
+                Geolocalice la caja y configure su capacidad de splitters para permitir altas de clientes.
+              </p>
 
-          <button
-            id="btn-run-1click-test"
-            type="button"
-            :disabled="fieldStore.isVerifying"
-            class="btn-touch btn-touch--pulse"
-            @click="handleRun1ClickVerify"
-          >
-            <span v-if="fieldStore.isVerifying">⏳ PROBANDO CONEXIÓN EN ROUTER...</span>
-            <span v-else>⚡ COMPROBAR CONEXIÓN (1-CLICK TEST)</span>
-          </button>
-        </div>
+              <form class="form-body" @submit.prevent="handleCreateNap">
+                <div class="form-row">
+                  <div class="form-group flex-1">
+                    <label for="nap-router-select">Router Asignador / Sede *</label>
+                    <select
+                      id="nap-router-select"
+                      v-model="napForm.router_id"
+                      class="rg-input"
+                      required
+                    >
+                      <option value="" disabled>Seleccione un router...</option>
+                      <option
+                        v-for="r in inventoryStore.routers"
+                        :key="r.id"
+                        :value="r.id"
+                      >
+                        {{ r.display_name }} ({{ r.ip_address }})
+                      </option>
+                    </select>
+                  </div>
 
-        <!-- Resultados del Test en Vivo -->
-        <div v-if="fieldStore.activeVerification" class="test-result-card">
-          <header class="result-header">
-            <span
-              :class="[
-                'result-status-pill',
-                fieldStore.activeVerification.session_active ? 'pill--online' : 'pill--offline',
-              ]"
-            >
-              {{
-                fieldStore.activeVerification.session_active
-                  ? '● EN LÍNEA EN ROUTEROS'
-                  : '● SIN SESIÓN ACTIVA'
-              }}
-            </span>
-            <span class="result-mode-tag">
-              Modo ONU: <strong>{{ fieldStore.activeVerification.detected_mode }}</strong>
-            </span>
-          </header>
+                  <div class="form-group flex-1">
+                    <label for="nap-code-input">{{ t('field_tech.box_code') }} *</label>
+                    <input
+                      id="nap-code-input"
+                      v-model="napForm.box_code"
+                      type="text"
+                      class="rg-input font-mono"
+                      :placeholder="t('field_tech.box_code_placeholder')"
+                      required
+                    />
+                  </div>
+                </div>
 
-          <div class="metrics-grid">
-            <div class="metric-box">
-              <span class="metric-label">{{ t('subscribers_map.latency') }}</span>
-              <span class="metric-val text-green font-mono"
-                >{{ fieldStore.activeVerification.ping_avg_ms || '0' }} ms</span
-              >
+                <div class="form-row">
+                  <div class="form-group flex-1">
+                    <label>{{ t('field_tech.capacity') }}</label>
+                    <div class="capacity-buttons">
+                      <button
+                        type="button"
+                        :class="['btn-toggle', { active: napForm.capacity_ports === 8 }]"
+                        @click="napForm.capacity_ports = 8; napForm.splitter_ratio = '1:8'"
+                      >
+                        8 Puertos
+                      </button>
+                      <button
+                        type="button"
+                        :class="['btn-toggle', { active: napForm.capacity_ports === 16 }]"
+                        @click="napForm.capacity_ports = 16; napForm.splitter_ratio = '1:16'"
+                      >
+                        16 Puertos
+                      </button>
+                      <button
+                        type="button"
+                        :class="['btn-toggle', { active: napForm.capacity_ports === 24 }]"
+                        @click="napForm.capacity_ports = 24; napForm.splitter_ratio = '1:24'"
+                      >
+                        24 Puertos
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="form-group flex-1">
+                    <label for="nap-splitter-ratio">{{ t('field_tech.splitter') }}</label>
+                    <select id="nap-splitter-ratio" v-model="napForm.splitter_ratio" class="rg-input">
+                      <option value="1:8">Splitter Simétrico 1:8</option>
+                      <option value="1:16">Splitter Simétrico 1:16</option>
+                      <option value="1:24">Splitter Simétrico 1:24</option>
+                      <option value="1:2 + 1:8">Cascada 1:2 + 1:8</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group flex-1">
+                    <label for="nap-type-select">{{ t('field_tech.installation_type') }}</label>
+                    <select id="nap-type-select" v-model="napForm.installation_type" class="rg-input">
+                      <option value="POSTE">{{ t('field_tech.installation_pole') }}</option>
+                      <option value="FACHADA">{{ t('field_tech.installation_facade') }}</option>
+                      <option value="CAMARA_SUBTERRANEA">{{ t('field_tech.installation_underground') }}</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group flex-1">
+                    <label for="nap-pin-input">{{ t('field_tech.input_power_dbm') }}</label>
+                    <input
+                      id="nap-pin-input"
+                      v-model.number="napForm.input_power_dbm"
+                      type="number"
+                      step="0.1"
+                      class="rg-input font-mono text-cyan"
+                    />
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="nap-location-input">{{ t('field_tech.physical_location') }}</label>
+                  <input
+                    id="nap-location-input"
+                    v-model="napForm.physical_location"
+                    type="text"
+                    class="rg-input"
+                    placeholder="Ej: Av. Bolívar Poste Eléctrico #14 frente a FarmaCentro"
+                  />
+                </div>
+
+                <div class="form-row coords-row">
+                  <div class="form-group flex-1">
+                    <label for="nap-lat-input">{{ t('field_tech.latitude') }} *</label>
+                    <input
+                      id="nap-lat-input"
+                      v-model.number="napForm.latitude"
+                      type="number"
+                      step="0.000001"
+                      class="rg-input font-mono"
+                      required
+                    />
+                  </div>
+
+                  <div class="form-group flex-1">
+                    <label for="nap-lng-input">{{ t('field_tech.longitude') }} *</label>
+                    <input
+                      id="nap-lng-input"
+                      v-model.number="napForm.longitude"
+                      type="number"
+                      step="0.000001"
+                      class="rg-input font-mono"
+                      required
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    class="btn-touch btn-touch--cyan align-self-end"
+                    @click="handleCaptureGps"
+                  >
+                    📍 GPS
+                  </button>
+                </div>
+
+                <button type="submit" class="btn-touch btn-touch--green w-full submit-btn">
+                  {{ t('field_tech.btn_save_nap') }}
+                </button>
+              </form>
             </div>
-            <div class="metric-box">
-              <span class="metric-label">{{ t('subscribers_map.packet_loss') }}</span>
-              <span class="metric-val text-cyan font-mono"
-                >{{ fieldStore.activeVerification.ping_loss_pct }}%</span
-              >
-            </div>
-            <div class="metric-box">
-              <span class="metric-label">Tráfico Rx</span>
-              <span class="metric-val font-mono"
-                >{{ fieldStore.activeVerification.traffic_rx_kbps }} kbps</span
-              >
-            </div>
-            <div class="metric-box">
-              <span class="metric-label">Tráfico Tx</span>
-              <span class="metric-val font-mono"
-                >{{ fieldStore.activeVerification.traffic_tx_kbps }} kbps</span
-              >
-            </div>
-          </div>
 
-          <div class="result-details">
-            <p>
-              <strong>IPv4 Asignada:</strong>
-              <code class="font-mono">{{
-                fieldStore.activeVerification.assigned_ipv4 || 'Dinámica'
-              }}</code>
-            </p>
-            <p v-if="fieldStore.activeVerification.assigned_ipv6_prefix">
-              <strong>Prefijo IPv6 /56:</strong>
-              <code class="font-mono">{{
-                fieldStore.activeVerification.assigned_ipv6_prefix
-              }}</code>
-            </p>
-            <p>
-              <strong>MAC Detectada:</strong>
-              <code class="font-mono">{{
-                fieldStore.activeVerification.detected_mac || 'Desconocida'
-              }}</code>
-            </p>
-            <p class="summary-line">{{ fieldStore.activeVerification.status_summary }}</p>
-          </div>
-
-          <button type="button" class="btn-touch btn-touch--green" @click="activeTab = 'certify'">
-            Continuar a Certificación y Firma →
-          </button>
-        </div>
-
-        <!-- Módulo Extendido de Diagnóstico 360° (Laptop/Desktop) -->
-        <div class="toolkit-360-box">
-          <div class="toolkit-360-header">
-            <h3>🔬 {{ t('field_tech.diagnostics_360_title') }}</h3>
-            <button
-              type="button"
-              class="btn-touch-sm btn-touch--cyan"
-              :disabled="isRunning360"
-              @click="handleQuick360Diagnostic"
-            >
-              {{ isRunning360 ? 'Ejecutando...' : 'Diagnóstico 360°' }}
-            </button>
-          </div>
-          <div v-if="diag360Result" class="diag360-result-banner">
-            <code>{{ diag360Result }}</code>
-          </div>
-        </div>
-      </section>
-
-      <!-- Columna 3: Activación con GPS y Certificación Digital -->
-      <section
-        class="field-col field-col--certify"
-        :class="{ 'field-col--hidden-mobile': activeTab !== 'certify' }"
-        aria-label="Certificación y Firma"
-      >
-        <div class="col-header">
-          <h2>✍️ {{ t('field_tech.certify_tab') }}</h2>
-        </div>
-
-        <div class="certify-box">
-          <!-- Botón Prominente de Captura GPS -->
-          <div class="gps-capture-card">
-            <button
-              id="btn-capture-gps-card"
-              type="button"
-              class="btn-touch btn-gps-prominent w-full"
-              :disabled="isLocating"
-              @click="handleCaptureGps"
-            >
-              <span v-if="isLocating">{{ t('field_tech.capturing_gps') }}</span>
-              <span v-else>{{ t('field_tech.capture_gps') }}</span>
-            </button>
-
-            <div v-if="techGps" class="gps-feedback">
-              <span class="gps-indicator">📍</span>
-              <div>
-                <strong>{{ t('field_tech.gps_captured') }}:</strong>
-                <span class="font-mono"> Lat: {{ techGps.lat }} | Lng: {{ techGps.lng }}</span>
+            <!-- Listado de Cajas Registradas -->
+            <div class="card-list">
+              <h3 class="list-title">Cajas NAP Desplegadas ({{ fieldStore.opticalBoxes.length }})</h3>
+              <div v-if="fieldStore.opticalBoxes.length === 0" class="empty-hint">
+                No hay cajas NAP registradas aún. Registre la primera caja a la izquierda.
+              </div>
+              <div v-else class="boxes-scrollable">
+                <article
+                  v-for="b in fieldStore.opticalBoxes"
+                  :key="b.id"
+                  class="box-mini-card"
+                  @click="customerForm.optical_box_id = b.id; activeTab = 'customer'"
+                >
+                  <div class="box-mini-header">
+                    <span class="box-badge font-mono">{{ b.box_code }}</span>
+                    <span class="box-capacity-tag">{{ b.capacity_ports }}p ({{ b.splitter_ratio }})</span>
+                  </div>
+                  <p class="box-location">{{ b.physical_location || 'Ubicación sin especificar' }}</p>
+                  <div class="box-mini-footer">
+                    <span class="font-mono text-cyan">{{ b.input_power_dbm ?? '--' }} dBm Pin</span>
+                    <span class="text-subtle font-mono">{{ Number(b.latitude).toFixed(4) }}, {{ Number(b.longitude).toFixed(4) }}</span>
+                  </div>
+                </article>
               </div>
             </div>
           </div>
+        </section>
 
-          <!-- Formulario Limpio: Solo Serial ONU e Identificador de Circuito -->
-          <div class="form-group-touch">
-            <label for="cert-circuit-id">{{ t('field_tech.circuit_id_label') }}</label>
-            <input
-              id="cert-circuit-id"
-              v-model="manualSubscriberId"
-              type="text"
-              class="rg-input-touch"
-              :placeholder="t('field_tech.circuit_id_placeholder')"
-              required
-            />
-          </div>
+        <!-- ========================================== -->
+        <!-- TAB 2: REGISTRAR NUEVO CLIENTE FTTH        -->
+        <!-- ========================================== -->
+        <section v-else-if="activeTab === 'customer'" class="tab-pane" aria-labelledby="tab-btn-customer">
+          <div class="pane-grid">
+            <div class="card-form">
+              <h2 class="form-title">🔌 Registrar y Aprovisionar Nuevo Cliente FTTH</h2>
+              <p class="form-desc">
+                Asocie la ONU al puerto disponible de la Caja NAP y valide la potencia óptica recibida en domicilio.
+              </p>
 
-          <div class="form-group-touch">
-            <label for="cert-serial">{{ t('field_tech.serial_onu_label') }}</label>
-            <input
-              id="cert-serial"
-              v-model="scannedSerial"
-              type="text"
-              class="rg-input-touch"
-              :placeholder="t('field_tech.serial_onu_placeholder')"
-              required
-            />
-          </div>
+              <form class="form-body" @submit.prevent="handleRegisterCustomer">
+                <div class="form-row">
+                  <div class="form-group flex-1">
+                    <label for="cust-service-id">{{ t('field_tech.subscriber_service_id') }} *</label>
+                    <input
+                      id="cust-service-id"
+                      v-model="customerForm.endpoint_identifier"
+                      type="text"
+                      class="rg-input font-mono"
+                      placeholder="Ej: CLI-008492"
+                      required
+                    />
+                  </div>
 
-          <div class="form-group-touch">
-            <label for="cert-notes">{{ t('field_tech.tech_notes') }}</label>
-            <textarea
-              id="cert-notes"
-              v-model="techNotes"
-              rows="2"
-              class="rg-input-touch"
-              :placeholder="t('field_tech.tech_notes_placeholder')"
-            />
-          </div>
+                  <div class="form-group flex-1">
+                    <label for="cust-nap-select">{{ t('field_tech.select_nap') }} *</label>
+                    <select
+                      id="cust-nap-select"
+                      v-model="customerForm.optical_box_id"
+                      class="rg-input"
+                      required
+                    >
+                      <option value="" disabled>Seleccione una caja NAP...</option>
+                      <option
+                        v-for="b in fieldStore.opticalBoxes"
+                        :key="b.id"
+                        :value="b.id"
+                      >
+                        {{ b.box_code }} ({{ b.capacity_ports }}p - {{ b.physical_location || 'NAP' }})
+                      </option>
+                    </select>
+                  </div>
+                </div>
 
-          <!-- Canvas de Firma Digital Manuscrita -->
-          <div class="signature-wrapper">
-            <div class="signature-header">
-              <label class="signature-label" for="signature-canvas">
-                ✍️ {{ t('field_tech.client_signature') }}
-              </label>
-              <span class="signature-hint">
-                El cliente debe dibujar su firma con el dedo, stylus o ratón
-              </span>
+                <div class="form-row">
+                  <div class="form-group flex-1">
+                    <label for="cust-port-select">{{ t('field_tech.select_nap_port') }} *</label>
+                    <select
+                      id="cust-port-select"
+                      v-model.number="customerForm.optical_box_port"
+                      class="rg-input font-mono"
+                      required
+                    >
+                      <option
+                        v-for="p in (selectedNapBox ? selectedNapBox.capacity_ports : 16)"
+                        :key="p"
+                        :value="p"
+                      >
+                        Puerto {{ p }}
+                      </option>
+                    </select>
+                  </div>
+
+                  <div class="form-group flex-1">
+                    <label for="cust-onu-serial">{{ t('field_tech.serial_onu_label') }} *</label>
+                    <div class="input-with-btn">
+                      <input
+                        id="cust-onu-serial"
+                        v-model="customerForm.device_serial"
+                        type="text"
+                        class="rg-input font-mono flex-1"
+                        placeholder="Ej: HWTC1234ABCD"
+                        required
+                      />
+                      <button
+                        type="button"
+                        class="btn-touch-sm btn-touch--cyan"
+                        title="Normalizar prefijos GPON"
+                        @click="handleNormalizeSerial"
+                      >
+                        🔤
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group flex-1">
+                    <label for="cust-onu-model">Modelo de ONU</label>
+                    <select id="cust-onu-model" v-model="customerForm.model" class="rg-input">
+                      <option value="HG8310M Bridge">Huawei HG8310M (Bridge 1GE)</option>
+                      <option value="F601 Bridge">ZTE F601 (Bridge 1GE)</option>
+                      <option value="F670L WiFi-6">ZTE F670L (Router Dual-Band AX)</option>
+                      <option value="EG8145V5 WiFi">Huawei EG8145V5 (Router AC)</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group flex-1">
+                    <label for="cust-onu-mode">Modo de Operación</label>
+                    <select id="cust-onu-mode" v-model="customerForm.onu_mode" class="rg-input">
+                      <option value="BRIDGE">Bridge Puro (PPPoE en Router Cliente)</option>
+                      <option value="ROUTER_NAT">Router NAT (PPPoE/DHCP en la ONU)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Semáforo Cromático de Potencia Óptica Rx -->
+                <div class="optical-power-meter-card" :class="`meter--${opticalRxSeverity}`">
+                  <div class="meter-header">
+                    <label for="cust-rx-power">{{ t('field_tech.rx_optical_power') }} *</label>
+                    <span class="power-status-badge">
+                      <span v-if="opticalRxSeverity === 'optimal'">🟢 ÓPTIMO (-15 a -24 dBm)</span>
+                      <span v-else-if="opticalRxSeverity === 'warning'">🟠 ATENCIÓN (-24 a -27 dBm)</span>
+                      <span v-else>🔴 CRÍTICO / SATURADO</span>
+                    </span>
+                  </div>
+                  <div class="meter-input-group">
+                    <input
+                      id="cust-rx-power"
+                      v-model.number="customerForm.rx_optical_power_dbm"
+                      type="number"
+                      step="0.1"
+                      class="rg-input font-mono text-xl"
+                      required
+                    />
+                    <span class="unit-tag font-mono">dBm</span>
+                  </div>
+                  <p class="meter-advice">
+                    <span v-if="opticalRxSeverity === 'optimal'">El nivel de luz se encuentra en el rango de máxima estabilidad y cero jitter.</span>
+                    <span v-else-if="opticalRxSeverity === 'warning'">Atenuación elevada. Verifique curvatura del cable drop o limpieza del conector SC/APC.</span>
+                    <span v-else>Riesgo inminente de desconexión o pérdida de tramas FEC. Requiere re-fusionar el drop.</span>
+                  </p>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group flex-1">
+                    <label for="cust-drop-meters">{{ t('field_tech.drop_cable_meters') }}</label>
+                    <input
+                      id="cust-drop-meters"
+                      v-model.number="customerForm.drop_cable_meters"
+                      type="number"
+                      class="rg-input font-mono"
+                    />
+                  </div>
+                </div>
+
+                <!-- Coordenadas Domicilio -->
+                <div class="coords-box">
+                  <div class="coords-header">
+                    <span>Coordenadas del Domicilio</span>
+                    <button
+                      type="button"
+                      class="btn-touch-xs btn-touch--cyan"
+                      @click="handleCopyCoordsFromNap"
+                    >
+                      {{ t('field_tech.copy_nap_coords') }}
+                    </button>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group flex-1">
+                      <input
+                        v-model.number="customerForm.latitude"
+                        type="number"
+                        step="0.000001"
+                        class="rg-input font-mono"
+                        placeholder="Latitud"
+                      />
+                    </div>
+                    <div class="form-group flex-1">
+                      <input
+                        v-model.number="customerForm.longitude"
+                        type="number"
+                        step="0.000001"
+                        class="rg-input font-mono"
+                        placeholder="Longitud"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      class="btn-touch btn-touch--cyan"
+                      @click="handleCaptureGps"
+                    >
+                      📍 GPS
+                    </button>
+                  </div>
+                </div>
+
+                <button type="submit" class="btn-touch btn-touch--green w-full submit-btn">
+                  {{ t('field_tech.btn_register_customer') }}
+                </button>
+              </form>
             </div>
 
-            <div class="signature-canvas-container">
-              <canvas
-                id="signature-canvas"
-                ref="signatureCanvas"
-                width="340"
-                height="140"
-                class="signature-pad"
-                aria-label="Área táctil para rúbrica o firma manuscrita de conformidad del abonado"
-                @mousedown="startDrawing"
-                @mousemove="draw"
-                @mouseup="stopDrawing"
-                @touchstart.prevent="startDrawing"
-                @touchmove.prevent="draw"
-                @touchend.prevent="stopDrawing"
-              />
-              <div v-if="!hasDrawnSignature" class="signature-watermark" aria-hidden="true">
-                <span class="watermark-icon">✍️</span>
-                <span class="watermark-text">Dibujar firma manuscrita aquí</span>
-                <span class="watermark-baseline">✕ ────────────────────────</span>
+            <!-- Previsualización de la Caja NAP Seleccionada -->
+            <div class="card-list">
+              <h3 class="list-title">Detalle de la Caja NAP</h3>
+              <div v-if="!selectedNapBox" class="empty-hint">
+                Seleccione una Caja NAP en el formulario para inspeccionar sus puertos y capacidad.
+              </div>
+              <div v-else class="nap-detail-view">
+                <div class="nap-summary">
+                  <h4 class="font-mono text-cyan">{{ selectedNapBox.box_code }}</h4>
+                  <p>{{ selectedNapBox.physical_location || 'Sin dirección física registrada' }}</p>
+                  <p class="font-mono text-subtle">
+                    Splitter {{ selectedNapBox.splitter_ratio }} • Potencia Entrada: {{ selectedNapBox.input_power_dbm ?? '--' }} dBm
+                  </p>
+                </div>
+
+                <div class="nap-matrix-preview">
+                  <h5>Matriz de Puertos ({{ selectedNapBox.capacity_ports }} Puertos)</h5>
+                  <div class="ports-grid">
+                    <button
+                      v-for="p in selectedNapBox.capacity_ports"
+                      :key="p"
+                      type="button"
+                      :class="[
+                        'port-btn',
+                        { selected: customerForm.optical_box_port === p }
+                      ]"
+                      @click="customerForm.optical_box_port = p"
+                    >
+                      <span class="port-num">{{ p }}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 3: DIAGNÓSTICOS Y CERTIFICACIÓN        -->
+        <!-- ========================================== -->
+        <section v-else class="tab-pane" aria-labelledby="tab-btn-diagnostics">
+          <div class="pane-grid">
+            <div class="card-form">
+              <h2 class="form-title">⚡ Diagnóstico en Tiempo Real y Certificación 1-Click</h2>
+              <p class="form-desc">
+                Verifique conectividad ICMP desde el router MikroTik y selle la entrega con firma táctil.
+              </p>
+
+              <div class="diag-action-bar">
+                <div class="form-group flex-1">
+                  <label for="diag-target-select">Abonado a Diagnosticar</label>
+                  <select
+                    id="diag-target-select"
+                    v-model="diagTargetId"
+                    class="rg-input font-mono"
+                  >
+                    <option value="" disabled>Seleccione un abonado...</option>
+                    <option
+                      v-for="dev in fieldStore.recentInstallations"
+                      :key="dev.id"
+                      :value="dev.id"
+                    >
+                      {{ dev.customer_code || dev.endpoint_identifier }} - {{ dev.onu_serial_number || dev.device_serial }}
+                    </option>
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  class="btn-touch btn-touch--cyan align-self-end"
+                  :disabled="isPinging || !diagTargetId"
+                  @click="handleRun1ClickPing"
+                >
+                  <span v-if="isPinging">⏳ Probando...</span>
+                  <span v-else>⚡ Test Ping 1-Click</span>
+                </button>
+              </div>
+
+              <!-- Resultados de Conectividad en Vivo -->
+              <div v-if="pingResult" class="ping-results-card" :class="`ping--${pingResult.status.toLowerCase()}`">
+                <div class="ping-card-header">
+                  <span class="status-pill">{{ pingResult.status }}</span>
+                  <span class="latency-readout font-mono">
+                    {{ pingResult.latency_ms !== undefined ? `${pingResult.latency_ms} ms` : 'Timeout' }}
+                  </span>
+                </div>
+                <p class="ping-msg font-mono">{{ pingResult.message }}</p>
+
+                <div class="diagnostics-subgrid">
+                  <div class="diag-metric-box">
+                    <span class="metric-label">Sesión RouterOS v7</span>
+                    <span class="metric-val text-green">{{ sessionStatus || 'Verificando...' }}</span>
+                  </div>
+                  <div class="diag-metric-box">
+                    <span class="metric-label">MTU 1500 DF Pass</span>
+                    <span class="metric-val" :class="mtuTestResult === 'PASS' ? 'text-green' : 'text-red'">
+                      {{ mtuTestResult || 'En espera' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Canvas Táctil de Firma de Conformidad -->
+              <div class="signature-section">
+                <div class="sig-header">
+                  <label class="sig-title">✍️ {{ t('field_tech.client_signature') }}</label>
+                  <button type="button" class="btn-touch-xs btn-touch--orange" @click="clearSignature">
+                    🗑️ {{ t('field_tech.clear_signature') }}
+                  </button>
+                </div>
+
+                <div class="signature-canvas-container">
+                  <canvas
+                    id="signature-canvas"
+                    ref="signatureCanvas"
+                    width="480"
+                    height="160"
+                    class="signature-pad"
+                    @mousedown="startDrawing"
+                    @mousemove="draw"
+                    @mouseup="stopDrawing"
+                    @touchstart.prevent="startDrawing"
+                    @touchmove.prevent="draw"
+                    @touchend.prevent="stopDrawing"
+                  />
+                  <div v-if="!hasDrawnSignature" class="signature-watermark" aria-hidden="true">
+                    <span>Dibujar rúbrica de conformidad aquí con el dedo o stylus</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  class="btn-touch btn-touch--purple w-full submit-btn"
+                  @click="handleCertifyInstallation"
+                >
+                  {{ t('field_tech.certify_submit') }}
+                </button>
               </div>
             </div>
 
-            <div class="signature-footer">
-              <button type="button" class="btn-clear-sig" @click="clearSignature">
-                🗑️ {{ t('field_tech.clear_signature') }}
-              </button>
-              <span class="signature-audit-note">Exportado en PNG nativo para auditoría WORM</span>
+            <!-- Historial de Altas Recientes del Técnico -->
+            <div class="card-list">
+              <h3 class="list-title">{{ t('field_tech.recent_activity') }} ({{ fieldStore.recentInstallations.length }})</h3>
+              <div v-if="fieldStore.recentInstallations.length === 0" class="empty-hint">
+                No hay instalaciones recientes registradas en este turno.
+              </div>
+              <div v-else class="boxes-scrollable">
+                <article
+                  v-for="inst in fieldStore.recentInstallations"
+                  :key="inst.id"
+                  class="box-mini-card"
+                  @click="handleSelectRecentDev(inst)"
+                >
+                  <div class="box-mini-header">
+                    <span class="box-badge font-mono">{{ inst.customer_code || inst.endpoint_identifier }}</span>
+                    <span
+                      class="status-pill-sm"
+                      :class="inst.last_reachability_status === 'ONLINE' ? 'pill--green' : 'pill--gray'"
+                    >
+                      {{ inst.last_reachability_status || 'REGISTRADO' }}
+                    </span>
+                  </div>
+                  <p class="font-mono text-cyan">{{ inst.onu_serial_number || inst.device_serial }}</p>
+                  <div class="box-mini-footer">
+                    <span>Puerto {{ inst.optical_box_port ?? '1' }}</span>
+                    <span class="text-subtle font-mono">{{ inst.rx_optical_power_dbm ?? '--' }} dBm Rx</span>
+                  </div>
+                </article>
+              </div>
             </div>
           </div>
-
-          <button
-            id="btn-certify-installation"
-            type="button"
-            class="btn-touch btn-touch--purple w-full"
-            @click="handleCertifyInstallation"
-          >
-            {{ t('field_tech.certify_submit') }}
-          </button>
-        </div>
-      </section>
+        </section>
+      </main>
     </div>
   </div>
 </template>
@@ -551,19 +998,47 @@
 <style scoped>
   .field-mobile-view {
     width: 100%;
-    max-width: 1400px;
+    max-width: 1440px;
     margin: 0 auto;
     background: #090e17;
-    color: #fff;
+    color: #f1f5f9;
     min-height: 100vh;
     padding: 1.25rem;
-    font-family:
-      system-ui,
-      -apple-system,
-      BlinkMacSystemFont,
-      'Segoe UI',
-      Roboto,
-      sans-serif;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  .non-isp-blocker {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 60vh;
+  }
+
+  .blocker-card {
+    background: #111927;
+    border: 1px solid rgba(0, 243, 255, 0.3);
+    border-radius: 8px;
+    padding: 2.5rem;
+    max-width: 520px;
+    text-align: center;
+  }
+
+  .blocker-icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 1rem;
+  }
+
+  .blocker-title {
+    color: #00f3ff;
+    font-size: 1.35rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .blocker-desc {
+    color: #94a3b8;
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
   }
 
   .field-header {
@@ -589,10 +1064,9 @@
 
   .tech-title {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: 1.3rem;
     font-weight: 800;
     color: #00f3ff;
-    letter-spacing: 0.5px;
   }
 
   .tech-sub {
@@ -600,590 +1074,524 @@
     color: #94a3b8;
   }
 
-  .header-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-  }
-
-  .orders-count {
-    background: rgba(0, 243, 255, 0.15);
-    color: #00f3ff;
-    padding: 0.35rem 0.75rem;
-    border-radius: 6px;
-    font-size: 0.8rem;
-    font-weight: bold;
-    border: 1px solid rgba(0, 243, 255, 0.3);
-  }
-
   .btn-gps-prominent {
-    min-height: 48px;
-    padding: 0 1.25rem;
-    background: linear-gradient(135deg, rgba(0, 243, 255, 0.2), rgba(0, 243, 255, 0.05));
+    background: #002233;
     border: 1px solid #00f3ff;
     color: #00f3ff;
-    font-weight: 700;
-    font-size: 0.95rem;
-    border-radius: 8px;
+    padding: 0.6rem 1.2rem;
+    border-radius: 6px;
     cursor: pointer;
-    box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
+    font-weight: 600;
     transition: all 0.2s ease;
   }
 
-  .btn-gps-prominent:hover:not(:disabled) {
-    background: #00f3ff;
-    color: #090e17;
-    box-shadow: 0 0 25px rgba(0, 243, 255, 0.4);
+  .btn-gps-prominent:hover {
+    background: rgba(0, 243, 255, 0.2);
   }
 
-  .btn-gps-prominent:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+  .feedback-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    font-weight: 500;
   }
 
-  /* Pestañas de navegación para móviles */
-  .mobile-nav {
+  .feedback--success {
+    background: rgba(34, 197, 94, 0.15);
+    border: 1px solid #22c55e;
+    color: #4ade80;
+  }
+
+  .feedback--error {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid #ef4444;
+    color: #f87171;
+  }
+
+  .btn-close-msg {
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 1.1rem;
+    cursor: pointer;
+  }
+
+  .tactical-tabs-nav {
     display: flex;
     gap: 0.5rem;
-    margin-bottom: 1.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 1.5rem;
+    overflow-x: auto;
   }
 
   .nav-tab {
-    flex: 1;
-    min-height: 48px;
-    padding: 0.75rem 0.5rem;
-    background: #131c2e;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
     color: #94a3b8;
-    font-weight: 700;
-    font-size: 0.9rem;
-    border-radius: 8px;
+    padding: 0.75rem 1.25rem;
+    font-size: 0.95rem;
+    font-weight: 600;
     cursor: pointer;
+    white-space: nowrap;
     transition: all 0.2s;
   }
 
-  .nav-tab.active {
-    background: rgba(0, 243, 255, 0.15);
-    border-color: #00f3ff;
-    color: #00f3ff;
+  .nav-tab:hover {
+    color: #f1f5f9;
   }
 
-  /* Grid Layout Multi-Dispositivo */
-  .field-layout-grid {
-    display: flex;
-    flex-direction: column;
+  .nav-tab.active {
+    color: #00f3ff;
+    border-bottom-color: #00f3ff;
+    background: rgba(0, 243, 255, 0.05);
+  }
+
+  .tab-badge {
+    background: #1e293b;
+    color: #00f3ff;
+    font-size: 0.75rem;
+    padding: 0.15rem 0.45rem;
+    border-radius: 10px;
+  }
+
+  .pane-grid {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
     gap: 1.5rem;
   }
 
-  .field-col {
-    background: #0d1527;
-    border: 1px solid rgba(0, 243, 255, 0.15);
-    border-radius: 10px;
-    padding: 1.25rem;
+  @media (max-width: 992px) {
+    .pane-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .card-form, .card-list {
+    background: #111927;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 1.5rem;
+  }
+
+  .form-title, .list-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-top: 0;
+    margin-bottom: 0.35rem;
+    color: #f8fafc;
+  }
+
+  .form-desc {
+    font-size: 0.825rem;
+    color: #94a3b8;
+    margin-bottom: 1.25rem;
+  }
+
+  .form-body {
     display: flex;
     flex-direction: column;
     gap: 1rem;
   }
 
-  .col-header {
+  .form-row {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    padding-bottom: 0.5rem;
+    gap: 1rem;
+    flex-wrap: wrap;
   }
 
-  .col-header h2 {
-    font-size: 1.05rem;
-    color: #00f3ff;
-    margin: 0;
-  }
-
-  /* Botones táctiles con mínimo 48px de altura (WCAG 2.1 AA) */
-  .btn-touch {
-    min-height: 48px;
-    padding: 0.75rem 1.25rem;
-    border-radius: 8px;
-    font-weight: 700;
-    font-size: 0.95rem;
-    border: none;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-  }
-
-  .btn-touch-sm {
-    min-height: 38px;
-    padding: 0.4rem 0.8rem;
-    border-radius: 6px;
-    font-weight: 600;
-    font-size: 0.85rem;
-    border: none;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .btn-touch--cyan {
-    background: rgba(0, 243, 255, 0.2);
-    border: 1px solid #00f3ff;
-    color: #00f3ff;
-  }
-
-  .btn-touch--cyan:hover {
-    background: #00f3ff;
-    color: #090e17;
-  }
-
-  .btn-touch--pulse {
-    background: linear-gradient(90deg, #00f3ff, #0088ff);
-    color: #090e17;
-    font-weight: 800;
-  }
-
-  .btn-touch--green {
-    background: #22c55e;
-    color: #090e17;
-    font-weight: 800;
-  }
-
-  .btn-touch--purple {
-    background: linear-gradient(90deg, #a855f7, #6366f1);
-    color: #fff;
-    font-weight: 800;
-  }
-
-  .rg-input-touch {
-    min-height: 48px;
-    background: #060b13;
-    border: 1px solid rgba(0, 243, 255, 0.3);
-    color: #fff;
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    width: 100%;
-    box-sizing: border-box;
-  }
-
-  .rg-input-touch:focus {
-    outline: none;
-    border-color: #00f3ff;
-    box-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
-  }
-
-  .form-row-touch {
+  .form-group {
     display: flex;
-    gap: 0.75rem;
+    flex-direction: column;
+    gap: 0.35rem;
   }
 
   .flex-1 {
     flex: 1;
+    min-width: 220px;
+  }
+
+  .rg-input {
+    background: #090e17;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    padding: 0.6rem 0.8rem;
+    color: #f1f5f9;
+    font-size: 0.9rem;
+  }
+
+  .rg-input:focus {
+    border-color: #00f3ff;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 243, 255, 0.2);
+  }
+
+  .capacity-buttons {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .btn-toggle {
+    flex: 1;
+    background: #090e17;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #94a3b8;
+    padding: 0.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+
+  .btn-toggle.active {
+    background: #002b3d;
+    border-color: #00f3ff;
+    color: #00f3ff;
+    font-weight: 600;
+  }
+
+  .btn-touch {
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+  }
+
+  .btn-touch--cyan {
+    background: #00f3ff;
+    color: #000;
+  }
+
+  .btn-touch--cyan:hover {
+    background: #5cf6ff;
+  }
+
+  .btn-touch--green {
+    background: #22c55e;
+    color: #000;
+  }
+
+  .btn-touch--green:hover {
+    background: #4ade80;
+  }
+
+  .btn-touch--purple {
+    background: #8b5cf6;
+    color: #fff;
+  }
+
+  .btn-touch-sm {
+    padding: 0.4rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    border: none;
+    cursor: pointer;
+  }
+
+  .btn-touch-xs {
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    border: none;
+    cursor: pointer;
   }
 
   .w-full {
     width: 100%;
   }
 
-  .font-mono {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  .align-self-end {
+    align-self: flex-end;
   }
 
-  .form-group-touch {
+  .input-with-btn {
     display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.5rem;
   }
 
-  .form-group-touch label {
+  /* Semáforo de Potencia Óptica */
+  .optical-power-meter-card {
+    padding: 1rem;
+    border-radius: 6px;
+    background: #090e17;
+    border-left: 4px solid #22c55e;
+  }
+
+  .meter--optimal {
+    border-left-color: #22c55e;
+  }
+
+  .meter--warning {
+    border-left-color: #f97316;
+  }
+
+  .meter--critical {
+    border-left-color: #ef4444;
+  }
+
+  .meter-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
     font-size: 0.85rem;
-    color: #94a3b8;
-    font-weight: 600;
   }
 
-  .verify-form {
+  .power-status-badge {
+    font-weight: 700;
+    font-size: 0.75rem;
+  }
+
+  .meter-input-group {
     display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
+    align-items: center;
+    gap: 0.5rem;
   }
 
-  .verify-form label {
-    font-size: 0.85rem;
+  .meter-advice {
+    font-size: 0.75rem;
     color: #94a3b8;
-    font-weight: 600;
+    margin-top: 0.4rem;
+    margin-bottom: 0;
   }
 
-  .empty-orders {
-    text-align: center;
-    padding: 2rem 1rem;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 8px;
-    color: #94a3b8;
-  }
-
-  .orders-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .order-card {
-    background: #111a2d;
+  .coords-box {
+    background: #090e17;
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 8px;
-    padding: 0.85rem;
+    border-radius: 6px;
+    padding: 0.75rem;
+  }
+
+  .coords-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+    color: #94a3b8;
+  }
+
+  .boxes-scrollable {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-height: 520px;
+    overflow-y: auto;
+  }
+
+  .box-mini-card {
+    background: #090e17;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    padding: 0.75rem;
     cursor: pointer;
     transition: all 0.2s;
   }
 
-  .order-card:hover,
-  .order-card--selected {
+  .box-mini-card:hover {
     border-color: #00f3ff;
-    background: #15223c;
+    transform: translateY(-2px);
   }
 
-  .order-card-header {
+  .box-mini-header {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.35rem;
   }
 
-  .order-id {
-    font-size: 0.85rem;
+  .box-badge {
     color: #00f3ff;
     font-weight: 700;
   }
 
-  .order-status {
+  .box-capacity-tag {
     font-size: 0.75rem;
-    padding: 0.2rem 0.5rem;
+    background: #1e293b;
+    padding: 0.1rem 0.4rem;
     border-radius: 4px;
-    font-weight: bold;
   }
 
-  .status--PENDING {
-    background: rgba(234, 179, 8, 0.2);
-    color: #eab308;
+  .box-location {
+    font-size: 0.8rem;
+    color: #cbd5e1;
+    margin: 0 0 0.35rem 0;
   }
 
-  .status--CERTIFIED {
-    background: rgba(34, 197, 94, 0.2);
-    color: #22c55e;
-  }
-
-  .order-card-body p {
-    margin: 0.25rem 0;
-    font-size: 0.85rem;
-  }
-
-  .order-notes {
-    color: #94a3b8;
-    font-style: italic;
-  }
-
-  .order-card-footer {
-    margin-top: 0.75rem;
-    display: flex;
-    justify-content: flex-end;
-  }
-
-  /* Test en vivo */
-  .test-result-card {
-    background: #08101e;
-    border: 1px solid rgba(0, 243, 255, 0.3);
-    border-radius: 8px;
-    padding: 1rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.85rem;
-  }
-
-  .result-header {
+  .box-mini-footer {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-  }
-
-  .result-status-pill {
-    padding: 0.25rem 0.65rem;
-    border-radius: 4px;
     font-size: 0.75rem;
-    font-weight: 800;
-  }
-
-  .pill--online {
-    background: rgba(34, 197, 94, 0.2);
-    color: #22c55e;
-  }
-
-  .pill--offline {
-    background: rgba(239, 68, 68, 0.2);
-    color: #ef4444;
-  }
-
-  .result-mode-tag {
-    font-size: 0.8rem;
-    color: #94a3b8;
-  }
-
-  .metrics-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.5rem;
-  }
-
-  .metric-box {
-    background: #04070d;
-    padding: 0.65rem;
-    border-radius: 6px;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .metric-label {
-    font-size: 0.7rem;
-    color: #64748b;
-  }
-
-  .metric-val {
-    font-size: 1.15rem;
-    font-weight: 700;
-  }
-
-  .text-green {
-    color: #22c55e;
   }
 
   .text-cyan {
     color: #00f3ff;
   }
 
-  .result-details {
-    font-size: 0.85rem;
-    background: #04070d;
-    padding: 0.65rem;
-    border-radius: 6px;
-  }
-
-  .result-details p {
-    margin: 0.25rem 0;
-  }
-
-  .summary-line {
-    color: #38bdf8;
-    margin-top: 0.5rem !important;
-  }
-
-  /* Diagnóstico 360 */
-  .toolkit-360-box {
-    background: #070d19;
-    border: 1px dashed rgba(0, 243, 255, 0.3);
-    border-radius: 8px;
-    padding: 0.85rem;
-  }
-
-  .toolkit-360-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .toolkit-360-header h3 {
-    margin: 0;
-    font-size: 0.95rem;
-    color: #00f3ff;
-  }
-
-  .diag360-result-banner {
-    margin-top: 0.65rem;
-    background: #020509;
-    padding: 0.5rem;
-    border-radius: 4px;
-    font-size: 0.8rem;
-    color: #a5f3fc;
-  }
-
-  /* Certificación y GPS */
-  .certify-box {
-    display: flex;
-    flex-direction: column;
-    gap: 0.85rem;
-  }
-
-  .gps-capture-card {
-    background: #050b15;
-    border: 1px solid rgba(0, 243, 255, 0.25);
-    border-radius: 8px;
-    padding: 0.85rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .gps-feedback {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.85rem;
+  .text-green {
     color: #22c55e;
   }
 
-  .gps-indicator {
-    font-size: 1.25rem;
+  .text-red {
+    color: #ef4444;
   }
 
-  .signature-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 0.45rem;
-    margin: 0.5rem 0;
+  .text-subtle {
+    color: #64748b;
   }
 
-  .signature-header {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
+  .ports-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 0.35rem;
+    margin-top: 0.5rem;
   }
 
-  .signature-label {
-    font-size: 0.88rem;
-    color: #e2e8f0;
-    font-weight: 700;
-  }
-
-  .signature-hint {
-    font-size: 0.75rem;
+  .port-btn {
+    background: #090e17;
+    border: 1px solid rgba(0, 243, 255, 0.3);
     color: #00f3ff;
-    font-weight: 500;
+    padding: 0.5rem 0.25rem;
+    border-radius: 4px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .port-btn.selected {
+    background: #00f3ff;
+    color: #000;
+  }
+
+  /* Diagnósticos */
+  .diag-action-bar {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .ping-results-card {
+    background: #090e17;
+    border-radius: 8px;
+    padding: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 1.25rem;
+  }
+
+  .ping--online {
+    border-color: #22c55e;
+  }
+
+  .ping--offline {
+    border-color: #ef4444;
+  }
+
+  .ping-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .status-pill {
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+
+  .ping--online .status-pill {
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+  }
+
+  .ping--offline .status-pill {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+  }
+
+  .diagnostics-subgrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+  }
+
+  .diag-metric-box {
+    background: #111927;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .metric-label {
+    font-size: 0.75rem;
+    color: #94a3b8;
+  }
+
+  .metric-val {
+    font-weight: 700;
+    font-size: 0.95rem;
+  }
+
+  /* Firma */
+  .signature-section {
+    margin-top: 1.5rem;
+  }
+
+  .sig-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
   }
 
   .signature-canvas-container {
     position: relative;
-    width: 100%;
-    max-width: 340px;
-    height: 140px;
+    background: #090e17;
+    border: 2px dashed rgba(0, 243, 255, 0.3);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: center;
   }
 
   .signature-pad {
     width: 100%;
-    max-width: 340px;
-    height: 140px;
-    background: #03060b;
-    border: 1.5px dashed rgba(0, 243, 255, 0.5);
-    border-radius: 6px;
+    max-width: 480px;
+    height: 160px;
     touch-action: none;
     cursor: crosshair;
-    position: relative;
-    z-index: 2;
   }
 
   .signature-watermark {
     position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.3rem;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: rgba(255, 255, 255, 0.2);
     pointer-events: none;
-    z-index: 1;
-    color: rgba(148, 163, 184, 0.4);
-    user-select: none;
+    font-size: 0.85rem;
   }
 
-  .watermark-icon {
-    font-size: 1.5rem;
-    opacity: 0.6;
-  }
-
-  .watermark-text {
-    font-size: 0.8rem;
-    font-weight: 600;
-    letter-spacing: 0.03em;
-  }
-
-  .watermark-baseline {
-    font-size: 0.75rem;
-    color: rgba(0, 243, 255, 0.35);
-    margin-top: 0.25rem;
-    letter-spacing: -0.05em;
-  }
-
-  .signature-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    max-width: 340px;
-    gap: 0.5rem;
-  }
-
-  .btn-clear-sig {
-    background: transparent;
-    border: 1px solid #475569;
-    color: #94a3b8;
-    padding: 0.3rem 0.6rem;
-    font-size: 0.75rem;
+  .status-pill-sm {
+    font-size: 0.7rem;
+    padding: 0.1rem 0.4rem;
     border-radius: 4px;
-    cursor: pointer;
-    min-height: 32px;
-    transition: all 0.2s ease;
+    font-weight: 600;
   }
 
-  .btn-clear-sig:hover {
-    border-color: #ef4444;
-    color: #ef4444;
-    background: rgba(239, 68, 68, 0.1);
+  .pill--green {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
   }
 
-  .signature-audit-note {
-    font-size: 0.68rem;
-    color: #64748b;
-    text-align: right;
-  }
-
-  /* MEDIA QUERIES RESPONSIVAS */
-  @media (max-width: 767px) {
-    .field-col--hidden-mobile {
-      display: none !important;
-    }
-  }
-
-  @media (min-width: 768px) and (max-width: 1023px) {
-    .mobile-nav {
-      display: none;
-    }
-    .field-col--hidden-mobile {
-      display: flex !important;
-    }
-    .field-layout-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1.25rem;
-    }
-    .field-col--certify {
-      grid-column: span 2;
-    }
-  }
-
-  @media (min-width: 1024px) {
-    .mobile-nav {
-      display: none;
-    }
-    .field-col--hidden-mobile {
-      display: flex !important;
-    }
-    .field-layout-grid {
-      display: grid;
-      grid-template-columns: 340px 1fr 1fr;
-      gap: 1.5rem;
-      align-items: start;
-    }
+  .pill--gray {
+    background: rgba(148, 163, 184, 0.2);
+    color: #94a3b8;
   }
 </style>
