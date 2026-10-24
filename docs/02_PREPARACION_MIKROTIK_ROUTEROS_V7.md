@@ -13,16 +13,16 @@ Accede por primera vez a tu equipo MikroTik mediante consola serial o WinBox tem
 RoSGrid valida la autenticidad del router mediante *Trust On First Use* (TOFU) capturando y fijando criptográficamente la huella digital SHA-256 del certificado SSL:
 
 ```routeros
-# 1. Crear plantilla de certificado autofirmado
-/certificate add name=my-ca common-name="Rosgrid Root CA" days-valid=3650 key-size=2048 key-usage=key-cert-sign,crl-sign
-/certificate sign my-ca
+# 1. Crear y autofirmar una CA local en el MikroTik
+/certificate add name=rosgrid-ca common-name="RoSGrid Local CA" days-valid=3650 key-size=2048 key-usage=key-cert-sign,crl-sign
+/certificate sign rosgrid-ca
 
-# 2. Firmar el certificado localmente
-/certificate add name=rosgrid-ssl common-name="rosgrid-router.local" days-valid=3650 key-size=2048 key-usage=digital-signature,key-encipherment,tls-server
-/certificate sign rosgrid-ssl ca=my-ca
+# 2. Generar y firmar el certificado TLS de servidor con la CA local
+/certificate add name=rosgrid-tofu-cert common-name="rosgrid.local" days-valid=3650 key-size=2048 key-usage=digital-signature,key-encipherment,tls-server
+/certificate sign rosgrid-tofu-cert ca=rosgrid-ca
 
 # 3. Verificar el certificado firmado y obtener el Fingerprint SHA-256
-/certificate print detail where name=rosgrid-ssl
+/certificate print detail where name=rosgrid-tofu-cert
 ```
 
 Anota el valor de `fingerprint` (ej. `3a:b8:c4:...`); este valor será fijado automáticamente por RoSGrid en el primer apretón de manos TLS o introducido manualmente en el inventario.
@@ -60,7 +60,7 @@ La comunicación entre RoSGrid y MikroTik se realiza **exclusivamente mediante l
 
 ```routeros
 # 1. Asignar el certificado y habilitar el servicio www-ssl en puerto 443
-/ip service set www-ssl certificate=rosgrid-ssl port=443 disabled=no tls-version=only-1.2
+/ip service set www-ssl certificate=rosgrid-tofu-cert port=443 disabled=no tls-version=only-1.2
 
 # 2. Deshabilitar servicios inseguros y puertos innecesarios
 /ip service disable www

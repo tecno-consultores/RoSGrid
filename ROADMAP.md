@@ -492,7 +492,10 @@
   - Detección dual de la Skill `rosgrid-noc-operator` en modo local (`.agents/skills/rosgrid-noc-operator`) y remoto (`skills/rosgrid-noc-operator`).
   - Sincronización de contratos Front-Back en `scripts/probar-prod-local.sh`: actualización de 24 a **26 contratos validados** (`26/26 contratos validados`) tras la incorporación de contratos 25 y 26 en Hito 23.
   - Estandarización de licencias `SPDX-License-Identifier: GPL-3.0-only` y flags `set -euo pipefail` en `scripts/auditar-infra.sh`, `scripts/build.sh` e `scripts/instalar-hooks.sh`.
-  - Actualización del hook `bash-lint` en `lefthook.yml` con el glob `{scripts,fastapi/scripts,.agents/scripts}/**/*.sh` ejecutando `koalaman/shellcheck:stable` en contenedor Docker efímero con 0 errores y 0 advertencias.
+- [x] **23.20** **Corrección de Sintaxis Canónica RouterOS v7 para Generación y Firma de Certificados SSL TOFU (`README.md`, `docs/INSTALL.md`, `docs/02`):**
+  - Incorporación de la creación y autofirma previa de la CA local (`rosgrid-ca` con `key-usage=key-cert-sign,crl-sign`) requerida por RouterOS v7 antes de emitir un certificado de servidor.
+  - Firma explícita de `rosgrid-tofu-cert` con `ca="rosgrid-ca"`, erradicando el error `failure: ca not found`.
+  - Estandarización unificada de nomenclatura de certificados en toda la documentación y guías de puesta en marcha.
 
 ---
 

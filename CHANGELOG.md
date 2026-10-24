@@ -10,6 +10,11 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Fixed
 
+- **Corrección de Sintaxis Canónica RouterOS v7 para Generación y Firma de Certificados SSL TOFU (`README.md`, `docs/INSTALL.md`, `docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md`):**
+  - **Requisito de Autoridad Certificadora (CA) Emisora:** Corregido el procedimiento CLI en MikroTik RouterOS v7 incorporando la creación y autofirma previa de la Autoridad Certificadora local (`/certificate add name="rosgrid-ca" ... key-usage=key-cert-sign,crl-sign` y `/certificate sign "rosgrid-ca"`).
+  - **Firma Asistida de Certificado de Servidor:** Se añadió el parámetro explícito `ca="rosgrid-ca"` en el comando de firma del certificado TLS de servidor (`/certificate sign "rosgrid-tofu-cert" ca="rosgrid-ca"`), resolviendo el error `failure: ca not found` producido cuando RouterOS intenta firmar un certificado de entidad final sin una CA especificada.
+  - **Estandarización de Nomenclatura:** Unificados los nombres `rosgrid-ca` y `rosgrid-tofu-cert` en toda la documentación operativa y guías de despliegue.
+
 - **Auditoría Integral y Corrección de Rutas en Scripts Bash y Barrera Pre-commit (`scripts/`, `lefthook.yml`):**
   - **Corrección de Modo Dual en `scripts/instalar-rosgrid.sh`:** Incorporada la resolución dinámica `REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"` con cambio automático de directorio si existen los archivos `.env.example` y `docker-compose.prod.yml`. Esto erradica el falso positivo que forzaba el modo de instalación remota (`/opt/rosgrid` con `sudo`) si el script era invocado desde el subdirectorio `scripts/` o rutas relativas.
   - **Detección Flexible de Skill de Agentes IA:** Enriquecida la detección de la Skill `rosgrid-noc-operator` para verificar tanto la ruta local del repositorio (`.agents/skills/rosgrid-noc-operator`) como la ruta de despliegue (`skills/rosgrid-noc-operator`).

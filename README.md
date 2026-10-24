@@ -304,11 +304,15 @@ Al ser la primera vez que se inicia el sistema, RoSGrid detectará que la base d
 Para que RoSGrid pueda gestionar un router mediante su REST API nativa sobre TLS, ejecuta este bloque de comandos en la terminal CLI de tu MikroTik (a través de WinBox o SSH):
 
 ```routeros
-# 1. Generar y firmar certificado TLS autofirmado para Pinning TOFU
-/certificate add name="rosgrid-tofu-cert" common-name="rosgrid.local" key-size=2048 days-valid=3650 key-usage=digital-signature,key-encipherment,tls-server
-/certificate sign "rosgrid-tofu-cert"
+# 1. Crear y autofirmar una CA local en el MikroTik
+/certificate add name="rosgrid-ca" common-name="RoSGrid Local CA" days-valid=3650 key-size=2048 key-usage=key-cert-sign,crl-sign
+/certificate sign "rosgrid-ca"
 
-# 2. Habilitar REST API sobre HTTPS (puerto 443) y deshabilitar HTTP sin cifrar
+# 2. Generar y firmar el certificado TLS de servidor con la CA local para Pinning TOFU
+/certificate add name="rosgrid-tofu-cert" common-name="rosgrid.local" key-size=2048 days-valid=3650 key-usage=digital-signature,key-encipherment,tls-server
+/certificate sign "rosgrid-tofu-cert" ca="rosgrid-ca"
+
+# 3. Habilitar REST API sobre HTTPS (puerto 443) y deshabilitar HTTP sin cifrar
 /ip service set www-ssl certificate="rosgrid-tofu-cert" port=443 disabled=no
 /ip service set www disabled=yes
 
