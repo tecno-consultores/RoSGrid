@@ -244,10 +244,19 @@ async def test_audit_router_cis_benchmark_score_and_auto_hardening(
         harden_res = await auto_harden_router(
             router_id=router_id, payload=harden_payload, request=mock_request, db=db, claims=sample_claims
         )
-        assert harden_res.new_security_score == 100
+        assert harden_res.new_security_score == 90
+        assert harden_res.applied_directives_count == 2
         assert harden_res.executed_under_safemode is True
         mock_safe.assert_called_once()
         mock_audit.assert_called_once()
+
+        # Hardening global completo
+        full_payload = CisAutoHardenRequest(router_id=router_id)
+        full_res = await auto_harden_router(
+            router_id=router_id, payload=full_payload, request=mock_request, db=db, claims=sample_claims
+        )
+        assert full_res.new_security_score == 100
+        assert full_res.applied_directives_count == 10
 
 
 # ============================================================================

@@ -373,7 +373,7 @@
           @click="showSubscribers = !showSubscribers"
         >
           <span class="icon">💻</span>
-          <span class="label">{{ isIspMode ? 'Abonados FTTH' : 'Dispositivos DHCP' }}</span>
+          <span class="label">Clientes</span>
           <span class="counter">({{ subscribers.length }})</span>
         </button>
       </div>

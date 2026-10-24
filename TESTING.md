@@ -1577,6 +1577,45 @@ Certificación ejecutada bajo la **Regla Cero** dentro de contenedores efímeros
 3. **Karate Labs UI BDD:** Escenario 37 incorporado en `vue3/test/ui_business_flow.feature` y replicado en `docs/examples/vue3/test/ui_business_flow.feature` (**37 escenarios totales de UI**).
 4. **Contratos Front-Back:** **26 de 26 pruebas PASADAS (100%)** en `validar_comunicacion_front_back.py`.
 
+---
+
+## 37. Gobernanza de Mantenimiento desde Inventario, Geolocalización en IPAM y Remediación Selectiva CIS Benchmark (Hito 23.25)
+
+Certificación ejecutada bajo la **Regla Cero** dentro de contenedores efímeros Docker `sinfallas/base-node-ionic:26` y `sinfallas/rosgrid-backend:local-test`.
+
+### A. Capacidades Certificadas
+1. **Acceso Rápido a Ventanas de Mantenimiento desde Inventario (`RouterInventoryView.vue`):**
+   - Incorporación del botón de acción superior `[ 🛠️ Ventanas de Mantenimiento ]` (`.btn-maintenance-windows`), permitiendo a ingenieros de NOC saltar de forma inmediata a la vista de programación de exclusión de alertas sin necesidad de navegar manualmente por menús indirectos.
+   - Botón contextual por fila `[ 🛠️ Mantenimiento ]` / `[ 🚀 A Producción ]` (`.btn-row-action--maint` / `.btn-row-action--prod`) para cambiar el estado administrativo (`admin_state`) de cualquier router en 1 solo clic.
+2. **Estandarización Universal del Rótulo "Clientes" en Mapas:**
+   - Sustitución de etiquetas de capas "Abonados FTTH" y "Dispositivos DHCP" por el término táctico unificado **"Clientes"** en `UnifiedNetworkMap.vue`, adaptándose tanto a proveedores de internet (ISP) como a infraestructuras de campus corporativo privado.
+3. **Geolocalización y Edición de Coordenadas de Clientes en IPAM (`IpamManagementView.vue`):**
+   - Agregada columna "Ubicación GPS" en la tabla de abonados y dispositivos de IPAM, mostrando coordenadas decimales formateadas o badge de alerta "Sin Coordenadas".
+   - Botón contextual `[ 📍 Ubicación ]` por fila que abre el modal interactivo con dos asistentes tácticos:
+     - `[ 🎯 Mi Ubicación GPS Actual ]`: Adquiere coordenadas del técnico en tiempo real vía HTML5 Geolocation API con precisión submétrica.
+     - `[ 🏢 Heredar de Cabecera ]`: Asigna automáticamente las coordenadas del router de distribución o cabecera asociado.
+   - Soporte nativo de `latitude` y `longitude` opcionales en el formulario de registro de nuevos abonados.
+4. **Remediación Individual Selectiva CIS Benchmark (`fastapi/` & `EnterpriseComplianceView.vue`):**
+   - Ampliación de `POST /api/v1/compliance/cis-audit/{router_id}/auto-harden` con el parámetro opcional `directive_codes_to_apply: list[str]`, permitiendo aplicar comandos correctivos puntuales (como Telnet/FTP disable, WinBox CIDR restrict, DNS allow-remote-requests, MAC-server LAN) sin forzar un endurecimiento masivo global.
+   - En `EnterpriseComplianceView.vue`: incorporación de la columna "Acción" en la tabla de 10 directivas CIS con botón individual `[ ⚡ Aplicar ]` en cada directiva fallida, ejecutada bajo Safe Mode de 60 segundos y recalculando el puntaje de seguridad de forma reactiva.
+
+### B. Cobertura y Certificación Multi-Capa 11X
+1. **Frontend Unitario (Vitest en Docker):**
+   - `src/components/network/UnifiedNetworkMap.unit.ts` (**7 de 7 pruebas PASADAS**).
+   - `src/views/enterpriseComplianceView.unit.ts` (**8 de 8 pruebas PASADAS**).
+   - `src/views/inventory/routerInventoryView.unit.ts` (**5 de 5 pruebas PASADAS**).
+2. **Backend Unitario (Pytest en Docker):**
+   - `tests/api/test_diagnostic_governor.unit.py` (**7 de 7 pruebas PASADAS**).
+   - `tests/api/test_hito20_enterprise_suite.unit.py` (**11 de 11 pruebas PASADAS**).
+   - Total backend verificado: **18 de 18 pruebas PASADAS (100%)**.
+3. **Análisis Estático y Tipado:**
+   - `vue-tsc --noEmit`: 0 errores (código de salida 0).
+   - `ruff check --no-cache`: All checks passed.
+   - `mypy`: Success: no issues found in 3 source files.
+4. **Karate Labs BDD:**
+   - **API BDD:** Escenario 86 incorporado en `fastapi/test/api_test.feature` y replicado en `docs/examples/fastapi/test/api_test.feature` (**86 escenarios totales de API**).
+   - **UI BDD:** Escenario 38 incorporado en `vue3/test/ui_business_flow.feature` y replicado en `docs/examples/vue3/test/ui_business_flow.feature` (**38 escenarios totales de UI**).
+
 
 
 

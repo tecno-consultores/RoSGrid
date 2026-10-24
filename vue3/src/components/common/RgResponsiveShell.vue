@@ -166,6 +166,12 @@
         icon: '🖥️',
       },
       {
+        name: 'MaintenanceWindows',
+        path: '/inventory/maintenance-windows',
+        label: t('nav.maintenance_windows', 'Ventanas Mantenimiento'),
+        icon: '🛠️',
+      },
+      {
         name: 'NocWallboard',
         path: '/noc-wallboard',
         label: t('nav.noc_wallboard', 'Wallboard NOC'),

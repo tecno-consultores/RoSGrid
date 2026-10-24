@@ -339,7 +339,21 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And waitFor(".subscribers-map-view")
     And waitFor(".unified-network-map-wrapper")
     And waitFor(".btn-layer-subs")
-    And match text(".btn-layer-subs") contains 'Abonados FTTH'
+    And match text(".btn-layer-subs") contains 'Clientes'
+
+  Scenario: 38. Gestión de Ventanas de Mantenimiento desde Inventario y Remediación Selectiva CIS Benchmark
+    Given driver baseUrl + '/inventory'
+    And waitFor(".inventory-view")
+    And waitFor(".btn-maintenance-windows")
+    And match text(".btn-maintenance-windows") contains 'Ventanas de Mantenimiento'
+    And click(".btn-maintenance-windows")
+    And waitFor(".maintenance-windows-view")
+    # Validación de botón de acción individual en tabla CIS Benchmark
+    Given driver baseUrl + '/enterprise-compliance'
+    And waitFor(".enterprise-compliance-view")
+    And click("#tab-btn-cis")
+    And waitFor(".tactical-table")
+    And match text(".tactical-table") contains 'Acción'
 
 
 

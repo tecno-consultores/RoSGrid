@@ -287,6 +287,41 @@
     }
   }
 
+  const applyingDirectiveCode = ref<string | null>(null);
+
+  async function handleApplySingleDirective(directiveCode: string) {
+    if (!selectedRouterId.value) return;
+    applyingDirectiveCode.value = directiveCode;
+    errorMessage.value = '';
+    successMessage.value = '';
+    try {
+      const res = await http.post<CisAutoHardenResponse>(
+        `/api/v1/compliance/cis-audit/${selectedRouterId.value}/auto-harden`,
+        {
+          router_id: selectedRouterId.value,
+          directive_codes_to_apply: [directiveCode],
+        },
+      );
+      successMessage.value = `¡Directiva ${directiveCode} aplicada con éxito bajo Safe Mode! Nuevo puntaje: ${res.data.new_security_score}/100.`;
+      if (cisAudit.value && cisAudit.value.directives) {
+        const d = cisAudit.value.directives.find((item) => item.code === directiveCode);
+        if (d && !d.passed) {
+          d.passed = true;
+          d.finding = 'Remediación aplicada exitosamente bajo Safe Mode.';
+          cisAudit.value.passed_directives = (cisAudit.value.passed_directives || 0) + 1;
+          cisAudit.value.failed_directives = Math.max(0, (cisAudit.value.failed_directives || 1) - 1);
+          cisAudit.value.security_score = res.data.new_security_score;
+        }
+      }
+    } catch (err: unknown) {
+      const e = err as { message?: string; detail?: string };
+      errorMessage.value =
+        e.detail || e.message || `Fallo al aplicar la directiva ${directiveCode}`;
+    } finally {
+      applyingDirectiveCode.value = null;
+    }
+  }
+
   // 3. Provision SD-WAN Spoke
   async function handleProvisionSpoke() {
     if (!newSpoke.value.spoke_name) {
@@ -708,6 +743,7 @@
                 <th scope="col">Estado</th>
                 <th scope="col">Hallazgo Técnico</th>
                 <th scope="col">Remediación Automática</th>
+                <th scope="col">Acción</th>
               </tr>
             </thead>
             <tbody>
@@ -723,6 +759,20 @@
                 <td class="text-subtle">{{ d.finding }}</td>
                 <td>
                   <code class="remediation-snippet">{{ d.remediation_cmd }}</code>
+                </td>
+                <td class="action-cell">
+                  <button
+                    v-if="!d.passed"
+                    type="button"
+                    class="btn-apply-remediation"
+                    :disabled="actionLoading || applyingDirectiveCode === d.code"
+                    :aria-label="`Aplicar remediación para directiva ${d.code}`"
+                    @click="handleApplySingleDirective(d.code)"
+                  >
+                    <span v-if="applyingDirectiveCode === d.code">⏳ Aplicando...</span>
+                    <span v-else>⚡ Aplicar</span>
+                  </button>
+                  <span v-else class="text-success text-xs font-mono font-bold">✓ Cumplido</span>
                 </td>
               </tr>
             </tbody>
@@ -1646,6 +1696,37 @@
     padding: 0.2rem 0.4rem;
     border-radius: 4px;
     border: 1px solid #1a2a40;
+  }
+
+  .action-cell {
+    white-space: nowrap;
+    text-align: center;
+  }
+
+  .btn-apply-remediation {
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid #10b981;
+    color: #34d399;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .btn-apply-remediation:hover:not(:disabled) {
+    background: rgba(16, 185, 129, 0.3);
+    color: #fff;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+  }
+
+  .btn-apply-remediation:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 
   /* SD-WAN & Grid Layouts */

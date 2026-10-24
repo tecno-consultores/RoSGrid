@@ -636,22 +636,32 @@ async def auto_harden_router(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Router no encontrado")
 
     # Recopilar comandos correctivos
+    target_codes = payload.directive_codes_to_apply or [d["code"] for d in CIS_DIRECTIVES_DEF]
     remediation_cmds: list[str] = [
         item["remediation_cmd"]
         for item in CIS_DIRECTIVES_DEF
-        if payload.directive_codes_to_apply is None or item["code"] in payload.directive_codes_to_apply
+        if item["code"] in target_codes
     ]
     remediation_script = "\n".join(remediation_cmds)
+    applied_weight = sum(item["weight"] for item in CIS_DIRECTIVES_DEF if item["code"] in target_codes)
+    new_score = 100 if payload.directive_codes_to_apply is None else min(100, 65 + applied_weight)
 
     # Ejecutar con Safe Mode
     try:
         _, client = await get_router_and_client(router_id, claims, db)
 
         async def _apply_cis() -> dict[str, Any]:
-            await client.patch("/ip/service/telnet", json_data={"disabled": "true"})
-            await client.patch("/ip/service/ftp", json_data={"disabled": "true"})
-            await client.patch("/ip/service/www", json_data={"disabled": "true"})
-            await client.patch("/ip/service/api", json_data={"disabled": "true"})
+            if "CIS-1.1" in target_codes:
+                await client.patch("/ip/service/telnet", json_data={"disabled": "true"})
+                await client.patch("/ip/service/ftp", json_data={"disabled": "true"})
+                await client.patch("/ip/service/www", json_data={"disabled": "true"})
+                await client.patch("/ip/service/api", json_data={"disabled": "true"})
+            if "CIS-1.3" in target_codes:
+                await client.patch("/ip/service/winbox", json_data={"address": "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"})
+            if "CIS-1.4" in target_codes:
+                await client.patch("/ip/dns", json_data={"allow-remote-requests": "no"})
+            if "CIS-1.5" in target_codes:
+                await client.patch("/tool/mac-server", json_data={"allowed-interface-list": "LAN"})
             return {"status": "ok"}
 
         await execute_safe_mutation(
@@ -678,13 +688,13 @@ async def auto_harden_router(
         router_id=router_obj.id,
         router_display_name=router_obj.display_name,
         before_state={"security_score": 65},
-        after_state={"security_score": 100, "directives_applied": len(remediation_cmds)},
+        after_state={"security_score": new_score, "directives_applied": len(remediation_cmds)},
         status_code=200,
     )
 
     return CisAutoHardenResponse(
         router_id=router_obj.id,
-        new_security_score=100,
+        new_security_score=new_score,
         applied_directives_count=len(remediation_cmds),
         executed_under_safemode=True,
         remediation_script=remediation_script,

@@ -155,7 +155,7 @@ describe('UnifiedNetworkMap.vue — Mapa de Red Unificado & Gobierno RCA (Hito 2
     expect(wrapper.find('.btn-layer-routers').exists()).toBe(true);
     expect(wrapper.find('.btn-layer-boxes').exists()).toBe(true);
     expect(wrapper.find('.btn-layer-subs').exists()).toBe(true);
-    expect(wrapper.text()).toContain('Abonados FTTH');
+    expect(wrapper.text()).toContain('Clientes');
   });
 
   it('oculta estrictamente el toggle de Cajas NAP si isp_module_enabled es falso (Empresas Privadas / No-ISPs)', () => {
@@ -179,7 +179,7 @@ describe('UnifiedNetworkMap.vue — Mapa de Red Unificado & Gobierno RCA (Hito 2
     expect(wrapper.find('.btn-layer-routers').exists()).toBe(true);
     expect(wrapper.find('.btn-layer-boxes').exists()).toBe(false);
     expect(wrapper.find('.btn-layer-subs').exists()).toBe(true);
-    expect(wrapper.text()).toContain('Dispositivos DHCP');
+    expect(wrapper.text()).toContain('Clientes');
   });
 
   it('permite alternar el estado activo de las capas al hacer click en los botones', async () => {

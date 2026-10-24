@@ -199,6 +199,32 @@
     }
   }
 
+  async function toggleRouterMaintenance(item: RouterItem) {
+    const nextState = item.admin_state === 'MAINTENANCE' ? 'PRODUCTION' : 'MAINTENANCE';
+    const actionDesc =
+      nextState === 'MAINTENANCE' ? 'poner en MANTENIMIENTO' : 'regresar a PRODUCCIÓN';
+    if (!confirm(`¿Deseas ${actionDesc} el equipo "${item.display_name}"?`)) return;
+
+    actionMessage.value = '';
+    actionError.value = '';
+    try {
+      await http.put(`/api/v1/inventory/routers/${item.id}`, { admin_state: nextState });
+      item.admin_state = nextState as 'PRODUCTION' | 'MAINTENANCE' | 'PROVISIONING' | 'DECOMMISSIONED';
+      actionMessage.value = `El router "${item.display_name}" ahora se encuentra en estado ${nextState}.`;
+      await inventoryStore.fetchRouters();
+      setTimeout(() => {
+        actionMessage.value = '';
+      }, 4000);
+    } catch (err: unknown) {
+      const e = err as { detail?: string; message?: string };
+      actionError.value =
+        e.detail || e.message || 'Error al actualizar el estado administrativo del router.';
+      setTimeout(() => {
+        actionError.value = '';
+      }, 4000);
+    }
+  }
+
   function handleCsvImported(count: number) {
     actionMessage.value = `Se importaron ${count} routers correctamente. Sincronizando inventario...`;
     inventoryStore.fetchRouters();
@@ -299,6 +325,16 @@
           @click="router.push('/inventory/cves')"
         >
           {{ t('inventory.btn_cve_matrix') }}
+        </button>
+
+        <button
+          type="button"
+          class="btn-maintenance-windows"
+          aria-label="Abrir gestión de ventanas de mantenimiento"
+          @click="router.push('/inventory/maintenance-windows')"
+        >
+          <span class="btn-icon" aria-hidden="true">🛠️</span>
+          <span>{{ t('inventory.btn_maintenance_windows', 'Ventanas de Mantenimiento') }}</span>
         </button>
 
         <button
@@ -449,6 +485,16 @@
 
                 <button
                   type="button"
+                  class="btn-row-action"
+                  :class="(row as unknown as RouterItem).admin_state === 'MAINTENANCE' ? 'btn-row-action--prod' : 'btn-row-action--maint'"
+                  :aria-label="((row as unknown as RouterItem).admin_state === 'MAINTENANCE' ? 'Regresar a Producción' : 'Poner en Mantenimiento') + ` ${(row as unknown as RouterItem).display_name}`"
+                  @click="toggleRouterMaintenance(row as unknown as RouterItem)"
+                >
+                  {{ (row as unknown as RouterItem).admin_state === 'MAINTENANCE' ? '🟢 En Servicio' : '🛠️ Mantenimiento' }}
+                </button>
+
+                <button
+                  type="button"
                   class="btn-row-action btn-row-action--tofu"
                   aria-label="Disparar autodescubrimiento"
                   @click="triggerDiscovery(row as unknown as RouterItem)"
@@ -588,6 +634,26 @@
 
   .btn-cve-matrix:hover {
     background: rgba(245, 158, 11, 0.25);
+    color: #fff;
+  }
+
+  .btn-maintenance-windows {
+    background: rgba(147, 51, 234, 0.15);
+    border: 1px solid #a855f7;
+    color: #c084fc;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-maintenance-windows:hover {
+    background: rgba(147, 51, 234, 0.25);
     color: #fff;
   }
 
@@ -757,6 +823,25 @@
   .btn-row-action--vault {
     border-color: #fbbf24;
     color: #fbbf24;
+  }
+
+  .btn-row-action--maint {
+    border-color: #a855f7;
+    color: #c084fc;
+  }
+
+  .btn-row-action--maint:hover {
+    background: rgba(168, 85, 247, 0.15);
+  }
+
+  .btn-row-action--prod {
+    border-color: #10b981;
+    color: #34d399;
+    background: rgba(16, 185, 129, 0.12);
+  }
+
+  .btn-row-action--prod:hover {
+    background: rgba(16, 185, 129, 0.25);
   }
 
   .btn-row-action--delete {

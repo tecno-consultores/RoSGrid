@@ -529,14 +529,17 @@
     - *Circuit Breaker Táctico por Router:* Umbral de 3 fallos activa estado `CIRCUIT_OPEN` por 30s con respuesta *Fail-Fast* (HTTP 503) sin retener hilos de FastAPI.
   - Exposición en API (`POST /api/v1/subscriber-devices/{id}/ping`) y frontend con badge `⚡ Caché Anti-Saturación (Ns)` en `SubscribersMapView.vue` y `FieldTechMobileView.vue`.
   - Cobertura 11X certificada: 5 pruebas unitarias backend (`test_diagnostic_governor.unit.py`), 0 errores en `vue-tsc`, ESLint, Ruff y Mypy, Escenario 83 en Karate Labs API y Escenario 34 en Karate Labs UI.
-- [x] **23.25** **Componente Unificado de Mapa (`UnifiedNetworkMap.vue`), 3 Toggles con Feature Flags, Causa Raíz (RCA) y Cerraduras Operativas en KeyDB:**
+- [x] **23.25** **Componente Unificado de Mapa (`UnifiedNetworkMap.vue`), 3 Toggles con Feature Flags, Causa Raíz (RCA), Cerraduras Operativas, IPAM GPS y Remediación CIS Selectiva:**
   - Especificación formal `docs/specs/38_UNIFIED_NETWORK_MAP_ROOT_CAUSE_AND_OPERATIONAL_LOCKING.md` y manual operativo `docs/13_MANUAL_MAPA_RED_BIMODAL_Y_OPERACIONES_CAMPO.md` completados.
   - Consolidación en un solo componente de mapa polimórfico (`UnifiedNetworkMap.vue`) para `/inventory/routers`, `/subscribers/map` y `/wallboard`.
-  - Toggles de capas independientes: `[ 🏢 Routers de Red ]`, `[ 📦 Cajas NAP FTTH ]` (gobernado estrictamente por `v-if="isp_module_enabled"`) y `[ 💻 Dispositivos / Abonados ]`.
+  - Toggles de capas independientes: `[ 🏢 Routers de Red ]`, `[ 📦 Cajas NAP FTTH ]` (gobernado estrictamente por `v-if="isp_module_enabled"`) y `[ 💻 Clientes ]` (estandarización universal para ISPs y empresas privadas).
   - Control de acceso RBAC en el mapa: técnicos de calle y soporte básico visualizan telemetría de salud del router pero tienen bloqueado y oculto el acceso a WebFig.
   - Motor de Análisis de Causa Raíz (RCA estilo Zabbix): supresión automática de pruebas individuales en clientes si el router de cabecera está caído o con Circuit Breaker abierto, con barra superior táctica de alerta y zoom a zona afectada (`ROOT_CAUSE_SUPPRESSED`).
   - Prevención de colisión operativa entre brigadas mediante cerraduras efímeras en KeyDB (`TTL = 600s`) con aviso contextual de trabajo en curso.
-  - Cobertura 11X certificada: 7 pruebas unitarias backend (`test_diagnostic_governor.unit.py`), 12 pruebas unitarias Vitest (`UnifiedNetworkMap.unit.ts` y `subscribersMapView.unit.ts`), 0 errores en `vue-tsc`, ESLint, Ruff y Mypy, Escenario 84 en Karate Labs API y Escenarios 35 y 37 en Karate Labs UI.
+  - Acceso directo a Ventanas de Mantenimiento desde `/inventory` con botón superior y acción por fila para alternar `admin_state` en 1 clic.
+  - Geolocalización de Clientes en `/ipam` con captura GPS móvil en vivo, herencia de cabecera y visualización de coordenadas.
+  - Remediación selectiva individual con Safe Mode en la tabla CIS Benchmark (`/enterprise-compliance`) con botón `[ ⚡ Aplicar ]` por directiva.
+  - Cobertura 11X certificada: 18 pruebas unitarias backend (`test_diagnostic_governor.unit.py`, `test_hito20_enterprise_suite.unit.py`), 20 pruebas unitarias Vitest (`UnifiedNetworkMap.unit.ts`, `subscribersMapView.unit.ts`, `enterpriseComplianceView.unit.ts`, `routerInventoryView.unit.ts`), 0 errores en `vue-tsc`, ESLint, Ruff y Mypy, Escenarios 84 y 86 en Karate Labs API y Escenarios 35, 37 y 38 en Karate Labs UI.
 - [x] **23.26** **Sondeo Pasivo Escalonado de Fondo (Worker Jitter), Notificación Reactiva WebSocket y Diagnóstico 360° en Toolkit de Campo:**
   - Especificación formal `docs/specs/39_BACKGROUND_SUBSCRIBER_POLLING_AND_REALTIME_STATUS_WEBSOCKET.md` y manual operativo `docs/13_MANUAL_MAPA_RED_BIMODAL_Y_OPERACIONES_CAMPO.md` completados.
   - Motor `StaggeredSessionPoller` en `rosgrid-worker` para lectura periódica de `/ip/dhcp-server/lease` y `/ppp/active` (intervalo 180s con jitter dinámico entre routers de 2 a 5s).

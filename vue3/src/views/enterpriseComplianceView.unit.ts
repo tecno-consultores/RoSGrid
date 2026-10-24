@@ -275,6 +275,27 @@ describe('EnterpriseComplianceView.vue — Hito 20 Suite Corporativa', () => {
     });
   });
 
+  it('muestra el botón Aplicar en directivas CIS fallidas y permite ejecutar la remediación individual', async () => {
+    const wrapper = mount(EnterpriseComplianceView);
+    const cisTabBtn = wrapper.find('#tab-btn-cis');
+    await cisTabBtn.trigger('click');
+
+    await vi.waitFor(() => {
+      expect(wrapper.find('.btn-apply-remediation').exists()).toBe(true);
+    });
+
+    const applyBtn = wrapper.find('.btn-apply-remediation');
+    expect(applyBtn.text()).toContain('Aplicar');
+
+    await applyBtn.trigger('click');
+    expect(http.post).toHaveBeenCalledWith(
+      expect.stringContaining('/auto-harden'),
+      expect.objectContaining({
+        directive_codes_to_apply: ['CIS-1.1'],
+      }),
+    );
+  });
+
   it('permite alternar a la pestaña SD-WAN y lista túneles Spoke', async () => {
     const wrapper = mount(EnterpriseComplianceView);
     const sdwanTabBtn = wrapper.find('#tab-btn-sdwan');

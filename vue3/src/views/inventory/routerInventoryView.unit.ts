@@ -300,4 +300,24 @@ describe('RouterInventoryView.vue — Inventario y Modos Tabla, Mapa y Dividido'
     const formattedPinned = sslCol!.formatter!({ ssl_trust_status: 'TRUSTED_PINNED' });
     expect(formattedPinned).toBe('Certificado Válido (Pinned)');
   });
+
+  it('contiene el botón de Ventanas de Mantenimiento y navega a su ruta', async () => {
+    const wrapper = mount(RouterInventoryView, {
+      global: {
+        stubs: {
+          RgDataTable: true,
+          OsmRouterMap: true,
+          CsvOnboardingWizardModal: true,
+          VaultRevealModal: true,
+        },
+      },
+    });
+
+    const maintWinBtn = wrapper.find('.btn-maintenance-windows');
+    expect(maintWinBtn.exists()).toBe(true);
+    expect(maintWinBtn.text()).toContain('Ventanas de Mantenimiento');
+
+    await maintWinBtn.trigger('click');
+    expect(mockPush).toHaveBeenCalledWith('/inventory/maintenance-windows');
+  });
 });

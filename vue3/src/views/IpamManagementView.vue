@@ -10,6 +10,7 @@
   import CorporateIpv6ManagerModal from '@/components/ipam/CorporateIpv6ManagerModal.vue';
   import FiberCutAlertBanner from '@/components/operations/FiberCutAlertBanner.vue';
   import type { CustomerService, IPAMPrefix } from '@/types';
+  import { http } from '@/api/httpClient';
 
   const ipamStore = useIpamStore();
   const inventoryStore = useInventoryStore();
@@ -101,6 +102,88 @@
       alert(getErrorMessage(err, 'Error al registrar abonado'));
     }
   }
+
+  // Modal de Ubicación de Cliente
+  const locationModalOpen = ref(false);
+  const selectedSubForLocation = ref<CustomerService | null>(null);
+  const editLocation = ref<{ latitude: number | null; longitude: number | null }>({
+    latitude: null,
+    longitude: null,
+  });
+  const isSavingLocation = ref(false);
+  const isLocatingGps = ref(false);
+  const locationSuccessMsg = ref('');
+  const locationErrorMsg = ref('');
+
+  function openLocationModal(sub: CustomerService) {
+    selectedSubForLocation.value = sub;
+    editLocation.value = {
+      latitude: sub.latitude ?? null,
+      longitude: sub.longitude ?? null,
+    };
+    locationSuccessMsg.value = '';
+    locationErrorMsg.value = '';
+    locationModalOpen.value = true;
+  }
+
+  function getCurrentGpsLocation() {
+    if (!navigator.geolocation) {
+      locationErrorMsg.value = 'Geolocalización no soportada por su navegador.';
+      return;
+    }
+    isLocatingGps.value = true;
+    locationErrorMsg.value = '';
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        editLocation.value.latitude = Number(pos.coords.latitude.toFixed(6));
+        editLocation.value.longitude = Number(pos.coords.longitude.toFixed(6));
+        isLocatingGps.value = false;
+      },
+      (err) => {
+        isLocatingGps.value = false;
+        locationErrorMsg.value = `Error GPS: ${err.message}`;
+      },
+      { timeout: 10000, enableHighAccuracy: true },
+    );
+  }
+
+  function inheritHeadendLocation() {
+    if (!selectedSubForLocation.value) return;
+    const router = inventoryStore.routers.find(
+      (r) => r.id === selectedSubForLocation.value?.router_id,
+    );
+    if (router && router.latitude && router.longitude) {
+      editLocation.value.latitude = Number(router.latitude);
+      editLocation.value.longitude = Number(router.longitude);
+      locationSuccessMsg.value = `Ubicación heredada del router ${router.display_name}.`;
+    } else {
+      locationErrorMsg.value = 'El router asociado no tiene coordenadas geográficas registradas.';
+    }
+  }
+
+  async function handleSaveLocation() {
+    if (!selectedSubForLocation.value) return;
+    isSavingLocation.value = true;
+    locationErrorMsg.value = '';
+    locationSuccessMsg.value = '';
+    try {
+      await http.patch(`/api/v1/subscriber-devices/${selectedSubForLocation.value.id}`, {
+        latitude: editLocation.value.latitude,
+        longitude: editLocation.value.longitude,
+      });
+      // Actualizar en el estado local de Pinia
+      selectedSubForLocation.value.latitude = editLocation.value.latitude ?? undefined;
+      selectedSubForLocation.value.longitude = editLocation.value.longitude ?? undefined;
+      locationSuccessMsg.value = 'Ubicación actualizada correctamente.';
+      setTimeout(() => {
+        locationModalOpen.value = false;
+      }, 1200);
+    } catch (err: unknown) {
+      locationErrorMsg.value = getErrorMessage(err, 'Error al guardar ubicación del cliente.');
+    } finally {
+      isSavingLocation.value = false;
+    }
+  }
 </script>
 
 
@@ -181,11 +264,13 @@
               <th scope="col">Puerto PON & Caja</th>
               <th scope="col">Modo ONU</th>
               <th scope="col">Estado Conectividad</th>
+              <th scope="col">Ubicación GPS</th>
+              <th scope="col">Acciones</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="ipamStore.customerServices.length === 0">
-              <td colspan="6" class="empty-state-cell">
+              <td colspan="8" class="empty-state-cell">
                 No hay abonados registrados. Haz clic en "Registrar Abonado" para añadir uno.
               </td>
             </tr>
@@ -215,6 +300,28 @@
                 >
                   ● {{ sub.last_reachability_status }}
                 </span>
+              </td>
+              <td>
+                <span
+                  v-if="sub.latitude && sub.longitude"
+                  class="geo-badge geo-badge--ok font-mono"
+                  :title="`Lat: ${sub.latitude}, Lng: ${sub.longitude}`"
+                >
+                  📍 {{ Number(sub.latitude).toFixed(4) }}, {{ Number(sub.longitude).toFixed(4) }}
+                </span>
+                <span v-else class="geo-badge geo-badge--none font-mono">
+                  Sin Coordenadas
+                </span>
+              </td>
+              <td>
+                <button
+                  type="button"
+                  class="btn-row-geo"
+                  :aria-label="`Cambiar o agregar ubicación GPS de ${sub.customer_name}`"
+                  @click="openLocationModal(sub)"
+                >
+                  📍 Ubicación
+                </button>
               </td>
             </tr>
           </tbody>
@@ -352,6 +459,30 @@
               />
             </div>
           </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="sub-lat">Latitud GPS (Opcional)</label>
+              <input
+                id="sub-lat"
+                v-model.number="newSubscriber.latitude"
+                type="number"
+                step="any"
+                class="rg-input"
+                placeholder="Ej: 10.480600"
+              />
+            </div>
+            <div class="form-group flex-1">
+              <label for="sub-lng">Longitud GPS (Opcional)</label>
+              <input
+                id="sub-lng"
+                v-model.number="newSubscriber.longitude"
+                type="number"
+                step="any"
+                class="rg-input"
+                placeholder="Ej: -66.903600"
+              />
+            </div>
+          </div>
           <footer class="modal-footer">
             <button
               type="button"
@@ -363,6 +494,94 @@
             <button type="submit" class="btn-rg btn-rg--cyan">Registrar Servicio</button>
           </footer>
         </form>
+      </div>
+    </div>
+
+    <!-- Modal Cambiar Ubicación de Cliente -->
+    <div v-if="locationModalOpen" class="rg-modal-backdrop" role="dialog" aria-modal="true">
+      <div class="rg-modal rg-modal--sm">
+        <header class="modal-header">
+          <h3>📍 Ubicación Geográfica de Cliente</h3>
+          <button type="button" class="btn-close" @click="locationModalOpen = false">✕</button>
+        </header>
+        <div class="modal-body">
+          <p class="sub-target-info">
+            Cliente: <strong>{{ selectedSubForLocation?.customer_name }}</strong>
+            <span v-if="selectedSubForLocation?.pppoe_username" class="text-cyan font-mono">
+              ({{ selectedSubForLocation.pppoe_username }})
+            </span>
+          </p>
+
+          <div v-if="locationSuccessMsg" class="banner banner--success mb-3">
+            {{ locationSuccessMsg }}
+          </div>
+          <div v-if="locationErrorMsg" class="banner banner--error mb-3">
+            {{ locationErrorMsg }}
+          </div>
+
+          <div class="geo-actions-helper mb-3">
+            <button
+              type="button"
+              class="btn-rg btn-rg--secondary btn-xs"
+              :disabled="isLocatingGps"
+              @click="getCurrentGpsLocation"
+            >
+              {{ isLocatingGps ? '⏳ Obteniendo GPS...' : '🎯 Mi Ubicación GPS Actual' }}
+            </button>
+
+            <button
+              type="button"
+              class="btn-rg btn-rg--secondary btn-xs"
+              @click="inheritHeadendLocation"
+            >
+              🏢 Heredar de Cabecera
+            </button>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="geo-lat">Latitud Decimal (-90 a 90)</label>
+              <input
+                id="geo-lat"
+                v-model.number="editLocation.latitude"
+                type="number"
+                step="any"
+                class="rg-input"
+                placeholder="Ej: 10.480600"
+                required
+              />
+            </div>
+            <div class="form-group flex-1">
+              <label for="geo-lng">Longitud Decimal (-180 a 180)</label>
+              <input
+                id="geo-lng"
+                v-model.number="editLocation.longitude"
+                type="number"
+                step="any"
+                class="rg-input"
+                placeholder="Ej: -66.903600"
+                required
+              />
+            </div>
+          </div>
+        </div>
+        <footer class="modal-footer">
+          <button
+            type="button"
+            class="btn-rg btn-rg--secondary"
+            @click="locationModalOpen = false"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            class="btn-rg btn-rg--cyan"
+            :disabled="isSavingLocation"
+            @click="handleSaveLocation"
+          >
+            {{ isSavingLocation ? 'Guardando...' : '💾 Guardar Ubicación' }}
+          </button>
+        </footer>
       </div>
     </div>
   </main>
@@ -555,5 +774,61 @@
     margin-top: 0.5rem;
     font-size: 0.85rem;
     color: #cbd5e1;
+  }
+
+  /* Estilos de Ubicación GPS de Clientes */
+  .geo-badge {
+    font-size: 0.72rem;
+    padding: 3px 6px;
+    border-radius: 4px;
+    display: inline-block;
+  }
+  .geo-badge--ok {
+    background: rgba(34, 211, 238, 0.12);
+    border: 1px solid rgba(34, 211, 238, 0.3);
+    color: #22d3ee;
+  }
+  .geo-badge--none {
+    background: rgba(148, 163, 184, 0.08);
+    border: 1px dashed rgba(148, 163, 184, 0.25);
+    color: #64748b;
+  }
+  .btn-row-geo {
+    background: transparent;
+    border: 1px solid #38bdf8;
+    color: #38bdf8;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-row-geo:hover {
+    background: rgba(56, 189, 248, 0.15);
+    color: #fff;
+  }
+  .rg-modal--sm {
+    max-width: 480px;
+    width: 95%;
+  }
+  .sub-target-info {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    margin-bottom: 0.75rem;
+  }
+  .geo-actions-helper {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .btn-xs {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+  }
+  .mt-3 {
+    margin-top: 0.75rem;
+  }
+  .mb-3 {
+    margin-bottom: 0.75rem;
   }
 </style>
