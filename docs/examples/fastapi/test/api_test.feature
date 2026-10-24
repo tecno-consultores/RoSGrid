@@ -658,6 +658,13 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 84. Consulta de Estado Operacional, Causa Raíz (RCA) y Cerradura de Cuadrillas sin autenticación devuelve 401
+    Given path '/api/v1/subscriber-devices/00000000-0000-0000-0000-000000000001/operational-status'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
 
 
 

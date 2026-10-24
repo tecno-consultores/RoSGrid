@@ -36,7 +36,16 @@
 
   // Ping en vivo
   const isPinging = ref(false);
-  const livePingResult = ref<{ status: string; latency_ms?: number; msg: string; is_cached?: boolean; cache_ttl_remaining?: number } | null>(null);
+  const livePingResult = ref<{
+    status: string;
+    latency_ms?: number;
+    msg: string;
+    is_cached?: boolean;
+    cache_ttl_remaining?: number;
+    rca_device?: string | null;
+    is_rca_suppressed?: boolean;
+    lock_tech?: string;
+  } | null>(null);
 
   // Simulación de Laboratorio (solo visible si ISP)
   async function handleSimulateFromDhcp(reset = false) {
@@ -231,6 +240,9 @@
         message: string;
         is_cached?: boolean;
         cache_ttl_remaining?: number;
+        status?: string;
+        root_cause_device_name?: string | null;
+        operational_lock?: { technician_name?: string; minutes_ago?: number; is_locked_by_other?: boolean } | null;
       }>(`/api/v1/subscriber-devices/${onu.id}/ping`);
 
       livePingResult.value = {
@@ -239,6 +251,9 @@
         msg: res.data.message,
         is_cached: res.data.is_cached,
         cache_ttl_remaining: res.data.cache_ttl_remaining,
+        rca_device: res.data.root_cause_device_name,
+        is_rca_suppressed: res.data.status === 'ROOT_CAUSE_SUPPRESSED',
+        lock_tech: res.data.operational_lock?.technician_name,
       };
       onu.last_reachability_status = res.data.last_reachability_status;
       onu.ping_latency_ms = res.data.ping_latency_ms;
@@ -254,6 +269,7 @@
       isPinging.value = false;
     }
   }
+
 
   async function handleSaveCoordinates() {
     if (!selectedOnu.value || editLat.value === undefined || editLng.value === undefined) return;

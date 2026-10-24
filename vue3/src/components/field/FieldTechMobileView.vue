@@ -8,7 +8,7 @@
   import { useInventoryStore } from '@/stores/useInventoryStore';
   import { useAuthStore } from '@/stores/useAuthStore';
   import { useI18n } from '@/composables/useI18n';
-  import type { SubscriberDeviceItem } from '@/types';
+  import type { SubscriberDeviceItem, OperationalLock } from '@/types';
 
   const router = useRouter();
   const fieldStore = useFieldOpsStore();
@@ -61,10 +61,14 @@
   const diagTargetId = ref('');
   const isPinging = ref(false);
   const pingResult = ref<{
-    status: 'ONLINE' | 'OFFLINE';
+    status: 'ONLINE' | 'OFFLINE' | 'ROOT_CAUSE_SUPPRESSED' | 'ERROR';
     latency_ms?: number;
     packet_loss?: number;
     message: string;
+    is_cached?: boolean;
+    cache_ttl_remaining?: number;
+    root_cause_device_name?: string | null;
+    operational_lock?: OperationalLock | null;
   } | null>(null);
   const mtuTestResult = ref<'PASS' | 'FAIL' | null>(null);
   const sessionStatus = ref<'ACTIVE' | 'IDLE' | null>(null);
@@ -268,12 +272,14 @@
     try {
       const res = await fieldStore.pingSubscriberLive(devId);
       pingResult.value = {
-        status: res.last_reachability_status === 'ONLINE' ? 'ONLINE' : 'OFFLINE',
+        status: res.status === 'ROOT_CAUSE_SUPPRESSED' ? 'ROOT_CAUSE_SUPPRESSED' : (res.last_reachability_status === 'ONLINE' ? 'ONLINE' : 'OFFLINE'),
         latency_ms: res.ping_latency_ms,
         packet_loss: res.packet_loss_pct,
         message: res.message,
         is_cached: res.is_cached,
         cache_ttl_remaining: res.cache_ttl_remaining,
+        root_cause_device_name: res.root_cause_device_name,
+        operational_lock: res.operational_lock,
       };
       sessionStatus.value = 'ACTIVE';
       mtuTestResult.value = 'PASS';

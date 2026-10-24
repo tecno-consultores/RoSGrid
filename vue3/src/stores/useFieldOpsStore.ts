@@ -7,11 +7,13 @@ import type {
   FiberCutIncident,
   FieldOrder,
   FieldVerifyResult,
+  OperationalStatusResponse,
   OpticalBoxDetailItem,
   OpticalBoxItem,
   SubscriberDeviceItem,
   SubscriberDevicePingResponse,
 } from '@/types';
+
 
 export const useFieldOpsStore = defineStore('fieldOps', () => {
   const orders = shallowRef<FieldOrder[]>([]);
@@ -203,6 +205,16 @@ export const useFieldOpsStore = defineStore('fieldOps', () => {
     }
   }
 
+  async function fetchOperationalStatus(deviceId: string): Promise<OperationalStatusResponse | null> {
+    try {
+      const { http } = await import('@/api/httpClient');
+      const res = await http.get<OperationalStatusResponse>(`/api/v1/subscriber-devices/${deviceId}/operational-status`);
+      return res.data;
+    } catch {
+      return null;
+    }
+  }
+
   return {
     orders,
     incidents,
@@ -219,6 +231,7 @@ export const useFieldOpsStore = defineStore('fieldOps', () => {
     fetchOpticalBoxDetail,
     registerSubscriberDevice,
     pingSubscriberLive,
+    fetchOperationalStatus,
     fetchRecentInstallations,
     createOrder,
     verifySubscriberLive,
@@ -226,3 +239,4 @@ export const useFieldOpsStore = defineStore('fieldOps', () => {
     detectFiberCuts,
   };
 });
+

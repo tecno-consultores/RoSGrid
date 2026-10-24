@@ -309,6 +309,13 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And waitFor(".map-actions")
     And match text(".map-actions") contains 'Sincronizar DHCP'
 
+  Scenario: 35. Mapa de Red Unificado — 3 Toggles de Capas Independientes, Alerta RCA y Gobernanza RBAC WebFig
+    Given driver baseUrl + '/subscribers/map'
+    And waitFor(".subscribers-map-view")
+    And waitFor(".map-actions")
+    And match text(".map-actions") contains 'Sincronizar DHCP'
+
+
 
 
 

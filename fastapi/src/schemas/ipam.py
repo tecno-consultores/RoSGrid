@@ -383,5 +383,22 @@ class SubscriberDevicePingResponse(BaseModel):
     message: str
     is_cached: bool = False
     cache_ttl_remaining: int = 0
+    status: str = "COMPLETED"
+    root_cause_device_name: Optional[str] = None
+    operational_lock: Optional[dict[str, Any]] = None
+
+
+class OperationalStatusResponse(BaseModel):
+    device_id: uuid.UUID
+    is_locked: bool = False
+    is_locked_by_other: bool = False
+    technician_id: Optional[str] = None
+    technician_name: Optional[str] = None
+    action: Optional[str] = None
+    locked_at: Optional[str] = None
+    minutes_ago: int = 0
+    message: Optional[str] = None
+    root_cause: Optional[dict[str, Any]] = None
+
 
 

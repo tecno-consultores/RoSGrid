@@ -36,6 +36,7 @@ from src.schemas.ipam import (
     BandwidthProfileCreate,
     BandwidthProfileResponse,
     BandwidthProfileUpdate,
+    OperationalStatusResponse,
     SimulateSubscribersResponse,
     SubscriberDeviceCreate,
     SubscriberDevicePingResponse,
@@ -861,11 +862,34 @@ async def ping_subscriber_device_live(
     if not r:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Router asignador no encontrado")
 
+    tech_name = str(claims.get("full_name") or claims.get("username") or claims.get("sub", "Técnico"))
+
+    # 3. Análisis de Causa Raíz (RCA estilo Zabbix): Si el router padre está caído, suprime ping
+    rc = await DiagnosticGovernor.check_root_cause_router_health(tenant_id, r.id, r.display_name)
+    if rc:
+        dev.last_reachability_status = "OFFLINE"
+        dev.last_seen_at = datetime.now(UTC)
+        await db.commit()
+        current_lock = await DiagnosticGovernor.get_device_operational_lock(tenant_id, dev.id, str(user_id))
+        return SubscriberDevicePingResponse(
+            device_id=dev.id,
+            assigned_ipv4=target_ip,
+            last_reachability_status="OFFLINE",
+            ping_latency_ms=None,
+            packet_loss_pct=Decimal("100.00"),
+            message=rc["message"],
+            is_cached=False,
+            cache_ttl_remaining=0,
+            status="ROOT_CAUSE_SUPPRESSED",
+            root_cause_device_name=rc.get("root_cause_device_name"),
+            operational_lock=current_lock,
+        )
+
     ping_ok = False
     latency_ms: Optional[Decimal] = None
     loss_pct = Decimal("100.00")
 
-    # 3. Adquirir slot de concurrencia y Circuit Breaker por router
+    # 4. Adquirir slot de concurrencia y Circuit Breaker por router
     async with DiagnosticGovernor.acquire_router_slot(tenant_id, r.id):
         client = _get_router_client(r, tenant_id)
         try:
@@ -901,6 +925,15 @@ async def ping_subscriber_device_live(
     dev.last_seen_at = datetime.now(UTC)
     await db.commit()
 
+    # 5. Adquirir cerradura táctica de atención para evitar colisión de cuadrillas (TTL 10m)
+    active_lock = await DiagnosticGovernor.acquire_device_operational_lock(
+        tenant_id=tenant_id,
+        device_id=dev.id,
+        technician_id=str(user_id),
+        technician_name=tech_name,
+        action="DIAGNOSTICO_ACTIVO",
+    )
+
     msg = f"Ping exitoso: {latency_ms}ms (pérdida: {loss_pct}%)" if ping_ok else "Dispositivo inaccesible (100% pérdida)"
     resp = SubscriberDevicePingResponse(
         device_id=dev.id,
@@ -911,8 +944,10 @@ async def ping_subscriber_device_live(
         message=msg,
         is_cached=False,
         cache_ttl_remaining=15,
+        status="COMPLETED",
+        operational_lock=active_lock,
     )
-    # 4. Guardar en KeyDB para evitar consultas redundantes en los próximos 15 segundos
+    # 6. Guardar en KeyDB para evitar consultas redundantes en los próximos 15 segundos
     await DiagnosticGovernor.set_cached_ping(
         tenant_id=tenant_id,
         device_id=dev.id,
@@ -927,6 +962,48 @@ async def ping_subscriber_device_live(
         ttl_seconds=15,
     )
     return resp
+
+
+@subscribers_router.get("/{device_id}/operational-status", response_model=OperationalStatusResponse)
+async def get_device_operational_status(
+    device_id: uuid.UUID,
+    db: AsyncSession = Depends(get_tenant_db_session),
+    claims: dict[str, Any] = Depends(get_current_user_claims),
+) -> OperationalStatusResponse:
+    """Consulta el estado operativo de atención (si otro técnico está trabajando) y la salud de la cabecera."""
+    tenant_id = get_tenant_id(claims)
+    raw_sub = claims.get("sub", claims.get("user_id"))
+    user_id_str = str(raw_sub) if raw_sub else ""
+
+    stmt = select(SubscriberDevice).where(
+        SubscriberDevice.id == device_id,
+        SubscriberDevice.tenant_id == tenant_id,
+    )
+    dev = (await db.execute(stmt)).scalar_one_or_none()
+    if not dev:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dispositivo no encontrado")
+
+    lock_info = await DiagnosticGovernor.get_device_operational_lock(tenant_id, dev.id, user_id_str)
+    root_cause = None
+    if dev.router_id:
+        stmt_r = select(Router).where(Router.id == dev.router_id, Router.tenant_id == tenant_id)
+        r = (await db.execute(stmt_r)).scalar_one_or_none()
+        if r:
+            root_cause = await DiagnosticGovernor.check_root_cause_router_health(tenant_id, r.id, r.display_name)
+
+    return OperationalStatusResponse(
+        device_id=dev.id,
+        is_locked=lock_info.get("is_locked", False),
+        is_locked_by_other=lock_info.get("is_locked_by_other", False),
+        technician_id=lock_info.get("technician_id"),
+        technician_name=lock_info.get("technician_name"),
+        action=lock_info.get("action"),
+        locked_at=lock_info.get("locked_at"),
+        minutes_ago=lock_info.get("minutes_ago", 0),
+        message=lock_info.get("message"),
+        root_cause=root_cause,
+    )
+
 
 
 @subscribers_router.delete("/{device_id}", status_code=status.HTTP_204_NO_CONTENT)

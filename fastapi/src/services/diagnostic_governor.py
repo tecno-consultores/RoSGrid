@@ -12,12 +12,12 @@ Protege la CPU de los routers MikroTik RouterOS v7 y los recursos del backend Ro
    por 30 segundos, respondiendo de inmediato sin saturar los sockets de red.
 """
 
-from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
 import json
 import logging
 import uuid
-from typing import Any, Optional
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from typing import Any, Optional, cast
 
 from fastapi import HTTPException, status
 
@@ -50,13 +50,17 @@ class DiagnosticGovernor:
 
             ttl = await redis.ttl(cache_key)
             ttl_remaining = max(1, ttl) if ttl and ttl > 0 else cls.CACHE_TTL_SECONDS
-            data = json.loads(raw)
+            parsed = json.loads(raw)
+            if not isinstance(parsed, dict):
+                return None
+            data = cast(dict[str, Any], parsed)
             data["is_cached"] = True
             data["cache_ttl_remaining"] = ttl_remaining
             return data
         except Exception as e:
             logger.debug(f"Aviso al consultar caché diagnóstica para {device_id}: {e}")
             return None
+
 
     @classmethod
     async def set_cached_ping(
@@ -203,3 +207,102 @@ class DiagnosticGovernor:
             await redis.delete(fail_key, cb_key)
         except Exception as e:
             logger.debug(f"Error limpiando fallas de router: {e}")
+
+    @classmethod
+    async def check_root_cause_router_health(
+        cls,
+        tenant_id: uuid.UUID,
+        router_id: uuid.UUID,
+        router_name: Optional[str] = None,
+    ) -> Optional[dict[str, Any]]:
+        """Verifica si el router padre se encuentra caído o en estado Circuit Breaker abierto.
+        Si está caído, retorna el contexto de Causa Raíz para suprimir diagnósticos inútiles."""
+        try:
+            redis = get_redis_client()
+            cb_key = f"rg:{tenant_id}:diag:cb:{router_id}"
+            cb_val = await redis.get(cb_key)
+            if cb_val == "OPEN":
+                name = router_name or str(router_id)
+                return {
+                    "root_cause": "ROUTER_DOWN",
+                    "root_cause_device_name": name,
+                    "message": (
+                        f"Diagnóstico omitido: El router de cabecera '{name}' se encuentra inalcanzable "
+                        "o sin energía. Los abonados asociados están afectados por esta contingencia."
+                    ),
+                }
+            return None
+        except Exception as e:
+            logger.debug(f"Aviso en verificación de Causa Raíz de router {router_id}: {e}")
+            return None
+
+    @classmethod
+    async def acquire_device_operational_lock(
+        cls,
+        tenant_id: uuid.UUID,
+        device_id: uuid.UUID,
+        technician_id: str,
+        technician_name: str,
+        action: str = "DIAGNOSTICO_ACTIVO",
+        ttl_seconds: int = 600,
+    ) -> dict[str, Any]:
+        """Adquiere o renueva la cerradura operativa efímera en KeyDB para un abonado (TTL 10m)."""
+        try:
+            redis = get_redis_client()
+            lock_key = f"rg:{tenant_id}:device:lock:{device_id}"
+            from datetime import datetime, timezone
+            now_iso = datetime.now(timezone.utc).isoformat()
+            payload = {
+                "technician_id": str(technician_id),
+                "technician_name": str(technician_name),
+                "action": action,
+                "locked_at": now_iso,
+            }
+            await redis.set(lock_key, json.dumps(payload), ex=ttl_seconds)
+            return payload
+        except Exception as e:
+            logger.debug(f"Aviso registrando operational lock para {device_id}: {e}")
+            return {}
+
+    @classmethod
+    async def get_device_operational_lock(
+        cls,
+        tenant_id: uuid.UUID,
+        device_id: uuid.UUID,
+        current_user_id: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """Verifica si existe un técnico trabajando activamente sobre este abonado."""
+        try:
+            redis = get_redis_client()
+            lock_key = f"rg:{tenant_id}:device:lock:{device_id}"
+            raw = await redis.get(lock_key)
+            if not raw:
+                return {"is_locked": False}
+            data = json.loads(raw)
+            tech_id = str(data.get("technician_id", ""))
+            is_other = (current_user_id is not None) and (tech_id != str(current_user_id))
+
+            locked_at_str = data.get("locked_at")
+            minutes_ago = 0
+            if locked_at_str:
+                try:
+                    from datetime import datetime, timezone
+                    dt = datetime.fromisoformat(locked_at_str)
+                    minutes_ago = max(0, int((datetime.now(timezone.utc) - dt).total_seconds() // 60))
+                except Exception:
+                    pass
+
+            return {
+                "is_locked": True,
+                "is_locked_by_other": is_other,
+                "technician_id": tech_id,
+                "technician_name": data.get("technician_name", "Otro técnico"),
+                "action": data.get("action", "ATENCION"),
+                "locked_at": locked_at_str,
+                "minutes_ago": minutes_ago,
+                "message": f"En atención: {data.get('technician_name')} está trabajando en este servicio (hace {minutes_ago}m).",
+            }
+        except Exception as e:
+            logger.debug(f"Aviso consultando operational lock para {device_id}: {e}")
+            return {"is_locked": False}
+

@@ -2,8 +2,8 @@
 
 ## 📍 Punto de Control Actual (Checkpoint)
 
-- **Hito Actual en Curso:** Hito 23.25 (Componente Unificado de Mapa `UnifiedNetworkMap.vue`, 3 Toggles de Capas con Feature Flags, Causa Raíz RCA y Locks en KeyDB)
-- **Estado General del Sistema:** Hitos 0 al 23.24 COMPLETADOS (100%). Hito 23.25 en fase de diseño de especificaciones y arquitectura completada.
+- **Hito Actual en Curso:** Hito 23.25 COMPLETADO al 100% (Componente Unificado de Mapa `UnifiedNetworkMap.vue`, 3 Toggles de Capas con Feature Flags, Causa Raíz RCA y Locks en KeyDB).
+- **Estado General del Sistema:** Hitos 0 al 23.25 COMPLETADOS (100%). Plataforma lista para el Hito 24 (Construcción final y cierre de versión 1.0.0).
 
 - **Hito 23 (Automatización de Flota, Topología L2, Syslog Efímero, Exportador Prometheus, Seguridad CVE y Disponibilidad API):** COMPLETADO al 100% y certificado en Docker. Especificaciones `docs/specs/35`, `docs/specs/03`, `docs/specs/11`, `docs/specs/18`, `docs/specs/19` y `docs/specs/36`, manuales `docs/12`, `docs/04` y `docs/06`, migraciones Alembic 0007 y 0008 (`tenant_custom_roles` y `routers.network_role` VARCHAR(64)), colector Syslog UDP 5514 activo en Worker con RingBuffer en KeyDB y badge de presencia en inventario con detección continua de configuración, motor de Topología L2 con Pan/Zoom Canvas 2D a 60 FPS, Matriz CVE con cruce local semver, auto-sincronización diaria con caché táctico de 24 horas y forzado manual, orquestador PoE-aware con Safety Stop (1%), exportador Prometheus `/api/v1/metrics/fleet`, indicador táctico de presencia y disponibilidad de API (Heartbeat/Ping) en barra superior y login con popover diagnóstico y caché anti-Thundering Herd de 5s en `/health`, 22 herramientas MCP en la Skill `rosgrid-noc-operator` con grounding oficial de RouterOS v7, 485 tests backend (95.1% cobertura), 361 tests frontend (100% pasando en 49 archivos Vitest), 76/76 escenarios BDD API en Karate Labs, 30/30 escenarios BDD UI en Karate Labs y 26/26 contratos Front-Back validados en Docker (`validar_comunicacion_front_back.py`).
 - **Hito 22.15 (Skill Oficial de Operaciones NOC para Agentes IA):** COMPLETADO al 100% y certificado en Docker. Arquitectura portable en `.agents/skills/rosgrid-noc-operator/SKILL.md` y global en `~/.gemini/config/skills/`, 5 Playbooks SOP (Diagnóstico 360°, cortes de fibra PON, inestabilidad BGP/OSPF, auditoría CIS y drift, aislamiento preventivo), catálogo de 14 herramientas MCP, referencias de flags RouterOS v7, configs para Claude Desktop y Hermes Agent, distribución remota en `instalar-rosgrid.sh` (`/opt/rosgrid/skills/`), botones de descarga/copiado en `RgMcpTokenModal.vue` y endpoint público `GET /api/v1/mcp/skill`.
@@ -527,13 +527,14 @@
     - *Circuit Breaker Táctico por Router:* Umbral de 3 fallos activa estado `CIRCUIT_OPEN` por 30s con respuesta *Fail-Fast* (HTTP 503) sin retener hilos de FastAPI.
   - Exposición en API (`POST /api/v1/subscriber-devices/{id}/ping`) y frontend con badge `⚡ Caché Anti-Saturación (Ns)` en `SubscribersMapView.vue` y `FieldTechMobileView.vue`.
   - Cobertura 11X certificada: 5 pruebas unitarias backend (`test_diagnostic_governor.unit.py`), 0 errores en `vue-tsc`, ESLint, Ruff y Mypy, Escenario 83 en Karate Labs API y Escenario 34 en Karate Labs UI.
-- [ ] **23.25** **Componente Unificado de Mapa (`UnifiedNetworkMap.vue`), 3 Toggles con Feature Flags, Causa Raíz (RCA) y Cerraduras Operativas en KeyDB:**
+- [x] **23.25** **Componente Unificado de Mapa (`UnifiedNetworkMap.vue`), 3 Toggles con Feature Flags, Causa Raíz (RCA) y Cerraduras Operativas en KeyDB:**
   - Especificación formal `docs/specs/38_UNIFIED_NETWORK_MAP_ROOT_CAUSE_AND_OPERATIONAL_LOCKING.md` y manual operativo `docs/13_MANUAL_MAPA_RED_BIMODAL_Y_OPERACIONES_CAMPO.md` completados.
   - Consolidación en un solo componente de mapa polimórfico (`UnifiedNetworkMap.vue`) para `/inventory/routers`, `/subscribers/map` y `/wallboard`.
   - Toggles de capas independientes: `[ 🏢 Routers de Red ]`, `[ 📦 Cajas NAP FTTH ]` (gobernado estrictamente por `v-if="isp_module_enabled"`) y `[ 💻 Dispositivos / Abonados ]`.
   - Control de acceso RBAC en el mapa: técnicos de calle y soporte básico visualizan telemetría de salud del router pero tienen bloqueado y oculto el acceso a WebFig.
-  - Motor de Análisis de Causa Raíz (RCA estilo Zabbix): supresión automática de pruebas individuales en clientes si el router de cabecera está caído o con Circuit Breaker abierto, con barra superior táctica de alerta y zoom a zona afectada.
+  - Motor de Análisis de Causa Raíz (RCA estilo Zabbix): supresión automática de pruebas individuales en clientes si el router de cabecera está caído o con Circuit Breaker abierto, con barra superior táctica de alerta y zoom a zona afectada (`ROOT_CAUSE_SUPPRESSED`).
   - Prevención de colisión operativa entre brigadas mediante cerraduras efímeras en KeyDB (`TTL = 600s`) con aviso contextual de trabajo en curso.
+  - Cobertura 11X certificada: 7 pruebas unitarias backend (`test_diagnostic_governor.unit.py`), 6 pruebas unitarias Vitest (`UnifiedNetworkMap.unit.ts`), 0 errores en `vue-tsc`, ESLint, Ruff y Mypy, Escenario 84 en Karate Labs API y Escenario 35 en Karate Labs UI.
 
 
 

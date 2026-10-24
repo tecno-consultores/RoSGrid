@@ -240,8 +240,24 @@ async def test_router_concurrency_governor_429(
 
 
 @pytest.mark.asyncio
-async def test_router_circuit_breaker_tripped_503(
-    async_client: AsyncClient, gov_auth: dict[str, Any], fake_redis: FakeAsyncRedis
+async def test_router_circuit_breaker_tripped_direct_slot_503(
+    fake_redis: FakeAsyncRedis
+) -> None:
+    tid = uuid.uuid4()
+    rid = uuid.uuid4()
+
+    # Simular que el Circuit Breaker del router está ABIERTO
+    await fake_redis.set(f"rg:{tid}:diag:cb:{rid}", "OPEN")
+
+    with pytest.raises(Exception) as exc_info:
+        async with DiagnosticGovernor.acquire_router_slot(tid, rid):
+            pass
+    assert "Circuito de diagnóstico abierto" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_diagnostic_root_cause_suppression_when_router_down(
+    async_client: AsyncClient, gov_auth: dict[str, Any], fake_redis: FakeAsyncRedis, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     tid = gov_auth["tenant_id"]
     headers = gov_auth["headers"]
@@ -249,7 +265,12 @@ async def test_router_circuit_breaker_tripped_503(
     mock_db = MockGovernorDbSession(tid)
     app.dependency_overrides[get_tenant_db_session] = lambda: mock_db
 
-    # Simular que el Circuit Breaker del router está ABIERTO
+    mock_client = MockPingClient()
+    import src.api.v1.subscribers as subs_module
+
+    monkeypatch.setattr(subs_module, "_get_router_client", lambda r, t: mock_client)
+
+    # Simular router caído con Circuit Breaker OPEN
     await fake_redis.set(f"rg:{tid}:diag:cb:{mock_db.router.id}", "OPEN")
 
     try:
@@ -257,8 +278,72 @@ async def test_router_circuit_breaker_tripped_503(
             f"/api/v1/subscriber-devices/{mock_db.device.id}/ping",
             headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
         )
-        assert res.status_code == 503
-        assert "Circuito de diagnóstico abierto" in res.json()["detail"]
+        assert res.status_code == 200
+        data = res.json()
+        assert data["status"] == "ROOT_CAUSE_SUPPRESSED"
+        assert data["last_reachability_status"] == "OFFLINE"
+        assert "Diagnóstico omitido" in data["message"]
+        assert data["root_cause_device_name"] == mock_db.router.display_name
+        # El router NO fue consultado en absoluto
+        assert mock_client.call_count == 0
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_device_operational_lock_and_collision_avoidance(
+    async_client: AsyncClient, gov_auth: dict[str, Any], fake_redis: FakeAsyncRedis, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    tid = gov_auth["tenant_id"]
+    headers = gov_auth["headers"]
+    uid = gov_auth["user_id"]
+
+    mock_db = MockGovernorDbSession(tid)
+    app.dependency_overrides[get_tenant_db_session] = lambda: mock_db
+
+    mock_client = MockPingClient()
+    import src.api.v1.subscribers as subs_module
+
+    monkeypatch.setattr(subs_module, "_get_router_client", lambda r, t: mock_client)
+
+    try:
+        # 1. Técnico 1 realiza Ping: adquiere el lock operativo
+        res1 = await async_client.post(
+            f"/api/v1/subscriber-devices/{mock_db.device.id}/ping",
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res1.status_code == 200
+        data1 = res1.json()
+        assert data1["operational_lock"] is not None
+        assert data1["operational_lock"]["technician_id"] == str(uid)
+
+        # 2. Técnico 2 consulta el estado operativo de ese mismo dispositivo
+        other_uid = uuid.uuid4()
+        other_sid = "sess-other-tech"
+        await fake_redis.hset(
+            f"rg:{tid}:sess:{other_sid}",
+            mapping={
+                "session_id": other_sid,
+                "user_id": str(other_uid),
+                "username": "pedro_field",
+                "role": SystemRoleEnum.FIELD_TECH.value,
+            },
+        )
+        other_token = create_jwt_access_token(str(other_uid), str(tid), "gov-tenant", other_sid, SystemRoleEnum.FIELD_TECH.value, True)
+        other_headers = {
+            "Authorization": f"Bearer {other_token}",
+            "Cookie": f"rosgrid_access_token={other_token}",
+        }
+
+        res_status = await async_client.get(
+            f"/api/v1/subscriber-devices/{mock_db.device.id}/operational-status",
+            headers=other_headers,
+        )
+        assert res_status.status_code == 200
+        st_data = res_status.json()
+        assert st_data["is_locked"] is True
+        assert st_data["is_locked_by_other"] is True
+        assert "En atención" in st_data["message"]
     finally:
         app.dependency_overrides.clear()
 
@@ -280,3 +365,4 @@ async def test_router_circuit_breaker_recovery(fake_redis: FakeAsyncRedis) -> No
     await DiagnosticGovernor.record_router_success(tid, rid)
     cb_after = await fake_redis.get(f"rg:{tid}:diag:cb:{rid}")
     assert cb_after is None
+

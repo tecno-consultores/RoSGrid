@@ -1487,6 +1487,37 @@ Certificación ejecutada bajo la **Regla Cero** dentro de los contenedores efím
 4. **Karate Labs API BDD:** Escenario 83 incorporado en `fastapi/test/api_test.feature` y replicado en `docs/examples/fastapi/test/api_test.feature` (**83 escenarios totales de API**).
 5. **Karate Labs UI BDD:** Escenario 34 incorporado en `vue3/test/ui_business_flow.feature` y replicado en `docs/examples/vue3/test/ui_business_flow.feature` (**34 escenarios totales de UI**).
 
+---
+
+## 34. Mapa de Red Unificado, Análisis de Causa Raíz (RCA) y Cerraduras Operativas (Hito 23.25)
+
+Certificación ejecutada bajo la **Regla Cero** dentro de los contenedores efímeros Docker `sinfallas/rosgrid-backend:local-test` y `sinfallas/base-node-ionic:26` conforme a `docs/specs/38_UNIFIED_NETWORK_MAP_ROOT_CAUSE_AND_OPERATIONAL_LOCKING.md` y `docs/13_MANUAL_MAPA_RED_BIMODAL_Y_OPERACIONES_CAMPO.md`.
+
+### A. Capacidades Certificadas
+1. **Componente de Mapa Unificado Multicapa (`UnifiedNetworkMap.vue`):**
+   - Soporte unificado para tres contextos operacionales: `/inventory/routers`, `/subscribers/map` y `/wallboard`.
+   - Tres toggles de capa independientes:
+     - `[ 🏢 Routers de Red ]`: Visible para empresas e ISPs.
+     - `[ 📦 Cajas NAP FTTH ]`: Gobernado estrictamente por Feature Flag `isp_module_enabled` (ausente para empresas privadas sin planta externa).
+     - `[ 💻 Dispositivos / Abonados ]`: Bimodal (Abonados FTTH en ISPs, Dispositivos de red en empresas).
+2. **Análisis de Causa Raíz (RCA estilo Zabbix):**
+   - Evaluación jerárquica pre-diagnóstico: si el router de cabecera está caído o con Circuit Breaker abierto, se suprime el ping a sus clientes dependientes (`ROOT_CAUSE_SUPPRESSED`), retornando en `< 1ms` sin saturar sockets ni MikroTik.
+   - Despliegue de franja táctica roja superior con recuento de abonados afectados y botón `[ 🎯 Enfocar Zona Afectada ]` con `flyTo()` cartográfico.
+3. **Prevención de Colisión Operativa entre Cuadrillas:**
+   - Cerradura efímera en KeyDB (`rg:{tenant}:device:lock:{id}` con TTL=600s).
+   - Detección de atención en curso y notificación visual al segundo técnico informando quién y hace cuántos minutos atendió el servicio.
+4. **Gobernanza RBAC en Cartografía:**
+   - Técnicos de calle (`FIELD_TECH`) y soporte L1 pueden monitorear salud de routers pero tienen estrictamente bloqueado y oculto el acceso a WebFig.
+   - Ingenieros de NOC y administradores disponen del botón táctico de consola directa WebFig v7.
+
+### B. Cobertura y Certificación Multi-Capa 11X
+1. **Backend Unitario:** `fastapi/tests/api/test_diagnostic_governor.unit.py` (7 pruebas unitarias cubriendo caché, rate limit, concurrencia, circuit breaker, supresión RCA de cabecera caída y adquisición de locks operacionales). Aprobadas al 100% (**7 de 7 pruebas PASADAS** en 0.34s).
+2. **Frontend Unitario:** `vue3/src/components/network/UnifiedNetworkMap.unit.ts` (6 pruebas unitarias cubriendo los 3 toggles, la supresión de cajas NAP sin ISP, franja RCA de cabecera, enfoque de zona y RBAC WebFig). Aprobadas al 100% (**6 de 6 pruebas PASADAS** en 89ms).
+3. **Análisis Estático y Tipado:** `vue-tsc --noEmit` (0 errores en toda la aplicación Vue 3), `ruff check --no-cache` (0 errores) y `mypy` (0 errores en los módulos modificados).
+4. **Karate Labs API BDD:** Escenario 84 incorporado en `fastapi/test/api_test.feature` y replicado en `docs/examples/fastapi/test/api_test.feature` (**84 escenarios totales de API**).
+5. **Karate Labs UI BDD:** Escenario 35 incorporado en `vue3/test/ui_business_flow.feature` y replicado en `docs/examples/vue3/test/ui_business_flow.feature` (**35 escenarios totales de UI**).
+
+
 
 
 

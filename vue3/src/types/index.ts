@@ -1206,6 +1206,31 @@ export interface SyslogTemplateResponse {
   instructions: string;
 }
 
+export interface OperationalLock {
+  technician_id: string;
+  technician_name: string;
+  action: string;
+  locked_at: string;
+  minutes_ago?: number;
+}
+
+export interface OperationalStatusResponse {
+  device_id: string;
+  is_locked: boolean;
+  is_locked_by_other: boolean;
+  technician_id?: string | null;
+  technician_name?: string | null;
+  action?: string | null;
+  locked_at?: string | null;
+  minutes_ago?: number;
+  message?: string | null;
+  root_cause?: {
+    root_cause: string;
+    root_cause_device_name?: string;
+    message: string;
+  } | null;
+}
+
 export interface SubscriberDevicePingResponse {
   device_id: string;
   assigned_ipv4?: string;
@@ -1215,5 +1240,9 @@ export interface SubscriberDevicePingResponse {
   message: string;
   is_cached?: boolean;
   cache_ttl_remaining?: number;
+  status?: string;
+  root_cause_device_name?: string | null;
+  operational_lock?: OperationalLock | null;
 }
+
 
