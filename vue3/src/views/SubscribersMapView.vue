@@ -36,7 +36,7 @@
 
   // Ping en vivo
   const isPinging = ref(false);
-  const livePingResult = ref<{ status: string; latency_ms?: number; msg: string } | null>(null);
+  const livePingResult = ref<{ status: string; latency_ms?: number; msg: string; is_cached?: boolean; cache_ttl_remaining?: number } | null>(null);
 
   // Simulación de Laboratorio (solo visible si ISP)
   async function handleSimulateFromDhcp(reset = false) {
@@ -229,12 +229,16 @@
         ping_latency_ms?: number;
         packet_loss_pct?: number;
         message: string;
+        is_cached?: boolean;
+        cache_ttl_remaining?: number;
       }>(`/api/v1/subscriber-devices/${onu.id}/ping`);
 
       livePingResult.value = {
         status: res.data.last_reachability_status,
         latency_ms: res.data.ping_latency_ms,
         msg: res.data.message,
+        is_cached: res.data.is_cached,
+        cache_ttl_remaining: res.data.cache_ttl_remaining,
       };
       onu.last_reachability_status = res.data.last_reachability_status;
       onu.ping_latency_ms = res.data.ping_latency_ms;
@@ -558,6 +562,7 @@
             </button>
             <div v-if="livePingResult" class="ping-feedback-box font-mono" :class="`live--${livePingResult.status.toLowerCase()}`">
               <span>{{ livePingResult.status }}: {{ livePingResult.latency_ms !== undefined ? `${livePingResult.latency_ms}ms` : 'Timeout' }}</span>
+              <span v-if="livePingResult.is_cached" class="tag--custom">⚡ Caché ({{ livePingResult.cache_ttl_remaining }}s)</span>
               <small>{{ livePingResult.msg }}</small>
             </div>
           </div>

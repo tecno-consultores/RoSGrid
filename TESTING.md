@@ -1464,5 +1464,29 @@ Certificación ejecutada bajo la **Regla Cero** dentro de los contenedores efím
 6. **Karate Labs UI BDD:** Escenarios 32 y 33 incorporados en `vue3/test/ui_business_flow.feature` y replicados en `docs/examples/vue3/test/ui_business_flow.feature` (**33 escenarios totales de UI**).
 7. **Auditoría de Secretos:** 0 secretos detectados con `./scripts/verificar-secretos.sh`.
 
+---
+
+## 33. Gobernanza Anti-Saturación de Diagnósticos de Red y Clientes (Hito 23.24)
+
+Certificación ejecutada bajo la **Regla Cero** dentro de los contenedores efímeros Docker `sinfallas/rosgrid-backend:local-test` y `sinfallas/base-node-ionic:26` conforme a `docs/specs/37_BIMODAL_NETWORK_MAP_AND_FTTH_FIELD_OPS.md` y `docs/13_MANUAL_MAPA_RED_BIMODAL_Y_OPERACIONES_CAMPO.md`.
+
+### A. Diagnóstico y Arquitectura del Gobernador (`DiagnosticGovernor`)
+1. **Protección Integral de 5 Capas:**
+   - **Anti-Thundering Herd:** Caché en memoria KeyDB con TTL de 15 segundos (`rg:{tenant_id}:diag:cache:{device_id}`). Resuelve consultas repetitivas de técnicos u operadores en `< 2ms` con los flags `is_cached: true` y `cache_ttl_remaining: N`.
+   - **Semáforo Concurrente por Router:** Máximo de 3 solicitudes simultáneas (`MAX_CONCURRENT_PER_ROUTER = 3`) por MikroTik, evitando saturación del proceso `www-ssl` o picos de CPU en hardware embebido.
+   - **Rate Limiting de Router:** Máximo de 30 diagnósticos por minuto por enrutador.
+   - **Rate Limiting de Técnico:** Máximo de 60 diagnósticos por minuto por usuario autenticado.
+   - **Circuit Breaker Táctico:** Detección de fallos y timeouts continuos. Al alcanzar 3 fallos consecutivos, conmuta a estado `CIRCUIT_OPEN` durante 30 segundos, ejecutando *Fail-Fast* inmediato (HTTP 503) sin agotar sockets ni hilos en los workers de FastAPI. Al expirar el temporizador, una prueba exitosa restablece el estado a `CLOSED`.
+2. **Exposición Táctica en Interfaz Gráfica:**
+   - Visualización de badge en `SubscribersMapView.vue` y `FieldTechMobileView.vue`: `⚡ Caché Anti-Saturación (Ns)` informando al operador sobre la vigencia del resultado sin generar tráfico al router.
+
+### B. Cobertura y Certificación Multi-Capa 11X
+1. **Backend Unitario:** `fastapi/tests/api/test_diagnostic_governor.unit.py` (5 pruebas unitarias cubriendo caché, rate limit por usuario, saturación de concurrencia 429, apertura de circuit breaker 503 y recuperación a 200). Aprobadas al 100% (**5 de 5 pruebas PASADAS** en 0.35s). Suite integrada de abonados y cajas: **11 de 11 pruebas PASADAS** en 0.59s.
+2. **Frontend Tipado y Componentes:** `SubscriberDevicePingResponse` tipado en `vue3/src/types/index.ts` y soportado en `useFieldOpsStore.ts`, con visualización condicional en `SubscribersMapView.vue` y `FieldTechMobileView.vue`.
+3. **Análisis Estático y Tipado:** `vue-tsc --noEmit` (0 errores), `ruff check --no-cache` (0 errores), `mypy` (0 errores) y `eslint` (0 errores).
+4. **Karate Labs API BDD:** Escenario 83 incorporado en `fastapi/test/api_test.feature` y replicado en `docs/examples/fastapi/test/api_test.feature` (**83 escenarios totales de API**).
+5. **Karate Labs UI BDD:** Escenario 34 incorporado en `vue3/test/ui_business_flow.feature` y replicado en `docs/examples/vue3/test/ui_business_flow.feature` (**34 escenarios totales de UI**).
+
+
 
 

@@ -10,6 +10,16 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Added
 
+- **Gobernanza Anti-Saturación de Diagnósticos de Red y Clientes (KeyDB Governor, Thundering-Herd Cache y Circuit Breaker Táctico) (`fastapi/src/services/diagnostic_governor.py`, `fastapi/src/api/v1/subscribers.py`, `fastapi/src/schemas/ipam.py`, `vue3/src/views/SubscribersMapView.vue`, `vue3/src/components/field/FieldTechMobileView.vue`, `vue3/src/stores/useFieldOpsStore.ts`, `vue3/src/types/index.ts`):**
+  - **Protección de 5 Capas Tácticas:**
+    - *Anti-Thundering Herd & Cooldown (KeyDB 15s):* Retorno inmediato de diagnósticos previos (< 2ms) con `is_cached: true` y `cache_ttl_remaining: N`.
+    - *Semáforo Concurrente por Router:* Máximo de 3 solicitudes simultáneas por equipo MikroTik (`MAX_CONCURRENT_PER_ROUTER = 3`), impidiendo la degradación del proceso `www-ssl` o de la CPU de RouterOS v7.
+    - *Rate Limiting de Router (30 req/min):* Control de tasa para evitar tormentas de peticiones no coordinadas hacia un mismo router.
+    - *Rate Limiting de Técnico (60 req/min):* Protección de capa de aplicación contra spam o peticiones repetitivas desde la interfaz de campo.
+    - *Circuit Breaker Táctico por Router:* Umbral de 3 fallos consecutivos dispara estado `CIRCUIT_OPEN` por 30s con respuesta *Fail-Fast* inmediata (HTTP 503) protegiendo el pool de workers de FastAPI sin bloquear hilos.
+  - **Transparencia Táctica en Frontend:** Exposición del badge `⚡ Caché Anti-Saturación (Ns)` en el drawer del mapa de red y en la herramienta de diagnóstico de campo del instalador FTTH.
+  - **Aseguramiento de Calidad 11X:** 5 pruebas unitarias backend (`test_diagnostic_governor.unit.py`), 0 errores de tipado o linting (`vue-tsc`, ESLint, Ruff, Mypy), y nuevos escenarios BDD en Karate Labs: Escenario 83 en API (`fastapi/test/api_test.feature`) y Escenario 34 en UI (`vue3/test/ui_business_flow.feature`), replicados en `docs/examples/`.
+
 - **Arquitectura Bimodal del Mapa de Red (No-ISP vs ISP), Gestión de Cajas NAP FTTH y Rediseño Táctico de Operaciones de Campo (`fastapi/src/models/ipam.py`, `fastapi/src/schemas/ipam.py`, `fastapi/src/api/v1/optical_boxes.py`, `fastapi/src/api/v1/subscribers.py`, `vue3/src/components/field/FieldTechMobileView.vue`, `vue3/src/views/SubscribersMapView.vue`, `vue3/src/components/inventory/OsmOnuMap.vue`, `vue3/src/stores/useFieldOpsStore.ts`):**
   - **Dualidad Arquitectónica Bimodal:**
     - *Modo Empresa No-ISP (`tenant.isp_module_enabled == false`):* Visualización en el mapa de dispositivos y clientes DHCP corporativos reales procedentes de `/ip/dhcp-server/lease` de routers MikroTik (PCs, APs, cámaras de seguridad, impresoras). Heredan automáticamente las coordenadas y ubicación física del router asignador. Los administradores pueden editar manualmente las coordenadas (`is_custom_coordinates = true`) o restablecerlas con el botón `[ 📍 Copiar Coordenadas del Router ]`. Se verifica disponibilidad mediante Ping ICMP 1-Click en tiempo real ejecutado desde el router MikroTik (`POST /ping`). Las pantallas y menús de fibra y campo FTTH se apagan y ocultan completamente para el tenant.

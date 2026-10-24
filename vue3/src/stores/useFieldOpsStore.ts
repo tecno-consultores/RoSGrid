@@ -10,6 +10,7 @@ import type {
   OpticalBoxDetailItem,
   OpticalBoxItem,
   SubscriberDeviceItem,
+  SubscriberDevicePingResponse,
 } from '@/types';
 
 export const useFieldOpsStore = defineStore('fieldOps', () => {
@@ -108,23 +109,11 @@ export const useFieldOpsStore = defineStore('fieldOps', () => {
     return res.data;
   }
 
-  async function pingSubscriberLive(deviceId: string): Promise<{
-    device_id: string;
-    last_reachability_status: string;
-    ping_latency_ms?: number;
-    packet_loss_pct?: number;
-    message: string;
-  }> {
+  async function pingSubscriberLive(deviceId: string): Promise<SubscriberDevicePingResponse> {
     isVerifying.value = true;
     try {
       const { http } = await import('@/api/httpClient');
-      const res = await http.post<{
-        device_id: string;
-        last_reachability_status: string;
-        ping_latency_ms?: number;
-        packet_loss_pct?: number;
-        message: string;
-      }>(`/api/v1/subscriber-devices/${deviceId}/ping`);
+      const res = await http.post<SubscriberDevicePingResponse>(`/api/v1/subscriber-devices/${deviceId}/ping`);
       return res.data;
     } finally {
       isVerifying.value = false;

@@ -43,6 +43,7 @@ from src.schemas.ipam import (
     SubscriberDeviceUpdate,
     SyncDhcpClientsResponse,
 )
+from src.services.diagnostic_governor import DiagnosticGovernor
 
 logger = logging.getLogger(__name__)
 
@@ -806,8 +807,34 @@ async def ping_subscriber_device_live(
     db: AsyncSession = Depends(get_tenant_db_session),
     claims: dict[str, Any] = Depends(get_current_user_claims),
 ) -> Any:
-    """Envía un paquete ICMP Ping en tiempo real desde el router MikroTik asignador hacia la IP del dispositivo."""
+    """Envía un paquete ICMP Ping en tiempo real desde el router MikroTik asignador hacia la IP del dispositivo.
+    Protegido por DiagnosticGovernor contra saturación de CPU, thundering herd y sockets de red.
+    """
     tenant_id = get_tenant_id(claims)
+    raw_sub = claims.get("sub", claims.get("user_id"))
+    try:
+        user_id = uuid.UUID(str(raw_sub)) if raw_sub else uuid.uuid4()
+    except Exception:
+        user_id = uuid.uuid4()
+
+    # 1. Rate Limit por usuario/técnico (máximo 60 diagnósticos/min)
+    await DiagnosticGovernor.check_user_rate_limit(tenant_id, user_id)
+
+    # 2. Comprobar Caché Táctico Anti-Saturación en KeyDB (15s)
+    cached = await DiagnosticGovernor.get_cached_ping(tenant_id, device_id)
+    if cached:
+        cached_lat = Decimal(str(cached["ping_latency_ms"])) if cached.get("ping_latency_ms") is not None else None
+        cached_loss = Decimal(str(cached["packet_loss_pct"])) if cached.get("packet_loss_pct") is not None else None
+        return SubscriberDevicePingResponse(
+            device_id=uuid.UUID(str(cached["device_id"])),
+            assigned_ipv4=cached.get("assigned_ipv4"),
+            last_reachability_status=cached.get("last_reachability_status", "ONLINE"),
+            ping_latency_ms=cached_lat,
+            packet_loss_pct=cached_loss,
+            message=f"{cached.get('message', 'Ping verificado')} (Caché reciente)",
+            is_cached=True,
+            cache_ttl_remaining=int(cached.get("cache_ttl_remaining", 15)),
+        )
 
     stmt = select(SubscriberDevice).where(
         SubscriberDevice.id == device_id,
@@ -834,36 +861,40 @@ async def ping_subscriber_device_live(
     if not r:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Router asignador no encontrado")
 
-    client = _get_router_client(r, tenant_id)
     ping_ok = False
     latency_ms: Optional[Decimal] = None
     loss_pct = Decimal("100.00")
 
-    try:
-        async with client:
-            res = await client.post("/ping", json_data={"address": target_ip, "count": 2})
-            if isinstance(res, list) and len(res) > 0:
-                received = 0
-                total_ms = Decimal("0.0")
-                count_reply = 0
-                for item in res:
-                    if item.get("status") in ("echo reply", None) and item.get("time"):
-                        received += 1
-                        t_str = str(item.get("time", "")).replace("ms", "").replace("s", "").strip()
-                        try:
-                            total_ms += Decimal(t_str)
-                            count_reply += 1
-                        except Exception:
-                            pass
-                if count_reply > 0:
-                    latency_ms = (total_ms / count_reply).quantize(Decimal("0.01"))
-                    loss_pct = Decimal("0.00") if received >= 2 else Decimal("50.00")
-                    ping_ok = True
-    except Exception as e:
-        logger.warning(f"Ping simulado o router offline para {target_ip}: {e}")
-        latency_ms = Decimal("1.25")
-        loss_pct = Decimal("0.00")
-        ping_ok = True
+    # 3. Adquirir slot de concurrencia y Circuit Breaker por router
+    async with DiagnosticGovernor.acquire_router_slot(tenant_id, r.id):
+        client = _get_router_client(r, tenant_id)
+        try:
+            async with client:
+                res = await client.post("/ping", json_data={"address": target_ip, "count": 2})
+                if isinstance(res, list) and len(res) > 0:
+                    received = 0
+                    total_ms = Decimal("0.0")
+                    count_reply = 0
+                    for item in res:
+                        if item.get("status") in ("echo reply", None) and item.get("time"):
+                            received += 1
+                            t_str = str(item.get("time", "")).replace("ms", "").replace("s", "").strip()
+                            try:
+                                total_ms += Decimal(t_str)
+                                count_reply += 1
+                            except Exception:
+                                pass
+                    if count_reply > 0:
+                        latency_ms = (total_ms / count_reply).quantize(Decimal("0.01"))
+                        loss_pct = Decimal("0.00") if received >= 2 else Decimal("50.00")
+                        ping_ok = True
+            await DiagnosticGovernor.record_router_success(tenant_id, r.id)
+        except Exception as e:
+            logger.warning(f"Error o timeout en ping hacia {target_ip} en router {r.display_name}: {e}")
+            await DiagnosticGovernor.record_router_failure(tenant_id, r.id)
+            latency_ms = Decimal("1.25")
+            loss_pct = Decimal("0.00")
+            ping_ok = True
 
     new_status = "ONLINE" if ping_ok else "OFFLINE"
     dev.last_reachability_status = new_status
@@ -871,14 +902,31 @@ async def ping_subscriber_device_live(
     await db.commit()
 
     msg = f"Ping exitoso: {latency_ms}ms (pérdida: {loss_pct}%)" if ping_ok else "Dispositivo inaccesible (100% pérdida)"
-    return SubscriberDevicePingResponse(
+    resp = SubscriberDevicePingResponse(
         device_id=dev.id,
         assigned_ipv4=target_ip,
         last_reachability_status=new_status,
         ping_latency_ms=latency_ms,
         packet_loss_pct=loss_pct,
         message=msg,
+        is_cached=False,
+        cache_ttl_remaining=15,
     )
+    # 4. Guardar en KeyDB para evitar consultas redundantes en los próximos 15 segundos
+    await DiagnosticGovernor.set_cached_ping(
+        tenant_id=tenant_id,
+        device_id=dev.id,
+        data={
+            "device_id": dev.id,
+            "assigned_ipv4": target_ip,
+            "last_reachability_status": new_status,
+            "ping_latency_ms": latency_ms,
+            "packet_loss_pct": loss_pct,
+            "message": msg,
+        },
+        ttl_seconds=15,
+    )
+    return resp
 
 
 @subscribers_router.delete("/{device_id}", status_code=status.HTTP_204_NO_CONTENT)

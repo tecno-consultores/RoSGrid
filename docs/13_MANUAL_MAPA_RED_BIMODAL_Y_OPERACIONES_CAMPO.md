@@ -113,3 +113,22 @@ El instalador en calle no depende de asignaciones burocráticas previas. Puede p
 * **Aislamiento Multi-Tenant Estricto:** Toda consulta a `optical_boxes` y `subscriber_devices` filtra por `tenant_id` mediante políticas nativas de PostgreSQL Row Level Security (RLS).
 * **Protección Anti-SSRF:** La comunicación con los routers de acceso utiliza exclusivamente el cliente `MikrotikRestClient` validado con pinning de certificados TOFU y credenciales descifradas de la bóveda AES-256-GCM.
 * **Cero Datos Personales (GDPR):** RoSGrid almacena exclusivamente parámetros de red y telemetría física. Las identidades civiles, contratos y cobranzas residen en los sistemas BSS/CRM externos.
+
+---
+
+## 5. Gobernador Anti-Saturación y Protección de Equipos MikroTik
+
+Para garantizar que el uso masivo de diagnósticos 1-Click por parte de los técnicos en campo o del personal de soporte en el Centro de Operaciones de Red (NOC) no degrade el rendimiento de los enrutadores MikroTik RouterOS v7 ni consuma los recursos del servidor RoSGrid, el sistema incorpora un **Gobernador de Diagnósticos**:
+
+1. **Caché Táctico de 15 Segundos (Anti-Thundering Herd):**
+   * Cuando se ejecuta un ping sobre un abonado o equipo de red, el resultado se almacena en memoria de alta velocidad (KeyDB) durante 15 segundos.
+   * Si el técnico o un compañero consulta el mismo abonado dentro de esa ventana, el resultado se entrega de inmediato ($< 2\text{ ms}$) sin volver a consultar al router.
+   * La interfaz muestra un distintivo táctico de color cian: `⚡ Caché Anti-Saturación (Ns)` indicando los segundos restantes de vigencia del resultado.
+
+2. **Semáforo Concurrente por Router (Máximo 3 Pruebas Simultáneas):**
+   * Ningún equipo MikroTik procesará más de 3 diagnósticos concurrentes. Si se alcanza este umbral en routers con muchos técnicos operando en paralelo, el sistema solicita pausar brevemente unos segundos antes de reintentar.
+
+3. **Circuit Breaker Automático ante Contingencias:**
+   * Si un router MikroTik pierde conectividad, se apaga o sufre timeouts repetitivos (3 fallas consecutivas), RoSGrid activa de inmediato el modo `CIRCUIT_OPEN` durante 30 segundos.
+   * Esto previene que las peticiones se acumulen en el servidor esperando timeouts lentos (fail-fast táctico con HTTP 503), manteniendo la consola de campo ágil y fluida en todo momento.
+

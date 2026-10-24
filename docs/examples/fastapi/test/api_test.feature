@@ -651,5 +651,13 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 83. Gobernanza Anti-Saturación — Diagnóstico Ping ICMP con Caché KeyDB y Semáforo Concurrente
+    Given path '/api/v1/subscriber-devices/00000000-0000-0000-0000-000000000001/ping'
+    And header Idempotency-Key = 'test-ping-governor-key'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
 
 

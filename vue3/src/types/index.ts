@@ -1205,3 +1205,15 @@ export interface SyslogTemplateResponse {
   protocol: string;
   instructions: string;
 }
+
+export interface SubscriberDevicePingResponse {
+  device_id: string;
+  assigned_ipv4?: string;
+  last_reachability_status: string;
+  ping_latency_ms?: number;
+  packet_loss_pct?: number;
+  message: string;
+  is_cached?: boolean;
+  cache_ttl_remaining?: number;
+}
+

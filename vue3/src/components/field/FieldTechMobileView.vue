@@ -272,6 +272,8 @@
         latency_ms: res.ping_latency_ms,
         packet_loss: res.packet_loss_pct,
         message: res.message,
+        is_cached: res.is_cached,
+        cache_ttl_remaining: res.cache_ttl_remaining,
       };
       sessionStatus.value = 'ACTIVE';
       mtuTestResult.value = 'PASS';
@@ -900,6 +902,7 @@
               <div v-if="pingResult" class="ping-results-card" :class="`ping--${pingResult.status.toLowerCase()}`">
                 <div class="ping-card-header">
                   <span class="status-pill">{{ pingResult.status }}</span>
+                  <span v-if="pingResult.is_cached" class="ping-cache-badge">⚡ Caché Anti-Saturación ({{ pingResult.cache_ttl_remaining }}s)</span>
                   <span class="latency-readout font-mono">
                     {{ pingResult.latency_ms !== undefined ? `${pingResult.latency_ms} ms` : 'Timeout' }}
                   </span>

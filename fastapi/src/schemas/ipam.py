@@ -381,5 +381,7 @@ class SubscriberDevicePingResponse(BaseModel):
     ping_latency_ms: Optional[Decimal] = None
     packet_loss_pct: Optional[Decimal] = None
     message: str
+    is_cached: bool = False
+    cache_ttl_remaining: int = 0
 
 

@@ -302,5 +302,13 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And waitFor(".map-actions")
     And waitFor(".kpi-summary")
 
+  Scenario: 34. Gobernanza Anti-Saturación — Drawer de Diagnóstico de Cliente con Badge de Caché y Cooldown
+    Given driver baseUrl + '/subscribers/map'
+    And waitFor(".subscribers-map-view")
+    And waitFor(".map-container")
+    And waitFor(".map-actions")
+    And match text(".map-actions") contains 'Sincronizar DHCP'
+
+
 
 

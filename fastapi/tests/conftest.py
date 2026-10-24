@@ -188,6 +188,21 @@ class FakeAsyncRedis:
         self.strings[name] = str(value)
         return True
 
+    async def incr(self, name: str, amount: int = 1) -> int:
+        val = int(self.strings.get(name, 0)) + amount
+        self.strings[name] = str(val)
+        return val
+
+    async def decr(self, name: str, amount: int = 1) -> int:
+        val = int(self.strings.get(name, 0)) - amount
+        self.strings[name] = str(val)
+        return val
+
+    async def ttl(self, name: str) -> int:
+        if name in self.strings or name in self.hashes:
+            return 15
+        return -2
+
     async def hset(
         self,
         name: str,
@@ -356,6 +371,7 @@ def fake_redis(monkeypatch: pytest.MonkeyPatch) -> FakeAsyncRedis:
     monkeypatch.setattr("src.workers.syslog_collector.get_redis_client", lambda: fake)
     monkeypatch.setattr("src.services.topology_l2.get_redis_client", lambda: fake)
     monkeypatch.setattr("src.api.v1.fleet_metrics.get_redis_client", lambda: fake)
+    monkeypatch.setattr("src.services.diagnostic_governor.get_redis_client", lambda: fake)
     return fake
 
 

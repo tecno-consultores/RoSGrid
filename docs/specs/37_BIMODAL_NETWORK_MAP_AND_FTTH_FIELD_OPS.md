@@ -159,3 +159,71 @@ Se elimina la barrera burocrática de "0 órdenes asignadas". El técnico en rut
 | `/field-ops` | **Desactivada:** Oculta en menú lateral y command palette. Redirige a `/` si se invoca. | **Activa:** Totalmente accesible para roles autorizados. |
 | `/subscribers/map` | **Modo Empresa:** Clientes DHCP, herencia de coordenadas de router y ping 1-Click. | **Modo ISP:** Cajas NAP, matriz de puertos, ONUs y diagnóstico óptico. |
 | `/api/v1/optical-boxes` | Retorna lista vacía o deshabilitado si el feature no aplica. | CRUD completo de Cajas NAP e inventario de puertos de splitter. |
+
+---
+
+## 6. Arquitectura de Gobernanza Anti-Saturación de Diagnósticos (KeyDB Governor & RouterOS Protection)
+
+Para evitar la saturación de los procesadores de la flota MikroTik RouterOS v7 y la sobrecarga del pool de workers asíncronos de RoSGrid ante consultas masivas de técnicos o monitoreos repetitivos, se implementa el **DiagnosticGovernor** (`fastapi/src/services/diagnostic_governor.py`) con 5 barreras tácticas en serie:
+
+```
+[ Solicitud Diagnóstico Técnico / Operador ]
+                     │
+                     ▼
+┌────────────────────────────────────────────────────────┐
+│ 1. Rate Limiter por Técnico (KeyDB: 60 req/min)       │ ──> [429 Demasiadas Solicitudes]
+└────────────────────────────────────────────────────────┘
+                     │ (OK)
+                     ▼
+┌────────────────────────────────────────────────────────┐
+│ 2. Caché Táctico Anti-Thundering Herd (KeyDB 15s)      │ ──> [200 OK Inmediato (<2ms, is_cached: true)]
+└────────────────────────────────────────────────────────┘
+                     │ (Miss)
+                     ▼
+┌────────────────────────────────────────────────────────┐
+│ 3. Circuit Breaker por Router (3 fallos -> 30s OPEN)   │ ──> [503 Circuito Abierto / Falla Rápida]
+└────────────────────────────────────────────────────────┘
+                     │ (CLOSED / HALF-OPEN)
+                     ▼
+┌────────────────────────────────────────────────────────┐
+│ 4. Rate Limiter por Router (KeyDB: 30 req/min)        │ ──> [429 Router Ocupado]
+└────────────────────────────────────────────────────────┘
+                     │ (OK)
+                     ▼
+┌────────────────────────────────────────────────────────┐
+│ 5. Semáforo Concurrente por Router (Máx 3 concurrentes)│ ──> [429 Concurrencia Máxima]
+└────────────────────────────────────────────────────────┘
+                     │ (Slot adquirido)
+                     ▼
+[ Ejecución Ping ICMP vía REST API MikroTik (/rest/ping) ]
+                     │
+                     ├─ Éxito ──> Guarda en KeyDB (TTL=15s) & Resetea Circuit Breaker
+                     └─ Fallo ──> Incrementa Contador Circuit Breaker
+```
+
+### 6.1. Pilares Técnicos de la Gobernanza
+
+1. **Anti-Thundering Herd & Cooldown (15 segundos):**
+   - Llave KeyDB: `rg:{tenant_id}:diag:cache:{device_id}` con TTL de 15 segundos.
+   - Si un técnico presiona repetidamente el botón de diagnóstico o varios operadores consultan el mismo abonado, la respuesta se entrega desde KeyDB en `< 2ms` con los flags `is_cached: true` y `cache_ttl_remaining: N`.
+   - La interfaz gráfica en Vue 3 (`SubscribersMapView.vue` y `FieldTechMobileView.vue`) renderiza inmediatamente un badge táctico cian: `⚡ Caché Anti-Saturación (Ns)` con barra de enfriamiento visual.
+
+2. **Semáforo Concurrente por Router (`MAX_CONCURRENT_PER_ROUTER = 3`):**
+   - Llave KeyDB: `rg:{tenant_id}:diag:concurrency:router:{router_id}` (vía operaciones atómicas `INCR` y `DECR`).
+   - Impide que más de 3 diagnósticos simultáneos golpeen el mismo equipo de red MikroTik. El proceso `www-ssl` de RouterOS v7 en hardware embebido (MIPSBE, ARM, Tile) queda protegido contra spikes de consumo de CPU.
+   - Si el límite se alcanza, retorna HTTP 429 con mensaje claro invitando a reintentar en breves segundos.
+
+3. **Límite de Tasa por Router (Rate Limiting de Equipo):**
+   - Llave KeyDB: `rg:{tenant_id}:diag:rate:router:{router_id}` con TTL de 60 segundos y tope de 30 diagnósticos por minuto.
+   - Protege routers de borde o concentración de sobrecarga por scripts automatizados o inspecciones masivas no coordinadas.
+
+4. **Límite de Tasa por Técnico/Usuario:**
+   - Llave KeyDB: `rg:{tenant_id}:diag:rate:user:{user_id}` con TTL de 60 segundos y tope de 60 diagnósticos por minuto.
+   - Frena comportamientos anómalos o spam intencional en la interfaz de campo.
+
+5. **Circuit Breaker Táctico por Router:**
+   - Llaves KeyDB: `rg:{tenant_id}:diag:circuit:failures:{router_id}` y `rg:{tenant_id}:diag:circuit:open:{router_id}`.
+   - Si un router MikroTik no responde o acumula 3 fallos consecutivos (`CIRCUIT_BREAKER_THRESHOLD = 3`), el circuito se dispara a estado `OPEN` durante 30 segundos (`CIRCUIT_BREAKER_COOLDOWN = 30`).
+   - Durante este tiempo, cualquier solicitud hacia ese router falla de inmediato con HTTP 503 (`Fail-Fast`), sin consumir sockets de conexión ni hilos en los workers de FastAPI.
+   - Al expirar los 30 segundos, el siguiente intento entra en modo de prueba (`HALF-OPEN`); si tiene éxito, restablece el circuito a `CLOSED`.
+
