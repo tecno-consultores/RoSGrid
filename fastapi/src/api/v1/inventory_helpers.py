@@ -33,16 +33,20 @@ async def enrich_router_telemetry(redis: Any, tenant_id: uuid.UUID, r_id: uuid.U
     key = f"rg:{tenant_id}:mon_state:{r_id}"
     syslog_active_key = f"rg:{tenant_id}:router:{r_id}:syslog:active"
     syslog_ring_key = f"rg:{tenant_id}:router:{r_id}:syslog:ring"
+    syslog_conf_key = f"rg:{tenant_id}:router:{r_id}:syslog:configured"
 
     try:
         pipeline = redis.pipeline()
         pipeline.hgetall(key)
         pipeline.exists(syslog_active_key)
         pipeline.llen(syslog_ring_key)
+        pipeline.exists(syslog_conf_key)
         res = await pipeline.execute()
-        data = res[0] or {}
-        syslog_active = bool(res[1])
-        syslog_count = int(res[2]) if res[2] else 0
+        data = res[0] or {} if len(res) > 0 else {}
+        syslog_has_traffic = bool(res[1]) if len(res) > 1 else False
+        syslog_count = int(res[2]) if len(res) > 2 and res[2] else 0
+        syslog_configured = bool(res[3]) if len(res) > 3 else False
+        syslog_active = syslog_has_traffic or (syslog_count > 0) or syslog_configured
     except Exception:
         data = {}
         syslog_active = False

@@ -1313,3 +1313,35 @@ Se contrastó cada módulo del backend y frontend que interactúa con routers Mi
 4. **Contratos Front-Back:** 26/26 pruebas aprobadas en contenedor Docker efímero (`validar_comunicacion_front_back.py`).
 5. **Karate Labs API BDD:** Escenario 72 incorporado en `fastapi/test/api_test.feature` y replicado en `docs/examples/fastapi/test/api_test.feature`.
 6. **Karate Labs UI BDD:** Escenario 28 incorporado en `vue3/test/ui_business_flow.feature` y replicado en `docs/examples/vue3/test/ui_business_flow.feature`.
+
+---
+
+## 38. Idempotencia en Reglas de Syslog, Detección Continua en Inventario y Consola Syslog Live
+
+### A. Diagnóstico de Causa Raíz
+1. **Duplicación de Tópicos en `/system/logging`:** Al ejecutar plantillas masivas o aprovisionar syslog, la API REST de RouterOS v7 permite múltiples llamadas `PUT /system/logging` con los mismos tópicos y acción sin arrojar error `already exists`, generando entradas duplicadas en la tabla de logging de RouterOS (visible en WinBox con reglas repetidas).
+2. **"Sin Syslog" en Inventario:** La clave en KeyDB `syslog:active` se configuraba únicamente ante la recepción de paquetes de red UDP 5514 con un TTL efímero de 300 segundos. Si los routers se encontraban en estado saludable sin generar eventos críticos o advertencias continuas, el TTL expiraba y el inventario mostraba `⚪ Sin Syslog` a pesar de que el router tenía la configuración de reenvío activa.
+3. **Consola Syslog Live Vacía (HTTP 422):** En `RouterSyslogTerminalView.vue`, el componente consultaba `GET /api/v1/routers/{id}/syslog?limit=200`, pero en el backend `fastapi/src/api/v1/syslog.py` el parámetro `limit` tenía la restricción `le=100`, arrojando `HTTP 422 Unprocessable Entity` y provocando que la terminal mostrara "0 eventos". Además, el puerto 5514/udp no estaba expuesto en el servicio `rosgrid-worker` de `docker-compose.yml`.
+
+### B. Correcciones Implementadas
+1. **Idempotencia Preventiva en Backend (`bulk_and_updates.py`):**
+   - En `_execute_single_step`: ante llamadas `PUT` contra `system/logging`, se consultan primero las reglas preexistentes (`client.get("system/logging")`).
+   - Se compara el set de tópicos (`tgt_set == r_set`) y la acción (`action == tgt_act`). Si coincide, se omite el `PUT` redundante y se retorna la regla existente.
+   - Deduplicación en vivo ejecutada mediante script REST en los routers `r1`, `r2` y `r3`, eliminando 28 reglas duplicadas y preservando las 6 reglas canónicas únicas.
+2. **Detección Continua de Syslog en Monitor de Salud (`health_monitor_worker.py` y `inventory_helpers.py`):**
+   - `health_monitor_worker.py`: al evaluar cada router alcanzable, verifica si `/system/logging/action` contiene `name == "rosgridsyslog"`. Si es así, persiste la clave `rg:{tenant}:router:{id}:syslog:configured` = `"1"` con TTL de 24 horas (86400s).
+   - `inventory_helpers.py`: `enrich_router_telemetry` ahora evalúa `syslog_active = syslog_has_traffic or (syslog_count > 0) or syslog_configured`.
+   - El inventario ahora refleja verazmente `🟢 Activo` en todos los routers aprovisionados.
+3. **Ampliación de Límite de Eventos y Paridad de Contrato (`syslog.py`, `schemas/syslog.py`, `docker-compose.yml`):**
+   - `limit` ampliado a `le=500` en `syslog.py`.
+   - Agregados campos de alias `total_events` y `critical_count` en `RouterSyslogResponse`.
+   - Agregado mapping de puerto `5514:5514/udp` en `rosgrid-worker`.
+
+### C. Cobertura y Certificación Multi-Capa 11X
+1. **Backend Unitario:** `fastapi/tests/api/test_hito23_cve_and_syslog.unit.py` (33 pruebas aprobadas al 100%, incluyendo pruebas de desempaquetado de pipeline de KeyDB y validación de `syslog_configured`).
+2. **Frontend Unitario:** `vue3/src/views/routerSyslogTerminalView.unit.ts` (5 pruebas Vitest aprobadas al 100%).
+3. **Contratos Front-Back:** 26/26 pruebas aprobadas en contenedor Docker efímero (`validar_comunicacion_front_back.py`).
+4. **Karate Labs API BDD:** Escenarios 73, 74 y 75 en `fastapi/test/api_test.feature` y `docs/examples/fastapi/test/api_test.feature`.
+5. **Karate Labs UI BDD:** Escenario 29 en `vue3/test/ui_business_flow.feature` y `docs/examples/vue3/test/ui_business_flow.feature`.
+6. **Verificación en Vivo con Navegador:** Confirmado visualmente en `http://localhost:8085/inventory` (`🟢 Activo`) y en la consola WebFig Syslog Live (`Eventos: 1` con log recibido).
+

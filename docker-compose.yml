@@ -110,6 +110,8 @@ services:
       - rosgrid_uv_cache:/root/.cache/uv
       - rosgrid_backups_storage:/var/lib/rosgrid/backups
     working_dir: /app
+    ports:
+      - "${ROSGRID_SYSLOG_PORT:-5514}:5514/udp"
     command: ["bash", "-c", "uv pip install --system -e . && python3 -m src.workers.runner"]
     networks:
       - rosgrid_internal_net

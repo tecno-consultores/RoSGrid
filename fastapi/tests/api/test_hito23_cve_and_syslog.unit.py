@@ -525,6 +525,7 @@ async def test_enrich_router_telemetry_with_syslog():
         {"operational_status": "ONLINE", "last_cpu_load_pct": "12", "last_free_memory_pct": "60"},
         1,  # exists -> True
         5,  # llen -> 5
+        0,  # configured -> 0
     ])
     mock_redis.pipeline.return_value = mock_pipe
 
@@ -534,4 +535,27 @@ async def test_enrich_router_telemetry_with_syslog():
     assert res["syslog_event_count"] == 5
     assert res["cpu_load_percent"] == 12
     assert res["memory_used_percent"] == 40
+
+
+@pytest.mark.asyncio
+async def test_enrich_router_telemetry_configured_without_traffic():
+    from src.api.v1.inventory_helpers import enrich_router_telemetry
+
+    tid = uuid.uuid4()
+    rid = uuid.uuid4()
+    mock_redis = MagicMock()
+    mock_pipe = MagicMock()
+    mock_pipe.execute = AsyncMock(return_value=[
+        {"operational_status": "ONLINE", "last_cpu_load_pct": "5", "last_free_memory_pct": "80"},
+        0,  # traffic -> False
+        0,  # llen -> 0
+        1,  # configured -> True
+    ])
+    mock_redis.pipeline.return_value = mock_pipe
+
+    res = await enrich_router_telemetry(mock_redis, tid, rid)
+    assert res["operational_status"] == "ONLINE"
+    assert res["syslog_active"] is True
+    assert res["syslog_event_count"] == 0
+
 

@@ -1297,7 +1297,7 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
 - **Propósito:** Consulta los eventos recientes de syslog almacenados en el RingBuffer circular de KeyDB (máx 500 entradas, sin persistencia en Postgres).
 - **Feature Flag:** `syslog_collector_enabled`.
 - **Rol Mínimo:** `OPERATOR`.
-- **Query Params:** `limit={int}` (1 a 200, por defecto 50).
+- **Query Params:** `limit={int}` (1 a 500, por defecto 50).
 
 #### 4.6.4 Exportador Prometheus OpenMetrics (`/api/v1/metrics/fleet`)
 

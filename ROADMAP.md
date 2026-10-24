@@ -476,6 +476,12 @@
   - Corrección de endpoints singulares canónicos: `system/ntp/client/set` (POST) y `ip/dns/set` (POST) en plantillas y presets.
   - Verificación en vivo en routers CHR reales: monitoreo de interfaces SFP (`/interface/ethernet/monitor`), reseteo de contadores de firewall (`/reset-counters-all`), vaciado de caché DNS (`/ip/dns/cache/flush`), ejecución de scripts (`/system/script/run`) y optimización de telemetría de interfaces mediante query param `?.proplist=...`.
   - Certificación 11X multi-capa: 8/8 tests backend, 10/10 tests frontend, 0 errores en `vue-tsc`, 0 errores en `ruff`, 26/26 contratos front-back y nuevos escenarios Karate Labs: Escenario 72 en API y Escenario 28 en UI sincronizados en `docs/examples/`.
+- [x] **23.17** **Idempotencia en Reglas de Syslog, Detección Continua en Inventario y Consola Syslog Live:**
+  - Idempotencia preventiva en `_execute_single_step` de operaciones masivas: consulta previa de reglas en `/system/logging` para evitar duplicar reglas idénticas (misma acción y mismo set de tópicos), erradicando la duplicación en routers MikroTik. Deduplicación y limpieza en vivo realizada en routers de prueba (`r1`, `r2`, `r3`).
+  - Detección continua de Syslog en `health_monitor_worker.py`: verificación periódica de presencia de la acción `rosgridsyslog` en el router y persistencia en KeyDB (`rg:{tenant}:router:{id}:syslog:configured`), eliminando el falso negativo `⚪ Sin Syslog` en el inventario para routers que no emiten logs continuos.
+  - Corrección de límite de eventos en `syslog.py` (ampliado de 100 a 500) para resolver el error HTTP 422 generado por la petición del frontend (`limit=200`), paridad de contrato con campos `total_events` y `critical_count` en `schemas/syslog.py`, y exposición de puerto `5514/udp` en worker.
+  - Certificación 11X multi-capa: 33/33 tests backend en `test_hito23_cve_and_syslog.unit.py`, 5/5 tests frontend en `routerSyslogTerminalView.unit.ts`, 26/26 contratos front-back y nuevos escenarios Karate Labs: Escenarios 73, 74 y 75 en API y Escenario 29 en UI sincronizados en `docs/examples/`.
+
 
 ---
 

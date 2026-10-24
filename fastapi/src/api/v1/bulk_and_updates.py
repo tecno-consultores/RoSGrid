@@ -730,6 +730,28 @@ async def _execute_single_step(client: MikrotikRestClient, step: dict[str, Any])
         return await client.post("ip/dns/set", payload)
 
     if method == "PUT":
+        # Idempotencia preventiva para /system/logging: no duplicar reglas con misma acción y tópicos
+        if endpoint == "system/logging":
+            tgt_act = payload.get("action", "")
+            tgt_top = payload.get("topics", "")
+            tgt_set = {t.strip() for t in tgt_top.split(",") if t.strip()}
+            try:
+                existing_rules = await client.get("system/logging")
+                if isinstance(existing_rules, list):
+                    for r in existing_rules:
+                        if r.get("action") == tgt_act:
+                            r_top = r.get("topics", "")
+                            r_set = {t.strip() for t in r_top.split(",") if t.strip()}
+                            if r_set == tgt_set:
+                                logger.info(
+                                    "Regla de logging con tópicos '%s' y acción '%s' ya existe (idempotente)",
+                                    tgt_top,
+                                    tgt_act,
+                                )
+                                return r
+            except Exception as e_log:
+                logger.debug("Fallo al consultar reglas previas de logging: %s", e_log)
+
         try:
             return await client.put(endpoint, payload)
         except MikrotikApiError as err:

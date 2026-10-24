@@ -256,3 +256,13 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     Then waitFor(".template-variables-box")
     And match text(".template-variables-box") contains 'dns_primary'
     And match text(".template-variables-box") contains 'dns_secondary'
+
+  Scenario: 29. Consola WebFig v7 — Módulo Syslog Live con RingBuffer y Script de Enrolamiento
+    Given driver baseUrl + '/routers/01928900-aaaa-7bbb-8ccc-111122223333/webfig/syslog'
+    And waitFor(".syslog-terminal")
+    And waitFor(".terminal-toolbar")
+    And match text(".terminal-toolbar") contains 'Script RouterOS'
+    And waitFor(".filter-input")
+    And waitFor(".severity-select")
+    And waitFor(".stats-badge")
+

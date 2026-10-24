@@ -24,17 +24,17 @@ ROUTEROS_SYSLOG_TEMPLATE = """# ================================================
 # ==============================================================================
 
 /system logging action
-remove [find name="rosgrid-syslog"]
-add name="rosgrid-syslog" target=remote remote={{ROSGRID_SERVER_IP}} remote-port={{ROSGRID_SYSLOG_PORT}} bsd-syslog=yes facility=daemon sys-ident=yes
+remove [find name="rosgridsyslog"]
+add name="rosgridsyslog" target=remote remote={{ROSGRID_SERVER_IP}} remote-port={{ROSGRID_SYSLOG_PORT}} remote-log-format=syslog syslog-facility=daemon
 
 /system logging
-remove [find action="rosgrid-syslog"]
-add topics=interface,warning,critical action="rosgrid-syslog"
-add topics=route,bgp,warning action="rosgrid-syslog"
-add topics=route,ospf,warning action="rosgrid-syslog"
-add topics=system,error,critical action="rosgrid-syslog"
-add topics=dhcp,critical action="rosgrid-syslog"
-add topics=firewall,warning action="rosgrid-syslog"
+remove [find action="rosgridsyslog"]
+add topics=interface,warning,critical action="rosgridsyslog"
+add topics=route,bgp,warning action="rosgridsyslog"
+add topics=route,ospf,warning action="rosgridsyslog"
+add topics=system,error,critical action="rosgridsyslog"
+add topics=dhcp,critical action="rosgridsyslog"
+add topics=firewall,warning action="rosgridsyslog"
 """
 
 
@@ -64,6 +64,11 @@ async def get_syslog_provisioning_template(
     return SyslogTemplateResponse(
         template_content=ROUTEROS_SYSLOG_TEMPLATE,
         default_port=getattr(settings, "ROSGRID_SYSLOG_PORT", 5514),
+        protocol="UDP",
+        instructions=(
+            "Copy and paste this script into RouterOS v7 terminal or apply it "
+            "using Bulk Operations under Safe Mode."
+        ),
         instructions_es=(
             "Copie y ejecute este script en la terminal de RouterOS v7 o aplíquelo "
             "de forma masiva mediante el módulo de Operaciones Masivas (Bulk Ops) bajo Safe Mode."
@@ -74,7 +79,7 @@ async def get_syslog_provisioning_template(
 @router.get("/{router_id}/syslog", response_model=RouterSyslogResponse)
 async def get_router_syslog(
     router_id: uuid.UUID,
-    limit: int = Query(30, ge=1, le=100, description="Cantidad máxima de eventos recientes"),
+    limit: int = Query(50, ge=1, le=500, description="Cantidad máxima de eventos recientes"),
     claims: dict[str, Any] = Depends(get_current_user_claims),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> RouterSyslogResponse:
@@ -96,9 +101,12 @@ async def get_router_syslog(
         )
 
     events = await get_router_syslog_events(tenant_id, router_id, limit=limit)
+    crit_count = sum(1 for e in events if e.is_critical)
 
     return RouterSyslogResponse(
         router_id=router_id,
         total_in_buffer=len(events),
+        total_events=len(events),
+        critical_count=crit_count,
         events=events,
     )

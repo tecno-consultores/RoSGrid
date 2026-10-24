@@ -19,11 +19,15 @@ class SyslogEvent(BaseModel):
 
 class RouterSyslogResponse(BaseModel):
     router_id: uuid.UUID
-    total_in_buffer: int
-    events: list[SyslogEvent]
+    total_in_buffer: int = Field(0, description="Cantidad total de eventos en el RingBuffer")
+    total_events: int = Field(0, description="Alias para paridad de contrato con frontend")
+    critical_count: int = Field(0, description="Cantidad de eventos críticos en el buffer")
+    events: list[SyslogEvent] = Field(default_factory=list)
 
 
 class SyslogTemplateResponse(BaseModel):
     template_content: str
     default_port: int
-    instructions_es: str
+    protocol: str = Field("UDP", description="Protocolo de transporte")
+    instructions: str = Field("", description="Instrucciones en inglés")
+    instructions_es: str = Field("", description="Instrucciones en español")

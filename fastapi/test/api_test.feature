@@ -584,3 +584,22 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     When method post
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 73. Consulta de plantilla de aprovisionamiento Syslog RouterOS v7 sin autenticación devuelve 401
+    Given path '/api/v1/routers/syslog/template'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 74. Consulta de RingBuffer de eventos Syslog de router sin autenticación devuelve 401
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/syslog'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 75. Consulta de eventos Syslog con límite superior a 500 devuelve error de validación 422
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/syslog'
+    And param limit = 501
+    When method get
+    Then status 401
+

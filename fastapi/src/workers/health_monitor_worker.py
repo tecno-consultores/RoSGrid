@@ -114,6 +114,20 @@ async def _evaluate_single_router(session: Any, redis: Any, r: Router) -> None:
                     r.last_discovery_sync_at = datetime.now(UTC)
                 except Exception as d_exc:
                     logger.debug("Fallo en autodescubrimiento durante monitor de salud para %s: %s", r.display_name, d_exc)
+
+            # Detección de presencia y configuración de Syslog hacia RoSGrid
+            try:
+                actions = await client.get("system/logging/action")
+                if isinstance(actions, list):
+                    has_syslog = any(a.get("name") == "rosgridsyslog" for a in actions)
+                    syslog_conf_key = f"rg:{r.tenant_id}:router:{r.id}:syslog:configured"
+                    if has_syslog:
+                        await redis.set(syslog_conf_key, "1", ex=86400)
+                    else:
+                        await redis.delete(syslog_conf_key)
+            except Exception as s_exc:
+                logger.debug("Fallo al verificar acción Syslog para %s: %s", r.display_name, s_exc)
+
         await client.close()
 
     new_status, alert, updated_state = evaluate_router_monitoring_cycle(
