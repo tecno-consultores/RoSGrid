@@ -318,12 +318,12 @@ Para que RoSGrid pueda gestionar un router mediante su REST API nativa sobre TLS
 
 # 4. Crear grupo de permisos y usuario API dedicado para RoSGrid
 /user group add name="rosgrid-api-group" policy=read,write,api,rest-api,test comment="Acceso REST para RoSGrid"
-/user add name="rosgrid_api" password="CambiarPorPasswordFuerte2026!" group="rosgrid-api-group" comment="Managed by RoSGrid Vault"
+/user add name="rosgrid_agent" password="CambiarPorPasswordFuerte2026!" group="rosgrid-api-group" comment="Managed by RoSGrid Vault"
 ```
 
 **Para agregarlo a RoSGrid:**
 1. En la consola web de RoSGrid, dirígete al menú **Inventario de Routers** y haz clic en **+ Registrar Router**.
-2. Ingresa el nombre del equipo (ej. *Core-BGP-Principal*), su dirección IP o dominio, el puerto HTTPS (`443`) y las credenciales creadas (`rosgrid_api`).
+2. Ingresa el nombre del equipo (ej. *Core-BGP-Principal*), su dirección IP o dominio, el puerto HTTPS (`443`) y las credenciales creadas (`rosgrid_agent`).
 3. RoSGrid verificará la conexión inmediatamente mediante **Pinning TOFU (*Trust On First Use*)**, capturando y fijando la huella digital SHA-256 del certificado TLS para protegerte contra ataques *Man-in-the-Middle*.
 
 ---

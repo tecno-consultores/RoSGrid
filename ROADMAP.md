@@ -495,7 +495,7 @@
 - [x] **23.20** **Corrección de Sintaxis Canónica RouterOS v7 para Generación y Firma de Certificados SSL TOFU (`README.md`, `docs/INSTALL.md`, `docs/02`):**
   - Incorporación de la creación y autofirma previa de la CA local (`rosgrid-ca` con `key-usage=key-cert-sign,crl-sign`) requerida por RouterOS v7 antes de emitir un certificado de servidor.
   - Firma explícita de `rosgrid-tofu-cert` con `ca="rosgrid-ca"`, erradicando el error `failure: ca not found`.
-  - Estandarización unificada de nomenclatura de certificados en toda la documentación y guías de puesta en marcha.
+  - Estandarización unificada de nomenclatura de certificados (`rosgrid-ca`, `rosgrid-tofu-cert`) y usuario canónico de servicio `rosgrid_agent` en toda la documentación y guías de puesta en marcha.
 
 ---
 
