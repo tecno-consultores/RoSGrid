@@ -226,22 +226,112 @@ Para una referencia exhaustiva de operación, seguridad y despliegue, consulta l
 
 ---
 
-## 🚀 Despliegue Rápido con Docker Compose
+## ⚡ Puesta en Marcha Rápida (Instalación en 3 Pasos)
 
-RoSGrid opera bajo el principio de **infraestructura inmutable** y ejecuta las migraciones de base de datos automáticamente al iniciar o actualizar contenedores (protegidas mediante `pg_advisory_lock` en PostgreSQL). Consulta [INSTALL.md](./docs/INSTALL.md) para ver los requisitos detallados y la configuración de **KeyDB** o **DragonflyDB**:
+RoSGrid está diseñado para desplegarse en **menos de 2 minutos** bajo el principio de **infraestructura inmutable**: todas las dependencias, servicios y migraciones de base de datos (`pg_advisory_lock`) se configuran automáticamente al iniciar los contenedores.
+
+```mermaid
+flowchart LR
+    Step1["1️⃣ Despliegue<br><code>curl ... | bash</code>"] --> Step2["2️⃣ Asistente Web<br><code>http://servidor:8080</code><br>Tenant + Superadmin + 2FA"]
+    Step2 --> Step3["3️⃣ MikroTik v7<br>Activar <code>www-ssl</code><br>Pinning TOFU SHA-256"]
+    Step3 --> Ready["🎉 ¡Flota en Control!<br>Consola NOC Operativa"]
+```
+
+### 📋 Requisitos Previos
+
+- **Servidor Anfitrión:** Servidor Linux de 64-bit (Ubuntu 24.04/26.04 LTS o Debian 12+) con **Docker Engine 24.0+** y **Docker Compose v2.20+**.
+- **Recursos Mínimos:** 2 vCPU y **4 GB de RAM** (gracias a **KeyDB Multi-Hilo**, que consume apenas ~35 MB en reposo).
+- **Routers MikroTik:** Equipos con **RouterOS v7.1 o superior** (v7.13+ con política `rest-api`) y alcance de red por el puerto HTTPS `443`.
+
+---
+
+### Paso 1: Desplegar el Servidor RoSGrid
+
+Elige el método que mejor se adapte a tu entorno:
+
+#### 🌟 Opción A (Recomendada): Servidor en Blanco — Turnkey en 1 Comando
+Si estás en un servidor VPS o dedicado recién instalado, no necesitas clonar el repositorio de código fuente. Ejecuta:
 
 ```bash
-# Opción 1 (Recomendada): Instalación Turnkey en 1 comando (descarga en /opt/rosgrid y despliegue oficial)
 curl -fsSL https://raw.githubusercontent.com/tecno-consultores/RoSGrid/main/scripts/instalar-rosgrid.sh | bash
+```
 
-# Opción 2: Instalación local desde el repositorio clonado
+> **¿Qué hace este comando automáticamente?**
+> 1. Crea de forma segura el directorio `/opt/rosgrid` asignado a tu usuario no-root.
+> 2. Descarga los manifiestos de producción oficiales (`docker-compose.prod.yml`).
+> 3. Genera un archivo `.env` con secretos criptográficos únicos de alta entropía (256 bits) para la bóveda `AES-256-GCM`, tokens JWT y base de datos con permisos estrictos `chmod 600`.
+> 4. Descarga las imágenes oficiales inmutables de Docker Hub (`sinfallas/rosgrid-*`).
+> 5. Levanta los contenedores y ejecuta las migraciones de PostgreSQL automáticamente.
+
+#### Opción B: Desde el Repositorio Clonado
+Si eres desarrollador o ya clonaste este repositorio con `git clone`:
+
+```bash
+git clone https://github.com/tecno-consultores/RoSGrid.git
+cd RoSGrid
 ./scripts/instalar-rosgrid.sh
+```
 
-# Opción 3: Despliegue manual directo con Docker Compose (Docker Hub)
+#### Opción C: Despliegue Manual con Docker Compose
+Si prefieres gestionar manualmente tus manifiestos y variables:
+
+```bash
 cp .env.example .env
-# Configura tus secretos criptográficos en .env y levanta:
+# Genera tus secretos criptográficos (openssl rand -hex 24 / openssl rand -base64 32)
 docker compose -f docker-compose.prod.yml up -d
 ```
+
+---
+
+### Paso 2: Asistente Inicial y Onboarding en el Navegador
+
+Una vez que los contenedores estén en ejecución (`docker compose -f docker-compose.prod.yml ps`), abre tu navegador web favorito:
+
+👉 **`http://<IP_DE_TU_SERVIDOR>:8080`** *(o `http://localhost:8080` si estás en local)*
+
+Al ser la primera vez que se inicia el sistema, RoSGrid detectará que la base de datos está virgen y te guiará a través del **Asistente de Bienvenida (Bootstrap Wizard)**:
+
+1. **🏢 Nombre de tu Organización (Tenant Inicial):** Define la empresa o nodo principal (ej. *NOC Central Telecom* o *Mi ISP*).
+2. **👤 Cuenta Superadmin:** Configura el correo y la contraseña maestra del Administrador Global.
+3. **🔐 Vinculación 2FA TOTP Obligatoria:** Escanea el código QR interactivo con tu aplicación móvil de autenticación preferida (*Google Authenticator, Aegis, Bitwarden, 2FAS, Authy*) e introduce el código de 6 dígitos para activar la cuenta.
+
+¡Listo! Ingresarás directamente al panel principal de RoSGrid con tu sesión protegida.
+
+---
+
+### Paso 3: Conectar tu Primer MikroTik RouterOS v7 (en 1 Minuto)
+
+Para que RoSGrid pueda gestionar un router mediante su REST API nativa sobre TLS, ejecuta este bloque de comandos en la terminal CLI de tu MikroTik (a través de WinBox o SSH):
+
+```routeros
+# 1. Generar y firmar certificado TLS autofirmado para Pinning TOFU
+/certificate add name="rosgrid-tofu-cert" common-name="rosgrid.local" key-size=2048 days-valid=3650 key-usage=digital-signature,key-encipherment,tls-server
+/certificate sign "rosgrid-tofu-cert"
+
+# 2. Habilitar REST API sobre HTTPS (puerto 443) y deshabilitar HTTP sin cifrar
+/ip service set www-ssl certificate="rosgrid-tofu-cert" port=443 disabled=no
+/ip service set www disabled=yes
+
+# 3. Crear grupo de permisos y usuario API dedicado para RoSGrid
+/user group add name="rosgrid-api-group" policy=read,write,api,rest-api,test comment="Acceso REST para RoSGrid"
+/user add name="rosgrid_api" password="CambiarPorPasswordFuerte2026!" group="rosgrid-api-group" comment="Managed by RoSGrid Vault"
+```
+
+**Para agregarlo a RoSGrid:**
+1. En la consola web de RoSGrid, dirígete al menú **Inventario de Routers** y haz clic en **+ Registrar Router**.
+2. Ingresa el nombre del equipo (ej. *Core-BGP-Principal*), su dirección IP o dominio, el puerto HTTPS (`443`) y las credenciales creadas (`rosgrid_api`).
+3. RoSGrid verificará la conexión inmediatamente mediante **Pinning TOFU (*Trust On First Use*)**, capturando y fijando la huella digital SHA-256 del certificado TLS para protegerte contra ataques *Man-in-the-Middle*.
+
+---
+
+### 📚 Recursos y Guías Avanzadas
+
+| Documento | Contenido y Casos de Uso |
+| :--- | :--- |
+| **[`docs/INSTALL.md`](./docs/INSTALL.md)** | Guía de instalación técnica avanzada: Nginx Reverse Proxy con TLS Let's Encrypt de dominio, perfil de memoria **DragonflyDB** para flotas masivas (300 a 2,000+ routers) y compilación local de imágenes. |
+| **[`docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md`](./docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md)** | Reglas de firewall recomendadas, listas de acceso IP (ACLs), Safe Mode y políticas de seguridad para RouterOS v7.13+. |
+| **[`docs/FAQ.md`](./docs/FAQ.md)** | Respuestas a preguntas frecuentes sobre puertos, resolución de problemas de conectividad, 2FA y migración. |
+| **[`docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md`](./docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md)** | Habilitar el servidor MCP integrado (`/api/v1/mcp`) para conectar agentes de IA autónomos (Hermes Agent / Claude Desktop). |
 
 ---
 

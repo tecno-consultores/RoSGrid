@@ -10,6 +10,13 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Changed
 
+- **Optimización y Guía Visual de Instalación Rápida en 3 Pasos (`README.md`):**
+  - **Reestructuración Visual e Intuitiva:** Rediseñada la sección de instalación principal en `README.md` (`## ⚡ Puesta en Marcha Rápida (Instalación en 3 Pasos)`), incorporando un diagrama de flujo horizontal (Mermaid) con la secuencia completa: Despliegue $\to$ Asistente Web $\to$ MikroTik RouterOS v7 $\to$ Tablero NOC.
+  - **Especificación Clara de Requisitos:** Detallados los requerimientos mínimos del anfitrión (Linux 64-bit, Docker 24+, Compose v2, 4 GB RAM con KeyDB) y versiones compatibles de RouterOS v7.1+.
+  - **Opciones de Despliegue Accesibles:** Presentadas de forma clara y didáctica las opciones: Turnkey en 1 comando vía `curl` para servidores vírgenes, asistente local `./scripts/instalar-rosgrid.sh` y despliegue manual con Docker Compose.
+  - **Guía de Onboarding Web (Bootstrap):** Instrucciones directas de acceso web a `http://<IP>:8080`, configuración de Organización inicial, credenciales Superadmin y vinculación 2FA TOTP mediante código QR interactivo.
+  - **Snippet MikroTik RouterOS v7 en 1 Minuto:** Bloque de comandos CLI copiable para habilitar `/ip/service/www-ssl`, generar certificado autofirmado y crear usuario API, con explicación del proceso de vinculación por Pinning TOFU (SHA-256).
+
 - **Centralización de Scripts Operativos en `scripts/` y Consolidación de Guías en `docs/`:**
   - **Reubicación de Scripts Raíz:** Migración de los 7 scripts ejecutables de la raíz hacia el directorio dedicado `scripts/` (`scripts/auditar-infra.sh`, `scripts/build.sh`, `scripts/instalar-hooks.sh`, `scripts/instalar-rosgrid.sh`, `scripts/limpieza.sh`, `scripts/probar-prod-local.sh` y `scripts/verificar-secretos.sh`), con resolución dinámica de rutas (`REPO_ROOT` y `SCRIPT_DIR`) para garantizar ejecución transparente e idéntica tanto desde la raíz del proyecto como desde `scripts/`.
   - **Consolidación de Documentos de Soporte e Instalación:** Reubicación de los manuales de la raíz `INSTALL.md`, `FAQ.md` y `RESOURCES.md` hacia `docs/` (`docs/INSTALL.md`, `docs/FAQ.md`, `docs/RESOURCES.md`), actualizando rutas relativas a manuales complementarios y simplificando el árbol de la raíz.
