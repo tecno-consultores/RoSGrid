@@ -179,6 +179,7 @@ def create_app() -> FastAPI:
 
     # 4. Endpoints auxiliares
     app.add_api_route("/health", health_check, methods=["GET"], tags=["Health"])
+    app.add_api_route("/api/v1/health", health_check, methods=["GET"], tags=["Health"])
     app.add_api_route("/users/me", users_me_alias, methods=["GET"], tags=["Compatibility"])
 
     # 5. Sanitización de Errores de Validación (Anti-Enumeración de Modelos Pydantic en Producción)

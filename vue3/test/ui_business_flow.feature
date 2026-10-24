@@ -213,6 +213,9 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     Then waitFor(".rg-health-popover")
     And match text(".rg-health-popover") contains 'Telemetría Backend'
     And waitFor(".btn-ping-action")
+    When click(".btn-ping-action")
+    Then waitFor(".rg-health-popover")
+    And match text(".rg-health-popover") contains 'Latencia'
 
 
 

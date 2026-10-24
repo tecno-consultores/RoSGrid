@@ -29,6 +29,7 @@ describe('useApiHeartbeatStore — Monitoreo Ligero y Resiliente de API', () => 
     global.fetch = vi.fn().mockResolvedValue({
       status: 200,
       ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
       json: async () => ({
         status: 'healthy',
         service: 'rosgrid-api',
@@ -52,6 +53,7 @@ describe('useApiHeartbeatStore — Monitoreo Ligero y Resiliente de API', () => 
     global.fetch = vi.fn().mockResolvedValue({
       status: 200,
       ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
       json: async () => ({
         status: 'unhealthy',
         database: 'connected',
@@ -71,6 +73,7 @@ describe('useApiHeartbeatStore — Monitoreo Ligero y Resiliente de API', () => 
     global.fetch = vi.fn().mockResolvedValue({
       status: 503,
       ok: false,
+      headers: new Headers({ 'content-type': 'application/json' }),
       json: async () => ({
         status: 'unhealthy',
         database: 'disconnected',
@@ -94,7 +97,38 @@ describe('useApiHeartbeatStore — Monitoreo Ligero y Resiliente de API', () => 
     expect(store.status).toBe('offline');
     expect(store.isOffline).toBe(true);
     expect(store.latencyMs).toBeNull();
-    expect(store.lastError).toContain('Connection refused');
+    expect(store.lastError).toContain('No se pudo conectar con el servidor');
+  });
+
+  it('captura limpiamente respuesta HTML inesperada sin romper con SyntaxError', async () => {
+    const store = useApiHeartbeatStore();
+
+    global.fetch = vi.fn().mockResolvedValue({
+      status: 200,
+      ok: true,
+      headers: new Headers({ 'content-type': 'text/html; charset=utf-8' }),
+      json: async () => {
+        throw new Error("Unexpected token '<', \"<!DOCTYPE \"... is not valid JSON");
+      },
+    });
+
+    await store.checkHealth();
+
+    expect(store.status).toBe('offline');
+    expect(store.lastError).toContain('Respuesta no válida');
+  });
+
+  it('diagnostica adecuadamente timeout por AbortError', async () => {
+    const store = useApiHeartbeatStore();
+
+    const abortError = new Error('The operation was aborted');
+    abortError.name = 'AbortError';
+    global.fetch = vi.fn().mockRejectedValue(abortError);
+
+    await store.checkHealth();
+
+    expect(store.status).toBe('offline');
+    expect(store.lastError).toContain('Tiempo de espera agotado');
   });
 
   it('actualiza estado pasivamente al recibir evento rosgrid:api-health-event exitoso', () => {
@@ -129,6 +163,7 @@ describe('useApiHeartbeatStore — Monitoreo Ligero y Resiliente de API', () => 
     global.fetch = vi.fn().mockResolvedValue({
       status: 200,
       ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
       json: async () => ({ status: 'healthy', database: 'connected', redis: 'connected' }),
     });
 

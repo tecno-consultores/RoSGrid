@@ -20,6 +20,15 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     And match response.database == '#string'
     And match response.redis == '#string'
 
+  Scenario: 1b. Healthcheck activo mediante alias estandarizado /api/v1/health
+    Given path '/api/v1/health'
+    When method get
+    Then status 200
+    And match response.status == 'healthy'
+    And match response.service == 'rosgrid-api'
+    And match response.database == '#string'
+    And match response.redis == '#string'
+
   Scenario: 2. Métricas del sistema expuestas en formato estándar Prometheus
     Given path '/metrics'
     When method get

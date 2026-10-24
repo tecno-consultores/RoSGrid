@@ -1210,7 +1210,32 @@ graph TD
 | **Invariante de Gobernanza Karate Labs:** Obligatoriedad incondicional de escenarios BDD para todo cambio | N/A | N/A | **68 de 68 escenarios aprobados (100%)** | **24 de 24 escenarios aprobados (100%)** | ✅ **Verificado** |
 | **Indicador Táctico de Disponibilidad de API (Heartbeat/Ping) y Caché Anti-Thundering Herd:** Botón interactivo en barra superior/login con popover diagnóstico, monitoreo pasivo, `BroadcastChannel` y caché 5s en `GET /health` | `test_health_cache.unit.py` (2/2 pass: caché en producción y forzado `?force=true`) | `useApiHeartbeatStore.unit.ts` (8/8 pass)<br>`RgApiHealthBadge.unit.ts` (5/5 pass)<br>`RgResponsiveShell.unit.ts` (18/18 pass) | **Escenario 1:** Healthcheck activo.<br>**Escenario 69:** Consulta optimizada con caché y `force=true`. | **Escenario 25:** Barra superior con `#api-health-badge` y apertura de popover con telemetría de backend. | ✅ **Verificado** |
 | **Auto-Pinning TOFU Continuo y Autodescubrimiento Desatendido:** Fijación automática de huella TLS SHA-256 al detectar router running en monitor de salud o en consola WebFig, guardado de metadatos de hardware y localización `PENDING_TOFU` | `test_workers_full.unit.py`<br>`test_webfig_layer1_endpoints.unit.py` (26/26 pass al 100%) | `routerInventoryView.unit.ts` (4/4 pass al 100%: formateo de estados SSL TOFU) | **Escenario 20b:** Validación contractual de auto-pinning TOFU y sincronización sin sesión (401). | **Escenario 3b:** Verificación de columna SSL / TOFU en la grilla de inventario. | ✅ **Verificado** |
-| **Total Global Karate Labs Actualizado:** | N/A | N/A | **70 de 70 escenarios aprobados (100%)** | **26 de 26 escenarios aprobados (100%)** | ✅ **Verificado** |
+| **Enrutamiento Nginx /health, Alias /api/v1/health y Diagnóstico Robusto:** Corrección de fallback SPA en reverse proxy, validación Content-Type: application/json, mensajes diagnósticos claros en español y soporte de timeout | `test_health_cache.unit.py` (3/3 pass al 100%, incluyendo `test_api_v1_health_endpoint`) | `useApiHeartbeatStore.unit.ts` (10/10 pass al 100%)<br>`RgApiHealthBadge.unit.ts` (5/5 pass al 100%) | **Escenario 1:** Healthcheck activo `/health`.<br>**Escenario 1b:** Healthcheck activo alias `/api/v1/health`.<br>**Escenario 69:** Caché y `force=true`. | **Escenario 25:** Indicador `#api-health-badge`, apertura de popover, interacción con botón de reintento `.btn-ping-action` y latencia en vivo. | ✅ **Verificado** |
+| **Total Global Karate Labs Actualizado:** | N/A | N/A | **71 de 71 escenarios aprobados (100%)** | **26 de 26 escenarios aprobados (100%)** | ✅ **Verificado** |
+
+---
+
+## 34. Diagnóstico de Salud de Backend y Corrección de Enrutamiento Inverso Nginx
+
+### A. Diagnóstico de la Causa Raíz
+- **Fallo Operativo:** Tras inactividad o al pulsar "Reintentar Ping Ahora", la interfaz mostraba `API OFFLINE` con error críptico `Unexpected token '<', "<!DOCTYPE "... is not valid JSON`.
+- **Causa:** La configuración de Nginx en `vue3/nginx/default.conf` solo enrutaba explícitamente `/api/` y `/ws/` hacia el servicio backend `rosgrid-api`. Las peticiones hacia `/health` caían en la regla SPA fallback `location / { try_files $uri $uri/ /index.html; }`, respondiendo con código HTTP 200 y el HTML de la aplicación, el cual provocaba fallo de deserialización en `useApiHeartbeatStore.ts`.
+
+### B. Correcciones Implementadas
+1. **Configuración Nginx (`vue3/nginx/default.conf`):** Incorporación de bloque dedicado `location /health` con `proxy_pass http://rosgrid-api:8000/health`.
+2. **Backend FastAPI (`fastapi/src/main.py`):** Exposición de alias canónico estandarizado `GET /api/v1/health` con tags de OpenAPI y preservación de `/health`.
+3. **Frontend Store Pinia (`useApiHeartbeatStore.ts`):**
+   - Sondeo primario hacia `/api/v1/health` con fallback automático a `/health`.
+   - Verificación estricta del encabezado `Content-Type` asegurando `application/json` antes de procesar el cuerpo JSON.
+   - Mensajes de diagnóstico amigables en español ante errores de red (`Failed to fetch`), cancelaciones o timeouts (`AbortError`), errores HTTP y respuestas no JSON.
+   - Limpieza automática de `lastError` al restablecerse la conectividad.
+
+### C. Cobertura de Pruebas Multi-Capa 11X
+1. **Backend Unitario:** `fastapi/tests/api/test_health_cache.unit.py` (3 pruebas al 100%, validando `/health`, `?force=true` y `/api/v1/health`).
+2. **Frontend Unitario:** `vue3/src/stores/useApiHeartbeatStore.unit.ts` y `RgApiHealthBadge.unit.ts` (15 pruebas al 100%).
+3. **Karate Labs API BDD:** Escenario 1b agregado en `fastapi/test/api_test.feature` y replicado en `docs/examples/fastapi/test/api_test.feature` (71 escenarios totales).
+4. **Karate Labs UI BDD:** Escenario 25 enriquecido en `vue3/test/ui_business_flow.feature` y replicado en `docs/examples/vue3/test/ui_business_flow.feature` (26 escenarios totales).
+
 
 
 

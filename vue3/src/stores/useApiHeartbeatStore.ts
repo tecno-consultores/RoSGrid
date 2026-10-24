@@ -71,7 +71,7 @@ export const useApiHeartbeatStore = defineStore('apiHeartbeat', () => {
     }
   }
 
-  // Ping activo ligero hacia /health con timeout estricto de 4s
+  // Ping activo ligero hacia /api/v1/health (con fallback a /health) y timeout estricto de 4s
   async function checkHealth(force = false): Promise<void> {
     if (isChecking.value && !force) return;
     isChecking.value = true;
@@ -82,17 +82,36 @@ export const useApiHeartbeatStore = defineStore('apiHeartbeat', () => {
     const timeoutId = setTimeout(() => abortController.abort(), 4000);
 
     try {
-      const url = resolveUrl(force ? '/health?force=true' : '/health');
-      const response = await fetch(url, {
+      const endpoint = force ? '/api/v1/health?force=true' : '/api/v1/health';
+      let url = resolveUrl(endpoint);
+      let response = await fetch(url, {
         method: 'GET',
         headers: { Accept: 'application/json' },
         signal: abortController.signal,
       });
 
+      // Si el backend no tiene montado /api/v1/health (fallback a /health)
+      if (response.status === 404) {
+        const fallbackEndpoint = force ? '/health?force=true' : '/health';
+        url = resolveUrl(fallbackEndpoint);
+        response = await fetch(url, {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+          signal: abortController.signal,
+        });
+      }
+
       clearTimeout(timeoutId);
       const duration = Math.round(
         (typeof performance !== 'undefined' ? performance.now() : Date.now()) - startTime,
       );
+
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        throw new Error(
+          `Respuesta no válida del backend (recibido ${contentType || 'formato no reconocido'}). Se esperaba JSON.`,
+        );
+      }
 
       if (response.status === 200) {
         const data = (await response.json()) as {
@@ -112,6 +131,7 @@ export const useApiHeartbeatStore = defineStore('apiHeartbeat', () => {
           database: data.database || 'connected',
           redis: data.redis || 'connected',
         };
+        lastError.value = null;
       } else if (response.status === 503) {
         let dbStatus = 'disconnected';
         let redisStatus = 'disconnected';
@@ -125,6 +145,7 @@ export const useApiHeartbeatStore = defineStore('apiHeartbeat', () => {
         status.value = 'degraded';
         latencyMs.value = duration;
         services.value = { database: dbStatus, redis: redisStatus };
+        lastError.value = 'Servicios dependientes (BD o Redis) no disponibles (503)';
       } else {
         status.value = 'offline';
         latencyMs.value = null;
@@ -134,7 +155,20 @@ export const useApiHeartbeatStore = defineStore('apiHeartbeat', () => {
       clearTimeout(timeoutId);
       status.value = 'offline';
       latencyMs.value = null;
-      lastError.value = (err as Error)?.message || 'Network Timeout';
+      const errorObj = err as Error;
+      if (errorObj?.name === 'AbortError' || errorObj?.message?.includes('aborted')) {
+        lastError.value = 'Tiempo de espera agotado (4s) al conectar con la API de RoSGrid.';
+      } else if (
+        (errorObj?.name === 'TypeError' && errorObj?.message?.includes('fetch')) ||
+        errorObj?.message?.toLowerCase().includes('failed to fetch') ||
+        errorObj?.message?.toLowerCase().includes('connection refused')
+      ) {
+        lastError.value = 'No se pudo conectar con el servidor (conexión rechazada o red caída).';
+      } else if (errorObj?.message?.includes('JSON') || errorObj?.message?.includes('<!DOCTYPE')) {
+        lastError.value = 'Respuesta no válida de la pasarela/API (esperado JSON, recibido HTML).';
+      } else {
+        lastError.value = errorObj?.message || 'Error desconocido al comprobar el API.';
+      }
     } finally {
       isChecking.value = false;
       lastChecked.value = new Date();

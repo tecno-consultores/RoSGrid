@@ -74,3 +74,22 @@ async def test_health_check_cache_degraded(async_client: AsyncClient, monkeypatc
     assert res_cached.status_code == 503
     assert res_cached.json()["status"] == "unhealthy"
     assert mock_redis.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_api_v1_health_endpoint(async_client: AsyncClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verifica que el alias /api/v1/health responda 200 OK de forma idéntica a /health."""
+    import src.main as main_mod
+
+    mock_db = AsyncMock(return_value="connected")
+    mock_redis = AsyncMock(return_value="connected")
+    monkeypatch.setattr(main_mod, "_check_database_health", mock_db)
+    monkeypatch.setattr(main_mod, "_check_redis_health", mock_redis)
+
+    res = await async_client.get("/api/v1/health?force=true")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "healthy"
+    assert data["service"] == "rosgrid-api"
+    assert data["database"] == "connected"
+    assert data["redis"] == "connected"

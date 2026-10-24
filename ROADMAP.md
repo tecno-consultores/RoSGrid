@@ -454,7 +454,8 @@
   - Interceptor de monitoreo pasivo en `httpClient.ts` emitiendo `rosgrid:api-health-event` con latencia calculada, permitiendo al frontend actualizar el estado sin llamadas HTTP adicionales mientras haya actividad normal.
   - Store `useApiHeartbeatStore.ts` con integración `BroadcastChannel('rosgrid_api_heartbeat')`, pausa automática por `Page Visibility API` (`document.hidden`) y sondeo en reposo a 45s con `AbortController` (timeout 4s).
   - Componente táctico `RgApiHealthBadge.vue` con dot semántico pulsante (`ONLINE`, `OFFLINE`, `DEGRADED`, `CHECKING`), popover interactivo con diagnóstico en vivo de backend/BD/KeyDB y botón de reintento forzado, integrado en la barra superior de `RgResponsiveShell.vue` y en la cabecera de `LoginView.vue`.
-  - Cobertura 11X certificada: 2 pruebas unitarias Pytest dedicadas (`test_health_cache.unit.py`), 31 pruebas Vitest en 3 suites frontend, Escenario 69 en Karate API y Escenario 25 en Karate UI, 100% sincronizados con `docs/examples/`.
+  - Corrección de enrutamiento Nginx (`location /health`), alias estandarizado `/api/v1/health` en FastAPI, validación estricta de `Content-Type` JSON y diagnósticos de conectividad claros en español.
+  - Cobertura 11X certificada: 3 pruebas unitarias Pytest dedicadas (`test_health_cache.unit.py`), 33 pruebas Vitest en frontend, Escenario 1b en Karate API y Escenario 25 enriquecido en Karate UI, 100% sincronizados con `docs/examples/`.
 - [x] **23.13** **Reorganización Estructural del Repositorio y Gobernanza Centralizada:**
   - Centralización de los 7 scripts operativos raíz en el nuevo directorio `scripts/` (`auditar-infra.sh`, `build.sh`, `instalar-hooks.sh`, `instalar-rosgrid.sh`, `limpieza.sh`, `probar-prod-local.sh`, `verificar-secretos.sh`), con rutas internas normalizadas (`SCRIPT_DIR`, `REPO_ROOT`).
   - Consolidación y reubicación de manuales técnicos de la raíz (`INSTALL.md`, `FAQ.md`, `RESOURCES.md`) dentro de `docs/`.

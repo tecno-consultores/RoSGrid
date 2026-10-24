@@ -1375,9 +1375,9 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
 
 ## 8. Sondas de Salud, Diagnóstico y Observabilidad
 
-### 8.1 Sonda de Salud y Disponibilidad del Backend (`GET /health`)
+### 8.1 Sonda de Salud y Disponibilidad del Backend (`GET /health` y `GET /api/v1/health`)
 
-- **Propósito:** Endpoint de sonda de liveness y readiness para balanceadores de carga, Kubernetes/Docker y el indicador táctico de presencia en el frontend (`RgApiHealthBadge.vue`).
+- **Propósito:** Endpoint de sonda de liveness y readiness para balanceadores de carga, Kubernetes/Docker, reverse proxies Nginx y el indicador táctico de presencia en el frontend (`RgApiHealthBadge.vue`). Disponible tanto en la raíz `/health` como bajo el prefijo canónico `/api/v1/health`.
 - **Autenticación:** No requerida (público, exento de CSRF y de verificaciones de sesión).
 - **Parámetros de Consulta:**
   - `force: bool = false` (opcional): Si se envía `?force=true`, omite la caché en memoria y ejecuta la comprobación directa de PostgreSQL y KeyDB.
