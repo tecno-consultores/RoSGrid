@@ -56,14 +56,36 @@
     () => ipamStore.customerServices.filter((s) => s.last_reachability_status === 'ONLINE').length,
   );
 
+  function getErrorMessage(err: unknown, defaultMsg: string): string {
+    if (err && typeof err === 'object') {
+      const resData = (err as { response?: { data?: { detail?: string } } }).response?.data;
+      if (resData?.detail) return resData.detail;
+      const msg = (err as { message?: string }).message;
+      if (msg) return msg;
+    }
+    return defaultMsg;
+  }
+
   async function handleSyncMikrotik() {
     if (!selectedSyncRouterId.value) return;
     isSyncing.value = true;
     syncResult.value = null;
     try {
       syncResult.value = await ipamStore.syncMikrotikIpam(selectedSyncRouterId.value);
-    } catch (err: any) {
-      alert(err?.response?.data?.detail || err?.message || 'Error durante la sincronización');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, 'Error durante la sincronización'));
+    } finally {
+      isSyncing.value = false;
+    }
+  }
+
+  async function handleSyncAllMikrotik() {
+    isSyncing.value = true;
+    syncResult.value = null;
+    try {
+      syncResult.value = await ipamStore.syncAllMikrotikIpam();
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, 'Error durante la sincronización de la flota'));
     } finally {
       isSyncing.value = false;
     }
@@ -75,11 +97,12 @@
       await ipamStore.createCustomerService(newSubscriber.value);
       newSubscriberModalOpen.value = false;
       alert('Abonado registrado exitosamente');
-    } catch (err: any) {
-      alert(err?.response?.data?.detail || err?.message || 'Error al registrar abonado');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, 'Error al registrar abonado'));
     }
   }
 </script>
+
 
 <template>
   <main class="ipam-management-view" aria-label="Gestor IPAM y Servicios de Abonados">
@@ -222,9 +245,19 @@
             :disabled="isSyncing || !selectedSyncRouterId"
             @click="handleSyncMikrotik"
           >
-            {{ isSyncing ? 'Sincronizando...' : '🚀 Iniciar Descubrimiento IPAM' }}
+            {{ isSyncing ? 'Sincronizando...' : '🚀 Sincronizar Router Seleccionado' }}
+          </button>
+
+          <button
+            type="button"
+            class="btn-rg btn-rg--purple btn-lg"
+            :disabled="isSyncing"
+            @click="handleSyncAllMikrotik"
+          >
+            {{ isSyncing ? 'Sincronizando...' : '🌐 Sincronizar Toda la Flota (DHCP)' }}
           </button>
         </div>
+
 
         <div v-if="syncResult" class="sync-result-box">
           <h4>Resultado de la Sincronización:</h4>
@@ -257,8 +290,9 @@
           <h3>Registrar Nuevo Servicio FTTH</h3>
           <button type="button" class="btn-close" @click="newSubscriberModalOpen = false">✕</button>
         </header>
-        <form @submit.prevent="handleCreateSubscriber" class="modal-body">
+        <form class="modal-body" @submit.prevent="handleCreateSubscriber">
           <div class="form-group">
+
             <label for="sub-r">Router de Acceso / BRAS</label>
             <select id="sub-r" v-model="newSubscriber.router_id" class="rg-input" required>
               <option v-for="r in inventoryStore.routers" :key="r.id" :value="r.id">

@@ -11,10 +11,12 @@ from decimal import Decimal
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.api.deps import get_current_user_claims, require_roles
+from src.api.v1.webfig_common import _create_client_from_vault
 from src.core.audit import write_audit_log
 from src.db.session import get_tenant_db_session
 from src.mikrotik.client import MikrotikRestClient
@@ -29,6 +31,7 @@ from src.models.ipam import (
     IPAMVrf,
     IPFamilyEnum,
     IPPrefixRoleEnum,
+    IPPrefixStatusEnum,
 )
 from src.schemas.ipam import (
     CustomerServiceCreate,
@@ -118,11 +121,25 @@ async def list_prefixes(
     vrf_id: Optional[uuid.UUID] = Query(None),
     ip_family: Optional[IPFamilyEnum] = Query(None),
     role: Optional[IPPrefixRoleEnum] = Query(None),
+    auto_sync: bool = Query(True),
     db: AsyncSession = Depends(get_tenant_db_session),
     claims: dict[str, Any] = Depends(get_current_user_claims),
 ) -> Any:
     """Lista prefijos y subredes con filtros por VRF, Familia de IP y Rol."""
     tenant_id = get_tenant_id(claims)
+
+    # Si el tenant no tiene ningún prefijo registrado, auto-descubrir desde la flota alcanzable
+    if auto_sync and not vrf_id and not ip_family and not role:
+        existing_pfxs = (
+            await db.execute(select(IPAMPrefix.id).where(IPAMPrefix.tenant_id == tenant_id))
+        ).scalars().all()
+        if not existing_pfxs:
+            logger.info(f"Tenant {tenant_id} sin prefijos en IPAM. Iniciando auto-descubrimiento desde la flota...")
+            try:
+                await _sync_all_tenant_routers_ipam(tenant_id, db)
+            except Exception as e:
+                logger.warning(f"Error en auto-descubrimiento IPAM inicial: {e}")
+
     stmt = select(IPAMPrefix).where(IPAMPrefix.tenant_id == tenant_id)
     if vrf_id:
         stmt = stmt.where(IPAMPrefix.vrf_id == vrf_id)
@@ -451,15 +468,369 @@ async def create_customer_service(
 # ============================================================================
 # 5. SINCRONIZACIÓN Y DESCUBRIMIENTO DESDE MIKROTIK
 # ============================================================================
+def _get_router_client(r: Router, tenant_id: uuid.UUID) -> MikrotikRestClient:
+    """Obtiene un cliente REST configurado con credenciales descifradas de la bóveda o valores por defecto."""
+    if r.vault:
+        try:
+            return _create_client_from_vault(r, tenant_id)
+        except Exception as e:
+            logger.warning(f"No se pudieron descifrar credenciales de bóveda para {r.display_name}: {e}")
+    host = r.api_base_url.replace("https://", "").replace("http://", "").split("/")[0].split(":")[0]
+    return MikrotikRestClient(host=host, port=r.api_port, username="admin", password="")
+
+
+async def _sync_single_router_ipam(
+    r: Router,
+    tenant_id: uuid.UUID,
+    db: AsyncSession,
+    default_vrf: IPAMVrf,
+) -> tuple[int, int]:
+    """Sincroniza prefijos, pools, servidores DHCP y direcciones IP desde un router MikroTik."""
+    synced_prefixes = 0
+    synced_ips = 0
+
+    client = _get_router_client(r, tenant_id)
+    try:
+        async with client:
+            raw_addrs: list[dict[str, Any]] = []
+            raw_pools: list[dict[str, Any]] = []
+            raw_dhcp_servers: list[dict[str, Any]] = []
+            raw_dhcp_networks: list[dict[str, Any]] = []
+            raw_leases: list[dict[str, Any]] = []
+
+            try:
+                res = await client.get("/ip/address")
+                if isinstance(res, list):
+                    raw_addrs = res
+            except Exception as e:
+                logger.warning(f"Error consultando /ip/address en {r.display_name}: {e}")
+
+            try:
+                res = await client.get("/ip/pool")
+                if isinstance(res, list):
+                    raw_pools = res
+            except Exception as e:
+                logger.warning(f"Error consultando /ip/pool en {r.display_name}: {e}")
+
+            try:
+                res = await client.get("/ip/dhcp-server")
+                if isinstance(res, list):
+                    raw_dhcp_servers = res
+            except Exception as e:
+                logger.warning(f"Error consultando /ip/dhcp-server en {r.display_name}: {e}")
+
+            try:
+                res = await client.get("/ip/dhcp-server/network")
+                if isinstance(res, list):
+                    raw_dhcp_networks = res
+            except Exception as e:
+                logger.warning(f"Error consultando /ip/dhcp-server/network en {r.display_name}: {e}")
+
+            try:
+                res = await client.get("/ip/dhcp-server/lease")
+                if isinstance(res, list):
+                    raw_leases = res
+            except Exception as e:
+                logger.warning(f"Error consultando /ip/dhcp-server/lease en {r.display_name}: {e}")
+
+            # Mapeos auxiliares de DHCP
+            dhcp_net_map: dict[str, dict[str, Any]] = {}
+            for net_item in raw_dhcp_networks:
+                if isinstance(net_item, dict):
+                    net_addr = net_item.get("address")
+                    if net_addr:
+                        dhcp_net_map[str(net_addr)] = net_item
+
+            dhcp_srv_by_pool: dict[str, list[dict[str, Any]]] = {}
+            for srv in raw_dhcp_servers:
+                if isinstance(srv, dict):
+                    p_name = srv.get("address-pool")
+                    if p_name:
+                        dhcp_srv_by_pool.setdefault(str(p_name), []).append(srv)
+
+            # Cargar prefijos existentes de esta VRF en memoria
+            known_prefixes: dict[str, IPAMPrefix] = {}
+            stmt_pfx = select(IPAMPrefix).where(
+                IPAMPrefix.tenant_id == tenant_id,
+                IPAMPrefix.vrf_id == default_vrf.id,
+            )
+            for p in (await db.execute(stmt_pfx)).scalars().all():
+                known_prefixes[str(p.prefix)] = p
+
+            # 1. Procesar Pools de IPs (/ip/pool) y DHCP Networks
+            for p_item in raw_pools:
+                if not isinstance(p_item, dict):
+                    continue
+                pool_name = str(p_item.get("name", "") or "")
+                ranges = str(p_item.get("ranges", "") or "")
+                if not ranges:
+                    continue
+
+                first_range = ranges.split(",")[0].strip()
+                start_ip_str = first_range.split("-")[0].strip()
+                try:
+                    start_ip = ipaddress.ip_address(start_ip_str)
+                except ValueError:
+                    continue
+
+                matched_net_str: str | None = None
+                for candidate_net_str in dhcp_net_map:
+                    try:
+                        cand_net = ipaddress.ip_network(candidate_net_str, strict=False)
+                        if start_ip in cand_net:
+                            matched_net_str = str(cand_net)
+                            break
+                    except ValueError:
+                        continue
+
+                if not matched_net_str:
+                    for addr_item in raw_addrs:
+                        if isinstance(addr_item, dict):
+                            a_str = addr_item.get("address", "")
+                            if a_str:
+                                try:
+                                    a_net = ipaddress.ip_interface(a_str).network
+                                    if start_ip in a_net:
+                                        matched_net_str = str(a_net)
+                                        break
+                                except ValueError:
+                                    continue
+
+                if not matched_net_str:
+                    if start_ip.version == 4:
+                        matched_net_str = f"{start_ip_str.rsplit('.', 1)[0]}.0/24"
+                    else:
+                        continue
+
+                # Calcular utilización
+                try:
+                    total = int(p_item.get("total", 0) or 0)
+                    used = int(p_item.get("used", 0) or 0)
+                    util_pct = Decimal(str(round((used / total) * 100, 2))) if total > 0 else Decimal("0.00")
+                except (ValueError, TypeError):
+                    util_pct = Decimal("0.00")
+
+                srv_list = dhcp_srv_by_pool.get(pool_name, [])
+                srv_names = ", ".join(s.get("name", "") for s in srv_list) if srv_list else "Sin DHCP Server"
+                srv_ifaces = ", ".join(s.get("interface", "") for s in srv_list if s.get("interface"))
+
+                desc = f"Pool: {pool_name} ({ranges}) • DHCP: {srv_names}"
+                if srv_ifaces:
+                    desc += f" en {srv_ifaces}"
+                desc += f" • Router: {r.display_name}"
+
+                if matched_net_str in known_prefixes:
+                    prefix = known_prefixes[matched_net_str]
+                    prefix.is_pool = True
+                    prefix.role = IPPrefixRoleEnum.CUSTOMER_RESIDENTIAL
+                    prefix.utilization_pct = util_pct
+                    prefix.description = desc
+                    prefix.status = IPPrefixStatusEnum.ACTIVE
+                else:
+                    prefix = IPAMPrefix(
+                        id=uuid.uuid4(),
+                        tenant_id=tenant_id,
+                        vrf_id=default_vrf.id,
+                        prefix=matched_net_str,
+                        ip_family=IPFamilyEnum.IPv4 if start_ip.version == 4 else IPFamilyEnum.IPv6,
+                        role=IPPrefixRoleEnum.CUSTOMER_RESIDENTIAL,
+                        status=IPPrefixStatusEnum.ACTIVE,
+                        is_pool=True,
+                        utilization_pct=util_pct,
+                        description=desc,
+                    )
+                    db.add(prefix)
+                    if hasattr(db, "flush") and callable(db.flush):
+                        await db.flush()
+                    known_prefixes[matched_net_str] = prefix
+                    synced_prefixes += 1
+
+            # 2. Procesar Interfaces IP (/ip/address)
+            for item in raw_addrs:
+                if not isinstance(item, dict):
+                    continue
+                ip_str = item.get("address", "")
+                if not ip_str:
+                    continue
+                try:
+                    iface_net = ipaddress.ip_interface(ip_str)
+                    net_str = str(iface_net.network)
+                    if net_str not in known_prefixes:
+                        role = IPPrefixRoleEnum.MGMT if item.get("interface") == "ether1" else IPPrefixRoleEnum.INFRA_P2P
+                        prefix = IPAMPrefix(
+                            id=uuid.uuid4(),
+                            tenant_id=tenant_id,
+                            vrf_id=default_vrf.id,
+                            prefix=net_str,
+                            ip_family=IPFamilyEnum.IPv4 if iface_net.version == 4 else IPFamilyEnum.IPv6,
+                            role=role,
+                            status=IPPrefixStatusEnum.ACTIVE,
+                            is_pool=False,
+                            utilization_pct=Decimal("0.00"),
+                            description=f"Interfaz {item.get('interface', '')} ({r.display_name})",
+                        )
+                        db.add(prefix)
+                        if hasattr(db, "flush") and callable(db.flush):
+                            await db.flush()
+                        known_prefixes[net_str] = prefix
+                        synced_prefixes += 1
+                    else:
+                        prefix = known_prefixes[net_str]
+
+                    stmt_addr = select(IPAMAddress).where(
+                        IPAMAddress.prefix_id == prefix.id,
+                        IPAMAddress.address == str(iface_net.ip),
+                    )
+                    addr_row = (await db.execute(stmt_addr)).scalar_one_or_none()
+                    if not addr_row:
+                        addr_row = IPAMAddress(
+                            id=uuid.uuid4(),
+                            tenant_id=tenant_id,
+                            prefix_id=prefix.id,
+                            address=str(iface_net.ip),
+                            ip_family=IPFamilyEnum.IPv4 if iface_net.version == 4 else IPFamilyEnum.IPv6,
+                            router_id=r.id,
+                            interface_name=item.get("interface"),
+                            status=IPAddressStatusEnum.ALLOCATED,
+                            description=f"Gateway/Interfaz {item.get('interface', '')} ({item.get('comment') or r.display_name})",
+                        )
+                        db.add(addr_row)
+                        synced_ips += 1
+                    else:
+                        addr_row.status = IPAddressStatusEnum.ALLOCATED
+                        addr_row.router_id = r.id
+                        addr_row.interface_name = item.get("interface")
+                except Exception as ex:
+                    logger.warning(f"Error procesando /ip/address {ip_str}: {ex}")
+
+            # 3. Procesar Leases de DHCP (/ip/dhcp-server/lease)
+            for lease in raw_leases:
+                if not isinstance(lease, dict):
+                    continue
+                l_ip = lease.get("active-address") or lease.get("address")
+                if not l_ip:
+                    continue
+                try:
+                    clean_ip = str(l_ip).split("/")[0].strip()
+                    ip_obj = ipaddress.ip_address(clean_ip)
+                    clean_ip_str = str(ip_obj)
+                    target_pfx: IPAMPrefix | None = None
+                    for net_str, pfx in known_prefixes.items():
+                        try:
+                            if ip_obj in ipaddress.ip_network(net_str, strict=False):
+                                target_pfx = pfx
+                                break
+                        except ValueError:
+                            continue
+
+                    if not target_pfx:
+                        continue
+
+                    mac = lease.get("mac-address") or lease.get("active-mac-address") or lease.get("src-mac-address")
+                    hostname = lease.get("host-name")
+                    is_dynamic = lease.get("dynamic") != "false"
+                    lease_status = IPAddressStatusEnum.DHCP_DYNAMIC if is_dynamic else IPAddressStatusEnum.DHCP_STATIC
+
+                    stmt_l = select(IPAMAddress).where(
+                        IPAMAddress.prefix_id == target_pfx.id,
+                        IPAMAddress.address == clean_ip_str,
+                    )
+                    lease_row = (await db.execute(stmt_l)).scalar_one_or_none()
+                    if not lease_row:
+                        lease_row = IPAMAddress(
+                            id=uuid.uuid4(),
+                            tenant_id=tenant_id,
+                            prefix_id=target_pfx.id,
+                            address=clean_ip_str,
+                            ip_family=IPFamilyEnum.IPv4 if ip_obj.version == 4 else IPFamilyEnum.IPv6,
+                            router_id=r.id,
+                            interface_name=lease.get("server"),
+                            mac_address=str(mac)[:17] if mac else None,
+                            dns_ptr=str(hostname)[:255] if hostname else None,
+                            status=lease_status,
+                            description=f"DHCP: {hostname or 'Cliente'} | Mac: {mac or 'N/A'} | Srv: {lease.get('server', '')}",
+                        )
+
+                        db.add(lease_row)
+                        synced_ips += 1
+                    else:
+                        lease_row.status = lease_status
+                        lease_row.mac_address = str(mac)[:17] if mac else lease_row.mac_address
+                        lease_row.dns_ptr = str(hostname)[:255] if hostname else lease_row.dns_ptr
+                        lease_row.router_id = r.id
+                except Exception as ex:
+                    logger.warning(f"Error procesando lease {l_ip}: {ex}")
+
+            await db.commit()
+
+    except Exception as e:
+        logger.warning(f"Error sincronizando IPAM desde {r.display_name}: {e}")
+
+    return synced_prefixes, synced_ips
+
+
+async def _sync_all_tenant_routers_ipam(tenant_id: uuid.UUID, db: AsyncSession) -> tuple[int, int]:
+    """Sincroniza todos los routers alcanzables del tenant."""
+    stmt_vrf = select(IPAMVrf).where(IPAMVrf.tenant_id == tenant_id, IPAMVrf.name == "default")
+    default_vrf = (await db.execute(stmt_vrf)).scalar_one_or_none()
+    if not default_vrf:
+        default_vrf = IPAMVrf(tenant_id=tenant_id, name="default", description="VRF Global de Enrutamiento")
+        db.add(default_vrf)
+        await db.commit()
+        await db.refresh(default_vrf)
+
+    stmt_routers = (
+        select(Router)
+        .where(Router.tenant_id == tenant_id, Router.is_reachable == True)  # noqa: E712
+        .options(selectinload(Router.vault))
+    )
+    routers = (await db.execute(stmt_routers)).scalars().all()
+
+    total_pfx = 0
+    total_ips = 0
+    for r in routers:
+        p, i = await _sync_single_router_ipam(r, tenant_id, db, default_vrf)
+        total_pfx += p
+        total_ips += i
+
+    return total_pfx, total_ips
+
+
+@router.post("/sync-all", status_code=status.HTTP_200_OK)
+async def sync_all_mikrotik_ipam(
+    db: AsyncSession = Depends(get_tenant_db_session),
+    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)),
+) -> Any:
+    """Descubre y sincroniza prefijos, pools y DHCP de todos los routers alcanzables del tenant."""
+    tenant_id = get_tenant_id(claims)
+    pfx_count, ips_count = await _sync_all_tenant_routers_ipam(tenant_id, db)
+    stmt = select(func.count(Router.id)).where(Router.tenant_id == tenant_id)
+    val = (await db.execute(stmt)).scalar()
+    routers_total = int(val) if isinstance(val, (int, float)) else (1 if val is not None else 0)
+    return {
+        "status": "success",
+        "synced_prefixes": pfx_count,
+        "synced_ips": ips_count,
+        "routers_processed": routers_total,
+        "message": f"Sincronización masiva completada: {pfx_count} prefijos y {ips_count} IPs descubiertas en {routers_total} routers de la flota",
+    }
+
+
+
+
 @router.post("/sync-mikrotik/{router_id}", status_code=status.HTTP_200_OK)
 async def sync_mikrotik_ipam(
     router_id: uuid.UUID,
     db: AsyncSession = Depends(get_tenant_db_session),
     claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)),
 ) -> Any:
-    """Descubre subredes e IPs configuradas en el router MikroTik y las sincroniza con el IPAM."""
+    """Descubre subredes, pools y servidores DHCP configurados en el router MikroTik y las sincroniza con el IPAM."""
     tenant_id = get_tenant_id(claims)
-    stmt = select(Router).where(Router.id == router_id, Router.tenant_id == tenant_id)
+    stmt = (
+        select(Router)
+        .where(Router.id == router_id, Router.tenant_id == tenant_id)
+        .options(selectinload(Router.vault))
+    )
     r = (await db.execute(stmt)).scalar_one_or_none()
     if not r:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Router no encontrado")
@@ -473,65 +844,7 @@ async def sync_mikrotik_ipam(
         await db.commit()
         await db.refresh(default_vrf)
 
-    synced_prefixes = 0
-    synced_ips = 0
-
-    try:
-        host = r.api_base_url.replace("https://", "").replace("http://", "").split("/")[0].split(":")[0]
-        async with MikrotikRestClient(host=host, port=r.api_port, username="admin", password="") as client:  # nosec B106
-            raw_addrs = await client.get("/ip/address")
-            for item in raw_addrs:
-                ip_str = item.get("address")
-                if not ip_str:
-                    continue
-                try:
-                    iface_net = ipaddress.ip_interface(ip_str)
-                    net_str = str(iface_net.network)
-
-                    # Verificar si el prefijo ya existe
-                    stmt_p = select(IPAMPrefix).where(
-                        IPAMPrefix.tenant_id == tenant_id,
-                        IPAMPrefix.vrf_id == default_vrf.id,
-                        IPAMPrefix.prefix == net_str,
-                    )
-                    prefix = (await db.execute(stmt_p)).scalar_one_or_none()
-                    if not prefix:
-                        prefix = IPAMPrefix(
-                            tenant_id=tenant_id,
-                            vrf_id=default_vrf.id,
-                            prefix=net_str,
-                            ip_family=IPFamilyEnum.IPv4,
-                            role=IPPrefixRoleEnum.INFRA_P2P,
-                            description=f"Descubierto en router {r.display_name} ({item.get('interface', '')})",
-                        )
-                        db.add(prefix)
-                        await db.commit()
-                        await db.refresh(prefix)
-                        synced_prefixes += 1
-
-                    # Registrar la IP específica de la interfaz
-                    stmt_addr = select(IPAMAddress).where(
-                        IPAMAddress.prefix_id == prefix.id,
-                        IPAMAddress.address == str(iface_net),
-                    )
-                    if not (await db.execute(stmt_addr)).scalar_one_or_none():
-                        addr = IPAMAddress(
-                            tenant_id=tenant_id,
-                            prefix_id=prefix.id,
-                            address=str(iface_net),
-                            ip_family=IPFamilyEnum.IPv4,
-                            router_id=r.id,
-                            interface_name=item.get("interface"),
-                            status=IPAddressStatusEnum.ALLOCATED,
-                            description="Interfaz local descubierta",
-                        )
-                        db.add(addr)
-                        await db.commit()
-                        synced_ips += 1
-                except Exception as ex:
-                    logger.warning(f"Error procesando IP {ip_str}: {ex}")
-    except Exception as e:
-        logger.warning(f"Sincronización simulada o error de conexión con MikroTik: {e}")
+    synced_prefixes, synced_ips = await _sync_single_router_ipam(r, tenant_id, db, default_vrf)
 
     return {
         "status": "success",

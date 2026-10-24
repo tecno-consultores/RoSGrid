@@ -502,6 +502,14 @@
   - Forzado de sincronización manual vía `POST /api/v1/inventory/cves/sync` que renueva el TTL a 24 horas y actualiza el catálogo de firmas.
   - Barra táctica en `FleetCveMatrix.vue` con badge de estado de caché (`Caché 24h Vigente (expira en Xh Ym)`), punto luminoso pulsante, fecha de última descarga y notificación contextual al auto-sincronizar.
   - Cobertura 11X certificada: 35 pruebas unitarias Pytest en backend (`test_hito23_cve_and_syslog.unit.py`), 9 pruebas unitarias Vitest en frontend (`fleetCveMatrix.unit.ts`), Escenario 76 en Karate API y Escenario 30 en Karate UI, 100% sincronizados con `docs/examples/`.
+- [x] **23.22** **Auto-Descubrimiento y Sincronización Masiva de IPAM Dual-Stack (Pools DHCP, Leases e Interfaces de Flota):**
+  - Descubrimiento exhaustivo de tablas `/ip/pool`, `/ip/dhcp-server`, `/ip/dhcp-server/network`, `/ip/dhcp-server/lease` e `/ip/address` mediante cliente MikroTik con credenciales descifradas de la bóveda AES-256-GCM.
+  - Auto-descubrimiento automático en primer acceso a `GET /api/v1/ipam/prefixes` cuando no existen prefijos registrados en base de datos.
+  - Nuevo endpoint masivo `POST /api/v1/ipam/sync-all` para sincronizar toda la flota en un paso.
+  - Coerción robusta en esquemas Pydantic v2 (`IPAMPrefixResponse`, `IPAMAddressResponse`) con `@field_validator(mode="before")` para conversión incondicional de objetos `IPv4Network`/`IPv4Address` INET a cadenas de texto.
+  - Visualización táctica prominente de rangos IPv4 en `IpamPrefixTable.vue` con badge `🎯 <rango_inicio> - <rango_fin>`, indicador de utilización porcentual calculado, tag `POOL`, botón `[ 🔄 Sincronizar Flota (DHCP) ]` y botón de flota en `IpamManagementView.vue`.
+  - Cobertura 11X certificada: 5 pruebas unitarias backend (`test_ipam_and_field_ops.unit.py`), 5 pruebas unitarias Vitest (`useIpamStore.unit.ts`), 0 errores en `vue-tsc`, ESLint, Ruff y Mypy, Escenario 77 en Karate Labs API y Escenario 31 en Karate Labs UI.
+
 
 ---
 

@@ -45,12 +45,22 @@
     return 'var(--rg-success, #00ff88)';
   }
 
+  function getErrorMessage(err: unknown, defaultMsg: string): string {
+    if (err && typeof err === 'object') {
+      const resData = (err as { response?: { data?: { detail?: string } } }).response?.data;
+      if (resData?.detail) return resData.detail;
+      const msg = (err as { message?: string }).message;
+      if (msg) return msg;
+    }
+    return defaultMsg;
+  }
+
   async function handleGetNextAvailable(pfx: IPAMPrefix) {
     try {
       nextAvailableResult.value = await ipamStore.getNextAvailable(pfx.id);
       nextAvailableModalOpen.value = true;
-    } catch (err: any) {
-      alert(err?.response?.data?.detail || err?.message || 'Error al obtener recurso libre');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, 'Error al obtener recurso libre'));
     }
   }
 
@@ -72,11 +82,58 @@
       newPrefixModalOpen.value = false;
       newPrefix.value.prefix = '';
       newPrefix.value.description = '';
-    } catch (err: any) {
-      alert(err?.response?.data?.detail || err?.message || 'Error al registrar prefijo');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, 'Error al registrar prefijo'));
     }
   }
+
+  const isSyncingFleet = ref(false);
+  const syncFeedbackMessage = ref<string | null>(null);
+
+  async function handleSyncFleet() {
+    isSyncingFleet.value = true;
+    syncFeedbackMessage.value = null;
+    try {
+      const res = await ipamStore.syncAllMikrotikIpam();
+      syncFeedbackMessage.value =
+        res.message ||
+        `✅ Sincronizados ${res.synced_prefixes} prefijos/pools y ${res.synced_ips} IPs en la flota.`;
+      setTimeout(() => {
+        syncFeedbackMessage.value = null;
+      }, 7000);
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, 'Error al sincronizar flota MikroTik'));
+    } finally {
+      isSyncingFleet.value = false;
+    }
+  }
+
+  function extractPoolRange(pfx: IPAMPrefix): string | null {
+    if (pfx.description) {
+      // Coincidir con rangos en descripción: (192.168.10.2-192.168.10.254) o (192.168.10.2 - 192.168.10.254)
+      const match = pfx.description.match(/\(([\d.]+\s*-\s*[\d.]+)\)/);
+      if (match) return match[1];
+    }
+
+    // Si es IPv4 CIDR, calcular rango utilizable estándar
+    if (pfx.ip_family === 'IPv4' && pfx.prefix.includes('/')) {
+      const [ip, maskStr] = pfx.prefix.split('/');
+      const mask = parseInt(maskStr, 10);
+      if (mask >= 24 && mask <= 30) {
+        const parts = ip.split('.').map(Number);
+        if (parts.length === 4) {
+          const base = `${parts[0]}.${parts[1]}.${parts[2]}`;
+          const blockSize = Math.pow(2, 32 - mask);
+          const startHost = parts[3] + 1;
+          const endHost = parts[3] + blockSize - 2;
+          return `${base}.${startHost} - ${base}.${endHost}`;
+        }
+      }
+    }
+    return null;
+  }
 </script>
+
 
 <template>
   <div class="ipam-prefix-table-container">
@@ -120,28 +177,43 @@
         <button
           type="button"
           class="btn-rg btn-rg--cyan"
-          @click="newPrefixModalOpen = true"
+          :disabled="isSyncingFleet"
+          aria-label="Sincronizar pools y DHCP de la flota"
+          @click="handleSyncFleet"
+        >
+          <span v-if="isSyncingFleet">⏳ Sincronizando...</span>
+          <span v-else>🔄 Sincronizar Flota (DHCP)</span>
+        </button>
+        <button
+          type="button"
+          class="btn-rg btn-rg--cyan"
           aria-label="Añadir nuevo prefijo"
+          @click="newPrefixModalOpen = true"
         >
           ➕ Nuevo Bloque / Subred
         </button>
         <button
           type="button"
           class="btn-rg btn-rg--purple"
-          @click="emit('open-corporate-modal')"
           aria-label="Gestor IPv6 Corporativo"
+          @click="emit('open-corporate-modal')"
         >
           🏢 IPv6 Corporativo (/48)
         </button>
       </div>
     </header>
 
+    <!-- Feedback Banner de Sincronización -->
+    <div v-if="syncFeedbackMessage" class="sync-feedback-banner" role="status">
+      {{ syncFeedbackMessage }}
+    </div>
+
     <!-- Tabla de Prefijos -->
     <div class="table-scroll-wrapper">
       <table class="rg-table" aria-label="Listado de Prefijos IPAM">
         <thead>
           <tr>
-            <th scope="col">Prefijo CIDR</th>
+            <th scope="col">Prefijo CIDR & Rango</th>
             <th scope="col">Familia</th>
             <th scope="col">Rol Operativo</th>
             <th scope="col">Utilización</th>
@@ -158,9 +230,20 @@
           </tr>
           <tr v-for="pfx in ipamStore.filteredPrefixes" :key="pfx.id" class="table-row">
             <td class="td-prefix">
-              <span class="cidr-badge">{{ pfx.prefix }}</span>
-              <span v-if="pfx.is_pool" class="pool-tag" title="Pool Dinámico PPPoE/DHCP">POOL</span>
+              <div class="prefix-header-line">
+                <span class="cidr-badge">{{ pfx.prefix }}</span>
+                <span v-if="pfx.is_pool" class="pool-tag" title="Pool Dinámico PPPoE/DHCP">POOL</span>
+              </div>
+              <div
+                v-if="extractPoolRange(pfx)"
+                class="range-subtext"
+                :title="`Rango de direcciones asignables: ${extractPoolRange(pfx)}`"
+              >
+                <span class="range-icon" aria-hidden="true">🎯</span>
+                <span class="range-val">{{ extractPoolRange(pfx) }}</span>
+              </div>
             </td>
+
             <td>
               <span
                 :class="[
@@ -197,8 +280,8 @@
               <button
                 type="button"
                 class="btn-cell btn-cell--free"
-                @click="handleGetNextAvailable(pfx)"
                 title="Calcular siguiente IP o subred libre"
+                @click="handleGetNextAvailable(pfx)"
               >
                 ⚡ Siguiente Libre
               </button>
@@ -206,8 +289,8 @@
                 v-if="pfx.ip_family === 'IPv4'"
                 type="button"
                 class="btn-cell btn-cell--grid"
-                @click="emit('open-ip-grid', pfx)"
                 title="Ver matriz de IPs libres y ocupadas"
+                @click="emit('open-ip-grid', pfx)"
               >
                 🔲 Matriz IPs
               </button>
@@ -231,14 +314,15 @@
           <button
             type="button"
             class="btn-close"
-            @click="newPrefixModalOpen = false"
             aria-label="Cerrar modal"
+            @click="newPrefixModalOpen = false"
           >
             ✕
           </button>
         </header>
 
-        <form @submit.prevent="handleCreatePrefix" class="modal-body">
+        <form class="modal-body" @submit.prevent="handleCreatePrefix">
+
           <div class="form-group">
             <label for="pfx-vrf">VRF de Enrutamiento</label>
             <select id="pfx-vrf" v-model="newPrefix.vrf_id" class="rg-input" required>
@@ -500,6 +584,48 @@
     background: rgba(0, 243, 255, 0.04);
   }
 
+  .sync-feedback-banner {
+    background: rgba(0, 255, 136, 0.12);
+    border: 1px solid #00ff88;
+    color: #a7f3d0;
+    padding: 0.6rem 1rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .prefix-header-line {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .range-subtext {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 0.25rem;
+    font-size: 0.72rem;
+    color: #a5f3fc;
+    font-family: monospace;
+    background: rgba(0, 243, 255, 0.08);
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    border: 1px dashed rgba(0, 243, 255, 0.35);
+  }
+
+  .range-icon {
+    font-size: 0.75rem;
+  }
+
+  .range-val {
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+
   .cidr-badge {
     font-family: monospace;
     font-weight: 700;
@@ -515,6 +641,7 @@
     margin-left: 0.5rem;
     font-weight: bold;
   }
+
 
   .family-badge {
     font-size: 0.75rem;

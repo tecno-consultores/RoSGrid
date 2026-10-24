@@ -275,4 +275,14 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And waitFor("button.btn-sync-cve")
     And match text("button.btn-sync-cve") contains 'Sincronizar Boletines'
 
+  Scenario: 31. Gestor IPAM Dual-Stack — Sincronización de Flota MikroTik y Visualización de Rangos IPv4
+    Given driver baseUrl + '/ipam'
+    And waitFor(".ipam-prefix-table-container")
+    And waitFor(".toolbar-actions")
+    And waitFor("//button[contains(., 'Sincronizar Flota (DHCP)')]")
+    Then match text("//button[contains(., 'Sincronizar Flota (DHCP)')]") contains 'Sincronizar Flota (DHCP)'
+    And waitFor(".rg-table")
+    And match text(".rg-table thead") contains 'Prefijo CIDR & Rango'
+
+
 

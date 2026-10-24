@@ -1394,3 +1394,36 @@ Se contrastó cada módulo del backend y frontend que interactúa con routers Mi
 3. **Análisis de Tipos TypeScript:** `vue-tsc --noEmit` completado con 0 errores.
 4. **Despliegue Local Certificado:** Imágenes `sinfallas/rosgrid-backend:local-test` y `sinfallas/rosgrid-frontend:local-test` reconstruidas; contenedores `rosgrid_api_local` y `rosgrid_ui_local` activos y saludables en puertos 8000 y 8085.
 
+---
+
+## 41. Auto-Descubrimiento y Sincronización Masiva de IPAM Dual-Stack (Pools DHCP, Leases e Interfaces de Flota)
+
+### A. Diagnóstico y Causa Raíz
+1. **Invisibilidad de Rangos IPv4 en el Módulo IPAM:** A pesar de que el router MikroTik `r1` en el laboratorio poseía múltiples servidores DHCP y rangos configurados, al ingresar a `/ipam` la tabla aparecía completamente vacía sin rangos ni prefijos.
+   - *Causa Raíz 1 (Credenciales Bóveda Omitidas):* `sync_mikrotik_ipam` usaba credenciales hardcodeadas `admin/""` en lugar de descifrar las credenciales de la bóveda AES-256-GCM (`_create_client_from_vault`).
+   - *Causa Raíz 2 (Omisión de Tablas DHCP y Pools):* El backend sólo consultaba `/ip/address`, ignorando `/ip/pool`, `/ip/dhcp-server`, `/ip/dhcp-server/network` y `/ip/dhcp-server/lease`.
+   - *Causa Raíz 3 (Falta de Auto-Descubrimiento Inicial):* Al estar la tabla `ipam_prefixes` vacía, se requería una sincronización manual individual por router que fallaba silenciosamente.
+   - *Causa Raíz 4 (Error de Serialización INET Pydantic v2):* Los tipos `IPv4Network` leídos por SQLAlchemy generaban `ResponseValidationError` al esperar `str` estricto en Pydantic.
+
+### B. Solución Técnica Implementada
+1. **Sincronización Exhaustiva de Pools y Servidores DHCP:**
+   - En `_sync_single_router_ipam`, se consultan `/ip/pool` y se asocian con `/ip/dhcp-server` para registrar cada pool como un prefijo con bandera `is_pool=True`, calculando el porcentaje de utilización real (`utilization_pct`) según los leases activos.
+   - Registro de clientes conectados desde `/ip/dhcp-server/lease` con sus MACs, nombres de host y estado dinámico o estático (`DHCP_DYNAMIC` / `DHCP_STATIC`).
+2. **Auto-Descubrimiento en Primera Consulta (`GET /api/v1/ipam/prefixes`):**
+   - Si no existen prefijos en la base de datos del tenant, se invoca automáticamente `_sync_all_tenant_routers_ipam`, precargando la tabla sin requerir interacción manual.
+3. **Endpoint de Sincronización Masiva (`POST /api/v1/ipam/sync-all`):**
+   - Permite sincronizar toda la flota de routers en un solo paso, retornando prefijos descubiertos, IPs y routers procesados.
+4. **Coerción Robusta en Esquemas Pydantic (`fastapi/src/schemas/ipam.py`):**
+   - `@field_validator("prefix", mode="before")` y `@field_validator("address", mode="before")` para convertir incondicionalmente objetos `IPv4Network`/`IPv6Network`/`IPv4Address` a cadenas de texto.
+5. **Visualización Táctica Prominente en Frontend (`IpamPrefixTable.vue`):**
+   - Badge táctico `🎯 <rango_inicio> - <rango_fin>` (ej. `🎯 192.168.10.2 - 192.168.10.254`), tag `POOL`, barra de utilización con código de colores según umbral, y botón `[ 🔄 Sincronizar Flota (DHCP) ]` con feedback contextual.
+
+### C. Cobertura y Certificación Multi-Capa 11X
+1. **Backend Unitario:** `fastapi/tests/api/test_ipam_and_field_ops.unit.py` (5 pruebas aprobadas al 100% en Docker efímero con `base-python-uv:3.15`).
+2. **Frontend Unitario:** `vue3/src/stores/useIpamStore.unit.ts` (5 pruebas Vitest aprobadas al 100% en `base-node-ionic:26`).
+3. **Análisis Estático y Tipado:** `vue-tsc --noEmit` (0 errores), `ruff check` (0 errores), `mypy` (0 errores) y `eslint` (0 errores en archivos modificados).
+4. **Karate Labs API BDD:** Escenario 77 incorporado en `fastapi/test/api_test.feature` y replicado en `docs/examples/fastapi/test/api_test.feature` (**77 escenarios totales de API**).
+5. **Karate Labs UI BDD:** Escenario 31 incorporado en `vue3/test/ui_business_flow.feature` y replicado en `docs/examples/vue3/test/ui_business_flow.feature` (**31 escenarios totales de UI**).
+6. **Validación en Vivo:** Certificada en navegador real sobre `http://localhost:8085/ipam` visualizando los 3 pools de `r1` (`pool-pcs`, `pool-aps`, `dhcp_pool2`) con sus rangos de IPs exactos (`192.168.10.2 - 192.168.10.254`, etc.) y 20 IPs asociadas.
+
+

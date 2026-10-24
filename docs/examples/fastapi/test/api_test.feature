@@ -610,4 +610,11 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 77. Sincronización masiva de IPAM (pools DHCP e interfaces) de la flota sin autenticación devuelve 401
+    Given path '/api/v1/ipam/sync-all'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
 

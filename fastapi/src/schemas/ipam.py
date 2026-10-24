@@ -4,9 +4,9 @@
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional
+from typing import Any, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from src.models.ipam import (
     AuthBackendEnum,
@@ -74,12 +74,18 @@ class IPAMPrefixResponse(BaseModel):
     status: IPPrefixStatusEnum
     is_pool: bool
     default_child_prefix_len: Optional[int]
-    utilization_pct: Decimal
+    utilization_pct: Optional[Decimal] = Decimal("0.00")
     description: Optional[str]
     created_at: datetime
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("prefix", mode="before")
+    @classmethod
+    def _coerce_prefix_to_str(cls, v: Any) -> str:
+        return str(v) if v is not None else ""
+
 
 
 class IPAMPrefixNextAvailableResponse(BaseModel):
@@ -128,6 +134,12 @@ class IPAMAddressResponse(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("address", mode="before")
+    @classmethod
+    def _coerce_address_to_str(cls, v: Any) -> str:
+        return str(v) if v is not None else ""
+
 
 
 class BandwidthProfileCreate(BaseModel):

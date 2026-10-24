@@ -100,6 +100,9 @@ class MockIpamDbSession:
             def scalar_one_or_none(self):
                 return self._items[0] if self._items else None
 
+            def scalar(self):
+                return self._items[0] if self._items else None
+
             def scalars(self):
                 items = self._items
 
@@ -115,8 +118,26 @@ class MockIpamDbSession:
         if "ipam_vrfs" in stmt_str:
             return MockResult(self.vrfs)
         elif "ipam_prefixes" in stmt_str:
+            if "ipam_prefixes.prefix" in stmt_str:
+                try:
+                    p_dict = stmt.compile().params
+                    target_pfx = next((v for k, v in p_dict.items() if "prefix" in k), None)
+                    if target_pfx:
+                        matched = [p for p in self.prefixes if getattr(p, "prefix", None) == target_pfx]
+                        return MockResult(matched)
+                except Exception:
+                    pass
             return MockResult(self.prefixes)
         elif "ipam_ip_addresses" in stmt_str:
+            if "ipam_ip_addresses.address" in stmt_str:
+                try:
+                    p_dict = stmt.compile().params
+                    target_addr = next((v for k, v in p_dict.items() if "address" in k), None)
+                    if target_addr:
+                        matched = [a for a in self.addresses if getattr(a, "address", None) == target_addr]
+                        return MockResult(matched)
+                except Exception:
+                    pass
             return MockResult(self.addresses)
         elif "subscriber_devices" in stmt_str or "customer_services" in stmt_str:
             if "count(" in stmt_str:
@@ -462,6 +483,75 @@ async def test_ipam_customer_services_and_sync_mikrotik(
             )
             assert resp_sync.status_code == 200
             assert resp_sync.json()["status"] == "success"
+
+        # 4. Sincronizar pools DHCP y leases desde MikroTik con mock completo
+        async def mock_get(endpoint: str):
+            if endpoint == "/ip/address":
+                return [
+                    {"address": "192.168.10.254/24", "interface": "bridge-anillo", "comment": "pc"},
+                    {"address": "10.250.3.8/24", "interface": "ether1"},
+                ]
+            elif endpoint == "/ip/pool":
+                return [
+                    {"name": "pool-pcs", "ranges": "192.168.10.2-192.168.10.254", "total": "253", "used": "7"}
+                ]
+            elif endpoint == "/ip/dhcp-server":
+                return [
+                    {"name": "dhcp-anillo", "interface": "bridge-anillo", "address-pool": "pool-pcs"}
+                ]
+            elif endpoint == "/ip/dhcp-server/network":
+                return [
+                    {"address": "192.168.10.0/24", "gateway": "192.168.10.254", "dns-server": "192.168.10.254"}
+                ]
+            elif endpoint == "/ip/dhcp-server/lease":
+                return [
+                    {
+                        "address": "192.168.10.253",
+                        "mac-address": "00:50:79:66:68:0A",
+                        "server": "dhcp-anillo",
+                        "host-name": "VPCS",
+                        "dynamic": "true",
+                    }
+                ]
+            return []
+
+        mock_client2 = AsyncMock()
+        mock_client2.get.side_effect = mock_get
+        mock_client2.__aenter__.return_value = mock_client2
+        mock_client2.__aexit__.return_value = None
+
+        with patch("src.api.v1.ipam.MikrotikRestClient", return_value=mock_client2):
+            resp_sync2 = await async_client.post(
+                f"/api/v1/ipam/sync-mikrotik/{router_id}",
+                headers=make_headers(token),
+            )
+            assert resp_sync2.status_code == 200
+            assert resp_sync2.json()["status"] == "success"
+
+            # Test sync-all endpoint
+            resp_sync_all = await async_client.post("/api/v1/ipam/sync-all", headers=make_headers(token))
+            assert resp_sync_all.status_code == 200
+
+            # Verificar que el prefijo del pool fue creado con is_pool=True
+            resp_pfxs = await async_client.get("/api/v1/ipam/prefixes", headers=make_headers(token))
+            assert resp_pfxs.status_code == 200
+            pfx_items = resp_pfxs.json()
+            pool_pfx = next((p for p in pfx_items if p["prefix"] == "192.168.10.0/24"), None)
+            assert pool_pfx is not None
+            assert pool_pfx["is_pool"] is True
+            assert float(pool_pfx["utilization_pct"]) > 0
+
+            # Verificar que la IP del lease DHCP está registrada
+            resp_addrs = await async_client.get(
+                f"/api/v1/ipam/addresses?prefix_id={pool_pfx['id']}",
+                headers=make_headers(token),
+            )
+            assert resp_addrs.status_code == 200
+            addrs = resp_addrs.json()
+            lease_addr = next((a for a in addrs if "192.168.10.253" in a["address"]), None)
+            assert lease_addr is not None
+            assert lease_addr["status"] == "DHCP_DYNAMIC"
+            assert lease_addr["mac_address"] == "00:50:79:66:68:0A"
     finally:
         app.dependency_overrides.clear()
 

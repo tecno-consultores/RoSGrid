@@ -57,8 +57,8 @@ export const useIpamStore = defineStore('ipam', () => {
       const res = await http.get<IPAMVrf[]>('/api/v1/ipam/vrfs');
       vrfs.value = Array.isArray(res.data) ? res.data : [];
       triggerRef(vrfs);
-    } catch (e: any) {
-      error.value = e?.message || 'Error al cargar VRFs';
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : 'Error al cargar VRFs';
     } finally {
       isLoading.value = false;
     }
@@ -84,8 +84,8 @@ export const useIpamStore = defineStore('ipam', () => {
       const res = await http.get<IPAMPrefix[]>('/api/v1/ipam/prefixes');
       prefixes.value = Array.isArray(res.data) ? res.data : [];
       triggerRef(prefixes);
-    } catch (e: any) {
-      error.value = e?.message || 'Error al cargar prefijos IPAM';
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : 'Error al cargar prefijos IPAM';
     } finally {
       isLoading.value = false;
     }
@@ -127,8 +127,8 @@ export const useIpamStore = defineStore('ipam', () => {
       const res = await http.get<IPAMAddress[]>(url);
       addresses.value = Array.isArray(res.data) ? res.data : [];
       triggerRef(addresses);
-    } catch (e: any) {
-      error.value = e?.message || 'Error al cargar direcciones IP';
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : 'Error al cargar direcciones IP';
     }
   }
 
@@ -139,10 +139,11 @@ export const useIpamStore = defineStore('ipam', () => {
       const res = await http.get<CustomerService[]>('/api/v1/ipam/customer-services');
       customerServices.value = Array.isArray(res.data) ? res.data : [];
       triggerRef(customerServices);
-    } catch (e: any) {
-      error.value = e?.message || 'Error al cargar servicios de clientes';
+    } catch (e: unknown) {
+      error.value = e instanceof Error ? e.message : 'Error al cargar servicios de clientes';
     }
   }
+
 
   async function createCustomerService(
     payload: Partial<CustomerService>,
@@ -162,6 +163,25 @@ export const useIpamStore = defineStore('ipam', () => {
     const res = await http.post<{ synced_prefixes: number; synced_ips: number; message: string }>(
       `/api/v1/ipam/sync-mikrotik/${routerId}`,
     );
+    await fetchPrefixes();
+    await fetchAddresses();
+    return res.data;
+  }
+
+  // Sync all routers from MikroTik
+  async function syncAllMikrotikIpam(): Promise<{
+    synced_prefixes: number;
+    synced_ips: number;
+    routers_processed: number;
+    message: string;
+  }> {
+    const { http } = await import('@/api/httpClient');
+    const res = await http.post<{
+      synced_prefixes: number;
+      synced_ips: number;
+      routers_processed: number;
+      message: string;
+    }>('/api/v1/ipam/sync-all');
     await fetchPrefixes();
     await fetchAddresses();
     return res.data;
@@ -190,5 +210,7 @@ export const useIpamStore = defineStore('ipam', () => {
     fetchCustomerServices,
     createCustomerService,
     syncMikrotikIpam,
+    syncAllMikrotikIpam,
   };
 });
+
