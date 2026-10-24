@@ -62,16 +62,38 @@ describe('ConfigTemplateEditorModal.vue — Predefined Templates & Golden Config
   it('contiene la plantilla predefinida SYSLOG_CENTRALIZADO_ROSGRID con IP de servidor y 7 pasos REST', () => {
     const syslogPreset = PREDEFINED_TEMPLATES.find((p) => p.name === 'SYSLOG_CENTRALIZADO_ROSGRID');
     expect(syslogPreset).toBeDefined();
-    expect(syslogPreset?.category).toBe('SECURITY');
-    expect(syslogPreset?.variables_schema.length).toBe(2);
-    expect(syslogPreset?.variables_schema[0].key).toBe('rosgrid_server_ip');
-    expect(syslogPreset?.variables_schema[1].key).toBe('rosgrid_syslog_port');
-    expect(syslogPreset?.rest_steps_template.length).toBe(7);
-    expect(syslogPreset?.rest_steps_template[0].endpoint).toBe('system/logging/action');
-    expect(syslogPreset?.rest_steps_template[0].method).toBe('PUT');
-    expect(syslogPreset?.rest_steps_template[1].endpoint).toBe('system/logging');
-    expect(syslogPreset?.rest_steps_template[1].method).toBe('PUT');
-    expect(syslogPreset?.requires_safemode).toBe(true);
+    if (!syslogPreset) return;
+    expect(syslogPreset.category).toBe('SECURITY');
+    expect(syslogPreset.variables_schema.length).toBe(2);
+    expect(syslogPreset.variables_schema[0].key).toBe('rosgrid_server_ip');
+    expect(syslogPreset.variables_schema[1].key).toBe('rosgrid_syslog_port');
+    expect(syslogPreset.rest_steps_template.length).toBe(7);
+    const actStep = syslogPreset.rest_steps_template[0];
+    const logStep = syslogPreset.rest_steps_template[1];
+    expect(actStep?.endpoint).toBe('system/logging/action');
+    expect(actStep?.method).toBe('PUT');
+    expect(actStep?.payload?.name).toBe('rosgridsyslog');
+    expect(actStep?.payload?.['remote-log-format']).toBe('syslog');
+    expect(actStep?.payload?.['syslog-facility']).toBe('daemon');
+    expect(logStep?.endpoint).toBe('system/logging');
+    expect(logStep?.method).toBe('PUT');
+    expect(logStep?.payload?.action).toBe('rosgridsyslog');
+    expect(syslogPreset.requires_safemode).toBe(true);
+  });
+
+  it('contiene la plantilla predefinida SNMP_V2C_MONITOREO_NOC con POST snmp/set canónico de RouterOS v7', () => {
+    const snmpPreset = PREDEFINED_TEMPLATES.find((p) => p.name === 'SNMP_V2C_MONITOREO_NOC');
+    expect(snmpPreset).toBeDefined();
+    if (!snmpPreset) return;
+    expect(snmpPreset.category).toBe('SECURITY');
+    const snmpSetStep = snmpPreset.rest_steps_template[0];
+    const snmpCommStep = snmpPreset.rest_steps_template[1];
+    expect(snmpSetStep?.endpoint).toBe('snmp/set');
+    expect(snmpSetStep?.method).toBe('POST');
+    expect(snmpSetStep?.payload?.enabled).toBe('yes');
+    expect(snmpCommStep?.endpoint).toBe('snmp/community/*0');
+    expect(snmpCommStep?.method).toBe('PATCH');
+    expect(snmpPreset.requires_safemode).toBe(true);
   });
 
   it('carga la plantilla predefinida SYSLOG_CENTRALIZADO_ROSGRID al seleccionarla en el dropdown', async () => {

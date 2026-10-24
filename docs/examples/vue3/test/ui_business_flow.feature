@@ -228,5 +228,20 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And waitFor(".template-variables-box")
     And match text(".vars-title") contains 'Parámetros de la Plantilla'
 
+  Scenario: 27. Operaciones Masivas — Verificación de Plantillas Canónicas RouterOS v7 (SNMP y Syslog Centralizado)
+    Given driver baseUrl + '/bulk-ops'
+    And waitFor("//h1[contains(., 'Operaciones Masivas')]")
+    And waitFor(".step-footer .btn--primary")
+    When click(".step-footer .btn--primary")
+    Then waitFor(".templates-list-scroll")
+    When click("//span[contains(@class, 'tpl-item-name') and contains(., 'SNMP_V2C_MONITOREO_NOC')]")
+    Then waitFor(".template-variables-box")
+    And match text(".template-variables-box") contains 'snmp_community'
+    When click("//span[contains(@class, 'tpl-item-name') and contains(., 'SYSLOG_CENTRALIZADO_ROSGRID')]")
+    Then waitFor(".template-variables-box")
+    And match text(".template-variables-box") contains 'rosgrid_server_ip'
+    And match text(".template-variables-box") contains 'rosgrid_syslog_port'
+
+
 
 

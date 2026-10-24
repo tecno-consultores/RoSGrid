@@ -566,5 +566,18 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     And match response.database == '#string'
     And match response.redis == '#string'
 
+  Scenario: 70. Consulta del catálogo de plantillas predefinidas RouterOS v7 sin autenticación devuelve 401
+    Given path '/api/v1/operations/templates/presets'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 71. Consulta de plantillas de configuración del tenant sin autenticación devuelve 401
+    Given path '/api/v1/operations/templates'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
 
 

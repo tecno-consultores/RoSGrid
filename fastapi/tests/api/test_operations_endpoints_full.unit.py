@@ -662,6 +662,32 @@ async def test_bulk_templates_and_jobs(fake_op_context: dict[str, Any]) -> None:
         exec_err = await api_bulk.execute_fleet_updates(exec_payload, claims=claims, db=db)
         assert exec_err.results[0]["status"] == "FAILED"
 
+    # Test _execute_single_step: auto-redirección de snmp a snmp/set
+    ctx["client"].post.reset_mock()
+    step_snmp = {"method": "PATCH", "endpoint": "snmp", "payload": {"enabled": "yes"}}
+    await api_bulk._execute_single_step(ctx["client"], step_snmp)
+    ctx["client"].post.assert_awaited_once_with("snmp/set", {"enabled": "yes"})
+
+    # Test _execute_single_step: idempotencia en system/logging/action ante 'already exists'
+    from src.mikrotik.client import MikrotikApiError
+    ctx["client"].put.side_effect = MikrotikApiError(400, "failure: action already exists with such a name")
+    ctx["client"].get.return_value = [{"name": "rosgridsyslog", ".id": "*A"}]
+    ctx["client"].patch.reset_mock()
+    step_syslog_act = {
+        "method": "PUT",
+        "endpoint": "system/logging/action",
+        "payload": {"name": "rosgridsyslog", "remote": "10.0.0.99"},
+    }
+    await api_bulk._execute_single_step(ctx["client"], step_syslog_act)
+    ctx["client"].patch.assert_awaited_once_with("system/logging/action/*A", {"name": "rosgridsyslog", "remote": "10.0.0.99"})
+
+    # Test _execute_single_step: tolerancia ante 'duplicate address' en servidores NTP
+    ctx["client"].put.side_effect = MikrotikApiError(400, "failure: duplicate address")
+    step_ntp = {"method": "PUT", "endpoint": "system/ntp/client/servers", "payload": {"address": "1.1.1.1"}}
+    res_ntp_dup = await api_bulk._execute_single_step(ctx["client"], step_ntp)
+    assert res_ntp_dup == []
+    ctx["client"].put.side_effect = None
+
 
 # ============================================================================
 # AUDIT CONSOLE UNIT TESTS

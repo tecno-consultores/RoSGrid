@@ -26,7 +26,7 @@ export interface PredefinedTemplate {
 
 const NTP_SERVERS_ENDPOINT = 'system/ntp/client/servers';
 const SYSTEM_LOGGING_ENDPOINT = 'system/logging';
-const ROSGRID_SYSLOG_ACTION = 'rosgrid-syslog';
+const ROSGRID_SYSLOG_ACTION = 'rosgridsyslog';
 
 export const PREDEFINED_TEMPLATES: PredefinedTemplate[] = [
   {
@@ -151,8 +151,8 @@ export const PREDEFINED_TEMPLATES: PredefinedTemplate[] = [
     ],
     rest_steps_template: [
       {
-        method: 'PATCH',
-        endpoint: 'snmp',
+        method: 'POST',
+        endpoint: 'snmp/set',
         payload: { enabled: 'yes' },
         cli_command: '/snmp set enabled=yes',
       },
@@ -194,12 +194,11 @@ export const PREDEFINED_TEMPLATES: PredefinedTemplate[] = [
           target: 'remote',
           remote: '{{ rosgrid_server_ip }}',
           'remote-port': '{{ rosgrid_syslog_port }}',
-          'bsd-syslog': 'yes',
-          facility: 'daemon',
-          'sys-ident': 'yes',
+          'remote-log-format': 'syslog',
+          'syslog-facility': 'daemon',
         },
         cli_command:
-          '/system logging action add name="rosgrid-syslog" target=remote remote={{ rosgrid_server_ip }} remote-port={{ rosgrid_syslog_port }} bsd-syslog=yes facility=daemon sys-ident=yes',
+          '/system logging action add name="rosgridsyslog" target=remote remote={{ rosgrid_server_ip }} remote-port={{ rosgrid_syslog_port }} remote-log-format=syslog syslog-facility=daemon',
       },
       {
         method: 'PUT',
@@ -209,7 +208,7 @@ export const PREDEFINED_TEMPLATES: PredefinedTemplate[] = [
           action: ROSGRID_SYSLOG_ACTION,
         },
         cli_command:
-          '/system logging add topics=interface,warning,critical action="rosgrid-syslog"',
+          '/system logging add topics=interface,warning,critical action="rosgridsyslog"',
       },
       {
         method: 'PUT',
@@ -218,7 +217,7 @@ export const PREDEFINED_TEMPLATES: PredefinedTemplate[] = [
           topics: 'route,bgp,warning',
           action: ROSGRID_SYSLOG_ACTION,
         },
-        cli_command: '/system logging add topics=route,bgp,warning action="rosgrid-syslog"',
+        cli_command: '/system logging add topics=route,bgp,warning action="rosgridsyslog"',
       },
       {
         method: 'PUT',
@@ -227,7 +226,7 @@ export const PREDEFINED_TEMPLATES: PredefinedTemplate[] = [
           topics: 'route,ospf,warning',
           action: ROSGRID_SYSLOG_ACTION,
         },
-        cli_command: '/system logging add topics=route,ospf,warning action="rosgrid-syslog"',
+        cli_command: '/system logging add topics=route,ospf,warning action="rosgridsyslog"',
       },
       {
         method: 'PUT',
@@ -236,7 +235,7 @@ export const PREDEFINED_TEMPLATES: PredefinedTemplate[] = [
           topics: 'system,error,critical',
           action: ROSGRID_SYSLOG_ACTION,
         },
-        cli_command: '/system logging add topics=system,error,critical action="rosgrid-syslog"',
+        cli_command: '/system logging add topics=system,error,critical action="rosgridsyslog"',
       },
       {
         method: 'PUT',
@@ -245,7 +244,7 @@ export const PREDEFINED_TEMPLATES: PredefinedTemplate[] = [
           topics: 'dhcp,critical',
           action: ROSGRID_SYSLOG_ACTION,
         },
-        cli_command: '/system logging add topics=dhcp,critical action="rosgrid-syslog"',
+        cli_command: '/system logging add topics=dhcp,critical action="rosgridsyslog"',
       },
       {
         method: 'PUT',
@@ -254,7 +253,7 @@ export const PREDEFINED_TEMPLATES: PredefinedTemplate[] = [
           topics: 'firewall,warning',
           action: ROSGRID_SYSLOG_ACTION,
         },
-        cli_command: '/system logging add topics=firewall,warning action="rosgrid-syslog"',
+        cli_command: '/system logging add topics=firewall,warning action="rosgridsyslog"',
       },
     ],
   },

@@ -466,6 +466,11 @@
   - Mecanismo de caché inteligente en KeyDB (`mcp:docs:mikrotik:index` con TTL 24h y `mcp:docs:mikrotik:page:{hash}` con TTL 7d) para cero latencia (< 5ms) y resiliencia offline.
   - Expansión de herramientas MCP a 22 tools: `rosgrid_search_mikrotik_docs` (búsqueda en índice oficial) y `rosgrid_get_mikrotik_doc_topic` (obtención de Markdown limpio) para erradicación de alucinaciones sintácticas v6 vs v7.
   - Actualización de manual `docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md` y Skill oficial `.agents/skills/rosgrid-noc-operator/SKILL.md` (nuevo SOP-8 y catálogo ampliado a 22 tools).
+- [x] **23.15** **Sintaxis Canónica RouterOS v7 e Idempotencia en Acciones Masivas (`SNMP_V2C_MONITOREO_NOC` y `SYSLOG_CENTRALIZADO_ROSGRID`):**
+  - Corrección de endpoint singular de SNMP en RouterOS v7 REST hacia `POST snmp/set` con payload `{"enabled": "yes"}`.
+  - Corrección de acción en `/system/logging/action` con nombre alfanumérico estricto `rosgridsyslog` (restringido por RouterOS v7 a letras y números sin guiones) y parámetros oficiales `remote-log-format: syslog` y `syslog-facility: daemon`.
+  - Idempotencia en despacho de pasos (`_execute_single_step`): conmutación a `PATCH` ante acciones existentes, tolerancia a direcciones duplicadas en NTP y resolución dinámica de comunidad SNMP default.
+  - Sincronización en base de datos PostgreSQL (`config_templates`), pruebas unitarias al 100% en backend (`test_operations_endpoints_full.unit.py`) y frontend (`ConfigTemplateEditorModal.unit.ts`), y nuevos escenarios BDD en Karate Labs: Escenarios 70 y 71 en API y Escenario 27 en UI (`docs/examples/`).
 
 ---
 

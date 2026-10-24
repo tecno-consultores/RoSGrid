@@ -283,8 +283,8 @@ _DEFAULT_STARTER_TEMPLATES = [
         ],
         "rest_steps_template": [
             {
-                "method": "PATCH",
-                "endpoint": "snmp",
+                "method": "POST",
+                "endpoint": "snmp/set",
                 "payload": {"enabled": "yes"},
                 "cli_command": "/snmp set enabled=yes",
             },
@@ -306,15 +306,15 @@ _DEFAULT_STARTER_TEMPLATES = [
             "Configura el reenvío de logs críticos y de seguridad vía Syslog remoto hacia el receptor centralizado de RoSGrid."
         ),
         "ros_command_template": (
-            '/system logging action remove [find name="rosgrid-syslog"]\n'
-            '/system logging action add name="rosgrid-syslog" target=remote remote={{ rosgrid_server_ip }} remote-port={{ rosgrid_syslog_port }} bsd-syslog=yes facility=daemon sys-ident=yes\n'
-            '/system logging remove [find action="rosgrid-syslog"]\n'
-            '/system logging add topics=interface,warning,critical action="rosgrid-syslog"\n'
-            '/system logging add topics=route,bgp,warning action="rosgrid-syslog"\n'
-            '/system logging add topics=route,ospf,warning action="rosgrid-syslog"\n'
-            '/system logging add topics=system,error,critical action="rosgrid-syslog"\n'
-            '/system logging add topics=dhcp,critical action="rosgrid-syslog"\n'
-            '/system logging add topics=firewall,warning action="rosgrid-syslog"'
+            '/system logging action remove [find name="rosgridsyslog"]\n'
+            '/system logging action add name="rosgridsyslog" target=remote remote={{ rosgrid_server_ip }} remote-port={{ rosgrid_syslog_port }} remote-log-format=syslog syslog-facility=daemon\n'
+            '/system logging remove [find action="rosgridsyslog"]\n'
+            '/system logging add topics=interface,warning,critical action="rosgridsyslog"\n'
+            '/system logging add topics=route,bgp,warning action="rosgridsyslog"\n'
+            '/system logging add topics=route,ospf,warning action="rosgridsyslog"\n'
+            '/system logging add topics=system,error,critical action="rosgridsyslog"\n'
+            '/system logging add topics=dhcp,critical action="rosgridsyslog"\n'
+            '/system logging add topics=firewall,warning action="rosgridsyslog"'
         ),
         "variables_schema": [
             {
@@ -335,55 +335,54 @@ _DEFAULT_STARTER_TEMPLATES = [
                 "method": "PUT",
                 "endpoint": "system/logging/action",
                 "payload": {
-                    "name": "rosgrid-syslog",
+                    "name": "rosgridsyslog",
                     "target": "remote",
                     "remote": "{{ rosgrid_server_ip }}",
                     "remote-port": "{{ rosgrid_syslog_port }}",
-                    "bsd-syslog": "yes",
-                    "facility": "daemon",
-                    "sys-ident": "yes",
+                    "remote-log-format": "syslog",
+                    "syslog-facility": "daemon",
                 },
                 "cli_command": (
-                    '/system logging action add name="rosgrid-syslog" target=remote '
+                    '/system logging action add name="rosgridsyslog" target=remote '
                     "remote={{ rosgrid_server_ip }} remote-port={{ rosgrid_syslog_port }} "
-                    "bsd-syslog=yes facility=daemon sys-ident=yes"
+                    'remote-log-format=syslog syslog-facility=daemon'
                 ),
             },
             {
                 "method": "PUT",
                 "endpoint": "system/logging",
-                "payload": {"topics": "interface,warning,critical", "action": "rosgrid-syslog"},
-                "cli_command": '/system logging add topics=interface,warning,critical action="rosgrid-syslog"',
+                "payload": {"topics": "interface,warning,critical", "action": "rosgridsyslog"},
+                "cli_command": '/system logging add topics=interface,warning,critical action="rosgridsyslog"',
             },
             {
                 "method": "PUT",
                 "endpoint": "system/logging",
-                "payload": {"topics": "route,bgp,warning", "action": "rosgrid-syslog"},
-                "cli_command": '/system logging add topics=route,bgp,warning action="rosgrid-syslog"',
+                "payload": {"topics": "route,bgp,warning", "action": "rosgridsyslog"},
+                "cli_command": '/system logging add topics=route,bgp,warning action="rosgridsyslog"',
             },
             {
                 "method": "PUT",
                 "endpoint": "system/logging",
-                "payload": {"topics": "route,ospf,warning", "action": "rosgrid-syslog"},
-                "cli_command": '/system logging add topics=route,ospf,warning action="rosgrid-syslog"',
+                "payload": {"topics": "route,ospf,warning", "action": "rosgridsyslog"},
+                "cli_command": '/system logging add topics=route,ospf,warning action="rosgridsyslog"',
             },
             {
                 "method": "PUT",
                 "endpoint": "system/logging",
-                "payload": {"topics": "system,error,critical", "action": "rosgrid-syslog"},
-                "cli_command": '/system logging add topics=system,error,critical action="rosgrid-syslog"',
+                "payload": {"topics": "system,error,critical", "action": "rosgridsyslog"},
+                "cli_command": '/system logging add topics=system,error,critical action="rosgridsyslog"',
             },
             {
                 "method": "PUT",
                 "endpoint": "system/logging",
-                "payload": {"topics": "dhcp,critical", "action": "rosgrid-syslog"},
-                "cli_command": '/system logging add topics=dhcp,critical action="rosgrid-syslog"',
+                "payload": {"topics": "dhcp,critical", "action": "rosgridsyslog"},
+                "cli_command": '/system logging add topics=dhcp,critical action="rosgridsyslog"',
             },
             {
                 "method": "PUT",
                 "endpoint": "system/logging",
-                "payload": {"topics": "firewall,warning", "action": "rosgrid-syslog"},
-                "cli_command": '/system logging add topics=firewall,warning action="rosgrid-syslog"',
+                "payload": {"topics": "firewall,warning", "action": "rosgridsyslog"},
+                "cli_command": '/system logging add topics=firewall,warning action="rosgridsyslog"',
             },
         ],
         "requires_safemode": True,
@@ -717,24 +716,64 @@ async def preview_template(
 
 
 async def _execute_single_step(client: MikrotikRestClient, step: dict[str, Any]) -> Any:
-    """Ejecuta un paso individual REST tolerando endpoints singulares de RouterOS v7."""
+    """Ejecuta un paso individual REST tolerando endpoints singulares e idempotencia en RouterOS v7."""
     method = step.get("method", "PATCH").upper()
     endpoint = step.get("endpoint", "").strip("/")
     payload = step.get("payload", {})
 
+    # Auto-redirección de endpoints singulares que no admiten PATCH en RouterOS v7
+    if endpoint == "snmp" and method in ("PATCH", "POST"):
+        return await client.post("snmp/set", payload)
+
     if method == "PUT":
-        return await client.put(endpoint, payload)
+        try:
+            return await client.put(endpoint, payload)
+        except MikrotikApiError as err:
+            err_msg = str(err).lower()
+            # Idempotencia para /system/logging/action si ya existe una acción con ese nombre
+            if "already exists" in err_msg and endpoint == "system/logging/action":
+                act_name = payload.get("name")
+                if act_name:
+                    actions = await client.get("system/logging/action")
+                    if isinstance(actions, list):
+                        match_act = next((a for a in actions if a.get("name") == act_name), None)
+                        if match_act and ".id" in match_act:
+                            return await client.patch(f"system/logging/action/{match_act['.id']}", payload)
+            # Idempotencia para /system/ntp/client/servers si ya existe la dirección registrada
+            if "duplicate address" in err_msg and endpoint == "system/ntp/client/servers":
+                logger.info("Servidor NTP ya registrado en router, ignorando duplicado: %s", payload.get("address"))
+                return []
+            raise
     elif method == "POST":
         return await client.post(endpoint, payload)
     elif method == "DELETE":
         return await client.delete(endpoint)
     elif method == "PATCH":
+        # Resolución dinámica de la comunidad default si *0 no existe o devuelve 404
+        if endpoint.startswith("snmp/community/"):
+            try:
+                return await client.patch(endpoint, payload)
+            except MikrotikApiError as err:
+                if "not found" in str(err).lower() or "404" in str(err) or "invalid" in str(err).lower():
+                    comms = await client.get("snmp/community")
+                    if isinstance(comms, list) and comms:
+                        def_c = next((c for c in comms if c.get("default") == "true"), comms[0])
+                        if ".id" in def_c:
+                            return await client.patch(f"snmp/community/{def_c['.id']}", payload)
+                raise
+
         try:
             return await client.patch(endpoint, payload)
         except MikrotikApiError as err:
-            # Fallback para menús singulares de RouterOS v7 (ej. system/ntp/client, ip/dns)
+            err_str = str(err).lower()
+            # Fallback para menús singulares de RouterOS v7 (ej. system/ntp/client, ip/dns, snmp)
             # donde RouterOS espera POST <endpoint>/set en lugar de PATCH
-            if "missing or invalid resource identifier" in str(err).lower():
+            if (
+                "missing or invalid resource identifier" in err_str
+                or "500" in err_str
+                or "internal server error" in err_str
+                or endpoint in ("snmp", "system/ntp/client", "ip/dns")
+            ):
                 return await client.post(f"{endpoint}/set", payload)
             raise
     elif method == "GET":

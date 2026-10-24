@@ -1212,6 +1212,7 @@ graph TD
 | **Auto-Pinning TOFU Continuo y Autodescubrimiento Desatendido:** Fijación automática de huella TLS SHA-256 al detectar router running en monitor de salud o en consola WebFig, guardado de metadatos de hardware y localización `PENDING_TOFU` | `test_workers_full.unit.py`<br>`test_webfig_layer1_endpoints.unit.py` (26/26 pass al 100%) | `routerInventoryView.unit.ts` (4/4 pass al 100%: formateo de estados SSL TOFU) | **Escenario 20b:** Validación contractual de auto-pinning TOFU y sincronización sin sesión (401). | **Escenario 3b:** Verificación de columna SSL / TOFU en la grilla de inventario. | ✅ **Verificado** |
 | **Enrutamiento Nginx /health, Alias /api/v1/health y Diagnóstico Robusto:** Corrección de fallback SPA en reverse proxy, validación Content-Type: application/json, mensajes diagnósticos claros en español y soporte de timeout | `test_health_cache.unit.py` (3/3 pass al 100%, incluyendo `test_api_v1_health_endpoint`) | `useApiHeartbeatStore.unit.ts` (10/10 pass al 100%)<br>`RgApiHealthBadge.unit.ts` (5/5 pass al 100%) | **Escenario 1:** Healthcheck activo `/health`.<br>**Escenario 1b:** Healthcheck activo alias `/api/v1/health`.<br>**Escenario 69:** Caché y `force=true`. | **Escenario 25:** Indicador `#api-health-badge`, apertura de popover, interacción con botón de reintento `.btn-ping-action` y latencia en vivo. | ✅ **Verificado** |
 | **Operaciones Masivas — Lista con Scroll, Radio Buttons y Parámetros Dinámicos:** Rediseño ergonómico de selección de plantillas con botón radio, contenedor con longitud visual fija (220px) con scroll y panel dinámico inferior de campos variables | N/A (Frontend UX) | `operationsViews.unit.ts` (11/11 pass al 100%) | N/A | **Escenario 26:** Asistente Paso 2 con lista de plantillas, botones radio y panel dinámico de parámetros. | ✅ **Verificado** |
+| **Sintaxis Canónica RouterOS v7 e Idempotencia en Plantillas Masivas (SNMP y Syslog):** Corrección oficial de `POST snmp/set`, nombre alfanumérico estricto `rosgridsyslog`, parámetros `remote-log-format: syslog` y `syslog-facility: daemon`, e idempotencia en despacho | `test_operations_endpoints_full.unit.py` (8/8 pass al 100%: auto-redirección snmp/set, idempotencia syslog y tolerancia duplicate NTP) | `ConfigTemplateEditorModal.unit.ts` (10/10 pass al 100%: esquemas canónicos de RouterOS v7) | **Escenario 70:** Consulta de catálogo de plantillas predefinidas sin autenticación (401).<br>**Escenario 71:** Consulta de plantillas del tenant sin autenticación (401). | **Escenario 27:** Operaciones Masivas — Verificación de Plantillas Canónicas RouterOS v7 (SNMP y Syslog Centralizado con variables dinámicas). | ✅ **Verificado** |
 | **Total Global Karate Labs Actualizado:** | N/A | N/A | **71 de 71 escenarios aprobados (100%)** | **27 de 27 escenarios aprobados (100%)** | ✅ **Verificado** |
 
 ---
@@ -1251,6 +1252,39 @@ graph TD
 ### B. Cobertura y Certificación 11X
 1. **Frontend Unitario (`operationsViews.unit.ts`):** 11 pruebas aprobadas al 100% en Docker efímero, certificando el rol de radiogroup, los inputs radio, la conmutación de selección y la reactividad de los campos en el panel de parámetros.
 2. **Karate Labs UI BDD (`ui_business_flow.feature`):** Escenario 26 incorporado y sincronizado en `docs/examples/vue3/test/ui_business_flow.feature`.
+
+---
+
+## 36. Corrección de Sintaxis Canónica RouterOS v7 e Idempotencia en Plantillas Masivas (SNMP y Syslog)
+
+### A. Diagnóstico de Causa Raíz contra Documentación Oficial MikroTik
+- **Fallo Operativo:** Al ejecutar las plantillas predefinidas `SNMP_V2C_MONITOREO_NOC` y `SYSLOG_CENTRALIZADO_ROSGRID` sobre routers MikroTik físicos o virtuales (CHR) en `/bulk-ops`, la operación abortaba con fallos REST HTTP 500 y HTTP 400.
+- **Investigación Documental:** Se consultó la documentación oficial de MikroTik integrada en el servidor MCP (`manual.mikrotik.com/docs/cli-reference/snmp.md`, `.../system/logging/action.md`):
+  1. **SNMP (`/snmp`):** Es un menú de configuración singular en RouterOS v7. La API REST no admite el verbo `PATCH` directo contra la raíz `/snmp` (retorna HTTP 500 `Internal Server Error`). El estándar oficial de RouterOS v7 es `POST /snmp/set` con payload `{enabled: "yes"}`.
+  2. **Syslog Action Name (`/system/logging/action`):** El parámetro `name` exige estrictamente solo letras y dígitos (`letters and digits only`). El nombre anterior `rosgrid-syslog` contenía un guion `-` que provocaba `HTTP 400 failure: action name can contain only letters and numbers`. Se renombró canónicamente a `rosgridsyslog`.
+  3. **Parámetros Desfasados de Syslog:** RouterOS v7 descartó los parámetros v6 `bsd-syslog: yes`, `facility: daemon` y `sys-ident: yes` (generando `HTTP 400 unknown parameter bsd-syslog`). Los parámetros canónicos en v7 son `remote-log-format: syslog` y `syslog-facility: daemon`.
+  4. **Idempotencia en Ejecuciones Repetidas:** Al re-aplicar plantillas, `PUT` sobre una acción existente producía `failure: action already exists with such a name`.
+
+### B. Implementación de Resiliencia e Idempotencia
+1. **Backend (`fastapi/src/api/v1/bulk_and_updates.py`):**
+   - Actualización de `_DEFAULT_STARTER_TEMPLATES` con la sintaxis canónica de RouterOS v7 para SNMP y Syslog.
+   - En `_execute_single_step`: auto-redirección de llamadas `snmp` a `POST snmp/set`.
+   - Recuperación automática ante `already exists`: consulta acciones existentes por nombre y realiza `PATCH /system/logging/action/{id}` con los parámetros actualizados.
+   - Tolerancia transparente a `duplicate address` en servidores NTP.
+   - Resolución dinámica de la comunidad SNMP default cuando el identificador `*0` no existe.
+2. **Frontend (`vue3/src/components/operations/templatePresets.ts`):**
+   - `ROSGRID_SYSLOG_ACTION = 'rosgridsyslog'`.
+   - `SNMP_V2C_MONITOREO_NOC` con `endpoint: 'snmp/set'`, `method: 'POST'`.
+   - `SYSLOG_CENTRALIZADO_ROSGRID` con `remote-log-format: 'syslog'`, `syslog-facility: 'daemon'`.
+3. **Persistencia en Base de Datos PostgreSQL:** Sincronización de registros en la tabla `config_templates` para el tenant activo.
+
+### C. Cobertura de Pruebas Multi-Capa 11X
+1. **Backend Unitario:** `fastapi/tests/api/test_operations_endpoints_full.unit.py` (8 pruebas al 100%, incluyendo validación de auto-redirección `snmp/set`, idempotencia `rosgridsyslog` y tolerancia duplicate en NTP).
+2. **Frontend Unitario:** `vue3/src/components/operations/ConfigTemplateEditorModal.unit.ts` (10 pruebas Vitest al 100%, validando esquemas canónicos de RouterOS v7).
+3. **Karate Labs API BDD:** Escenarios 70 y 71 agregados en `fastapi/test/api_test.feature` y replicados en `docs/examples/fastapi/test/api_test.feature`.
+4. **Karate Labs UI BDD:** Escenario 27 agregado en `vue3/test/ui_business_flow.feature` y replicado en `docs/examples/vue3/test/ui_business_flow.feature`.
+5. **Verificación en Vivo con Navegador Real:** Ejecución exitosa de ambas plantillas sobre routers `r1`, `r2` y `r3` con 100% de éxito (`SUCCESS`).
+
 
 
 
