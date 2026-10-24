@@ -10,6 +10,13 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Fixed
 
+- **Auditoría Integral y Corrección de Rutas en Scripts Bash y Barrera Pre-commit (`scripts/`, `lefthook.yml`):**
+  - **Corrección de Modo Dual en `scripts/instalar-rosgrid.sh`:** Incorporada la resolución dinámica `REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"` con cambio automático de directorio si existen los archivos `.env.example` y `docker-compose.prod.yml`. Esto erradica el falso positivo que forzaba el modo de instalación remota (`/opt/rosgrid` con `sudo`) si el script era invocado desde el subdirectorio `scripts/` o rutas relativas.
+  - **Detección Flexible de Skill de Agentes IA:** Enriquecida la detección de la Skill `rosgrid-noc-operator` para verificar tanto la ruta local del repositorio (`.agents/skills/rosgrid-noc-operator`) como la ruta de despliegue (`skills/rosgrid-noc-operator`).
+  - **Sincronización de Contratos en `scripts/probar-prod-local.sh`:** Actualizado el conteo y validación de contratos Front-Back de 24 a **26 contratos** (`26/26 contratos validados`) para reflejar los nuevos contratos 25 (reinicio de energía USB PoE RouterBOARD) y 26 (exportador Prometheus de métricas de flota).
+  - **Estandarización de Licencias y Banderas POSIX en DevOps:** Actualizadas las cabeceras de licencia a `SPDX-License-Identifier: GPL-3.0-only` y endurecidas las banderas de ejecución a `set -euo pipefail` en `scripts/auditar-infra.sh`, `scripts/build.sh` e `scripts/instalar-hooks.sh`.
+  - **Activación de Barrera Lefthook para Scripts de Bash:** Actualizado el hook `bash-lint` en `lefthook.yml` con el glob `{scripts,fastapi/scripts,.agents/scripts}/**/*.sh` ejecutando `koalaman/shellcheck:stable` en contenedor Docker efímero, certificando 0 errores y 0 advertencias en el 100% de los scripts del proyecto.
+
 - **Robustecimiento del Script de Limpieza, Purga de Residuos `.venv` y Blindaje Global de `.gitignore` y `.dockerignore` (`scripts/limpieza.sh`, `.gitignore`, `fastapi/.dockerignore`, `vue3/.dockerignore`, `docs/examples/fastapi/limpieza.sh`):**
   - **Purga de Entornos Virtuales y Permisos Root:** Incorporada la eliminación forzada de `.venv/` y `venv/` (tanto en `fastapi/` como en la raíz) con contenedor Docker Alpine de rescate en caso de archivos creados por root durante montajes de volumen.
   - **Doble Capa de Eliminación de `__pycache__`:** Integrado comando `find` en contenedor Docker para erradicar directorios de bytecode `.pyc` pertenecientes a `root`, impidiendo la acumulación silenciosa de residuos tras la ejecución de pruebas en Docker efímero.

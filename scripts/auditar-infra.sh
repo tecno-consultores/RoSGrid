@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Licencia: MIT
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright (C) 2026 RoSGrid Contributors
 # Propósito: Auditoría efímera de Infraestructura como Código (IaC) usando Trivy.
 
 LC_ALL=C
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"

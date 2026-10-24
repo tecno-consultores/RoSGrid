@@ -6,6 +6,12 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# Si el script se ejecuta dentro de un clon local del repositorio, nos posicionamos en la raíz
+if [[ -f "${REPO_ROOT}/.env.example" && -f "${REPO_ROOT}/docker-compose.prod.yml" ]]; then
+    cd "${REPO_ROOT}"
+fi
 
 # 1. Validación estricta de permisos de usuario (Regla corporativa 11X)
 if [[ "$EUID" -eq 0 ]]; then
@@ -292,9 +298,16 @@ if [[ "$IS_REMOTE" == "true" ]]; then
     echo "  docker compose -f docker-compose.prod.yml down"
     echo "  docker compose -f docker-compose.prod.yml up -d"
 fi
+SKILL_DIR=""
 if [[ -d skills/rosgrid-noc-operator ]]; then
+    SKILL_DIR="$(pwd)/skills/rosgrid-noc-operator"
+elif [[ -d .agents/skills/rosgrid-noc-operator ]]; then
+    SKILL_DIR="$(pwd)/.agents/skills/rosgrid-noc-operator"
+fi
+
+if [[ -n "$SKILL_DIR" ]]; then
     echo -e "\n🤖 Skill Oficial para Agentes IA (rosgrid-noc-operator):"
-    echo "  Directorio local: $(pwd)/skills/rosgrid-noc-operator"
+    echo "  Directorio local: ${SKILL_DIR}"
     echo "  Consulta pública vía API: http://localhost:${PORT_DISPLAY}/api/v1/mcp/skill"
 fi
 echo "=============================================================================="

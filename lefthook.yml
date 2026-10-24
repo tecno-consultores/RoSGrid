@@ -29,9 +29,9 @@ pre-commit:
     # ECOSISTEMA BASH (DEVOPS)
     # --------------------------------------------------------------------------
     bash-lint:
-      glob: "bash-scripts/**/*.sh"
-      # shellCheck evalúa vulnerabilidades POSIX, shfmt verifica la estética (-d es modo dry-run/check)
-      run: docker compose -f bash-scripts/docker-compose.qa.yml run --rm test bash -c "shellcheck {staged_files} && shfmt -d {staged_files}"
+      glob: "{scripts,fastapi/scripts,.agents/scripts}/**/*.sh"
+      # shellCheck evalúa vulnerabilidades POSIX en contenedor Docker efímero
+      run: docker run --rm -v $(pwd):/workspace -w /workspace koalaman/shellcheck:stable {staged_files}
 
     # --------------------------------------------------------------------------
     # PROTECCIÓN DE SECRETOS (Global)

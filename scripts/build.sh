@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Made by Sinfallas <sinfallas@yahoo.com>
-# Licence: GPL-3.0-only
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright (C) 2026 RoSGrid Contributors
 # Propósito: Compilación Multi-Arquitectura (amd64, arm64) y Publicación a Docker Hub tras Validación Local
 
 LC_ALL=C

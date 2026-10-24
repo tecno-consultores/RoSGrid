@@ -487,6 +487,12 @@
   - Actualización exhaustiva de `.gitignore` y estandarización de `fastapi/.dockerignore` y `vue3/.dockerignore` con exclusiones recursivas globales (`**/venv/`, `**/.venv/`, `**/__pycache__/`, `**/.pytest_cache/`, `**/.mypy_cache/`, `**/.ruff_cache/`, `**/.uv/`, `**/.stryker-tmp/`, `**/graphify-out/`, etc.) para agilizar la transferencia del contexto de compilación en Docker.
 
 
+- [x] **23.19** **Auditoría Integral y Corrección de Rutas en Scripts Bash y Barrera Pre-commit (`scripts/`, `lefthook.yml`):**
+  - Corrección de modo dual en `scripts/instalar-rosgrid.sh`: resolución determinista de `REPO_ROOT` con `cd "${REPO_ROOT}"` al detectar `.env.example` y `docker-compose.prod.yml`, eliminando falsos positivos de modo remoto al invocar desde `scripts/`.
+  - Detección dual de la Skill `rosgrid-noc-operator` en modo local (`.agents/skills/rosgrid-noc-operator`) y remoto (`skills/rosgrid-noc-operator`).
+  - Sincronización de contratos Front-Back en `scripts/probar-prod-local.sh`: actualización de 24 a **26 contratos validados** (`26/26 contratos validados`) tras la incorporación de contratos 25 y 26 en Hito 23.
+  - Estandarización de licencias `SPDX-License-Identifier: GPL-3.0-only` y flags `set -euo pipefail` en `scripts/auditar-infra.sh`, `scripts/build.sh` e `scripts/instalar-hooks.sh`.
+  - Actualización del hook `bash-lint` en `lefthook.yml` con el glob `{scripts,fastapi/scripts,.agents/scripts}/**/*.sh` ejecutando `koalaman/shellcheck:stable` en contenedor Docker efímero con 0 errores y 0 advertencias.
 
 ---
 

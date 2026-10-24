@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Licencia: MIT
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright (C) 2026 RoSGrid Contributors
 # Propósito: Inicializar la barrera de entrada de QA Testing Blueprints en local.
 
 LC_ALL=C
-set -e
+set -euo pipefail
 
 echo "🛡️ Configurando Barrera de Entrada Corporativa (Lefthook)..."
 

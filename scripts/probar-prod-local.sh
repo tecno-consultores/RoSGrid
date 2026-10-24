@@ -46,7 +46,7 @@ Fases del Pipeline de Validación:
   [2/6] Despliegue en Aislamiento Sintético con docker-compose.prod.local.yml
   [3/6] Estabilización y Verificación de Healthchecks (PostgreSQL, KeyDB, FastAPI, Worker)
   [4/6] Pruebas Sintéticas HTTP, Hardening y Proxy Nginx (/health, /metrics, proxy, 404 docs, 401 unauth)
-  [5/6] Aprovisionamiento E2E, Token MCP, Invocación JSON-RPC y Suite Front-Back (24 Contratos)
+  [5/6] Aprovisionamiento E2E, Token MCP, Invocación JSON-RPC y Suite Front-Back (26 Contratos)
   [6/6] Inspección de Logs (API y Worker), Aislamiento de Red y Cierre Limpio
 
 Ejemplos:
@@ -289,10 +289,10 @@ else
     echo "$MCP_RESPONSE" | grep -q '"tools"'
     echo "✔ Endpoint MCP (/api/v1/mcp) respondió JSON-RPC 2.0 con catálogo de Tools semánticas correctamente."
 
-    # Ejecución de la Suite de 24 Contratos Front-Back (validar_comunicacion_front_back.py)
-    echo "Ejecutando suite automatizada de 24 contratos Front-Back (validar_comunicacion_front_back.py)..."
+    # Ejecución de la Suite de 26 Contratos Front-Back (validar_comunicacion_front_back.py)
+    echo "Ejecutando suite automatizada de 26 contratos Front-Back (validar_comunicacion_front_back.py)..."
     docker exec rosgrid_api_local python3 /app/scripts/validar_comunicacion_front_back.py
-    echo "✔ Suite de integración Front-Back superada al 100% (24/24 contratos validados)."
+    echo "✔ Suite de integración Front-Back superada al 100% (26/26 contratos validados)."
 
     # Inspección de logs de API y Worker en busca de excepciones no controladas
     echo "Comprobando ausencia de errores críticos y tracebacks en logs de API y Worker..."
