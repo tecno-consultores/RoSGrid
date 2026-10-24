@@ -2,6 +2,7 @@
 # Copyright (C) 2026 RoSGrid Contributors
 
 import logging
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -13,6 +14,16 @@ from src.schemas.topology_l2 import L2TopologyResponse, TopologyEdge, TopologyNo
 logger = logging.getLogger(__name__)
 
 TOPOLOGY_CACHE_TTL_SECONDS = 60
+
+
+def _normalize_interface_name(name: str) -> str:
+    """Normaliza nombres compuestos de RouterOS (ej. 'ether3,bridge-anillo' o 'bridge-anillo/ether3') al identificador físico base."""
+    if not name:
+        return "unknown"
+    m = re.search(r"(ether\d+|sfp\d+|qsfp\d+|wlan\d+)", name, re.IGNORECASE)
+    if m:
+        return m.group(1).lower()
+    return name.split(",")[0].split("/")[-1].strip().lower()
 
 
 def _build_canonical_edge_id(r1: uuid.UUID, if1: str, r2: uuid.UUID, if2: str) -> str:
@@ -41,7 +52,7 @@ def _match_neighbor_to_router(
 
 def _extract_poe_status(neighbor: dict[str, Any], poe_map: dict[str, Any]) -> tuple[bool, float | None]:
     """Determina si el puerto local entrega energía PoE al equipo vecino."""
-    local_if = neighbor.get("interface", "")
+    local_if = _normalize_interface_name(neighbor.get("interface", ""))
     poe_info = poe_map.get(local_if, {})
     is_delivering = poe_info.get("poe-out-status") == "delivering-power"
     power = float(poe_info.get("poe-out-power", 0.0)) if is_delivering else None
@@ -61,13 +72,18 @@ def _process_single_neighbor(
     if not target_router or target_router.id == src_id:
         return None
 
-    src_if = n.get("interface", "unknown")
-    tgt_if = n.get("interface-name", "unknown")
+    raw_src_if = n.get("interface", "unknown")
+    raw_tgt_if = n.get("interface-name", "unknown")
+    src_if = _normalize_interface_name(raw_src_if)
+    tgt_if = _normalize_interface_name(raw_tgt_if)
     edge_id = _build_canonical_edge_id(src_id, src_if, target_router.id, tgt_if)
 
     is_poe, watts = _extract_poe_status(n, router_poe)
     if is_poe:
         pse_nodes.add(src_id)
+
+    disc = str(n.get("discovered-by", "")).lower()
+    proto = "LLDP" if "lldp" in disc else n.get("discovery-protocol", "MNDP")
 
     edge = TopologyEdge(
         id=edge_id,
@@ -76,7 +92,7 @@ def _process_single_neighbor(
         target_router_id=target_router.id,
         target_interface=tgt_if,
         link_speed=n.get("link-speed"),
-        protocol=n.get("discovery-protocol", "MNDP"),
+        protocol=proto,
         is_poe_delivering=is_poe,
         poe_power_watts=watts,
     )
@@ -111,12 +127,26 @@ def process_topology_graph(
     routers_by_identity = {r.ros_identity: r for r in routers if r.ros_identity}
     routers_by_ip = {r.api_base_url.split("://")[-1].split(":")[0]: r for r in routers}
 
+    # Detectar si hay presencia de vecinos descubiertos por LLDP (estándar IEEE 802.1AB punto a punto)
+    has_lldp = any(
+        "lldp" in str(n.get("discovered-by", "")).lower()
+        for n_list in neighbors_by_router_id.values()
+        for n in n_list
+    )
+
     seen_edges: dict[str, TopologyEdge] = {}
     pse_nodes: set[uuid.UUID] = set()
 
     for src_id, neighbor_list in neighbors_by_router_id.items():
         router_poe = poe_data.get(src_id, {})
         for n in neighbor_list:
+            disc = str(n.get("discovered-by", "")).lower()
+
+            # Si la red cuenta con LLDP, priorizar estrictamente enlaces LLDP para evitar
+            # que los broadcasts MNDP reenviados por bridges generen mallas falsas de múltiples saltos.
+            if has_lldp and "lldp" not in disc:
+                continue
+
             res = _process_single_neighbor(src_id, n, router_poe, routers_by_identity, routers_by_ip, pse_nodes)
             if res and res[0] not in seen_edges:
                 seen_edges[res[0]] = res[1]

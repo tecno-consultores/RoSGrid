@@ -1374,3 +1374,23 @@ Se contrastó cada módulo del backend y frontend que interactúa con routers Mi
 4. **Karate Labs API BDD:** Escenario 76 incorporado en `fastapi/test/api_test.feature` y replicado en `docs/examples/fastapi/test/api_test.feature` (76 escenarios totales de API).
 5. **Karate Labs UI BDD:** Escenario 30 incorporado en `vue3/test/ui_business_flow.feature` y replicado en `docs/examples/vue3/test/ui_business_flow.feature` (30 escenarios totales de UI).
 
+---
+
+## 40. Topología Física Layer 2 — Detección Canónica de Anillo (LLDP vs MNDP) y Rediseño de Franja Táctica CVE
+
+### A. Diagnóstico y Causa Raíz
+1. **Topología L2 (Anillo Físico vs Malla Ficticia):** En una topología física en anillo donde los routers están interconectados punto a punto (`r1 ↔ r2 ↔ r3 ↔ r4 ↔ r5 ↔ r6 ↔ r1`), la interfaz mostraba una densa malla de 46 enlaces redundantes.
+   - *Causa Raíz:* `GET /rest/ip/neighbor` en RouterOS v7 consolida anuncios de MNDP y LLDP. El protocolo propietario MNDP opera mediante broadcasts UDP (`255.255.255.255:5678`), los cuales son inundados por los puentes de software (`bridge-anillo`) e interfaces de gestión (`ether1`), generando registros de vecinos a múltiples saltos. Asimismo, RouterOS reporta nombres compuestos de interfaz (`ether3,bridge-anillo` y `bridge-anillo/ether3`).
+2. **Solución Canónica LLDP (IEEE 802.1AB):**
+   - El estándar LLDP utiliza la dirección de destino multicast `01:80:C2:00:00:0E` (*Nearest Bridge*), la cual conforme a la norma IEEE 802.1D **jamás es reenviada a través de bridges**. Por tanto, un vecino LLDP representa de manera unívoca un enlace físico directo de un solo salto.
+   - En `fastapi/src/services/topology_l2.py`, al detectar la presencia de vecinos descubiertos por LLDP (`"lldp" in discovered-by`), el algoritmo descarta de forma estricta todos los falsos vecinos MNDP y normaliza mediante expresiones regulares las interfaces (`ether\d+|sfp\d+|qsfp\d+|wlan\d+`), resolviendo con exactitud matemática las 6 aristas físicas del anillo.
+3. **Franja Táctica CVE de 24 Horas:**
+   - Para erradicar la falta de visibilidad en el navegador, se rediseñó la visualización en `vue3/src/views/FleetCveMatrix.vue` transformándola de una barra pequeña en el encabezado en una franja táctica prominente de ancho completo (`<section class="cve-cache-strip cve-cache-bar">`) ubicada antes de las tarjetas KPI.
+   - Cuenta con badge táctico `.cve-cache-badge`, punto luminoso reactivo `.cache-dot`, estado dinámico de vigencia con tiempo restante, fecha de última sincronización y panel de política informativa (`TTL: 24 Horas (KeyDB)`).
+
+### B. Cobertura y Certificación Multi-Capa 11X
+1. **Backend Unitario:** `fastapi/tests/api/test_hito23_topology_and_fleet.unit.py` (17 pruebas aprobadas al 100% en Docker efímero, cobertura del 93% en `topology_l2.py`, incluyendo `test_process_topology_graph_lldp_ring_filters_mndp_mesh`).
+2. **Frontend Unitario:** `vue3/src/views/fleetCveMatrix.unit.ts` (9 pruebas Vitest aprobadas al 100% en `qa-vue3`).
+3. **Análisis de Tipos TypeScript:** `vue-tsc --noEmit` completado con 0 errores.
+4. **Despliegue Local Certificado:** Imágenes `sinfallas/rosgrid-backend:local-test` y `sinfallas/rosgrid-frontend:local-test` reconstruidas; contenedores `rosgrid_api_local` y `rosgrid_ui_local` activos y saludables en puertos 8000 y 8085.
+

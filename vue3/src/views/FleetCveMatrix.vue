@@ -207,19 +207,6 @@ onMounted(() => {
             class="cve-source-link"
           >NIST NVD MikroTik</a>
         </p>
-
-        <!-- Indicador Táctico de Caché 24h -->
-        <div class="cve-cache-bar" role="status" aria-live="polite">
-          <span
-            class="cve-cache-badge"
-            :class="{ 'cve-cache-badge--fresh': isCacheFresh, 'cve-cache-badge--stale': !isCacheFresh }"
-            data-testid="cve-cache-badge"
-          >
-            <span class="cache-dot" aria-hidden="true"></span>
-            <span class="cache-label">{{ cacheStatusText }}</span>
-            <span v-if="lastSyncFormatted" class="cache-date">• Última descarga: {{ lastSyncFormatted }}</span>
-          </span>
-        </div>
       </div>
 
       <div class="cve-actions">
@@ -249,6 +236,25 @@ onMounted(() => {
         </button>
       </div>
     </header>
+
+    <!-- Franja Táctica Prominente de Estado de Caché 24h y Gobernanza de Boletines -->
+    <section class="cve-cache-strip cve-cache-bar" role="status" aria-live="polite">
+      <div class="cache-strip-info">
+        <span
+          class="cve-cache-badge"
+          :class="{ 'cve-cache-badge--fresh': isCacheFresh, 'cve-cache-badge--stale': !isCacheFresh }"
+          data-testid="cve-cache-badge"
+        >
+          <span class="cache-dot" aria-hidden="true"></span>
+          <span class="cache-label">{{ cacheStatusText }}</span>
+          <span v-if="lastSyncFormatted" class="cache-date">• Última descarga: {{ lastSyncFormatted }}</span>
+        </span>
+      </div>
+      <div class="cache-strip-policy">
+        <span class="policy-tag">TTL: 24 Horas (KeyDB)</span>
+        <span class="policy-desc">Descarga remota en primer acceso diario • Reutilización anti-saturación</span>
+      </div>
+    </section>
 
     <!-- Banners de Estado -->
     <div v-if="successMessage" class="banner-success" role="alert">
@@ -480,19 +486,59 @@ onMounted(() => {
   color: var(--rg-cyan-300, #67e8f9);
 }
 
-.cve-cache-bar {
-  margin-top: 0.5rem;
+.cve-cache-strip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  padding: 0.75rem 1.15rem;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.cache-strip-info {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.cache-strip-policy {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--rg-text-muted, #94a3b8);
+}
+
+.policy-tag {
+  background: rgba(30, 41, 59, 0.95);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--rg-border-grid, #334155);
+  font-family: var(--rg-font-mono, monospace);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--rg-accent-cyan, #22d3ee);
+}
+
+.policy-desc {
+  font-size: 0.75rem;
+  color: var(--rg-text-secondary, #94a3b8);
 }
 
 .cve-cache-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  padding: 0.25rem 0.65rem;
+  padding: 0.3rem 0.75rem;
   border-radius: 9999px;
-  background-color: rgba(30, 41, 59, 0.7);
+  background-color: rgba(30, 41, 59, 0.9);
   border: 1px solid var(--rg-border-grid, #334155);
   color: var(--rg-text-secondary, #cbd5e1);
   letter-spacing: 0.01em;

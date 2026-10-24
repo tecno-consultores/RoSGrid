@@ -114,6 +114,64 @@ def test_process_topology_graph():
     assert pse_nodes[0].id == r1.id
 
 
+def test_process_topology_graph_lldp_ring_filters_mndp_mesh():
+    """Certifica que en presencia de vecinos LLDP, se descartan los falsos enlaces MNDP de gestión/puentes."""
+    r1 = Router(
+        id=uuid.uuid4(),
+        display_name="r1",
+        ros_identity="1",
+        is_reachable=True,
+        api_base_url="https://10.250.3.8",
+    )
+    r2 = Router(
+        id=uuid.uuid4(),
+        display_name="r2",
+        ros_identity="2",
+        is_reachable=True,
+        api_base_url="https://10.250.3.13",
+    )
+    r3 = Router(
+        id=uuid.uuid4(),
+        display_name="r3",
+        ros_identity="3",
+        is_reachable=True,
+        api_base_url="https://10.250.3.14",
+    )
+
+    neighbors = {
+        r1.id: [
+            # Vecinos de gestión en ether1 descubiertos por MNDP (malla falsa)
+            {"interface": "ether1", "identity": "2", "interface-name": "ether1", "discovered-by": "cdp,mndp"},
+            {"interface": "ether1", "identity": "3", "interface-name": "ether1", "discovered-by": "cdp,mndp"},
+            # Enlaces físicos directos de anillo con LLDP
+            {"interface": "ether3,bridge-anillo", "identity": "2", "interface-name": "bridge-anillo/ether2", "discovered-by": "cdp,lldp,mndp"},
+            {"interface": "ether2,bridge-anillo", "identity": "3", "interface-name": "bridge-anillo/ether3", "discovered-by": "cdp,lldp,mndp"},
+        ],
+        r2.id: [
+            {"interface": "ether1", "identity": "1", "interface-name": "ether1", "discovered-by": "cdp,mndp"},
+            {"interface": "ether1", "identity": "3", "interface-name": "ether1", "discovered-by": "cdp,mndp"},
+            {"interface": "ether2,bridge-anillo", "identity": "1", "interface-name": "bridge-anillo/ether3", "discovered-by": "cdp,lldp,mndp"},
+            {"interface": "ether3,bridge-anillo", "identity": "3", "interface-name": "bridge-anillo/ether2", "discovered-by": "cdp,lldp,mndp"},
+        ],
+        r3.id: [
+            {"interface": "ether1", "identity": "1", "interface-name": "ether1", "discovered-by": "cdp,mndp"},
+            {"interface": "ether1", "identity": "2", "interface-name": "ether1", "discovered-by": "cdp,mndp"},
+            {"interface": "ether3,bridge-anillo", "identity": "1", "interface-name": "bridge-anillo/ether2", "discovered-by": "cdp,lldp,mndp"},
+            {"interface": "ether2,bridge-anillo", "identity": "2", "interface-name": "bridge-anillo/ether3", "discovered-by": "cdp,lldp,mndp"},
+        ],
+    }
+
+    topo = process_topology_graph([r1, r2, r3], neighbors)
+    assert topo.total_nodes == 3
+    # Debe tener exactamente 3 aristas correspondientes al anillo físico r1-r2-r3-r1
+    assert topo.total_edges == 3
+    for e in topo.edges:
+        assert e.protocol == "LLDP"
+        # Las interfaces deben estar normalizadas al puerto físico
+        assert e.source_interface in ("ether2", "ether3")
+        assert e.target_interface in ("ether2", "ether3")
+
+
 def test_evaluate_safety_stop():
     # 0 fallos
     assert evaluate_safety_stop(0, 10, 1.0) is False
