@@ -10,6 +10,13 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Fixed
 
+- **Auditoría Integral de Consistencia Documental y Sincronización Arquitectónica (`docs/`, `docs/specs/`, `README.md`, `TESTING.md`, `ROADMAP.md`):**
+  - **Políticas de Grupo RouterOS v7:** Unificadas las directivas y comandos de configuración para `rosgrid-api-group` en `README.md`, `docs/INSTALL.md`, `docs/specs/08_MIKROTIK_REST_V7_CLIENT_TOFU_AND_SAFEMODE.md` y `docs/FAQ.md`, incorporando explícitamente los permisos `reboot,policy,sensitive` (además de `api,rest-api,read,write,test`), requeridos para reinicios y rotación de contraseñas de bóveda sobre `/user/set`.
+  - **Sincronización de Contratos Front-Back (26/26):** Actualizadas todas las referencias residuales de "24 contratos" a **26 contratos (26/26)** en `docs/INSTALL.md`, `docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md`, `docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md`, `docs/specs/31_PRODUCTION_BOOTSTRAP_LOCAL_TESTING_AND_DISTRIBUTED_OPS.md`, `docs/specs/35_FLEET_AUTOMATION_TOPOLOGY_L2_SYSLOG_AND_PROMETHEUS.md`, `TESTING.md` y `ROADMAP.md`.
+  - **Módulos del Smoke Test de Producción:** Actualizado el diagrama y tablas de `docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md` de 80 a **113 submódulos importados** en `test_production_boot_smoke.py`.
+  - **Diagrama de Arquitectura del Servidor MCP:** Sincronizado el diagrama Mermaid en `docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md` y `docs/specs/30_BACKEND_MCP_PROTECTED_ENDPOINT.md` reflejando las **22 herramientas semánticas** activas y el rol de mutación dual (tools 8 y 20 bajo Maker-Checker y Safe Mode).
+  - **Métricas de Karate Labs:** Sincronizado el conteo en `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md` certificando **75 escenarios BDD de API** y **29 escenarios BDD de UI**.
+
 - **Corrección de Sintaxis Canónica RouterOS v7 para Generación y Firma de Certificados SSL TOFU (`README.md`, `docs/INSTALL.md`, `docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md`):**
   - **Requisito de Autoridad Certificadora (CA) Emisora:** Corregido el procedimiento CLI en MikroTik RouterOS v7 incorporando la creación y autofirma previa de la Autoridad Certificadora local (`/certificate add name="rosgrid-ca" ... key-usage=key-cert-sign,crl-sign` y `/certificate sign "rosgrid-ca"`).
   - **Firma Asistida de Certificado de Servidor:** Se añadió el parámetro explícito `ca="rosgrid-ca"` en el comando de firma del certificado TLS de servidor (`/certificate sign "rosgrid-tofu-cert" ca="rosgrid-ca"`), resolviendo el error `failure: ca not found` producido cuando RouterOS intenta firmar un certificado de entidad final sin una CA especificada.

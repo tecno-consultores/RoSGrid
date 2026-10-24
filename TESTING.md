@@ -638,7 +638,7 @@ Certificación integral ejecutada bajo la **Regla Cero** garantizando cumplimien
   - Creación de Superadmin con `crear_admin.py` y confirmación `is_bootstrapped: true`.
   - Emisión de Token MCP con `generar_token_mcp.py` y validación de sesión Bearer en KeyDB.
   - Invocación real del endpoint MCP JSON-RPC 2.0 (`POST /api/v1/mcp` con `tools/list`).
-  - Ejecución obligatoria de la suite de 24 contratos Front-Back (`fastapi/scripts/validar_comunicacion_front_back.py`) dentro del contenedor con 100% de éxito.
+  - Ejecución obligatoria de la suite de 26 contratos Front-Back (`fastapi/scripts/validar_comunicacion_front_back.py`) dentro del contenedor con 100% de éxito.
 - **Fase 6 (Diagnóstico y Cierre Limpio):**
   - Inspección de logs en busca de tracebacks en `rosgrid_api_local` y `rosgrid_worker_local`.
   - Verificación de aislamiento de puertos internos (5432 y 6379 cerrados al host).
@@ -905,7 +905,7 @@ Certificación integral ejecutada de extremo a extremo bajo la **Regla Cero** (c
   2. Despliegue sintético aislado con `docker-compose.prod.local.yml`.
   3. Estabilización y healthchecks de PostgreSQL 17, KeyDB Multi-Hilo, FastAPI y Workers en estado `healthy`.
   4. Pruebas sintéticas HTTP: `/health` (HTTP 200), `/metrics` Prometheus, Swagger `/docs` y OpenAPI (HTTP 404 estricto) y fail-closed `/api/v1/auth/me` (HTTP 401 sin credenciales).
-  5. Aprovisionamiento E2E de Super Admin, generación de Token MCP, invocación JSON-RPC 2.0 y **24/24 contratos Front-Back validados al 100%** (`validar_comunicacion_front_back.py`).
+  5. Aprovisionamiento E2E de Super Admin, generación de Token MCP, invocación JSON-RPC 2.0 y **26/26 contratos Front-Back validados al 100%** (`validar_comunicacion_front_back.py`).
   6. Aislamiento de red interna (puertos 5432 y 6379 no expuestos al host), verificación de logs limpios y desmantelamiento seguro de volúmenes efímeros.
 
 ### E. Auditoría de Secretos (`./scripts/verificar-secretos.sh`)

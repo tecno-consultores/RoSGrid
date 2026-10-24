@@ -21,7 +21,7 @@ flowchart TD
     subgraph "Fase Previa: Certificación Automatizada"
         Unit["Unit Tests & Mutación (>=95%)"]
         Lint["Linters & Typecheck (Grado A)"]
-        Contract["Contratos UI-API (24/24)"]
+        Contract["Contratos UI-API (26/26)"]
         A11y["Axe-Core / WCAG 2.1 AA (0 errores)"]
         Unit --> Gate1{"Gate Automatizado"}
         Lint --> Gate1

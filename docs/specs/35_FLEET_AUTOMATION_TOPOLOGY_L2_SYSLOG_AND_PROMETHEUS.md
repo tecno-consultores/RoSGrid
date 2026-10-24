@@ -311,7 +311,7 @@ Concluida la fase de desarrollo, la suite completa fue sometida al protocolo de 
      * Healthchecks de PostgreSQL 17, KeyDB Multi-Hilo, FastAPI y Workers en estado `healthy`.
      * Pruebas sintéticas HTTP: `/health` (200), `/metrics` Prometheus, Swagger `/docs` (404 estricto) y fail-closed (401 sin token).
      * Aprovisionamiento de Super Admin, generación de Token MCP e invocación JSON-RPC 2.0.
-     * Suite de integración Front-Back: **24/24 contratos validados al 100%** (`validar_comunicacion_front_back.py`).
+     * Suite de integración Front-Back: **26/26 contratos validados al 100%** (`validar_comunicacion_front_back.py`).
      * Aislamiento estricto de puertos de base de datos (5432 y 6379 no expuestos al host).
 5. **Auditoría de Secretos (`./scripts/verificar-secretos.sh`):** 0 credenciales ni tokens filtrados en el árbol de trabajo.
 

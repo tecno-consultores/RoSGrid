@@ -146,8 +146,8 @@ Para comprobar que las imágenes construidas con `Dockerfile` funcionan correcta
      5. **Aprovisionamiento E2E, Token Bearer MCP, Invocación JSON-RPC 2.0 y Contratos UI-API:**
         - Ejecución de `crear_admin.py` y confirmación de transición a `is_bootstrapped: true`.
         - Emisión de token JWT Bearer con `generar_token_mcp.py --raw-token` y validación de sesión en KeyDB mediante llamada autenticada a `GET /api/v1/auth/me`.
-        - Invocación real del endpoint MCP (`POST /api/v1/mcp` con JSON-RPC 2.0 `tools/list`) certificando el protocolo de agentes IA, rate limiting en KeyDB y exposición de las 16 tools operativas.
-        - Ejecución obligatoria de la suite de 24 contratos Front-Back (`fastapi/scripts/validar_comunicacion_front_back.py`) dentro del contenedor `rosgrid_api_local` con 100% de éxito.
+        - Invocación real del endpoint MCP (`POST /api/v1/mcp` con JSON-RPC 2.0 `tools/list`) certificando el protocolo de agentes IA, rate limiting en KeyDB y exposición de las 22 tools operativas.
+        - Ejecución obligatoria de la suite de 26 contratos Front-Back (`fastapi/scripts/validar_comunicacion_front_back.py`) dentro del contenedor `rosgrid_api_local` con 100% de éxito.
      6. **Diagnóstico de Logs, Aislamiento de Red y Finalización:**
         - Inspección de logs en busca de `Traceback` y `CRITICAL` tanto en `rosgrid_api_local` como en `rosgrid_worker_local`.
         - Verificación de aislamiento estricto de puertos internos (PostgreSQL 5432 y KeyDB 6379 cerrados al host).

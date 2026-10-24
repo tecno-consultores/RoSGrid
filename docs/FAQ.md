@@ -33,7 +33,7 @@ A partir de **MikroTik RouterOS v7.13+**, MikroTik dividió los permisos de la A
 - **Solución en RouterOS CLI:**
 
   ```routeros
-  /user group add name=rosgrid-api-group policy=read,write,api,rest-api,test
+  /user group add name=rosgrid-api-group policy=api,rest-api,read,write,test,reboot,policy,sensitive
   /user set [find name=rosgrid_agent] group=rosgrid-api-group
   ```
 

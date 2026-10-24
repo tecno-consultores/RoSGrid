@@ -2,7 +2,7 @@
 
 > **Nota de Seguridad de Producción y Certificación QA:**  
 > En cumplimiento del estándar de endurecimiento de RoSGrid, la documentación interactiva Swagger UI (`/docs`), ReDoc (`/redoc`) y la especificación abierta OpenAPI (`/openapi.json`) están **deshabilitadas de forma estricta e inmutable en entornos productivos** (`ROSGRID_ENV=production`). Este documento constituye la especificación formal y exhaustiva de todas las interfaces REST y WebSockets del sistema.  
-> El 100% de los endpoints y contratos aquí descritos están certificados con la suite de pruebas BDD de caja negra de **Karate Labs** (`fastapi/test/api_test.feature`, 54 escenarios integrales).
+> El 100% de los endpoints y contratos aquí descritos están certificados con la suite de pruebas BDD de caja negra de **Karate Labs** (`fastapi/test/api_test.feature`, 75 escenarios BDD integrales).
 
 ---
 

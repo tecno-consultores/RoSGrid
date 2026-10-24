@@ -26,17 +26,17 @@ flowchart TB
 
     subgraph "Servidor MCP RoSGrid (FastAPI)"
         RateLimit --> Dispatcher[Dispatcher JSON-RPC 2.0]
-        Dispatcher --> ToolsList["tools/list (16 Tools Semánticas)"]
+        Dispatcher --> ToolsList["tools/list (22 Tools Semánticas)"]
         Dispatcher --> ToolExec["tools/call (Ejecutor Aislado)"]
         ToolExec --> AuditWORM[(Bitácora WORM: MCP_AI_TOOL_CALL)]
     end
 
     subgraph "Freno de Seguridad y Enlace a MikroTik"
-        ToolExec --> ReadTools[1 a 7 & 9 a 16: Herramientas de Diagnóstico, Consulta y Aislamiento Técnico]
-        ToolExec --> MutationTool[8: rosgrid_propose_network_change]
+        ToolExec --> ReadTools["1-7, 9-19 & 21-22: Diagnóstico, Topología L2, CVE, Syslog y Grounding"]
+        ToolExec --> MutationTools["8 & 20: Mutaciones Sensibles (Maker-Checker 202 y Safe Mode 60s)"]
         
         ReadTools -->|Pool TLS Keep-Alive| MikroTik[MikroTik RouterOS v7]
-        MutationTool -->|HTTP 202 Accepted| MakerChecker[Bandeja approval_requests: AWAITING_APPROVAL]
+        MutationTools -->|HTTP 202 Accepted| MakerChecker[Bandeja approval_requests: AWAITING_APPROVAL]
         MakerChecker -.->|Supervisión Humana Requerida| Supervisor[Supervisor Humano en WebFig]
         Supervisor -->|Aprobación Explícita| SafeMode[Ejecución con Safe Mode 60s]
         SafeMode --> MikroTik

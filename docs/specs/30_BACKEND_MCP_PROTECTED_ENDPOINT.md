@@ -89,7 +89,7 @@ class McpJsonRpcResponse(BaseModel):
 
 1. **`initialize`:** Devuelve `protocolVersion: "2025-03-26"`, `capabilities: {"tools": {"listChanged": False}}` y `serverInfo: {"name": "rosgrid-mcp-server", "version": "1.0.0"}`.
 2. **`ping` / `notifications/initialized`:** Devuelve `{}` confirmando estado activo de la sesión MCP.
-3. **`tools/list`:** Devuelve el arreglo de las **8 Tools semánticas de RoSGrid** con sus respectivos JSON Schemas de entrada (`inputSchema`).
+3. **`tools/list`:** Devuelve el arreglo del catálogo de herramientas semánticas de RoSGrid (inicialmente 8 tools en Hito 14, ampliado de forma modular a **22 tools semánticas** con soporte de Topología L2, CVEs, Syslog efímero y Grounding oficial RouterOS v7) con sus respectivos JSON Schemas de entrada (`inputSchema`).
 4. **`tools/call`:** Recibe `params: {"name": "<tool_name>", "arguments": {...}}`, valida permisos sobre el `router_id`, registra la acción en la bitácora WORM, ejecuta el servicio interno y devuelve:
 
    ~~~json

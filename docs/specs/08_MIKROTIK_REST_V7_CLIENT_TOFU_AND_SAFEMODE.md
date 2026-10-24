@@ -59,7 +59,7 @@ A partir de MikroTik RouterOS v7.13+, MikroTik introdujo una política de seguri
 - **Configuración requerida en RouterOS v7.13+:**
 
   ```routeros
-  /user group add name=rosgrid-api-group policy=read,write,api,rest-api,test
+  /user group add name=rosgrid-api-group policy=api,rest-api,read,write,test,reboot,policy,sensitive
   /user add name=rosgrid_agent group=rosgrid-api-group password="ClaveSegura"
   ```
 

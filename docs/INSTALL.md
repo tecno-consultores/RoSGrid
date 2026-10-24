@@ -208,7 +208,7 @@ Antes de registrar un router en el inventario de RoSGrid (individualmente o por 
 /ip service set www disabled=yes
 
 # 4. Crear grupo con política REST API (obligatorio en RouterOS v7.13+) y usuario dedicado
-/user group add name="rosgrid-api-group" policy=read,write,api,rest-api,test comment="Acceso REST para RoSGrid"
+/user group add name="rosgrid-api-group" policy=api,rest-api,read,write,test,reboot,policy,sensitive comment="Acceso REST para RoSGrid"
 /user add name="rosgrid_agent" password="CambiarPorClaveInicialFuerte2026!" group="rosgrid-api-group" comment="Managed by RoSGrid Vault"
 ```
 
@@ -242,5 +242,5 @@ Para profundizar en la configuración y operación de cada subsistema:
 - [05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md](./05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md) — Bitácora WORM, ADR de seguridad y grafos Mermaid.
 - [06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md](./06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md) — Especificación técnica de endpoints REST y WebSockets.
 - [07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md](./07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md) — Conexión de agentes autónomos IA (Hermes Agent / Claude).
-- [08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md](./08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md) — Pipeline de pruebas locales y suite de 24 contratos de integración.
+- [08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md](./08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md) — Pipeline de pruebas locales y suite de 26 contratos de integración.
 - [09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md](./09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md) — Plan maestro UAT 11X (28 casos E2E).
