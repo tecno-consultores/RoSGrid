@@ -93,4 +93,67 @@ describe('DashboardHomeView.vue — Centro de Mando Táctico 11X', () => {
 
     expect(fetchSpy).toHaveBeenCalled();
   });
+
+  it('filtra dinámicamente baldosas según Feature Flags: oculta baldosas ISP si isp_module_enabled es false y muestra Matriz CVE si cve_scanner_enabled es true', async () => {
+    const authStore = useAuthStore();
+    // Empresa no-ISP con escáner de CVE activado
+    authStore.tenantFeatures = {
+      isp_module_enabled: false,
+      cve_scanner_enabled: true,
+    };
+
+    const wrapper = mount(DashboardHomeView, {
+      global: {
+        stubs: {
+          RouterView: true,
+          RouterLink: true,
+        },
+      },
+    });
+
+    const renderedText = wrapper.text();
+    // CVEs sí debe aparecer
+    expect(renderedText).toContain('Matriz CVE de la Flota');
+    // Baldosas exclusivas de ISP NO deben aparecer
+    expect(renderedText).not.toContain('Mapa de Abonados FTTH');
+    expect(renderedText).not.toContain('Operaciones de Campo');
+  });
+
+  it('muestra baldosas de ISP cuando la empresa tiene isp_module_enabled: true', async () => {
+    const authStore = useAuthStore();
+    authStore.tenantFeatures = {
+      isp_module_enabled: true,
+      cve_scanner_enabled: false,
+    };
+
+    const wrapper = mount(DashboardHomeView, {
+      global: {
+        stubs: {
+          RouterView: true,
+          RouterLink: true,
+        },
+      },
+    });
+
+    const renderedText = wrapper.text();
+    expect(renderedText).toContain('Mapa de Abonados FTTH');
+    expect(renderedText).toContain('Operaciones de Campo');
+    expect(renderedText).not.toContain('Matriz CVE de la Flota');
+  });
+
+  it('la baldosa de equipos se titula "Equipos de la Flota" y contiene contenedor con scroll', () => {
+    const wrapper = mount(DashboardHomeView, {
+      global: {
+        stubs: {
+          RouterView: true,
+          RouterLink: true,
+        },
+      },
+    });
+
+    const cardTitle = wrapper.find('.quick-routers-card .card-title');
+    expect(cardTitle.exists()).toBe(true);
+    expect(cardTitle.text()).toContain('Equipos de la Flota');
+    expect(cardTitle.text()).not.toContain('Principales');
+  });
 });

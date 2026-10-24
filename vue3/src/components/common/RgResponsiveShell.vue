@@ -59,6 +59,24 @@
   const isReset2FAModalOpen = ref(false);
   const isMcpTokenModalOpen = ref(false);
 
+  // Estado para Ocultar / Mostrar la Barra Lateral Izquierda (Desktop/Tablet)
+  const isSidebarHidden = ref<boolean>(
+    typeof localStorage !== 'undefined'
+      ? localStorage.getItem('rosgrid_sidebar_hidden') === 'true'
+      : false,
+  );
+
+  function toggleSidebar(): void {
+    isSidebarHidden.value = !isSidebarHidden.value;
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('rosgrid_sidebar_hidden', String(isSidebarHidden.value));
+      } catch {
+        // Ignora excepciones de storage
+      }
+    }
+  }
+
   function toggleUserMenu(): void {
     isUserMenuOpen.value = !isUserMenuOpen.value;
   }
@@ -288,6 +306,20 @@
           <span class="brand-name">RoSGrid</span>
           <span class="brand-version">v1.0</span>
         </router-link>
+
+        <!-- Botón para Ocultar / Mostrar la Barra Lateral Izquierda -->
+        <button
+          type="button"
+          class="btn-sidebar-toggle"
+          id="btn-toggle-sidebar"
+          :title="isSidebarHidden ? 'Mostrar barra lateral' : 'Ocultar barra lateral'"
+          :aria-label="isSidebarHidden ? 'Mostrar barra lateral de navegación' : 'Ocultar barra lateral de navegación'"
+          :aria-expanded="!isSidebarHidden"
+          @click="toggleSidebar"
+        >
+          <span class="toggle-icon" aria-hidden="true">{{ isSidebarHidden ? '☰' : '◀' }}</span>
+        </button>
+
         <div v-if="authStore.tenantSlug" class="tenant-badge" :title="`Organización: ${authStore.tenantSlug}`">
           <strong>{{ authStore.tenantSlug }}</strong>
         </div>
@@ -486,7 +518,10 @@
       <!-- Riel Izquierdo Global (Desktop y Tablet) -->
       <nav
         class="rg-rail"
-        :class="{ 'rg-rail--open': themeStore.isMobileDrawerOpen }"
+        :class="{
+          'rg-rail--open': themeStore.isMobileDrawerOpen,
+          'rg-rail--collapsed': isSidebarHidden,
+        }"
         aria-label="Navegación principal"
       >
         <ul class="rail-list">
@@ -723,6 +758,37 @@
     background: var(--rg-status-info-bg);
     padding: 1px 4px;
     border-radius: 2px;
+  }
+
+  .btn-sidebar-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--rg-border-panel, rgba(56, 189, 248, 0.25));
+    border-radius: 6px;
+    color: var(--rg-accent-cyan, #00f0ff);
+    cursor: pointer;
+    font-size: 0.8125rem;
+    transition: all 0.15s ease;
+    margin: 0 4px;
+  }
+
+  .btn-sidebar-toggle:hover {
+    background: rgba(0, 240, 255, 0.15);
+    border-color: var(--rg-accent-cyan, #00f0ff);
+    transform: scale(1.05);
+  }
+
+  .btn-sidebar-toggle:focus-visible {
+    outline: 2px solid var(--rg-accent-cyan, #00f0ff);
+    outline-offset: 2px;
+  }
+
+  .toggle-icon {
+    line-height: 1;
   }
 
   .tenant-badge {
@@ -965,6 +1031,17 @@
     overflow-x: hidden;
     scrollbar-width: thin;
     scrollbar-color: rgba(148, 163, 184, 0.2) transparent;
+    transition: width 0.2s ease, opacity 0.15s ease, padding 0.2s ease;
+  }
+
+  .rg-rail--collapsed {
+    width: 0 !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    border-right: none !important;
+    overflow: hidden !important;
+    opacity: 0;
+    pointer-events: none;
   }
 
   .rg-rail::-webkit-scrollbar {

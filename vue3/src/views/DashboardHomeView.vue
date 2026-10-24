@@ -8,7 +8,7 @@
   import { useAuthStore } from '@/stores/useAuthStore';
   import { useNocEventsStore } from '@/stores/useNocEventsStore';
   import { useI18n } from '@/composables/useI18n';
-  import type { SystemRole } from '@/types';
+  import type { SystemRole, TenantFeatureFlags } from '@/types';
 
   const router = useRouter();
   const inventoryStore = useInventoryStore();
@@ -46,6 +46,7 @@
     badge?: number | string;
     badgeType?: 'warning' | 'info' | 'success' | 'critical';
     requiredRoles?: SystemRole[];
+    requiredFeature?: keyof TenantFeatureFlags;
   }
 
   const userRole = computed<SystemRole>(() => authStore.currentRole || 'AUDITOR');
@@ -73,6 +74,51 @@
       badgeType: 'critical',
     },
     {
+      id: 'cve-matrix',
+      title: t('dashboard.tools.cve_matrix_title'),
+      category: t('dashboard.tools.cve_matrix_cat'),
+      description: t('dashboard.tools.cve_matrix_desc'),
+      icon: '🛡️',
+      route: '/fleet/cve-matrix',
+      requiredFeature: 'cve_scanner_enabled',
+    },
+    {
+      id: 'subscribers-map',
+      title: t('dashboard.tools.subscribers_map_title'),
+      category: t('dashboard.tools.subscribers_map_cat'),
+      description: t('dashboard.tools.subscribers_map_desc'),
+      icon: '📦',
+      route: '/subscribers/map',
+      requiredFeature: 'isp_module_enabled',
+    },
+    {
+      id: 'field-ops',
+      title: t('dashboard.tools.field_ops_title'),
+      category: t('dashboard.tools.field_ops_cat'),
+      description: t('dashboard.tools.field_ops_desc'),
+      icon: '📱',
+      route: '/field-ops',
+      requiredFeature: 'isp_module_enabled',
+    },
+    {
+      id: 'topology-l2',
+      title: t('dashboard.tools.topology_l2_title'),
+      category: t('dashboard.tools.topology_l2_cat'),
+      description: t('dashboard.tools.topology_l2_desc'),
+      icon: '🕸️',
+      route: '/network/topology-l2',
+      requiredFeature: 'l2_topology_enabled',
+    },
+    {
+      id: 'syslog',
+      title: t('dashboard.tools.syslog_title'),
+      category: t('dashboard.tools.syslog_cat'),
+      description: t('dashboard.tools.syslog_desc'),
+      icon: '📡',
+      route: '/routers/syslog',
+      requiredFeature: 'syslog_collector_enabled',
+    },
+    {
       id: 'maker-checker',
       title: t('dashboard.tools.maker_checker_title'),
       category: t('dashboard.tools.maker_checker_cat'),
@@ -84,6 +130,7 @@
           ? t('dashboard.tools.maker_checker_pending_badge', { count: nocStore.pendingApprovalsCount })
           : undefined,
       badgeType: 'warning',
+      requiredFeature: 'enforce_maker_checker',
     },
     {
       id: 'backups',
@@ -92,6 +139,7 @@
       description: t('dashboard.tools.backups_desc'),
       icon: '📦',
       route: '/backups',
+      requiredFeature: 'nightly_backups_enabled',
     },
     {
       id: 'bulk-ops',
@@ -131,8 +179,16 @@
 
   const authorizedTools = computed(() => {
     return tools.value.filter((tool) => {
-      if (!tool.requiredRoles) return true;
-      return tool.requiredRoles.includes(userRole.value);
+      // 1. Filtrar por rol RBAC
+      if (tool.requiredRoles && !tool.requiredRoles.includes(userRole.value)) {
+        return false;
+      }
+      // 2. Filtrar por Feature Flags del Tenant (dinámico según empresa/ISP)
+      if (tool.requiredFeature) {
+        const flagVal = authStore.tenantFeatures?.[tool.requiredFeature];
+        if (!flagVal) return false;
+      }
+      return true;
     });
   });
 
@@ -361,7 +417,7 @@
         </div>
 
         <div v-else class="router-fast-list">
-          <div v-for="r in inventoryStore.routers.slice(0, 5)" :key="r.id" class="router-fast-item">
+          <div v-for="r in inventoryStore.routers" :key="r.id" class="router-fast-item">
             <div class="router-fast-info">
               <div class="router-name-line">
                 <span
@@ -911,7 +967,36 @@
     font-family: var(--rg-font-mono, monospace);
   }
 
-  .router-fast-list,
+  .router-fast-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 290px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 240, 255, 0.3) rgba(15, 23, 42, 0.5);
+  }
+
+  .router-fast-list::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .router-fast-list::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.5);
+    border-radius: 3px;
+  }
+
+  .router-fast-list::-webkit-scrollbar-thumb {
+    background: rgba(0, 240, 255, 0.25);
+    border-radius: 3px;
+  }
+
+  .router-fast-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 240, 255, 0.5);
+  }
+
   .events-fast-list {
     display: flex;
     flex-direction: column;

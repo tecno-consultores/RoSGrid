@@ -582,5 +582,40 @@ describe('RgResponsiveShell.vue — Doble Contexto & Menú de Usuario 11X', () =
 
     expect(wrapper.findComponent({ name: 'RgApiHealthBadge' }).exists() || wrapper.find('#api-health-badge').exists()).toBe(true);
   });
+
+  it('incluye el botón para ocultar y mostrar la barra lateral (#btn-toggle-sidebar) entre el logo y el tenant badge, y conmuta la clase rg-rail--collapsed', async () => {
+    const authStore = useAuthStore();
+    authStore.tenantSlug = 'corp-demo';
+
+    const wrapper = mount(RgResponsiveShell, {
+      global: {
+        stubs: {
+          RouterView: true,
+          RgCommandPalette: true,
+          RgSafeModeBanner: true,
+          ChangePasswordModal: true,
+          RgStepUp2FAModal: true,
+          RgMcpTokenModal: true,
+        },
+      },
+    });
+
+    const toggleBtn = wrapper.find('#btn-toggle-sidebar');
+    expect(toggleBtn.exists()).toBe(true);
+    expect(toggleBtn.attributes('title')).toBe('Ocultar barra lateral');
+
+    const rail = wrapper.find('nav.rg-rail');
+    expect(rail.exists()).toBe(true);
+    expect(rail.classes()).not.toContain('rg-rail--collapsed');
+
+    // Clic en el botón para colapsar la barra lateral
+    await toggleBtn.trigger('click');
+    expect(rail.classes()).toContain('rg-rail--collapsed');
+    expect(toggleBtn.attributes('title')).toBe('Mostrar barra lateral');
+
+    // Clic nuevamente para expandir
+    await toggleBtn.trigger('click');
+    expect(rail.classes()).not.toContain('rg-rail--collapsed');
+  });
 });
 
