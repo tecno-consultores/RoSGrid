@@ -64,26 +64,36 @@ const mockSubscribers: SubscriberDeviceItem[] = [
     id: 'sub-1',
     tenant_id: 't-1',
     router_id: 'r-pop-2', // Depende del router caído
+    service_type: 'FTTH_PPPOE',
+    auth_backend: 'ROUTEROS_LOCAL',
+    onu_mode: 'BRIDGE',
     optical_box_id: 'box-1',
     endpoint_identifier: 'CLI-1001-FTTH',
-    ipv4_address: '100.64.0.15',
+    assigned_ipv4: '100.64.0.15',
     last_reachability_status: 'OFFLINE',
     latitude: 10.4715,
     longitude: -66.9115,
-    is_active: true,
+    status: 'ACTIVE',
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
   },
   {
     id: 'sub-2',
     tenant_id: 't-1',
     router_id: 'r-core-1', // Depende del router activo
+    service_type: 'CORP_DHCP',
+    auth_backend: 'ROUTEROS_LOCAL',
+    onu_mode: 'ROUTER',
     endpoint_identifier: 'CLI-1002-CORP',
-    ipv4_address: '10.0.0.50',
+    assigned_ipv4: '10.0.0.50',
     last_reachability_status: 'ONLINE',
     ping_latency_ms: 4.2,
     packet_loss_pct: 0,
     latitude: 10.4810,
     longitude: -66.9040,
-    is_active: true,
+    status: 'ACTIVE',
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
   },
 ];
 
@@ -259,7 +269,7 @@ describe('UnifiedNetworkMap.vue — Mapa de Red Unificado & Gobierno RCA (Hito 2
 
   it('permite acceso a consola WebFig para administradores e ingenieros de NOC', async () => {
     const authStore = useAuthStore();
-    authStore.currentRole = 'NETWORK_ADMIN';
+    authStore.currentRole = 'TENANT_ADMIN';
     authStore.tenantFeatures = { isp_module_enabled: true };
 
     const wrapper = mount(UnifiedNetworkMap, {

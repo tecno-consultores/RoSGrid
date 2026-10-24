@@ -51,7 +51,7 @@
   // Control RBAC: Solo ingenieros de NOC y administradores pueden acceder a WebFig
   const canAccessWebFig = computed<boolean>(() => {
     const role = authStore.currentRole || authStore.user?.role || '';
-    const privileged = ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'NETWORK_ADMIN', 'SUPPORT_L2'];
+    const privileged = ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'SUPERVISOR', 'SUPPORT_L3', 'SUPPORT_L2'];
     return privileged.includes(role);
   });
 
