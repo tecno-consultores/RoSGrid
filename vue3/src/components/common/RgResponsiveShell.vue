@@ -190,9 +190,7 @@
     items.push({
       name: 'SubscribersMap',
       path: '/subscribers/map',
-      label: authStore.isFeatureEnabled('isp_module_enabled')
-        ? t('nav.subscribers_map_isp', 'Mapa Clientes FTTH')
-        : t('nav.subscribers_map_enterprise', 'Mapa Clientes DHCP'),
+      label: t('nav.subscribers_map', 'Mapa de Clientes'),
       icon: '📍',
     });
 

@@ -3,12 +3,12 @@
 
 <script setup lang="ts">
   import { ref, computed, onMounted, watch } from 'vue';
-  import OsmOnuMap from '@/components/inventory/OsmOnuMap.vue';
+  import UnifiedNetworkMap from '@/components/network/UnifiedNetworkMap.vue';
   import { useI18n } from '@/composables/useI18n';
   import { useAuthStore } from '@/stores/useAuthStore';
   import { useFieldOpsStore } from '@/stores/useFieldOpsStore';
   import { http } from '@/api/httpClient';
-  import type { OpticalBoxDetailItem, SubscriberDeviceItem } from '@/types';
+  import type { OpticalBoxDetailItem, SubscriberDeviceItem, RouterItem } from '@/types';
 
   const { t } = useI18n();
   const authStore = useAuthStore();
@@ -16,14 +16,15 @@
 
   const isIspMode = computed(() => authStore.isFeatureEnabled('isp_module_enabled'));
 
+  const routers = ref<RouterItem[]>([]);
   const onus = ref<SubscriberDeviceItem[]>([]);
   const isLoading = ref<boolean>(false);
-  const isSimulating = ref<boolean>(false);
   const isSyncingDhcp = ref<boolean>(false);
   const feedbackMessage = ref<string>('');
   const feedbackType = ref<'success' | 'error'>('success');
   const selectedOnuId = ref<string | null>(null);
   const selectedBoxId = ref<string | null>(null);
+  const selectedRouterId = ref<string | null>(null);
   const selectedBoxDetail = ref<OpticalBoxDetailItem | null>(null);
   const isLoadingBoxDetail = ref<boolean>(false);
   const searchQuery = ref<string>('');
@@ -47,22 +48,12 @@
     lock_tech?: string;
   } | null>(null);
 
-  // Simulación de Laboratorio (solo visible si ISP)
-  async function handleSimulateFromDhcp(reset = false) {
+  async function loadRouters() {
     try {
-      isSimulating.value = true;
-      feedbackMessage.value = '';
-      const res = await http.post<{ message: string; created_count: number; updated_count: number }>(
-        `/api/v1/subscriber-devices/simulate-from-dhcp?reset_existing=${reset}`,
-      );
-      feedbackType.value = 'success';
-      feedbackMessage.value = res.data.message || t('subscribers_map.simulation_success');
-      await loadSubscriberDevices();
-    } catch (err: unknown) {
-      feedbackType.value = 'error';
-      feedbackMessage.value = err instanceof Error ? err.message : 'Error al simular clientes desde DHCP';
-    } finally {
-      isSimulating.value = false;
+      const res = await http.get<RouterItem[]>('/api/v1/inventory/routers');
+      routers.value = Array.isArray(res.data) ? res.data : [];
+    } catch {
+      routers.value = [];
     }
   }
 
@@ -211,7 +202,15 @@
   function handleSelectOnu(onuId: string) {
     selectedBoxId.value = null;
     selectedBoxDetail.value = null;
+    selectedRouterId.value = null;
     selectedOnuId.value = onuId;
+  }
+
+  function handleSelectRouter(routerId: string) {
+    selectedOnuId.value = null;
+    selectedBoxId.value = null;
+    selectedBoxDetail.value = null;
+    selectedRouterId.value = routerId;
   }
 
   async function handleSelectBox(boxId: string) {
@@ -324,10 +323,11 @@
   }
 
   onMounted(async () => {
-    await loadSubscriberDevices();
-    if (isIspMode.value) {
-      await fieldStore.fetchOpticalBoxes();
-    }
+    await Promise.all([
+      loadSubscriberDevices(),
+      loadRouters(),
+      isIspMode.value ? fieldStore.fetchOpticalBoxes() : Promise.resolve(),
+    ]);
   });
 </script>
 
@@ -469,36 +469,23 @@
           <span v-else>🔄</span>
           {{ isSyncingDhcp ? t('subscribers_map.syncing_dhcp') : t('subscribers_map.btn_sync_dhcp') }}
         </button>
-
-        <!-- Botones Modo ISP (Laboratorio y Simulación) -->
-        <template v-if="isIspMode">
-          <button
-            type="button"
-            class="btn-simulate-dhcp"
-            :disabled="isSimulating"
-            aria-label="Simular Clientes"
-            @click="handleSimulateFromDhcp(false)"
-          >
-            <span v-if="isSimulating">⏳</span>
-            <span v-else>🧪</span>
-            {{ isSimulating ? t('subscribers_map.simulating') : t('subscribers_map.btn_simulate_dhcp') }}
-          </button>
-        </template>
       </div>
     </div>
 
-    <!-- Contenedor del Mapa y HUD Lateral Flotante -->
+    <!-- Contenedor del Mapa Cartográfico Unificado Multicapa (Routers, Cajas NAP y Clientes) -->
     <div class="map-stage">
-      <OsmOnuMap
-        :onus="filteredOnus"
+      <UnifiedNetworkMap
+        :mode="'subscribers'"
+        :routers="routers"
         :optical-boxes="fieldStore.opticalBoxes"
-        :selected-onu-id="selectedOnuId"
+        :subscribers="filteredOnus"
+        :selected-id="selectedOnuId"
         :center-coordinates="[10.4806, -66.9036]"
         :zoom-level="12"
-        @select-onu="handleSelectOnu"
+        @select-subscriber="handleSelectOnu"
         @select-box="handleSelectBox"
-        @verify-onu="handleLivePingTest"
-        @diagnose-onu="handleLivePingTest"
+        @select-router="handleSelectRouter"
+        @diagnose-subscriber="handleLivePingTest"
       />
 
       <!-- Drawer Lateral 1: Detalles del Dispositivo Seleccionado (Cliente FTTH o PC DHCP) -->

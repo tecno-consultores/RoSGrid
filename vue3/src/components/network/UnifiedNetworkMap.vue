@@ -344,8 +344,8 @@
           type="button"
           class="btn-layer-toggle btn-layer-routers"
           :class="{ 'btn-layer-toggle--active': showRouters }"
-          @click="showRouters = !showRouters"
           :aria-pressed="showRouters ? 'true' : 'false'"
+          @click="showRouters = !showRouters"
         >
           <span class="icon">🏢</span>
           <span class="label">Routers de Red</span>
@@ -357,8 +357,8 @@
           type="button"
           class="btn-layer-toggle btn-layer-boxes"
           :class="{ 'btn-layer-toggle--active': showBoxes }"
-          @click="showBoxes = !showBoxes"
           :aria-pressed="showBoxes ? 'true' : 'false'"
+          @click="showBoxes = !showBoxes"
         >
           <span class="icon">📦</span>
           <span class="label">Cajas NAP</span>
@@ -369,8 +369,8 @@
           type="button"
           class="btn-layer-toggle btn-layer-subs"
           :class="{ 'btn-layer-toggle--active': showSubscribers }"
-          @click="showSubscribers = !showSubscribers"
           :aria-pressed="showSubscribers ? 'true' : 'false'"
+          @click="showSubscribers = !showSubscribers"
         >
           <span class="icon">💻</span>
           <span class="label">{{ isIspMode ? 'Abonados FTTH' : 'Dispositivos DHCP' }}</span>
@@ -409,8 +409,8 @@
         <button
           type="button"
           class="btn-rca-close"
-          @click="showRcaBanner = false"
           aria-label="Descartar aviso de cabecera"
+          @click="showRcaBanner = false"
         >
           ✖️
         </button>

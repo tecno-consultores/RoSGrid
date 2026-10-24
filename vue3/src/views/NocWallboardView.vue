@@ -4,8 +4,8 @@
 <script setup lang="ts">
   import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
   import { useRouter } from 'vue-router';
-  import OsmRouterMap from '@/components/inventory/OsmRouterMap.vue';
-  import type { RouterItem } from '@/types';
+  import UnifiedNetworkMap from '@/components/network/UnifiedNetworkMap.vue';
+  import type { RouterItem, OpticalBoxItem, SubscriberDeviceItem } from '@/types';
   import { http } from '@/api/httpClient';
   import { useNocEventsStore } from '@/stores/useNocEventsStore';
   import { useI18n } from '@/composables/useI18n';
@@ -27,8 +27,10 @@
   const isFullscreen = ref(false);
   const wallboardContainer = ref<HTMLElement | null>(null);
 
-  // Routers reales obtenidos del inventario
+  // Infraestructura real obtenida de la API
   const routers = ref<RouterItem[]>([]);
+  const opticalBoxes = ref<OpticalBoxItem[]>([]);
+  const subscribers = ref<SubscriberDeviceItem[]>([]);
   const selectedRouterId = ref<string | null>(null);
 
   const selectedRouter = computed(() => {
@@ -94,7 +96,9 @@
   function playTacticalChime(): void {
     if (isAudioSilenced.value || typeof window === 'undefined') return;
     try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (!AudioCtx) return;
       const ctx = new AudioCtx();
       const osc = ctx.createOscillator();
@@ -138,35 +142,53 @@
     if (isRefreshing.value) return;
     isRefreshing.value = true;
     try {
-      await Promise.allSettled([loadRouters(), loadEvents()]);
+      await Promise.allSettled([loadRouters(), loadOpticalBoxes(), loadSubscribers(), loadEvents()]);
     } finally {
       isRefreshing.value = false;
     }
   }
 
+  function determineEventType(name: string): NocEvent['type'] {
+    if (name.includes('DOWN')) return 'ROUTER_DOWN';
+    if (name.includes('UP')) return 'ROUTER_UP';
+    return 'MAINTENANCE';
+  }
+
+  function determineSeverity(sev: string): 'critical' | 'warning' | 'info' {
+    const s = sev.toLowerCase();
+    if (s === 'critical') return 'critical';
+    if (s === 'warning') return 'warning';
+    return 'info';
+  }
+
+  function createLiveEvent(latest: {
+    id: string;
+    timestampIso: string;
+    eventName: string;
+    routerDisplayName?: string;
+    message?: string;
+    severity: string;
+  }): NocEvent {
+    const actionDesc = formatEventAction(latest.eventName);
+    return {
+      id: latest.id,
+      timestamp: new Date(latest.timestampIso).toLocaleTimeString(),
+      type: determineEventType(latest.eventName),
+      router_identity: latest.routerDisplayName || 'Sistema',
+      message: latest.message ? formatEventMessage(latest.message, latest.routerDisplayName) : actionDesc,
+      severity: determineSeverity(latest.severity),
+    };
+  }
+
   watch(
     () => nocEventsStore.recentEvents,
     (events) => {
-      if (events && events.length > 0) {
-        const latest = events[0];
-        const actionDesc = formatEventAction(latest.eventName);
-        const newEvt: NocEvent = {
-          id: latest.id,
-          timestamp: new Date(latest.timestampIso).toLocaleTimeString(),
-          type:
-            latest.eventName.includes('DOWN')
-              ? 'ROUTER_DOWN'
-              : latest.eventName.includes('UP')
-                ? 'ROUTER_UP'
-                : 'MAINTENANCE',
-          router_identity: latest.routerDisplayName || 'Sistema',
-          message: latest.message ? formatEventMessage(latest.message, latest.routerDisplayName) : actionDesc,
-          severity: (latest.severity.toLowerCase() as any) || 'info',
-        };
-        liveEvents.value = [newEvt, ...liveEvents.value.slice(0, 19)];
-        if (latest.severity === 'CRITICAL' && !massOutageAlert.value.active) {
-          playTacticalChime();
-        }
+      if (!events || events.length === 0) return;
+      const latest = events[0];
+      const newEvt = createLiveEvent(latest);
+      liveEvents.value = [newEvt, ...liveEvents.value.slice(0, 19)];
+      if (latest.severity === 'CRITICAL' && !massOutageAlert.value.active) {
+        playTacticalChime();
       }
     },
     { deep: true },
@@ -179,8 +201,8 @@
       );
       const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
       if (raw.length > 0) {
-        routers.value = raw.map((item: any) => ({
-          ...item,
+        routers.value = (raw as unknown as Record<string, unknown>[]).map((item) => ({
+          ...(item as unknown as RouterItem),
           latitude:
             item.latitude !== null && item.latitude !== undefined && item.latitude !== ''
               ? Number(item.latitude)
@@ -190,15 +212,15 @@
               ? Number(item.longitude)
               : undefined,
           ip_address:
-            item.ip_address ||
-            (item.api_base_url
-              ? item.api_base_url
+            (item.ip_address as string) ||
+            ((item.api_base_url as string)
+              ? (item.api_base_url as string)
                   .replace(/^https?:\/\//, '')
                   .split('/')[0]
                   .split(':')[0]
               : ''),
-          ros_version: item.ros_version || 'v7',
-          is_reachable: item.is_reachable ?? false,
+          ros_version: (item.ros_version as string) || 'v7',
+          is_reachable: (item.is_reachable as boolean) ?? false,
         }));
       }
 
@@ -210,30 +232,50 @@
     }
   }
 
+  async function loadOpticalBoxes() {
+    try {
+      const res = await http.get<OpticalBoxItem[] | { items: OpticalBoxItem[] }>('/api/v1/optical-boxes');
+      const raw = Array.isArray(res.data) ? res.data : (res.data as { items?: OpticalBoxItem[] })?.items || [];
+      opticalBoxes.value = raw;
+    } catch {
+      opticalBoxes.value = [];
+    }
+  }
+
+  async function loadSubscribers() {
+    try {
+      const res = await http.get<SubscriberDeviceItem[] | { items: SubscriberDeviceItem[] }>('/api/v1/subscriber-devices');
+      const raw = Array.isArray(res.data) ? res.data : (res.data as { items?: SubscriberDeviceItem[] })?.items || [];
+      subscribers.value = raw;
+    } catch {
+      subscribers.value = [];
+    }
+  }
+
   async function loadEvents() {
     try {
-      const res = await http.get<{ items: any[] }>('/api/v1/audit/logs');
+      const res = await http.get<{ items: Record<string, unknown>[] }>('/api/v1/audit/logs');
       const items = res.data?.items || [];
 
       // Detección de caída masiva en eventos de auditoría recientes
       const outageLog = items.find(
-        (log: any) =>
+        (log) =>
           log.event_action === 'MASS_OUTAGE_TRIGGERED' ||
           log.event_action === 'MASS_OUTAGE_DETECTED',
       );
       if (outageLog && !massOutageAlert.value.active) {
-        const after = outageLog.after_state || {};
+        const after = (outageLog.after_state as Record<string, unknown>) || {};
         triggerMassOutage(
           Number(after.affected_onus_count || 10),
-          after.pon_port,
-          after.optical_box,
+          after.pon_port as string | undefined,
+          after.optical_box as string | undefined,
         );
       }
 
-      liveEvents.value = items.slice(0, 20).map((log: any) => ({
+      liveEvents.value = items.slice(0, 20).map((log) => ({
         id: String(log.id),
         timestamp: log.created_at
-          ? new Date(log.created_at).toLocaleTimeString()
+          ? new Date(log.created_at as string).toLocaleTimeString()
           : new Date().toLocaleTimeString(),
         type:
           log.event_action === 'MASS_OUTAGE_TRIGGERED' ||
@@ -242,13 +284,13 @@
             : log.event_category === 'AUTH'
               ? 'ROUTER_UP'
               : 'MAINTENANCE',
-        router_identity: log.router_display_name || log.actor_username || 'Sistema',
-        message: formatEventMessage(log.event_action, log.actor_username),
+        router_identity: (log.router_display_name as string) || (log.actor_username as string) || 'Sistema',
+        message: formatEventMessage(log.event_action as string, log.actor_username as string),
         severity:
           log.event_action === 'MASS_OUTAGE_TRIGGERED' ||
           log.event_action === 'MASS_OUTAGE_DETECTED'
             ? 'critical'
-            : log.status_code >= 400
+            : Number(log.status_code || 0) >= 400
               ? 'critical'
               : 'info',
       }));
@@ -298,6 +340,8 @@
 
   onMounted(() => {
     loadRouters();
+    loadOpticalBoxes();
+    loadSubscribers();
     loadEvents();
 
     // Auto-refresco autónomo cada 15 segundos sin intervención de usuario
@@ -425,12 +469,15 @@
     <div class="wallboard-body">
       <!-- Mitad Izquierda: Mapa Interactivo -->
       <section class="wallboard-map-panel" aria-label="Mapa de routers de la flota">
-        <OsmRouterMap
+        <UnifiedNetworkMap
+          :mode="'wallboard'"
+          :allow-webfig="true"
           :routers="routers"
-          :selected-router-id="selectedRouterId"
+          :optical-boxes="opticalBoxes"
+          :subscribers="subscribers"
+          :selected-id="selectedRouterId"
           :zoom-level="12"
           @select-router="handleSelectRouter"
-          @open-webfig="handleOpenWebFig"
         />
 
         <!-- Floating HUD de equipo seleccionado con botón directo a WebFig -->

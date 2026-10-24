@@ -323,6 +323,25 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And click("#tab-btn-map")
     And waitFor(".tab-pane-map")
 
+  Scenario: 37. Mapa de Red Unificado Multicapa — Menú "Mapa de Clientes", Wallboard NOC con Toggles de Cajas/Clientes y Panel de Feature Flags
+    # Verificación de texto unificado en navegación
+    Given driver baseUrl + '/dashboard'
+    And waitFor(".rg-sidebar")
+    And match text(".rg-sidebar") contains 'Mapa de Clientes'
+    # Validación en Wallboard NOC
+    Given driver baseUrl + '/noc-wallboard'
+    And waitFor(".noc-wallboard")
+    And waitFor(".unified-network-map-wrapper")
+    And waitFor(".btn-layer-routers")
+    And match text(".btn-layer-routers") contains 'Routers de Red'
+    # Validación en Mapa de Clientes
+    Given driver baseUrl + '/subscribers/map'
+    And waitFor(".subscribers-map-view")
+    And waitFor(".unified-network-map-wrapper")
+    And waitFor(".btn-layer-subs")
+    And match text(".btn-layer-subs") contains 'Abonados FTTH'
+
+
 
 
 

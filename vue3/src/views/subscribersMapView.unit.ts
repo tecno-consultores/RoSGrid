@@ -9,17 +9,17 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { useFieldOpsStore } from '@/stores/useFieldOpsStore';
 import { http } from '@/api/httpClient';
 
-vi.mock('@/components/inventory/OsmOnuMap.vue', () => ({
+vi.mock('@/components/network/UnifiedNetworkMap.vue', () => ({
   default: {
-    name: 'OsmOnuMap',
-    template: '<div class="mock-osm-onu-map" data-testid="osm-onu-map"></div>',
-    props: ['onus', 'opticalBoxes', 'selectedOnuId'],
-    emits: ['select-onu', 'select-box', 'verify-onu', 'diagnose-onu'],
+    name: 'UnifiedNetworkMap',
+    template: '<div class="mock-unified-network-map" data-testid="unified-network-map"></div>',
+    props: ['routers', 'opticalBoxes', 'subscribers', 'selectedId', 'mode'],
+    emits: ['select-subscriber', 'select-box', 'select-router', 'diagnose-subscriber'],
   },
 }));
 
 const MOCK_SERIAL = 'ZTEGC00001';
-const MOCK_MAP_SELECTOR = '.mock-osm-onu-map';
+const MOCK_MAP_SELECTOR = '.mock-unified-network-map';
 
 describe('SubscribersMapView.vue — Vista Bimodal de Mapa de Red y Clientes', () => {
   beforeEach(() => {
@@ -27,81 +27,110 @@ describe('SubscribersMapView.vue — Vista Bimodal de Mapa de Red y Clientes', (
     vi.restoreAllMocks();
     window.alert = vi.fn();
 
-    vi.spyOn(http, 'get').mockResolvedValue({
-      status: 200,
-      headers: new Headers(),
-      data: [
-        {
-          id: 'onu-01',
-          tenant_id: 't-1',
-          router_id: 'r-1',
-          service_type: 'FTTH_PPPOE',
-          auth_backend: 'INTERNAL',
-          onu_mode: 'ROUTER',
-          device_serial: MOCK_SERIAL,
-          onu_serial_number: MOCK_SERIAL,
-          customer_name: 'Carlos Santana',
-          customer_code: 'CLI-01',
-          endpoint_identifier: 'CLI-01',
-          assigned_ipv4: '192.168.88.50',
-          pon_port: 'sfp-plus1',
-          optical_box: 'NAP-A',
-          latitude: 10.4806,
-          longitude: -66.9036,
-          is_custom_coordinates: false,
-          last_reachability_status: 'ONLINE',
-          status: 'ACTIVE',
-          ping_latency_ms: 22,
-          packet_loss_pct: 0,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        {
-          id: 'onu-02',
-          tenant_id: 't-1',
-          router_id: 'r-1',
-          service_type: 'FTTH_PPPOE',
-          auth_backend: 'INTERNAL',
-          onu_mode: 'BRIDGE',
-          device_serial: 'HWTC00002',
-          onu_serial_number: 'HWTC00002',
-          customer_name: 'Ana Maria',
-          customer_code: 'CLI-02',
-          endpoint_identifier: 'CLI-02',
-          assigned_ipv4: '192.168.88.51',
-          pon_port: 'sfp-plus1',
-          optical_box: 'NAP-A',
-          latitude: 10.481,
-          longitude: -66.904,
-          is_custom_coordinates: true,
-          last_reachability_status: 'ONLINE',
-          status: 'ACTIVE',
-          ping_latency_ms: 75,
-          packet_loss_pct: 2,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-      ],
+    vi.spyOn(http, 'get').mockImplementation(async (url: string) => {
+      if (url.includes('/api/v1/inventory/routers')) {
+        return {
+          status: 200,
+          headers: new Headers(),
+          data: [
+            {
+              id: 'r-1',
+              display_name: 'ROUTER-CORE-01',
+              ip_address: '10.0.0.1',
+              admin_state: 'PRODUCTION',
+              is_reachable: true,
+            },
+          ],
+        } as any;
+      }
+      return {
+        status: 200,
+        headers: new Headers(),
+        data: [
+          {
+            id: 'onu-01',
+            tenant_id: 't-1',
+            router_id: 'r-1',
+            service_type: 'FTTH_PPPOE',
+            auth_backend: 'INTERNAL',
+            onu_mode: 'ROUTER',
+            device_serial: MOCK_SERIAL,
+            onu_serial_number: MOCK_SERIAL,
+            customer_name: 'Carlos Santana',
+            customer_code: 'CLI-01',
+            endpoint_identifier: 'CLI-01',
+            assigned_ipv4: '192.168.88.50',
+            pon_port: 'sfp-plus1',
+            optical_box: 'NAP-A',
+            latitude: 10.4806,
+            longitude: -66.9036,
+            is_custom_coordinates: false,
+            last_reachability_status: 'ONLINE',
+            status: 'ACTIVE',
+            ping_latency_ms: 22,
+            packet_loss_pct: 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+          {
+            id: 'onu-02',
+            tenant_id: 't-1',
+            router_id: 'r-1',
+            service_type: 'FTTH_PPPOE',
+            auth_backend: 'INTERNAL',
+            onu_mode: 'BRIDGE',
+            device_serial: 'HWTC00002',
+            onu_serial_number: 'HWTC00002',
+            customer_name: 'Ana Maria',
+            customer_code: 'CLI-02',
+            endpoint_identifier: 'CLI-02',
+            assigned_ipv4: '192.168.88.51',
+            pon_port: 'sfp-plus1',
+            optical_box: 'NAP-A',
+            latitude: 10.481,
+            longitude: -66.904,
+            is_custom_coordinates: true,
+            last_reachability_status: 'ONLINE',
+            status: 'ACTIVE',
+            ping_latency_ms: 75,
+            packet_loss_pct: 2,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        ],
+      } as any;
     });
   });
 
-  it('renderiza título de Modo ISP cuando isp_module_enabled está activo', async () => {
+  it('renderiza título de Modo ISP cuando isp_module_enabled está activo y no muestra botón de simulación', async () => {
     const authStore = useAuthStore();
     authStore.updateTenantFeatures({ isp_module_enabled: true });
 
-    const wrapper = mount(SubscribersMapView);
+    const wrapper = mount(SubscribersMapView, {
+      global: {
+        stubs: {
+          RouterLink: true,
+        },
+      },
+    });
     await vi.waitFor(() => {
       expect(wrapper.text()).toContain('2'); // Total equipos
     });
     expect(wrapper.text()).toContain('Mapa de Cobertura FTTH y Cajas NAP');
-    expect(wrapper.find('.btn-simulate-dhcp').exists()).toBe(true);
+    expect(wrapper.find('.btn-simulate-dhcp').exists()).toBe(false);
   });
 
   it('renderiza título de Modo Empresa (No-ISP) y botón de sincronización DHCP', async () => {
     const authStore = useAuthStore();
     authStore.updateTenantFeatures({ isp_module_enabled: false });
 
-    const wrapper = mount(SubscribersMapView);
+    const wrapper = mount(SubscribersMapView, {
+      global: {
+        stubs: {
+          RouterLink: true,
+        },
+      },
+    });
     await vi.waitFor(() => {
       expect(wrapper.text()).toContain('2');
     });
@@ -110,10 +139,7 @@ describe('SubscribersMapView.vue — Vista Bimodal de Mapa de Red y Clientes', (
     expect(wrapper.find('.btn-simulate-dhcp').exists()).toBe(false);
   });
 
-  it('ejecuta sincronización real DHCP al presionar el botón de sync', async () => {
-    const authStore = useAuthStore();
-    authStore.updateTenantFeatures({ isp_module_enabled: false });
-
+  it('ejecuta sincronización DHCP real desde la interfaz', async () => {
     const postSpy = vi.spyOn(http, 'post').mockResolvedValue({
       status: 200,
       headers: new Headers(),
@@ -126,7 +152,13 @@ describe('SubscribersMapView.vue — Vista Bimodal de Mapa de Red y Clientes', (
       },
     });
 
-    const wrapper = mount(SubscribersMapView);
+    const wrapper = mount(SubscribersMapView, {
+      global: {
+        stubs: {
+          RouterLink: true,
+        },
+      },
+    });
     await vi.waitFor(() => {
       expect(wrapper.find('.btn-sync-dhcp').exists()).toBe(true);
     });
@@ -151,14 +183,20 @@ describe('SubscribersMapView.vue — Vista Bimodal de Mapa de Red y Clientes', (
       },
     });
 
-    const wrapper = mount(SubscribersMapView);
+    const wrapper = mount(SubscribersMapView, {
+      global: {
+        stubs: {
+          RouterLink: true,
+        },
+      },
+    });
     await vi.waitFor(() => {
       expect(wrapper.find(MOCK_MAP_SELECTOR).exists()).toBe(true);
       expect(wrapper.text()).toContain('2');
     });
 
-    const osmMapComponent = wrapper.findComponent({ name: 'OsmOnuMap' });
-    osmMapComponent.vm.$emit('select-onu', 'onu-01');
+    const mapComponent = wrapper.findComponent({ name: 'UnifiedNetworkMap' });
+    mapComponent.vm.$emit('select-subscriber', 'onu-01');
     await wrapper.vm.$nextTick();
 
     await vi.waitFor(() => {
@@ -214,13 +252,19 @@ describe('SubscribersMapView.vue — Vista Bimodal de Mapa de Red y Clientes', (
       updated_at: new Date().toISOString(),
     });
 
-    const wrapper = mount(SubscribersMapView);
+    const wrapper = mount(SubscribersMapView, {
+      global: {
+        stubs: {
+          RouterLink: true,
+        },
+      },
+    });
     await vi.waitFor(() => {
       expect(wrapper.find(MOCK_MAP_SELECTOR).exists()).toBe(true);
     });
 
-    const osmMapComponent = wrapper.findComponent({ name: 'OsmOnuMap' });
-    osmMapComponent.vm.$emit('select-box', 'box-01');
+    const mapComponent = wrapper.findComponent({ name: 'UnifiedNetworkMap' });
+    mapComponent.vm.$emit('select-box', 'box-01');
     await wrapper.vm.$nextTick();
 
     await vi.waitFor(() => {

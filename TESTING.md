@@ -1542,6 +1542,42 @@ Certificación ejecutada bajo la **Regla Cero** dentro de contenedores efímeros
 3. **Tipado y Linters:** `ruff check --no-cache` (All checks passed!), `mypy` (Success: no issues found in 117 source files) y `vue-tsc --noEmit` (0 errores).
 4. **Escaneo Trivy Local:** `fastapi/uv.lock` (0 vulnerabilidades), `vue3/pnpm-lock.yaml` (0 vulnerabilidades), `fastapi/Dockerfile` (0 misconfiguraciones) y `vue3/Dockerfile` (0 misconfiguraciones).
 
+---
+
+## 36. Perfeccionamiento y Cierre de Mapa de Red Unificado, Wallboard Multicapa y Panel de Feature Flags (Hito 23.25)
+
+Certificación ejecutada bajo la **Regla Cero** dentro de contenedores efímeros Docker `sinfallas/base-node-ionic:26` y `sinfallas/rosgrid-backend:local-test`.
+
+### A. Capacidades Certificadas
+1. **Navegación Táctica Unificada:**
+   - Actualización del rótulo en el menú principal a **"Mapa de Clientes"** (`t('nav.subscribers_map')`), unificando la experiencia tanto para ISPs como para organizaciones empresariales privadas.
+2. **Higienización de Entorno de Producción en Mapa de Clientes:**
+   - Eliminación definitiva del botón y lógica de "Simular Clientes" (`handleSimulateFromDhcp`, `isSimulating`, `btn-simulate-dhcp`), preservando exclusivamente la sincronización real de leases DHCP desde MikroTik (`/api/v1/subscriber-devices/sync-dhcp`).
+3. **Mapa Multicapa en Wallboard NOC:**
+   - Sustitución de `OsmRouterMap` por `UnifiedNetworkMap` en `/noc-wallboard`, dotando al centro de operaciones de control visual directo sobre la flota con toggles independientes de capas:
+     - `[ 🏢 Routers de Red ]` (Activo por defecto).
+     - `[ 📦 Cajas NAP FTTH ]` (Gobernado por `isp_module_enabled`).
+     - `[ 💻 Clientes / Dispositivos ]` (Encendido/apagado a demanda del operador NOC).
+4. **Puesta al Día del Panel de Feature Flags:**
+   - Integración de la Sección 4 ("Flota, Topología L2 & Observabilidad") en el modal de gestión de empresas/tenants (`TenantsManagementView.vue`):
+     - `l2_topology_enabled` (Topología Física L2 MNDP/LLDP).
+     - `syslog_collector_enabled` (Receptor Syslog UDP 5514).
+     - `cve_scanner_enabled` (Escáner Local de Vulnerabilidades CVE).
+     - `prometheus_fleet_exporter_enabled` (Exportador Prometheus de Flota).
+   - Inclusión en `defaultTenantFeatures` de `useAuthStore.ts`.
+
+### B. Cobertura y Certificación Multi-Capa 11X
+1. **Frontend Unitario:**
+   - `src/components/network/UnifiedNetworkMap.unit.ts` (**7 de 7 pruebas PASADAS**).
+   - `src/views/subscribersMapView.unit.ts` (**5 de 5 pruebas PASADAS**).
+   - Total frontend en la suite afectada: **12 de 12 pruebas PASADAS (100%)**.
+2. **Análisis Estático y Tipado:**
+   - `vue-tsc --noEmit`: 0 errores (código de salida 0).
+   - `eslint`: 0 errores (código de salida 0).
+3. **Karate Labs UI BDD:** Escenario 37 incorporado en `vue3/test/ui_business_flow.feature` y replicado en `docs/examples/vue3/test/ui_business_flow.feature` (**37 escenarios totales de UI**).
+4. **Contratos Front-Back:** **26 de 26 pruebas PASADAS (100%)** en `validar_comunicacion_front_back.py`.
+
+
 
 
 

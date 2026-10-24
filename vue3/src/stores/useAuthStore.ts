@@ -23,6 +23,10 @@ export const defaultTenantFeatures: TenantFeatureFlags = {
   sla_tracker_enabled: false,
   mass_outage_threshold: 10,
   default_locale: 'es',
+  l2_topology_enabled: true,
+  syslog_collector_enabled: true,
+  cve_scanner_enabled: true,
+  prometheus_fleet_exporter_enabled: true,
 };
 
 function getStoredUser(): UserInfo | null {

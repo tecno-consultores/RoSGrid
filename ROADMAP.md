@@ -536,7 +536,7 @@
   - Control de acceso RBAC en el mapa: técnicos de calle y soporte básico visualizan telemetría de salud del router pero tienen bloqueado y oculto el acceso a WebFig.
   - Motor de Análisis de Causa Raíz (RCA estilo Zabbix): supresión automática de pruebas individuales en clientes si el router de cabecera está caído o con Circuit Breaker abierto, con barra superior táctica de alerta y zoom a zona afectada (`ROOT_CAUSE_SUPPRESSED`).
   - Prevención de colisión operativa entre brigadas mediante cerraduras efímeras en KeyDB (`TTL = 600s`) con aviso contextual de trabajo en curso.
-  - Cobertura 11X certificada: 7 pruebas unitarias backend (`test_diagnostic_governor.unit.py`), 6 pruebas unitarias Vitest (`UnifiedNetworkMap.unit.ts`), 0 errores en `vue-tsc`, ESLint, Ruff y Mypy, Escenario 84 en Karate Labs API y Escenario 35 en Karate Labs UI.
+  - Cobertura 11X certificada: 7 pruebas unitarias backend (`test_diagnostic_governor.unit.py`), 12 pruebas unitarias Vitest (`UnifiedNetworkMap.unit.ts` y `subscribersMapView.unit.ts`), 0 errores en `vue-tsc`, ESLint, Ruff y Mypy, Escenario 84 en Karate Labs API y Escenarios 35 y 37 en Karate Labs UI.
 - [x] **23.26** **Sondeo Pasivo Escalonado de Fondo (Worker Jitter), Notificación Reactiva WebSocket y Diagnóstico 360° en Toolkit de Campo:**
   - Especificación formal `docs/specs/39_BACKGROUND_SUBSCRIBER_POLLING_AND_REALTIME_STATUS_WEBSOCKET.md` y manual operativo `docs/13_MANUAL_MAPA_RED_BIMODAL_Y_OPERACIONES_CAMPO.md` completados.
   - Motor `StaggeredSessionPoller` en `rosgrid-worker` para lectura periódica de `/ip/dhcp-server/lease` y `/ppp/active` (intervalo 180s con jitter dinámico entre routers de 2 a 5s).

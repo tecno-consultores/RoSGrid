@@ -584,7 +584,54 @@
                 <span class="switch-label">Webhooks Salientes de Eventos Técnicos</span>
               </label>
             </div>
+          </fieldset>
 
+          <!-- Sección 4: Automatización de Flota, Topología L2 & Observabilidad -->
+          <fieldset class="form-fieldset">
+            <legend class="fieldset-legend">4. Flota, Topología L2 & Observabilidad</legend>
+            <div class="switches-grid">
+              <label class="switch-row">
+                <input
+                  id="flag-l2"
+                  v-model="tenantFeaturesForm.l2_topology_enabled"
+                  type="checkbox"
+                  class="switch-input"
+                />
+                <span class="switch-label">Visualizador de Topología Física L2 (MNDP/LLDP)</span>
+              </label>
+              <label class="switch-row">
+                <input
+                  id="flag-syslog"
+                  v-model="tenantFeaturesForm.syslog_collector_enabled"
+                  type="checkbox"
+                  class="switch-input"
+                />
+                <span class="switch-label">Receptor y Buffer Syslog RouterOS (UDP 5514)</span>
+              </label>
+              <label class="switch-row">
+                <input
+                  id="flag-cve"
+                  v-model="tenantFeaturesForm.cve_scanner_enabled"
+                  type="checkbox"
+                  class="switch-input"
+                />
+                <span class="switch-label">Escáner Local y Matriz de Vulnerabilidades CVE</span>
+              </label>
+              <label class="switch-row">
+                <input
+                  id="flag-prometheus"
+                  v-model="tenantFeaturesForm.prometheus_fleet_exporter_enabled"
+                  type="checkbox"
+                  class="switch-input"
+                />
+                <span class="switch-label">Exportador Prometheus para Flotas (/metrics/fleet)</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <!-- Sección 5: Parámetros Generales -->
+          <fieldset class="form-fieldset">
+            <legend class="fieldset-legend">5. Parámetros Generales</legend>
             <div class="form-row" style="margin-top: 10px">
               <div class="form-group">
                 <label for="flag-threshold" class="form-label"
