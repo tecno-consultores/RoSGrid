@@ -48,13 +48,13 @@ sed -i "s|ROSGRID_CSRF_HMAC_SECRET=.*|ROSGRID_CSRF_HMAC_SECRET=$(openssl rand -b
 chmod 600 .env
 ```
 
-> ⚠️ **IMPORTANTE SOBRE `ROSGRID_MASTER_VAULT_KEY`:** Esta llave maestra de 32 bytes (codificada en Base64) cifra las credenciales API de todos tus routers MikroTik mediante `AES-256-GCM`. Guárdala en un gestor de secretos externo seguro; si pierdes esta llave, no podrás descifrar la bóveda `router_credentials_vault`. Para detalles completos de todas las variables, consulta [docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md](./docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md) y [docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md](./docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md).
+> ⚠️ **IMPORTANTE SOBRE `ROSGRID_MASTER_VAULT_KEY`:** Esta llave maestra de 32 bytes (codificada en Base64) cifra las credenciales API de todos tus routers MikroTik mediante `AES-256-GCM`. Guárdala en un gestor de secretos externo seguro; si pierdes esta llave, no podrás descifrar la bóveda `router_credentials_vault`. Para detalles completos de todas las variables, consulta [01_GUIA_DESPLIEGUE_Y_ENTORNO.md](./01_GUIA_DESPLIEGUE_Y_ENTORNO.md) y [07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md](./07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md).
 
 ---
 
 ## 3. Modos de Instalación y Despliegue
 
-Para conocer todos los parámetros avanzados de despliegue, puertos y topologías de red, consulta [docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md](./docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md).
+Para conocer todos los parámetros avanzados de despliegue, puertos y topologías de red, consulta [01_GUIA_DESPLIEGUE_Y_ENTORNO.md](./01_GUIA_DESPLIEGUE_Y_ENTORNO.md).
 
 ```mermaid
 flowchart TD
@@ -63,7 +63,7 @@ flowchart TD
     Branch -->|Opción 1: Turnkey Remoto| Curl["curl -fsSL ... | bash"]
     Curl --> OptDir["Crea /opt/rosgrid y descarga manifests de GitHub"]
     
-    Branch -->|Opción 2: Repositorio Clonado| LocalScript["./instalar-rosgrid.sh"]
+    Branch -->|Opción 2: Repositorio Clonado| LocalScript["./scripts/instalar-rosgrid.sh"]
     LocalScript --> DetectLocal["Usa manifests locales del repositorio"]
     
     Branch -->|Opción 3: Compose Directo| Manual["cp .env.example .env && docker compose up"]
@@ -90,7 +90,7 @@ Para una instalación turnkey sin fricción, dispones de dos alternativas asisti
 Si te encuentras en un servidor nuevo y deseas desplegar RoSGrid sin clonar el repositorio de código fuente, ejecuta:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/tecno-consultores/RoSGrid/main/instalar-rosgrid.sh | bash
+curl -fsSL https://raw.githubusercontent.com/tecno-consultores/RoSGrid/main/scripts/instalar-rosgrid.sh | bash
 ```
 
 **¿Qué hace este comando automáticamente?**
@@ -106,8 +106,8 @@ curl -fsSL https://raw.githubusercontent.com/tecno-consultores/RoSGrid/main/inst
 Si ya clonaste el repositorio con `git clone`:
 
 ```bash
-chmod +x ./instalar-rosgrid.sh
-./instalar-rosgrid.sh
+chmod +x ./scripts/instalar-rosgrid.sh
+./scripts/instalar-rosgrid.sh
 ```
 
 *(El script detectará la ejecución local, buscará y cargará automáticamente la configuración de tu archivo `.env` existente —o empleará los valores por defecto si aún no ha sido creado— y te ofrecerá elegir el modo de despliegue: oficial de Docker Hub, compilación local o desarrollo).*
@@ -135,7 +135,7 @@ Levanta la plataforma montando el código fuente local sobre las imágenes base 
 
 ```bash
 # 1. Auditar la configuración con Trivy antes de levantar
-./auditar-infra.sh
+./scripts/auditar-infra.sh
 
 # 2. Levantar todos los servicios
 docker compose up -d
@@ -150,7 +150,7 @@ Si deseas construir tus propias imágenes de producción a partir del código fu
 
 ```bash
 # Ejecutar como usuario normal (NO root)
-./build.sh 1.0.0
+./scripts/build.sh 1.0.0
 ```
 
 ---
@@ -192,7 +192,7 @@ Si tu operación requiere el motor *Shared-Nothing* sobre `io_uring` de **Dragon
 
 ## 5. Preparación Rápida de tus Equipos MikroTik (RouterOS v7.1+)
 
-Antes de registrar un router en el inventario de RoSGrid (individualmente o por lote CSV), ejecuta estos comandos en la terminal del MikroTik para habilitar `www-ssl` con un certificado TLS para fijación **TOFU (*Trust On First Use*)**. Para una explicación detallada de políticas de firewall, grupos de permisos y Safe Mode, consulta [docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md](./docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md):
+Antes de registrar un router en el inventario de RoSGrid (individualmente o por lote CSV), ejecuta estos comandos en la terminal del MikroTik para habilitar `www-ssl` con un certificado TLS para fijación **TOFU (*Trust On First Use*)**. Para una explicación detallada de políticas de firewall, grupos de permisos y Safe Mode, consulta [02_PREPARACION_MIKROTIK_ROUTEROS_V7.md](./02_PREPARACION_MIKROTIK_ROUTEROS_V7.md):
 
 ```routeros
 # 1. Generar y firmar certificado TLS autofirmado en el MikroTik
@@ -212,11 +212,11 @@ Antes de registrar un router en el inventario de RoSGrid (individualmente o por 
 
 ## 6. Actualización de Versiones y Migraciones Automáticas
 
-RoSGrid incluye un mecanismo de auto-migración protegido por bloqueo atómico en PostgreSQL (`pg_advisory_lock` ID `948271605` en `entrypoint.sh`). Para actualizar tu instalación a una nueva versión sin corromper el esquema:
+RoSGrid incluye un mecanismo de auto-migración protegido por bloqueo atómico en PostgreSQL (`pg_advisory_lock` ID `948271605` en `fastapi/scripts/entrypoint.sh`). Para actualizar tu instalación a una nueva versión sin corromper el esquema:
 
 ```bash
 # 1. Consultar cambios relevantes en CHANGELOG.md
-less CHANGELOG.md
+less ../CHANGELOG.md
 
 # 2. Descargar la nueva versión de las imágenes y recrear contenedores
 docker compose -f docker-compose.prod.yml pull
@@ -227,16 +227,16 @@ El contenedor `rosgrid_api` adquirirá automáticamente el bloqueo en PostgreSQL
 
 ---
 
-## 7. Referencias y Manuales Detallados (`docs/`)
+## 7. Referencias y Manuales Detallados
 
 Para profundizar en la configuración y operación de cada subsistema:
 
-- [docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md](./docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md) — Infraestructura, variables y perfiles en memoria (KeyDB / DragonflyDB).
-- [docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md](./docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md) — Comandos CLI, política `rest-api`, TOFU y Safe Mode.
-- [docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md](./docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md) — RLS, 11 roles, Bóveda 2FA, Kill-Switch y Auto-Registro.
-- [docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md](./docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md) — WebFig, RingBuffer, Maker-Checker y Wallboard.
-- [docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md](./docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md) — Bitácora WORM, ADR de seguridad y grafos Mermaid.
-- [docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md](./docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md) — Especificación técnica de endpoints REST y WebSockets.
-- [docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md](./docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md) — Conexión de agentes autónomos IA (Hermes Agent / Claude).
-- [docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md](./docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md) — Pipeline de pruebas locales y suite de 24 contratos de integración.
-- [docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md](./docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md) — Plan maestro UAT 11X (28 casos E2E).
+- [01_GUIA_DESPLIEGUE_Y_ENTORNO.md](./01_GUIA_DESPLIEGUE_Y_ENTORNO.md) — Infraestructura, variables y perfiles en memoria (KeyDB / DragonflyDB).
+- [02_PREPARACION_MIKROTIK_ROUTEROS_V7.md](./02_PREPARACION_MIKROTIK_ROUTEROS_V7.md) — Comandos CLI, política `rest-api`, TOFU y Safe Mode.
+- [03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md](./03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md) — RLS, 11 roles, Bóveda 2FA, Kill-Switch y Auto-Registro.
+- [04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md](./04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md) — WebFig, RingBuffer, Maker-Checker y Wallboard.
+- [05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md](./05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md) — Bitácora WORM, ADR de seguridad y grafos Mermaid.
+- [06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md](./06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md) — Especificación técnica de endpoints REST y WebSockets.
+- [07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md](./07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md) — Conexión de agentes autónomos IA (Hermes Agent / Claude).
+- [08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md](./08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md) — Pipeline de pruebas locales y suite de 24 contratos de integración.
+- [09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md](./09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md) — Plan maestro UAT 11X (28 casos E2E).

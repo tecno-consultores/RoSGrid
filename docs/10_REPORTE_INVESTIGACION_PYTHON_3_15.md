@@ -202,7 +202,7 @@ gantt
     Ejecución de suite Pytest en Docker efímero        :b1, after a2, 10d
     Pruebas de concurrencia No-GIL con KeyDB           :b2, after b1, 7d
     section Fase 3: Homologación y QA 11X
-    Pipeline ./probar-prod-local.sh con 3.15           :c1, after b2, 5d
+    Pipeline ./scripts/probar-prod-local.sh con 3.15   :c1, after b2, 5d
     Auditoría Trivy (0 CVEs CRITICAL/HIGH)             :c2, after c1, 3d
     section Fase 4: Despliegue General
     Publicación oficial de imágenes en Docker Hub      :d1, after c2, 4d

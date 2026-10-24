@@ -112,7 +112,7 @@ Por gobernanza innegociable de Nivel 11X, tras **CADA** tarea o solicitud que mo
    - Actualizar las métricas y conteo de pruebas en `TESTING.md`.
    - Actualizar `README.md` y documentación en la raíz cuando aplique.
 4. **Auditoría de Secretos y Paridad ORM:**
-   - Ejecutar `./verificar-secretos.sh` (0 secretos expuestos).
+   - Ejecutar `./scripts/verificar-secretos.sh` (0 secretos expuestos).
    - Ejecutar `./.agents/scripts/certify_task_completion.sh`.
 5. **Registro y Publicación Remota Inmediata:**
    - Registrar los cambios con `git add .`.

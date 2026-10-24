@@ -6,6 +6,10 @@
 LC_ALL=C
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${REPO_ROOT}"
+
 # Configuración y Parámetros por Defecto
 KEEP_ALIVE=false
 SKIP_BUILD=false
@@ -20,7 +24,7 @@ mostrar_ayuda() {
 ==============================================================================
   🚀 Pipeline de Pruebas Locales de Producción RoSGrid (QA 11X)
 ==============================================================================
-Uso: ./probar-prod-local.sh [OPCIONES]
+Uso: ./scripts/probar-prod-local.sh [OPCIONES]
 
 Opciones disponibles:
   -h, --help           Muestra esta ayuda y termina.
@@ -32,7 +36,7 @@ Opciones disponibles:
   -s, --skip-build     Omite la fase de compilación local si las imágenes ya fueron
                        construidas previamente en la caché Docker.
   -a, --audit          Ejecuta la auditoría estática de seguridad de infraestructura
-                       (./auditar-infra.sh: Trivy IaC, CVEs y secretos) antes del despliegue.
+                       (./scripts/auditar-infra.sh: Trivy IaC, CVEs y secretos) antes del despliegue.
   -d, --down, --stop   Apaga y desmantela el entorno local de pruebas (contenedores, redes y volúmenes).
   -p, --port PUERTO    Especifica el puerto del host para acceder al Frontend Nginx
                        (Predeterminado: 8085 o variable ROSGRID_HTTP_PORT).
@@ -46,11 +50,11 @@ Fases del Pipeline de Validación:
   [6/6] Inspección de Logs (API y Worker), Aislamiento de Red y Cierre Limpio
 
 Ejemplos:
-  ./probar-prod-local.sh                     # Ejecución completa estándar automatizada
-  ./probar-prod-local.sh --keep-alive        # Valida y deja el sistema levantado para probar en navegador
-  ./probar-prod-local.sh --down              # Apaga el stack activo y libera todos los recursos
-  ./probar-prod-local.sh --skip-build        # Revalida el stack rápidamente sin recompilar imágenes
-  ./probar-prod-local.sh -a -k -p 8090       # Auditoría previa, levanta en puerto 8090 y mantiene activo
+  ./scripts/probar-prod-local.sh                     # Ejecución completa estándar automatizada
+  ./scripts/probar-prod-local.sh --keep-alive        # Valida y deja el sistema levantado para probar en navegador
+  ./scripts/probar-prod-local.sh --down              # Apaga el stack activo y libera todos los recursos
+  ./scripts/probar-prod-local.sh --skip-build        # Revalida el stack rápidamente sin recompilar imágenes
+  ./scripts/probar-prod-local.sh -a -k -p 8090       # Auditoría previa, levanta en puerto 8090 y mantiene activo
 ==============================================================================
 EOF
 }
@@ -139,7 +143,7 @@ trap limpiar_en_fallo EXIT
 echo -e "\n[1/6] Auditoría y Preparación de Imágenes de Producción..."
 if [ "$RUN_AUDIT" = true ]; then
     echo "Ejecutando auditoría de infraestructura y seguridad (Trivy)..."
-    ./auditar-infra.sh
+    "${SCRIPT_DIR}/auditar-infra.sh"
 fi
 
 if [ "$SKIP_BUILD" = false ]; then
@@ -327,7 +331,7 @@ if [ "$CLEAN_WIZARD" = true ]; then
     echo "  • Estado Bootstrap:      is_bootstrapped: false (Registro abierto)"
     echo "------------------------------------------------------------------------------"
     echo "Para apagar el stack y liberar los recursos cuando termines, ejecuta:"
-    echo "  ./probar-prod-local.sh --down"
+    echo "  ./scripts/probar-prod-local.sh --down"
     echo "  (o alternativamente: docker compose -f ${COMPOSE_FILE} down -v)"
     echo "=============================================================================="
     exit 0
@@ -346,7 +350,7 @@ elif [ "$KEEP_ALIVE" = true ]; then
     echo "  • Contraseña:            ClaveSegura123!"
     echo "------------------------------------------------------------------------------"
     echo "Para apagar el stack y liberar los recursos cuando termines, ejecuta:"
-    echo "  ./probar-prod-local.sh --down"
+    echo "  ./scripts/probar-prod-local.sh --down"
     echo "  (o alternativamente: docker compose -f ${COMPOSE_FILE} down -v)"
     echo "=============================================================================="
     exit 0

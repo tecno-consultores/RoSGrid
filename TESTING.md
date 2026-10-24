@@ -42,10 +42,10 @@
 - **Pruebas de Mutación:** 0 mutantes críticos sobrevivientes en lógica de negocio crítica.
 - **Accesibilidad y Rendimiento UI:** 0 violaciones WCAG 2.1 A/AA en `@axe-core/playwright`, regresión visual determinista, y Lighthouse CI con Performance `>= 0.90`, Accessibility `>= 0.95`, Best-Practices `>= 0.90` y SEO `>= 0.90`.
 - **Regla Cero de Host:** Cero ejecuciones de entornos en el host local; ejecución 100% encapsulada en contenedores Docker efímeros.
-- **Auditoría Estática de Scripts en Bash (ShellCheck):** Cero (0) errores y cero (0) advertencias en `ShellCheck` (`koalaman/shellcheck:stable`) sobre el 100% de los scripts `.sh` del monorepo (`auditar-infra.sh`, `instalar-rosgrid.sh`, `build.sh`, `instalar-hooks.sh`, `limpieza.sh`, `probar-prod-local.sh`, `verificar-secretos.sh`, `fastapi/scripts/entrypoint.sh`).
+- **Auditoría Estática de Scripts en Bash (ShellCheck):** Cero (0) errores y cero (0) advertencias en `ShellCheck` (`koalaman/shellcheck:stable`) sobre el 100% de los scripts `.sh` del monorepo (`scripts/auditar-infra.sh`, `scripts/instalar-rosgrid.sh`, `scripts/build.sh`, `scripts/instalar-hooks.sh`, `scripts/limpieza.sh`, `scripts/probar-prod-local.sh`, `scripts/verificar-secretos.sh`, `fastapi/scripts/entrypoint.sh`).
 - **Tolerancia Cero a Diagnósticos de IDE y Linters Estáticos:** Cero (0) errores y cero (0) advertencias en Pyrefly, SonarLint, Hadolint y ESLint sobre todo archivo versionado en el repositorio.
 - **Certificación de Arranque Estricto de Producción (`--no-dev`):** Validación obligatoria por AST (`test_production_no_dev_cleanliness.unit.py`) y Smoke Test inmutable en contenedor (`test_production_boot_smoke.py`) asegurando cero dependencias de desarrollo en el runtime de producción.
-- **Compuerta de Validación Integral de Producción Local (`probar-prod-local.sh`):** Ejecución obligatoria de las 6 fases de validación pre-publicación (`./probar-prod-local.sh`) certificando: liveness `/health`, Prometheus `/metrics`, transición de bootstrap (`false` a `true`), validación del proxy inverso Nginx (`:${UI_PORT}/api/...`), ocultamiento HTTP 404 de Swagger/OpenAPI en producción, prueba negativa 401 sin Bearer token, emisión y autenticación de token MCP, sondeo JSON-RPC 2.0 (`POST /api/v1/mcp`), runner `rosgrid-worker` sin excepciones, aislamiento de puertos de base de datos (5432 y 6379 cerrados al host) y ejecución exitosa (100%) de la suite de 24 contratos Front-Back (`validar_comunicacion_front_back.py`).
+- **Compuerta de Validación Integral de Producción Local (`probar-prod-local.sh`):** Ejecución obligatoria de las 6 fases de validación pre-publicación (`./scripts/probar-prod-local.sh`) certificando: liveness `/health`, Prometheus `/metrics`, transición de bootstrap (`false` a `true`), validación del proxy inverso Nginx (`:${UI_PORT}/api/...`), ocultamiento HTTP 404 de Swagger/OpenAPI en producción, prueba negativa 401 sin Bearer token, emisión y autenticación de token MCP, sondeo JSON-RPC 2.0 (`POST /api/v1/mcp`), runner `rosgrid-worker` sin excepciones, aislamiento de puertos de base de datos (5432 y 6379 cerrados al host) y ejecución exitosa (100%) de la suite de 24 contratos Front-Back (`validar_comunicacion_front_back.py`).
 - **Plan Maestro de Pruebas de Aceptación Manual (UAT 11X):** Ejecución protocolizada de [docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md) sobre hardware físico o MikroTik CHR v7 antes de cada release.
 
 ---
@@ -56,30 +56,31 @@
 
 ```bash
 # 1. Auditoría de Infraestructura como Código (IaC) y Vulnerabilidades en File System (Trivy)
-./auditar-infra.sh
+./scripts/auditar-infra.sh
 
 # 2. Auditoría Estática de Scripts en Bash (ShellCheck en Docker)
 docker run --rm -v "$(pwd):/mnt" koalaman/shellcheck:stable \
-    /mnt/auditar-infra.sh \
-    /mnt/instalar-rosgrid.sh \
-    /mnt/build.sh \
-    /mnt/instalar-hooks.sh \
-    /mnt/limpieza.sh \
-    /mnt/probar-prod-local.sh \
+    /mnt/scripts/auditar-infra.sh \
+    /mnt/scripts/instalar-rosgrid.sh \
+    /mnt/scripts/build.sh \
+    /mnt/scripts/instalar-hooks.sh \
+    /mnt/scripts/limpieza.sh \
+    /mnt/scripts/probar-prod-local.sh \
+    /mnt/scripts/verificar-secretos.sh \
     /mnt/fastapi/scripts/entrypoint.sh
 
 # 3. Pipeline de Validación Integral de Imágenes de Producción en Local (Bajo Demanda)
 # Ejecución estándar (automatizada de 6 fases con desmantelamiento limpio)
-./probar-prod-local.sh
+./scripts/probar-prod-local.sh
 
 # Modo Interactivo: Deja el stack levantado para inspección en navegador (http://localhost:8085)
-./probar-prod-local.sh --keep-alive
+./scripts/probar-prod-local.sh --keep-alive
 
 # Modo Rápido: Revalida endpoints y aprovisionamiento sin recompilar imágenes
-./probar-prod-local.sh --skip-build
+./scripts/probar-prod-local.sh --skip-build
 
 # Modo Seguridad: Ejecuta Trivy IaC/CVEs previo al despliegue y mapea a puerto personalizado
-./probar-prod-local.sh --audit --port 8090
+./scripts/probar-prod-local.sh --audit --port 8090
 ```
 
 > Consulta el manual operativo completo en [docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md).
@@ -610,7 +611,7 @@ Certificación integral ejecutada bajo la **Regla Cero** garantizando cumplimien
 
 ### A. Auditoría Estática de Infraestructura y Scripts
 
-- **Trivy IaC (`./auditar-infra.sh`):**
+- **Trivy IaC (`./scripts/auditar-infra.sh`):**
   - **Dockerfiles y Compose:** Cero (0) fallos de configuración en `fastapi/Dockerfile`, `vue3/Dockerfile`, `docker-compose.yml`, `docker-compose.prod.yml` y `docker-compose.prod.local.yml`.
 - **Trivy FileSystem (`uv.lock` y `pnpm-lock.yaml`):**
   - **Vulnerabilidades:** Cero (0) vulnerabilidades `HIGH` o `CRITICAL` en la cadena de dependencias de Python y Node.js.
@@ -618,7 +619,7 @@ Certificación integral ejecutada bajo la **Regla Cero** garantizando cumplimien
   - `fastapi/Dockerfile`: 0 errores, 0 advertencias (`USER 10001:10001` no-root, curl healthcheck).
   - `vue3/Dockerfile`: 0 errores, 0 advertencias (`USER 101:101` nginx no-root, wget healthcheck).
 - **ShellCheck en Docker (`koalaman/shellcheck:stable`):**
-  - Cero (0) errores y cero (0) advertencias en el 100% de los scripts del proyecto (`auditar-infra.sh`, `instalar-rosgrid.sh`, `build.sh`, `instalar-hooks.sh`, `limpieza.sh`, `probar-prod-local.sh`, `fastapi/scripts/entrypoint.sh`).
+  - Cero (0) errores y cero (0) advertencias en el 100% de los scripts del proyecto (`scripts/auditar-infra.sh`, `scripts/instalar-rosgrid.sh`, `scripts/build.sh`, `scripts/instalar-hooks.sh`, `scripts/limpieza.sh`, `scripts/probar-prod-local.sh`, `scripts/verificar-secretos.sh`, `fastapi/scripts/entrypoint.sh`).
 
 ### B. Especificación y Endurecimiento de la Matriz Smoke Tests (`probar-prod-local.sh`)
 
@@ -647,7 +648,7 @@ Certificación integral ejecutada bajo la **Regla Cero** garantizando cumplimien
 
 ## 18. Certificación QA 11X — Hito 22.5 (Mitigación Integral de Vectores de Ataque en Plataforma Híbrida Vue 3 + FastAPI)
 
-Certificación integral ejecutada bajo la **Regla Cero** dentro del contenedor Docker efímero `qa-backend` (`sinfallas/base-python-uv:3.15`) y validada en entorno de producción local (`./probar-prod-local.sh`).
+Certificación integral ejecutada bajo la **Regla Cero** dentro del contenedor Docker efímero `qa-backend` (`sinfallas/base-python-uv:3.15`) y validada en entorno de producción local (`./scripts/probar-prod-local.sh`).
 
 ### A. Backend (`fastapi/`) — Docker `sinfallas/base-python-uv:3.15`
 
@@ -671,7 +672,7 @@ Certificación integral ejecutada bajo la **Regla Cero** dentro del contenedor D
     5. **Límite de Carga de Inventario CSV (`test_inventory_endpoints.unit.py`):**
        - Rechazo con HTTP `413 Payload Too Large` cuando el archivo CSV excede el umbral de seguridad de 2 MB.
 
-### B. Validación de Integración en Producción Local (`./probar-prod-local.sh`)
+### B. Validación de Integración en Producción Local (`./scripts/probar-prod-local.sh`)
 
 - **Suite de Contratos Front-Back (`validar_comunicacion_front_back.py`):**
   - **Contratos Ejecutados:** **22 de 22 contratos aprobados (100% exitosos)** contra el stack completo en contenedores (`postgres`, `keydb`, `fastapi`, `worker`, `nginx`).
@@ -897,7 +898,7 @@ Certificación integral ejecutada de extremo a extremo bajo la **Regla Cero** (c
 - **Verificación de Tipos TypeScript (`vue-tsc --noEmit`):** 0 errores en todos los componentes y composables.
 - **Compilación de Producción (Vite 5):** Bundle generado de forma limpia en 3.99 segundos.
 
-### D. Pipeline de Validación Local de Producción (`./probar-prod-local.sh`)
+### D. Pipeline de Validación Local de Producción (`./scripts/probar-prod-local.sh`)
 
 - **Fases Validadas (6/6 al 100%):**
   1. Construcción multi-etapa de imágenes `rosgrid-backend:local-test` y `rosgrid-frontend:local-test`.
@@ -907,7 +908,7 @@ Certificación integral ejecutada de extremo a extremo bajo la **Regla Cero** (c
   5. Aprovisionamiento E2E de Super Admin, generación de Token MCP, invocación JSON-RPC 2.0 y **24/24 contratos Front-Back validados al 100%** (`validar_comunicacion_front_back.py`).
   6. Aislamiento de red interna (puertos 5432 y 6379 no expuestos al host), verificación de logs limpios y desmantelamiento seguro de volúmenes efímeros.
 
-### E. Auditoría de Secretos (`./verificar-secretos.sh`)
+### E. Auditoría de Secretos (`./scripts/verificar-secretos.sh`)
 
 - Verificación sin hallazgos de claves API, tokens JWT o contraseñas en el árbol de trabajo.
 
@@ -1051,7 +1052,7 @@ Certificación integral ejecutada de extremo a extremo bajo la **Regla Cero** (c
    - **26 de 26 contratos aprobados (100%)** en `validar_comunicacion_front_back.py`.
    - **25 de 25 tablas en estricta paridad ORM con migraciones Alembic** (`verify_alembic_orm_parity.py`).
 5. **Auditoría de Secretos:**
-   - `./verificar-secretos.sh`: 0 secretos detectados en el árbol de trabajo.
+   - `./scripts/verificar-secretos.sh`: 0 secretos detectados en el árbol de trabajo.
 6. **Validación Visual en Navegador Real:**
    - Verificado con `browser_subagent` en `http://localhost:8085/noc-wallboard` y `http://localhost:8085/`:
      - Encabezado de Wallboard limpio sin óvalo ni texto *"EN VIVO 24/7"*.
@@ -1180,7 +1181,7 @@ Certificación integral ejecutada de extremo a extremo bajo la **Regla Cero** (c
    - Sincronizadas las especificaciones en `docs/specs/35_FLEET_AUTOMATION_TOPOLOGY_L2_SYSLOG_AND_PROMETHEUS.md`.
    - Sincronizada la documentación de API en `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`.
    - Registro de cambios en `CHANGELOG.md` y `ROADMAP.md`.
-   - `./verificar-secretos.sh`: 0 secretos detectados.
+   - `./scripts/verificar-secretos.sh`: 0 secretos detectados.
 5. **Invariante de Calidad Karate Labs Reforzada:**
    - Actualizadas las directivas de gobernanza en `AGENTS.md`, `.agents/rules/mandatory_qa_pyramid_and_doc_sync.md`, `.agents/rules/frontend_parity_and_closure.md`, `.agents/README.md` y `.agents/scripts/certify_task_completion.sh` para exigir incondicionalmente la inclusión y sincronización de escenarios BDD de Karate Labs (`fastapi/test/` y `vue3/test/`, reflejados en `docs/examples/`) ante cualquier mutación de código en la plataforma.
 

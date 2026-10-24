@@ -5,6 +5,8 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # 1. Validación estricta de permisos de usuario (Regla corporativa 11X)
 if [[ "$EUID" -eq 0 ]]; then
     echo -e "\e[31m[ERROR] Este script NUNCA debe ejecutarse como root.\e[0m"
@@ -186,10 +188,19 @@ if [[ "$RECREAR_VOLUMENES" == "true" ]]; then
 fi
 
 # 6. Ejecución del auditor de infraestructura (Trivy IaC si existe localmente)
-if [[ -f ./auditar-infra.sh ]]; then
+AUDITAR_SCRIPT=""
+if [[ -f "${SCRIPT_DIR}/auditar-infra.sh" ]]; then
+    AUDITAR_SCRIPT="${SCRIPT_DIR}/auditar-infra.sh"
+elif [[ -f "./scripts/auditar-infra.sh" ]]; then
+    AUDITAR_SCRIPT="./scripts/auditar-infra.sh"
+elif [[ -f "./auditar-infra.sh" ]]; then
+    AUDITAR_SCRIPT="./auditar-infra.sh"
+fi
+
+if [[ -n "$AUDITAR_SCRIPT" ]]; then
     echo -e "\n[4/5] Ejecutando auditoría de seguridad IaC (Trivy)..."
-    chmod +x ./auditar-infra.sh
-    if ./auditar-infra.sh; then
+    chmod +x "$AUDITAR_SCRIPT"
+    if "$AUDITAR_SCRIPT"; then
         echo "✔ Auditoría de infraestructura superada sin vulnerabilidades CRITICAL/HIGH."
     else
         echo -e "\e[31m[ERROR] La auditoría de seguridad detectó fallos. Revisa la salida superior.\e[0m"

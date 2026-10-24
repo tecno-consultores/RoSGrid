@@ -55,7 +55,7 @@ chmod 600 .env
 | :--- | :--- | :--- | :--- |
 | `ROSGRID_ENV` | String | `production` | Entorno de ejecución (`production`, `qa_test`, `development`). En `production`, Swagger y OpenAPI se ocultan permanentemente. |
 | `ROSGRID_HTTP_PORT` | Entero | `8080` | Puerto en el host donde escuchará el servidor Nginx de RoSGrid. |
-| `ROSGRID_INSTALL_DIR` | String | `/opt/rosgrid` | Directorio de destino en el host para instalación remota o standalone desatendida vía curl (`instalar-rosgrid.sh`). |
+| `ROSGRID_INSTALL_DIR` | String | `/opt/rosgrid` | Directorio de destino en el host para instalación remota o standalone desatendida vía curl (`scripts/instalar-rosgrid.sh`). |
 | `POSTGRES_HOST` | String | `rosgrid_db` | Hostname o dirección IP del servidor PostgreSQL 17 (permite conectar clústeres externos o DB administrada). |
 | `POSTGRES_PORT` | Entero | `5432` | Puerto de conexión al servicio PostgreSQL. |
 | `POSTGRES_DB` | String | `rosgrid` | Nombre de la base de datos central en PostgreSQL 17. |
@@ -162,7 +162,7 @@ Este método no requiere descargar el código fuente ni compilar imágenes local
 #### Método Asistido en 1 Solo Comando (Recomendado)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/tecno-consultores/RoSGrid/main/instalar-rosgrid.sh | bash
+curl -fsSL https://raw.githubusercontent.com/tecno-consultores/RoSGrid/main/scripts/instalar-rosgrid.sh | bash
 ```
 
 El asistente crea y configura automáticamente `/opt/rosgrid`, descarga los manifiestos oficiales (`.env.example` y `docker-compose.prod.yml`), inyecta secretos criptográficos aleatorios de 256 bits (`chmod 600 .env`), descarga las imágenes oficiales y lanza el asistente interactivo para crear el Super Administrador.
@@ -176,7 +176,7 @@ sequenceDiagram
     participant Hub as Docker Hub
     participant Stack as RoSGrid Stack (/opt/rosgrid)
 
-    Admin->>Host: curl -fsSL .../instalar-rosgrid.sh | bash
+    Admin->>Host: curl -fsSL .../scripts/instalar-rosgrid.sh | bash
     Host->>Host: Verifica permisos no-root y grupo docker
     Host->>Host: Crea /opt/rosgrid (sudo temporal) asignado a $USER
     Host->>GH: Descarga .env.example y docker-compose.prod.yml
@@ -254,16 +254,16 @@ sequenceDiagram
 
 ---
 
-## 6. Compilación y Publicación Multi-Arquitectura (`./build.sh`)
+## 6. Compilación y Publicación Multi-Arquitectura (`./scripts/build.sh`)
 
 Para construir y publicar imágenes de producción para Docker Hub cumpliendo las directivas de seguridad Trivy IaC:
 
 ```bash
 # Requiere privilegios de usuario regular (EUID != 0) con acceso al socket Docker
-./build.sh 1.0.0
+./scripts/build.sh 1.0.0
 ```
 
-El script `./build.sh`:
+El script `./scripts/build.sh`:
 
 1. Inicializa emuladores QEMU con `tonistiigi/binfmt` para soporte multi-arquitectura.
 2. Crea una instancia aislada `docker buildx` de tipo contenedor (`container-builder`).
@@ -325,22 +325,22 @@ RoSGrid permite desplegar el Frontend (Nginx) y el Backend (FastAPI + Bases de D
   - El servidor Frontend recibe todo el tráfico en `https://noc.tuempresa.com` y reenvía internamente `/api/` y `/ws/` al servidor Backend a través de red privada o túnel WireGuard.
   - Permite conservar las cookies `__Host-rg_at` con `SameSite=Strict`.
 
-### 7.3 Pipeline de Validación de Imágenes de Producción en Local (`./probar-prod-local.sh`)
+### 7.3 Pipeline de Validación de Imágenes de Producción en Local (`./scripts/probar-prod-local.sh`)
 
 Para validar el stack completo de producción (`--no-dev`) antes de subir las imágenes a Docker Hub o desplegarlas, RoSGrid dispone de un pipeline automatizado configurable a petición del usuario:
 
 ```bash
 # Ejecución estándar automatizada
-./probar-prod-local.sh
+./scripts/probar-prod-local.sh
 
 # Modo interactivo (mantiene el stack activo para navegar en http://localhost:8085)
-./probar-prod-local.sh --keep-alive
+./scripts/probar-prod-local.sh --keep-alive
 
 # Modo rápido (sin recompilar si las imágenes ya existen)
-./probar-prod-local.sh --skip-build
+./scripts/probar-prod-local.sh --skip-build
 
 # Modo seguridad (ejecuta auditoría Trivy previa y cambia el puerto UI)
-./probar-prod-local.sh --audit --port 8090
+./scripts/probar-prod-local.sh --audit --port 8090
 ```
 
 Este pipeline ejecuta 6 fases exhaustivas:
@@ -353,7 +353,7 @@ Este pipeline ejecuta 6 fases exhaustivas:
 6. **Inspección de Logs y Limpieza:** Auditoría de ausencia de tracebacks y purga de volúmenes (o entrega de enlaces si se usó `--keep-alive`).
 
 > [!NOTE]
-> Para la guía operativa paso a paso, arquitectura y solución de problemas, consulta el manual completo en [08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md](08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md). Además, el script de publicación [build.sh](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/build.sh) ejecuta automáticamente este pipeline como Paso 0 previo a cualquier `docker buildx build --push`.
+> Para la guía operativa paso a paso, arquitectura y solución de problemas, consulta el manual completo en [08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md](08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md). Además, el script de publicación [build.sh](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/scripts/build.sh) ejecuta automáticamente este pipeline como Paso 0 previo a cualquier `docker buildx build --push`.
 
 ### 7.4 Dictamen de Arquitecturas de Hardware (AMD64, ARM64 y ARMv7)
 

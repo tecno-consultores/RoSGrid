@@ -18,6 +18,10 @@ else
     sudo apt install lefthook
 fi
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${REPO_ROOT}"
+
 # Instalar los hooks en el repositorio de Git actual
 lefthook install
 

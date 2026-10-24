@@ -3,9 +3,9 @@
 
 # Guía Operativa: Pipeline de Validación y Pruebas Locales de Imágenes de Producción
 
-Este documento detalla el procedimiento formal, la arquitectura y las opciones de ejecución bajo demanda del **Pipeline de Validación Local de Imágenes de Producción** de RoSGrid (`./probar-prod-local.sh`).
+Este documento detalla el procedimiento formal, la arquitectura y las opciones de ejecución bajo demanda del **Pipeline de Validación Local de Imágenes de Producción** de RoSGrid (`./scripts/probar-prod-local.sh`).
 
-Su propósito es actuar como **compuerta de calidad obligatoria (Gatekeeper)** antes de publicar imágenes en Docker Hub (`build.sh`) o de desplegarlas en entornos reales de clientes mediante `docker-compose.prod.yml`.
+Su propósito es actuar como **compuerta de calidad obligatoria (Gatekeeper)** antes de publicar imágenes en Docker Hub (`./scripts/build.sh`) o de desplegarlas en entornos reales de clientes mediante `docker-compose.prod.yml`.
 
 ---
 
@@ -36,7 +36,7 @@ flowchart TD
 
 | Fase | Título | Acciones Ejecutadas | Criterio de Éxito |
 | :--- | :--- | :--- | :--- |
-| **1/6** | **Auditoría e Imágenes** | Opcional: Escaneo Trivy (`./auditar-infra.sh`). Construcción local de `sinfallas/rosgrid-backend:local-test` y `sinfallas/rosgrid-frontend:local-test`. | 0 vulnerabilidades CRITICAL/HIGH y compilación multi-stage exitosa. |
+| **1/6** | **Auditoría e Imágenes** | Opcional: Escaneo Trivy (`./scripts/auditar-infra.sh`). Construcción local de `sinfallas/rosgrid-backend:local-test` y `sinfallas/rosgrid-frontend:local-test`. | 0 vulnerabilidades CRITICAL/HIGH y compilación multi-stage exitosa. |
 | **2/6** | **Despliegue Sintético** | Limpieza de huérfanos y arranque de PostgreSQL 17, KeyDB, FastAPI API, Worker y Nginx UI con `docker-compose.prod.local.yml`. | Contenedores creados e iniciados sin conflicto de puertos. |
 | **3/6** | **Healthchecks** | Sondeo activo con `docker inspect` hasta 45 intentos de PostgreSQL 17, KeyDB, FastAPI y `rosgrid-worker`. | Los cuatro servicios reportan estado `healthy`. |
 | **4/6** | **Pruebas Sintéticas y Hardening** | Ejecución de `test_production_boot_smoke.py` (`--no-dev`), consultas `curl` a `/health`, `/metrics`, `/api/v1/auth/bootstrap-status`, bundle servido en `/` (UI Nginx), **validación de proxy inverso Nginx** (`http://127.0.0.1:${UI_PORT}/api/...`), **ocultamiento estricto de Swagger/OpenAPI** (`/docs` y `/openapi.json` = HTTP 404) y **prueba negativa de autenticación** (`/api/v1/auth/me` sin token = HTTP 401). | 80 submódulos importados sin dependencias dev, HTTP 200 en endpoints operativos, HTTP 404 en Swagger, HTTP 401 en llamadas no autenticadas y bundle Nginx servido con cabeceras de seguridad. |
@@ -47,10 +47,10 @@ flowchart TD
 
 ## 3. Opciones de Ejecución a Petición del Usuario
 
-El script `./probar-prod-local.sh` dispone de un menú flexible de argumentos CLI:
+El script `./scripts/probar-prod-local.sh` dispone de un menú flexible de argumentos CLI:
 
 ```bash
-Uso: ./probar-prod-local.sh [OPCIONES]
+Uso: ./scripts/probar-prod-local.sh [OPCIONES]
 ```
 
 | Opción | Argumento Largo | Descripción |
@@ -59,7 +59,7 @@ Uso: ./probar-prod-local.sh [OPCIONES]
 | `-k` | `--keep-alive` | **Modo Interactivo:** No apaga los contenedores al terminar. Muestra las credenciales creadas y los enlaces para acceder desde el navegador. |
 | `-w` | `--wizard` | **Modo Asistente Inicial:** Omite la creación de admin_local y mantiene el sistema activo en `is_bootstrapped: false` para registrarse manualmente desde el navegador (incluye `--keep-alive` implícito). |
 | `-s` | `--skip-build` | **Modo Rápido:** Omite la compilación Docker si las imágenes ya existen en la caché local. Reduce el tiempo a solo unos segundos. |
-| `-a` | `--audit` | **Modo Seguridad:** Ejecuta `./auditar-infra.sh` (ShellCheck + Trivy IaC, CVEs y secretos) previo al despliegue. |
+| `-a` | `--audit` | **Modo Seguridad:** Ejecuta `./scripts/auditar-infra.sh` (ShellCheck + Trivy IaC, CVEs y secretos) previo al despliegue. |
 | `-p` | `--port <PUERTO>` | Define el puerto TCP del host para exponer la interfaz de usuario Nginx (Predeterminado: `8085` o `$ROSGRID_HTTP_PORT`). |
 
 ---
@@ -71,7 +71,7 @@ Uso: ./probar-prod-local.sh [OPCIONES]
 Ejecuta la validación completa en modo desatendido. Si todas las fases se superan, limpia los recursos y retorna código `0`:
 
 ```bash
-./probar-prod-local.sh
+./scripts/probar-prod-local.sh
 ```
 
 ### 4.2 Inspección Interactiva en el Navegador Web
@@ -79,7 +79,7 @@ Ejecuta la validación completa en modo desatendido. Si todas las fases se super
 Ideal cuando el operador desea verificar visualmente la interfaz WebFig táctil, el formulario de login o las políticas de seguridad antes de dar el visto bueno:
 
 ```bash
-./probar-prod-local.sh --keep-alive
+./scripts/probar-prod-local.sh --keep-alive
 ```
 
 Al finalizar, el script mostrará en consola:
@@ -104,7 +104,7 @@ Para apagar el stack y liberar los recursos cuando termines, ejecuta:
 Si solo se modificaron variables de entorno o configuraciones del compose y las imágenes locales ya están construidas:
 
 ```bash
-./probar-prod-local.sh --skip-build
+./scripts/probar-prod-local.sh --skip-build
 ```
 
 ### 4.4 Auditoría de Seguridad Integral con Puerto Personalizado
@@ -112,25 +112,25 @@ Si solo se modificaron variables de entorno o configuraciones del compose y las 
 Para verificar exhaustivamente las imágenes con Trivy y levantar la UI en el puerto 9000:
 
 ```bash
-./probar-prod-local.sh --audit --keep-alive --port 9000
+./scripts/probar-prod-local.sh --audit --keep-alive --port 9000
 ```
 
 ---
 
-## 5. Integración con el Proceso de Publicación (`build.sh`)
+## 5. Integración con el Proceso de Publicación (`scripts/build.sh`)
 
-Para impedir que imágenes rotas o desincronizadas se publiquen en Docker Hub, el script [build.sh](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/build.sh) invoca automáticamente a `./probar-prod-local.sh` como **Paso 0**:
+Para impedir que imágenes rotas o desincronizadas se publiquen en Docker Hub, el script [build.sh](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/scripts/build.sh) invoca automáticamente a `./scripts/probar-prod-local.sh` como **Paso 0**:
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant Dev as Desarrollador / CI
-    participant Build as build.sh
-    participant Pipeline as probar-prod-local.sh
+    participant Build as scripts/build.sh
+    participant Pipeline as scripts/probar-prod-local.sh
     participant Stack as docker-compose.prod.local.yml
     participant Hub as Docker Hub (sinfallas/*)
 
-    Dev->>Build: ./build.sh 1.2.0
+    Dev->>Build: ./scripts/build.sh 1.2.0
     Build->>Pipeline: Paso 0: Ejecutar compuerta local obligatoria
     Pipeline->>Stack: Despliegue sintético de PostgreSQL + KeyDB + API + Nginx
     Stack->>Pipeline: Healthchecks Healthy (4/4 servicios)
@@ -148,13 +148,13 @@ sequenceDiagram
 
 ```bash
 # Publicación normal (valida en local antes de compilar multi-arch y publicar)
-./build.sh 1.2.0
+./scripts/build.sh 1.2.0
 
 # Publicación forzada (omitiendo la validación previa solo si es estrictamente necesario)
-./build.sh 1.2.0 --skip-validation
+./scripts/build.sh 1.2.0 --skip-validation
 ```
 
-Si `./probar-prod-local.sh` detecta cualquier fallo en healthchecks, migraciones, endpoints o tokens, el proceso de compilación `buildx` multi-plataforma (`linux/amd64`, `linux/arm64`) se aborta inmediatamente con código de error `1`, protegiendo el registro público.
+Si `./scripts/probar-prod-local.sh` detecta cualquier fallo en healthchecks, migraciones, endpoints o tokens, el proceso de compilación `buildx` multi-plataforma (`linux/amd64`, `linux/arm64`) se aborta inmediatamente con código de error `1`, protegiendo el registro público.
 
 ---
 
@@ -167,14 +167,14 @@ Si un servicio local ya está utilizando el puerto `8085` o `8000`:
 - **Solución:** Ejecuta el pipeline especificando un puerto alternativo:
 
   ```bash
-  ./probar-prod-local.sh -p 8095
+  ./scripts/probar-prod-local.sh -p 8095
   ```
 
 - O exporta la variable en tu sesión:
 
   ```bash
   export ROSGRID_HTTP_PORT=8095
-  ./probar-prod-local.sh
+  ./scripts/probar-prod-local.sh
   ```
 
 ### 6.2 Tiempo de Espera Agotado en Healthchecks (`timeout`)

@@ -170,7 +170,7 @@ flowchart TD
     ProdBuild --> NginxProd["5. Despliegue en Nginx 1.27 Alpine"]
     NginxProd --> AxeCore["6. @axe-core/playwright: 0 violaciones WCAG 2.1 AA"]
     AxeCore --> Karate["7. Karate Labs: 16 escenarios BDD UI (100% PASSED)"]
-    Karate --> LocalProd["8. Pipeline ./probar-prod-local.sh"]
+    Karate --> LocalProd["8. Pipeline ./scripts/probar-prod-local.sh"]
     
     LocalProd --> SignOff["✅ Certificación QA 11X Aprobada para Producción"]
 ```

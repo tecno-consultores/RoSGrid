@@ -39,7 +39,7 @@ pre-commit:
     leaks-check:
       glob: "**/*"
       # Busca patrones comunes de contraseñas y tokens en archivos antes del commit
-      run: ./verificar-secretos.sh {staged_files}
+      run: ./scripts/verificar-secretos.sh {staged_files}
 
 commit-msg:
   commands:
@@ -59,4 +59,4 @@ pre-push:
     trivy-iac-scan:
       # Bloquea el `git push` si hay puertos expuestos, contenedores en modo root
       # o vulnerabilidades críticas en dependencias (File System).
-      run: ./auditar-infra.sh
+      run: ./scripts/auditar-infra.sh

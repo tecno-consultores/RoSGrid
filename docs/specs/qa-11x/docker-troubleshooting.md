@@ -16,7 +16,7 @@ Docker sigue almacenando en caché de forma agresiva: imágenes colgantes (Dangl
 Ejecutar la purga profunda que apagará todos los perfiles ocultos y destruirá los volúmenes (`down -v`):
 
 ```bash
-sudo ./limpieza.sh
+sudo ./scripts/limpieza.sh
 # O utiliza la meta del Makefile en tu proyecto:
 make clean-cache
 ```
@@ -98,7 +98,7 @@ OWASP ZAP termina de auditar la API exitosamente, pero escupe un error de permis
 El contenedor de ZAP corre por defecto con el usuario no privilegiado `zap` interno, el cual no tiene permisos de escritura en el volumen *bind* mapeado desde tu máquina host.
 
 **La Solución:**
-Asegúrate de que la directiva `user: root` esté declarada en el servicio `zap` dentro de tu `docker-compose.qa.yml`. Luego, ejecuta `sudo ./limpieza.sh` para restaurar los permisos locales.
+Asegúrate de que la directiva `user: root` esté declarada en el servicio `zap` dentro de tu `docker-compose.qa.yml`. Luego, ejecuta `sudo ./scripts/limpieza.sh` para restaurar los permisos locales.
 
 ---
 

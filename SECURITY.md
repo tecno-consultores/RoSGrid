@@ -153,11 +153,11 @@ La integración entre una SPA en Vue 3 y una API asíncrona en FastAPI introduce
 
 ## 4. Barreras Automatizadas DevSecOps
 
-Antes de cada commit, push o publicación de imagen en Docker Hub (`./build.sh`), el código supera:
+Antes de cada commit, push o publicación de imagen en Docker Hub (`./scripts/build.sh`), el código supera:
 
 - **Detección de Secretos:** `gitleaks` vía `lefthook.yml`.
 - **SAST Backend & Frontend:** `Bandit` (Python) y `eslint-plugin-security` (Vue 3 / TypeScript), más `.npmrc` con `ignore-scripts=true`.
-- **Auditoría IaC y Contenedores:** `Trivy` (`./auditar-infra.sh`) exigiendo `0` vulnerabilidades `HIGH` o `CRITICAL` y ejecución con usuarios sin privilegios (`non-root`).
+- **Auditoría IaC y Contenedores:** `Trivy` (`./scripts/auditar-infra.sh`) exigiendo `0` vulnerabilidades `HIGH` o `CRITICAL` y ejecución con usuarios sin privilegios (`non-root`).
 - **DAST en Vivo:** Escaneo dinámico con **OWASP ZAP Baseline** contra el contenedor compilado.
 
 ---

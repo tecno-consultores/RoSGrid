@@ -21,8 +21,8 @@ for arg in "$@"; do
 			SKIP_VALIDATION=true
 			;;
 		-h|--help)
-			echo "Uso: ./build.sh [VERSION] [--skip-validation]"
-			echo "Ejemplo: ./build.sh 1.2.0"
+			echo "Uso: ./scripts/build.sh [VERSION] [--skip-validation]"
+			echo "Ejemplo: ./scripts/build.sh 1.2.0"
 			exit 0
 			;;
 		*)
@@ -33,6 +33,10 @@ for arg in "$@"; do
 	esac
 done
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${REPO_ROOT}"
+
 CURRENT_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
 
 echo "=============================================================================="
@@ -42,7 +46,7 @@ echo "==========================================================================
 # Validación previa obligatoria antes de publicar en Docker Hub
 if [ "$SKIP_VALIDATION" = false ]; then
 	echo -e "\n[Paso 0] Ejecutando Pipeline de Validación Local Previo a la Publicación..."
-	if ! ./probar-prod-local.sh; then
+	if ! "${SCRIPT_DIR}/probar-prod-local.sh"; then
 		echo -e "\n\e[31m[ERROR CRÍTICO] La validación local de imágenes falló.\e[0m" >&2
 		echo -e "\e[31mSe cancela la publicación a Docker Hub para proteger el entorno de producción.\e[0m" >&2
 		exit 1

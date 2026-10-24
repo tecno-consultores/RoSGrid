@@ -176,10 +176,7 @@ Una pregunta frecuente de colaboradores y operadores acostumbrados a WinBox/WebF
 rosgrid/
 ├── LICENSE                         # Licencia GNU GPLv3
 ├── README.md                       # Documentación principal del proyecto y ADR de seguridad
-├── INSTALL.md                      # Guía paso a paso de instalación, KeyDB vs DragonflyDB y MikroTik
 ├── SECURITY.md                     # Política de seguridad, criptografía y reporte de vulnerabilidades
-├── RESOURCES.md                    # Catálogo de recursos, imágenes Docker y RFCs
-├── FAQ.md                          # Preguntas frecuentes técnicas y operativas
 ├── CONTRIBUTING.md                 # Guía de contribución y umbrales del estándar QA 11X
 ├── CODE_OF_CONDUCT.md              # Código de conducta de la comunidad (Contributor Covenant v2.1)
 ├── CHANGELOG.md                    # Historial de versiones (Keep a Changelog / SemVer)
@@ -187,14 +184,21 @@ rosgrid/
 ├── TESTING.md                      # Bitácora Viva de certificación QA 11X
 ├── docker-compose.yml              # Orquestador de entorno local / laboratorio EVE-NG (con KeyDB)
 ├── docker-compose.prod.yml         # Orquestador de producción (Imágenes oficiales en Docker Hub)
-├── build.sh                        # Script multi-arquitectura buildx para publicación en Docker Hub
 ├── .env.example                    # Plantilla de configuración de entorno
 ├── lefthook.yml                    # Barrera de seguridad Pre-Commit, Commit-Msg y Pre-Push
 ├── commitlint.config.js            # Convenciones estrictas de mensajes de commit
-├── instalar-hooks.sh               # Instalador local de hooks Lefthook
-├── verificar-secretos.sh           # Detección preventiva de credenciales y secretos hardcodeados
-├── auditar-infra.sh                # Auditoría efímera Trivy (IaC + File System CVEs)
-├── docs/                           # Manuales operativos, especificaciones técnicas y plantillas canónicas
+├── scripts/                        # Scripts operativos, compilación y compuertas de seguridad
+│   ├── auditar-infra.sh            # Auditoría efímera Trivy (IaC + File System CVEs)
+│   ├── build.sh                    # Script multi-arquitectura buildx para publicación en Docker Hub
+│   ├── instalar-hooks.sh           # Instalador local de hooks Lefthook
+│   ├── instalar-rosgrid.sh         # Asistente de instalación No-Root y aprovisionamiento
+│   ├── limpieza.sh                 # Limpieza y purga unificada de cachés y temporales
+│   ├── probar-prod-local.sh        # Pipeline de validación de producción local en 6 fases
+│   └── verificar-secretos.sh       # Detección preventiva de credenciales y secretos hardcodeados
+├── docs/                           # Manuales operativos, especificaciones técnicas y guías
+│   ├── INSTALL.md                  # Guía paso a paso de instalación, KeyDB vs DragonflyDB y MikroTik
+│   ├── FAQ.md                      # Preguntas frecuentes técnicas y operativas
+│   ├── RESOURCES.md                # Catálogo de recursos, imágenes Docker y RFCs
 │   ├── specs/                      # Enciclopedia de 36 especificaciones arquitectónicas + Blueprints QA 11X
 │   └── examples/                   # Plantillas de referencia y blueprints canónicos (FastAPI y Vue 3)
 ├── fastapi/                        # Ecosistema Backend (FastAPI + SQLAlchemy 2.0 + KeyDB + QA 11X)
@@ -203,18 +207,18 @@ rosgrid/
 
 ### 📖 Enciclopedia Documental de Producción (`docs/`)
 
-Para una referencia exhaustiva de operación, seguridad y despliegue, consulta los 12 manuales e informes oficiales del sistema:
+Para una referencia exhaustiva de operación, seguridad y despliegue, consulta los 12 manuales e informes oficiales del sistema, así como la [Guía de Instalación](./docs/INSTALL.md), las [Preguntas Frecuentes](./docs/FAQ.md) y el [Catálogo de Recursos](./docs/RESOURCES.md):
 
 | Manual | Descripción Técnica |
 | :--- | :--- |
-| **[`docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md`](./docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md)** | Variables `.env`, entropía criptográfica, arquitectura **KeyDB Multi-Hilo por defecto** vs. perfil **DragonflyDB**, Compose y `./build.sh`. |
+| **[`docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md`](./docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md)** | Variables `.env`, entropía criptográfica, arquitectura **KeyDB Multi-Hilo por defecto** vs. perfil **DragonflyDB**, Compose y `./scripts/build.sh`. |
 | **[`docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md`](./docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md)** | Comandos CLI RouterOS v7.1+, política obligatoria `rest-api` (v7.13+), certificados TLS para Pinning TOFU (`SHA-256`), `/ip/service/www-ssl` y Safe Mode. |
 | **[`docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md`](./docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md)** | Aislamiento RLS en PostgreSQL 17, matriz de 11 roles RBAC, permisos por router, Bóveda 2FA (30s), Kill-Switch y Auto-Registro con Maker-Checker. |
 | **[`docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md`](./docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md)** | Consola WebFig L1/L2, pestañas `<KeepAlive :max="5">`, gráficas Canvas 2D, Maker-Checker, comparador Git Diff `.rsc`, Wallboard y Plantillas Golden Configs masivas. |
 | **[`docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md`](./docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md)** | Perfil Auditor, cadena WORM SHA-256 e índice BRIN, ADR sobre la exclusión de terminal CLI/SSH y diagramas Mermaid AST. |
 | **[`docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`](./docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md)** | Especificación completa de endpoints `/api/v1/*` (incluyendo `/api/v1/operations/templates*`, `/bulk-jobs*`, `/auth/register` y `/api/v1/mcp`) y WebSockets `/ws/v1/*`. |
 | **[`docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md`](./docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md)** | Servidor MCP protegido (`POST /api/v1/mcp`), catálogo de 16 tools semánticas, configuración Hermes/Claude y NOC Autónomo 24/7. |
-| **[`docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md`](./docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md)** | Pipeline local `./probar-prod-local.sh`, verificación sintética en 6 fases y suite de 24 pruebas de integración UI-API (`validar_comunicacion_front_back.py`). |
+| **[`docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md`](./docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md)** | Pipeline local `./scripts/probar-prod-local.sh`, verificación sintética en 6 fases y suite de 24 pruebas de integración UI-API (`validar_comunicacion_front_back.py`). |
 | **[`docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md`](./docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md)** | Plan maestro de pruebas de aceptación de usuario (UAT 11X), 28 casos manuales E2E, redescubrimiento TOFU y bitácora de sign-off. |
 | **[`docs/10_REPORTE_INVESTIGACION_PYTHON_3_15.md`](./docs/10_REPORTE_INVESTIGACION_PYTHON_3_15.md)** | Investigación técnica sobre Python 3.15 (Free-Threading / No-GIL PEP 703, Tier-2 JIT, PEP 649) y migración a `sinfallas/base-python-uv:3.15`. |
 | **[`docs/11_REPORTE_INVESTIGACION_NODE_26.md`](./docs/11_REPORTE_INVESTIGACION_NODE_26.md)** | Investigación técnica sobre Node.js 26 LTS (Native Type Stripping, V8 14.x, Temporal API) y migración a `sinfallas/base-node-ionic:26`. |
@@ -224,14 +228,14 @@ Para una referencia exhaustiva de operación, seguridad y despliegue, consulta l
 
 ## 🚀 Despliegue Rápido con Docker Compose
 
-RoSGrid opera bajo el principio de **infraestructura inmutable** y ejecuta las migraciones de base de datos automáticamente al iniciar o actualizar contenedores (protegidas mediante `pg_advisory_lock` en PostgreSQL). Consulta [INSTALL.md](./INSTALL.md) para ver los requisitos detallados y la configuración de **KeyDB** o **DragonflyDB**:
+RoSGrid opera bajo el principio de **infraestructura inmutable** y ejecuta las migraciones de base de datos automáticamente al iniciar o actualizar contenedores (protegidas mediante `pg_advisory_lock` en PostgreSQL). Consulta [INSTALL.md](./docs/INSTALL.md) para ver los requisitos detallados y la configuración de **KeyDB** o **DragonflyDB**:
 
 ```bash
 # Opción 1 (Recomendada): Instalación Turnkey en 1 comando (descarga en /opt/rosgrid y despliegue oficial)
-curl -fsSL https://raw.githubusercontent.com/tecno-consultores/RoSGrid/main/instalar-rosgrid.sh | bash
+curl -fsSL https://raw.githubusercontent.com/tecno-consultores/RoSGrid/main/scripts/instalar-rosgrid.sh | bash
 
 # Opción 2: Instalación local desde el repositorio clonado
-./instalar-rosgrid.sh
+./scripts/instalar-rosgrid.sh
 
 # Opción 3: Despliegue manual directo con Docker Compose (Docker Hub)
 cp .env.example .env

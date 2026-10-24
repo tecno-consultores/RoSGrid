@@ -67,10 +67,7 @@ Antigravity tiene **estrictamente prohibido** violar cualquiera de los siguiente
 rosgrid/
 ├── LICENSE                                  # Texto íntegro GPLv3
 ├── README.md                                # Documentación general del proyecto RoSGrid y ADR de seguridad
-├── INSTALL.md                               # Guía paso a paso de instalación, KeyDB vs DragonflyDB y MikroTik
 ├── SECURITY.md                              # Política de seguridad, criptografía y reporte de vulnerabilidades
-├── RESOURCES.md                             # Catálogo de recursos, imágenes Docker y RFCs
-├── FAQ.md                                   # Preguntas frecuentes técnicas y operativas
 ├── CONTRIBUTING.md                          # Guía de contribución y umbrales del estándar QA 11X
 ├── CODE_OF_CONDUCT.md                       # Código de conducta (Contributor Covenant v2.1)
 ├── CHANGELOG.md                             # Historial de versiones (Keep a Changelog / SemVer)
@@ -78,15 +75,24 @@ rosgrid/
 ├── TESTING.md                               # Bitácora Viva 11X global (flujos cubiertos y comandos)
 ├── docker-compose.yml                       # Orquestador local / laboratorio EVE-NG (con KeyDB Multi-Hilo)
 ├── docker-compose.prod.yml                  # Orquestador de producción (Imágenes oficiales en Docker Hub)
-├── build.sh                                 # Script multi-arquitectura buildx para publicación en Docker Hub
 ├── .env.example                             # Plantilla de variables de entorno (Cero secretos reales)
 ├── .gitignore                               # Reglas globales de exclusión
 ├── commitlint.config.js                     # Reglas de Conventional Commits (Estándar 11X)
 ├── lefthook.yml                             # Barrera Pre-commit, Commit-msg y Pre-push
-├── instalar-hooks.sh                        # Instalador de Lefthook
-├── auditar-infra.sh                         # Escáner efímero Trivy IaC + FS (CRITICAL/HIGH = Exit 1)
+│
+├── scripts/                                 # Scripts de compilación, instalación y compuertas QA
+│   ├── auditar-infra.sh                     # Escáner efímero Trivy IaC + FS (CRITICAL/HIGH = Exit 1)
+│   ├── build.sh                             # Script multi-arquitectura buildx para publicación en Docker Hub
+│   ├── instalar-hooks.sh                    # Instalador de Lefthook
+│   ├── instalar-rosgrid.sh                  # Asistente de instalación No-Root
+│   ├── limpieza.sh                          # Limpieza y purga unificada de cachés y temporales
+│   ├── probar-prod-local.sh                 # Pipeline de validación de producción local en 6 fases
+│   └── verificar-secretos.sh                # Detección preventiva de credenciales y secretos hardcodeados
 │
 ├── docs/                                    # DOCUMENTACIÓN OFICIAL DE ROSGRID
+│   ├── INSTALL.md                           # Guía paso a paso de instalación, KeyDB vs DragonflyDB y MikroTik
+│   ├── FAQ.md                               # Preguntas frecuentes técnicas y operativas
+│   ├── RESOURCES.md                         # Catálogo de recursos, imágenes Docker y RFCs
 │   ├── specs/                               # PLANOS ARQUITECTÓNICOS Y REGLAS PARA ANTIGRAVITY (00..35 y qa-11x/)
 │   ├── examples/                            # PLANTILLAS BASE 11X (SOLO LECTURA — NO MODIFICAR)
 │   │   ├── fastapi/                         # Archivos .example, README.md y compose base de FastAPI
@@ -204,7 +210,7 @@ Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `
 * `docs/specs/27_QA_11X_VUE3_INFRA_UNIT_AND_STRYKER_MUTATION.md` — Orquestador `vue3/docker-compose.qa.yml`, `Makefile`, pruebas unitarias `Vitest` (>= 95%) y mutación con `Stryker`.
 * `docs/specs/28_QA_11X_VUE3_PLAYWRIGHT_AXE_LIGHTHOUSE_AND_KARATE.md` — Pruebas E2E `Playwright + @axe-core`, snapshots visuales deterministas, `Lighthouse CI`, `Karate UI` y observabilidad Nginx.
 * `docs/specs/29_ANTIGRAVITY_MASTER_EXECUTION_PLAYBOOK_AND_TESTING_MD.md` — Playbook secuencial de construcción, validación y plantilla obligatoria de `TESTING.md`.
-* `docs/specs/31_PRODUCTION_BOOTSTRAP_LOCAL_TESTING_AND_DISTRIBUTED_OPS.md` — Procedimiento de bootstrap en DB virgen, arquitectura distribuida Cross-Origin Direct y pipeline de validación local `./probar-prod-local.sh`.
+* `docs/specs/31_PRODUCTION_BOOTSTRAP_LOCAL_TESTING_AND_DISTRIBUTED_OPS.md` — Procedimiento de bootstrap en DB virgen, arquitectura distribuida Cross-Origin Direct y pipeline de validación local `./scripts/probar-prod-local.sh`.
 
 ### Bloque 6: Operaciones ISP, Gestión Corporativa de Flotas y Gobernanza Modular
 
@@ -232,4 +238,4 @@ Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `
      * Smoke test inmutable [test_production_boot_smoke.py](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/fastapi/scripts/test_production_boot_smoke.py) ejecutado dentro del contenedor de producción verificando 80 submódulos sin paquetes dev.
 
 3. **Plan Maestro de Pruebas Manuales y Aceptación de Usuario (UAT 11X):**
-   * Antes de cada pase a producción o liberación de release con `./build.sh`, es requisito mandatorio ejecutar y registrar la bitácora de aceptación formal definida en [docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md), evaluando el comportamiento en hardware MikroTik v7+ físico o CHR.
+   * Antes de cada pase a producción o liberación de release con `./scripts/build.sh`, es requisito mandatorio ejecutar y registrar la bitácora de aceptación formal definida en [docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md), evaluando el comportamiento en hardware MikroTik v7+ físico o CHR.

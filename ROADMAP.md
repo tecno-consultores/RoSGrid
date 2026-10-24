@@ -340,7 +340,7 @@
 
 > **Archivo Guía:** `docs/specs/01_DOCKER_INFRASTRUCTURE_AND_IMMUTABLE_IMAGES.md`
 
-- [x] **22.1** Auditar los `Dockerfile`, `docker-compose*.yml` e infraestructura con `./auditar-infra.sh` y escaneo Trivy de imágenes (`CRITICAL,HIGH = 0`).
+- [x] **22.1** Auditar los `Dockerfile`, `docker-compose*.yml` e infraestructura con `./scripts/auditar-infra.sh` y escaneo Trivy de imágenes (`CRITICAL,HIGH = 0`).
 - [x] **22.2** **Especificación y Endurecimiento de Pruebas Smoke Locales (`probar-prod-local.sh`):** Actualización de especificaciones (`docs/specs/31`), manual operativo (`docs/08`) y bitácora QA 11X (`TESTING.md`) incorporando la ejecución obligatoria de la suite de 24 contratos Front-Back (`validar_comunicacion_front_back.py`), validación del proxy inverso Nginx (`:${UI_PORT}/api/...`), sondeo real JSON-RPC 2.0 MCP (`POST /api/v1/mcp`), supervisión activa de healthchecks y logs de `rosgrid-worker`, verificación de ocultamiento HTTP 404 de Swagger/OpenAPI en producción, pruebas negativas de autenticación (401) y verificación de aislamiento de puertos internos DB/KeyDB.
 - [x] **22.5** **Endurecimiento de Seguridad Híbrida (FastAPI + Vue 3) y Protección contra Vectores de Ataque:**
   - Mitigación de Cross-Site WebSocket Hijacking (CSWSH) mediante validación obligatoria de la cabecera `Origin` (`_verify_ws_origin`) previa a la aceptación del WebSocket (`ws.accept()`), rechazando orígenes no autorizados o ausentes en producción con código `4403`.
@@ -422,8 +422,8 @@
   - Auditoría de Shell Scripts con ShellCheck (0 errores, 0 advertencias en todos los scripts `.sh`).
   - Backend QA (`sinfallas/base-python-uv:3.15`): 463 pruebas unitarias aprobadas al 100% en 29.09s, 95.11% de cobertura de código real (`--cov-fail-under=95`), Ruff check y format sin desviaciones en 159 archivos, Mypy strict (0 errores en 114 archivos), Bandit SAST (0 problemas de seguridad en 19.941 líneas) y pip-audit (0 vulnerabilidades conocidas en dependencias de producción y desarrollo).
   - Frontend QA (`sinfallas/base-node-ionic:26`): 297 pruebas unitarias aprobadas al 100% en 43 suites con Vitest, vue-tsc (0 errores de tipos TypeScript) y compilación de producción con Vite limpia en 3.99s.
-  - Validación de Producción Local (`./probar-prod-local.sh`): 6 fases completadas exitosamente al 100% (construcción de imágenes locales, healthchecks de contenedores en aislamiento, pruebas sintéticas HTTP, endpoints de documentación 404 estricto, fail-closed 401, Bearer token MCP, invocación JSON-RPC 2.0 y 24/24 contratos Front-Back validados con `validar_comunicacion_front_back.py`).
-  - Verificación de secretos (`./verificar-secretos.sh`): Árbol de trabajo auditado con 0 credenciales ni tokens expuestos.
+  - Validación de Producción Local (`./scripts/probar-prod-local.sh`): 6 fases completadas exitosamente al 100% (construcción de imágenes locales, healthchecks de contenedores en aislamiento, pruebas sintéticas HTTP, endpoints de documentación 404 estricto, fail-closed 401, Bearer token MCP, invocación JSON-RPC 2.0 y 24/24 contratos Front-Back validados con `validar_comunicacion_front_back.py`).
+  - Verificación de secretos (`./scripts/verificar-secretos.sh`): Árbol de trabajo auditado con 0 credenciales ni tokens expuestos.
 - [x] **23.8** **Refactorización Táctica del Centro de Mando, Menú Desplegable de Usuario y Gestión de Seguridad:**
   - Depuración del Centro de Mando (`DashboardHomeView.vue`): remoción del término anglosajón redundante *"Mission Control"*, erradicación del tag estático *"Tactical NOC v1.0"*, eliminación del indicador superfluo *"NOC EN VIVO"*, simplificación del reloj operativo a una sola lectura y supresión de prefijos de organización redundantes.
   - Despliegue del menú táctico de usuario en `RgResponsiveShell.vue` disparado por el `username` del operador autenticado: selectores en caliente de formato horario (24 Horas vs 12h AM/PM), tema gráfico (Oscuro, Claro, NOC) e idioma (ES/EN); acciones de auto-gestión (Cambio de Clave, Reset 2FA, Token MCP) y botón de cierre de sesión al pie.
@@ -455,12 +455,16 @@
   - Store `useApiHeartbeatStore.ts` con integración `BroadcastChannel('rosgrid_api_heartbeat')`, pausa automática por `Page Visibility API` (`document.hidden`) y sondeo en reposo a 45s con `AbortController` (timeout 4s).
   - Componente táctico `RgApiHealthBadge.vue` con dot semántico pulsante (`ONLINE`, `OFFLINE`, `DEGRADED`, `CHECKING`), popover interactivo con diagnóstico en vivo de backend/BD/KeyDB y botón de reintento forzado, integrado en la barra superior de `RgResponsiveShell.vue` y en la cabecera de `LoginView.vue`.
   - Cobertura 11X certificada: 2 pruebas unitarias Pytest dedicadas (`test_health_cache.unit.py`), 31 pruebas Vitest en 3 suites frontend, Escenario 69 en Karate API y Escenario 25 en Karate UI, 100% sincronizados con `docs/examples/`.
+- [x] **23.13** **Reorganización Estructural del Repositorio y Gobernanza Centralizada:**
+  - Centralización de los 7 scripts operativos raíz en el nuevo directorio `scripts/` (`auditar-infra.sh`, `build.sh`, `instalar-hooks.sh`, `instalar-rosgrid.sh`, `limpieza.sh`, `probar-prod-local.sh`, `verificar-secretos.sh`), con rutas internas normalizadas (`SCRIPT_DIR`, `REPO_ROOT`).
+  - Consolidación y reubicación de manuales técnicos de la raíz (`INSTALL.md`, `FAQ.md`, `RESOURCES.md`) dentro de `docs/`.
+  - Actualización exhaustiva de configuraciones CI/CD (`lefthook.yml`), directivas de IA (`AGENTS.md`, `.agents/rules/`, `.agents/skills/`), manuales (`docs/`), especificaciones arquitectónicas (`docs/specs/`) e índices maestros.
 
 ---
 
-## 📦 HITO 24: Cierre de `CHANGELOG.md`, Auditoría Trivy y Publicación en Docker Hub (`build.sh`)
+## 📦 HITO 24: Cierre de `CHANGELOG.md`, Auditoría Trivy y Publicación en Docker Hub (`scripts/build.sh`)
 
 > **Archivo Guía:** `docs/specs/01_DOCKER_INFRASTRUCTURE_AND_IMMUTABLE_IMAGES.md`
 
 - [ ] **24.1** Actualizar `CHANGELOG.md` consolidando los cambios de `[Unreleased]` dentro del lanzamiento oficial `[1.0.0]` con las métricas certificadas en `TESTING.md`.
-- [ ] **24.2** Ejecutar `./build.sh` (como usuario no-root) con `docker buildx` (`container-builder` + `tonistiigi/binfmt`) para construir y publicar `sinfallas/rosgrid-backend:latest` (`:1.0.0`) y `sinfallas/rosgrid-frontend:latest` (`:1.0.0`) en Docker Hub y limpiar cachés con `prune -af`.
+- [ ] **24.2** Ejecutar `./scripts/build.sh` (como usuario no-root) con `docker buildx` (`container-builder` + `tonistiigi/binfmt`) para construir y publicar `sinfallas/rosgrid-backend:latest` (`:1.0.0`) y `sinfallas/rosgrid-frontend:latest` (`:1.0.0`) en Docker Hub y limpiar cachés con `prune -af`.

@@ -109,7 +109,7 @@ RoSGrid implementa de forma nativa la especificación **Model Context Protocol (
 1. Habilita la funcionalidad en tu `.env` con `ROSGRID_MCP_ENABLED=true`.
 2. Crea un usuario con rol `SERVICE_ACCOUNT`, asígnale los routers permitidos en la matriz de permisos y declara la subred autorizada en `allowed_cidr`.
 3. Configura el bloque de conexión HTTP en `mcp_config.json` (Hermes Agent) o en tu cliente MCP apuntando a `https://tu-dominio.com/api/v1/mcp` con la cabecera `Authorization: Bearer <token>`.
-4. El agente dispondrá inmediatamente de **16 herramientas semánticas** especializadas de diagnóstico 360°, salud, óptica SFP DDM, enrutamiento BGP, aislamiento técnico, remediación de Config Drift, auditoría CIS y detección de cortes masivos. Consulta la guía detallada en [docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md](./docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md).
+4. El agente dispondrá inmediatamente de **16 herramientas semánticas** especializadas de diagnóstico 360°, salud, óptica SFP DDM, enrutamiento BGP, aislamiento técnico, remediación de Config Drift, auditoría CIS y detección de cortes masivos. Consulta la guía detallada en [07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md](./07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md).
 
 ### ¿Puede un agente de IA causar una interrupción masiva de red a través del endpoint MCP?
 
@@ -134,7 +134,7 @@ RoSGrid es una **plataforma pura de ingeniería de red e infraestructura**. No e
 
 ### ¿Cómo se integra un sistema de facturación o CRM externo con RoSGrid?
 
-A través de la **API de Aprovisionamiento Técnico Idempotente** documentada en [docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md](./docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md):
+A través de la **API de Aprovisionamiento Técnico Idempotente** documentada en [06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md](./06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md):
 
 - El sistema externo invoca `POST /api/v1/network-services/{id}/isolate` para suspender el tráfico en MikroTik, o `/restore` para reactivarlo, utilizando la cabecera `Idempotency-Key` (UUIDv7) para garantizar cero efectos secundarios ante cortes de red.
 - RoSGrid responde en milisegundos y despacha **Webhooks Salientes** firmados criptográficamente con `HMAC-SHA256` para notificar al CRM eventos como `DEVICE_ACTIVATED_GPS`, `DEVICE_ISOLATED` o `MASS_OUTAGE_TRIGGERED`.
@@ -148,16 +148,16 @@ El Superadmin simplemente desactiva el switch **"Módulo ISP & Operaciones de Ca
 
 ---
 
-## 6. Dónde Aprender Más (`docs/`)
+## 6. Dónde Aprender Más
 
 Para consultar todos los manuales oficiales de producción de RoSGrid:
 
-- [docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md](./docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md) — Despliegue, `.env` y perfiles KeyDB / DragonflyDB.
-- [docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md](./docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md) — Configuración RouterOS v7, TOFU y Safe Mode.
-- [docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md](./docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md) — RLS, 11 roles RBAC, Bóveda 2FA, Kill-Switch y Auto-Registro.
-- [docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md](./docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md) — WebFig, RingBuffer, Maker-Checker y Wallboard.
-- [docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md](./docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md) — Bitácora WORM, ADR y grafos de arquitectura.
-- [docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md](./docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md) — Catálogo de endpoints REST, WebSockets, Aprovisionamiento QoS y Webhooks.
-- [docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md](./docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md) — Integración de IA con Model Context Protocol (16 Tools).
-- [docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md](./docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md) — Pipeline local y suite de 24 pruebas UI-API.
-- [docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md](./docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md) — Plan maestro UAT 11X (75 casos de prueba E2E).
+- [01_GUIA_DESPLIEGUE_Y_ENTORNO.md](./01_GUIA_DESPLIEGUE_Y_ENTORNO.md) — Despliegue, `.env` y perfiles KeyDB / DragonflyDB.
+- [02_PREPARACION_MIKROTIK_ROUTEROS_V7.md](./02_PREPARACION_MIKROTIK_ROUTEROS_V7.md) — Configuración RouterOS v7, TOFU y Safe Mode.
+- [03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md](./03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md) — RLS, 11 roles RBAC, Bóveda 2FA, Kill-Switch y Auto-Registro.
+- [04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md](./04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md) — WebFig, RingBuffer, Maker-Checker y Wallboard.
+- [05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md](./05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md) — Bitácora WORM, ADR y grafos de arquitectura.
+- [06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md](./06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md) — Catálogo de endpoints REST, WebSockets, Aprovisionamiento QoS y Webhooks.
+- [07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md](./07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md) — Integración de IA con Model Context Protocol (16 Tools).
+- [08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md](./08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md) — Pipeline local y suite de 24 pruebas UI-API.
+- [09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md](./09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md) — Plan maestro UAT 11X (75 casos de prueba E2E).

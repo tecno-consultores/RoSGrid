@@ -284,7 +284,7 @@ Para garantizar la integridad y cero regresión en todo el ciclo de vida, el Hit
 
 Concluida la fase de desarrollo, la suite completa fue sometida al protocolo de pruebas pre-lanzamiento bajo la **Regla Cero** en contenedores Docker efímeros:
 
-1. **Auditoría de Shell Scripts:** Cero errores y cero advertencias en `ShellCheck` (`koalaman/shellcheck:stable`) sobre todos los scripts `.sh` del monorepo (`auditar-infra.sh`, `probar-prod-local.sh`, `build.sh`, `instalar-rosgrid.sh`, `instalar-hooks.sh`, `limpieza.sh`, `verificar-secretos.sh`).
+1. **Auditoría de Shell Scripts:** Cero errores y cero advertencias en `ShellCheck` (`koalaman/shellcheck:stable`) sobre todos los scripts `.sh` del monorepo (`scripts/auditar-infra.sh`, `scripts/probar-prod-local.sh`, `scripts/build.sh`, `scripts/instalar-rosgrid.sh`, `scripts/instalar-hooks.sh`, `scripts/limpieza.sh`, `scripts/verificar-secretos.sh`).
 2. **Suite Unitaria y Cobertura de Backend (`fastapi/`):**
    * **463 pruebas unitarias aprobadas al 100%** en 29.09 segundos dentro de `sinfallas/base-python-uv:3.15`.
    * **Cobertura global de código: 95.11%** (478 líneas faltantes sobre 9.781 declaraciones, superando el umbral estricto `--cov-fail-under=95`).
@@ -305,7 +305,7 @@ Concluida la fase de desarrollo, la suite completa fue sometida al protocolo de 
    * **297 pruebas unitarias aprobadas al 100%** en 43 suites dentro de `sinfallas/base-node-ionic:26`.
    * **Tipado TypeScript (`vue-tsc --noEmit`):** 0 errores en todas las vistas y composables.
    * **Compilación de Producción (Vite):** Bundle generado de forma limpia en 3.99 segundos.
-4. **Pipeline Local de Producción (`./probar-prod-local.sh`):**
+4. **Pipeline Local de Producción (`./scripts/probar-prod-local.sh`):**
    * Validación exitosa de las 6 fases del pipeline con `docker-compose.prod.local.yml`:
      * Compilación multi-etapa de imágenes `rosgrid-backend:local-test` y `rosgrid-frontend:local-test`.
      * Healthchecks de PostgreSQL 17, KeyDB Multi-Hilo, FastAPI y Workers en estado `healthy`.
@@ -313,5 +313,5 @@ Concluida la fase de desarrollo, la suite completa fue sometida al protocolo de 
      * Aprovisionamiento de Super Admin, generación de Token MCP e invocación JSON-RPC 2.0.
      * Suite de integración Front-Back: **24/24 contratos validados al 100%** (`validar_comunicacion_front_back.py`).
      * Aislamiento estricto de puertos de base de datos (5432 y 6379 no expuestos al host).
-5. **Auditoría de Secretos (`./verificar-secretos.sh`):** 0 credenciales ni tokens filtrados en el árbol de trabajo.
+5. **Auditoría de Secretos (`./scripts/verificar-secretos.sh`):** 0 credenciales ni tokens filtrados en el árbol de trabajo.
 

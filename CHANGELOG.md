@@ -10,6 +10,11 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Changed
 
+- **Centralización de Scripts Operativos en `scripts/` y Consolidación de Guías en `docs/`:**
+  - **Reubicación de Scripts Raíz:** Migración de los 7 scripts ejecutables de la raíz hacia el directorio dedicado `scripts/` (`scripts/auditar-infra.sh`, `scripts/build.sh`, `scripts/instalar-hooks.sh`, `scripts/instalar-rosgrid.sh`, `scripts/limpieza.sh`, `scripts/probar-prod-local.sh` y `scripts/verificar-secretos.sh`), con resolución dinámica de rutas (`REPO_ROOT` y `SCRIPT_DIR`) para garantizar ejecución transparente e idéntica tanto desde la raíz del proyecto como desde `scripts/`.
+  - **Consolidación de Documentos de Soporte e Instalación:** Reubicación de los manuales de la raíz `INSTALL.md`, `FAQ.md` y `RESOURCES.md` hacia `docs/` (`docs/INSTALL.md`, `docs/FAQ.md`, `docs/RESOURCES.md`), actualizando rutas relativas a manuales complementarios y simplificando el árbol de la raíz.
+  - **Alineación de CI/CD, Directivas de IA y Documentación Técnica:** Sincronización de hooks Git (`lefthook.yml`), directivas de agentes en `.agents/` (`AGENTS.md`, `.agents/README.md`, `.agents/rules/`, `.agents/scripts/certify_task_completion.sh`, `.agents/skills/`), guías de despliegue (`README.md`, `SECURITY.md`, `CONTRIBUTING.md`, `docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md`, `docs/07_...`, `docs/08_...`, `docs/09_...`), especificaciones (`docs/specs/00`, `01`, `29`, `31`, `35`, `qa-11x/`), bitácora `TESTING.md` y control de hitos en `ROADMAP.md`.
+
 - **Reorganización Estructural del Repositorio y Consolidación Documental (`docs/specs/` y `docs/examples/`):**
   - **Limpieza de la Raíz del Monorepo:** Consolidación de las carpetas de especificaciones arquitectónicas (`specs/` $\to$ `docs/specs/`, 36 especificaciones y subdirectorio `qa-11x/`) y de plantillas canónicas (`examples/` $\to$ `docs/examples/`, blueprints para FastAPI y Vue 3) dentro del directorio unificado de documentación `docs/`.
   - **Sincronización Total de Gobernanza y Agentes de IA:** Actualización completa de rutas y directivas en `AGENTS.md`, `.agents/README.md`, `.agents/rules/` (`mandatory_qa_pyramid_and_doc_sync.md`, `secure_development_and_testing_guidelines.md`, `frontend_parity_and_closure.md`), `.agents/scripts/certify_task_completion.sh` y `.agents/skills/graphify-docs-api-writer/SKILL.md`.
@@ -172,7 +177,7 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
   - **Elevación de Cobertura Backend a 95.11% (`pytest-cov`):** 463 pruebas unitarias aprobadas al 100% en Docker (`sinfallas/base-python-uv:3.15`), incorporando suites dedicadas para `test_hito23_cve_and_syslog.unit.py`, `test_hito23_topology_and_fleet.unit.py` y `test_hito23_mcp_tools.unit.py` cubriendo la totalidad de endpoints de Syslog, matrices CVE, Topología L2, DAG PoE inverso, herramientas semánticas MCP y exportador Prometheus.
   - **Endurecimiento SAST (Bandit):** Mitigación de alertas B110 (`try_except_pass`) en `topology_l2.py` y `csrf.py` mediante logging estructurado y marcado `# nosec B106` para el argumento de tipo de token en `users.py`, logrando 0 incidencias en 19.941 líneas analizadas.
   - **Auditoría de Dependencias (`pip-audit`):** Sincronización de `uv.lock` con actualización a versiones seguras de `certifi` (`2026.10.19`) y `uv` (`0.13.4`), certificando 0 vulnerabilidades conocidas en paquetes de producción y desarrollo.
-  - **Pipeline de Validación Local de Producción (`./probar-prod-local.sh`):** Ejecución automatizada y validación al 100% de las 6 fases del pipeline pre-release: compilación multi-etapa de imágenes de backend y frontend, healthchecks en aislamiento, pruebas sintéticas HTTP, hardening de docs 404, prueba fail-closed 401, token MCP, JSON-RPC 2.0 y 24 contratos Front-Back (`validar_comunicacion_front_back.py`).
+  - **Pipeline de Validación Local de Producción (`./scripts/probar-prod-local.sh`):** Ejecución automatizada y validación al 100% de las 6 fases del pipeline pre-release: compilación multi-etapa de imágenes de backend y frontend, healthchecks en aislamiento, pruebas sintéticas HTTP, hardening de docs 404, prueba fail-closed 401, token MCP, JSON-RPC 2.0 y 24 contratos Front-Back (`validar_comunicacion_front_back.py`).
   - **Auditoría de Shell Scripts:** Cero errores y cero advertencias en `ShellCheck` sobre todos los scripts `.sh` del monorepo.
 
 - **Implementación Frontend (Vue 3 + Pinia) — Topología L2, Matriz CVE, Syslog Live y PoE-Aware (Hito 23.5):**
@@ -378,7 +383,7 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 ### Pendiente para publicación oficial
 
 - Auditoría final de vulnerabilidades Trivy (`CRITICAL,HIGH = 0`) en imágenes Docker de producción (Hito 16).
-- Publicación multi-arquitectura con `./build.sh` hacia Docker Hub (`sinfallas/rosgrid-backend:1.0.0` y `sinfallas/rosgrid-frontend:1.0.0`).
+- Publicación multi-arquitectura con `./scripts/build.sh` hacia Docker Hub (`sinfallas/rosgrid-backend:1.0.0` y `sinfallas/rosgrid-frontend:1.0.0`).
 
 ---
 

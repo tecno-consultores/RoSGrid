@@ -24,7 +24,7 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
      - El historial de cambios en `CHANGELOG.md` (bajo `## [Unreleased]`).
      - El control de hitos y sub-tareas en `ROADMAP.md`.
      - Las métricas y conteo de pruebas en `TESTING.md`.
-     - La documentación en la raíz del repositorio (`README.md`, `INSTALL.md`, etc., cuando aplique).
+     - La documentación en la raíz del repositorio (`README.md`, etc., cuando aplique) o manuales en `docs/` (`INSTALL.md`, `FAQ.md`, `RESOURCES.md`).
 
 2. [secure_development_and_testing_guidelines.md](file:///.agents/rules/secure_development_and_testing_guidelines.md):
    - **Anti-Mock Blindness:** ORM changes (`src/models/`) require immediate versioned Alembic migrations verified in PostgreSQL (`\d <table>`).
@@ -76,8 +76,8 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
 >    - `CHANGELOG.md` (sección `## [Unreleased]`).
 >    - `ROADMAP.md` (estado de hitos y sub-tareas).
 >    - `TESTING.md` (métricas de aseguramiento y conteo de pruebas).
->    - Raíz del repositorio (`README.md`, `INSTALL.md`, etc., cuando aplique).
-> 4. **Escaneo de Secretos y Paridad:** Ejecutar `./verificar-secretos.sh` y certificar paridad ORM con PostgreSQL.
+>    - Raíz del repositorio (`README.md`, etc., cuando aplique) o `docs/` (`INSTALL.md`, `FAQ.md`, `RESOURCES.md`).
+> 4. **Escaneo de Secretos y Paridad:** Ejecutar `./scripts/verificar-secretos.sh` y certificar paridad ORM con PostgreSQL.
 > 5. **Indexación de Cambios:** Registrar todas las modificaciones con `git add .`.
 > 6. **Confirmación Semántica:** Crear el commit siguiendo Conventional Commits estrictamente en español: `git commit -m "<tipo>(<ámbito>): <descripción_en_español>"`.
 > 7. **Publicación Remota Inmediata:** Publicar en el repositorio remoto con `git push origin <rama_actual>`.

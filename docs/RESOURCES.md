@@ -8,7 +8,7 @@ Este documento centraliza las referencias técnicas, imágenes oficiales de Dock
 
 ### Manuales Operativos, de Despliegue y Referencia de API (`docs/`)
 
-- `docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md` — Variables `.env`, generación de llaves criptográficas, motor **KeyDB Multi-Hilo** predeterminado vs. perfil **DragonflyDB** de alta escala, despliegue Docker Compose, auto-migración con `pg_advisory_lock` y compilación con `./build.sh`.
+- `docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md` — Variables `.env`, generación de llaves criptográficas, motor **KeyDB Multi-Hilo** predeterminado vs. perfil **DragonflyDB** de alta escala, despliegue Docker Compose, auto-migración con `pg_advisory_lock` y compilación con `./scripts/build.sh`.
 - `docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md` — Configuración paso a paso de RouterOS v7.1+ (`www-ssl`, certificados autofirmados para TOFU, permisos API y funcionamiento del *Safe Mode*).
 - `docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md` — Gestión de empresas (Tenants), los 11 roles RBAC, matriz de permisos por router, Bóveda *Step-Up Auth* (30s) y *Kill-Switch*.
 - `docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md` — Operación de Capa 1 y Capa 2, gráficas efímeras `RingBuffer` sobre `<canvas>` 2D, *Maker-Checker*, comparador Diff `.rsc` estilo Git, importador CSV y Wallboard NOC.

@@ -30,7 +30,7 @@ flowchart TD
     end
 
     subgraph "Fase UAT 11X: Aceptación Humana"
-        Gate1 -->|Aprobado| EnvPrep["Arranque de Entorno:<br>./probar-prod-local.sh --keep-alive"]
+        Gate1 -->|Aprobado| EnvPrep["Arranque de Entorno:<br>./scripts/probar-prod-local.sh --keep-alive"]
         EnvPrep --> ManualExec["Ejecución de 28 Casos UAT<br>(Bootstrap, 2FA, TOFU, WebFig, SafeMode, Diff)"]
         ManualExec --> RealHardware["Validación en Hardware Real / CHR v7"]
         RealHardware --> Forensic["Verificación de Cadena WORM en audit_logs"]
@@ -39,7 +39,7 @@ flowchart TD
     subgraph "Sign-Off Formal"
         Forensic --> Review{"Comité de Calidad & NOC"}
         Review -->|Hallazgo / Bug| Rollback["Bloqueo de Release -> Retorno a Desarrollo"]
-        Review -->|100% Casos Superados| SignOff["Certificación UAT Aprobada -> build.sh"]
+        Review -->|100% Casos Superados| SignOff["Certificación UAT Aprobada -> scripts/build.sh"]
     end
 ```
 
@@ -49,7 +49,7 @@ flowchart TD
 
 ### A. Topología de Prueba Recomendada
 
-- **Servidor RoSGrid:** Instancia local levantada con `./probar-prod-local.sh --keep-alive` o stack en servidor de laboratorio (Docker Compose).
+- **Servidor RoSGrid:** Instancia local levantada con `./scripts/probar-prod-local.sh --keep-alive` o stack en servidor de laboratorio (Docker Compose).
 - **Equipo MikroTik de Prueba:**
   - Instancia MikroTik CHR v7 en Proxmox/VirtualBox/GNS3 o RouterBOARD físico (hEX, RB4011, etc.).
   - REST API activa en puerto HTTPS 443 o HTTP 80 (`/ip/service/enable rest`).

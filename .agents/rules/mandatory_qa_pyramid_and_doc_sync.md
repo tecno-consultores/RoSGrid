@@ -93,7 +93,7 @@ Whenever code is added, updated, or refactored, the AI agent **MUST OBLIGATORILY
 
 Before concluding any task and proceeding to Git publication:
 ```bash
-./verificar-secretos.sh
+./scripts/verificar-secretos.sh
 ./.agents/scripts/certify_task_completion.sh
 ```
 Verify zero secret leaks, zero type errors, clean git tree, and all Docker containers healthy.

@@ -48,7 +48,7 @@ After **EVERY** task or turn that adds, edits, or removes code or configuration 
    - Update `TESTING.md` metrics and counts.
    - Update `README.md` and root documentation when user-facing interfaces or architectures change.
 4. **Secret & Parity Certification:**
-   - Run `./verificar-secretos.sh` (0 secret leaks).
+   - Run `./scripts/verificar-secretos.sh` (0 secret leaks).
    - Run `./.agents/scripts/certify_task_completion.sh`.
 5. **Mandatory Git Commit & Push:**
    - Run `git add .`

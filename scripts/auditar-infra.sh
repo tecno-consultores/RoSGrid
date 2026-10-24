@@ -5,12 +5,15 @@
 LC_ALL=C
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
 echo "🛡️ Iniciando Auditoría de Seguridad de Infraestructura (Trivy IaC)..."
 
-# Ejecuta el escáner de misconfiguraciones mapeando la carpeta actual al contenedor.
+# Ejecuta el escáner de misconfiguraciones mapeando la carpeta raíz del repositorio al contenedor.
 # Usamos ":ro" (Read-Only) para garantizar que Trivy no pueda alterar el código fuente.
 docker run --rm \
-  -v "${PWD}:/app:ro" \
+  -v "${REPO_ROOT}:/app:ro" \
   -w /app \
   aquasec/trivy:latest config . \
   --severity HIGH,CRITICAL \
@@ -21,7 +24,7 @@ docker run --rm \
 echo "✅ IaC validado. Escaneando vulnerabilidades (CVEs) en el File System..."
 
 docker run --rm \
-  -v "${PWD}:/app:ro" \
+  -v "${REPO_ROOT}:/app:ro" \
   -w /app \
   aquasec/trivy:latest fs . \
   --severity CRITICAL \

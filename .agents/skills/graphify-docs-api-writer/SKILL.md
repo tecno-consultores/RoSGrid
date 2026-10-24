@@ -27,7 +27,7 @@ This skill guides the execution of **Milestone 14 (`14.1` to `14.8`)**, using `f
 ## 2. Mandatory Deliverables in `docs/` (`Sub-tasks 14.1 to 14.7`)
 
 1. **`docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md` (`14.1`):**
-   - Hardware/network requirements, `.env` secret generation with `openssl` (including `ROSGRID_MCP_ENABLED` and `ROSGRID_MCP_RATE_LIMIT_PER_MIN`), default **Multi-Threaded KeyDB** vs optional **DragonflyDB High-Performance Profile**, deployment via `docker-compose.yml` and `docker-compose.prod.yml`, auto-migration with `pg_advisory_lock`, and `./build.sh` usage.
+   - Hardware/network requirements, `.env` secret generation with `openssl` (including `ROSGRID_MCP_ENABLED` and `ROSGRID_MCP_RATE_LIMIT_PER_MIN`), default **Multi-Threaded KeyDB** vs optional **DragonflyDB High-Performance Profile**, deployment via `docker-compose.yml` and `docker-compose.prod.yml`, auto-migration with `pg_advisory_lock`, and `./scripts/build.sh` usage.
 2. **`docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md` (`14.2`):**
    - RouterOS v7.1+ CLI commands for TOFU self-signed TLS certificate generation, enabling `/ip/service/www-ssl`, disabling plaintext HTTP, API service user creation, and detailed explanation of *Safe Mode (Dead Man's Switch)* via `/system/scheduler`.
 3. **`docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md` (`14.3`):**
@@ -53,4 +53,4 @@ This skill guides the execution of **Milestone 14 (`14.1` to `14.8`)**, using `f
 
 ## 3. Governance Sync in Root Files (`Sub-task 14.8`)
 
-- Upon finalizing all manuals in `docs/`, verify that root governance files (`README.md`, `INSTALL.md`, `SECURITY.md`, `RESOURCES.md`, `FAQ.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`) are 100% aligned with implementation.
+- Upon finalizing all manuals in `docs/`, verify that root governance files (`README.md`, `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`) and manuals in `docs/` (`docs/INSTALL.md`, `docs/RESOURCES.md`, `docs/FAQ.md`) are 100% aligned with implementation.

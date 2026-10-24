@@ -16,8 +16,8 @@ Toda la infraestructura de RoSGrid DEBE operar consumiendo exclusivamente las si
 | **Backend Base & QA** | `sinfallas/base-python-uv:3.15` | Base para `fastapi/Dockerfile`, ejecución local de FastAPI (Uvicorn + `uvloop`), migraciones Alembic, workers asíncronos y suite QA Python | `rosgrid_uv_cache:/root/.cache/uv` |
 | **Frontend Builder & QA** | `sinfallas/base-node-ionic:26` | Etapa builder de `vue3/Dockerfile`, compilación de activos estáticos Vite/Vue 3 (`dist/`), Linting, Vitest y Stryker en `vue3/docker-compose.qa.yml` | `rosgrid_pnpm_store:/pnpm` |
 | **Frontend Web Server** | `nginx:1.27-alpine` / `nginx:alpine` | Base runtime de `vue3/Dockerfile`, servidor HTTP de alta velocidad para el bundle compilado (`vue3/dist`) y proxy inverso | `rosgrid_nginx_logs:/var/log/nginx` |
-| **Imagen Producción Backend** | `sinfallas/rosgrid-backend:latest` | Imagen oficial inmutable de producción publicada en Docker Hub mediante `./build.sh` | `rosgrid_backups_storage:/var/lib/rosgrid/backups` |
-| **Imagen Producción Frontend** | `sinfallas/rosgrid-frontend:latest` | Imagen oficial inmutable de producción (Nginx + SPA compilada) publicada en Docker Hub mediante `./build.sh` | `rosgrid_nginx_logs:/var/log/nginx` |
+| **Imagen Producción Backend** | `sinfallas/rosgrid-backend:latest` | Imagen oficial inmutable de producción publicada en Docker Hub mediante `./scripts/build.sh` | `rosgrid_backups_storage:/var/lib/rosgrid/backups` |
+| **Imagen Producción Frontend** | `sinfallas/rosgrid-frontend:latest` | Imagen oficial inmutable de producción (Nginx + SPA compilada) publicada en Docker Hub mediante `./scripts/build.sh` | `rosgrid_nginx_logs:/var/log/nginx` |
 | **Base de Datos Relacional** | `postgres:17-alpine` | Almacenamiento transaccional Multi-Tenant con RLS, bóveda AES-256-GCM, backups `.rsc` y auditoría inmutable WORM con índice `BRIN` | `rosgrid_pg_data:/var/lib/postgresql/data` |
 | **Memoria & Estado Efímero (Predeterminado)** | `eqalpha/keydb:alpine` | Motor en memoria **Multi-Hilo (`--server-threads 2`)** para Idempotencia HTTP, sesiones activas (Kill-Switch), Pub/Sub de gráficas en vivo y pipelines del monitor (~35 MB RAM) | `rosgrid_redis_data:/data` |
 | **Memoria Alta Escala (Perfil Opcional ISP)** | `docker.dragonflydb.io/dragonflydb/dragonfly:latest` | Motor *Shared-Nothing* sobre `io_uring` opcional para flotas masivas (> 300–500 routers MikroTik en servidores de 16 GB+ RAM) | `rosgrid_redis_data:/data` |
@@ -30,9 +30,9 @@ Toda la infraestructura de RoSGrid DEBE operar consumiendo exclusivamente las si
 
 ---
 
-## 2. Reglas de Red y Seguridad IaC (Cumplimiento Trivy `auditar-infra.sh`)
+## 2. Reglas de Red y Seguridad IaC (Cumplimiento Trivy `scripts/auditar-infra.sh`)
 
-Para superar la barrera pre-push (`./auditar-infra.sh` con `aquasec/trivy:latest config . --severity HIGH,CRITICAL --exit-code 1`), todos los archivos `docker-compose*.yml`, `Dockerfile` y scripts asociados DEBEN cumplir:
+Para superar la barrera pre-push (`./scripts/auditar-infra.sh` con `aquasec/trivy:latest config . --severity HIGH,CRITICAL --exit-code 1`), todos los archivos `docker-compose*.yml`, `Dockerfile` y scripts asociados DEBEN cumplir:
 
 1. **IPv4 Estricto:**
    - Todas las redes declaradas en Docker Compose DEBEN usar `driver: bridge`.
@@ -404,9 +404,9 @@ server {
 
 ---
 
-## 7. Empaquetado de Imágenes de Producción y Publicación en Docker Hub (`build.sh`)
+## 7. Empaquetado de Imágenes de Producción y Publicación en Docker Hub (`scripts/build.sh`)
 
-Para distribuir **RoSGrid** como imágenes listas para producción en Docker Hub bajo el namespace `sinfallas/`, Antigravity DEBE crear los siguientes 4 artefactos cumpliendo al 100% con el escáner Trivy (`./auditar-infra.sh`).
+Para distribuir **RoSGrid** como imágenes listas para producción en Docker Hub bajo el namespace `sinfallas/`, Antigravity DEBE crear los siguientes 4 artefactos cumpliendo al 100% con el escáner Trivy (`./scripts/auditar-infra.sh`).
 
 ### 7.1 `fastapi/Dockerfile` (Hito 10.5)
 
@@ -498,9 +498,9 @@ HEALTHCHECK --interval=15s --timeout=5s --start-period=5s --retries=3 \
 CMD ["nginx", "-g", "daemon off;"]
 ~~~
 
-### 7.3 Script `build.sh` en la Raíz del Proyecto (Hito 13.7 / Hito 16)
+### 7.3 Script `scripts/build.sh` del Proyecto (Hito 13.7 / Hito 16)
 
-Antigravity DEBE crear en la raíz del repositorio el archivo ejecutable `build.sh` (`chmod +x build.sh`), siguiendo el estándar de construcción `buildx` de Sinfallas:
+Antigravity DEBE crear en `scripts/` el archivo ejecutable `build.sh` (`chmod +x scripts/build.sh`), siguiendo el estándar de construcción `buildx` de Sinfallas:
 
 ~~~bash
 #!/usr/bin/env bash

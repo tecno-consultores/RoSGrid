@@ -103,13 +103,13 @@ Por directiva innegociable de gobernanza QA 11X:
 
 ```bash
 docker run --rm -v "$(pwd):/mnt" koalaman/shellcheck:stable \
-    /mnt/auditar-infra.sh \
-    /mnt/instalar-rosgrid.sh \
-    /mnt/build.sh \
-    /mnt/instalar-hooks.sh \
-    /mnt/limpieza.sh \
-    /mnt/probar-prod-local.sh \
-    /mnt/verificar-secretos.sh \
+    /mnt/scripts/auditar-infra.sh \
+    /mnt/scripts/instalar-rosgrid.sh \
+    /mnt/scripts/build.sh \
+    /mnt/scripts/instalar-hooks.sh \
+    /mnt/scripts/limpieza.sh \
+    /mnt/scripts/probar-prod-local.sh \
+    /mnt/scripts/verificar-secretos.sh \
     /mnt/fastapi/scripts/entrypoint.sh
 ```
 
@@ -130,9 +130,9 @@ Para comprobar que las imágenes construidas con `Dockerfile` funcionan correcta
    - Define los servicios `rosgrid_db_local`, `rosgrid_redis_local`, `rosgrid_api_local`, `rosgrid_worker_local` y `rosgrid_ui_local`.
    - Utiliza las etiquetas locales `sinfallas/rosgrid-backend:local-test` y `sinfallas/rosgrid-frontend:local-test`.
    - Configura `pull_policy: never` para evitar descargas accidentales desde registros remotos.
-2. **Pipeline Automatizado Bajo Demanda (`probar-prod-local.sh`):**
+2. **Pipeline Automatizado Bajo Demanda (`scripts/probar-prod-local.sh`):**
    - Ejecuta las 6 fases de validación pre-publicación con estándar de calidad QA 11X:
-     1. **Auditoría e Imágenes:** Opcional con `--audit` (`./auditar-infra.sh` Trivy IaC, FS y Hadolint) y compilación local de `sinfallas/rosgrid-backend:local-test` y `sinfallas/rosgrid-frontend:local-test` (omissible con `--skip-build`).
+     1. **Auditoría e Imágenes:** Opcional con `--audit` (`./scripts/auditar-infra.sh` Trivy IaC, FS y Hadolint) y compilación local de `sinfallas/rosgrid-backend:local-test` y `sinfallas/rosgrid-frontend:local-test` (omissible con `--skip-build`).
      2. **Despliegue Aislado:** Levantamiento de `docker-compose.prod.local.yml` en red interna con `pull_policy: never`.
      3. **Healthchecks Activos:** Verificación continua hasta 45 intentos de PostgreSQL 17, KeyDB Multi-Hilo, FastAPI y runner de segundo plano `rosgrid-worker`.
      4. **Pruebas Sintéticas HTTP, Hardening y Proxy Reverso:**
@@ -152,7 +152,7 @@ Para comprobar que las imágenes construidas con `Dockerfile` funcionan correcta
         - Inspección de logs en busca de `Traceback` y `CRITICAL` tanto en `rosgrid_api_local` como en `rosgrid_worker_local`.
         - Verificación de aislamiento estricto de puertos internos (PostgreSQL 5432 y KeyDB 6379 cerrados al host).
         - Purga de volúmenes efímeros o entrega de entorno persistente (`--keep-alive` / `--wizard`) para inspección manual en el navegador.
-   - **Gatekeeper en `build.sh`:** El script de compilación multi-plataforma invoca `./probar-prod-local.sh` como Paso 0 mandatorio previo a publicar a Docker Hub.
+   - **Gatekeeper en `scripts/build.sh`:** El script de compilación multi-plataforma invoca `./scripts/probar-prod-local.sh` como Paso 0 mandatorio previo a publicar a Docker Hub.
    - **Manual Operativo:** Especificación completa en [docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md).
 
 ---

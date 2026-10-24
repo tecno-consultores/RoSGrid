@@ -6,6 +6,10 @@
 LC_ALL=C
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${REPO_ROOT}"
+
 echo "=============================================================================="
 echo "          🧹 Limpieza Unificada del Espacio de Trabajo RoSGrid               "
 echo "=============================================================================="

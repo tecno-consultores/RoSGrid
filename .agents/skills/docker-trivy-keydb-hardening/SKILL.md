@@ -9,7 +9,7 @@ description: >-
 
 # Docker/Trivy Hardening, Multi-Threaded KeyDB & Production Optimization
 
-This skill governs infrastructure configuration (`docker-compose*.yml`, `Dockerfile`, `entrypoint.sh`, `nginx/default.conf`, `build.sh`) and backend performance packaging.
+This skill governs infrastructure configuration (`docker-compose*.yml`, `Dockerfile`, `entrypoint.sh`, `nginx/default.conf`, `scripts/build.sh`) and backend performance packaging.
 > **OUTPUT LANGUAGE CONSTRAINT:** Always communicate with the user and write final explanations in Spanish.
 
 ---
@@ -39,12 +39,12 @@ This skill governs infrastructure configuration (`docker-compose*.yml`, `Dockerf
 
 ---
 
-## 3. Trivy IaC Compliance (`./auditar-infra.sh`) & Release (`./build.sh`)
+## 3. Trivy IaC Compliance (`./scripts/auditar-infra.sh`) & Release (`./scripts/build.sh`)
 
 1. **Trivy Compliance (`HIGH,CRITICAL = 0`):**
    - Strict IPv4 networks (`driver: bridge`; forbidden: `enable_ipv6: true`).
    - Forbid `privileged: true`, `SYS_PTRACE`, or mounting `/var/run/docker.sock` in compose manifests.
    - In `fastapi/Dockerfile` and `vue3/Dockerfile`, enforce non-root unprivileged users (`USER rosgrid` UID `10001` / `USER nginx`) with explicit `HEALTHCHECK` directives.
    - Only `rosgrid-ui` exposes ports to the host; PostgreSQL and KeyDB remain fully isolated within `rosgrid_internal_net`.
-2. **Multi-Stage `./build.sh` Script:**
+2. **Multi-Stage `./scripts/build.sh` Script:**
    - Enforce non-root execution (`EUID != 0`), initialize `tonistiigi/binfmt` and `docker buildx` (`container-builder`), compile and publish `sinfallas/rosgrid-backend` and `sinfallas/rosgrid-frontend` (`:${VERSION}` and `:latest`), running `prune -af` upon completion.

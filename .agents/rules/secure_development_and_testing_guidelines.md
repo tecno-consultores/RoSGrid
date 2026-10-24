@@ -69,5 +69,5 @@ Before declaring a task done or creating a commit/PR:
 - [ ] New/modified ORM models? -> Alembic migration applied and verified in PostgreSQL (`\d <table>`).
 - [ ] Endpoints verified with real payloads using `validar_comunicacion_front_back.py`?
 - [ ] Added scenarios in Karate Labs API (`api_test.feature`) and Karate Labs UI (`ui_business_flow.feature`)?
-- [ ] Executed `./verificar-secretos.sh` and ShellCheck clean?
+- [ ] Executed `./scripts/verificar-secretos.sh` and ShellCheck clean?
 - [ ] Synchronized `docs/specs/`, `docs/`, `CHANGELOG.md`, `ROADMAP.md`, and `TESTING.md`?

@@ -59,13 +59,13 @@ Por seguridad, el demonio de Docker bloquea la inspección de memoria entre proc
 
 ### ZAP (DAST) falla al escribir el `zap-report.html` (Permission Denied)
 El contenedor de ZAP corre por defecto con un usuario no privilegiado que no tiene permisos de escritura en el volumen *bind* del host.
-**Solución:** Asegúrate de incluir explícitamente la directiva `user: root` en la definición del servicio `zap` en tu `docker-compose.qa.yml`. Luego, ejecuta `sudo ./limpieza.sh` en tu host para restaurar los permisos.
+**Solución:** Asegúrate de incluir explícitamente la directiva `user: root` en la definición del servicio `zap` en tu `docker-compose.qa.yml`. Luego, ejecuta `sudo ./scripts/limpieza.sh` en tu host para restaurar los permisos.
 
 ### Docker se quedó sin espacio, está muy lento o las pruebas fallan porque detectan código viejo.
 Los contenedores y gestores acumulan cachés masivos. 
 **Solución:** Ejecuta el script maestro de purga como administrador:
 ```bash
-sudo ./limpieza.sh
+sudo ./scripts/limpieza.sh
 ```
 Esto fuerza un `docker system prune -af` y borra reportes y dependencias huérfanas, limpiando también los volúmenes nombrados de caché (`pnpm-store` o `uv-cache`).
 

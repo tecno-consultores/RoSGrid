@@ -31,7 +31,7 @@ Se activa el perfil oculto `--profile chaos` inyectando latencia con Pumba y ole
 ### Paso 5: Extracción de Artefactos (Reportes)
 Como utilizamos volúmenes *bind*, cuando el contenedor efímero muere, deja los reportes HTML y JSON físicamente en el disco del *runner*. El pipeline toma esa carpeta y la sube como un "Artifact" para que el equipo pueda descargarlo.
 ### Paso 6: Limpieza
-Ejecutar `make clean-cache` o `./limpieza.sh` para destruir las cachés de volumen y no saturar el almacenamiento del *runner*.
+Ejecutar `make clean-cache` o `./scripts/limpieza.sh` para destruir las cachés de volumen y no saturar el almacenamiento del *runner*.
 
 ---
 
@@ -62,7 +62,7 @@ jobs:
 
       - name: 3️⃣ Auditoría de Infraestructura y Contenedores (Trivy)
         run: |
-          ./auditar-infra.sh
+          ./scripts/auditar-infra.sh
 
       - name: 4️⃣ Análisis Estático, Complejidad y Formateo
         # Ejecuta linting, tipeo (Mypy/TS) y reglas de complejidad.

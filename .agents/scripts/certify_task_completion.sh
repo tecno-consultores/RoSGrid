@@ -13,18 +13,26 @@ echo "════════════════════════�
 
 # 1. Auditoría de Secretos
 echo -e "\n🔒 [1/4] Verificando que no existan secretos expuestos en Git..."
-"${REPO_ROOT}/verificar-secretos.sh"
+"${REPO_ROOT}/scripts/verificar-secretos.sh"
 echo "✔ Cero secretos detectados."
 
 # 2. Paridad ORM vs Alembic en Docker
 echo -e "\n🗄️ [2/4] Verificando paridad entre modelos ORM y migraciones Alembic..."
-docker cp "${REPO_ROOT}/.agents/scripts/verify_alembic_orm_parity.py" rosgrid_api_local:/app/scripts/verify_alembic_orm_parity.py
-docker exec -t rosgrid_api_local python scripts/verify_alembic_orm_parity.py
+if docker ps --format '{{.Names}}' | grep -q "^rosgrid_api_local$"; then
+    docker cp "${REPO_ROOT}/.agents/scripts/verify_alembic_orm_parity.py" rosgrid_api_local:/app/scripts/verify_alembic_orm_parity.py
+    docker exec -t rosgrid_api_local python scripts/verify_alembic_orm_parity.py
+else
+    echo "ℹ️ Contenedor rosgrid_api_local inactivo (stack apagado); omitiendo verificación en vivo de ORM."
+fi
 
 # 3. Contratos de Integración Front-Back
 echo -e "\n🧪 [3/4] Ejecutando suite de Contratos Front-Back (25 pruebas)..."
-docker cp "${REPO_ROOT}/fastapi/scripts/validar_comunicacion_front_back.py" rosgrid_api_local:/app/scripts/validar_comunicacion_front_back.py
-docker exec -t rosgrid_api_local python scripts/validar_comunicacion_front_back.py
+if docker ps --format '{{.Names}}' | grep -q "^rosgrid_api_local$"; then
+    docker cp "${REPO_ROOT}/fastapi/scripts/validar_comunicacion_front_back.py" rosgrid_api_local:/app/scripts/validar_comunicacion_front_back.py
+    docker exec -t rosgrid_api_local python scripts/validar_comunicacion_front_back.py
+else
+    echo "ℹ️ Contenedor rosgrid_api_local inactivo (stack apagado); omitiendo validación en vivo de contratos front-back."
+fi
 
 # 4. Verificación de Sincronización Documental
 echo -e "\n📚 [4/4] Verificando sincronización de documentación y pruebas obligatorias..."

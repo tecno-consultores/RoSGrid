@@ -15,10 +15,10 @@ Para garantizar reproducibilidad absoluta y proteger el sistema operativo anfitr
 
 ```bash
 # Activar los hooks locales de Lefthook (Pre-Commit, Commit-Msg y Pre-Push)
-./instalar-hooks.sh
+./scripts/instalar-hooks.sh
 
 # Auditar Dockerfiles, docker-compose y vulnerabilidades con Trivy
-./auditar-infra.sh
+./scripts/auditar-infra.sh
 ```
 
 ---

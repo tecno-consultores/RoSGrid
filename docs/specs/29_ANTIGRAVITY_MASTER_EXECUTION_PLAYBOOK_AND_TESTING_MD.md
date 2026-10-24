@@ -23,7 +23,7 @@
 5. **Activación del Paso 0 (Graphify MCP):**
    * Levanta el contenedor `graphify` (`--profile graphify`) e ingiere las configuraciones estrictas locales antes de escribir código de negocio.
 6. **Gate 0 (Infraestructura IaC):**
-   * Ejecuta `./auditar-infra.sh` (Trivy IaC + FS) y verifica `Exit Code 0`.
+   * Ejecuta `./scripts/auditar-infra.sh` (Trivy IaC + FS) y verifica `Exit Code 0`.
 
 ---
 
@@ -131,7 +131,7 @@ Por ley innegociable del Estándar 11X (`docs/specs/qa-11x/AI_MASTER_PROMPT.md` 
 
 ### A. Auditoría Global de Infraestructura y Secretos (Trivy IaC + FS)
 ```bash
-./auditar-infra.sh
+./scripts/auditar-infra.sh
 ```
 
 ### B. Ecosistema Backend (`cd fastapi`)
