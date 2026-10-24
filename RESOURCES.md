@@ -16,13 +16,13 @@ Este documento centraliza las referencias técnicas, imágenes oficiales de Dock
 - `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md` — Especificación completa de todos los endpoints `/api/v1/*` (incluyendo `/api/v1/mcp`) y canales `/ws/v1/*` (cabeceras `X-CSRF-Token`, `Idempotency-Key`, payloads JSON y uso de `SERVICE_ACCOUNT`), supliendo a Swagger/ReDoc en producción.
 - `docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md` — Manual técnico del servidor MCP protegido (`POST /api/v1/mcp` JSON-RPC 2.0 Streamable HTTP) para conectar **Hermes Agent** y **Claude**, con catálogo de las 8 Tools semánticas, flujo NOC autónomo 24/7 y gobierno Maker-Checker.
 
-### Enciclopedia de Especificaciones (`specs/`)
+### Enciclopedia de Especificaciones (`docs/specs/`)
 
-- `specs/00` a `specs/08` — Gobernanza 11X, infraestructura Docker inmutable, esquema PostgreSQL 17 RLS/WORM/BRIN, KeyDB/RESP, criptografía, RBAC de 11 roles y cliente RouterOS v7 TOFU/Safe Mode con pool TLS Keep-Alive.
-- `specs/09` a `specs/17` — Arquitectura Backend FastAPI (`ORJSONResponse` + `uvloop`), endpoints de Capa 1, motor universal de Capa 2, Maker-Checker, Backups Diff Git, WebSockets de telemetría efímera y Workers asíncronos.
-- `specs/18` a `specs/23` — Arquitectura Frontend Vue 3 Zero-Trust (`shallowRef`), sistema de diseño táctico NOC (`WCAG 2.1 AA` + *Virtual Scrolling*), mapa OpenStreetMap (`Leaflet`), consola WebFig con `<KeepAlive :max="5">` y `TelemetryRingBuffer` sobre `<canvas>` 2D.
-- `specs/24` a `specs/29` — Suites de certificación del Estándar Corporativo **QA 11X**.
-- `specs/30_BACKEND_MCP_PROTECTED_ENDPOINT.md` — Especificación arquitectónica del servidor **Model Context Protocol (MCP)** protegido para agentes de IA autónomos.
+- `docs/specs/00` a `docs/specs/08` — Gobernanza 11X, infraestructura Docker inmutable, esquema PostgreSQL 17 RLS/WORM/BRIN, KeyDB/RESP, criptografía, RBAC de 11 roles y cliente RouterOS v7 TOFU/Safe Mode con pool TLS Keep-Alive.
+- `docs/specs/09` a `docs/specs/17` — Arquitectura Backend FastAPI (`ORJSONResponse` + `uvloop`), endpoints de Capa 1, motor universal de Capa 2, Maker-Checker, Backups Diff Git, WebSockets de telemetría efímera y Workers asíncronos.
+- `docs/specs/18` a `docs/specs/23` — Arquitectura Frontend Vue 3 Zero-Trust (`shallowRef`), sistema de diseño táctico NOC (`WCAG 2.1 AA` + *Virtual Scrolling*), mapa OpenStreetMap (`Leaflet`), consola WebFig con `<KeepAlive :max="5">` y `TelemetryRingBuffer` sobre `<canvas>` 2D.
+- `docs/specs/24` a `docs/specs/29` — Suites de certificación del Estándar Corporativo **QA 11X**.
+- `docs/specs/30_BACKEND_MCP_PROTECTED_ENDPOINT.md` a `docs/specs/35_FLEET_AUTOMATION_TOPOLOGY_L2_SYSLOG_AND_PROMETHEUS.md` — Especificaciones arquitectónicas de servidor MCP, despliegue distribuido, módulo ISP, suite corporativa, feature flags y automatización de flota.
 
 ---
 

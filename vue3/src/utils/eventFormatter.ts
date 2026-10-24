@@ -17,7 +17,7 @@ const EVENT_ACTION_DESCRIPTIONS: Record<string, string> = {
   '2FA_VERIFICATION_FAILED': 'Fallo en verificación de segundo factor (2FA)',
   SESSION_KILLED_DUPLICATE_LOGIN: 'Sesión finalizada por ingreso concurrente',
 
-  // Caídas, Disponibilidad y Alertas Masivas (specs/32)
+  // Caídas, Disponibilidad y Alertas Masivas (docs/specs/32)
   MASS_OUTAGE_TRIGGERED: 'Alerta de caída masiva activada',
   MASS_OUTAGE_DETECTED: 'Caída masiva detectada en la red',
   ROUTER_DOWN: 'Router fuera de línea (sin respuesta)',

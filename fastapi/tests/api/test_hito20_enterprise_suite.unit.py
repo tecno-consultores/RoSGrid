@@ -3,7 +3,7 @@
 
 """Pruebas unitarias para Hito 20: Suite Corporativa de Gestión de Flota y Cumplimiento Normativo.
 
-Cubre Sub-tareas 20.1 a 20.6 / specs/33:
+Cubre Sub-tareas 20.1 a 20.6 / docs/specs/33:
 - 20.1: Config Drift & Auto-Revert a Golden Templates
 - 20.2: Orquestador SD-WAN WireGuard Hub & Spoke y Failover Multi-WAN
 - 20.3: Auditoría Automatizada CIS Benchmark y Auto-Hardening

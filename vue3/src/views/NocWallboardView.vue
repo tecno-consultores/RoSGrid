@@ -71,7 +71,7 @@
   // Cinta de eventos reales en vivo
   const liveEvents = ref<NocEvent[]>([]);
 
-  // Alerta de Caída Masiva (Mass Outage) — specs/32 §5.3
+  // Alerta de Caída Masiva (Mass Outage) — docs/specs/32 §5.3
   interface MassOutageAlertData {
     active: boolean;
     title: string;
@@ -378,7 +378,7 @@
       </button>
     </header>
 
-    <!-- Banner de Alta Visibilidad de Caída Masiva (specs/32 §5.3) -->
+    <!-- Banner de Alta Visibilidad de Caída Masiva (docs/specs/32 §5.3) -->
     <transition name="outage-slide">
       <div
         v-if="massOutageAlert.active"
@@ -524,7 +524,7 @@
     overflow: hidden;
   }
 
-  /* Banner Táctico de Caída Masiva (specs/32 §5.3) */
+  /* Banner Táctico de Caída Masiva (docs/specs/32 §5.3) */
   .mass-outage-banner {
     background: linear-gradient(90deg, #7f1d1d, #b91c1c, #dc2626);
     color: #fff;

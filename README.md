@@ -194,9 +194,9 @@ rosgrid/
 ├── instalar-hooks.sh               # Instalador local de hooks Lefthook
 ├── verificar-secretos.sh           # Detección preventiva de credenciales y secretos hardcodeados
 ├── auditar-infra.sh                # Auditoría efímera Trivy (IaC + File System CVEs)
-├── specs/                          # Enciclopedia de 34 especificaciones técnicas + Blueprints QA 11X
-├── examples/                       # Plantillas de referencia de solo lectura (FastAPI y Vue 3)
-├── docs/                           # Manuales técnicos, operativos y referencia completa de la API
+├── docs/                           # Manuales operativos, especificaciones técnicas y plantillas canónicas
+│   ├── specs/                      # Enciclopedia de 36 especificaciones arquitectónicas + Blueprints QA 11X
+│   └── examples/                   # Plantillas de referencia y blueprints canónicos (FastAPI y Vue 3)
 ├── fastapi/                        # Ecosistema Backend (FastAPI + SQLAlchemy 2.0 + KeyDB + QA 11X)
 └── vue3/                           # Ecosistema Frontend (Vue 3 + TypeScript + Pinia + Leaflet + QA 11X)
 ```

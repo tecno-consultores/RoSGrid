@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 from src.models.core import TenantStatusEnum
 
-# Valores por defecto oficiales de los Feature Flags (specs/34 §1).
+# Valores por defecto oficiales de los Feature Flags (docs/specs/34 §1).
 TENANT_FEATURE_DEFAULTS: dict[str, Any] = {
     "isp_module_enabled": True,
     "bgp_looking_glass_enabled": False,

@@ -6,20 +6,20 @@
 
 ## 1. Secuencia Maestra de Ejecución por Hitos (Step-by-Step Playbook)
 
-### Hito 0: Ingesta de Reglas, Preparación del Monorepo, Licencia GPLv3 y Fusión Quirúrgica desde `examples/`
+### Hito 0: Ingesta de Reglas, Preparación del Monorepo, Licencia GPLv3 y Fusión Quirúrgica desde `docs/examples/`
 1. **Lectura Inicial Obligatoria (Antes de tocar cualquier archivo):**
-   * Lee `specs/qa-11x/AI_MASTER_PROMPT.md`, `examples/fastapi/README.md` y `examples/vue3/README.md`.
-   * Lee `specs/00_MASTER_INDEX_AND_11X_GOVERNANCE.md` y `specs/01_DOCKER_INFRASTRUCTURE_AND_IMMUTABLE_IMAGES.md`.
+   * Lee `docs/specs/qa-11x/AI_MASTER_PROMPT.md`, `docs/examples/fastapi/README.md` y `docs/examples/vue3/README.md`.
+   * Lee `docs/specs/00_MASTER_INDEX_AND_11X_GOVERNANCE.md` y `docs/specs/01_DOCKER_INFRASTRUCTURE_AND_IMMUTABLE_IMAGES.md`.
 2. **Respeto Estricto de Carpetas del Repositorio:**
-   * Conserva intacta la carpeta `specs/` (los 30 archivos de especificación y `specs/qa-11x/`).
-   * Conserva intacta la carpeta `examples/` (`examples/fastapi/` y `examples/vue3/`) como plantillas de referencia de **solo lectura**.
-   * Reserva la carpeta `docs/` exclusivamente para la documentación de usuario, operación y despliegue del proyecto RoSGrid.
+   * Conserva intacta la carpeta `docs/specs/` (los 36 archivos de especificación y `docs/specs/qa-11x/`).
+   * Conserva intacta la carpeta `docs/examples/` (`docs/examples/fastapi/` y `docs/examples/vue3/`) como plantillas de referencia de **solo lectura**.
+   * Reserva los manuales de `docs/` exclusivamente para la documentación de usuario, operación y despliegue del proyecto RoSGrid.
 3. **Inicialización de la Raíz y Creación de `./fastapi/` y `./vue3/`:**
    * Verifica o crea en la raíz: `LICENSE` (GPL-3.0-only), `.env.example`, `docker-compose.yml`, `.gitignore`, `lefthook.yml`, `commitlint.config.js`, `instalar-hooks.sh` y `auditar-infra.sh`.
-   * Crea las carpetas de código real `./fastapi/` y `./vue3/` en la raíz del proyecto tomando como base los archivos de `examples/fastapi/` y `examples/vue3/`.
+   * Crea las carpetas de código real `./fastapi/` y `./vue3/` en la raíz del proyecto tomando como base los archivos de `docs/examples/fastapi/` y `docs/examples/vue3/`.
 4. **Fusión Quirúrgica No Destructiva (Sin dejar sufijos `.example` en `./fastapi/` ni `./vue3/`):**
-   * En `./fastapi/`: Copia `docker-compose.qa.yml` y `limpieza.sh` desde `examples/fastapi/`, y fusiona `pyproject.toml.example` -> `pyproject.toml`, `tox.ini.example` -> `tox.ini`, `Makefile.example` -> `Makefile`, `gitignore.example` -> `.gitignore` y `locustfile.py.example` -> `locustfile.py` según los documentos `specs/09` y `specs/24`.
-   * En `./vue3/`: Copia `docker-compose.qa.yml` y `limpieza.sh` desde `examples/vue3/`, y fusiona `package.json.example` -> `package.json`, `npmrc.example` -> `.npmrc`, `vitest.config.ts.example` -> `vitest.config.ts`, `stryker.conf.json.example` -> `stryker.conf.json`, `playwright.config.ts.example` -> `playwright.config.ts`, `lighthouserc.js.example` -> `lighthouserc.js`, `Makefile.example` -> `Makefile` y `gitignore.example` -> `.gitignore` según los documentos `specs/18`, `specs/27` y `specs/28`.
+   * En `./fastapi/`: Copia `docker-compose.qa.yml` y `limpieza.sh` desde `docs/examples/fastapi/`, y fusiona `pyproject.toml.example` -> `pyproject.toml`, `tox.ini.example` -> `tox.ini`, `Makefile.example` -> `Makefile`, `gitignore.example` -> `.gitignore` y `locustfile.py.example` -> `locustfile.py` según los documentos `docs/specs/09` y `docs/specs/24`.
+   * En `./vue3/`: Copia `docker-compose.qa.yml` y `limpieza.sh` desde `docs/examples/vue3/`, y fusiona `package.json.example` -> `package.json`, `npmrc.example` -> `.npmrc`, `vitest.config.ts.example` -> `vitest.config.ts`, `stryker.conf.json.example` -> `stryker.conf.json`, `playwright.config.ts.example` -> `playwright.config.ts`, `lighthouserc.js.example` -> `lighthouserc.js`, `Makefile.example` -> `Makefile` y `gitignore.example` -> `.gitignore` según los documentos `docs/specs/18`, `docs/specs/27` y `docs/specs/28`.
 5. **Activación del Paso 0 (Graphify MCP):**
    * Levanta el contenedor `graphify` (`--profile graphify`) e ingiere las configuraciones estrictas locales antes de escribir código de negocio.
 6. **Gate 0 (Infraestructura IaC):**
@@ -28,7 +28,7 @@
 ---
 
 ### Hito 1: Construcción del Núcleo Backend, Base de Datos RLS, Redis y Seguridad (Fases 1 y 2 Backend)
-1. **Lectura Obligatoria:** Lee los documentos `02`, `03`, `04`, `05`, `06`, `07`, `09` y `10` dentro de `specs/`.
+1. **Lectura Obligatoria:** Lee los documentos `02`, `03`, `04`, `05`, `06`, `07`, `09` y `10` dentro de `docs/specs/`.
 2. **Implementación en `fastapi/src/`:**
    * Crea `main.py` exponiendo `/metrics` (`prometheus-fastapi-instrumentator`) y `/health`.
    * Crea `scripts/entrypoint.sh` con auto-migración Alembic protegida por `pg_advisory_lock`.
@@ -45,7 +45,7 @@
 ---
 
 ### Hito 2: Conector RouterOS v7 (TOFU SSL + Safe Mode), Inventario, Bóveda Step-Up y WebFig Capa 1/Capa 2 (Fases 3, 4 y 5 Backend)
-1. **Lectura Obligatoria:** Lee los documentos `08`, `11`, `12`, `13`, `14` y `15` dentro de `specs/`.
+1. **Lectura Obligatoria:** Lee los documentos `08`, `11`, `12`, `13`, `14` y `15` dentro de `docs/specs/`.
 2. **Implementación en `fastapi/src/`:**
    * Construye `mikrotik/ssl_tofu.py`, `mikrotik/client.py`, `mikrotik/safemode.py` (Dead Man's Switch con `/system/scheduler`) y `mikrotik/normalizers.py`.
    * Construye los endpoints de Inventario, Importador CSV en 2 pasos (`dry-run` y `commit`), Bóveda con *Step-Up Auth* de 30s (exclusiva para `SUPERADMIN_GLOBAL` y `TENANT_ADMIN`), Rotación automática de contraseñas API y Ventanas de Mantenimiento.
@@ -59,13 +59,13 @@
 ---
 
 ### Hito 3: Operaciones Avanzadas, Backups/Diff Git, WebSockets Efímeros, Workers de Alerta y Certificación Total Backend (Fase 6 Backend)
-1. **Lectura Obligatoria:** Lee los documentos `16`, `17` y `26` dentro de `specs/`.
+1. **Lectura Obligatoria:** Lee los documentos `16`, `17` y `26` dentro de `docs/specs/`.
 2. **Implementación en `fastapi/src/`:**
    * Construye los endpoints de Bandeja Maker-Checker, Backups `.rsc`/`.backup` con deduplicación SHA-256 (30 días) y comparador **Diff estilo Git**, Plantillas (*Golden Configs*), Acciones Masivas Multi-Router, Actualizador centralizado de RouterOS v7 y Consola de Auditoría Inmutable.
    * Construye los 2 canales WebSocket (`/ws/v1/routers/{router_id}/live-telemetry` y `/ws/v1/tenant/events`) y los 4 workers en segundo plano (Monitor *Zero-Storage*, Despachador de Alertas a Telegram/SMTP/Webhook/NOC, Backup Nocturno y Rotación de Bóveda).
 3. **Pruebas Unitarias, Contratos, BDD, DAST y Caos (`fastapi/`):**
    * Escribe `test_backups_diff_and_bulk_ops.unit.py`, `test_zero_metrics_state_machine.unit.py` y `test_websockets_multiplexer.unit.py`.
-   * Configura `fastapi/test/api_test.feature` (tomando la base de `examples/fastapi/api_test.feature`) y `fastapi/locustfile.py`.
+   * Configura `fastapi/test/api_test.feature` (tomando la base de `docs/examples/fastapi/test/api_test.feature`) y `fastapi/locustfile.py`.
 4. **Gate 3 (Certificación 11X Completa del Backend):**
    * Ejecuta `make qa-all`.
    * Levanta `api` y ejecuta `Schemathesis`, `Karate Labs`, `OWASP ZAP Baseline` y el perfil `--profile chaos` (`Pumba + Locust + Prometheus`).
@@ -74,13 +74,13 @@
 ---
 
 ### Hito 4: Construcción del Frontend Vue 3, Sistema de Diseño, Inventario OSM y Consola WebFig (Fases 1 a 5 Frontend)
-1. **Lectura Obligatoria:** Lee los documentos `18`, `19`, `20`, `21`, `22`, `23`, `27` y `28` dentro de `specs/`.
+1. **Lectura Obligatoria:** Lee los documentos `18`, `19`, `20`, `21`, `22`, `23`, `27` y `28` dentro de `docs/specs/`.
 2. **Implementación en `vue3/src/`:**
    * Construye `httpClient.ts` (interceptores CSRF, `Idempotency-Key` `UUIDv7`, Refresh Token y `202 Accepted` Maker-Checker).
    * Construye los 6 stores de Pinia y la clase `TelemetryRingBuffer<T>` (5400 puntos en RAM para 3 horas de gráficas en vivo que se reinician al salir).
    * Construye el sistema de diseño (`themes.css` con ratios WCAG 2.1 AA, `RgDataTable.vue` con Drag & Drop accesible, `RgCommandPalette.vue` `Ctrl + K`, `RgSafeModeBanner.vue`, `RgStepUp2FAModal.vue` y `RgResponsiveShell.vue` para Móvil/Tablet/Escritorio).
    * Construye todas las vistas: Login Multi-Tenant + 2FA QR, Gestión de Tenants/Usuarios/Matriz de Routers, Panel de Sesiones Activas (*Kill-Switch*), Inventario con Mapa **Leaflet + OpenStreetMap (`OsmRouterMap.vue`)**, Asistente CSV, Modal de Bóveda *Step-Up* (30s), Consola WebFig (Dashboard en vivo + Capa 1 + Capa 2), Bandeja Maker-Checker, Comparador Diff Git (`.rsc`), Acciones Masivas/Updates, **Wallboard NOC** y Consola del **Auditor**.
-   * Adapta `examples/vue3/accessibility.spec.ts` hacia `vue3/e2e/accessibility.e2e.ts` y `examples/vue3/ui_business_flow.feature` hacia `vue3/test/ui_business_flow.feature`.
+   * Adapta `docs/examples/vue3/e2e/accessibility.spec.ts` hacia `vue3/e2e/accessibility.e2e.ts` y `docs/examples/vue3/test/ui_business_flow.feature` hacia `vue3/test/ui_business_flow.feature`.
 3. **Gate 4 (Certificación 11X Completa del Frontend):**
    * Ejecuta en `vue3/`:
      * `make qa-lint` (0 errores en `npm audit`, `vue-tsc`, `prettier` y `eslint` con `sonarjs` + `security`).
@@ -95,7 +95,7 @@
 
 ## 2. Plantilla Obligatoria de Bitácora Viva (`TESTING.md`)
 
-Por ley innegociable del Estándar 11X (`specs/qa-11x/AI_MASTER_PROMPT.md` Regla 5), AntiGravity DEBE mantener actualizado el archivo `TESTING.md` en la raíz del repositorio con la siguiente estructura exacta:
+Por ley innegociable del Estándar 11X (`docs/specs/qa-11x/AI_MASTER_PROMPT.md` Regla 5), AntiGravity DEBE mantener actualizado el archivo `TESTING.md` en la raíz del repositorio con la siguiente estructura exacta:
 
 ```markdown
 # 🛡️ Bitácora Viva de Calidad y Certificación 11X — RoSGrid

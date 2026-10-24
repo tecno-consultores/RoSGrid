@@ -33,8 +33,8 @@ Before exposing new endpoints or frontend views:
 After **EVERY** task or turn that adds, edits, or removes code or configuration files, the AI agent **MUST** autonomously execute this protocol and publish to Git without waiting for user prompting:
 
 1. **Mandatory 11X Test Creation (Including Karate Labs for API & UI):**
-   - For backend mutations: add/update unit tests in `fastapi/tests/**/*.unit.py` AND mandatory BDD scenarios in `fastapi/test/api_test.feature` (mirrored in `examples/fastapi/`).
-   - For frontend mutations: add/update unit tests in `vue3/src/**/*.unit.ts` AND mandatory BDD scenarios in `vue3/test/ui_business_flow.feature` (mirrored in `examples/vue3/`).
+   - For backend mutations: add/update unit tests in `fastapi/tests/**/*.unit.py` AND mandatory BDD scenarios in `fastapi/test/api_test.feature` (mirrored in `docs/examples/fastapi/`).
+   - For frontend mutations: add/update unit tests in `vue3/src/**/*.unit.ts` AND mandatory BDD scenarios in `vue3/test/ui_business_flow.feature` (mirrored in `docs/examples/vue3/`).
    - **Karate Labs Invariant:** Every single code change MUST include corresponding Karate Labs API and/or UI scenarios.
 2. **Full Ephemeral Docker Test Execution (`Rule Zero`):**
    - Backend: `docker compose -f docker-compose.qa.yml run --rm qa-backend uv run pytest tests/ --cov=src --cov-fail-under=95`
@@ -42,7 +42,7 @@ After **EVERY** task or turn that adds, edits, or removes code or configuration 
    - Linters: `ruff check`, `mypy --strict`, `eslint`, `prettier`.
 3. **Autonomous & Mandatory Multi-Layer Documentation Sync:**
    - Update affected operational and technical manuals in `docs/` (including `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`).
-   - Update affected specifications in `specs/`.
+   - Update affected specifications in `docs/specs/`.
    - Update `CHANGELOG.md` under `## [Unreleased]`.
    - Update `ROADMAP.md` task checkpoints and deliverables.
    - Update `TESTING.md` metrics and counts.

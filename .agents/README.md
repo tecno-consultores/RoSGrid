@@ -33,7 +33,7 @@ Este directorio implementa el estándar abierto y emergente de la industria para
 ## 🌐 Estrategia Lingüística y Optimización de Tokens (Inglés Técnico vs. Español Humano)
 
 > **PREMISA DE DISEÑO:**  
-> Las instrucciones destinadas al consumo interno de los modelos de IA (`rules/` y `skills/`) están redactadas en **inglés técnico compacto de alta densidad**, mientras que toda la interacción con desarrolladores humanos, respuestas en el chat y documentación del negocio (`specs/`, `docs/`, `CHANGELOG.md`, `ROADMAP.md`, `TESTING.md`) se mantiene estrictamente en **español**.
+> Las instrucciones destinadas al consumo interno de los modelos de IA (`rules/` y `skills/`) están redactadas en **inglés técnico compacto de alta densidad**, mientras que toda la interacción con desarrolladores humanos, respuestas en el chat y documentación del negocio (`docs/specs/`, `docs/`, `CHANGELOG.md`, `ROADMAP.md`, `TESTING.md`) se mantiene estrictamente en **español**.
 
 ### ¿Por qué las directivas de IA están en inglés?
 
@@ -98,15 +98,15 @@ docker exec -t rosgrid_api_local python scripts/verify_alembic_orm_parity.py
 Por gobernanza innegociable de Nivel 11X, tras **CADA** tarea o solicitud que modifique, añada o corrija código fuente (`fastapi/`, `vue3/`, scripts o configuraciones), el agente de IA **DEBE** ejecutar de forma autónoma el siguiente protocolo:
 
 1. **Creación Obligatoria de Pruebas 11X (Incluyendo SIEMPRE Karate Labs):**
-   - Utilizar de forma obligatoria los ejemplos y patrones canónicos de `examples/fastapi/` y `examples/vue3/`.
-   - Toda mutación de backend requiere pruebas en `fastapi/tests/**/*.unit.py` con cobertura `>= 95%` y escenarios BDD en `fastapi/test/api_test.feature` (espejo en `examples/fastapi/`).
-   - Toda mutación de frontend requiere pruebas en `vue3/src/**/*.unit.ts` con 100% pass en Vitest y escenarios BDD en `vue3/test/ui_business_flow.feature` (espejo en `examples/vue3/`).
+   - Utilizar de forma obligatoria los ejemplos y patrones canónicos de `docs/examples/fastapi/` y `docs/examples/vue3/`.
+   - Toda mutación de backend requiere pruebas en `fastapi/tests/**/*.unit.py` con cobertura `>= 95%` y escenarios BDD en `fastapi/test/api_test.feature` (espejo en `docs/examples/fastapi/`).
+   - Toda mutación de frontend requiere pruebas en `vue3/src/**/*.unit.ts` con 100% pass en Vitest y escenarios BDD en `vue3/test/ui_business_flow.feature` (espejo en `docs/examples/vue3/`).
    - **Invariante Karate Labs:** Todo cambio de endpoints o vistas de interfaz DEBE incorporar o actualizar escenarios BDD en Karate Labs sin excepción.
 2. **Ejecución Obligatoria de Pruebas en Docker Efímero (`Rule Zero`):**
    - Ejecutar la suite en contenedores efímeros (`docker-compose.qa.yml` o `Makefile`) validando que no existan fallos ni degradación de cobertura.
 3. **Sincronización Documental Obligatoria:**
    - Actualizar los manuales técnicos afectados en `docs/` (incluyendo `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`).
-   - Actualizar las especificaciones de arquitectura en `specs/`.
+   - Actualizar las especificaciones de arquitectura en `docs/specs/`.
    - Actualizar el historial de cambios en `CHANGELOG.md` (bajo `## [Unreleased]`).
    - Actualizar el estado de hitos y sub-tareas en `ROADMAP.md`.
    - Actualizar las métricas y conteo de pruebas en `TESTING.md`.

@@ -9,7 +9,7 @@ MAKER_CHECKER = "MAKER_CHECKER"
 READ_ONLY = "READ_ONLY"
 DENY = "DENY"
 
-# Matriz exhaustiva de 11 roles x 19 acciones críticas según specs/07
+# Matriz exhaustiva de 11 roles x 19 acciones críticas según docs/specs/07
 POLICY_MATRIX: dict[SystemRoleEnum, dict[str, str]] = {
     SystemRoleEnum.SUPERADMIN_GLOBAL: {
         "TENANT_MANAGEMENT": ALLOW,

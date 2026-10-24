@@ -409,7 +409,7 @@
       </div>
     </div>
 
-    <!-- Modal de Módulos & Capacidades (Feature Flags - specs/34) -->
+    <!-- Modal de Módulos & Capacidades (Feature Flags - docs/specs/34) -->
     <div
       v-if="isFeaturesModalOpen && selectedTenant"
       class="rg-modal-backdrop"

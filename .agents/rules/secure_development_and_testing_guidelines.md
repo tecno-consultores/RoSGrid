@@ -25,8 +25,8 @@ Unit isolation with mocks measures quick logical coverage but creates blind spot
    - **Layer 2: Real Front-Back Integration Contracts:**
      - Update and run `fastapi/scripts/validar_comunicacion_front_back.py` inside Docker `rosgrid_api_local`. Send the exact payload (multipart form or JSON) used by the UI and verify DB persistence.
    - **Layer 3: Black-Box Acceptance BDD (Karate Labs):**
-     - Backend: Scenarios in `fastapi/test/api_test.feature` & `examples/` verifying 401 unauth, 422 malformed, and 200/201 success contracts.
-     - Frontend: Scenarios in `vue3/test/ui_business_flow.feature` & `examples/` testing interactive UI, modals, and navigation.
+     - Backend: Scenarios in `fastapi/test/api_test.feature` & `docs/examples/` verifying 401 unauth, 422 malformed, and 200/201 success contracts.
+     - Frontend: Scenarios in `vue3/test/ui_business_flow.feature` & `docs/examples/` testing interactive UI, modals, and navigation.
 
 3. **Anti-JSDOM Geometry Blindness:**
    - JSDOM does NOT calculate CSS Flexbox/Grid layouts, element coordinates, or viewport bounding boxes.
@@ -70,4 +70,4 @@ Before declaring a task done or creating a commit/PR:
 - [ ] Endpoints verified with real payloads using `validar_comunicacion_front_back.py`?
 - [ ] Added scenarios in Karate Labs API (`api_test.feature`) and Karate Labs UI (`ui_business_flow.feature`)?
 - [ ] Executed `./verificar-secretos.sh` and ShellCheck clean?
-- [ ] Synchronized `specs/`, `docs/`, `CHANGELOG.md`, `ROADMAP.md`, and `TESTING.md`?
+- [ ] Synchronized `docs/specs/`, `docs/`, `CHANGELOG.md`, `ROADMAP.md`, and `TESTING.md`?

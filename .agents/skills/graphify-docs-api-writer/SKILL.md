@@ -8,7 +8,7 @@ description: >-
 
 # Technical Documentation, API Reference & AI MCP Authoring (Graphify AST-Grounded)
 
-This skill guides the execution of **Milestone 14 (`14.1` to `14.8`)**, using `fastapi/graphify-out/GRAPH_REPORT.md`, `vue3/graphify-out/GRAPH_REPORT.md`, and `specs/30_BACKEND_MCP_PROTECTED_ENDPOINT.md` as sources of truth.
+This skill guides the execution of **Milestone 14 (`14.1` to `14.8`)**, using `fastapi/graphify-out/GRAPH_REPORT.md`, `vue3/graphify-out/GRAPH_REPORT.md`, and `docs/specs/30_BACKEND_MCP_PROTECTED_ENDPOINT.md` as sources of truth.
 > **OUTPUT LANGUAGE CONSTRAINT:** Always communicate with the user and write final explanations in Spanish.
 
 ---

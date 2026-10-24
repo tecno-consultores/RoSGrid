@@ -48,7 +48,7 @@
   let resizeObserver: ResizeObserver | null = null;
 
   /**
-   * Regla de Oro Zero-Metrics (specs/32 §5.2):
+   * Regla de Oro Zero-Metrics (docs/specs/32 §5.2):
    * 🟢 Verde: Latencia < 40ms, 0% pérdida
    * 🟠 Naranja: Latencia 40-120ms o pérdida 1-20%
    * 🔴 Rojo: Timeout, offline o pérdida > 20%

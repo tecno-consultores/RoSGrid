@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 RoSGrid Contributors
 
-"""Esquemas Pydantic v2 para la Suite Corporativa (Hito 20 / specs/33).
+"""Esquemas Pydantic v2 para la Suite Corporativa (Hito 20 / docs/specs/33).
 
 Cubre: Config Drift, SD-WAN WireGuard Hub & Spoke, CIS Benchmark Hardening,
 Switching & Rogue DHCP, SLA Tracker y WiFi CAPsMAN / WiFiWave2.

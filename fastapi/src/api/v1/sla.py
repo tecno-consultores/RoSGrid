@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 RoSGrid Contributors
 
-"""Endpoints del Monitor de Cumplimiento de SLA para Enlaces Dedicados (Hito 20.5 / specs/33 §5)."""
+"""Endpoints del Monitor de Cumplimiento de SLA para Enlaces Dedicados (Hito 20.5 / docs/specs/33 §5)."""
 
 import logging
 import uuid

@@ -1,6 +1,6 @@
 # 00 — ÍNDICE MAESTRO, GOBERNANZA ARQUITECTÓNICA Y ESTÁNDAR 11X (RoSGrid)
 
-> **[DIRECTIVA DE SISTEMA PARA AGENTES DE IA / ANTIGRAVITY]:** Actúa como un Principal Systems Architect, Staff Backend/Frontend Engineer y Staff QA Automation Engineer. Lee, analiza y aplica de forma estricta e innegociable todas las especificaciones contenidas en esta enciclopedia documental de 36 archivos ubicada en `specs/` para construir **RoSGrid**: Plataforma Centralizada Multi-Tenant de Gestión Técnica y Operativa para Flotas MikroTik RouterOS v7+. Procesa la lógica al máximo nivel de razonamiento técnico y genera todo el código, comentarios, commits y documentación en **Español**.
+> **[DIRECTIVA DE SISTEMA PARA AGENTES DE IA / ANTIGRAVITY]:** Actúa como un Principal Systems Architect, Staff Backend/Frontend Engineer y Staff QA Automation Engineer. Lee, analiza y aplica de forma estricta e innegociable todas las especificaciones contenidas en esta enciclopedia documental de 36 archivos ubicada en `docs/specs/` para construir **RoSGrid**: Plataforma Centralizada Multi-Tenant de Gestión Técnica y Operativa para Flotas MikroTik RouterOS v7+. Procesa la lógica al máximo nivel de razonamiento técnico y genera todo el código, comentarios, commits y documentación en **Español**.
 
 ---
 
@@ -39,8 +39,8 @@ Antigravity tiene **estrictamente prohibido** violar cualquiera de los siguiente
    * Por diseño de seguridad (ADR), RoSGrid omite deliberadamente terminales interactivas SSH/Telnet/CLI libres para preservar el aislamiento *Split-Credential*, el *Maker-Checker*, el *Safe Mode* y la bitácora inmutable WORM.
 5. **Uso de Graphify (En Docker) y Lectura Proactiva de Configuraciones:**
    * Al cerrar la arquitectura de Backend y Frontend, el agente DEBE ejecutar el perfil `--profile graphify` en Docker para generar `fastapi/graphify-out/GRAPH_REPORT.md` y `vue3/graphify-out/GRAPH_REPORT.md`, usándolos como fuente de verdad para la documentación en `docs/` y la certificación QA.
-6. **Protocolo de Inicialización y Fusión Quirúrgica No Destructiva desde `examples/`:**
-   * En las carpetas `examples/fastapi/` y `examples/vue3/` residen las plantillas originales y archivos `.example` del Estándar 11X. **Trátalos como referencia de solo lectura (no los modifiques ni los elimines).**
+6. **Protocolo de Inicialización y Fusión Quirúrgica No Destructiva desde `docs/examples/`:**
+   * En las carpetas `docs/examples/fastapi/` y `docs/examples/vue3/` residen las plantillas originales y archivos `.example` del Estándar 11X. **Trátalos como referencia de solo lectura (no los modifiques ni los elimines).**
    * Al inicializar o auditar los directorios reales `./fastapi/` y `./vue3/` en la raíz del proyecto, une las herramientas de QA 11X con las dependencias de negocio de RoSGrid.
 7. **Umbrales de Rechazo Automático ("Fail & Forbid"):**
    * **Cobertura Unitaria:** Mínimo **95%** obligatorio tanto en Backend (`pytest-cov --cov-fail-under=95`) como en Frontend (`Vitest v8` con 95% en `lines`, `functions`, `branches` y `statements`).
@@ -86,15 +86,11 @@ rosgrid/
 ├── instalar-hooks.sh                        # Instalador de Lefthook
 ├── auditar-infra.sh                         # Escáner efímero Trivy IaC + FS (CRITICAL/HIGH = Exit 1)
 │
-├── specs/                                   # PLANOS ARQUITECTÓNICOS Y REGLAS PARA ANTIGRAVITY
-│   ├── 00..35_*.md                          # Enciclopedia de 36 archivos de especificación RoSGrid
-│   └── qa-11x/                              # Documentación oficial del Blueprint QA 11X
-│
-├── examples/                                # PLANTILLAS BASE 11X (SOLO LECTURA — NO MODIFICAR)
-│   ├── fastapi/                             # Archivos .example, README.md y compose base de FastAPI
-│   └── vue3/                                # Archivos .example, README.md y compose base de Vue 3
-│
 ├── docs/                                    # DOCUMENTACIÓN OFICIAL DE ROSGRID
+│   ├── specs/                               # PLANOS ARQUITECTÓNICOS Y REGLAS PARA ANTIGRAVITY (00..35 y qa-11x/)
+│   ├── examples/                            # PLANTILLAS BASE 11X (SOLO LECTURA — NO MODIFICAR)
+│   │   ├── fastapi/                         # Archivos .example, README.md y compose base de FastAPI
+│   │   └── vue3/                            # Archivos .example, README.md y compose base de Vue 3
 │   ├── 01_GUIA_DESPLIEGUE_Y_ENTORNO.md
 │   ├── 02_PREPARACION_MIKROTIK_ROUTEROS_V7.md
 │   ├── 03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md
@@ -156,66 +152,66 @@ rosgrid/
 
 ---
 
-## 4. Índice Maestro de los 36 Archivos de Especificación (Carpeta `specs/`)
+## 4. Índice Maestro de los 36 Archivos de Especificación (Carpeta `docs/specs/`)
 
-Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `specs/` siguiendo rigurosamente el orden de los 5 Bloques listados a continuación:
+Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `docs/specs/` siguiendo rigurosamente el orden de los 5 Bloques listados a continuación:
 
 ### Bloque 0: Gobernanza, Arquitectura Global y Despliegue Inmutable
 
-* `specs/00_MASTER_INDEX_AND_11X_GOVERNANCE.md` *(Este documento)* — Reglas globales, licencia GPLv3, estructura del monorepo y mandamientos del Estándar 11X.
-* `specs/01_DOCKER_INFRASTRUCTURE_AND_IMMUTABLE_IMAGES.md` — Orquestación con imágenes `sinfallas/*`, KeyDB Multi-Hilo por defecto y perfil DragonflyDB, redes IPv4, migraciones automáticas con `pg_advisory_lock`, `Dockerfile` de producción, `build.sh` y cumplimiento de `Trivy`.
+* `docs/specs/00_MASTER_INDEX_AND_11X_GOVERNANCE.md` *(Este documento)* — Reglas globales, licencia GPLv3, estructura del monorepo y mandamientos del Estándar 11X.
+* `docs/specs/01_DOCKER_INFRASTRUCTURE_AND_IMMUTABLE_IMAGES.md` — Orquestación con imágenes `sinfallas/*`, KeyDB Multi-Hilo por defecto y perfil DragonflyDB, redes IPv4, migraciones automáticas con `pg_advisory_lock`, `Dockerfile` de producción, `build.sh` y cumplimiento de `Trivy`.
 
 ### Bloque 1: Base de Datos (PostgreSQL 17) y Estado Efímero (KeyDB Multi-Hilo)
 
-* `specs/02_DB_SCHEMA_CORE_TENANTS_AND_RLS.md` — Tablas Multi-Tenant (`tenants`, `users`, `roles`, `user_router_permissions`) y políticas *Row-Level Security (RLS)*.
-* `specs/03_DB_SCHEMA_INVENTORY_VAULT_AND_MAINTENANCE.md` — Tablas de inventario MikroTik, bóveda `AES-256-GCM`, rotación de credenciales, TOFU SSL SHA-256 y ventanas de mantenimiento.
-* `specs/04_DB_SCHEMA_OPERATIONS_BACKUPS_AND_IMMUTABLE_AUDIT.md` — Tablas de Maker-Checker, backups `.rsc`/`.backup` con deduplicación SHA-256 (30 días), plantillas, trabajos masivos y `audit_logs` inmutable con índice `BRIN`.
-* `specs/05_REDIS_KEYS_IDEMPOTENCY_AND_ZERO_METRICS.md` — Estructura de llaves KeyDB/RESP: idempotencia HTTP, familias de Refresh Tokens, *Kill-Switch* de sesiones, Pub/Sub de gráficas en vivo y máquina de estados *Zero-Metrics* con `pipeline()`.
+* `docs/specs/02_DB_SCHEMA_CORE_TENANTS_AND_RLS.md` — Tablas Multi-Tenant (`tenants`, `users`, `roles`, `user_router_permissions`) y políticas *Row-Level Security (RLS)*.
+* `docs/specs/03_DB_SCHEMA_INVENTORY_VAULT_AND_MAINTENANCE.md` — Tablas de inventario MikroTik, bóveda `AES-256-GCM`, rotación de credenciales, TOFU SSL SHA-256 y ventanas de mantenimiento.
+* `docs/specs/04_DB_SCHEMA_OPERATIONS_BACKUPS_AND_IMMUTABLE_AUDIT.md` — Tablas de Maker-Checker, backups `.rsc`/`.backup` con deduplicación SHA-256 (30 días), plantillas, trabajos masivos y `audit_logs` inmutable con índice `BRIN`.
+* `docs/specs/05_REDIS_KEYS_IDEMPOTENCY_AND_ZERO_METRICS.md` — Estructura de llaves KeyDB/RESP: idempotencia HTTP, familias de Refresh Tokens, *Kill-Switch* de sesiones, Pub/Sub de gráficas en vivo y máquina de estados *Zero-Metrics* con `pipeline()`.
 
 ### Bloque 2: Seguridad, Matriz RBAC (11 Roles) y Conector RouterOS v7
 
-* `specs/06_SECURITY_SPLIT_CREDENTIAL_2FA_AND_STEPUP.md` — Patrón *Split-Credential* con cookies `__Host-`, CSRF firmado, 2FA TOTP, *Step-Up Auth* de 30s para revelar claves y cabeceras HTTP para OWASP ZAP.
-* `specs/07_RBAC_11_ROLES_MATRIX_AND_MAKER_CHECKER.md` — Permisos granulares de los 11 roles y catálogo de acciones críticas sujetas a aprobación *Maker-Checker*.
-* `specs/08_MIKROTIK_REST_V7_CLIENT_TOFU_AND_SAFEMODE.md` — Conector asíncrono `httpx` con pool TLS `Keep-Alive` para RouterOS v7 (`/rest/*`), pinning SSL TOFU y motor *Dead Man's Switch (Safe Mode)* mediante `/system/scheduler`.
+* `docs/specs/06_SECURITY_SPLIT_CREDENTIAL_2FA_AND_STEPUP.md` — Patrón *Split-Credential* con cookies `__Host-`, CSRF firmado, 2FA TOTP, *Step-Up Auth* de 30s para revelar claves y cabeceras HTTP para OWASP ZAP.
+* `docs/specs/07_RBAC_11_ROLES_MATRIX_AND_MAKER_CHECKER.md` — Permisos granulares de los 11 roles y catálogo de acciones críticas sujetas a aprobación *Maker-Checker*.
+* `docs/specs/08_MIKROTIK_REST_V7_CLIENT_TOFU_AND_SAFEMODE.md` — Conector asíncrono `httpx` con pool TLS `Keep-Alive` para RouterOS v7 (`/rest/*`), pinning SSL TOFU y motor *Dead Man's Switch (Safe Mode)* mediante `/system/scheduler`.
 
 ### Bloque 3: Fases de Construcción, Catálogo de Endpoints y Servidor MCP del Backend (`fastapi/`)
 
-* `specs/09_BACKEND_PHASE_1_SKELETON_OBSERVABILITY_AND_MIGRATIONS.md` — Fase 1 Backend: fusión 11X desde `examples/fastapi/`, `/metrics`, `ORJSONResponse`, auto-migración Alembic, middlewares e inyección de dependencias.
-* `specs/10_BACKEND_ENDPOINTS_AUTH_TENANTS_USERS_KILLSWITCH.md` — Endpoints de Login Multi-Tenant, 2FA, gestión de usuarios, permisos por equipo y expulsión de sesiones en vivo.
-* `specs/11_BACKEND_ENDPOINTS_INVENTORY_CSV_VAULT_AND_ROTATION.md` — Endpoints de inventario, autodescubrimiento, importación masiva CSV en 2 pasos, Bóveda *Step-Up Auth*, rotación de claves y mantenimiento.
-* `specs/12_BACKEND_ENDPOINTS_WEBFIG_L1_INTERFACES_AND_IP.md` — Endpoints WebFig Capa 1: Interfaces (Ethernet, SFP DDM, VLAN, Bridge, WireGuard, WiFi) e IP/IPv6 (Addresses, Routes, ARP, DHCP, DNS, Services).
-* `specs/13_BACKEND_ENDPOINTS_WEBFIG_L1_FIREWALL_AND_ROUTING.md` — Endpoints WebFig Capa 1: Firewall (`Filter`, `NAT`, `Mangle`, `RAW`, `Address-Lists`, reordenamiento, `Conntrack`) y Routing v7 (`BGP`, `OSPF`, `BFD`).
-* `specs/14_BACKEND_ENDPOINTS_WEBFIG_L1_PPP_QUEUES_SYSTEM_TOOLS.md` — Endpoints WebFig Capa 1: PPPoE/VPNs, Queues, System (Users, Scripts, Scheduler, Packages, Reboot) y Tools (`Ping`, `Traceroute`, `Torch`, `Log`).
-* `specs/15_BACKEND_ENDPOINTS_WEBFIG_L2_UNIVERSAL_ENGINE.md` — Motor dinámico universal para el 100% restante de menús `/rest/*` de RouterOS v7.
-* `specs/16_BACKEND_ENDPOINTS_MAKER_CHECKER_BACKUPS_BULK_UPDATES.md` — Endpoints de aprobaciones Maker-Checker, Backups y Diff Git de `.rsc`, Plantillas/Snippets, Acciones Masivas y Actualizador de RouterOS v7.
-* `specs/17_BACKEND_WEBSOCKETS_LIVE_CHARTS_AND_ALERT_WORKERS.md` — Multiplexor WebSocket para gráficas efímeras estilo WinBox y workers de alerta (Telegram, SMTP, Webhook, NOC).
-* `specs/30_BACKEND_MCP_PROTECTED_ENDPOINT.md` — Endpoint MCP Protegido (`POST /api/v1/mcp` JSON-RPC 2.0 Streamable HTTP) para agentes IA (`Hermes Agent`, `Claude`) con cuenta `SERVICE_ACCOUNT` + CIDR, Rate-Limit en KeyDB, 8 Tools semánticas y freno obligatorio *Maker-Checker*.
+* `docs/specs/09_BACKEND_PHASE_1_SKELETON_OBSERVABILITY_AND_MIGRATIONS.md` — Fase 1 Backend: fusión 11X desde `docs/examples/fastapi/`, `/metrics`, `ORJSONResponse`, auto-migración Alembic, middlewares e inyección de dependencias.
+* `docs/specs/10_BACKEND_ENDPOINTS_AUTH_TENANTS_USERS_KILLSWITCH.md` — Endpoints de Login Multi-Tenant, 2FA, gestión de usuarios, permisos por equipo y expulsión de sesiones en vivo.
+* `docs/specs/11_BACKEND_ENDPOINTS_INVENTORY_CSV_VAULT_AND_ROTATION.md` — Endpoints de inventario, autodescubrimiento, importación masiva CSV en 2 pasos, Bóveda *Step-Up Auth*, rotación de claves y mantenimiento.
+* `docs/specs/12_BACKEND_ENDPOINTS_WEBFIG_L1_INTERFACES_AND_IP.md` — Endpoints WebFig Capa 1: Interfaces (Ethernet, SFP DDM, VLAN, Bridge, WireGuard, WiFi) e IP/IPv6 (Addresses, Routes, ARP, DHCP, DNS, Services).
+* `docs/specs/13_BACKEND_ENDPOINTS_WEBFIG_L1_FIREWALL_AND_ROUTING.md` — Endpoints WebFig Capa 1: Firewall (`Filter`, `NAT`, `Mangle`, `RAW`, `Address-Lists`, reordenamiento, `Conntrack`) y Routing v7 (`BGP`, `OSPF`, `BFD`).
+* `docs/specs/14_BACKEND_ENDPOINTS_WEBFIG_L1_PPP_QUEUES_SYSTEM_TOOLS.md` — Endpoints WebFig Capa 1: PPPoE/VPNs, Queues, System (Users, Scripts, Scheduler, Packages, Reboot) y Tools (`Ping`, `Traceroute`, `Torch`, `Log`).
+* `docs/specs/15_BACKEND_ENDPOINTS_WEBFIG_L2_UNIVERSAL_ENGINE.md` — Motor dinámico universal para el 100% restante de menús `/rest/*` de RouterOS v7.
+* `docs/specs/16_BACKEND_ENDPOINTS_MAKER_CHECKER_BACKUPS_BULK_UPDATES.md` — Endpoints de aprobaciones Maker-Checker, Backups y Diff Git de `.rsc`, Plantillas/Snippets, Acciones Masivas y Actualizador de RouterOS v7.
+* `docs/specs/17_BACKEND_WEBSOCKETS_LIVE_CHARTS_AND_ALERT_WORKERS.md` — Multiplexor WebSocket para gráficas efímeras estilo WinBox y workers de alerta (Telegram, SMTP, Webhook, NOC).
+* `docs/specs/30_BACKEND_MCP_PROTECTED_ENDPOINT.md` — Endpoint MCP Protegido (`POST /api/v1/mcp` JSON-RPC 2.0 Streamable HTTP) para agentes IA (`Hermes Agent`, `Claude`) con cuenta `SERVICE_ACCOUNT` + CIDR, Rate-Limit en KeyDB, 8 Tools semánticas y freno obligatorio *Maker-Checker*.
 
 ### Bloque 4: Fases de Construcción y Especificación del Frontend (`vue3/`)
 
-* `specs/18_FRONTEND_PHASE_1_SETUP_ZERO_TRUST_AND_INTERCEPTORS.md` — Fase 1 Frontend: fusión `.npmrc` Zero-Trust, stores Pinia con `shallowRef`, interceptores de seguridad/idempotencia/Kill-Switch y arquitectura PWA Mobile/Tablet.
-* `specs/19_FRONTEND_DESIGN_SYSTEM_ACCESSIBILITY_AND_PERFORMANCE.md` — Sistema de diseño *Tactical NOC Cyan*, Densidad Dual (`32px`/`44px`), *Virtual Scrolling* nativo, buscador `Ctrl+K`, cumplimiento WCAG 2.1 AA (`@axe-core`) y Lighthouse >= 90.
-* `specs/20_FRONTEND_VIEWS_AUTH_USERS_PERMISSIONS_AND_SESSIONS.md` — Pantallas de Login Multi-Tenant + 2FA, gestión de usuarios, asignación de routers y panel de sesiones activas en tiempo real.
-* `specs/21_FRONTEND_VIEWS_INVENTORY_OSM_MAP_CSV_AND_VAULT.md` — Pantallas de inventario, mapa **Leaflet + OpenStreetMap**, asistente CSV, modal de Bóveda con temporizador de 30s y ventanas de mantenimiento.
-* `specs/22_FRONTEND_VIEWS_WEBFIG_CONSOLE_RINGBUFFER_AND_LAYERS.md` — Consola WebFig: pestañas con memoria `<KeepAlive :max="5">`, gráficas efímeras en RAM (`TelemetryRingBuffer` sobre `<canvas>` 2D), módulos Capa 1 y motor universal Capa 2.
-* `specs/23_FRONTEND_VIEWS_APPROVALS_DIFF_BULK_NOC_AND_AUDITOR.md` — Vistas de Maker-Checker, visor Diff de `.rsc`, asistente de Acciones Masivas/Updates, modo **Wallboard NOC** y consola del rol **Auditor**.
+* `docs/specs/18_FRONTEND_PHASE_1_SETUP_ZERO_TRUST_AND_INTERCEPTORS.md` — Fase 1 Frontend: fusión `.npmrc` Zero-Trust, stores Pinia con `shallowRef`, interceptores de seguridad/idempotencia/Kill-Switch y arquitectura PWA Mobile/Tablet.
+* `docs/specs/19_FRONTEND_DESIGN_SYSTEM_ACCESSIBILITY_AND_PERFORMANCE.md` — Sistema de diseño *Tactical NOC Cyan*, Densidad Dual (`32px`/`44px`), *Virtual Scrolling* nativo, buscador `Ctrl+K`, cumplimiento WCAG 2.1 AA (`@axe-core`) y Lighthouse >= 90.
+* `docs/specs/20_FRONTEND_VIEWS_AUTH_USERS_PERMISSIONS_AND_SESSIONS.md` — Pantallas de Login Multi-Tenant + 2FA, gestión de usuarios, asignación de routers y panel de sesiones activas en tiempo real.
+* `docs/specs/21_FRONTEND_VIEWS_INVENTORY_OSM_MAP_CSV_AND_VAULT.md` — Pantallas de inventario, mapa **Leaflet + OpenStreetMap**, asistente CSV, modal de Bóveda con temporizador de 30s y ventanas de mantenimiento.
+* `docs/specs/22_FRONTEND_VIEWS_WEBFIG_CONSOLE_RINGBUFFER_AND_LAYERS.md` — Consola WebFig: pestañas con memoria `<KeepAlive :max="5">`, gráficas efímeras en RAM (`TelemetryRingBuffer` sobre `<canvas>` 2D), módulos Capa 1 y motor universal Capa 2.
+* `docs/specs/23_FRONTEND_VIEWS_APPROVALS_DIFF_BULK_NOC_AND_AUDITOR.md` — Vistas de Maker-Checker, visor Diff de `.rsc`, asistente de Acciones Masivas/Updates, modo **Wallboard NOC** y consola del rol **Auditor**.
 
 ### Bloque 5: Suite de Pruebas y Certificación del Estándar 11X
 
-* `specs/24_QA_11X_FASTAPI_INFRA_MAKEFILE_AND_CONFIGS.md` — Orquestador `fastapi/docker-compose.qa.yml`, `Makefile`, `pyproject.toml` y `tox.ini`.
-* `specs/25_QA_11X_FASTAPI_UNIT_MUTATION_AND_MOCK_CATALOG.md` — Pruebas unitarias `.unit.py` (>= 95%), pruebas de mutación `mutmut` y catálogo de mocks para RouterOS v7.
-* `specs/26_QA_11X_FASTAPI_CONTRACTS_BDD_DAST_AND_CHAOS.md` — Contratos `Schemathesis`, BDD `Karate Labs`, `OWASP ZAP`, profiling `py-spy` y caos con `Pumba + Locust + Prometheus`.
-* `specs/27_QA_11X_VUE3_INFRA_UNIT_AND_STRYKER_MUTATION.md` — Orquestador `vue3/docker-compose.qa.yml`, `Makefile`, pruebas unitarias `Vitest` (>= 95%) y mutación con `Stryker`.
-* `specs/28_QA_11X_VUE3_PLAYWRIGHT_AXE_LIGHTHOUSE_AND_KARATE.md` — Pruebas E2E `Playwright + @axe-core`, snapshots visuales deterministas, `Lighthouse CI`, `Karate UI` y observabilidad Nginx.
-* `specs/29_ANTIGRAVITY_MASTER_EXECUTION_PLAYBOOK_AND_TESTING_MD.md` — Playbook secuencial de construcción, validación y plantilla obligatoria de `TESTING.md`.
-* `specs/31_PRODUCTION_BOOTSTRAP_LOCAL_TESTING_AND_DISTRIBUTED_OPS.md` — Procedimiento de bootstrap en DB virgen, arquitectura distribuida Cross-Origin Direct y pipeline de validación local `./probar-prod-local.sh`.
+* `docs/specs/24_QA_11X_FASTAPI_INFRA_MAKEFILE_AND_CONFIGS.md` — Orquestador `fastapi/docker-compose.qa.yml`, `Makefile`, `pyproject.toml` y `tox.ini`.
+* `docs/specs/25_QA_11X_FASTAPI_UNIT_MUTATION_AND_MOCK_CATALOG.md` — Pruebas unitarias `.unit.py` (>= 95%), pruebas de mutación `mutmut` y catálogo de mocks para RouterOS v7.
+* `docs/specs/26_QA_11X_FASTAPI_CONTRACTS_BDD_DAST_AND_CHAOS.md` — Contratos `Schemathesis`, BDD `Karate Labs`, `OWASP ZAP`, profiling `py-spy` y caos con `Pumba + Locust + Prometheus`.
+* `docs/specs/27_QA_11X_VUE3_INFRA_UNIT_AND_STRYKER_MUTATION.md` — Orquestador `vue3/docker-compose.qa.yml`, `Makefile`, pruebas unitarias `Vitest` (>= 95%) y mutación con `Stryker`.
+* `docs/specs/28_QA_11X_VUE3_PLAYWRIGHT_AXE_LIGHTHOUSE_AND_KARATE.md` — Pruebas E2E `Playwright + @axe-core`, snapshots visuales deterministas, `Lighthouse CI`, `Karate UI` y observabilidad Nginx.
+* `docs/specs/29_ANTIGRAVITY_MASTER_EXECUTION_PLAYBOOK_AND_TESTING_MD.md` — Playbook secuencial de construcción, validación y plantilla obligatoria de `TESTING.md`.
+* `docs/specs/31_PRODUCTION_BOOTSTRAP_LOCAL_TESTING_AND_DISTRIBUTED_OPS.md` — Procedimiento de bootstrap en DB virgen, arquitectura distribuida Cross-Origin Direct y pipeline de validación local `./probar-prod-local.sh`.
 
 ### Bloque 6: Operaciones ISP, Gestión Corporativa de Flotas y Gobernanza Modular
 
-* `specs/32_ISP_OPERATIONS_TECHNICAL_QOS_AND_FIELD_TOOLKIT.md` — Módulo ISP técnico: QoS con Burst/PCQ, API de aprovisionamiento externa (Isolate/Restore/Rate-limit) con idempotencia, diagnóstico 360°, mapa de ONUs con telemetría efímera, alerta masiva, toolkit de campo responsive con GPS y arquitectura i18n.
-* `specs/33_ENTERPRISE_FLEET_MANAGEMENT_AND_SECURITY_COMPLIANCE.md` — Módulo Corporativo / Enterprise: Detección de Desviación de Configuración (Config Drift vs Golden Baseline), Orquestador SD-WAN y Malla WireGuard Hub & Spoke, Auditoría CIS Benchmark (Score 0-100), Detección de Rogue DHCP / Seguridad LAN, Monitor de Cumplimiento de SLA y Gestión Centralizada WiFi (CAPsMAN / WiFiWave2).
-* `specs/34_TENANT_FEATURE_FLAGS_AND_GOVERNANCE_PANEL.md` — Panel de Gobernanza de Feature Flags por Empresa: Modelo de datos en `tenants`, control de acceso por SuperAdmin, guardias de API y conmutación dinámica de la interfaz para operar como ISP, Entorno Corporativo o Mixto.
-* `specs/35_FLEET_AUTOMATION_TOPOLOGY_L2_SYSLOG_AND_PROMETHEUS.md` — Automatización de Flota, Topología Física L2, Receptor Syslog Efímero y Exportador Prometheus: Actualizaciones PoE-aware, Safety Stop, cruce local de CVEs, receptor UDP/TCP 5514 en KeyDB, visualizador L2 MNDP/LLDP, puente de telemetría `/metrics/fleet` sin almacenamiento en Postgres y ampliación MCP.
+* `docs/specs/32_ISP_OPERATIONS_TECHNICAL_QOS_AND_FIELD_TOOLKIT.md` — Módulo ISP técnico: QoS con Burst/PCQ, API de aprovisionamiento externa (Isolate/Restore/Rate-limit) con idempotencia, diagnóstico 360°, mapa de ONUs con telemetría efímera, alerta masiva, toolkit de campo responsive con GPS y arquitectura i18n.
+* `docs/specs/33_ENTERPRISE_FLEET_MANAGEMENT_AND_SECURITY_COMPLIANCE.md` — Módulo Corporativo / Enterprise: Detección de Desviación de Configuración (Config Drift vs Golden Baseline), Orquestador SD-WAN y Malla WireGuard Hub & Spoke, Auditoría CIS Benchmark (Score 0-100), Detección de Rogue DHCP / Seguridad LAN, Monitor de Cumplimiento de SLA y Gestión Centralizada WiFi (CAPsMAN / WiFiWave2).
+* `docs/specs/34_TENANT_FEATURE_FLAGS_AND_GOVERNANCE_PANEL.md` — Panel de Gobernanza de Feature Flags por Empresa: Modelo de datos en `tenants`, control de acceso por SuperAdmin, guardias de API y conmutación dinámica de la interfaz para operar como ISP, Entorno Corporativo o Mixto.
+* `docs/specs/35_FLEET_AUTOMATION_TOPOLOGY_L2_SYSLOG_AND_PROMETHEUS.md` — Automatización de Flota, Topología Física L2, Receptor Syslog Efímero y Exportador Prometheus: Actualizaciones PoE-aware, Safety Stop, cruce local de CVEs, receptor UDP/TCP 5514 en KeyDB, visualizador L2 MNDP/LLDP, puente de telemetría `/metrics/fleet` sin almacenamiento en Postgres y ampliación MCP.
 
 ---
 

@@ -18,7 +18,7 @@ Un resumen claro y conciso de lo que está fallando (ej. "Al reordenar una regla
 3. El error observado fue...
 
 ## 🎯 Comportamiento Esperado
-Descripción clara de lo que debería haber ocurrido según las especificaciones de `specs/`.
+Descripción clara de lo que debería haber ocurrido según las especificaciones de `docs/specs/`.
 
 ## 💻 Entorno de Ejecución
 - **Subsistema Afectado:** [ej. Backend FastAPI, Frontend Vue 3, Conector MikroTik REST v7, Endpoint MCP, Docker/KeyDB]

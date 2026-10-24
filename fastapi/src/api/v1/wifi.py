@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 RoSGrid Contributors
 
-"""Endpoints de Gestión Centralizada de WiFi Corporativo (CAPsMAN / WiFiWave2) (Hito 20.6 / specs/33 §6)."""
+"""Endpoints de Gestión Centralizada de WiFi Corporativo (CAPsMAN / WiFiWave2) (Hito 20.6 / docs/specs/33 §6)."""
 
 import logging
 import uuid

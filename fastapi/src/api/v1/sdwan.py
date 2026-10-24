@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 RoSGrid Contributors
 
-"""Endpoints del Orquestador SD-WAN y Malla WireGuard Hub & Spoke (Hito 20.2 / specs/33 §2)."""
+"""Endpoints del Orquestador SD-WAN y Malla WireGuard Hub & Spoke (Hito 20.2 / docs/specs/33 §2)."""
 
 import base64
 import logging

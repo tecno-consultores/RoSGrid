@@ -38,7 +38,7 @@ class MockDbResult:
 
 @pytest.mark.asyncio
 async def test_certify_installation_associates_gps_coordinates_to_subscriber() -> None:
-    """Verifica que la certificación asocie las coordenadas GPS al equipo (Sub-tarea 19.3 / specs/32 §6.2)."""
+    """Verifica que la certificación asocie las coordenadas GPS al equipo (Sub-tarea 19.3 / docs/specs/32 §6.2)."""
     db = AsyncMock()
     t_id = uuid.uuid4()
     ord_id = uuid.uuid4()

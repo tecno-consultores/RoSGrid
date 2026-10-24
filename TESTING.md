@@ -165,7 +165,7 @@ docker compose -f docker-compose.qa.yml down --remove-orphans
 | **Hito 22** | Auditoría IaC, Endurecimiento Docker, Mitigación Plataforma Híbrida y Matriz Smoke Tests 11X | **95.04%** (399 tests Backend)<br>**100%** (22 contratos locales) | N/A | Trivy IaC + FS (0 CVEs) + Hadolint (0 err) + ShellCheck (0 err) | ✅ **Certificado** |
 | **Hito 22.6** | Asistente de Instalación Standalone Remoto con Modo Dual (`curl -fsSL ... \| bash` en `/opt/rosgrid`) | N/A | N/A | ShellCheck (0 err) + Entropía 256 bits + chmod 600 | ✅ **Certificado** |
 | **Hito 22.7** | Cobertura BDD Integral Karate Labs (100% de la Interfaz Web — 16 Escenarios E2E en Docker) | **100%** (16/16 BDD UI)<br>**100%** (262 tests Vitest) | N/A | Karate Labs CDP + Vitest (38 suites) + vue-tsc (0 err) | ✅ **Certificado** |
-| **Hito 22.8** | Enriquecimiento Visual con Diagramas Mermaid en el 100% de los Manuales del Sistema | N/A | N/A | 30+ Diagramas Mermaid en specs/ y docs/ | ✅ **Certificado** |
+| **Hito 22.8** | Enriquecimiento Visual con Diagramas Mermaid en el 100% de los Manuales del Sistema | N/A | N/A | 30+ Diagramas Mermaid en docs/specs/ y docs/ | ✅ **Certificado** |
 | **Hito 22.9** | Investigación Técnica y Hojas de Ruta de Migración a Python 3.15 y Node.js 26 LTS | N/A | N/A | Reportes técnicos docs/10 y docs/11 aprobados | ✅ **Certificado** |
 | **Hito 22.10** | Cobertura BDD Integral Karate Labs (100% de la API REST FastAPI — 54 Escenarios Exhaustivos en Docker) | **100%** (54/54 BDD REST)<br>**95.04%** (399 tests Pytest) | N/A | Karate Labs API + Cobertura de 35 submódulos | ✅ **Certificado** |
 | **Hito 22.11** | Migración Integral de Runtime a Python 3.15 (`base-python-uv:3.15`) y Node.js 26 LTS (`base-node-ionic:26`) | **95.04%** (399 tests Pytest)<br>**100%** (262 tests Vitest) | Stryker + Mutmut | Free-Threading PEP 703 Tier-1 + V8 14.x + vue-tsc (0 err) | ✅ **Certificado** |
@@ -697,7 +697,7 @@ Certificación integral ejecutada bajo la **Regla Cero** dentro del contenedor D
 
 ## 19. Certificación QA 11X — Cobertura BDD Integral Karate Labs (100% de la Interfaz Web)
 
-Certificación ejecutada bajo la **Regla Cero** dentro de los contenedores efímeros Docker `qa-vue3` (`sinfallas/base-node-ionic:26`) y `karatelabs/karate:latest` conforme a `specs/28_FRONTEND_E2E_AND_KARATE_UI.md`.
+Certificación ejecutada bajo la **Regla Cero** dentro de los contenedores efímeros Docker `qa-vue3` (`sinfallas/base-node-ionic:26`) y `karatelabs/karate:latest` conforme a `docs/specs/28_FRONTEND_E2E_AND_KARATE_UI.md`.
 
 ### A. Catálogo de los 16 Escenarios BDD Certificados (`vue3/test/ui_business_flow.feature`)
 
@@ -725,13 +725,13 @@ Certificación ejecutada bajo la **Regla Cero** dentro de los contenedores efím
 - **Análisis de Tipos TypeScript (`vue-tsc --noEmit`):** Cero (0) errores de tipado estricto.
 - **Formateo y Estilo de Código (`prettier --check`):** 100% de conformidad con las directivas corporativas.
 - **Suite Unitaria Vitest (`pnpm test:unit`):** **38 de 38 suites aprobadas (100%)** con **262 de 262 pruebas unitarias exitosas**.
-- **Sincronización:** Los archivos de pruebas BDD en `vue3/test/ui_business_flow.feature` y su réplica de referencia en `examples/vue3/test/ui_business_flow.feature` permanecen 100% sincronizados bit a bit.
+- **Sincronización:** Los archivos de pruebas BDD en `vue3/test/ui_business_flow.feature` y su réplica de referencia en `docs/examples/vue3/test/ui_business_flow.feature` permanecen 100% sincronizados bit a bit.
 
 ---
 
 ## 20. Certificación QA 11X — Cobertura BDD Integral Karate Labs (100% de la API REST FastAPI)
 
-Certificación ejecutada bajo la **Regla Cero** dentro de los contenedores efímeros Docker `sinfallas/base-python-uv:3.15` y `sinfallas/karatelabs:latest` conforme a `specs/26_BACKEND_CONTRACTS_AND_BDD.md`.
+Certificación ejecutada bajo la **Regla Cero** dentro de los contenedores efímeros Docker `sinfallas/base-python-uv:3.15` y `sinfallas/karatelabs:latest` conforme a `docs/specs/26_BACKEND_CONTRACTS_AND_BDD.md`.
 
 ### A. Catálogo de los 54 Escenarios BDD Certificados (`fastapi/test/api_test.feature`)
 
@@ -768,7 +768,7 @@ Certificación ejecutada bajo la **Regla Cero** dentro de los contenedores efím
 
 ### B. Sincronización y Conformidad
 
-- **Sincronización:** Los archivos de pruebas BDD de API en `fastapi/test/api_test.feature` y su réplica de referencia en `examples/fastapi/test/api_test.feature` permanecen 100% sincronizados bit a bit.
+- **Sincronización:** Los archivos de pruebas BDD de API en `fastapi/test/api_test.feature` y su réplica de referencia en `docs/examples/fastapi/test/api_test.feature` permanecen 100% sincronizados bit a bit.
 
 ---
 
@@ -808,15 +808,15 @@ Certificación ejecutada bajo la **Regla Cero** dentro de los contenedores Docke
 
 ### C. Sincronización Global de Infraestructura y Orquestadores
 
-- Actualización íntegra de `docker-compose.yml`, `fastapi/docker-compose.qa.yml`, `vue3/docker-compose.qa.yml` y réplicas en `examples/`.
+- Actualización íntegra de `docker-compose.yml`, `fastapi/docker-compose.qa.yml`, `vue3/docker-compose.qa.yml` y réplicas en `docs/examples/`.
 - Sincronización de los reportes técnicos de investigación `docs/10_REPORTE_INVESTIGACION_PYTHON_3_15.md` y `docs/11_REPORTE_INVESTIGACION_NODE_26.md` pasando a estado **Migración Ejecutada e Implementada en RoSGrid**.
-- Gobernanza raíz (`README.md`, `INSTALL.md`, `RESOURCES.md`, `CHANGELOG.md`, `ROADMAP.md` y especificaciones `specs/00`, `specs/01`, `specs/24`, `specs/27`) completamente alineada con Python 3.15 y Node.js 26 LTS.
+- Gobernanza raíz (`README.md`, `INSTALL.md`, `RESOURCES.md`, `CHANGELOG.md`, `ROADMAP.md` y especificaciones `docs/specs/00`, `docs/specs/01`, `docs/specs/24`, `docs/specs/27`) completamente alineada con Python 3.15 y Node.js 26 LTS.
 
 ---
 
 ## 22. Certificación QA 11X — Automatización de Flota, Topología L2, Syslog, Cruce CVEs y Prometheus (Hito 23.4)
 
-Certificación ejecutada bajo la **Regla Cero** dentro del contenedor efímero Docker `sinfallas/base-python-uv:3.15` y `sinfallas/karatelabs:latest` conforme a `specs/35_FLEET_AUTOMATION_TOPOLOGY_L2_SYSLOG_AND_PROMETHEUS.md` y `docs/12_DISENO_TOPOLOGIA_L2_SYSLOG_Y_AUTOMATIZACION.md`.
+Certificación ejecutada bajo la **Regla Cero** dentro del contenedor efímero Docker `sinfallas/base-python-uv:3.15` y `sinfallas/karatelabs:latest` conforme a `docs/specs/35_FLEET_AUTOMATION_TOPOLOGY_L2_SYSLOG_AND_PROMETHEUS.md` y `docs/12_DISENO_TOPOLOGIA_L2_SYSLOG_Y_AUTOMATIZACION.md`.
 
 ### A. Resultados de Pruebas Unitarias y Análisis Estático (Pytest 9.1.1 + Ruff + Mypy + Radon)
 
@@ -828,7 +828,7 @@ Certificación ejecutada bajo la **Regla Cero** dentro del contenedor efímero D
 
 ### B. Pruebas BDD de Contrato y Aceptación con Karate Labs (Grupo 22)
 
-- **Escenarios de Prueba en `fastapi/test/api_test.feature` y réplica en `examples/fastapi/test/api_test.feature`:**
+- **Escenarios de Prueba en `fastapi/test/api_test.feature` y réplica en `docs/examples/fastapi/test/api_test.feature`:**
   - **Escenario 55:** Consulta de matriz CVE de flota `/api/v1/inventory/cves` sin autenticación devuelve 401.
   - **Escenario 56:** Sincronización del catálogo CVE `/api/v1/inventory/cves/sync` sin autenticación devuelve 401.
   - **Escenario 57:** Consulta de topología física Layer 2 `/api/v1/topology/l2` sin autenticación devuelve 401.
@@ -842,7 +842,7 @@ Certificación ejecutada bajo la **Regla Cero** dentro del contenedor efímero D
 
 ## 23. Certificación QA 11X — Frontend Vue 3 + Pinia: Matriz CVE, Topología L2, Syslog Terminal y Operaciones PoE-Aware (Hito 23.5)
 
-Certificación ejecutada bajo la **Regla Cero** dentro del contenedor efímero Docker `sinfallas/base-node-ionic:26` y `sinfallas/karatelabs:latest` conforme a `specs/35_FLEET_AUTOMATION_TOPOLOGY_L2_SYSLOG_AND_PROMETHEUS.md` y `docs/12_DISENO_TOPOLOGIA_L2_SYSLOG_Y_AUTOMATIZACION.md`.
+Certificación ejecutada bajo la **Regla Cero** dentro del contenedor efímero Docker `sinfallas/base-node-ionic:26` y `sinfallas/karatelabs:latest` conforme a `docs/specs/35_FLEET_AUTOMATION_TOPOLOGY_L2_SYSLOG_AND_PROMETHEUS.md` y `docs/12_DISENO_TOPOLOGIA_L2_SYSLOG_Y_AUTOMATIZACION.md`.
 
 ### A. Resultados de Pruebas Unitarias y Tipado Estricto (Vitest 1.3.1 + Vue-TSC + ESLint)
 
@@ -853,7 +853,7 @@ Certificación ejecutada bajo la **Regla Cero** dentro del contenedor efímero D
 
 ### B. Pruebas BDD de Interfaz de Usuario con Karate Labs (Escenarios 17-20)
 
-- **Escenarios de Prueba en `vue3/test/ui_business_flow.feature` y réplica en `examples/vue3/test/ui_business_flow.feature`:**
+- **Escenarios de Prueba en `vue3/test/ui_business_flow.feature` y réplica en `docs/examples/vue3/test/ui_business_flow.feature`:**
   - **Escenario 17:** *Mapa de Topología Física Layer 2 y Enlaces PoE* (`/topology/l2`): Valida renderizado del canvas táctico 2D a 60 FPS, leyenda de PSE/PoE y refresco interactivo.
   - **Escenario 18:** *Matriz de Vulnerabilidades CVE de Flota y Remediación Táctica* (`/inventory/cves`): Valida encabezado h1 semántico, grid con 4 tarjetas KPI evaluadas, botón de sincronización NIST NVD y enlace directo al orquestador de actualización masiva.
   - **Escenario 19:** *Consola WebFig v7 — Terminal Syslog en Vivo (RingBuffer Efímero)* (`/routers/{id}/webfig/syslog`): Valida terminal de eventos en tiempo real, badges de severidad, auto-scroll y apertura del modal con script CLI de configuración MikroTik.
@@ -926,12 +926,12 @@ Certificación integral ejecutada de extremo a extremo bajo la **Regla Cero** (c
 - **Acción Correctiva:** Configuración de `flex-direction: column` en `.login-wrapper`, `margin: auto 0` en `.login-card` y `width: 100%` en `.login-footer`, manteniendo el pie de página visible al fondo sin colapso.
 
 ### C. Ampliación de Suites de Pruebas Multi-Capa (Karate Labs, Contratos y Unitarias)
-1. **Karate Labs API BDD (`fastapi/test/api_test.feature` y `examples/fastapi/test/api_test.feature`):**
+1. **Karate Labs API BDD (`fastapi/test/api_test.feature` y `docs/examples/fastapi/test/api_test.feature`):**
    - **Escenario 62:** Validación en seco de CSV (`/api/v1/inventory/import-csv/dry-run`) sin autenticación devuelve HTTP 401.
    - **Escenario 63:** Confirmación transaccional (`/api/v1/inventory/import-csv/commit`) sin autenticación devuelve HTTP 401.
    - **Escenario 64:** Consulta de catálogo de roles de red y roles personalizados (`/api/v1/inventory/network-roles`) sin autenticación devuelve HTTP 401.
    - **Total Karate Labs API:** **64 de 64 escenarios aprobados (100%)**.
-2. **Karate Labs UI BDD (`vue3/test/ui_business_flow.feature` y `examples/vue3/test/ui_business_flow.feature`):**
+2. **Karate Labs UI BDD (`vue3/test/ui_business_flow.feature` y `docs/examples/vue3/test/ui_business_flow.feature`):**
    - **Escenario 21:** Apertura, inspección del asistente de importación masiva CSV (Paso 1 de 2), verificación de plantilla descargable y cierre.
    - **Escenario 22:** Estructura y posicionamiento del pie de página institucional en pantalla de Login sin solapamiento.
    - **Total Karate Labs UI:** **22 de 22 escenarios aprobados (100%)**.
@@ -1138,8 +1138,8 @@ Certificación integral ejecutada de extremo a extremo bajo la **Regla Cero** (c
    - Creación exitosa de los bridges `bridge12` y `bridge13` con Safe Mode (60s), RSTP y VLAN Filtering.
    - Confirmación visual de cierre del modal sin retrasos y listado instantáneo de los recursos creados en la tabla con sus banderas `[D] [R]`, MAC y estado activo.
 4. **Sincronización Arquitectónica y Operativa:**
-   - `specs/12_BACKEND_ENDPOINTS_WEBFIG_L1_INTERFACES_AND_IP.md`: Sección 2.2 incorporada con contratos de `BridgeCreateRequest`, `BridgeUpdateRequest` y `BridgePortCreateRequest`.
-   - `specs/22_FRONTEND_VIEWS_WEBFIG_CONSOLE_RINGBUFFER_AND_LAYERS.md`: Documentada la vista especializada `BridgeView.vue` en la Capa 1.
+   - `docs/specs/12_BACKEND_ENDPOINTS_WEBFIG_L1_INTERFACES_AND_IP.md`: Sección 2.2 incorporada con contratos de `BridgeCreateRequest`, `BridgeUpdateRequest` y `BridgePortCreateRequest`.
+   - `docs/specs/22_FRONTEND_VIEWS_WEBFIG_CONSOLE_RINGBUFFER_AND_LAYERS.md`: Documentada la vista especializada `BridgeView.vue` en la Capa 1.
    - `docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md`: Manual operativo actualizado con la operativa de Bridges y Safe Mode.
    - `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`: Sección 2.4 enriquecida con los endpoints formales REST `/webfig/interfaces/bridge` y `/ports`.
 
@@ -1174,15 +1174,15 @@ Certificación integral ejecutada de extremo a extremo bajo la **Regla Cero** (c
    - **7 de 7 pruebas unitarias aprobadas al 100%** en `vue3/src/views/fleetCveMatrix.unit.ts`.
    - `npm run build`: Compilación de producción exitosa en 3.96s con 0 errores TypeScript (`vue-tsc`).
 3. **Pruebas BDD de Aceptación con Karate Labs:**
-   - **Karate Labs API (`fastapi/test/api_test.feature` y `examples/fastapi/test/api_test.feature`):** Escenarios 55 y 56 validando contractualmente el acceso a `/api/v1/inventory/cves` y la sincronización en `/api/v1/inventory/cves/sync`.
-   - **Karate Labs UI (`vue3/test/ui_business_flow.feature` y `examples/vue3/test/ui_business_flow.feature`):** Escenario 18 enriquecido verificando la presencia en el DOM de los enlaces oficiales a MikroTik Security (`https://mikrotik.com/supportsec`) y NIST NVD Search (`https://nvd.nist.gov/vuln/search?keyword=mikrotik&resultType=records`).
+   - **Karate Labs API (`fastapi/test/api_test.feature` y `docs/examples/fastapi/test/api_test.feature`):** Escenarios 55 y 56 validando contractualmente el acceso a `/api/v1/inventory/cves` y la sincronización en `/api/v1/inventory/cves/sync`.
+   - **Karate Labs UI (`vue3/test/ui_business_flow.feature` y `docs/examples/vue3/test/ui_business_flow.feature`):** Escenario 18 enriquecido verificando la presencia en el DOM de los enlaces oficiales a MikroTik Security (`https://mikrotik.com/supportsec`) y NIST NVD Search (`https://nvd.nist.gov/vuln/search?keyword=mikrotik&resultType=records`).
 4. **Sincronización Documental y Secretos:**
-   - Sincronizadas las especificaciones en `specs/35_FLEET_AUTOMATION_TOPOLOGY_L2_SYSLOG_AND_PROMETHEUS.md`.
+   - Sincronizadas las especificaciones en `docs/specs/35_FLEET_AUTOMATION_TOPOLOGY_L2_SYSLOG_AND_PROMETHEUS.md`.
    - Sincronizada la documentación de API en `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`.
    - Registro de cambios en `CHANGELOG.md` y `ROADMAP.md`.
    - `./verificar-secretos.sh`: 0 secretos detectados.
 5. **Invariante de Calidad Karate Labs Reforzada:**
-   - Actualizadas las directivas de gobernanza en `AGENTS.md`, `.agents/rules/mandatory_qa_pyramid_and_doc_sync.md`, `.agents/rules/frontend_parity_and_closure.md`, `.agents/README.md` y `.agents/scripts/certify_task_completion.sh` para exigir incondicionalmente la inclusión y sincronización de escenarios BDD de Karate Labs (`fastapi/test/` y `vue3/test/`, reflejados en `examples/`) ante cualquier mutación de código en la plataforma.
+   - Actualizadas las directivas de gobernanza en `AGENTS.md`, `.agents/rules/mandatory_qa_pyramid_and_doc_sync.md`, `.agents/rules/frontend_parity_and_closure.md`, `.agents/README.md` y `.agents/scripts/certify_task_completion.sh` para exigir incondicionalmente la inclusión y sincronización de escenarios BDD de Karate Labs (`fastapi/test/` y `vue3/test/`, reflejados en `docs/examples/`) ante cualquier mutación de código en la plataforma.
 
 ---
 

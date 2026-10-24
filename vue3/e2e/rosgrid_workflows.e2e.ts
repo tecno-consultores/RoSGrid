@@ -3,7 +3,7 @@
 
 import { test, expect } from '@playwright/test';
 
-test.describe('Flujos de Negocio E2E Críticos de RoSGrid (specs/28)', () => {
+test.describe('Flujos de Negocio E2E Críticos de RoSGrid (docs/specs/28)', () => {
   test.beforeEach(async ({ page }) => {
     // Intercepción común de APIs para garantizar determinismo y cero salida a red
     await page.route('**/api/v1/auth/**', async (route) => {

@@ -9,20 +9,20 @@
 
 ---
 
-## 1. Mandatory 11X Test Creation (Using `examples/` as Blueprints)
+## 1. Mandatory 11X Test Creation (Using `docs/examples/` as Blueprints)
 
-Any modification, addition, or bugfix in source code (`fastapi/src/` or `vue3/src/`) MUST be accompanied by corresponding tests across the full 11X test pyramid. The AI agent MUST consult and strictly replicate the blueprints, configurations, and test designs provided in `examples/`:
+Any modification, addition, or bugfix in source code (`fastapi/src/` or `vue3/src/`) MUST be accompanied by corresponding tests across the full 11X test pyramid. The AI agent MUST consult and strictly replicate the blueprints, configurations, and test designs provided in `docs/examples/`:
 
-- **Backend Blueprints (`examples/fastapi/`):**
+- **Backend Blueprints (`docs/examples/fastapi/`):**
   - Unit & mocking standards (`pytest`, `pytest-cov`, `pytest-mock` in `fastapi/tests/**/*.unit.py` with `>= 95%` coverage).
-  - API black-box behavioral scenarios (`Karate Labs` `.feature` in `examples/fastapi/test/api_test.feature`).
+  - API black-box behavioral scenarios (`Karate Labs` `.feature` in `docs/examples/fastapi/test/api_test.feature`).
   - SAST & complexity auditing (`bandit`, `radon`, `mypy --strict`, `ruff`).
   - Contract & Fuzzing testing (`schemathesis`, `OWASP ZAP` baseline).
   - Chaos engineering & Prometheus observability (`Pumba`, `Locust`, `prometheus_fastapi_instrumentator`).
-- **Frontend Blueprints (`examples/vue3/`):**
+- **Frontend Blueprints (`docs/examples/vue3/`):**
   - Isolated unit tests (`Vitest` + `jsdom` in `vue3/src/**/*.unit.ts` with `>= 95%` coverage).
-  - UI Business Flow BDD (`Karate Labs` in `examples/vue3/test/ui_business_flow.feature`).
-  - E2E & Accessibility (`Playwright` + `@axe-core/playwright` in `examples/vue3/e2e/accessibility.spec.ts`).
+  - UI Business Flow BDD (`Karate Labs` in `docs/examples/vue3/test/ui_business_flow.feature`).
+  - E2E & Accessibility (`Playwright` + `@axe-core/playwright` in `docs/examples/vue3/e2e/accessibility.spec.ts`).
   - Cognitive complexity and static security (`eslint-plugin-sonarjs`, `eslint-plugin-security`).
   - Frontend mutation testing (`Stryker` preconfigured in `stryker.conf.json.example`).
 
@@ -30,19 +30,19 @@ Any modification, addition, or bugfix in source code (`fastapi/src/` or `vue3/sr
 
 | Test Layer | Location | Blueprint Reference | Requirement |
 | :--- | :--- | :--- | :--- |
-| **1. Backend Unit** | `fastapi/tests/**/*.unit.py` | `examples/fastapi/README.md` | Coverage `>= 95%` (`pytest-cov`). Test nominal, edge, and error branches. |
-| **2. Frontend Unit** | `vue3/src/**/*.unit.ts` | `examples/vue3/README.md` | 100% pass rate in Vitest. Test composables, Pinia stores, and form validation. |
-| **3. Real DB & Migration** | `fastapi/migrations/versions/` | `specs/02` & `alembic` | **Anti-Mock Invariant:** Never validate ORM changes (`src/models/`) with `AsyncMock` alone. Generate an Alembic migration and verify actual column types (`\d <table>`) and RLS in real PostgreSQL. |
+| **1. Backend Unit** | `fastapi/tests/**/*.unit.py` | `docs/examples/fastapi/README.md` | Coverage `>= 95%` (`pytest-cov`). Test nominal, edge, and error branches. |
+| **2. Frontend Unit** | `vue3/src/**/*.unit.ts` | `docs/examples/vue3/README.md` | 100% pass rate in Vitest. Test composables, Pinia stores, and form validation. |
+| **3. Real DB & Migration** | `fastapi/migrations/versions/` | `docs/specs/02` & `alembic` | **Anti-Mock Invariant:** Never validate ORM changes (`src/models/`) with `AsyncMock` alone. Generate an Alembic migration and verify actual column types (`\d <table>`) and RLS in real PostgreSQL. |
 | **4. Front-Back Contracts** | `fastapi/scripts/validar_comunicacion_front_back.py` | `docs/08` | Run inside Docker `rosgrid_api_local`. Send the exact payload (multipart form or JSON) used by the UI and verify DB persistence. |
-| **5. Karate Labs API BDD** | `fastapi/test/api_test.feature` | `examples/fastapi/test/api_test.feature` | **MANDATORY FOR ALL API CHANGES:** Black-box Gherkin scenarios testing 401 unauth, 422 malformed payloads, and 200/201 success contracts. Always include. |
-| **6. Karate Labs UI BDD** | `vue3/test/ui_business_flow.feature` | `examples/vue3/test/ui_business_flow.feature` | **MANDATORY FOR ALL UI CHANGES:** Real browser acceptance scenarios with Chrome CDP (button clicks, modal flows, navigation, critical links). Always include. |
-| **7. Visual Geometry** | DOM Hierarchy & Viewport Layout | `examples/vue3/e2e/` | **Anti-JSDOM Blindness:** JSDOM does not render Flexbox/Grid boxes. Test DOM order and inspect viewports in real browser sessions to ensure modals and sticky footers never overlap content. |
+| **5. Karate Labs API BDD** | `fastapi/test/api_test.feature` | `docs/examples/fastapi/test/api_test.feature` | **MANDATORY FOR ALL API CHANGES:** Black-box Gherkin scenarios testing 401 unauth, 422 malformed payloads, and 200/201 success contracts. Always include. |
+| **6. Karate Labs UI BDD** | `vue3/test/ui_business_flow.feature` | `docs/examples/vue3/test/ui_business_flow.feature` | **MANDATORY FOR ALL UI CHANGES:** Real browser acceptance scenarios with Chrome CDP (button clicks, modal flows, navigation, critical links). Always include. |
+| **7. Visual Geometry** | DOM Hierarchy & Viewport Layout | `docs/examples/vue3/e2e/` | **Anti-JSDOM Blindness:** JSDOM does not render Flexbox/Grid boxes. Test DOM order and inspect viewports in real browser sessions to ensure modals and sticky footers never overlap content. |
 
 ### 1.2 Mandatory Inclusion of Karate Labs Scenarios for All Changes
 
 **ZERO EXCEPTIONS INVARIANT:** Every single task or turn that adds, modifies, or fixes code MUST include Karate Labs scenarios:
-1. **API Changes (Endpoints, Schemas, Logic):** MUST add or update black-box BDD scenarios in `fastapi/test/api_test.feature` AND mirror them identically in `examples/fastapi/test/api_test.feature`.
-2. **Frontend Changes (Views, Modals, Buttons, Links, Tables):** MUST add or update interactive BDD scenarios in `vue3/test/ui_business_flow.feature` AND mirror them identically in `examples/vue3/test/ui_business_flow.feature`.
+1. **API Changes (Endpoints, Schemas, Logic):** MUST add or update black-box BDD scenarios in `fastapi/test/api_test.feature` AND mirror them identically in `docs/examples/fastapi/test/api_test.feature`.
+2. **Frontend Changes (Views, Modals, Buttons, Links, Tables):** MUST add or update interactive BDD scenarios in `vue3/test/ui_business_flow.feature` AND mirror them identically in `docs/examples/vue3/test/ui_business_flow.feature`.
 3. An AI agent or developer MUST NEVER consider a task completed without verifying that both Karate Labs feature files have been updated with scenarios covering the newly introduced functionality.
 
 ---
@@ -77,8 +77,8 @@ Whenever code is added, updated, or refactored, the AI agent **MUST OBLIGATORILY
    - Update operational manuals (`docs/01` through `docs/05`, `docs/12`).
    - Update complete REST/WebSockets reference in `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md` whenever endpoints, query params, or schemas change.
    - Update AI integration guides (`docs/07`) when MCP tools change.
-2. **`specs/` Directory:**
-   - Update all affected domain and functional specifications (`specs/01` through `specs/34`).
+2. **`docs/specs/` Directory:**
+   - Update all affected domain and functional specifications (`docs/specs/01` through `docs/specs/35`).
 3. **Monorepo Root:**
    - **`CHANGELOG.md`:** Document changes under `## [Unreleased]` (`Added`, `Fixed`, `Changed`) with technical detail.
    - **`ROADMAP.md`:** Update milestone checkpoints, sub-task statuses, and deliverables.

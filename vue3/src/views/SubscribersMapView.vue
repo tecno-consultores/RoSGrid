@@ -45,7 +45,7 @@
       const res = await http.get<SubscriberDeviceItem[]>('/api/v1/subscriber-devices');
       const items = Array.isArray(res.data) ? res.data : [];
 
-      // Asignar telemetría efímera Zero-Metrics en memoria (specs/32 §5.2)
+      // Asignar telemetría efímera Zero-Metrics en memoria (docs/specs/32 §5.2)
       onus.value = items.map((item, index) => {
         // En simulación efímera para demo/test de campo:
         const simulatedLat =

@@ -46,7 +46,7 @@ if [ -n "${CODE_CHANGES}" ]; then
     done <<< "${TEST_CHANGES}"
   fi
 
-  KARATE_CHANGES=$(git diff --name-only HEAD 2>/dev/null | grep -E '^(fastapi/test/.*\.feature|vue3/test/.*\.feature|examples/fastapi/test/|examples/vue3/test/)' || true)
+  KARATE_CHANGES=$(git diff --name-only HEAD 2>/dev/null | grep -E '^(fastapi/test/.*\.feature|vue3/test/.*\.feature|docs/examples/fastapi/test/|docs/examples/vue3/test/)' || true)
   if [ -z "${KARATE_CHANGES}" ]; then
     echo "⚠️ ADVERTENCIA: Se modificó código fuente pero NO se detectan escenarios BDD Karate Labs (fastapi/test/ o vue3/test/)."
     echo "Recuerda la Invariante Karate Labs: cada cambio de API o UI DEBE incluir sus escenarios BDD correspondientes."
@@ -57,9 +57,9 @@ if [ -n "${CODE_CHANGES}" ]; then
     done <<< "${KARATE_CHANGES}"
   fi
 
-  DOC_CHANGES=$(git diff --name-only HEAD 2>/dev/null | grep -E '^(specs/|docs/|CHANGELOG\.md|ROADMAP\.md|TESTING\.md|README\.md)' || true)
+  DOC_CHANGES=$(git diff --name-only HEAD 2>/dev/null | grep -E '^(docs/|CHANGELOG\.md|ROADMAP\.md|TESTING\.md|README\.md)' || true)
   if [ -z "${DOC_CHANGES}" ]; then
-    echo "⚠️ ADVERTENCIA: Se modificó código pero NO se han actualizado specs/, docs/, CHANGELOG.md, ROADMAP.md, TESTING.md o README.md."
+    echo "⚠️ ADVERTENCIA: Se modificó código pero NO se han actualizado docs/, CHANGELOG.md, ROADMAP.md, TESTING.md o README.md."
     echo "Recuerda la Directiva Suprema: la documentación debe sincronizarse con cada cambio."
   else
     echo "✔ Documentación actualizada en paralelo:"

@@ -43,7 +43,7 @@ Antes de proponer una nueva funcionalidad, verifica que cumpla estas 6 reglas de
    - Toda tabla técnica debe usar `RgDataTable.vue` (que activa *Virtual Scrolling* nativo al superar 100 filas) y las gráficas en tiempo real deben renderizarse en `<canvas>` 2D con `requestAnimationFrame`.
 6. **Accesibilidad (`WCAG 2.1 AA`) y Diseño de Alta Densidad:**
    - Toda vista o componente en `vue3/` debe usar las variables CSS de `src/assets/themes.css` (soportando los temas `dark`, `light` y `noc-high-contrast` con ratio de contraste `>= 4.5:1`), respetar la **Densidad Dual Adaptativa (`32px` en PC / `44px` en móvil)** y aplicar `font-variant-numeric: tabular-nums` en columnas numéricas, IPs y contadores.
-7. **Gobernanza de Herramientas MCP y Agentes IA (`specs/30` / `docs/07`):**
+7. **Gobernanza de Herramientas MCP y Agentes IA (`docs/specs/30` / `docs/07`):**
    - Cualquier nueva herramienta semántica para el endpoint MCP (`POST /api/v1/mcp`) debe seguir estrictamente JSON-RPC 2.0, validar rigurosamente su esquema Pydantic (`extra="forbid"`), registrar su invocación en la bitácora WORM (`MCP_AI_TOOL_CALL`) y, si altera el estado del router, canalizarse obligatoriamente hacia el flujo **Maker-Checker** (`202 Accepted` / `AWAITING_APPROVAL`) bajo protección de **Safe Mode (60s)**. Queda prohibida la ejecución desatendida de comandos destructivos por parte de agentes IA.
 
 ---

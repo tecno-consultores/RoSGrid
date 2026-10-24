@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 RoSGrid Contributors
 
-"""Endpoints de Seguridad de Conmutación Capa 2 & Detección de Rogue DHCP (Hito 20.4 / specs/33 §4)."""
+"""Endpoints de Seguridad de Conmutación Capa 2 & Detección de Rogue DHCP (Hito 20.4 / docs/specs/33 §4)."""
 
 import logging
 import uuid

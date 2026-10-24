@@ -261,7 +261,7 @@ Para evitar la introducción de vectores de ataque en estas nuevas funciones:
 
 Para garantizar la integridad y cero regresión en todo el ciclo de vida, el Hito 23 incorpora suites de pruebas de contratos y de comportamiento en **Karate Labs**:
 
-### 10.1. Contratos REST de Backend (`fastapi/test/api_test.feature` y réplica en `examples/`)
+### 10.1. Contratos REST de Backend (`fastapi/test/api_test.feature` y réplica en `docs/examples/`)
 
 * **Escenario 55:** Validación 401 en `/api/v1/inventory/cves` sin autenticación.
 * **Escenario 56:** Validación 401 en `/api/v1/inventory/cves/sync` sin autenticación.
@@ -271,7 +271,7 @@ Para garantizar la integridad y cero regresión en todo el ciclo de vida, el Hit
 * **Escenario 60:** Scraping OpenMetrics `/api/v1/metrics/fleet` devuelve 200 y métrica `rosgrid_router_status`.
 * **Escenario 61:** Actualización masiva PoE-aware `/api/v1/operations/ros-updates/execute` sin autenticación devuelve 401.
 
-### 10.2. Flujos de Interfaz Web E2E (`vue3/test/ui_business_flow.feature` y réplica en `examples/`)
+### 10.2. Flujos de Interfaz Web E2E (`vue3/test/ui_business_flow.feature` y réplica en `docs/examples/`)
 
 * **Escenario 17:** Verificación de carga de Topología L2 (`/topology/l2`), renderizado del canvas y leyenda de inyector PSE.
 * **Escenario 18:** Verificación de la Matriz de Vulnerabilidades CVE (`/inventory/cves`), tarjetas KPI, botón de sincronización y botón remediador de flota.
