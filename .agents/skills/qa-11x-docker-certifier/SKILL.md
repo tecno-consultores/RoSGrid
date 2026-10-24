@@ -42,7 +42,7 @@ This skill governs all tests, linters, audits, and cleanups in `fastapi/` and `v
 ## 3. Repository Hygiene & Silent Mode (IDE RAM Conservation)
 
 1. **Mandatory Post-QA Cleanup:**
-   - After running coverage or mutation tests, execute `./fastapi/limpieza.sh` and `./vue3/limpieza.sh` (purging `mutants/`, `htmlcov/`, `.coverage`, `.stryker-tmp/`, `playwright-report/`).
+   - After running coverage or mutation tests, execute `./scripts/limpieza.sh` (or `make clean-cache`), purging `mutants/`, `htmlcov/`, `.coverage`, `.stryker-tmp/`, `playwright-report/`.
    - **Exception:** Retain `fastapi/graphify-out/GRAPH_REPORT.md` and `vue3/graphify-out/GRAPH_REPORT.md` when needed for Milestone 14 and Milestone 15.
 2. **Silent Chat Mode:**
    - Do not dump verbose source code or raw terminal logs in the chat.

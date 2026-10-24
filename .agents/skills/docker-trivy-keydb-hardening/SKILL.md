@@ -3,7 +3,7 @@ name: docker-trivy-keydb-hardening
 description: >-
   Docker container hardening (Trivy HIGH/CRITICAL = 0), default multi-threaded KeyDB in-memory engine
   (with optional DragonflyDB profile), backend performance optimizations (orjson, uvloop, TLS Keep-Alive pool,
-  KeyDB pipelines, BRIN index), Swagger production suppression, and multi-stage build.sh publication.
+  KeyDB pipelines, BRIN index), Swagger production suppression, and multi-stage scripts/build.sh publication.
   Applies to RoSGrid Sub-task 10.6, Milestone 13.7, and Milestone 16.
 ---
 

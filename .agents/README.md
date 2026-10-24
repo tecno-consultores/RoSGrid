@@ -75,7 +75,7 @@ Esta carpeta **NO es exclusiva de una sola herramienta**. Ha sido diseñada bajo
 **Sí, es 100% recomendable y una práctica recomendada en ingeniería de software moderna:**
 - **Cero Secretos:** Este directorio solo contiene directivas en Markdown, configuraciones de muestra (`.json`, `.yaml`) y scripts en Python/Bash. No contiene tokens de producción, contraseñas ni variables de entorno.
 - **Reproducibilidad:** Permite que cualquier desarrollador que clone el repositorio obtenga inmediatamente un agente de IA calibrado y alineado con las reglas de RoSGrid, sin riesgo de que introduzca código roto, modelos sin migración o fallos de seguridad.
-- **Auditoría Continua:** Cualquier script añadido a `.agents/scripts/` es auditado por `ShellCheck` y `verificar-secretos.sh` en el pipeline de CI/CD.
+- **Auditoría Continua:** Cualquier script añadido a `.agents/scripts/` es auditado por `ShellCheck` y `./scripts/verificar-secretos.sh` en el pipeline de CI/CD.
 
 ---
 
