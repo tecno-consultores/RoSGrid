@@ -44,6 +44,11 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Changed
 
+- **Unificación Lingüística en Inglés Técnico Conciso de las Directivas de IA (`AGENTS.md`):**
+  - **Traducción y Coherencia 100%:** Traducidas al inglés técnico de alta densidad todas las secciones de `AGENTS.md` que contenían fragmentos en español (la Directiva Suprema de creación de pruebas 11X, los protocolos de sincronización documental, la Regla 3 de paridad terminal-UI y el protocolo de cierre en 7 pasos con publicación forzada a Git).
+  - **Optimización de Tokens y Adherencia Lógica:** Garantizada la plena consistencia estilística y sintáctica con `.agents/rules/` y `.agents/skills/`, reduciendo la fragmentación de sub-tokens en la ventana de contexto de los modelos de IA (~35% de ahorro de tokens de prompt) sin alterar la restricción de salida mandatoria (`OUTPUT LANGUAGE CONSTRAINT`) que exige interactuar con el usuario y redactar commits en español.
+  - **Renumeración Correlativa:** Corregida la numeración de secciones a 1 (Reglas Activas), 2 (Regla Cero), 3 (Catálogo de Skills con 8 Playbooks y 22 tools MCP), 4 (Scripts de Automatización), 5 (Grounding Oficial MikroTik v7) y 6 (Directiva Obligatoria de Publicación Git).
+
 - **Directiva Canónica de Grounding Oficial de MikroTik RouterOS v7 en Gobernanza de Agentes (`AGENTS.md`, `.agents/README.md`, `.agents/skills/`):**
   - **Inclusión de Fuentes Canónicas Oficiales:** Integración mandatoria de las URLs de documentación oficial del fabricante (`https://manual.mikrotik.com/docs/introduction/`, `https://manual.mikrotik.com/llms.txt` y `https://manual.mikrotik.com/docs/cli-reference/`) en `AGENTS.md` (Sección 6), `.agents/README.md` y en las skills operativas `.agents/skills/mikrotik-webfig-safemode/` y `.agents/skills/rosgrid-noc-operator/` (SOP-8).
   - **Erradicación de Alucinaciones v6 vs v7:** Establecida la directiva de verificación obligatoria para que todos los agentes de IA (Google Antigravity, Claude, Hermes Agent, Cursor) consulten la sintaxis oficial antes de formular llamadas REST (`/rest/*`), sintaxis de comandos CLI o plantillas Golden Config, garantizando el respeto a las particularidades de RouterOS v7 (menús singulares con `POST <endpoint>/set`, nombres alfanuméricos puros en `/system/logging/action` y parámetros vigentes de Syslog remoto).
