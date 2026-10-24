@@ -217,5 +217,16 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     Then waitFor(".rg-health-popover")
     And match text(".rg-health-popover") contains 'Latencia'
 
+  Scenario: 26. Operaciones Masivas — Asistente Paso 2 con Lista de Plantillas, Radio Buttons y Parámetros Dinámicos
+    Given driver baseUrl + '/bulk-ops'
+    And waitFor("//h1[contains(., 'Operaciones Masivas')]")
+    And waitFor(".step-footer .btn--primary")
+    When click(".step-footer .btn--primary")
+    Then waitFor(".templates-list-scroll")
+    And waitFor(".template-list-item")
+    And waitFor(".tpl-radio-input")
+    And waitFor(".template-variables-box")
+    And match text(".vars-title") contains 'Parámetros de la Plantilla'
+
 
 

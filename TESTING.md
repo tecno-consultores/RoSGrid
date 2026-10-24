@@ -1211,7 +1211,8 @@ graph TD
 | **Indicador Táctico de Disponibilidad de API (Heartbeat/Ping) y Caché Anti-Thundering Herd:** Botón interactivo en barra superior/login con popover diagnóstico, monitoreo pasivo, `BroadcastChannel` y caché 5s en `GET /health` | `test_health_cache.unit.py` (2/2 pass: caché en producción y forzado `?force=true`) | `useApiHeartbeatStore.unit.ts` (8/8 pass)<br>`RgApiHealthBadge.unit.ts` (5/5 pass)<br>`RgResponsiveShell.unit.ts` (18/18 pass) | **Escenario 1:** Healthcheck activo.<br>**Escenario 69:** Consulta optimizada con caché y `force=true`. | **Escenario 25:** Barra superior con `#api-health-badge` y apertura de popover con telemetría de backend. | ✅ **Verificado** |
 | **Auto-Pinning TOFU Continuo y Autodescubrimiento Desatendido:** Fijación automática de huella TLS SHA-256 al detectar router running en monitor de salud o en consola WebFig, guardado de metadatos de hardware y localización `PENDING_TOFU` | `test_workers_full.unit.py`<br>`test_webfig_layer1_endpoints.unit.py` (26/26 pass al 100%) | `routerInventoryView.unit.ts` (4/4 pass al 100%: formateo de estados SSL TOFU) | **Escenario 20b:** Validación contractual de auto-pinning TOFU y sincronización sin sesión (401). | **Escenario 3b:** Verificación de columna SSL / TOFU en la grilla de inventario. | ✅ **Verificado** |
 | **Enrutamiento Nginx /health, Alias /api/v1/health y Diagnóstico Robusto:** Corrección de fallback SPA en reverse proxy, validación Content-Type: application/json, mensajes diagnósticos claros en español y soporte de timeout | `test_health_cache.unit.py` (3/3 pass al 100%, incluyendo `test_api_v1_health_endpoint`) | `useApiHeartbeatStore.unit.ts` (10/10 pass al 100%)<br>`RgApiHealthBadge.unit.ts` (5/5 pass al 100%) | **Escenario 1:** Healthcheck activo `/health`.<br>**Escenario 1b:** Healthcheck activo alias `/api/v1/health`.<br>**Escenario 69:** Caché y `force=true`. | **Escenario 25:** Indicador `#api-health-badge`, apertura de popover, interacción con botón de reintento `.btn-ping-action` y latencia en vivo. | ✅ **Verificado** |
-| **Total Global Karate Labs Actualizado:** | N/A | N/A | **71 de 71 escenarios aprobados (100%)** | **26 de 26 escenarios aprobados (100%)** | ✅ **Verificado** |
+| **Operaciones Masivas — Lista con Scroll, Radio Buttons y Parámetros Dinámicos:** Rediseño ergonómico de selección de plantillas con botón radio, contenedor con longitud visual fija (220px) con scroll y panel dinámico inferior de campos variables | N/A (Frontend UX) | `operationsViews.unit.ts` (11/11 pass al 100%) | N/A | **Escenario 26:** Asistente Paso 2 con lista de plantillas, botones radio y panel dinámico de parámetros. | ✅ **Verificado** |
+| **Total Global Karate Labs Actualizado:** | N/A | N/A | **71 de 71 escenarios aprobados (100%)** | **27 de 27 escenarios aprobados (100%)** | ✅ **Verificado** |
 
 ---
 
@@ -1234,7 +1235,23 @@ graph TD
 1. **Backend Unitario:** `fastapi/tests/api/test_health_cache.unit.py` (3 pruebas al 100%, validando `/health`, `?force=true` y `/api/v1/health`).
 2. **Frontend Unitario:** `vue3/src/stores/useApiHeartbeatStore.unit.ts` y `RgApiHealthBadge.unit.ts` (15 pruebas al 100%).
 3. **Karate Labs API BDD:** Escenario 1b agregado en `fastapi/test/api_test.feature` y replicado en `docs/examples/fastapi/test/api_test.feature` (71 escenarios totales).
-4. **Karate Labs UI BDD:** Escenario 25 enriquecido en `vue3/test/ui_business_flow.feature` y replicado en `docs/examples/vue3/test/ui_business_flow.feature` (26 escenarios totales).
+4. **Karate Labs UI BDD:** Escenario 25 enriquecido en `vue3/test/ui_business_flow.feature` y replicado en `docs/examples/vue3/test/ui_business_flow.feature` (27 escenarios totales).
+
+---
+
+## 35. Operaciones Masivas: Lista Ergonómica con Scroll, Botón Radio y Parámetros Dinámicos
+
+### A. Diagnóstico y Requerimiento de UX
+- **Problema Previo:** Las plantillas de configuración en el Paso 2 de Operaciones Masivas (`BulkOperationsAndUpdatesView.vue`) se desplegaban en un grid de tarjetas cuadradas que crecía horizontal y verticalmente sin límite fijo de altura, dificultando la selección unívoca y el acceso a los parámetros.
+- **Solución Implementada:**
+  1. **Contenedor con Longitud Fija y Scroll:** Contenedor táctico `.templates-list-scroll` con altura fija a 220px y barra de desplazamiento estilizada (`scrollbar-color: #0284c7 #0f172a`), garantizando estabilidad visual independientemente de cuántas plantillas existan.
+  2. **Botón Radio Unívoco:** Cada elemento cuenta con `<input type="radio">` y diseño táctico con halo cian al seleccionarse, asegurando que solo una plantilla esté activa a la vez.
+  3. **Despliegue Dinámico de Parámetros Inferior:** El recuadro `.template-variables-box` refleja de inmediato el nombre de la plantilla elegida y despliega los campos dinámicos correspondientes a `variables_schema` (o un mensaje informativo cuando la plantilla no requiere variables adicionales).
+
+### B. Cobertura y Certificación 11X
+1. **Frontend Unitario (`operationsViews.unit.ts`):** 11 pruebas aprobadas al 100% en Docker efímero, certificando el rol de radiogroup, los inputs radio, la conmutación de selección y la reactividad de los campos en el panel de parámetros.
+2. **Karate Labs UI BDD (`ui_business_flow.feature`):** Escenario 26 incorporado y sincronizado en `docs/examples/vue3/test/ui_business_flow.feature`.
+
 
 
 

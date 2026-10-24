@@ -783,4 +783,82 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
     await flushPromises();
     expect(wrapper.findAll('.audit-row').length).toBe(0);
   });
+
+  it('BulkOperationsAndUpdatesView — lista de plantillas con botón radio, contenedor con scroll y despliegue de parámetros al seleccionar', async () => {
+    vi.spyOn(http, 'get').mockResolvedValue({
+      status: 200,
+      data: [
+        {
+          id: 'tpl-ntp',
+          name: 'CLIENTE_NTP',
+          category: 'SYSTEM',
+          description: 'Activa cliente NTP',
+          variables_schema: [
+            { key: 'ntp_srv', label: 'Servidor NTP', default_val: '0.pool.ntp.org' },
+          ],
+          ros_command_template: '/system ntp client set enabled=yes',
+        },
+        {
+          id: 'tpl-dns',
+          name: 'DNS_CORPORATIVO',
+          category: 'NETWORK',
+          description: 'Configura DNS',
+          variables_schema: [
+            { key: 'dns_1', label: 'DNS Primario', default_val: '9.9.9.9' },
+            { key: 'dns_2', label: 'DNS Secundario', default_val: '1.1.1.1' },
+          ],
+          ros_command_template: '/ip dns set servers={{dns_1}},{{dns_2}}',
+        },
+        {
+          id: 'tpl-reboot',
+          name: 'REINICIO_PROGRAMADO',
+          category: 'MAINTENANCE',
+          description: 'Reinicia el equipo sin variables',
+          variables_schema: [],
+          ros_command_template: '/system reboot',
+        },
+      ],
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(BulkOperationsAndUpdatesView);
+    await flushPromises();
+
+    // Avanzar al paso 2
+    const nextBtn = wrapper.find('.step-footer .btn--primary');
+    await nextBtn.trigger('click');
+    await flushPromises();
+
+    // 1. Contenedor de lista con scroll y role="radiogroup"
+    const scrollList = wrapper.find('.templates-list-scroll');
+    expect(scrollList.exists()).toBe(true);
+    expect(scrollList.attributes('role')).toBe('radiogroup');
+
+    // 2. Elementos de la lista con botones radio
+    const listItems = wrapper.findAll('.template-list-item');
+    expect(listItems.length).toBe(3);
+    const radioInputs = wrapper.findAll('.tpl-radio-input');
+    expect(radioInputs.length).toBe(3);
+
+    // Primera plantilla seleccionada por defecto
+    expect((radioInputs[0].element as HTMLInputElement).checked).toBe(true);
+    expect(wrapper.find('.vars-title-hint').text()).toContain('CLIENTE_NTP');
+    expect(wrapper.findAll('.vars-grid .form-group').length).toBe(1);
+    expect(wrapper.find('.form-label').text()).toContain('Servidor NTP');
+
+    // 3. Seleccionar la segunda plantilla mediante clic en el radio o fila
+    await listItems[1].trigger('click');
+    await flushPromises();
+
+    expect((radioInputs[1].element as HTMLInputElement).checked).toBe(true);
+    expect(wrapper.find('.vars-title-hint').text()).toContain('DNS_CORPORATIVO');
+    expect(wrapper.findAll('.vars-grid .form-group').length).toBe(2);
+
+    // 4. Seleccionar la tercera plantilla (sin parámetros)
+    await listItems[2].trigger('click');
+    await flushPromises();
+
+    expect((radioInputs[2].element as HTMLInputElement).checked).toBe(true);
+    expect(wrapper.find('.vars-empty-state').text()).toContain('no requiere parámetros adicionales');
+  });
 });

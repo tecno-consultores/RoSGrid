@@ -24,6 +24,12 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Changed
 
+- **Rediseño Ergonómico de Selección de Plantillas y Parámetros en Operaciones Masivas (`BulkOperationsAndUpdatesView.vue`):**
+  - **Lista con Desplazamiento y Altura Fija:** Sustituido el grid de tarjetas cuadradas por un contenedor de lista táctica `.templates-list-scroll` con altura constante de 220px y barra de desplazamiento estilizada, previniendo deformaciones visuales cuando el catálogo de plantillas crece.
+  - **Selección Exclusiva por Botón Radio:** Incorporado `<input type="radio">` y estilos tácticos para garantizar la selección unívoca de plantillas Golden Config.
+  - **Recuadro Dinámico de Parámetros Inferior:** El recuadro `.template-variables-box` muestra reactivamente el nombre de la plantilla seleccionada y los campos de entrada correspondientes a su `variables_schema` (con soporte para estados vacíos y plantillas sin parámetros variables).
+  - **Certificación QA 11X:** 11 pruebas unitarias aprobadas al 100% en `operationsViews.unit.ts` y nuevo Escenario 26 en Karate Labs UI BDD (`ui_business_flow.feature`), replicado en `docs/examples/`.
+
 - **Optimización y Guía Visual de Instalación Rápida en 3 Pasos (`README.md`):**
   - **Reestructuración Visual e Intuitiva:** Rediseñada la sección de instalación principal en `README.md` (`## ⚡ Puesta en Marcha Rápida (Instalación en 3 Pasos)`), incorporando un diagrama de flujo horizontal (Mermaid) con la secuencia completa: Despliegue $\to$ Asistente Web $\to$ MikroTik RouterOS v7 $\to$ Tablero NOC.
   - **Especificación Clara de Requisitos:** Detallados los requerimientos mínimos del anfitrión (Linux 64-bit, Docker 24+, Compose v2, 4 GB RAM con KeyDB) y versiones compatibles de RouterOS v7.1+.

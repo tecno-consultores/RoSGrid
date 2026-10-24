@@ -141,6 +141,9 @@
   // Paso 2: Plantillas y Variables
   const templates = ref<ConfigTemplate[]>([]);
   const selectedTemplateId = ref<string>('');
+  const selectedTemplate = computed(() => {
+    return templates.value.find((t) => t.id === selectedTemplateId.value) || null;
+  });
   const templateVars = ref<Record<string, string>>({});
   const previewPayload = ref<string>('');
 
@@ -667,38 +670,109 @@
         <div v-if="templates.length === 0" class="empty-state-banner">
           <p>No existen plantillas Golden Config registradas para este Tenant.</p>
         </div>
-        <div v-else class="templates-grid">
+        <div v-else class="templates-list-wrapper">
           <div
-            v-for="tpl in templates"
-            :key="tpl.id"
-            class="template-card"
-            :class="{ 'template-card--selected': selectedTemplateId === tpl.id }"
-            @click="onSelectTemplate(tpl.id)"
+            class="templates-list-scroll"
+            role="radiogroup"
+            aria-label="Lista de plantillas Golden Config seleccionables"
           >
-            <div class="tpl-card-top">
-              <span class="tpl-name">{{ tpl.name }}</span>
-              <span class="tag tag--role">{{ tpl.category }}</span>
+            <div
+              v-for="tpl in templates"
+              :key="tpl.id"
+              class="template-list-item template-card"
+              :class="{
+                'template-list-item--selected': selectedTemplateId === tpl.id,
+                'template-card--selected': selectedTemplateId === tpl.id,
+              }"
+              role="radio"
+              :aria-checked="selectedTemplateId === tpl.id"
+              tabindex="0"
+              @click="onSelectTemplate(tpl.id)"
+              @keydown.space.prevent="onSelectTemplate(tpl.id)"
+              @keydown.enter.prevent="onSelectTemplate(tpl.id)"
+            >
+              <div class="tpl-item-radio-wrapper">
+                <input
+                  type="radio"
+                  :id="`tpl-radio-${tpl.id}`"
+                  name="selected_golden_template"
+                  :value="tpl.id"
+                  :checked="selectedTemplateId === tpl.id"
+                  class="tpl-radio-input"
+                  :aria-label="`Seleccionar plantilla ${tpl.name}`"
+                  @change="onSelectTemplate(tpl.id)"
+                  @click.stop
+                />
+              </div>
+              <div class="tpl-item-content">
+                <div class="tpl-item-header">
+                  <label :for="`tpl-radio-${tpl.id}`" class="tpl-name cursor-pointer">
+                    {{ tpl.name }}
+                  </label>
+                  <div class="tpl-item-badges">
+                    <span class="tag tag--role">{{ tpl.category }}</span>
+                    <span v-if="tpl.requires_safemode ?? true" class="badge badge--safe-sm">
+                      Safe Mode
+                    </span>
+                    <span class="tag tag--info">
+                      {{ (tpl.variables_schema || []).length }} parámetros
+                    </span>
+                  </div>
+                </div>
+                <p class="tpl-desc">{{ tpl.description }}</p>
+              </div>
             </div>
-            <p class="tpl-desc">{{ tpl.description }}</p>
           </div>
         </div>
 
-        <!-- Formulario dinámico de variables -->
-        <div v-if="selectedTemplateId" class="template-variables-box">
-          <h3 class="vars-title">Parámetros de la Plantilla</h3>
-          <div class="vars-grid">
+        <!-- Formulario dinámico de variables / Parámetros de la Plantilla -->
+        <div class="template-variables-box">
+          <div class="vars-box-header">
+            <h3 class="vars-title">
+              Parámetros de la Plantilla
+              <span v-if="selectedTemplate" class="vars-title-hint">
+                — {{ selectedTemplate.name }}
+              </span>
+            </h3>
+            <span
+              v-if="selectedTemplate && (selectedTemplate.variables_schema || []).length > 0"
+              class="badge badge--info font-mono"
+            >
+              {{ (selectedTemplate.variables_schema || []).length }} campos
+            </span>
+          </div>
+
+          <!-- Si no hay plantilla seleccionada -->
+          <div v-if="!selectedTemplateId" class="vars-empty-state">
+            <p class="text-muted">Seleccione una plantilla de la lista superior para configurar sus parámetros.</p>
+          </div>
+
+          <!-- Si la plantilla no requiere parámetros -->
+          <div
+            v-else-if="!selectedTemplate?.variables_schema || selectedTemplate.variables_schema.length === 0"
+            class="vars-empty-state"
+          >
+            <p class="text-muted">
+              Esta plantilla no requiere parámetros adicionales de configuración. Se ejecutará con sus comandos predefinidos.
+            </p>
+          </div>
+
+          <!-- Si tiene variables a rellenar -->
+          <div v-else class="vars-grid">
             <div
-              v-for="v in templates.find((t) => t.id === selectedTemplateId)?.variables_schema ||
-              []"
+              v-for="v in selectedTemplate.variables_schema"
               :key="v.key"
               class="form-group"
             >
-              <label :for="`var-${v.key}`" class="form-label">{{ v.label }}:</label>
+              <label :for="`var-${v.key}`" class="form-label font-bold">
+                {{ v.label }}:
+              </label>
               <input
                 :id="`var-${v.key}`"
                 v-model="templateVars[v.key]"
                 type="text"
-                class="form-input"
+                class="form-input font-mono"
+                :placeholder="v.default_val ? `Ej: ${v.default_val}` : `Ingrese ${v.label}`"
                 @input="generatePreview"
               />
             </div>
@@ -1180,33 +1254,143 @@
     border: 1px solid rgba(56, 189, 248, 0.4);
   }
 
-  /* Templates Grid */
-  .templates-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 1rem;
+  /* Templates Scroll List */
+  .templates-list-wrapper {
+    width: 100%;
+    background: #0d1522;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    overflow: hidden;
   }
 
-  .template-card {
-    background: #1e293b;
-    border: 1px solid #334155;
-    border-radius: 4px;
-    padding: 0.85rem;
-    cursor: pointer;
+  .templates-list-scroll {
+    height: 220px;
+    max-height: 220px;
+    min-height: 220px;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    scrollbar-width: thin;
+    scrollbar-color: #0284c7 #0f172a;
   }
 
+  .templates-list-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .templates-list-scroll::-webkit-scrollbar-track {
+    background: #0f172a;
+  }
+
+  .templates-list-scroll::-webkit-scrollbar-thumb {
+    background: #0284c7;
+    border-radius: 3px;
+  }
+
+  .templates-list-scroll::-webkit-scrollbar-thumb:hover {
+    background: #38bdf8;
+  }
+
+  .template-list-item {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.75rem 1rem;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #1e293b;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+
+  .template-list-item:last-child {
+    border-bottom: none;
+  }
+
+  .template-list-item:hover {
+    background: rgba(56, 189, 248, 0.06);
+  }
+
+  .template-list-item--selected,
   .template-card--selected {
-    border-color: #38bdf8;
-    background: #1e2e4a;
+    background: rgba(2, 132, 199, 0.14) !important;
+    border-left: 3px solid #38bdf8;
   }
 
-  .tpl-card-top {
+  .tpl-item-radio-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .tpl-radio-input {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border: 2px solid #64748b;
+    border-radius: 50%;
+    outline: none;
+    cursor: pointer;
+    background: #0f172a;
+    position: relative;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    display: grid;
+    place-content: center;
+  }
+
+  .tpl-radio-input:hover {
+    border-color: #38bdf8;
+  }
+
+  .tpl-radio-input:checked {
+    border-color: #38bdf8;
+    background: #0f172a;
+  }
+
+  .tpl-radio-input:checked::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    background-color: #38bdf8;
+    border-radius: 50%;
+    box-shadow: 0 0 6px rgba(56, 189, 248, 0.8);
+  }
+
+  .tpl-item-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+  }
+
+  .tpl-item-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .tpl-item-badges {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .badge--safe-sm {
+    font-size: 0.65rem;
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    background: #082f49;
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    font-weight: 600;
+  }
+
+  .cursor-pointer {
+    cursor: pointer;
   }
 
   .tpl-name {
@@ -1223,20 +1407,43 @@
   .template-variables-box {
     background: #182234;
     border: 1px solid #334155;
-    border-radius: 4px;
-    padding: 1rem;
+    border-radius: 6px;
+    padding: 1rem 1.25rem;
+  }
+
+  .vars-box-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.85rem;
   }
 
   .vars-title {
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     font-weight: 600;
-    color: #cbd5e1;
-    margin: 0 0 0.75rem;
+    color: #f1f5f9;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .vars-title-hint {
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: #38bdf8;
+  }
+
+  .vars-empty-state {
+    padding: 1rem 0.5rem;
+    color: #94a3b8;
+    font-size: 0.85rem;
+    text-align: center;
   }
 
   .vars-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 1rem;
   }
 
