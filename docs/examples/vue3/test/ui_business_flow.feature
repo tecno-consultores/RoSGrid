@@ -242,6 +242,17 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And match text(".template-variables-box") contains 'rosgrid_server_ip'
     And match text(".template-variables-box") contains 'rosgrid_syslog_port'
 
-
-
-
+  Scenario: 28. Operaciones Masivas — Verificación de Plantillas Canónicas RouterOS v7 (Cliente NTP y DNS Resiliente)
+    Given driver baseUrl + '/bulk-ops'
+    And waitFor("//h1[contains(., 'Operaciones Masivas')]")
+    And waitFor(".step-footer .btn--primary")
+    When click(".step-footer .btn--primary")
+    Then waitFor(".templates-list-scroll")
+    When click("//span[contains(@class, 'tpl-item-name') and contains(., 'CLIENTE_NTP')]")
+    Then waitFor(".template-variables-box")
+    And match text(".template-variables-box") contains 'ntp_primary'
+    And match text(".template-variables-box") contains 'ntp_secondary'
+    When click("//span[contains(@class, 'tpl-item-name') and contains(., 'DNS_CORPORATIVO_RESILIENTE')]")
+    Then waitFor(".template-variables-box")
+    And match text(".template-variables-box") contains 'dns_primary'
+    And match text(".template-variables-box") contains 'dns_secondary'

@@ -10,6 +10,19 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Fixed
 
+- **Auditoría Exhaustiva y Estandarización de Interacciones con MikroTik RouterOS v7 contra Documentación Oficial:**
+  - **Sintaxis Canónica Oficial en Plantillas Masivas (`bulk_and_updates.py`, `templatePresets.ts`):**
+    - `CLIENTE_NTP`: Actualizado canónicamente de `PATCH system/ntp/client` a `POST system/ntp/client/set` con `enabled: "yes"`, manteniendo `PUT system/ntp/client/servers`.
+    - `DNS_CORPORATIVO_RESILIENTE`: Corregido de `PATCH ip/dns` a `POST ip/dns/set` con `servers` y `allow-remote-requests`, y `POST ip/dns/cache/flush` para purga inmediata de registros en caché.
+    - `_execute_single_step`: Auto-redirección proactiva de endpoints singulares (`snmp`, `system/ntp/client`, `ip/dns`) con `PATCH` o `POST` hacia `POST <endpoint>/set`.
+  - **Auditoría de Módulos WebFig, Workers y Herramientas MCP:**
+    - Verificación y validación de endpoints en vivo sobre routers CHR reales: monitoreo de interfaces SFP (`/interface/ethernet/monitor`), reseteo de contadores de firewall (`/reset-counters-all`), vaciado de caché DNS (`/ip/dns/cache/flush`), ejecución de scripts (`/system/script/run`) y optimización de telemetría de interfaces mediante query param `?.proplist=...`.
+  - **Aseguramiento de Calidad 11X Multi-Capa:**
+    - Pruebas unitarias aprobadas al 100% en backend (`test_operations_endpoints_full.unit.py`) y frontend (`ConfigTemplateEditorModal.unit.ts`).
+    - Verificación estricta de tipado (`vue-tsc --noEmit`) y linters (`ruff check`).
+    - 26/26 contratos Front-Back aprobados en Docker efímero.
+    - Nuevos escenarios BDD en Karate Labs: Escenario 72 en API (`fastapi/test/api_test.feature`) y Escenario 28 en UI (`vue3/test/ui_business_flow.feature`), sincronizados en `docs/examples/`.
+
 - **Corrección de Sintaxis Canónica RouterOS v7 e Idempotencia en Plantillas Masivas (`SNMP_V2C_MONITOREO_NOC` y `SYSLOG_CENTRALIZADO_ROSGRID`):**
   - **Sintaxis Oficial RouterOS v7 para SNMP:** Corregido endpoint singular de `/snmp` hacia `POST snmp/set` con payload `{"enabled": "yes"}`. En la API REST de RouterOS v7 los menús de configuración singulares no admiten `PATCH` directo (devolviendo HTTP 500 `Internal Server Error`).
   - **Sintaxis Oficial RouterOS v7 para Syslog Remoto:** Corregida la acción en `/system/logging/action` con nombre alfanumérico estricto `rosgridsyslog` (erradicando el guion `-` que provocaba `HTTP 400 failure: action name can contain only letters and numbers`), y parámetros canónicos de RouterOS v7 `remote-log-format: syslog` y `syslog-facility: daemon` (eliminando los parámetros obsoletos de v6 `bsd-syslog`, `facility` y `sys-ident` que generaban `HTTP 400 unknown parameter bsd-syslog`).

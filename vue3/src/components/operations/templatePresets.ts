@@ -62,8 +62,8 @@ export const PREDEFINED_TEMPLATES: PredefinedTemplate[] = [
     ],
     rest_steps_template: [
       {
-        method: 'PATCH',
-        endpoint: 'system/ntp/client',
+        method: 'POST',
+        endpoint: 'system/ntp/client/set',
         payload: { enabled: 'yes' },
         cli_command: '/system ntp client set enabled=yes',
       },
@@ -115,8 +115,8 @@ export const PREDEFINED_TEMPLATES: PredefinedTemplate[] = [
     ],
     rest_steps_template: [
       {
-        method: 'PATCH',
-        endpoint: 'ip/dns',
+        method: 'POST',
+        endpoint: 'ip/dns/set',
         payload: { servers: '{{ dns_servers }}', 'allow-remote-requests': '{{ allow_remote }}' },
         cli_command:
           '/ip dns set servers={{ dns_servers }} allow-remote-requests={{ allow_remote }}',

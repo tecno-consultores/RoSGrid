@@ -195,8 +195,8 @@ _DEFAULT_STARTER_TEMPLATES = [
         ],
         "rest_steps_template": [
             {
-                "method": "PATCH",
-                "endpoint": "system/ntp/client",
+                "method": "POST",
+                "endpoint": "system/ntp/client/set",
                 "payload": {"enabled": "yes"},
                 "cli_command": "/system ntp client set enabled=yes",
             },
@@ -245,8 +245,8 @@ _DEFAULT_STARTER_TEMPLATES = [
         ],
         "rest_steps_template": [
             {
-                "method": "PATCH",
-                "endpoint": "ip/dns",
+                "method": "POST",
+                "endpoint": "ip/dns/set",
                 "payload": {"servers": "{{ dns_servers }}", "allow-remote-requests": "{{ allow_remote }}"},
                 "cli_command": "/ip dns set servers={{ dns_servers }} allow-remote-requests={{ allow_remote }}",
             },
@@ -724,6 +724,10 @@ async def _execute_single_step(client: MikrotikRestClient, step: dict[str, Any])
     # Auto-redirección de endpoints singulares que no admiten PATCH en RouterOS v7
     if endpoint == "snmp" and method in ("PATCH", "POST"):
         return await client.post("snmp/set", payload)
+    if endpoint == "system/ntp/client" and method in ("PATCH", "POST"):
+        return await client.post("system/ntp/client/set", payload)
+    if endpoint == "ip/dns" and method in ("PATCH", "POST"):
+        return await client.post("ip/dns/set", payload)
 
     if method == "PUT":
         try:

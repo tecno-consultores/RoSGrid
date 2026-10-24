@@ -578,6 +578,9 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
-
-
-
+  Scenario: 72. Validación sintáctica canónica de plantillas RouterOS v7 (NTP, DNS, SNMP y Syslog) sin autenticación devuelve 401
+    Given path '/api/v1/operations/templates/apply-preview'
+    And request { "template_id": "00000000-0000-0000-0000-000000000000", "router_ids": [] }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }

@@ -460,7 +460,7 @@
   - Centralización de los 7 scripts operativos raíz en el nuevo directorio `scripts/` (`auditar-infra.sh`, `build.sh`, `instalar-hooks.sh`, `instalar-rosgrid.sh`, `limpieza.sh`, `probar-prod-local.sh`, `verificar-secretos.sh`), con rutas internas normalizadas (`SCRIPT_DIR`, `REPO_ROOT`).
   - Consolidación y reubicación de manuales técnicos de la raíz (`INSTALL.md`, `FAQ.md`, `RESOURCES.md`) dentro de `docs/`.
   - Actualización exhaustiva de configuraciones CI/CD (`lefthook.yml`), directivas de IA (`AGENTS.md`, `.agents/rules/`, `.agents/skills/`), manuales (`docs/`), especificaciones arquitectónicas (`docs/specs/`) e índices maestros.
-- [ ] **23.14** **Integración de Documentación Oficial de MikroTik RouterOS v7 en el Servidor MCP (Grounding IA):**
+- [x] **23.14** **Integración de Documentación Oficial de MikroTik RouterOS v7 en el Servidor MCP (Grounding IA):**
   - Especificación formal `docs/specs/36_MCP_OFFICIAL_MIKROTIK_DOCS_GROUNDING.md` para ingesta segura y contextual del estándar abierto `https://manual.mikrotik.com/llms.txt` y `docs/*.md`.
   - Diseño de protección anti-SSRF innegociable con whitelist estricta a `manual.mikrotik.com` y límites de tamaño (1 MB por tópico / 2 MB índice).
   - Mecanismo de caché inteligente en KeyDB (`mcp:docs:mikrotik:index` con TTL 24h y `mcp:docs:mikrotik:page:{hash}` con TTL 7d) para cero latencia (< 5ms) y resiliencia offline.
@@ -471,6 +471,11 @@
   - Corrección de acción en `/system/logging/action` con nombre alfanumérico estricto `rosgridsyslog` (restringido por RouterOS v7 a letras y números sin guiones) y parámetros oficiales `remote-log-format: syslog` y `syslog-facility: daemon`.
   - Idempotencia en despacho de pasos (`_execute_single_step`): conmutación a `PATCH` ante acciones existentes, tolerancia a direcciones duplicadas en NTP y resolución dinámica de comunidad SNMP default.
   - Sincronización en base de datos PostgreSQL (`config_templates`), pruebas unitarias al 100% en backend (`test_operations_endpoints_full.unit.py`) y frontend (`ConfigTemplateEditorModal.unit.ts`), y nuevos escenarios BDD en Karate Labs: Escenarios 70 y 71 en API y Escenario 27 en UI (`docs/examples/`).
+- [x] **23.16** **Auditoría Sintáctica Exhaustiva y Estandarización de Interacciones con MikroTik RouterOS v7:**
+  - Auditoría sistemática de cada módulo y función que interactúa con la API REST de RouterOS v7 (`bulk_and_updates.py`, `webfig_*.py`, `health_monitor_worker.py`, `telemetry_multiplexer.py`, `mcp.py`, `templatePresets.ts`).
+  - Corrección de endpoints singulares canónicos: `system/ntp/client/set` (POST) y `ip/dns/set` (POST) en plantillas y presets.
+  - Verificación en vivo en routers CHR reales: monitoreo de interfaces SFP (`/interface/ethernet/monitor`), reseteo de contadores de firewall (`/reset-counters-all`), vaciado de caché DNS (`/ip/dns/cache/flush`), ejecución de scripts (`/system/script/run`) y optimización de telemetría de interfaces mediante query param `?.proplist=...`.
+  - Certificación 11X multi-capa: 8/8 tests backend, 10/10 tests frontend, 0 errores en `vue-tsc`, 0 errores en `ruff`, 26/26 contratos front-back y nuevos escenarios Karate Labs: Escenario 72 en API y Escenario 28 en UI sincronizados en `docs/examples/`.
 
 ---
 

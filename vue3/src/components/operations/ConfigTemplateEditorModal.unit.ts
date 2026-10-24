@@ -53,8 +53,8 @@ describe('ConfigTemplateEditorModal.vue — Predefined Templates & Golden Config
     expect(ntpPreset?.variables_schema.length).toBe(4);
     expect(ntpPreset?.rest_steps_template.length).toBe(5);
 
-    expect(ntpPreset?.rest_steps_template[0].endpoint).toBe('system/ntp/client');
-    expect(ntpPreset?.rest_steps_template[0].method).toBe('PATCH');
+    expect(ntpPreset?.rest_steps_template[0].endpoint).toBe('system/ntp/client/set');
+    expect(ntpPreset?.rest_steps_template[0].method).toBe('POST');
     expect(ntpPreset?.rest_steps_template[1].endpoint).toBe('system/ntp/client/servers');
     expect(ntpPreset?.rest_steps_template[1].method).toBe('PUT');
   });
