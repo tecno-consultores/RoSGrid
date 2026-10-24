@@ -634,14 +634,17 @@
 
 <style scoped>
   .rg-shell {
-    min-height: 100vh;
+    height: 100vh;
+    max-height: 100vh;
     display: flex;
     flex-direction: column;
     background: var(--rg-bg-canvas);
+    overflow: hidden;
   }
 
   .rg-header {
     height: 52px;
+    flex-shrink: 0;
     background: var(--rg-bg-surface);
     border-bottom: 1px solid var(--rg-border-panel);
     display: flex;
@@ -947,13 +950,34 @@
     flex: 1;
     display: flex;
     position: relative;
+    min-height: 0;
+    overflow: hidden;
   }
 
   .rg-rail {
     width: 220px;
+    flex-shrink: 0;
+    height: 100%;
     background: var(--rg-bg-surface);
     border-right: 1px solid var(--rg-border-panel);
     padding: 12px 8px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.2) transparent;
+  }
+
+  .rg-rail::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .rg-rail::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .rg-rail::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.25);
+    border-radius: 4px;
   }
 
   .rail-list {
@@ -1000,9 +1024,34 @@
 
   .rg-main {
     flex: 1;
+    height: 100%;
+    min-height: 0;
+    min-width: 0;
     padding: 16px;
     overflow-y: auto;
+    overflow-x: hidden;
     outline: none;
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 240, 255, 0.3) rgba(11, 15, 25, 0.5);
+  }
+
+  .rg-main::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .rg-main::-webkit-scrollbar-track {
+    background: rgba(11, 15, 25, 0.5);
+  }
+
+  .rg-main::-webkit-scrollbar-thumb {
+    background: rgba(0, 240, 255, 0.25);
+    border-radius: 4px;
+  }
+
+  .rg-main::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 240, 255, 0.5);
   }
 
   /* Barra Móvil Inferior Fija */
@@ -1081,6 +1130,7 @@
   /* Pie de Página Global Autenticado (Subtarea 16.5) */
   .rg-global-footer {
     height: 32px;
+    flex-shrink: 0;
     background: var(--rg-bg-surface);
     border-top: 1px solid var(--rg-border-panel);
     display: flex;

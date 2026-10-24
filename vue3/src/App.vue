@@ -38,7 +38,7 @@
 </script>
 
 <template>
-  <div class="app-root">
+  <div class="app-root" :class="{ 'app-root--login': isLoginRoute }">
     <router-view v-if="isLoginRoute" />
     <RgResponsiveShell v-else>
       <router-view v-slot="{ Component, route: currentRoute }">
@@ -52,9 +52,17 @@
 
 <style>
   .app-root {
-    min-height: 100vh;
+    height: 100vh;
+    max-height: 100vh;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+  }
+
+  .app-root--login {
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
   }
 
   /* Transición táctica de cambio de pantalla */
