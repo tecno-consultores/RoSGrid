@@ -64,7 +64,20 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
 
 ---
 
-## 5. Mandatory Git Publication Directive & Task Closure Gate
+## 6. Official MikroTik RouterOS v7 Grounding & Technical References
+
+> **CANONICAL GROUNDING DIRECTIVE — ZERO HALLUCINATIONS:**
+> To prevent legacy RouterOS v6 syntax hallucinations (e.g. invalid syslog parameters, hyphenated action names, or illegal `PATCH` calls on singleton menus), all AI agents and developers modifying or creating RouterOS REST integrations, Golden Config templates, or CLI workflows MUST consult the official MikroTik documentation:
+>
+> - **Official MikroTik v7 Documentation Hub:** [https://manual.mikrotik.com/docs/introduction/](https://manual.mikrotik.com/docs/introduction/)
+> - **Open LLM Index (Fast Semantic Retrieval):** [https://manual.mikrotik.com/llms.txt](https://manual.mikrotik.com/llms.txt)
+> - **Command Line & REST API Reference:** [https://manual.mikrotik.com/docs/cli-reference/](https://manual.mikrotik.com/docs/cli-reference/)
+>
+> Prior to implementing REST endpoints under `/rest/*` or executing actions in `/bulk-ops` or MCP tools, verify parameter schemas, singleton menu mechanics (`POST <endpoint>/set`), and native property types directly against these official sources.
+
+---
+
+## 7. Mandatory Git Publication Directive & Task Closure Gate
 
 > **INNEGOCIABLE:** Tras **CADA** tarea o solicitud del usuario que modifique, añada o corrija código fuente (`fastapi/`, `vue3/`, scripts o configuraciones), el agente de IA **DEBE** ejecutar de forma autónoma el siguiente protocolo de 7 pasos antes de concluir su turno:
 >

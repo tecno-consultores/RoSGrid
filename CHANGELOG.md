@@ -31,6 +31,10 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Changed
 
+- **Directiva Canónica de Grounding Oficial de MikroTik RouterOS v7 en Gobernanza de Agentes (`AGENTS.md`, `.agents/README.md`, `.agents/skills/`):**
+  - **Inclusión de Fuentes Canónicas Oficiales:** Integración mandatoria de las URLs de documentación oficial del fabricante (`https://manual.mikrotik.com/docs/introduction/`, `https://manual.mikrotik.com/llms.txt` y `https://manual.mikrotik.com/docs/cli-reference/`) en `AGENTS.md` (Sección 6), `.agents/README.md` y en las skills operativas `.agents/skills/mikrotik-webfig-safemode/` y `.agents/skills/rosgrid-noc-operator/` (SOP-8).
+  - **Erradicación de Alucinaciones v6 vs v7:** Establecida la directiva de verificación obligatoria para que todos los agentes de IA (Google Antigravity, Claude, Hermes Agent, Cursor) consulten la sintaxis oficial antes de formular llamadas REST (`/rest/*`), sintaxis de comandos CLI o plantillas Golden Config, garantizando el respeto a las particularidades de RouterOS v7 (menús singulares con `POST <endpoint>/set`, nombres alfanuméricos puros en `/system/logging/action` y parámetros vigentes de Syslog remoto).
+
 - **Rediseño Ergonómico de Selección de Plantillas y Parámetros en Operaciones Masivas (`BulkOperationsAndUpdatesView.vue`):**
   - **Lista con Desplazamiento y Altura Fija:** Sustituido el grid de tarjetas cuadradas por un contenedor de lista táctica `.templates-list-scroll` con altura constante de 220px y barra de desplazamiento estilizada, previniendo deformaciones visuales cuando el catálogo de plantillas crece.
   - **Selección Exclusiva por Botón Radio:** Incorporado `<input type="radio">` y estilos tácticos para garantizar la selección unívoca de plantillas Golden Config.

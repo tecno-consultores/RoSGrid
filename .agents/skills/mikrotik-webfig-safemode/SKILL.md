@@ -56,3 +56,23 @@ This skill guides the integration between Vue 3 (`vue3/`) and FastAPI endpoints 
    - Accessible top banner (`role="status"`, `aria-live="polite"`) displaying a 60-second countdown while backend verifies router survivability and confirms the `rosgrid_safemode_*` scheduler removal.
 4. **Step-Up Auth Vault with 30s Auto-Destruction (`VaultRevealModal.vue`):**
    - Restricted to `SUPERADMIN_GLOBAL` and `TENANT_ADMIN`. Requires live 2FA TOTP verification (`RgStepUp2FAModal.vue`), displays a 30-second countdown bar, and automatically purges the plaintext password from memory when reaching `0`.
+
+---
+
+## 4. Official MikroTik Documentation & Zero-Hallucination Grounding
+
+Before introducing new WebFig endpoints, Golden Config templates, or bulk operations, verify syntax directly against official vendor resources:
+
+- **Official MikroTik v7 Documentation Hub:** [https://manual.mikrotik.com/docs/introduction/](https://manual.mikrotik.com/docs/introduction/)
+- **Open LLM Index (Fast Semantic Retrieval):** [https://manual.mikrotik.com/llms.txt](https://manual.mikrotik.com/llms.txt)
+- **CLI & REST API Reference:** [https://manual.mikrotik.com/docs/cli-reference/](https://manual.mikrotik.com/docs/cli-reference/)
+
+### Key RouterOS v7 REST Invariants:
+1. **Singleton Settings Menus (`/snmp`, `/system/ntp/client`, `/ip/dns`):**
+   - RouterOS v7 rejects root-level `PATCH` requests on singleton configuration menus with `HTTP 500` or identifier errors.
+   - Always dispatch property modifications via `POST <endpoint>/set` (e.g. `POST snmp/set` with `{enabled: "yes"}`).
+2. **Identifier & Action Name Constraints:**
+   - Resource names such as `/system/logging/action` require strict alphanumeric identifiers (`letters and digits only`). Avoid hyphens (`-`) or special characters that trigger `HTTP 400 failure: action name can contain only letters and numbers`.
+3. **Parameter Evolution (v6 vs v7):**
+   - Legacy parameters (e.g. `bsd-syslog`, `facility`, `sys-ident`) are discontinued. Modern v7 equivalents must be used (e.g. `remote-log-format: syslog`, `syslog-facility: daemon`).
+

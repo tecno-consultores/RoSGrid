@@ -57,6 +57,18 @@ Este directorio implementa el estándar abierto y emergente de la industria para
 
 ---
 
+## 📚 Fuente Canónica Oficial MikroTik RouterOS v7 (Grounding Directo para Agentes de IA)
+
+Para evitar alucinaciones sintácticas o mezclas con la versión obsoleta RouterOS v6 (por ejemplo, nombres de acción con guiones en logging, invocación ilegal de `PATCH` en menús singulares o parámetros descontinuados de Syslog), todos los agentes de IA y desarrolladores cuentan con los siguientes puntos de referencia oficiales del fabricante:
+
+- **Portal Oficial de Documentación RouterOS v7:** [https://manual.mikrotik.com/docs/introduction/](https://manual.mikrotik.com/docs/introduction/)
+- **Índice Abierto para LLMs (Fast Semantic Retrieval):** [https://manual.mikrotik.com/llms.txt](https://manual.mikrotik.com/llms.txt)
+- **Referencia Canónica de Comandos CLI y REST API:** [https://manual.mikrotik.com/docs/cli-reference/](https://manual.mikrotik.com/docs/cli-reference/)
+
+Cualquier mutación en `/rest/*`, plantilla Golden Config o herramienta MCP debe verificarse contra estos recursos antes de formular llamadas REST o generar scripts en RouterOS.
+
+---
+
 ## 🤝 Compatibilidad Multi-Agente
 
 Esta carpeta **NO es exclusiva de una sola herramienta**. Ha sido diseñada bajo especificaciones estándar y portables:

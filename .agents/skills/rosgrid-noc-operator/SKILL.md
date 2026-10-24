@@ -184,6 +184,11 @@ For fleet-wide RouterOS v7 upgrades:
 
 ### SOP-8: Grounding & Syntax Verification via Official MikroTik Docs (`llms.txt`)
 
+Official MikroTik documentation sources for autonomous grounding:
+- **Documentation Hub:** [https://manual.mikrotik.com/docs/introduction/](https://manual.mikrotik.com/docs/introduction/)
+- **LLM Open Index:** [https://manual.mikrotik.com/llms.txt](https://manual.mikrotik.com/llms.txt)
+- **CLI & REST Reference:** [https://manual.mikrotik.com/docs/cli-reference/](https://manual.mikrotik.com/docs/cli-reference/)
+
 Before proposing complex configuration changes or diagnosing protocol discrepancies:
 
 1. **Step 1: Search Official Index:**
