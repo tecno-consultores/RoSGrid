@@ -266,3 +266,13 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And waitFor(".severity-select")
     And waitFor(".stats-badge")
 
+  Scenario: 30. Matriz de Vulnerabilidades CVE — Verificación de Badge de Caché de 24 Horas y Sincronización
+    Given driver baseUrl + '/inventory/cves'
+    And waitFor("//h1[contains(., 'Matriz de Vulnerabilidades CVE')]")
+    And waitFor(".cve-cache-bar")
+    And waitFor(".cve-cache-badge")
+    And match text(".cve-cache-badge") contains 'Caché oficial'
+    And waitFor("button.btn-sync-cve")
+    And match text("button.btn-sync-cve") contains 'Sincronizar Boletines'
+
+

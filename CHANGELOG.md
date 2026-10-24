@@ -8,6 +8,15 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ## [Unreleased]
 
+### Added
+
+- **Sincronización Automática de Boletines CVE con Caché de 24 Horas y Forzado Manual (`fastapi/src/api/v1/cve.py`, `fastapi/src/services/cve_matcher.py`, `fastapi/src/schemas/cve.py`, `vue3/src/views/FleetCveMatrix.vue`, `vue3/src/types/index.ts`):**
+  - **Auto-Sincronización Transparente en la Primera Entrada del Día:** Al ingresar por primera vez a la Matriz de CVEs (`GET /api/v1/inventory/cves`), el backend inspecciona en KeyDB la clave de metadatos `rg:cve:sync_meta`. Si no existe o su vigencia de 24 horas (`86400s`) expiró, ejecuta automáticamente la sincronización remota contra los boletines oficiales de MikroTik Security, persistiendo la fecha y renovando el TTL sin requerir acción manual.
+  - **Reutilización Eficiente de Caché Vigente:** Si la clave existe en KeyDB con TTL activo, el backend retorna los datos del catálogo local junto con los metadatos de vigencia (`is_cache_fresh: true`, `auto_synced: false`, `cache_ttl_seconds`, `last_synced_at`, `cache_expires_at`), evitando descargas remotas redundantes para los siguientes usuarios durante la jornada.
+  - **Forzado de Actualización Manual:** Mantenido el botón `[ 🔄 Sincronizar Boletines ]` (`POST /api/v1/inventory/cves/sync`) para que el administrador pueda renovar el catálogo y reiniciar el ciclo de 24 horas bajo demanda.
+  - **Badge Táctico y Notificaciones en Frontend:** Incorporada barra táctica informativa en `FleetCveMatrix.vue` con badge de estado (`Caché 24h Vigente (expira en Xh Ym)` o `Caché Expirado / Pendiente`), punto luminoso pulsante, fecha de última sincronización y notificación flotante contextual cuando el catálogo se auto-sincroniza.
+  - **Aseguramiento de Calidad 11X:** 35 pruebas unitarias backend al 100% en `test_hito23_cve_and_syslog.unit.py` (con 96% de cobertura en `cve_matcher.py`), 9 pruebas unitarias frontend Vitest en `fleetCveMatrix.unit.ts`, y nuevos escenarios BDD en Karate Labs: Escenario 76 en API (`fastapi/test/api_test.feature`) y Escenario 30 en UI (`vue3/test/ui_business_flow.feature`), replicados en `docs/examples/`.
+
 ### Fixed
 
 - **Auditoría Integral de Consistencia Documental y Sincronización Arquitectónica (`docs/`, `docs/specs/`, `README.md`, `TESTING.md`, `ROADMAP.md`):**

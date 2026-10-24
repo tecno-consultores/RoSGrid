@@ -1090,6 +1090,11 @@ export interface FleetCveSummary {
   summary_by_severity: Record<string, number>;
   vulnerable_routers: RouterCveEvaluation[];
   timestamp: string;
+  last_synced_at?: string | null;
+  cache_expires_at?: string | null;
+  cache_ttl_seconds?: number | null;
+  is_cache_fresh?: boolean;
+  auto_synced?: boolean;
 }
 
 export interface CveSyncResponse {

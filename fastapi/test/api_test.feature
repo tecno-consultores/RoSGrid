@@ -603,3 +603,11 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     When method get
     Then status 401
 
+  Scenario: 76. Consulta de matriz CVE con autosincronización y caché de 24 horas sin autenticación devuelve 401
+    Given path '/api/v1/inventory/cves'
+    And param auto_sync = true
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+

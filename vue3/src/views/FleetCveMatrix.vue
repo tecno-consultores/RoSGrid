@@ -19,15 +19,61 @@ const searchQuery = ref('');
 const selectedSeverity = ref<string>('ALL');
 const expandedCveId = ref<string | null>(null);
 
+const isCacheFresh = computed<boolean>(() => {
+  return cveSummary.value?.is_cache_fresh ?? true;
+});
+
+const cacheStatusText = computed<string>(() => {
+  if (!cveSummary.value) return 'Consultando estado del catálogo...';
+  if (!cveSummary.value.is_cache_fresh) {
+    return 'Caché de boletines vencido (> 24h)';
+  }
+  if (cveSummary.value.cache_ttl_seconds != null) {
+    const hours = Math.floor(cveSummary.value.cache_ttl_seconds / 3600);
+    const minutes = Math.floor((cveSummary.value.cache_ttl_seconds % 3600) / 60);
+    if (hours > 0) {
+      return `Caché oficial vigente (expira en ${hours}h ${minutes}m)`;
+    }
+    return `Caché oficial vigente (expira en ${minutes}m)`;
+  }
+  return 'Caché oficial de 24 horas activo';
+});
+
+const lastSyncFormatted = computed<string>(() => {
+  if (!cveSummary.value?.last_synced_at) return '';
+  try {
+    const d = new Date(cveSummary.value.last_synced_at);
+    return d.toLocaleString([], {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return '';
+  }
+});
+
 async function loadCveSummary(): Promise<void> {
   loading.value = true;
   errorMessage.value = null;
   try {
     const res = await http.get<FleetCveSummary>('/api/v1/inventory/cves');
     cveSummary.value = res.data;
+    if (res.data.auto_synced) {
+      successMessage.value =
+        'Boletines CVE sincronizados automáticamente al ingresar por primera vez en el día. Caché de 24 horas activado.';
+      setTimeout(() => {
+        if (successMessage.value?.includes('automáticamente')) {
+          successMessage.value = null;
+        }
+      }, 7000);
+    }
   } catch (err: unknown) {
     const errorObj = err as { response?: { data?: { detail?: string } }; message?: string };
-    errorMessage.value = errorObj.response?.data?.detail || errorObj.message || 'Error al cargar la matriz de vulnerabilidades.';
+    errorMessage.value =
+      errorObj.response?.data?.detail || errorObj.message || 'Error al cargar la matriz de vulnerabilidades.';
   } finally {
     loading.value = false;
   }
@@ -39,17 +85,20 @@ async function syncCveDatabase(): Promise<void> {
   successMessage.value = null;
   try {
     const res = await http.post<CveSyncResponse>('/api/v1/inventory/cves/sync');
-    successMessage.value = res.data.message || `Catálogo sincronizado exitosamente (${res.data.total_cves} CVEs).`;
+    successMessage.value =
+      res.data.message ||
+      `Catálogo actualizado manualmente (${res.data.total_cves} CVEs). Caché renovado por 24 horas.`;
     await loadCveSummary();
   } catch (err: unknown) {
     const errorObj = err as { response?: { data?: { detail?: string } }; message?: string };
-    errorMessage.value = errorObj.response?.data?.detail || errorObj.message || 'Fallo al sincronizar base de datos CVE.';
+    errorMessage.value =
+      errorObj.response?.data?.detail || errorObj.message || 'Fallo al sincronizar base de datos CVE.';
   } finally {
     syncing.value = false;
     if (successMessage.value) {
       setTimeout(() => {
         successMessage.value = null;
-      }, 6000);
+      }, 7000);
     }
   }
 }
@@ -158,6 +207,19 @@ onMounted(() => {
             class="cve-source-link"
           >NIST NVD MikroTik</a>
         </p>
+
+        <!-- Indicador Táctico de Caché 24h -->
+        <div class="cve-cache-bar" role="status" aria-live="polite">
+          <span
+            class="cve-cache-badge"
+            :class="{ 'cve-cache-badge--fresh': isCacheFresh, 'cve-cache-badge--stale': !isCacheFresh }"
+            data-testid="cve-cache-badge"
+          >
+            <span class="cache-dot" aria-hidden="true"></span>
+            <span class="cache-label">{{ cacheStatusText }}</span>
+            <span v-if="lastSyncFormatted" class="cache-date">• Última descarga: {{ lastSyncFormatted }}</span>
+          </span>
+        </div>
       </div>
 
       <div class="cve-actions">
@@ -165,7 +227,9 @@ onMounted(() => {
           type="button"
           class="btn-sync-cve"
           :disabled="syncing"
-          aria-label="Sincronizar boletines CVE desde feed oficial"
+          aria-label="Forzar sincronización manual de boletines CVE y renovar caché de 24 horas"
+          title="Caché de 24 horas activo. Presiona para forzar una sincronización manual remota."
+          data-testid="btn-sync-cve"
           @click="syncCveDatabase"
         >
           <span v-if="syncing" class="spinner-inline" aria-hidden="true"></span>
@@ -177,6 +241,7 @@ onMounted(() => {
           type="button"
           class="btn-remediate-fleet"
           aria-label="Actualizar flota afectada en operaciones masivas"
+          data-testid="btn-remediate-fleet"
           @click="navigateToBulkUpdates"
         >
           <span aria-hidden="true">⚡</span>
@@ -413,6 +478,54 @@ onMounted(() => {
 
 .cve-source-link:hover {
   color: var(--rg-cyan-300, #67e8f9);
+}
+
+.cve-cache-bar {
+  margin-top: 0.5rem;
+}
+
+.cve-cache-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  background-color: rgba(30, 41, 59, 0.7);
+  border: 1px solid var(--rg-border-grid, #334155);
+  color: var(--rg-text-secondary, #cbd5e1);
+  letter-spacing: 0.01em;
+}
+
+.cve-cache-badge--fresh {
+  border-color: rgba(34, 211, 238, 0.35);
+  color: var(--rg-accent-cyan, #22d3ee);
+  background-color: rgba(6, 78, 59, 0.25);
+}
+
+.cve-cache-badge--stale {
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #f59e0b;
+}
+
+.cache-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--rg-accent-cyan, #22d3ee);
+  box-shadow: 0 0 6px rgba(34, 211, 238, 0.6);
+}
+
+.cve-cache-badge--stale .cache-dot {
+  background-color: #f59e0b;
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
+}
+
+.cache-date {
+  opacity: 0.85;
+  font-size: 0.7rem;
+  font-weight: 400;
 }
 
 .cve-actions {

@@ -46,6 +46,21 @@ class FleetCveSummary(BaseModel):
     summary_by_severity: dict[str, int]
     vulnerable_routers: list[RouterCveEvaluation]
     timestamp: datetime
+    last_synced_at: datetime | None = Field(
+        None, description="Timestamp UTC de la última sincronización de boletines remotos"
+    )
+    cache_expires_at: datetime | None = Field(
+        None, description="Timestamp UTC en que expira la validez del caché de 24 horas"
+    )
+    cache_ttl_seconds: int | None = Field(
+        None, description="Segundos restantes de validez del caché en KeyDB"
+    )
+    is_cache_fresh: bool = Field(
+        True, description="Indica si el catálogo en caché se encuentra vigente (< 24 horas)"
+    )
+    auto_synced: bool = Field(
+        False, description="Indica si se ejecutó una sincronización automática al ingresar por primera vez en el día"
+    )
 
 
 class CveSyncResponse(BaseModel):

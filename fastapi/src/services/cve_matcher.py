@@ -148,6 +148,11 @@ def evaluate_router_cves(
 def evaluate_fleet_cves(
     routers_data: list[dict[str, Any]],
     catalog: list[CveItem] | None = None,
+    last_synced_at: datetime | None = None,
+    cache_expires_at: datetime | None = None,
+    cache_ttl_seconds: int | None = None,
+    is_cache_fresh: bool = True,
+    auto_synced: bool = False,
 ) -> FleetCveSummary:
     """Evalúa el inventario completo de routers del tenant contra el catálogo CVE."""
     active_catalog = catalog if catalog is not None else load_cve_catalog()
@@ -182,6 +187,11 @@ def evaluate_fleet_cves(
         summary_by_severity=severity_counts,
         vulnerable_routers=vulnerable_list,
         timestamp=datetime.now(timezone.utc),
+        last_synced_at=last_synced_at,
+        cache_expires_at=cache_expires_at,
+        cache_ttl_seconds=cache_ttl_seconds,
+        is_cache_fresh=is_cache_fresh,
+        auto_synced=auto_synced,
     )
 
 

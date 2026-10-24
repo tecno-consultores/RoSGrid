@@ -230,9 +230,11 @@ Para evitar la introducción de vectores de ataque en estas nuevas funciones:
 
 * **Objetivo:** Panel táctico centralizado de riesgos de seguridad de la flota MikroTik.
 * **Métricas KPI:** 4 tarjetas tácticas con tipografía `tabular-nums` que resumen: *Total Routers Evaluados*, *Routers Vulnerables*, *Amenazas Críticas Pendientes* y *Versión de Firmware Recomendada*.
+* **Auto-Sincronización Diaria y Caché Táctico de 24 Horas:** Al ingresar por primera vez en el día a la Matriz de CVEs, el backend sincroniza de forma transparente los boletines oficiales sin requerir acción manual, almacenando el estado en KeyDB (`rg:cve:sync_meta`) con un TTL estricto de 24 horas (`86400s`). Los usuarios subsiguientes durante la jornada consumen los datos directamente desde el caché en memoria, previniendo descargas redundantes y consumo de ancho de banda externo.
+* **Badge Táctico de Estado de Caché:** Barra informativa con badge dinámico (`Caché 24h Vigente (expira en Xh Ym)` o `Caché Expirado / Pendiente`), punto luminoso pulsante e indicador de fecha/hora de última descarga.
 * **Controles y Filtros:** Búsqueda en vivo por ID de CVE, descripción o nombre de router; filtro desplegable por severidad (`ALL`, `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`).
 * **Detalle Táctico:** Fila expandible con descripción en español, vector CVSS v3, versiones afectadas y botón de mitigación.
-* **Acciones Directas:** Sincronizador manual contra boletines oficiales de MikroTik Security Advisories (`https://mikrotik.com/supportsec`) y búsqueda de registros NIST NVD MikroTik (`https://nvd.nist.gov/vuln/search?keyword=mikrotik&resultType=records`) vía (`POST /api/v1/inventory/cves/sync`) y botón de acceso directo `[ 🚀 Actualizar Flota Afectada ]` enlazado al asistente de operaciones masivas.
+* **Acciones Directas:** Botón de forzado de sincronización manual `[ 🔄 Sincronizar Boletines ]` (`POST /api/v1/inventory/cves/sync`) que renueva el caché inmediatamente por 24 horas adicionales, y botón de acceso directo `[ 🚀 Actualizar Flota Afectada ]` enlazado al asistente de operaciones masivas.
 
 ### 9.2. Topología Física Capa 2 en Canvas 2D (`L2TopologyView.vue` en `/topology/l2`)
 
@@ -270,6 +272,7 @@ Para garantizar la integridad y cero regresión en todo el ciclo de vida, el Hit
 * **Escenario 59:** Validación 401 en `/api/v1/routers/{id}/syslog` sin autenticación.
 * **Escenario 60:** Scraping OpenMetrics `/api/v1/metrics/fleet` devuelve 200 y métrica `rosgrid_router_status`.
 * **Escenario 61:** Actualización masiva PoE-aware `/api/v1/operations/ros-updates/execute` sin autenticación devuelve 401.
+* **Escenario 76:** Validación de consulta de matriz CVE con autosincronización y caché de 24 horas sin autenticación devuelve 401.
 
 ### 10.2. Flujos de Interfaz Web E2E (`vue3/test/ui_business_flow.feature` y réplica en `docs/examples/`)
 
@@ -277,6 +280,7 @@ Para garantizar la integridad y cero regresión en todo el ciclo de vida, el Hit
 * **Escenario 18:** Verificación de la Matriz de Vulnerabilidades CVE (`/inventory/cves`), tarjetas KPI, botón de sincronización y botón remediador de flota.
 * **Escenario 19:** Verificación del Terminal Syslog en Vivo en WebFig (`/routers/{id}/webfig/syslog`), contenedor de consola y apertura del modal de script CLI.
 * **Escenario 20:** Verificación del Actualizador Masivo PoE-Aware en Operaciones Masivas (`/bulk-ops`), conmutador PoE y selector de umbral Safety Stop.
+* **Escenario 30:** Verificación del Badge de Caché de 24 Horas y Sincronización Manual en la Matriz de Vulnerabilidades CVE (`/inventory/cves`).
 
 ---
 

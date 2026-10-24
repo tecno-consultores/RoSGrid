@@ -2,6 +2,7 @@
 # Copyright (C) 2026 RoSGrid Contributors
 
 import asyncio
+import json
 import uuid
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -168,6 +169,68 @@ async def test_cve_api_endpoints(sample_tenant, sample_claims):
     with patch("src.api.v1.cve.sync_cve_catalog", AsyncMock(return_value=fake_sync)):
         sync_res = await sync_cve_database(claims=sample_claims, db=db)
         assert sync_res.total_cves == 6
+
+
+@pytest.mark.asyncio
+async def test_cve_autosync_first_time_of_day_and_24h_cache(sample_tenant, sample_claims):
+    db = AsyncMock()
+    db.get.return_value = sample_tenant
+    mock_res = MagicMock()
+    mock_res.all.return_value = [(uuid.uuid4(), "R1", "7.10")]
+    db.execute.return_value = mock_res
+
+    fake_redis = AsyncMock()
+    fake_redis.get.return_value = None  # No hay caché previo (primera vez en el día)
+    fake_redis.set = AsyncMock()
+    fake_redis.ttl.return_value = None
+
+    fake_sync = CveSyncResponse(
+        success=True,
+        source_url="https://mikrotik.com/supportsec",
+        total_cves=25,
+        updated_at=datetime.now(timezone.utc),
+        message="Synced successfully",
+    )
+
+    with patch("src.api.v1.cve.get_redis_client", return_value=fake_redis), \
+         patch("src.api.v1.cve.sync_cve_catalog", AsyncMock(return_value=fake_sync)) as mock_sync:
+        res = await get_fleet_cves_summary(claims=sample_claims, db=db)
+        assert res.auto_synced is True
+        assert res.is_cache_fresh is True
+        assert res.cache_ttl_seconds == 86400
+        mock_sync.assert_awaited_once()
+        fake_redis.set.assert_awaited_once()
+        args, kwargs = fake_redis.set.call_args
+        assert args[0] == "rg:cve:sync_meta"
+        assert kwargs.get("ex") == 86400
+
+
+@pytest.mark.asyncio
+async def test_cve_cache_fresh_does_not_call_remote_sync(sample_tenant, sample_claims):
+    db = AsyncMock()
+    db.get.return_value = sample_tenant
+    mock_res = MagicMock()
+    mock_res.all.return_value = [(uuid.uuid4(), "R1", "7.10")]
+    db.execute.return_value = mock_res
+
+    fake_redis = AsyncMock()
+    now_iso = datetime.now(timezone.utc).isoformat()
+    # Caché existente y vigente con 72000s restantes
+    fake_redis.get.return_value = json.dumps({
+        "last_sync": now_iso,
+        "total_cves": 25,
+        "source_url": "https://mikrotik.com/supportsec",
+    })
+    fake_redis.ttl.return_value = 72000
+
+    with patch("src.api.v1.cve.get_redis_client", return_value=fake_redis), \
+         patch("src.api.v1.cve.sync_cve_catalog", AsyncMock()) as mock_sync:
+        res = await get_fleet_cves_summary(claims=sample_claims, db=db)
+        assert res.auto_synced is False
+        assert res.is_cache_fresh is True
+        assert res.cache_ttl_seconds == 72000
+        mock_sync.assert_not_called()  # NO se llama a la sincronización remota porque el caché está vigente
+
 
 
 @pytest.mark.asyncio

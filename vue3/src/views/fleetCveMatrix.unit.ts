@@ -63,6 +63,11 @@ const sampleCveSummary: FleetCveSummary = {
     },
   ],
   timestamp: '2026-10-20T21:00:00Z',
+  last_synced_at: '2026-10-24T10:00:00Z',
+  cache_expires_at: '2026-10-25T10:00:00Z',
+  cache_ttl_seconds: 73800,
+  is_cache_fresh: true,
+  auto_synced: false,
 };
 
 describe('FleetCveMatrix.vue — Hito 23.5 Matriz de Vulnerabilidades CVE', () => {
@@ -185,4 +190,35 @@ describe('FleetCveMatrix.vue — Hito 23.5 Matriz de Vulnerabilidades CVE', () =
 
     expect(mockPush).toHaveBeenCalledWith('/bulk-ops');
   });
+
+  it('despliega el badge de estado de caché de 24 horas vigente con tiempo restante', async () => {
+    const wrapper = mount(FleetCveMatrix);
+    await new Promise((r) => setTimeout(r, 20));
+    await wrapper.vm.$nextTick();
+
+    const badge = wrapper.find('[data-testid="cve-cache-badge"]');
+    expect(badge.exists()).toBe(true);
+    expect(badge.classes()).toContain('cve-cache-badge--fresh');
+    expect(badge.text()).toContain('Caché oficial vigente (expira en 20h 30m)');
+    expect(badge.text()).toContain('Última descarga:');
+  });
+
+  it('muestra mensaje informativo de bienvenida cuando auto_synced es true', async () => {
+    vi.spyOn(http, 'get').mockImplementationOnce(() => {
+      const autoSyncSummary: FleetCveSummary = {
+        ...sampleCveSummary,
+        auto_synced: true,
+      };
+      return Promise.resolve({ data: autoSyncSummary, status: 200, headers: new Headers() } as unknown as ApiResponse);
+    });
+
+    const wrapper = mount(FleetCveMatrix);
+    await new Promise((r) => setTimeout(r, 20));
+    await wrapper.vm.$nextTick();
+
+    const banner = wrapper.find('.banner-success');
+    expect(banner.exists()).toBe(true);
+    expect(banner.text()).toContain('sincronizados automáticamente al ingresar por primera vez en el día');
+  });
 });
+

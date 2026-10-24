@@ -2,7 +2,7 @@
 
 > **Nota de Seguridad de Producción y Certificación QA:**  
 > En cumplimiento del estándar de endurecimiento de RoSGrid, la documentación interactiva Swagger UI (`/docs`), ReDoc (`/redoc`) y la especificación abierta OpenAPI (`/openapi.json`) están **deshabilitadas de forma estricta e inmutable en entornos productivos** (`ROSGRID_ENV=production`). Este documento constituye la especificación formal y exhaustiva de todas las interfaces REST y WebSockets del sistema.  
-> El 100% de los endpoints y contratos aquí descritos están certificados con la suite de pruebas BDD de caja negra de **Karate Labs** (`fastapi/test/api_test.feature`, 75 escenarios BDD integrales).
+> El 100% de los endpoints y contratos aquí descritos están certificados con la suite de pruebas BDD de caja negra de **Karate Labs** (`fastapi/test/api_test.feature`, 76 escenarios BDD integrales).
 
 ---
 
@@ -1174,6 +1174,7 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
 ##### `GET /api/v1/inventory/cves`
 
 - **Propósito:** Evalúa en tiempo real toda la flota adoptada del tenant contra el catálogo de firmas CVE de RouterOS v7.
+- **Auto-Sincronización Diaria y Caché de 24 Horas:** Al ingresar por primera vez en el día, si el catálogo no ha sido actualizado en las últimas 24 horas (`rg:cve:sync_meta` ausente o expirado en KeyDB), el endpoint ejecuta una sincronización automática y transparente contra los boletines remotos oficiales de MikroTik Security, marcando `auto_synced: true` e inicializando el TTL de 24 horas (`86400s`). Peticiones subsiguientes en ese periodo retornan `is_cache_fresh: true` y `auto_synced: false` sin descargas redundantes.
 - **Feature Flag:** `cve_scanner_enabled`.
 - **Rol Mínimo:** `OPERATOR`.
 - **Respuesta (200 OK):**
@@ -1212,7 +1213,12 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
         ]
       }
     ],
-    "timestamp": "2026-10-20T21:00:00Z"
+    "last_synced_at": "2026-10-24T12:00:00Z",
+    "cache_expires_at": "2026-10-25T12:00:00Z",
+    "cache_ttl_seconds": 86400,
+    "is_cache_fresh": true,
+    "auto_synced": false,
+    "timestamp": "2026-10-24T12:00:00Z"
   }
   ```
 
