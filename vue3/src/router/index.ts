@@ -5,6 +5,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw, type RouteLocation
 import type { SystemRole, TenantFeatureFlags } from '@/types';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useWebFigStore } from '@/stores/useWebFigStore';
+import { useI18n } from '@/composables/useI18n';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -14,6 +15,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: false,
       title: 'Iniciar Sesión — RoSGrid',
+      titleKey: 'routes.login',
     },
   },
   {
@@ -24,6 +26,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       title: 'Centro de Mando — RoSGrid',
+      titleKey: 'routes.dashboard',
     },
   },
   {
@@ -34,6 +37,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       title: 'Inventario de Equipos — RoSGrid',
+      titleKey: 'routes.inventory',
     },
   },
   {
@@ -44,6 +48,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       title: 'Matriz de Vulnerabilidades CVE — RoSGrid',
+      titleKey: 'routes.cve_matrix',
     },
   },
   {
@@ -190,6 +195,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       title: 'Bandeja Maker-Checker — RoSGrid',
+      titleKey: 'routes.approvals',
       allowedRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'SUPERVISOR', 'SUPPORT_L3'],
     },
   },
@@ -200,6 +206,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       title: 'Respaldos y Comparador Diff — RoSGrid',
+      titleKey: 'routes.diff_backups',
       requiredFeature: 'nightly_backups_enabled',
     },
   },
@@ -210,6 +217,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       title: 'Operaciones Masivas y Actualizaciones — RoSGrid',
+      titleKey: 'routes.bulk_ops',
       allowedRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'SUPERVISOR', 'SUPPORT_L3', 'SUPPORT_L2'],
     },
   },
@@ -220,6 +228,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       title: 'Wallboard NOC 24/7 — RoSGrid',
+      titleKey: 'routes.noc_wallboard',
     },
   },
   {
@@ -230,6 +239,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       title: 'Consola Forense WORM — RoSGrid',
+      titleKey: 'routes.audit_logs',
       allowedRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'AUDITOR', 'SECURITY_OFFICER'],
     },
   },
@@ -240,6 +250,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       title: 'Ventanas de Mantenimiento — RoSGrid',
+      titleKey: 'routes.maintenance_windows',
     },
   },
   {
@@ -249,6 +260,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       title: 'Administración de Empresas — RoSGrid',
+      titleKey: 'routes.tenants',
       allowedRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN'],
     },
   },
@@ -259,6 +271,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       title: 'Módulos y Capacidades de Red — RoSGrid',
+      titleKey: 'routes.tenant_modules',
       allowedRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN'],
     },
   },
@@ -270,6 +283,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       title: 'Usuarios y Matriz RBAC — RoSGrid',
+      titleKey: 'routes.users_rbac',
       allowedRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN'],
     },
   },
@@ -281,6 +295,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       title: 'Sesiones Activas y Kill-Switch — RoSGrid',
+      titleKey: 'routes.active_sessions',
       allowedRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'SUPERVISOR'],
     },
   },
@@ -291,6 +306,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       title: 'IPAM Dual-Stack Universal & Clientes — RoSGrid',
+      titleKey: 'routes.ipam',
     },
   },
   {
@@ -301,6 +317,7 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: true,
       requiredFeature: 'isp_module_enabled',
       title: 'Operaciones de Campo & Toolkit — RoSGrid',
+      titleKey: 'routes.field_ops',
     },
   },
   {
@@ -310,6 +327,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       title: 'Mapa de Red & Clientes — RoSGrid',
+      titleKey: 'routes.subscribers_map',
     },
   },
   {
@@ -320,6 +338,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       title: 'Gestión de Flota & Cumplimiento Normativo — RoSGrid',
+      titleKey: 'routes.enterprise_compliance',
     },
   },
   {
@@ -330,6 +349,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       title: 'Topología Física Layer 2 — RoSGrid',
+      titleKey: 'routes.l2_topology',
     },
   },
 ];
@@ -362,8 +382,14 @@ function syncWebFigTab(to: RouteLocationNormalized): void {
 
 router.beforeEach((to, _from, next) => {
   // 1. Actualización de título para WCAG 2.1 AA y SEO
-  if (to.meta.title && typeof document !== 'undefined') {
-    document.title = String(to.meta.title);
+  if (typeof document !== 'undefined') {
+    const titleKey = to.meta.titleKey as string | undefined;
+    if (titleKey) {
+      const { t } = useI18n();
+      document.title = `${t(titleKey)} — RoSGrid`;
+    } else if (to.meta.title) {
+      document.title = String(to.meta.title);
+    }
   }
 
   const authStore = useAuthStore();

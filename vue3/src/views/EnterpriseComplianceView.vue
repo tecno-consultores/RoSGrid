@@ -596,7 +596,7 @@
             class="tactical-select"
             aria-label="Seleccionar router de la flota"
           >
-            <option value="" disabled>Seleccione un equipo...</option>
+            <option value="" disabled>{{ t('enterprise.select_router_placeholder', 'Seleccione un equipo...') }}</option>
             <option v-for="r in routersList" :key="r.id" :value="r.id">
               {{ r.display_name }} ({{ r.ip_address }}) [{{ r.network_role }}]
             </option>
@@ -831,10 +831,10 @@
         <div class="cis-policy-banner">
           <div class="policy-info">
             <span class="badge badge-info">
-              Perfil Activo: {{ cisPoliciesConfig?.profile || 'CORPORATE' }}
+              {{ t('enterprise.active_profile', 'Perfil Activo:') }} {{ cisPoliciesConfig?.profile || 'CORPORATE' }}
             </span>
             <span class="policy-details text-subtle text-xs">
-              {{ cisPoliciesConfig?.rules?.filter(r => r.enabled).length ?? 10 }} directivas habilitadas en la política de esta organización
+              {{ cisPoliciesConfig?.rules?.filter(r => r.enabled).length ?? 10 }} {{ t('enterprise.directives_enabled_policy', 'directivas habilitadas en la política de esta organización') }}
             </span>
           </div>
           <button
@@ -844,7 +844,7 @@
             @click="openCisPolicyModal"
           >
             <span>⚙️</span>
-            Personalizar Políticas de Empresa
+            {{ t('enterprise.customize_policies', 'Personalizar Políticas de Empresa') }}
           </button>
         </div>
 
@@ -852,7 +852,7 @@
           <div class="score-card">
             <div class="score-number">{{ cisAudit?.security_score ?? '--' }}/100</div>
             <div class="score-grade" :class="'grade-' + (cisAudit?.compliance_grade || 'C')">
-              Grado {{ cisAudit?.compliance_grade || 'C' }}
+              {{ t('enterprise.grade', 'Grado') }} {{ cisAudit?.compliance_grade || 'C' }}
             </div>
             <p class="score-desc">{{ t('enterprise.cis_score_desc', 'Puntaje Global de Cumplimiento Normativo CIS') }}</p>
           </div>
@@ -904,7 +904,7 @@
                 <td>{{ d.weight }} pts</td>
                 <td>
                   <span class="badge" :class="d.passed ? 'badge-success' : 'badge-danger'">
-                    {{ d.passed ? 'APROBADO' : 'FALLIDO' }}
+                    {{ d.passed ? t('enterprise.cis_passed', 'APROBADO') : t('enterprise.cis_failed', 'FALLIDO') }}
                   </span>
                 </td>
                 <td class="text-subtle">{{ d.finding }}</td>
@@ -920,10 +920,10 @@
                     :aria-label="`Aplicar remediación para directiva ${d.code}`"
                     @click="handleApplySingleDirective(d.code)"
                   >
-                    <span v-if="applyingDirectiveCode === d.code">⏳ Aplicando...</span>
-                    <span v-else>⚡ Aplicar</span>
+                    <span v-if="applyingDirectiveCode === d.code">{{ t('enterprise.applying', '⏳ Aplicando...') }}</span>
+                    <span v-else>{{ t('enterprise.btn_apply', '⚡ Aplicar') }}</span>
                   </button>
-                  <span v-else class="text-success text-xs font-mono font-bold">✓ Cumplido</span>
+                  <span v-else class="text-success text-xs font-mono font-bold">{{ t('enterprise.compliant', '✓ Cumplido') }}</span>
                 </td>
               </tr>
             </tbody>

@@ -247,7 +247,7 @@
 </script>
 
 <template>
-  <div class="mission-hub" role="region" aria-label="Centro de Mando Táctico">
+  <div class="mission-hub" role="region" :aria-label="t('dashboard.title', 'Centro de Mando')">
     <!-- Header Principal del Hub -->
     <header class="hub-header">
       <div class="hub-identity">
@@ -266,7 +266,7 @@
           class="btn btn-primary"
           :class="{ 'btn-primary--loading': isRefreshing }"
           :disabled="isRefreshing"
-          aria-label="Actualizar datos de la flota"
+          :aria-label="t('dashboard.refresh_data', 'Actualizar Datos')"
           @click="refreshFleetData"
         >
           <span v-if="isRefreshing" class="btn-spinner" aria-hidden="true">⏳</span>
@@ -283,7 +283,7 @@
     </header>
 
     <!-- Franja de KPIs Tácticos -->
-    <section class="kpi-strip" aria-label="Indicadores Clave de Rendimiento">
+    <section class="kpi-strip" :aria-label="t('dashboard.kpi_fleet', 'Indicadores Clave de Rendimiento')">
       <div class="kpi-card" @click="navigateTo('/inventory')">
         <div class="kpi-icon-wrap kpi-icon--cyan">🖥️</div>
         <div class="kpi-content">

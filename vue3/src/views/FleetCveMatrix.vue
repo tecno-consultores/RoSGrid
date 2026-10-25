@@ -26,19 +26,21 @@ const isCacheFresh = computed<boolean>(() => {
 });
 
 const cacheStatusText = computed<string>(() => {
-  if (!cveSummary.value) return 'Consultando estado del catálogo...';
+  if (!cveSummary.value) return t('cve_matrix.cache_checking', 'Consultando estado del catálogo...');
   if (!cveSummary.value.is_cache_fresh) {
-    return 'Caché de boletines vencido (> 24h)';
+    return t('cve_matrix.cache_expired', 'Caché de boletines vencido (> 24h)');
   }
   if (cveSummary.value.cache_ttl_seconds != null) {
     const hours = Math.floor(cveSummary.value.cache_ttl_seconds / 3600);
     const minutes = Math.floor((cveSummary.value.cache_ttl_seconds % 3600) / 60);
+    const validStr = t('cve_matrix.cache_valid', 'Caché oficial vigente');
+    const expStr = t('cve_matrix.expires_in', 'expira en');
     if (hours > 0) {
-      return `Caché oficial vigente (expira en ${hours}h ${minutes}m)`;
+      return `${validStr} (${expStr} ${hours}h ${minutes}m)`;
     }
-    return `Caché oficial vigente (expira en ${minutes}m)`;
+    return `${validStr} (${expStr} ${minutes}m)`;
   }
-  return 'Caché oficial de 24 horas activo';
+  return t('cve_matrix.cache_active_24h', 'Caché oficial de 24 horas activo');
 });
 
 const lastSyncFormatted = computed<string>(() => {
@@ -194,14 +196,14 @@ onMounted(() => {
       <div class="cve-header-text">
         <h1 id="cve-matrix-title" class="cve-title">{{ t('cve_matrix.title', 'Matriz de Vulnerabilidades CVE — Flota MikroTik') }}</h1>
         <p class="cve-subtitle">
-          Auditoría proactiva de boletines RouterOS v7 | Fuentes oficiales:
+          {{ t('cve_matrix.subtitle', 'Auditoría proactiva de boletines RouterOS v7 | Fuentes oficiales:') }}
           <a
             href="https://mikrotik.com/supportsec"
             target="_blank"
             rel="noopener noreferrer"
             class="cve-source-link"
           >MikroTik Security Advisories</a>
-          y
+          {{ t('common.and', 'y') }}
           <a
             href="https://nvd.nist.gov/vuln/search?keyword=mikrotik&resultType=records"
             target="_blank"
@@ -216,8 +218,8 @@ onMounted(() => {
           type="button"
           class="btn-sync-cve"
           :disabled="syncing"
-          aria-label="Forzar sincronización manual de boletines CVE y renovar caché de 24 horas"
-          title="Caché de 24 horas activo. Presiona para forzar una sincronización manual remota."
+          :aria-label="t('cve_matrix.btn_sync', 'Sincronizar Boletines')"
+          :title="t('cve_matrix.cache_active_24h', 'Caché oficial de 24 horas activo')"
           data-testid="btn-sync-cve"
           @click="syncCveDatabase"
         >
@@ -229,7 +231,7 @@ onMounted(() => {
         <button
           type="button"
           class="btn-remediate-fleet"
-          aria-label="Actualizar flota afectada en operaciones masivas"
+          :aria-label="t('cve_matrix.btn_remediate', 'Actualizar Flota Afectada')"
           data-testid="btn-remediate-fleet"
           @click="navigateToBulkUpdates"
         >
@@ -249,12 +251,12 @@ onMounted(() => {
         >
           <span class="cache-dot" aria-hidden="true"></span>
           <span class="cache-label">{{ cacheStatusText }}</span>
-          <span v-if="lastSyncFormatted" class="cache-date">• Última descarga: {{ lastSyncFormatted }}</span>
+          <span v-if="lastSyncFormatted" class="cache-date">• {{ t('cve_matrix.last_download', 'Última descarga:') }} {{ lastSyncFormatted }}</span>
         </span>
       </div>
       <div class="cache-strip-policy">
-        <span class="policy-tag">TTL: 24 Horas (KeyDB)</span>
-        <span class="policy-desc">Descarga remota en primer acceso diario • Reutilización anti-saturación</span>
+        <span class="policy-tag">{{ t('cve_matrix.ttl_policy', 'TTL: 24 Horas (KeyDB)') }}</span>
+        <span class="policy-desc">{{ t('cve_matrix.ttl_policy_desc', 'Descarga remota en primer acceso diario • Reutilización anti-saturación') }}</span>
       </div>
     </section>
 
@@ -274,27 +276,27 @@ onMounted(() => {
       <div class="kpi-card">
         <span class="kpi-label">{{ t('cve_matrix.kpi_evaluated', 'Routers Evaluados') }}</span>
         <span class="kpi-val">{{ cveSummary?.total_evaluated_routers ?? 0 }}</span>
-        <span class="kpi-meta">Inventario total adoptado</span>
+        <span class="kpi-meta">{{ t('cve_matrix.kpi_total_meta', 'Inventario total adoptado') }}</span>
       </div>
 
       <div class="kpi-card kpi-card--warning">
         <span class="kpi-label">{{ t('cve_matrix.kpi_vulnerable', 'Routers Vulnerables') }}</span>
         <span class="kpi-val kpi-val--warning">{{ cveSummary?.vulnerable_routers_count ?? 0 }}</span>
         <span class="kpi-meta">
-          Críticos: {{ cveSummary?.critical_routers_count ?? 0 }} | Altos: {{ cveSummary?.high_routers_count ?? 0 }}
+          {{ t('cve_matrix.kpi_critical', 'Críticos:') }} {{ cveSummary?.critical_routers_count ?? 0 }} | {{ t('cve_matrix.kpi_high', 'Altos:') }} {{ cveSummary?.high_routers_count ?? 0 }}
         </span>
       </div>
 
       <div class="kpi-card kpi-card--danger">
         <span class="kpi-label">{{ t('cve_matrix.kpi_cvss', 'Score CVSS Máximo') }}</span>
         <span class="kpi-val kpi-val--danger">{{ maxFleetCvss.toFixed(1) }}</span>
-        <span class="kpi-meta">Boletines únicos: {{ cveSummary?.total_unique_cves ?? 0 }}</span>
+        <span class="kpi-meta">{{ t('cve_matrix.kpi_unique_bulletins', 'Boletines únicos:') }} {{ cveSummary?.total_unique_cves ?? 0 }}</span>
       </div>
 
       <div class="kpi-card kpi-card--cyan">
         <span class="kpi-label">{{ t('cve_matrix.kpi_recommended', 'Versión ROS Recomendada') }}</span>
         <span class="kpi-val kpi-val--cyan tabular-nums">{{ recommendedFleetVersion }}</span>
-        <span class="kpi-meta">Subsana 100% de los CVEs detectados</span>
+        <span class="kpi-meta">{{ t('cve_matrix.kpi_remedy_meta', 'Subsana 100% de los CVEs detectados') }}</span>
       </div>
     </section>
 
@@ -338,14 +340,14 @@ onMounted(() => {
     <section class="table-container" aria-label="Tabla de vulnerabilidades CVE detectadas">
       <div v-if="loading && !cveSummary" class="loading-state">
         <span class="spinner" aria-hidden="true"></span>
-        <p>Evaluando flota contra catálogo de vulnerabilidades...</p>
+        <p>{{ t('cve_matrix.loading_eval', 'Evaluando flota contra catálogo de vulnerabilidades...') }}</p>
       </div>
 
       <div v-else-if="uniqueCveRows.length === 0" class="empty-state">
         <span class="empty-icon" aria-hidden="true">🛡️</span>
-        <p class="empty-title">Flota libre de vulnerabilidades conocidas</p>
+        <p class="empty-title">{{ t('cve_matrix.empty_title', 'Flota libre de vulnerabilidades conocidas') }}</p>
         <p class="empty-sub">
-          No se identificaron boletines CVE activos para los filtros seleccionados o los equipos operan con versiones seguras.
+          {{ t('cve_matrix.empty_desc', 'No se identificaron boletines CVE activos para los filtros seleccionados o los equipos operan con versiones seguras.') }}
         </p>
       </div>
 
@@ -382,7 +384,7 @@ onMounted(() => {
               </td>
               <td>
                 <span class="badge-count">
-                  {{ row.affectedRouters.length }} {{ row.affectedRouters.length === 1 ? 'equipo' : 'equipos' }}
+                  {{ row.affectedRouters.length }} {{ row.affectedRouters.length === 1 ? t('cve_matrix.one_router', 'equipo') : t('cve_matrix.many_routers', 'equipos') }}
                 </span>
               </td>
               <td>
@@ -393,7 +395,7 @@ onMounted(() => {
                   :aria-label="`Ver detalle de ${row.cve.cve_id}`"
                   @click="toggleExpandCve(row.cve.cve_id)"
                 >
-                  {{ expandedCveId === row.cve.cve_id ? '▲ Ocultar' : '▼ Detalle' }}
+                  {{ expandedCveId === row.cve.cve_id ? t('cve_matrix.btn_hide', '▲ Ocultar') : t('cve_matrix.btn_details', '▼ Detalle') }}
                 </button>
               </td>
             </tr>
@@ -404,18 +406,18 @@ onMounted(() => {
                 <div class="cve-card-detail">
                   <div class="cve-detail-header">
                     <h2 class="cve-detail-title">{{ row.cve.title }}</h2>
-                    <span class="cve-published">Publicado: {{ row.cve.published_date }}</span>
+                    <span class="cve-published">{{ t('cve_matrix.published', 'Publicado:') }} {{ row.cve.published_date }}</span>
                   </div>
 
                   <p class="cve-desc">{{ row.cve.description_es }}</p>
 
                   <div class="cve-remediation-box">
-                    <strong class="remediation-title">Mitigación y Remediación Sugerida:</strong>
+                    <strong class="remediation-title">{{ t('cve_matrix.remediation_title', 'Mitigación y Remediación Sugerida:') }}</strong>
                     <p class="remediation-text">{{ row.cve.remediation }}</p>
                   </div>
 
                   <div class="affected-routers-list">
-                    <strong>Routers de tu Flota con esta Vulnerabilidad:</strong>
+                    <strong>{{ t('cve_matrix.fleet_affected_title', 'Routers de tu Flota con esta Vulnerabilidad:') }}</strong>
                     <div class="router-chips-wrap">
                       <button
                         v-for="r in row.affectedRouters"
@@ -426,7 +428,7 @@ onMounted(() => {
                         @click="openRouterWebFig(r.id)"
                       >
                         <span class="chip-name">{{ r.display_name }}</span>
-                        <span class="chip-ver tabular-nums">ROS: {{ r.ros_version || 'Desconocida' }}</span>
+                        <span class="chip-ver tabular-nums">ROS: {{ r.ros_version || t('common.unknown', 'Desconocida') }}</span>
                         <span class="chip-arrow" aria-hidden="true">→</span>
                       </button>
                     </div>

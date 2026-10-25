@@ -489,7 +489,9 @@
           @click="toggleRegistration"
         >
           {{
-            isRegistrationEnabled ? '🔓 Auto-Registro: Activado' : '🔒 Auto-Registro: Desactivado'
+            isRegistrationEnabled
+              ? t('users_mgmt.autoreg_enabled', '🔓 Auto-Registro: Activado')
+              : t('users_mgmt.autoreg_disabled', '🔒 Auto-Registro: Desactivado')
           }}
         </button>
 
@@ -576,7 +578,7 @@
         <div class="filter-item">
           <label for="filter-role" class="filter-label">{{ t('users_mgmt.filter_role', 'Rol RBAC:') }}</label>
           <select id="filter-role" v-model="roleFilter" class="filter-select">
-            <option value="ALL">{{ t('bulk_ops.all_roles', 'Todos los Roles') }} (11)</option>
+            <option value="ALL">{{ t('users_mgmt.all_roles_11', 'Todos los Roles (11)') }}</option>
             <option v-for="r in availableRoles" :key="r" :value="r">{{ r }}</option>
           </select>
         </div>
@@ -586,7 +588,7 @@
           <select id="filter-status" v-model="statusFilter" class="filter-select">
             <option value="ALL">{{ t('users_mgmt.all_statuses', 'Todos los Estados') }}</option>
             <option value="ACTIVE">{{ t('users_mgmt.status_active', 'Activos') }}</option>
-            <option value="PENDING">Pendientes</option>
+            <option value="PENDING">{{ t('users_mgmt.status_pending', 'Pendientes') }}</option>
             <option value="INACTIVE">{{ t('users_mgmt.status_suspended', 'Bloqueados') }}</option>
           </select>
         </div>
@@ -623,16 +625,16 @@
                     'badge-2fa--pending': !u.totp_enabled,
                   }"
                 >
-                  {{ u.totp_enabled ? '✓ Activo' : 'Pendiente' }}
+                  {{ u.totp_enabled ? t('users_mgmt.status_active_check', '✓ Activo') : t('users_mgmt.status_pending', 'Pendiente') }}
                 </span>
               </td>
               <td>
                 <span v-if="u.has_all_routers_access" class="badge-access badge-access--all">
-                  Todos (Global)
+                  {{ t('users_mgmt.scope_all_global', 'Todos (Global)') }}
                 </span>
                 <span v-else class="badge-access badge-access--custom">
                   {{
-                    u.assigned_router_ids ? `${u.assigned_router_ids.length} equipos` : 'Por Matriz'
+                    u.assigned_router_ids ? `${u.assigned_router_ids.length} ${t('common.routers', 'equipos')}` : t('users_mgmt.by_matrix', 'Por Matriz')
                   }}
                 </span>
               </td>
@@ -645,7 +647,7 @@
                     'badge-status--disabled': !u.is_active && u.totp_enabled,
                   }"
                 >
-                  {{ u.is_active ? 'Habilitado' : !u.totp_enabled ? '⏳ Pendiente' : 'Bloqueado' }}
+                  {{ u.is_active ? t('users_mgmt.status_enabled', 'Habilitado') : !u.totp_enabled ? t('users_mgmt.status_pending_wait', '⏳ Pendiente') : t('users_mgmt.status_blocked', 'Bloqueado') }}
                 </span>
               </td>
               <td class="col-actions">
@@ -657,7 +659,7 @@
                     aria-label="Aprobar operador y asignar rol"
                     @click="openApproveModal(u)"
                   >
-                    ✓ Aprobar
+                    {{ t('users_mgmt.btn_approve', '✓ Aprobar') }}
                   </button>
                   <button
                     v-if="isWriteAuthorized"
@@ -666,7 +668,7 @@
                     aria-label="Rechazar solicitud"
                     @click="handleRejectUser(u)"
                   >
-                    ✕ Rechazar
+                    {{ t('users_mgmt.btn_reject', '✕ Rechazar') }}
                   </button>
                 </template>
                 <template v-else>
@@ -717,7 +719,7 @@
               </td>
             </tr>
             <tr v-if="filteredUsers.length === 0 && !isLoading">
-              <td colspan="7" class="cell-empty">No se encontraron usuarios coincidentes.</td>
+              <td colspan="7" class="cell-empty">{{ t('users_mgmt.no_users_match', 'No se encontraron usuarios coincidentes.') }}</td>
             </tr>
           </tbody>
         </table>

@@ -1917,3 +1917,9 @@ Conforme a la Especificación 43 v2.0.0 y la directiva `.agents/rules/ground_tru
    - Frontend: `vue-tsc --noEmit` -> 0 errores.
 5. **Auditoría de Seguridad y Secretos:**
    - `./scripts/verificar-secretos.sh` -> 0 secretos detectados.
+6. **Resolución de Colisión de Diccionarios y Certificación Visual i18n:**
+   - Subsanada duplicación de clave `"shell":` en `es.json` y `en.json` que anulaba claves del buscador y barra superior.
+   - Sincronización de títulos de página (`document.title`) reactiva a `titleKey` de las rutas.
+   - Verificación visual certificada con `browser_subagent` en `http://localhost:8085/enterprise/compliance?tab=cves` y `http://localhost:8085/users`, garantizando 100% de coherencia en inglés sin mezclas ni textos huérfanos.
+   - Imagen `sinfallas/rosgrid-frontend:local-test` recompilada y recreada exitosamente en el entorno de pruebas local.
+

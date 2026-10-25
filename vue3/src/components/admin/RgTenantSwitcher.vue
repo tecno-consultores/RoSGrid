@@ -6,6 +6,7 @@
   import { useAuthStore } from '@/stores/useAuthStore';
   import { useInventoryStore } from '@/stores/useInventoryStore';
   import { useNocEventsStore } from '@/stores/useNocEventsStore';
+  import { useI18n } from '@/composables/useI18n';
   import { http } from '@/api/httpClient';
 
   interface TenantSummary {
@@ -18,6 +19,7 @@
   const authStore = useAuthStore();
   const inventoryStore = useInventoryStore();
   const nocStore = useNocEventsStore();
+  const { t } = useI18n();
 
   const isOpen = ref(false);
   const isLoading = ref(false);
@@ -130,7 +132,7 @@
       :disabled="isSwitching"
       aria-haspopup="listbox"
       :aria-expanded="isOpen"
-      :title="`Organización actual: ${authStore.tenantSlug}. Clic para conmutar de empresa.`"
+      :title="t('tenant_switcher.btn_title', { slug: authStore.tenantSlug || '' })"
       @click="toggleDropdown"
     >
       <span class="switcher-icon" aria-hidden="true">🏢</span>
@@ -142,7 +144,7 @@
     <transition name="fade-slide">
       <div v-if="isOpen" class="tenant-switcher-popover" role="listbox">
         <div class="popover-header">
-          <span class="popover-title">Conmutar Organización</span>
+          <span class="popover-title">{{ t('tenant_switcher.title', 'Conmutar Organización') }}</span>
           <span class="popover-badge">SuperAdmin</span>
         </div>
 
@@ -150,35 +152,35 @@
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="🔍 Buscar empresa..."
+            :placeholder="t('tenant_switcher.search_placeholder', '🔍 Buscar empresa...')"
             class="search-input"
             autofocus
             @click.stop
           />
         </div>
 
-        <div v-if="isLoading" class="popover-loading">Cargando empresas...</div>
+        <div v-if="isLoading" class="popover-loading">{{ t('tenant_switcher.loading', 'Cargando empresas...') }}</div>
 
         <ul v-else-if="filteredTenants.length > 0" class="tenant-items-list">
           <li
-            v-for="t in filteredTenants"
-            :key="t.id"
+            v-for="tItem in filteredTenants"
+            :key="tItem.id"
             class="tenant-option"
-            :class="{ 'tenant-option--active': t.slug === authStore.tenantSlug }"
+            :class="{ 'tenant-option--active': tItem.slug === authStore.tenantSlug }"
             role="option"
-            :aria-selected="t.slug === authStore.tenantSlug"
-            @click="handleSelectTenant(t)"
+            :aria-selected="tItem.slug === authStore.tenantSlug"
+            @click="handleSelectTenant(tItem)"
           >
-            <span class="option-indicator">{{ t.slug === authStore.tenantSlug ? '●' : '○' }}</span>
+            <span class="option-indicator">{{ tItem.slug === authStore.tenantSlug ? '●' : '○' }}</span>
             <div class="option-details">
-              <span class="option-name">{{ t.name }}</span>
-              <span class="option-slug">{{ t.slug }}</span>
+              <span class="option-name">{{ tItem.name }}</span>
+              <span class="option-slug">{{ tItem.slug }}</span>
             </div>
-            <span v-if="t.slug === authStore.tenantSlug" class="active-pill">Actual</span>
+            <span v-if="tItem.slug === authStore.tenantSlug" class="active-pill">{{ t('tenant_switcher.current', 'Actual') }}</span>
           </li>
         </ul>
 
-        <div v-else class="popover-empty">No se encontraron empresas activas</div>
+        <div v-else class="popover-empty">{{ t('tenant_switcher.empty', 'No se encontraron empresas activas') }}</div>
       </div>
     </transition>
   </div>

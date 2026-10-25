@@ -263,7 +263,7 @@
 <template>
   <div class="rg-shell">
     <!-- Enlace de Accesibilidad WCAG 2.1 AA -->
-    <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+    <a href="#main-content" class="skip-link">{{ t('common.skip_link', 'Saltar al contenido principal') }}</a>
 
     <!-- Banner Superior de Safe Mode -->
     <RgSafeModeBanner />
@@ -275,12 +275,12 @@
           v-if="!themeStore.isDesktopView"
           type="button"
           class="btn-hamburger"
-          aria-label="Abrir menú de navegación"
+          :aria-label="t('nav.open_nav', 'Abrir menú de navegación')"
           @click="themeStore.toggleMobileDrawer()"
         >
           ☰
         </button>
-        <router-link to="/" class="brand" aria-label="Ir al Centro de Mando">
+        <router-link to="/" class="brand" :aria-label="t('nav.dashboard', 'Ir al Centro de Mando')">
           <span class="brand-icon" aria-hidden="true">🌐</span>
           <span class="brand-name">RoSGrid</span>
           <span class="brand-version">v1.0</span>
@@ -291,8 +291,8 @@
           id="btn-toggle-sidebar"
           type="button"
           class="btn-sidebar-toggle"
-          :title="isSidebarHidden ? 'Mostrar barra lateral' : 'Ocultar barra lateral'"
-          :aria-label="isSidebarHidden ? 'Mostrar barra lateral de navegación' : 'Ocultar barra lateral de navegación'"
+          :title="isSidebarHidden ? t('shell.show_sidebar', 'Mostrar barra lateral') : t('shell.hide_sidebar', 'Ocultar barra lateral')"
+          :aria-label="isSidebarHidden ? t('shell.show_sidebar', 'Mostrar barra lateral') : t('shell.hide_sidebar', 'Ocultar barra lateral')"
           :aria-expanded="!isSidebarHidden"
           @click="toggleSidebar"
         >
@@ -308,7 +308,7 @@
         <RgApiHealthBadge />
 
         <!-- Reloj Global del Sistema (HH:MM según 24h / 12h) -->
-        <div class="header-clock font-mono" aria-label="Hora actual del sistema">
+        <div class="header-clock font-mono" :aria-label="t('shell.clock_aria', 'Hora actual del sistema')">
           <span class="clock-icon" aria-hidden="true">🕒</span>
           <span class="clock-time">{{ currentHeaderTime }}</span>
         </div>
@@ -317,11 +317,11 @@
         <button
           type="button"
           class="btn-search-trigger"
-          aria-label="Buscar recursos y comandos (Ctrl+K)"
+          :aria-label="t('shell.search_aria', 'Buscar recursos y comandos (Ctrl+K)')"
           @click="themeStore.openCommandPalette()"
         >
           <span aria-hidden="true">🔍</span>
-          <span class="search-label">Buscar...</span>
+          <span class="search-label">{{ t('shell.search_label', 'Buscar...') }}</span>
           <kbd class="search-kbd" aria-hidden="true">Ctrl K</kbd>
         </button>
 
