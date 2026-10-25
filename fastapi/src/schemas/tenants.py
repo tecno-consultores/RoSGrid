@@ -31,6 +31,7 @@ TENANT_FEATURE_DEFAULTS: dict[str, Any] = {
     "syslog_collector_enabled": True,
     "cve_scanner_enabled": True,
     "prometheus_fleet_exporter_enabled": True,
+    "onboarding_completed": False,
 }
 
 SUPPORTED_LOCALES_PATTERN = r"^(es|en)$"
@@ -86,6 +87,7 @@ class UpdateTenantFeaturesRequest(BaseModel):
     syslog_collector_enabled: bool | None = None
     cve_scanner_enabled: bool | None = None
     prometheus_fleet_exporter_enabled: bool | None = None
+    onboarding_completed: bool | None = None
 
 
 class UpdateTenantRequest(UpdateTenantFeaturesRequest):
@@ -123,6 +125,7 @@ class TenantFeatureFlagsMixin(BaseModel):
     syslog_collector_enabled: bool = True
     cve_scanner_enabled: bool = True
     prometheus_fleet_exporter_enabled: bool = True
+    onboarding_completed: bool = False
 
     @model_validator(mode="before")
     @classmethod

@@ -8,6 +8,7 @@
   import { useNocEventsStore } from '@/stores/useNocEventsStore';
   import { useThemeAndLayoutStore } from '@/stores/useThemeAndLayoutStore';
   import RgResponsiveShell from '@/components/common/RgResponsiveShell.vue';
+  import TenantOnboardingModal from '@/components/common/TenantOnboardingModal.vue';
   import { useTabLifecycleCoordinator } from '@/composables/useTabLifecycleCoordinator';
 
   const route = useRoute();
@@ -18,6 +19,15 @@
   useTabLifecycleCoordinator();
 
   const isLoginRoute = computed(() => route.path === '/login');
+
+  const shouldShowOnboarding = computed(() => {
+    if (isLoginRoute.value) return false;
+    if (!authStore.isAuthenticated) return false;
+    const role = authStore.currentRole;
+    const isPrivilegedAdmin = role === 'SUPERADMIN_GLOBAL' || role === 'TENANT_ADMIN';
+    if (!isPrivilegedAdmin) return false;
+    return authStore.tenantFeatures?.onboarding_completed === false;
+  });
 
   onMounted(() => {
     themeStore.setTheme(themeStore.theme);
@@ -50,6 +60,12 @@
         </transition>
       </router-view>
     </RgResponsiveShell>
+
+    <!-- Modal de Onboarding Inicial para Admins -->
+    <TenantOnboardingModal
+      v-if="shouldShowOnboarding"
+      @completed="authStore.fetchTenantFeatures()"
+    />
   </div>
 </template>
 

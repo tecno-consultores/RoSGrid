@@ -99,7 +99,17 @@ async def get_tenant_features(
         raise HTTPException(status_code=403, detail="No autorizado para consultar configuración de esta empresa")
 
     tenant = await _load_tenant_or_404(db, tenant_id)
-    return TenantFeaturesResponse.model_validate(tenant)
+    features_dict = extract_tenant_features(tenant)
+    try:
+        redis = get_redis_client()
+        onb_val = await redis.get(f"rg:{tenant_id}:onboarding_completed")
+        if onb_val:
+            features_dict["onboarding_completed"] = (
+                onb_val.decode() if isinstance(onb_val, bytes) else str(onb_val)
+            ).lower() == "true"
+    except Exception as exc:
+        logger.debug("Error leyendo onboarding_completed de KeyDB: %s", exc)
+    return TenantFeaturesResponse.model_validate(features_dict)
 
 
 @router.patch("/{tenant_id}/features", response_model=TenantFeaturesResponse)
@@ -122,8 +132,20 @@ async def update_tenant_features(
     before_state = extract_tenant_features(tenant)
 
     update_data = body.model_dump(exclude_unset=True, exclude_none=True)
+
+    # Manejo de flag efímero de onboarding_completed en KeyDB
+    onboarding_completed_val: bool | None = None
+    if "onboarding_completed" in update_data:
+        onboarding_completed_val = bool(update_data.pop("onboarding_completed"))
+        try:
+            redis = get_redis_client()
+            await redis.set(f"rg:{tenant_id}:onboarding_completed", "true" if onboarding_completed_val else "false")
+        except Exception as exc:
+            logger.debug("Error guardando onboarding_completed en KeyDB: %s", exc)
+
     for field, value in update_data.items():
-        setattr(tenant, field, value)
+        if hasattr(tenant, field):
+            setattr(tenant, field, value)
 
     actor = audit_actor_from_claims(claims, request)
     actor["tenant_id"] = tenant.id
@@ -132,14 +154,51 @@ async def update_tenant_features(
         **actor,
         event_category="GOVERNANCE",
         event_action="TENANT_FEATURE_FLAGS_UPDATED",
-        before_state={key: before_state[key] for key in update_data},
+        before_state={key: before_state[key] for key in update_data if key in before_state},
         after_state=update_data,
     )
     await db.commit()
     await db.refresh(tenant)
     await invalidate_tenant_features_cache(tenant_id)
 
-    return TenantFeaturesResponse.model_validate(tenant)
+    response_dict = extract_tenant_features(tenant)
+    if onboarding_completed_val is not None:
+        response_dict["onboarding_completed"] = onboarding_completed_val
+    else:
+        try:
+            redis = get_redis_client()
+            onb_check = await redis.get(f"rg:{tenant_id}:onboarding_completed")
+            if onb_check:
+                response_dict["onboarding_completed"] = (
+                    onb_check.decode() if isinstance(onb_check, bytes) else str(onb_check)
+                ).lower() == "true"
+        except Exception:
+            pass
+    return TenantFeaturesResponse.model_validate(response_dict)
+
+
+@router.post("/{tenant_id}/onboarding-complete", response_model=TenantFeaturesResponse)
+async def complete_tenant_onboarding(
+    tenant_id: uuid.UUID,
+    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)),
+    db: AsyncSession = Depends(get_db_session),
+) -> TenantFeaturesResponse:
+    """Marca la configuración inicial (Onboarding Wizard) del tenant como completada."""
+    user_role = claims.get("rol")
+    user_tid = claims.get("tid")
+    if user_role != SystemRoleEnum.SUPERADMIN_GLOBAL.value and str(user_tid) != str(tenant_id):
+        raise HTTPException(status_code=403, detail="No autorizado para configurar esta empresa")
+
+    tenant = await _load_tenant_or_404(db, tenant_id)
+    try:
+        redis = get_redis_client()
+        await redis.set(f"rg:{tenant_id}:onboarding_completed", "true")
+    except Exception as exc:
+        logger.debug("Error persistiendo onboarding_completed: %s", exc)
+
+    features = extract_tenant_features(tenant)
+    features["onboarding_completed"] = True
+    return TenantFeaturesResponse.model_validate(features)
 
 
 @router.post("", response_model=TenantResponse, status_code=status.HTTP_201_CREATED)

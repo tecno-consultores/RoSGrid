@@ -491,7 +491,7 @@
                   type="checkbox"
                   class="switch-input"
                 />
-                <span class="switch-label">Auditoría CIS Benchmark & Hardening</span>
+                <span class="switch-label">Auditoría CIS Hardening</span>
               </label>
               <label class="switch-row">
                 <input

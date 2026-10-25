@@ -1692,6 +1692,41 @@ Certificación ejecutada bajo la **Regla Cero** dentro de contenedores efímeros
 4. **Verificación en Vivo (Browser End-to-End):**
     - Flujo completo de apertura de modal, fechas pre-llenadas, selección de router `r1` y creación exitosa de ventana con reporte en vivo y cierre automático verificado en contenedor de producción.
 
+---
+
+## 40. Políticas CIS Hardening Personalizables por Empresa y Onboarding de Feature Flags
+
+### A. Alcance Técnico y Arquitectura
+1. **Renombrado Integral a "CIS Hardening":**
+   - Eliminación estricta de la palabra "Benchmark" en frontend y backend en favor de la denominación unificada "CIS Hardening".
+2. **Políticas CIS Parametrizables por Empresa (Tenant):**
+   - Endpoints `GET /api/v1/compliance/cis-policies` y `PUT /api/v1/compliance/cis-policies`.
+   - Soporte para perfiles base `CORPORATE`, `ISP` y `DATACENTER` almacenados en KeyDB (`rg:{tenant}:cis_policies_config`) con auditoría WORM `COMPLIANCE_CIS`.
+   - Incorporación de directivas canónicas `CIS-2.1` (BGP Prefix Limits & MD5/TCP-AO) y `CIS-2.2` (Selective FastTrack compatible con QoS).
+   - Recálculo dinámico normalizado de puntuación de seguridad (0 a 100) ponderando únicamente las directivas activadas por la empresa.
+   - Modal táctico en `EnterpriseComplianceView.vue` para alternar perfiles base, activar/desactivar reglas, ajustar pesos (1-50 pts) y personalizar scripts RouterOS de remediación.
+3. **Onboarding de Feature Flags al Primer Inicio:**
+   - Componente interactivo `TenantOnboardingModal.vue` montado en `App.vue` para `SUPERADMIN_GLOBAL` o `TENANT_ADMIN` si `onboarding_completed: false`.
+   - Selector en 1 clic de arquetipo (`[ 🏢 Corporativo ]`, `[ 🌐 Proveedor ISP ]`, `[ ⚙️ Personalizado ]`) con guardado hacia `/api/v1/tenants/{id}/features` y KeyDB (`rg:{tenant}:onboarding_completed`).
+
+### B. Cobertura y Certificación Multi-Capa 11X
+1. **Backend Unitario (Pytest en Docker):**
+   - `fastapi/tests/api/test_cis_policies_and_onboarding.unit.py` (**3 de 3 pruebas PASADAS, 100%**).
+   - `fastapi/tests/api/test_hito20_enterprise_suite.unit.py` (**12 de 12 pruebas PASADAS, 100%**).
+   - `fastapi/tests/api/test_tenants_and_users.unit.py` (**12 de 12 pruebas PASADAS, 100%**).
+   - Suite completa: **517 de 517 pruebas PASADAS (100% de éxito)**.
+2. **Frontend Unitario (Vitest en Docker):**
+   - `vue3/src/components/common/tenantOnboardingModal.unit.ts` (**4 de 4 pruebas PASADAS, 100%**).
+   - `vue3/src/views/enterpriseComplianceView.unit.ts` (**7 de 7 pruebas PASADAS, 100%**).
+   - Suite completa: **390 de 390 pruebas unitarias PASADAS en 52 archivos (100% de éxito)**.
+3. **Análisis Estático y Tipado Estricto:**
+   - `vue-tsc --noEmit`: 0 errores de tipado.
+   - `ruff check src/`: All checks passed.
+   - `mypy --strict src/`: Success: no issues found in 118 source files.
+4. **Karate Labs BDD:**
+   - **API BDD:** Escenarios 90, 91 y 92 incorporados en `fastapi/test/api_test.feature` y replicados en `docs/examples/fastapi/test/api_test.feature` (**92 escenarios totales de API**).
+   - **UI BDD:** Escenario 42 incorporado en `vue3/test/ui_business_flow.feature` y replicado en `docs/examples/vue3/test/ui_business_flow.feature` (**42 escenarios totales de UI**).
+
 
 
 

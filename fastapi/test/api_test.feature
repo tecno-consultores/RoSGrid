@@ -699,6 +699,25 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 400
     And match response == { detail: 'Se requiere session_id para registrar el cierre' }
 
+  Scenario: 90. Consulta de directivas y políticas CIS personalizadas sin autenticación devuelve 401
+    Given path '/api/v1/compliance/cis-policies'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 91. Actualización de directivas y políticas CIS personalizadas sin autenticación devuelve 401
+    Given path '/api/v1/compliance/cis-policies'
+    And request { profile: 'ISP', rules: [] }
+    When method put
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 92. Finalización de Onboarding de Tenant sin autenticación devuelve 401
+    Given path '/api/v1/tenants/00000000-0000-0000-0000-000000000001/onboarding-complete'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
 
 
 

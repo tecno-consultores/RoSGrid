@@ -557,7 +557,17 @@
     - Nuevo endpoint `POST /api/v1/auth/session-closing` que registra clave efímera `rg:{tenant}:sess_closing:{session_id}` con TTL de 35 segundos e inserción en cola `closing_sessions_queue`.
     - Cancelación reactiva incondicional al detectar nueva petición autenticada o apertura de WebSocket en el plazo de gracia (eliminando la clave y preservando el ciclo absoluto de 8 horas).
     - Recolección y cierre desatendido (`kill_session`) con registro WORM `SESSION_CLOSED_ON_DISCONNECT` si el usuario no reconecta tras 35 segundos.
-  - **Aseguramiento Multi-Capa 11X:** Pruebas unitarias backend en `test_session_closing_grace_period.unit.py`, pruebas Vitest frontend en `useTabLifecycleCoordinator.unit.ts`, contratos Front-Back y escenarios BDD Karate Labs en API (`api_test.feature`) y UI (`ui_business_flow.feature`), espejados en `docs/examples/`.
+- [x] **23.28** **Políticas CIS Hardening Personalizables por Empresa (ISP / Corporativo), Onboarding de Feature Flags al Primer Inicio y Especificación Formal 42:**
+  - **Especificación Formal:** Aprobada `docs/specs/42_ROUTEROS_V7_CIS_HARDENING_PERFORMANCE_AND_BULK_OPS_TEMPLATES.md` documentando directivas de control plane, L2 discovery, mitigación de amplificación DNS, BGP prefix-limits / TCP-AO / MD5, filtrado de bogons RFC 1918/6598, FastTrack selectivo QoS (`packet-mark=!qos-shaped`) y port-knocking dinámico de 3 etapas.
+  - **Frontend (Vue 3 / TypeScript):**
+    - Supresión estricta de la palabra "Benchmark" en títulos, badges, descripciones y pestañas en favor de la denominación unificada "CIS Hardening".
+    - Modal interactivo de bienvenida y despliegue `TenantOnboardingModal.vue` presentado automáticamente al `SUPERADMIN_GLOBAL` o `TENANT_ADMIN` en su primer inicio de sesión para configurar el arquetipo de red (`🏢 Corporativo`, `🌐 ISP` o `⚙️ Personalizado`).
+    - Modal de personalización de políticas CIS en `EnterpriseComplianceView.vue` para alternar perfiles base, activar/desactivar directivas, editar ponderaciones numéricas (1 a 50 pts) y personalizar scripts RouterOS de remediación.
+  - **Backend (FastAPI / KeyDB):**
+    - Endpoints `GET /api/v1/compliance/cis-policies` y `PUT /api/v1/compliance/cis-policies` con almacenamiento en KeyDB (`rg:{tenant}:cis_policies_config`) y auditoría inmutable WORM `COMPLIANCE_CIS`.
+    - Ponderación normalizada de seguridad (0-100 pts) calculada dinámicamente sobre las directivas activas configuradas por el tenant.
+    - Endpoints de onboarding en tenants (`POST /{id}/onboarding-complete` y `PATCH /{id}/features`) con flag `onboarding_completed`.
+  - **Aseguramiento Multi-Capa 11X:** 517 pruebas unitarias backend aprobadas al 100%, 390 pruebas unitarias Vitest aprobadas en 52 archivos, 0 errores en `vue-tsc`, `ruff` y `mypy`, y nuevos escenarios Karate Labs BDD en API (escenarios 90-92 en `api_test.feature`) y UI (escenario 42 en `ui_business_flow.feature`), espejados en `docs/examples/`.
 
 ---
 

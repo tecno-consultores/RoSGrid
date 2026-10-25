@@ -123,6 +123,24 @@ describe('EnterpriseComplianceView.vue — Hito 20 Suite Corporativa', () => {
           ],
           audited_at: new Date().toISOString(),
         };
+      } else if (url.includes('/compliance/cis-policies')) {
+        data = {
+          tenant_id: T_CORP,
+          profile: 'CORPORATE',
+          updated_at: new Date().toISOString(),
+          rules: [
+            {
+              code: 'CIS-1.1',
+              title: 'Deshabilitar servicios obsoletos',
+              category: 'CONTROL_PLANE',
+              weight: 15,
+              severity: 'HIGH',
+              enabled: true,
+              remediation_cmd: '/ip service set telnet disabled=yes',
+              profile_target: 'ALL',
+            },
+          ],
+        };
       } else if (url.includes('/sdwan/topology/')) {
         data = {
           tenant_id: T_CORP,
@@ -263,7 +281,7 @@ describe('EnterpriseComplianceView.vue — Hito 20 Suite Corporativa', () => {
     expect(wrapper.find('#tab-btn-wifi').exists()).toBe(true);
   });
 
-  it('permite alternar a la pestaña CIS Benchmark y muestra el puntaje', async () => {
+  it('permite alternar a la pestaña CIS Hardening y muestra el puntaje', async () => {
     const wrapper = mount(EnterpriseComplianceView);
     const cisTabBtn = wrapper.find('#tab-btn-cis');
     await cisTabBtn.trigger('click');
@@ -273,6 +291,42 @@ describe('EnterpriseComplianceView.vue — Hito 20 Suite Corporativa', () => {
       expect(wrapper.text()).toContain('Grado B');
       expect(wrapper.text()).toContain('CIS-1.1');
     });
+  });
+
+  it('permite abrir el modal de personalización de directivas CIS y guardar configuración', async () => {
+    const wrapper = mount(EnterpriseComplianceView);
+    const cisTabBtn = wrapper.find('#tab-btn-cis');
+    await cisTabBtn.trigger('click');
+
+    await vi.waitFor(() => {
+      expect(wrapper.find('#btn-open-cis-policies').exists()).toBe(true);
+    });
+
+    const openPoliciesBtn = wrapper.find('#btn-open-cis-policies');
+    await openPoliciesBtn.trigger('click');
+
+    expect(wrapper.find('.cis-policies-modal').exists()).toBe(true);
+    expect(wrapper.text()).toContain('Políticas de Seguridad CIS Hardening — Personalización de Empresa');
+
+    const saveBtn = wrapper.find('#btn-save-cis-policies');
+    expect(saveBtn.exists()).toBe(true);
+
+    vi.spyOn(http, 'put').mockResolvedValueOnce({
+      data: {
+        tenant_id: T_CORP,
+        profile: 'ISP',
+        updated_at: new Date().toISOString(),
+        rules: [],
+      },
+    } as any);
+
+    await saveBtn.trigger('click');
+    expect(http.put).toHaveBeenCalledWith(
+      '/api/v1/compliance/cis-policies',
+      expect.objectContaining({
+        profile: expect.any(String),
+      }),
+    );
   });
 
   it('muestra el botón Aplicar en directivas CIS fallidas y permite ejecutar la remediación individual', async () => {

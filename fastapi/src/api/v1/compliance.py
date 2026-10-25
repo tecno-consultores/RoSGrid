@@ -4,6 +4,7 @@
 """Endpoints de Cumplimiento Normativo Corporativo: Config Drift & Auditoría CIS Benchmark (Hito 20.1 & 20.3)."""
 
 import difflib
+import json
 import logging
 import uuid
 from datetime import UTC, datetime
@@ -26,6 +27,9 @@ from src.schemas.enterprise import (
     CisAutoHardenRequest,
     CisAutoHardenResponse,
     CisDirectiveResult,
+    CisPoliciesConfigRequest,
+    CisPoliciesConfigResponse,
+    CisPolicyRule,
     ConfigDriftCheckResponse,
     ConfigDriftRevertRequest,
     ConfigDriftRevertResponse,
@@ -426,74 +430,244 @@ async def revert_config_drift(
 # ============================================================================
 
 
-CIS_DIRECTIVES_DEF: list[dict[str, Any]] = [
+CIS_CATALOG_BASE: list[dict[str, Any]] = [
     {
         "code": "CIS-1.1",
         "title": "Deshabilitar servicios inseguros (Telnet, FTP, HTTP sin TLS, API sin TLS)",
+        "category": "CONTROL_PLANE",
         "weight": 15,
+        "severity": "HIGH",
         "remediation_cmd": "/ip service set telnet,ftp,www,api disabled=yes",
+        "profile_target": "ALL",
     },
     {
         "code": "CIS-1.2",
         "title": "Deshabilitar o renombrar usuario administrador por defecto ('admin')",
+        "category": "IDENTITY",
         "weight": 10,
+        "severity": "HIGH",
         "remediation_cmd": "/user set [find name=admin] disabled=yes",
+        "profile_target": "ALL",
     },
     {
         "code": "CIS-1.3",
         "title": "Restricción de direcciones IP autorizadas para WinBox y API REST",
+        "category": "MANAGEMENT",
         "weight": 10,
+        "severity": "HIGH",
         "remediation_cmd": "/ip service set winbox,www-ssl address=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16",
+        "profile_target": "ALL",
     },
     {
         "code": "CIS-1.4",
         "title": "Protección contra Open DNS Resolver en interfaces públicas",
+        "category": "NETWORK",
         "weight": 10,
+        "severity": "CRITICAL",
         "remediation_cmd": "/ip dns set allow-remote-requests=no",
+        "profile_target": "ALL",
     },
     {
         "code": "CIS-1.5",
         "title": "Desactivar MAC-Server y Neighbor Discovery en interfaces WAN",
+        "category": "L2_DISCOVERY",
         "weight": 10,
+        "severity": "MEDIUM",
         "remediation_cmd": "/tool mac-server set allowed-interface-list=LAN; /ip neighbor discovery-settings set discover-interface-list=LAN",
+        "profile_target": "ALL",
     },
     {
         "code": "CIS-1.6",
         "title": "Actualización y parches de seguridad de RouterOS y firmware RouterBOOT",
+        "category": "MAINTENANCE",
         "weight": 10,
+        "severity": "MEDIUM",
         "remediation_cmd": "/system package update install; /system routerboard upgrade",
+        "profile_target": "ALL",
     },
     {
         "code": "CIS-1.7",
         "title": "Filtrado estricto de paquetes Bogon / RFC 1918 en interfaz WAN",
+        "category": "FIREWALL",
         "weight": 10,
+        "severity": "HIGH",
         "remediation_cmd": "/ip firewall raw add chain=prerouting src-address-list=bogons in-interface-list=WAN action=drop",
+        "profile_target": "ALL",
     },
     {
         "code": "CIS-1.8",
         "title": "Defensa dinámica contra ataques de fuerza bruta (Brute-Force SSH/WinBox)",
+        "category": "FIREWALL",
         "weight": 10,
+        "severity": "HIGH",
         "remediation_cmd": "/ip firewall filter add chain=input protocol=tcp dst-port=22 connection-state=new src-address-list=ssh_stage3 action=add-src-to-address-list address-list=ssh_blacklist address-list-timeout=1d",
+        "profile_target": "ALL",
     },
     {
         "code": "CIS-1.9",
         "title": "Criptografía robusta en túneles (prohibición de DES, 3DES y MD5)",
+        "category": "VPN_CRYPTO",
         "weight": 8,
+        "severity": "MEDIUM",
         "remediation_cmd": "/ip ipsec profile set default enc-algorithm=aes-256,aes-128-gcm hash-algorithm=sha256",
+        "profile_target": "ALL",
     },
     {
         "code": "CIS-1.10",
         "title": "Aislamiento de la gestión administrativa en VLAN dedicada",
+        "category": "SEGMENTATION",
         "weight": 7,
+        "severity": "LOW",
         "remediation_cmd": "/interface vlan add name=vlan99-mgmt vlan-id=99 interface=bridge",
+        "profile_target": "CORPORATE",
+    },
+    {
+        "code": "CIS-2.1",
+        "title": "Seguridad y límites BGP (Prefix-Limit, BGP TCP-AO o MD5)",
+        "category": "ROUTING_BGP",
+        "weight": 10,
+        "severity": "HIGH",
+        "remediation_cmd": "/routing bgp connection set [find] tcp-md5-key=yes output.keep-sent-attributes=no",
+        "profile_target": "ISP",
+    },
+    {
+        "code": "CIS-2.2",
+        "title": "FastTrack selectivo de alto rendimiento (sin bypass de colas QoS)",
+        "category": "PERFORMANCE",
+        "weight": 10,
+        "severity": "MEDIUM",
+        "remediation_cmd": "/ip firewall filter add chain=forward action=fasttrack-connection connection-state=established,related packet-mark=!qos-shaped",
+        "profile_target": "ISP",
     },
 ]
+
+# Alias para compatibilidad regresiva con tests unitarios
+CIS_DIRECTIVES_DEF: list[dict[str, Any]] = CIS_CATALOG_BASE
+
+
+def _build_default_cis_rules(profile: str = "CORPORATE") -> list[CisPolicyRule]:
+    """Genera el conjunto de directivas por defecto según el perfil de empresa."""
+    rules: list[CisPolicyRule] = []
+    for item in CIS_CATALOG_BASE:
+        target = item["profile_target"]
+        if profile == "ISP":
+            enabled = (target in ("ALL", "ISP")) and item["code"] != "CIS-1.10"
+        elif profile == "DATACENTER":
+            enabled = True
+        else:  # CORPORATE
+            enabled = (target in ("ALL", "CORPORATE"))
+        rules.append(
+            CisPolicyRule(
+                code=item["code"],
+                title=item["title"],
+                category=item["category"],
+                weight=item["weight"],
+                severity=item["severity"],
+                enabled=enabled,
+                remediation_cmd=item["remediation_cmd"],
+                profile_target=target,
+            )
+        )
+    return rules
+
+
+async def get_tenant_cis_policies_helper(tenant_id: uuid.UUID) -> CisPoliciesConfigResponse:
+    """Recupera la política CIS personalizada del tenant desde KeyDB o genera el baseline por defecto."""
+    try:
+        redis = get_redis_client()
+        raw = await redis.get(f"rg:{tenant_id}:cis_policies_config")
+        if raw:
+            raw_text = raw.decode() if isinstance(raw, bytes) else str(raw)
+            data = json.loads(raw_text)
+            return CisPoliciesConfigResponse(
+                tenant_id=tenant_id,
+                profile=data.get("profile", "CORPORATE"),
+                updated_at=data.get("updated_at", datetime.now(UTC).isoformat()),
+                rules=[CisPolicyRule(**r) for r in data.get("rules", [])],
+            )
+    except Exception as exc:
+        logger.debug("Error leyendo políticas CIS de KeyDB para tenant %s: %s", tenant_id, exc)
+
+    now_iso = datetime.now(UTC).isoformat()
+    return CisPoliciesConfigResponse(
+        tenant_id=tenant_id,
+        profile="CORPORATE",
+        updated_at=now_iso,
+        rules=_build_default_cis_rules("CORPORATE"),
+    )
+
+
+@router.get(
+    "/cis-policies",
+    response_model=CisPoliciesConfigResponse,
+    summary="Obtener configuración y directivas de endurecimiento CIS de la empresa/tenant",
+    dependencies=[
+        Depends(require_roles(*_COMPLIANCE_READ_ROLES)),
+        Depends(require_feature("cis_audit_enabled")),
+    ],
+)
+async def get_cis_policies(
+    claims: dict[str, Any] = Depends(get_current_user_claims),
+) -> CisPoliciesConfigResponse:
+    tenant_id = uuid.UUID(str(claims["tid"]))
+    return await get_tenant_cis_policies_helper(tenant_id)
+
+
+@router.put(
+    "/cis-policies",
+    response_model=CisPoliciesConfigResponse,
+    summary="Actualizar y personalizar directivas de endurecimiento CIS para la empresa (ISP o Corporativo)",
+    dependencies=[
+        Depends(require_roles(*_COMPLIANCE_WRITE_ROLES)),
+        Depends(require_feature("cis_audit_enabled")),
+    ],
+)
+async def update_cis_policies(
+    payload: CisPoliciesConfigRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_tenant_db_session),
+    claims: dict[str, Any] = Depends(get_current_user_claims),
+) -> CisPoliciesConfigResponse:
+    tenant_id = uuid.UUID(str(claims["tid"]))
+    redis = get_redis_client()
+    key = f"rg:{tenant_id}:cis_policies_config"
+    now_str = datetime.now(UTC).isoformat()
+
+    doc_data = {
+        "profile": payload.profile,
+        "updated_at": now_str,
+        "rules": [r.model_dump() for r in payload.rules],
+    }
+    await redis.set(key, json.dumps(doc_data, ensure_ascii=False))
+
+    actor = audit_actor_from_claims(claims, request)
+    await write_audit_log(
+        session=db,
+        tenant_id=tenant_id,
+        actor_user_id=actor["actor_user_id"],
+        actor_username=actor["actor_username"],
+        actor_role=actor["actor_role"],
+        actor_ip=actor["actor_ip"],
+        actor_user_agent=actor["actor_user_agent"],
+        event_category="COMPLIANCE_CIS",
+        event_action="UPDATE_CIS_POLICIES",
+        before_state={},
+        after_state={"profile": payload.profile, "rules_count": len(payload.rules)},
+        status_code=200,
+    )
+
+    return CisPoliciesConfigResponse(
+        tenant_id=tenant_id,
+        profile=payload.profile,
+        updated_at=now_str,
+        rules=payload.rules,
+    )
 
 
 @router.get(
     "/cis-audit/{router_id}",
     response_model=CisAuditResponse,
-    summary="Consultar o ejecutar escaneo de seguridad CIS Benchmark para RouterOS (Security Score 0-100)",
+    summary="Consultar o ejecutar escaneo de seguridad CIS Hardening para RouterOS (Security Score 0-100)",
     dependencies=[
         Depends(require_roles(*_COMPLIANCE_READ_ROLES)),
         Depends(require_feature("cis_audit_enabled")),
@@ -502,7 +676,7 @@ CIS_DIRECTIVES_DEF: list[dict[str, Any]] = [
 @router.post(
     "/cis-audit/{router_id}",
     response_model=CisAuditResponse,
-    summary="Ejecutar escaneo de seguridad CIS Benchmark para RouterOS (Security Score 0-100)",
+    summary="Ejecutar escaneo de seguridad CIS Hardening para RouterOS (Security Score 0-100)",
     dependencies=[
         Depends(require_roles(*_COMPLIANCE_READ_ROLES)),
         Depends(require_feature("cis_audit_enabled")),
@@ -521,6 +695,13 @@ async def run_cis_audit(
     if not router_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Router no encontrado")
 
+    # Recuperar directivas de política del tenant
+    tenant_policies = await get_tenant_cis_policies_helper(tenant_id)
+    active_rules = [r for r in tenant_policies.rules if r.enabled]
+    if not active_rules:
+        # Fallback a directivas base
+        active_rules = [r for r in _build_default_cis_rules("CORPORATE") if r.enabled]
+
     # Recuperar directivas aplicadas previamente en KeyDB
     applied_codes: set[str] = set()
     try:
@@ -531,12 +712,7 @@ async def run_cis_audit(
     except Exception as exc:
         logger.debug("Error leyendo KeyDB cis_applied: %s", exc)
 
-    # Evaluar las 10 directivas
-    results: list[CisDirectiveResult] = []
-    total_score = 0
-    passed_count = 0
-
-    # Consultar estado real si está disponible
+    # Estado recopilado del router
     services_state: dict[str, bool] = {"telnet": True, "ftp": True, "www": True, "api": True}
     winbox_restricted = False
     admin_user_disabled = True
@@ -546,6 +722,8 @@ async def run_cis_audit(
     bruteforce_defense_present = False
     ipsec_crypto_secure = True
     mgmt_vlan_present = False
+    bgp_secure = False
+    fasttrack_selective = False
 
     try:
         _, client = await get_router_and_client(router_id, claims, db)
@@ -596,7 +774,7 @@ async def run_cis_audit(
         except Exception as exc:
             logger.debug("Sondeo /ip/neighbor/discovery-settings en CIS audit: %s", exc)
 
-        # 5. Firewall Filter (Brute-Force & Bogons)
+        # 5. Firewall Filter (Brute-Force, Bogons, FastTrack)
         try:
             fw_rules = await client.get("/ip/firewall/filter")
             if isinstance(fw_rules, list):
@@ -604,10 +782,15 @@ async def run_cis_audit(
                     comment = str(r.get("comment", "")).upper()
                     src_list = str(r.get("src-address-list", "")).lower()
                     addr_list = str(r.get("address-list", "")).lower()
+                    act = str(r.get("action", "")).lower()
                     if "CIS-1.8" in comment or "bruteforce" in src_list or "ssh_blacklist" in src_list or "ssh_blacklist" in addr_list:
                         bruteforce_defense_present = True
                     if "CIS-1.7" in comment or "bogon" in comment or "bogon" in src_list:
                         bogon_rules_present = True
+                    if act == "fasttrack-connection":
+                        pkt_mark = str(r.get("packet-mark", ""))
+                        if "!qos-shaped" in pkt_mark or "CIS-2.2" in comment:
+                            fasttrack_selective = True
         except Exception as exc:
             logger.debug("Sondeo /ip/firewall/filter en CIS audit: %s", exc)
 
@@ -635,12 +818,29 @@ async def run_cis_audit(
         except Exception as exc:
             logger.debug("Sondeo /interface/vlan en CIS audit: %s", exc)
 
+        # 8. BGP Security (CIS-2.1)
+        try:
+            bgp_conns = await client.get("/routing/bgp/connection")
+            if isinstance(bgp_conns, list) and bgp_conns:
+                bgp_secure = any(
+                    b.get("tcp-md5-key") in (True, "true", "yes") or b.get("tcp-ao") in (True, "true", "yes")
+                    for b in bgp_conns
+                )
+        except Exception as exc:
+            logger.debug("Sondeo /routing/bgp/connection en CIS audit: %s", exc)
+
     except Exception as exc:
         logger.debug("Sondeo en vivo de RouterOS en CIS audit para %s: %s (utilizando heurística)", router_id, exc)
 
-    for item in CIS_DIRECTIVES_DEF:
-        code = item["code"]
-        weight = item["weight"]
+    # Evaluar únicamente directivas habilitadas en la política del tenant
+    results: list[CisDirectiveResult] = []
+    earned_weight = 0
+    total_active_weight = sum(rule.weight for rule in active_rules) or 1
+    passed_count = 0
+
+    for rule in active_rules:
+        code = rule.code
+        weight = rule.weight
         passed = False
         finding = ""
 
@@ -711,22 +911,41 @@ async def run_cis_audit(
             else:
                 passed = False
                 finding = "No se detectó interfaz VLAN de administración dedicada (ej. mgmt o vlan99)."
+        elif code == "CIS-2.1":
+            if code in applied_codes or bgp_secure:
+                passed = True
+                finding = "Protección de sesiones BGP con autenticación TCP-AO/MD5 verificada."
+            else:
+                passed = False
+                finding = "Sesiones BGP sin autenticación criptográfica TCP-MD5/TCP-AO."
+        elif code == "CIS-2.2":
+            if code in applied_codes or fasttrack_selective:
+                passed = True
+                finding = "FastTrack selectivo implementado respetando el árbol de colas QoS."
+            else:
+                passed = False
+                finding = "FastTrack omite árboles de colas o no cuenta con exclusión de tráfico marcado."
+        else:
+            passed = code in applied_codes
+            finding = "Directiva evaluada conforme a la política personalizada de la empresa."
 
         if passed:
-            total_score += weight
+            earned_weight += weight
             passed_count += 1
 
         results.append(
             CisDirectiveResult(
                 code=code,
-                title=item["title"],
+                title=rule.title,
                 passed=passed,
                 weight=weight,
                 finding=finding,
-                remediation_cmd=item["remediation_cmd"],
+                remediation_cmd=rule.remediation_cmd,
             )
         )
 
+    # Cálculo ponderado normalizado 0-100 según directivas activas
+    total_score = min(100, int(round((earned_weight / total_active_weight) * 100)))
     grade = "A" if total_score >= 90 else "B" if total_score >= 75 else "C" if total_score >= 60 else "F"
 
     return CisAuditResponse(
@@ -734,9 +953,9 @@ async def run_cis_audit(
         router_name=router_obj.display_name,
         security_score=total_score,
         compliance_grade=grade,
-        total_directives=len(CIS_DIRECTIVES_DEF),
+        total_directives=len(active_rules),
         passed_directives=passed_count,
-        failed_directives=len(CIS_DIRECTIVES_DEF) - passed_count,
+        failed_directives=len(active_rules) - passed_count,
         directives=results,
         audited_at=datetime.now(UTC).isoformat(),
     )
@@ -766,15 +985,21 @@ async def auto_harden_router(
     if not router_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Router no encontrado")
 
-    # Recopilar comandos correctivos
-    target_codes = payload.directive_codes_to_apply or [d["code"] for d in CIS_DIRECTIVES_DEF]
+    # Recopilar comandos correctivos basados en la política del tenant
+    tenant_policies = await get_tenant_cis_policies_helper(tenant_id)
+    enabled_rules_map = {r.code: r for r in tenant_policies.rules if r.enabled}
+    if payload.directive_codes_to_apply:
+        target_codes = [c for c in payload.directive_codes_to_apply if c in enabled_rules_map]
+    else:
+        target_codes = list(enabled_rules_map.keys())
+
     remediation_cmds: list[str] = [
-        item["remediation_cmd"]
-        for item in CIS_DIRECTIVES_DEF
-        if item["code"] in target_codes
+        enabled_rules_map[code].remediation_cmd
+        for code in target_codes
+        if code in enabled_rules_map
     ]
     remediation_script = "\n".join(remediation_cmds)
-    applied_weight = sum(item["weight"] for item in CIS_DIRECTIVES_DEF if item["code"] in target_codes)
+    applied_weight = sum(enabled_rules_map[c].weight for c in target_codes if c in enabled_rules_map)
     new_score = 100 if payload.directive_codes_to_apply is None else min(100, 65 + applied_weight)
 
     # Ejecutar con Safe Mode
@@ -864,7 +1089,6 @@ async def auto_harden_router(
                         already_has_cis18 = any("CIS-1.8" in str(r.get("comment", "")) for r in existing_fw)
 
                     if not already_has_cis18:
-                        # 1. Regla Drop para atacantes en ssh_blacklist
                         await client.put("/ip/firewall/filter", json_data={
                             "chain": "input",
                             "protocol": "tcp",
@@ -874,7 +1098,6 @@ async def auto_harden_router(
                             "action": "drop",
                             "comment": "CIS-1.8: Drop Brute-Force Blacklist",
                         })
-                        # 2. Regla agregar a ssh_blacklist si proviene de stage3
                         await client.put("/ip/firewall/filter", json_data={
                             "chain": "input",
                             "protocol": "tcp",
@@ -886,7 +1109,6 @@ async def auto_harden_router(
                             "address-list-timeout": "1d",
                             "comment": "CIS-1.8: Stage 3 to Blacklist",
                         })
-                        # 3. Regla agregar a stage3 si proviene de stage2
                         await client.put("/ip/firewall/filter", json_data={
                             "chain": "input",
                             "protocol": "tcp",
@@ -898,7 +1120,6 @@ async def auto_harden_router(
                             "address-list-timeout": "1m",
                             "comment": "CIS-1.8: Stage 2 to Stage 3",
                         })
-                        # 4. Regla agregar a stage2 si proviene de stage1
                         await client.put("/ip/firewall/filter", json_data={
                             "chain": "input",
                             "protocol": "tcp",
@@ -910,7 +1131,6 @@ async def auto_harden_router(
                             "address-list-timeout": "1m",
                             "comment": "CIS-1.8: Stage 1 to Stage 2",
                         })
-                        # 5. Regla inicial: agregar a stage1
                         await client.put("/ip/firewall/filter", json_data={
                             "chain": "input",
                             "protocol": "tcp",
@@ -944,6 +1164,34 @@ async def auto_harden_router(
                 except Exception as e:
                     logger.warning("Fallo al aplicar CIS-1.10 en router: %s", e)
 
+            # 11. CIS-2.1: BGP Security & MD5
+            if "CIS-2.1" in target_codes:
+                try:
+                    bgp_conns = await client.get("/routing/bgp/connection")
+                    if isinstance(bgp_conns, list):
+                        for c in bgp_conns:
+                            c_id = c.get(".id")
+                            if c_id:
+                                await client.patch(f"/routing/bgp/connection/{c_id}", json_data={"tcp-md5-key": "yes"})
+                except Exception as e:
+                    logger.warning("Fallo al aplicar CIS-2.1 en router: %s", e)
+
+            # 12. CIS-2.2: Selective FastTrack QoS Compatible
+            if "CIS-2.2" in target_codes:
+                try:
+                    await client.put(
+                        "/ip/firewall/filter",
+                        json_data={
+                            "chain": "forward",
+                            "action": "fasttrack-connection",
+                            "connection-state": "established,related",
+                            "packet-mark": "!qos-shaped",
+                            "comment": "CIS-2.2: Selective FastTrack QoS Compatible",
+                        },
+                    )
+                except Exception as e:
+                    logger.warning("Fallo al aplicar CIS-2.2 en router: %s", e)
+
             return {"status": "ok"}
 
         await execute_safe_mutation(
@@ -972,7 +1220,7 @@ async def auto_harden_router(
         actor_role=actor["actor_role"],
         actor_ip=actor["actor_ip"],
         actor_user_agent=actor["actor_user_agent"],
-        event_category="CIS_BENCHMARK_HARDENING",
+        event_category="CIS_HARDENING",
         event_action="AUTO_HARDEN_ROUTER",
         router_id=router_obj.id,
         router_display_name=router_obj.display_name,

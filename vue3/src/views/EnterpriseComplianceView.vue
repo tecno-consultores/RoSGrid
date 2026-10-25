@@ -12,6 +12,9 @@
     CapsmanOverviewResponse,
     CisAuditResponse,
     CisAutoHardenResponse,
+    CisPoliciesConfigRequest,
+    CisPoliciesConfigResponse,
+    CisPolicyRule,
     ConfigDriftCheckResponse,
     ConfigDriftRevertResponse,
     DhcpSnoopingState,
@@ -116,8 +119,13 @@
   const driftResult = ref<ConfigDriftCheckResponse | null>(null);
   const selectedTemplateId = ref<string>('');
 
-  // 2. CIS Benchmark State
+  // 2. CIS Hardening State
   const cisAudit = ref<CisAuditResponse | null>(null);
+  const showCisPolicyModal = ref(false);
+  const cisPoliciesConfig = ref<CisPoliciesConfigResponse | null>(null);
+  const editingPolicies = ref<CisPolicyRule[]>([]);
+  const selectedCisProfile = ref<string>('CORPORATE');
+  const savingPolicies = ref(false);
 
   // 3. SD-WAN State
   const sdwanTopology = ref<SdwanTopologyResponse | null>(null);
@@ -190,11 +198,66 @@
     driftResult.value = driftRes.data;
   }
 
+  async function loadCisPolicies() {
+    try {
+      const res = await http.get<CisPoliciesConfigResponse>('/api/v1/compliance/cis-policies');
+      cisPoliciesConfig.value = res.data;
+      selectedCisProfile.value = res.data.profile;
+      editingPolicies.value = JSON.parse(JSON.stringify(res.data.rules));
+    } catch (err) {
+      console.error('Error cargando políticas CIS:', err);
+    }
+  }
+
+  function openCisPolicyModal() {
+    loadCisPolicies();
+    showCisPolicyModal.value = true;
+  }
+
+  function applyProfilePreset(preset: 'CORPORATE' | 'ISP' | 'DATACENTER') {
+    selectedCisProfile.value = preset;
+    editingPolicies.value.forEach((rule) => {
+      const target = rule.profile_target;
+      if (preset === 'CORPORATE') {
+        rule.enabled = target === 'ALL' || target === 'CORPORATE';
+      } else if (preset === 'ISP') {
+        rule.enabled = (target === 'ALL' || target === 'ISP') && rule.code !== 'CIS-1.10';
+      } else if (preset === 'DATACENTER') {
+        rule.enabled = true;
+      }
+    });
+  }
+
+  async function saveCisPolicies() {
+    savingPolicies.value = true;
+    try {
+      const payload: CisPoliciesConfigRequest = {
+        profile: selectedCisProfile.value,
+        rules: editingPolicies.value,
+      };
+      const res = await http.put<CisPoliciesConfigResponse>('/api/v1/compliance/cis-policies', payload);
+      cisPoliciesConfig.value = res.data;
+      showCisPolicyModal.value = false;
+      successMessage.value = 'Políticas de seguridad CIS actualizadas exitosamente para la empresa.';
+      setTimeout(() => {
+        successMessage.value = '';
+      }, 4000);
+      if (selectedRouterId.value) {
+        await loadCisTab();
+      }
+    } catch (err) {
+      console.error('Error guardando políticas CIS:', err);
+    } finally {
+      savingPolicies.value = false;
+    }
+  }
+
   async function loadCisTab() {
-    const res = await http.get<CisAuditResponse>(
-      `/api/v1/compliance/cis-audit/${selectedRouterId.value}`,
-    );
-    cisAudit.value = res.data;
+    const [auditRes] = await Promise.all([
+      http.get<CisAuditResponse>(`/api/v1/compliance/cis-audit/${selectedRouterId.value}`),
+      loadCisPolicies(),
+    ]);
+    cisAudit.value = auditRes.data;
   }
 
   async function loadSdwanTab() {
@@ -507,7 +570,7 @@
           {{
             t(
               'enterprise.subtitle',
-              'Config Drift, Auditoría CIS Benchmark, SD-WAN WireGuard, Rogue DHCP, SLA & Wi-Fi',
+              'Config Drift, Auditoría CIS Hardening, SD-WAN WireGuard, Rogue DHCP, SLA & Wi-Fi',
             )
           }}
         </p>
@@ -581,7 +644,7 @@
         @click="activeTab = 'cis'"
       >
         <span class="tab-icon">🔒</span>
-        <span>{{ t('enterprise.tab_cis', 'CIS Benchmark Hardening') }}</span>
+        <span>{{ t('enterprise.tab_cis', 'CIS Hardening') }}</span>
       </button>
 
       <button
@@ -755,7 +818,7 @@
       </section>
 
       <!-- ================================================================= -->
-      <!-- TAB 2: CIS Benchmark Hardening (Sub-tarea 20.3)                   -->
+      <!-- TAB 2: CIS Hardening (Sub-tarea 20.3)                              -->
       <!-- ================================================================= -->
       <section
         v-else-if="activeTab === 'cis'"
@@ -764,6 +827,27 @@
         aria-labelledby="tab-btn-cis"
         class="tab-panel"
       >
+        <!-- Banner de Perfil y Configuración de Políticas -->
+        <div class="cis-policy-banner">
+          <div class="policy-info">
+            <span class="badge badge-info">
+              Perfil Activo: {{ cisPoliciesConfig?.profile || 'CORPORATE' }}
+            </span>
+            <span class="policy-details text-subtle text-xs">
+              {{ cisPoliciesConfig?.rules?.filter(r => r.enabled).length ?? 10 }} directivas habilitadas en la política de esta organización
+            </span>
+          </div>
+          <button
+            id="btn-open-cis-policies"
+            type="button"
+            class="tactical-btn btn-secondary"
+            @click="openCisPolicyModal"
+          >
+            <span>⚙️</span>
+            Personalizar Políticas de Empresa
+          </button>
+        </div>
+
         <div class="cis-score-dashboard">
           <div class="score-card">
             <div class="score-number">{{ cisAudit?.security_score ?? '--' }}/100</div>
@@ -799,9 +883,9 @@
           </div>
         </div>
 
-        <!-- Tabla de las 10 Directivas CIS -->
+        <!-- Tabla de Directivas CIS Hardening -->
         <div class="tactical-table-wrapper">
-          <table class="tactical-table" aria-label="Directivas CIS Benchmark">
+          <table class="tactical-table" aria-label="Directivas CIS Hardening">
             <thead>
               <tr>
                 <th scope="col">Código</th>
@@ -844,6 +928,168 @@
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- Modal: Personalización de Políticas CIS de la Empresa -->
+        <div
+          v-if="showCisPolicyModal"
+          class="modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-cis-policies-title"
+        >
+          <div class="modal-card cis-policies-modal">
+            <header class="modal-header">
+              <h3 id="modal-cis-policies-title">
+                ⚙️ Políticas de Seguridad CIS Hardening — Personalización de Empresa
+              </h3>
+              <button
+                type="button"
+                class="btn-close"
+                aria-label="Cerrar modal"
+                @click="showCisPolicyModal = false"
+              >
+                ✕
+              </button>
+            </header>
+
+            <div class="modal-body">
+              <p class="modal-intro text-subtle text-xs mb-3">
+                Selecciona una plantilla base según el tipo de infraestructura (ISP vs Corporativo) o ajusta individualmente las directivas, severidades y pesos ponderados de auditoría.
+              </p>
+
+              <!-- Selector de Presets de Empresa -->
+              <div class="profile-presets-row" role="group" aria-label="Perfiles predefinidos de empresa">
+                <button
+                  type="button"
+                  class="preset-btn"
+                  :class="{ active: selectedCisProfile === 'CORPORATE' }"
+                  @click="applyProfilePreset('CORPORATE')"
+                >
+                  <span class="preset-icon">🏢</span>
+                  <div class="preset-text">
+                    <strong>Corporativo / Empresa</strong>
+                    <small>VLAN de gestión, puertos de acceso, servicios confinados</small>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  class="preset-btn"
+                  :class="{ active: selectedCisProfile === 'ISP' }"
+                  @click="applyProfilePreset('ISP')"
+                >
+                  <span class="preset-icon">🌐</span>
+                  <div class="preset-text">
+                    <strong>Proveedor ISP / WISP</strong>
+                    <small>BGP Prefix Limit, MD5, FastTrack selectivo QoS, Bogons</small>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  class="preset-btn"
+                  :class="{ active: selectedCisProfile === 'DATACENTER' }"
+                  @click="applyProfilePreset('DATACENTER')"
+                >
+                  <span class="preset-icon">🖥️</span>
+                  <div class="preset-text">
+                    <strong>Data Center / Tránsito</strong>
+                    <small>Seguridad estricta en todas las directivas (Máxima exigencia)</small>
+                  </div>
+                </button>
+              </div>
+
+              <!-- Tabla de directivas configurables -->
+              <div class="directives-config-table-wrapper">
+                <table class="tactical-table policies-table" aria-label="Configuración de Directivas CIS">
+                  <thead>
+                    <tr>
+                      <th scope="col" style="width: 70px;">Activa</th>
+                      <th scope="col" style="width: 100px;">Código</th>
+                      <th scope="col">Directiva Técnica</th>
+                      <th scope="col" style="width: 110px;">Severidad</th>
+                      <th scope="col" style="width: 90px;">Peso</th>
+                      <th scope="col">Comando RouterOS Remediación</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="rule in editingPolicies"
+                      :key="rule.code"
+                      :class="{ 'row-disabled': !rule.enabled }"
+                    >
+                      <td>
+                        <input
+                          v-model="rule.enabled"
+                          type="checkbox"
+                          class="tactical-checkbox"
+                          :aria-label="`Activar directiva ${rule.code}`"
+                        />
+                      </td>
+                      <td class="font-mono text-cyan font-bold">{{ rule.code }}</td>
+                      <td>
+                        <strong>{{ rule.title }}</strong>
+                        <div class="text-subtle text-xs font-mono">{{ rule.category }}</div>
+                      </td>
+                      <td>
+                        <span
+                          class="badge"
+                          :class="'badge-' + (rule.severity === 'CRITICAL' ? 'danger' : rule.severity === 'HIGH' ? 'warning' : 'info')"
+                        >
+                          {{ rule.severity }}
+                        </span>
+                      </td>
+                      <td>
+                        <input
+                          v-model.number="rule.weight"
+                          type="number"
+                          min="1"
+                          max="50"
+                          class="tactical-input weight-input"
+                          :disabled="!rule.enabled"
+                          :aria-label="`Peso ponderado para ${rule.code}`"
+                        />
+                      </td>
+                      <td>
+                        <input
+                          v-model="rule.remediation_cmd"
+                          type="text"
+                          class="tactical-input font-mono text-xs"
+                          :disabled="!rule.enabled"
+                          :aria-label="`Comando de remediación para ${rule.code}`"
+                        />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <footer class="modal-footer">
+              <div class="footer-summary">
+                <span>Habilitadas: <strong>{{ editingPolicies.filter(r => r.enabled).length }}/{{ editingPolicies.length }}</strong></span>
+                <span class="ml-4">Peso Total: <strong>{{ editingPolicies.filter(r => r.enabled).reduce((acc, r) => acc + (r.weight || 0), 0) }} pts</strong></span>
+              </div>
+              <div class="footer-actions">
+                <button
+                  type="button"
+                  class="tactical-btn btn-secondary"
+                  @click="showCisPolicyModal = false"
+                >
+                  Cancelar
+                </button>
+                <button
+                  id="btn-save-cis-policies"
+                  type="button"
+                  class="tactical-btn btn-primary"
+                  :disabled="savingPolicies"
+                  @click="saveCisPolicies"
+                >
+                  <span v-if="savingPolicies">💾 Guardando...</span>
+                  <span v-else>💾 Guardar Políticas del Tenant</span>
+                </button>
+              </div>
+            </footer>
+          </div>
         </div>
       </section>
 
@@ -1641,6 +1887,115 @@
   .diff-line-ctx {
     color: #94a3b8;
     display: block;
+  }
+
+  /* CIS Policy Banner & Modal */
+  .cis-policy-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #080f1d;
+    border: 1px solid #1a2a40;
+    border-radius: 6px;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .policy-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .cis-policies-modal {
+    max-width: 980px;
+    width: 95vw;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .profile-presets-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .preset-btn {
+    background: #060b14;
+    border: 1px solid #1a2a40;
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s ease;
+  }
+
+  .preset-btn:hover {
+    border-color: #00e5ff;
+    background: #0a1322;
+  }
+
+  .preset-btn.active {
+    border-color: #00e5ff;
+    background: rgba(0, 229, 255, 0.08);
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.15);
+  }
+
+  .preset-icon {
+    font-size: 1.5rem;
+  }
+
+  .preset-text strong {
+    display: block;
+    color: #e2e8f0;
+    font-size: 0.85rem;
+  }
+
+  .preset-text small {
+    display: block;
+    color: #94a3b8;
+    font-size: 0.7rem;
+    line-height: 1.2;
+    margin-top: 0.2rem;
+  }
+
+  .directives-config-table-wrapper {
+    max-height: 50vh;
+    overflow-y: auto;
+    border: 1px solid #1a2a40;
+    border-radius: 6px;
+  }
+
+  .policies-table .row-disabled {
+    opacity: 0.45;
+  }
+
+  .tactical-checkbox {
+    width: 1.1rem;
+    height: 1.1rem;
+    cursor: pointer;
+    accent-color: #00e5ff;
+  }
+
+  .weight-input {
+    width: 65px;
+    text-align: center;
+  }
+
+  .footer-summary {
+    display: flex;
+    align-items: center;
+    font-size: 0.85rem;
+    color: #94a3b8;
+  }
+
+  .footer-summary strong {
+    color: #00e5ff;
   }
 
   /* CIS Score Dashboard */

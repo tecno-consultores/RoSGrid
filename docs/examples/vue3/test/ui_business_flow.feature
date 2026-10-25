@@ -377,6 +377,18 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And match text(".rg-sidebar") contains 'Flota & Seguridad'
     And match text(".rg-sidebar") !contains 'Sesiones Activas (Kill-Switch)'
 
+  Scenario: 42. Personalización de Políticas CIS Hardening y Onboarding de Feature Flags
+    Given driver baseUrl + '/enterprise-compliance'
+    And waitFor(".enterprise-compliance-view")
+    And click("#tab-btn-cis")
+    And waitFor(".cis-policy-banner")
+    And match text(".cis-policy-banner") contains 'Perfil Activo'
+    When click("#btn-open-cis-policies")
+    Then waitFor(".cis-policies-modal")
+    And match text(".cis-policies-modal") contains 'Políticas de Seguridad CIS Hardening'
+    And waitFor(".preset-btn")
+    When click(".btn-close")
+
 
 
 

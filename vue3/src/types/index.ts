@@ -55,6 +55,7 @@ export interface TenantFeatureFlags {
   syslog_collector_enabled?: boolean;
   cve_scanner_enabled?: boolean;
   prometheus_fleet_exporter_enabled?: boolean;
+  onboarding_completed?: boolean;
 }
 
 export interface UserInfo {
@@ -881,6 +882,29 @@ export interface CisAutoHardenResponse {
   executed_under_safemode: boolean;
   remediation_script: string;
   audit_log_id: string;
+}
+
+export interface CisPolicyRule {
+  code: string;
+  title: string;
+  category: string;
+  weight: number;
+  severity: string;
+  enabled: boolean;
+  remediation_cmd: string;
+  profile_target: string;
+}
+
+export interface CisPoliciesConfigRequest {
+  profile: string;
+  rules: CisPolicyRule[];
+}
+
+export interface CisPoliciesConfigResponse {
+  tenant_id: string;
+  profile: string;
+  updated_at: string;
+  rules: CisPolicyRule[];
 }
 
 export interface SdwanSpokeTunnel {

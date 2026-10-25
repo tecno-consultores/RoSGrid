@@ -183,9 +183,9 @@
   },
   "enterprise": {
     "title": "Fleet Management & Security Compliance",
-    "subtitle": "Config Drift, CIS Benchmark Audit, SD-WAN WireGuard, Rogue DHCP, SLA & Wi-Fi",
+    "subtitle": "Config Drift, CIS Hardening Audit, SD-WAN WireGuard, Rogue DHCP, SLA & Wi-Fi",
     "tab_drift": "Config Drift & Baselines",
-    "tab_cis": "CIS Benchmark Hardening",
+    "tab_cis": "CIS Hardening",
     "tab_cves": "CVE Matrix",
     "tab_audit": "WORM Audit Logs",
     "tab_sdwan": "SD-WAN Hub & Spoke",

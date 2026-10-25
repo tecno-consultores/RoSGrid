@@ -153,7 +153,7 @@
       id: 'compliance',
       title: t('dashboard.tools.compliance_title', 'Flota & Seguridad'),
       category: t('dashboard.tools.compliance_cat', 'Gobernanza'),
-      description: t('dashboard.tools.compliance_desc', 'Auditoría WORM, Matriz CVE, Drift y CIS Benchmark'),
+      description: t('dashboard.tools.compliance_desc', 'Auditoría WORM, Matriz CVE, Drift y CIS Hardening'),
       icon: '🛡️',
       route: '/enterprise/compliance',
     },

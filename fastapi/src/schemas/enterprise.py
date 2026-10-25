@@ -197,6 +197,35 @@ class CisAutoHardenResponse(BaseModel):
     audit_log_id: str
 
 
+class CisPolicyRule(BaseModel):
+    """Definición y estado de activación de una directiva CIS Hardening para la empresa."""
+
+    code: str = Field(..., max_length=16)
+    title: str = Field(..., max_length=255)
+    category: str = Field("CONTROL_PLANE", max_length=64)
+    weight: int = Field(10, ge=1, le=50)
+    severity: str = Field("HIGH", max_length=16)
+    enabled: bool = Field(True)
+    remediation_cmd: str = Field(..., max_length=512)
+    profile_target: str = Field("ALL", max_length=32)
+
+
+class CisPoliciesConfigRequest(StrictBaseModel):
+    """Solicitud para actualizar las directivas y el perfil de endurecimiento CIS de la empresa."""
+
+    profile: str = Field("CORPORATE", max_length=32)
+    rules: list[CisPolicyRule]
+
+
+class CisPoliciesConfigResponse(BaseModel):
+    """Configuración actual de directivas CIS Hardening de la empresa."""
+
+    tenant_id: uuid.UUID
+    profile: str
+    updated_at: str
+    rules: list[CisPolicyRule]
+
+
 # ============================================================================
 # 4. Switching & Detección de Rogue DHCP (Sub-tarea 20.4)
 # ============================================================================
