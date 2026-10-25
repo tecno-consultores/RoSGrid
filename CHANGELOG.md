@@ -17,6 +17,17 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
   - **Worker de Limpieza Desatendida:** Servicio `session_lifecycle_worker.py` integrado en `rosgrid-worker` (`fastapi/src/workers/runner.py`) que barre periódicamente sesiones expiradas en el sorted set, ejecutando `kill_session` y emitiendo el evento WORM `SESSION_CLOSED_ON_DISCONNECT`.
   - **Aseguramiento Multi-Capa 11X:** 8 pruebas unitarias backend en `test_session_closing_grace_period.unit.py` (514 pruebas backend totales con 92% de cobertura), 5 pruebas unitarias frontend en `useTabLifecycleCoordinator.unit.ts` (383 pruebas Vitest totales en 51 archivos pasando al 100%), Escenario 89 en Karate Labs API (`fastapi/test/api_test.feature`) y Escenario 41 en Karate Labs UI (`vue3/test/ui_business_flow.feature`), espejados en `docs/examples/`.
 
+
+### Fixed
+
+- **Corrección de Endpoints, Cierre de Modal y Selector Interactivo de Routers en Ventanas de Mantenimiento (`fastapi/src/api/v1/maintenance.py`, `fastapi/src/schemas/inventory.py`, `vue3/src/views/MaintenanceWindowsView.vue`):**
+  - **Resolución de Error 404:** Añadidos aliases de enrutamiento en FastAPI tanto en la raíz como con subfijo (`@router.post("")`, `@router.post("/windows")`, `@router.get("")`, `@router.get("/windows")`, `@router.delete("")`, `@router.delete("/windows/{id}")`), remediando el error `Not Found` al programar o listar ventanas.
+  - **Cierre y Reset Automático de Modal:** El modal de programación ahora se cierra correctamente (`isCreateModalOpen.value = false`) y resetea su estado una vez confirmada la creación por el backend, desplegando notificaciones reactivas de éxito o error sin bloquear la interfaz.
+  - **Selector Táctico de Routers Múltiples:** Reemplazado el campo de texto plano opcional por un selector interactivo multirouter que consulta el store reactivo de inventario, con filtrado en tiempo real por nombre, IP o modelo, selección global de visibles, badges de estado y conteo dinámico.
+  - **Soporte Transaccional Multi-Equipo en Backend:** El esquema `CreateMaintenanceWindowRequest` soporta `router_ids: list[UUID]`, creando atómicamente una ventana por cada router seleccionado dentro de la misma transacción PostgreSQL e insertando los registros WORM correspondientes.
+  - **Resolución Visual en Tabla de Objetivos:** La columna "Objetivo" en la vista resuelve automáticamente los UUIDs de routers asociados a nombres e IPs amigables (`📡 CORE-01 (192.168.88.1)`) para máxima legibilidad operativa NOC.
+  - **Selector Exclusivo por Calendario y Bloqueo de Tipeo Manual:** Bloqueo estricto de eventos de teclado directo en los inputs de fecha y hora (`starts_at`, `ends_at`) preservando navegación accesible (Tab/Escape) y botón táctico integrado `📅` con `showPicker()` nativo para despliegue ininterrumpido del menú de calendario sin errores de formato.
+
 ### Changed
 
 - **Consolidación de Navegación Lateral y Reparación de Baldosas del Dashboard (`vue3/src/components/common/RgResponsiveShell.vue`, `vue3/src/views/DashboardHomeView.vue`, `vue3/src/router/index.ts`):**

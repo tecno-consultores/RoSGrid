@@ -502,6 +502,20 @@ async def test_maintenance_window_endpoints(fake_request: MagicMock) -> None:
         await cancel_maintenance_window(uuid.uuid4(), fake_request, claims, db)
     assert exc_cancel.value.status_code == 404
 
+    # 7. Create with multiple router_ids
+    r2_id = uuid.uuid4()
+    multi_mw_req = CreateMaintenanceWindowRequest(
+        title="Multi Router Patch",
+        reason="Core cluster upgrade",
+        router_ids=[r_id, r2_id],
+        starts_at=now,
+        ends_at=now + timedelta(hours=3),
+        suppress_alerts=True,
+    )
+    with patch("src.api.v1.maintenance.write_audit_log", new_callable=AsyncMock):
+        multi_mw = await create_maintenance_window(multi_mw_req, fake_request, claims, db)
+        assert multi_mw.title == "Multi Router Patch"
+
 
 # ============================================================================
 # NOTIFICATION CHANNELS ENDPOINTS

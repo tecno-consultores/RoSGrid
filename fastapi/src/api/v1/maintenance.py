@@ -47,6 +47,7 @@ def _apply_window_filters(
     return query
 
 
+@router.get("", response_model=list[MaintenanceWindowResponse])
 @router.get("/windows", response_model=list[MaintenanceWindowResponse])
 async def list_maintenance_windows(
     router_id: uuid.UUID | None = None,
@@ -66,6 +67,7 @@ async def list_maintenance_windows(
     return [MaintenanceWindowResponse.model_validate(w) for w in windows]
 
 
+@router.post("", response_model=MaintenanceWindowResponse, status_code=status.HTTP_201_CREATED)
 @router.post("/windows", response_model=MaintenanceWindowResponse, status_code=status.HTTP_201_CREATED)
 async def create_maintenance_window(
     payload: CreateMaintenanceWindowRequest,
@@ -81,26 +83,72 @@ async def create_maintenance_window(
     ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> MaintenanceWindowResponse:
-    """Programa una nueva ventana de mantenimiento para un router o grupo por etiqueta."""
+    """Programa una nueva ventana de mantenimiento para uno o varios routers o grupo por etiqueta."""
     if payload.ends_at <= payload.starts_at:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="La fecha de finalización debe ser posterior a la fecha de inicio",
         )
-    if not payload.router_id and not payload.target_tag:
+
+    target_router_ids: list[uuid.UUID] = []
+    if payload.router_ids:
+        target_router_ids.extend(payload.router_ids)
+    elif payload.router_id:
+        target_router_ids.append(payload.router_id)
+
+    if not target_router_ids and not payload.target_tag:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Debe especificar al menos un router_id o un target_tag",
+            detail="Debe especificar al menos un router_id, una lista de routers o un target_tag",
         )
 
     tenant_id = uuid.UUID(claims["tid"])
     user_id = uuid.UUID(claims["sub"])
+    ip_addr = request.client.host if request.client else "127.0.0.1"
+    ua = request.headers.get("User-Agent")
 
+    if target_router_ids:
+        created_windows: list[MaintenanceWindow] = []
+        for r_id in target_router_ids:
+            window = MaintenanceWindow(
+                tenant_id=tenant_id,
+                title=payload.title.strip(),
+                reason=payload.reason.strip(),
+                router_id=r_id,
+                target_tag=payload.target_tag.strip().lower() if payload.target_tag else None,
+                starts_at=payload.starts_at,
+                ends_at=payload.ends_at,
+                suppress_alerts=payload.suppress_alerts,
+                created_by=user_id,
+            )
+            db.add(window)
+            created_windows.append(window)
+        await db.flush()
+
+        for w in created_windows:
+            await write_audit_log(
+                session=db,
+                tenant_id=tenant_id,
+                actor_user_id=user_id,
+                actor_username=claims.get("sub", ""),
+                actor_role=claims.get("rol", SystemRoleEnum.TENANT_ADMIN),
+                actor_ip=ip_addr,
+                actor_user_agent=ua,
+                event_category="OPERATIONS",
+                event_action="MAINTENANCE_WINDOW_CREATED",
+                router_id=w.router_id,
+                after_state={"title": w.title, "starts_at": w.starts_at, "ends_at": w.ends_at},
+            )
+        await db.commit()
+        await db.refresh(created_windows[0])
+        return MaintenanceWindowResponse.model_validate(created_windows[0])
+
+    # Caso por etiqueta (target_tag) sin router individual específico
     window = MaintenanceWindow(
         tenant_id=tenant_id,
         title=payload.title.strip(),
         reason=payload.reason.strip(),
-        router_id=payload.router_id,
+        router_id=None,
         target_tag=payload.target_tag.strip().lower() if payload.target_tag else None,
         starts_at=payload.starts_at,
         ends_at=payload.ends_at,
@@ -110,8 +158,6 @@ async def create_maintenance_window(
     db.add(window)
     await db.flush()
 
-    ip_addr = request.client.host if request.client else "127.0.0.1"
-    ua = request.headers.get("User-Agent")
     await write_audit_log(
         session=db,
         tenant_id=tenant_id,
@@ -131,6 +177,8 @@ async def create_maintenance_window(
 
 
 @router.post("/windows/{window_id}/cancel", response_model=MaintenanceWindowResponse)
+@router.delete("/windows/{window_id}", response_model=MaintenanceWindowResponse)
+@router.delete("/{window_id}", response_model=MaintenanceWindowResponse)
 async def cancel_maintenance_window(
     window_id: uuid.UUID,
     request: Request,

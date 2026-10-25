@@ -140,16 +140,17 @@ Cumple la condición estricta de que **solo los 2 perfiles más altos (SUPERADMI
 
 
 
-## **5. Vista de Ventanas de Mantenimiento Programadas (vue3/src/views/inventory/MaintenanceWindowsView.vue)**
+## **5. Vista de Ventanas de Mantenimiento Programadas (vue3/src/views/MaintenanceWindowsView.vue)**
 
-- **Ruta:** /inventory/maintenance-windows
-
-- Permite listar, crear y cancelar ventanas de mantenimiento indicando:
-
-  - Título y motivo técnico.
-
-  - Selección de un MikroTik específico (router\_id) o una etiqueta completa (target\_tag, ej. nodo-valencia).
-
-  - Rango de inicio y fin (starts\_at, ends\_at en zona horaria local America/Caracas, convertidos a UTC al enviar al backend).
-
-  - Checkbox suppress\_alerts = true para silenciar notificaciones hacia Telegram, SMTP y Webhook mientras dure el trabajo programado.
+- **Ruta:** `/inventory/maintenance-windows`
+- **Endpoints de Integración:** `GET/POST /api/v1/maintenance/windows` (con alias `/api/v1/maintenance`), `POST /api/v1/maintenance/windows/{id}/cancel` (con alias `DELETE`).
+- **Capacidades Operativas:**
+  - Listar, crear y cancelar ventanas de mantenimiento con trazabilidad WORM.
+  - Título y motivo técnico del trabajo en caliente.
+  - **Selector Táctico de Alcance:**
+    - **Routers Involucrados:** Selector interactivo multirouter conectado al store de inventario, con filtro en tiempo real por nombre, IP o modelo, selección masiva de visibles y badges informativos. Genera atómicamente ventanas individuales por cada equipo seleccionado (`router_ids: list[UUID]`).
+    - **Etiqueta / Tag:** Agrupación por nodo o zona (ej. `nodo-valencia`).
+    - **Toda la Red (Global):** Supresión general para mantenimientos mayores de cabecera.
+  - Rango de inicio y fin (`starts_at`, `ends_at` en zona horaria local `America/Caracas`, convertidos a UTC en ISO-8601).
+  - Checkbox `suppress_alerts = true` para silenciar notificaciones hacia Telegram, SMTP y Webhooks durante la ventana.
+  - Resolución amigable de routers (`getRouterLabel`) mostrando nombre e IP (`📡 CORE-01 (192.168.88.1)`) en la tabla táctica.

@@ -1662,6 +1662,33 @@ Certificación ejecutada bajo la **Regla Cero** dentro de contenedores efímeros
    - **API BDD:** Escenario 89 incorporado en `fastapi/test/api_test.feature` y replicado en `docs/examples/fastapi/test/api_test.feature` (**89 escenarios totales de API**).
    - **UI BDD:** Escenario 41 incorporado en `vue3/test/ui_business_flow.feature` y replicado en `docs/examples/vue3/test/ui_business_flow.feature` (**41 escenarios totales de UI**).
 
+---
+
+## 39. Remediación y Optimización de Ventanas de Mantenimiento Programadas
+
+### A. Alcance Técnico y Correcciones Aplicadas
+1. **Resolución de Error 404 en Backend:**
+   - Enrutamiento dual en `fastapi/src/api/v1/maintenance.py` (`@router.get("")`, `@router.get("/windows")`, `@router.post("")`, `@router.post("/windows")`, `@router.delete("")`, `@router.delete("/windows/{id}")`, `@router.post("/windows/{id}/cancel")`), remediando el error `Not Found` tanto para clientes que llaman a la raíz del recurso como al sub-recurso de colección.
+2. **Soporte Multi-Router Transaccional:**
+   - Actualización de `CreateMaintenanceWindowRequest` (`fastapi/src/schemas/inventory.py`) para admitir `router_ids: list[UUID] | None`. Creación atómica de una ventana de mantenimiento individual por cada router seleccionado dentro de una sola transacción de PostgreSQL e inserción correspondiente de eventos de auditoría inmutable WORM.
+3. **Selector Interactivo de Routers en Frontend:**
+   - Rediseño táctico del modal en `vue3/src/views/MaintenanceWindowsView.vue` con buscador reactivo de routers por nombre, IP o modelo, selección de routers visibles, conteo dinámico, badges de estado y roles.
+   - Cierre automático del modal (`isCreateModalOpen.value = false;`) y reinicio de campos tras crear la ventana exitosamente.
+   - Resolución de nombres amigables e IPs (`getRouterLabel`) en la columna "Objetivo" de la tabla principal de ventanas de mantenimiento.
+   - Bloqueo estricto de eventos de teclado en inputs de fecha/hora (`handleDateKeyDown`, `@paste.prevent`, `@drop.prevent`) y apertura exclusiva con menú interactivo nativo mediante botón integrado `📅` (`showPicker()`), preservando navegación por teclado accesible (Tab/Escape).
+
+### B. Cobertura y Certificación Multi-Capa 11X
+1. **Backend Unitario (Pytest en Docker):**
+   - `fastapi/tests/api/test_inventory_and_vault_endpoints_full.unit.py` (**7 de 7 pruebas PASADAS, 100%**).
+2. **Frontend Unitario (Vitest en Docker):**
+   - `vue3/src/views/inventory/maintenanceWindowsView.unit.ts` (**4 de 4 pruebas PASADAS, 100%**).
+3. **Análisis Estático y Tipado Estricto:**
+   - `vue-tsc --noEmit`: 0 errores.
+   - `ruff check src/ tests/`: All checks passed.
+   - `mypy --strict src/`: Success: no issues found in 118 source files.
+   - `eslint src/views/MaintenanceWindowsView.vue`: 0 errores.
+
+
 
 
 

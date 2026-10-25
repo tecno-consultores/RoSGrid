@@ -272,6 +272,7 @@ class CreateMaintenanceWindowRequest(StrictBaseModel):
     title: str = Field(..., min_length=3, max_length=150)
     reason: str = Field(..., min_length=5)
     router_id: uuid.UUID | None = None
+    router_ids: list[uuid.UUID] | None = None
     target_tag: str | None = Field(default=None, max_length=48)
     starts_at: datetime
     ends_at: datetime
