@@ -78,13 +78,15 @@ async def push_event_to_ringbuffer(
         redis = get_redis_client()
         key = f"rg:{tenant_id}:router:{router_id}:syslog:ring"
         active_key = f"rg:{tenant_id}:router:{router_id}:syslog:active"
+        conf_key = f"rg:{tenant_id}:router:{router_id}:syslog:configured"
         payload = event.model_dump_json()
 
         pipeline = redis.pipeline()
         pipeline.lpush(key, payload)
         pipeline.ltrim(key, 0, SYSLOG_RINGBUFFER_MAXLEN - 1)
         pipeline.expire(key, SYSLOG_KEY_TTL_SECONDS)
-        pipeline.set(active_key, "1", ex=300)
+        pipeline.set(active_key, "1", ex=3600)
+        pipeline.set(conf_key, "1", ex=86400)
 
         if event.is_critical:
             alert_payload = json.dumps(
@@ -123,8 +125,13 @@ async def get_router_syslog_events(
 class SyslogUdpProtocol(asyncio.DatagramProtocol):
     """Protocolo UDP asíncrono para ingesta de eventos Syslog en puerto no privilegiado."""
 
-    def __init__(self, ip_router_map: dict[str, tuple[uuid.UUID, uuid.UUID]]) -> None:
+    def __init__(
+        self,
+        ip_router_map: dict[str, tuple[uuid.UUID, uuid.UUID]],
+        name_router_map: dict[str, tuple[uuid.UUID, uuid.UUID]] | None = None,
+    ) -> None:
         self.ip_router_map = ip_router_map
+        self.name_router_map = name_router_map or {}
         self.transport: asyncio.DatagramTransport | None = None
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
@@ -133,34 +140,62 @@ class SyslogUdpProtocol(asyncio.DatagramProtocol):
     def datagram_received(self, data: bytes, addr: tuple[str, int]) -> None:
         src_ip = addr[0]
         mapping = self.ip_router_map.get(src_ip)
+
+        text = data.decode("utf-8", errors="replace")
+        clean = text.strip()
+
+        # Si el datagrama viene vía Docker NAT/bridge (ej: 172.18.0.1, 127.0.0.1) o VPN/túnel
         if not mapping:
-            # Descarte silencioso anti-spoofing para IPs no enroladas en el tenant
+            # 1. Comprobar si alguna de las IPs registradas aparece en el mensaje Syslog
+            for registered_ip, target in self.ip_router_map.items():
+                if registered_ip in clean:
+                    mapping = target
+                    break
+
+        # 2. Comprobar si el display_name o ros_identity del router aparece en el encabezado BSD
+        if not mapping and self.name_router_map:
+            tokens = re.findall(r"[a-zA-Z0-9_\-\.]+", clean[:150])
+            for token in tokens:
+                t_lower = token.lower()
+                if t_lower in self.name_router_map:
+                    mapping = self.name_router_map[t_lower]
+                    break
+
+        if not mapping:
+            logger.debug("Descarte Syslog: no se encontró mapeo para origen %s ni en texto: %s", src_ip, clean[:80])
             return
 
         tenant_id, router_id = mapping
         try:
-            text = data.decode("utf-8", errors="replace")
-            event = parse_syslog_message(text)
+            event = parse_syslog_message(clean)
             asyncio.create_task(push_event_to_ringbuffer(tenant_id, router_id, event))
         except Exception as exc:
             logger.debug("Error procesando datagrama Syslog de %s: %s", src_ip, exc)
 
 
-async def load_ip_router_map() -> dict[str, tuple[uuid.UUID, uuid.UUID]]:
-    """Consulta la base de datos para mapear IPs de routers activos a (tenant_id, router_id)."""
+async def load_router_syslog_maps() -> tuple[
+    dict[str, tuple[uuid.UUID, uuid.UUID]],
+    dict[str, tuple[uuid.UUID, uuid.UUID]],
+]:
+    """Consulta la base de datos para mapear IPs y nombres de routers activos a (tenant_id, router_id)."""
     from sqlalchemy import select
 
     from src.db.session import async_session_maker
     from src.models.inventory import Router, RouterAdminStateEnum
 
     ip_map: dict[str, tuple[uuid.UUID, uuid.UUID]] = {}
+    name_map: dict[str, tuple[uuid.UUID, uuid.UUID]] = {}
     try:
         async with async_session_maker() as session:
-            stmt = select(Router.id, Router.tenant_id, Router.api_base_url).where(
-                Router.admin_state != RouterAdminStateEnum.RETIRED
-            )
+            stmt = select(
+                Router.id,
+                Router.tenant_id,
+                Router.api_base_url,
+                Router.display_name,
+                Router.ros_identity,
+            ).where(Router.admin_state != RouterAdminStateEnum.RETIRED)
             rows = (await session.execute(stmt)).all()
-            for r_id, t_id, base_url in rows:
+            for r_id, t_id, base_url, d_name, r_ident in rows:
                 if base_url:
                     clean = (
                         base_url.replace("https://", "")
@@ -171,8 +206,18 @@ async def load_ip_router_map() -> dict[str, tuple[uuid.UUID, uuid.UUID]]:
                     )
                     if clean:
                         ip_map[clean] = (t_id, r_id)
+                if d_name:
+                    name_map[d_name.strip().lower()] = (t_id, r_id)
+                if r_ident:
+                    name_map[r_ident.strip().lower()] = (t_id, r_id)
     except Exception as exc:
-        logger.warning("Fallo al sincronizar mapa IP de routers para Syslog: %s", exc)
+        logger.warning("Fallo al sincronizar mapas de routers para Syslog: %s", exc)
+    return ip_map, name_map
+
+
+async def load_ip_router_map() -> dict[str, tuple[uuid.UUID, uuid.UUID]]:
+    """Mantiene compatibilidad con suites de pruebas unitarias existentes."""
+    ip_map, _ = await load_router_syslog_maps()
     return ip_map
 
 
@@ -183,20 +228,21 @@ async def syslog_collector_worker_loop() -> None:
     port = getattr(settings, "ROSGRID_SYSLOG_PORT", 5514)
     logger.info("=== Iniciando Colector Syslog UDP en 0.0.0.0:%d ===", port)
 
-    ip_map = await load_ip_router_map()
+    ip_map, name_map = await load_router_syslog_maps()
     loop = asyncio.get_running_loop()
 
     transport = None
     protocol = None
     try:
         transport, protocol = await loop.create_datagram_endpoint(
-            lambda: SyslogUdpProtocol(ip_map),
+            lambda: SyslogUdpProtocol(ip_map, name_map),
             local_addr=("0.0.0.0", port),
         )
         logger.info(
-            "Colector Syslog escuchando en UDP 0.0.0.0:%d con %d router(s) mapeado(s).",
+            "Colector Syslog escuchando en UDP 0.0.0.0:%d con %d IP(s) y %d nombre(s) mapeado(s).",
             port,
             len(ip_map),
+            len(name_map),
         )
     except Exception as exc:
         logger.error("Error al enlazar socket UDP 0.0.0.0:%d para Syslog: %s", port, exc)
@@ -205,11 +251,18 @@ async def syslog_collector_worker_loop() -> None:
     try:
         while True:
             await asyncio.sleep(60)
-            new_map = await load_ip_router_map()
+            new_ip_map, new_name_map = await load_router_syslog_maps()
             if protocol and hasattr(protocol, "ip_router_map"):
                 protocol.ip_router_map.clear()
-                protocol.ip_router_map.update(new_map)
-                logger.debug("Mapa de IPs Syslog refrescado: %d routers.", len(new_map))
+                protocol.ip_router_map.update(new_ip_map)
+                if hasattr(protocol, "name_router_map"):
+                    protocol.name_router_map.clear()
+                    protocol.name_router_map.update(new_name_map)
+                logger.debug(
+                    "Mapas Syslog refrescados: %d IPs, %d nombres.",
+                    len(new_ip_map),
+                    len(new_name_map),
+                )
     except asyncio.CancelledError:
         logger.info("Cerrando listener Syslog UDP 0.0.0.0:%d...", port)
     finally:

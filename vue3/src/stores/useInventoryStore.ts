@@ -68,12 +68,11 @@ export const useInventoryStore = defineStore('inventory', () => {
     triggerRef(maintenanceWindows);
   }
 
-  async function fetchRouters(): Promise<void> {
+  async function fetchRouters(refresh: boolean = false): Promise<void> {
     try {
       const { http } = await import('@/api/httpClient');
-      const res = await http.get<RouterItem[] | { items: RouterItem[] }>(
-        '/api/v1/inventory/routers',
-      );
+      const url = refresh ? '/api/v1/inventory/routers?refresh=true' : '/api/v1/inventory/routers';
+      const res = await http.get<RouterItem[] | { items: RouterItem[] }>(url);
       const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
       const items: RouterItem[] = raw.map((item: any) => ({
         ...item,
@@ -103,6 +102,22 @@ export const useInventoryStore = defineStore('inventory', () => {
     } catch {
       // Sin datos de demostración: si falla la red, el inventario permanece vacío
       setRouters([]);
+    }
+  }
+
+  async function syncRouterSyslog(routerId: string): Promise<boolean> {
+    try {
+      const { http } = await import('@/api/httpClient');
+      const res = await http.post<RouterItem>(`/api/v1/inventory/routers/${routerId}/sync-syslog`);
+      if (res.data) {
+        updateRouter({
+          ...res.data,
+          syslog_active: true,
+        });
+      }
+      return true;
+    } catch {
+      return false;
     }
   }
 
@@ -173,6 +188,7 @@ export const useInventoryStore = defineStore('inventory', () => {
     selectRouter,
     clearInventory,
     fetchRouters,
+    syncRouterSyslog,
     deleteRouter,
     fetchNetworkRoles,
     createCustomRole,

@@ -13,7 +13,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from src.api.v1.inventory_helpers import discover_hardware
+from src.api.v1.inventory_helpers import discover_hardware, inspect_router_syslog_config
 from src.api.v1.webfig_common import _create_client_from_vault
 from src.db.session import async_session_maker
 from src.mikrotik.client import MikrotikRestClient
@@ -117,14 +117,14 @@ async def _evaluate_single_router(session: Any, redis: Any, r: Router) -> None:
 
             # Detección de presencia y configuración de Syslog hacia RoSGrid
             try:
-                actions = await client.get("system/logging/action")
-                if isinstance(actions, list):
-                    has_syslog = any(a.get("name") == "rosgridsyslog" for a in actions)
-                    syslog_conf_key = f"rg:{r.tenant_id}:router:{r.id}:syslog:configured"
-                    if has_syslog:
-                        await redis.set(syslog_conf_key, "1", ex=86400)
-                    else:
-                        await redis.delete(syslog_conf_key)
+                actions = await client.get("/system/logging/action")
+                rules = await client.get("/system/logging")
+                has_syslog = inspect_router_syslog_config(actions, rules)
+                syslog_conf_key = f"rg:{r.tenant_id}:router:{r.id}:syslog:configured"
+                syslog_active_key = f"rg:{r.tenant_id}:router:{r.id}:syslog:active"
+                if has_syslog:
+                    await redis.set(syslog_conf_key, "1", ex=86400)
+                    await redis.set(syslog_active_key, "1", ex=3600)
             except Exception as s_exc:
                 logger.debug("Fallo al verificar acción Syslog para %s: %s", r.display_name, s_exc)
 

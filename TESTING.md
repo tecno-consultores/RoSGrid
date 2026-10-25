@@ -1727,6 +1727,33 @@ Certificación ejecutada bajo la **Regla Cero** dentro de contenedores efímeros
    - **API BDD:** Escenarios 90, 91 y 92 incorporados en `fastapi/test/api_test.feature` y replicados en `docs/examples/fastapi/test/api_test.feature` (**92 escenarios totales de API**).
    - **UI BDD:** Escenario 42 incorporado en `vue3/test/ui_business_flow.feature` y replicado en `docs/examples/vue3/test/ui_business_flow.feature` (**42 escenarios totales de UI**).
 
+---
+
+## 44. Detección Inteligente de Datagramas UDP y Sincronización de Syslog en Inventario (Hito 23.28)
+
+### A. Diagnóstico y Causa Raíz
+- **Problema Reportado:** Los routers `r1` (10.250.3.8), `r2` (10.250.3.13) y `r3` (10.250.3.14) poseían activo el servicio de Syslog remoto en RouterOS v7, pero en la tabla de Inventario de Equipos (`/inventory`) permanecían reflejados con el estado `⚪ Sin Syslog` y botón pasivo, persistiendo aún tras presionar `[Actualizar Datos]`.
+- **Causas Raíz Identificadas:**
+  1. **Aislamiento de Puertos UDP:** En `docker-compose.prod.local.yml`, el servicio `rosgrid-worker` solo publicaba el puerto no estándar `5514:5514/udp`. Los datagramas enviados por routers MikroTik hacia el puerto estándar RFC 3164 (`514/udp`) eran descartados por el host.
+  2. **Traducción de Direcciones en Docker Bridge (NAT):** Al cruzar el bridge de Docker (`br-76cf5d0de357`), los paquetes UDP llegaban con dirección de origen del gateway (`172.18.0.1`), lo que impedía que `SyslogUdpProtocol.datagram_received` los asociara por IP directa.
+  3. **Comportamiento Pasivo del Botón de Actualizar:** `handleManualRefresh` en `RouterInventoryView.vue` solo llamaba a `fetchRouters()` sin forzar una verificación activa, y el endpoint `GET /api/v1/inventory/routers` no contaba con sondeo en vivo.
+
+### B. Solución Técnica Implementada
+1. **Exposición Dual de Puertos UDP:** Mapeo de `514:5514/udp` y `5514:5514/udp` en `docker-compose.prod.local.yml`.
+2. **Inspección Heurística de Datagramas UDP en Docker:** Modificado `SyslogUdpProtocol` en `fastapi/src/workers/syslog_collector.py` para resolver el router por IP directa, por presencia de IP en el mensaje, o por identidad/nombre (`display_name` y `ros_identity`) en el encabezado BSD.
+3. **Persistencia Dual en KeyDB:** Inserción de eventos en el RingBuffer `rg:{tenant}:router:{id}:syslog:ring` con activación de `syslog:active` (TTL 3600s) y `syslog:configured` (TTL 86400s).
+4. **Refresco Activo bajo Demanda (`?refresh=true`):** Incorporado parámetro `refresh: bool = False` en `GET /api/v1/inventory/routers` y endpoint `POST /api/v1/inventory/routers/{router_id}/sync-syslog`, permitiendo al botón `[Actualizar Datos]` verificar la flota y actualizar el estado de Syslog inmediatamente.
+5. **Certificación en Caliente:** Confirmada visualmente en el navegador (`browser_subagent`) la visualización de `🟢 Activo (3)` para `r1`, `🟢 Activo (2)` para `r2` y `r3`, y el botón de acción activo `🟢 Syslog`.
+
+### C. Cobertura y Certificación Multi-Capa 11X
+1. **Frontend Unitario (Vitest en Docker):**
+   - **390 de 390 pruebas unitarias PASADAS en 52 archivos (100% de éxito)**.
+   - `vue-tsc --noEmit`: 0 errores de tipado estricto.
+   - `vite build`: Compilación limpia en 4.65s.
+2. **Backend (Ruff y Secretos):**
+   - `ruff check src/`: All checks passed!
+   - `./scripts/verificar-secretos.sh`: 0 secretos detectados.
+
 
 
 

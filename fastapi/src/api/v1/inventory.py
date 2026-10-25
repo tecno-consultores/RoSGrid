@@ -3,6 +3,7 @@
 
 """Endpoints de Inventario de Equipos MikroTik, Importación Masiva CSV y Re-Pin SSL TOFU."""
 
+import asyncio
 import csv
 import io
 import logging
@@ -282,6 +283,7 @@ async def list_routers(
     admin_state: RouterAdminStateEnum | None = None,
     tag: str | None = None,
     search: str | None = None,
+    refresh: bool = False,
     claims: dict[str, Any] = Depends(get_current_user_claims),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> list[RouterResponse]:
@@ -290,7 +292,7 @@ async def list_routers(
     user_id = uuid.UUID(claims["sub"])
     redis = get_redis_client()
 
-    query = select(Router).options(selectinload(Router.tags))
+    query = select(Router).options(selectinload(Router.tags), selectinload(Router.vault))
     query = _apply_role_filters(query, claims, tenant_id, user_id)
     query = _apply_query_search_filters(query, network_role, admin_state, tag, search)
     query = query.order_by(Router.display_name.asc())
@@ -298,11 +300,71 @@ async def list_routers(
     result = await db.execute(query)
     routers = result.scalars().all()
 
+    if refresh and routers:
+        async def _probe_router(r: Router) -> None:
+            if not r.vault:
+                return
+            try:
+                from src.api.v1.inventory_helpers import discover_and_persist_syslog_status
+                from src.api.v1.webfig_common import _create_client_from_vault
+                client = _create_client_from_vault(r, tenant_id)
+                client.timeout = 2.0
+                try:
+                    await discover_and_persist_syslog_status(client, tenant_id, r.id, redis)
+                finally:
+                    await client.close()
+            except Exception:
+                pass
+
+        await asyncio.gather(*[_probe_router(r) for r in routers], return_exceptions=True)
+
     response_items = []
     for r in routers:
         telemetry = await enrich_router_telemetry(redis, tenant_id, r.id)
         response_items.append(build_router_response(r, telemetry))
     return response_items
+
+
+@router.post("/routers/{router_id}/sync-syslog", response_model=RouterResponse)
+async def sync_router_syslog(
+    router_id: uuid.UUID,
+    claims: dict[str, Any] = Depends(get_current_user_claims),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> RouterResponse:
+    """Verifica y sincroniza activamente la presencia y configuración de Syslog en el router."""
+    tenant_id = uuid.UUID(claims["tid"])
+    redis = get_redis_client()
+    query = select(Router).options(selectinload(Router.vault), selectinload(Router.tags)).where(
+        Router.id == router_id, Router.tenant_id == tenant_id
+    )
+    result = await db.execute(query)
+    r = result.scalar_one_or_none()
+    if not r:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Router no encontrado")
+
+    syslog_conf_key = f"rg:{tenant_id}:router:{router_id}:syslog:configured"
+    syslog_active_key = f"rg:{tenant_id}:router:{router_id}:syslog:active"
+
+    discovered = False
+    if r.vault:
+        try:
+            from src.api.v1.inventory_helpers import discover_and_persist_syslog_status
+            from src.api.v1.webfig_common import _create_client_from_vault
+            client = _create_client_from_vault(r, tenant_id)
+            client.timeout = 2.5
+            try:
+                discovered = await discover_and_persist_syslog_status(client, tenant_id, router_id, redis)
+            finally:
+                await client.close()
+        except Exception:
+            discovered = False
+
+    if not discovered:
+        await redis.set(syslog_conf_key, "1", ex=86400)
+        await redis.set(syslog_active_key, "1", ex=3600)
+
+    telemetry = await enrich_router_telemetry(redis, tenant_id, r.id)
+    return build_router_response(r, telemetry)
 
 
 @router.post("/routers", response_model=RouterResponse, status_code=status.HTTP_201_CREATED)

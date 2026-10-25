@@ -239,7 +239,7 @@
   async function handleManualRefresh() {
     isRefreshing.value = true;
     try {
-      await inventoryStore.fetchRouters();
+      await inventoryStore.fetchRouters(true);
       isFleetUpdated.value = true;
       setTimeout(() => {
         isFleetUpdated.value = false;

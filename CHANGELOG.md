@@ -10,6 +10,14 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Fixed
 
+- **Sincronización, Detección de Datagramas y Visualización de Syslog en Inventario de Equipos (`fastapi/src/workers/syslog_collector.py`, `fastapi/src/api/v1/inventory_helpers.py`, `fastapi/src/workers/health_monitor_worker.py`, `fastapi/src/api/v1/inventory.py`, `vue3/src/views/RouterInventoryView.vue`, `vue3/src/stores/useInventoryStore.ts`, `docker-compose.prod.local.yml`):**
+  - **Exposición Dual de Puertos UDP (514 y 5514):** Mapeado el puerto estándar RFC 3164 / MikroTik `514:5514/udp` junto al puerto alternativo `5514:5514/udp` en el servicio `rosgrid-worker`, permitiendo recibir datagramas nativos de routers MikroTik RouterOS v7 sin importar el puerto configurado.
+  - **Resolución Inteligente de Datagramas UDP bajo Docker NAT / Bridge:** Implementado mapeo bidireccional por IP de router y por identidad (`display_name`, `ros_identity`) en `SyslogUdpProtocol.datagram_received`. Los datagramas entrantes vía Docker gateway (`172.18.0.1` o `127.0.0.1`) son inspeccionados en su encabezado y cuerpo, asociándolos de inmediato al router correcto y almacenándolos en su RingBuffer KeyDB con persistencia de `syslog:active` y `syslog:configured`.
+  - **Detección Flexible en RouterOS v7 REST API:** Incorporada la función `inspect_router_syslog_config` en `inventory_helpers.py` y `health_monitor_worker.py` para detectar acciones remotas estándar (`target="remote"`, campos `remote` con IP/host, o nombres `remote`, `syslog`, `rosgridsyslog`), así como reglas activas en `/system/logging`.
+  - **Refresco Activo bajo Demanda (`?refresh=true`):** El botón `[🔄 Actualizar Datos]` en la vista de Inventario ahora despacha `fetchRouters(true)` enviando el parámetro `?refresh=true`, el cual ejecuta una verificación paralela no bloqueante en FastAPI y actualiza de inmediato el estado en vivo.
+  - **Endpoint de Sincronización Directa de Syslog:** Incorporado `POST /api/v1/inventory/routers/{router_id}/sync-syslog` en FastAPI y `syncRouterSyslog` en `useInventoryStore.ts` para forzar la sincronización y activación de Syslog en routers específicos.
+  - **Confirmación Visual Exitosa:** Enriquecimiento inmediato de las filas de la tabla de inventario mostrando `🟢 Activo (<conteo>)` y botón interactivo `🟢 Syslog`.
+
 - **Persistencia de Feature Flags en Asistente de Onboarding Inicial (`fastapi/src/api/v1/tenants.py`, `vue3/src/components/common/TenantOnboardingModal.vue`):**
   - **Soporte Bimodal HTTP (PUT y PATCH):** Añadido decorador `@router.put` en `/api/v1/tenants/{tenant_id}/features` junto a `@router.patch`, eliminando el rechazo `HTTP 405 Method Not Allowed` al confirmar la configuración inicial del tenant desde el modal de bienvenida.
   - **Sincronización en Frontend:** Actualizado `TenantOnboardingModal.vue` para despachar `http.patch` en consonancia con la vista de administración general de tenants.

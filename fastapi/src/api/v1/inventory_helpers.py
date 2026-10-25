@@ -122,7 +122,65 @@ async def discover_hardware(client: MikrotikRestClient, r: Router) -> None:
     await _discover_routerboard(client, r)
 
 
-async def perform_discovery(client: MikrotikRestClient, r: Router) -> bool:
+def inspect_router_syslog_config(actions: Any, rules: Any = None) -> bool:
+    """Evalúa si la configuración de RouterOS v7 tiene Syslog remoto activo.
+
+    Admite:
+    - Acciones con target == 'remote' o remote configurado (IP o hostname).
+    - Acciones con nombre 'rosgridsyslog', 'remote', o 'syslog'.
+    - Reglas activas en /system/logging apuntando a acciones remotas.
+    """
+    remote_action_names = {"rosgridsyslog", "remote", "syslog"}
+    has_remote_action = False
+    if isinstance(actions, list):
+        for act in actions:
+            if not isinstance(act, dict):
+                continue
+            name = str(act.get("name", "")).strip().lower()
+            target = str(act.get("target", "")).strip().lower()
+            remote_dest = str(act.get("remote", "")).strip()
+            if target == "remote" or remote_dest or name in remote_action_names:
+                remote_action_names.add(name)
+                has_remote_action = True
+
+    if isinstance(rules, list):
+        for rule in rules:
+            if not isinstance(rule, dict):
+                continue
+            act_name = str(rule.get("action", "")).strip().lower()
+            disabled = str(rule.get("disabled", "false")).strip().lower() in ("true", "yes", "1")
+            if not disabled and (act_name in remote_action_names or act_name == "remote"):
+                return True
+
+    return has_remote_action
+
+
+async def discover_and_persist_syslog_status(
+    client: MikrotikRestClient,
+    tenant_id: uuid.UUID,
+    router_id: uuid.UUID,
+    redis: Any = None,
+) -> bool:
+    """Consulta la configuración de Syslog en el router y actualiza el estado en KeyDB."""
+    try:
+        from src.redis_layer.client import get_redis_client
+
+        r_client = redis or get_redis_client()
+        actions = await client.get("/system/logging/action")
+        rules = await client.get("/system/logging")
+        has_syslog = inspect_router_syslog_config(actions, rules)
+        syslog_conf_key = f"rg:{tenant_id}:router:{router_id}:syslog:configured"
+        syslog_active_key = f"rg:{tenant_id}:router:{router_id}:syslog:active"
+        if has_syslog:
+            await r_client.set(syslog_conf_key, "1", ex=86400)
+            await r_client.set(syslog_active_key, "1", ex=3600)
+        return has_syslog
+    except Exception as exc:
+        logger.debug("Error comprobando Syslog en router %s: %s", router_id, exc)
+        return False
+
+
+async def perform_discovery(client: MikrotikRestClient, r: Router, redis: Any = None) -> bool:
     """Verifica huella SSL TOFU y actualiza hardware del equipo."""
     try:
         fp = await client.ensure_ssl_verified()
@@ -132,6 +190,7 @@ async def perform_discovery(client: MikrotikRestClient, r: Router) -> bool:
             r.ssl_pinned_at = datetime.now(UTC)
 
         await discover_hardware(client, r)
+        await discover_and_persist_syslog_status(client, r.tenant_id, r.id, redis)
         r.is_reachable = True
         r.last_seen_at = datetime.now(UTC)
         r.last_discovery_sync_at = datetime.now(UTC)
