@@ -1,0 +1,17 @@
+[
+  {
+    ".id": "*1",
+    "name": "ether1",
+    "poe-out": "auto-on",
+    "poe-out-status": "overload",
+    "poe-out-voltage": "0.0",
+    "poe-out-current": "0",
+    "poe-out-power": "0.0"
+  },
+  {
+    ".id": "*2",
+    "name": "ether2",
+    "poe-out": "auto-on",
+    "poe-out-status": "short-circuit"
+  }
+]

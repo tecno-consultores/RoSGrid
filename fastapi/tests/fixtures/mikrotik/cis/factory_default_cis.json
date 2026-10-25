@@ -1,0 +1,30 @@
+{
+  "ip_service": [
+    {"name": "telnet", "port": 23, "disabled": false, "address": ""},
+    {"name": "ftp", "port": 21, "disabled": false, "address": ""},
+    {"name": "www", "port": 80, "disabled": false, "address": ""},
+    {"name": "ssh", "port": 22, "disabled": false, "address": ""},
+    {"name": "www-ssl", "port": 443, "disabled": true, "address": ""},
+    {"name": "api", "port": 8728, "disabled": false, "address": ""},
+    {"name": "winbox", "port": 8291, "disabled": false, "address": ""},
+    {"name": "api-ssl", "port": 8729, "disabled": true, "address": ""}
+  ],
+  "user": [
+    {"name": "admin", "group": "full", "disabled": false}
+  ],
+  "ip_dns": {
+    "allow-remote-requests": false,
+    "servers": "1.1.1.1,8.8.8.8"
+  },
+  "neighbor_discovery": {
+    "discover-interface-list": "all"
+  },
+  "firewall_filter": [
+    {"chain": "input", "action": "accept", "connection-state": "established,related", "comment": "defconf: accept established,related"},
+    {"chain": "input", "action": "drop", "connection-state": "invalid", "comment": "defconf: drop invalid"},
+    {"chain": "input", "action": "accept", "protocol": "icmp", "comment": "defconf: accept ICMP"},
+    {"chain": "input", "action": "drop", "in-interface-list": "!LAN", "comment": "defconf: drop all not coming from LAN"}
+  ],
+  "firewall_raw": [],
+  "interface_vlan": []
+}

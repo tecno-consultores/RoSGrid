@@ -1,0 +1,36 @@
+{
+  "ip_address": [
+    {
+      ".id": "*1",
+      "address": "192.168.88.1/24",
+      "network": "192.168.88.0",
+      "interface": "bridge",
+      "comment": "defconf"
+    }
+  ],
+  "ip_pool": [
+    {
+      ".id": "*1",
+      "name": "default-dhcp",
+      "ranges": "192.168.88.10-192.168.88.254"
+    }
+  ],
+  "dhcp_server": [
+    {
+      ".id": "*1",
+      "name": "defconf",
+      "interface": "bridge",
+      "address-pool": "default-dhcp",
+      "disabled": false
+    }
+  ],
+  "dhcp_network": [
+    {
+      ".id": "*1",
+      "address": "192.168.88.0/24",
+      "gateway": "192.168.88.1",
+      "comment": "defconf"
+    }
+  ],
+  "dhcp_lease": []
+}

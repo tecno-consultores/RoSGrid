@@ -1841,6 +1841,18 @@ Certificación ejecutada bajo la **Regla Cero** dentro de los contenedores efím
    - `/inventory`: `r1, r2, r3` reflejan `🟢 Activo (3)` con botón `🟢 Syslog`. `r4, r5, r6` reflejan `⚪ Sin Syslog` con botón inactivo `📡 Syslog`.
    - `/dashboard`: Muestra `6 equipos | 6 en línea | 0 desconectado` con disponibilidad al 100% ÓPTIMO.
 
+### D. Ampliación Universal del Marco Trimodal (Fase 2 Planificada)
+Conforme a la Especificación 43 v2.0.0 y la directiva `.agents/rules/ground_truth_fixtures_and_negative_invariants.md`, se establece la obligatoriedad de extender este mismo estándar a los restantes 7 dominios críticos:
+1. CIS Hardening (`/compliance/cis-audit`)
+2. Topología L2 MNDP/LLDP (`/topology/l2`)
+3. IPAM, Pools DHCP y Leases (`/ipam/prefixes`)
+4. Orquestador PoE (`/bulk-ops/poe`)
+5. Rogue DHCP & DHCP Snooping (`/compliance/rogue-dhcp`)
+6. CAPsMAN & Wi-Fi 6 (`/wireless/capsman`)
+7. Detección de Config Drift (`/compliance/drift`)
+8. Suite Unificada de Smoke Tests de Flota Real Multi-Dominio (`scripts/validar-flota-real.py`).
+
+
 
 
 

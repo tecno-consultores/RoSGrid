@@ -578,27 +578,50 @@
 
 ---
 
-## 🛡️ HITO 24: Detección Canónica Determinista de Syslog, Fixtures Reales MikroTik v7 y Smoke Test de Flota Real (Negative Invariants)
+## 🛡️ HITO 24: Marco Universal de Fixtures Trimodales Ground-Truth, Invariantes Negativas y Smoke Tests de Flota Real
 
-> **Archivos Guía:** `docs/specs/43_REAL_FLEET_SMOKE_TESTS_GROUND_TRUTH_FIXTURES_AND_DETERMINISTIC_SENSING.md`
+> **Archivos Guía:** `docs/specs/43_REAL_FLEET_SMOKE_TESTS_GROUND_TRUTH_FIXTURES_AND_DETERMINISTIC_SENSING.md` y `.agents/rules/ground_truth_fixtures_and_negative_invariants.md`
 
+### Fase 1: Subsistema de Syslog y Telemetría Viva (Completado y Certificado)
 - [x] **24.1** **Redefinición Canónica y Determinista de Detección de Syslog:**
   - Sustituida la búsqueda genérica de `"remote"` en `inspect_router_syslog_config` (`inventory_helpers.py` y `health_monitor_worker.py`) por validación estricta de doble candado: acción con nombre exacto `rosgridsyslog`, parámetro `remote` con IP válida (distinta de `0.0.0.0`) y regla en `/system/logging` con `action="rosgridsyslog"` y `disabled="false"`.
   - Fallback por evidencia física de tráfico en KeyDB (`llen(syslog:ring) > 0`).
   - Retorno estrictamente de `False` ante routers con configuración por defecto de fábrica.
-- [x] **24.2** **Fixtures JSON Reales de MikroTik RouterOS v7 (Ground-Truth):**
-  - Creación de capturas crudas bajo `fastapi/tests/fixtures/mikrotik/`: `factory_default_logging.json` (router de fábrica inerte), `rosgrid_configured_logging.json` (plantilla oficial activa) y `disabled_rosgrid_logging.json` (regla deshabilitada).
+- [x] **24.2** **Fixtures JSON Reales de Syslog MikroTik RouterOS v7:**
+  - Capturas crudas bajo `fastapi/tests/fixtures/mikrotik/`: `factory_default_logging.json` (de fábrica), `rosgrid_configured_logging.json` (activo) y `disabled_rosgrid_logging.json` (deshabilitado).
 - [x] **24.3** **Saneamiento de Estado en KeyDB y PostgreSQL:**
-  - Purgadas claves erróneas de `r4`, `r5` y `r6` en KeyDB (`syslog:active`, `syslog:configured`) y fijado `operational_status = "OFFLINE"`.
-  - Restablecida la discriminación real de sensores Syslog, preservando activos a `r1`, `r2` y `r3`.
-- [x] **24.4** **Guardrail de Validación de Flota Real (`scripts/validar-flota-real.py`):**
-  - Implementado script de prueba end-to-end contra la API del stack local validando aserciones positivas (`r1, r2, r3` vivos con Syslog) y aserciones negativas obligatorias (`r4, r5, r6` apagados sin Syslog).
-  - Integrado en `Makefile` (`make smoke-fleet`) con bloqueo estricto del pipeline ante cualquier falso positivo.
+  - Purgadas claves erróneas de `r4`, `r5` y `r6` en KeyDB (`syslog:active`, `syslog:configured`).
+- [x] **24.4** **Guardrail Inicial de Validación de Flota Real (`scripts/validar-flota-real.py`):**
+  - Script end-to-end evaluando aserciones positivas (`r1, r2, r3` con Syslog activo) y aserciones negativas obligatorias (`r4, r5, r6` estrictamente inactivos / `⚪ Sin Syslog`).
 - [x] **24.5** **Aseguramiento Unitario Multi-Capa con Salidas Reales:**
-  - Pruebas en Pytest (`test_inventory_syslog_detection.unit.py`) evaluando `inspect_router_syslog_config` contra los fixtures reales (100% aprobadas).
-  - Pruebas en Vitest validando renderizado de badges (`🟢 Activo` vs `⚪ Sin Syslog`) y cálculo de disponibilidad.
+  - Pruebas Pytest (`test_inventory_syslog_detection.unit.py`) evaluando `inspect_router_syslog_config` contra los fixtures reales (100% aprobadas).
 - [x] **24.6** **Inspección Visual y Certificación en Navegador:**
-  - Inspección con `browser_subagent` en `/inventory` y `/dashboard` certificando que `r1, r2, r3` muestran `🟢 Activo (3)` y `r4, r5, r6` muestran `⚪ Sin Syslog`, con disponibilidad de flota en 100% (6/6 equipos alcanzables vía REST).
+  - Inspección con `browser_subagent` en `/inventory` y `/dashboard` certificando que `r1, r2, r3` muestran `🟢 Activo (3)` y `r4, r5, r6` muestran `⚪ Sin Syslog`.
+
+### Fase 2: Extensión Transversal a los 7 Subsistemas Restantes (Completada y Certificada)
+- [x] **24.7** **Auditoría CIS Hardening & Endurecimiento:**
+  - Fixtures trimodales: `factory_default_cis.json` (Telnet/FTP activos, admin sin pass, score < 35), `hardened_rosgrid_cis.json` (score >= 90) y `partial_hardened_cis.json`.
+  - Aserción negativa obligatoria: Routers vírgenes de fábrica (`r4, r5, r6`) DEBEN reprobar directivas críticas; nunca otorgar puntaje alto a equipos sin endurecer.
+- [x] **24.8** **Topología L2 & Vecinos MNDP/LLDP:**
+  - Fixtures trimodales: `factory_default_neighbors.json` (lista vacía `[]`), `meshed_neighbors.json` (vecinos MikroTik nominales) y `thirdparty_neighbors.json` (dispositivos extranjeros no-ROS).
+  - Aserción negativa obligatoria: Zero alucinación de topología ni fallos ante MACs foráneas cuando la tabla está vacía.
+- [x] **24.9** **IPAM, Pools DHCP y Leases:**
+  - Fixtures trimodales: `factory_default_dhcp.json` (subnet por defecto `192.168.88.0/24` inerte), `configured_dhcp_pools.json` (pools corporativos RoSGrid) y `disabled_dhcp_server.json` (`invalid=true`).
+  - Aserción negativa obligatoria: No asociar leases ajenos ni registrar pools inactivos como operativos en el tenant.
+- [x] **24.10** **Orquestador PoE & Tolerancia a Hardware No Compatible:**
+  - Fixtures trimodales: `factory_default_poe.json` (routers sin PoE/CHR, HTTP 404/400), `active_poe_netpower.json` (interfaces PoE activas) y `overload_poe.json` (sobrecarga/cortocircuito).
+  - Aserción negativa obligatoria: Equipos sin chip PoE retornan `UNSUPPORTED`, nunca "puertos caídos".
+- [x] **24.11** **Detección de Rogue DHCP & DHCP Snooping:**
+  - Fixtures trimodales: `factory_default_bridge.json` (`dhcp-snooping=no`), `snooping_enabled_bridge.json` (`dhcp-snooping=yes`) y `rogue_server_alert.json`.
+  - Aserción negativa obligatoria: Zero alertas espurias de Rogue DHCP si el bridge tiene `dhcp-snooping=no`.
+- [x] **24.12** **CAPsMAN & Wi-Fi 6:**
+  - Remediación en `wifi.py` erradicando métricas inventadas (4 APs, 8 radios, 36 clientes). Fixtures trimodales: `factory_default_no_wifi.json` (CCR2004/RB5009 sin radio), `active_wifiwave2_capsman.json` y `unregistered_ap.json`.
+  - Aserción negativa obligatoria: Reportar `NO_WIRELESS_INTERFACES` sin degradar la salud general del equipo.
+- [x] **24.13** **Detección de Config Drift (Desviación):**
+  - Fixtures trimodales: `factory_default_export.rsc`, `golden_baseline_export.rsc` y `tampered_export.rsc`.
+  - Aserción negativa obligatoria: Configuración de fábrica contra Golden Baseline debe reportar 100% de desviación (drift).
+- [x] **24.14** **Suite Unificada de Smoke Tests de Flota Real Multi-Dominio:**
+  - Ampliación de `scripts/validar-flota-real.py` (`make smoke-fleet`) evaluando los 8 dominios contra los 6 routers físicos (`r1-r3` nominales vs `r4-r6` fábrica), garantizando la compuerta institucional Level-11X.
 
 ---
 

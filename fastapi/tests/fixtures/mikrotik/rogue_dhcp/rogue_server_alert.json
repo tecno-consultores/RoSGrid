@@ -1,0 +1,9 @@
+[
+  {
+    ".id": "*1",
+    "interface": "bridge",
+    "unknown-server": "E4:8D:8C:99:88:77",
+    "valid-server": "192.168.10.1",
+    "alert-timeout": "1m"
+  }
+]

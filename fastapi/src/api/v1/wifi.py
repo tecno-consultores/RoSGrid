@@ -97,30 +97,44 @@ async def get_capsman_overview(
     if not router_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Router no encontrado")
 
-    active_radios = 8
-    managed_aps = 4
-    connected_clients = 36
+    active_radios = 0
+    managed_aps = 0
+    connected_clients = 0
+    capsman_running = False
 
     try:
         _, client = await get_router_and_client(router_id, claims, db)
+        # Consultar estado del manager CAPsMAN
+        try:
+            mgr = await client.get("/caps-man/manager")
+            if isinstance(mgr, dict) and mgr.get("enabled") in (True, "true", "yes"):
+                capsman_running = True
+        except Exception:
+            pass
+
         # Consultar radios CAPsMAN
         radios = await client.get("/caps-man/remote-cap")
         if isinstance(radios, list):
-            managed_aps = len(radios) or 4
-            active_radios = managed_aps * 2
+            managed_aps = len(radios)
+            active_radios = sum(int(r.get("radios", 1)) for r in radios if isinstance(r, dict)) if managed_aps > 0 else 0
+
         reg_table = await client.get("/caps-man/registration-table")
         if isinstance(reg_table, list):
-            connected_clients = len(reg_table) or 36
+            connected_clients = len(reg_table)
+
+        if managed_aps > 0 or connected_clients > 0:
+            capsman_running = True
     except Exception as exc:
-        logger.debug("Sondeo CAPsMAN REST: %s. Utilizando telemetría agregada.", exc)
+        logger.debug("Sondeo CAPsMAN REST en router %s: %s", router_id, exc)
 
     return CapsmanOverviewResponse(
         router_id=router_obj.id,
-        capsman_running=True,
+        capsman_running=capsman_running,
         active_radios_count=active_radios,
         managed_aps_count=managed_aps,
         connected_clients_count=connected_clients,
     )
+
 
 
 @router.get(

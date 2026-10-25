@@ -1,107 +1,99 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 RoSGrid Contributors
 
-# 📑 Especificación 43: Detección Canónica Determinista de Syslog, Fixtures Reales MikroTik v7, Smoke Tests de Flota Real y Bitácora Activa de Tareas
+# 📑 Especificación 43: Marco Universal de Fixtures Trimodales Ground-Truth, Invariantes Negativas y Smoke Tests de Flota Real
 
-**Versión:** 1.0.0  
+**Versión:** 2.0.0 (Ampliación Transversal a Toda la Plataforma)  
 **Fecha:** 2026-10-25  
 **Estado:** Aprobada  
-**Módulos Afectados:** `fastapi/src/api/v1/inventory_helpers.py`, `fastapi/src/workers/health_monitor_worker.py`, `scripts/validar-flota-real.py`, `.agents/ACTIVE_TASK.md`, `vue3/src/views/RouterInventoryView.vue`.
+**Módulos Afectados:** 
+- `fastapi/src/api/v1/inventory_helpers.py`, `fastapi/src/workers/health_monitor_worker.py` (Syslog & Reachability)
+- `fastapi/src/api/v1/compliance.py` (CIS Hardening, Rogue DHCP & Config Drift)
+- `fastapi/src/api/v1/topology.py` (Topología L2 MNDP/LLDP)
+- `fastapi/src/api/v1/ipam.py` (Pools DHCP, Leases e Interfaces)
+- `fastapi/src/api/v1/bulk_ops.py` (Orquestador PoE & WiFi CAPsMAN)
+- `scripts/validar-flota-real.py`, `Makefile`, `.agents/ACTIVE_TASK.md`
 
 ---
 
-## 1. Contexto, Diagnóstico y Causa Raíz
+## 1. Contexto, Diagnóstico y Causa Raíz Sistémica
 
-### 1.1 El Falso Positivo de Detección de Syslog
-En MikroTik RouterOS v7, la instalación de fábrica (`default-configuration`) incluye de manera predeterminada 4 acciones en `/system/logging/action`:
-1. `memory` (target: memory)
-2. `disk` (target: disk)
-3. `echo` (target: echo)
-4. `remote` (target: remote, con `remote=0.0.0.0`)
+### 1.1 El Síndrome de la "Ceguera de Mocks" (Mock Blindness)
+Durante el desarrollo del Hito 24, se descubrió que los routers de laboratorio `r4`, `r5` y `r6` (mantenidos intencionalmente de fábrica sin Syslog configurado) figuraban en la interfaz web como `🟢 Activo`. 
 
-La implementación previa de `inspect_router_syslog_config` evaluaba si existía alguna acción con nombre `"remote"` o `target == "remote"`, retornando `True` sin verificar:
-- Si esa acción pertenecía a RoSGrid o era simplemente el elemento inerte de fábrica.
-- Si existía una regla activa en `/system/logging` vinculada a dicha acción.
-- Si el destino remoto apuntaba realmente a la IP/puerto del servidor RoSGrid.
+El análisis de causa raíz demostró que:
+1. RouterOS v7 incluye de fábrica una acción inerte en `/system/logging/action` denominada `remote` con `remote=0.0.0.0`.
+2. El código del backend utilizaba heurísticas genéricas (búsqueda de subcadenas `"remote"`), otorgando un `True` complaciente.
+3. **Las pruebas unitarias daban 100% de éxito** porque el programador creaba diccionarios sintéticos que ya contenían `syslog_active: true`, evaluando tautológicamente la lógica del frontend sin contrastar jamás la respuesta real de RouterOS v7 de fábrica.
 
-Como consecuencia, equipos de prueba de laboratorio sin Syslog configurado (`r4`, `r5`, `r6`) fueron erróneamente clasificados con Syslog activo (`syslog_active = True`), contaminando la máquina de estados en KeyDB y la interfaz gráfica de usuario.
-
-### 1.2 La Ceguera de las Pruebas Unitarias Míticas (Tautología de Mocks)
-Las pruebas unitarias existentes aprobaban al 100% porque evaluaban mocks sintéticos donde el dato de entrada ya contenía `syslog_active: true`. El sistema probaba que el frontend reflejaba lo que el mock decía, pero **nunca contrastó el algoritmo contra los JSONs reales que devuelve la API REST de RouterOS v7 de fábrica**.
+### 1.2 Extensión Transversal del Riesgo
+Este patrón de ceguera no es exclusivo de Syslog: afecta potencialmente a toda integración donde RoSGrid deba **discriminar un equipo virgen de fábrica de un equipo aprovisionado por la plataforma**.
 
 ---
 
-## 2. Detección Canónica Determinista (Doble Candado)
+## 2. Marco Universal de Fixtures Trimodales (Ground-Truth)
 
-RoSGrid establece una firma inmutable para su integración de Syslog sobre MikroTik RouterOS v7. La detección no debe utilizar términos genéricos (`"remote"` o `"syslog"`), sino validar **la firma canónica exacta**:
+Para eliminar cualquier ambigüedad sintética, todo subsistema que interactúe con MikroTik RouterOS v7 debe someterse a la **Matriz Trimodal de Fixtures Reales** bajo `fastapi/tests/fixtures/mikrotik/<dominio>/`:
 
 ```mermaid
 flowchart TD
-    Start[Inspección de RouterOS v7] --> A{¿Existe acción name=='rosgridsyslog'?}
-    A -- No --> Negative[syslog_active = False]
-    A -- Sí --> B{¿Campo remote != '0.0.0.0' y no vacío?}
-    B -- No --> Negative
-    B -- Sí --> C{¿Existe regla en /system/logging con action=='rosgridsyslog'?}
-    C -- No --> Negative
-    C -- Sí --> D{¿Regla disabled == false?}
-    D -- No --> Negative
-    D -- Sí --> Positive[syslog_active = True]
+    subgraph Trimodal Matrix
+        FA[Fixture A: Router de Fábrica] -->|Assert Negativo| NA[Estado: INERTE / FALSE / EMPTY / LOW]
+        FB[Fixture B: Router Nominal RoSGrid] -->|Assert Positivo| NB[Estado: ACTIVO / TRUE / ONLINE / NOMINAL]
+        FC[Fixture C: Deshabilitado / No Soportado] -->|Assert Resiliente| NC[Estado: DEGRADED / NOT_APPLICABLE / 0 Crashes]
+    end
     
-    Negative --> E{¿Existen paquetes en KeyDB syslog:ring > 0?}
-    E -- Sí --> PositiveProof[syslog_active = True por Evidencia Física de Tráfico]
-    E -- No --> FinalNegative[Sensor Apagado / Inactivo]
+    subgraph Ejecución
+        NA --> Engine[Motor de Verificación Pytest]
+        NB --> Engine
+        NC --> Engine
+        Engine --> Gate[Smoke Test Flota Real r1-r6]
+    end
 ```
 
-### 2.1 Criterios Deterministas Obligatorios
-1. **Acción Canónica:** La acción debe denominarse exactamente `rosgridsyslog`. Su target debe ser `remote` y el parámetro `remote` debe contener una dirección IP o FQDN válido (distinto de `0.0.0.0` y no nulo).
-2. **Regla Vinculada y Habilitada:** En `/system/logging`, debe existir al menos una regla cuyo campo `action` apunte a `rosgridsyslog`, y cuyo atributo `disabled` sea estrictamente `false` (o booleano `False`).
-3. **Prueba Física de Tráfico (Fallback Resiliente):** Si la API REST no responde o no está disponible, el sensor evaluará `llen(rg:{tenant}:router:{id}:syslog:ring) > 0`. Si hay datagramas reales recibidos en el colector UDP 5514, el router se considera activo por evidencia física de tráfico.
-4. **Condición Negativa de Fábrica:** Si el router únicamente posee las acciones de fábrica (`memory`, `disk`, `echo`, `remote` con `0.0.0.0`), el resultado es **`False`** sin excepción.
+---
+
+## 3. Catálogo de los 8 Dominios Críticos
+
+| Dominio | Endpoint / Recurso | Fixture A (Fábrica) | Fixture B (RoSGrid Nominal) | Fixture C (Degradado/No Soportado) | Invariante Negativa Obligatoria |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **1. Syslog Telemetría** | `/system/logging`, `/system/logging/action` | `factory_default_logging.json` (`remote=0.0.0.0`) | `rosgrid_configured_logging.json` (`action=rosgridsyslog`) | `disabled_rosgrid_logging.json` (`disabled=true`) | Si no existe acción `rosgridsyslog` con IP válida, `syslog_active == False`. |
+| **2. CIS Hardening** | `/ip/service`, `/user`, `/ip/dns`, etc. | `factory_default_cis.json` (Telnet/FTP on, admin sin pass) | `hardened_rosgrid_cis.json` (Perfiles Corporate/ISP) | `partial_hardened_cis.json` (Directivas selectivas) | Router de fábrica **DEBE reprobar** directivas críticas; Score < 35 pts. |
+| **3. Topología L2 MNDP** | `/ip/neighbor`, `/ip/neighbor/discovery-settings` | `factory_default_neighbors.json` (Lista vacía `[]`) | `meshed_neighbors.json` (Vecinos MikroTik válidos) | `thirdparty_neighbors.json` (Switches no-ROS, foreign MACs) | No alucinar enlaces ni fallar ante MACs desconocidas; `nodes=[]`. |
+| **4. IPAM & DHCP** | `/ip/pool`, `/ip/dhcp-server`, `/lease` | `factory_default_dhcp.json` (`192.168.88.0/24` inerte) | `configured_dhcp_pools.json` (Pools corporativos RoSGrid) | `disabled_dhcp_server.json` (`invalid=true`) | No asociar leases ajenos; distinguir pools activos de subredes inertes. |
+| **5. Orquestador PoE** | `/interface/ethernet/poe` | `factory_default_poe.json` (Routers sin PoE / CHR) | `active_poe_netpower.json` (PoE-out en interfaces) | `overload_poe.json` (Puertos en sobrecarga/cortocircuito) | Hardware sin PoE debe retornar `UNSUPPORTED`, nunca "puertos caídos". |
+| **6. Rogue DHCP** | `/interface/bridge`, `/interface/bridge/port` | `factory_default_bridge.json` (`dhcp-snooping=no`) | `snooping_enabled_bridge.json` (`dhcp-snooping=yes`) | `rogue_server_alert.json` (Servidor no autorizado) | No emitir alertas espurias si DHCP Snooping no está activo en el bridge. |
+| **7. WiFi CAPsMAN** | `/interface/wifi`, `/caps-man` | `factory_default_nowifi.json` (CCR/RB sin chip de radio) | `active_wifiwave2_capsman.json` (Radios y clientes en línea) | `unregistered_ap.json` (Radios no autorizadas) | Routers sin wireless deben retornar `NO_WIRELESS`, sin degradar salud. |
+| **8. Config Drift** | `/export` vs Golden Baseline | `factory_default_export.rsc` (Configuración de fábrica) | `golden_baseline_export.rsc` (Configuración RoSGrid idéntica) | `tampered_export.rsc` (Reglas firewall modificadas) | Comparar contra Golden Baseline debe dar **100% de desviación (drift)**. |
 
 ---
 
-## 3. Fixtures Reales de MikroTik RouterOS v7 (Ground-Truth)
+## 4. Guardrail de Validación de Flota Real (`scripts/validar-flota-real.py`)
 
-Para evitar la ceguera de pruebas en el backend, se formalizan tres fixtures JSON capturados de routers físicos RouterOS v7 bajo `fastapi/tests/fixtures/mikrotik/`:
+El entorno de laboratorio físico dispone de 6 routers MikroTik (`r1` a `r6`):
+- `r1` (`10.250.3.8`), `r2` (`10.250.3.13`), `r3` (`10.250.3.14`): Enrolados con servicios RoSGrid.
+- `r4` (`10.250.3.15`), `r5` (`10.250.3.17`), `r6` (`10.250.3.19`): Mantenidos intencionalmente de fábrica.
 
-1. `factory_default_logging.json`:
-   - Representa un router virgen recién desempaquetado.
-   - Acciones: `memory`, `disk`, `echo`, `remote (0.0.0.0)`.
-   - Reglas: Solo `memory` y `disk`.
-   - **Aserción:** `inspect_router_syslog_config == False`.
-2. `rosgrid_configured_logging.json`:
-   - Representa un router tras aplicar la plantilla `SYSLOG_CENTRALIZADO_ROSGRID`.
-   - Acción: `rosgridsyslog` (`target=remote`, `remote=10.250.3.1`, `remote-port=5514`).
-   - Regla: `action=rosgridsyslog`, `topics=info,warning,error,critical`, `disabled=false`.
-   - **Aserción:** `inspect_router_syslog_config == True`.
-3. `disabled_rosgrid_logging.json`:
-   - Representa un router donde el operador deshabilitó temporalmente la regla de Syslog.
-   - Acción: `rosgridsyslog` presente.
-   - Regla: `action=rosgridsyslog`, `disabled=true`.
-   - **Aserción:** `inspect_router_syslog_config == False`.
+### 4.1 Aserciones Cruzadas Multi-Dominio
 
----
+```text
+[Aserción Positiva]: r1, r2, r3 DEBEN reportar:
+  - Reachable: True (API REST HTTPS)
+  - Status: ONLINE
+  - Syslog Active: True (Sensor encendido)
+  - CIS Score: >= 70
+  - IPAM Leases: Sincronizados
 
-## 4. Smoke Test de Flota Real con Aserciones Negativas Obligatorias
+[Aserción Negativa Obligatoria]: r4, r5, r6 DEBEN reportar:
+  - Reachable: True (Físicamente vivos en lab)
+  - Status: ONLINE
+  - Syslog Active: FALSE (⚪ Sin Syslog)
+  - CIS Score: < 35 (Directivas fallidas)
+  - Config Drift: 100% Desviado
+```
 
-Para impedir que cambios futuros rompan la diferenciación entre routers configurados y no configurados, se establece el script de prueba end-to-end:
-
-$$\text{Archivo: } \texttt{scripts/validar-flota-real.py}$$
-
-### 4.1 Invariantes Innegociables
-El script consulta el endpoint real `/api/v1/inventory/routers` sobre el entorno de prueba de producción local levantado y valida:
-
-| Router | Condición Requerida | Syslog Activo | Estado Operacional | Alcanzabilidad |
-| :--- | :--- | :--- | :--- | :--- |
-| **r1** | Enrolado con Syslog | `True` (🟢) | `ONLINE` | `True` |
-| **r2** | Enrolado con Syslog | `True` (🟢) | `ONLINE` | `True` |
-| **r3** | Enrolado con Syslog | `True` (🟢) | `ONLINE` | `True` |
-| **r4** | De Fábrica (Sin Syslog) | **`False`** (⚪) | `OFFLINE` | `False` |
-| **r5** | De Fábrica (Sin Syslog) | **`False`** (⚪) | `OFFLINE` | `False` |
-| **r6** | De Fábrica (Sin Syslog) | **`False`** (⚪) | `OFFLINE` | `False` |
-
-* **Métrica de Disponibilidad Global:** Exactamente $\frac{3}{6} = 50\%$.
-* **Criterio de Bloqueo (Fail-Closed):** Si `r4`, `r5` o `r6` retornan `syslog_active == True`, el script emite código de salida `1` y bloquea cualquier intento de commit o push.
+### 4.2 Principio Fail-Closed
+Si cualquier equipo de fábrica (`r4, r5, r6`) reporta un valor positivo en sensores exclusivos de RoSGrid, el script `scripts/validar-flota-real.py` (`make smoke-fleet`) termina inmediatamente con código de salida `1`, impidiendo commits o publicación en Git.
 
 ---
 

@@ -1,0 +1,41 @@
+{
+  "manager": {
+    "enabled": true
+  },
+  "remote_cap": [
+    {
+      ".id": "*1",
+      "name": "CAP-Piso-1",
+      "identity": "AP-Lobby",
+      "base-mac": "48:A9:8A:22:33:44",
+      "radios": 2,
+      "state": "provisioned"
+    },
+    {
+      ".id": "*2",
+      "name": "CAP-Piso-2",
+      "identity": "AP-Sala-Juntas",
+      "base-mac": "48:A9:8A:55:66:77",
+      "radios": 2,
+      "state": "provisioned"
+    }
+  ],
+  "registration_table": [
+    {
+      ".id": "*1",
+      "mac-address": "70:85:C2:11:22:33",
+      "interface": "cap-wifi1",
+      "ssid": "RoSGrid-Corporate",
+      "signal": -52,
+      "uptime": "2h15m"
+    },
+    {
+      ".id": "*2",
+      "mac-address": "70:85:C2:44:55:66",
+      "interface": "cap-wifi2",
+      "ssid": "RoSGrid-Corporate",
+      "signal": -64,
+      "uptime": "45m"
+    }
+  ]
+}

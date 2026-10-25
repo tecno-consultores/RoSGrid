@@ -1,0 +1,22 @@
+[
+  {
+    ".id": "*3",
+    "address": "192.168.1.50",
+    "identity": "Cisco-Catalyst-2960",
+    "interface": "ether4",
+    "interface-name": "GigabitEthernet0/1",
+    "mac-address": "00:1B:D4:AA:BB:CC",
+    "platform": "Cisco",
+    "system-description": "Cisco IOS Software"
+  },
+  {
+    ".id": "*4",
+    "address": "192.168.1.100",
+    "identity": "HP-ProCurve-Switch",
+    "interface": "ether5",
+    "interface-name": "1",
+    "mac-address": "00:24:A5:DD:EE:FF",
+    "platform": "HP",
+    "system-description": "HP ProCurve 2510G-24"
+  }
+]

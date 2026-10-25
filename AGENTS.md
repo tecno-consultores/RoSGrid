@@ -41,6 +41,9 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
 5. [anti_regression_and_side_effects_guardrail.md](file:///.agents/rules/anti_regression_and_side_effects_guardrail.md):
    - **Anti-Regression & Blast-Radius Governance:** Zero degradation of pre-existing functionality when introducing changes. Mandatory pre-modification impact audit for shared files and Docker Compose ports (canonical UDP 514/5514 must never be dropped), Docker NAT/bridge proxy tolerance with heuristic payload/identity fallback, strict pre-build static typing/linting (`ruff`, `vue-tsc`), and non-destructive frontend error handling (no `setRouters([])` in generic catch blocks).
 
+6. [ground_truth_fixtures_and_negative_invariants.md](file:///.agents/rules/ground_truth_fixtures_and_negative_invariants.md):
+   - **Universal Trimodal Fixtures & Negative Invariants:** Eradicate Mock Blindness across all 8 RouterOS v7 domains (Syslog, CIS Hardening, L2 Topology, IPAM DHCP, PoE, Rogue DHCP, CAPsMAN WiFi, and Config Drift). Every endpoint/integration MUST be tested against three raw JSON fixtures: Factory Default (asserting negative/unconfigured), Nominal RoSGrid (asserting active/online), and Degraded/Unsupported (asserting graceful degradation without 500 errors). Real-fleet smoke testing (`scripts/validar-flota-real.py`) mandatory before concluding tasks.
+
 ---
 
 ## 2. Rule Zero: Ephemeral Docker Execution

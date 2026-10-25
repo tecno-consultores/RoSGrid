@@ -1,0 +1,26 @@
+[
+  {
+    ".id": "*1",
+    "name": "ether1",
+    "poe-out": "auto-on",
+    "poe-out-status": "delivering-power",
+    "poe-out-voltage": "48.5",
+    "poe-out-current": "150",
+    "poe-out-power": "7.2"
+  },
+  {
+    ".id": "*2",
+    "name": "ether2",
+    "poe-out": "auto-on",
+    "poe-out-status": "delivering-power",
+    "poe-out-voltage": "48.4",
+    "poe-out-current": "90",
+    "poe-out-power": "4.3"
+  },
+  {
+    ".id": "*3",
+    "name": "ether3",
+    "poe-out": "off",
+    "poe-out-status": "disabled"
+  }
+]

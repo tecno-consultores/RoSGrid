@@ -1,0 +1,22 @@
+{
+  "ip_address": [],
+  "ip_pool": [
+    {
+      ".id": "*1",
+      "name": "pool-disabled",
+      "ranges": "172.16.0.10-172.16.0.50"
+    }
+  ],
+  "dhcp_server": [
+    {
+      ".id": "*1",
+      "name": "dhcp-disabled",
+      "interface": "ether5",
+      "address-pool": "pool-disabled",
+      "disabled": true,
+      "invalid": true
+    }
+  ],
+  "dhcp_network": [],
+  "dhcp_lease": []
+}

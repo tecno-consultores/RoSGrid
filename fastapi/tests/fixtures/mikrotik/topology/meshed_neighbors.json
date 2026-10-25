@@ -1,0 +1,24 @@
+[
+  {
+    ".id": "*1",
+    "address": "10.250.3.13",
+    "address4": "10.250.3.13",
+    "identity": "r2",
+    "interface": "ether2",
+    "interface-name": "ether1",
+    "mac-address": "48:A9:8A:11:22:33",
+    "platform": "MikroTik",
+    "version": "7.16"
+  },
+  {
+    ".id": "*2",
+    "address": "10.250.3.14",
+    "address4": "10.250.3.14",
+    "identity": "r3",
+    "interface": "ether3",
+    "interface-name": "ether1",
+    "mac-address": "48:A9:8A:44:55:66",
+    "platform": "MikroTik",
+    "version": "7.16"
+  }
+]

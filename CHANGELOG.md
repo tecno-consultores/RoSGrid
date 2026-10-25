@@ -38,6 +38,12 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Added
 
+- **Directiva Obligatoria de Gobernanza de Fixtures Trimodales Ground-Truth y Aserciones Negativas (`.agents/rules/ground_truth_fixtures_and_negative_invariants.md`, `AGENTS.md`, `.agents/rules/secure_development_and_testing_guidelines.md`, `.agents/rules/mandatory_qa_pyramid_and_doc_sync.md`, `docs/specs/43_REAL_FLEET_SMOKE_TESTS_GROUND_TRUTH_FIXTURES_AND_DETERMINISTIC_SENSING.md`):**
+  - **Erradicación de la Ceguera de Mocks (Mock Blindness):** Invariante institucional que exige que toda integración con MikroTik RouterOS v7 se valide contra una terna de fixtures JSON crudos: Fixture A (Router de Fábrica / Inerte), Fixture B (Router Nominal RoSGrid) y Fixture C (Router Degradado / No Soportado).
+  - **Aserciones Negativas Obligatorias:** Prohibición estricta de evaluar únicamente el camino feliz; los routers con configuración de fábrica o hardware no compatible DEBEN evaluar obligatoriamente a estados negativos (`active=False`, `items=[]`, `score=LOW`, `UNSUPPORTED`).
+  - **Cobertura Transversal de 8 Dominios:** Syslog Telemetry, CIS Hardening, Topología L2 MNDP/LLDP, IPAM & DHCP, Orquestador PoE, Rogue DHCP Snooping, WiFi CAPsMAN y Detección de Config Drift.
+  - **Smoke Test de Flota Real Obligatorio:** Extensión de `scripts/validar-flota-real.py` (`make smoke-fleet`) evaluando los 6 routers físicos del laboratorio (`r1-r3` nominales vs `r4-r6` fábrica) como compuerta bloqueante antes de cualquier commit o push.
+
 - **Directiva Obligatoria de Gobernanza Anti-Regresión y Prevención de Efectos Secundarios (`.agents/rules/anti_regression_and_side_effects_guardrail.md`, `AGENTS.md`, `.agents/rules/secure_development_and_testing_guidelines.md`, `vue3/src/stores/useInventoryStore.ts`):**
   - **Guardrail de Radio de Impacto (Blast-Radius):** Invariante institucional que prohíbe la degradación de funcionalidades preexistentes al introducir modificaciones; auditoría obligatoria de puertos en Docker Compose (prohibiendo suprimir puertos canónicos como UDP 514/5514) y flujos adyacentes antes de comitear.
   - **Tolerancia a Entornos de Red Reales & Docker NAT:** Obligatoriedad de soportar proxies y pasarelas de Docker (`172.18.0.1`) en colectores de red (Syslog, SNMP, WebSockets), aplicando resolución heurística de respaldo en payload y encabezados BSD.

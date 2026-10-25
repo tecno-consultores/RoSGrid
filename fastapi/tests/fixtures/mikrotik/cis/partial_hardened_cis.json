@@ -1,0 +1,21 @@
+{
+  "ip_service": [
+    {"name": "telnet", "port": 23, "disabled": true, "address": ""},
+    {"name": "ftp", "port": 21, "disabled": false, "address": ""},
+    {"name": "www", "port": 80, "disabled": false, "address": ""},
+    {"name": "ssh", "port": 22, "disabled": false, "address": ""},
+    {"name": "winbox", "port": 8291, "disabled": false, "address": ""}
+  ],
+  "user": [
+    {"name": "admin", "group": "full", "disabled": false}
+  ],
+  "ip_dns": {
+    "allow-remote-requests": true
+  },
+  "neighbor_discovery": {
+    "discover-interface-list": "all"
+  },
+  "firewall_filter": [],
+  "firewall_raw": [],
+  "interface_vlan": []
+}

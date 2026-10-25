@@ -32,6 +32,14 @@ Unit isolation with mocks measures quick logical coverage but creates blind spot
    - JSDOM does NOT calculate CSS Flexbox/Grid layouts, element coordinates, or viewport bounding boxes.
    - Prevent overlapping elements (e.g. login footer collapsing over form cards or uncentered modals) by asserting DOM hierarchy in unit tests and inspecting real browser viewport visibility/clickability in Karate UI or Playwright.
 
+4. **Trimodal Ground-Truth Fixtures & Negative Invariants:**
+   - Synthetic mocks that assume ideal network responses create critical blind spots (e.g. factory routers reporting active sensors).
+   - In accordance with [ground_truth_fixtures_and_negative_invariants.md](file:///.agents/rules/ground_truth_fixtures_and_negative_invariants.md), every integration with RouterOS v7 must test:
+     1. **Fixture A (Factory Default):** Must assert negative states (`active=False`, `items=[]`, `score=LOW`).
+     2. **Fixture B (Nominal RoSGrid):** Must assert nominal active operation.
+     3. **Fixture C (Disabled/Degraded):** Must assert graceful error handling without 500 crashes.
+   - Real-fleet smoke testing (`scripts/validar-flota-real.py`) mandatory against running lab equipment (`r1-r6`).
+
 ---
 
 ## 2. Security-by-Design & OWASP Guidelines

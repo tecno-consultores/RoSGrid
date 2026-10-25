@@ -14,6 +14,7 @@
 # Artefactos de Dominio MikroTik (Evitar subir respaldos reales al repo)
 *.backup
 *.rsc
+!fastapi/tests/fixtures/**/*.rsc
 *.db
 *.sqlite
 *.sqlite3

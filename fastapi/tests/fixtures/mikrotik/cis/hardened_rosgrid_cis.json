@@ -1,0 +1,36 @@
+{
+  "ip_service": [
+    {"name": "telnet", "port": 23, "disabled": true, "address": ""},
+    {"name": "ftp", "port": 21, "disabled": true, "address": ""},
+    {"name": "www", "port": 80, "disabled": true, "address": ""},
+    {"name": "ssh", "port": 22, "disabled": false, "address": "10.250.0.0/16"},
+    {"name": "www-ssl", "port": 443, "disabled": false, "address": "10.250.0.0/16"},
+    {"name": "api", "port": 8728, "disabled": true, "address": ""},
+    {"name": "winbox", "port": 8291, "disabled": false, "address": "10.250.0.0/16"},
+    {"name": "api-ssl", "port": 8729, "disabled": false, "address": "10.250.0.0/16"}
+  ],
+  "user": [
+    {"name": "admin", "group": "full", "disabled": true},
+    {"name": "rosgrid_admin", "group": "full", "disabled": false}
+  ],
+  "ip_dns": {
+    "allow-remote-requests": false,
+    "servers": "1.1.1.1,8.8.8.8"
+  },
+  "neighbor_discovery": {
+    "discover-interface-list": "LAN"
+  },
+  "firewall_filter": [
+    {"chain": "input", "action": "accept", "connection-state": "established,related"},
+    {"chain": "input", "action": "drop", "src-address-list": "ssh_blacklist", "comment": "RoSGrid CIS-1.8 SSH BruteForce drop"},
+    {"chain": "input", "action": "add-src-to-address-list", "protocol": "tcp", "dst-port": "22", "connection-state": "new", "address-list": "ssh_blacklist"},
+    {"chain": "input", "action": "drop", "src-address-list": "bogon_subnets", "comment": "RoSGrid CIS-1.7 Drop Bogons"},
+    {"chain": "forward", "action": "fasttrack-connection", "connection-state": "established,related", "packet-mark": "!qos-shaped", "comment": "RoSGrid CIS-2.2 Selective FastTrack"}
+  ],
+  "firewall_raw": [
+    {"chain": "prerouting", "action": "drop", "src-address-list": "bogon_subnets", "comment": "RoSGrid CIS-1.7 RAW Bogon drop"}
+  ],
+  "interface_vlan": [
+    {"name": "vlan99-mgmt", "vlan-id": 99, "interface": "bridge", "comment": "RoSGrid CIS-1.10 Management VLAN"}
+  ]
+}

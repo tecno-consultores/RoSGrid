@@ -1,0 +1,16 @@
+{
+  "manager": {
+    "enabled": true
+  },
+  "remote_cap": [
+    {
+      ".id": "*3",
+      "name": "CAP-Desconocido",
+      "identity": "Rogue-AP",
+      "base-mac": "00:0C:42:99:88:77",
+      "radios": 1,
+      "state": "unauthorized"
+    }
+  ],
+  "registration_table": []
+}
