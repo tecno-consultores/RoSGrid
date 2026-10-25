@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
-import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
+import { createRouter, createWebHistory, type RouteRecordRaw, type RouteLocationNormalized } from 'vue-router';
 import type { SystemRole, TenantFeatureFlags } from '@/types';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useWebFigStore } from '@/stores/useWebFigStore';

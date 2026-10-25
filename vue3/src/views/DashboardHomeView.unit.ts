@@ -7,6 +7,7 @@ import { setActivePinia, createPinia } from 'pinia';
 import DashboardHomeView from './DashboardHomeView.vue';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
+import type { RouterItem } from '@/types';
 
 const pushMock = vi.fn();
 vi.mock('vue-router', () => ({
@@ -191,7 +192,7 @@ describe('DashboardHomeView.vue — Centro de Mando Táctico 11X', () => {
         memory_usage_pct: 12,
         created_at: '2026-01-01',
         updated_at: '2026-01-01',
-      } as unknown as import('@/types/inventory').RouterItem,
+      } as unknown as RouterItem,
     ];
 
     const wrapper = mount(DashboardHomeView, {
