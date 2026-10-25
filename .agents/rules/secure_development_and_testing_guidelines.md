@@ -74,15 +74,17 @@ Apply these non-negotiable security directives before writing any code:
    - Inbound network traffic handlers (Syslog, SNMP, WebSockets) must tolerate Docker NAT proxying (`172.18.0.1`) and never rely on raw `addr[0]` alone.
    - Frontend stores must never destroy previously populated in-memory state on network catch blocks.
 
-7. **SuperAdmin Tenant Fast-Switching & Atomic Session Re-keying:**
+7. **SuperAdmin Tenant Fast-Switching, Atomic Session Re-keying & Pub/Sub Suppression:**
    - Dynamic context switching via `POST /api/v1/auth/switch-tenant` is strictly restricted to `SUPERADMIN_GLOBAL`.
    - Any request from lower roles (`TENANT_ADMIN`, `OPERATOR`, `FIELD_TECH`) must fail-closed with HTTP `403 Forbidden`.
    - Re-keying of active session in KeyDB must occur atomically, updating tenant claims in JWT without dropping the authenticated user identity, followed by an immediate WORM audit record `SUPERADMIN_TENANT_SWITCHED`.
+   - **Pub/Sub Suppression (`notify_ws=False`):** Calling `kill_session` on the old tenant context MUST suppress websocket publication to avoid kicking out the active browser session (`forceKillSwitchLogout`). The frontend store MUST ignore `SUPERADMIN_TENANT_SWITCH` and seamlessly reconnect WebSockets upon `rosgrid:tenant-switched`.
 
-8. **Feature Flags Governance & Blast Radius Shield (Scoped by Tenant):**
-   - In B2B multi-tenancy, feature flags are tenant-level capabilities and licensing attributes. They must be managed strictly from the Tenant administration context (`/tenants`), never from an orphan global sidebar.
-   - UI mutators modifying critical governance flags (`syslog_collector_enabled`, `enforce_maker_checker`, `auto_safemode_enforced`) MUST enforce a Blast Radius confirmation shield calculating dynamic impact on fleet and active operators.
-   - Flag dependencies must be validated via a Directed Acyclic Graph (DAG) preventing orphan dependent flags (e.g. BGP Looking Glass without ISP Core).
+8. **Feature Flags Governance, DAG Hard Lock & Contingency Mode:**
+   - In B2B multi-tenancy, feature flags represent commercial licensing entitlements. Endpoints `PATCH` and `PUT` `/features` are strictly restricted to `SUPERADMIN_GLOBAL` (fail-closed HTTP 403 to local tenant admins).
+   - **Active DAG (Hard Lock):** Dependent flags (e.g. `bgp_looking_glass_enabled`, `sla_tracker_enabled`) MUST be locked (`disabled`) with visual badge and tooltip when the parent module (`isp_module_enabled`) is off, and forced off in cascade.
+   - **Contingency Mode NOC in 1-Click:** Provide a low-power preset that immediately suspends heavy telemetry collectors (Syslog, IPFIX, Prometheus, SFP, Drift, SD-WAN) during network congestion while preserving the core router control and governance.
+   - UI mutators modifying critical governance flags MUST enforce a Blast Radius confirmation shield calculating dynamic impact on fleet and active operators.
 
 9. **Visual Geometry & In-Flow Ergonomics (Anti-Sticky Footer):**
    - JSDOM does not calculate layout or bounding boxes. Ensure real browser validation for viewport ergonomics.
@@ -92,6 +94,15 @@ Apply these non-negotiable security directives before writing any code:
 10. **Critical Execution Gate & Explicit User Authorization:**
     - AI agents MUST NEVER create, edit, or delete code files (in `fastapi/`, `vue3/`, scripts, or migrations) based on IDE timeouts, artifact review notifications, or automatic system 'Auto-proceed' events.
     - All code modifications are strictly prohibited while in the planning phase. The agent must pause and wait until the user explicitly commands to proceed in the chat (e.g. 'procede', 'ejecuta el plan', 'adelante con el código').
+
+11. **Operational Separation: Local Test Environment (`local-test`) vs. Official Production Release (`scripts/build.sh`):**
+    - **Local Testing Environment:** When testing production images locally (`docker-compose.prod.local.yml`), AI agents MUST build the local test images:
+      ```bash
+      docker build -f fastapi/Dockerfile -t sinfallas/rosgrid-backend:local-test fastapi
+      docker build -f vue3/Dockerfile -t sinfallas/rosgrid-frontend:local-test vue3
+      docker compose -f docker-compose.prod.local.yml up -d --force-recreate rosgrid-api rosgrid-ui
+      ```
+    - **NEVER execute `./scripts/build.sh` for intermediate local testing.** `scripts/build.sh` is reserved strictly for official milestone releases (Milestone 27) that publish `:latest` and `:1.0.0` tags to remote Docker Hub and trigger `docker builder prune -af`. Mixing these environments confuses workflows and burns unnecessary network and CPU resources.
 
 
 ---

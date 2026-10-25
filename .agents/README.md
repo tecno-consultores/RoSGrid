@@ -13,9 +13,11 @@ Este directorio implementa el estándar abierto y emergente de la industria para
 ├── README.md                                         # Este documento explicativo
 ├── rules/                                            # Reglas y directivas de comportamiento forzadas
 │   ├── mandatory_qa_pyramid_and_doc_sync.md          # Pirámide de pruebas multi-capa y sync documental
-│   ├── secure_development_and_testing_guidelines.md  # Anti-Mocks ciegos, RLS forzado, SSRF y bóveda
+│   ├── secure_development_and_testing_guidelines.md  # Anti-Mocks ciegos, RLS forzado, SSRF, bóveda y deslinde operativo
 │   ├── frontend_parity_and_closure.md                # Paridad terminal-UI y protocolo de cierre
-│   └── continuous_agent_evolution.md                 # Evolución y actualización autónoma y continua de .agents/
+│   ├── continuous_agent_evolution.md                 # Evolución y actualización autónoma y continua de .agents/
+│   ├── anti_regression_and_side_effects_guardrail.md # Blindaje contra regresiones y control de radio de impacto
+│   └── ground_truth_fixtures_and_negative_invariants.md # Fixtures trimodales RouterOS v7 e invariantes negativos
 ├── skills/                                           # Habilidades y Playbooks de dominio
 │   ├── rosgrid-noc-operator/                         # Operador NOC y diagnóstico autónomo vía MCP (RouterOS v7)
 │   ├── qa-11x-docker-certifier/                      # Certificación 11X en Docker efímero (95% cobertura)
@@ -25,7 +27,9 @@ Este directorio implementa el estándar abierto y emergente de la industria para
 │   └── graphify-docs-api-writer/                     # Redacción de arquitectura, grafos AST y manuales
 └── scripts/                                          # Scripts de automatización y compuertas de calidad
     ├── verify_alembic_orm_parity.py                  # Auditoría estricta: modelos ORM vs migraciones Alembic
-    └── certify_task_completion.sh                    # Compuerta de certificación pre-commit automatizada
+    ├── verify_json_no_duplicate_keys.py              # Auditoría estricta anti-colisión de claves duplicadas en JSON i18n
+    └── certify_task_completion.sh                    # Compuerta de certificación pre-commit automatizada (6 etapas)
+
 ```
 
 ---

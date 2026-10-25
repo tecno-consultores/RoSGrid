@@ -28,9 +28,10 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
 
 2. [secure_development_and_testing_guidelines.md](file:///.agents/rules/secure_development_and_testing_guidelines.md):
    - **Anti-Mock Blindness:** ORM changes (`src/models/`) require immediate versioned Alembic migrations verified in PostgreSQL (`\d <table>`).
-   - **Security-by-Design:** Forced PostgreSQL RLS per tenant, anti-SSRF URL validation (`validate_router_target_url`), AES-256-GCM Vault cryptography, HMAC-SHA256 CSRF protection, mandatory `Idempotency-Key` headers, and SuperAdmin tenant fast-switching with atomic KeyDB session re-keying and WORM audit.
+   - **Security-by-Design:** Forced PostgreSQL RLS per tenant, anti-SSRF URL validation (`validate_router_target_url`), AES-256-GCM Vault cryptography, HMAC-SHA256 CSRF protection, mandatory `Idempotency-Key` headers, and SuperAdmin tenant fast-switching with atomic KeyDB session re-keying, Pub/Sub suppression (`notify_ws=False`) and WORM audit.
    - **Visual Geometry & In-Flow Ergonomics (Anti-Sticky Footer):** JSDOM does not calculate layout or bounding boxes. Validate DOM tree order and inspect viewports in real browser sessions. Prohibit fixed floating bottom footers that steal vertical real estate; enforce in-flow footers inside `<main>` (`margin-top: auto`).
-   - **Feature Flags Governance:** Flags are tenant-scoped capabilities; enforce Blast Radius confirmation shield on critical governance flags and DAG dependency validation.
+   - **Feature Flags Governance & DAG Hard Lock:** Flags are tenant-scoped commercial capabilities; enforce DAG cascade lock (disabling child flags if parent is off), 1-click Contingency low-power preset, and Blast Radius confirmation shield.
+   - **Operational Separation Invariant:** Never run `./scripts/build.sh` for intermediate local testing; build `local-test` images (`sinfallas/rosgrid-backend:local-test` and `sinfallas/rosgrid-frontend:local-test`) and recreate `docker-compose.prod.local.yml`. `build.sh` is reserved strictly for official milestone releases.
    - **Critical Execution Gate:** AI agents must NEVER modify code based on IDE timeouts or 'Auto-proceed' signals; code changes require explicit user authorization in the chat.
 
 3. [frontend_parity_and_closure.md](file:///.agents/rules/frontend_parity_and_closure.md):
@@ -68,7 +69,8 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
 ## 4. Automation Scripts in `.agents/scripts/`
 
 - `verify_alembic_orm_parity.py`: Automated parity validator between SQLAlchemy ORM models and Alembic migrations (detects schema drift).
-- `certify_task_completion.sh`: End-to-end certification gate enforcing secret scanning, ORM parity, front-back contracts, and documentation sync.
+- `verify_json_no_duplicate_keys.py`: Automated integrity validator detecting duplicate keys in i18n JSON locale files.
+- `certify_task_completion.sh`: End-to-end certification gate enforcing secret scanning, ORM parity, front-back contracts, i18n dictionary integrity, and documentation sync.
 
 ---
 
