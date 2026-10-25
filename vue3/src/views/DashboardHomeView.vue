@@ -79,7 +79,7 @@
       category: t('dashboard.tools.cve_matrix_cat'),
       description: t('dashboard.tools.cve_matrix_desc'),
       icon: '🛡️',
-      route: '/fleet/cve-matrix',
+      route: '/enterprise/compliance?tab=cves',
       requiredFeature: 'cve_scanner_enabled',
     },
     {
@@ -106,7 +106,7 @@
       category: t('dashboard.tools.topology_l2_cat'),
       description: t('dashboard.tools.topology_l2_desc'),
       icon: '🕸️',
-      route: '/network/topology-l2',
+      route: '/topology/l2',
       requiredFeature: 'l2_topology_enabled',
     },
     {
@@ -150,12 +150,20 @@
       route: '/bulk-ops',
     },
     {
+      id: 'compliance',
+      title: t('dashboard.tools.compliance_title', 'Flota & Seguridad'),
+      category: t('dashboard.tools.compliance_cat', 'Gobernanza'),
+      description: t('dashboard.tools.compliance_desc', 'Auditoría WORM, Matriz CVE, Drift y CIS Benchmark'),
+      icon: '🛡️',
+      route: '/enterprise/compliance',
+    },
+    {
       id: 'sessions',
       title: t('dashboard.tools.sessions_title'),
       category: t('dashboard.tools.sessions_cat'),
       description: t('dashboard.tools.sessions_desc'),
       icon: '🛑',
-      route: '/sessions',
+      route: '/users?tab=sessions',
       requiredRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'SECURITY_OFFICER'],
     },
     {
@@ -173,7 +181,7 @@
       category: t('dashboard.tools.audit_cat'),
       description: t('dashboard.tools.audit_desc'),
       icon: '📜',
-      route: '/audit-logs',
+      route: '/enterprise/compliance?tab=audit',
     },
   ]);
 
@@ -193,6 +201,16 @@
   });
 
   function navigateTo(path: string) {
+    if (path === '/routers/syslog') {
+      const target =
+        inventoryStore.routers.find((r) => r.is_reachable) || inventoryStore.routers[0];
+      if (target) {
+        router.push(`/routers/${target.id}/webfig/syslog`);
+      } else {
+        router.push('/inventory');
+      }
+      return;
+    }
     router.push(path);
   }
 

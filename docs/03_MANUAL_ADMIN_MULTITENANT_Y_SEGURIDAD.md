@@ -208,8 +208,9 @@ En la barra de navegación superior (`RgResponsiveShell.vue`), cada operador aut
    - **Resetear Mi 2FA:** Permite reiniciar el segundo factor TOTP personal con revocación inmediata de sesiones activas en KeyDB.
    - **Token de Acceso MCP:** Permite emitir o renovar el Bearer Token JWT de larga duración para asistentes de IA (`RgMcpTokenModal.vue`).
    - **Cerrar Sesión:** Salida limpia del sistema con invalidación de cookies de sesión y redirección segura a `/login`.
-3. **Paridad Administrativa:**
-   - Los administradores (`SUPERADMIN_GLOBAL` y `TENANT_ADMIN`) conservan las opciones equivalentes para todos los operadores de la organización desde la tabla de **Usuarios y Permisos** (`/users`), incluyendo el botón `[ 🔑 Clave ]`, `[ ↺ Reset 2FA ]` y `[ ⚡ Token MCP ]`.
+3. **Paridad Administrativa y Sesiones Activas:**
+   - Los administradores (`SUPERADMIN_GLOBAL` y `TENANT_ADMIN`) gestionan todas las sesiones vivas de la organización desde la pestaña **Sesiones Activas** dentro de **Usuarios y RBAC** (`/users?tab=sessions`), evitando redundancias en la barra lateral.
+   - Conservan las opciones equivalentes para todos los operadores desde la tabla de usuarios, incluyendo el botón `[ 🔑 Clave ]`, `[ ↺ Reset 2FA ]` y `[ ⚡ Token MCP ]`.
 
 ---
 

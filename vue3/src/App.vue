@@ -8,11 +8,14 @@
   import { useNocEventsStore } from '@/stores/useNocEventsStore';
   import { useThemeAndLayoutStore } from '@/stores/useThemeAndLayoutStore';
   import RgResponsiveShell from '@/components/common/RgResponsiveShell.vue';
+  import { useTabLifecycleCoordinator } from '@/composables/useTabLifecycleCoordinator';
 
   const route = useRoute();
   const authStore = useAuthStore();
   const nocStore = useNocEventsStore();
   const themeStore = useThemeAndLayoutStore();
+
+  useTabLifecycleCoordinator();
 
   const isLoginRoute = computed(() => route.path === '/login');
 

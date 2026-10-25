@@ -156,4 +156,80 @@ describe('DashboardHomeView.vue — Centro de Mando Táctico 11X', () => {
     expect(cardTitle.text()).toContain('Equipos de la Flota');
     expect(cardTitle.text()).not.toContain('Principales');
   });
+
+  it('navega correctamente a rutas consolidadas al pulsar las baldosas', async () => {
+    const authStore = useAuthStore();
+    authStore.setAuth({
+      id: 'usr-1',
+      username: 'admin',
+      email: 'admin@rosgrid.local',
+      role: 'SUPERADMIN_GLOBAL',
+      tenant_id: 't-1',
+      tenant_slug: 'tenant-demo',
+      totp_enabled: false,
+    });
+    authStore.tenantFeatures = {
+      cve_scanner_enabled: true,
+      l2_topology_enabled: true,
+      syslog_collector_enabled: true,
+    };
+
+    const inventoryStore = useInventoryStore();
+    inventoryStore.routers = [
+      {
+        id: 'r-test-1',
+        name: 'Core-CCR2004',
+        ip_address: '10.0.0.1',
+        is_reachable: true,
+        identity: 'Core-CCR2004',
+        model: 'CCR2004-1G-12S+2XS',
+        ros_version: '7.16',
+        board_name: 'CCR2004',
+        architecture: 'arm64',
+        uptime: '42d',
+        cpu_load: 5,
+        memory_usage_pct: 12,
+        created_at: '2026-01-01',
+        updated_at: '2026-01-01',
+      } as unknown as import('@/types/inventory').RouterItem,
+    ];
+
+    const wrapper = mount(DashboardHomeView, {
+      global: {
+        stubs: { RouterView: true, RouterLink: true },
+      },
+    });
+
+    // Encontrar tarjetas de herramientas
+    const toolCards = wrapper.findAll('.tile-card');
+    expect(toolCards.length).toBeGreaterThan(0);
+
+    // Baldosa CVEs debe navegar a /enterprise/compliance?tab=cves
+    const cveCard = toolCards.find((c) => c.text().includes('Matriz CVE'));
+    expect(cveCard).toBeDefined();
+    await cveCard?.trigger('click');
+    expect(pushMock).toHaveBeenCalledWith('/enterprise/compliance?tab=cves');
+
+    // Baldosa Sesiones debe navegar a /users?tab=sessions
+    pushMock.mockClear();
+    const sessionsCard = toolCards.find((c) => c.text().includes('Sesiones'));
+    expect(sessionsCard).toBeDefined();
+    await sessionsCard?.trigger('click');
+    expect(pushMock).toHaveBeenCalledWith('/users?tab=sessions');
+
+    // Baldosa Topología debe navegar a /topology/l2
+    pushMock.mockClear();
+    const topologyCard = toolCards.find((c) => c.text().includes('Topología'));
+    expect(topologyCard).toBeDefined();
+    await topologyCard?.trigger('click');
+    expect(pushMock).toHaveBeenCalledWith('/topology/l2');
+
+    // Baldosa Syslog debe navegar al router online activo
+    pushMock.mockClear();
+    const syslogCard = toolCards.find((c) => c.text().includes('Syslog'));
+    expect(syslogCard).toBeDefined();
+    await syslogCard?.trigger('click');
+    expect(pushMock).toHaveBeenCalledWith('/routers/r-test-1/webfig/syslog');
+  });
 });
+

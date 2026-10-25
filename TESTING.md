@@ -174,6 +174,7 @@ docker compose -f docker-compose.qa.yml down --remove-orphans
 | **Hito 23.5** | Frontend Vue 3 + Pinia: Matriz CVE, Topología L2 Canvas, Syslog Live, PoE-Aware y Karate UI | **100%** (20/20 BDD UI)<br>**100%** (297 tests Vitest) | N/A | ESLint + SonarJS (0 err) + vue-tsc (0 err) + Karate Labs Grupo 23 | ✅ **Certificado** |
 | **Hito 23.25** | Componente Unificado de Mapa (`UnifiedNetworkMap.vue`), 3 Toggles Feature Flags, Causa Raíz (RCA) y Cerraduras Operativas en KeyDB | **100%** (84/84 BDD API)<br>**100%** (35/35 BDD UI)<br>**100%** (7 tests Unitarios Backend) | N/A | 0 errores vue-tsc + Mypy Strict + ESLint + Vitest 100% | ✅ **Certificado** |
 | **Hito 23.26** | Sondeo Pasivo Escalonado de Fondo (Worker Jitter), Zero-Write Delta, WebSocket Reactivo, Diagnóstico 360° y Override de Cerraduras en Toolkit de Campo | **100%** (85/85 BDD API)<br>**100%** (36/36 BDD UI)<br>**100%** (11 tests Unitarios Backend + 15 tests Vitest) | N/A | StaggeredSessionPoller + Vite Build (0 err, 5.08s) + Mypy (0 err) | ✅ **Certificado** |
+| **Hito 23.27** | Detección Cierre Pestaña/Navegador (`pagehide` + `sendBeacon`), Grace Period 35s en KeyDB, Cancelación Reactiva y Limpieza Desatendida | **100%** (89/89 BDD API)<br>**100%** (41/41 BDD UI)<br>**92%** (514 tests Pytest)<br>**100%** (383 tests Vitest en 51 suites) | N/A | BroadcastChannel Multi-Pestaña + SessionLifecycleWorker + 26 Contratos Front-Back | ✅ **Certificado** |
 
 ---
 
@@ -1623,6 +1624,44 @@ Certificación ejecutada bajo la **Regla Cero** dentro de contenedores efímeros
 7. **Karate Labs BDD:**
    - **API BDD:** Escenario 88 incorporado en `fastapi/test/api_test.feature` y replicado en `docs/examples/fastapi/test/api_test.feature` (**88 escenarios totales de API**).
    - **UI BDD:** Escenario 40 incorporado en `vue3/test/ui_business_flow.feature` y replicado en `docs/examples/vue3/test/ui_business_flow.feature` (**40 escenarios totales de UI**).
+8. **Limpieza de Barra Lateral y Consolidación de Navegación:**
+   - Retiro de accesos redundantes de Auditoría WORM, Matriz CVEs y Sesiones Activas en `RgResponsiveShell.vue`.
+
+---
+
+## 38. Detección de Cierre de Pestaña/Navegador, Coordinación Multi-Pestaña y Liberación Efímera con Período de Gracia (Hito 23.27)
+
+### A. Alcance Técnico y Arquitectura de 2 Capas
+1. **Frontend (Vue 3 / TypeScript):**
+   - Composable `src/composables/useTabLifecycleCoordinator.ts` con bus `BroadcastChannel('rosgrid_tab_lifecycle_bus')` para registrar pestañas activas concurrentes y suprimir señales falsas de cierre de sesión.
+   - Intercepción de `window.addEventListener('pagehide')` con despacho de `navigator.sendBeacon('/api/v1/auth/session-closing')` (fallback `fetch(..., { keepalive: true })`) exclusivamente al cerrar la última pestaña del operador autenticado.
+   - Consolidación de baldosas de navegación en `DashboardHomeView.vue` y rutas canónicas en `RgResponsiveShell.vue`.
+2. **Backend (FastAPI / KeyDB Multi-Hilo):**
+   - Endpoint `POST /api/v1/auth/session-closing` (HTTP 202 Accepted) con registro de clave efímera `rg:{tenant}:sess_closing:{session_id}` (TTL 35s) e inserción en el sorted set `closing_sessions_queue`.
+   - Exclusión de validaciones CSRF e Idempotency-Key para permitir el despacho del beacon por el navegador.
+   - Cancelación reactiva incondicional al detectar nueva petición HTTP autenticada (`deps.py`) o apertura de WebSocket (`websockets.py`).
+   - Servicio en segundo plano `session_lifecycle_worker.py` en `rosgrid-worker` para barrido periódico de sesiones expiradas en el sorted set, cerrándolas con `kill_session` y emitiendo evento WORM `SESSION_CLOSED_ON_DISCONNECT`.
+
+### B. Cobertura y Certificación Multi-Capa 11X
+1. **Backend Unitario (Pytest en Docker):**
+   - `tests/api/test_session_closing_grace_period.unit.py` (**8 de 8 pruebas PASADAS, 100%**).
+   - Total backend: **514 pruebas pasadas (514/514, 100% de éxito)** con **92% de cobertura global**.
+2. **Frontend Unitario (Vitest en Docker):**
+   - `src/composables/useTabLifecycleCoordinator.unit.ts` (**5 de 5 pruebas PASADAS, 100%**).
+   - `src/views/DashboardHomeView.unit.ts` (**6 de 6 pruebas PASADAS, 100%**).
+   - `src/components/common/RgResponsiveShell.unit.ts` (**19 de 19 pruebas PASADAS, 100%**).
+   - Total frontend: **383 pruebas unitarias pasadas en 51 archivos de prueba (383/383, 100% de éxito)**.
+3. **Análisis Estático y Tipado Estricto:**
+   - `vue-tsc --noEmit`: 0 errores (código de salida 0).
+   - `ruff check`: All checks passed en backend.
+   - `mypy --strict`: Success: no issues found en 118 source files.
+   - `eslint src/`: 0 errores en todos los componentes y composables modificados.
+4. **Contratos Front-Back en Docker:**
+   - 26 de 26 pruebas de integración y contratos validados con `validar_comunicacion_front_back.py`.
+5. **Karate Labs BDD:**
+   - **API BDD:** Escenario 89 incorporado en `fastapi/test/api_test.feature` y replicado en `docs/examples/fastapi/test/api_test.feature` (**89 escenarios totales de API**).
+   - **UI BDD:** Escenario 41 incorporado en `vue3/test/ui_business_flow.feature` y replicado en `docs/examples/vue3/test/ui_business_flow.feature` (**41 escenarios totales de UI**).
+
 
 
 

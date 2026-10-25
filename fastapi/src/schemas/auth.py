@@ -113,3 +113,17 @@ class RegisterUserResponse(BaseModel):
     user_id: uuid.UUID
     username: str
     is_active: bool
+
+
+class SessionClosingRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    session_id: str = Field(..., description="ID de sesión que entra en cierre de ventana/pestaña")
+    client_timestamp: int | None = Field(None, description="Timestamp local en milisegundos")
+
+
+class SessionClosingResponse(BaseModel):
+    status: str = Field("GRACE_PERIOD_ACTIVE", description="Estado del ciclo de cierre")
+    ttl_seconds: int = Field(35, description="Período de gracia otorgado en segundos")
+    session_id: str
+

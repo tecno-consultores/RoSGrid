@@ -8,6 +8,22 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ## [Unreleased]
 
+### Added
+
+- **Detección de Cierre de Pestaña/Navegador, Coordinación Multi-Pestaña y Liberación Efímera con Período de Gracia (Hito 23.27 — `fastapi/src/api/v1/auth.py`, `fastapi/src/redis_layer/sessions.py`, `fastapi/src/workers/session_lifecycle_worker.py`, `vue3/src/composables/useTabLifecycleCoordinator.ts`, `docs/specs/41_TAB_CLOSE_DETECTION_AND_EPHEMERAL_GRACE_PERIOD_SESSION_CLEANUP.md`):**
+  - **Coordinación Multi-Pestaña en Frontend:** Composable `useTabLifecycleCoordinator.ts` con bus `BroadcastChannel('rosgrid_tab_lifecycle_bus')` que registra y sincroniza pestañas concurrentes en memoria; intercepción del evento WHATWG `pagehide` para despachar `navigator.sendBeacon('/api/v1/auth/session-closing')` (con fallback a `fetch` con `keepalive: true` y `credentials: 'include'`) únicamente cuando se cierra la última pestaña del operador.
+  - **Endpoint Asíncrono de Cierre de Sesión:** `POST /api/v1/auth/session-closing` (HTTP 202 Accepted) que registra la clave efímera `rg:{tenant}:sess_closing:{session_id}` con TTL de 35 segundos e indexa la sesión en el sorted set `closing_sessions_queue` en KeyDB. Excluido de validación CSRF e Idempotency-Key para permitir el despacho nativo por `sendBeacon` del navegador.
+  - **Cancelación Reactiva:** Desbloqueo transparente e inmediato de la clave de cierre ante cualquier petición HTTP autenticada (`get_current_user_claims`) o apertura de conexión WebSocket (`_extract_ws_claims`), permitiendo que recargas F5 o reconexiones de red mantengan la sesión intacta dentro de su ciclo de 8 horas.
+  - **Worker de Limpieza Desatendida:** Servicio `session_lifecycle_worker.py` integrado en `rosgrid-worker` (`fastapi/src/workers/runner.py`) que barre periódicamente sesiones expiradas en el sorted set, ejecutando `kill_session` y emitiendo el evento WORM `SESSION_CLOSED_ON_DISCONNECT`.
+  - **Aseguramiento Multi-Capa 11X:** 8 pruebas unitarias backend en `test_session_closing_grace_period.unit.py` (514 pruebas backend totales con 92% de cobertura), 5 pruebas unitarias frontend en `useTabLifecycleCoordinator.unit.ts` (383 pruebas Vitest totales en 51 archivos pasando al 100%), Escenario 89 en Karate Labs API (`fastapi/test/api_test.feature`) y Escenario 41 en Karate Labs UI (`vue3/test/ui_business_flow.feature`), espejados en `docs/examples/`.
+
+### Changed
+
+- **Consolidación de Navegación Lateral y Reparación de Baldosas del Dashboard (`vue3/src/components/common/RgResponsiveShell.vue`, `vue3/src/views/DashboardHomeView.vue`, `vue3/src/router/index.ts`):**
+  - **Eliminación de Redundancias en Barra Lateral:** Retirados los accesos directos de primer nivel para *Auditoría WORM*, *Matriz CVEs* y *Sesiones Activas* en `RgResponsiveShell.vue`. Ahora residen estrictamente en sus secciones canónicas (*Flota & Cumplimiento* y *Usuarios & RBAC*).
+  - **Reparación Integral de Baldosas en Dashboard:** Corregidas las rutas de acceso en `DashboardHomeView.vue` para enlazar correctamente a `/enterprise/compliance?tab=cves` (Matriz CVE), `/topology/l2` (Topología L2), `/users?tab=sessions` (Sesiones Activas), `/enterprise/compliance?tab=audit` (Auditoría Forense) y navegación contextual en Syslog hacia el primer router accesible o al inventario si no hay equipos online.
+  - **Aliases de Enrutamiento:** Agregados aliases en `vue3/src/router/index.ts` para `/fleet/cve-matrix`, `/audit`, `/network/topology-l2` y `/compliance`, garantizando retrocompatibilidad y previniendo pantallas en blanco.
+
 ### Security
 
 - **Auditoría Preventiva de Vulnerabilidades, Seguridad Shift-Left y Compuerta de Certificación Local (`Makefile`, `scripts/auditar-infra.sh`, `.agents/scripts/certify_task_completion.sh`, `docs/specs/40_LOCAL_VULNERABILITY_AUDIT_AND_SHIFT_LEFT_SECURITY.md`, `fastapi/tests/core/test_vulnerability_audit_gate.unit.py`):**

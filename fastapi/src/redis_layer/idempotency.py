@@ -21,6 +21,7 @@ _EXCLUDED_PATHS = {
     "/api/v1/auth/2fa/verify",
     "/api/v1/auth/refresh",
     "/api/v1/auth/logout",
+    "/api/v1/auth/session-closing",
     "/api/v1/auth/bootstrap",
     "/api/v1/mcp",
     "/metrics",

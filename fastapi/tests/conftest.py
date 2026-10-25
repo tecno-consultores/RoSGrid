@@ -324,6 +324,13 @@ class FakeAsyncRedis:
             return sorted_members[start:]
         return sorted_members[start : end + 1]
 
+    async def zrangebyscore(self, name: str, min: float | str, max: float | str) -> list[str]:
+        items = self.zsets.get(name, {})
+        min_val = float("-inf") if str(min) == "-inf" else float(min)
+        max_val = float("inf") if str(max) in ("+inf", "inf") else float(max)
+        filtered = [k for k, v in items.items() if min_val <= v <= max_val]
+        return sorted(filtered, key=lambda k: items[k])
+
     async def keys(self, pattern: str) -> list[str]:
         all_keys = (
             list(self.strings.keys()) + list(self.hashes.keys()) + list(self.sets.keys()) + list(self.zsets.keys())
@@ -372,6 +379,7 @@ def fake_redis(monkeypatch: pytest.MonkeyPatch) -> FakeAsyncRedis:
     monkeypatch.setattr("src.services.topology_l2.get_redis_client", lambda: fake)
     monkeypatch.setattr("src.api.v1.fleet_metrics.get_redis_client", lambda: fake)
     monkeypatch.setattr("src.services.diagnostic_governor.get_redis_client", lambda: fake)
+    monkeypatch.setattr("src.workers.session_lifecycle_worker.get_redis_client", lambda: fake)
     return fake
 
 

@@ -524,15 +524,15 @@ describe('RgResponsiveShell.vue — Doble Contexto & Menú de Usuario 11X', () =
 
     expect(wrapper.text()).toContain('Empresas (Tenants)');
     const allText = wrapper.text();
-    const auditPos = allText.indexOf('Auditoría WORM');
+    const usersPos = allText.indexOf('Usuarios & RBAC');
     const tenantsPos = allText.indexOf('Empresas (Tenants)');
     const compliancePos = allText.indexOf('Flota & Seguridad');
-    expect(auditPos).toBeGreaterThan(-1);
-    expect(tenantsPos).toBeGreaterThan(auditPos);
+    expect(usersPos).toBeGreaterThan(-1);
+    expect(tenantsPos).toBeGreaterThan(usersPos);
     expect(compliancePos).toBeGreaterThan(tenantsPos);
   });
 
-  it('traduce el menú de usuario y los enlaces de navegación L2 Topology y CVE Matrix al cambiar a inglés', async () => {
+  it('traduce el menú de usuario y los enlaces de navegación L2 Topology y Fleet & Compliance al cambiar a inglés', async () => {
     const { setLocale } = useI18n();
     setLocale('en');
 
@@ -551,7 +551,7 @@ describe('RgResponsiveShell.vue — Doble Contexto & Menú de Usuario 11X', () =
 
     // Enlaces de navegación en inglés
     expect(wrapper.text()).toContain('L2 Topology');
-    expect(wrapper.text()).toContain('CVE Matrix');
+    expect(wrapper.text()).toContain('Fleet & Compliance');
 
     // Desplegar menú de usuario en inglés
     await wrapper.find('.user-profile-btn').trigger('click');

@@ -17,6 +17,7 @@ from src.core.config import settings
 from src.db.session import async_session_maker
 from src.models.core import SystemRoleEnum, UserRouterPermission
 from src.redis_layer.client import get_redis_client
+from src.redis_layer.sessions import cancel_session_closing
 from src.services.telemetry_multiplexer import (
     cancel_poller_task,
     ensure_poller_active,
@@ -80,6 +81,8 @@ async def _extract_ws_claims(ws: WebSocket) -> dict[str, Any]:
     if not sess_alive:
         await ws.close(code=4401, reason="Sesión revocada o expirada")
         raise WebSocketDisconnect(code=4401)
+
+    await cancel_session_closing(str(tenant_id), str(session_id))
 
     return payload
 

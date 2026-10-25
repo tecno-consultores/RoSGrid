@@ -210,13 +210,6 @@
       icon: '🗺️',
     });
 
-    items.push({
-      name: 'FleetCveMatrix',
-      path: '/inventory/cves',
-      label: t('nav.cve_matrix', 'Matriz de CVEs'),
-      icon: '🛡️',
-    });
-
     if (authStore.isFeatureEnabled('nightly_backups_enabled')) {
       items.push({
         name: 'RscGitDiff',
@@ -239,27 +232,7 @@
         label: t('nav.users_rbac', 'Usuarios & RBAC'),
         icon: '👥',
       },
-      {
-        name: 'ImmutableAuditLogs',
-        path: '/audit',
-        label: t('nav.audit_worm', 'Auditoría WORM'),
-        icon: '📜',
-      },
     );
-
-    if (
-      authStore.currentRole === 'SUPERADMIN_GLOBAL' ||
-      authStore.currentRole === 'TENANT_ADMIN' ||
-      authStore.currentRole === 'SECURITY_OFFICER' ||
-      authStore.currentRole === 'AUDITOR'
-    ) {
-      items.push({
-        name: 'ActiveSessionsKillSwitch',
-        path: '/sessions',
-        label: t('nav.active_sessions', 'Sesiones Activas (Kill-Switch)'),
-        icon: '🛑',
-      });
-    }
 
     if (authStore.currentRole === 'SUPERADMIN_GLOBAL' || authStore.currentRole === 'TENANT_ADMIN') {
       items.push({
@@ -314,9 +287,9 @@
 
         <!-- Botón para Ocultar / Mostrar la Barra Lateral Izquierda -->
         <button
+          id="btn-toggle-sidebar"
           type="button"
           class="btn-sidebar-toggle"
-          id="btn-toggle-sidebar"
           :title="isSidebarHidden ? 'Mostrar barra lateral' : 'Ocultar barra lateral'"
           :aria-label="isSidebarHidden ? 'Mostrar barra lateral de navegación' : 'Ocultar barra lateral de navegación'"
           :aria-expanded="!isSidebarHidden"
@@ -353,11 +326,11 @@
         </button>
 
         <!-- Menú Desplegable Táctico de Usuario -->
-        <div v-if="authStore.user" class="user-menu-container" ref="userMenuRef">
+        <div v-if="authStore.user" ref="userMenuRef" class="user-menu-container">
           <button
+            id="user-profile-trigger"
             type="button"
             class="user-profile-btn"
-            id="user-profile-trigger"
             :aria-expanded="isUserMenuOpen"
             aria-haspopup="true"
             :aria-label="t('user_menu.aria_label')"

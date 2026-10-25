@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 RoSGrid Contributors
 
+import asyncio
 import hashlib
 import json
 import secrets
@@ -212,3 +213,100 @@ async def rotate_refresh_token(
     await pipe.execute()
 
     return True, None, new_token
+
+
+CLOSING_GRACE_PERIOD_SECONDS = 35
+
+
+async def mark_session_closing(
+    tenant_id: str, session_id: str, grace_seconds: int = CLOSING_GRACE_PERIOD_SECONDS
+) -> bool:
+    """Marca una sesión en estado de cierre temporal (período de gracia ante cierre de pestaña/navegador).
+
+    Crea una clave efímera rg:{tenant_id}:sess_closing:{session_id} con TTL de gracia (35s)
+    y la registra en el Sorted Set rg:{tenant_id}:closing_sessions_zset.
+    """
+    redis = get_redis_client()
+    sess_key = f"rg:{tenant_id}:sess:{session_id}"
+    exists = await redis.exists(sess_key)
+    if not exists:
+        return False
+
+    closing_key = f"rg:{tenant_id}:sess_closing:{session_id}"
+    zset_key = f"rg:{tenant_id}:closing_sessions_zset"
+    now_epoch = int(time.time())
+    expires_at = now_epoch + grace_seconds
+
+    pipe = redis.pipeline()
+    pipe.set(closing_key, str(expires_at), ex=grace_seconds)
+    pipe.zadd(zset_key, {session_id: float(expires_at)})
+    await pipe.execute()
+    return True
+
+
+async def cancel_session_closing(tenant_id: str, session_id: str) -> bool:
+    """Cancela el período de gracia de cierre de sesión ante reactivación de pestañas."""
+    redis = get_redis_client()
+    closing_key = f"rg:{tenant_id}:sess_closing:{session_id}"
+    zset_key = f"rg:{tenant_id}:closing_sessions_zset"
+
+    try:
+        pipeline_fn = getattr(redis, "pipeline", None)
+        if callable(pipeline_fn):
+            pipe = pipeline_fn()
+            # Si pipeline() devolvió una corrutina (ej. en ciertos mocks)
+            if asyncio.iscoroutine(pipe):
+                pipe = await pipe
+            if hasattr(pipe, "delete") and hasattr(pipe, "zrem") and hasattr(pipe, "execute"):
+                pipe.delete(closing_key)
+                pipe.zrem(zset_key, session_id)
+                res = pipe.execute()
+                results = await res if asyncio.iscoroutine(res) else res
+                return bool(results and len(results) > 0 and results[0] > 0)
+        await redis.delete(closing_key)
+        await redis.zrem(zset_key, session_id)
+        return True
+    except Exception:
+        return False
+
+
+async def is_session_closing(tenant_id: str, session_id: str) -> bool:
+    """Verifica si una sesión se encuentra actualmente en período de gracia de cierre."""
+    redis = get_redis_client()
+    closing_key = f"rg:{tenant_id}:sess_closing:{session_id}"
+    return bool(await redis.exists(closing_key))
+
+
+async def sweep_expired_closing_sessions(tenant_id: str) -> list[str]:
+    """Identifica y revoca sesiones cuyo período de gracia de cierre ha expirado en KeyDB.
+
+    Elimina de Redis las sesiones que no tuvieron reactivación dentro de los 35 segundos.
+    """
+    redis = get_redis_client()
+    zset_key = f"rg:{tenant_id}:closing_sessions_zset"
+    now_epoch = int(time.time())
+
+    # Obtener sesiones candidatas cuyo expires_at <= now_epoch
+    expired_candidates = await redis.zrangebyscore(zset_key, min="-inf", max=now_epoch)
+    if not expired_candidates:
+        return []
+
+    closed_sessions: list[str] = []
+    for sid_raw in expired_candidates:
+        sid = sid_raw.decode("utf-8") if isinstance(sid_raw, bytes) else str(sid_raw)
+        closing_key = f"rg:{tenant_id}:sess_closing:{sid}"
+        is_still_closing = await redis.exists(closing_key)
+        # Si la clave con TTL ya expiró en Redis (o ya venció su tiempo)
+        if not is_still_closing:
+            await kill_session(
+                tenant_id,
+                sid,
+                killed_by="SESSION_LIFECYCLE_WORKER",
+                reason="Liberación automática por cierre de pestaña/navegador (Gracia 35s expirada)",
+            )
+            closed_sessions.append(sid)
+
+        await redis.zrem(zset_key, sid)
+
+    return closed_sessions
+

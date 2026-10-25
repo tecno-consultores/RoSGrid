@@ -367,6 +367,17 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And waitFor(".enterprise-compliance-view")
     And waitFor(".tactical-table")
 
+  Scenario: 41. Navegación táctica consolidada desde baldosas principales y coordinación multi-pestaña (Hito 23.27)
+    Given driver baseUrl + '/'
+    And waitFor(".mission-hub")
+    And waitFor(".tool-card")
+    And match text(".mission-hub") contains 'Centro de Mando'
+    # Verificación de consolidación en barra lateral (sin redundancia de auditoría ni sesiones)
+    And match text(".rg-sidebar") contains 'Usuarios & RBAC'
+    And match text(".rg-sidebar") contains 'Flota & Seguridad'
+    And match text(".rg-sidebar") !contains 'Sesiones Activas (Kill-Switch)'
+
+
 
 
 

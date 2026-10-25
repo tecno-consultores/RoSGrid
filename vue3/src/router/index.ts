@@ -38,6 +38,7 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/inventory/cves',
+    alias: ['/fleet/cve-matrix'],
     name: 'FleetCveMatrix',
     component: () => import('@/views/FleetCveMatrix.vue'),
     meta: {
@@ -223,6 +224,7 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/audit-logs',
+    alias: ['/audit'],
     name: 'ImmutableAuditLogs',
     component: () => import('@/views/ImmutableAuditLogsView.vue'),
     meta: {
@@ -302,6 +304,7 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/enterprise/compliance',
+    alias: ['/compliance', '/fleet/compliance'],
     name: 'EnterpriseCompliance',
     component: () => import('@/views/EnterpriseComplianceView.vue'),
     meta: {
@@ -311,7 +314,7 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/topology/l2',
-    alias: ['/topology'],
+    alias: ['/topology', '/network/topology-l2'],
     name: 'L2Topology',
     component: () => import('@/views/L2TopologyView.vue'),
     meta: {
@@ -325,6 +328,27 @@ export const router = createRouter({
   history: createWebHistory(),
   routes,
 });
+
+function syncWebFigTab(to: RouteLocationNormalized): void {
+  if (!to.path.includes('/webfig/') || !to.name) {
+    return;
+  }
+  const webFigStore = useWebFigStore();
+  const routerId = String(to.params.routerId || '');
+  const tabId = String(to.name);
+  const label = String(to.meta.tabLabel || to.name);
+  const icon = String(to.meta.tabIcon || '📄');
+  const isDashboard = tabId === 'RouterLiveDashboard';
+
+  webFigStore.openOrFocusTab({
+    tabId,
+    routeName: String(to.name),
+    label,
+    icon,
+    params: { routerId },
+    closable: !isDashboard,
+  });
+}
 
 router.beforeEach((to, _from, next) => {
   // 1. Actualización de título para WCAG 2.1 AA y SEO
@@ -362,24 +386,8 @@ router.beforeEach((to, _from, next) => {
     return next({ path: '/inventory' });
   }
 
-  // 5. Sincronización automática de pestañas de WebFig
-  if (to.path.includes('/webfig/') && to.name) {
-    const webFigStore = useWebFigStore();
-    const routerId = String(to.params.routerId || '');
-    const tabId = String(to.name);
-    const label = String(to.meta.tabLabel || to.name);
-    const icon = String(to.meta.tabIcon || '📄');
-    const isDashboard = tabId === 'RouterLiveDashboard';
-
-    webFigStore.openOrFocusTab({
-      tabId,
-      routeName: String(to.name),
-      label,
-      icon,
-      params: { routerId },
-      closable: !isDashboard,
-    });
-  }
+  // 6. Sincronización automática de pestañas de WebFig
+  syncWebFigTab(to);
 
   next();
 });

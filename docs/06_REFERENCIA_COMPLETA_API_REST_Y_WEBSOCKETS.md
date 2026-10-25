@@ -172,6 +172,31 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
 - **Roles:** Todos los usuarios autenticados.
 - **Salida (200):** Invalida la sesión en KeyDB y elimina la cookie.
 
+#### `POST /api/v1/auth/session-closing` *(Cierre Efímero de Pestaña/Navegador con Período de Gracia)*
+
+- **Propósito:** Notificación asíncrona disparada por el cliente vía `navigator.sendBeacon` o `fetch` con `keepalive: true` ante el evento WHATWG `pagehide` al cerrarse la última pestaña activa del operador.
+- **Roles:** Usuarios autenticados (sesión activa vía cookie `__Host-rg_at` o token Bearer).
+- **Entrada (JSON / Blob Beacon):**
+  ```json
+  {
+    "session_id": "current",
+    "client_timestamp": 1729814400000
+  }
+  ```
+- **Salida (202 Accepted):**
+  ```json
+  {
+    "status": "grace_period_initiated",
+    "session_id": "d043f112-28e4-...",
+    "grace_period_seconds": 35
+  }
+  ```
+- **Mecánica de Seguridad y Resiliencia:**
+  - Clave efímera en KeyDB `rg:{tenant}:sess_closing:{session_id}` con TTL de 35 segundos e inserción en el sorted set `closing_sessions_queue`.
+  - Excluido de validaciones CSRF e Idempotency-Key para permitir el envío nativo por el motor Beacon del navegador.
+  - Cancelación reactiva incondicional si el usuario realiza cualquier petición autenticada o abre un canal WebSocket dentro de los 35s (frecuente en recargas F5 y reconexiones de red).
+  - Recolección desatendida por el worker `session_lifecycle_worker` que tras 35s revoca la sesión y genera el registro de auditoría WORM `SESSION_CLOSED_ON_DISCONNECT`.
+
 #### `GET /api/v1/sessions`
 
 - **Roles:** `TENANT_ADMIN`, `SUPERADMIN_GLOBAL`.

@@ -2,6 +2,7 @@
 # Copyright (C) 2026 RoSGrid Contributors
 
 import hashlib
+import json
 import logging
 import secrets
 import time
@@ -15,7 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.deps import get_current_user_claims
+from src.api.deps import extract_token_from_request, get_current_user_claims
 from src.core.audit import write_audit_log
 from src.core.config import settings
 from src.core.crypto import (
@@ -29,9 +30,11 @@ from src.db.session import get_db_session, set_tenant_context
 from src.models.core import SystemRoleEnum, Tenant, TenantStatusEnum, User
 from src.redis_layer.client import get_redis_client
 from src.redis_layer.sessions import (
+    CLOSING_GRACE_PERIOD_SECONDS,
     create_session,
     kill_all_user_sessions,
     kill_session,
+    mark_session_closing,
     rotate_refresh_token,
 )
 from src.schemas.auth import (
@@ -43,6 +46,8 @@ from src.schemas.auth import (
     LoginStep1Response,
     RegisterUserRequest,
     RegisterUserResponse,
+    SessionClosingRequest,
+    SessionClosingResponse,
     UserProfileResponse,
     Verify2FARequest,
 )
@@ -608,6 +613,88 @@ async def logout(
     response.delete_cookie("__Host-rg_rt", path="/api/v1/auth/refresh")
     response.delete_cookie("rg_rt", path="/api/v1/auth/refresh")
     response.delete_cookie("rg_csrf", path="/")
+
+
+@router.post(
+    "/session-closing",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=SessionClosingResponse,
+)
+async def session_closing(
+    request: Request,
+    payload: SessionClosingRequest | None = None,
+) -> SessionClosingResponse:
+    """Registra una sesión en estado de cierre temporal con período de gracia de 35s.
+
+    Invocado por el frontend ante el cierre de la última pestaña o navegador
+    (mediante navigator.sendBeacon o fetch con keepalive).
+    """
+    sid: str | None = payload.session_id if payload else None
+    if not sid:
+        try:
+            raw_body = await request.body()
+            if raw_body:
+                body_json = json.loads(raw_body.decode("utf-8"))
+                sid = body_json.get("session_id")
+        except Exception:
+            sid = None
+
+    token = extract_token_from_request(request)
+    tenant_id: str | None = None
+
+    if token:
+        try:
+            claims: dict[str, Any] = jwt.decode(
+                token,
+                settings.ROSGRID_JWT_SECRET_KEY,
+                algorithms=["HS256"],
+                options={"verify_exp": False},
+            )
+            tenant_id = claims.get("tid")
+            token_sid = claims.get("sid")
+            if sid and token_sid and sid != token_sid:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="El ID de sesión no coincide con las credenciales",
+                )
+            sid = sid or token_sid
+        except jwt.PyJWTError:
+            pass
+
+    if not sid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Se requiere session_id para registrar el cierre",
+        )
+
+    redis = get_redis_client()
+    if not tenant_id:
+        keys = await redis.keys(f"rg:*:sess:{sid}")
+        if keys:
+            first_key = keys[0]
+            matched_key = first_key.decode("utf-8") if isinstance(first_key, bytes) else str(first_key)
+            parts = matched_key.split(":")
+            if len(parts) >= 4:
+                tenant_id = parts[1]
+
+    if not tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Sesión no encontrada o ya finalizada",
+        )
+
+    marked = await mark_session_closing(tenant_id, sid, grace_seconds=CLOSING_GRACE_PERIOD_SECONDS)
+    if not marked:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="La sesión no existe en el registro activo",
+        )
+
+    return SessionClosingResponse(
+        status="GRACE_PERIOD_ACTIVE",
+        ttl_seconds=CLOSING_GRACE_PERIOD_SECONDS,
+        session_id=sid,
+    )
 
 
 @router.get("/me")

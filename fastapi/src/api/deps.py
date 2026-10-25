@@ -11,6 +11,7 @@ from fastapi import Depends, HTTPException, Request, status
 from src.core.config import settings
 from src.models.core import SystemRoleEnum
 from src.redis_layer.client import get_redis_client
+from src.redis_layer.sessions import cancel_session_closing
 
 
 def extract_token_from_request(request: Request) -> str | None:
@@ -67,6 +68,9 @@ async def get_current_user_claims(request: Request) -> dict[str, Any]:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Sesión expirada o revocada por Kill-Switch",
         )
+
+    # Cancelación reactiva de período de gracia ante reactivación/recarga
+    await cancel_session_closing(str(tenant_id), str(session_id))
 
     request.state.tenant_id = uuid.UUID(str(tenant_id))
     request.state.session_id = str(session_id)
