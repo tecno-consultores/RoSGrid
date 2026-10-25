@@ -89,6 +89,11 @@ Apply these non-negotiable security directives before writing any code:
    - Prohibit fixed floating bottom footers (`position: fixed` or rigid bottom flex containers) that permanently steal vertical pixels.
    - All copyright and legal footers must be placed in-flow inside `<main>` with `margin-top: auto`, reserving 100% of vertical height for dashboards, inventory tables, and network maps.
 
+10. **Critical Execution Gate & Explicit User Authorization:**
+    - AI agents MUST NEVER create, edit, or delete code files (in `fastapi/`, `vue3/`, scripts, or migrations) based on IDE timeouts, artifact review notifications, or automatic system 'Auto-proceed' events.
+    - All code modifications are strictly prohibited while in the planning phase. The agent must pause and wait until the user explicitly commands to proceed in the chat (e.g. 'procede', 'ejecuta el plan', 'adelante con el código').
+
+
 ---
 
 ## 3. Pre-Commit 11X Checklist

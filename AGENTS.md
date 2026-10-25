@@ -31,6 +31,7 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
    - **Security-by-Design:** Forced PostgreSQL RLS per tenant, anti-SSRF URL validation (`validate_router_target_url`), AES-256-GCM Vault cryptography, HMAC-SHA256 CSRF protection, mandatory `Idempotency-Key` headers, and SuperAdmin tenant fast-switching with atomic KeyDB session re-keying and WORM audit.
    - **Visual Geometry & In-Flow Ergonomics (Anti-Sticky Footer):** JSDOM does not calculate layout or bounding boxes. Validate DOM tree order and inspect viewports in real browser sessions. Prohibit fixed floating bottom footers that steal vertical real estate; enforce in-flow footers inside `<main>` (`margin-top: auto`).
    - **Feature Flags Governance:** Flags are tenant-scoped capabilities; enforce Blast Radius confirmation shield on critical governance flags and DAG dependency validation.
+   - **Critical Execution Gate:** AI agents must NEVER modify code based on IDE timeouts or 'Auto-proceed' signals; code changes require explicit user authorization in the chat.
 
 3. [frontend_parity_and_closure.md](file:///.agents/rules/frontend_parity_and_closure.md):
    - **Terminal ↔ Frontend Parity:** Zero console-only actions or orphan API endpoints without a matching Vue 3 interface.
