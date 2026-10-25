@@ -67,6 +67,31 @@ async def test_kill_session_and_pubsub_event(fake_redis: FakeAsyncRedis) -> None
 
 
 @pytest.mark.asyncio
+async def test_kill_session_silent_mode_no_ws_notify(fake_redis: FakeAsyncRedis) -> None:
+    """Verifica que kill_session con notify_ws=False destruye la sesión sin publicar en Pub/Sub."""
+    with patch("src.redis_layer.sessions.get_redis_client", return_value=fake_redis):
+        session_id, _family_id, _ = await create_session(
+            tenant_id="tenant-silence",
+            user_id="user-silence",
+            username="superadmin",
+            full_name="Super Admin",
+            role="SUPERADMIN_GLOBAL",
+            ip_address="10.0.0.1",
+            user_agent="AgentSwitch",
+        )
+
+        killed = await kill_session(
+            "tenant-silence",
+            session_id,
+            killed_by="SUPERADMIN_TENANT_SWITCH",
+            reason="Conmutación de tenant",
+            notify_ws=False,
+        )
+        assert killed is True
+        assert await get_session("tenant-silence", session_id) is None
+
+
+@pytest.mark.asyncio
 async def test_kill_all_user_sessions(fake_redis: FakeAsyncRedis) -> None:
     with patch("src.redis_layer.sessions.get_redis_client", return_value=fake_redis):
         # Crear 2 sesiones para el mismo usuario

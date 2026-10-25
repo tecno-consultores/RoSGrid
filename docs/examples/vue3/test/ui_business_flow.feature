@@ -397,6 +397,19 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     Then waitFor(".rg-tenant-switcher__dropdown")
     And match text(".rg-tenant-switcher__dropdown") contains 'Organizaciones'
 
+  Scenario: 44. Gestión Táctica de Módulos & Feature Flags por Empresa (Hito 25)
+    Given driver baseUrl + '/admin/tenants'
+    And waitFor(".tenants-management-view")
+    And waitFor("button.btn-action--features")
+    When click("button.btn-action--features")
+    Then waitFor(".tenant-modules-studio")
+    And waitFor(".features-grid-container")
+    And waitFor(".presets-row")
+    And match text(".presets-row") contains 'Modo Corporativo'
+    And match text(".presets-row") contains 'Modo ISP & WISP'
+    And waitFor("button.btn-save-features")
+    And match text("button.btn-save-features") contains 'Guardar Capacidades'
+
 
 
 

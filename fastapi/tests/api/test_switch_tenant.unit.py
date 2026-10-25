@@ -147,6 +147,14 @@ async def test_switch_tenant_inactive(
     assert "no se encuentra activo" in exc_info.value.detail
 
 
+def test_switch_tenant_missing_target_payload_validation() -> None:
+    """Verifica que SwitchTenantRequest rechaza la creación si ambos campos están vacíos."""
+    import pydantic
+    with pytest.raises(pydantic.ValidationError) as exc_info:
+        SwitchTenantRequest()
+    assert "target_tenant_id" in str(exc_info.value)
+
+
 @pytest.mark.asyncio
 async def test_switch_tenant_success_by_id(
     mock_request: Request,

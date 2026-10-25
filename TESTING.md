@@ -1863,27 +1863,37 @@ Conforme a la Especificación 43 v2.0.0 y la directiva `.agents/rules/ground_tru
    - Resultado: **100% APROBADO** en Docker.
 
 ### E. Hito 25: Conmutador Rápido de Contexto de Tenants, Ergonomía In-Flow y Estudio Táctico de Feature Flags (Completado y Certificado al 100%)
-1. **Backend Unitario (`fastapi/tests/api/test_switch_tenant.unit.py`):**
-   - 5 pruebas unitarias cubriendo:
+1. **Backend Unitario (`fastapi/tests/api/test_switch_tenant.unit.py` y `fastapi/tests/redis_layer/test_sessions_and_killswitch.unit.py`):**
+   - 6 pruebas unitarias en `test_switch_tenant.unit.py`:
      - Rechazo HTTP 403 a roles no autorizados (no `SUPERADMIN_GLOBAL`).
      - Rechazo HTTP 400 ante tenant inactivo o inexistente.
      - Conmutación exitosa por `target_tenant_id` y por `target_tenant_slug`.
-     - Invalidación de sesión previa con `kill_session`, creación de sesión atómica en KeyDB y registro de auditoría WORM `SUPERADMIN_TENANT_SWITCHED`.
-   - Ejecutadas en contenedor efímero `sinfallas/base-python-uv:3.15`: **5 de 5 pruebas PASADAS (100%)**.
-   - Total backend: **541 pruebas unitarias PASADAS al 100%**.
+     - Invalidación de sesión previa con `kill_session(..., notify_ws=False)`, creación de sesión atómica en KeyDB y registro de auditoría WORM `SUPERADMIN_TENANT_SWITCHED`.
+     - Validación estricta de payload en `SwitchTenantRequest` con Pydantic.
+   - 7 pruebas unitarias en `test_sessions_and_killswitch.unit.py` incluyendo `test_kill_session_silent_mode_no_ws_notify`.
+   - Ejecutadas en contenedor efímero `sinfallas/base-python-uv:3.15`: **13 de 13 pruebas PASADAS (100%)**.
+   - Total backend: **543 pruebas unitarias PASADAS al 100%**.
 2. **Frontend Unitario (Vitest en Docker `sinfallas/base-node-ionic:26`):**
    - `vue3/src/components/admin/RgTenantSwitcher.unit.ts`: **4 de 4 pruebas PASADAS (100%)**.
    - `vue3/src/components/admin/RgFeatureFlagsGrid.unit.ts`: **4 de 4 pruebas PASADAS (100%)**.
    - `vue3/src/views/admin/TenantModulesStudioView.unit.ts`: **2 de 2 pruebas PASADAS (100%)**.
    - `vue3/src/views/admin/tenantsManagementView.unit.ts`: **6 de 6 pruebas PASADAS (100%)**.
-   - Total frontend: **55 suites aprobadas, 402 de 402 pruebas PASADAS al 100%**.
-3. **Análisis Estático y Tipado Estricto:**
+   - `vue3/src/stores/useNocEventsStore.unit.ts`: **8 de 8 pruebas PASADAS (100%)** (incluyendo exclusión de `SUPERADMIN_TENANT_SWITCH` y reconexión por `rosgrid:tenant-switched`).
+   - Total frontend: **55 suites aprobadas, 404 de 404 pruebas PASADAS al 100%**.
+3. **Escenarios BDD Karate Labs:**
+   - **API REST (`fastapi/test/api_test.feature` & `docs/examples/fastapi/test/api_test.feature`):** **94 escenarios BDD PASADOS (100%)** (incorporados escenarios 93 y 94 para conmutación de tenants y validación de métodos).
+   - **UI WebFig / NOC (`vue3/test/ui_business_flow.feature` & `docs/examples/vue3/test/ui_business_flow.feature`):** **44 escenarios BDD PASADOS (100%)** (incorporados escenarios 43 y 44 para conmutador superior y estudio táctico de módulos).
+4. **Contratos Front-Back y Seguridad:**
+   - **Suite de Integración:** 26 de 26 contratos Front-Back aprobados al 100% en `validar_comunicacion_front_back.py`.
+   - **Trivy IaC & Vulnerabilidades:** 0 hallazgos CRITICAL/HIGH.
+   - **Secretos:** 0 secretos detectados.
+   - **Paridad ORM vs Alembic:** 26 de 26 tablas en perfecta paridad.
+5. **Análisis Estático y Tipado Estricto:**
    - Backend: `ruff check src/` -> 0 errores.
    - Frontend: `vue-tsc --noEmit` -> 0 errores.
    - Compilación de producción Vite (`npm run build`) -> Limpia en 4.14s.
-4. **Ergonomía de Pantalla Completa:**
+6. **Ergonomía de Pantalla Completa y Fix de Conmutación:**
    - 100% del alto útil de viewport recuperado en el Centro de Mando e Inventario sin barras flotantes fijas inferiores.
-5. **Certificación del Fix de Conmutación de Tenants sin Deslogueo:**
    - Backend: Invocación de `kill_session(..., notify_ws=False)` en `switch_tenant` impidiendo falsas expulsiones por WebSocket.
    - Frontend: Filtro en `useNocEventsStore.ts` excluyendo `SUPERADMIN_TENANT_SWITCH` de `forceKillSwitchLogout` y reconexión limpia reactiva ante `rosgrid:tenant-switched`.
    - Verificado con sesión activa de SuperAdmin alternando fluidamente entre `sistemas` y `fibra-norte` con 0 deslogueos indeseados.

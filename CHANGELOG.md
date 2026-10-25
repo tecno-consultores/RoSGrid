@@ -10,10 +10,16 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Fixed
 
-- **Corrección de Auto-Deslogueo por WebSocket Kill-Switch al Conmutar Tenant (`fastapi/src/redis_layer/sessions.py`, `fastapi/src/api/v1/auth.py`, `vue3/src/stores/useNocEventsStore.ts`):**
+- **Corrección de Auto-Deslogueo por WebSocket Kill-Switch al Conmutar Tenant (`fastapi/src/redis_layer/sessions.py`, `fastapi/src/api/v1/auth.py`, `vue3/src/stores/useNocEventsStore.ts`, `fastapi/tests/api/test_switch_tenant.unit.py`, `fastapi/tests/redis_layer/test_sessions_and_killswitch.unit.py`, `vue3/src/stores/useNocEventsStore.unit.ts`, `fastapi/test/api_test.feature`, `vue3/test/ui_business_flow.feature`):**
   - **Silenciamiento de Pub/Sub en Conmutación (`notify_ws=False`):** En `fastapi/src/redis_layer/sessions.py`, se dotó a la función `kill_session` del parámetro opcional `notify_ws: bool = True`. Al ejecutar `switch_tenant` en `fastapi/src/api/v1/auth.py`, se invoca con `notify_ws=False`, silenciando el broadcast del evento `SESSION_KILLED` en el canal Pub/Sub `rg:pubsub:events:{tenant_id}` y evitando que la misma pestaña del navegador reciba un aviso de revocación administrativo para expulsar al operador a la pantalla de login.
   - **Secuencia Atómica Fail-Safe en Backend:** En `switch_tenant`, se asegura la lectura canónica de `features` mediante `_extract_tenant_features(target_tenant)` y se crea la nueva sesión antes de revocar la previa, garantizando que un fallo intermedio nunca deje al SuperAdmin en un estado huérfano o deslogueado.
   - **Filtro de Exclusión y Reconexión Limpia en Frontend:** En `vue3/src/stores/useNocEventsStore.ts`, se intercepta el manejador de eventos del WebSocket para omitir la expulsión (`forceKillSwitchLogout`) cuando `killed_by === 'SUPERADMIN_TENANT_SWITCH'`, y se enlaza un oyente al evento reactivo `rosgrid:tenant-switched` para cerrar el socket del tenant saliente y reconectar con retardo controlado al canal del tenant entrante.
+  - **Aseguramiento Integral Multi-Capa 11X & Karate Labs BDD:**
+    - Pruebas unitarias de backend ampliadas a 543 tests pasando al 100% (incorporando `test_kill_session_silent_mode_no_ws_notify` y validación de `SwitchTenantRequest`).
+    - Pruebas unitarias de frontend ampliadas a 404 tests en 55 suites Vitest (incorporando 2 tests específicos de exclusión de kill-switch y reconexión WebSocket).
+    - Escenarios BDD Karate Labs API ampliados a 94 escenarios (añadidos escenarios 93 y 94 para conmutación rápida y validación de métodos).
+    - Escenarios BDD Karate Labs UI ampliados a 44 escenarios (añadidos escenarios 43 y 44 para conmutador superior y estudio táctico de módulos y feature flags por empresa).
+    - 26 de 26 contratos Front-Back validados en vivo con Docker.
 
 - **Detección Canónica Determinista de Syslog y Eliminación de Falsos Positivos en Flota de Fábrica (Hito 24 — `fastapi/src/api/v1/inventory_helpers.py`, `fastapi/src/workers/health_monitor_worker.py`, `scripts/validar-flota-real.py`, `Makefile`):**
   - **Eliminación de la Heurística Laxa ("remote"):** Se erradicó la coincidencia genérica sobre la acción por defecto de fábrica de MikroTik (`name="remote"` con `0.0.0.0`), la cual provocaba que routers de laboratorio sin configurar (`r4, r5, r6`) se marcaran erróneamente con Syslog activo.

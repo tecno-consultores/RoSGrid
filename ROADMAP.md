@@ -659,11 +659,11 @@
   - 0 errores de tipado estricto en `ruff`, `mypy` y `vue-tsc`.
 - [x] **25.10** **Certificación en Docker e Inspección Visual en Navegador Real:**
   - Despliegue en contenedor efímero y validación visual con `browser_subagent` verificando conmutación de tenant, footer in-flow y cuadrícula de módulos.
-- [x] **25.11** **Estabilización de Conmutación de Contexto y Prevención de Auto-Deslogueo por WebSocket Kill-Switch:**
+- [x] **25.11** **Estabilización de Conmutación de Contexto, Doble Candado Fail-Safe y Cobertura 11X Integral (Karate Labs API & UI):**
   - Silenciamiento de broadcast en Pub/Sub (`notify_ws=False`) en `kill_session` al conmutar organizaciones, impidiendo que el WebSocket propio interprete un kill-switch administrativo sobre la sesión activa.
   - Secuencia Fail-Safe en backend extrayendo `features` de forma canónica y asegurando la nueva sesión antes de revocar la anterior.
   - Filtro de exclusión para `SUPERADMIN_TENANT_SWITCH` en `useNocEventsStore.ts` y reconexión reactiva limpia ante el evento `rosgrid:tenant-switched`.
-  - Certificado en Docker con 100% de éxito en Pytest (5/5), Vitest (8/8) y suite de contratos Front-Back (26/26).
+  - Aseguramiento 11X completo: 543 pruebas unitarias backend aprobadas al 100% (añadida validación de payload y `test_kill_session_silent_mode_no_ws_notify`), 404 pruebas frontend en 55 suites Vitest, 94 escenarios BDD Karate Labs API (escenarios 93 y 94 en `api_test.feature`), 44 escenarios BDD Karate Labs UI (escenarios 43 y 44 en `ui_business_flow.feature`) y 26 de 26 contratos Front-Back aprobados en Docker.
 
 ---
 

@@ -3,16 +3,17 @@
 
 # 📑 Especificación 44: Conmutador Rápido de Tenants en Cabecera, Ergonomía de Pie de Página In-Flow y Gestión Táctica de Feature Flags por Empresa
 
-**Versión:** 1.0.0  
+**Versión:** 1.1.0  
 **Fecha:** 2026-10-25  
-**Estado:** Propuesta (En Planificación)  
+**Estado:** Implementado y Certificado al 100%  
 **Módulos Afectados:**
-- `fastapi/src/api/v1/auth.py`, `fastapi/src/schemas/auth.py`, `fastapi/src/redis_layer/sessions.py` (Tenant Switcher API)
+- `fastapi/src/api/v1/auth.py`, `fastapi/src/schemas/auth.py`, `fastapi/src/redis_layer/sessions.py` (Tenant Switcher API & Fail-Safe Session Lifecycle)
 - `vue3/src/components/common/RgResponsiveShell.vue` (Layout, Header & Footer In-Flow)
 - `vue3/src/components/admin/RgTenantSwitcher.vue` (Nuevo Componente Conmutador)
 - `vue3/src/views/admin/TenantsManagementView.vue` (Integración de Badges e Invocación de Módulos)
-- `vue3/src/views/admin/TenantModulesStudioView.vue` (Nueva Sub-pantalla Táctica de Módulos)
+- `vue3/src/views/admin/TenantModulesStudioView.vue` (Sub-pantalla Táctica de Módulos)
 - `vue3/src/components/admin/RgFeatureFlagsGrid.vue` (Cuadrícula Táctica de 4 Cuadrantes y Arquetipos)
+- `vue3/src/stores/useNocEventsStore.ts` (Filtro Kill-Switch y Reconexión Reactiva WebSocket)
 - `vue3/src/stores/useAuthStore.ts`, `vue3/src/router/index.ts`
 
 ---
@@ -56,6 +57,15 @@ Esta especificación formaliza tres mejoras estructurales clave de experiencia d
 * **Transición en Caliente:**
   - Al seleccionar un nuevo tenant, `authStore` actualiza el token y las llaves de tenant.
   - Se despachan automáticamente las acciones de refresco de Pinia: `inventoryStore.fetchRouters(true)`, recarga de alertas del NOC y telemetría, sin recargar la página ni perder la sesión.
+
+### 2.3 Resiliencia Fail-Safe y Prevención de Auto-Deslogueo por WebSocket (Hotfix 25.11)
+Para evitar que la revocación de la sesión previa en KeyDB expulse involuntariamente a la pestaña activa del operador mediante el canal de eventos en vivo:
+1. **Silenciamiento de Pub/Sub en Backend:**
+   - La función `kill_session(..., notify_ws=False)` omite la publicación del mensaje `SESSION_KILLED` en el canal `rg:pubsub:events:{tenant_id}` cuando la revocación es producto de una conmutación legítima de contexto (`killed_by="SUPERADMIN_TENANT_SWITCH"`).
+   - Secuencia **Fail-Safe**: Primero se validan las credenciales, se extraen las capacidades de forma canónica mediante `_extract_tenant_features(target_tenant)` y se activa la nueva sesión en KeyDB. Solo tras recibir confirmación de éxito se revoca la sesión del tenant saliente.
+2. **Filtro de Exclusión y Reconexión Reactiva en Frontend:**
+   - En `useNocEventsStore.ts`, el interceptor de eventos en vivo descarta cualquier notificación `SESSION_KILLED` que contenga `killed_by === 'SUPERADMIN_TENANT_SWITCH'`, impidiendo la invocación no deseada de `authStore.forceKillSwitchLogout()`.
+   - Se establece un oyente global para el evento nativo `rosgrid:tenant-switched` que desconecta el socket del tenant saliente y reconecta el canal de eventos con un retardo controlado de 150 ms apuntando a la nueva organización.
 
 ---
 

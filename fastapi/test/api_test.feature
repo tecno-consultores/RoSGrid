@@ -725,6 +725,11 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 94. Conmutación Rápida de Tenants (switch-tenant) con método no permitido devuelve 405
+    Given path '/api/v1/auth/switch-tenant'
+    When method get
+    Then status 405
+
 
 
 
