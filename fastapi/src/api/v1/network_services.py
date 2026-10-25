@@ -121,7 +121,7 @@ async def isolate_network_service(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Servicio de red no encontrado")
 
     # Verificación de idempotencia lógica
-    if device.status in ("ISOLATED_ADMINISTRATIVE", "SUSPENDED_TECHNICAL"):
+    if device.status in ("ISOLATED_ADMINISTRATIVE", "SUSPENDED_TECHNICAL", CustomerServiceStatusEnum.SUSPENDED):
         return NetworkServiceActionResponse(
             status="ALREADY_ISOLATED",
             service_id=device.id,

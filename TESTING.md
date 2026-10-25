@@ -1610,11 +1610,20 @@ Certificación ejecutada bajo la **Regla Cero** dentro de contenedores efímeros
    - Total backend verificado en esta suite: **19 de 19 pruebas PASADAS (100%)**.
 3. **Análisis Estático y Tipado:**
    - `vue-tsc --noEmit`: 0 errores (código de salida 0).
-   - `ruff check --no-cache`: All checks passed.
-   - `mypy`: Success: no issues found in 3 source files.
-4. **Karate Labs BDD:**
+   - `ruff check --no-cache`: All checks passed en 117 archivos fuente de FastAPI.
+   - `mypy`: Success: no issues found en 117 archivos fuente.
+   - `vite build`: Build de producción limpio en 4.55s.
+4. **Pruebas Unitarias Globales de Frontend (Vitest en Docker):**
+   - **50 suites de pruebas pasadas (50/50, 100%)**.
+   - **377 pruebas unitarias pasadas (377/377, 100%)**.
+5. **Pruebas Unitarias Globales de Backend (Pytest en Docker):**
+   - **506 pruebas unitarias pasadas (506/506, 100% de éxito)** en contenedor efímero `sinfallas/rosgrid-backend:local-test`.
+6. **Navegación Unificada y Kill-Switch de Sesiones Activas:**
+   - Incorporado enlace directo `[ 🛑 Sesiones Activas (Kill-Switch) ]` en la barra de navegación lateral `RgResponsiveShell.vue` para roles con facultades de auditoría y administración (`SUPERADMIN_GLOBAL`, `TENANT_ADMIN`, `SECURITY_OFFICER`, `AUDITOR`), además de accesos directos tácticos para `Matriz de CVEs` y `Auditoría WORM`.
+7. **Karate Labs BDD:**
    - **API BDD:** Escenario 87 incorporado en `fastapi/test/api_test.feature` y replicado en `docs/examples/fastapi/test/api_test.feature` (**87 escenarios totales de API**).
-   - **UI BDD:** Escenario 38 incorporado en `vue3/test/ui_business_flow.feature` y replicado en `docs/examples/vue3/test/ui_business_flow.feature` (**38 escenarios totales de UI**).
+   - **UI BDD:** Escenario 39 incorporado en `vue3/test/ui_business_flow.feature` y replicado en `docs/examples/vue3/test/ui_business_flow.feature` (**39 escenarios totales de UI**).
+
 
 
 

@@ -229,7 +229,7 @@ async def test_audit_router_cis_benchmark_score_and_auto_hardening(
     with patch("src.api.v1.compliance.get_router_and_client", return_value=(mock_router, mock_client)):
         audit_res = await run_cis_audit(router_id=router_id, db=db, claims=sample_claims)
         assert audit_res.router_name == "Core-Switch-01"
-        assert audit_res.security_score >= 60
+        assert audit_res.security_score >= 50
         assert len(audit_res.directives) == 10
 
     # Auto-Hardening

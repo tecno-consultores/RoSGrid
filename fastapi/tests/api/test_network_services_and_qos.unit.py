@@ -22,6 +22,7 @@ from src.api.v1.network_services import (
 from src.models.core import SystemRoleEnum
 from src.models.ipam import (
     BandwidthProfile,
+    CustomerServiceStatusEnum,
     IPAMAddress,
     SubscriberDevice,
 )
@@ -192,7 +193,7 @@ async def test_isolate_network_service_flow() -> None:
     ):
         res_iso = await isolate_network_service(s_id, idempotency_key=valid_idem, db=db, claims=claims)
         assert res_iso.status == "ISOLATED"
-        assert dev_active.status == "ISOLATED_ADMINISTRATIVE"
+        assert dev_active.status == CustomerServiceStatusEnum.SUSPENDED
         mock_client.put.assert_awaited_once()
         mock_client.patch.assert_awaited_once_with(
             "/queue/simple/*Q1",
@@ -202,7 +203,7 @@ async def test_isolate_network_service_flow() -> None:
         assert mock_pub.await_args.kwargs["event_name"] == "DEVICE_ISOLATED"
 
     # 4. Router failure fallback (does not crash DB update)
-    dev_active.status = "ACTIVE"
+    dev_active.status = CustomerServiceStatusEnum.ACTIVE
     with (
         patch("src.api.v1.network_services.get_router_and_client", side_effect=Exception("Router offline")),
         patch("src.api.v1.network_services.write_audit_log", AsyncMock()),
@@ -210,7 +211,7 @@ async def test_isolate_network_service_flow() -> None:
     ):
         res_fallback = await isolate_network_service(s_id, idempotency_key=valid_idem, db=db, claims=claims)
         assert res_fallback.status == "ISOLATED"
-        assert dev_active.status == "ISOLATED_ADMINISTRATIVE"
+        assert dev_active.status == CustomerServiceStatusEnum.SUSPENDED
 
 
 # ============================================================================

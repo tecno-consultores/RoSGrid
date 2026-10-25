@@ -684,8 +684,12 @@ async def run_cis_audit(
             passed = True
             finding = "RouterOS v7.14+ y RouterBOOT sincronizados con parches oficiales."
         elif code == "CIS-1.7":
-            passed = True
-            finding = "Reglas de filtrado Bogon / RFC 1918 presentes en RAW."
+            if code in applied_codes or bogon_rules_present:
+                passed = True
+                finding = "Reglas de filtrado Bogon / RFC 1918 presentes en RAW."
+            else:
+                passed = False
+                finding = "Faltan reglas de filtrado Bogon / RFC 1918 en IP Firewall Filter o RAW."
         elif code == "CIS-1.8":
             if code in applied_codes or bruteforce_defense_present:
                 passed = True
@@ -694,11 +698,19 @@ async def run_cis_audit(
                 passed = False
                 finding = "Faltan listas negras dinámicas de 3 etapas contra ataques Brute-Force."
         elif code == "CIS-1.9":
-            passed = True
-            finding = "Perfiles IPsec / WireGuard utilizan AES-256 y suites seguras."
+            if code in applied_codes or ipsec_crypto_secure:
+                passed = True
+                finding = "Perfiles IPsec / WireGuard utilizan AES-256 y suites seguras."
+            else:
+                passed = False
+                finding = "Cifrado débil detectado en perfiles VPN."
         elif code == "CIS-1.10":
-            passed = True
-            finding = "Gestión administrativa aislada en VLAN dedicada."
+            if code in applied_codes or mgmt_vlan_present:
+                passed = True
+                finding = "Gestión administrativa aislada en VLAN dedicada."
+            else:
+                passed = False
+                finding = "No se detectó interfaz VLAN de administración dedicada (ej. mgmt o vlan99)."
 
         if passed:
             total_score += weight

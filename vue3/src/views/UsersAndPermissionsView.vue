@@ -2,7 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { ref, computed, onMounted } from 'vue';
+  import { ref, computed, onMounted, defineAsyncComponent, watch } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
   import { http } from '@/api/httpClient';
   import { useAuthStore } from '@/stores/useAuthStore';
@@ -13,18 +13,32 @@
   import RbacRoleMatrixPanel from '@/components/admin/RbacRoleMatrixPanel.vue';
   import RgMcpTokenModal from '@/components/admin/RgMcpTokenModal.vue';
 
+  const ActiveSessionsKillSwitchView = defineAsyncComponent(
+    () => import('@/views/ActiveSessionsKillSwitchView.vue'),
+  );
+
   const route = useRoute();
   const router = useRouter();
 
-  // Control de Pestañas: 'users' (Operadores) | 'roles' (Matriz de Políticas RBAC)
-  const activeTab = ref<'users' | 'roles'>((route?.query?.tab as 'users' | 'roles') || 'users');
+  // Control de Pestañas: 'users' (Operadores) | 'roles' (Matriz de Políticas RBAC) | 'sessions' (Sesiones & Kill-Switch)
+  type UserTabType = 'users' | 'roles' | 'sessions';
+  const activeTab = ref<UserTabType>((route?.query?.tab as UserTabType) || 'users');
 
-  function selectTab(tab: 'users' | 'roles') {
+  function selectTab(tab: UserTabType) {
     activeTab.value = tab;
     if (router && route) {
       router.replace({ query: { ...route.query, tab } }).catch(() => {});
     }
   }
+
+  watch(
+    () => route?.query?.tab,
+    (newTab) => {
+      if (newTab === 'users' || newTab === 'roles' || newTab === 'sessions') {
+        activeTab.value = newTab;
+      }
+    },
+  );
 
   const authStore = useAuthStore();
 
@@ -514,6 +528,20 @@
         <span class="tab-btn-text">Perfiles &amp; Matriz de Permisos</span>
         <span class="tab-btn-badge tab-btn-badge--cyan">11 Roles</span>
       </button>
+
+      <button
+        id="tab-sessions"
+        type="button"
+        role="tab"
+        class="rbac-tab-btn"
+        :class="{ 'rbac-tab-btn--active': activeTab === 'sessions' }"
+        :aria-selected="activeTab === 'sessions'"
+        aria-controls="tabpanel-sessions"
+        @click="selectTab('sessions')"
+      >
+        <span class="tab-btn-icon" aria-hidden="true">🛑</span>
+        <span class="tab-btn-text">Sesiones &amp; Kill-Switch</span>
+      </button>
     </div>
 
     <!-- Pestaña 1: Operadores y Usuarios -->
@@ -702,6 +730,17 @@
       aria-labelledby="tab-roles"
     >
       <RbacRoleMatrixPanel />
+    </div>
+
+    <!-- Pestaña 3: Sesiones y Kill-Switch -->
+    <div
+      v-if="activeTab === 'sessions'"
+      id="tabpanel-sessions"
+      role="tabpanel"
+      aria-labelledby="tab-sessions"
+      class="tabpanel-sessions"
+    >
+      <ActiveSessionsKillSwitchView />
     </div>
 
     <!-- Modal para Crear Usuario -->

@@ -2,7 +2,8 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { computed, onMounted, ref, watch } from 'vue';
+  import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue';
+  import { useRoute, useRouter } from 'vue-router';
   import { useI18n } from '@/composables/useI18n';
   import { http } from '@/api/httpClient';
   import { useAuthStore } from '@/stores/useAuthStore';
@@ -29,11 +30,27 @@
 
   import NotificationChannelsPanel from '@/components/operations/NotificationChannelsPanel.vue';
 
+  const FleetCveMatrix = defineAsyncComponent(() => import('@/views/FleetCveMatrix.vue'));
+  const ImmutableAuditLogsView = defineAsyncComponent(
+    () => import('@/views/ImmutableAuditLogsView.vue'),
+  );
+
+  const route = useRoute();
+  const router = useRouter();
   const { t } = useI18n();
   const authStore = useAuthStore();
   const inventoryStore = useInventoryStore();
 
-  type TabType = 'drift' | 'cis' | 'sdwan' | 'switching' | 'sla' | 'wifi' | 'notifications';
+  type TabType =
+    | 'drift'
+    | 'cis'
+    | 'cves'
+    | 'audit'
+    | 'sdwan'
+    | 'switching'
+    | 'sla'
+    | 'wifi'
+    | 'notifications';
 
   interface TabDef {
     id: TabType;
@@ -43,6 +60,8 @@
   const allTabs: TabDef[] = [
     { id: 'drift', flag: 'config_drift_monitoring_enabled' },
     { id: 'cis', flag: 'cis_audit_enabled' },
+    { id: 'cves' },
+    { id: 'audit' },
     { id: 'sdwan', flag: 'sdwan_orchestrator_enabled' },
     { id: 'switching' },
     { id: 'sla', flag: 'sla_tracker_enabled' },
@@ -54,7 +73,27 @@
     return allTabs.filter((tab) => !tab.flag || authStore.isFeatureEnabled(tab.flag));
   });
 
-  const activeTab = ref<TabType>(availableTabs.value[0]?.id || 'switching');
+  const initialQueryTab = route?.query?.tab as TabType | undefined;
+  const activeTab = ref<TabType>(
+    initialQueryTab && allTabs.some((t) => t.id === initialQueryTab)
+      ? initialQueryTab
+      : availableTabs.value[0]?.id || 'switching',
+  );
+
+  watch(activeTab, (newTab) => {
+    if (router && route && route.query?.tab !== newTab) {
+      router.replace({ query: { ...route.query, tab: newTab } }).catch(() => {});
+    }
+  });
+
+  watch(
+    () => route?.query?.tab,
+    (newTab) => {
+      if (newTab && typeof newTab === 'string' && allTabs.some((t) => t.id === newTab)) {
+        activeTab.value = newTab as TabType;
+      }
+    },
+  );
 
   watch(
     availableTabs,
@@ -546,6 +585,34 @@
       </button>
 
       <button
+        id="tab-btn-cves"
+        type="button"
+        class="tab-btn"
+        :class="{ active: activeTab === 'cves' }"
+        :aria-selected="activeTab === 'cves'"
+        role="tab"
+        aria-controls="panel-cves"
+        @click="activeTab = 'cves'"
+      >
+        <span class="tab-icon">🛡️</span>
+        <span>{{ t('enterprise.tab_cves', 'Matriz de CVEs') }}</span>
+      </button>
+
+      <button
+        id="tab-btn-audit"
+        type="button"
+        class="tab-btn"
+        :class="{ active: activeTab === 'audit' }"
+        :aria-selected="activeTab === 'audit'"
+        role="tab"
+        aria-controls="panel-audit"
+        @click="activeTab = 'audit'"
+      >
+        <span class="tab-icon">📜</span>
+        <span>{{ t('enterprise.tab_audit', 'Auditoría WORM') }}</span>
+      </button>
+
+      <button
         v-if="authStore.isFeatureEnabled('sdwan_orchestrator_enabled')"
         id="tab-btn-sdwan"
         type="button"
@@ -778,6 +845,32 @@
             </tbody>
           </table>
         </div>
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- TAB: Matriz de CVEs & Vulnerabilidades de Flota                    -->
+      <!-- ================================================================= -->
+      <section
+        v-else-if="activeTab === 'cves'"
+        id="panel-cves"
+        role="tabpanel"
+        aria-labelledby="tab-btn-cves"
+        class="tab-panel"
+      >
+        <FleetCveMatrix />
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- TAB: Auditoría Inmutable WORM & Registros de Seguridad             -->
+      <!-- ================================================================= -->
+      <section
+        v-else-if="activeTab === 'audit'"
+        id="panel-audit"
+        role="tabpanel"
+        aria-labelledby="tab-btn-audit"
+        class="tab-panel"
+      >
+        <ImmutableAuditLogsView />
       </section>
 
       <!-- ================================================================= -->

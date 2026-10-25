@@ -166,12 +166,6 @@
         icon: '🖥️',
       },
       {
-        name: 'MaintenanceWindows',
-        path: '/inventory/maintenance-windows',
-        label: t('nav.maintenance_windows', 'Ventanas Mantenimiento'),
-        icon: '🛠️',
-      },
-      {
         name: 'NocWallboard',
         path: '/noc-wallboard',
         label: t('nav.noc_wallboard', 'Wallboard NOC'),
@@ -188,7 +182,7 @@
       {
         name: 'IpamManagement',
         path: '/ipam',
-        label: t('nav.ipam_ftth', 'IPAM & FTTH'),
+        label: t('nav.ipam', 'IPAM'),
         icon: '🌐',
       },
     ];
@@ -209,20 +203,19 @@
       });
     }
 
-    items.push(
-      {
-        name: 'L2Topology',
-        path: '/topology/l2',
-        label: t('nav.l2_topology', 'Topología L2'),
-        icon: '🗺️',
-      },
-      {
-        name: 'FleetCveMatrix',
-        path: '/inventory/cves',
-        label: t('nav.cve_matrix', 'Matriz de CVEs'),
-        icon: '🛡️',
-      },
-    );
+    items.push({
+      name: 'L2Topology',
+      path: '/topology/l2',
+      label: t('nav.l2_topology', 'Topología L2'),
+      icon: '🗺️',
+    });
+
+    items.push({
+      name: 'FleetCveMatrix',
+      path: '/inventory/cves',
+      label: t('nav.cve_matrix', 'Matriz de CVEs'),
+      icon: '🛡️',
+    });
 
     if (authStore.isFeatureEnabled('nightly_backups_enabled')) {
       items.push({
@@ -241,12 +234,6 @@
         icon: '⚡',
       },
       {
-        name: 'ActiveSessionsKillSwitch',
-        path: '/sessions',
-        label: t('nav.sessions_killswitch', 'Sesiones & Kill-Switch'),
-        icon: '🛑',
-      },
-      {
         name: 'UsersAndPermissions',
         path: '/users',
         label: t('nav.users_rbac', 'Usuarios & RBAC'),
@@ -254,11 +241,25 @@
       },
       {
         name: 'ImmutableAuditLogs',
-        path: '/audit-logs',
+        path: '/audit',
         label: t('nav.audit_worm', 'Auditoría WORM'),
         icon: '📜',
       },
     );
+
+    if (
+      authStore.currentRole === 'SUPERADMIN_GLOBAL' ||
+      authStore.currentRole === 'TENANT_ADMIN' ||
+      authStore.currentRole === 'SECURITY_OFFICER' ||
+      authStore.currentRole === 'AUDITOR'
+    ) {
+      items.push({
+        name: 'ActiveSessionsKillSwitch',
+        path: '/sessions',
+        label: t('nav.active_sessions', 'Sesiones Activas (Kill-Switch)'),
+        icon: '🛑',
+      });
+    }
 
     if (authStore.currentRole === 'SUPERADMIN_GLOBAL' || authStore.currentRole === 'TENANT_ADMIN') {
       items.push({

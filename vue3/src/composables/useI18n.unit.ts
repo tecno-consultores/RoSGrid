@@ -42,7 +42,7 @@ describe('useI18n — Composable de Internacionalización Reactivo', () => {
     const { t } = useI18n();
     expect(t('common.save')).toBe('Guardar');
     expect(t('nav.inventory')).toBe('Inventario');
-    expect(t('nav.subscribers_map')).toBe('Mapa de Clientes (ONUs)');
+    expect(t('nav.subscribers_map')).toBe('Mapa de Clientes');
     expect(t('field_tech.capture_gps')).toBe('📍 Capturar Coordenadas GPS');
   });
 
@@ -58,7 +58,7 @@ describe('useI18n — Composable de Internacionalización Reactivo', () => {
     expect(locale.value).toBe('en');
     expect(t('common.save')).toBe('Save');
     expect(t('nav.inventory')).toBe('Inventory');
-    expect(t('nav.subscribers_map')).toBe('Subscribers Map (ONUs)');
+    expect(t('nav.subscribers_map')).toBe('Subscribers Map');
     expect(t('field_tech.capture_gps')).toBe('📍 Capture GPS Coordinates');
     expect(window.localStorage.getItem('rg_locale')).toBe('en');
     expect(document.documentElement.lang).toBe('en');
