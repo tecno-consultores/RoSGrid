@@ -30,6 +30,11 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Added
 
+- **Especificación Formal de Detección de Cierre de Pestaña/Navegador y Período de Gracia en KeyDB (`docs/specs/41_TAB_CLOSE_DETECTION_AND_EPHEMERAL_GRACE_PERIOD_SESSION_CLEANUP.md`, `docs/specs/00_MASTER_INDEX_AND_11X_GOVERNANCE.md`, `ROADMAP.md`):**
+  - **Especificación 41:** Diseño formal de 2 capas que coordina múltiples pestañas activas del operador mediante la API estándar `BroadcastChannel('rosgrid_tab_lifecycle_bus')` en Vue 3 y notifica al cerrar la última pestaña (`pagehide` + `sendBeacon('/api/v1/auth/session-closing')`).
+  - **Período de Gracia de 35s en KeyDB:** Introducción de la clave efímera `sess_closing` para prevenir deslogueos indeseados ante recargas F5 y reconexiones, con recolección desatendida y trazabilidad WORM `SESSION_CLOSED_ON_DISCONNECT` preservando el ciclo de vida absoluto de 8 horas.
+  - **Planificación en Roadmap:** Incorporación de la Sub-tarea 23.27 en `ROADMAP.md` y actualización del índice maestro con 42 especificaciones técnicas.
+
 - **Gobernanza de Mantenimiento desde Inventario, Geolocalización en IPAM y Remediación Selectiva CIS Benchmark (`vue3/src/views/RouterInventoryView.vue`, `vue3/src/views/IpamManagementView.vue`, `vue3/src/views/EnterpriseComplianceView.vue`, `fastapi/src/api/v1/compliance.py`, `vue3/src/components/network/UnifiedNetworkMap.vue`):**
   - **Acceso Rápido a Ventanas de Mantenimiento:** Botón superior `[ 🛠️ Ventanas de Mantenimiento ]` en el Inventario de Routers y botón contextual por fila `[ 🛠️ Mantenimiento ]` / `[ 🚀 A Producción ]` para cambiar el estado administrativo (`admin_state`) en 1 solo clic.
   - **Navegación Unificada y Kill-Switch de Sesiones:** Incorporado enlace directo `[ 🛑 Sesiones Activas (Kill-Switch) ]` en la barra de navegación lateral táctica `RgResponsiveShell.vue` para roles con privilegios de auditoría y administración, con badges dinámicos y acceso a Matriz de CVEs y Auditoría WORM.

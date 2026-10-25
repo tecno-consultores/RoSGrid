@@ -1,10 +1,11 @@
-# 🗺️ ROADMAP GRANULAR DE EJECUCIÓN (41 SPECS) — RoSGrid
+# 🗺️ ROADMAP GRANULAR DE EJECUCIÓN (42 SPECS) — RoSGrid
 
 ## 📍 Punto de Control Actual (Checkpoint)
 
-- **Hito Actual en Curso:** Hito 23.26 COMPLETADO al 100% (Auditoría Preventiva de Vulnerabilidades, Seguridad Shift-Left, Estandarización de Comandos Canónicos en `Makefile`, y Compuerta de Certificación 11X en `.agents/scripts/certify_task_completion.sh`).
-- **Estado General del Sistema:** Hitos 0 al 23.26 COMPLETADOS (100%). Plataforma lista para el Hito 24 (Construcción final y cierre de versión 1.0.0).
+- **Hito Actual en Curso:** Hito 23.27 EN PROGRESO (Detección de Cierre de Pestaña/Navegador, Coordinación Multi-Pestaña y Liberación Efímera de Sesión con Período de Gracia en KeyDB — `docs/specs/41`).
+- **Estado General del Sistema:** Hitos 0 al 23.26 COMPLETADOS (100%). Plataforma en especificación y aseguramiento del Hito 23.27 previa al Hito 24 (Construcción final y cierre de versión 1.0.0).
 
+- **Hito 23.27 (Cierre de Pestaña/Navegador y Grace Period en KeyDB):** Especificación formal completada en `docs/specs/41_TAB_CLOSE_DETECTION_AND_EPHEMERAL_GRACE_PERIOD_SESSION_CLEANUP.md`. Coordinación `BroadcastChannel` multi-pestaña, `sendBeacon` en `pagehide`, endpoint `/session-closing` con período de gracia de 35s en KeyDB y cancelación reactiva ante F5/reconexión.
 - **Hito 23.26 (Auditoría Preventiva Shift-Left, Makefile Canónico y Compuerta de Seguridad):** COMPLETADO al 100% y certificado en Docker. Especificación formal `docs/specs/40_LOCAL_VULNERABILITY_AUDIT_AND_SHIFT_LEFT_SECURITY.md`, creación de `Makefile` con comandos canónicos (`make audit`, `make test`, `make lint`, `make certify`), actualización del script de certificación de 5 etapas `.agents/scripts/certify_task_completion.sh` con Trivy IaC + FS en contenedor efímero de solo lectura, remediación inmediata de `brotli v1.2.1` (`GHSA-9v8h-qqgm-4m35`) en `uv.lock`, 4 pruebas unitarias de gate en `test_vulnerability_audit_gate.unit.py` (506 tests unitarios backend en total, 377 frontend Vitest en 50 suites, 88 escenarios BDD API y 40 escenarios BDD UI en Karate Labs), y 0 vulnerabilidades CRITICAL/HIGH detectadas en local antes de Git Push.
 - **Hito 23.25 (Componente Unificado de Mapa, 3 Toggles de Capas, Causa Raíz RCA y Locks en KeyDB):** COMPLETADO al 100% y certificado en Docker.
 - **Hito 23 (Automatización de Flota, Topología L2, Syslog Efímero, Exportador Prometheus, Seguridad CVE y Disponibilidad API):** COMPLETADO al 100% y certificado en Docker. Especificaciones `docs/specs/35`, `docs/specs/03`, `docs/specs/11`, `docs/specs/18`, `docs/specs/19` y `docs/specs/36`, manuales `docs/12`, `docs/04` y `docs/06`, migraciones Alembic 0007 y 0008 (`tenant_custom_roles` y `routers.network_role` VARCHAR(64)), colector Syslog UDP 5514 activo en Worker con RingBuffer en KeyDB y badge de presencia en inventario con detección continua de configuración, motor de Topología L2 con Pan/Zoom Canvas 2D a 60 FPS, Matriz CVE con cruce local semver, auto-sincronización diaria con caché táctico de 24 horas y forzado manual, orquestador PoE-aware con Safety Stop (1%), exportador Prometheus `/api/v1/metrics/fleet`, indicador táctico de presencia y disponibilidad de API (Heartbeat/Ping) en barra superior y login con popover diagnóstico y caché anti-Thundering Herd de 5s en `/health`, 22 herramientas MCP en la Skill `rosgrid-noc-operator` con grounding oficial de RouterOS v7, 485 tests backend (95.1% cobertura), 361 tests frontend (100% pasando en 49 archivos Vitest), 76/76 escenarios BDD API en Karate Labs, 30/30 escenarios BDD UI en Karate Labs y 26/26 contratos Front-Back validados en Docker (`validar_comunicacion_front_back.py`).
@@ -547,9 +548,17 @@
   - Integración con vía rápida de eventos Syslog UDP 5514 ante desconexiones repentinas.
   - Transmisión en tiempo real por canal WebSocket de eventos `DEVICE_STATUS_CHANGED` y actualización cromática en caliente en `UnifiedNetworkMap.vue` y Wallboard NOC.
   - Toolkit de campo (`FieldTechMobileView.vue`): 4ta pestaña de Mapa de Zona integrada (routers visibles sin acceso WebFig), suite de Diagnóstico Integral 360° (Ping cliente, Gateway local, Internet WAN 1.1.1.1, DNS y MTU), y banner de advertencia de cerradura operativa con botón de forzado de prueba para órdenes de NOC.
-  - Cobertura 11X certificada: 4 pruebas unitarias backend (`test_subscriber_status_poller.unit.py`), 9 pruebas unitarias Vitest (`FieldTechMobileView.unit.ts`), 6 pruebas unitarias Vitest (`UnifiedNetworkMap.unit.ts`), 0 errores de tipado en `vue-tsc` y Mypy Strict, y Escenario 85 en Karate Labs API y Escenario 36 en Karate Labs UI.
-
-
+- [ ] **23.27** **Detección de Cierre de Pestaña o Navegador, Coordinación Multi-Pestaña y Liberación Efímera de Sesión con Período de Gracia (Grace Period en KeyDB):**
+  - **Especificación Formal:** Aprobada `docs/specs/41_TAB_CLOSE_DETECTION_AND_EPHEMERAL_GRACE_PERIOD_SESSION_CLEANUP.md`.
+  - **Frontend (Vue 3 / TypeScript):**
+    - Composable `useTabLifecycleCoordinator.ts` con API estándar `BroadcastChannel('rosgrid_tab_lifecycle_bus')` para computar activas en memoria sin colisiones.
+    - Intercepción del evento WHATWG `pagehide` para ejecutar `navigator.sendBeacon('/api/v1/auth/session-closing')` (con fallback a `fetch` con `keepalive: true` y `credentials: 'include'`) exclusivamente al cerrar la última pestaña activa del operador.
+    - Reconexión transparente sin pérdida de sesión ante F5 / recargas de página.
+  - **Backend (FastAPI / KeyDB):**
+    - Nuevo endpoint `POST /api/v1/auth/session-closing` que registra clave efímera `rg:{tenant}:sess_closing:{session_id}` con TTL de 35 segundos e inserción en cola `closing_sessions_queue`.
+    - Cancelación reactiva incondicional al detectar nueva petición autenticada o apertura de WebSocket en el plazo de gracia (eliminando la clave y preservando el ciclo absoluto de 8 horas).
+    - Recolección y cierre desatendido (`kill_session`) con registro WORM `SESSION_CLOSED_ON_DISCONNECT` si el usuario no reconecta tras 35 segundos.
+  - **Aseguramiento Multi-Capa 11X:** Pruebas unitarias backend en `test_session_closing_grace_period.unit.py`, pruebas Vitest frontend en `useTabLifecycleCoordinator.unit.ts`, contratos Front-Back y escenarios BDD Karate Labs en API (`api_test.feature`) y UI (`ui_business_flow.feature`), espejados en `docs/examples/`.
 
 ---
 
