@@ -589,6 +589,7 @@ async def test_capsman_overview_ssids_and_clients(sample_tenant_id: uuid.UUID, s
 
     mock_client = AsyncMock()
     mock_client.get.side_effect = [
+        {"enabled": "yes"},
         [{"name": "cap1"}, {"name": "cap2"}],
         [{"mac-address": "A1:B2:C3:D4:E5:F6"}, {"mac-address": "11:22:33:44:55:66"}],
     ]

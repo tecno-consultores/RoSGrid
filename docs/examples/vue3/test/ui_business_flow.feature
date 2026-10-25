@@ -410,6 +410,18 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And waitFor("button.btn-save-features")
     And match text("button.btn-save-features") contains 'Guardar Capacidades'
 
+  Scenario: 45. Conmutación Internacional Dinámica i18n en Vistas Tácticas (Inglés y Español)
+    Given driver baseUrl + '/admin/tenants'
+    And waitFor(".tenants-management-view")
+    And match text(".view-title") contains 'Administración de Empresas'
+    And click("#user-profile-trigger")
+    And waitFor(".dropdown-section--lang")
+    When click(".dropdown-section--lang button:nth-child(2)")
+    Then waitForText(".view-title", "Enterprise Administration")
+    When click(".dropdown-section--lang button:nth-child(1)")
+    Then waitForText(".view-title", "Administración de Empresas")
+
+
 
 
 

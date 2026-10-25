@@ -113,14 +113,20 @@ async def get_capsman_overview(
             pass
 
         # Consultar radios CAPsMAN
-        radios = await client.get("/caps-man/remote-cap")
-        if isinstance(radios, list):
-            managed_aps = len(radios)
-            active_radios = sum(int(r.get("radios", 1)) for r in radios if isinstance(r, dict)) if managed_aps > 0 else 0
+        try:
+            radios = await client.get("/caps-man/remote-cap")
+            if isinstance(radios, list):
+                managed_aps = len(radios)
+                active_radios = sum(int(r.get("radios", 1)) for r in radios if isinstance(r, dict)) if managed_aps > 0 else 0
+        except Exception:
+            pass
 
-        reg_table = await client.get("/caps-man/registration-table")
-        if isinstance(reg_table, list):
-            connected_clients = len(reg_table)
+        try:
+            reg_table = await client.get("/caps-man/registration-table")
+            if isinstance(reg_table, list):
+                connected_clients = len(reg_table)
+        except Exception:
+            pass
 
         if managed_aps > 0 or connected_clients > 0:
             capsman_running = True

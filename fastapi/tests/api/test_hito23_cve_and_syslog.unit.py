@@ -503,9 +503,9 @@ async def test_load_ip_router_map_success():
     mock_session = AsyncMock()
     mock_result = MagicMock()
     mock_result.all.return_value = [
-        (rid, tid, "https://10.250.3.8:443"),
-        (uuid.uuid4(), tid, "http://192.168.88.1/rest"),
-        (uuid.uuid4(), tid, ""),
+        (rid, tid, "https://10.250.3.8:443", "Router-Core", "mikrotik-core"),
+        (uuid.uuid4(), tid, "http://192.168.88.1/rest", "Router-Edge", "mikrotik-edge"),
+        (uuid.uuid4(), tid, "", None, None),
     ]
     mock_session.execute.return_value = mock_result
 

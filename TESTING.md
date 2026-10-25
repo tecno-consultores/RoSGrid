@@ -1900,3 +1900,20 @@ Conforme a la Especificación 43 v2.0.0 y la directiva `.agents/rules/ground_tru
    - Backend: Invocación de `kill_session(..., notify_ws=False)` en `switch_tenant` impidiendo falsas expulsiones por WebSocket.
    - Frontend: Filtro en `useNocEventsStore.ts` excluyendo `SUPERADMIN_TENANT_SWITCH` de `forceKillSwitchLogout` y reconexión limpia reactiva ante `rosgrid:tenant-switched`.
    - Verificado con sesión activa de SuperAdmin alternando fluidamente entre `sistemas` y `fibra-norte` con 0 deslogueos indeseados.
+
+### F. Hito 25.12: Internacionalización Integral (i18n) en Inglés y Español de 16 Pantallas y Módulos Críticos (Completado y Certificado al 100%)
+1. **Frontend Unitario (Vitest en Docker `sinfallas/base-node-ionic:26`):**
+   - `vue3/src/composables/useI18n.unit.ts`: **8 de 8 pruebas PASADAS (100%)**, incorporando prueba exhaustiva de simetría y resolución de claves para los 16 módulos críticos (`approvals`, `ipam`, `network_map`, `field_tech`, `l2_topology`, `backups_diff`, `bulk_ops`, `users_mgmt`, `tenants_mgmt`, `enterprise` [CIS, SD-WAN, Switching, SLA], `cve_matrix`, `audit_logs`, `notification_channels`).
+   - Total frontend: **55 suites aprobadas, 405 de 405 pruebas PASADAS al 100%**.
+2. **Backend Unitario (Pytest en Docker `sinfallas/rosgrid-backend:local-test`):**
+   - Resiliencia y tolerancia a fallos parciales ante sondeos REST CAPsMAN en `fastapi/src/api/v1/wifi.py` (`test_capsman_overview_ssids_and_clients`).
+   - Desempaquetado tolerante de tuplas en `fastapi/src/workers/syslog_collector.py` (`test_load_ip_router_map_success`).
+   - Total backend: **543 de 543 pruebas unitarias PASADAS al 100%**.
+3. **Escenarios BDD Karate Labs:**
+   - **API REST (`fastapi/test/api_test.feature` & `docs/examples/fastapi/test/api_test.feature`):** **94 escenarios BDD PASADOS (100%)**.
+   - **UI WebFig / NOC (`vue3/test/ui_business_flow.feature` & `docs/examples/vue3/test/ui_business_flow.feature`):** **45 escenarios BDD PASADOS (100%)** (incorporado Escenario 45: Conmutación Internacional Dinámica i18n en Vistas Tácticas).
+4. **Análisis Estático y Tipado Estricto:**
+   - Backend: `ruff check src/` -> 0 errores; `mypy` -> Success (0 errores en 118 archivos).
+   - Frontend: `vue-tsc --noEmit` -> 0 errores.
+5. **Auditoría de Seguridad y Secretos:**
+   - `./scripts/verificar-secretos.sh` -> 0 secretos detectados.

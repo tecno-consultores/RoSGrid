@@ -195,7 +195,14 @@ async def load_router_syslog_maps() -> tuple[
                 Router.ros_identity,
             ).where(Router.admin_state != RouterAdminStateEnum.RETIRED)
             rows = (await session.execute(stmt)).all()
-            for r_id, t_id, base_url, d_name, r_ident in rows:
+            for row in rows:
+                if len(row) >= 5:
+                    r_id, t_id, base_url, d_name, r_ident = row[0], row[1], row[2], row[3], row[4]
+                elif len(row) >= 3:
+                    r_id, t_id, base_url = row[0], row[1], row[2]
+                    d_name, r_ident = None, None
+                else:
+                    continue
                 if base_url:
                     clean = (
                         base_url.replace("https://", "")

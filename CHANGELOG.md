@@ -68,8 +68,10 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
     15. *Telemetría de SLA* (`EnterpriseComplianceView.vue` tab SLA): Exportación de reportes formales, tabla de métricas y formulario de sondeo inmediato.
     16. *Canales de Alerta NOC* (`NotificationChannelsPanel.vue`): Cabecera, nuevo canal, actualización, cards de canales (Telegram, SMTP, Webhooks), prueba de envío y estados vacíos.
   - **Aseguramiento 11X Multi-Capa en Docker Efímero:**
-    - 404 pruebas unitarias de frontend Vitest en 55 suites aprobadas al 100%.
-    - Cero (0) errores en análisis estático de TypeScript con `vue-tsc --noEmit`.
+    - 405 pruebas unitarias de frontend Vitest en 55 suites aprobadas al 100% (añadida prueba exhaustiva de simetría de los 16 módulos en `useI18n.unit.ts`).
+    - Escenario 45 de Karate Labs UI (`vue3/test/ui_business_flow.feature` y `docs/examples/vue3/test/ui_business_flow.feature`) para conmutación internacional interactiva.
+    - 543 pruebas unitarias de backend con pytest en Docker aprobadas al 100%.
+    - Cero (0) errores en análisis estático de TypeScript con `vue-tsc --noEmit`, linteo con `ruff check` y tipado estricto con `mypy`.
     - Cero (0) hallazgos de secretos o vulnerabilidades (`./scripts/verificar-secretos.sh`).
 
 - **Conmutador Rápido de Contexto de Tenants para SuperAdmin, Ergonomía de Pie de Página In-Flow y Estudio Táctico de Feature Flags por Empresa (Hito 25 — Specs 43 & 44 — `fastapi/src/api/v1/auth.py`, `fastapi/src/schemas/auth.py`, `vue3/src/components/admin/RgTenantSwitcher.vue`, `vue3/src/components/admin/RgFeatureFlagsGrid.vue`, `vue3/src/views/admin/TenantModulesStudioView.vue`, `vue3/src/views/admin/TenantsManagementView.vue`, `vue3/src/components/common/RgResponsiveShell.vue`, `vue3/src/stores/useAuthStore.ts`):**
