@@ -94,7 +94,8 @@ export const useInventoryStore = defineStore('inventory', () => {
                 .split(':')[0]
             : ''),
         ros_version: item.ros_version || 'v7',
-        is_reachable: item.is_reachable ?? false,
+        is_reachable: Boolean(item.is_reachable || item.syslog_active || item.operational_status === 'ONLINE'),
+        operational_status: item.operational_status || (item.is_reachable || item.syslog_active ? 'ONLINE' : 'OFFLINE'),
         syslog_active: Boolean(item.syslog_active),
         syslog_event_count: Number(item.syslog_event_count || 0),
       }));

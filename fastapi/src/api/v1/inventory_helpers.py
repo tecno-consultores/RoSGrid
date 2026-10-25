@@ -54,13 +54,15 @@ async def enrich_router_telemetry(redis: Any, tenant_id: uuid.UUID, r_id: uuid.U
 
     if not data:
         return {
-            "operational_status": "OFFLINE",
+            "operational_status": "ONLINE" if syslog_active else "OFFLINE",
             "cpu_load_percent": None,
             "memory_used_percent": None,
             "syslog_active": syslog_active,
             "syslog_event_count": syslog_count,
         }
     op_status = data.get("operational_status") or data.get("state", "ONLINE")
+    if syslog_active and op_status == "OFFLINE":
+        op_status = "ONLINE"
     cpu_val = data.get("last_cpu_load_pct") or data.get("cpu")
     cpu = int(cpu_val) if cpu_val and cpu_val.isdigit() else None
     free_mem_val = data.get("last_free_memory_pct")
@@ -206,6 +208,15 @@ async def perform_discovery(client: MikrotikRestClient, r: Router, redis: Any = 
 def build_router_response(r: Router, telemetry: dict[str, Any]) -> RouterResponse:
     """Construye esquema de respuesta de Router combinando modelo y métricas en vivo."""
     tag_names = [t.tag_name for t in r.tags] if r.tags else []
+    is_effective_reachable = bool(
+        r.is_reachable
+        or telemetry.get("syslog_active")
+        or (telemetry.get("operational_status") == "ONLINE")
+    )
+    operational_status = telemetry.get("operational_status", "OFFLINE")
+    if is_effective_reachable and operational_status == "OFFLINE":
+        operational_status = "ONLINE"
+
     return RouterResponse(
         id=r.id,
         tenant_id=r.tenant_id,
@@ -229,12 +240,12 @@ def build_router_response(r: Router, telemetry: dict[str, Any]) -> RouterRespons
         ros_version=r.ros_version,
         firmware_version=r.firmware_version,
         upgrade_firmware_version=r.upgrade_firmware_version,
-        is_reachable=r.is_reachable,
+        is_reachable=is_effective_reachable,
         last_seen_at=r.last_seen_at,
         ssl_trust_status=r.ssl_trust_status,
         ssl_sha256_fingerprint=r.ssl_sha256_fingerprint,
         ssl_pinned_at=r.ssl_pinned_at,
-        operational_status=telemetry.get("operational_status", "OFFLINE"),
+        operational_status=operational_status,
         cpu_load_percent=telemetry.get("cpu_load_percent"),
         memory_used_percent=telemetry.get("memory_used_percent"),
         syslog_active=telemetry.get("syslog_active", False),

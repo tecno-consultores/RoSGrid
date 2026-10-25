@@ -569,6 +569,12 @@
     - Ponderación normalizada de seguridad (0-100 pts) calculada dinámicamente sobre las directivas activas configuradas por el tenant.
     - Endpoints de onboarding en tenants (`POST /{id}/onboarding-complete` y `PATCH /{id}/features`) con flag `onboarding_completed`.
   - **Aseguramiento Multi-Capa 11X:** 517 pruebas unitarias backend aprobadas al 100%, 390 pruebas unitarias Vitest aprobadas en 52 archivos, 0 errores en `vue-tsc`, `ruff` y `mypy`, y nuevos escenarios Karate Labs BDD en API (escenarios 90-92 en `api_test.feature`) y UI (escenario 42 en `ui_business_flow.feature`), espejados en `docs/examples/`.
+- [x] **23.29** **Corrección de Disponibilidad de Flota (50%), Telemetría Viva Syslog y Consolidación de Alcanzabilidad en Centro de Mando:**
+  - **Diagnóstico y Causa Raíz:** El monitor de salud periódico marcaba `is_reachable = False` ante demoras REST, sobreescribiendo el estado a `OFFLINE` e ignorando el tráfico Syslog vivo de `r1`, `r2` y `r3`. En el frontend, las fórmulas de disponibilidad en `DashboardHomeView.vue` y `useInventoryStore.ts` dependían de `r.is_reachable` en Postgres, causando 0% de disponibilidad artificial.
+  - **Worker de Monitoreo:** `health_monitor_worker.py` evalúa la existencia de llaves de Syslog activo en KeyDB y calcula `effective_reachable = is_reachable or has_syslog_live`, actualizando PostgreSQL y preservando la flota viva.
+  - **Enriquecimiento de Telemetría:** `inventory_helpers.py` consolida `is_effective_reachable` y promueve `operational_status = "ONLINE"` si el router emite datagramas de eventos.
+  - **Centro de Mando & Pinia:** `useInventoryStore.ts` y `DashboardHomeView.vue` consideran `is_reachable || operational_status === 'ONLINE' || syslog_active`, y el botón `[Actualizar Datos]` despacha `fetchRouters(true)`. Verificado visualmente en navegador con 3 en línea de 6 (50% disponibilidad).
+  - **Aseguramiento Multi-Capa 11X:** 518 pruebas unitarias backend aprobadas al 100%, 392 pruebas unitarias Vitest aprobadas en 52 archivos, 0 errores en `vue-tsc`, `ruff` y `mypy`, y 0 secretos detectados.
 
 ---
 

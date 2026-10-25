@@ -1754,6 +1754,40 @@ Certificación ejecutada bajo la **Regla Cero** dentro de contenedores efímeros
    - `ruff check src/`: All checks passed!
    - `./scripts/verificar-secretos.sh`: 0 secretos detectados.
 
+---
+
+## 45. Corrección de Disponibilidad de Flota (50%) y Consolidación de Alcanzabilidad en Centro de Mando (Hito 23.29)
+
+### A. Diagnóstico y Causa Raíz
+- **Problema Reportado:** Tras resolver la visualización de Syslog, el Centro de Mando reflejaba una regresión: `FLOTA MIKROTIK: 6 equipos | 0 en línea | 6 desconectado` y `DISPONIBILIDAD FLOTA: 0% REVISIÓN`.
+- **Causas Raíz Identificadas:**
+  1. **Punto Ciego de Reachability en `health_monitor_worker.py`:** El worker evaluaba cada 30 segundos únicamente `_ping_router_resource(client)`. Al no responder temporalmente la API REST, marcaba `is_reachable = False`, acumulando fallos hasta fijar `operational_status = "OFFLINE"` y persistir `is_reachable = False` en PostgreSQL, ignorando por completo que `r1`, `r2` y `r3` estaban activamente transmitiendo datagramas Syslog hacia RoSGrid.
+  2. **Desconexión entre KeyDB y Modelo Relacional en `inventory_helpers.py`:** `build_router_response` asignaba ciegamente `is_reachable = r.is_reachable` (el booleano de la tabla relacional), sin considerar si `syslog_active` o `operational_status` estaban en línea.
+  3. **Fórmula Rígida en `DashboardHomeView.vue` y `useInventoryStore.ts`:** Las métricas calculadas evaluaban únicamente `r.is_reachable`. Al ser `false`, calculaban `0 en línea` y `0% de disponibilidad`. Además, el botón `[Actualizar Datos]` no transmitía `refresh=true`.
+
+### B. Solución Técnica Implementada
+1. **Evaluación de Telemetría Viva y Tráfico Syslog en Worker:** `_evaluate_single_router` en `health_monitor_worker.py` ahora consulta las llaves de KeyDB (`syslog:active`, `syslog:ring`, `syslog:configured`). Si el equipo tiene tráfico Syslog o configuración viva, calcula `effective_reachable = is_reachable or has_syslog_live`, restableciendo `consecutive_failures = 0`, actualizando `r.is_reachable = True` en PostgreSQL y `last_seen_at = NOW()`.
+2. **Consolidación en `inventory_helpers.py`:** `build_router_response` calcula `is_effective_reachable = bool(r.is_reachable or telemetry.get("syslog_active") or telemetry.get("operational_status") == "ONLINE")`, y promueve `operational_status = "ONLINE"` si el router está vivo.
+3. **Mapeo Robusto en Pinia y Vue 3:** `useInventoryStore.ts` mapea `is_reachable: Boolean(item.is_reachable || item.syslog_active || item.operational_status === 'ONLINE')` y `operational_status`. En `DashboardHomeView.vue`, `onlineRouters` y `offlineRouters` consideran tanto `is_reachable` como `operational_status` y `syslog_active`, y el botón `[Actualizar Datos]` despacha `fetchRouters(true)`.
+4. **Validación Visual en Navegador:** Verificado mediante `browser_subagent` en `http://localhost:8085/`:
+   - `FLOTA MIKROTIK`: 6 equipos | 🟢 3 en línea | 🔴 3 desconectado.
+   - `DISPONIBILIDAD FLOTA`: **50% REVISIÓN** (con barra de progreso al 50%).
+   - Indicador de estado: 🟢 Actualizado.
+
+### C. Cobertura y Certificación Multi-Capa 11X
+1. **Frontend Unitario (Vitest en Docker):**
+   - `vue3/src/stores/useInventoryStore.unit.ts` (**5 de 5 pruebas PASADAS, 100%**).
+   - `vue3/src/views/DashboardHomeView.unit.ts` (**8 de 8 pruebas PASADAS, 100%**).
+   - Suite completa: **392 de 392 pruebas unitarias PASADAS en 52 archivos (100% de éxito)**.
+   - `vue-tsc --noEmit`: 0 errores de tipado estricto.
+   - `vite build`: Compilación limpia en 5.30s.
+2. **Backend (Pytest y Ruff en Docker):**
+   - `tests/api/test_inventory_and_vault_endpoints_full.unit.py` (**8 de 8 pruebas PASADAS, 100%**).
+   - `tests/redis_layer/test_zero_metrics_state_machine.unit.py` (**7 de 7 pruebas PASADAS, 100%**).
+   - Suite completa: **518 de 518 pruebas PASADAS (100% de éxito)**.
+   - `ruff check src/`: All checks passed!
+   - `./scripts/verificar-secretos.sh`: 0 secretos detectados.
+
 
 
 

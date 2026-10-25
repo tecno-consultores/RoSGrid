@@ -150,4 +150,40 @@ describe('useInventoryStore — Inventario Flota MikroTik (shallowRef)', () => {
     expect(store.maintenanceWindows).toEqual([]);
     expect(store.selectedRouterId).toBeNull();
   });
+
+  it('consolida is_reachable a true cuando syslog_active es true u operational_status es ONLINE', async () => {
+    const store = useInventoryStore();
+    const { http } = await import('@/api/httpClient');
+    const mockData = [
+      {
+        id: 'r-syslog-only',
+        tenant_id: 'tenant-1',
+        display_name: 'CCR2004-Syslog-Only',
+        is_reachable: false,
+        syslog_active: true,
+        operational_status: 'ONLINE',
+      },
+      {
+        id: 'r-fully-offline',
+        tenant_id: 'tenant-1',
+        display_name: 'RB-Dead',
+        is_reachable: false,
+        syslog_active: false,
+        operational_status: 'OFFLINE',
+      },
+    ];
+    const getSpy = vi.spyOn(http, 'get').mockResolvedValueOnce({
+      status: 200,
+      data: mockData,
+      headers: new Headers(),
+    });
+
+    await store.fetchRouters(true);
+    expect(store.routers.length).toBe(2);
+    expect(store.routers[0].is_reachable).toBe(true);
+    expect(store.routers[0].operational_status).toBe('ONLINE');
+    expect(store.routers[1].is_reachable).toBe(false);
+    expect(store.routers[1].operational_status).toBe('OFFLINE');
+    getSpy.mockRestore();
+  });
 });

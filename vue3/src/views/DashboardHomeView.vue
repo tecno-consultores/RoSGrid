@@ -18,7 +18,7 @@
 
   onMounted(() => {
     if (inventoryStore.routers.length === 0) {
-      inventoryStore.fetchRouters();
+      inventoryStore.fetchRouters(true);
     }
     inventoryStore.fetchNetworkRoles();
     nocStore.connectEventsWebSocket();
@@ -27,9 +27,17 @@
 
   // Métricas calculadas
   const totalRouters = computed(() => inventoryStore.routers.length);
-  const onlineRouters = computed(() => inventoryStore.routers.filter((r) => r.is_reachable).length);
+  const onlineRouters = computed(
+    () =>
+      inventoryStore.routers.filter(
+        (r) => r.is_reachable || r.operational_status === 'ONLINE' || r.syslog_active,
+      ).length,
+  );
   const offlineRouters = computed(
-    () => inventoryStore.routers.filter((r) => !r.is_reachable).length,
+    () =>
+      inventoryStore.routers.filter(
+        (r) => !r.is_reachable && r.operational_status !== 'ONLINE' && !r.syslog_active,
+      ).length,
   );
   const availabilityPct = computed(() => {
     if (totalRouters.value === 0) return 100;
@@ -225,7 +233,7 @@
     isRefreshing.value = true;
     try {
       await Promise.allSettled([
-        inventoryStore.fetchRouters(),
+        inventoryStore.fetchRouters(true),
         nocStore.fetchRecentAuditLogs(true),
       ]);
       isFleetUpdated.value = true;

@@ -220,7 +220,9 @@
                   .split(':')[0]
               : ''),
           ros_version: (item.ros_version as string) || 'v7',
-          is_reachable: (item.is_reachable as boolean) ?? false,
+          is_reachable: Boolean(item.is_reachable || item.syslog_active || item.operational_status === 'ONLINE'),
+          operational_status: (item.operational_status as string) || (item.is_reachable || item.syslog_active ? 'ONLINE' : 'OFFLINE'),
+          syslog_active: Boolean(item.syslog_active),
         }));
       }
 

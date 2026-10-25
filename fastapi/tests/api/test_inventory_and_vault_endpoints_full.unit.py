@@ -582,3 +582,43 @@ async def test_notification_channel_endpoints() -> None:
         # 5. Delete
         await delete_channel(ch.id, claims=claims, db=db)
         db.delete.assert_awaited_once_with(ch)
+
+
+@pytest.mark.asyncio
+async def test_build_router_response_reachability_consolidation() -> None:
+    """Verifica que build_router_response consolide is_reachable = True si syslog_active es True."""
+    from datetime import date
+
+    from src.api.v1.inventory_helpers import build_router_response
+    from src.models.inventory import Router, RouterAdminStateEnum, SSLTrustStatusEnum
+
+    r = Router(
+        id=uuid.uuid4(),
+        tenant_id=uuid.uuid4(),
+        display_name="r-test-syslog",
+        api_base_url="https://10.250.3.8:443",
+        api_port=443,
+        network_role="CORE",
+        admin_state=RouterAdminStateEnum.PRODUCTION,
+        physical_location="NOC",
+        online_since_date=date(2026, 1, 1),
+        serial_number="SN-TEST-1",
+        ssl_trust_status=SSLTrustStatusEnum.TRUSTED_PINNED,
+        is_reachable=False,  # En Postgres figuraba False
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+
+    # Telemetría viva con Syslog activo
+    telemetry = {
+        "operational_status": "OFFLINE",
+        "cpu_load_percent": None,
+        "memory_used_percent": None,
+        "syslog_active": True,
+        "syslog_event_count": 42,
+    }
+
+    resp = build_router_response(r, telemetry)
+    assert resp.is_reachable is True
+    assert resp.operational_status == "ONLINE"
+    assert resp.syslog_active is True

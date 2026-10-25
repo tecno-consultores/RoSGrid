@@ -130,18 +130,30 @@ async def _evaluate_single_router(session: Any, redis: Any, r: Router) -> None:
 
         await client.close()
 
+    # Detección y evaluación de telemetría y tráfico Syslog existente hacia RoSGrid
+    syslog_active_key = f"rg:{r.tenant_id}:router:{r.id}:syslog:active"
+    syslog_ring_key = f"rg:{r.tenant_id}:router:{r.id}:syslog:ring"
+    syslog_conf_key = f"rg:{r.tenant_id}:router:{r.id}:syslog:configured"
+    has_syslog_live = bool(
+        await redis.exists(syslog_active_key)
+        or (await redis.llen(syslog_ring_key) > 0)
+        or await redis.exists(syslog_conf_key)
+    )
+    effective_reachable = is_reachable or has_syslog_live
+
     new_status, alert, updated_state = evaluate_router_monitoring_cycle(
         current_state=cur_state,
-        is_reachable=is_reachable,
+        is_reachable=effective_reachable,
         cpu_load_pct=cpu,
         free_memory_pct=free_pct,
         in_maintenance=in_maint,
     )
 
     await write_monitoring_state_pipeline(redis, r.tenant_id, r.id, updated_state)
-    r.is_reachable = is_reachable
-    if is_reachable:
+    r.is_reachable = effective_reachable
+    if effective_reachable:
         r.last_seen_at = datetime.now(UTC)
+        r.last_connection_error = None
 
     if alert and not in_maint:
         await _publish_alert_and_event(redis, r.tenant_id, r.id, r.display_name, alert, new_status)

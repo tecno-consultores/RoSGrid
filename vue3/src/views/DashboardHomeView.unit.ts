@@ -232,5 +232,50 @@ describe('DashboardHomeView.vue — Centro de Mando Táctico 11X', () => {
     await syslogCard?.trigger('click');
     expect(pushMock).toHaveBeenCalledWith('/routers/r-test-1/webfig/syslog');
   });
+
+  it('calcula disponibilidad de flota correctamente con routers activos por syslog', () => {
+    const inventoryStore = useInventoryStore();
+    inventoryStore.routers = [
+      {
+        id: 'r-1',
+        display_name: 'r1',
+        is_reachable: false,
+        syslog_active: true,
+        operational_status: 'ONLINE',
+      } as unknown as RouterItem,
+      {
+        id: 'r-2',
+        display_name: 'r2',
+        is_reachable: true,
+        syslog_active: false,
+        operational_status: 'ONLINE',
+      } as unknown as RouterItem,
+      {
+        id: 'r-3',
+        display_name: 'r3',
+        is_reachable: false,
+        syslog_active: false,
+        operational_status: 'OFFLINE',
+      } as unknown as RouterItem,
+      {
+        id: 'r-4',
+        display_name: 'r4',
+        is_reachable: false,
+        syslog_active: false,
+        operational_status: 'OFFLINE',
+      } as unknown as RouterItem,
+    ];
+
+    const wrapper = mount(DashboardHomeView, {
+      global: {
+        stubs: { RouterView: true, RouterLink: true },
+      },
+    });
+
+    // 2 de 4 routers deben estar en línea (50% disponibilidad)
+    expect(wrapper.text()).toContain('50%');
+    expect(wrapper.text()).toContain('2 en línea');
+    expect(wrapper.text()).toContain('2 desconectado');
+  });
 });
 
