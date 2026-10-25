@@ -27,6 +27,8 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
   - **Soporte Transaccional Multi-Equipo en Backend:** El esquema `CreateMaintenanceWindowRequest` soporta `router_ids: list[UUID]`, creando atómicamente una ventana por cada router seleccionado dentro de la misma transacción PostgreSQL e insertando los registros WORM correspondientes.
   - **Resolución Visual en Tabla de Objetivos:** La columna "Objetivo" en la vista resuelve automáticamente los UUIDs de routers asociados a nombres e IPs amigables (`📡 CORE-01 (192.168.88.1)`) para máxima legibilidad operativa NOC.
   - **Selector Exclusivo por Calendario y Bloqueo de Tipeo Manual:** Bloqueo estricto de eventos de teclado directo en los inputs de fecha y hora (`starts_at`, `ends_at`) preservando navegación accesible (Tab/Escape) y botón táctico integrado `📅` con `showPicker()` nativo para despliegue ininterrumpido del menú de calendario sin errores de formato.
+  - **Pre-llenado Automático y Atajos de Duración Rápida:** Apertura del modal con fecha/hora actual en inicio y +2 horas en fin por defecto (`initDefaultDates`), junto a botones tácticos de 1 clic (`[ ⏱️ +1 Hora ]`, `[ ⏱️ +2 Horas ]`, `[ ⏱️ +4 Horas ]`, `[ 🌙 Madrugada ]`), garantizando que los campos nunca inicien vacíos y evitando bloqueos de validación en navegadores Chromium.
+  - **Serialización Segura WORM en Backend:** Conversión estricta a `.isoformat()` de marcas temporales al registrar el evento de auditoría `MAINTENANCE_WINDOW_CREATED` en la columna JSONB de PostgreSQL, previniendo errores de serialización interna.
 
 ### Changed
 

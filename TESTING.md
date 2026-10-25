@@ -1672,21 +1672,25 @@ Certificación ejecutada bajo la **Regla Cero** dentro de contenedores efímeros
 2. **Soporte Multi-Router Transaccional:**
    - Actualización de `CreateMaintenanceWindowRequest` (`fastapi/src/schemas/inventory.py`) para admitir `router_ids: list[UUID] | None`. Creación atómica de una ventana de mantenimiento individual por cada router seleccionado dentro de una sola transacción de PostgreSQL e inserción correspondiente de eventos de auditoría inmutable WORM.
 3. **Selector Interactivo de Routers en Frontend:**
-   - Rediseño táctico del modal en `vue3/src/views/MaintenanceWindowsView.vue` con buscador reactivo de routers por nombre, IP o modelo, selección de routers visibles, conteo dinámico, badges de estado y roles.
-   - Cierre automático del modal (`isCreateModalOpen.value = false;`) y reinicio de campos tras crear la ventana exitosamente.
-   - Resolución de nombres amigables e IPs (`getRouterLabel`) en la columna "Objetivo" de la tabla principal de ventanas de mantenimiento.
-   - Bloqueo estricto de eventos de teclado en inputs de fecha/hora (`handleDateKeyDown`, `@paste.prevent`, `@drop.prevent`) y apertura exclusiva con menú interactivo nativo mediante botón integrado `📅` (`showPicker()`), preservando navegación por teclado accesible (Tab/Escape).
+    - Rediseño táctico del modal en `vue3/src/views/MaintenanceWindowsView.vue` con buscador reactivo de routers por nombre, IP o modelo, selección de routers visibles, conteo dinámico, badges de estado y roles.
+    - Cierre automático del modal (`isCreateModalOpen.value = false;`) y reinicio de campos tras crear la ventana exitosamente.
+    - Resolución de nombres amigables e IPs (`getRouterLabel`) en la columna "Objetivo" de la tabla principal de ventanas de mantenimiento.
+    - Bloqueo estricto de eventos de teclado en inputs de fecha/hora (`handleDateKeyDown`, `@paste.prevent`, `@drop.prevent`) y apertura exclusiva con menú interactivo nativo mediante botón integrado `📅` (`showPicker()`), preservando navegación por teclado accesible (Tab/Escape).
+    - Pre-llenado automático de fecha/hora de inicio (actual) y fin (+2 horas) al abrir el modal, con 4 atajos tácticos de duración (`+1h`, `+2h`, `+4h`, `Madrugada`), asegurando que los campos nunca inicien vacíos ni generen rechazo en Chromium.
+    - Serialización segura en backend (`.isoformat()`) para `starts_at` y `ends_at` en el payload WORM `after_state` de auditoría PostgreSQL.
 
 ### B. Cobertura y Certificación Multi-Capa 11X
 1. **Backend Unitario (Pytest en Docker):**
-   - `fastapi/tests/api/test_inventory_and_vault_endpoints_full.unit.py` (**7 de 7 pruebas PASADAS, 100%**).
+    - `fastapi/tests/api/test_inventory_and_vault_endpoints_full.unit.py` (**7 de 7 pruebas PASADAS, 100%**).
 2. **Frontend Unitario (Vitest en Docker):**
-   - `vue3/src/views/inventory/maintenanceWindowsView.unit.ts` (**4 de 4 pruebas PASADAS, 100%**).
+    - `vue3/src/views/inventory/maintenanceWindowsView.unit.ts` (**4 de 4 pruebas PASADAS, 100%**).
 3. **Análisis Estático y Tipado Estricto:**
-   - `vue-tsc --noEmit`: 0 errores.
-   - `ruff check src/ tests/`: All checks passed.
-   - `mypy --strict src/`: Success: no issues found in 118 source files.
-   - `eslint src/views/MaintenanceWindowsView.vue`: 0 errores.
+    - `vue-tsc --noEmit`: 0 errores.
+    - `ruff check src/ tests/`: All checks passed.
+    - `mypy --strict src/`: Success: no issues found in 118 source files.
+    - `eslint src/views/MaintenanceWindowsView.vue`: 0 errores.
+4. **Verificación en Vivo (Browser End-to-End):**
+    - Flujo completo de apertura de modal, fechas pre-llenadas, selección de router `r1` y creación exitosa de ventana con reporte en vivo y cierre automático verificado en contenedor de producción.
 
 
 

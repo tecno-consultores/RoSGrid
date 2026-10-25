@@ -137,7 +137,11 @@ async def create_maintenance_window(
                 event_category="OPERATIONS",
                 event_action="MAINTENANCE_WINDOW_CREATED",
                 router_id=w.router_id,
-                after_state={"title": w.title, "starts_at": w.starts_at, "ends_at": w.ends_at},
+                after_state={
+                    "title": w.title,
+                    "starts_at": w.starts_at.isoformat() if w.starts_at else None,
+                    "ends_at": w.ends_at.isoformat() if w.ends_at else None,
+                },
             )
         await db.commit()
         await db.refresh(created_windows[0])
@@ -169,7 +173,11 @@ async def create_maintenance_window(
         event_category="OPERATIONS",
         event_action="MAINTENANCE_WINDOW_CREATED",
         router_id=window.router_id,
-        after_state={"title": window.title, "starts_at": window.starts_at, "ends_at": window.ends_at},
+        after_state={
+            "title": window.title,
+            "starts_at": window.starts_at.isoformat() if window.starts_at else None,
+            "ends_at": window.ends_at.isoformat() if window.ends_at else None,
+        },
     )
     await db.commit()
     await db.refresh(window)

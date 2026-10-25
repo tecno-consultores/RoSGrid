@@ -30,6 +30,55 @@
     suppress_alerts: true,
   });
 
+  function formatForDateTimeLocal(date: Date): string {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const yyyy = date.getFullYear();
+    const mm = pad(date.getMonth() + 1);
+    const dd = pad(date.getDate());
+    const hh = pad(date.getHours());
+    const min = pad(date.getMinutes());
+    return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+  }
+
+  function initDefaultDates(): void {
+    const now = new Date();
+    now.setSeconds(0, 0);
+    const remainder = now.getMinutes() % 5;
+    if (remainder !== 0) {
+      now.setMinutes(now.getMinutes() + (5 - remainder));
+    }
+    const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+    newWindow.value.starts_at = formatForDateTimeLocal(now);
+    newWindow.value.ends_at = formatForDateTimeLocal(twoHoursLater);
+  }
+
+  function openCreateModal(): void {
+    initDefaultDates();
+    isCreateModalOpen.value = true;
+  }
+
+  function setDurationPreset(hours: number): void {
+    const start = newWindow.value.starts_at ? new Date(newWindow.value.starts_at) : new Date();
+    if (isNaN(start.getTime())) {
+      initDefaultDates();
+      return;
+    }
+    const end = new Date(start.getTime() + hours * 60 * 60 * 1000);
+    newWindow.value.ends_at = formatForDateTimeLocal(end);
+  }
+
+  function setNightWindowPreset(): void {
+    const start = new Date();
+    if (start.getHours() >= 5) {
+      start.setDate(start.getDate() + 1);
+    }
+    start.setHours(1, 0, 0, 0);
+    const end = new Date(start);
+    end.setHours(5, 0, 0, 0);
+    newWindow.value.starts_at = formatForDateTimeLocal(start);
+    newWindow.value.ends_at = formatForDateTimeLocal(end);
+  }
+
   const startsAtInputRef = ref<HTMLInputElement | null>(null);
   const endsAtInputRef = ref<HTMLInputElement | null>(null);
 
@@ -54,8 +103,10 @@
   }
 
   function handleDateKeyDown(event: KeyboardEvent, target: 'starts' | 'ends'): void {
-    // Permitir accesibilidad por teclado (Tab para navegar, Escape para cancelar)
-    if (['Tab', 'Escape'].includes(event.key)) {
+    // Permitir accesibilidad por teclado y navegación dentro de selectores de fecha/hora
+    if (
+      ['Tab', 'Escape', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)
+    ) {
       return;
     }
     // Enter o Espacio abren el menú del calendario
@@ -209,6 +260,7 @@
         ends_at: '',
         suppress_alerts: true,
       };
+      initDefaultDates();
       selectedRouterIds.value = [];
       routerSearch.value = '';
     } catch (err: unknown) {
@@ -220,6 +272,7 @@
   }
 
   onMounted(async () => {
+    initDefaultDates();
     await loadMaintenanceWindows();
     if (inventoryStore.routers.length === 0) {
       await inventoryStore.fetchRouters();
@@ -240,7 +293,7 @@
         id="btn-open-create-mw-modal"
         type="button"
         class="btn-create"
-        @click="isCreateModalOpen = true"
+        @click="openCreateModal"
       >
         + Programar Ventana
       </button>
@@ -562,6 +615,45 @@
               <span class="helper-text helper-text--picker">
                 Seleccione desde el botón o menú del calendario (escritura manual deshabilitada).
               </span>
+            </div>
+          </div>
+
+          <!-- Presets de Duración Rápida -->
+          <div class="duration-presets-group">
+            <span class="presets-label">Atajos de Duración:</span>
+            <div class="presets-buttons">
+              <button
+                type="button"
+                class="btn-preset"
+                title="Establecer fin a +1 hora del inicio"
+                @click="setDurationPreset(1)"
+              >
+                ⏱️ +1 Hora
+              </button>
+              <button
+                type="button"
+                class="btn-preset"
+                title="Establecer fin a +2 horas del inicio"
+                @click="setDurationPreset(2)"
+              >
+                ⏱️ +2 Horas
+              </button>
+              <button
+                type="button"
+                class="btn-preset"
+                title="Establecer fin a +4 horas del inicio"
+                @click="setDurationPreset(4)"
+              >
+                ⏱️ +4 Horas
+              </button>
+              <button
+                type="button"
+                class="btn-preset"
+                title="Programar para la próxima madrugada de 01:00 a 05:00"
+                @click="setNightWindowPreset"
+              >
+                🌙 Madrugada (01:00 - 05:00)
+              </button>
             </div>
           </div>
 
@@ -1126,5 +1218,50 @@
     color: var(--rg-text-muted, #94a3b8);
     margin-top: 4px;
     display: block;
+  }
+
+  /* Atajos de Duración Rápida */
+  .duration-presets-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: rgba(30, 41, 59, 0.4);
+    border: 1px dashed rgba(34, 211, 238, 0.25);
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+  }
+
+  .presets-label {
+    font-size: 0.72rem;
+    color: var(--rg-accent-cyan, #22d3ee);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .presets-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .btn-preset {
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid var(--rg-border-grid, #1e293b);
+    color: var(--rg-text-secondary, #cbd5e1);
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.15s ease-in-out;
+  }
+
+  .btn-preset:hover {
+    background: rgba(34, 211, 238, 0.15);
+    border-color: var(--rg-accent-cyan, #22d3ee);
+    color: var(--rg-accent-cyan, #22d3ee);
+    transform: translateY(-1px);
   }
 </style>
