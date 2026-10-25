@@ -1621,8 +1621,9 @@ Certificación ejecutada bajo la **Regla Cero** dentro de contenedores efímeros
 6. **Navegación Unificada y Kill-Switch de Sesiones Activas:**
    - Incorporado enlace directo `[ 🛑 Sesiones Activas (Kill-Switch) ]` en la barra de navegación lateral `RgResponsiveShell.vue` para roles con facultades de auditoría y administración (`SUPERADMIN_GLOBAL`, `TENANT_ADMIN`, `SECURITY_OFFICER`, `AUDITOR`), además de accesos directos tácticos para `Matriz de CVEs` y `Auditoría WORM`.
 7. **Karate Labs BDD:**
-   - **API BDD:** Escenario 87 incorporado en `fastapi/test/api_test.feature` y replicado en `docs/examples/fastapi/test/api_test.feature` (**87 escenarios totales de API**).
-   - **UI BDD:** Escenario 39 incorporado en `vue3/test/ui_business_flow.feature` y replicado en `docs/examples/vue3/test/ui_business_flow.feature` (**39 escenarios totales de UI**).
+   - **API BDD:** Escenario 88 incorporado en `fastapi/test/api_test.feature` y replicado en `docs/examples/fastapi/test/api_test.feature` (**88 escenarios totales de API**).
+   - **UI BDD:** Escenario 40 incorporado en `vue3/test/ui_business_flow.feature` y replicado en `docs/examples/vue3/test/ui_business_flow.feature` (**40 escenarios totales de UI**).
+
 
 
 

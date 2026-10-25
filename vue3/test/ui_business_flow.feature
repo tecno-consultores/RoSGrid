@@ -362,6 +362,12 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And waitFor(".tactical-table")
     And match text(".tactical-table") contains 'CIS-1.8'
 
+  Scenario: 40. Inspección de DHCP Snooping y alertas Rogue DHCP en pestaña Switching de Enterprise Compliance
+    Given driver baseUrl + '/enterprise-compliance?tab=switching'
+    And waitFor(".enterprise-compliance-view")
+    And waitFor(".tactical-table")
+
+
 
 
 

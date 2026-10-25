@@ -97,20 +97,11 @@ async def get_dhcp_snooping_state(
                         untrusted_ports=untrusted,
                     )
                 )
-            if states:
-                return states
+            return states
     except Exception as exc:
-        logger.debug("Sondeo REST de DHCP Snooping: %s. Utilizando estado estructurado.", exc)
+        logger.debug("Sondeo REST de DHCP Snooping: %s", exc)
 
-    # Estado representativo por defecto
-    return [
-        DhcpSnoopingState(
-            bridge_name="bridge1",
-            dhcp_snooping_enabled=True,
-            trusted_ports=["sfp-sfpplus1", "ether1"],
-            untrusted_ports=["ether2", "ether3", "ether4", "ether5", "ether6"],
-        )
-    ]
+    return []
 
 
 @router.post(
@@ -176,7 +167,7 @@ async def enable_dhcp_snooping(
         bridge_name=payload.bridge_name,
         dhcp_snooping_enabled=True,
         trusted_ports=trusted_list,
-        untrusted_ports=["ether2", "ether3", "ether4"],
+        untrusted_ports=[],
     )
 
 
@@ -199,30 +190,30 @@ async def list_rogue_dhcp_alerts(
     if not router_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Router no encontrado")
 
-    now = datetime.now(UTC).isoformat()
-    # Genera alertas detectadas en logs de DHCP snooping
-    return [
-        RogueDhcpAlertItem(
-            id=f"alert-{router_id}-ether14",
-            router_id=router_obj.id,
-            bridge_name="bridge1",
-            interface_name="ether14",
-            rogue_server_mac="B8:69:F4:11:22:33",
-            rogue_server_ip="192.168.1.1",
-            detected_at=now,
-            status="ALERT_ACTIVE",
-        ),
-        RogueDhcpAlertItem(
-            id=f"alert-{router_id}-ether22",
-            router_id=router_obj.id,
-            bridge_name="bridge1",
-            interface_name="ether22",
-            rogue_server_mac="C4:AD:34:AA:BB:CC",
-            rogue_server_ip="192.168.0.1",
-            detected_at=now,
-            status="BLOCKED_BY_HARDWARE",
-        ),
-    ]
+    alerts: list[RogueDhcpAlertItem] = []
+    try:
+        _, client = await get_router_and_client(router_id, claims, db)
+        ros_alerts = await client.get("/ip/dhcp-server/alert")
+        if isinstance(ros_alerts, list):
+            for idx, a in enumerate(ros_alerts):
+                unknown_server = str(a.get("unknown-server", "")).strip()
+                if unknown_server:
+                    alerts.append(
+                        RogueDhcpAlertItem(
+                            id=f"alert-{router_id}-{a.get('interface', idx)}",
+                            router_id=router_obj.id,
+                            bridge_name=str(a.get("interface", "")),
+                            interface_name=str(a.get("interface", "")),
+                            rogue_server_mac=unknown_server,
+                            rogue_server_ip=str(a.get("valid-server", "")),
+                            detected_at=datetime.now(UTC).isoformat(),
+                            status="ALERT_ACTIVE",
+                        )
+                    )
+        return alerts
+    except Exception as exc:
+        logger.debug("Sondeo de /ip/dhcp-server/alert en router %s: %s", router_id, exc)
+        return []
 
 
 @router.post(

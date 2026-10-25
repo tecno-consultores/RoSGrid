@@ -21,6 +21,13 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
   - **Mitigación:** Corrección de la vulnerabilidad de desbordamiento de escritura fuera de límites (*Out-of-bounds write*) en el decodificador de Brotli calificada como `CRITICAL`.
   - **Certificación de Regresión 11X:** 501 pruebas unitarias del backend ejecutadas y aprobadas al 100% en contenedor efímero de Docker, y 0 errores de tipado estricto en Mypy (`Success: no issues found in 117 source files`).
 
+### Changed
+
+- **Sondeo Nativo de Rogue DHCP en RouterOS v7 y Montaje de Workspace en Makefile (`fastapi/src/api/v1/switching.py`, `fastapi/tests/api/test_hito20_enterprise_suite.unit.py`, `Makefile`):**
+  - **Sondeo Nativo `/ip/dhcp-server/alert`:** Refinada la consulta de alertas de DHCP no autorizado para interrogar directamente la tabla nativa de RouterOS v7 vía REST API en vez de utilizar alertas estáticas de muestra, saneando puertos desconfiados a listas vacías por defecto.
+  - **Montaje `/workspace:ro` en Makefile:** Actualizado el target `test-backend` en el Makefile raíz para montar el directorio de trabajo como volumen de solo lectura, permitiendo que las pruebas de auditoría del gate validen los archivos de raíz y scripts con total determinismo.
+  - **Aseguramiento Multi-Capa 11X:** 506 pruebas unitarias backend aprobadas al 100%, 377 pruebas frontend Vitest aprobadas (50 suites), 0 errores en `vue-tsc`, `ruff` y `mypy`, y nuevos escenarios BDD en Karate Labs: Escenario 88 en API (`fastapi/test/api_test.feature`) y Escenario 40 en UI (`vue3/test/ui_business_flow.feature`), espejados en `docs/examples/`.
+
 ### Added
 
 - **Gobernanza de Mantenimiento desde Inventario, Geolocalización en IPAM y Remediación Selectiva CIS Benchmark (`vue3/src/views/RouterInventoryView.vue`, `vue3/src/views/IpamManagementView.vue`, `vue3/src/views/EnterpriseComplianceView.vue`, `fastapi/src/api/v1/compliance.py`, `vue3/src/components/network/UnifiedNetworkMap.vue`):**

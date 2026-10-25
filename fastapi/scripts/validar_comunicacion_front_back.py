@@ -60,6 +60,7 @@ async def check_health(client: httpx.AsyncClient) -> None:
 async def obtain_admin_token(client: httpx.AsyncClient) -> str:
     """Autentica al Superadmin y retorna el token JWT Bearer."""
     from sqlalchemy import select
+
     from src.api.v1.auth import create_jwt_access_token
     from src.db.session import async_session_maker
     from src.models.core import Tenant, User
@@ -447,7 +448,7 @@ async def verify_router_specific_endpoints(
             async with httpx.AsyncClient(base_url=API_BASE, timeout=15.0) as clean_client:
                 r_del = await clean_client.delete(f"/api/v1/inventory/routers/{test_router_to_clean}", headers=delete_headers)
                 log_test(
-                    f"DELETE /api/v1/inventory/routers (Higiene y Limpieza de Equipos de Prueba)",
+                    "DELETE /api/v1/inventory/routers (Higiene y Limpieza de Equipos de Prueba)",
                     r_del.status_code == 204,
                     f"HTTP {r_del.status_code}",
                 )

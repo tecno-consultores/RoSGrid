@@ -435,12 +435,27 @@ async def test_rogue_dhcp_detection_and_port_isolation(
     )
     db.execute.return_value = MockDbResult([mock_router])
 
-    alerts = await list_rogue_dhcp_alerts(router_id=router_id, db=db, claims=sample_claims)
-    assert len(alerts) >= 1
-    assert alerts[0].rogue_server_mac == "B8:69:F4:11:22:33"
+    mock_client = AsyncMock()
+    mock_client.get.return_value = []
+    with patch("src.api.v1.switching.get_router_and_client", return_value=(mock_router, mock_client)):
+        alerts_empty = await list_rogue_dhcp_alerts(router_id=router_id, db=db, claims=sample_claims)
+        assert len(alerts_empty) == 0
+
+    mock_client.get.return_value = [
+        {
+            ".id": "*1",
+            "interface": "ether14",
+            "unknown-server": "B8:69:F4:11:22:33",
+            "valid-server": "192.168.1.1",
+        }
+    ]
+    with patch("src.api.v1.switching.get_router_and_client", return_value=(mock_router, mock_client)):
+        alerts = await list_rogue_dhcp_alerts(router_id=router_id, db=db, claims=sample_claims)
+        assert len(alerts) == 1
+        assert alerts[0].rogue_server_mac == "B8:69:F4:11:22:33"
+        assert alerts[0].interface_name == "ether14"
 
     # Isolate port
-    mock_client = AsyncMock()
     mock_audit = MagicMock()
     mock_audit.id = uuid.uuid4()
 

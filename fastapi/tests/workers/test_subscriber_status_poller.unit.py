@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
 from src.models.inventory import Router, RouterAdminStateEnum
 from src.models.ipam import SubscriberDevice
 from src.workers.subscriber_status_poller import _poll_single_router_sessions
