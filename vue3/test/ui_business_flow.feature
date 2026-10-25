@@ -389,6 +389,14 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And waitFor(".preset-btn")
     When click(".btn-close")
 
+  Scenario: 43. Conmutador Rápido de Contexto de Tenants para SuperAdmin (Hito 25)
+    Given driver baseUrl + '/'
+    And waitFor(".rg-tenant-switcher")
+    And waitFor(".rg-tenant-switcher__btn")
+    When click(".rg-tenant-switcher__btn")
+    Then waitFor(".rg-tenant-switcher__dropdown")
+    And match text(".rg-tenant-switcher__dropdown") contains 'Organizaciones'
+
 
 
 

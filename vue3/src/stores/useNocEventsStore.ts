@@ -41,8 +41,11 @@ export const useNocEventsStore = defineStore('nocEvents', () => {
 
       // Intercepción del Kill-Switch en vivo
       if (eventName === 'SESSION_KILLED') {
+        if (payload?.killed_by === 'SUPERADMIN_TENANT_SWITCH') {
+          return;
+        }
         const authStore = useAuthStore();
-        authStore.forceKillSwitchLogout('Sesión finalizada por el Administrador');
+        authStore.forceKillSwitchLogout(payload?.reason || 'Sesión finalizada por el Administrador');
         return;
       }
 
@@ -158,6 +161,15 @@ export const useNocEventsStore = defineStore('nocEvents', () => {
     recentEvents.value = [];
     activeAlertsCount.value = 0;
     triggerRef(recentEvents);
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('rosgrid:tenant-switched', () => {
+      disconnectEventsWebSocket();
+      setTimeout(() => {
+        connectEventsWebSocket();
+      }, 150);
+    });
   }
 
   return {

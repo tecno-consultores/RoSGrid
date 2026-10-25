@@ -186,12 +186,13 @@ async def test_switch_tenant_success_by_id(
         assert res.user.role == SystemRoleEnum.SUPERADMIN_GLOBAL
         assert res.user.features.get("isp_module_enabled") is True
 
-        # Verificar que se revocó la sesión anterior
+        # Verificar que se revocó la sesión anterior silenciando eventos WS al propio cliente
         mock_kill.assert_awaited_once_with(
             superadmin_claims["tid"],
             superadmin_claims["sid"],
             killed_by="SUPERADMIN_TENANT_SWITCH",
             reason="Conmutación al tenant isp-destino",
+            notify_ws=False,
         )
 
         # Verificar auditoría

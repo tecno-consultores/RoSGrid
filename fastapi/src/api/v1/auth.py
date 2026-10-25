@@ -767,15 +767,7 @@ async def switch_tenant(
     old_tenant_id = str(claims["tid"])
     old_session_id = str(claims["sid"])
 
-    # 3. Revocar sesión previa en el tenant anterior
-    await kill_session(
-        old_tenant_id,
-        old_session_id,
-        killed_by="SUPERADMIN_TENANT_SWITCH",
-        reason=f"Conmutación al tenant {target_tenant.slug}",
-    )
-
-    # 4. Construir y activar nueva sesión para el tenant destino
+    # 3. Construir y activar nueva sesión para el tenant destino
     features = _extract_tenant_features(target_tenant)
     session_response = await _build_auth_session_response(
         request=request,
@@ -786,6 +778,15 @@ async def switch_tenant(
         user=user,
         db=db,
         features=features,
+    )
+
+    # 4. Revocar sesión previa en el tenant anterior de forma segura (Fail-Safe y sin emitir SESSION_KILLED al propio cliente)
+    await kill_session(
+        old_tenant_id,
+        old_session_id,
+        killed_by="SUPERADMIN_TENANT_SWITCH",
+        reason=f"Conmutación al tenant {target_tenant.slug}",
+        notify_ws=False,
     )
 
     # 5. Registrar evento WORM específico de cambio de tenant

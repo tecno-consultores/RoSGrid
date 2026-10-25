@@ -2,8 +2,9 @@
 
 ## 📍 Punto de Control Actual (Checkpoint)
 
-- **Hito Actual en Curso:** Hito 25 (En Planificación) — Conmutador Rápido de Tenants en Cabecera (SuperAdmin), Ergonomía de Pie de Página In-Flow y Gestión Táctica de Feature Flags por Empresa.
-- **Estado General del Sistema:** Hitos 0 al 24 COMPLETADOS (100%).
+- **Hito Actual en Curso:** Hito 26 (En Planificación) — Gobernanza Táctica de Módulos B2B (DAG en Cascada / Hard Lock, Blindaje RBAC de Licenciamiento, Modo Contingencia y Auditoría Visual con Rollback).
+- **Estado General del Sistema:** Hitos 0 al 25 COMPLETADOS (100%).
+- **Hito 25 (Conmutador Rápido de Contexto de Tenants, Ergonomía de Pie de Página In-Flow y Gestión Táctica de Feature Flags por Empresa):** COMPLETADO al 100% y certificado en Docker. Especificación formal `docs/specs/44_TENANT_SWITCHER_INFLOW_FOOTER_AND_MODULAR_FEATURE_FLAGS.md`. Conmutador rápido de tenants exclusivo para `SUPERADMIN_GLOBAL` en cabecera (`RgTenantSwitcher.vue`), respaldado por `POST /api/v1/auth/switch-tenant` con re-keying atómico de sesión en KeyDB y auditoría WORM. Supresión de la barra flotante de 32px y reubicación del footer in-flow dentro de `.rg-main` con `margin-top: auto` (100% de espacio vertical recuperado). Sub-pantalla dedicada `/admin/tenants/:id/modules` con 4 cuadrantes tácticos, 4 presets rápidos y diálogo modal de confirmación de radio de impacto. 5 pruebas unitarias Pytest aprobadas al 100%, 55 suites Vitest con 402/402 tests aprobados, compilación Vite limpia en 4.14s y smoke tests de flota real multi-dominio 100% aprobados.
 - **Hito 24 (Marco Universal de Fixtures Trimodales Ground-Truth, Invariantes Negativas y Smoke Tests de Flota Real - 8 Dominios):** COMPLETADO al 100% y certificado en Docker. Especificación formal `docs/specs/43_REAL_FLEET_SMOKE_TESTS_GROUND_TRUTH_FIXTURES_AND_DETERMINISTIC_SENSING.md`, regla de gobernanza institucional `.agents/rules/ground_truth_fixtures_and_negative_invariants.md` y actualización en `AGENTS.md`. Erradicación de la ceguera de mocks (Mock Blindness) en los 8 dominios (Syslog, CIS Hardening, Topología L2, IPAM DHCP, PoE, Rogue DHCP, CAPsMAN WiFi 6 y Config Drift) mediante ternas de fixtures crudos de MikroTik RouterOS v7. Detección canónica estricta con doble candado en Syslog (`rosgridsyslog`), eliminación de métricas inventadas en CAPsMAN (`wifi.py`), aserciones negativas obligatorias para routers de fábrica (`r4, r5, r6`), suite unitaria en Pytest (`test_ground_truth_trimodal_fixtures.unit.py` y `test_inventory_syslog_detection.unit.py` 18/18 tests pasando al 100%) y guardrail de Smoke Test de Flota Real multi-dominio (`scripts/validar-flota-real.py` / `make smoke-fleet`) evaluando los 6 routers físicos reales en laboratorio.
 - **Hito 23.28 (Guardrail Anti-Regresión, Detección de Datagramas UDP y Sincronización Syslog en Inventario):** COMPLETADO al 100% y certificado en Docker. Regla `.agents/rules/anti_regression_and_side_effects_guardrail.md` y actualización en `AGENTS.md`. Mapeo bimodal de puertos UDP 514 y 5514 en `docker-compose.prod.local.yml`, resolución heurística en `SyslogUdpProtocol` resiliente a Docker NAT (`172.18.0.1`), inspección flexible de acciones RouterOS v7 (`inspect_router_syslog_config`), refresco activo bajo demanda `?refresh=true` con endpoint `/sync-syslog`, y principio de "No Destructive Catch" en Pinia (`useInventoryStore.ts`). 390 pruebas unitarias Vitest aprobadas (100% éxito en 52 archivos), `vue-tsc` limpio y 0 hallazgos en auditoría de secretos.
 - **Hito 23.27 (Cierre de Pestaña/Navegador, Coordinación Multi-Pestaña y Grace Period en KeyDB):** COMPLETADO al 100% y certificado en Docker. Especificación formal `docs/specs/41_TAB_CLOSE_DETECTION_AND_EPHEMERAL_GRACE_PERIOD_SESSION_CLEANUP.md`. Coordinación `BroadcastChannel` multi-pestaña, `sendBeacon` en `pagehide`, endpoint `/session-closing` con período de gracia de 35s en KeyDB, worker de ciclo de vida `session_lifecycle_worker`, cancelación reactiva ante F5/reconexión, eliminación de elementos redundantes en barra lateral (`RgResponsiveShell.vue`) y corrección integral de baldosas de navegación en `DashboardHomeView.vue`. 514 tests unitarios backend (92% de cobertura), 383 tests frontend en 51 archivos Vitest (100% pasando), 89 escenarios BDD API y 41 escenarios BDD UI en Karate Labs, y 26 contratos Front-Back aprobados en Docker.
@@ -630,41 +631,69 @@
 
 > **Archivos Guía:** `docs/specs/44_TENANT_SWITCHER_INFLOW_FOOTER_AND_MODULAR_FEATURE_FLAGS.md`
 
-- [ ] **25.1** **API Backend de Conmutación de Contexto de Tenant:**
+- [x] **25.1** **API Backend de Conmutación de Contexto de Tenant:**
   - Endpoint `POST /api/v1/auth/switch-tenant` restringido exclusivamente a `SUPERADMIN_GLOBAL`.
   - Validación de estado activo del tenant destino, actualización atómica de sesión en KeyDB y emisión de nuevo JWT token.
   - Registro de auditoría WORM HMAC-SHA256 con acción `SUPERADMIN_TENANT_SWITCHED`.
-- [ ] **25.2** **Componente Frontend `RgTenantSwitcher.vue` en Barra Superior:**
+- [x] **25.2** **Componente Frontend `RgTenantSwitcher.vue` en Barra Superior:**
   - Sustitución del badge estático `div.tenant-badge` en `RgResponsiveShell.vue` por selector interactivo `🏢 {tenantSlug} ▾` para `SUPERADMIN_GLOBAL`.
   - Popover flotante estilo Tactical NOC con buscador (`🔍 Buscar empresa...`), lista de empresas activas y conmutación en caliente de stores de Pinia (`useInventoryStore`, `useNocEventsStore`, `useAuthStore`) sin recargar página.
   - Mantenimiento como badge estático solo de lectura para roles no-SuperAdmin.
-- [ ] **25.3** **Ergonomía de Pie de Página In-Flow (Recuperación de 32px Verticales):**
+- [x] **25.3** **Ergonomía de Pie de Página In-Flow (Recuperación de 32px Verticales):**
   - Eliminación de la barra fija flotante `.rg-global-footer` del layout raíz en `RgResponsiveShell.vue`.
   - Reubicación del pie de página con créditos institucionales y licencia GPLv3 al interior de `.rg-main` tras el `<slot />`, con `margin-top: auto`.
   - Maximización del 100% de la altura de pantalla en todas las vistas (Dashboard, Inventario, Wallboard, Topología).
-- [ ] **25.4** **Indicadores Visuales de Módulos en Tabla de Empresas:**
+- [x] **25.4** **Indicadores Visuales de Módulos en Tabla de Empresas:**
   - Inclusión de badges resumen `[ 12/16 Módulos ]` y botón de acción descriptivo `[ ⚙️ Módulos ]` en `TenantsManagementView.vue`.
-- [ ] **25.5** **Sub-pantalla Táctica de Módulos & Capacidades (`TenantModulesStudioView.vue`):**
+- [x] **25.5** **Sub-pantalla Táctica de Módulos & Capacidades (`TenantModulesStudioView.vue`):**
   - Vista dedicada en `/admin/tenants/:tenantId/modules` con navegación de miga de pan (`Breadcrumbs`) y botón `[ ⬅ Volver a Empresas ]`.
-- [ ] **25.6** **Barra de Arquetipos en 1 Clic (Presets Rápidos):**
+- [x] **25.6** **Barra de Arquetipos en 1 Clic (Presets Rápidos):**
   - Botones tácticos superiores para alternancia instantánea: `🏢 Modo Corporativo`, `🌐 Modo ISP & WISP`, `⚡ Modo NOC Mínimo` y `⚙️ Personalizado`.
-- [ ] **25.7** **Cuadrícula Táctica de 4 Cuadrantes (`RgFeatureFlagsGrid.vue` & `RgFeatureCard.vue`):**
+- [x] **25.7** **Cuadrícula Táctica de 4 Cuadrantes (`RgFeatureFlagsGrid.vue` & `RgFeatureCard.vue`):**
   - Organización de las 16 flags en 4 dominios funcionales: *Núcleo ISP*, *Ciberseguridad*, *Telemetría* y *Automatización*.
   - Tarjetas enriquecidas con badges de riesgo (`🟢 Bajo`, `🟡 Operativo`, `🔴 Crítico`), descripción en español, interruptores táctiles y validación de dependencias lógicas (DAG).
-- [ ] **25.8** **Escudo de Radio de Impacto (*Blast Radius Shield*):**
+- [x] **25.8** **Escudo de Radio de Impacto (*Blast Radius Shield*):**
   - Modal de advertencia de seguridad con cálculo dinámico antes de desactivar flags críticas de gobernanza (`syslog_collector_enabled`, `enforce_maker_checker`, `auto_safemode_enforced`).
-- [ ] **25.9** **Aseguramiento Unitario Multi-Capa 11X:**
+- [x] **25.9** **Aseguramiento Unitario Multi-Capa 11X:**
   - Pruebas unitarias backend (FastAPI/Pytest) del endpoint de conmutación y frontend (Vitest) de los componentes `RgTenantSwitcher`, `TenantModulesStudioView` y `RgFeatureFlagsGrid`.
   - 0 errores de tipado estricto en `ruff`, `mypy` y `vue-tsc`.
-- [ ] **25.10** **Certificación en Docker e Inspección Visual en Navegador Real:**
+- [x] **25.10** **Certificación en Docker e Inspección Visual en Navegador Real:**
   - Despliegue en contenedor efímero y validación visual con `browser_subagent` verificando conmutación de tenant, footer in-flow y cuadrícula de módulos.
 
 ---
 
-## 📦 HITO 26: Cierre de `CHANGELOG.md`, Auditoría Trivy y Publicación en Docker Hub (`scripts/build.sh`)
+## 🛡️ HITO 26: Gobernanza Táctica de Módulos B2B — DAG en Cascada (Hard Lock), Blindaje RBAC de Licenciamiento, Modo Contingencia y Auditoría Visual con Rollback
+
+> **Archivos Guía:** `docs/specs/45_TACTICAL_FEATURE_FLAGS_GOVERNANCE_DAG_AND_AUDIT_ROLLBACK.md`
+
+- [ ] **26.1** **Grafo de Dependencias Activo (DAG) con Bloqueo Estricto en Cascada (Hard Lock):**
+  - Implementación reactiva en `RgFeatureFlagsGrid.vue`: si un módulo padre (ej. `isp_module_enabled`) es apagado, los módulos dependientes (`bgp_looking_glass_enabled`, `sla_tracker_enabled`) se fuerzan a `false` y sus interruptores quedan bloqueados en gris (`disabled`).
+  - Tooltips contextuales explicativos en hover (`[ 🔒 Requiere activar Módulo ISP previamente ]`).
+- [ ] **26.2** **Blindaje RBAC de Licenciamiento Comercial (Solo SuperAdmin):**
+  - Refuerzo de validación estricta en endpoints de flags (`fastapi/src/api/v1/tenants.py`): retorno imperativo de `HTTP 403 Forbidden` ante cualquier rol inferior a `SUPERADMIN_GLOBAL`.
+  - Documentación de gobernanza comercial: las flags representan licenciamiento contractual B2B inalterable por inquilinos locales.
+- [ ] **26.3** **Botón Táctico de Modo Contingencia / Emergencia NOC:**
+  - Inclusión del botón `[ ⚡ Modo Contingencia / Bajo Consumo ]` con acento visual en la barra de presets de `TenantModulesStudioView.vue`.
+  - Matriz de apagado en 1 clic de colectores de alta frecuencia (`syslog_collector_enabled`, `ipfix_analytics_enabled`, `prometheus_fleet_exporter_enabled`, `sfp_ddm_telemetry_enabled`), preservando intacto el núcleo de control.
+  - Banner informativo en pantalla alertando sobre la suspensión de telemetría intensiva.
+- [ ] **26.4** **Auditoría Visual en Pantalla y Función de Reversión (Rollback en 1 Clic):**
+  - Estructuración bimodal de pestañas en `/admin/tenants/:tenantId/modules`: `[ ⚙️ Matriz de Módulos ]` y `[ 📜 Historial de Modificaciones ]`.
+  - Componente de auditoría `TenantModulesAuditTab.vue` que consulta los eventos WORM `TENANT_FEATURE_FLAGS_UPDATED` de esa empresa.
+  - Botón `[ ⤺ Cargar esta versión ]` en cada registro histórico, poblando el formulario reactivo de la Pestaña 1 con el estado previo para guardado consciente.
+- [ ] **26.5** **Aseguramiento Unitario Multi-Capa 11X:**
+  - Pruebas unitarias frontend en Vitest para la cascada del DAG, el preset de contingencia y la reversión de auditoría.
+  - Pruebas unitarias backend en Pytest para la restricción 403 de roles no-SuperAdmin.
+  - 0 errores en `vue-tsc --noEmit` y `ruff check src/`.
+- [ ] **26.6** **Validación en Docker e Inspección Visual en Navegador Real:**
+  - Verificación interactiva del bloqueo de switches hijos, el preset de contingencia y el cargado de versiones históricas en `browser_subagent`.
+
+---
+
+## 📦 HITO 27: Cierre de `CHANGELOG.md`, Auditoría Trivy y Publicación en Docker Hub (`scripts/build.sh`)
 
 > **Archivo Guía:** `docs/specs/01_DOCKER_INFRASTRUCTURE_AND_IMMUTABLE_IMAGES.md`
 
-- [ ] **26.1** Actualizar `CHANGELOG.md` consolidando los cambios de `[Unreleased]` dentro del lanzamiento oficial `[1.0.0]` con las métricas certificadas en `TESTING.md`.
-- [ ] **26.2** Ejecutar `./scripts/build.sh` (como usuario no-root) con `docker buildx` (`container-builder` + `tonistiigi/binfmt`) para construir y publicar `sinfallas/rosgrid-backend:latest` (`:1.0.0`) y `sinfallas/rosgrid-frontend:latest` (`:1.0.0`) en Docker Hub y limpiar cachés con `prune -af`.
+- [ ] **27.1** Actualizar `CHANGELOG.md` consolidando los cambios de `[Unreleased]` dentro del lanzamiento oficial `[1.0.0]` con las métricas certificadas en `TESTING.md`.
+- [ ] **27.2** Ejecutar `./scripts/build.sh` (como usuario no-root) con `docker buildx` (`container-builder` + `tonistiigi/binfmt`) para construir y publicar `sinfallas/rosgrid-backend:latest` (`:1.0.0`) y `sinfallas/rosgrid-frontend:latest` (`:1.0.0`) en Docker Hub y limpiar cachés con `prune -af`.
+
 

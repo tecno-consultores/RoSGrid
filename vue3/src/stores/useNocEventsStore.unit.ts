@@ -185,6 +185,37 @@ describe('useNocEventsStore — WebSocket Global & Alertas NOC', () => {
     window.removeEventListener('rosgrid:kill-switch', eventSpy);
   });
 
+  it('ignora SESSION_KILLED cuando killed_by es SUPERADMIN_TENANT_SWITCH para evitar auto-deslogueo', () => {
+    const store = useNocEventsStore();
+    const switchPayload = JSON.stringify({
+      event_name: 'SESSION_KILLED',
+      killed_by: 'SUPERADMIN_TENANT_SWITCH',
+      reason: 'Conmutación al tenant fibra-norte',
+    });
+
+    const eventSpy = vi.fn();
+    window.addEventListener('rosgrid:kill-switch', eventSpy);
+
+    store.handleIncomingEvent(switchPayload);
+
+    expect(eventSpy).not.toHaveBeenCalled();
+    window.removeEventListener('rosgrid:kill-switch', eventSpy);
+  });
+
+  it('reacciona al evento rosgrid:tenant-switched reconectando el WebSocket', () => {
+    const store = useNocEventsStore();
+    store.connectEventsWebSocket('ws://localhost:8000/ws/test');
+    vi.advanceTimersByTime(20);
+    expect(store.isConnected).toBe(true);
+
+    const initialInstanceCount = MockWebSocket.instances.length;
+
+    window.dispatchEvent(new CustomEvent('rosgrid:tenant-switched'));
+    vi.advanceTimersByTime(200);
+
+    expect(MockWebSocket.instances.length).toBeGreaterThan(initialInstanceCount);
+  });
+
   it('permite limpiar la lista de eventos con clearEvents', () => {
     const store = useNocEventsStore();
     store.handleIncomingEvent(

@@ -91,7 +91,11 @@ async def get_session(tenant_id: str, session_id: str) -> dict[str, str] | None:
 
 
 async def kill_session(
-    tenant_id: str, session_id: str, killed_by: str = "SYSTEM", reason: str = "Revocación manual"
+    tenant_id: str,
+    session_id: str,
+    killed_by: str = "SYSTEM",
+    reason: str = "Revocación manual",
+    notify_ws: bool = True,
 ) -> bool:
     redis = get_redis_client()
     sess_key = f"rg:{tenant_id}:sess:{session_id}"
@@ -110,16 +114,18 @@ async def kill_session(
         pipe.srem(f"rg:{tenant_id}:user_sessions:{user_id}", session_id)
     pipe.zrem(f"rg:{tenant_id}:active_sessions", session_id)
 
-    event_payload = json.dumps(
-        {
-            "event": "SESSION_KILLED",
-            "target_session_id": session_id,
-            "target_user_id": user_id,
-            "reason": reason,
-            "killed_by": killed_by,
-        }
-    )
-    pipe.publish(f"rg:pubsub:events:{tenant_id}", event_payload)
+    if notify_ws:
+        event_payload = json.dumps(
+            {
+                "event": "SESSION_KILLED",
+                "target_session_id": session_id,
+                "target_user_id": user_id,
+                "reason": reason,
+                "killed_by": killed_by,
+            }
+        )
+        pipe.publish(f"rg:pubsub:events:{tenant_id}", event_payload)
+
     await pipe.execute()
     return True
 

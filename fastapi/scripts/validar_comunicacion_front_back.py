@@ -127,7 +127,7 @@ async def obtain_admin_token(client: httpx.AsyncClient) -> str:
         )
         log_test("Token JWT + Sesión KeyDB de Prueba Generado In-Process", True, f"Usuario: {target_user.username} ({role_str})")
 
-    return access_token or ""
+    return (access_token or "", target_tenant_slug)
 
 
 async def verify_core_resources(client: httpx.AsyncClient, auth_headers: dict[str, str]) -> str | None:
@@ -499,13 +499,13 @@ async def run_suite():
 
     async with httpx.AsyncClient(base_url=API_BASE, timeout=15.0, follow_redirects=True) as client:
         await check_health(client)
-        access_token = await obtain_admin_token(client)
+        access_token, tenant_slug = await obtain_admin_token(client)
         auth_headers = {
             "Authorization": f"Bearer {access_token}",
             "X-CSRF-Token": "test_csrf_token_for_front_back_validation",
         }
         existing_router_id, created_test_router_id = await verify_core_resources(client, auth_headers)
-        await verify_user_lifecycle_and_maker_checker(client, auth_headers)
+        await verify_user_lifecycle_and_maker_checker(client, auth_headers, tenant_slug=tenant_slug)
         target_router_id = existing_router_id or created_test_router_id
         await verify_router_specific_endpoints(client, auth_headers, target_router_id, test_router_to_clean=created_test_router_id)
 

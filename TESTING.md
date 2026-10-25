@@ -1883,3 +1883,7 @@ Conforme a la Especificación 43 v2.0.0 y la directiva `.agents/rules/ground_tru
    - Compilación de producción Vite (`npm run build`) -> Limpia en 4.14s.
 4. **Ergonomía de Pantalla Completa:**
    - 100% del alto útil de viewport recuperado en el Centro de Mando e Inventario sin barras flotantes fijas inferiores.
+5. **Certificación del Fix de Conmutación de Tenants sin Deslogueo:**
+   - Backend: Invocación de `kill_session(..., notify_ws=False)` en `switch_tenant` impidiendo falsas expulsiones por WebSocket.
+   - Frontend: Filtro en `useNocEventsStore.ts` excluyendo `SUPERADMIN_TENANT_SWITCH` de `forceKillSwitchLogout` y reconexión limpia reactiva ante `rosgrid:tenant-switched`.
+   - Verificado con sesión activa de SuperAdmin alternando fluidamente entre `sistemas` y `fibra-norte` con 0 deslogueos indeseados.
