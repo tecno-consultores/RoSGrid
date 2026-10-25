@@ -61,12 +61,19 @@ Apply these non-negotiable security directives before writing any code:
    - Session cookies: `__Host-rg_at` and `__Host-rg_rt` with `HttpOnly; Secure; SameSite=Strict; Path=/`.
    - All browser mutation requests require `X-CSRF-Token` HMAC-SHA256 signature verification.
 
+6. **Anti-Regression & Real Network Environment Invariant:**
+   - See [anti_regression_and_side_effects_guardrail.md](file:///.agents/rules/anti_regression_and_side_effects_guardrail.md).
+   - Inbound network traffic handlers (Syslog, SNMP, WebSockets) must tolerate Docker NAT proxying (`172.18.0.1`) and never rely on raw `addr[0]` alone.
+   - Frontend stores must never destroy previously populated in-memory state on network catch blocks.
+
 ---
 
 ## 3. Pre-Commit 11X Checklist
 
 Before declaring a task done or creating a commit/PR:
 - [ ] New/modified ORM models? -> Alembic migration applied and verified in PostgreSQL (`\d <table>`).
+- [ ] Ports preserved in Docker Compose? (e.g. standard UDP 514/5514 for Syslog, HTTP 8000, WebFig 8085).
+- [ ] Zero missing imports verified via static analysis (`ruff check src/`, `vue-tsc --noEmit`)?
 - [ ] Endpoints verified with real payloads using `validar_comunicacion_front_back.py`?
 - [ ] Added scenarios in Karate Labs API (`api_test.feature`) and Karate Labs UI (`ui_business_flow.feature`)?
 - [ ] Executed `./scripts/verificar-secretos.sh` and ShellCheck clean?

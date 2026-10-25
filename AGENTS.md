@@ -38,6 +38,9 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
 4. [continuous_agent_evolution.md](file:///.agents/rules/continuous_agent_evolution.md):
    - **Autonomous Evolution of `.agents/`:** Proactively update rules, skills, and automation scripts whenever discovering an improvement opportunity, unhandled edge case, procedure automation, or token optimization without waiting for user prompting.
 
+5. [anti_regression_and_side_effects_guardrail.md](file:///.agents/rules/anti_regression_and_side_effects_guardrail.md):
+   - **Anti-Regression & Blast-Radius Governance:** Zero degradation of pre-existing functionality when introducing changes. Mandatory pre-modification impact audit for shared files and Docker Compose ports (canonical UDP 514/5514 must never be dropped), Docker NAT/bridge proxy tolerance with heuristic payload/identity fallback, strict pre-build static typing/linting (`ruff`, `vue-tsc`), and non-destructive frontend error handling (no `setRouters([])` in generic catch blocks).
+
 ---
 
 ## 2. Rule Zero: Ephemeral Docker Execution
@@ -82,7 +85,7 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
 > **NON-NEGOTIABLE:** Following **EACH** task or user request modifying, adding, or fixing source code (`fastapi/`, `vue3/`, scripts, or configurations), the AI agent **MUST** autonomously execute the following 7-step protocol before completing its turn:
 >
 > 1. **Mandatory 11X Test Creation (ALWAYS Including Karate Labs):** Create or extend unit and integration tests in `fastapi/tests/` and `vue3/src/`, and **ALWAYS incorporate Karate Labs BDD scenarios** in `fastapi/test/api_test.feature` (API) and `vue3/test/ui_business_flow.feature` (UI), strictly replicating them in canonical blueprints under `docs/examples/` (`docs/examples/fastapi/` and `docs/examples/vue3/`).
-> 2. **Mandatory Test Execution:** Execute the complete test suite in ephemeral Docker containers (`Rule Zero`), certifying `>= 95%` coverage, 100% passed assertions, Karate Labs BDD contract validation, and 0 typing/linting errors (`ruff`, `mypy`, `eslint`, `vue-tsc`).
+> 2. **Mandatory Test Execution & Anti-Regression Verification:** Execute the complete test suite in ephemeral Docker containers (`Rule Zero`), certifying `>= 95%` coverage, 100% passed assertions, Karate Labs BDD contract validation, and 0 typing/linting errors (`ruff`, `mypy`, `eslint`, `vue-tsc`), and perform smoke checks on adjacent pre-existing features to guarantee zero regressions.
 > 3. **Mandatory Documentation Synchronization:** Unconditionally update all affected files across:
 >    - `docs/` (operations manuals, guides, and REST/WebSockets API specifications).
 >    - `docs/specs/` (domain architectural specifications).

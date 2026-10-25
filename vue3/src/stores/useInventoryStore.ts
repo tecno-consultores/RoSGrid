@@ -99,9 +99,12 @@ export const useInventoryStore = defineStore('inventory', () => {
         syslog_event_count: Number(item.syslog_event_count || 0),
       }));
       setRouters(items);
-    } catch {
-      // Sin datos de demostración: si falla la red, el inventario permanece vacío
-      setRouters([]);
+    } catch (err) {
+      // Directiva Anti-Degradación: Preservar estado previo si ya existían routers en memoria
+      if (routers.value.length === 0) {
+        setRouters([]);
+      }
+      console.warn('Fallo transitorio al consultar inventario de routers:', err);
     }
   }
 

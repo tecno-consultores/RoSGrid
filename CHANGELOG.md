@@ -24,6 +24,12 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Added
 
+- **Directiva Obligatoria de Gobernanza Anti-Regresión y Prevención de Efectos Secundarios (`.agents/rules/anti_regression_and_side_effects_guardrail.md`, `AGENTS.md`, `.agents/rules/secure_development_and_testing_guidelines.md`, `vue3/src/stores/useInventoryStore.ts`):**
+  - **Guardrail de Radio de Impacto (Blast-Radius):** Invariante institucional que prohíbe la degradación de funcionalidades preexistentes al introducir modificaciones; auditoría obligatoria de puertos en Docker Compose (prohibiendo suprimir puertos canónicos como UDP 514/5514) y flujos adyacentes antes de comitear.
+  - **Tolerancia a Entornos de Red Reales & Docker NAT:** Obligatoriedad de soportar proxies y pasarelas de Docker (`172.18.0.1`) en colectores de red (Syslog, SNMP, WebSockets), aplicando resolución heurística de respaldo en payload y encabezados BSD.
+  - **Verificación Estática Pre-Build Obligatoria:** Ejecución temprana de `ruff check src/` y `vue-tsc --noEmit` previo a cualquier empaquetado Docker, eliminando excepciones en tiempo de ejecución por dependencias o módulos no importados (`NameError`).
+  - **Resiliencia en Frontend (No Destructive Catch):** Los bloques `catch` en Pinia no vacían colecciones si ya existen datos en memoria; mantienen el último estado válido conocido y alertan sin destruir la visualización de datos al usuario.
+
 - **Personalización de Políticas de CIS Hardening por Empresa (ISP / Corporativo / Data Center) & Especificación 42 (`fastapi/src/api/v1/compliance.py`, `fastapi/src/schemas/enterprise.py`, `vue3/src/views/EnterpriseComplianceView.vue`, `docs/specs/42_ROUTEROS_V7_CIS_HARDENING_PERFORMANCE_AND_BULK_OPS_TEMPLATES.md`):**
   - **Renombrado Estricto a "CIS Hardening":** Retirada la palabra "Benchmark" en títulos, pestañas, descripciones y badges a lo largo de la plataforma web y backend, adoptando la denominación universalmente clara "CIS Hardening".
   - **Políticas Parametrizables por Empresa:** Cada organización (Tenant) puede configurar sus propias directivas, severidades y pesos ponderados (de 1 a 50 pts) según su naturaleza operativa, con soporte para perfiles predefinidos `CORPORATE` (control plane, VLAN de gestión), `ISP` (BGP prefix limits / MD5, Selective FastTrack compatible con QoS, Bogons) y `DATACENTER` (alta seguridad).
