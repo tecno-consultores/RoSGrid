@@ -9,6 +9,7 @@
   import { useAuthStore, defaultTenantFeatures } from '@/stores/useAuthStore';
   import type { TenantFeatureFlags } from '@/types';
   import RgFeatureFlagsGrid from '@/components/admin/RgFeatureFlagsGrid.vue';
+  import TenantModulesAuditTab from '@/components/admin/TenantModulesAuditTab.vue';
 
   const { t } = useI18n();
 
@@ -27,6 +28,8 @@
   const tenantId = computed(() => String(route.params.tenantId || ''));
   const currentTenant = ref<TenantItem | null>(null);
   const tenantFeatures = ref<TenantFeatureFlags>({ ...defaultTenantFeatures });
+  const activeTab = ref<'matrix' | 'audit'>('matrix');
+  const rollbackNotice = ref('');
   const isLoading = ref(true);
   const isSaving = ref(false);
   const saveSuccessMessage = ref('');
@@ -70,6 +73,7 @@
       }
 
       saveSuccessMessage.value = 'Capacidades y módulos guardados exitosamente.';
+      rollbackNotice.value = '';
       setTimeout(() => {
         saveSuccessMessage.value = '';
       }, 4000);
@@ -78,6 +82,15 @@
     } finally {
       isSaving.value = false;
     }
+  }
+
+  function handleRollback(previousFeatures: Partial<TenantFeatureFlags>): void {
+    tenantFeatures.value = { ...tenantFeatures.value, ...previousFeatures };
+    activeTab.value = 'matrix';
+    rollbackNotice.value = t(
+      'tenants_mgmt.rollback_notice',
+      'Valores anteriores cargados en el formulario. Revisa los cuadrantes y pulsa "Guardar Capacidades" para aplicar la reversión de manera permanente.',
+    );
   }
 
   function goBack(): void {
@@ -110,9 +123,43 @@
       </div>
     </header>
 
+    <!-- Barra de Pestañas Tácticas (Hito 26.4) -->
+    <nav class="studio-tabs-nav" aria-label="Navegación de módulos y auditoría">
+      <button
+        type="button"
+        class="tab-btn"
+        :class="{ 'tab-btn--active': activeTab === 'matrix' }"
+        @click="activeTab = 'matrix'"
+      >
+        <span>⚙️</span>
+        <span>{{ t('tenants_mgmt.tab_matrix', 'Matriz de Módulos') }}</span>
+      </button>
+      <button
+        type="button"
+        class="tab-btn"
+        :class="{ 'tab-btn--active': activeTab === 'audit' }"
+        @click="activeTab = 'audit'"
+      >
+        <span>📜</span>
+        <span>{{ t('tenants_mgmt.tab_audit', 'Historial de Modificaciones') }}</span>
+      </button>
+    </nav>
+
     <!-- Notificaciones en Pantalla -->
     <div v-if="saveSuccessMessage" class="feedback-banner feedback-banner--success" role="alert">
       ✔ {{ saveSuccessMessage }}
+    </div>
+    <div v-if="rollbackNotice" class="feedback-banner feedback-banner--rollback" role="alert">
+      <span class="rollback-icon" aria-hidden="true">⤺</span>
+      <span class="rollback-text">{{ rollbackNotice }}</span>
+      <button
+        type="button"
+        class="btn-close-rollback"
+        aria-label="Cerrar aviso"
+        @click="rollbackNotice = ''"
+      >
+        ✕
+      </button>
     </div>
     <div v-if="errorMessage" class="feedback-banner feedback-banner--error" role="alert">
       ✖ {{ errorMessage }}
@@ -126,10 +173,16 @@
 
     <main v-else class="studio-main-content">
       <RgFeatureFlagsGrid
+        v-if="activeTab === 'matrix'"
         v-model="tenantFeatures"
         :is-saving="isSaving"
         :tenant-name="currentTenant?.name || currentTenant?.slug"
         @save="handleSaveFeatures"
+      />
+      <TenantModulesAuditTab
+        v-else-if="activeTab === 'audit'"
+        :tenant-id="tenantId"
+        @rollback="handleRollback"
       />
     </main>
   </div>
@@ -202,6 +255,42 @@
     color: var(--rg-accent-cyan, #06b6d4);
   }
 
+  /* Pestañas de Navegación del Studio */
+  .studio-tabs-nav {
+    display: flex;
+    gap: 8px;
+    background: var(--rg-bg-surface, #0f172a);
+    border: 1px solid var(--rg-border-panel, #1e293b);
+    border-radius: 8px;
+    padding: 6px;
+  }
+
+  .tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--rg-text-muted, #94a3b8);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .tab-btn:hover {
+    color: var(--rg-text-primary, #f1f5f9);
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .tab-btn--active {
+    color: var(--rg-accent-cyan, #06b6d4);
+    background: rgba(6, 182, 212, 0.12);
+    border-color: rgba(6, 182, 212, 0.35);
+  }
+
   .feedback-banner {
     padding: 10px 16px;
     border-radius: 6px;
@@ -213,6 +302,42 @@
     background: rgba(34, 197, 94, 0.15);
     border: 1px solid rgba(34, 197, 94, 0.4);
     color: #22c55e;
+  }
+
+  .feedback-banner--rollback {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(6, 182, 212, 0.15);
+    border: 1px solid rgba(6, 182, 212, 0.4);
+    color: #a5f3fc;
+  }
+
+  .rollback-icon {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--rg-accent-cyan, #06b6d4);
+  }
+
+  .rollback-text {
+    flex: 1;
+    font-weight: 500;
+  }
+
+  .btn-close-rollback {
+    background: transparent;
+    border: none;
+    color: #a5f3fc;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: background 0.15s ease;
+  }
+
+  .btn-close-rollback:hover {
+    background: rgba(6, 182, 212, 0.3);
+    color: #ffffff;
   }
 
   .feedback-banner--error {

@@ -5,12 +5,12 @@
 
 **Versión:** 1.0.0  
 **Fecha:** 2026-10-25  
-**Estado:** Propuesta (En Planificación)  
+**Estado:** Implementado & Certificado 11X (Hito 26)  
 **Módulos Afectados:**
 - `vue3/src/components/admin/RgFeatureFlagsGrid.vue` (Lógica Reactiva DAG, Botón de Contingencia y Tooltips)
 - `vue3/src/views/admin/TenantModulesStudioView.vue` (Pestañas Tácticas: Matriz de Módulos vs. Historial de Auditoría con Rollback)
 - `vue3/src/components/admin/TenantModulesAuditTab.vue` (Nuevo Componente de Historial y Rollback en 1 Clic)
-- `fastapi/src/api/v1/tenants.py` (Blindaje RBAC de Licenciamiento Comercial — Validación Fail-Closed 403)
+- `fastapi/src/api/v1/tenants.py` (Blindaje RBAC de Licenciamiento Comercial — Validación Fail-Closed 403 y Endpoint Forense WORM)
 - `docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md`, `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`
 
 ---

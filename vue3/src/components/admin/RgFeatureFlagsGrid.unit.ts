@@ -24,12 +24,13 @@ describe('RgFeatureFlagsGrid.vue — Cuadrícula Táctica de Feature Flags y Arq
     const quadrants = wrapper.findAll('.quadrant-card');
     expect(quadrants.length).toBe(4);
 
-    // Arquetipos en barra superior
+    // Arquetipos en barra superior (ahora incluye Modo Contingencia - Hito 26.3)
     const presets = wrapper.findAll('.btn-preset');
-    expect(presets.length).toBe(4);
+    expect(presets.length).toBe(5);
     expect(wrapper.text()).toContain('Modo Corporativo');
     expect(wrapper.text()).toContain('Modo ISP & WISP');
     expect(wrapper.text()).toContain('Modo NOC Mínimo');
+    expect(wrapper.text()).toContain('Modo Contingencia / Bajo Consumo');
   });
 
   it('aplica el arquetipo Corporativo activando seguridad y apagando BGP/Abonados', async () => {
@@ -62,6 +63,74 @@ describe('RgFeatureFlagsGrid.vue — Cuadrícula Táctica de Feature Flags y Arq
     expect(updated.bgp_looking_glass_enabled).toBe(false);
   });
 
+  it('aplica el Modo Contingencia / Bajo Consumo apagando recolectores intensivos y mostrando el banner', async () => {
+    const wrapper = mount(RgFeatureFlagsGrid, {
+      props: {
+        modelValue: {
+          ...defaultTenantFeatures,
+          syslog_collector_enabled: true,
+          ipfix_analytics_enabled: true,
+          prometheus_fleet_exporter_enabled: true,
+          sfp_ddm_telemetry_enabled: true,
+          config_drift_monitoring_enabled: true,
+          sdwan_orchestrator_enabled: true,
+        },
+      },
+      global: {
+        stubs: {
+          'router-link': true,
+        },
+      },
+    });
+
+    const btnContingency = wrapper.find('.btn-preset--contingency');
+    expect(btnContingency.exists()).toBe(true);
+    await btnContingency.trigger('click');
+
+    const emitted = wrapper.emitted('update:modelValue');
+    expect(emitted).toBeTruthy();
+    const updated = emitted![0][0] as typeof defaultTenantFeatures;
+    expect(updated.syslog_collector_enabled).toBe(false);
+    expect(updated.ipfix_analytics_enabled).toBe(false);
+    expect(updated.prometheus_fleet_exporter_enabled).toBe(false);
+    expect(updated.sfp_ddm_telemetry_enabled).toBe(false);
+    expect(updated.config_drift_monitoring_enabled).toBe(false);
+    expect(updated.sdwan_orchestrator_enabled).toBe(false);
+
+    // Banner visible
+    expect(wrapper.find('.contingency-banner').exists()).toBe(true);
+    expect(wrapper.text()).toContain('Modo Contingencia Aplicado');
+  });
+
+  it('aplica DAG Hard Lock deshabilitando switches hijos cuando isp_module_enabled está apagado', async () => {
+    const wrapper = mount(RgFeatureFlagsGrid, {
+      props: {
+        modelValue: {
+          ...defaultTenantFeatures,
+          isp_module_enabled: false,
+          bgp_looking_glass_enabled: false,
+          sla_tracker_enabled: false,
+        },
+      },
+      global: {
+        stubs: {
+          'router-link': true,
+        },
+      },
+    });
+
+    // Validar alertas de dependencia y switches deshabilitados
+    const dependencyAlerts = wrapper.findAll('.dependency-alert');
+    expect(dependencyAlerts.length).toBeGreaterThanOrEqual(2);
+    expect(wrapper.text()).toContain('🔒 Requiere activar previamente: Módulo ISP');
+
+    const disabledSwitches = wrapper.findAll('.switch-toggle--disabled input');
+    expect(disabledSwitches.length).toBeGreaterThanOrEqual(2);
+    for (const sw of disabledSwitches) {
+      expect((sw.element as HTMLInputElement).disabled).toBe(true);
+    }
+  });
+
   it('despliega modal de Radio de Impacto al intentar apagar flag crítica de gobernanza', async () => {
     const wrapper = mount(RgFeatureFlagsGrid, {
       props: {
@@ -79,7 +148,6 @@ describe('RgFeatureFlagsGrid.vue — Cuadrícula Táctica de Feature Flags y Arq
 
     // Encuentra los switches y conmuta el de Maker-Checker (flag crítica)
     const switches = wrapper.findAll('.switch-toggle input');
-    // Maker-checker está en cuadrante 2
     for (const sw of switches) {
       if ((sw.element as HTMLInputElement).checked) {
         await sw.trigger('change');

@@ -730,6 +730,30 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     When method get
     Then status 405
 
+  # ==============================================================================
+  # Grupo 25: Gobernanza Táctica de Módulos B2B y Auditoría Forense WORM (Hito 26)
+  # ==============================================================================
+
+  Scenario: 95. Modificación de capacidades y módulos B2B de tenant sin autenticación devuelve 401
+    Given path '/api/v1/tenants/00000000-0000-0000-0000-000000000001/features'
+    And request { "isp_module_enabled": true }
+    When method patch
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 96. Consulta de historial WORM de auditoría de modificaciones de módulos sin autenticación devuelve 401
+    Given path '/api/v1/tenants/00000000-0000-0000-0000-000000000001/features/audit'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 97. Consulta de historial WORM de auditoría con límite no válido devuelve 422
+    Given path '/api/v1/tenants/00000000-0000-0000-0000-000000000001/features/audit'
+    And param limit = 0
+    When method get
+    Then status 401
+
+
 
 
 

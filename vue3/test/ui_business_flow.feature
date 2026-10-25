@@ -421,6 +421,28 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     When click(".dropdown-section--lang button:nth-child(1)")
     Then waitForText(".view-title", "Administración de Empresas")
 
+  Scenario: 46. Gobernanza Táctica de Módulos B2B — DAG Hard Lock, Modo Contingencia y Auditoría Forense con Rollback (Hito 26)
+    Given driver baseUrl + '/admin/tenants'
+    And waitFor(".tenants-management-view")
+    And waitFor("button.btn-action--features")
+    When click("button.btn-action--features")
+    Then waitFor(".tenant-modules-studio")
+    And waitFor(".studio-tabs-nav")
+    And match text(".studio-tabs-nav") contains 'Matriz de Módulos'
+    And match text(".studio-tabs-nav") contains 'Historial de Modificaciones'
+    # Validación de botón de Modo Contingencia en la barra de presets
+    And waitFor(".btn-preset--contingency")
+    And match text(".btn-preset--contingency") contains 'Modo Contingencia / Bajo Consumo'
+    # Verificación de bloqueo DAG Hard Lock
+    And waitFor(".dependency-alert")
+    And match text(".features-grid-container") contains 'Requiere activar previamente'
+    # Navegación a Pestaña de Historial WORM de Modificaciones
+    When click(".studio-tabs-nav button:nth-child(2)")
+    Then waitFor(".tenant-audit-tab")
+    And waitFor(".tab-title")
+    And match text(".tab-title") contains 'Historial Forense WORM de Módulos'
+
+
 
 
 

@@ -2,8 +2,9 @@
 
 ## 📍 Punto de Control Actual (Checkpoint)
 
-- **Hito Actual en Curso:** Hito 26 (En Planificación) — Gobernanza Táctica de Módulos B2B (DAG en Cascada / Hard Lock, Blindaje RBAC de Licenciamiento, Modo Contingencia y Auditoría Visual con Rollback).
-- **Hito General del Sistema:** Hitos 0 al 25 COMPLETADOS (100%).
+- **Hito Actual en Curso:** Hito 27 (En Planificación) — Cierre de `CHANGELOG.md`, Auditoría Trivy y Publicación en Docker Hub (`scripts/build.sh`).
+- **Hito General del Sistema:** Hitos 0 al 26 COMPLETADOS (100%).
+- **Hito 26 (Gobernanza Táctica de Módulos B2B — DAG Hard Lock, Blindaje RBAC, Modo Contingencia y Auditoría Forense con Rollback):** COMPLETADO al 100% y certificado en Docker. Especificación formal `docs/specs/45_TACTICAL_FEATURE_FLAGS_GOVERNANCE_DAG_AND_AUDIT_ROLLBACK.md`. Grafo DAG activo en `RgFeatureFlagsGrid.vue` con bloqueo en cascada y tooltips (`[ 🔒 Requiere activar previamente: Módulo ISP ]`), blindaje RBAC fail-closed en `fastapi/src/api/v1/tenants.py` restringiendo licenciamiento exclusivamente a `SUPERADMIN_GLOBAL` con `HTTP 403 Forbidden`, arquetipo rápido en 1 clic `[ ⚡ Modo Contingencia / Bajo Consumo ]` suspendiendo colectores intensivos ante saturación de red con banner táctico reactivo, y pestaña táctica `[ 📜 Historial de Modificaciones ]` en `TenantModulesStudioView.vue` respaldada por `TenantModulesAuditTab.vue` con consulta WORM SHA-256 de `audit_logs` y reversión rollback en 1 clic. 544 tests backend Pytest (100% éxito), 412 tests frontend en 56 suites Vitest (100% éxito), 97 escenarios BDD Karate Labs API, 46 escenarios BDD Karate Labs UI, y validación visual interactiva en navegador con `browser_subagent`.
 - **Internacionalización Integral (i18n) en Inglés y Español de 16 Vistas/Módulos Críticos:** COMPLETADO al 100% y certificado en Docker. Cobertura simétrica total en `vue3/src/locales/es.json` y `vue3/src/locales/en.json` para las 16 áreas clave: Maker-Checker, IPAM, Mapa Unificado de Clientes/ONUs, Desplegables de Técnico de Campo, Topología L2 PoE, Comparador Diff de Respaldos Git, Operaciones Masivas & Golden Config, Gestión de Usuarios y Roles RBAC, Administración de Empresas Multi-Tenant & Módulos Studio, CIS Hardening, Matriz CVE, Auditoría Forense WORM, SD-WAN WireGuard, Seguridad L2 & Rogue DHCP, Telemetría de SLA y Canales de Notificación Multicanal. 405 tests en 55 suites Vitest pasando al 100%, 45 escenarios BDD en Karate Labs UI (incorporado Escenario 45 de conmutación interactiva), 543 tests backend en Pytest pasando al 100%, validación estática limpia con `vue-tsc --noEmit`, `ruff check` y `mypy`, y 0 hallazgos en auditoría de secretos.
 - **Hito 25 (Conmutador Rápido de Contexto de Tenants, Ergonomía de Pie de Página In-Flow y Gestión Táctica de Feature Flags por Empresa):** COMPLETADO al 100% y certificado en Docker. Especificación formal `docs/specs/44_TENANT_SWITCHER_INFLOW_FOOTER_AND_MODULAR_FEATURE_FLAGS.md`. Conmutador rápido de tenants exclusivo para `SUPERADMIN_GLOBAL` en cabecera (`RgTenantSwitcher.vue`), respaldado por `POST /api/v1/auth/switch-tenant` con re-keying atómico de sesión en KeyDB y auditoría WORM. Estabilización de conmutación sin auto-deslogueo por WebSocket kill-switch (25.11). Supresión de la barra flotante de 32px y reubicación del footer in-flow dentro de `.rg-main` con `margin-top: auto` (100% de espacio vertical recuperado). Sub-pantalla dedicada `/admin/tenants/:id/modules` con 4 cuadrantes tácticos, 4 presets rápidos y diálogo modal de confirmación de radio de impacto. 5 pruebas unitarias Pytest aprobadas al 100%, 55 suites Vitest con 402/402 tests aprobados, compilación Vite limpia en 4.14s y smoke tests de flota real multi-dominio 100% aprobados.
 - **Hito 24 (Marco Universal de Fixtures Trimodales Ground-Truth, Invariantes Negativas y Smoke Tests de Flota Real - 8 Dominios):** COMPLETADO al 100% y certificado en Docker. Especificación formal `docs/specs/43_REAL_FLEET_SMOKE_TESTS_GROUND_TRUTH_FIXTURES_AND_DETERMINISTIC_SENSING.md`, regla de gobernanza institucional `.agents/rules/ground_truth_fixtures_and_negative_invariants.md` y actualización en `AGENTS.md`. Erradicación de la ceguera de mocks (Mock Blindness) en los 8 dominios (Syslog, CIS Hardening, Topología L2, IPAM DHCP, PoE, Rogue DHCP, CAPsMAN WiFi 6 y Config Drift) mediante ternas de fixtures crudos de MikroTik RouterOS v7. Detección canónica estricta con doble candado en Syslog (`rosgridsyslog`), eliminación de métricas inventadas en CAPsMAN (`wifi.py`), aserciones negativas obligatorias para routers de fábrica (`r4, r5, r6`), suite unitaria en Pytest (`test_ground_truth_trimodal_fixtures.unit.py` y `test_inventory_syslog_detection.unit.py` 18/18 tests pasando al 100%) y guardrail de Smoke Test de Flota Real multi-dominio (`scripts/validar-flota-real.py` / `make smoke-fleet`) evaluando los 6 routers físicos reales en laboratorio.
@@ -672,26 +673,27 @@
 
 > **Archivos Guía:** `docs/specs/45_TACTICAL_FEATURE_FLAGS_GOVERNANCE_DAG_AND_AUDIT_ROLLBACK.md`
 
-- [ ] **26.1** **Grafo de Dependencias Activo (DAG) con Bloqueo Estricto en Cascada (Hard Lock):**
+- [x] **26.1** **Grafo de Dependencias Activo (DAG) con Bloqueo Estricto en Cascada (Hard Lock):**
   - Implementación reactiva en `RgFeatureFlagsGrid.vue`: si un módulo padre (ej. `isp_module_enabled`) es apagado, los módulos dependientes (`bgp_looking_glass_enabled`, `sla_tracker_enabled`) se fuerzan a `false` y sus interruptores quedan bloqueados en gris (`disabled`).
-  - Tooltips contextuales explicativos en hover (`[ 🔒 Requiere activar Módulo ISP previamente ]`).
-- [ ] **26.2** **Blindaje RBAC de Licenciamiento Comercial (Solo SuperAdmin):**
+  - Tooltips contextuales explicativos en hover (`[ 🔒 Requiere activar Módulo ISP previamente ]`) y badge visual en tarjeta.
+- [x] **26.2** **Blindaje RBAC de Licenciamiento Comercial (Solo SuperAdmin):**
   - Refuerzo de validación estricta en endpoints de flags (`fastapi/src/api/v1/tenants.py`): retorno imperativo de `HTTP 403 Forbidden` ante cualquier rol inferior a `SUPERADMIN_GLOBAL`.
   - Documentación de gobernanza comercial: las flags representan licenciamiento contractual B2B inalterable por inquilinos locales.
-- [ ] **26.3** **Botón Táctico de Modo Contingencia / Emergencia NOC:**
-  - Inclusión del botón `[ ⚡ Modo Contingencia / Bajo Consumo ]` con acento visual en la barra de presets de `TenantModulesStudioView.vue`.
-  - Matriz de apagado en 1 clic de colectores de alta frecuencia (`syslog_collector_enabled`, `ipfix_analytics_enabled`, `prometheus_fleet_exporter_enabled`, `sfp_ddm_telemetry_enabled`), preservando intacto el núcleo de control.
-  - Banner informativo en pantalla alertando sobre la suspensión de telemetría intensiva.
-- [ ] **26.4** **Auditoría Visual en Pantalla y Función de Reversión (Rollback en 1 Clic):**
+- [x] **26.3** **Botón Táctico de Modo Contingencia / Emergencia NOC:**
+  - Inclusión del botón `[ ⚡ Modo Contingencia / Bajo Consumo ]` con acento visual en la barra de presets de `RgFeatureFlagsGrid.vue` y `TenantModulesStudioView.vue`.
+  - Matriz de apagado en 1 clic de colectores de alta frecuencia (`syslog_collector_enabled`, `ipfix_analytics_enabled`, `prometheus_fleet_exporter_enabled`, `sfp_ddm_telemetry_enabled`, `config_drift_monitoring_enabled`, `sdwan_orchestrator_enabled`), preservando intacto el núcleo de control.
+  - Banner informativo reactivo en pantalla alertando sobre la suspensión de telemetría intensiva.
+- [x] **26.4** **Auditoría Visual en Pantalla y Función de Reversión (Rollback en 1 Clic):**
   - Estructuración bimodal de pestañas en `/admin/tenants/:tenantId/modules`: `[ ⚙️ Matriz de Módulos ]` y `[ 📜 Historial de Modificaciones ]`.
-  - Componente de auditoría `TenantModulesAuditTab.vue` que consulta los eventos WORM `TENANT_FEATURE_FLAGS_UPDATED` de esa empresa.
-  - Botón `[ ⤺ Cargar esta versión ]` en cada registro histórico, poblando el formulario reactivo de la Pestaña 1 con el estado previo para guardado consciente.
-- [ ] **26.5** **Aseguramiento Unitario Multi-Capa 11X:**
-  - Pruebas unitarias frontend en Vitest para la cascada del DAG, el preset de contingencia y la reversión de auditoría.
-  - Pruebas unitarias backend en Pytest para la restricción 403 de roles no-SuperAdmin.
+  - Componente de auditoría `TenantModulesAuditTab.vue` que consulta el endpoint `GET /api/v1/tenants/{tenant_id}/features/audit` para listar eventos WORM `TENANT_FEATURE_FLAGS_UPDATED` de esa empresa con hash criptográfico SHA-256.
+  - Botón `[ ⤺ Cargar esta versión ]` en cada registro histórico, poblando el formulario reactivo de la Pestaña 1 con el estado previo para guardado consciente y desplegando banner informativo.
+- [x] **26.5** **Aseguramiento Unitario Multi-Capa 11X:**
+  - Pruebas unitarias frontend en Vitest para la cascada del DAG, el preset de contingencia y la reversión de auditoría (`RgFeatureFlagsGrid.unit.ts`, `TenantModulesAuditTab.unit.ts` y `TenantModulesStudioView.unit.ts`). Total: 412 tests en 56 suites pasando al 100%.
+  - Pruebas unitarias backend en Pytest para la restricción 403 de roles no-SuperAdmin y endpoint de auditoría WORM (`test_tenants_features_rbac.unit.py`). Total: 544 tests backend pasando al 100%.
   - 0 errores en `vue-tsc --noEmit` y `ruff check src/`.
-- [ ] **26.6** **Validación en Docker e Inspección Visual en Navegador Real:**
-  - Verificación interactiva del bloqueo de switches hijos, el preset de contingencia y el cargado de versiones históricas en `browser_subagent`.
+  - Escenarios BDD Karate Labs API (95, 96, 97) y UI (46) incorporados y sincronizados en `docs/examples/`.
+- [x] **26.6** **Validación en Docker e Inspección Visual en Navegador Real:**
+  - Reconstrucción de imágenes locales (`sinfallas/rosgrid-backend:local-test` y `sinfallas/rosgrid-frontend:local-test`), recreación de contenedores y verificación interactiva del bloqueo de switches hijos, el preset de contingencia y el cargado de versiones históricas en `browser_subagent`.
 
 ---
 

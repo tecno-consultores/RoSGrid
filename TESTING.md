@@ -2,7 +2,7 @@
 
 **Licencia:** GPL-3.0-only  
 **Estándar Aplicado:** QA Testing Blueprints (Nivel 11X)  
-**Estado Actual:** Hito 22 Completado y Certificado al 100% (Sub-tareas 22.1 a 22.13) en Contenedores Docker Efímeros — Plataforma Migrada a Python 3.15 y Node.js 26 LTS.
+**Estado Actual:** Hito 26 Completado y Certificado al 100% (Sub-tareas 26.1 a 26.6) en Contenedores Docker Efímeros — Plataforma Migrada a Python 3.15 y Node.js 26 LTS.
 
 ---
 
@@ -178,6 +178,7 @@ docker compose -f docker-compose.qa.yml down --remove-orphans
 | **Hito 24** | Marco Universal de Fixtures Trimodales Ground-Truth, Invariantes Negativas y Smoke Tests de Flota Real (8 Dominios) | **100%** (543 tests Pytest)<br>**100%** (18 tests trimodales) | N/A | 6 Routers Físicos Evaluados (`make smoke-fleet`) + Doble Candado Syslog | ✅ **Certificado** |
 | **Hito 25** | Conmutador Rápido de Tenants, Ergonomía de Pie In-Flow y Estudio Táctico de Feature Flags por Empresa | **100%** (543 tests Pytest)<br>**100%** (402 tests Vitest) | N/A | Kill-Switch Silent Mode + Sub-Pantalla Módulos Studio + Blast-Radius Shield | ✅ **Certificado** |
 | **Hito 25.12** | Internacionalización Integral (i18n) en Inglés y Español de 16 Pantallas y Módulos Críticos | **100%** (404 tests Vitest en 55 suites) | N/A | vue-tsc (0 err) + verificación de secretos limpia | ✅ **Certificado** |
+| **Hito 26** | Gobernanza Táctica de Módulos B2B, DAG Hard Lock, Blindaje RBAC, Contingencia y Auditoría Forense con Rollback | **100%** (544 tests Pytest)<br>**100%** (412 tests Vitest en 56 suites)<br>**100%** (97 BDD API / 46 BDD UI) | N/A | DAG Watcher + RBAC 403 Fail-Closed + WORM Audit Tab + browser_subagent visual pass | ✅ **Certificado** |
 
 ---
 
@@ -1922,4 +1923,35 @@ Conforme a la Especificación 43 v2.0.0 y la directiva `.agents/rules/ground_tru
    - Sincronización de títulos de página (`document.title`) reactiva a `titleKey` de las rutas.
    - Verificación visual certificada con `browser_subagent` en `http://localhost:8085/enterprise/compliance?tab=cves` y `http://localhost:8085/users`, garantizando 100% de coherencia en inglés sin mezclas ni textos huérfanos.
    - Imagen `sinfallas/rosgrid-frontend:local-test` recompilada y recreada exitosamente en el entorno de pruebas local.
+
+### G. Hito 26: Gobernanza Táctica de Módulos B2B — DAG Hard Lock, Blindaje RBAC, Modo Contingencia y Auditoría Forense con Rollback (Completado y Certificado al 100%)
+
+1. **Frontend Unitario (Vitest en Docker `sinfallas/base-node-ionic:26`):**
+   - `vue3/src/components/admin/TenantModulesAuditTab.unit.ts`: **5 de 5 pruebas PASADAS (100%)**, verificando carga inicial, renderizado forense WORM, cálculo reactivo de diff de flags (`before_state` vs `after_state`), emisión de evento rollback al hacer click en "Cargar esta versión", y estados vacío y error.
+   - `vue3/src/components/admin/RgFeatureFlagsGrid.unit.ts`: **6 de 6 pruebas PASADAS (100%)**, incorporando pruebas de DAG Hard Lock (switches dependientes `bgp_looking_glass_enabled` y `sla_tracker_enabled` deshabilitados cuando `isp_module_enabled` es `false`, con badge `[ 🔒 Requiere activar previamente: Módulo ISP ]`), y preset de Modo Contingencia NOC / Bajo Consumo con banner de advertencia reactivo.
+   - `vue3/src/views/admin/TenantModulesStudioView.unit.ts`: **4 de 4 pruebas PASADAS (100%)**, verificando alternancia entre pestañas tácticas (`matrix` vs `audit`) y feedback banner al aplicar rollback.
+   - Total frontend: **56 suites aprobadas, 412 de 412 pruebas PASADAS al 100%**.
+
+2. **Backend Unitario (Pytest en Docker `sinfallas/rosgrid-backend:local-test`):**
+   - `fastapi/tests/api/test_tenants_features_rbac.unit.py`: **1 de 1 prueba exhaustiva PASADA (100%)**, validando denegación estricta `HTTP 403 Forbidden` a roles `TENANT_ADMIN` y `SUPPORT_L1`, mutación permitida exclusivamente a `SUPERADMIN_GLOBAL`, persistencia WORM con hash SHA-256 en `audit_logs`, y consulta forense mediante `GET /api/v1/tenants/{tenant_id}/features/audit`.
+   - `fastapi/tests/api/test_tenants_and_users.unit.py`: **12 de 12 pruebas PASADAS (100%)**, certificando cero regresiones en la gestión de inquilinos y usuarios.
+   - Total backend: **544 de 544 pruebas unitarias PASADAS al 100%**.
+
+3. **Escenarios BDD Karate Labs:**
+   - **API REST (`fastapi/test/api_test.feature` & `docs/examples/fastapi/test/api_test.feature`):** **97 escenarios BDD PASADOS (100%)** (incorporados Escenarios 95, 96 y 97 para mutación de módulos 401, consulta de auditoría WORM 401 y validación de límite de auditoría).
+   - **UI WebFig / NOC (`vue3/test/ui_business_flow.feature` & `docs/examples/vue3/test/ui_business_flow.feature`):** **46 escenarios BDD PASADOS (100%)** (incorporado Escenario 46: Gobernanza Táctica de Módulos B2B — DAG Hard Lock, Modo Contingencia y Auditoría Forense con Rollback).
+
+4. **Análisis Estático, Tipado Estricto y Complejidad Ciclomática:**
+   - Backend: `ruff check src/api/v1/tenants.py tests/api/test_tenants_features_rbac.unit.py` -> 0 errores (All checks passed).
+   - Frontend: `vue-tsc --noEmit` -> 0 errores; `eslint` -> 0 errores.
+
+5. **Auditoría de Seguridad y Secretos:**
+   - `./scripts/verificar-secretos.sh` -> 0 secretos detectados.
+
+6. **Inspección Visual y Certificación en Navegador Real (`browser_subagent`):**
+   - Grabación `hito_26_governance` y capturas de pantalla tomadas en entorno local recreado (`http://localhost:8085/admin/tenants/fibra-norte/modules`).
+   - Verificado el bloqueo visual y funcional en cascada (switches grisados con tooltip al apagar el módulo padre ISP).
+   - Verificado el botón `[ ⚡ Modo Contingencia / Bajo Consumo ]` y la visualización de su banner de advertencia reactivo.
+   - Verificada la pestaña `[ 📜 Historial de Modificaciones ]` con tabla forense WORM, diff de cambios y botón `[ ⤺ Cargar esta versión ]`.
+
 

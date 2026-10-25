@@ -125,4 +125,81 @@ describe('TenantModulesStudioView.vue — Estudio Táctico de Módulos & Feature
       expect(patchSpy).toHaveBeenCalledWith('/api/v1/tenants/t-123/features', expect.anything());
     }
   });
+
+  it('permite alternar entre pestaña de Matriz y pestaña de Historial de Modificaciones', async () => {
+    vi.spyOn(http, 'get').mockResolvedValue({
+      status: 200,
+      data: [{ id: 't-123', name: 'ISP Sur', slug: 'isp-sur', status: 'ACTIVE' }],
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(TenantModulesStudioView, {
+      global: {
+        stubs: {
+          'router-link': true,
+          RgFeatureFlagsGrid: true,
+          TenantModulesAuditTab: true,
+        },
+      },
+    });
+
+    await flushPromises();
+
+    const tabButtons = wrapper.findAll('.tab-btn');
+    expect(tabButtons.length).toBe(2);
+    expect(tabButtons[0].text()).toContain('Matriz de Módulos');
+    expect(tabButtons[1].text()).toContain('Historial de Modificaciones');
+
+    // Por defecto está en 'matrix'
+    expect(wrapper.findComponent({ name: 'RgFeatureFlagsGrid' }).exists()).toBe(true);
+    expect(wrapper.findComponent({ name: 'TenantModulesAuditTab' }).exists()).toBe(false);
+
+    // Cambiar a 'audit'
+    await tabButtons[1].trigger('click');
+    expect(wrapper.findComponent({ name: 'RgFeatureFlagsGrid' }).exists()).toBe(false);
+    expect(wrapper.findComponent({ name: 'TenantModulesAuditTab' }).exists()).toBe(true);
+  });
+
+  it('procesa el evento rollback cargando valores anteriores y mostrando aviso reactivo', async () => {
+    vi.spyOn(http, 'get').mockResolvedValue({
+      status: 200,
+      data: [{ id: 't-123', name: 'ISP Sur', slug: 'isp-sur', status: 'ACTIVE' }],
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(TenantModulesStudioView, {
+      global: {
+        stubs: {
+          'router-link': true,
+          RgFeatureFlagsGrid: true,
+          TenantModulesAuditTab: true,
+        },
+      },
+    });
+
+    await flushPromises();
+
+    // Ir a pestaña de auditoría
+    const tabButtons = wrapper.findAll('.tab-btn');
+    await tabButtons[1].trigger('click');
+
+    const auditTab = wrapper.findComponent({ name: 'TenantModulesAuditTab' });
+    expect(auditTab.exists()).toBe(true);
+
+    // Emitir rollback
+    auditTab.vm.$emit('rollback', {
+      isp_module_enabled: false,
+      syslog_collector_enabled: true,
+    });
+
+    await flushPromises();
+
+    // Vuelve a la matriz
+    expect(wrapper.findComponent({ name: 'RgFeatureFlagsGrid' }).exists()).toBe(true);
+
+    // Muestra banner de rollback
+    const rollbackBanner = wrapper.find('.feedback-banner--rollback');
+    expect(rollbackBanner.exists()).toBe(true);
+    expect(rollbackBanner.text()).toContain('Valores anteriores cargados');
+  });
 });

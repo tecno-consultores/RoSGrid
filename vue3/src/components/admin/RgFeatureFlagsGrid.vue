@@ -2,7 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { ref, computed } from 'vue';
+  import { ref, computed, watch } from 'vue';
   import type { TenantFeatureFlags } from '@/types';
 
   const props = defineProps<{
@@ -21,6 +21,9 @@
   const pendingCriticalFlag = ref<keyof TenantFeatureFlags | null>(null);
   const pendingCriticalLabel = ref('');
   const pendingCriticalDesc = ref('');
+
+  // Banner Informativo de Modo Contingencia (Hito 26.3)
+  const isContingencyBannerVisible = ref(false);
 
   interface FeatureDefinition {
     key: keyof TenantFeatureFlags;
@@ -197,6 +200,7 @@
           icon: '⏱️',
           severity: 'OPS',
           routePath: '/enterprise/compliance?tab=sla',
+          requires: 'isp_module_enabled',
         },
         {
           key: 'outbound_webhooks_enabled',
@@ -228,7 +232,27 @@
     return Boolean(props.modelValue[key]);
   }
 
+  // Grafo de Dependencias Activo (DAG Hard Lock - Hito 26.1):
+  // Si isp_module_enabled se apaga, apagar en cascada bgp_looking_glass_enabled y sla_tracker_enabled
+  watch(
+    () => props.modelValue.isp_module_enabled,
+    (ispEnabled) => {
+      if (!ispEnabled && (props.modelValue.bgp_looking_glass_enabled || props.modelValue.sla_tracker_enabled)) {
+        emit('update:modelValue', {
+          ...props.modelValue,
+          bgp_looking_glass_enabled: false,
+          sla_tracker_enabled: false,
+        });
+      }
+    },
+  );
+
   function toggleFeature(feat: FeatureDefinition): void {
+    // Si la feature requiere otra que no está activa, bloquear activación (Hard Lock)
+    if (feat.requires && !isEnabled(feat.requires)) {
+      return;
+    }
+
     const current = isEnabled(feat.key);
 
     // Si se va a apagar una flag crítica, requerir confirmación
@@ -259,12 +283,12 @@
   function applyToggle(key: keyof TenantFeatureFlags, value: boolean): void {
     const updated = { ...props.modelValue, [key]: value };
 
-    // Si se apaga una dependencia padre, apagar las hijas
+    // Si se apaga una dependencia padre, apagar en cascada las dependientes
     if (!value) {
       for (const q of quadrants) {
         for (const f of q.features) {
           if (f.requires === key) {
-            (updated as any)[f.key] = false;
+            (updated as unknown as Record<keyof TenantFeatureFlags, boolean>)[f.key] = false;
           }
         }
       }
@@ -273,8 +297,8 @@
     emit('update:modelValue', updated);
   }
 
-  // Presets / Arquetipos en 1 Clic
-  function applyPreset(presetType: 'CORP' | 'ISP' | 'NOC' | 'ALL'): void {
+  // Presets / Arquetipos en 1 Clic (Hito 26.3)
+  function applyPreset(presetType: 'CORP' | 'ISP' | 'NOC' | 'ALL' | 'CONTINGENCY'): void {
     const current = { ...props.modelValue };
 
     if (presetType === 'CORP') {
@@ -292,7 +316,7 @@
       current.cve_scanner_enabled = true;
       current.prometheus_fleet_exporter_enabled = true;
       current.ai_mcp_integration_enabled = true;
-      current.sla_tracker_enabled = true;
+      current.sla_tracker_enabled = false; // Requiere ISP
     } else if (presetType === 'ISP') {
       current.isp_module_enabled = true;
       current.bgp_looking_glass_enabled = true;
@@ -308,11 +332,12 @@
       current.cve_scanner_enabled = true;
       current.auto_safemode_enforced = true;
       current.ai_mcp_integration_enabled = true;
+      current.sla_tracker_enabled = true;
     } else if (presetType === 'NOC') {
       // Mínimo operativo
       for (const q of quadrants) {
         for (const f of q.features) {
-          (current as any)[f.key] = false;
+          (current as unknown as Record<keyof TenantFeatureFlags, boolean>)[f.key] = false;
         }
       }
       current.syslog_collector_enabled = true;
@@ -323,9 +348,27 @@
     } else if (presetType === 'ALL') {
       for (const q of quadrants) {
         for (const f of q.features) {
-          (current as any)[f.key] = true;
+          (current as unknown as Record<keyof TenantFeatureFlags, boolean>)[f.key] = true;
         }
       }
+    } else if (presetType === 'CONTINGENCY') {
+      // Modo Contingencia NOC / Bajo Consumo (Hito 26.3)
+      current.syslog_collector_enabled = false;
+      current.ipfix_analytics_enabled = false;
+      current.prometheus_fleet_exporter_enabled = false;
+      current.sfp_ddm_telemetry_enabled = false;
+      current.config_drift_monitoring_enabled = false;
+      current.sdwan_orchestrator_enabled = false;
+
+      // Preservar núcleo y gobernanza
+      current.isp_module_enabled = true;
+      current.cis_audit_enabled = true;
+      current.enforce_maker_checker = true;
+      current.auto_safemode_enforced = true;
+      current.l2_topology_enabled = true;
+      current.nightly_backups_enabled = true;
+
+      isContingencyBannerVisible.value = true;
     }
 
     emit('update:modelValue', current);
@@ -373,8 +416,31 @@
           <button type="button" class="btn-preset" @click="applyPreset('ALL')">
             ✨ Todos los Módulos
           </button>
+          <button
+            type="button"
+            class="btn-preset btn-preset--contingency"
+            @click="applyPreset('CONTINGENCY')"
+          >
+            ⚡ Modo Contingencia / Bajo Consumo
+          </button>
         </div>
       </div>
+    </div>
+
+    <!-- Banner Informativo de Modo Contingencia (Hito 26.3) -->
+    <div v-if="isContingencyBannerVisible" class="contingency-banner" role="alert">
+      <span class="contingency-icon" aria-hidden="true">⚠️</span>
+      <span class="contingency-text">
+        Modo Contingencia Aplicado: Se han suspendido los recolectores de alta frecuencia para liberar recursos de CPU y ancho de banda en los routers.
+      </span>
+      <button
+        type="button"
+        class="btn-close-contingency"
+        aria-label="Cerrar advertencia"
+        @click="isContingencyBannerVisible = false"
+      >
+        ✕
+      </button>
     </div>
 
     <!-- 4 Cuadrantes de Dominio Táctico -->
@@ -411,9 +477,13 @@
 
             <p class="feat-desc">{{ feat.description }}</p>
 
-            <!-- Alerta de Dependencia -->
-            <div v-if="feat.requires && !isEnabled(feat.requires)" class="dependency-alert">
-              ⚠️ Requiere activar primero: <strong>{{ feat.requires }}</strong>
+            <!-- Alerta de Dependencia (DAG Hard Lock - Hito 26.1) -->
+            <div
+              v-if="feat.requires && !isEnabled(feat.requires)"
+              class="dependency-alert"
+              :title="feat.requires === 'isp_module_enabled' ? 'Requiere activar Módulo ISP previamente' : `Requiere activar primero ${feat.requires}`"
+            >
+              🔒 Requiere activar previamente: <strong>{{ feat.requires === 'isp_module_enabled' ? 'Módulo ISP' : feat.requires }}</strong>
             </div>
 
             <div class="card-bottom">
@@ -426,7 +496,11 @@
               </router-link>
               <span v-else class="context-placeholder"></span>
 
-              <label class="switch-toggle" :title="`Alternar ${feat.label}`">
+              <label
+                class="switch-toggle"
+                :class="{ 'switch-toggle--disabled': feat.requires && !isEnabled(feat.requires) }"
+                :title="feat.requires && !isEnabled(feat.requires) ? '🔒 Requiere activar Módulo ISP previamente' : `Alternar ${feat.label}`"
+              >
                 <input
                   type="checkbox"
                   :checked="isEnabled(feat.key)"
@@ -586,6 +660,68 @@
     background: rgba(6, 182, 212, 0.15);
     border-color: var(--rg-accent-cyan, #06b6d4);
     color: var(--rg-accent-cyan, #06b6d4);
+  }
+
+  .btn-preset--contingency {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.5);
+    color: #fca5a5;
+  }
+
+  .btn-preset--contingency:hover {
+    background: rgba(239, 68, 68, 0.3);
+    border-color: #ef4444;
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+  }
+
+  /* Banner de Contingencia */
+  .contingency-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    border-radius: 8px;
+    padding: 10px 16px;
+    color: #fecaca;
+    font-size: 13px;
+  }
+
+  .contingency-icon {
+    font-size: 18px;
+  }
+
+  .contingency-text {
+    flex: 1;
+    font-weight: 500;
+  }
+
+  .btn-close-contingency {
+    background: transparent;
+    border: none;
+    color: #fca5a5;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: background 0.15s ease;
+  }
+
+  .btn-close-contingency:hover {
+    background: rgba(239, 68, 68, 0.3);
+    color: #ffffff;
+  }
+
+  /* Hard Lock Disabled State */
+  .switch-toggle--disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .switch-toggle--disabled .slider {
+    cursor: not-allowed;
+    background-color: #1e293b;
   }
 
   /* Grid de Cuadrantes */
