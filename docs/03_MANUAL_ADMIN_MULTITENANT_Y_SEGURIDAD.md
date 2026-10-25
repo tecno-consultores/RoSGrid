@@ -348,3 +348,77 @@ flowchart TD
 
 - El middleware de idempotencia (`IdempotencyMiddleware`) decodifica el token de sesión (`rg_at` o Bearer) y construye llaves canónicas en KeyDB con el esquema `rg:{tenant_id}:{user_id}:idemp:{idempotency_key}`.
 - Este aislamiento por empresa y usuario garantiza que la generación o repetición fortuita de un UUIDv7 entre dos inquilinos diferentes jamás provoque colisiones ni interferencias operativas.
+
+---
+
+## 9. Conmutador Rápido de Contexto de Tenant en Cabecera (SuperAdmin Fast-Switching)
+
+En plataformas SaaS multi-tenant, los operadores con rol `SUPERADMIN_GLOBAL` requieren supervisar y auditar distintas empresas sin incurrir en la fricción operativa de cerrar e iniciar sesión repetidamente.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor SuperAdmin as SUPERADMIN_GLOBAL
+    participant UI as RgTenantSwitcher (Cabecera)
+    participant API as FastAPI (/api/v1/auth/switch-tenant)
+    participant KeyDB as KeyDB In-Memory Session
+    participant DB as PostgreSQL (WORM Audit)
+
+    SuperAdmin->>UI: Clic en "🏢 {tenantSlug} ▾" y selecciona nueva empresa
+    UI->>API: POST /api/v1/auth/switch-tenant {"target_tenant_id": "uuid"}
+    Note over API: Valida rol == SUPERADMIN_GLOBAL<br>Valida target_tenant exists & is_active
+    API->>KeyDB: Re-keying atómico de sesión con nuevo tenant_id
+    API->>DB: Registro WORM HMAC-SHA256 (SUPERADMIN_TENANT_SWITCHED)
+    API-->>UI: 200 OK {access_token, tenant_id, tenant_slug, tenant_name}
+    UI->>UI: Actualiza authStore y despacha recarga reactiva de stores
+```
+
+### 9.1 Reglas de Autorización y Gobernanza RBAC
+1. **Restricción Exclusiva:** Únicamente los usuarios con `role == "SUPERADMIN_GLOBAL"` tienen acceso al endpoint `POST /api/v1/auth/switch-tenant` y al componente visual interactivo. Cualquier otro rol (`TENANT_ADMIN`, `OPERATOR`, `FIELD_TECH`) recibe un rechazo estricto `HTTP 403 Forbidden`.
+2. **Visualización Adaptativa:**
+   - Para `SUPERADMIN_GLOBAL`: El elemento en cabecera es un botón táctico `🏢 {tenantSlug} ▾` con popover de búsqueda rápida (`🔍 Buscar empresa...`) y listado de empresas con indicador de empresa activa.
+   - Para otros roles: El elemento se renderiza como una etiqueta estática (badge solo de lectura), garantizando que el operador permanezca consciente de su tenant sin opciones de evasión.
+3. **Re-keying Atómico y Auditoría Inmutable:**
+   - La sesión en KeyDB se re-vincula al nuevo `tenant_id` y `tenant_slug`.
+   - Se emite un nuevo JWT con claims renovados.
+   - Se registra inmediatamente un evento de auditoría WORM inmutable con acción `SUPERADMIN_TENANT_SWITCHED`, capturando el tenant de origen, el tenant destino, IP de origen y marca de tiempo micro-segundo.
+
+---
+
+## 10. Gestión Táctica de Módulos & Feature Flags por Empresa (Sub-pantalla de Alta Densidad)
+
+Las capacidades y módulos de RoSGrid (tales como BGP Looking Glass, Topología L2, Monitoreo Syslog, Auditoría CIS o Aprovisionamiento FTTH) son atributos específicos de cada Organización (Tenant), licenciados o activados según el perfil operativo del cliente.
+
+### 10.1 Punto de Entrada en la Tabla de Empresas
+En lugar de dispersar las flags en un menú global inconexo, el punto de control reside donde se administran las entidades empresariales (`/tenants` — `TenantsManagementView.vue`):
+- **Badge Resumen:** `[ 12/16 Módulos ]` que refleja al instante el grado de activación de la empresa.
+- **Botón Descriptivo:** `[ ⚙️ Módulos ]` que abre la sub-pantalla completa de alta densidad en `/admin/tenants/:tenantId/modules` (`TenantModulesStudioView.vue`).
+
+### 10.2 Cuadrantes Tácticos y Arquetipos en 1 Clic
+El estudio táctico de módulos organiza las 16 capacidades en 4 cuadrantes funcionales:
+1. **🌐 Núcleo de Red & Servicios ISP:** Abonados FTTH, BGP Looking Glass, Wi-Fi CAPsMAN, Túneles SD-WAN WireGuard.
+2. **🛡️ Ciberseguridad & Gobernanza:** CIS Hardening, Config Drift, Rogue DHCP, Maker-Checker (4 ojos), Safe Mode forzado (60s).
+3. **📡 Telemetría & Observabilidad:** Syslog en tiempo real (5514), Telemetría SFP DDM, Exportador Prometheus, Analítica IPFIX.
+4. **⚙️ Automatización & Plataforma:** Topología L2, Respaldos WORM, Sondas SLA, Webhooks salientes, Servidor MCP para Agentes IA.
+
+Para agilizar la configuración, la barra superior ofrece **Arquetipos en 1 Clic**:
+- `🏢 Perfil Corporativo`: Enciende CIS Hardening, Safe Mode forzado, Maker-Checker, Topología L2, Syslog y Respaldos. Apaga BGP y módulos de abonados residenciales.
+- `🌐 Perfil ISP & WISP`: Enciende Abonados FTTH, BGP Looking Glass, Syslog, SFP DDM, CAPsMAN y Webhooks.
+- `⚡ Perfil NOC Mínimo`: Deja activo solo lo indispensable para telemetría esencial de red.
+- `⚙️ Perfil Personalizado`: Control granular manual con interruptores independientes.
+
+### 10.3 Blindaje de Radio de Impacto (*Blast Radius Shield*)
+Para salvaguardar la resiliencia operativa, la desactivación de módulos de **Gobernanza Crítica** (`syslog_collector_enabled`, `enforce_maker_checker`, `auto_safemode_enforced`) exige pasar por un diálogo modal de confirmación táctica. Este modal calcula dinámicamente la cantidad de routers y operadores afectados en el tenant antes de permitir la persistencia en base de datos.
+
+---
+
+## 11. Ergonomía de Pantalla Completa y Pie de Página In-Flow (Eliminación de Sticky Footers)
+
+La densidad de información en centros de operaciones de red (NOC) exige maximizar la altura vertical visible para tablas, terminales y mapas.
+
+### 11.1 Problema de las Barras Fijas Flotantes
+Un pie de página fijo (`position: fixed` o elemento estático al fondo del flex container principal) sustrae de manera permanente entre 32 y 40 píxeles verticales en cada vista, obligando a barras de scroll innecesarias en resoluciones típicas de campo (1366x768 o 1080p).
+
+### 11.2 Directiva In-Flow Layout
+1. **Cero Barras Fijas en el Fondo:** La interfaz de RoSGrid prohíbe terminantemente barras inferiores flotantes fijas. El 100% de la altura de la ventana del navegador se reserva para el contenido operativo.
+2. **Ubicación In-Flow con `margin-top: auto`:** Los créditos institucionales de *Tecno Consultores 2023 C.A.* y la licencia *GNU GPLv3* se ubican como último elemento dentro de `<main class="rg-main">`, mostrándose de forma natural únicamente cuando el usuario navega hasta el fondo del scroll.

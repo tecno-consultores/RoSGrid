@@ -3,21 +3,17 @@
 
 <script setup lang="ts">
   import { ref, onMounted } from 'vue';
+  import { useRouter } from 'vue-router';
   import { http } from '@/api/httpClient';
-  import type { TenantItem, TenantFeatureFlags } from '@/types';
-  import { useAuthStore, defaultTenantFeatures } from '@/stores/useAuthStore';
+  import type { TenantItem } from '@/types';
+  import { useAuthStore } from '@/stores/useAuthStore';
 
+  const router = useRouter();
   const authStore = useAuthStore();
   const isLoading = ref(false);
   const errorMessage = ref('');
   const successMessage = ref('');
   const tenants = ref<TenantItem[]>([]);
-
-  // Modal de Módulos & Capacidades (Feature Flags)
-  const isFeaturesModalOpen = ref(false);
-  const isSavingFeatures = ref(false);
-  const selectedTenant = ref<TenantItem | null>(null);
-  const tenantFeaturesForm = ref<TenantFeatureFlags>({ ...defaultTenantFeatures });
 
   // Modal de Crear Empresa
   const isCreateModalOpen = ref(false);
@@ -34,48 +30,13 @@
     default_safemode_seconds: 60,
   });
 
-  async function openFeaturesModal(tenant: TenantItem) {
-    selectedTenant.value = tenant;
-    errorMessage.value = '';
-    try {
-      const res = await http.get<TenantFeatureFlags>(`/api/v1/tenants/${tenant.id}/features`);
-      tenantFeaturesForm.value = { ...defaultTenantFeatures, ...(res.data || {}) };
-    } catch {
-      tenantFeaturesForm.value = { ...defaultTenantFeatures, ...(tenant.features || {}) };
-    }
-    isFeaturesModalOpen.value = true;
+  function goToTenantModules(tenant: TenantItem): void {
+    router.push(`/admin/tenants/${tenant.id}/modules`);
   }
 
-  async function handleSaveFeatures() {
-    if (!selectedTenant.value) return;
-    isSavingFeatures.value = true;
-    errorMessage.value = '';
-    try {
-      const res = await http.patch<TenantFeatureFlags>(
-        `/api/v1/tenants/${selectedTenant.value.id}/features`,
-        tenantFeaturesForm.value,
-      );
-      const updatedFeatures = res.data || { ...tenantFeaturesForm.value };
-      selectedTenant.value.features = updatedFeatures;
-      if (
-        authStore.user?.tenant_id === selectedTenant.value.id ||
-        authStore.tenantSlug === selectedTenant.value.slug ||
-        authStore.currentRole === 'SUPERADMIN_GLOBAL'
-      ) {
-        authStore.updateTenantFeatures(updatedFeatures);
-      }
-      isFeaturesModalOpen.value = false;
-      successMessage.value = `Capacidades de "${selectedTenant.value.name}" actualizadas exitosamente.`;
-      setTimeout(() => {
-        successMessage.value = '';
-      }, 4000);
-    } catch (err: unknown) {
-      const error = err as { message?: string; detail?: string };
-      errorMessage.value =
-        error.detail || error.message || 'Error al guardar las capacidades de la empresa.';
-    } finally {
-      isSavingFeatures.value = false;
-    }
+  function countActiveModules(tenant: TenantItem): number {
+    const feats = tenant.features || {};
+    return Object.values(feats).filter((v) => v === true).length;
   }
 
   async function loadTenants() {
@@ -250,9 +211,12 @@
                 type="button"
                 class="btn-action btn-action--features"
                 :aria-label="`Configurar módulos y capacidades de ${t.name}`"
-                @click="openFeaturesModal(t)"
+                @click="goToTenantModules(t)"
               >
                 ⚙️ Módulos
+                <span v-if="countActiveModules(t) > 0" class="badge-modules-count">
+                  {{ countActiveModules(t) }}
+                </span>
               </button>
               <button
                 v-if="authStore.currentRole === 'SUPERADMIN_GLOBAL'"
@@ -409,272 +373,6 @@
       </div>
     </div>
 
-    <!-- Modal de Módulos & Capacidades (Feature Flags - docs/specs/34) -->
-    <div
-      v-if="isFeaturesModalOpen && selectedTenant"
-      class="rg-modal-backdrop"
-      @click.self="isFeaturesModalOpen = false"
-    >
-      <div
-        class="rg-modal rg-modal--features"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="modal-features-title"
-      >
-        <header class="modal-header">
-          <div>
-            <h2 id="modal-features-title" class="modal-title">Módulos & Capacidades</h2>
-            <p class="modal-subtitle">{{ selectedTenant.name }} ({{ selectedTenant.slug }})</p>
-          </div>
-          <button
-            type="button"
-            class="btn-close"
-            aria-label="Cerrar modal"
-            @click="isFeaturesModalOpen = false"
-          >
-            ✕
-          </button>
-        </header>
-
-        <form class="modal-form" @submit.prevent="handleSaveFeatures">
-          <!-- Sección 1: Perfil de Operación de Red -->
-          <fieldset class="form-fieldset">
-            <legend class="fieldset-legend">1. Perfil de Operación de Red</legend>
-            <div class="switches-grid">
-              <label class="switch-row">
-                <input
-                  id="flag-isp"
-                  v-model="tenantFeaturesForm.isp_module_enabled"
-                  type="checkbox"
-                  class="switch-input"
-                />
-                <span class="switch-label">Módulo ISP & Operaciones de Campo (FTTH/ONUs)</span>
-              </label>
-              <label class="switch-row">
-                <input
-                  id="flag-bgp"
-                  v-model="tenantFeaturesForm.bgp_looking_glass_enabled"
-                  type="checkbox"
-                  class="switch-input"
-                />
-                <span class="switch-label">BGP Looking Glass (Para redes con ASN)</span>
-              </label>
-              <label class="switch-row">
-                <input
-                  id="flag-capsman"
-                  v-model="tenantFeaturesForm.capsman_wifi_enabled"
-                  type="checkbox"
-                  class="switch-input"
-                />
-                <span class="switch-label">Gestión Centralizada WiFi (CAPsMAN / Campus)</span>
-              </label>
-              <label class="switch-row">
-                <input
-                  id="flag-sdwan"
-                  v-model="tenantFeaturesForm.sdwan_orchestrator_enabled"
-                  type="checkbox"
-                  class="switch-input"
-                />
-                <span class="switch-label">Orquestador SD-WAN & Malla WireGuard</span>
-              </label>
-            </div>
-          </fieldset>
-
-          <!-- Sección 2: Ciberseguridad & Compliance -->
-          <fieldset class="form-fieldset">
-            <legend class="fieldset-legend">2. Ciberseguridad & Compliance</legend>
-            <div class="switches-grid">
-              <label class="switch-row">
-                <input
-                  id="flag-cis"
-                  v-model="tenantFeaturesForm.cis_audit_enabled"
-                  type="checkbox"
-                  class="switch-input"
-                />
-                <span class="switch-label">Auditoría CIS Hardening</span>
-              </label>
-              <label class="switch-row">
-                <input
-                  id="flag-drift"
-                  v-model="tenantFeaturesForm.config_drift_monitoring_enabled"
-                  type="checkbox"
-                  class="switch-input"
-                />
-                <span class="switch-label"
-                  >Detección de Desviación de Configuración (Config Drift)</span
-                >
-              </label>
-              <label class="switch-row">
-                <input
-                  id="flag-mc"
-                  v-model="tenantFeaturesForm.enforce_maker_checker"
-                  type="checkbox"
-                  class="switch-input"
-                />
-                <span class="switch-label">Gobernanza Maker-Checker Estricta (Aprobación 202)</span>
-              </label>
-              <label class="switch-row">
-                <input
-                  id="flag-safemode"
-                  v-model="tenantFeaturesForm.auto_safemode_enforced"
-                  type="checkbox"
-                  class="switch-input"
-                />
-                <span class="switch-label">Safe Mode Obligatorio (60s)</span>
-              </label>
-            </div>
-          </fieldset>
-
-          <!-- Sección 3: Telemetría & Automatización -->
-          <fieldset class="form-fieldset">
-            <legend class="fieldset-legend">3. Telemetría & Automatización</legend>
-            <div class="switches-grid">
-              <label class="switch-row">
-                <input
-                  id="flag-sfp"
-                  v-model="tenantFeaturesForm.sfp_ddm_telemetry_enabled"
-                  type="checkbox"
-                  class="switch-input"
-                />
-                <span class="switch-label">Monitoreo Óptico SFP DDM</span>
-              </label>
-              <label class="switch-row">
-                <input
-                  id="flag-ipfix"
-                  v-model="tenantFeaturesForm.ipfix_analytics_enabled"
-                  type="checkbox"
-                  class="switch-input"
-                />
-                <span class="switch-label">Análisis de Flujos IPFIX</span>
-              </label>
-              <label class="switch-row">
-                <input
-                  id="flag-mcp"
-                  v-model="tenantFeaturesForm.ai_mcp_integration_enabled"
-                  type="checkbox"
-                  class="switch-input"
-                />
-                <span class="switch-label">Integración de Agentes IA vía MCP</span>
-              </label>
-              <label class="switch-row">
-                <input
-                  id="flag-backups"
-                  v-model="tenantFeaturesForm.nightly_backups_enabled"
-                  type="checkbox"
-                  class="switch-input"
-                />
-                <span class="switch-label">Respaldos Nocturnos Automáticos con Git Diff</span>
-              </label>
-              <label class="switch-row">
-                <input
-                  id="flag-sla"
-                  v-model="tenantFeaturesForm.sla_tracker_enabled"
-                  type="checkbox"
-                  class="switch-input"
-                />
-                <span class="switch-label">Monitor de Cumplimiento de SLA</span>
-              </label>
-              <label class="switch-row">
-                <input
-                  id="flag-webhooks"
-                  v-model="tenantFeaturesForm.outbound_webhooks_enabled"
-                  type="checkbox"
-                  class="switch-input"
-                />
-                <span class="switch-label">Webhooks Salientes de Eventos Técnicos</span>
-              </label>
-            </div>
-          </fieldset>
-
-          <!-- Sección 4: Automatización de Flota, Topología L2 & Observabilidad -->
-          <fieldset class="form-fieldset">
-            <legend class="fieldset-legend">4. Flota, Topología L2 & Observabilidad</legend>
-            <div class="switches-grid">
-              <label class="switch-row">
-                <input
-                  id="flag-l2"
-                  v-model="tenantFeaturesForm.l2_topology_enabled"
-                  type="checkbox"
-                  class="switch-input"
-                />
-                <span class="switch-label">Visualizador de Topología Física L2 (MNDP/LLDP)</span>
-              </label>
-              <label class="switch-row">
-                <input
-                  id="flag-syslog"
-                  v-model="tenantFeaturesForm.syslog_collector_enabled"
-                  type="checkbox"
-                  class="switch-input"
-                />
-                <span class="switch-label">Receptor y Buffer Syslog RouterOS (UDP 5514)</span>
-              </label>
-              <label class="switch-row">
-                <input
-                  id="flag-cve"
-                  v-model="tenantFeaturesForm.cve_scanner_enabled"
-                  type="checkbox"
-                  class="switch-input"
-                />
-                <span class="switch-label">Escáner Local y Matriz de Vulnerabilidades CVE</span>
-              </label>
-              <label class="switch-row">
-                <input
-                  id="flag-prometheus"
-                  v-model="tenantFeaturesForm.prometheus_fleet_exporter_enabled"
-                  type="checkbox"
-                  class="switch-input"
-                />
-                <span class="switch-label">Exportador Prometheus para Flotas (/metrics/fleet)</span>
-              </label>
-            </div>
-          </fieldset>
-
-          <!-- Sección 5: Parámetros Generales -->
-          <fieldset class="form-fieldset">
-            <legend class="fieldset-legend">5. Parámetros Generales</legend>
-            <div class="form-row" style="margin-top: 10px">
-              <div class="form-group">
-                <label for="flag-threshold" class="form-label"
-                  >Umbral Alarma Caída Masiva (Dispositivos) *</label
-                >
-                <input
-                  id="flag-threshold"
-                  v-model.number="tenantFeaturesForm.mass_outage_threshold"
-                  type="number"
-                  min="1"
-                  max="1000"
-                  required
-                  class="form-input"
-                />
-              </div>
-              <div class="form-group">
-                <label for="flag-locale" class="form-label"
-                  >Idioma Predeterminado del Sistema *</label
-                >
-                <select
-                  id="flag-locale"
-                  v-model="tenantFeaturesForm.default_locale"
-                  required
-                  class="form-input"
-                >
-                  <option value="es">Español (es)</option>
-                  <option value="en">English (en)</option>
-                </select>
-              </div>
-            </div>
-          </fieldset>
-
-          <footer class="modal-footer">
-            <button type="button" class="btn-cancel" @click="isFeaturesModalOpen = false">
-              Cancelar
-            </button>
-            <button type="submit" class="btn-submit" :disabled="isSavingFeatures">
-              {{ isSavingFeatures ? 'Guardando...' : 'Guardar Capacidades' }}
-            </button>
-          </footer>
-        </form>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -997,5 +695,17 @@
 
   .btn-action--features:hover {
     background: rgba(56, 189, 248, 0.15);
+  }
+
+  .badge-modules-count {
+    display: inline-block;
+    font-size: 10px;
+    font-family: var(--rg-font-mono, monospace);
+    background: rgba(56, 189, 248, 0.2);
+    color: #38bdf8;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-weight: 700;
+    margin-left: 3px;
   }
 </style>

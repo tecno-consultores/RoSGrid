@@ -8,6 +8,13 @@ import TenantsManagementView from './TenantsManagementView.vue';
 import { http } from '@/api/httpClient';
 import { useAuthStore } from '@/stores/useAuthStore';
 
+const pushMock = vi.fn();
+vi.mock('vue-router', () => ({
+  useRouter: () => ({
+    push: pushMock,
+  }),
+}));
+
 describe('TenantsManagementView.vue — Gestión de Empresas Multi-Tenant', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
@@ -220,114 +227,52 @@ describe('TenantsManagementView.vue — Gestión de Empresas Multi-Tenant', () =
     }
   });
 
-  it('permite abrir modal de Módulos & Capacidades, alternar switches y guardar cambios', async () => {
-    vi.spyOn(http, 'get').mockImplementation(async (url: string) => {
-      if (url === '/api/v1/tenants') {
-        return {
-          status: 200,
-          data: {
-            items: [
-              {
-                id: 't-99',
-                slug: 'isp-gov',
-                name: 'ISP Gobernanza',
-                tax_id: 'J-123456',
-                status: 'ACTIVE',
-                max_routers_quota: 30,
-                max_users_quota: 10,
-                active_routers_count: 2,
-                active_users_count: 1,
-                default_safemode_seconds: 60,
-              },
-            ],
+  it('permite navegar al estudio de Módulos & Capacidades con botón y badge de módulos activos', async () => {
+    pushMock.mockClear();
+    vi.spyOn(http, 'get').mockResolvedValueOnce({
+      status: 200,
+      data: {
+        items: [
+          {
+            id: 't-99',
+            slug: 'isp-gov',
+            name: 'ISP Gobernanza',
+            tax_id: 'J-123456',
+            status: 'ACTIVE',
+            max_routers_quota: 30,
+            max_users_quota: 10,
+            active_routers_count: 2,
+            active_users_count: 1,
+            default_safemode_seconds: 60,
+            features: {
+              isp_module_enabled: true,
+              cis_audit_enabled: true,
+              syslog_collector_enabled: true,
+            },
           },
-          headers: new Headers(),
-        };
-      }
-      if (url.includes('/features')) {
-        return {
-          status: 200,
-          data: {
-            isp_module_enabled: true,
-            bgp_looking_glass_enabled: false,
-            sfp_ddm_telemetry_enabled: true,
-            ipfix_analytics_enabled: false,
-            enforce_maker_checker: true,
-            auto_safemode_enforced: true,
-            ai_mcp_integration_enabled: true,
-            nightly_backups_enabled: true,
-            outbound_webhooks_enabled: true,
-            config_drift_monitoring_enabled: false,
-            cis_audit_enabled: true,
-            sdwan_orchestrator_enabled: false,
-            capsman_wifi_enabled: false,
-            sla_tracker_enabled: false,
-            mass_outage_threshold: 10,
-            default_locale: 'es',
-          },
-          headers: new Headers(),
-        };
-      }
-      return { status: 404, data: null, headers: new Headers() };
+        ],
+      },
+      headers: new Headers(),
     });
 
     const wrapper = mount(TenantsManagementView);
     await flushPromises();
 
-    // Abrir modal de Módulos
+    // Validar badge de módulos activos
+    const badge = wrapper.find('.badge-modules-count');
+    expect(badge.exists()).toBe(true);
+    expect(badge.text()).toBe('3');
+
+    // Clic en botón ⚙️ Módulos
     const btnFeatures = wrapper.find('.btn-action--features');
     expect(btnFeatures.exists()).toBe(true);
     await btnFeatures.trigger('click');
     await flushPromises();
 
-    expect(wrapper.find('.rg-modal--features').exists()).toBe(true);
-    expect(wrapper.find('#modal-features-title').text()).toContain('Módulos & Capacidades');
-
-    // Alternar switches
-    const chkIsp = wrapper.find('#flag-isp');
-    expect(chkIsp.exists()).toBe(true);
-    await chkIsp.setValue(false);
-
-    const selLocale = wrapper.find('#flag-locale');
-    expect(selLocale.exists()).toBe(true);
-    await selLocale.setValue('en');
-
-    // Guardar con éxito
-    vi.spyOn(http, 'patch').mockResolvedValueOnce({
-      status: 200,
-      data: {
-        isp_module_enabled: false,
-        default_locale: 'en',
-      },
-      headers: new Headers(),
-    });
-
-    await wrapper.find('.rg-modal--features form').trigger('submit');
-    await flushPromises();
-
-    expect(wrapper.find('.banner--success').text()).toContain(
-      'Capacidades de "ISP Gobernanza" actualizadas',
-    );
-    expect(wrapper.find('.rg-modal--features').exists()).toBe(false);
-
-    // Reabrir y simular fallo en guardado
-    await btnFeatures.trigger('click');
-    await flushPromises();
-    expect(wrapper.find('.rg-modal--features').exists()).toBe(true);
-
-    vi.spyOn(http, 'patch').mockRejectedValueOnce({
-      detail: 'No autorizado para modificar flags',
-    });
-
-    await wrapper.find('.rg-modal--features form').trigger('submit');
-    await flushPromises();
-
-    expect(wrapper.find('.banner--error').text()).toContain('No autorizado para modificar flags');
-
-    // Cerrar modal con botón cancelar
-    await wrapper.find('.rg-modal--features .btn-cancel').trigger('click');
-    expect(wrapper.find('.rg-modal--features').exists()).toBe(false);
+    // Debe navegar hacia la sub-pantalla de módulos del tenant
+    expect(pushMock).toHaveBeenCalledWith('/admin/tenants/t-99/modules');
   });
+
 
   it('oculta el botón de registrar empresa si el usuario no tiene rol SUPERADMIN_GLOBAL', async () => {
     const authStore = useAuthStore();

@@ -127,3 +127,16 @@ class SessionClosingResponse(BaseModel):
     ttl_seconds: int = Field(35, description="Período de gracia otorgado en segundos")
     session_id: str
 
+
+class SwitchTenantRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    target_tenant_id: uuid.UUID | None = None
+    target_tenant_slug: str | None = None
+
+    @model_validator(mode="after")
+    def check_target(self) -> "SwitchTenantRequest":
+        if not self.target_tenant_id and not self.target_tenant_slug:
+            raise ValueError("Debe proporcionar 'target_tenant_id' o 'target_tenant_slug'")
+        return self
+

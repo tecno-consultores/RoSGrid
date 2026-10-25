@@ -16,6 +16,7 @@
   import ChangePasswordModal from '@/components/common/ChangePasswordModal.vue';
   import RgStepUp2FAModal from '@/components/common/RgStepUp2FAModal.vue';
   import RgMcpTokenModal from '@/components/admin/RgMcpTokenModal.vue';
+  import RgTenantSwitcher from '@/components/admin/RgTenantSwitcher.vue';
 
   const route = useRoute();
   const router = useRouter();
@@ -298,9 +299,8 @@
           <span class="toggle-icon" aria-hidden="true">{{ isSidebarHidden ? '☰' : '◀' }}</span>
         </button>
 
-        <div v-if="authStore.tenantSlug" class="tenant-badge" :title="`Organización: ${authStore.tenantSlug}`">
-          <strong>{{ authStore.tenantSlug }}</strong>
-        </div>
+        <!-- Conmutador Táctico de Tenant / Badge Informativo (Hito 25) -->
+        <RgTenantSwitcher />
       </div>
 
       <div class="header-right">
@@ -525,47 +525,49 @@
 
       <!-- Área de Contenido Principal -->
       <main id="main-content" class="rg-main" tabindex="-1">
-        <slot></slot>
+        <div class="rg-main-content">
+          <slot></slot>
+        </div>
+
+        <!-- Pie de Página Global Autenticado In-Flow (Subtarea 25.3) -->
+        <footer class="rg-global-footer" role="contentinfo">
+          <div class="footer-content">
+            <span class="footer-text">
+              Elaborado por
+              <a
+                href="https://www.tecnoconsultores.net/"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="footer-link"
+              >
+                Tecno Consultores 2023 C.A.
+              </a>
+              • Licencia GNU GPLv3
+            </span>
+            <a
+              href="https://github.com/tecno-consultores/RoSGrid/"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="footer-github-link"
+              aria-label="Repositorio GitHub oficial de RoSGrid"
+            >
+              <svg
+                class="github-icon"
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"
+                />
+              </svg>
+            </a>
+          </div>
+        </footer>
       </main>
     </div>
-
-    <!-- Pie de Página Global Autenticado (Subtarea 16.5) -->
-    <footer class="rg-global-footer" role="contentinfo">
-      <div class="footer-content">
-        <span class="footer-text">
-          Elaborado por
-          <a
-            href="https://www.tecnoconsultores.net/"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="footer-link"
-          >
-            Tecno Consultores 2023 C.A.
-          </a>
-          • Licencia GNU GPLv3
-        </span>
-        <a
-          href="https://github.com/tecno-consultores/RoSGrid/"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="footer-github-link"
-          aria-label="Repositorio GitHub oficial de RoSGrid"
-        >
-          <svg
-            class="github-icon"
-            viewBox="0 0 24 24"
-            width="14"
-            height="14"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"
-            />
-          </svg>
-        </a>
-      </div>
-    </footer>
 
     <!-- Barra Inferior Fija para Móvil (< 768px) -->
     <nav
@@ -1082,13 +1084,19 @@
     height: 100%;
     min-height: 0;
     min-width: 0;
-    padding: 16px;
+    padding: 16px 16px 0 16px;
+    display: flex;
+    flex-direction: column;
     overflow-y: auto;
     overflow-x: hidden;
     outline: none;
     scroll-behavior: smooth;
     scrollbar-width: thin;
     scrollbar-color: rgba(0, 240, 255, 0.3) rgba(11, 15, 25, 0.5);
+  }
+
+  .rg-main-content {
+    flex: 1 0 auto;
   }
 
   .rg-main::-webkit-scrollbar {
@@ -1182,19 +1190,18 @@
     }
   }
 
-  /* Pie de Página Global Autenticado (Subtarea 16.5) */
+  /* Pie de Página Global Autenticado In-Flow (Hito 25) */
   .rg-global-footer {
-    height: 32px;
+    margin-top: auto;
+    padding: 16px 0 12px 0;
     flex-shrink: 0;
-    background: var(--rg-bg-surface);
-    border-top: 1px solid var(--rg-border-panel);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0 16px;
     font-size: 11px;
     color: var(--rg-text-muted);
-    z-index: 700;
+    background: transparent;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
   }
 
   .footer-content {

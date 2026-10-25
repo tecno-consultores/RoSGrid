@@ -197,6 +197,35 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
   - Cancelación reactiva incondicional si el usuario realiza cualquier petición autenticada o abre un canal WebSocket dentro de los 35s (frecuente en recargas F5 y reconexiones de red).
   - Recolección desatendida por el worker `session_lifecycle_worker` que tras 35s revoca la sesión y genera el registro de auditoría WORM `SESSION_CLOSED_ON_DISCONNECT`.
 
+#### `POST /api/v1/auth/switch-tenant` *(Conmutador Rápido de Contexto de Tenant para SuperAdmin)*
+
+- **Propósito:** Permite a un operador con rol `SUPERADMIN_GLOBAL` conmutar atómicamente de empresa sin cerrar sesión ni perder el estado de autenticación.
+- **Roles:** Estrictamente reservado a `SUPERADMIN_GLOBAL`. Cualquier otro rol es denegado con HTTP `403 Forbidden`.
+- **Entrada (JSON):**
+  ```json
+  {
+    "target_tenant_id": "c1234567-89ab-cdef-0123-456789abcdef",
+    "target_tenant_slug": "empresa-norte"
+  }
+  ```
+  *(Debe especificarse al menos `target_tenant_id` o `target_tenant_slug`)*
+- **Salida (200 OK):**
+  ```json
+  {
+    "access_token": "eyJhbGciOi...",
+    "token_type": "bearer",
+    "tenant_id": "c1234567-89ab-cdef-0123-456789abcdef",
+    "tenant_slug": "empresa-norte",
+    "tenant_name": "Telecomunicaciones del Norte C.A.",
+    "role": "SUPERADMIN_GLOBAL",
+    "switched": true
+  }
+  ```
+- **Mecánica de Seguridad y Auditoría:**
+  - Actualiza de forma atómica en KeyDB la sesión activa (`session_id`), re-asociándola al nuevo `tenant_id` y renovando el TTL.
+  - Emite un nuevo JWT firmado con los nuevos claims de tenant y actualiza las cookies seguras `__Host-rg_at`.
+  - Registra inmediatamente una entrada inmutable WORM en `audit_logs` con acción `SUPERADMIN_TENANT_SWITCHED`, capturando `from_tenant_id`, `to_tenant_id`, IP de origen y agente de usuario.
+
 #### `GET /api/v1/sessions`
 
 - **Roles:** `TENANT_ADMIN`, `SUPERADMIN_GLOBAL`.

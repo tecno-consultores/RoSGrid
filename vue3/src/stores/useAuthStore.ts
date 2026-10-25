@@ -184,6 +184,31 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function switchTenant(targetTenantId: string): Promise<boolean> {
+    try {
+      const res = await http.post<{
+        session_id: string;
+        user: UserInfo;
+        csrf_token: string;
+      }>('/api/v1/auth/switch-tenant', { target_tenant_id: targetTenantId });
+
+      if (res.data?.user) {
+        setAuth(res.data.user, res.data.csrf_token);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new CustomEvent('rosgrid:tenant-switched', {
+              detail: { tenantId: targetTenantId, tenantSlug: res.data.user.tenant_slug },
+            }),
+          );
+        }
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
   return {
     user,
     tenantSlug,
@@ -196,6 +221,7 @@ export const useAuthStore = defineStore('auth', () => {
     clearAuth,
     updateTenantFeatures,
     fetchTenantFeatures,
+    switchTenant,
     isFeatureEnabled,
     hasCapability,
     forceKillSwitchLogout,

@@ -48,6 +48,7 @@ from src.schemas.auth import (
     RegisterUserResponse,
     SessionClosingRequest,
     SessionClosingResponse,
+    SwitchTenantRequest,
     UserProfileResponse,
     Verify2FARequest,
 )
@@ -382,6 +383,41 @@ async def _execute_2fa_verification(db: AsyncSession, user: User, code: str, aad
         raise HTTPException(status_code=401, detail="Código 2FA o de recuperación incorrecto")
 
 
+def _extract_tenant_features(tenant: Tenant) -> dict[str, Any]:
+    features_dict: dict[str, Any] = {
+        "isp_module_enabled": True,
+        "bgp_looking_glass_enabled": False,
+        "sfp_ddm_telemetry_enabled": True,
+        "ipfix_analytics_enabled": False,
+        "enforce_maker_checker": True,
+        "auto_safemode_enforced": True,
+        "ai_mcp_integration_enabled": True,
+        "nightly_backups_enabled": True,
+        "outbound_webhooks_enabled": True,
+        "config_drift_monitoring_enabled": False,
+        "cis_audit_enabled": True,
+        "sdwan_orchestrator_enabled": False,
+        "capsman_wifi_enabled": False,
+        "sla_tracker_enabled": False,
+        "l2_topology_enabled": True,
+        "syslog_collector_enabled": True,
+        "cve_scanner_enabled": True,
+        "prometheus_fleet_exporter_enabled": True,
+        "mass_outage_threshold": 10,
+        "default_locale": "es",
+    }
+    for key in list(features_dict.keys()):
+        val = getattr(tenant, key, None)
+        if val is not None:
+            features_dict[key] = val
+
+    custom_features = getattr(tenant, "features", None)
+    if isinstance(custom_features, dict):
+        features_dict.update(custom_features)
+
+    return features_dict
+
+
 async def _build_auth_session_response(
     request: Request,
     response: Response,
@@ -513,24 +549,7 @@ async def verify_2fa(
     t_res = await db.execute(stmt_t)
     tenant_obj = t_res.scalar_one()
 
-    features = {
-        "isp_module_enabled": getattr(tenant_obj, "isp_module_enabled", True),
-        "bgp_looking_glass_enabled": getattr(tenant_obj, "bgp_looking_glass_enabled", False),
-        "sfp_ddm_telemetry_enabled": getattr(tenant_obj, "sfp_ddm_telemetry_enabled", True),
-        "ipfix_analytics_enabled": getattr(tenant_obj, "ipfix_analytics_enabled", False),
-        "enforce_maker_checker": getattr(tenant_obj, "enforce_maker_checker", True),
-        "auto_safemode_enforced": getattr(tenant_obj, "auto_safemode_enforced", True),
-        "ai_mcp_integration_enabled": getattr(tenant_obj, "ai_mcp_integration_enabled", True),
-        "nightly_backups_enabled": getattr(tenant_obj, "nightly_backups_enabled", True),
-        "outbound_webhooks_enabled": getattr(tenant_obj, "outbound_webhooks_enabled", True),
-        "config_drift_monitoring_enabled": getattr(tenant_obj, "config_drift_monitoring_enabled", False),
-        "cis_audit_enabled": getattr(tenant_obj, "cis_audit_enabled", True),
-        "sdwan_orchestrator_enabled": getattr(tenant_obj, "sdwan_orchestrator_enabled", False),
-        "capsman_wifi_enabled": getattr(tenant_obj, "capsman_wifi_enabled", False),
-        "sla_tracker_enabled": getattr(tenant_obj, "sla_tracker_enabled", False),
-        "mass_outage_threshold": getattr(tenant_obj, "mass_outage_threshold", 10),
-        "default_locale": getattr(tenant_obj, "default_locale", "es"),
-    }
+    features = _extract_tenant_features(tenant_obj)
 
     return await _build_auth_session_response(
         request, response, tenant_id, tenant_obj.slug, tenant_obj.name, user, db=db, features=features
@@ -695,6 +714,99 @@ async def session_closing(
         ttl_seconds=CLOSING_GRACE_PERIOD_SECONDS,
         session_id=sid,
     )
+
+
+@router.post("/switch-tenant", response_model=AuthSessionResponse)
+async def switch_tenant(
+    body: SwitchTenantRequest,
+    request: Request,
+    response: Response,
+    claims: dict[str, Any] = Depends(get_current_user_claims),
+    db: AsyncSession = Depends(get_db_session),
+) -> AuthSessionResponse:
+    """Permite al Super Administrador Global conmutar en caliente entre tenants activos.
+
+    Emite un nuevo JWT token, actualiza la sesión en KeyDB y registra la auditoría WORM.
+    """
+    current_role = claims.get("rol")
+    if current_role != SystemRoleEnum.SUPERADMIN_GLOBAL.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acceso denegado: solo el Super Administrador Global puede conmutar de tenant",
+        )
+
+    # 1. Buscar y validar el tenant destino
+    query = select(Tenant)
+    if body.target_tenant_id:
+        query = query.where(Tenant.id == body.target_tenant_id)
+    elif body.target_tenant_slug:
+        query = query.where(Tenant.slug == body.target_tenant_slug.strip().lower())
+
+    target_tenant = await db.scalar(query)
+    if not target_tenant:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="El tenant destino especificado no existe",
+        )
+
+    if target_tenant.status != TenantStatusEnum.ACTIVE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El tenant destino especificado no se encuentra activo",
+        )
+
+    # 2. Cargar datos del usuario SuperAdmin actual
+    current_user_id = uuid.UUID(str(claims["sub"]))
+    user = await db.scalar(select(User).where(User.id == current_user_id))
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuario Super Administrador no encontrado",
+        )
+
+    old_tenant_id = str(claims["tid"])
+    old_session_id = str(claims["sid"])
+
+    # 3. Revocar sesión previa en el tenant anterior
+    await kill_session(
+        old_tenant_id,
+        old_session_id,
+        killed_by="SUPERADMIN_TENANT_SWITCH",
+        reason=f"Conmutación al tenant {target_tenant.slug}",
+    )
+
+    # 4. Construir y activar nueva sesión para el tenant destino
+    features = _extract_tenant_features(target_tenant)
+    session_response = await _build_auth_session_response(
+        request=request,
+        response=response,
+        tenant_id=target_tenant.id,
+        tenant_slug=target_tenant.slug,
+        tenant_name=target_tenant.name,
+        user=user,
+        db=db,
+        features=features,
+    )
+
+    # 5. Registrar evento WORM específico de cambio de tenant
+    await _log_login_event(
+        db=db,
+        tenant_id=target_tenant.id,
+        actor_username=user.username,
+        actor_role=user.role,
+        actor_user_id=user.id,
+        event_action="SUPERADMIN_TENANT_SWITCHED",
+        status_code=200,
+        extra_details={
+            "previous_tenant_id": old_tenant_id,
+            "target_tenant_id": str(target_tenant.id),
+            "target_tenant_slug": target_tenant.slug,
+            "new_session_id": session_response.session_id,
+        },
+        request=request,
+    )
+
+    return session_response
 
 
 @router.get("/me")

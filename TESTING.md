@@ -1861,3 +1861,25 @@ Conforme a la Especificación 43 v2.0.0 y la directiva `.agents/rules/ground_tru
      - Dominio 3 (Topología L2): 6 nodos procesados en grafo sin errores.
      - Dominio 4 (IPAM Prefijos): HTTP 200 con prefijos aislados.
    - Resultado: **100% APROBADO** en Docker.
+
+### E. Hito 25: Conmutador Rápido de Contexto de Tenants, Ergonomía In-Flow y Estudio Táctico de Feature Flags (Completado y Certificado al 100%)
+1. **Backend Unitario (`fastapi/tests/api/test_switch_tenant.unit.py`):**
+   - 5 pruebas unitarias cubriendo:
+     - Rechazo HTTP 403 a roles no autorizados (no `SUPERADMIN_GLOBAL`).
+     - Rechazo HTTP 400 ante tenant inactivo o inexistente.
+     - Conmutación exitosa por `target_tenant_id` y por `target_tenant_slug`.
+     - Invalidación de sesión previa con `kill_session`, creación de sesión atómica en KeyDB y registro de auditoría WORM `SUPERADMIN_TENANT_SWITCHED`.
+   - Ejecutadas en contenedor efímero `sinfallas/base-python-uv:3.15`: **5 de 5 pruebas PASADAS (100%)**.
+   - Total backend: **541 pruebas unitarias PASADAS al 100%**.
+2. **Frontend Unitario (Vitest en Docker `sinfallas/base-node-ionic:26`):**
+   - `vue3/src/components/admin/RgTenantSwitcher.unit.ts`: **4 de 4 pruebas PASADAS (100%)**.
+   - `vue3/src/components/admin/RgFeatureFlagsGrid.unit.ts`: **4 de 4 pruebas PASADAS (100%)**.
+   - `vue3/src/views/admin/TenantModulesStudioView.unit.ts`: **2 de 2 pruebas PASADAS (100%)**.
+   - `vue3/src/views/admin/tenantsManagementView.unit.ts`: **6 de 6 pruebas PASADAS (100%)**.
+   - Total frontend: **55 suites aprobadas, 402 de 402 pruebas PASADAS al 100%**.
+3. **Análisis Estático y Tipado Estricto:**
+   - Backend: `ruff check src/` -> 0 errores.
+   - Frontend: `vue-tsc --noEmit` -> 0 errores.
+   - Compilación de producción Vite (`npm run build`) -> Limpia en 4.14s.
+4. **Ergonomía de Pantalla Completa:**
+   - 100% del alto útil de viewport recuperado en el Centro de Mando e Inventario sin barras flotantes fijas inferiores.

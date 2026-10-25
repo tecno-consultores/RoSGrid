@@ -253,6 +253,16 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/admin/tenants/:tenantId/modules',
+    name: 'TenantModulesStudio',
+    component: () => import('@/views/admin/TenantModulesStudioView.vue'),
+    meta: {
+      requiresAuth: true,
+      title: 'Módulos y Capacidades de Red — RoSGrid',
+      allowedRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN'],
+    },
+  },
+  {
     path: '/users',
     alias: '/admin/users',
     name: 'UsersAndPermissions',

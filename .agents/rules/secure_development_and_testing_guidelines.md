@@ -74,6 +74,21 @@ Apply these non-negotiable security directives before writing any code:
    - Inbound network traffic handlers (Syslog, SNMP, WebSockets) must tolerate Docker NAT proxying (`172.18.0.1`) and never rely on raw `addr[0]` alone.
    - Frontend stores must never destroy previously populated in-memory state on network catch blocks.
 
+7. **SuperAdmin Tenant Fast-Switching & Atomic Session Re-keying:**
+   - Dynamic context switching via `POST /api/v1/auth/switch-tenant` is strictly restricted to `SUPERADMIN_GLOBAL`.
+   - Any request from lower roles (`TENANT_ADMIN`, `OPERATOR`, `FIELD_TECH`) must fail-closed with HTTP `403 Forbidden`.
+   - Re-keying of active session in KeyDB must occur atomically, updating tenant claims in JWT without dropping the authenticated user identity, followed by an immediate WORM audit record `SUPERADMIN_TENANT_SWITCHED`.
+
+8. **Feature Flags Governance & Blast Radius Shield (Scoped by Tenant):**
+   - In B2B multi-tenancy, feature flags are tenant-level capabilities and licensing attributes. They must be managed strictly from the Tenant administration context (`/tenants`), never from an orphan global sidebar.
+   - UI mutators modifying critical governance flags (`syslog_collector_enabled`, `enforce_maker_checker`, `auto_safemode_enforced`) MUST enforce a Blast Radius confirmation shield calculating dynamic impact on fleet and active operators.
+   - Flag dependencies must be validated via a Directed Acyclic Graph (DAG) preventing orphan dependent flags (e.g. BGP Looking Glass without ISP Core).
+
+9. **Visual Geometry & In-Flow Ergonomics (Anti-Sticky Footer):**
+   - JSDOM does not calculate layout or bounding boxes. Ensure real browser validation for viewport ergonomics.
+   - Prohibit fixed floating bottom footers (`position: fixed` or rigid bottom flex containers) that permanently steal vertical pixels.
+   - All copyright and legal footers must be placed in-flow inside `<main>` with `margin-top: auto`, reserving 100% of vertical height for dashboards, inventory tables, and network maps.
+
 ---
 
 ## 3. Pre-Commit 11X Checklist

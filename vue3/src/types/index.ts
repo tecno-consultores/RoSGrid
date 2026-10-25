@@ -55,6 +55,7 @@ export interface TenantFeatureFlags {
   syslog_collector_enabled?: boolean;
   cve_scanner_enabled?: boolean;
   prometheus_fleet_exporter_enabled?: boolean;
+  rogue_dhcp_enabled?: boolean;
   onboarding_completed?: boolean;
 }
 
