@@ -4,7 +4,10 @@
 <script setup lang="ts">
   import { ref, computed, onMounted } from 'vue';
   import { http } from '@/api/httpClient';
+  import { useI18n } from '@/composables/useI18n';
   import type { AuditLogItem } from '@/types';
+
+  const { t } = useI18n();
 
   const loading = ref(false);
   const verifying = ref(false);
@@ -222,10 +225,9 @@
     <!-- Cabecera -->
     <header class="audit-header">
       <div>
-        <h1 id="audit-title" class="audit-title">Consola Forense de Auditoría Inmutable (WORM)</h1>
+        <h1 id="audit-title" class="audit-title">{{ t('audit_logs.title', 'Consola Forense de Auditoría Inmutable (WORM)') }}</h1>
         <p class="audit-subtitle">
-          Cadena criptográfica SHA-256 inalterable y certificación de cadena de custodia para roles
-          autorizados
+          {{ t('audit_logs.subtitle', 'Cadena criptográfica SHA-256 inalterable y certificación de cadena de custodia para roles autorizados') }}
         </p>
       </div>
 
@@ -236,15 +238,15 @@
           :disabled="verifying"
           @click="verifyWormIntegrity"
         >
-          <span v-if="verifying">⏳ Verificando Cadena...</span>
-          <span v-else>🔒 Certificar Cadena WORM</span>
+          <span v-if="verifying">⏳ {{ t('audit_logs.verifying', 'Verificando Cadena...') }}</span>
+          <span v-else>🔒 {{ t('audit_logs.btn_verify_integrity', 'Certificar Cadena WORM') }}</span>
         </button>
 
         <button type="button" class="btn btn--secondary" @click="exportReport('csv')">
-          📥 Exportar CSV
+          {{ t('audit_logs.btn_export_csv', '📥 Exportar CSV') }}
         </button>
         <button type="button" class="btn btn--secondary" @click="exportReport('json')">
-          📥 Exportar JSON Firmado
+          {{ t('audit_logs.btn_export_json', '📥 Exportar JSON Firmado') }}
         </button>
       </div>
     </header>
@@ -274,20 +276,20 @@
     <!-- Filtros Forenses -->
     <section class="filters-card" aria-label="Filtros forenses de auditoría">
       <div class="filter-group">
-        <label for="filter-actor" class="filter-label">Usuario:</label>
+        <label for="filter-actor" class="filter-label">{{ t('audit_logs.th_actor', 'Usuario:') }}</label>
         <input
           id="filter-actor"
           v-model="filterActor"
           type="text"
-          placeholder="ej. carlos.admin"
+          :placeholder="t('audit_logs.filter_actor', 'ej. carlos.admin')"
           class="form-input"
         />
       </div>
 
       <div class="filter-group">
-        <label for="filter-cat" class="filter-label">Categoría:</label>
+        <label for="filter-cat" class="filter-label">{{ t('audit_logs.filter_category', 'Categoría:') }}</label>
         <select id="filter-cat" v-model="filterCategory" class="form-select">
-          <option value="ALL">Todas las Categorías</option>
+          <option value="ALL">{{ t('audit_logs.all_categories', 'Todas las Categorías') }}</option>
           <option value="AUTH">AUTH (Inicio / 2FA)</option>
           <option value="VAULT">VAULT (Bóveda Step-Up)</option>
           <option value="WEBFIG_L1">WEBFIG_L1 (Capa 1)</option>
@@ -299,12 +301,12 @@
       </div>
 
       <div class="filter-group">
-        <label for="filter-router" class="filter-label">Router Afectado:</label>
+        <label for="filter-router" class="filter-label">{{ t('audit_logs.th_target', 'Router Afectado:') }}</label>
         <input
           id="filter-router"
           v-model="filterRouter"
           type="text"
-          placeholder="ej. RB5009"
+          :placeholder="t('audit_logs.filter_router', 'ej. RB5009')"
           class="form-input"
         />
       </div>
@@ -319,14 +321,14 @@
         <table v-else class="audit-table">
           <thead>
             <tr>
-              <th>Timestamp UTC</th>
-              <th>Actor & Rol</th>
+              <th>{{ t('audit_logs.th_timestamp', 'Timestamp UTC') }}</th>
+              <th>{{ t('audit_logs.th_actor', 'Actor & Rol') }}</th>
               <th>IP Origen</th>
-              <th>Categoría</th>
-              <th>Acción</th>
-              <th>Router</th>
-              <th>HTTP</th>
-              <th>Hash SHA-256</th>
+              <th>{{ t('audit_logs.th_category', 'Categoría') }}</th>
+              <th>{{ t('audit_logs.th_action', 'Acción') }}</th>
+              <th>{{ t('audit_logs.th_target', 'Router') }}</th>
+              <th>{{ t('audit_logs.th_status', 'HTTP') }}</th>
+              <th>{{ t('audit_logs.th_hash', 'Hash SHA-256') }}</th>
             </tr>
           </thead>
           <tbody>

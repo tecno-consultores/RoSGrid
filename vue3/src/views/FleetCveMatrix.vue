@@ -5,8 +5,10 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { http } from '@/api/httpClient';
+import { useI18n } from '@/composables/useI18n';
 import type { FleetCveSummary, CveItem, CveSyncResponse } from '@/types';
 
+const { t } = useI18n();
 const router = useRouter();
 
 const loading = ref(false);
@@ -190,7 +192,7 @@ onMounted(() => {
     <!-- Encabezado de Vista -->
     <header class="cve-header">
       <div class="cve-header-text">
-        <h1 id="cve-matrix-title" class="cve-title">Matriz de Vulnerabilidades CVE — Flota MikroTik</h1>
+        <h1 id="cve-matrix-title" class="cve-title">{{ t('cve_matrix.title', 'Matriz de Vulnerabilidades CVE — Flota MikroTik') }}</h1>
         <p class="cve-subtitle">
           Auditoría proactiva de boletines RouterOS v7 | Fuentes oficiales:
           <a
@@ -221,7 +223,7 @@ onMounted(() => {
         >
           <span v-if="syncing" class="spinner-inline" aria-hidden="true"></span>
           <span v-else aria-hidden="true">🔄</span>
-          <span>{{ syncing ? 'Sincronizando...' : 'Sincronizar Boletines' }}</span>
+          <span>{{ syncing ? t('cve_matrix.syncing', 'Sincronizando...') : t('cve_matrix.btn_sync', 'Sincronizar Boletines') }}</span>
         </button>
 
         <button
@@ -232,7 +234,7 @@ onMounted(() => {
           @click="navigateToBulkUpdates"
         >
           <span aria-hidden="true">⚡</span>
-          <span>Actualizar Flota Afectada</span>
+          <span>{{ t('cve_matrix.btn_remediate', 'Actualizar Flota Afectada') }}</span>
         </button>
       </div>
     </header>
@@ -270,13 +272,13 @@ onMounted(() => {
     <!-- Tiras KPI Tácticas -->
     <section class="kpi-grid" aria-label="Resumen de métricas de seguridad">
       <div class="kpi-card">
-        <span class="kpi-label">Routers Evaluados</span>
+        <span class="kpi-label">{{ t('cve_matrix.kpi_evaluated', 'Routers Evaluados') }}</span>
         <span class="kpi-val">{{ cveSummary?.total_evaluated_routers ?? 0 }}</span>
         <span class="kpi-meta">Inventario total adoptado</span>
       </div>
 
       <div class="kpi-card kpi-card--warning">
-        <span class="kpi-label">Routers Vulnerables</span>
+        <span class="kpi-label">{{ t('cve_matrix.kpi_vulnerable', 'Routers Vulnerables') }}</span>
         <span class="kpi-val kpi-val--warning">{{ cveSummary?.vulnerable_routers_count ?? 0 }}</span>
         <span class="kpi-meta">
           Críticos: {{ cveSummary?.critical_routers_count ?? 0 }} | Altos: {{ cveSummary?.high_routers_count ?? 0 }}
@@ -284,13 +286,13 @@ onMounted(() => {
       </div>
 
       <div class="kpi-card kpi-card--danger">
-        <span class="kpi-label">Score CVSS Máximo</span>
+        <span class="kpi-label">{{ t('cve_matrix.kpi_cvss', 'Score CVSS Máximo') }}</span>
         <span class="kpi-val kpi-val--danger">{{ maxFleetCvss.toFixed(1) }}</span>
         <span class="kpi-meta">Boletines únicos: {{ cveSummary?.total_unique_cves ?? 0 }}</span>
       </div>
 
       <div class="kpi-card kpi-card--cyan">
-        <span class="kpi-label">Versión ROS Recomendada</span>
+        <span class="kpi-label">{{ t('cve_matrix.kpi_recommended', 'Versión ROS Recomendada') }}</span>
         <span class="kpi-val kpi-val--cyan tabular-nums">{{ recommendedFleetVersion }}</span>
         <span class="kpi-meta">Subsana 100% de los CVEs detectados</span>
       </div>
@@ -299,20 +301,20 @@ onMounted(() => {
     <!-- Barra de Filtros y Controles -->
     <section class="cve-filters" aria-label="Filtros de búsqueda de vulnerabilidades">
       <div class="filter-item">
-        <label for="cve-search" class="filter-label">Buscar CVE o Router:</label>
+        <label for="cve-search" class="filter-label">{{ t('inventory.filter_search_label', 'Buscar Router:') }}</label>
         <input
           id="cve-search"
           v-model="searchQuery"
           type="text"
           class="input-search"
-          placeholder="Ej: CVE-2023-32154, CCR2004, IPv6..."
+          :placeholder="t('cve_matrix.search_placeholder', 'Buscar CVE o Router...')"
         />
       </div>
 
       <div class="filter-item">
-        <label for="cve-severity-filter" class="filter-label">Severidad CVSS:</label>
+        <label for="cve-severity-filter" class="filter-label">{{ t('cve_matrix.th_severity', 'Severidad CVSS:') }}</label>
         <select id="cve-severity-filter" v-model="selectedSeverity" class="select-filter">
-          <option value="ALL">Todas las severidades</option>
+          <option value="ALL">{{ t('cve_matrix.severity_all', 'Todas las severidades') }}</option>
           <option value="CRITICAL">CRITICAL (>= 9.0)</option>
           <option value="HIGH">HIGH (7.0 - 8.9)</option>
           <option value="MEDIUM">MEDIUM (4.0 - 6.9)</option>
@@ -328,7 +330,7 @@ onMounted(() => {
         @click="loadCveSummary"
       >
         <span aria-hidden="true">↻</span>
-        <span>Refrescar</span>
+        <span>{{ t('inventory.btn_refresh', 'Refrescar') }}</span>
       </button>
     </section>
 
@@ -350,12 +352,12 @@ onMounted(() => {
       <table v-else class="cve-table">
         <thead>
           <tr>
-            <th scope="col">CVE ID</th>
-            <th scope="col">Severidad</th>
-            <th scope="col">Versiones Afectadas</th>
-            <th scope="col">Versión Corregida</th>
-            <th scope="col">Equipos Afectados</th>
-            <th scope="col">Acción</th>
+            <th scope="col">{{ t('cve_matrix.th_cve', 'CVE ID') }}</th>
+            <th scope="col">{{ t('cve_matrix.th_severity', 'Severidad') }}</th>
+            <th scope="col">{{ t('cve_matrix.th_affected', 'Versiones Afectadas') }}</th>
+            <th scope="col">{{ t('cve_matrix.th_fix', 'Versión Corregida') }}</th>
+            <th scope="col">{{ t('cve_matrix.th_routers', 'Equipos Afectados') }}</th>
+            <th scope="col">{{ t('inventory.col_actions', 'Acción') }}</th>
           </tr>
         </thead>
         <tbody>

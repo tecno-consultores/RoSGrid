@@ -549,7 +549,7 @@
                         :class="['btn-toggle', { active: napForm.capacity_ports === 24 }]"
                         @click="napForm.capacity_ports = 24; napForm.splitter_ratio = '1:24'"
                       >
-                        24 Puertos
+                        {{ t('field_tech.ports_24') }}
                       </button>
                     </div>
                   </div>
@@ -557,10 +557,10 @@
                   <div class="form-group flex-1">
                     <label for="nap-splitter-ratio">{{ t('field_tech.splitter') }}</label>
                     <select id="nap-splitter-ratio" v-model="napForm.splitter_ratio" class="rg-input">
-                      <option value="1:8">Splitter Simétrico 1:8</option>
-                      <option value="1:16">Splitter Simétrico 1:16</option>
-                      <option value="1:24">Splitter Simétrico 1:24</option>
-                      <option value="1:2 + 1:8">Cascada 1:2 + 1:8</option>
+                      <option value="1:8">{{ t('field_tech.splitter_symmetric_8') }}</option>
+                      <option value="1:16">{{ t('field_tech.splitter_symmetric_16') }}</option>
+                      <option value="1:24">{{ t('field_tech.splitter_symmetric_24') }}</option>
+                      <option value="1:2 + 1:8">{{ t('field_tech.splitter_cascade') }}</option>
                     </select>
                   </div>
                 </div>
@@ -755,7 +755,7 @@
 
                 <div class="form-row">
                   <div class="form-group flex-1">
-                    <label for="cust-onu-model">Modelo de ONU</label>
+                    <label for="cust-onu-model">{{ t('field_tech.onu_model') }}</label>
                     <select id="cust-onu-model" v-model="customerForm.model" class="rg-input">
                       <option value="HG8310M Bridge">Huawei HG8310M (Bridge 1GE)</option>
                       <option value="F601 Bridge">ZTE F601 (Bridge 1GE)</option>
@@ -765,10 +765,10 @@
                   </div>
 
                   <div class="form-group flex-1">
-                    <label for="cust-onu-mode">Modo de Operación</label>
+                    <label for="cust-onu-mode">{{ t('field_tech.onu_mode') }}</label>
                     <select id="cust-onu-mode" v-model="customerForm.onu_mode" class="rg-input">
-                      <option value="BRIDGE">Bridge Puro (PPPoE en Router Cliente)</option>
-                      <option value="ROUTER_NAT">Router NAT (PPPoE/DHCP en la ONU)</option>
+                      <option value="BRIDGE">{{ t('field_tech.onu_mode_bridge') }}</option>
+                      <option value="ROUTER_NAT">{{ t('field_tech.onu_mode_router') }}</option>
                     </select>
                   </div>
                 </div>
@@ -778,9 +778,9 @@
                   <div class="meter-header">
                     <label for="cust-rx-power">{{ t('field_tech.rx_optical_power') }} *</label>
                     <span class="power-status-badge">
-                      <span v-if="opticalRxSeverity === 'optimal'">🟢 ÓPTIMO (-15 a -24 dBm)</span>
-                      <span v-else-if="opticalRxSeverity === 'warning'">🟠 ATENCIÓN (-24 a -27 dBm)</span>
-                      <span v-else>🔴 CRÍTICO / SATURADO</span>
+                      <span v-if="opticalRxSeverity === 'optimal'">{{ t('field_tech.optical_optimal') }}</span>
+                      <span v-else-if="opticalRxSeverity === 'warning'">{{ t('field_tech.optical_warning') }}</span>
+                      <span v-else>{{ t('field_tech.optical_critical') }}</span>
                     </span>
                   </div>
                   <div class="meter-input-group">
@@ -910,13 +910,13 @@
 
               <div class="diag-action-bar">
                 <div class="form-group flex-1">
-                  <label for="diag-target-select">Abonado a Diagnosticar</label>
+                  <label for="diag-target-select">{{ t('field_tech.diag_select_subscriber') }}</label>
                   <select
                     id="diag-target-select"
                     v-model="diagTargetId"
                     class="rg-input font-mono"
                   >
-                    <option value="" disabled>Seleccione un abonado...</option>
+                    <option value="" disabled>{{ t('field_tech.diag_select_placeholder') }}</option>
                     <option
                       v-for="dev in fieldStore.recentInstallations"
                       :key="dev.id"

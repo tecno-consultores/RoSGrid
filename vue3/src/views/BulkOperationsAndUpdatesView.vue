@@ -5,10 +5,13 @@
   import { ref, computed, onMounted, watch } from 'vue';
   import { http } from '@/api/httpClient';
   import { useInventoryStore } from '@/stores/useInventoryStore';
+  import { useI18n } from '@/composables/useI18n';
   import ConfigTemplateEditorModal, {
     type TemplateItem,
     type TemplateStep,
   } from '@/components/operations/ConfigTemplateEditorModal.vue';
+
+  const { t } = useI18n();
 
   interface FleetRouter {
     id: string;
@@ -466,9 +469,9 @@
   <main class="bulk-view" aria-labelledby="bulk-title">
     <header class="bulk-header">
       <div>
-        <h1 id="bulk-title" class="bulk-title">Operaciones Masivas y Actualizador RouterOS v7</h1>
+        <h1 id="bulk-title" class="bulk-title">{{ t('bulk_ops.title') }}</h1>
         <p class="bulk-subtitle">
-          Golden Configs, plantillas parametrizables con Safe Mode y matriz de versiones de flota
+          {{ t('bulk_ops.subtitle') }}
         </p>
       </div>
 
@@ -481,7 +484,7 @@
             :class="{ 'tab-btn--active': activeTab === 'templates' }"
             @click="activeTab = 'templates'"
           >
-            📋 Plantillas y Acciones Masivas
+            📋 {{ t('bulk_ops.tab_templates') }}
           </button>
           <button
             type="button"
@@ -489,17 +492,17 @@
             :class="{ 'tab-btn--active': activeTab === 'updates' }"
             @click="activeTab = 'updates'"
           >
-            🚀 Actualizador de RouterOS
+            🚀 {{ t('bulk_ops.tab_updates') }}
           </button>
         </nav>
 
         <button
           type="button"
           class="btn-manage-tpl"
-          aria-label="+ Nueva Plantilla"
+          :aria-label="t('bulk_ops.btn_new_template')"
           @click="openCreateTemplateModal"
         >
-          ⚡ + Nueva Plantilla
+          ⚡ {{ t('bulk_ops.btn_new_template') }}
         </button>
       </div>
     </header>
@@ -517,30 +520,30 @@
           :class="{ 'step-item--active': wizardStep === 1, 'step-item--done': wizardStep > 1 }"
         >
           <span class="step-num">1</span>
-          <span class="step-label">Flota Destino ({{ selectedRoutersCount }})</span>
+          <span class="step-label">{{ t('bulk_ops.step_1', { count: selectedRoutersCount }) }}</span>
         </li>
         <li
           class="step-item"
           :class="{ 'step-item--active': wizardStep === 2, 'step-item--done': wizardStep > 2 }"
         >
           <span class="step-num">2</span>
-          <span class="step-label">Plantilla & Previsualización</span>
+          <span class="step-label">{{ t('bulk_ops.step_2') }}</span>
         </li>
         <li class="step-item" :class="{ 'step-item--active': wizardStep === 3 }">
           <span class="step-num">3</span>
-          <span class="step-label">Ejecución & Safe Mode</span>
+          <span class="step-label">{{ t('bulk_ops.step_3') }}</span>
         </li>
       </ol>
 
       <!-- PASO 1: Selección de Flota -->
       <div v-if="wizardStep === 1" class="wizard-step-card">
         <div class="step-header">
-          <h2 class="step-title">Paso 1: Seleccionar Equipos Destino</h2>
+          <h2 class="step-title">{{ t('bulk_ops.step_1_title') }}</h2>
           <div class="step-filters">
             <label class="filter-label">
-              Rol:
+              {{ t('bulk_ops.filter_role') }}
               <select v-model="filterRole" class="form-select">
-                <option value="ALL">Todos los Roles</option>
+                <option value="ALL">{{ t('bulk_ops.all_roles') }}</option>
                 <option v-for="role in availableRoles" :key="role" :value="role">
                   {{ role }}
                 </option>
@@ -548,9 +551,9 @@
             </label>
 
             <label class="filter-label">
-              Etiqueta:
+              {{ t('bulk_ops.filter_tag') }}
               <select v-model="filterTag" class="form-select">
-                <option value="ALL">Todas las Etiquetas</option>
+                <option value="ALL">{{ t('bulk_ops.all_tags') }}</option>
                 <option v-for="tag in availableTags" :key="tag" :value="tag">
                   {{ tag }}
                 </option>
@@ -565,15 +568,15 @@
               <th class="th-chk">
                 <input
                   type="checkbox"
-                  aria-label="Seleccionar todos los routers mostrados"
+                  :aria-label="t('bulk_ops.th_select_all')"
                   @change="toggleAllVisible(($event.target as HTMLInputElement).checked)"
                 />
               </th>
-              <th>Identidad / Router</th>
-              <th>IP Primaria</th>
-              <th>Rol en Red</th>
-              <th>Etiqueta</th>
-              <th>Versión RouterOS</th>
+              <th>{{ t('bulk_ops.th_identity') }}</th>
+              <th>{{ t('bulk_ops.th_ip') }}</th>
+              <th>{{ t('bulk_ops.th_role') }}</th>
+              <th>{{ t('bulk_ops.th_tag') }}</th>
+              <th>{{ t('bulk_ops.th_ros') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -599,9 +602,7 @@
         </table>
 
         <div class="step-footer">
-          <span
-            >Seleccionados: <strong>{{ selectedRoutersCount }}</strong> routers</span
-          >
+          <span>{{ t('bulk_ops.selected_count', { count: selectedRoutersCount }) }}</span>
           <button
             type="button"
             class="btn btn--primary"
@@ -611,7 +612,7 @@
               generatePreview();
             "
           >
-            Siguiente: Configurar Plantilla ➔
+            {{ t('bulk_ops.btn_next_config') }}
           </button>
         </div>
       </div>
@@ -619,50 +620,50 @@
       <!-- PASO 2: Selección de Plantilla y Previsualización -->
       <div v-if="wizardStep === 2" class="wizard-step-card">
         <div class="step-header-with-actions">
-          <h2 class="step-title">Paso 2: Elegir o Crear Plantilla Parametrizable</h2>
+          <h2 class="step-title">{{ t('bulk_ops.step_2_title') }}</h2>
           <div class="tpl-action-buttons">
             <button
               type="button"
               class="btn-primary-sm"
-              title="Crear una nueva plantilla Golden Config"
+              :title="t('bulk_ops.btn_new_template')"
               @click="openCreateTemplateModal"
             >
-              + Nueva Plantilla
+              {{ t('bulk_ops.btn_new_template') }}
             </button>
             <button
               type="button"
               class="btn-secondary-sm"
-              title="Sincronizar plantillas predefinidas del sistema"
+              :title="t('bulk_ops.btn_seed_presets')"
               @click="seedDefaultTemplates"
             >
-              ⭐ Sincronizar Presets
+              {{ t('bulk_ops.btn_seed_presets') }}
             </button>
             <button
               v-if="selectedTemplateId"
               type="button"
               class="btn-secondary-sm"
-              title="Editar la plantilla seleccionada"
+              :title="t('bulk_ops.btn_edit_template')"
               @click="openEditTemplateModal"
             >
-              ✏️ Editar
+              {{ t('bulk_ops.btn_edit_template') }}
             </button>
             <button
               v-if="selectedTemplateId"
               type="button"
               class="btn-secondary-sm"
-              title="Clonar plantilla seleccionada"
+              :title="t('bulk_ops.btn_clone_template')"
               @click="cloneSelectedTemplate"
             >
-              📄 Clonar
+              {{ t('bulk_ops.btn_clone_template') }}
             </button>
             <button
               v-if="selectedTemplateId"
               type="button"
               class="btn-danger-sm"
-              title="Eliminar plantilla seleccionada"
+              :title="t('bulk_ops.btn_delete_template')"
               @click="deleteSelectedTemplate"
             >
-              🗑️ Eliminar
+              {{ t('bulk_ops.btn_delete_template') }}
             </button>
           </div>
         </div>
@@ -729,7 +730,7 @@
         <div class="template-variables-box">
           <div class="vars-box-header">
             <h3 class="vars-title">
-              Parámetros de la Plantilla
+              {{ t('bulk_ops.vars_title') }}
               <span v-if="selectedTemplate" class="vars-title-hint">
                 — {{ selectedTemplate.name }}
               </span>
@@ -744,7 +745,7 @@
 
           <!-- Si no hay plantilla seleccionada -->
           <div v-if="!selectedTemplateId" class="vars-empty-state">
-            <p class="text-muted">Seleccione una plantilla de la lista superior para configurar sus parámetros.</p>
+            <p class="text-muted">{{ t('bulk_ops.vars_empty') }}</p>
           </div>
 
           <!-- Si la plantilla no requiere parámetros -->
@@ -782,7 +783,7 @@
         <!-- Previsualización -->
         <div v-if="selectedTemplateId" class="preview-box">
           <div class="preview-header">
-            <span>Previsualización de Comandos REST (render-preview)</span>
+            <span>{{ t('bulk_ops.preview_title') }}</span>
             <span class="badge badge--safe">Safe Mode 60s Activado</span>
           </div>
           <pre class="preview-code">{{ previewPayload }}</pre>
@@ -790,7 +791,7 @@
 
         <div class="step-footer">
           <button type="button" class="btn btn--secondary" @click="wizardStep = 1">
-            ⬅️ Volver a Flota
+            {{ t('bulk_ops.btn_prev_step') }}
           </button>
           <button
             type="button"
@@ -798,7 +799,7 @@
             :disabled="!selectedTemplateId || selectedRoutersCount === 0"
             @click="startBulkExecution"
           >
-            🚀 Ejecutar en {{ selectedRoutersCount }} Routers con Safe Mode ➔
+            {{ t('bulk_ops.btn_execute_bulk') }} ({{ selectedRoutersCount }}) ➔
           </button>
         </div>
       </div>

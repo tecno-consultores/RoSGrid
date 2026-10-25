@@ -6,12 +6,15 @@
   import { useRoute, useRouter } from 'vue-router';
   import { http } from '@/api/httpClient';
   import { useAuthStore } from '@/stores/useAuthStore';
+  import { useI18n } from '@/composables/useI18n';
   import type { SystemRole, UserManagementItem, McpTokenResponse } from '@/types';
   import RgStepUp2FAModal from '@/components/common/RgStepUp2FAModal.vue';
   import ChangePasswordModal from '@/components/common/ChangePasswordModal.vue';
   import UserRouterMatrixModal from '@/components/admin/UserRouterMatrixModal.vue';
   import RbacRoleMatrixPanel from '@/components/admin/RbacRoleMatrixPanel.vue';
   import RgMcpTokenModal from '@/components/admin/RgMcpTokenModal.vue';
+
+  const { t } = useI18n();
 
   const ActiveSessionsKillSwitchView = defineAsyncComponent(
     () => import('@/views/ActiveSessionsKillSwitchView.vue'),
@@ -468,10 +471,9 @@
   <div class="users-view">
     <header class="view-header">
       <div>
-        <h1 class="view-title">Gestión de Usuarios y Roles RBAC (11 Roles)</h1>
+        <h1 class="view-title">{{ t('users_mgmt.title', 'Gestión de Usuarios y Roles RBAC (11 Roles)') }}</h1>
         <p class="view-subtitle">
-          Control de acceso técnico, definición de permisos por rol, reinicio de 2FA y matriz de
-          routers.
+          {{ t('users_mgmt.subtitle', 'Control de acceso técnico, definición de permisos por rol, reinicio de 2FA y matriz de routers.') }}
         </p>
       </div>
 
@@ -492,7 +494,7 @@
         </button>
 
         <button type="button" class="btn-create" @click="isCreateUserModalOpen = true">
-          + Nuevo Operador
+          {{ t('users_mgmt.btn_create_user', '+ Nuevo Operador') }}
         </button>
       </div>
     </header>
@@ -510,7 +512,7 @@
         @click="selectTab('users')"
       >
         <span class="tab-btn-icon" aria-hidden="true">👥</span>
-        <span class="tab-btn-text">Operadores &amp; Cuentas</span>
+        <span class="tab-btn-text">{{ t('users_mgmt.tab_users', 'Operadores & Cuentas') }}</span>
         <span class="tab-btn-badge">{{ usersList.length }}</span>
       </button>
 
@@ -525,7 +527,7 @@
         @click="selectTab('roles')"
       >
         <span class="tab-btn-icon" aria-hidden="true">🛡️</span>
-        <span class="tab-btn-text">Perfiles &amp; Matriz de Permisos</span>
+        <span class="tab-btn-text">{{ t('users_mgmt.tab_roles', 'Perfiles & Matriz de Permisos') }}</span>
         <span class="tab-btn-badge tab-btn-badge--cyan">11 Roles</span>
       </button>
 
@@ -540,7 +542,7 @@
         @click="selectTab('sessions')"
       >
         <span class="tab-btn-icon" aria-hidden="true">🛑</span>
-        <span class="tab-btn-text">Sesiones &amp; Kill-Switch</span>
+        <span class="tab-btn-text">{{ t('users_mgmt.tab_sessions', 'Sesiones & Kill-Switch') }}</span>
       </button>
     </div>
 
@@ -561,31 +563,31 @@
       <!-- Barra de Filtros Accesibles -->
       <div class="filters-bar">
         <div class="filter-item">
-          <label for="filter-search" class="filter-label">Buscar Operador:</label>
+          <label for="filter-search" class="filter-label">{{ t('inventory.filter_search_label', 'Buscar Operador:') }}</label>
           <input
             id="filter-search"
             v-model="searchFilter"
             type="search"
-            placeholder="Nombre, username o correo..."
+            :placeholder="t('users_mgmt.search_placeholder', 'Nombre, username o correo...')"
             class="filter-input"
           />
         </div>
 
         <div class="filter-item">
-          <label for="filter-role" class="filter-label">Rol RBAC:</label>
+          <label for="filter-role" class="filter-label">{{ t('users_mgmt.filter_role', 'Rol RBAC:') }}</label>
           <select id="filter-role" v-model="roleFilter" class="filter-select">
-            <option value="ALL">Todos los Roles (11)</option>
+            <option value="ALL">{{ t('bulk_ops.all_roles', 'Todos los Roles') }} (11)</option>
             <option v-for="r in availableRoles" :key="r" :value="r">{{ r }}</option>
           </select>
         </div>
 
         <div class="filter-item">
-          <label for="filter-status" class="filter-label">Estado:</label>
+          <label for="filter-status" class="filter-label">{{ t('users_mgmt.filter_status', 'Estado:') }}</label>
           <select id="filter-status" v-model="statusFilter" class="filter-select">
-            <option value="ALL">Todos los Estados</option>
-            <option value="ACTIVE">Activos</option>
-            <option value="PENDING">Pendientes de Aprobación</option>
-            <option value="INACTIVE">Bloqueados</option>
+            <option value="ALL">{{ t('users_mgmt.all_statuses', 'Todos los Estados') }}</option>
+            <option value="ACTIVE">{{ t('users_mgmt.status_active', 'Activos') }}</option>
+            <option value="PENDING">Pendientes</option>
+            <option value="INACTIVE">{{ t('users_mgmt.status_suspended', 'Bloqueados') }}</option>
           </select>
         </div>
       </div>
@@ -594,13 +596,13 @@
         <table class="rg-table" aria-label="Listado de usuarios y matriz RBAC">
           <thead>
             <tr>
-              <th scope="col">Operador / Username</th>
-              <th scope="col">Correo Electrónico</th>
-              <th scope="col">Rol RBAC</th>
-              <th scope="col">Estado 2FA</th>
-              <th scope="col">Acceso Routers</th>
-              <th scope="col">Estado</th>
-              <th scope="col" class="col-actions">Acciones</th>
+              <th scope="col">{{ t('users_mgmt.th_user', 'Operador / Username') }}</th>
+              <th scope="col">{{ t('users_mgmt.th_email', 'Correo Electrónico') }}</th>
+              <th scope="col">{{ t('users_mgmt.th_role', 'Rol RBAC') }}</th>
+              <th scope="col">{{ t('users_mgmt.th_2fa', 'Estado 2FA') }}</th>
+              <th scope="col">{{ t('users_mgmt.th_scope', 'Acceso Routers') }}</th>
+              <th scope="col">{{ t('users_mgmt.th_status', 'Estado') }}</th>
+              <th scope="col" class="col-actions">{{ t('users_mgmt.th_actions', 'Acciones') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -674,7 +676,7 @@
                     aria-label="Abrir matriz de asignación de routers"
                     @click="openMatrixModal(u)"
                   >
-                    ⚙ Matriz Routers
+                    {{ t('users_mgmt.btn_router_matrix', '🎯 Matriz Routers') }}
                   </button>
 
                   <button
@@ -684,7 +686,7 @@
                     aria-label="Cambiar o restablecer contraseña de este operador"
                     @click="openChangePasswordModal(u)"
                   >
-                    🔑 Clave
+                    {{ t('users_mgmt.btn_change_pass', '🔑 Clave') }}
                   </button>
 
                   <button
@@ -694,7 +696,7 @@
                     aria-label="Reiniciar 2FA de este operador"
                     @click="openReset2FAModal(u)"
                   >
-                    ↺ Reset 2FA
+                    {{ t('users_mgmt.btn_reset_2fa', '↺ Reset 2FA') }}
                   </button>
 
                   <button
@@ -709,7 +711,7 @@
                     aria-label="Generar Token de Acceso MCP para agentes IA"
                     @click="openMcpTokenModal(u)"
                   >
-                    ⚡ Token MCP
+                    {{ t('users_mgmt.btn_mcp_token', '🤖 Token MCP') }}
                   </button>
                 </template>
               </td>

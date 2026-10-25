@@ -5,9 +5,11 @@
   import { ref, computed, onMounted } from 'vue';
   import { http } from '@/api/httpClient';
   import { useAuthStore } from '@/stores/useAuthStore';
+  import { useI18n } from '@/composables/useI18n';
   import type { ApprovalRequestItem } from '@/types';
 
   const authStore = useAuthStore();
+  const { t } = useI18n();
 
   const activeTab = ref<'pending' | 'approved' | 'rejected'>('pending');
   const isLoading = ref(false);
@@ -125,15 +127,14 @@
   <div class="approvals-view">
     <header class="view-header">
       <div>
-        <h1 class="view-title">Bandeja de Aprobaciones — Maker-Checker</h1>
+        <h1 class="view-title">{{ t('approvals.title') }}</h1>
         <p class="view-subtitle">
-          Control de cuatro ojos (Four-Eyes Principle) para cambios críticos de red con Safe Mode
-          (60s)
+          {{ t('approvals.subtitle') }}
         </p>
       </div>
 
       <!-- Pestañas de Aprobación -->
-      <nav class="subtabs-bar" role="tablist" aria-label="Estados de solicitudes Maker-Checker">
+      <nav class="subtabs-bar" role="tablist" :aria-label="t('approvals.subtabs_aria')">
         <button
           type="button"
           class="btn-subtab"
@@ -142,7 +143,7 @@
           :aria-selected="activeTab === 'pending'"
           @click="activeTab = 'pending'"
         >
-          Pendientes de Firma
+          {{ t('approvals.tab_pending') }}
         </button>
         <button
           type="button"
@@ -152,7 +153,7 @@
           :aria-selected="activeTab === 'approved'"
           @click="activeTab = 'approved'"
         >
-          Aprobadas y Ejecutadas
+          {{ t('approvals.tab_approved') }}
         </button>
         <button
           type="button"
@@ -162,7 +163,7 @@
           :aria-selected="activeTab === 'rejected'"
           @click="activeTab = 'rejected'"
         >
-          Rechazadas / Expiradas
+          {{ t('approvals.tab_rejected') }}
         </button>
       </nav>
     </header>
@@ -182,7 +183,7 @@
           :class="{ 'inbox-card--selected': selectedRequest?.id === appr.id }"
           tabindex="0"
           role="button"
-          :aria-label="`Inspeccionar solicitud ${appr.id}`"
+          :aria-label="t('approvals.inspect_aria', { id: appr.id })"
           @click="selectedRequest = appr"
           @keydown.enter="selectedRequest = appr"
         >
@@ -198,46 +199,46 @@
             <span class="requester"
               >👤 @{{ appr.requested_by_username }} ({{ appr.requested_by_role }})</span
             >
-            <span v-if="isSelfApproval(appr)" class="self-flag font-bold">🚫 Tu solicitud</span>
+            <span v-if="isSelfApproval(appr)" class="self-flag font-bold">{{ t('approvals.your_request') }}</span>
           </div>
         </div>
 
         <div v-if="filteredRequests.length === 0" class="empty-inbox">
-          No hay solicitudes en esta bandeja.
+          {{ t('approvals.empty_inbox') }}
         </div>
       </div>
 
       <!-- Tarjeta de Inspección Técnica (JSON Previo vs Propuesto) -->
       <div v-if="selectedRequest" class="inspector-panel font-tabular">
         <div class="inspector-header">
-          <h2 class="inspector-title">Inspección de Solicitud #{{ selectedRequest.id }}</h2>
+          <h2 class="inspector-title">{{ t('approvals.inspection_title', { id: selectedRequest.id }) }}</h2>
           <span class="badge-status">{{ selectedRequest.status }}</span>
         </div>
 
         <div class="inspector-details">
           <p>
-            <strong>Equipo Destino:</strong> {{ selectedRequest.router_name }} ({{
+            <strong>{{ t('approvals.target_device') }}</strong> {{ selectedRequest.router_name }} ({{
               selectedRequest.router_id
             }})
           </p>
           <p>
-            <strong>Solicitante:</strong> @{{ selectedRequest.requested_by_username }} (Rol:
+            <strong>{{ t('approvals.requester') }}</strong> @{{ selectedRequest.requested_by_username }} ({{ t('approvals.role_label') }}
             {{ selectedRequest.requested_by_role }})
           </p>
-          <p><strong>Motivo / Justificación:</strong> {{ selectedRequest.justification }}</p>
+          <p><strong>{{ t('approvals.justification') }}</strong> {{ selectedRequest.justification }}</p>
         </div>
 
         <!-- Comparador JSON Previo vs Propuesto -->
         <div class="diff-json-grid">
           <div class="json-box">
-            <span class="json-title text-amber">Estado Previo en MikroTik</span>
+            <span class="json-title text-amber">{{ t('approvals.prev_state') }}</span>
             <pre class="json-pre">{{
               JSON.stringify(selectedRequest.previous_state_snapshot, null, 2)
             }}</pre>
           </div>
 
           <div class="json-box">
-            <span class="json-title text-emerald">Cambio Propuesto (A Aplicar)</span>
+            <span class="json-title text-emerald">{{ t('approvals.proposed_change') }}</span>
             <pre class="json-pre">{{
               JSON.stringify(selectedRequest.request_payload, null, 2)
             }}</pre>
@@ -247,17 +248,16 @@
         <!-- Acciones Maker-Checker -->
         <div v-if="selectedRequest.status === 'AWAITING_APPROVAL'" class="actions-panel">
           <div v-if="isSelfApproval(selectedRequest)" class="banner banner--warning font-bold">
-            ⛔ Segregación de funciones: Como solicitante no puedes aprobar tu propio cambio. Se
-            requiere firma de otro Supervisor o N3.
+            {{ t('approvals.self_approval_warning') }}
           </div>
 
           <div class="comment-group">
-            <label for="review-comment" class="form-label">Comentario de Revisión:</label>
+            <label for="review-comment" class="form-label">{{ t('approvals.review_comment_label') }}</label>
             <input
               id="review-comment"
               v-model="reviewComment"
               type="text"
-              placeholder="Escribe un comentario técnico o ticket de respaldo..."
+              :placeholder="t('approvals.review_comment_placeholder')"
               class="form-input"
             />
           </div>
@@ -269,7 +269,7 @@
               :disabled="!isCheckerAuthorized"
               @click="handleReject(selectedRequest)"
             >
-              ✕ Rechazar Solicitud
+              {{ t('approvals.btn_reject') }}
             </button>
 
             <button
@@ -278,7 +278,7 @@
               :disabled="!isCheckerAuthorized || isSelfApproval(selectedRequest)"
               @click="handleApprove(selectedRequest)"
             >
-              ✓ Aprobar y Ejecutar con Safe Mode (60s)
+              {{ t('approvals.btn_approve') }}
             </button>
           </div>
         </div>
@@ -286,9 +286,9 @@
         <!-- Resultado de la Ejecución en MikroTik -->
         <div v-else-if="selectedRequest.execution_result" class="execution-result-panel">
           <div class="result-header">
-            <span class="font-bold text-cyan">⚡ Resultado de la Ejecución en Flota MikroTik:</span>
+            <span class="font-bold text-cyan">{{ t('approvals.execution_result_title') }}</span>
             <span class="badge" :class="selectedRequest.status === 'APPROVED' ? 'badge--approved' : 'badge--rejected'">
-              {{ selectedRequest.status === 'APPROVED' ? '✓ Ejecutado Exitosamente' : '✕ Fallo en la Ejecución' }}
+              {{ selectedRequest.status === 'APPROVED' ? t('approvals.status_executed') : t('approvals.status_failed') }}
             </span>
           </div>
           <pre class="json-pre execution-json">{{ JSON.stringify(selectedRequest.execution_result, null, 2) }}</pre>

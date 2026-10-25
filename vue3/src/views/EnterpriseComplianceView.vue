@@ -854,20 +854,20 @@
             <div class="score-grade" :class="'grade-' + (cisAudit?.compliance_grade || 'C')">
               Grado {{ cisAudit?.compliance_grade || 'C' }}
             </div>
-            <p class="score-desc">Puntaje Global de Cumplimiento Normativo CIS</p>
+            <p class="score-desc">{{ t('enterprise.cis_score_desc', 'Puntaje Global de Cumplimiento Normativo CIS') }}</p>
           </div>
 
           <div class="score-meta-card">
             <div class="metric-row">
-              <span>Directivas Evaluadas:</span>
+              <span>{{ t('enterprise.cis_directives_eval', 'Directivas Evaluadas:') }}</span>
               <strong>{{ cisAudit?.total_directives || 10 }}</strong>
             </div>
             <div class="metric-row">
-              <span>Directivas Aprobadas:</span>
+              <span>{{ t('enterprise.cis_directives_passed', 'Directivas Aprobadas:') }}</span>
               <strong class="text-success">{{ cisAudit?.passed_directives || 0 }}</strong>
             </div>
             <div class="metric-row">
-              <span>Directivas Fallidas / Riesgo:</span>
+              <span>{{ t('enterprise.cis_directives_failed', 'Directivas Fallidas / Riesgo:') }}</span>
               <strong class="text-danger">{{ cisAudit?.failed_directives || 0 }}</strong>
             </div>
             <button
@@ -888,13 +888,13 @@
           <table class="tactical-table" aria-label="Directivas CIS Hardening">
             <thead>
               <tr>
-                <th scope="col">Código</th>
-                <th scope="col">Directiva Técnica</th>
-                <th scope="col">Peso</th>
-                <th scope="col">Estado</th>
-                <th scope="col">Hallazgo Técnico</th>
-                <th scope="col">Remediación Automática</th>
-                <th scope="col">Acción</th>
+                <th scope="col">{{ t('enterprise.cis_th_code', 'Código') }}</th>
+                <th scope="col">{{ t('enterprise.cis_th_title', 'Directiva Técnica') }}</th>
+                <th scope="col">{{ t('enterprise.cis_th_weight', 'Peso') }}</th>
+                <th scope="col">{{ t('enterprise.cis_th_status', 'Estado') }}</th>
+                <th scope="col">{{ t('enterprise.cis_th_finding', 'Hallazgo Técnico') }}</th>
+                <th scope="col">{{ t('enterprise.cis_th_remediation', 'Remediación Automática') }}</th>
+                <th scope="col">{{ t('enterprise.cis_th_action', 'Acción') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -1229,13 +1229,13 @@
           <table class="tactical-table" aria-label="Túneles SD-WAN Spoke">
             <thead>
               <tr>
-                <th scope="col">Sucursal Spoke</th>
-                <th scope="col">Interfaz</th>
-                <th scope="col">Subred Punto a Punto</th>
-                <th scope="col">Endpoint Hub</th>
-                <th scope="col">Protocolo</th>
-                <th scope="col">Failover Multi-WAN</th>
-                <th scope="col">Estado</th>
+                <th scope="col">{{ t('enterprise.sdwan_th_spoke', 'Sucursal Spoke') }}</th>
+                <th scope="col">{{ t('enterprise.sdwan_th_interface', 'Interfaz') }}</th>
+                <th scope="col">{{ t('enterprise.sdwan_th_subnet', 'Subred Punto a Punto') }}</th>
+                <th scope="col">{{ t('enterprise.sdwan_th_hub', 'Endpoint Hub') }}</th>
+                <th scope="col">{{ t('enterprise.sdwan_th_proto', 'Protocolo') }}</th>
+                <th scope="col">{{ t('enterprise.sdwan_th_failover', 'Failover Multi-WAN') }}</th>
+                <th scope="col">{{ t('enterprise.sdwan_th_status', 'Estado') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -1291,7 +1291,7 @@
 
             <div class="ports-classification">
               <div>
-                <span class="ports-title text-success">Puertos Confiables (Trusted / Uplink):</span>
+                <span class="ports-title text-success">{{ t('enterprise.switching_trusted', 'Puertos Confiables (Trusted / Uplink):') }}</span>
                 <div class="tags-group">
                   <span v-for="p in b.trusted_ports" :key="p" class="port-tag tag-trusted">
                     {{ p }}
@@ -1301,7 +1301,7 @@
 
               <div>
                 <span class="ports-title text-warning"
-                  >Puertos de Acceso (Untrusted / Confinados):</span
+                  >{{ t('enterprise.switching_untrusted', 'Puertos de Acceso (Untrusted / Confinados):') }}</span
                 >
                 <div class="tags-group">
                   <span v-for="p in b.untrusted_ports" :key="p" class="port-tag tag-untrusted">
@@ -1315,18 +1315,18 @@
 
         <!-- Alertas de Rogue DHCP -->
         <h2 class="section-subtitle" style="margin-top: 1.5rem">
-          Servidores DHCP No Autorizados Detectados (Rogue DHCP)
+          {{ t('enterprise.switching_rogue_title', 'Servidores DHCP No Autorizados Detectados (Rogue DHCP)') }}
         </h2>
         <div class="tactical-table-wrapper">
           <table class="tactical-table" aria-label="Alertas Rogue DHCP">
             <thead>
               <tr>
-                <th scope="col">ID Alerta</th>
-                <th scope="col">MAC Atacante/Rogue</th>
-                <th scope="col">IP Ofrecida</th>
-                <th scope="col">Puerto / Interfaz</th>
-                <th scope="col">Estado</th>
-                <th scope="col">Acción Inmediata</th>
+                <th scope="col">{{ t('enterprise.switching_th_alert', 'ID Alerta') }}</th>
+                <th scope="col">{{ t('enterprise.switching_th_mac', 'MAC Atacante/Rogue') }}</th>
+                <th scope="col">{{ t('enterprise.switching_th_ip', 'IP Ofrecida') }}</th>
+                <th scope="col">{{ t('enterprise.switching_th_port', 'Puerto / Interfaz') }}</th>
+                <th scope="col">{{ t('enterprise.switching_th_status', 'Estado') }}</th>
+                <th scope="col">{{ t('enterprise.switching_th_action', 'Acción Inmediata') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -1395,16 +1395,16 @@
           <table class="tactical-table" aria-label="Métricas de Cumplimiento de SLA">
             <thead>
               <tr>
-                <th scope="col">Destino / Gateway</th>
-                <th scope="col">Nombre Enlace</th>
-                <th scope="col">Uptime %</th>
-                <th scope="col">Latencia Media</th>
+                <th scope="col">{{ t('enterprise.sla_th_target', 'Destino / Gateway') }}</th>
+                <th scope="col">{{ t('enterprise.sla_th_link', 'Nombre Enlace') }}</th>
+                <th scope="col">{{ t('enterprise.sla_th_uptime', 'Uptime %') }}</th>
+                <th scope="col">{{ t('enterprise.sla_th_latency', 'Latencia Media') }}</th>
                 <th scope="col">P95 Latency</th>
                 <th scope="col">P99 Latency</th>
-                <th scope="col">Jitter</th>
-                <th scope="col">Pérdida %</th>
-                <th scope="col">Umbral SLA</th>
-                <th scope="col">Estado Contrato</th>
+                <th scope="col">{{ t('enterprise.sla_th_jitter', 'Jitter') }}</th>
+                <th scope="col">{{ t('enterprise.sla_th_loss', 'Pérdida %') }}</th>
+                <th scope="col">{{ t('enterprise.sla_th_threshold', 'Umbral SLA') }}</th>
+                <th scope="col">{{ t('enterprise.sla_th_status', 'Estado Contrato') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -1438,7 +1438,7 @@
 
         <!-- Formulario de Ejecución de Sondeo Inmediato -->
         <div class="sla-form-card" style="margin-top: 1.5rem">
-          <h2 class="card-title">Ejecutar Ciclo de Sondeo Inmediato</h2>
+          <h2 class="card-title">{{ t('enterprise.sla_probe_title', 'Ejecutar Ciclo de Sondeo Inmediato') }}</h2>
           <form class="tactical-form form-inline" @submit.prevent="handleTriggerProbe">
             <div class="form-group">
               <label for="sla-target-host">Host / IP Destino</label>
@@ -1471,7 +1471,7 @@
             </div>
             <button type="submit" class="tactical-btn btn-primary" :disabled="actionLoading">
               <span>⏱️</span>
-              Ejecutar Sondeo
+              {{ t('enterprise.sla_btn_probe', 'Ejecutar Sondeo Inmediato') }}
             </button>
           </form>
         </div>

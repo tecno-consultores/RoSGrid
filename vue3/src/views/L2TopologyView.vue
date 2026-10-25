@@ -5,9 +5,11 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { http } from '@/api/httpClient';
+import { useI18n } from '@/composables/useI18n';
 import type { L2TopologyResponse, TopologyNode, TopologyEdge } from '@/types';
 
 const router = useRouter();
+const { t } = useI18n();
 
 const loading = ref(false);
 const errorMessage = ref<string | null>(null);
@@ -423,9 +425,9 @@ watch([searchQuery, onlyPoeFilter], () => {
   <main class="l2-topology-view" aria-labelledby="topology-title">
     <header class="topo-header">
       <div>
-        <h1 id="topology-title" class="topo-title">Topología Física Layer 2 — Mapa de Interconexión</h1>
+        <h1 id="topology-title" class="topo-title">{{ t('l2_topology.title') }}</h1>
         <p class="topo-subtitle">
-          Vecinos MNDP/LLDP en vivo, puertos de interconexión y telemetría de alimentación PoE
+          {{ t('l2_topology.subtitle') }}
         </p>
       </div>
 
@@ -434,21 +436,21 @@ watch([searchQuery, onlyPoeFilter], () => {
           type="button"
           class="btn-refresh-topo"
           :disabled="loading"
-          aria-label="Refrescar topología física L2 en vivo"
+          :aria-label="t('l2_topology.btn_refresh')"
           @click="loadTopology(true)"
         >
           <span v-if="loading" class="spinner-sm" aria-hidden="true"></span>
           <span v-else aria-hidden="true">🔄</span>
-          <span>{{ loading ? 'Descubriendo...' : 'Refrescar L2' }}</span>
+          <span>{{ loading ? t('l2_topology.discovering') : t('l2_topology.btn_refresh') }}</span>
         </button>
 
         <button
           type="button"
           class="btn-reset-view"
-          aria-label="Centrar y resetear vista del mapa"
+          :aria-label="t('l2_topology.btn_center')"
           @click="resetZoomAndPan"
         >
-          <span>🎯 Centrar</span>
+          <span>{{ t('l2_topology.btn_center') }}</span>
         </button>
       </div>
     </header>
@@ -462,21 +464,21 @@ watch([searchQuery, onlyPoeFilter], () => {
           v-model="searchQuery"
           type="text"
           class="input-search"
-          placeholder="Filtrar por identidad, modelo o IP..."
+          :placeholder="t('l2_topology.search_placeholder')"
         />
       </div>
 
       <label class="checkbox-poe-label">
         <input v-model="onlyPoeFilter" type="checkbox" class="checkbox-poe" />
-        <span>Solo enlaces PoE (⚡)</span>
+        <span>{{ t('l2_topology.filter_only_poe') }}</span>
       </label>
 
       <!-- Leyenda Rápida -->
       <div class="legend-wrap" aria-label="Leyenda de símbolos">
-        <span class="legend-item"><span class="led led--online"></span> Online</span>
-        <span class="legend-item"><span class="led led--pse">⚡</span> Inyector PSE</span>
-        <span class="legend-item"><span class="line-sample line--poe"></span> PoE Delivery</span>
-        <span class="legend-item"><span class="line-sample line--data"></span> Enlace Datos</span>
+        <span class="legend-item"><span class="led led--online"></span> {{ t('l2_topology.legend_online') }}</span>
+        <span class="legend-item"><span class="led led--pse">⚡</span> {{ t('l2_topology.legend_pse') }}</span>
+        <span class="legend-item"><span class="line-sample line--poe"></span> {{ t('l2_topology.legend_poe_delivery') }}</span>
+        <span class="legend-item"><span class="line-sample line--data"></span> {{ t('l2_topology.legend_data_link') }}</span>
       </div>
     </section>
 
@@ -513,7 +515,7 @@ watch([searchQuery, onlyPoeFilter], () => {
 
         <div class="drawer-body">
           <div class="drawer-kpi-row">
-            <span class="drawer-kpi-label">Estado:</span>
+            <span class="drawer-kpi-label">{{ t('l2_topology.drawer_node_status') }}</span>
             <span
               class="status-tag"
               :class="selectedNode.status === 'ONLINE' ? 'status-tag--online' : 'status-tag--offline'"
@@ -523,24 +525,24 @@ watch([searchQuery, onlyPoeFilter], () => {
           </div>
 
           <div class="drawer-kpi-row">
-            <span class="drawer-kpi-label">Dirección IP:</span>
+            <span class="drawer-kpi-label">{{ t('l2_topology.drawer_node_ip') }}</span>
             <span class="tabular-nums font-mono">{{ selectedNode.ip_address }}</span>
           </div>
 
           <div class="drawer-kpi-row">
-            <span class="drawer-kpi-label">Modelo:</span>
+            <span class="drawer-kpi-label">{{ t('l2_topology.drawer_node_model') }}</span>
             <span>{{ selectedNode.model_name || selectedNode.board_name || 'MikroTik Router' }}</span>
           </div>
 
           <div class="drawer-kpi-row">
-            <span class="drawer-kpi-label">RouterOS:</span>
+            <span class="drawer-kpi-label">{{ t('l2_topology.drawer_node_ros') }}</span>
             <span class="tabular-nums font-mono">v{{ selectedNode.ros_version || '7' }}</span>
           </div>
 
           <div class="drawer-kpi-row">
-            <span class="drawer-kpi-label">Alimentación PoE:</span>
-            <span v-if="selectedNode.is_pse" class="badge-pse">⚡ Inyector PoE (PSE)</span>
-            <span v-else class="badge-pd">Dispositivo Alimentado (PD) / Estándar</span>
+            <span class="drawer-kpi-label">{{ t('l2_topology.drawer_node_poe') }}</span>
+            <span v-if="selectedNode.is_pse" class="badge-pse">{{ t('l2_topology.badge_pse') }}</span>
+            <span v-else class="badge-pd">{{ t('l2_topology.badge_pd') }}</span>
           </div>
 
           <button
@@ -549,7 +551,7 @@ watch([searchQuery, onlyPoeFilter], () => {
             :aria-label="`Abrir consola WebFig de ${selectedNode.display_name}`"
             @click="openRouterWebFig(selectedNode.id)"
           >
-            ⚡ Abrir Consola WebFig
+            {{ t('l2_topology.btn_open_webfig') }}
           </button>
         </div>
       </aside>
@@ -557,7 +559,7 @@ watch([searchQuery, onlyPoeFilter], () => {
       <!-- Panel Lateral de Detalles de Enlace -->
       <aside v-else-if="selectedEdge" class="detail-drawer" aria-label="Detalles del enlace Layer 2">
         <div class="drawer-header">
-          <h2 class="drawer-title">Enlace Físico L2</h2>
+          <h2 class="drawer-title">{{ t('l2_topology.drawer_edge_title') }}</h2>
           <button
             type="button"
             class="btn-close-drawer"
@@ -570,29 +572,29 @@ watch([searchQuery, onlyPoeFilter], () => {
 
         <div class="drawer-body">
           <div class="drawer-kpi-row">
-            <span class="drawer-kpi-label">Puerto Origen:</span>
+            <span class="drawer-kpi-label">{{ t('l2_topology.drawer_edge_source') }}</span>
             <span class="font-mono">{{ selectedEdge.source_interface }}</span>
           </div>
 
           <div class="drawer-kpi-row">
-            <span class="drawer-kpi-label">Puerto Destino:</span>
+            <span class="drawer-kpi-label">{{ t('l2_topology.drawer_edge_target') }}</span>
             <span class="font-mono">{{ selectedEdge.target_interface }}</span>
           </div>
 
           <div class="drawer-kpi-row">
-            <span class="drawer-kpi-label">Velocidad:</span>
+            <span class="drawer-kpi-label">{{ t('l2_topology.drawer_edge_speed') }}</span>
             <span class="font-mono">{{ selectedEdge.link_speed || '1Gbps' }}</span>
           </div>
 
           <div class="drawer-kpi-row">
-            <span class="drawer-kpi-label">Protocolo:</span>
+            <span class="drawer-kpi-label">{{ t('l2_topology.drawer_edge_proto') }}</span>
             <span>{{ selectedEdge.protocol }}</span>
           </div>
 
           <div v-if="selectedEdge.is_poe_delivering" class="poe-details-box">
-            <span class="poe-title">⚡ Suministro de Energía PoE Activo</span>
+            <span class="poe-title">{{ t('l2_topology.poe_active_supply') }}</span>
             <p class="poe-watts tabular-nums font-mono">
-              Consumo medido: {{ (selectedEdge.poe_power_watts ?? 0).toFixed(1) }} Watts
+              {{ t('l2_topology.poe_measured_consumption', { watts: (selectedEdge.poe_power_watts ?? 0).toFixed(1) }) }}
             </p>
           </div>
         </div>

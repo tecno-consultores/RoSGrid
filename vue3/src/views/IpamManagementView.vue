@@ -5,12 +5,15 @@
   import { computed, onMounted, ref } from 'vue';
   import { useIpamStore } from '@/stores/useIpamStore';
   import { useInventoryStore } from '@/stores/useInventoryStore';
+  import { useI18n } from '@/composables/useI18n';
   import IpamPrefixTable from '@/components/ipam/IpamPrefixTable.vue';
   import IpamIpGridModal from '@/components/ipam/IpamIpGridModal.vue';
   import CorporateIpv6ManagerModal from '@/components/ipam/CorporateIpv6ManagerModal.vue';
   import FiberCutAlertBanner from '@/components/operations/FiberCutAlertBanner.vue';
   import type { CustomerService, IPAMPrefix } from '@/types';
   import { http } from '@/api/httpClient';
+
+  const { t } = useI18n();
 
   const ipamStore = useIpamStore();
   const inventoryStore = useInventoryStore();
@@ -195,19 +198,19 @@
     <!-- Métricas Tácticas Superiores -->
     <section class="ipam-kpi-grid">
       <div class="kpi-card">
-        <span class="kpi-label">Abonados Totales (PPPoE/DHCP)</span>
+        <span class="kpi-label">{{ t('ipam.total_subscribers') }}</span>
         <span class="kpi-value text-cyan">{{ totalSubscribersCount }}</span>
       </div>
       <div class="kpi-card">
-        <span class="kpi-label">Abonados en Línea (Reachability)</span>
+        <span class="kpi-label">{{ t('ipam.online_subscribers') }}</span>
         <span class="kpi-value text-green">{{ activeSubscribersCount }}</span>
       </div>
       <div class="kpi-card">
-        <span class="kpi-label">Prefijos & Supernets Activas</span>
+        <span class="kpi-label">{{ t('ipam.active_prefixes') }}</span>
         <span class="kpi-value text-purple">{{ ipamStore.prefixes.length }}</span>
       </div>
       <div class="kpi-card">
-        <span class="kpi-label">VRFs de Enrutamiento</span>
+        <span class="kpi-label">{{ t('ipam.routing_vrfs') }}</span>
         <span class="kpi-value text-yellow">{{ ipamStore.vrfs.length }}</span>
       </div>
     </section>
@@ -219,21 +222,21 @@
         :class="['tab-btn', { active: activeSubTab === 'prefixes' }]"
         @click="activeSubTab = 'prefixes'"
       >
-        🌐 Prefijos & Árbol CIDR
+        {{ t('ipam.tab_prefixes') }}
       </button>
       <button
         type="button"
         :class="['tab-btn', { active: activeSubTab === 'subscribers' }]"
         @click="activeSubTab = 'subscribers'"
       >
-        👥 Servicios de Abonados (FTTH / ISP)
+        {{ t('ipam.tab_subscribers') }}
       </button>
       <button
         type="button"
         :class="['tab-btn', { active: activeSubTab === 'sync' }]"
         @click="activeSubTab = 'sync'"
       >
-        🔄 Sincronización MikroTik
+        {{ t('ipam.tab_sync') }}
       </button>
     </nav>
 
@@ -248,9 +251,9 @@
     <!-- Contenido 2: Abonados FTTH -->
     <section v-if="activeSubTab === 'subscribers'" class="subscribers-section">
       <header class="section-toolbar">
-        <h3>Listado de Clientes y Asignación Dual-Stack</h3>
+        <h3>{{ t('ipam.subscribers_list_title') }}</h3>
         <button type="button" class="btn-rg btn-rg--cyan" @click="newSubscriberModalOpen = true">
-          ➕ Registrar Abonado
+          {{ t('ipam.btn_register_subscriber') }}
         </button>
       </header>
 
@@ -258,20 +261,20 @@
         <table class="rg-table">
           <thead>
             <tr>
-              <th scope="col">Cliente / Razón Social</th>
-              <th scope="col">Tipo & Protocolo</th>
-              <th scope="col">Usuario PPPoE</th>
-              <th scope="col">Puerto PON & Caja</th>
-              <th scope="col">Modo ONU</th>
-              <th scope="col">Estado Conectividad</th>
-              <th scope="col">Ubicación GPS</th>
-              <th scope="col">Acciones</th>
+              <th scope="col">{{ t('ipam.th_customer') }}</th>
+              <th scope="col">{{ t('ipam.th_type_proto') }}</th>
+              <th scope="col">{{ t('ipam.th_pppoe_user') }}</th>
+              <th scope="col">{{ t('ipam.th_pon_box') }}</th>
+              <th scope="col">{{ t('ipam.th_onu_mode') }}</th>
+              <th scope="col">{{ t('ipam.th_reachability') }}</th>
+              <th scope="col">{{ t('ipam.th_gps') }}</th>
+              <th scope="col">{{ t('ipam.th_actions') }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="ipamStore.customerServices.length === 0">
               <td colspan="8" class="empty-state-cell">
-                No hay abonados registrados. Haz clic en "Registrar Abonado" para añadir uno.
+                {{ t('ipam.empty_subscribers') }}
               </td>
             </tr>
             <tr v-for="sub in ipamStore.customerServices" :key="sub.id" class="table-row">
@@ -310,7 +313,7 @@
                   📍 {{ Number(sub.latitude).toFixed(4) }}, {{ Number(sub.longitude).toFixed(4) }}
                 </span>
                 <span v-else class="geo-badge geo-badge--none font-mono">
-                  Sin Coordenadas
+                  {{ t('ipam.no_coords') }}
                 </span>
               </td>
               <td>
@@ -320,7 +323,7 @@
                   :aria-label="`Cambiar o agregar ubicación GPS de ${sub.customer_name}`"
                   @click="openLocationModal(sub)"
                 >
-                  📍 Ubicación
+                  {{ t('ipam.btn_location') }}
                 </button>
               </td>
             </tr>
@@ -332,11 +335,9 @@
     <!-- Contenido 3: Sincronización MikroTik -->
     <section v-if="activeSubTab === 'sync'" class="sync-section">
       <div class="sync-card">
-        <h3>Descubrimiento Automático de Redes e IPs desde MikroTik</h3>
+        <h3>{{ t('ipam.sync_title') }}</h3>
         <p class="sync-desc">
-          Consulta directamente las tablas <code>/ip/address</code> y <code>/ip/pool</code> del
-          equipo seleccionado y registra automáticamente los prefijos y direcciones faltantes en la
-          base de datos IPAM de RoSGrid.
+          {{ t('ipam.sync_desc') }}
         </p>
 
         <div class="form-row-sync">
@@ -352,7 +353,7 @@
             :disabled="isSyncing || !selectedSyncRouterId"
             @click="handleSyncMikrotik"
           >
-            {{ isSyncing ? 'Sincronizando...' : '🚀 Sincronizar Router Seleccionado' }}
+            {{ isSyncing ? t('ipam.syncing') : `🚀 ${t('ipam.btn_sync_single')}` }}
           </button>
 
           <button
@@ -361,7 +362,7 @@
             :disabled="isSyncing"
             @click="handleSyncAllMikrotik"
           >
-            {{ isSyncing ? 'Sincronizando...' : '🌐 Sincronizar Toda la Flota (DHCP)' }}
+            {{ isSyncing ? t('ipam.syncing') : `🌐 ${t('ipam.btn_sync_all')}` }}
           </button>
         </div>
 

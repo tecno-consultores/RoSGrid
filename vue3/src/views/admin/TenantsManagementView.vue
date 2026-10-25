@@ -5,9 +5,11 @@
   import { ref, onMounted } from 'vue';
   import { useRouter } from 'vue-router';
   import { http } from '@/api/httpClient';
+  import { useI18n } from '@/composables/useI18n';
   import type { TenantItem } from '@/types';
   import { useAuthStore } from '@/stores/useAuthStore';
 
+  const { t } = useI18n();
   const router = useRouter();
   const authStore = useAuthStore();
   const isLoading = ref(false);
@@ -124,9 +126,9 @@
   <div class="tenants-view">
     <header class="view-header">
       <div>
-        <h1 class="view-title">Administración de Empresas (Multi-Tenant)</h1>
+        <h1 class="view-title">{{ t('tenants_mgmt.title', 'Administración de Empresas (Multi-Tenant)') }}</h1>
         <p class="view-subtitle">
-          Gestión de organizaciones, cuotas de hardware MikroTik y suspensión de Tenants.
+          {{ t('tenants_mgmt.subtitle', 'Gestión de organizaciones, cuotas de hardware MikroTik y suspensión de Tenants.') }}
         </p>
       </div>
       <button
@@ -136,7 +138,7 @@
         class="btn-create"
         @click="isCreateModalOpen = true"
       >
-        + Registrar Empresa
+        {{ t('tenants_mgmt.btn_register_tenant', '+ Registrar Empresa') }}
       </button>
     </header>
 
@@ -151,34 +153,34 @@
       <table class="rg-table" aria-label="Listado de empresas y cuotas">
         <thead>
           <tr>
-            <th scope="col">Organización</th>
-            <th scope="col">Slug</th>
+            <th scope="col">{{ t('tenants_mgmt.th_tenant', 'Organización') }}</th>
+            <th scope="col">{{ t('tenants_mgmt.th_slug', 'Slug') }}</th>
             <th scope="col">RIF / Tax ID</th>
-            <th scope="col">Estado</th>
-            <th scope="col">Cuota Routers</th>
+            <th scope="col">{{ t('tenants_mgmt.th_status', 'Estado') }}</th>
+            <th scope="col">{{ t('tenants_mgmt.th_quotas', 'Cuota Routers') }}</th>
             <th scope="col">Cuota Usuarios</th>
             <th scope="col">Safe Mode</th>
-            <th scope="col" class="col-actions">Acciones</th>
+            <th scope="col" class="col-actions">{{ t('tenants_mgmt.th_actions', 'Acciones') }}</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="t in tenants" :key="t.id">
+          <tr v-for="tenant in tenants" :key="tenant.id">
             <td class="cell-name">
-              <strong>{{ t.name }}</strong>
+              <strong>{{ tenant.name }}</strong>
             </td>
             <td class="cell-slug">
-              <code>{{ t.slug }}</code>
+              <code>{{ tenant.slug }}</code>
             </td>
-            <td>{{ t.tax_id || '—' }}</td>
+            <td>{{ tenant.tax_id || '—' }}</td>
             <td>
               <span
                 class="badge-status"
                 :class="{
-                  'badge-status--active': t.status === 'ACTIVE',
-                  'badge-status--suspended': t.status === 'SUSPENDED',
+                  'badge-status--active': tenant.status === 'ACTIVE',
+                  'badge-status--suspended': tenant.status === 'SUSPENDED',
                 }"
               >
-                {{ t.status }}
+                {{ tenant.status }}
               </span>
             </td>
             <td class="cell-quota">
@@ -186,12 +188,12 @@
                 <div
                   class="quota-bar-fill"
                   :style="{
-                    width: `${Math.min(100, (t.active_routers_count / t.max_routers_quota) * 100)}%`,
+                    width: `${Math.min(100, (tenant.active_routers_count / tenant.max_routers_quota) * 100)}%`,
                   }"
                 ></div>
               </div>
               <span class="quota-text"
-                >{{ t.active_routers_count }} / {{ t.max_routers_quota }}</span
+                >{{ tenant.active_routers_count }} / {{ tenant.max_routers_quota }}</span
               >
             </td>
             <td class="cell-quota">
@@ -199,33 +201,33 @@
                 <div
                   class="quota-bar-fill"
                   :style="{
-                    width: `${Math.min(100, (t.active_users_count / t.max_users_quota) * 100)}%`,
+                    width: `${Math.min(100, (tenant.active_users_count / tenant.max_users_quota) * 100)}%`,
                   }"
                 ></div>
               </div>
-              <span class="quota-text">{{ t.active_users_count }} / {{ t.max_users_quota }}</span>
+              <span class="quota-text">{{ tenant.active_users_count }} / {{ tenant.max_users_quota }}</span>
             </td>
-            <td class="cell-safemode">{{ t.default_safemode_seconds }}s</td>
+            <td class="cell-safemode">{{ tenant.default_safemode_seconds }}s</td>
             <td class="col-actions">
               <button
                 type="button"
                 class="btn-action btn-action--features"
-                :aria-label="`Configurar módulos y capacidades de ${t.name}`"
-                @click="goToTenantModules(t)"
+                :aria-label="`Configurar módulos y capacidades de ${tenant.name}`"
+                @click="goToTenantModules(tenant)"
               >
-                ⚙️ Módulos
-                <span v-if="countActiveModules(t) > 0" class="badge-modules-count">
-                  {{ countActiveModules(t) }}
+                {{ t('tenants_mgmt.btn_modules_studio', '⚙️ Módulos Studio') }}
+                <span v-if="countActiveModules(tenant) > 0" class="badge-modules-count">
+                  {{ countActiveModules(tenant) }}
                 </span>
               </button>
               <button
                 v-if="authStore.currentRole === 'SUPERADMIN_GLOBAL'"
                 type="button"
                 class="btn-action"
-                :class="{ 'btn-action--danger': t.status === 'ACTIVE' }"
-                @click="toggleSuspendTenant(t)"
+                :class="{ 'btn-action--danger': tenant.status === 'ACTIVE' }"
+                @click="toggleSuspendTenant(tenant)"
               >
-                {{ t.status === 'ACTIVE' ? 'Suspender' : 'Reactivar' }}
+                {{ tenant.status === 'ACTIVE' ? t('tenants_mgmt.btn_suspend_tenant', 'Suspender') : t('tenants_mgmt.btn_activate_tenant', 'Reactivar') }}
               </button>
             </td>
           </tr>

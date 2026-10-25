@@ -8,7 +8,10 @@
   import { useAuthStore } from '@/stores/useAuthStore';
   import { useFieldOpsStore } from '@/stores/useFieldOpsStore';
   import { useNocEventsStore } from '@/stores/useNocEventsStore';
+  import { useI18n } from '@/composables/useI18n';
   import { escapeHtml } from '@/utils/security';
+
+  const { t } = useI18n();
 
   const props = withDefaults(
     defineProps<{
@@ -348,7 +351,7 @@
           @click="showRouters = !showRouters"
         >
           <span class="icon">🏢</span>
-          <span class="label">Routers de Red</span>
+          <span class="label">{{ t('network_map.layer_routers') }}</span>
           <span class="counter">({{ routers.length }})</span>
         </button>
 
@@ -361,7 +364,7 @@
           @click="showBoxes = !showBoxes"
         >
           <span class="icon">📦</span>
-          <span class="label">Cajas NAP</span>
+          <span class="label">{{ t('network_map.layer_boxes') }}</span>
           <span class="counter">({{ opticalBoxes.length }})</span>
         </button>
 
@@ -373,16 +376,16 @@
           @click="showSubscribers = !showSubscribers"
         >
           <span class="icon">💻</span>
-          <span class="label">Clientes</span>
+          <span class="label">{{ t('network_map.layer_subs') }}</span>
           <span class="counter">({{ subscribers.length }})</span>
         </button>
       </div>
 
       <div class="filter-controls-group">
         <select v-model="statusFilter" class="rg-select-filter" aria-label="Filtrar por estado">
-          <option value="ALL">Todos los Estados</option>
-          <option value="ONLINE">🟢 Solo Online</option>
-          <option value="OFFLINE">🔴 Solo Alertas/Offline</option>
+          <option value="ALL">{{ t('network_map.filter_all') }}</option>
+          <option value="ONLINE">{{ t('network_map.filter_online') }}</option>
+          <option value="OFFLINE">{{ t('network_map.filter_offline') }}</option>
         </select>
       </div>
     </header>
@@ -397,14 +400,14 @@
       <div class="rca-alert-content">
         <span class="rca-icon">🚨</span>
         <div class="rca-text">
-          <strong>ALERTA DE CABECERA:</strong>
-          <span>El router <strong>{{ downRouters[0].display_name }}</strong> se encuentra inalcanzable.</span>
-          <span class="rca-affected">({{ affectedSubscribers.length }} abonados dependientes afectados por esta contingencia).</span>
+          <strong>{{ t('network_map.rca_title') }}</strong>
+          <span>{{ t('network_map.rca_desc', { name: downRouters[0].display_name }) }}</span>
+          <span class="rca-affected">{{ t('network_map.rca_affected', { count: affectedSubscribers.length }) }}</span>
         </div>
       </div>
       <div class="rca-actions">
         <button type="button" class="btn-rca-focus" @click="focusAffectedZone">
-          🎯 Enfocar Zona Afectada
+          {{ t('network_map.btn_focus_zone') }}
         </button>
         <button
           type="button"

@@ -49,6 +49,29 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Added
 
+- **Internacionalización Integral (i18n) en Inglés y Español de 16 Pantallas y Módulos Críticos (`vue3/src/locales/es.json`, `vue3/src/locales/en.json`, `vue3/src/views/*`, `vue3/src/components/*`):**
+  - **Soporte Simétrico Completo:** Implementación de claves i18n reactivas vía composable `useI18n()` con sincronización en `es.json` y `en.json` en las 16 vistas del sistema:
+    1. *Maker-Checker* (`ApprovalsInboxView.vue`): Cabeceras, filtros por estado, tarjetas de aprobación, inspector lateral, diff JSON y botones de acción.
+    2. *IPAM* (`IpamManagementView.vue`): KPIs, pestañas, cabeceras de tabla de abonados FTTH, botones de acción y panel de sincronización con MikroTik.
+    3. *Mapa Unificado de Clientes/ONUs* (`UnifiedNetworkMap.vue`): Toggles de capas (Routers, Cajas NAP, Clientes), selectores de filtro y banners tácticos RCA.
+    4. *Técnico de Campo Móvil* (`FieldTechMobileView.vue`): Botón de 24 puertos, selectores de splitter, modelos de ONU, modos de operación, semáforo óptico Rx y selector de diagnósticos.
+    5. *Topología L2* (`L2TopologyView.vue`): Cabecera, controles de refresco/centrado, buscador, toggle PoE, leyenda táctica y drawers de nodos/enlaces.
+    6. *Historial de Respaldos Diff* (`RscGitDiffViewer.vue`): Cabecera, botón de crear backup, sidebar de 30 días, badges, selectores Base/Objetivo, botones de visualización y estados vacíos.
+    7. *Operaciones Masivas & Golden Config* (`BulkOperationsAndUpdatesView.vue`): Cabecera, pestañas, pasos 1-3, tabla y filtros de flota, gestión de plantillas, variables y preview de script.
+    8. *Usuarios, Roles RBAC & Sesiones* (`UsersAndPermissionsView.vue`): Cabecera, subtítulo, pestañas, registrar operador, buscador, filtros, tabla y botones de matriz de routers, token MCP, cambiar clave y reset 2FA.
+    9. *Administración de Empresas & Módulos Studio* (`TenantsManagementView.vue`, `TenantModulesStudioView.vue`): Cabeceras, botones de registro, cuotas, módulos studio, suspensión/reactivación y navegación.
+    10. *Auditoría CIS Hardening* (`EnterpriseComplianceView.vue` tab CIS): Puntuación global, directivas evaluadas/aprobadas/fallidas, headers de tabla técnica y auto-hardening.
+    11. *Matriz de Vulnerabilidades CVE* (`FleetCveMatrix.vue`): Título, sincronización de boletines, KPIs de routers evaluados/vulnerables, buscador y tabla de CVEs.
+    12. *Bitácora Forense WORM* (`ImmutableAuditLogsView.vue`): Cabecera, verificación criptográfica WORM, exportación JSON/CSV, filtros por actor/categoría/router y tabla forense.
+    13. *SD-WAN WireGuard* (`EnterpriseComplianceView.vue` tab SD-WAN): Formulario de failover Multi-WAN y tabla de túneles spoke.
+    14. *Seguridad L2 & Rogue DHCP* (`EnterpriseComplianceView.vue` tab Switching): Puertos confiables/confinados, alertas de servidores rogue y aislamiento bajo Safe Mode.
+    15. *Telemetría de SLA* (`EnterpriseComplianceView.vue` tab SLA): Exportación de reportes formales, tabla de métricas y formulario de sondeo inmediato.
+    16. *Canales de Alerta NOC* (`NotificationChannelsPanel.vue`): Cabecera, nuevo canal, actualización, cards de canales (Telegram, SMTP, Webhooks), prueba de envío y estados vacíos.
+  - **Aseguramiento 11X Multi-Capa en Docker Efímero:**
+    - 404 pruebas unitarias de frontend Vitest en 55 suites aprobadas al 100%.
+    - Cero (0) errores en análisis estático de TypeScript con `vue-tsc --noEmit`.
+    - Cero (0) hallazgos de secretos o vulnerabilidades (`./scripts/verificar-secretos.sh`).
+
 - **Conmutador Rápido de Contexto de Tenants para SuperAdmin, Ergonomía de Pie de Página In-Flow y Estudio Táctico de Feature Flags por Empresa (Hito 25 — Specs 43 & 44 — `fastapi/src/api/v1/auth.py`, `fastapi/src/schemas/auth.py`, `vue3/src/components/admin/RgTenantSwitcher.vue`, `vue3/src/components/admin/RgFeatureFlagsGrid.vue`, `vue3/src/views/admin/TenantModulesStudioView.vue`, `vue3/src/views/admin/TenantsManagementView.vue`, `vue3/src/components/common/RgResponsiveShell.vue`, `vue3/src/stores/useAuthStore.ts`):**
   - **Conmutador Rápido de Tenants en Cabecera (`RgTenantSwitcher.vue`):** Desplegable exclusivo para el rol `SUPERADMIN_GLOBAL` (`🏢 {tenant_slug} ▾`) que permite alternar la administración entre múltiples empresas en caliente sin desloguearse ni destruir la sesión maestra.
   - **Endpoint Atómico de Conmutación (`POST /api/v1/auth/switch-tenant`):** Valida la condición de SuperAdmin Global, revoca la sesión previa con `kill_session`, inicializa una nueva sesión atómica en KeyDB para el tenant destino y reemite el JWT con los nuevos claims de aislamiento de tenant (`tid`, `tslug`), registrando auditoría WORM `SUPERADMIN_TENANT_SWITCHED`.

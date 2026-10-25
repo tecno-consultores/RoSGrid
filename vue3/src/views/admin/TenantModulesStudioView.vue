@@ -5,9 +5,12 @@
   import { ref, onMounted, computed } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
   import { http } from '@/api/httpClient';
+  import { useI18n } from '@/composables/useI18n';
   import { useAuthStore, defaultTenantFeatures } from '@/stores/useAuthStore';
   import type { TenantFeatureFlags } from '@/types';
   import RgFeatureFlagsGrid from '@/components/admin/RgFeatureFlagsGrid.vue';
+
+  const { t } = useI18n();
 
   interface TenantItem {
     id: string;
@@ -102,7 +105,7 @@
 
       <div class="header-actions">
         <button type="button" class="btn-back" @click="goBack">
-          ⬅ Volver a Empresas
+          {{ t('tenants_mgmt.studio_back', '⬅ Volver a Empresas') }}
         </button>
       </div>
     </header>
@@ -118,7 +121,7 @@
     <!-- Contenido Principal -->
     <div v-if="isLoading" class="loading-state">
       <span class="spinner" aria-hidden="true">⏳</span>
-      <p>Cargando capacidades de la empresa...</p>
+      <p>{{ t('tenants_mgmt.studio_loading', 'Cargando capacidades de la empresa...') }}</p>
     </div>
 
     <main v-else class="studio-main-content">

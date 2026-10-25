@@ -4,12 +4,15 @@
 <script setup lang="ts">
   import { ref, onMounted } from 'vue';
   import { http } from '@/api/httpClient';
+  import { useI18n } from '@/composables/useI18n';
   import type {
     AlertChannelType,
     NotificationChannelItem,
     NotificationChannelCreateRequest,
     NotificationTestResponse,
   } from '@/types';
+
+  const { t } = useI18n();
 
   const channels = ref<NotificationChannelItem[]>([]);
   const isLoading = ref<boolean>(false);
@@ -257,10 +260,9 @@
     <!-- Barra Superior de Acciones -->
     <div class="panel-toolbar">
       <div>
-        <h2 class="section-title">Canales de Alerta y Notificación Multicanal</h2>
+        <h2 class="section-title">{{ t('notification_channels.title', 'Canales de Alerta y Notificación Multicanal') }}</h2>
         <p class="section-desc">
-          Configure la integración segura con Telegram, Servidores SMTP y Webhooks cifrados en
-          AES-256-GCM para notificaciones instantáneas de eventos de red y fallas de la flota.
+          {{ t('notification_channels.subtitle', 'Configure la integración segura con Telegram, Servidores SMTP y Webhooks cifrados en AES-256-GCM para notificaciones instantáneas de eventos de red y fallas de la flota.') }}
         </p>
       </div>
       <div class="toolbar-actions">
@@ -271,10 +273,10 @@
           :disabled="isLoading"
           @click="fetchChannels"
         >
-          🔄 Refrescar
+          🔄 {{ t('inventory.btn_refresh', 'Refrescar') }}
         </button>
         <button type="button" class="btn-tactical btn-primary" @click="openCreateModal">
-          ➕ Nuevo Canal de Alerta
+          {{ t('notification_channels.btn_new_channel', '➕ Nuevo Canal de Alerta') }}
         </button>
       </div>
     </div>
@@ -287,13 +289,13 @@
 
     <div v-else-if="channels.length === 0" class="empty-state">
       <div class="empty-icon">🔔</div>
-      <p class="empty-title">No hay canales de notificación configurados</p>
+      <p class="empty-title">{{ t('notification_channels.empty_channels', 'No hay canales de notificación configurados') }}</p>
       <p class="empty-subtitle">
         Cree un canal de Telegram, Servidor SMTP o Webhook para recibir alarmas críticas en tiempo
         real.
       </p>
       <button type="button" class="btn-tactical btn-primary" @click="openCreateModal">
-        ➕ Configurar Primer Canal
+        {{ t('notification_channels.btn_new_channel', '➕ Configurar Primer Canal') }}
       </button>
     </div>
 
@@ -343,7 +345,7 @@
             title="Despachar mensaje de prueba a este canal"
             @click="openTestModal(ch)"
           >
-            🧪 Probar
+            {{ t('notification_channels.btn_test', '🧪 Probar') }}
           </button>
           <button
             type="button"
@@ -352,12 +354,12 @@
             :title="ch.is_enabled ? 'Desactivar canal' : 'Activar canal'"
             @click="handleToggleStatus(ch)"
           >
-            {{ ch.is_enabled ? 'Desactivar' : 'Activar' }}
+            {{ ch.is_enabled ? t('notification_channels.btn_deactivate', 'Desactivar') : t('notification_channels.btn_activate', 'Activar') }}
           </button>
           <button
             type="button"
             class="btn-card-action btn-delete"
-            title="Eliminar canal de notificación"
+            :title="t('notification_channels.btn_delete', 'Eliminar canal de notificación')"
             @click="handleDeleteChannel(ch)"
           >
             🗑️

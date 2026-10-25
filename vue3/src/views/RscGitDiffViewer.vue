@@ -5,8 +5,11 @@
   import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
   import { useRoute } from 'vue-router';
   import { useInventoryStore } from '@/stores/useInventoryStore';
+  import { useI18n } from '@/composables/useI18n';
   import { http } from '@/api/httpClient';
   import type { BackupItem } from '@/types';
+
+  const { t } = useI18n();
 
   interface DiffLine {
     type: 'same' | 'added' | 'removed';
@@ -313,10 +316,9 @@
     <!-- Cabecera de la vista -->
     <header class="diff-header">
       <div>
-        <h1 id="diff-title" class="diff-title">Historial de Respaldos y Comparador Visual Git</h1>
+        <h1 id="diff-title" class="diff-title">{{ t('backups_diff.title') }}</h1>
         <p class="diff-subtitle">
-          Retención WORM de 30 días, deduplicación SHA-256 e inspección lado a lado contra estado
-          LIVE
+          {{ t('backups_diff.subtitle') }}
         </p>
       </div>
 
@@ -351,8 +353,8 @@
           :disabled="creatingBackup || !routerId"
           @click="createManualBackup"
         >
-          <span v-if="creatingBackup">⏳ Generando...</span>
-          <span v-else>➕ Crear Backup Ahora</span>
+          <span v-if="creatingBackup">{{ t('backups_diff.generating') }}</span>
+          <span v-else>{{ t('backups_diff.btn_create_now') }}</span>
         </button>
       </div>
     </header>
@@ -368,12 +370,12 @@
     <div class="diff-layout">
       <!-- Columna Izquierda: Línea de tiempo de 30 días -->
       <section class="backups-sidebar" aria-labelledby="sidebar-backups-title">
-        <h2 id="sidebar-backups-title" class="sidebar-heading">Respaldos (Últimos 30 Días)</h2>
+        <h2 id="sidebar-backups-title" class="sidebar-heading">{{ t('backups_diff.sidebar_title') }}</h2>
 
-        <div v-if="loading" class="sidebar-loading">Cargando respaldos...</div>
+        <div v-if="loading" class="sidebar-loading">{{ t('backups_diff.loading_backups') }}</div>
 
         <div v-else-if="backups.length === 0" class="sidebar-empty">
-          No hay respaldos registrados.
+          {{ t('backups_diff.empty_backups') }}
         </div>
 
         <ul v-else class="backups-list">
@@ -398,10 +400,10 @@
               </span>
               <div class="backup-top-badges">
                 <span v-if="selectedBaseId === b.id" class="badge-pill badge-pill--base"
-                  >🔵 BASE</span
+                  >{{ t('backups_diff.badge_base') }}</span
                 >
                 <span v-if="selectedTargetId === b.id" class="badge-pill badge-pill--target"
-                  >🟢 OBJETIVO</span
+                  >{{ t('backups_diff.badge_target') }}</span
                 >
                 <span class="ros-tag">v{{ b.ros_version_at_backup }}</span>
               </div>
@@ -435,7 +437,7 @@
                 title="Fijar como Base (panel izquierdo)"
                 @click.stop="selectCardAsBase(b.id)"
               >
-                Base (Izq)
+                {{ t('backups_diff.btn_base_left') }}
               </button>
               <button
                 type="button"
@@ -444,13 +446,13 @@
                 title="Fijar como Objetivo (panel derecho)"
                 @click.stop="selectCardAsTarget(b.id)"
               >
-                Objetivo (Der)
+                {{ t('backups_diff.btn_target_right') }}
               </button>
               <button
                 type="button"
                 class="btn-icon"
-                title="Descargar script .rsc"
-                aria-label="Descargar script .rsc"
+                :title="t('backups_diff.download_rsc_title')"
+                :aria-label="t('backups_diff.download_rsc_title')"
                 @click.stop="downloadBackup(b.id, 'rsc')"
               >
                 📜
@@ -462,8 +464,8 @@
                 :disabled="!b.has_binary_backup"
                 :title="
                   b.has_binary_backup
-                    ? 'Descargar binario .backup nativo'
-                    : 'Este punto no tiene archivo .backup binario (solo script .rsc)'
+                    ? t('backups_diff.download_backup_title')
+                    : t('backups_diff.no_binary_title')
                 "
                 aria-label="Descargar binario .backup"
                 @click.stop="downloadBackup(b.id, 'backup')"
@@ -481,7 +483,7 @@
         <div class="diff-toolbar">
           <div class="diff-selectors">
             <label class="diff-label">
-              Base:
+              {{ t('backups_diff.label_base') }}
               <select
                 v-model="selectedBaseId"
                 class="diff-select"
@@ -497,14 +499,14 @@
             <span class="diff-vs">vs</span>
 
             <label class="diff-label">
-              Objetivo:
+              {{ t('backups_diff.label_target') }}
               <select
                 v-model="selectedTargetId"
                 class="diff-select"
                 aria-label="Seleccionar versión objetivo"
                 @change="compareDiff"
               >
-                <option value="LIVE">🔴 ESTADO EN VIVO (LIVE)</option>
+                <option value="LIVE">{{ t('backups_diff.live_state_option') }}</option>
                 <option v-for="b in backups" :key="b.id" :value="b.id">
                   {{ new Date(b.created_at).toLocaleDateString() }} (v{{ b.ros_version_at_backup }})
                 </option>
@@ -525,7 +527,7 @@
                 :class="{ 'btn-toggle--active': viewMode === 'split' }"
                 @click="viewMode = 'split'"
               >
-                Lado a Lado
+                {{ t('backups_diff.mode_split') }}
               </button>
               <button
                 type="button"
@@ -533,27 +535,26 @@
                 :class="{ 'btn-toggle--active': viewMode === 'unified' }"
                 @click="viewMode = 'unified'"
               >
-                Unificado
+                {{ t('backups_diff.mode_unified') }}
               </button>
             </div>
 
             <div class="keyboard-hint" title="Usa las teclas 'n' y 'p' para navegar diferencias">
-              <kbd>n</kbd> sig / <kbd>p</kbd> ant
+              <kbd>n</kbd> {{ t('backups_diff.keyboard_hint').split('/')[0] }} / <kbd>p</kbd> {{ t('backups_diff.keyboard_hint').split('/')[1] }}
             </div>
           </div>
         </div>
 
         <!-- Estado vacío si no hay respaldos -->
         <div v-if="backups.length === 0 && !loading" class="diff-empty-state">
-          <p>No hay respaldos registrados para este router.</p>
+          <p>{{ t('backups_diff.empty_state_title') }}</p>
           <p class="diff-empty-sub">
-            Haga clic en <strong>➕ Crear Backup Ahora</strong> para generar el primer respaldo
-            (.rsc + .backup) cifrado en la bóveda.
+            {{ t('backups_diff.empty_state_desc') }}
           </p>
         </div>
 
         <!-- Área de código diff -->
-        <div v-else-if="diffLoading" class="diff-loading">Calculando diferencias...</div>
+        <div v-else-if="diffLoading" class="diff-loading">{{ t('backups_diff.calculating_diff') }}</div>
 
         <!-- Modo Lado a Lado (Split) -->
         <div
