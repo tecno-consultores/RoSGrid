@@ -1841,26 +1841,23 @@ Certificación ejecutada bajo la **Regla Cero** dentro de los contenedores efím
    - `/inventory`: `r1, r2, r3` reflejan `🟢 Activo (3)` con botón `🟢 Syslog`. `r4, r5, r6` reflejan `⚪ Sin Syslog` con botón inactivo `📡 Syslog`.
    - `/dashboard`: Muestra `6 equipos | 6 en línea | 0 desconectado` con disponibilidad al 100% ÓPTIMO.
 
-### D. Ampliación Universal del Marco Trimodal (Fase 2 Planificada)
-Conforme a la Especificación 43 v2.0.0 y la directiva `.agents/rules/ground_truth_fixtures_and_negative_invariants.md`, se establece la obligatoriedad de extender este mismo estándar a los restantes 7 dominios críticos:
-1. CIS Hardening (`/compliance/cis-audit`)
-2. Topología L2 MNDP/LLDP (`/topology/l2`)
-3. IPAM, Pools DHCP y Leases (`/ipam/prefixes`)
-4. Orquestador PoE (`/bulk-ops/poe`)
-5. Rogue DHCP & DHCP Snooping (`/compliance/rogue-dhcp`)
-6. CAPsMAN & Wi-Fi 6 (`/wireless/capsman`)
-7. Detección de Config Drift (`/compliance/drift`)
-8. Suite Unificada de Smoke Tests de Flota Real Multi-Dominio (`scripts/validar-flota-real.py`).
-
-
-
-
-
-
-
-
-
-
-
-
-
+### D. Ampliación Universal del Marco Trimodal (Fase 2 Completada y Certificada)
+Conforme a la Especificación 43 v2.0.0 y la directiva `.agents/rules/ground_truth_fixtures_and_negative_invariants.md`, se extendió e implementó este estándar de manera transversal a los 8 dominios de la plataforma:
+1. **CIS Hardening (`/compliance/cis-audit`):** Fixtures `factory_default_cis.json` (score < 35 pts), `hardened_rosgrid_cis.json` (score >= 90 pts) y `partial_hardened_cis.json`.
+2. **Topología L2 MNDP/LLDP (`/topology/l2`):** Fixtures `factory_default_neighbors.json` (`[]`), `meshed_neighbors.json` y `thirdparty_neighbors.json` (dispositivos no-ROS). Zero enlaces fantasma.
+3. **IPAM, Pools DHCP y Leases (`/ipam/prefixes`):** Fixtures `factory_default_dhcp.json` (`192.168.88.0/24`), `configured_dhcp_pools.json` y `disabled_dhcp_server.json`.
+4. **Orquestador PoE (`/bulk-ops/poe`):** Fixtures `factory_default_no_poe.json` (CHR/sin PoE), `active_poe_netpower.json` y `overload_poe.json`.
+5. **Rogue DHCP & DHCP Snooping (`/compliance/rogue-dhcp`):** Fixtures `factory_default_bridge.json` (`dhcp-snooping=no`), `snooping_enabled_bridge.json` y `rogue_server_alert.json`.
+6. **CAPsMAN & Wi-Fi 6 (`/wireless/capsman`):** Remediadas métricas inventadas en `fastapi/src/api/v1/wifi.py`. Fixtures `factory_default_no_wifi.json` (CCR sin radio), `active_wifiwave2_capsman.json` y `unregistered_ap.json`. Aserción negativa obligatoria: Routers de fábrica devuelven `capsman_running=False`, 0 APs, 0 radios y 0 clientes.
+7. **Detección de Config Drift (`/compliance/drift`):** Fixtures `.rsc` reales `factory_default_export.rsc`, `golden_baseline_export.rsc` y `tampered_export.rsc`. Desviación del 100% detectada ante configuraciones vírgenes.
+8. **Suite Unitaria Pytest Trimodal (`fastapi/tests/api/test_ground_truth_trimodal_fixtures.unit.py`):**
+   - 14 nuevas pruebas unitarias cubriendo los 7 dominios con aserciones negativas obligatorias.
+   - Ejecutadas en contenedor efímero `sinfallas/base-python-uv:3.15`: **18 de 18 pruebas PASADAS (100%)** en 0.08s (14 de dominios trimodales + 4 de Syslog).
+   - Total backend: **536 pruebas unitarias PASADAS al 100%**.
+9. **Smoke Test de Flota Real Multi-Dominio (`scripts/validar-flota-real.py` / `make smoke-fleet`):**
+   - Validó simultáneamente Syslog, CAPsMAN, Topología L2 e IPAM contra los 6 routers físicos reales en laboratorio:
+     - Dominio 1 (Syslog): `r1-r3` ACTIVO (True) vs `r4-r6` INACTIVO (False).
+     - Dominio 2 (CAPsMAN): `r4` de fábrica evaluado con `capsman_running == False`, 0 APs, 0 radios, 0 clientes (100% libre de métricas sintéticas).
+     - Dominio 3 (Topología L2): 6 nodos procesados en grafo sin errores.
+     - Dominio 4 (IPAM Prefijos): HTTP 200 con prefijos aislados.
+   - Resultado: **100% APROBADO** en Docker.
