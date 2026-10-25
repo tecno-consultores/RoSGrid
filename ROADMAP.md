@@ -578,9 +578,33 @@
 
 ---
 
-## 📦 HITO 24: Cierre de `CHANGELOG.md`, Auditoría Trivy y Publicación en Docker Hub (`scripts/build.sh`)
+## 🛡️ HITO 24: Detección Canónica Determinista de Syslog, Fixtures Reales MikroTik v7 y Smoke Test de Flota Real (Negative Invariants)
+
+> **Archivos Guía:** `docs/specs/43_REAL_FLEET_SMOKE_TESTS_GROUND_TRUTH_FIXTURES_AND_DETERMINISTIC_SENSING.md`
+
+- [x] **24.1** **Redefinición Canónica y Determinista de Detección de Syslog:**
+  - Sustituida la búsqueda genérica de `"remote"` en `inspect_router_syslog_config` (`inventory_helpers.py` y `health_monitor_worker.py`) por validación estricta de doble candado: acción con nombre exacto `rosgridsyslog`, parámetro `remote` con IP válida (distinta de `0.0.0.0`) y regla en `/system/logging` con `action="rosgridsyslog"` y `disabled="false"`.
+  - Fallback por evidencia física de tráfico en KeyDB (`llen(syslog:ring) > 0`).
+  - Retorno estrictamente de `False` ante routers con configuración por defecto de fábrica.
+- [x] **24.2** **Fixtures JSON Reales de MikroTik RouterOS v7 (Ground-Truth):**
+  - Creación de capturas crudas bajo `fastapi/tests/fixtures/mikrotik/`: `factory_default_logging.json` (router de fábrica inerte), `rosgrid_configured_logging.json` (plantilla oficial activa) y `disabled_rosgrid_logging.json` (regla deshabilitada).
+- [x] **24.3** **Saneamiento de Estado en KeyDB y PostgreSQL:**
+  - Purgadas claves erróneas de `r4`, `r5` y `r6` en KeyDB (`syslog:active`, `syslog:configured`) y fijado `operational_status = "OFFLINE"`.
+  - Restablecida la discriminación real de sensores Syslog, preservando activos a `r1`, `r2` y `r3`.
+- [x] **24.4** **Guardrail de Validación de Flota Real (`scripts/validar-flota-real.py`):**
+  - Implementado script de prueba end-to-end contra la API del stack local validando aserciones positivas (`r1, r2, r3` vivos con Syslog) y aserciones negativas obligatorias (`r4, r5, r6` apagados sin Syslog).
+  - Integrado en `Makefile` (`make smoke-fleet`) con bloqueo estricto del pipeline ante cualquier falso positivo.
+- [x] **24.5** **Aseguramiento Unitario Multi-Capa con Salidas Reales:**
+  - Pruebas en Pytest (`test_inventory_syslog_detection.unit.py`) evaluando `inspect_router_syslog_config` contra los fixtures reales (100% aprobadas).
+  - Pruebas en Vitest validando renderizado de badges (`🟢 Activo` vs `⚪ Sin Syslog`) y cálculo de disponibilidad.
+- [x] **24.6** **Inspección Visual y Certificación en Navegador:**
+  - Inspección con `browser_subagent` en `/inventory` y `/dashboard` certificando que `r1, r2, r3` muestran `🟢 Activo (3)` y `r4, r5, r6` muestran `⚪ Sin Syslog`, con disponibilidad de flota en 100% (6/6 equipos alcanzables vía REST).
+
+---
+
+## 📦 HITO 25: Cierre de `CHANGELOG.md`, Auditoría Trivy y Publicación en Docker Hub (`scripts/build.sh`)
 
 > **Archivo Guía:** `docs/specs/01_DOCKER_INFRASTRUCTURE_AND_IMMUTABLE_IMAGES.md`
 
-- [ ] **24.1** Actualizar `CHANGELOG.md` consolidando los cambios de `[Unreleased]` dentro del lanzamiento oficial `[1.0.0]` con las métricas certificadas en `TESTING.md`.
-- [ ] **24.2** Ejecutar `./scripts/build.sh` (como usuario no-root) con `docker buildx` (`container-builder` + `tonistiigi/binfmt`) para construir y publicar `sinfallas/rosgrid-backend:latest` (`:1.0.0`) y `sinfallas/rosgrid-frontend:latest` (`:1.0.0`) en Docker Hub y limpiar cachés con `prune -af`.
+- [ ] **25.1** Actualizar `CHANGELOG.md` consolidando los cambios de `[Unreleased]` dentro del lanzamiento oficial `[1.0.0]` con las métricas certificadas en `TESTING.md`.
+- [ ] **25.2** Ejecutar `./scripts/build.sh` (como usuario no-root) con `docker buildx` (`container-builder` + `tonistiigi/binfmt`) para construir y publicar `sinfallas/rosgrid-backend:latest` (`:1.0.0`) y `sinfallas/rosgrid-frontend:latest` (`:1.0.0`) en Docker Hub y limpiar cachés con `prune -af`.

@@ -27,7 +27,11 @@ test-frontend:
 	@echo "🧪 [Test Frontend] Ejecutando vitest en contenedor efímero..."
 	@docker run --rm -v $$(pwd)/vue3:/app -w /app sinfallas/base-node-ionic:26 npx vitest run
 
-test: test-backend test-frontend
+smoke-fleet:
+	@echo "🔍 [Smoke Fleet] Ejecutando Smoke Test de Flota Real (Negative Invariants) en Docker..."
+	@docker cp scripts/validar-flota-real.py rosgrid_api_local:/app/scripts/validar-flota-real.py && docker exec -e ROSGRID_API_URL=http://localhost:8000 rosgrid_api_local python /app/scripts/validar-flota-real.py
+
+test: test-backend test-frontend smoke-fleet
 
 lint:
 	@echo "🔍 [Lint] Ejecutando ruff, mypy y vue-tsc..."

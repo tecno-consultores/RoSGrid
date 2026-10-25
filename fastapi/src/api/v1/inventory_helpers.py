@@ -125,36 +125,47 @@ async def discover_hardware(client: MikrotikRestClient, r: Router) -> None:
 
 
 def inspect_router_syslog_config(actions: Any, rules: Any = None) -> bool:
-    """Evalúa si la configuración de RouterOS v7 tiene Syslog remoto activo.
+    """Evalúa determinísticamente si RouterOS v7 tiene Syslog remoto activo hacia RoSGrid.
 
-    Admite:
-    - Acciones con target == 'remote' o remote configurado (IP o hostname).
-    - Acciones con nombre 'rosgridsyslog', 'remote', o 'syslog'.
-    - Reglas activas en /system/logging apuntando a acciones remotas.
+    Criterio Canónico (Doble Candado - Espec 43):
+    1. Debe existir en /system/logging/action una acción con name == 'rosgridsyslog' y target == 'remote',
+       con destino 'remote' válido (distinto de '0.0.0.0' y no vacío).
+    2. Debe existir en /system/logging al menos una regla activa (disabled == false) que utilice
+       la acción 'rosgridsyslog'.
+    3. Las configuraciones de fábrica estándar de MikroTik (acciones 'memory', 'disk', 'echo', 'remote'
+       con 0.0.0.0 y sin reglas activas de RoSGrid) retornan estrictamente False.
     """
-    remote_action_names = {"rosgridsyslog", "remote", "syslog"}
-    has_remote_action = False
-    if isinstance(actions, list):
-        for act in actions:
-            if not isinstance(act, dict):
-                continue
-            name = str(act.get("name", "")).strip().lower()
-            target = str(act.get("target", "")).strip().lower()
-            remote_dest = str(act.get("remote", "")).strip()
-            if target == "remote" or remote_dest or name in remote_action_names:
-                remote_action_names.add(name)
-                has_remote_action = True
+    if not isinstance(actions, list) or not isinstance(rules, list):
+        return False
 
-    if isinstance(rules, list):
-        for rule in rules:
-            if not isinstance(rule, dict):
-                continue
-            act_name = str(rule.get("action", "")).strip().lower()
-            disabled = str(rule.get("disabled", "false")).strip().lower() in ("true", "yes", "1")
-            if not disabled and (act_name in remote_action_names or act_name == "remote"):
-                return True
+    has_valid_rosgrid_action = False
+    for act in actions:
+        if not isinstance(act, dict):
+            continue
+        name = str(act.get("name", "")).strip().lower()
+        target = str(act.get("target", "")).strip().lower()
+        remote_dest = str(act.get("remote", "")).strip()
 
-    return has_remote_action
+        # Candado 1: Acción debe llamarse estrictamente 'rosgridsyslog'
+        if name == "rosgridsyslog" and target == "remote":
+            if remote_dest and remote_dest != "0.0.0.0":
+                has_valid_rosgrid_action = True
+                break
+
+    if not has_valid_rosgrid_action:
+        return False
+
+    # Candado 2: Debe existir regla activa apuntando a 'rosgridsyslog'
+    for rule in rules:
+        if not isinstance(rule, dict):
+            continue
+        act_name = str(rule.get("action", "")).strip().lower()
+        disabled_val = str(rule.get("disabled", "false")).strip().lower()
+        is_disabled = disabled_val in ("true", "yes", "1")
+        if act_name == "rosgridsyslog" and not is_disabled:
+            return True
+
+    return False
 
 
 async def discover_and_persist_syslog_status(
@@ -176,6 +187,9 @@ async def discover_and_persist_syslog_status(
         if has_syslog:
             await r_client.set(syslog_conf_key, "1", ex=86400)
             await r_client.set(syslog_active_key, "1", ex=3600)
+        else:
+            await r_client.delete(syslog_conf_key)
+            await r_client.delete(syslog_active_key)
         return has_syslog
     except Exception as exc:
         logger.debug("Error comprobando Syslog en router %s: %s", router_id, exc)

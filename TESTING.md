@@ -1788,6 +1788,60 @@ Certificación ejecutada bajo la **Regla Cero** dentro de contenedores efímeros
    - `ruff check src/`: All checks passed!
    - `./scripts/verificar-secretos.sh`: 0 secretos detectados.
 
+---
+
+## 46. Detección Canónica Determinista de Syslog, Fixtures Reales MikroTik v7 y Smoke Test de Flota Real (Hito 24)
+
+Certificación ejecutada bajo la **Regla Cero** dentro de los contenedores efímeros Docker `sinfallas/rosgrid-backend:local-test` y el entorno real en ejecución conforme a `docs/specs/43_REAL_FLEET_SMOKE_TESTS_GROUND_TRUTH_FIXTURES_AND_DETERMINISTIC_SENSING.md`.
+
+### A. Diagnóstico y Causa Raíz
+- **Problema Reportado:** En la vista de Inventario de Equipos (`/inventory`), todos los enrutadores (`r1` a `r6`) se mostraban con el sensor de Syslog en estado `🟢 Activo`, a pesar de que los routers de laboratorio `r4` (10.250.3.15), `r5` (10.250.3.17) y `r6` (10.250.3.19) se mantienen intencionalmente con configuración de fábrica para comprobar la discriminación real de los sensores.
+- **Causas Raíz Identificadas:**
+  1. **Acción por Defecto de RouterOS v7:** Todo dispositivo MikroTik con configuración inicial incorpora en `/system/logging/action` una acción denominada `remote` con el parámetro `remote="0.0.0.0"`.
+  2. **Heurística Laxa en el Backend:** La implementación de `inspect_router_syslog_config` evaluaba si existía cualquier acción llamada `remote` o con propiedad `target="remote"`, dando como resultado `True` incondicional para cualquier router recién instalado de fábrica.
+  3. **Puntos Ciegos de Mocks Sintéticos:** Las pruebas unitarias tradicionales empleaban diccionarios sintéticos creados ad-hoc que no modelaban la salida cruda JSON de un RouterOS v7 de fábrica.
+  4. **Ausencia de Aserciones Negativas en Smoke Tests:** No existía una prueba contra la flota real que exigiera que los routers no configurados debieran fallar (`syslog_active == False`).
+
+### B. Solución Técnica Implementada
+1. **Doble Candado Canónico Determinista (`fastapi/src/api/v1/inventory_helpers.py` y `fastapi/src/workers/health_monitor_worker.py`):**
+   - **Candado 1 (Acción Canónica):** Exigir estrictamente una acción llamada exactamente `rosgridsyslog`, verificando que su parámetro `remote` contenga una dirección IP válida (distinta de `0.0.0.0`).
+   - **Candado 2 (Regla de Registro Activa):** Exigir una regla en `/system/logging` asociada a `action="rosgridsyslog"` con `disabled="false"`.
+   - **Fallback Físico:** Solo si el router ha transmitido datagramas reales verificados en el RingBuffer de KeyDB (`syslog:ring`).
+   - **Purga de Claves Zombi:** Si el router no posee la configuración canónica, se eliminan inmediatamente las claves `syslog:configured` y `syslog:active` en KeyDB.
+2. **Fixtures Reales Ground-Truth de MikroTik v7 (`fastapi/tests/fixtures/mikrotik/`):**
+   - `factory_default_logging.json`: Salida JSON cruda de `/system/logging` y `/system/logging/action` de un router de fábrica (evalúa a `False`).
+   - `rosgrid_configured_logging.json`: Salida JSON con acción `rosgridsyslog` configurada hacia RoSGrid (evalúa a `True`).
+   - `disabled_rosgrid_logging.json`: Salida JSON con acción configurada pero regla deshabilitada (`disabled=true`) (evalúa a `False`).
+3. **Suite de Pruebas Unitarias Pytest (`fastapi/tests/api/test_inventory_syslog_detection.unit.py`):**
+   - Cuatro pruebas unitarias evaluando exhaustivamente los tres escenarios de fixtures reales y la verificación por presencia de datagramas físicos en KeyDB.
+4. **Guardrail de Validación de Flota Real (`scripts/validar-flota-real.py`):**
+   - Script ejecutable en Docker que consulta la API de RoSGrid autenticándose con sesión válida, comprobando:
+     - **Aserciones Positivas:** `r1`, `r2`, `r3` con `is_reachable == True`, `operational_status == 'ONLINE'` y `syslog_active == True` (`🟢 Activo`).
+     - **Aserciones Negativas Obligatorias:** `r4`, `r5`, `r6` con `syslog_active == False` (`⚪ Sin Syslog`).
+     - Aborta inmediatamente con código de salida 1 ante cualquier falso positivo.
+   - Target en `Makefile`: `make smoke-fleet`.
+
+### C. Cobertura y Certificación Multi-Capa 11X
+1. **Backend Unitario con Fixtures Reales (Pytest en Docker):**
+   - `fastapi/tests/api/test_inventory_syslog_detection.unit.py`: **4 de 4 pruebas PASADAS (100%)**.
+   - Total backend: **522 pruebas unitarias PASADAS al 100%**.
+2. **Smoke Test de Flota Real (`make smoke-fleet` / `scripts/validar-flota-real.py`):**
+   - `r1` (10.250.3.8): API Reachable = True, Status = ONLINE, Syslog Active = True (`🟢 Activo (Correcto)`)
+   - `r2` (10.250.3.13): API Reachable = True, Status = ONLINE, Syslog Active = True (`🟢 Activo (Correcto)`)
+   - `r3` (10.250.3.14): API Reachable = True, Status = ONLINE, Syslog Active = True (`🟢 Activo (Correcto)`)
+   - `r4` (10.250.3.15): API Reachable = True, Status = ONLINE, Syslog Active = False (`⚪ Sin Syslog (Correcto)`)
+   - `r5` (10.250.3.17): API Reachable = True, Status = ONLINE, Syslog Active = False (`⚪ Sin Syslog (Correcto)`)
+   - `r6` (10.250.3.19): API Reachable = True, Status = ONLINE, Syslog Active = False (`⚪ Sin Syslog (Correcto)`)
+   - Flota API REST: **6/6 en línea (100% de disponibilidad)**.
+   - Sensores Syslog: **3 Activos (r1, r2, r3) | 3 Sin Syslog (r4, r5, r6)**.
+3. **Análisis Estático y Seguridad:**
+   - `ruff check src/ tests/`: All checks passed! (0 advertencias).
+   - `./scripts/verificar-secretos.sh`: 0 secretos detectados.
+4. **Verificación Visual en Navegador Real (`browser_subagent`):**
+   - `/inventory`: `r1, r2, r3` reflejan `🟢 Activo (3)` con botón `🟢 Syslog`. `r4, r5, r6` reflejan `⚪ Sin Syslog` con botón inactivo `📡 Syslog`.
+   - `/dashboard`: Muestra `6 equipos | 6 en línea | 0 desconectado` con disponibilidad al 100% ÓPTIMO.
+
+
 
 
 

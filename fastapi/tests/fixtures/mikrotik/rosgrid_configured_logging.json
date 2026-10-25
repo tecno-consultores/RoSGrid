@@ -1,0 +1,44 @@
+{
+  "actions": [
+    {
+      ".id": "*1",
+      "default": "true",
+      "name": "memory",
+      "target": "memory"
+    },
+    {
+      ".id": "*4",
+      "default": "true",
+      "name": "remote",
+      "remote": "0.0.0.0",
+      "remote-port": "514",
+      "src-address": "0.0.0.0",
+      "target": "remote"
+    },
+    {
+      ".id": "*5",
+      "bsd-syslog": "true",
+      "name": "rosgridsyslog",
+      "remote": "10.250.3.1",
+      "remote-port": "5514",
+      "src-address": "0.0.0.0",
+      "syslog-facility": "daemon",
+      "syslog-severity": "auto",
+      "target": "remote"
+    }
+  ],
+  "rules": [
+    {
+      ".id": "*1",
+      "action": "memory",
+      "disabled": "false",
+      "topics": "info"
+    },
+    {
+      ".id": "*5",
+      "action": "rosgridsyslog",
+      "disabled": "false",
+      "topics": "info,warning,error,critical"
+    }
+  ]
+}

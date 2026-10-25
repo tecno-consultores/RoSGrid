@@ -125,6 +125,9 @@ async def _evaluate_single_router(session: Any, redis: Any, r: Router) -> None:
                 if has_syslog:
                     await redis.set(syslog_conf_key, "1", ex=86400)
                     await redis.set(syslog_active_key, "1", ex=3600)
+                else:
+                    await redis.delete(syslog_conf_key)
+                    await redis.delete(syslog_active_key)
             except Exception as s_exc:
                 logger.debug("Fallo al verificar acción Syslog para %s: %s", r.display_name, s_exc)
 
@@ -133,11 +136,9 @@ async def _evaluate_single_router(session: Any, redis: Any, r: Router) -> None:
     # Detección y evaluación de telemetría y tráfico Syslog existente hacia RoSGrid
     syslog_active_key = f"rg:{r.tenant_id}:router:{r.id}:syslog:active"
     syslog_ring_key = f"rg:{r.tenant_id}:router:{r.id}:syslog:ring"
-    syslog_conf_key = f"rg:{r.tenant_id}:router:{r.id}:syslog:configured"
     has_syslog_live = bool(
         await redis.exists(syslog_active_key)
         or (await redis.llen(syslog_ring_key) > 0)
-        or await redis.exists(syslog_conf_key)
     )
     effective_reachable = is_reachable or has_syslog_live
 

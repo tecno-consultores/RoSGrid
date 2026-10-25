@@ -1,0 +1,45 @@
+{
+  "actions": [
+    {
+      ".id": "*1",
+      "default": "true",
+      "name": "memory",
+      "target": "memory"
+    },
+    {
+      ".id": "*2",
+      "default": "true",
+      "name": "disk",
+      "target": "disk"
+    },
+    {
+      ".id": "*3",
+      "default": "true",
+      "name": "echo",
+      "target": "echo"
+    },
+    {
+      ".id": "*4",
+      "default": "true",
+      "name": "remote",
+      "remote": "0.0.0.0",
+      "remote-port": "514",
+      "src-address": "0.0.0.0",
+      "target": "remote"
+    }
+  ],
+  "rules": [
+    {
+      ".id": "*1",
+      "action": "memory",
+      "disabled": "false",
+      "topics": "info"
+    },
+    {
+      ".id": "*2",
+      "action": "disk",
+      "disabled": "false",
+      "topics": "error"
+    }
+  ]
+}
