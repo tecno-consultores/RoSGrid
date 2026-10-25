@@ -59,7 +59,7 @@ describe('TenantOnboardingModal.vue — Onboarding de Feature Flags', () => {
 
   it('envía la configuración y emite completed al confirmar', async () => {
     const wrapper = mount(TenantOnboardingModal);
-    vi.spyOn(http, 'put').mockResolvedValueOnce({
+    vi.spyOn(http, 'patch').mockResolvedValueOnce({
       data: {
         isp_module_enabled: false,
         onboarding_completed: true,
@@ -69,7 +69,7 @@ describe('TenantOnboardingModal.vue — Onboarding de Feature Flags', () => {
     const submitBtn = wrapper.find('#btn-confirm-onboarding');
     await submitBtn.trigger('click');
 
-    expect(http.put).toHaveBeenCalledWith(
+    expect(http.patch).toHaveBeenCalledWith(
       `/api/v1/tenants/${T_ID}/features`,
       expect.objectContaining({
         onboarding_completed: true,

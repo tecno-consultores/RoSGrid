@@ -8,6 +8,12 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ## [Unreleased]
 
+### Fixed
+
+- **Persistencia de Feature Flags en Asistente de Onboarding Inicial (`fastapi/src/api/v1/tenants.py`, `vue3/src/components/common/TenantOnboardingModal.vue`):**
+  - **Soporte Bimodal HTTP (PUT y PATCH):** Añadido decorador `@router.put` en `/api/v1/tenants/{tenant_id}/features` junto a `@router.patch`, eliminando el rechazo `HTTP 405 Method Not Allowed` al confirmar la configuración inicial del tenant desde el modal de bienvenida.
+  - **Sincronización en Frontend:** Actualizado `TenantOnboardingModal.vue` para despachar `http.patch` en consonancia con la vista de administración general de tenants.
+
 ### Added
 
 - **Personalización de Políticas de CIS Hardening por Empresa (ISP / Corporativo / Data Center) & Especificación 42 (`fastapi/src/api/v1/compliance.py`, `fastapi/src/schemas/enterprise.py`, `vue3/src/views/EnterpriseComplianceView.vue`, `docs/specs/42_ROUTEROS_V7_CIS_HARDENING_PERFORMANCE_AND_BULK_OPS_TEMPLATES.md`):**

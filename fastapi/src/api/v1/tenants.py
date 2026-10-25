@@ -113,6 +113,7 @@ async def get_tenant_features(
 
 
 @router.patch("/{tenant_id}/features", response_model=TenantFeaturesResponse)
+@router.put("/{tenant_id}/features", response_model=TenantFeaturesResponse)
 async def update_tenant_features(
     tenant_id: uuid.UUID,
     body: UpdateTenantFeaturesRequest,

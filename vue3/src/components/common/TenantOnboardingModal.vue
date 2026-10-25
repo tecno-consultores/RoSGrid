@@ -87,7 +87,7 @@
         onboarding_completed: true,
       };
 
-      await http.put(`/api/v1/tenants/${tid}/features`, payload);
+      await http.patch(`/api/v1/tenants/${tid}/features`, payload);
       authStore.updateTenantFeatures(payload);
       emit('completed');
     } catch (err: any) {
