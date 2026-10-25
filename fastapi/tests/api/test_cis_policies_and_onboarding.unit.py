@@ -12,7 +12,6 @@ import pytest
 from starlette.requests import Request
 
 from src.api.v1.compliance import (
-    auto_harden_router,
     get_cis_policies,
     run_cis_audit,
     update_cis_policies,
@@ -24,7 +23,6 @@ from src.api.v1.tenants import (
 )
 from src.models.inventory import Router, RouterNetworkRoleEnum
 from src.schemas.enterprise import (
-    CisAutoHardenRequest,
     CisPoliciesConfigRequest,
     CisPolicyRule,
 )
