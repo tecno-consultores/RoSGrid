@@ -24,6 +24,13 @@ Este documento centraliza las referencias técnicas, imágenes oficiales de Dock
 - `docs/specs/24` a `docs/specs/29` — Suites de certificación del Estándar Corporativo **QA 11X**.
 - `docs/specs/30_BACKEND_MCP_PROTECTED_ENDPOINT.md` a `docs/specs/35_FLEET_AUTOMATION_TOPOLOGY_L2_SYSLOG_AND_PROMETHEUS.md` — Especificaciones arquitectónicas de servidor MCP, despliegue distribuido, módulo ISP, suite corporativa, feature flags y automatización de flota.
 
+### Herramientas y Scripts Canónicos de Automatización (`scripts/`)
+
+- `scripts/actualizar-grafos-graphify.sh` — Extracción y reclustering de grafos AST para Backend y Frontend en contenedores Docker efímeros (`sinfallas/remote-graphify:latest`).
+- `scripts/auditar-infra.sh` — Escaneo preventivo de vulnerabilidades y configuraciones erróneas IaC con Trivy en Docker.
+- `scripts/verificar-secretos.sh` — Auditoría preventiva contra fuga de credenciales o tokens hardcodeados en Git.
+- `scripts/validar-flota-real.py` — Pruebas de humo de alcanzabilidad e invariantes negativos contra routers MikroTik físicos reales.
+
 ---
 
 ## 2. Catálogo de Imágenes Oficiales y Motores en Memoria

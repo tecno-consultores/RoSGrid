@@ -179,3 +179,62 @@ flowchart TB
         MTClient -->|HTTPS REST :443 Pinning TOFU| MikroTik[Flota MikroTik RouterOS v7+]
     end
 ```
+
+---
+
+## 4. Generación y Actualización de Grafos AST con Graphify
+
+Para mantener la fidelidad arquitectónica entre el código vivo y la documentación técnica sin alucinaciones de IA, RoSGrid integra el perfil canónico de análisis sintáctico abstracto (**AST — Abstract Syntax Tree**) mediante `sinfallas/remote-graphify:latest`.
+
+### 4.1 Ejecución en 1 Clic (Script Canónico)
+
+Bajo la **Regla Cero**, la extracción y reclustering de comunidades funcionales se realiza 100% dentro de contenedores efímeros mediante el script:
+
+```bash
+# Ejecutar extracción y actualización completa de Backend y Frontend:
+./scripts/actualizar-grafos-graphify.sh
+```
+
+*(Opcionalmente, si `make` está instalado en el entorno: `make graphify`).*
+
+### 4.2 Secuencia de Extracción Interna
+
+El flujo automatizado realiza las siguientes fases sin requerir llaves externas de pago (`--code-only`):
+
+1. **Backend (`fastapi/`):**
+   ```bash
+   docker compose -f fastapi/docker-compose.qa.yml --profile graphify run --rm graphify graphify extract . --code-only
+   docker compose -f fastapi/docker-compose.qa.yml --profile graphify run --rm graphify graphify cluster-only .
+   ```
+   - Analiza 158+ archivos de código Python en paralelo con 12 workers.
+   - Genera `fastapi/graphify-out/graph.json` (>3.300 nodos, >12.400 aristas) y `GRAPH_REPORT.md` (171 comunidades funcionales).
+
+2. **Frontend (`vue3/`):**
+   ```bash
+   docker compose -f vue3/docker-compose.qa.yml --profile graphify run --rm graphify graphify extract . --code-only
+   docker compose -f vue3/docker-compose.qa.yml --profile graphify run --rm graphify graphify cluster-only .
+   ```
+   - Analiza 132+ archivos de TypeScript, Vue SFC y stores Pinia.
+   - Genera `vue3/graphify-out/graph.json` (>1.800 nodos, >3.200 aristas) y `GRAPH_REPORT.md` (95 comunidades funcionales).
+
+3. **Normalización de Permisos:**
+   - Como el contenedor genera archivos con UID de contenedor, el script ejecuta un `chown` automático asignando la propiedad al usuario del host (`$(id -u):$(id -g)`).
+
+### 4.3 Visualización Interactiva en el Navegador
+
+Cada directorio de salida incluye un archivo HTML interactivo autónomo con visualizador D3/Canvas:
+
+* **Backend:** Abrir en el navegador local `fastapi/graphify-out/graph.html`
+* **Frontend:** Abrir en el navegador local `vue3/graphify-out/graph.html`
+
+Si se desea levantar el servidor web interactivo de Graphify para navegación asistida:
+
+```bash
+# Para Backend:
+docker compose -f fastapi/docker-compose.qa.yml --profile graphify up -d graphify
+# Acceder a: http://localhost:8080
+
+# Para detener el servidor al finalizar:
+docker compose -f fastapi/docker-compose.qa.yml --profile graphify down -v
+```
+

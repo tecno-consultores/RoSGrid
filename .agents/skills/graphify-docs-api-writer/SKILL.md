@@ -54,3 +54,19 @@ This skill guides the execution of **Milestone 14 (`14.1` to `14.8`)**, using `f
 ## 3. Governance Sync in Root Files (`Sub-task 14.8`)
 
 - Upon finalizing all manuals in `docs/`, verify that root governance files (`README.md`, `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`) and manuals in `docs/` (`docs/INSTALL.md`, `docs/RESOURCES.md`, `docs/FAQ.md`) are 100% aligned with implementation.
+
+---
+
+## 4. Operational Refresh Workflow (One-Click)
+
+Whenever significant code changes or milestone completions occur, refresh both AST graphs in ephemeral Docker using the canonical script:
+
+```bash
+# Refrescar ambos grafos (fastapi/ y vue3/) bajo la Regla Cero:
+./scripts/actualizar-grafos-graphify.sh
+```
+
+*(Or `make graphify` if `make` is available).*
+
+This updates `GRAPH_REPORT.md`, `graph.json`, and `graph.html` under `fastapi/graphify-out/` and `vue3/graphify-out/` with zero paid token consumption (`--code-only`) and normalizes host permissions.
+
