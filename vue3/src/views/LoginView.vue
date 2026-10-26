@@ -7,14 +7,11 @@
   import QRCode from 'qrcode';
   import { http } from '@/api/httpClient';
   import { useAuthStore } from '@/stores/useAuthStore';
-  import { useApiHeartbeatStore } from '@/stores/useApiHeartbeatStore';
-  import RgApiHealthBadge from '@/components/common/RgApiHealthBadge.vue';
   import type { UserInfo } from '@/types';
 
   const route = useRoute();
   const router = useRouter();
   const authStore = useAuthStore();
-  const heartbeatStore = useApiHeartbeatStore();
 
   // Estados de etapas de Login
   type LoginStep = 'CREDENTIALS' | 'ENROLL_2FA' | 'VERIFY_2FA' | 'BOOTSTRAP' | 'REGISTER';
@@ -107,7 +104,6 @@
 
   onBeforeUnmount(() => {
     stopCountdown();
-    heartbeatStore.stopMonitoring();
   });
 
   // Renderizar QR local con librería qrcode
@@ -455,7 +451,6 @@
   }
 
   onMounted(async () => {
-    heartbeatStore.startMonitoring();
     applyQueryTenant();
     try {
       const res = await http.get<{
@@ -473,12 +468,16 @@
 
 <template>
   <div class="login-wrapper">
-    <div class="login-top-bar">
-      <RgApiHealthBadge />
-    </div>
     <main id="main-content" class="login-card" role="main" aria-labelledby="login-heading">
       <header class="login-header">
-        <div class="brand-logo" aria-hidden="true">
+        <a
+          href="https://www.rosgrid.net/"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="brand-logo"
+          aria-label="Sitio web oficial de RoSGrid (abre en una nueva pestaña)"
+          title="Sitio web oficial de RoSGrid"
+        >
           <img
             src="/favicon.svg"
             alt="RoSGrid"
@@ -486,7 +485,7 @@
             width="64"
             height="64"
           />
-        </div>
+        </a>
         <h1 id="login-heading" class="brand-title">RoSGrid</h1>
         <p class="brand-subtitle">Gestión Multi-Tenant para Flotas MikroTik RouterOS v7+</p>
       </header>
@@ -1098,14 +1097,6 @@
     box-sizing: border-box;
   }
 
-  .login-top-bar {
-    width: 100%;
-    max-width: 440px;
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 12px;
-  }
-
   .login-card {
     width: 100%;
     max-width: 440px;
@@ -1123,10 +1114,19 @@
   }
 
   .brand-logo {
-    display: flex;
+    display: inline-flex;
     justify-content: center;
     align-items: center;
     margin-bottom: var(--rg-space-2, 8px);
+    text-decoration: none;
+    cursor: pointer;
+    border-radius: var(--rg-radius-md, 8px);
+    transition: transform 0.25s ease;
+  }
+
+  .brand-logo:focus-visible {
+    outline: 2px solid var(--rg-accent-cyan, #00d2ff);
+    outline-offset: 4px;
   }
 
   .brand-logo-img {
@@ -1137,9 +1137,9 @@
     transition: transform 0.25s ease, filter 0.25s ease;
   }
 
-  .brand-logo-img:hover {
-    transform: scale(1.05);
-    filter: drop-shadow(0 0 24px rgba(0, 240, 255, 0.7));
+  .brand-logo:hover .brand-logo-img {
+    transform: scale(1.08);
+    filter: drop-shadow(0 0 24px rgba(0, 240, 255, 0.75));
   }
 
   .brand-title {

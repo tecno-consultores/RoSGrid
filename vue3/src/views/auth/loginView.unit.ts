@@ -42,9 +42,15 @@ describe('LoginView.vue — Autenticación Multi-Tenant en 2 Etapas y 2FA TOTP',
     const wrapper = mount(LoginView);
     await flushPromises();
     expect(wrapper.find('h1').text()).toBe('RoSGrid');
-    const logoImg = wrapper.find('.brand-logo img.brand-logo-img');
+    const logoLink = wrapper.find('a.brand-logo');
+    expect(logoLink.exists()).toBe(true);
+    expect(logoLink.attributes('href')).toBe('https://www.rosgrid.net/');
+    expect(logoLink.attributes('target')).toBe('_blank');
+    expect(logoLink.attributes('rel')).toContain('noopener');
+    const logoImg = logoLink.find('img.brand-logo-img');
     expect(logoImg.exists()).toBe(true);
     expect(logoImg.attributes('src')).toBe('/favicon.svg');
+    expect(wrapper.find('.login-top-bar').exists()).toBe(false);
     expect(wrapper.find('#tenant-slug').exists()).toBe(true);
     expect((wrapper.find('#tenant-slug').element as HTMLInputElement).value).toBe('isp-valencia');
   });

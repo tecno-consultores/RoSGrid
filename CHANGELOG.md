@@ -8,6 +8,13 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ## [Unreleased]
 
+### Changed
+
+- **Refinamiento de UX y Enlace Oficial en Pantalla de Login (`vue3/src/views/LoginView.vue`, `vue3/src/views/auth/loginView.unit.ts`):**
+  - **Retiro del Sensor de Latencia de API en Vista No Autenticada:** Eliminación del componente `RgApiHealthBadge` y del polling reactivo de `heartbeatStore` en la pantalla de login. El monitoreo de latencia y estado de la API queda restringido exclusivamente a la sesión autenticada del operador dentro del layout táctico (`RgResponsiveShell.vue`).
+  - **Enlace Oficial al Portal Web RoSGrid:** El contenedor del isotipo vectorial oficial (`.brand-logo`) fue transformado en un hipervínculo interactivo accesible (`<a href="https://www.rosgrid.net/" target="_blank" rel="noopener noreferrer">`), permitiendo a los operadores acceder directamente al portal corporativo en una nueva pestaña sin riesgo de reverse tabnabbing.
+  - **Aseguramiento Unitario y A11y:** Actualización de la suite Vitest en `vue3/src/views/auth/loginView.unit.ts` validando la no presencia de la barra superior del sensor y los atributos de seguridad (`target="_blank"`, `rel="noopener noreferrer"`, `aria-label`) del logo enlazado.
+
 ### Added
 
 - **Integración y Despliegue de Branding Oficial: Logos Vectoriales SVG, Favicons Multi-Resolución, PWA y Metadatos Open Graph (`vue3/src/components/common/RgResponsiveShell.vue`, `vue3/src/views/LoginView.vue`, `vue3/src/views/NocWallboardView.vue`, `vue3/index.html`, `vue3/nginx/default.conf`, `README.md`, `vue3/src/components/common/RgResponsiveShell.unit.ts`, `vue3/src/views/auth/loginView.unit.ts`):**
