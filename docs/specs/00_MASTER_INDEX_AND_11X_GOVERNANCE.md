@@ -229,7 +229,10 @@ Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `
 * `docs/specs/43_REAL_FLEET_SMOKE_TESTS_GROUND_TRUTH_FIXTURES_AND_DETERMINISTIC_SENSING.md` — Suite Unificada de Smoke Tests de Flota Real Multi-Dominio, Fixtures Trimodales y Aserciones Negativas Obligatorias: Erradicación del sesgo de simulación mediante tres estados de prueba (Fábrica, Nominal y Degradado) para los 8 dominios de RouterOS v7 con validación en hardware físico.
 * `docs/specs/44_TENANT_SWITCHER_INFLOW_FOOTER_AND_MODULAR_FEATURE_FLAGS.md` — Conmutador Rápido de Contexto de Tenant en Cabecera (SuperAdmin Fast-Switching), Ergonomía de Pie de Página In-Flow (recuperación de 32px verticales) y Sub-pantalla Táctica de Gestión de Feature Flags por Empresa con Arquetipos en 1 Clic y Blindaje de Radio de Impacto.
 * `docs/specs/45_TACTICAL_FEATURE_FLAGS_GOVERNANCE_DAG_AND_AUDIT_ROLLBACK.md` — Gobernanza Táctica de Módulos B2B: Grafo de Dependencias Activo (DAG en Cascada / Hard Lock), Blindaje RBAC de Licenciamiento Comercial (Solo SuperAdmin), Modo Contingencia de Emergencia en 1 Clic y Pestaña de Historial de Auditoría con Reversión (Rollback).
-
+* `docs/specs/46_REPORTE_INVESTIGACION_WEBFIG_COMPETITIVIDAD_Y_ROADMAP.md` — Reporte de Investigación: Análisis de Mercado, Competitividad de WebFig (WinBox 4, MKController, Splynx, ISPApp, pfSense), Detección de Brechas Frontend-Backend y Arquitectura de Hitos.
+* `docs/specs/47_WEBFIG_V7_FULL_PARITY_FIREWALL_QUEUES_AND_PPPOE.md` — WebFig v7 Capa 1: Paridad Total, Modales Tácticos de Creación/Edición de Reglas de Firewall (Filter/NAT/Mangle/RAW), Simple Queues con Presets de Ancho de Banda y Gestión Operativa PPPoE (Kick Session).
+* `docs/specs/48_WEBFIG_V7_IP_STACK_DHCPV4_AND_DHCPV6_DUAL_STACK.md` — WebFig v7 Capa 1: Módulo IP Dedicado, DHCPv4 Server & Client, Leases en Vivo con Make Static, Pila Dual IPv6 Nativa, DHCPv6-PD y Descubrimiento de Vecinos (NDP).
+* `docs/specs/49_WEBFIG_V7_ROUTING_DYNAMIC_BGP_OSPF_AND_NAT_WIZARDS.md` — WebFig v7 Capa 1: Rutas Estáticas Dual-Stack IPv4/IPv6 con Check Gateway, BGP v7 Interactivo (Sessions, Connections & Templates), Policy-Based Routing (FIB/Rules) y Asistentes NAT en 1 Clic (Masquerade y Port Forwarding).
 
 ---
 
