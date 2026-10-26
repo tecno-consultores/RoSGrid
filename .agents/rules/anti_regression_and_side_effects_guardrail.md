@@ -17,11 +17,12 @@ Before altering any shared code, service definition, or configuration:
    - For WebFig, API, and WebSocket endpoints, verify that base HTTP/HTTPS/WSS bindings remain reachable.
 2. **Dependency & Shared Worker Audit:**
    - When modifying worker loops (`health_monitor_worker`, `syslog_collector`, `subscriber_poller`), audit all downstream KeyDB keys and consumers to ensure existing TTLs, channel subscriptions, and key structures (`rg:{tid}:router:{rid}:*`) are preserved.
-3. **Graphify AST Blast-Radius Pre-Audit:**
-   - Prior to modifying or refactoring any shared function, model, utility or Pinia store, run the canonical blast radius inspector:
+3. **Graphify AST Blast-Radius Pre-Audit (CLI-First Invariant):**
+   - Prior to modifying or refactoring any shared function, model, utility or Pinia store, run the canonical blast radius inspector directly via CLI:
      ```bash
      python3 .agents/scripts/inspect_blast_radius.py "<symbol_name>"
      ```
+   - **CLI-First Execution Rule:** Shell-capable agents (Google Antigravity, local terminal agents) MUST execute the inspector and query tools directly via CLI. They MUST NOT spawn background Docker MCP containers (`docker compose --profile graphify up`) or occupy port 8080, which are reserved exclusively for external non-shell clients (Claude Desktop, Hermes Agent).
    - For any symbol assessed as `MODERATE` or `HIGH/CRITICAL` risk, the agent's implementation plan must explicitly list all affected caller files and guarantee that their contracts and parameters remain intact.
 
 ---

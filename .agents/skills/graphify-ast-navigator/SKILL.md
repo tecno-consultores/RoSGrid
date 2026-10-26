@@ -13,7 +13,18 @@ This skill guides AI agents (Google Antigravity, Claude, Hermes Agent) to levera
 
 ---
 
-## 1. Quick Blast Radius Inspection (Pre-Refactor)
+## 0. Canonical Architectural Directive: CLI-First vs. MCP Protocol
+
+RoSGrid enforces a clear operational separation depending on the execution capability of the AI agent:
+
+| Agent Profile | Preferred Modality | Rationale & Mechanism |
+| :--- | :--- | :--- |
+| **Shell-Capable Agents**<br>*(Google Antigravity, local terminal agents)* | **`CLI & Direct Scripts`**<br>*(MANDATORY)* | **Zero background latency, zero RAM consumption, zero port exposure.**<br>Do **NOT** spawn Docker MCP daemons or occupy port 8080. Query AST graphs directly via specialized Python scripts (`inspect_blast_radius.py`, `verify_topological_health.py`), one-line Python queries, or `jq` against `graphify-out/graph.json`. |
+| **External IDE / Non-Shell Agents**<br>*(Claude Desktop, remote Hermes Agent)* | **`MCP Streamable HTTP`**<br>*(Optional on-demand)* | Connected over JSON-RPC / SSE via `graphify-mcp` service on `http://localhost:8080/mcp` using descriptors in `.agents/configs/`. |
+
+---
+
+## 1. Quick Blast Radius Inspection (Pre-Refactor — CLI First)
 
 Before modifying any shared function, database model, or Pinia store, determine its exact blast radius:
 
@@ -47,9 +58,31 @@ python3 .agents/scripts/verify_topological_health.py
 
 ---
 
-## 3. Running the Dedicated MCP Topology Server
+## 3. Ad-hoc Direct AST Queries via CLI (Zero Overhead)
 
-For external agents (Hermes Agent, Claude Desktop) that connect over Model Context Protocol:
+Shell-capable agents should query the raw AST files directly via python or jq without starting any daemon:
+
+```bash
+# 1. Search for symbols matching a pattern in Backend graph:
+python3 -c "
+import json
+g = json.load(open('fastapi/graphify-out/graph.json'))
+matches = [n['label'] for n in g['nodes'] if 'safemode' in n['label'].lower()]
+print('Matches:', matches[:15])
+"
+
+# 2. Check cluster / architectural community report:
+head -n 45 fastapi/graphify-out/GRAPH_REPORT.md
+
+# 3. Direct jq filtering on nodes or link targets:
+jq '.nodes[] | select(.label | test("RouterOS"; "i")) | {id, label, source_file}' fastapi/graphify-out/graph.json | head -n 20
+```
+
+---
+
+## 4. Running the Dedicated MCP Topology Server (External Non-Shell Clients ONLY)
+
+> **AGENT DIRECTIVE:** Shell-capable agents (Antigravity) **MUST NOT** use this method. It is reserved exclusively for external clients (Hermes Agent, Claude Desktop) that lack terminal access and connect over Model Context Protocol:
 
 ```bash
 # Start the MCP server (Streamable HTTP on port 8080):
@@ -68,7 +101,7 @@ Pre-configured client descriptors:
 
 ---
 
-## 4. Full AST Graph Refresh
+## 5. Full AST Graph Refresh
 
 Whenever major milestones or structural refactorings are concluded, regenerate the entire AST:
 

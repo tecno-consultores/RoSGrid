@@ -42,7 +42,7 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
    - **Autonomous Evolution of `.agents/`:** Proactively update rules, skills, and automation scripts whenever discovering an improvement opportunity, unhandled edge case, procedure automation, or token optimization without waiting for user prompting.
 
 5. [anti_regression_and_side_effects_guardrail.md](file:///.agents/rules/anti_regression_and_side_effects_guardrail.md):
-   - **Anti-Regression & Blast-Radius Governance:** Zero degradation of pre-existing functionality when introducing changes. Mandatory pre-modification impact audit for shared files and Docker Compose ports (canonical UDP 514/5514 must never be dropped), Docker NAT/bridge proxy tolerance with heuristic payload/identity fallback, strict pre-build static typing/linting (`ruff`, `vue-tsc`), and non-destructive frontend error handling (no `setRouters([])` in generic catch blocks).
+   - **Anti-Regression & Blast-Radius Governance (CLI-First Invariant):** Zero degradation of pre-existing functionality when introducing changes. Mandatory pre-modification impact audit for shared files, Docker Compose ports (canonical UDP 514/5514 must never be dropped), and AST blast radius (`.agents/scripts/inspect_blast_radius.py`). Shell-capable agents (Antigravity) MUST execute AST inspection directly via CLI/scripts and never spawn background Docker MCP daemons or occupy port 8080. MCP (`graphify-mcp`) is reserved exclusively for external non-shell clients (Claude Desktop, Hermes Agent). Docker NAT/bridge proxy tolerance with heuristic payload/identity fallback, strict pre-build static typing/linting (`ruff`, `vue-tsc`), and non-destructive frontend error handling (no `setRouters([])` in generic catch blocks).
 
 6. [ground_truth_fixtures_and_negative_invariants.md](file:///.agents/rules/ground_truth_fixtures_and_negative_invariants.md):
    - **Universal Trimodal Fixtures & Negative Invariants:** Eradicate Mock Blindness across all 8 RouterOS v7 domains (Syslog, CIS Hardening, L2 Topology, IPAM DHCP, PoE, Rogue DHCP, CAPsMAN WiFi, and Config Drift). Every endpoint/integration MUST be tested against three raw JSON fixtures: Factory Default (asserting negative/unconfigured), Nominal RoSGrid (asserting active/online), and Degraded/Unsupported (asserting graceful degradation without 500 errors). Real-fleet smoke testing (`scripts/validar-flota-real.py`) mandatory before concluding tasks.
@@ -63,7 +63,7 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
 4. `vue3-wcag-tactical-ui`: WinBox-style high-density Vue 3 + TypeScript architecture (Tactical NOC Cyan), virtual scrolling, and WCAG 2.1 AA compliance.
 5. `docker-trivy-keydb-hardening`: Docker container hardening (Trivy HIGH/CRITICAL = 0), Multi-Threaded KeyDB in-memory engine, and backend performance.
 6. `graphify-docs-api-writer`: Technical authoring for operations manuals, Mermaid architecture, REST/WebSockets API specs, and AI MCP integration guides.
-7. `graphify-ast-navigator`: AST Knowledge Graph navigation, blast-radius pre-audit, layer boundary compliance, and local MCP topology server integration.
+7. `graphify-ast-navigator`: AST Knowledge Graph navigation, blast-radius pre-audit, layer boundary compliance, CLI-first query protocol for shell agents, and local MCP topology server integration.
 
 ---
 
