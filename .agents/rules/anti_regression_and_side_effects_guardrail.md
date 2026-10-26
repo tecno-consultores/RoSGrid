@@ -17,6 +17,12 @@ Before altering any shared code, service definition, or configuration:
    - For WebFig, API, and WebSocket endpoints, verify that base HTTP/HTTPS/WSS bindings remain reachable.
 2. **Dependency & Shared Worker Audit:**
    - When modifying worker loops (`health_monitor_worker`, `syslog_collector`, `subscriber_poller`), audit all downstream KeyDB keys and consumers to ensure existing TTLs, channel subscriptions, and key structures (`rg:{tid}:router:{rid}:*`) are preserved.
+3. **Graphify AST Blast-Radius Pre-Audit:**
+   - Prior to modifying or refactoring any shared function, model, utility or Pinia store, run the canonical blast radius inspector:
+     ```bash
+     python3 .agents/scripts/inspect_blast_radius.py "<symbol_name>"
+     ```
+   - For any symbol assessed as `MODERATE` or `HIGH/CRITICAL` risk, the agent's implementation plan must explicitly list all affected caller files and guarantee that their contracts and parameters remain intact.
 
 ---
 

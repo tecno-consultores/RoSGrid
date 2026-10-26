@@ -103,7 +103,7 @@ services:
     profiles:
       - graphify
     restart: always
-    command: uvx --from graphifyy python -m graphify.serve /app/graphify-out/graph.json --transport http --host 0.0.0.0 --port 8080
+    command: graphify-mcp /app/graphify-out/graph.json --transport http --host 0.0.0.0 --port 8080
     ports:
       - "8080:8080"
     extra_hosts:

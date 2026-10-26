@@ -24,12 +24,14 @@ Este directorio implementa el estándar abierto y emergente de la industria para
 │   ├── mikrotik-webfig-safemode/                     # Reglas de dominio MikroTik v7, Safe Mode y RingBuffer
 │   ├── vue3-wcag-tactical-ui/                        # Arquitectura Vue 3 WinBox, WCAG 2.1 AA y Lighthouse
 │   ├── docker-trivy-keydb-hardening/                 # Endurecimiento Docker, Trivy = 0 y KeyDB multi-hilo
-│   └── graphify-docs-api-writer/                     # Redacción de arquitectura, grafos AST y manuales
+│   ├── graphify-docs-api-writer/                     # Redacción de arquitectura, grafos AST y manuales
+│   └── graphify-ast-navigator/                       # Navegación AST, radio de impacto (Blast Radius) y servidor MCP
 └── scripts/                                          # Scripts de automatización y compuertas de calidad
     ├── verify_alembic_orm_parity.py                  # Auditoría estricta: modelos ORM vs migraciones Alembic
     ├── verify_json_no_duplicate_keys.py              # Auditoría estricta anti-colisión de claves duplicadas en JSON i18n
-    └── certify_task_completion.sh                    # Compuerta de certificación pre-commit automatizada (6 etapas)
-
+    ├── verify_topological_health.py                  # Auditoría estricta de salud topológica y límites de capas AST
+    ├── inspect_blast_radius.py                       # Análisis de radio de impacto pre-refactorización (aristas entrantes)
+    └── certify_task_completion.sh                    # Compuerta de certificación pre-commit automatizada (7 etapas)
 ```
 
 ---

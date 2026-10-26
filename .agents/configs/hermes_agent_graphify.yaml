@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright (C) 2026 RoSGrid Contributors
+# Configuración de MCP Server de Graphify AST para Hermes Agent (Nous Research)
+
+mcp_servers:
+  rosgrid_graphify:
+    url: "http://localhost:8080/mcp"
+    transport: "http"
+    description: "Servidor MCP de Topología AST, Árbol de Dependencias y Comunidades para RoSGrid"

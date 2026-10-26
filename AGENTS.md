@@ -63,6 +63,7 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
 4. `vue3-wcag-tactical-ui`: WinBox-style high-density Vue 3 + TypeScript architecture (Tactical NOC Cyan), virtual scrolling, and WCAG 2.1 AA compliance.
 5. `docker-trivy-keydb-hardening`: Docker container hardening (Trivy HIGH/CRITICAL = 0), Multi-Threaded KeyDB in-memory engine, and backend performance.
 6. `graphify-docs-api-writer`: Technical authoring for operations manuals, Mermaid architecture, REST/WebSockets API specs, and AI MCP integration guides.
+7. `graphify-ast-navigator`: AST Knowledge Graph navigation, blast-radius pre-audit, layer boundary compliance, and local MCP topology server integration.
 
 ---
 
@@ -70,7 +71,9 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
 
 - `verify_alembic_orm_parity.py`: Automated parity validator between SQLAlchemy ORM models and Alembic migrations (detects schema drift).
 - `verify_json_no_duplicate_keys.py`: Automated integrity validator detecting duplicate keys in i18n JSON locale files.
-- `certify_task_completion.sh`: End-to-end certification gate enforcing secret scanning, ORM parity, front-back contracts, i18n dictionary integrity, and documentation sync.
+- `verify_topological_health.py`: Automated AST architectural validator detecting forbidden cross-layer coupling and layer boundary violations.
+- `inspect_blast_radius.py`: Automated impact analyzer computing direct and transitive inbound callers for symbols before refactoring.
+- `certify_task_completion.sh`: End-to-end certification gate enforcing secret scanning, ORM parity, front-back contracts, i18n integrity, topological health, and documentation sync.
 
 ---
 

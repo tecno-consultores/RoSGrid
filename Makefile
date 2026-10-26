@@ -2,7 +2,7 @@
 # Copyright (C) 2026 RoSGrid Contributors
 # Makefile canónico para desarrollo local, automatización y gobernanza Level-11X
 
-.PHONY: help audit test test-backend test-frontend lint certify graphify build clean
+.PHONY: help audit test test-backend test-frontend lint certify graphify map build clean
 
 help:
 	@echo "Comandos canónicos de desarrollo y gobernanza para RoSGrid:"
@@ -13,6 +13,7 @@ help:
 	@echo "  make lint          - Ejecuta linters y chequeo de tipos (ruff, mypy, vue-tsc)"
 	@echo "  make certify       - Ejecuta el gate de certificación 11X (.agents/scripts/certify_task_completion.sh)"
 	@echo "  make graphify      - Extrae y actualiza los grafos AST de Graphify (Backend y Frontend en Docker)"
+	@echo "  make map           - Abre los mapas interactivos AST de arquitectura en el navegador"
 	@echo "  make build         - Reconstruye imágenes locales de Docker (rosgrid-api, rosgrid-ui)"
 	@echo "  make clean         - Limpia artefactos temporales y contenedores de prueba"
 
@@ -45,6 +46,9 @@ certify:
 
 graphify:
 	@./scripts/actualizar-grafos-graphify.sh
+
+map:
+	@./scripts/ver-mapa-arquitectura.sh
 
 build:
 	@./scripts/build.sh
