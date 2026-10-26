@@ -1,5 +1,12 @@
+<div align="center">
+  <a href="[https://rosgrid.net](https://rosgrid.net)">
+    <img src="./docs/assets/logo-git.jpg" alt="RoSGrid — Multi-Tenant Management Console & MCP Server for MikroTik RouterOS v7" width="850">
+  </a>
+</div>
+
 # 🌐 RoSGrid — Consola Centralizada Multi-Tenant para Flotas MikroTik RouterOS v7+
 
+**Sitio Oficial:** [https://rosgrid.net](https://rosgrid.net)  
 **Licencia:** GNU General Public License v3.0 (GPL-3.0-only)  
 **Stack Principal:** FastAPI (Python 3.15 + `orjson` + `uvloop`) + Vue 3 (TypeScript / Pinia / Node.js 26 LTS) + PostgreSQL 17 (RLS + BRIN) + KeyDB Multi-Hilo (Compatible DragonflyDB)  
 **Calidad y Seguridad:** Certificado bajo el Estándar Corporativo **[QA 11X](https://github.com/tecno-consultores/qa-testing-blueprints)**
@@ -113,7 +120,7 @@ flowchart TB
 ### 5. Servidor MCP Protegido para Agentes de IA (`Hermes Agent`, `Claude Desktop / Code`)
 
 - **Model Context Protocol (JSON-RPC 2.0 Streamable HTTP):** Endpoint `POST /api/v1/mcp` protegido por lista blanca CIDR, tokens de cuenta `SERVICE_ACCOUNT` y límite de tasa en KeyDB (`30 req/min`).
-- **Catálogo de 22 Tools Semánticas:** Inventario (`rosgrid_list_inventory`), salud física (`rosgrid_get_router_health`), óptica SFP DDM (`rosgrid_check_sfp_optical_ddm`), enrutamiento BGP/OSPF (`rosgrid_inspect_routing_bgp_ospf`), diagnóstico en vivo (`rosgrid_run_live_diagnostic`), comparador Diff Git `.rsc` (`rosgrid_compare_config_diff`), reconexión PPPoE (`rosgrid_reconnect_pppoe_client`), propuesta de mutaciones de red (`rosgrid_propose_network_change`), diagnóstico 360° (`rosgrid_run_360_diagnostics`), aislamiento técnico (`rosgrid_isolate_subscriber`), restauración técnica (`rosgrid_restore_subscriber`), cambio de rate-limit (`rosgrid_change_rate_limit`), consultas BGP Looking Glass (`rosgrid_query_bgp_looking_glass`), detección de desviación de configuración (`rosgrid_check_config_drift`), auditoría CIS Benchmark (`rosgrid_run_cis_audit`), detección de caídas masivas (`rosgrid_detect_mass_outage`), topología L2 física (`rosgrid_get_l2_topology`), matriz local de CVEs (`rosgrid_check_fleet_cves`), terminal Syslog efímero (`rosgrid_get_recent_syslog`), actualizaciones PoE-aware con Safety Stop (`rosgrid_execute_poe_aware_upgrade`), y **Grounding Oficial de Documentación MikroTik** mediante búsqueda en índice oficial (`rosgrid_search_mikrotik_docs`) y lectura de tópicos Markdown (`rosgrid_get_mikrotik_doc_topic`) sobre el estándar abierto `https://manual.mikrotik.com/llms.txt`.
+- **Catálogo de 22 Tools Semánticas:** Inventario (`rosgrid_list_inventory`), salud física (`rosgrid_get_router_health`), óptica SFP DDM (`rosgrid_check_sfp_optical_ddm`), enrutamiento BGP/OSPF (`rosgrid_inspect_routing_bgp_ospf`), diagnóstico en vivo (`rosgrid_run_live_diagnostic`), comparador Diff Git `.rsc` (`rosgrid_compare_config_diff`), reconexión PPPoE (`rosgrid_reconnect_pppoe_client`), propuesta de mutaciones de red (`rosgrid_propose_network_change`), diagnóstico 360° (`rosgrid_run_360_diagnostics`), aislamiento técnico (`rosgrid_isolate_subscriber`), restauración técnica (`rosgrid_restore_subscriber`), cambio de rate-limit (`rosgrid_change_rate_limit`), consultas BGP Looking Glass (`rosgrid_query_bgp_looking_glass`), detección de desviación de configuración (`rosgrid_check_config_drift`), auditoría CIS Benchmark (`rosgrid_run_cis_audit`), detección de caídas masivas (`rosgrid_detect_mass_outage`), topología L2 física (`rosgrid_get_l2_topology`), matriz local de CVEs (`rosgrid_check_fleet_cves`), terminal Syslog efímero (`rosgrid_get_recent_syslog`), actualizaciones PoE-aware con Safety Stop (`rosgrid_execute_poe_aware_upgrade`), y **Grounding Oficial de Documentación MikroTik** mediante búsqueda en índice oficial (`rosgrid_search_mikrotik_docs`) y lectura de tópicos Markdown (`rosgrid_get_mikrotik_doc_topic`) sobre el estándar abierto `[https://manual.mikrotik.com/llms.txt](https://manual.mikrotik.com/llms.txt)`.
 - **NOC Autónomo 24/7 y Gobierno Maker-Checker:** Las propuestas de mutación generadas por agentes IA se retienen automáticamente como `202 Accepted` (`AWAITING_APPROVAL`) para autorización humana previa, protegidas por *Safe Mode (60s)* y registradas en la bitácora forense WORM (`MCP_AI_TOOL_CALL`). Consulta `docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md`.
 
 ### 6. Gobernanza Modular (Feature Flags): Operación Dual ISP y Corporativa
@@ -196,6 +203,7 @@ rosgrid/
 │   ├── probar-prod-local.sh        # Pipeline de validación de producción local en 6 fases
 │   └── verificar-secretos.sh       # Detección preventiva de credenciales y secretos hardcodeados
 ├── docs/                           # Manuales operativos, especificaciones técnicas y guías
+│   ├── assets/                     # Recursos gráficos e identidad visual (logo-git.jpg)
 │   ├── INSTALL.md                  # Guía paso a paso de instalación, KeyDB vs DragonflyDB y MikroTik
 │   ├── FAQ.md                      # Preguntas frecuentes técnicas y operativas
 │   ├── RESOURCES.md                # Catálogo de recursos, imágenes Docker y RFCs
@@ -215,7 +223,7 @@ Para una referencia exhaustiva de operación, seguridad y despliegue, consulta l
 | **[`docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md`](./docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md)** | Comandos CLI RouterOS v7.1+, política obligatoria `rest-api` (v7.13+), certificados TLS para Pinning TOFU (`SHA-256`), `/ip/service/www-ssl` y Safe Mode. |
 | **[`docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md`](./docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md)** | Aislamiento RLS en PostgreSQL 17, matriz de 11 roles RBAC, permisos por router, Bóveda 2FA (30s), Kill-Switch y Auto-Registro con Maker-Checker. |
 | **[`docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md`](./docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md)** | Consola WebFig L1/L2, pestañas `<KeepAlive :max="5">`, gráficas Canvas 2D, Maker-Checker, comparador Git Diff `.rsc`, Wallboard y Plantillas Golden Configs masivas. |
-| **[`docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md`](./docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md)** | Perfil Auditor, cadena WORM SHA-256 e índice BRIN, ADR sobre la exclusión de terminal CLI/SSH y diagramas Mermaid AST. |
+| **[`docs/05_AUDITORIA_FORENSE_Y_ARQUITURA.md`](./docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md)** | Perfil Auditor, cadena WORM SHA-256 e índice BRIN, ADR sobre la exclusión de terminal CLI/SSH y diagramas Mermaid AST. |
 | **[`docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`](./docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md)** | Especificación completa de endpoints `/api/v1/*` (incluyendo `/api/v1/operations/templates*`, `/bulk-jobs*`, `/auth/register` y `/api/v1/mcp`) y WebSockets `/ws/v1/*`. |
 | **[`docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md`](./docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md)** | Servidor MCP protegido (`POST /api/v1/mcp`), catálogo de 16 tools semánticas, configuración Hermes/Claude y NOC Autónomo 24/7. |
 | **[`docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md`](./docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md)** | Pipeline local `./scripts/probar-prod-local.sh`, verificación sintética en 6 fases y suite de 24 pruebas de integración UI-API (`validar_comunicacion_front_back.py`). |
@@ -365,4 +373,3 @@ Cualquier desarrollador que clone el repositorio puede utilizar estos recursos p
 ## 📄 Licencia
 
 Este proyecto es Software Libre distribuido bajo los términos de la **GNU General Public License v3.0 (GPL-3.0-only)**. Consulta el archivo [LICENSE](./LICENSE) para más detalles.
-
