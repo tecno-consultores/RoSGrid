@@ -13,14 +13,14 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Set
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 FASTAPI_GRAPH_PATH = REPO_ROOT / "fastapi" / "graphify-out" / "graph.json"
 VUE3_GRAPH_PATH = REPO_ROOT / "vue3" / "graphify-out" / "graph.json"
 
 
-def load_graph(path: Path) -> Dict[str, Any]:
+def load_graph(path: Path) -> dict[str, Any]:
     if not path.is_file():
         print(f"⚠️ Archivo de grafo no encontrado: {path}", file=sys.stderr)
         sys.exit(1)
@@ -28,28 +28,26 @@ def load_graph(path: Path) -> Dict[str, Any]:
         return json.load(f)
 
 
-def find_matching_nodes(graph: Dict[str, Any], query: str) -> List[Dict[str, Any]]:
+def find_matching_nodes(graph: dict[str, Any], query: str) -> list[dict[str, Any]]:
     query_lower = query.lower()
     matches = []
     for node in graph.get("nodes", []):
         label = node.get("label", "").lower()
         node_id = node.get("id", "").lower()
         source_file = node.get("source_file", "").lower()
-        if query_lower == label or query_lower == node_id or query_lower in source_file:
-            matches.append(node)
-        elif query_lower in label:
+        if query_lower == label or query_lower == node_id or query_lower in source_file or query_lower in label:
             matches.append(node)
     return matches
 
 
-def compute_blast_radius(graph: Dict[str, Any], target_node_id: str) -> Dict[str, Any]:
+def compute_blast_radius(graph: dict[str, Any], target_node_id: str) -> dict[str, Any]:
     nodes_by_id = {n["id"]: n for n in graph.get("nodes", [])}
     links = graph.get("links", [])
 
     # Aristas entrantes directas (quién llama al target)
     direct_callers = []
-    direct_caller_files: Set[str] = set()
-    impacted_communities: Set[str] = set()
+    direct_caller_files: set[str] = set()
+    impacted_communities: set[str] = set()
 
     for link in links:
         if link.get("target") == target_node_id:

@@ -694,6 +694,13 @@
   - Escenarios BDD Karate Labs API (95, 96, 97) y UI (46) incorporados y sincronizados en `docs/examples/`.
 - [x] **26.6** **Validación en Docker e Inspección Visual en Navegador Real:**
   - Reconstrucción de imágenes locales (`sinfallas/rosgrid-backend:local-test` y `sinfallas/rosgrid-frontend:local-test`), recreación de contenedores y verificación interactiva del bloqueo de switches hijos, el preset de contingencia y el cargado de versiones históricas en `browser_subagent`.
+- [x] **26.7** **Integración Integral de Graphify AST en el Proceso de Desarrollo (Fases 1 a 4):**
+  - Refresco completo de grafos topológicos (Backend: 3.320 nodos, 12.448 aristas, 171 comunidades; Frontend: 1.816 nodos, 3.235 aristas, 95 comunidades).
+  - Script canónico de extracción en 1 clic en Docker efímero con `--code-only` (`scripts/actualizar-grafos-graphify.sh`).
+  - Script de validación topológica y límites de capas arquitectónicas (`.agents/scripts/verify_topological_health.py`) integrado en la compuerta de certificación (`[4/7]`).
+  - Herramienta de inspección de radio de impacto pre-refactorización (`.agents/scripts/inspect_blast_radius.py`) incorporada en directivas de `.agents/rules/`.
+  - Servicio MCP estandarizado (`graphify-mcp`) en puerto 8080 con plantillas para Hermes Agent y Claude Desktop, y habilidad agéntica `.agents/skills/graphify-ast-navigator`.
+  - Visualización interactiva en 1 clic (`scripts/ver-mapa-arquitectura.sh` / `make map`).
 
 ---
 

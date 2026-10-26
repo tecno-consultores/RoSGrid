@@ -12,14 +12,14 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 FASTAPI_GRAPH_PATH = REPO_ROOT / "fastapi" / "graphify-out" / "graph.json"
 VUE3_GRAPH_PATH = REPO_ROOT / "vue3" / "graphify-out" / "graph.json"
 
 
-def load_graph(path: Path) -> Dict[str, Any]:
+def load_graph(path: Path) -> dict[str, Any]:
     if not path.is_file():
         print(f"⚠️ Archivo de grafo no encontrado: {path}", file=sys.stderr)
         print("  Ejecute primero './scripts/actualizar-grafos-graphify.sh'", file=sys.stderr)
@@ -28,10 +28,10 @@ def load_graph(path: Path) -> Dict[str, Any]:
         return json.load(f)
 
 
-def audit_backend_layers(graph: Dict[str, Any]) -> Tuple[List[str], Dict[str, Any]]:
+def audit_backend_layers(graph: dict[str, Any]) -> tuple[list[str], dict[str, Any]]:
     nodes = {n["id"]: n for n in graph.get("nodes", [])}
     links = graph.get("links", [])
-    violations: List[str] = []
+    violations: list[str] = []
 
     # Reglas de límite de capas en Backend:
     # 1. src/mikrotik/, src/models/, src/core/, src/schemas/ NUNCA deben llamar o importar de src/api/
@@ -60,15 +60,15 @@ def audit_backend_layers(graph: Dict[str, Any]) -> Tuple[List[str], Dict[str, An
     stats = {
         "nodes": len(nodes),
         "links": len(links),
-        "communities": len(set(n.get("community", 0) for n in nodes.values())),
+        "communities": len({n.get("community", 0) for n in nodes.values()}),
     }
     return violations, stats
 
 
-def audit_frontend_layers(graph: Dict[str, Any]) -> Tuple[List[str], Dict[str, Any]]:
+def audit_frontend_layers(graph: dict[str, Any]) -> tuple[list[str], dict[str, Any]]:
     nodes = {n["id"]: n for n in graph.get("nodes", [])}
     links = graph.get("links", [])
-    violations: List[str] = []
+    violations: list[str] = []
 
     # Reglas de límite de capas en Frontend:
     # 1. Componentes comunes (src/components/common/) nunca deben depender de vistas completas (src/views/)
@@ -88,7 +88,7 @@ def audit_frontend_layers(graph: Dict[str, Any]) -> Tuple[List[str], Dict[str, A
     stats = {
         "nodes": len(nodes),
         "links": len(links),
-        "communities": len(set(n.get("community", 0) for n in nodes.values())),
+        "communities": len({n.get("community", 0) for n in nodes.values()}),
     }
     return violations, stats
 

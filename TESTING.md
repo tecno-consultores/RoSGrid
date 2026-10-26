@@ -42,7 +42,9 @@
 - **Pruebas de Mutación:** 0 mutantes críticos sobrevivientes en lógica de negocio crítica.
 - **Accesibilidad y Rendimiento UI:** 0 violaciones WCAG 2.1 A/AA en `@axe-core/playwright`, regresión visual determinista, y Lighthouse CI con Performance `>= 0.90`, Accessibility `>= 0.95`, Best-Practices `>= 0.90` y SEO `>= 0.90`.
 - **Regla Cero de Host:** Cero ejecuciones de entornos en el host local; ejecución 100% encapsulada en contenedores Docker efímeros.
-- **Auditoría Estática de Scripts en Bash (ShellCheck):** Cero (0) errores y cero (0) advertencias en `ShellCheck` (`koalaman/shellcheck:stable`) sobre el 100% de los scripts `.sh` del monorepo (`scripts/auditar-infra.sh`, `scripts/instalar-rosgrid.sh`, `scripts/build.sh`, `scripts/instalar-hooks.sh`, `scripts/limpieza.sh`, `scripts/probar-prod-local.sh`, `scripts/verificar-secretos.sh`, `fastapi/scripts/entrypoint.sh`).
+- **Auditoría Estática de Scripts en Bash (ShellCheck):** Cero (0) errores y cero (0) advertencias en `ShellCheck` (`koalaman/shellcheck:stable`) sobre el 100% de los scripts `.sh` del monorepo (`scripts/auditar-infra.sh`, `scripts/instalar-rosgrid.sh`, `scripts/build.sh`, `scripts/instalar-hooks.sh`, `scripts/limpieza.sh`, `scripts/probar-prod-local.sh`, `scripts/verificar-secretos.sh`, `scripts/actualizar-grafos-graphify.sh`, `scripts/ver-mapa-arquitectura.sh`, `fastapi/scripts/entrypoint.sh`).
+- **Salud Topológica y Límites de Capas (Graphify AST):** Validación obligatoria de 0 violaciones de límites de capas arquitectónicas y 0 acoplamientos inversos entre Backend (`src/mikrotik/`, `src/models/`, `src/core/` ➔ `src/api/`) y Frontend (`components/common/` ➔ `views/`) mediante `.agents/scripts/verify_topological_health.py`, integrado en la fase `[4/7]` de `certify_task_completion.sh`.
+- **Análisis Preventivo de Radio de Impacto (*Blast Radius*):** Evaluación obligatoria de aristas entrantes (`.agents/scripts/inspect_blast_radius.py`) previa a cualquier refactorización transversal, clasificando riesgos en Bajo, Moderado o Crítico.
 - **Tolerancia Cero a Diagnósticos de IDE y Linters Estáticos:** Cero (0) errores y cero (0) advertencias en Pyrefly, SonarLint, Hadolint y ESLint sobre todo archivo versionado en el repositorio.
 - **Certificación de Arranque Estricto de Producción (`--no-dev`):** Validación obligatoria por AST (`test_production_no_dev_cleanliness.unit.py`) y Smoke Test inmutable en contenedor (`test_production_boot_smoke.py`) asegurando cero dependencias de desarrollo en el runtime de producción.
 - **Compuerta de Validación Integral de Producción Local (`probar-prod-local.sh`):** Ejecución obligatoria de las 6 fases de validación pre-publicación (`./scripts/probar-prod-local.sh`) certificando: liveness `/health`, Prometheus `/metrics`, transición de bootstrap (`false` a `true`), validación del proxy inverso Nginx (`:${UI_PORT}/api/...`), ocultamiento HTTP 404 de Swagger/OpenAPI en producción, prueba negativa 401 sin Bearer token, emisión y autenticación de token MCP, sondeo JSON-RPC 2.0 (`POST /api/v1/mcp`), runner `rosgrid-worker` sin excepciones, aislamiento de puertos de base de datos (5432 y 6379 cerrados al host) y ejecución exitosa (100%) de la suite de 26 contratos Front-Back (`validar_comunicacion_front_back.py`).
@@ -67,9 +69,15 @@ docker run --rm -v "$(pwd):/mnt" koalaman/shellcheck:stable \
     /mnt/scripts/limpieza.sh \
     /mnt/scripts/probar-prod-local.sh \
     /mnt/scripts/verificar-secretos.sh \
+    /mnt/scripts/actualizar-grafos-graphify.sh \
+    /mnt/scripts/ver-mapa-arquitectura.sh \
     /mnt/fastapi/scripts/entrypoint.sh
 
-# 3. Pipeline de Validación Integral de Imágenes de Producción en Local (Bajo Demanda)
+# 3. Auditoría de Salud Topológica AST y Radio de Impacto (Graphify)
+python3 .agents/scripts/verify_topological_health.py
+python3 .agents/scripts/inspect_blast_radius.py "<nombre_simbolo>"
+
+# 4. Pipeline de Validación Integral de Imágenes de Producción en Local (Bajo Demanda)
 # Ejecución estándar (automatizada de 6 fases con desmantelamiento limpio)
 ./scripts/probar-prod-local.sh
 
