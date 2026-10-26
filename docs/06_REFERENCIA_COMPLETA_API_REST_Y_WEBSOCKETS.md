@@ -484,6 +484,43 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
 - **Roles:** `can_write_layer2` en matriz de permisos.
 - **Descripción:** Acceso transparente a recursos de Capa 2 (Bridges, VLANs, Switch, WireGuard, Capsman, IoT).
 
+#### `POST /api/v1/routers/{id}/webfig/ip/dhcp-servers`
+
+- **Roles:** `SUPPORT_L2`, `SUPPORT_L3`, `TENANT_ADMIN`.
+- **Protección:** **Safe Mode obligatorio (60s)**.
+- **Entrada (`DhcpServerCreateRequest`):** `{"name": "dhcp1", "interface": "bridge1", "address_pool": "pool-lan", "lease_time": "12h"}`
+- **Salida (200 / 201):** Identificador del servidor DHCP creado en RouterOS.
+
+#### `POST /api/v1/routers/{id}/webfig/ip/dhcp-server/networks`
+
+- **Roles:** `SUPPORT_L2`, `SUPPORT_L3`, `TENANT_ADMIN`.
+- **Protección:** **Safe Mode obligatorio (60s)**.
+- **Entrada (`DhcpNetworkCreateRequest`):** `{"address": "192.168.88.0/24", "gateway": "192.168.88.1", "dns_server": "1.1.1.1,8.8.8.8"}`
+- **Salida (200 / 201):** Red DHCP provisionada con parámetros de puerta de enlace y DNS upstream.
+
+#### `POST /api/v1/routers/{id}/webfig/ip/dhcp-clients/{item_id}/renew` y `/release`
+
+- **Roles:** `SUPPORT_L2`, `SUPPORT_L3`, `TENANT_ADMIN`.
+- **Propósito:** Fuerza la renegociación inmediata o liberación de la concesión DHCP en la interfaz WAN seleccionada vía comando nativo RouterOS v7 (`/ip/dhcp-client/renew` o `/release`).
+
+#### `GET /api/v1/routers/{id}/webfig/ipv6/addresses` y `POST`
+
+- **Roles:** Lectura / `SUPPORT_L2`, `SUPPORT_L3`, `TENANT_ADMIN`.
+- **Protección:** **Safe Mode obligatorio (60s)** en mutaciones.
+- **Entrada (`Ipv6AddressCreateRequest`):** `{"address": "2001:db8::1/64", "interface": "ether1", "advertise": true, "eui_64": false}`
+- **Salida (200 / 201):** Dirección IPv6 asignada a la interfaz con soporte SLAAC (Router Advertisements).
+
+#### `GET /api/v1/routers/{id}/webfig/ipv6/dhcp-clients` y `POST`
+
+- **Roles:** Lectura / `SUPPORT_L2`, `SUPPORT_L3`, `TENANT_ADMIN`.
+- **Entrada (`Ipv6DhcpClientCreateRequest`):** `{"interface": "ether1", "request": "prefix", "pool_name": "ipv6-lan-pool", "pool_prefix_length": 64}`
+- **Propósito:** Habilita la delegación de prefijos DHCPv6 (PD) desde el proveedor WAN hacia un pool local para subdelegación a la LAN.
+
+#### `GET /api/v1/routers/{id}/webfig/ipv6/neighbors`
+
+- **Roles:** Lectura concedida.
+- **Salida (200):** Lista de vecinos descubiertos mediante protocolo NDP (`/ipv6/neighbor`) con dirección IPv6, MAC, interfaz y estado de alcanzabilidad (`reachable`, `stale`).
+
 ---
 
 ### 2.5 Operaciones: Aprobaciones Maker-Checker y Respaldos (`/api/v1/operations/*`)

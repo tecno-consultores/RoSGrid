@@ -109,6 +109,28 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        path: 'ip',
+        name: 'IpAddressesAndDhcp',
+        component: () => import('@/views/IpAddressesAndDhcpView.vue'),
+        meta: {
+          requiresAuth: true,
+          title: 'Módulo IP & DHCP — RoSGrid',
+          tabLabel: 'IP & DHCP',
+          tabIcon: '🔢',
+        },
+      },
+      {
+        path: 'ipv6',
+        name: 'Ipv6DualStack',
+        component: () => import('@/views/Ipv6DualStackView.vue'),
+        meta: {
+          requiresAuth: true,
+          title: 'Pila Dual IPv6 — RoSGrid',
+          tabLabel: 'IPv6',
+          tabIcon: '🌐',
+        },
+      },
+      {
         path: 'firewall',
         name: 'FirewallRules',
         component: () => import('@/views/FirewallRulesView.vue'),

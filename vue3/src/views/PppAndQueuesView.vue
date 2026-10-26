@@ -8,6 +8,7 @@
   import { useWebFigStore } from '@/stores/useWebFigStore';
   import type { TableColumn, PppActiveSessionItem, SimpleQueueItem } from '@/types';
   import RgDataTable from '@/components/common/RgDataTable.vue';
+  import RgSimpleQueueModal from '@/components/webfig/RgSimpleQueueModal.vue';
 
   interface PppSecretItem extends Record<string, unknown> {
     id: string;
@@ -62,6 +63,9 @@
   const isCreateSecretModalOpen = ref(false);
   const isCreateProfileModalOpen = ref(false);
   const isCreateServerModalOpen = ref(false);
+  const isCreateQueueModalOpen = ref(false);
+  const isEditingQueue = ref(false);
+  const selectedQueue = ref<SimpleQueueItem | null>(null);
 
   const newSecret = ref({
     name: '',
@@ -323,6 +327,102 @@
     }
   }
 
+  function openCreateQueueModal() {
+    isEditingQueue.value = false;
+    selectedQueue.value = null;
+    isCreateQueueModalOpen.value = true;
+  }
+
+  function openEditQueueModal(queue: SimpleQueueItem) {
+    isEditingQueue.value = true;
+    selectedQueue.value = queue;
+    isCreateQueueModalOpen.value = true;
+  }
+
+  async function handleSaveQueue(payload: Record<string, any>) {
+    webFigStore.startSafeModeCountdown(60);
+    errorMessage.value = '';
+    try {
+      if (isEditingQueue.value && selectedQueue.value?.id) {
+        await http.patch(
+          `/api/v1/routers/${routerId.value}/webfig/queues/simple/${selectedQueue.value.id}`,
+          payload,
+        );
+        actionMessage.value = 'Cola simple modificada exitosamente.';
+      } else {
+        await http.post(`/api/v1/routers/${routerId.value}/webfig/queues/simple`, payload);
+        actionMessage.value = 'Nueva cola simple creada bajo Safe Mode.';
+      }
+      isCreateQueueModalOpen.value = false;
+      loadPppData();
+    } catch (err: any) {
+      errorMessage.value =
+        err?.response?.data?.detail || err?.message || 'Error al persistir cola simple.';
+    }
+  }
+
+  async function handleToggleQueue(queue: SimpleQueueItem) {
+    webFigStore.startSafeModeCountdown(60);
+    try {
+      await http.patch(
+        `/api/v1/routers/${routerId.value}/webfig/queues/simple/${queue.id}`,
+        { disabled: !queue.disabled },
+      );
+      loadPppData();
+    } catch (err: any) {
+      errorMessage.value = err?.response?.data?.detail || 'Error al conmutar cola.';
+    }
+  }
+
+  async function handleDeleteQueue(queue: SimpleQueueItem) {
+    if (!confirm(`¿Eliminar la cola simple "${queue.name}"?`)) return;
+    webFigStore.startSafeModeCountdown(60);
+    try {
+      await http.delete(`/api/v1/routers/${routerId.value}/webfig/queues/simple/${queue.id}`);
+      actionMessage.value = `Cola "${queue.name}" eliminada.`;
+      loadPppData();
+    } catch (err: any) {
+      errorMessage.value = err?.response?.data?.detail || 'Error al eliminar cola simple.';
+    }
+  }
+
+  async function handleToggleSecret(secret: PppSecretItem) {
+    webFigStore.startSafeModeCountdown(60);
+    try {
+      await http.patch(
+        `/api/v1/routers/${routerId.value}/webfig/ppp/secrets/${secret.id}`,
+        { disabled: !secret.disabled },
+      );
+      loadPppData();
+    } catch (err: any) {
+      errorMessage.value = err?.response?.data?.detail || 'Error al conmutar usuario PPP.';
+    }
+  }
+
+  async function handleDeleteSecret(secret: PppSecretItem) {
+    if (!confirm(`¿Eliminar el usuario PPP "${secret.name}"?`)) return;
+    webFigStore.startSafeModeCountdown(60);
+    try {
+      await http.delete(`/api/v1/routers/${routerId.value}/webfig/ppp/secrets/${secret.id}`);
+      actionMessage.value = `Usuario "${secret.name}" eliminado.`;
+      loadPppData();
+    } catch (err: any) {
+      errorMessage.value = err?.response?.data?.detail || 'Error al eliminar usuario PPP.';
+    }
+  }
+
+  async function handleDeleteProfile(profile: PppProfileItem) {
+    if (!confirm(`¿Eliminar el perfil PPP "${profile.name}"?`)) return;
+    webFigStore.startSafeModeCountdown(60);
+    try {
+      await http.delete(`/api/v1/routers/${routerId.value}/webfig/ppp/profiles/${profile.id}`);
+      actionMessage.value = `Perfil "${profile.name}" eliminado.`;
+      loadPppData();
+    } catch (err: any) {
+      errorMessage.value = err?.response?.data?.detail || 'Error al eliminar perfil PPP.';
+    }
+  }
+
   function setTab(tab: typeof activeTab.value) {
     activeTab.value = tab;
     loadPppData();
@@ -368,6 +468,14 @@
           @click="isCreateServerModalOpen = true"
         >
           + Activar Servidor PPPoE
+        </button>
+        <button
+          v-if="activeTab === 'simple-queues'"
+          type="button"
+          class="btn-primary"
+          @click="openCreateQueueModal"
+        >
+          + Crear Cola Simple
         </button>
         <button
           type="button"
@@ -455,11 +563,12 @@
           <template #actions="{ row }">
             <button
               type="button"
-              class="btn-secondary"
-              :aria-label="`Reconectar sesión PPPoE de ${(row as any).name}`"
+              class="btn-row-action btn-row-action--danger"
+              :aria-label="`Desconectar sesión PPPoE de ${(row as any).name}`"
+              title="Desconectar / Expulsar Abonado (Kick Session)"
               @click="handleReconnectPpp(row as any)"
             >
-              🔄 Reconectar
+              ⏏ Desconectar
             </button>
           </template>
         </RgDataTable>
@@ -472,7 +581,30 @@
           :rows="pppSecrets"
           caption="Secretos y Clientes PPP"
           row-key="id"
-        />
+        >
+          <template #actions="{ row }">
+            <div class="row-actions-group">
+              <button
+                type="button"
+                class="btn-row-action"
+                :title="(row as any).disabled ? 'Habilitar usuario' : 'Deshabilitar usuario'"
+                :aria-label="(row as any).disabled ? 'Habilitar usuario' : 'Deshabilitar usuario'"
+                @click="handleToggleSecret(row as any)"
+              >
+                {{ (row as any).disabled ? '▶' : '⏸' }}
+              </button>
+              <button
+                type="button"
+                class="btn-row-action btn-row-action--danger"
+                title="Eliminar usuario"
+                :aria-label="`Eliminar usuario ${(row as any).name}`"
+                @click="handleDeleteSecret(row as any)"
+              >
+                🗑
+              </button>
+            </div>
+          </template>
+        </RgDataTable>
       </div>
 
       <!-- Pestaña 3: Perfiles PPP -->
@@ -482,7 +614,19 @@
           :rows="pppProfiles"
           caption="Perfiles de Servicio PPP"
           row-key="id"
-        />
+        >
+          <template #actions="{ row }">
+            <button
+              type="button"
+              class="btn-row-action btn-row-action--danger"
+              title="Eliminar perfil"
+              :aria-label="`Eliminar perfil ${(row as any).name}`"
+              @click="handleDeleteProfile(row as any)"
+            >
+              🗑
+            </button>
+          </template>
+        </RgDataTable>
       </div>
 
       <!-- Pestaña 4: Servidores PPPoE -->
@@ -502,9 +646,50 @@
           :rows="simpleQueues"
           caption="Colas de Ancho de Banda Simples"
           row-key="id"
-        />
+        >
+          <template #actions="{ row }">
+            <div class="row-actions-group">
+              <button
+                type="button"
+                class="btn-row-action"
+                title="Editar cola simple"
+                :aria-label="`Editar cola ${(row as any).name}`"
+                @click="openEditQueueModal(row as any)"
+              >
+                ✏
+              </button>
+              <button
+                type="button"
+                class="btn-row-action"
+                :title="(row as any).disabled ? 'Habilitar cola' : 'Deshabilitar cola'"
+                :aria-label="(row as any).disabled ? 'Habilitar cola' : 'Deshabilitar cola'"
+                @click="handleToggleQueue(row as any)"
+              >
+                {{ (row as any).disabled ? '▶' : '⏸' }}
+              </button>
+              <button
+                type="button"
+                class="btn-row-action btn-row-action--danger"
+                title="Eliminar cola simple"
+                :aria-label="`Eliminar cola ${(row as any).name}`"
+                @click="handleDeleteQueue(row as any)"
+              >
+                🗑
+              </button>
+            </div>
+          </template>
+        </RgDataTable>
       </div>
     </div>
+
+    <!-- Modal Táctico de Creación/Edición de Cola Simple -->
+    <RgSimpleQueueModal
+      :is-open="isCreateQueueModalOpen"
+      :is-editing="isEditingQueue"
+      :initial-queue="selectedQueue"
+      @close="isCreateQueueModalOpen = false"
+      @save="handleSaveQueue"
+    />
 
     <!-- Modal Crear Secreto PPP -->
     <div
@@ -820,5 +1005,30 @@
     padding: 8px 14px;
     border-radius: 6px;
     cursor: pointer;
+  }
+  .row-actions-group {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+  }
+  .btn-row-action {
+    background: transparent;
+    border: 1px solid var(--rg-border-grid, #334155);
+    border-radius: 4px;
+    color: var(--rg-text-secondary, #94a3b8);
+    font-size: 0.8rem;
+    padding: 2px 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .btn-row-action:hover {
+    border-color: var(--rg-accent-cyan, #00d2ff);
+    color: var(--rg-accent-cyan, #00d2ff);
+    background: rgba(0, 210, 255, 0.1);
+  }
+  .btn-row-action--danger:hover {
+    border-color: #ef4444;
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.15);
   }
 </style>

@@ -165,6 +165,26 @@
           <button
             type="button"
             class="nav-item"
+            :class="{ 'nav-item--active': route.path.includes('/ip') && !route.path.includes('/ipv6') }"
+            @click="navigateTo('ip')"
+          >
+            <span class="item-icon">🔢</span>
+            <span class="item-text">{{ t('webfig.nav_ip') }}</span>
+          </button>
+
+          <button
+            type="button"
+            class="nav-item"
+            :class="{ 'nav-item--active': route.path.includes('/ipv6') }"
+            @click="navigateTo('ipv6')"
+          >
+            <span class="item-icon">🌐</span>
+            <span class="item-text">{{ t('webfig.nav_ipv6') }}</span>
+          </button>
+
+          <button
+            type="button"
+            class="nav-item"
             :class="{ 'nav-item--active': route.path.includes('/firewall') }"
             @click="navigateTo('firewall')"
           >

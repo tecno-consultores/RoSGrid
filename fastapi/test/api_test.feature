@@ -753,6 +753,49 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     When method get
     Then status 401
 
+  # ==============================================================================
+  # Grupo 26: WebFig v7 Paridad Total — DHCPv4, Pila Dual IPv6 & Routing (Hito 27)
+  # ==============================================================================
+
+  Scenario: 98. Consulta de servidores DHCP sin autenticación devuelve 401
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/ip/dhcp-servers'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 99. Creación de red DHCP sin autenticación devuelve 401
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/ip/dhcp-server/networks'
+    And request { address: '192.168.100.0/24', gateway: '192.168.100.1' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 100. Renovación de concesión de cliente DHCP WAN sin autenticación devuelve 401
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/ip/dhcp-clients/c1/renew'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 101. Consulta de direcciones IPv6 Dual-Stack sin autenticación devuelve 401
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/ipv6/addresses'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 102. Solicitud de prefijo delegable DHCPv6-PD sin autenticación devuelve 401
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/ipv6/dhcp-clients'
+    And request { interface: 'ether1', request: 'prefix', pool_name: 'v6-pool', pool_prefix_length: 64, add_default_route: true }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 103. Consulta de tabla de vecinos IPv6 (NDP) sin autenticación devuelve 401
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/ipv6/neighbors'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
 
 
 

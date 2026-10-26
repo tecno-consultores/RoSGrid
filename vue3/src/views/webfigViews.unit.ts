@@ -524,7 +524,9 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
     }
   });
 
-  it('FirewallRulesView — reordena reglas y filtra por cadena', async () => {
+  it('FirewallRulesView — gestiona reglas, modales, reseteo de contadores y Safe Mode', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+
     vi.spyOn(http, 'get').mockResolvedValue({
       status: 200,
       data: {
@@ -570,6 +572,18 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
       headers: new Headers(),
     });
 
+    vi.spyOn(http, 'patch').mockResolvedValue({
+      status: 200,
+      data: { success: true },
+      headers: new Headers(),
+    });
+
+    vi.spyOn(http, 'delete').mockResolvedValue({
+      status: 200,
+      data: { success: true },
+      headers: new Headers(),
+    });
+
     const wrapper = mount(FirewallRulesView);
     await flushPromises();
 
@@ -585,6 +599,54 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
     if (select.exists()) {
       await select.setValue('input');
       await select.trigger('change');
+    }
+
+    // Botón + Nueva Regla
+    const btnNewRule = wrapper.find('.btn-primary-action');
+    if (btnNewRule.exists()) {
+      await btnNewRule.trigger('click');
+      expect((wrapper.vm as any).isRuleModalOpen).toBe(true);
+
+      // Guardar regla nueva
+      await (wrapper.vm as any).handleSaveRule({
+        chain: 'forward',
+        action: 'accept',
+        comment: 'Test rule',
+        disabled: false,
+      });
+      await flushPromises();
+    }
+
+    // Editar regla existente
+    const rowSample = (wrapper.vm as any).rulesList[0];
+    if (rowSample) {
+      (wrapper.vm as any).openEditRuleModal(rowSample);
+      expect((wrapper.vm as any).isEditingRule).toBe(true);
+      await (wrapper.vm as any).handleSaveRule({
+        chain: 'forward',
+        action: 'accept',
+        comment: 'Updated comment',
+      });
+      await flushPromises();
+
+      // Duplicar regla
+      (wrapper.vm as any).handleDuplicateRule(rowSample);
+      expect((wrapper.vm as any).isRuleModalOpen).toBe(true);
+
+      // Toggle regla
+      await (wrapper.vm as any).handleToggleRule(rowSample);
+      await flushPromises();
+
+      // Eliminar regla
+      await (wrapper.vm as any).handleDeleteRule(rowSample);
+      await flushPromises();
+    }
+
+    // Reset de contadores
+    const btnReset = wrapper.find('.btn-secondary-action');
+    if (btnReset.exists()) {
+      await btnReset.trigger('click');
+      await flushPromises();
     }
 
     // Reordenar mediante evento del componente tabla (éxito)
@@ -606,6 +668,26 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
       });
       await flushPromises();
     }
+
+    // Wizards NAT (Masquerade & Port Forwarding)
+    const vmFw = wrapper.vm as any;
+    vmFw.activeTab = 'nat';
+    vmFw.masqueradeWan = 'ether1';
+    await vmFw.handleExecuteMasquerade();
+    await flushPromises();
+    expect(vmFw.actionMessage).toContain('Masquerade');
+
+    vmFw.portForward = {
+      in_interface: 'ether1',
+      protocol: 'tcp',
+      dst_port: 8080,
+      to_addresses: '192.168.88.50',
+      to_ports: 80,
+      auto_filter: true,
+    };
+    await vmFw.handleExecutePortForward();
+    await flushPromises();
+    expect(vmFw.actionMessage).toContain('Redirección de puertos');
   });
 
   it('RoutingBgpOspfView — cambia entre pestañas BGP, OSPF y formatea estado', async () => {
@@ -657,6 +739,61 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
       await btn.trigger('click');
       await flushPromises();
     }
+
+    const vm = wrapper.vm as any;
+
+    // Rutas Estáticas
+    vm.activeTab = 'routes';
+    vm.newRoute = {
+      dst_address: '10.50.0.0/16',
+      gateway: '192.168.1.254',
+      distance: 2,
+      routing_table: 'main',
+      check_gateway: 'ping',
+      comment: 'Branch Office',
+      disabled: false,
+    };
+    vi.spyOn(http, 'post').mockResolvedValueOnce({ status: 200, data: { ret: '*r1' }, headers: new Headers() });
+    await vm.handleCreateRoute();
+    await flushPromises();
+    expect(vm.actionMessage).toContain('10.50.0.0/16');
+
+    // Toggle & Delete Route
+    vi.spyOn(http, 'patch').mockResolvedValueOnce({ status: 200, data: {}, headers: new Headers() });
+    await vm.handleToggleRoute({ id: '*r1', dst_address: '10.50.0.0/16', disabled: false });
+    await flushPromises();
+
+    vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
+    vi.spyOn(http, 'delete').mockResolvedValueOnce({ status: 200, data: {}, headers: new Headers() });
+    await vm.handleDeleteRoute({ id: '*r1', dst_address: '10.50.0.0/16' });
+    await flushPromises();
+
+    // BGP Connection
+    vm.activeTab = 'bgp';
+    vm.newBgp = {
+      name: 'peer-upstream',
+      remote_address: '203.0.113.10',
+      remote_as: 65100,
+      local_as: 65000,
+      templates: 'default',
+      connect: true,
+      listen: true,
+    };
+    vi.spyOn(http, 'post').mockResolvedValueOnce({ status: 200, data: { ret: '*b1' }, headers: new Headers() });
+    await vm.handleCreateBgpConnection();
+    await flushPromises();
+
+    // Policy Routing
+    vm.activeTab = 'policy-routing';
+    vm.newTable = { name: 'fib_wan2', fib: true };
+    vi.spyOn(http, 'post').mockResolvedValueOnce({ status: 200, data: { ret: '*t1' }, headers: new Headers() });
+    await vm.handleCreateTable();
+    await flushPromises();
+
+    vm.newRule = { src_address: '192.168.1.50/32', action: 'lookup-only-in-table', table: 'fib_wan2' };
+    vi.spyOn(http, 'post').mockResolvedValueOnce({ status: 200, data: { ret: '*ru1' }, headers: new Headers() });
+    await vm.handleCreateRule();
+    await flushPromises();
   });
 
   it('PppAndQueuesView — reconecta suscriptor PPPoE y visualiza Simple Queues', async () => {
@@ -717,6 +854,80 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
     const subtabs = wrapper.findAll('.btn-subtab');
     if (subtabs.length > 1) {
       await subtabs[1].trigger('click');
+      await flushPromises();
+    }
+
+    // Modal de colas simples y creación
+    const vm = wrapper.vm as any;
+    if (typeof vm.openCreateQueueModal === 'function') {
+      vm.openCreateQueueModal();
+      expect(vm.isCreateQueueModalOpen).toBe(true);
+
+      vi.spyOn(http, 'post').mockResolvedValueOnce({
+        status: 200,
+        data: { id: '*q1', name: 'queue-client-01' },
+        headers: new Headers(),
+      });
+      await vm.handleSaveQueue({ name: 'queue-client-01', target: '192.168.88.50/32', max_limit: '50M/100M' });
+      await flushPromises();
+
+      // Edición de cola
+      vm.openEditQueueModal({ id: '*q1', name: 'queue-client-01', target: '192.168.88.50/32', max_limit: '50M/100M', disabled: false });
+      expect(vm.isEditingQueue).toBe(true);
+
+      vi.spyOn(http, 'patch').mockResolvedValueOnce({
+        status: 200,
+        data: { id: '*q1', max_limit: '100M/200M' },
+        headers: new Headers(),
+      });
+      await vm.handleSaveQueue({ max_limit: '100M/200M' });
+      await flushPromises();
+
+      // Toggle queue
+      vi.spyOn(http, 'patch').mockResolvedValueOnce({
+        status: 200,
+        data: { success: true },
+        headers: new Headers(),
+      });
+      await vm.handleToggleQueue({ id: '*q1', name: 'queue-client-01', disabled: false });
+      await flushPromises();
+
+      // Delete queue (confirm mock)
+      vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
+      vi.spyOn(http, 'delete').mockResolvedValueOnce({
+        status: 200,
+        data: { success: true },
+        headers: new Headers(),
+      });
+      await vm.handleDeleteQueue({ id: '*q1', name: 'queue-client-01' });
+      await flushPromises();
+
+      // Toggle & Delete secret
+      vi.spyOn(http, 'patch').mockResolvedValueOnce({
+        status: 200,
+        data: { success: true },
+        headers: new Headers(),
+      });
+      await vm.handleToggleSecret({ id: '*s1', name: 'sec-01', disabled: false });
+      await flushPromises();
+
+      vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
+      vi.spyOn(http, 'delete').mockResolvedValueOnce({
+        status: 200,
+        data: { success: true },
+        headers: new Headers(),
+      });
+      await vm.handleDeleteSecret({ id: '*s1', name: 'sec-01' });
+      await flushPromises();
+
+      // Delete profile
+      vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
+      vi.spyOn(http, 'delete').mockResolvedValueOnce({
+        status: 200,
+        data: { success: true },
+        headers: new Headers(),
+      });
+      await vm.handleDeleteProfile({ id: '*p1', name: 'prof-01' });
       await flushPromises();
     }
 

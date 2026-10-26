@@ -442,6 +442,37 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And waitFor(".tab-title")
     And match text(".tab-title") contains 'Historial Forense WORM de Módulos'
 
+  Scenario: 47. WebFig v7 — Módulo IP y DHCP Server con Leases en Vivo y Asistente Setup (Hito 27)
+    Given driver baseUrl + '/routers/00000000-0000-0000-0000-000000000001/webfig/ip'
+    And waitFor(".webfig-ip-view")
+    And match text(".view-title") contains 'Módulo IP & Servicios DHCP'
+    And waitFor(".nav-tabs")
+    And match text(".nav-tabs") contains 'Direcciones IP'
+    And match text(".nav-tabs") contains 'Servidor DHCP'
+    And match text(".nav-tabs") contains 'Cliente DHCP (WAN)'
+    When click("//button[contains(@class, 'tab-btn') and contains(., 'Servidor DHCP')]")
+    Then waitFor(".subtabs-bar")
+    And match text(".subtabs-bar") contains 'Concesiones Activas'
+    And match text(".subtabs-bar") contains 'Servidores DHCP'
+
+  Scenario: 48. WebFig v7 — Pila Dual IPv6 con Solicitud de Prefijo WAN (PD) y Vecinos NDP (Hito 27)
+    Given driver baseUrl + '/routers/00000000-0000-0000-0000-000000000001/webfig/ipv6'
+    And waitFor(".webfig-ipv6-view")
+    And match text(".view-title") contains 'Pila Dual IPv6'
+    And waitFor(".nav-tabs")
+    And match text(".nav-tabs") contains 'Direcciones IPv6'
+    And match text(".nav-tabs") contains 'DHCPv6 Client & PD'
+    And match text(".nav-tabs") contains 'Vecinos NDP'
+
+  Scenario: 49. WebFig v7 — Firewall Wizards en 1 Clic (Masquerade y Port Forwarding) (Hito 27)
+    Given driver baseUrl + '/routers/00000000-0000-0000-0000-000000000001/webfig/firewall'
+    And waitFor(".firewall-view")
+    When click("//button[contains(@class, 'btn-subtab') and contains(., 'NAT')]")
+    Then waitFor(".btn-wizard-action")
+    And match text(".header-actions") contains 'Masquerade'
+    And match text(".header-actions") contains 'Port Forwarding'
+
+
 
 
 

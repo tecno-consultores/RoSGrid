@@ -36,6 +36,7 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
 
 3. [frontend_parity_and_closure.md](file:///.agents/rules/frontend_parity_and_closure.md):
    - **Terminal ↔ Frontend Parity:** Zero console-only actions or orphan API endpoints without a matching Vue 3 interface.
+   - **Zero Read-Only Operational Consoles (WebFig v7 Parity):** Router management tables (Firewall, Queues, PPP, DHCPv4, Dual-Stack IPv6, Routing) MUST offer tactical mutation actions (create, edit, toggle, delete, 1-click wizards) with 60s Safe Mode; no screen may remain view-only when RouterOS REST API supports mutations.
    - **Closure Protocol & Mandatory Git Push:** Test creation and execution in ephemeral Docker, mandatory synchronization of `docs/`, `docs/specs/`, `CHANGELOG.md`, `ROADMAP.md`, `TESTING.md`, and `README.md`, secret scanning, and automated Git publication (`git add`, `git commit`, and `git push`).
 
 4. [continuous_agent_evolution.md](file:///.agents/rules/continuous_agent_evolution.md):

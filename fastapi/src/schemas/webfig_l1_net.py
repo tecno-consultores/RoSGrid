@@ -145,6 +145,7 @@ class IpRouteCreateRequest(StrictBaseModel):
     gateway: str = Field(..., min_length=1)  # Soporta multi-gateway separado por comas (ECMP)
     distance: int = Field(default=1, ge=1, le=255)
     routing_table: str = Field(default="main", min_length=1, max_length=64)
+    check_gateway: str | None = Field(default=None, max_length=16)
     comment: str | None = None
     disabled: bool = False
 
@@ -154,6 +155,7 @@ class IpRouteUpdateRequest(StrictBaseModel):
     gateway: str | None = Field(default=None, min_length=1)
     distance: int | None = Field(default=None, ge=1, le=255)
     routing_table: str | None = Field(default=None, min_length=1, max_length=64)
+    check_gateway: str | None = Field(default=None, max_length=16)
     comment: str | None = None
     disabled: bool | None = None
 
@@ -181,3 +183,95 @@ class IpServiceUpdateRequest(StrictBaseModel):
     port: int | None = Field(default=None, ge=1, le=65535)
     address: str | None = None
     disabled: bool | None = None
+
+
+# ============================================================================
+# DHCPv4 SERVER, NETWORKS & CLIENTS
+# ============================================================================
+
+
+class DhcpServerCreateRequest(StrictBaseModel):
+    name: str = Field(..., min_length=1, max_length=64)
+    interface: str = Field(..., min_length=1, max_length=64)
+    address_pool: str = Field(..., min_length=1, max_length=64)
+    lease_time: str = Field(default="10m", max_length=16)
+    disabled: bool = False
+
+
+class DhcpServerUpdateRequest(StrictBaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=64)
+    interface: str | None = Field(default=None, min_length=1, max_length=64)
+    address_pool: str | None = Field(default=None, min_length=1, max_length=64)
+    lease_time: str | None = Field(default=None, max_length=16)
+    disabled: bool | None = None
+
+
+class DhcpNetworkCreateRequest(StrictBaseModel):
+    address: str = Field(..., min_length=3, max_length=64)
+    gateway: str | None = None
+    dns_server: str | None = None
+    domain: str | None = None
+    comment: str | None = None
+
+
+class DhcpNetworkUpdateRequest(StrictBaseModel):
+    gateway: str | None = None
+    dns_server: str | None = None
+    domain: str | None = None
+    comment: str | None = None
+
+
+class DhcpClientCreateRequest(StrictBaseModel):
+    interface: str = Field(..., min_length=1, max_length=64)
+    add_default_route: bool = True
+    use_peer_dns: bool = True
+    use_peer_ntp: bool = True
+    disabled: bool = False
+    comment: str | None = None
+
+
+class DhcpClientUpdateRequest(StrictBaseModel):
+    add_default_route: bool | None = None
+    use_peer_dns: bool | None = None
+    use_peer_ntp: bool | None = None
+    disabled: bool | None = None
+    comment: str | None = None
+
+
+# ============================================================================
+# IPv6: ADDRESSES, DHCPv6 CLIENT/SERVER, POOLS & NDP
+# ============================================================================
+
+
+class Ipv6AddressCreateRequest(StrictBaseModel):
+    address: str = Field(..., min_length=3, max_length=64)
+    interface: str = Field(..., min_length=1, max_length=64)
+    advertise: bool = True
+    eui_64: bool = False
+    disabled: bool = False
+    comment: str | None = None
+
+
+class Ipv6DhcpClientCreateRequest(StrictBaseModel):
+    interface: str = Field(..., min_length=1, max_length=64)
+    request: str = Field(default="prefix", max_length=16)
+    pool_name: str | None = Field(default=None, max_length=64)
+    pool_prefix_length: int = Field(default=64, ge=16, le=128)
+    add_default_route: bool = True
+    disabled: bool = False
+    comment: str | None = None
+
+
+class Ipv6DhcpServerCreateRequest(StrictBaseModel):
+    name: str = Field(..., min_length=1, max_length=64)
+    interface: str = Field(..., min_length=1, max_length=64)
+    address_pool: str = Field(..., min_length=1, max_length=64)
+    lease_time: str = Field(default="10m", max_length=16)
+    disabled: bool = False
+
+
+class Ipv6PoolCreateRequest(StrictBaseModel):
+    name: str = Field(..., min_length=1, max_length=64)
+    prefix: str = Field(..., min_length=3, max_length=64)
+    prefix_length: int = Field(default=64, ge=16, le=128)
+

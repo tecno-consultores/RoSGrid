@@ -21,7 +21,13 @@ from src.mikrotik.client import MikrotikRestClient
 from src.models.core import SystemRoleEnum
 from src.redis_layer.client import get_redis_client
 from src.schemas.webfig_l1_net import (
+    DhcpClientCreateRequest,
+    DhcpClientUpdateRequest,
     DhcpLeaseUpdateRequest,
+    DhcpNetworkCreateRequest,
+    DhcpNetworkUpdateRequest,
+    DhcpServerCreateRequest,
+    DhcpServerUpdateRequest,
     IpAddressCreateRequest,
     IpAddressUpdateRequest,
     IpArpCreateRequest,
@@ -222,6 +228,8 @@ async def create_route(
         "routing-table": payload.routing_table,
         "disabled": payload.disabled,
     }
+    if payload.check_gateway:
+        body["check-gateway"] = payload.check_gateway
     if payload.comment:
         body["comment"] = payload.comment
     async with client:
@@ -261,6 +269,8 @@ async def update_route(
         patch_data["distance"] = payload.distance
     if payload.routing_table:
         patch_data["routing-table"] = payload.routing_table
+    if payload.check_gateway is not None:
+        patch_data["check-gateway"] = payload.check_gateway
     if payload.disabled is not None:
         patch_data["disabled"] = payload.disabled
     if payload.comment is not None:
@@ -488,8 +498,414 @@ async def delete_dhcp_lease(
 
 
 # ============================================================================
+# DHCP SERVERS & NETWORKS
+# ============================================================================
+
+
+@router.get("/dhcp-servers")
+async def list_dhcp_servers(
+    router_id: uuid.UUID,
+    refresh: bool = Query(default=False),
+    claims: dict[str, Any] = Depends(get_current_user_claims),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Lista servidores DHCP configurados en el router."""
+    tenant_id = uuid.UUID(claims["tid"])
+    redis = get_redis_client()
+    _, client = await get_router_and_client(router_id, claims, db)
+    async with client:
+        return await cached_mikrotik_get(redis, tenant_id, router_id, "/ip/dhcp-server", client, refresh)
+
+
+@router.post("/dhcp-servers", status_code=status.HTTP_201_CREATED)
+async def create_dhcp_server(
+    router_id: uuid.UUID,
+    payload: DhcpServerCreateRequest,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+        )
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Crea una nueva instancia de servidor DHCP en una interfaz."""
+    _, client = await get_router_and_client(router_id, claims, db)
+    body: dict[str, Any] = {
+        "name": payload.name,
+        "interface": payload.interface,
+        "address-pool": payload.address_pool,
+        "lease-time": payload.lease_time,
+        "disabled": payload.disabled,
+    }
+    async with client:
+        return await execute_safe_mutation(
+            client=client,
+            menu="ip/dhcp-server",
+            action="create",
+            before_state=body,
+            coro_fn=lambda: client.put("/ip/dhcp-server", json_data=body),
+        )
+
+
+@router.patch("/dhcp-servers/{item_id}")
+async def update_dhcp_server(
+    router_id: uuid.UUID,
+    item_id: str,
+    payload: DhcpServerUpdateRequest,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+        )
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Actualiza configuración de un servidor DHCP."""
+    _, client = await get_router_and_client(router_id, claims, db)
+    patch_data: dict[str, Any] = {}
+    if payload.name is not None:
+        patch_data["name"] = payload.name
+    if payload.interface is not None:
+        patch_data["interface"] = payload.interface
+    if payload.address_pool is not None:
+        patch_data["address-pool"] = payload.address_pool
+    if payload.lease_time is not None:
+        patch_data["lease-time"] = payload.lease_time
+    if payload.disabled is not None:
+        patch_data["disabled"] = payload.disabled
+
+    async with client:
+        before = await client.get(f"/ip/dhcp-server/{item_id}")
+        return await execute_safe_mutation(
+            client=client,
+            menu="ip/dhcp-server",
+            action="update",
+            item_id=item_id,
+            before_state=before if isinstance(before, dict) else {},
+            coro_fn=lambda: client.patch(f"/ip/dhcp-server/{item_id}", json_data=patch_data),
+        )
+
+
+@router.delete("/dhcp-servers/{item_id}")
+async def delete_dhcp_server(
+    router_id: uuid.UUID,
+    item_id: str,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+        )
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Elimina una instancia de servidor DHCP."""
+    _, client = await get_router_and_client(router_id, claims, db)
+    async with client:
+        before = await client.get(f"/ip/dhcp-server/{item_id}")
+        return await execute_safe_mutation(
+            client=client,
+            menu="ip/dhcp-server",
+            action="delete",
+            item_id=item_id,
+            before_state=before if isinstance(before, dict) else {},
+            coro_fn=lambda: client.delete(f"/ip/dhcp-server/{item_id}"),
+        )
+
+
+@router.get("/dhcp-server/networks")
+async def list_dhcp_networks(
+    router_id: uuid.UUID,
+    refresh: bool = Query(default=False),
+    claims: dict[str, Any] = Depends(get_current_user_claims),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Lista las redes DHCP configuradas."""
+    tenant_id = uuid.UUID(claims["tid"])
+    redis = get_redis_client()
+    _, client = await get_router_and_client(router_id, claims, db)
+    async with client:
+        return await cached_mikrotik_get(redis, tenant_id, router_id, "/ip/dhcp-server/network", client, refresh)
+
+
+@router.post("/dhcp-server/networks", status_code=status.HTTP_201_CREATED)
+async def create_dhcp_network(
+    router_id: uuid.UUID,
+    payload: DhcpNetworkCreateRequest,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+        )
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Crea una nueva red para el servidor DHCP."""
+    _, client = await get_router_and_client(router_id, claims, db)
+    body: dict[str, Any] = {"address": payload.address}
+    if payload.gateway:
+        body["gateway"] = payload.gateway
+    if payload.dns_server:
+        body["dns-server"] = payload.dns_server
+    if payload.domain:
+        body["domain"] = payload.domain
+    if payload.comment:
+        body["comment"] = payload.comment
+
+    async with client:
+        return await execute_safe_mutation(
+            client=client,
+            menu="ip/dhcp-server/network",
+            action="create",
+            before_state=body,
+            coro_fn=lambda: client.put("/ip/dhcp-server/network", json_data=body),
+        )
+
+
+@router.patch("/dhcp-server/networks/{item_id}")
+async def update_dhcp_network(
+    router_id: uuid.UUID,
+    item_id: str,
+    payload: DhcpNetworkUpdateRequest,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+        )
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Modifica una red existente del servidor DHCP."""
+    _, client = await get_router_and_client(router_id, claims, db)
+    patch_data: dict[str, Any] = {}
+    if payload.gateway is not None:
+        patch_data["gateway"] = payload.gateway
+    if payload.dns_server is not None:
+        patch_data["dns-server"] = payload.dns_server
+    if payload.domain is not None:
+        patch_data["domain"] = payload.domain
+    if payload.comment is not None:
+        patch_data["comment"] = payload.comment
+
+    async with client:
+        before = await client.get(f"/ip/dhcp-server/network/{item_id}")
+        return await execute_safe_mutation(
+            client=client,
+            menu="ip/dhcp-server/network",
+            action="update",
+            item_id=item_id,
+            before_state=before if isinstance(before, dict) else {},
+            coro_fn=lambda: client.patch(f"/ip/dhcp-server/network/{item_id}", json_data=patch_data),
+        )
+
+
+@router.delete("/dhcp-server/networks/{item_id}")
+async def delete_dhcp_network(
+    router_id: uuid.UUID,
+    item_id: str,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+        )
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Elimina una subred del servidor DHCP."""
+    _, client = await get_router_and_client(router_id, claims, db)
+    async with client:
+        before = await client.get(f"/ip/dhcp-server/network/{item_id}")
+        return await execute_safe_mutation(
+            client=client,
+            menu="ip/dhcp-server/network",
+            action="delete",
+            item_id=item_id,
+            before_state=before if isinstance(before, dict) else {},
+            coro_fn=lambda: client.delete(f"/ip/dhcp-server/network/{item_id}"),
+        )
+
+
+# ============================================================================
+# DHCP CLIENTS (WAN)
+# ============================================================================
+
+
+@router.get("/dhcp-clients")
+async def list_dhcp_clients(
+    router_id: uuid.UUID,
+    refresh: bool = Query(default=False),
+    claims: dict[str, Any] = Depends(get_current_user_claims),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Lista clientes DHCP WAN configurados."""
+    tenant_id = uuid.UUID(claims["tid"])
+    redis = get_redis_client()
+    _, client = await get_router_and_client(router_id, claims, db)
+    async with client:
+        return await cached_mikrotik_get(redis, tenant_id, router_id, "/ip/dhcp-client", client, refresh)
+
+
+@router.post("/dhcp-clients", status_code=status.HTTP_201_CREATED)
+async def create_dhcp_client(
+    router_id: uuid.UUID,
+    payload: DhcpClientCreateRequest,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+        )
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Crea un nuevo cliente DHCP en una interfaz WAN."""
+    _, client = await get_router_and_client(router_id, claims, db)
+    body: dict[str, Any] = {
+        "interface": payload.interface,
+        "add-default-route": "yes" if payload.add_default_route else "no",
+        "use-peer-dns": "yes" if payload.use_peer_dns else "no",
+        "use-peer-ntp": "yes" if payload.use_peer_ntp else "no",
+        "disabled": payload.disabled,
+    }
+    if payload.comment:
+        body["comment"] = payload.comment
+
+    async with client:
+        return await execute_safe_mutation(
+            client=client,
+            menu="ip/dhcp-client",
+            action="create",
+            before_state=body,
+            coro_fn=lambda: client.put("/ip/dhcp-client", json_data=body),
+        )
+
+
+@router.patch("/dhcp-clients/{item_id}")
+async def update_dhcp_client(
+    router_id: uuid.UUID,
+    item_id: str,
+    payload: DhcpClientUpdateRequest,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+        )
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Modifica opciones de un cliente DHCP WAN."""
+    _, client = await get_router_and_client(router_id, claims, db)
+    patch_data: dict[str, Any] = {}
+    if payload.add_default_route is not None:
+        patch_data["add-default-route"] = "yes" if payload.add_default_route else "no"
+    if payload.use_peer_dns is not None:
+        patch_data["use-peer-dns"] = "yes" if payload.use_peer_dns else "no"
+    if payload.use_peer_ntp is not None:
+        patch_data["use-peer-ntp"] = "yes" if payload.use_peer_ntp else "no"
+    if payload.disabled is not None:
+        patch_data["disabled"] = payload.disabled
+    if payload.comment is not None:
+        patch_data["comment"] = payload.comment
+
+    async with client:
+        before = await client.get(f"/ip/dhcp-client/{item_id}")
+        return await execute_safe_mutation(
+            client=client,
+            menu="ip/dhcp-client",
+            action="update",
+            item_id=item_id,
+            before_state=before if isinstance(before, dict) else {},
+            coro_fn=lambda: client.patch(f"/ip/dhcp-client/{item_id}", json_data=patch_data),
+        )
+
+
+@router.delete("/dhcp-clients/{item_id}")
+async def delete_dhcp_client(
+    router_id: uuid.UUID,
+    item_id: str,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+        )
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Elimina un cliente DHCP WAN."""
+    _, client = await get_router_and_client(router_id, claims, db)
+    async with client:
+        before = await client.get(f"/ip/dhcp-client/{item_id}")
+        return await execute_safe_mutation(
+            client=client,
+            menu="ip/dhcp-client",
+            action="delete",
+            item_id=item_id,
+            before_state=before if isinstance(before, dict) else {},
+            coro_fn=lambda: client.delete(f"/ip/dhcp-client/{item_id}"),
+        )
+
+
+@router.post("/dhcp-clients/{item_id}/renew")
+async def renew_dhcp_client(
+    router_id: uuid.UUID,
+    item_id: str,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+        )
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Renueva concesión WAN del cliente DHCP."""
+    _, client = await get_router_and_client(router_id, claims, db)
+    async with client:
+        return await client.post("/ip/dhcp-client/renew", json_data={"numbers": item_id})
+
+
+@router.post("/dhcp-clients/{item_id}/release")
+async def release_dhcp_client(
+    router_id: uuid.UUID,
+    item_id: str,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+        )
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Libera concesión WAN del cliente DHCP."""
+    _, client = await get_router_and_client(router_id, claims, db)
+    async with client:
+        return await client.post("/ip/dhcp-client/release", json_data={"numbers": item_id})
+
+
+# ============================================================================
 # DNS & NEIGHBORS
 # ============================================================================
+
 
 
 @router.get("/dns")

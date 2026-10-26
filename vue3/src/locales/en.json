@@ -470,6 +470,8 @@
     "nav_interfaces": "Interfaces & SFP DDM",
     "nav_bridge": "Bridge (VLANs, Ports & FDB)",
     "nav_wireguard": "WireGuard VPN & Peers",
+    "nav_ip": "IP & DHCP (Addressing)",
+    "nav_ipv6": "Dual-Stack IPv6 & PD",
     "nav_firewall": "Firewall (Filter, NAT, RAW)",
     "nav_routing": "Routing v7 (BGP / OSPF)",
     "nav_ppp": "PPPoE & Bandwidth Queues",

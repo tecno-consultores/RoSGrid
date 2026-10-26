@@ -36,6 +36,7 @@ from src.api.v1.vault import router as vault_router
 from src.api.v1.webfig_firewall import router as webfig_firewall_router
 from src.api.v1.webfig_interfaces import router as webfig_interfaces_router
 from src.api.v1.webfig_ip import router as webfig_ip_router
+from src.api.v1.webfig_ipv6 import router as webfig_ipv6_router
 from src.api.v1.webfig_layer2 import router as webfig_layer2_router
 from src.api.v1.webfig_ppp import router as webfig_ppp_router
 from src.api.v1.webfig_queues import router as webfig_queues_router
@@ -64,6 +65,7 @@ api_v1_router.include_router(vault_router)
 api_v1_router.include_router(maintenance_router)
 api_v1_router.include_router(webfig_interfaces_router)
 api_v1_router.include_router(webfig_ip_router)
+api_v1_router.include_router(webfig_ipv6_router)
 api_v1_router.include_router(webfig_firewall_router)
 api_v1_router.include_router(webfig_routing_router)
 api_v1_router.include_router(webfig_ppp_router)

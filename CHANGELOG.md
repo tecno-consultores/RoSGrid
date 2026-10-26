@@ -17,6 +17,34 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Added
 
+- **WebFig v7 Táctico: Paridad Operativa Total, Modales de Creación (Firewall/Queues/PPPoE), Módulos IP & DHCPv4/v6, Pila Dual IPv6, Routing Dinámico y Asistentes NAT en 1 Clic (Hito 27 — `fastapi/src/api/v1/webfig_ip.py`, `fastapi/src/api/v1/webfig_ipv6.py`, `fastapi/src/schemas/webfig_l1_net.py`, `vue3/src/components/webfig/RgFirewallRuleModal.vue`, `vue3/src/components/webfig/RgSimpleQueueModal.vue`, `vue3/src/views/FirewallRulesView.vue`, `vue3/src/views/PppAndQueuesView.vue`, `vue3/src/views/IpAddressesAndDhcpView.vue`, `vue3/src/views/Ipv6DualStackView.vue`, `vue3/src/views/RoutingBgpOspfView.vue`, `vue3/src/components/webfig/RouterSidebarMenu.vue`, `vue3/src/locales/es.json`, `vue3/src/locales/en.json`, `docs/specs/46`, `docs/specs/47`, `docs/specs/48`, `docs/specs/49`):**
+  - **Modales Tácticos de Reglas de Firewall (`RgFirewallRuleModal.vue`, `FirewallRulesView.vue`):** Soporte total para creación y edición en tablas *Filter*, *NAT*, *Mangle* y *RAW*. Validación contextual de cadenas (`input`, `forward`, `prerouting`, `srcnat`, `dstnat`), parámetros L3/L4 (IPs, puertos, protocolos TCP/UDP/ICMP, interfaces in/out) y posicionamiento exacto con `place-before`. Blindaje de Safe Mode de 60s obligatorio para caídas y acciones `drop` en cadena `input`.
+  - **Asistentes Visuales NAT de 1 Clic (Wizards en `FirewallRulesView.vue`):**
+    - *Wizard Masquerade:* Configuración asistida de compartición de Internet seleccionando la interfaz WAN de salida en 1 solo paso.
+    - *Wizard Port Forwarding (Dst-NAT):* Asistente en 2 pasos para publicación de servidores locales (CCTV, Web, VPN) con puerto externo, protocolo, IP interna, puerto interno y creación opcional de regla espejo en Filter Forward bajo Safe Mode.
+  - **Creación y Edición de Simple Queues con Presets de Ancho de Banda (`RgSimpleQueueModal.vue`, `PppAndQueuesView.vue`):** Creación táctica con selector de Target (IP o subred CIDR), selector de cola contenedora padre (*Parent Queue*), asignación de prioridad (1..8) y barra de accesos directos en 1 clic (`10M/10M`, `25M/50M`, `50M/100M`, `100M/300M`, `200M/600M`, `1 Gbps Simétrico`). Semáforo cromático de tasa de utilización en tiempo real.
+  - **Operaciones de Abonados PPPoE y Sesiones Activas (`PppAndQueuesView.vue`):** Desconexión instantánea de abonados (*Kick Session*) vía `DELETE .../webfig/ppp/active/{session_id}` con diálogo de confirmación táctico, edición y alternancia `disabled` de credenciales (*Secrets*) y perfiles de conexión (*Profiles*).
+  - **Módulo Dedicado de Direccionamiento IP y Servicios DHCP (`IpAddressesAndDhcpView.vue`, `webfig_ip.py`):**
+    - Pestañas tácticas: `[ Direcciones IP ]`, `[ Servidor DHCP ]`, `[ Clientes DHCP WAN ]`, `[ Pools ]`, `[ DNS y Caché ]` y `[ Tabla ARP ]`.
+    - Asistente guiado **"DHCP Setup en 3 Pasos"** para aprovisionamiento atómico de IP Pool, Network y DHCP Server.
+    - Monitoreo en vivo de concesiones DHCP (*Leases*) con botones de acción en 1 clic: `[ 📌 Hacer Estática ]` (`make-static`) y `[ 🚫 Bloquear en Cuarentena ]`.
+    - Gestión de Clientes DHCP WAN con acciones de renovación rápida `[ 🔄 Renew ]` y liberación `[ ❌ Release ]`.
+    - Flush de caché DNS upstream en 1 clic y conversión de entradas dinámicas ARP a estáticas.
+  - **Pila Dual IPv6 Nativa (`Ipv6DualStackView.vue`, `webfig_ipv6.py`):**
+    - Nuevo router FastAPI `/api/v1/webfig/ipv6` con endpoints para direcciones, clientes DHCPv6, servidores DHCPv6, pools y vecinos NDP.
+    - Asignación de direcciones IPv6 con SLAAC (`advertise`) y cálculo automático EUI-64.
+    - Cliente DHCPv6 WAN con solicitud de delegación de prefijos (Prefix Delegation - PD) inyectados a pools locales (`/ipv6/pool`).
+    - Servidor DHCPv6 para entrega y subdelegación de prefijos `/56` o `/64` a redes de clientes.
+    - Inspección de tabla de vecinos IPv6 (Neighbor Discovery Protocol - NDP) con flags `router` y `reachable`.
+  - **Routing Dinámico e Interactivo RouterOS v7 (`RoutingBgpOspfView.vue`):**
+    - Rutas estáticas con soporte de failover automático `check-gateway` (`ping`/`arp`), visualización de flags nativos (`[A]`, `[S]`, `[b]`, `[o]`, `[D]`) y tablas PBR.
+    - Conexiones BGP v7 interactivas (`/routing/bgp/connection`) y gestión de tablas/reglas de ruteo FIB.
+  - **Gobernanza y Aseguramiento QA 11X Multi-Capa:**
+    - Karate Labs BDD: 6 nuevos escenarios API (98 a 103) en `fastapi/test/api_test.feature` y 3 nuevos escenarios UI (47 a 49) en `vue3/test/ui_business_flow.feature`, replicados en `docs/examples/`.
+    - Backend Pytest: Suite `test_webfig_dhcp_and_ipv6.unit.py` (7 tests nuevos, 100% aprobados en Docker efímero con uv).
+    - Frontend Vitest: Suites `RgFirewallRuleModal.unit.ts`, `RgSimpleQueueModal.unit.ts`, `ipAndIpv6Views.unit.ts` y ampliación de `webfigViews.unit.ts` totalizando 431 tests unitarios aprobados al 100% en 59 archivos.
+    - Nueva directiva de gobernanza: Regla `Zero Read-Only Operational Consoles (WebFig v7 Parity)` institucionalizada en `.agents/rules/frontend_parity_and_closure.md` y `AGENTS.md`.
+
 - **Integración y Despliegue de Branding Oficial: Logos Vectoriales SVG, Favicons Multi-Resolución, PWA y Metadatos Open Graph (`vue3/src/components/common/RgResponsiveShell.vue`, `vue3/src/views/LoginView.vue`, `vue3/src/views/NocWallboardView.vue`, `vue3/index.html`, `vue3/nginx/default.conf`, `README.md`, `vue3/src/components/common/RgResponsiveShell.unit.ts`, `vue3/src/views/auth/loginView.unit.ts`):**
   - **Reemplazo Integral de Emojis por Isotipo Vectorial Oficial:** Sustitución de emojis provisionales (`🌐` en la barra superior de navegación y `⚡` en el encabezado de autenticación y wizard de primer arranque) por el logo oficial SVG de RoSGrid (`favicon.svg`), renderizado con resplandor neón cian (`drop-shadow`), proporciones exactas y plena accesibilidad WCAG 2.1 AA (`aria-hidden="true"`).
   - **Identidad de Marca en NOC Wallboard 24/7:** Incorporación del isotipo SVG oficial de 32px al lado del título principal del Wallboard táctico.

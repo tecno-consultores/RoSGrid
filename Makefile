@@ -23,7 +23,7 @@ audit:
 
 test-backend:
 	@echo "🧪 [Test Backend] Ejecutando pytest en contenedor efímero..."
-	@docker run --rm --entrypoint uv -u $$(id -u):$$(id -g) -e UV_CACHE_DIR=/tmp/uv-cache -e PYTHONPATH=/app/src -v $$(pwd)/fastapi:/app -v $$(pwd):/workspace:ro -w /app sinfallas/rosgrid-backend:local-test run pytest -o addopts="" --import-mode=importlib --no-cov tests/
+	@docker run --rm --entrypoint uv -e UV_CACHE_DIR=/tmp/uv-cache -e PYTHONPATH=/app/src -v $$(pwd)/fastapi:/app -v $$(pwd):/workspace:ro -w /app sinfallas/rosgrid-backend:local-test run --with pytest --with pytest-asyncio --with pytest-cov pytest -o addopts="" --import-mode=importlib tests/
 
 test-frontend:
 	@echo "🧪 [Test Frontend] Ejecutando vitest en contenedor efímero..."

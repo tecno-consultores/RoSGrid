@@ -2,8 +2,9 @@
 
 ## 📍 Punto de Control Actual (Checkpoint)
 
-- **Hito Actual en Curso:** Hito 27 (En Planificación) — WebFig v7 Táctico: Paridad Total, Modales de Creación (Firewall/Queues/PPPoE), Módulos IP & DHCPv4/v6, Pila Dual IPv6 y Routing Dinámico.
-- **Hito General del Sistema:** Hitos 0 al 26 COMPLETADOS (100%).
+- **Hito Actual en Curso:** Hito 28 (Pendiente de Publicación Final) — Cierre de CHANGELOG.md, Auditoría Trivy y Publicación en Docker Hub.
+- **Hito General del Sistema:** Hitos 0 al 27 COMPLETADOS (100%).
+- **Hito 27 (WebFig v7 Táctico — Paridad Total, Asistentes de Creación Firewall/Queues/PPPoE, Módulos IP & DHCPv4/v6, Pila Dual IPv6 y Routing Dinámico):** COMPLETADO al 100% y certificado en Docker. Especificaciones formales `docs/specs/46_REPORTE_INVESTIGACION_WEBFIG_COMPETITIVIDAD_Y_ROADMAP.md`, `docs/specs/47_WEBFIG_V7_FULL_PARITY_FIREWALL_QUEUES_AND_PPPOE.md`, `docs/specs/48_WEBFIG_V7_IP_STACK_DHCPV4_AND_DHCPV6_DUAL_STACK.md`, y `docs/specs/49_WEBFIG_V7_ROUTING_DYNAMIC_BGP_OSPF_AND_NAT_WIZARDS.md`. Modales tácticos de creación y mutación con Safe Mode de 60s en `RgFirewallRuleModal.vue` (Filter, NAT, Mangle, RAW con place-before), `RgSimpleQueueModal.vue` (con selector de Target IP/CIDR y presets rápidos de ancho de banda de 10M a 1G), deslogueo Kick Session en clientes PPPoE (`DELETE .../ppp/active/{session_id}`), módulo dedicado de direccionamiento IP y DHCP (`IpAddressesAndDhcpView.vue`) con wizard de DHCP Setup en 3 pasos, Leases en vivo con Make Static y bloqueo en cuarentena, gestión de clientes DHCP WAN con Renew/Release, soporte de Pila Dual IPv6 (`Ipv6DualStackView.vue` y router `/api/v1/webfig/ipv6`) con asignación SLAAC EUI-64, clientes DHCPv6 con Prefix Delegation (PD), servidores DHCPv6, pools y vecinos NDP, vistas tácticas de Routing v7 (`RoutingBgpOspfView.vue`) con rutas estáticas failover `check-gateway` (`ping`/`arp`), BGP connections interactivas y tablas/reglas PBR, y asistentes visuales NAT de 1 clic (Wizard Masquerade y Wizard Port Forwarding con regla espejo opcional en Filter Forward). Cobertura y calidad: 551 tests backend Pytest (100% éxito), 431 tests frontend en 59 suites Vitest (100% éxito), 103 escenarios BDD Karate Labs API, 49 escenarios BDD Karate Labs UI, 0 errores en `ruff` y `vue-tsc`, y 0 vulnerabilidades en auditoría de infraestructura y secretos.
 - **Hito 26 (Gobernanza Táctica de Módulos B2B — DAG Hard Lock, Blindaje RBAC, Modo Contingencia y Auditoría Forense con Rollback):** COMPLETADO al 100% y certificado en Docker. Especificación formal `docs/specs/45_TACTICAL_FEATURE_FLAGS_GOVERNANCE_DAG_AND_AUDIT_ROLLBACK.md`. Grafo DAG activo en `RgFeatureFlagsGrid.vue` con bloqueo en cascada y tooltips (`[ 🔒 Requiere activar previamente: Módulo ISP ]`), blindaje RBAC fail-closed en `fastapi/src/api/v1/tenants.py` restringiendo licenciamiento exclusivamente a `SUPERADMIN_GLOBAL` con `HTTP 403 Forbidden`, arquetipo rápido en 1 clic `[ ⚡ Modo Contingencia / Bajo Consumo ]` suspendiendo colectores intensivos ante saturación de red con banner táctico reactivo, y pestaña táctica `[ 📜 Historial de Modificaciones ]` en `TenantModulesStudioView.vue` respaldada por `TenantModulesAuditTab.vue` con consulta WORM SHA-256 de `audit_logs` y reversión rollback en 1 clic. 544 tests backend Pytest (100% éxito), 412 tests frontend en 56 suites Vitest (100% éxito), 97 escenarios BDD Karate Labs API, 46 escenarios BDD Karate Labs UI, y validación visual interactiva en navegador con `browser_subagent`.
 - **Internacionalización Integral (i18n) en Inglés y Español de 16 Vistas/Módulos Críticos:** COMPLETADO al 100% y certificado en Docker. Cobertura simétrica total en `vue3/src/locales/es.json` y `vue3/src/locales/en.json` para las 16 áreas clave: Maker-Checker, IPAM, Mapa Unificado de Clientes/ONUs, Desplegables de Técnico de Campo, Topología L2 PoE, Comparador Diff de Respaldos Git, Operaciones Masivas & Golden Config, Gestión de Usuarios y Roles RBAC, Administración de Empresas Multi-Tenant & Módulos Studio, CIS Hardening, Matriz CVE, Auditoría Forense WORM, SD-WAN WireGuard, Seguridad L2 & Rogue DHCP, Telemetría de SLA y Canales de Notificación Multicanal. 405 tests en 55 suites Vitest pasando al 100%, 45 escenarios BDD en Karate Labs UI (incorporado Escenario 45 de conmutación interactiva), 543 tests backend en Pytest pasando al 100%, validación estática limpia con `vue-tsc --noEmit`, `ruff check` y `mypy`, y 0 hallazgos en auditoría de secretos.
 - **Hito 25 (Conmutador Rápido de Contexto de Tenants, Ergonomía de Pie de Página In-Flow y Gestión Táctica de Feature Flags por Empresa):** COMPLETADO al 100% y certificado en Docker. Especificación formal `docs/specs/44_TENANT_SWITCHER_INFLOW_FOOTER_AND_MODULAR_FEATURE_FLAGS.md`. Conmutador rápido de tenants exclusivo para `SUPERADMIN_GLOBAL` en cabecera (`RgTenantSwitcher.vue`), respaldado por `POST /api/v1/auth/switch-tenant` con re-keying atómico de sesión en KeyDB y auditoría WORM. Estabilización de conmutación sin auto-deslogueo por WebSocket kill-switch (25.11). Supresión de la barra flotante de 32px y reubicación del footer in-flow dentro de `.rg-main` con `margin-top: auto` (100% de espacio vertical recuperado). Sub-pantalla dedicada `/admin/tenants/:id/modules` con 4 cuadrantes tácticos, 4 presets rápidos y diálogo modal de confirmación de radio de impacto. 5 pruebas unitarias Pytest aprobadas al 100%, 55 suites Vitest con 402/402 tests aprobados, compilación Vite limpia en 4.14s y smoke tests de flota real multi-dominio 100% aprobados.
@@ -712,47 +713,47 @@
 
 > **Archivos Guía:** `docs/specs/46_REPORTE_INVESTIGACION_WEBFIG_COMPETITIVIDAD_Y_ROADMAP.md`, `docs/specs/47_WEBFIG_V7_FULL_PARITY_FIREWALL_QUEUES_AND_PPPOE.md`, `docs/specs/48_WEBFIG_V7_IP_STACK_DHCPV4_AND_DHCPV6_DUAL_STACK.md`, y `docs/specs/49_WEBFIG_V7_ROUTING_DYNAMIC_BGP_OSPF_AND_NAT_WIZARDS.md`
 
-- [ ] **27.1** **Modales Tácticos de Creación y Edición de Reglas de Firewall (`RgFirewallRuleModal.vue` & `FirewallRulesView.vue`):**
+- [x] **27.1** **Modales Tácticos de Creación y Edición de Reglas de Firewall (`RgFirewallRuleModal.vue` & `FirewallRulesView.vue`):**
   - Implementación de la botonera superior `[ + Nueva Regla ]`, `[ 🔄 Resetear Contadores ]` y selector de Safe Mode en las pestañas *Filter*, *NAT*, *Mangle* y *RAW*.
   - Modal adaptativo con validación contextual de cadenas (`input`, `forward`, `prerouting`, `srcnat`, `dstnat`), acciones nativas RouterOS v7, parámetros L3/L4 (IP, puerto, protocolo, interfaces) y posicionamiento exacto `place-before`.
   - Acciones contextuales por fila en tabla: Habilitar/Deshabilitar (`[X]`), Editar, Duplicar y Eliminar con confirmación de Safe Mode.
   - Blindaje Maker-Checker (HTTP 202) y Safe Mode forzado ante reglas `drop` en cadena `input`.
-- [ ] **27.2** **Creación y Edición de Simple Queues con Presets Tácticos de Ancho de Banda (`RgSimpleQueueModal.vue` & `PppAndQueuesView.vue`):**
+- [x] **27.2** **Creación y Edición de Simple Queues con Presets Tácticos de Ancho de Banda (`RgSimpleQueueModal.vue` & `PppAndQueuesView.vue`):**
   - Botón `[ + Nueva Cola Simple ]` y modal táctico con selector de Target (IP/CIDR), selector de cola padre para contención (*Parent Queue*) y prioridad QoS (1..8).
   - Barra de Presets Rápidos en 1 Clic (`10M/10M`, `25M/50M`, `50M/100M`, `100M/300M`, `200M/600M`, `1 Gbps Simétrico`).
   - Semáforo cromático de utilización en tiempo real (🟢 < 70%, 🟡 70%-90%, 🔴 > 90%).
-- [ ] **27.3** **Gestión Operativa de Abonados PPPoE (Kick Session, Secrets & Profiles):**
+- [x] **27.3** **Gestión Operativa de Abonados PPPoE (Kick Session, Secrets & Profiles):**
   - Botón `[ ⏏ Desconectar ]` (*Kick Session*) en la tabla de clientes activos (`/ppp/active`) con confirmación modal y deslogueo inmediato vía `DELETE .../webfig/ppp/active/{session_id}`.
   - Botones de acción en tablas de *Secrets* y *Profiles*: Edición de credenciales/perfiles, conmutador de estado `disabled` y borrado.
-- [ ] **27.4** **Módulo Dedicado de Direccionamiento IP y Servicios (`IpAddressesAndDhcpView.vue`):**
+- [x] **27.4** **Módulo Dedicado de Direccionamiento IP y Servicios (`IpAddressesAndDhcpView.vue`):**
   - Nueva vista WebFig con pestañas: `[ Direcciones IP ]`, `[ Servidor DHCP ]`, `[ Cliente DHCP ]`, `[ Pools ]`, `[ DNS y Caché ]` y `[ Tabla ARP ]`.
   - Asignación de IPs CIDR a interfaces con validación de máscara y detección anti-suicidio en la IP de gestión de RoSGrid.
   - Gestión de Pools de direcciones reutilizables para DHCP y PPPoE.
   - Inspección de tabla ARP con acción de conversión dinámica a estática (*Make Static*).
   - Configuración de servidores DNS upstream, activación de "Allow Remote Requests" y botón de vaciado de caché (*Flush Cache*).
-- [ ] **27.5** **Módulo Integral DHCPv4 Server & Client:**
+- [x] **27.5** **Módulo Integral DHCPv4 Server & Client:**
   - Asistente rápido guiado **"DHCP Setup en 3 Pasos"** para aprovisionar Pool, Network y Server en una sola transacción.
   - Tabla en tiempo real de concesiones activas (*DHCP Leases*) con IP, MAC, Hostname del cliente y tiempo restante.
   - Botón en 1 clic **`[ 📌 Hacer Estática ]`** (`make-static`) para fijar la IP al cliente sin desconexión.
   - Botón en 1 clic **`[ 🚫 Bloquear Cliente ]`** para aislar dispositivos no autorizados en address-list de cuarentena.
   - Pestaña de DHCP Client en interfaces WAN con estado de negociación (`bound`, `searching`), IP obtenida y Gateway, con botones `[ 🔄 Renew ]` y `[ ❌ Release ]`.
-- [ ] **27.6** **Pila Dual IPv6 Nativa (`Ipv6DualStackView.vue` & Selector Bimodal):**
+- [x] **27.6** **Pila Dual IPv6 Nativa (`Ipv6DualStackView.vue` & Selector Bimodal):**
   - Selector unificado IPv4 / IPv6 en barra de herramientas de Firewall y Routing.
   - Vista dedicada de IPv6: Asignación de direcciones IPv6 (`/ipv6/address`) con prefijo, selector de interfaz, banderas `advertise` (SLAAC) y generación automática EUI-64.
   - Tabla de Vecinos Descubiertos IPv6 (NDP / `/ipv6/neighbor`) y configuración de Router Advertisements (RA).
   - Pestaña de Firewall IPv6 (`/ipv6/firewall`) con soporte para tablas Filter, Mangle, RAW y Address-Lists v6, asegurando reglas ICMPv6 esenciales para NDP y Path MTU Discovery.
-- [ ] **27.7** **DHCPv6 Client con Prefix Delegation (PD) y Servidor DHCPv6:**
+- [x] **27.7** **DHCPv6 Client con Prefix Delegation (PD) y Servidor DHCPv6:**
   - Configuración de cliente DHCPv6 en interfaz WAN solicitando prefijos delegados (`request=prefix`) al ISP upstream.
   - Inyección automática del prefijo delegado en pools IPv6 locales (`/ipv6/pool`).
   - Servidor DHCPv6 para entrega y subdelegación de prefijos `/56` o `/64` hacia routers y CPEs aguas abajo.
-- [ ] **27.8** **Rutas Estáticas Dual-Stack IPv4/IPv6 y BGP v7 Interactivo (`RoutingBgpOspfView.vue`):**
+- [x] **27.8** **Rutas Estáticas Dual-Stack IPv4/IPv6 y BGP v7 Interactivo (`RoutingBgpOspfView.vue`):**
   - Pestaña de Rutas Estáticas con visualización de flags nativos (`[A]`, `[S]`, `[b]`, `[o]`, `[D]`) y modal de creación/edición de rutas con `check-gateway` (`ping`/`arp`) para failover automático.
   - Pestaña interactiva de BGP v7: Creación y edición de conexiones BGP (`/routing/bgp/connection`), templates (`/routing/bgp/template`), visualización de prefijos RX/TX y botón de reinicio suave (*Soft Reset*).
   - Pestaña de Policy-Based Routing (PBR): Creación de tablas de enrutamiento FIB (`/routing/table`) y reglas de ruteo (`/routing/rule`).
-- [ ] **27.9** **Asistentes Visuales NAT (Wizards) de 1 Clic:**
+- [x] **27.9** **Asistentes Visuales NAT (Wizards) de 1 Clic:**
   - *Wizard Masquerade:* Configuración asistida de compartición de Internet seleccionando la interfaz WAN de salida en 1 paso.
   - *Wizard Port Forwarding (Dst-NAT):* Asistente en 2 pasos para publicación de servidores locales (CCTV, Web, VPN) con puerto externo, protocolo, IP interna, puerto interno y creación opcional de regla espejo en Filter Forward.
-- [ ] **27.10** **Aseguramiento Unitario Multi-Capa 11X, Verificación AST Graphify y Certificación en Docker:**
+- [x] **27.10** **Aseguramiento Unitario Multi-Capa 11X, Verificación AST Graphify y Certificación en Docker:**
   - Pruebas unitarias backend en Pytest para todas las mutaciones WebFig con cobertura `>= 95%`.
   - Pruebas unitarias frontend en Vitest para todos los modales, componentes y wizards con 100% de éxito.
   - Verificación estática con 0 errores en `ruff`, `mypy`, `vue-tsc` y `eslint`.

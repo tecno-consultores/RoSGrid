@@ -9,6 +9,7 @@
   import type { TableColumn, FirewallRuleItem } from '@/types';
   import RgDataTable from '@/components/common/RgDataTable.vue';
   import RgSafeModeBanner from '@/components/common/RgSafeModeBanner.vue';
+  import RgFirewallRuleModal from '@/components/webfig/RgFirewallRuleModal.vue';
 
   const route = useRoute();
   const routerId = computed(() => String(route.params.routerId || ''));
@@ -21,6 +22,28 @@
   const isLoading = ref(false);
   const rulesList = ref<FirewallRuleItem[]>([]);
   const isMoving = ref(false);
+  const isResetting = ref(false);
+  const actionMessage = ref('');
+  const errorMessage = ref('');
+
+  // Modales
+  const isRuleModalOpen = ref(false);
+  const isEditingRule = ref(false);
+  const selectedRule = ref<FirewallRuleItem | null>(null);
+
+  // Wizards NAT
+  const isMasqueradeWizardOpen = ref(false);
+  const masqueradeWan = ref('ether1');
+
+  const isPortForwardWizardOpen = ref(false);
+  const portForward = ref({
+    in_interface: 'ether1',
+    protocol: 'tcp',
+    dst_port: 8080,
+    to_addresses: '192.168.88.50',
+    to_ports: 80,
+    auto_filter: true,
+  });
 
   const columns: TableColumn<FirewallRuleItem>[] = [
     { key: 'chain', label: 'Cadena', sortable: true },
@@ -54,6 +77,7 @@
 
   async function loadFirewallRules() {
     isLoading.value = true;
+    errorMessage.value = '';
     try {
       const res = await http.get<FirewallRuleItem[] | { items: FirewallRuleItem[] }>(
         `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}`,
@@ -75,10 +99,102 @@
         dynamic: item.dynamic === true || item.dynamic === 'true',
         invalid: item.invalid === true || item.invalid === 'true',
       }));
-    } catch {
+    } catch (e: any) {
       rulesList.value = [];
+      errorMessage.value = e?.response?.data?.detail || 'Error al cargar las reglas de firewall.';
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  function openCreateRuleModal() {
+    isEditingRule.value = false;
+    selectedRule.value = null;
+    isRuleModalOpen.value = true;
+  }
+
+  function openEditRuleModal(rule: FirewallRuleItem) {
+    isEditingRule.value = true;
+    selectedRule.value = rule;
+    isRuleModalOpen.value = true;
+  }
+
+  function handleDuplicateRule(rule: FirewallRuleItem) {
+    isEditingRule.value = false;
+    selectedRule.value = { ...rule, id: '', comment: `${rule.comment || ''} (Copia)` };
+    isRuleModalOpen.value = true;
+  }
+
+  async function handleSaveRule(payload: Record<string, any>) {
+    webFigStore.startSafeModeCountdown(60);
+    errorMessage.value = '';
+    actionMessage.value = '';
+
+    try {
+      if (isEditingRule.value && selectedRule.value?.id) {
+        await http.patch(
+          `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}/${selectedRule.value.id}`,
+          payload,
+        );
+        actionMessage.value = 'Regla modificada exitosamente con Safe Mode activo.';
+      } else {
+        await http.post(
+          `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}`,
+          payload,
+        );
+        actionMessage.value = 'Nueva regla creada exitosamente bajo Safe Mode.';
+      }
+      isRuleModalOpen.value = false;
+      await loadFirewallRules();
+    } catch (e: any) {
+      errorMessage.value = e?.response?.data?.detail || 'Error al persistir la regla de firewall.';
+    }
+  }
+
+  async function handleToggleRule(rule: FirewallRuleItem) {
+    webFigStore.startSafeModeCountdown(60);
+    try {
+      await http.patch(
+        `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}/${rule.id}`,
+        { disabled: !rule.disabled },
+      );
+      await loadFirewallRules();
+    } catch (e: any) {
+      errorMessage.value = e?.response?.data?.detail || 'Error al conmutar estado de la regla.';
+    }
+  }
+
+  async function handleDeleteRule(rule: FirewallRuleItem) {
+    if (!confirm(`¿Eliminar la regla ${rule.id} [${rule.chain}] ${rule.action}?`)) {
+      return;
+    }
+    webFigStore.startSafeModeCountdown(60);
+    try {
+      await http.delete(
+        `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}/${rule.id}`,
+      );
+      actionMessage.value = 'Regla eliminada exitosamente.';
+      await loadFirewallRules();
+    } catch (e: any) {
+      errorMessage.value = e?.response?.data?.detail || 'Error al eliminar la regla de firewall.';
+    }
+  }
+
+  async function handleResetCounters() {
+    if (!confirm(`¿Resetear a cero los contadores de paquetes y bytes de la tabla ${activeTab.value.toUpperCase()}?`)) {
+      return;
+    }
+    isResetting.value = true;
+    try {
+      await http.post(
+        `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}/reset-counters`,
+      );
+      actionMessage.value = 'Contadores de tráfico reiniciados a cero.';
+      await loadFirewallRules();
+    } catch (e: any) {
+      errorMessage.value = e?.response?.data?.detail || 'Error al reiniciar contadores.';
+    } finally {
+      isResetting.value = false;
     }
   }
 
@@ -108,6 +224,67 @@
     }
   }
 
+  async function handleExecuteMasquerade() {
+    webFigStore.startSafeModeCountdown(60);
+    try {
+      await http.post(
+        `/api/v1/routers/${routerId.value}/webfig/firewall/rules?table=nat`,
+        {
+          chain: 'srcnat',
+          out_interface: masqueradeWan.value,
+          action: 'masquerade',
+          comment: 'NAT Masquerade RoSGrid Wizard',
+        },
+      );
+      actionMessage.value = `Regla Masquerade creada para salida WAN en ${masqueradeWan.value}.`;
+      isMasqueradeWizardOpen.value = false;
+      await loadFirewallRules();
+    } catch (err: any) {
+      errorMessage.value = err?.detail || err?.message || 'Error al crear regla Masquerade.';
+    }
+  }
+
+  async function handleExecutePortForward() {
+    webFigStore.startSafeModeCountdown(60);
+    try {
+      // 1. Regla Dst-NAT
+      await http.post(
+        `/api/v1/routers/${routerId.value}/webfig/firewall/rules?table=nat`,
+        {
+          chain: 'dstnat',
+          in_interface: portForward.value.in_interface,
+          protocol: portForward.value.protocol,
+          dst_port: portForward.value.dst_port,
+          action: 'dst-nat',
+          to_addresses: portForward.value.to_addresses,
+          to_ports: String(portForward.value.to_ports),
+          comment: `Port Forward :${portForward.value.dst_port} -> ${portForward.value.to_addresses}:${portForward.value.to_ports}`,
+        },
+      );
+
+      // 2. Regla opcional en Filter forward
+      if (portForward.value.auto_filter) {
+        await http.post(
+          `/api/v1/routers/${routerId.value}/webfig/firewall/rules?table=filter`,
+          {
+            chain: 'forward',
+            dst_address: portForward.value.to_addresses,
+            protocol: portForward.value.protocol,
+            dst_port: portForward.value.to_ports,
+            action: 'accept',
+            comment: `Permitir Port Forward a ${portForward.value.to_addresses}:${portForward.value.to_ports}`,
+          },
+        );
+      }
+
+      actionMessage.value = `Redirección de puertos :${portForward.value.dst_port} -> ${portForward.value.to_addresses}:${portForward.value.to_ports} completada con éxito.`;
+      isPortForwardWizardOpen.value = false;
+      await loadFirewallRules();
+    } catch (err: any) {
+      errorMessage.value = err?.detail || err?.message || 'Error al ejecutar asistente de Port Forwarding.';
+    }
+  }
+
   onMounted(() => {
     loadFirewallRules();
   });
@@ -121,12 +298,57 @@
       :remaining-seconds="webFigStore.safeModeCountdownSeconds"
     />
 
+    <!-- Alertas informativas / de error -->
+    <div v-if="actionMessage" class="feedback-banner feedback-banner--success" role="status">
+      <span>✅ {{ actionMessage }}</span>
+      <button type="button" class="btn-dismiss" @click="actionMessage = ''">✕</button>
+    </div>
+    <div v-if="errorMessage" class="feedback-banner feedback-banner--error" role="alert">
+      <span>⚠️ {{ errorMessage }}</span>
+      <button type="button" class="btn-dismiss" @click="errorMessage = ''">✕</button>
+    </div>
+
     <header class="view-header">
       <div>
         <h2 class="view-title">Firewall RouterOS v7 & Filtrado de Paquetes</h2>
         <p class="view-subtitle">
           Reglas ordenadas con protección Safe Mode (60s Rollback) y barras de tráfico en vivo
         </p>
+      </div>
+
+      <div class="header-actions">
+        <button
+          v-if="activeTab === 'nat'"
+          type="button"
+          class="btn-wizard-action"
+          @click="isMasqueradeWizardOpen = true"
+        >
+          🧙‍♂️ Masquerade
+        </button>
+        <button
+          v-if="activeTab === 'nat'"
+          type="button"
+          class="btn-wizard-action"
+          @click="isPortForwardWizardOpen = true"
+        >
+          🧙‍♂️ Port Forwarding
+        </button>
+        <button
+          v-if="activeTab === 'filter' || activeTab === 'nat' || activeTab === 'mangle' || activeTab === 'raw'"
+          type="button"
+          class="btn-primary-action"
+          @click="openCreateRuleModal"
+        >
+          + Nueva Regla
+        </button>
+        <button
+          type="button"
+          class="btn-secondary-action"
+          :disabled="isResetting"
+          @click="handleResetCounters"
+        >
+          🔄 Reset Contadores
+        </button>
       </div>
 
       <!-- Pestañas de Tablas de Firewall -->
@@ -190,7 +412,129 @@
         caption="Reglas de Firewall RouterOS"
         row-key="id"
         @reorder="handleReorder"
-      />
+      >
+        <template #actions="{ row }">
+          <div class="row-actions-group">
+            <button
+              type="button"
+              class="btn-table-action"
+              title="Editar regla"
+              aria-label="Editar regla"
+              @click="openEditRuleModal(row as FirewallRuleItem)"
+            >
+              ✏
+            </button>
+            <button
+              type="button"
+              class="btn-table-action"
+              :title="(row as FirewallRuleItem).disabled ? 'Habilitar regla' : 'Deshabilitar regla'"
+              :aria-label="(row as FirewallRuleItem).disabled ? 'Habilitar regla' : 'Deshabilitar regla'"
+              @click="handleToggleRule(row as FirewallRuleItem)"
+            >
+              {{ (row as FirewallRuleItem).disabled ? '▶' : '⏸' }}
+            </button>
+            <button
+              type="button"
+              class="btn-table-action"
+              title="Duplicar regla"
+              aria-label="Duplicar regla"
+              @click="handleDuplicateRule(row as FirewallRuleItem)"
+            >
+              📋
+            </button>
+            <button
+              type="button"
+              class="btn-table-action btn-table-action--danger"
+              title="Eliminar regla"
+              aria-label="Eliminar regla"
+              @click="handleDeleteRule(row as FirewallRuleItem)"
+            >
+              🗑
+            </button>
+          </div>
+        </template>
+      </RgDataTable>
+    </div>
+
+    <!-- Modal Táctico de Creación/Edición -->
+    <RgFirewallRuleModal
+      v-if="activeTab === 'filter' || activeTab === 'nat' || activeTab === 'mangle' || activeTab === 'raw'"
+      :is-open="isRuleModalOpen"
+      :is-editing="isEditingRule"
+      :table-type="activeTab"
+      :initial-rule="selectedRule"
+      :existing-rules="rulesList"
+      @close="isRuleModalOpen = false"
+      @save="handleSaveRule"
+    />
+
+    <!-- Wizard Masquerade -->
+    <div v-if="isMasqueradeWizardOpen" class="modal-backdrop">
+      <div class="modal-window">
+        <h3 class="modal-title">🧙‍♂️ Asistente de Salida a Internet (Masquerade)</h3>
+        <p class="modal-desc text-muted">
+          Crea la regla de enmascaramiento NAT necesaria para que los equipos de la LAN salgan a Internet.
+        </p>
+        <form @submit.prevent="handleExecuteMasquerade">
+          <div class="form-group">
+            <label for="masq-wan">Interfaz WAN de Salida (Out-Interface)</label>
+            <input id="masq-wan" v-model="masqueradeWan" type="text" class="form-input" placeholder="ether1" required />
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary-action" @click="isMasqueradeWizardOpen = false">Cancelar</button>
+            <button type="submit" class="btn-primary-action">Crear Regla Masquerade</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Wizard Port Forwarding -->
+    <div v-if="isPortForwardWizardOpen" class="modal-backdrop">
+      <div class="modal-window">
+        <h3 class="modal-title">🧙‍♂️ Asistente de Apertura de Puertos (Port Forwarding)</h3>
+        <p class="modal-desc text-muted">
+          Publica servidores locales hacia Internet mapeando puertos externos hacia la IP interna con Safe Mode.
+        </p>
+        <form @submit.prevent="handleExecutePortForward">
+          <div class="form-group">
+            <label for="pf-wan">Interfaz WAN de Entrada (In-Interface)</label>
+            <input id="pf-wan" v-model="portForward.in_interface" type="text" class="form-input" placeholder="ether1" required />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="pf-proto">Protocolo</label>
+              <select id="pf-proto" v-model="portForward.protocol" class="form-input">
+                <option value="tcp">TCP</option>
+                <option value="udp">UDP</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="pf-ext-port">Puerto Externo</label>
+              <input id="pf-ext-port" v-model="portForward.dst_port" type="number" class="form-input font-mono" min="1" max="65535" required />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="pf-int-ip">IP Interna del Servidor</label>
+              <input id="pf-int-ip" v-model="portForward.to_addresses" type="text" class="form-input font-mono" placeholder="192.168.88.50" required />
+            </div>
+            <div class="form-group">
+              <label for="pf-int-port">Puerto Interno</label>
+              <input id="pf-int-port" v-model="portForward.to_ports" type="number" class="form-input font-mono" min="1" max="65535" required />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input v-model="portForward.auto_filter" type="checkbox" />
+              Crear automáticamente regla de permiso en Filter Forward
+            </label>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary-action" @click="isPortForwardWizardOpen = false">Cancelar</button>
+            <button type="submit" class="btn-primary-action">Crear Port Forwarding</button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 </template>
@@ -223,6 +567,43 @@
     color: var(--rg-text-muted);
   }
 
+  .header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .btn-primary-action {
+    padding: 6px 14px;
+    background: linear-gradient(135deg, #00d2ff, #0077b6);
+    border: none;
+    border-radius: 6px;
+    color: #ffffff;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 210, 255, 0.25);
+  }
+
+  .btn-primary-action:hover {
+    filter: brightness(1.1);
+  }
+
+  .btn-secondary-action {
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid var(--rg-border-grid, #1e293b);
+    border-radius: 6px;
+    color: var(--rg-text-secondary, #94a3b8);
+    font-size: 0.82rem;
+    cursor: pointer;
+  }
+
+  .btn-secondary-action:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--rg-text-primary, #f8fafc);
+  }
+
   .subtabs-bar {
     display: flex;
     gap: 4px;
@@ -249,6 +630,36 @@
     background: var(--rg-bg-elevated);
     color: var(--rg-accent-cyan);
     font-weight: 600;
+  }
+
+  .feedback-banner {
+    padding: 10px 14px;
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+  }
+
+  .feedback-banner--success {
+    background-color: rgba(34, 197, 94, 0.15);
+    border: 1px solid #22c55e;
+    color: #86efac;
+  }
+
+  .feedback-banner--error {
+    background-color: rgba(239, 68, 68, 0.15);
+    border: 1px solid #ef4444;
+    color: #fca5a5;
+  }
+
+  .btn-dismiss {
+    background: transparent;
+    border: none;
+    color: inherit;
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 0 4px;
   }
 
   .filter-toolbar {
@@ -291,40 +702,135 @@
     gap: 6px;
   }
 
-  .traffic-cell {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    min-width: 130px;
+  .row-actions-group {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
   }
 
-  .traffic-labels {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.75rem;
+  .btn-table-action {
+    background: transparent;
+    border: 1px solid var(--rg-border-grid, #1e293b);
+    border-radius: 4px;
+    color: var(--rg-text-secondary, #94a3b8);
+    font-size: 0.8rem;
+    padding: 2px 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
   }
 
-  .pkts-label {
-    color: var(--rg-text-muted);
-    font-size: 0.7rem;
+  .btn-table-action:hover {
+    border-color: var(--rg-accent-cyan, #00d2ff);
+    color: var(--rg-accent-cyan, #00d2ff);
+    background: rgba(0, 210, 255, 0.1);
   }
 
-  .traffic-bar-bg {
-    width: 100%;
-    height: 4px;
-    background: var(--rg-bg-elevated);
-    border-radius: 2px;
-    overflow: hidden;
-  }
-
-  .traffic-bar-fill {
-    height: 100%;
-    background: var(--rg-accent-cyan);
-    border-radius: 2px;
+  .btn-table-action--danger:hover {
+    border-color: #ef4444;
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.15);
   }
 
   .font-tabular {
     font-family: 'JetBrains Mono', 'Ubuntu Mono', ui-monospace, monospace;
     font-variant-numeric: tabular-nums;
+  }
+
+  .btn-wizard-action {
+    padding: 6px 12px;
+    background: #0284c7;
+    border: 1px solid #38bdf8;
+    border-radius: 6px;
+    color: #ffffff;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-wizard-action:hover {
+    background: #0369a1;
+  }
+
+  .modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .modal-window {
+    background: #1e293b;
+    border: 1px solid #38bdf8;
+    border-radius: 8px;
+    padding: 1.5rem;
+    width: 90%;
+    max-width: 480px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  }
+
+  .modal-title {
+    margin-top: 0;
+    font-size: 1.15rem;
+    color: #38bdf8;
+  }
+
+  .modal-desc {
+    font-size: 0.8rem;
+    margin-bottom: 1rem;
+    color: #94a3b8;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-bottom: 0.9rem;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .form-group label {
+    font-size: 0.8rem;
+    color: #94a3b8;
+  }
+
+  .form-input {
+    background: #0f172a;
+    border: 1px solid #334155;
+    color: #f8fafc;
+    padding: 0.5rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+  }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+  }
+
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.82rem;
+    color: #f8fafc;
+    cursor: pointer;
+  }
+
+  .font-mono {
+    font-family: monospace;
   }
 </style>

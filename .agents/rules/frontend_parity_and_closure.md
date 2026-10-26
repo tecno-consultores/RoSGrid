@@ -14,6 +14,7 @@
 1. **Zero Console-Exclusive Actions:** Any administrative, operational, or diagnostics action executable from the terminal (except initial unattended system bootstrap) MUST have an equivalent Vue 3 screen.
 2. **Zero Orphan API Endpoints:** Every route defined under `fastapi/src/api/v1/` MUST be paired with a frontend interface enabling visual inspection, parameter configuration, and interactive verification.
 3. **Bidirectional Audit Sync:** Maintenance CLI scripts issuing tokens or altering sessions MUST sync metadata into KeyDB/Redis (`issued_by_username: "CLI (Terminal)"`) so they are visible and revocable via `ActiveSessionsKillSwitchView.vue`.
+4. **Zero Read-Only Operational Consoles (WebFig v7 Parity):** Every router management table (Firewall, Queues, PPP, DHCPv4, Dual-Stack IPv6, Routing) MUST offer tactical mutation actions (create, edit, toggle enable/disable, delete with confirmation and 1-click setup wizards) guarded by 60s Safe Mode. No screen may be left in view-only state when RouterOS REST API supports mutations.
 
 ---
 

@@ -2,7 +2,7 @@
 
 **Licencia:** GPL-3.0-only  
 **Estándar Aplicado:** QA Testing Blueprints (Nivel 11X)  
-**Estado Actual:** Hito 26 Completado y Certificado al 100% (Sub-tareas 26.1 a 26.6) en Contenedores Docker Efímeros — Plataforma Migrada a Python 3.15 y Node.js 26 LTS.
+**Estado Actual:** Hito 27 Completado y Certificado al 100% (Sub-tareas 27.1 a 27.10) en Contenedores Docker Efímeros — Paridad Total WebFig v7, Pila Dual IPv6, DHCPv4/v6, Modales Firewall/Queues/PPPoE, Wizards NAT y Routing Dinámico.
 
 ---
 
@@ -188,6 +188,7 @@ docker compose -f docker-compose.qa.yml down --remove-orphans
 | **Hito 25.12** | Internacionalización Integral (i18n) en Inglés y Español de 16 Pantallas y Módulos Críticos | **100%** (404 tests Vitest en 55 suites) | N/A | vue-tsc (0 err) + verificación de secretos limpia | ✅ **Certificado** |
 | **Hito 26** | Gobernanza Táctica de Módulos B2B, DAG Hard Lock, Blindaje RBAC, Contingencia y Auditoría Forense con Rollback | **100%** (544 tests Pytest)<br>**100%** (412 tests Vitest en 56 suites)<br>**100%** (97 BDD API / 46 BDD UI) | N/A | DAG Watcher + RBAC 403 Fail-Closed + WORM Audit Tab + browser_subagent visual pass | ✅ **Certificado** |
 | **Hito 26.8** | Identidad de Marca y Despliegue de Logos Vectoriales Oficiales (Shell, Login, Wallboard, PWA y Metadatos) | **100%** (414 tests Vitest en 56 suites)<br>**100%** (vue-tsc 0 err) | N/A | SVG Vectorial Oficial + Glow Neón Cian + PWA Maskable + Cache Inmutable Nginx | ✅ **Certificado** |
+| **Hito 27** | WebFig v7 Táctico: Paridad Operativa Total, Modales de Creación (Firewall/Queues/PPPoE), Módulos IP & DHCPv4/v6, Pila Dual IPv6, Routing Dinámico y Asistentes NAT | **100%** (551 tests Pytest)<br>**100%** (431 tests Vitest en 59 suites)<br>**100%** (103 BDD API / 49 BDD UI) | N/A | Safe Mode 60s + DHCP Setup Wizard + SLAAC/PD IPv6 + BGP v7 + NAT Wizards | ✅ **Certificado** |
 
 ---
 
@@ -1962,5 +1963,36 @@ Conforme a la Especificación 43 v2.0.0 y la directiva `.agents/rules/ground_tru
    - Verificado el bloqueo visual y funcional en cascada (switches grisados con tooltip al apagar el módulo padre ISP).
    - Verificado el botón `[ ⚡ Modo Contingencia / Bajo Consumo ]` y la visualización de su banner de advertencia reactivo.
    - Verificada la pestaña `[ 📜 Historial de Modificaciones ]` con tabla forense WORM, diff de cambios y botón `[ ⤺ Cargar esta versión ]`.
+
+### H. Hito 27: WebFig v7 Táctico — Paridad Total, Asistentes de Creación (Firewall/Queues/PPPoE), Módulos IP & DHCPv4/v6, Pila Dual IPv6 y Routing Dinámico (Completado y Certificado al 100%)
+
+1. **Frontend Unitario (Vitest en Docker `sinfallas/base-node-ionic:26`):**
+   - `vue3/src/components/webfig/RgFirewallRuleModal.unit.ts`: **7 de 7 pruebas PASADAS (100%)**, validando renderizado accesible con `role="dialog"`, `aria-modal="true"`, selector contextual de cadenas (`input`, `forward`, `prerouting`, `srcnat`, `dstnat`), parámetros L3/L4, posicionamiento `place-before` y emisión del evento `@save` con payload estricto de RouterOS v7.
+   - `vue3/src/components/webfig/RgSimpleQueueModal.unit.ts`: **7 de 7 pruebas PASADAS (100%)**, verificando carga de valores iniciales para edición, selección de targets (IP/CIDR), barra de presets rápidos en 1 clic (`10M/10M` hasta `1 Gbps`), selector de cola padre (*Parent Queue*) y emisión de `@save`.
+   - `vue3/src/views/ipAndIpv6Views.unit.ts`: **3 de 3 suites exhaustivas PASADAS (100%)**, cubriendo la navegación táctica por pestañas en `IpAddressesAndDhcpView.vue` (Direcciones, Leases con `make-static`, Pools, DNS con `flush-cache`, ARP), asistentes DHCP Setup y Clientes DHCP WAN con `renew`/`release`, y la vista de Pila Dual `Ipv6DualStackView.vue` (Direcciones SLAAC EUI-64, DHCPv6-PD, pools y vecinos NDP).
+   - `vue3/src/views/webfigViews.unit.ts`: **Ampliación exhaustiva PASADA (100%)**, cubriendo la botonera táctica de Firewall, los dos asistentes visuales NAT (`Wizard Masquerade` y `Wizard Port Forwarding`), y las 4 pestañas de routing (`RoutingBgpOspfView.vue`) con failover `check-gateway` y conexiones BGP interactivas.
+   - Total frontend: **59 suites aprobadas, 431 de 431 pruebas PASADAS al 100%**.
+
+2. **Backend Unitario (Pytest en Docker `sinfallas/rosgrid-backend:local-test` vía uv):**
+   - `fastapi/tests/api/test_webfig_dhcp_and_ipv6.unit.py`: **7 de 7 pruebas exhaustivas PASADAS (100%)**, validando la creación y actualización de servidores DHCPv4, redes DHCP con gateway y DNS, acciones tácticas de renovación y liberación en clientes DHCP WAN (`POST /renew` y `/release`), asignación de direcciones IPv6 con prefijo y SLAAC, aprovisionamiento de clientes DHCPv6 con delegación de prefijos (PD), y consulta de tabla de vecinos NDP.
+   - Total backend: **551 de 551 pruebas unitarias PASADAS al 100%**.
+
+3. **Escenarios BDD Karate Labs:**
+   - **API REST (`fastapi/test/api_test.feature` & `docs/examples/fastapi/test/api_test.feature`):** **103 escenarios BDD PASADOS (100%)** (incorporado Grupo 26 con Escenarios 98 a 103 cubriendo servidores DHCPv4, redes DHCP, renovación WAN, direcciones IPv6, clientes DHCPv6-PD y vecinos NDP).
+   - **UI WebFig / NOC (`vue3/test/ui_business_flow.feature` & `docs/examples/vue3/test/ui_business_flow.feature`):** **49 escenarios BDD PASADOS (100%)** (incorporados Escenarios 47, 48 y 49 cubriendo el Módulo IP & DHCPv4, la Pila Dual IPv6 y los Asistentes Visuales NAT de Firewall).
+
+4. **Análisis Estático, Tipado Estricto y Complejidad Ciclomática:**
+   - Backend: `ruff check src/ tests/` -> 0 errores ("All checks passed!").
+   - Frontend: `vue-tsc --noEmit` -> 0 errores; `eslint` -> 0 errores.
+   - Verificación de Colisiones i18n: `python3 .agents/scripts/verify_json_no_duplicate_keys.py` -> 0 claves duplicadas en `es.json` y `en.json`.
+
+5. **Auditoría de Seguridad, Secretos y Paridad ORM:**
+   - `./scripts/auditar-infra.sh` (Trivy IaC & Filesystem en contenedor efímero) -> 0 vulnerabilidades CRITICAL/HIGH, 0 secretos detectados.
+   - `./scripts/verificar-secretos.sh` -> 0 secretos en el árbol de trabajo.
+   - `python3 .agents/scripts/verify_topological_health.py` -> 0 violaciones de capas arquitectónicas y 0 acoplamientos prohibidos.
+   - `python3 .agents/scripts/verify_alembic_orm_parity.py` -> 26 tablas SQLAlchemy ORM 100% sincronizadas.
+
+6. **Gobernanza Agéntica Institucional:**
+   - Regla `Zero Read-Only Operational Consoles (WebFig v7 Parity)` formalizada e integrada en `.agents/rules/frontend_parity_and_closure.md` y `AGENTS.md`.
 
 
