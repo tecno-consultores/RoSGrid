@@ -281,7 +281,14 @@
           ☰
         </button>
         <router-link to="/" class="brand" :aria-label="t('nav.dashboard', 'Ir al Centro de Mando')">
-          <span class="brand-icon" aria-hidden="true">🌐</span>
+          <img
+            src="/favicon.svg"
+            alt=""
+            class="brand-icon brand-logo"
+            width="22"
+            height="22"
+            aria-hidden="true"
+          />
           <span class="brand-name">RoSGrid</span>
           <span class="brand-version">v1.0</span>
         </router-link>
@@ -721,7 +728,12 @@
   }
 
   .brand-icon {
-    font-size: 20px;
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    flex-shrink: 0;
+    display: inline-block;
+    filter: drop-shadow(0 0 6px rgba(0, 240, 255, 0.4));
   }
 
   .brand-name {

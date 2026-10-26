@@ -700,7 +700,11 @@
   - Script de validación topológica y límites de capas arquitectónicas (`.agents/scripts/verify_topological_health.py`) integrado en la compuerta de certificación (`[4/7]`).
   - Herramienta de inspección de radio de impacto pre-refactorización (`.agents/scripts/inspect_blast_radius.py`) incorporada en directivas de `.agents/rules/`.
   - Servicio MCP estandarizado (`graphify-mcp`) en puerto 8080 con plantillas para Hermes Agent y Claude Desktop, y habilidad agéntica `.agents/skills/graphify-ast-navigator`.
-  - Visualización interactiva en 1 clic (`scripts/ver-mapa-arquitectura.sh` / `make map`).
+- [x] **26.8** **Identidad de Marca y Despliegue de Logos Vectoriales Oficiales:**
+  - Sustitución de emojis provisionales por el isotipo SVG oficial de RoSGrid en Topbar (`RgResponsiveShell.vue`), Login y Asistente de Arranque Inicial (`LoginView.vue`) y Wallboard NOC 24/7 (`NocWallboardView.vue`).
+  - Metadatos PWA y Open Graph enriquecidos en `index.html` y `manifest.webmanifest`.
+  - Reglas de caché rápida inmutable en Nginx (`default.conf`) para assets estáticos (`.ico`, `.svg`, `.png`, `.webmanifest`).
+  - 414 pruebas unitarias de Vitest al 100% y 0 errores en `vue-tsc`.
 
 ---
 

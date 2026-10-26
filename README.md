@@ -1,5 +1,5 @@
 <div align="center">
-  <a href="[https://rosgrid.net](https://rosgrid.net)">
+  <a href="https://rosgrid.net">
     <img src="./docs/assets/logo-git.jpg" alt="RoSGrid — Multi-Tenant Management Console & MCP Server for MikroTik RouterOS v7" width="850">
   </a>
 </div>

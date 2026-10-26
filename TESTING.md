@@ -187,6 +187,7 @@ docker compose -f docker-compose.qa.yml down --remove-orphans
 | **Hito 25** | Conmutador Rápido de Tenants, Ergonomía de Pie In-Flow y Estudio Táctico de Feature Flags por Empresa | **100%** (543 tests Pytest)<br>**100%** (402 tests Vitest) | N/A | Kill-Switch Silent Mode + Sub-Pantalla Módulos Studio + Blast-Radius Shield | ✅ **Certificado** |
 | **Hito 25.12** | Internacionalización Integral (i18n) en Inglés y Español de 16 Pantallas y Módulos Críticos | **100%** (404 tests Vitest en 55 suites) | N/A | vue-tsc (0 err) + verificación de secretos limpia | ✅ **Certificado** |
 | **Hito 26** | Gobernanza Táctica de Módulos B2B, DAG Hard Lock, Blindaje RBAC, Contingencia y Auditoría Forense con Rollback | **100%** (544 tests Pytest)<br>**100%** (412 tests Vitest en 56 suites)<br>**100%** (97 BDD API / 46 BDD UI) | N/A | DAG Watcher + RBAC 403 Fail-Closed + WORM Audit Tab + browser_subagent visual pass | ✅ **Certificado** |
+| **Hito 26.8** | Identidad de Marca y Despliegue de Logos Vectoriales Oficiales (Shell, Login, Wallboard, PWA y Metadatos) | **100%** (414 tests Vitest en 56 suites)<br>**100%** (vue-tsc 0 err) | N/A | SVG Vectorial Oficial + Glow Neón Cian + PWA Maskable + Cache Inmutable Nginx | ✅ **Certificado** |
 
 ---
 

@@ -478,7 +478,15 @@
     </div>
     <main id="main-content" class="login-card" role="main" aria-labelledby="login-heading">
       <header class="login-header">
-        <div class="brand-logo" aria-hidden="true">⚡</div>
+        <div class="brand-logo" aria-hidden="true">
+          <img
+            src="/favicon.svg"
+            alt="RoSGrid"
+            class="brand-logo-img"
+            width="64"
+            height="64"
+          />
+        </div>
         <h1 id="login-heading" class="brand-title">RoSGrid</h1>
         <p class="brand-subtitle">Gestión Multi-Tenant para Flotas MikroTik RouterOS v7+</p>
       </header>
@@ -1115,8 +1123,23 @@
   }
 
   .brand-logo {
-    font-size: 2.2rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     margin-bottom: var(--rg-space-2, 8px);
+  }
+
+  .brand-logo-img {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+    filter: drop-shadow(0 0 16px rgba(0, 240, 255, 0.45));
+    transition: transform 0.25s ease, filter 0.25s ease;
+  }
+
+  .brand-logo-img:hover {
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 24px rgba(0, 240, 255, 0.7));
   }
 
   .brand-title {

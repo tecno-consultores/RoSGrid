@@ -379,6 +379,14 @@
     <!-- Encabezado KPI Gigante -->
     <header class="wallboard-header">
       <div class="wallboard-brand">
+        <img
+          src="/favicon.svg"
+          alt=""
+          class="wallboard-logo"
+          width="32"
+          height="32"
+          aria-hidden="true"
+        />
         <h1 class="brand-title">{{ t('wallboard.title') }}</h1>
       </div>
 
@@ -699,7 +707,14 @@
   .wallboard-brand {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.75rem;
+  }
+
+  .wallboard-logo {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.5));
   }
 
   .brand-title {

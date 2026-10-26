@@ -86,6 +86,9 @@ describe('RgResponsiveShell.vue — Doble Contexto & Menú de Usuario 11X', () =
     const brandLink = wrapper.find('a.brand');
     expect(brandLink.exists()).toBe(true);
     expect(brandLink.attributes('href')).toBe('/');
+    const logoImg = brandLink.find('img.brand-logo');
+    expect(logoImg.exists()).toBe(true);
+    expect(logoImg.attributes('src')).toBe('/favicon.svg');
   });
 
   it('muestra solo el nombre del tenant en la barra superior sin el prefijo "Tenant: "', () => {
