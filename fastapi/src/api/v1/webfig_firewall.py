@@ -124,6 +124,10 @@ async def create_rule(
         body["comment"] = payload.comment
     if payload.place_before:
         body["place-before"] = payload.place_before
+    if payload.to_addresses:
+        body["to-addresses"] = payload.to_addresses
+    if payload.to_ports:
+        body["to-ports"] = payload.to_ports
     body.update(payload.extra_params)
 
     menu = f"{proto}/firewall/{table_type}"
@@ -148,6 +152,8 @@ def _build_firewall_patch_data(payload: FirewallRuleUpdateRequest) -> dict[str, 
         "dst-port": payload.dst_port,
         "in-interface": payload.in_interface,
         "out-interface": payload.out_interface,
+        "to-addresses": payload.to_addresses,
+        "to-ports": payload.to_ports,
         "comment": payload.comment,
         "disabled": payload.disabled,
     }

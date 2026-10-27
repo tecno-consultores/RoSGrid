@@ -34,6 +34,8 @@ class FirewallRuleCreateRequest(StrictBaseModel):
     dst_port: str | None = None
     in_interface: str | None = None
     out_interface: str | None = None
+    to_addresses: str | None = None
+    to_ports: str | None = None
     place_before: str | None = None
     comment: str | None = None
     disabled: bool = False
@@ -50,6 +52,8 @@ class FirewallRuleUpdateRequest(StrictBaseModel):
     dst_port: str | None = None
     in_interface: str | None = None
     out_interface: str | None = None
+    to_addresses: str | None = None
+    to_ports: str | None = None
     comment: str | None = None
     disabled: bool | None = None
     extra_params: dict[str, Any] = Field(default_factory=dict)
