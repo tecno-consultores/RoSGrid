@@ -6,7 +6,7 @@
 **Estado:** Especificado / Listo para Desarrollo  
 **Fecha:** 2026-10-26  
 **Ámbitos:** `fastapi/src/api/v1/compliance.py`, `fastapi/src/api/v1/bulk_and_updates.py`, `vue3/src/views/EnterpriseComplianceView.vue`, `vue3/src/views/BulkOperationsView.vue`, `fastapi/src/schemas/enterprise.py`  
-**Hito Asociado:** Hito 29 (Post-Lanzamiento 1.0.0 / Hito 28)
+**Hito Asociado:** Hito 27.11 (Previo al Cierre Definitivo y Publicación en Hito 28)
 
 ---
 

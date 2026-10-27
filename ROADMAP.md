@@ -2,9 +2,9 @@
 
 ## 📍 Punto de Control Actual (Checkpoint)
 
-- **Hito Actual en Curso:** Hito 28 (Pendiente de Publicación Final) — Cierre de CHANGELOG.md, Auditoría Trivy y Publicación en Docker Hub.
-- **Próximo Hito Planificado:** Hito 29 — Expansión de CIS Benchmark Hardening Interactivo (28 Directivas ISP vs Empresa con Enlaces Oficiales) y Catálogo de 10 Plantillas Masivas Avanzadas (`docs/specs/50_EXPANSION_CIS_BENCHMARK_INTERACTIVO_Y_CATALOGO_PLANTILLAS_COMPLEJAS.md`).
-- **Hito General del Sistema:** Hitos 0 al 27 COMPLETADOS (100%).
+- **Hito Actual en Curso:** Hito 27.11 (Pendiente de Implementación) — Expansión de CIS Benchmark Hardening Interactivo (28 Directivas ISP vs Empresa con Enlaces Oficiales) y Catálogo de 10 Plantillas Masivas Avanzadas (`docs/specs/50_EXPANSION_CIS_BENCHMARK_INTERACTIVO_Y_CATALOGO_PLANTILLAS_COMPLEJAS.md`).
+- **Hito Final de Cierre del Sistema:** Hito 28 (Pendiente de Publicación Final) — Cierre de CHANGELOG.md, Auditoría Trivy y Publicación en Docker Hub.
+- **Hito General del Sistema:** Hitos 0 al 27.10 COMPLETADOS (100%).
 - **Hito 27 (WebFig v7 Táctico — Paridad Total, Asistentes de Creación Firewall/Queues/PPPoE, Módulos IP & DHCPv4/v6, Pila Dual IPv6, Routing Dinámico y Definición Integral de VLANs):** COMPLETADO al 100% y certificado en Docker. Especificaciones formales `docs/specs/46_REPORTE_INVESTIGACION_WEBFIG_COMPETITIVIDAD_Y_ROADMAP.md`, `docs/specs/47_WEBFIG_V7_FULL_PARITY_FIREWALL_QUEUES_AND_PPPOE.md`, `docs/specs/48_WEBFIG_V7_IP_STACK_DHCPV4_AND_DHCPV6_DUAL_STACK.md`, y `docs/specs/49_WEBFIG_V7_ROUTING_DYNAMIC_BGP_OSPF_AND_NAT_WIZARDS.md`. Modales tácticos de creación y mutación con Safe Mode de 60s en `RgFirewallRuleModal.vue` (Filter, NAT, Mangle, RAW con place-before), `RgSimpleQueueModal.vue` (con selector de Target IP/CIDR y presets rápidos de ancho de banda de 10M a 1G), deslogueo Kick Session en clientes PPPoE (`DELETE .../ppp/active/{session_id}`), módulo dedicado de direccionamiento IP y DHCP (`IpAddressesAndDhcpView.vue`) con wizard de DHCP Setup en 3 pasos, Leases en vivo con Make Static y bloqueo en cuarentena, gestión de clientes DHCP WAN con Renew/Release, soporte de Pila Dual IPv6 (`Ipv6DualStackView.vue` y router `/api/v1/webfig/ipv6`) con asignación SLAAC EUI-64, clientes DHCPv6 con Prefix Delegation (PD), servidores DHCPv6, pools y vecinos NDP, vistas tácticas de Routing v7 (`RoutingBgpOspfView.vue`) con rutas estáticas failover `check-gateway` (`ping`/`arp`), BGP connections interactivas y tablas/reglas PBR, asistentes visuales NAT de 1 clic (Wizard Masquerade y Wizard Port Forwarding), y definición integral de VLANs en Bridge (`/interface/bridge/vlan`) y subinterfaces 802.1Q (`/interface/vlan`) con modales interactivos y endpoints Safe Mode en `BridgeView.vue` e `InterfacesAndSfpView.vue`. Cobertura y calidad: 555 tests backend Pytest (100% éxito), 433 tests frontend en 60 suites Vitest (100% éxito), 105 escenarios BDD Karate Labs API, 50 escenarios BDD Karate Labs UI, 0 errores en `ruff` y `vue-tsc`, y 0 vulnerabilidades en auditoría de infraestructura y secretos.
 - **Hito 26 (Gobernanza Táctica de Módulos B2B — DAG Hard Lock, Blindaje RBAC, Modo Contingencia y Auditoría Forense con Rollback):** COMPLETADO al 100% y certificado en Docker. Especificación formal `docs/specs/45_TACTICAL_FEATURE_FLAGS_GOVERNANCE_DAG_AND_AUDIT_ROLLBACK.md`. Grafo DAG activo en `RgFeatureFlagsGrid.vue` con bloqueo en cascada y tooltips (`[ 🔒 Requiere activar previamente: Módulo ISP ]`), blindaje RBAC fail-closed en `fastapi/src/api/v1/tenants.py` restringiendo licenciamiento exclusivamente a `SUPERADMIN_GLOBAL` con `HTTP 403 Forbidden`, arquetipo rápido en 1 clic `[ ⚡ Modo Contingencia / Bajo Consumo ]` suspendiendo colectores intensivos ante saturación de red con banner táctico reactivo, y pestaña táctica `[ 📜 Historial de Modificaciones ]` en `TenantModulesStudioView.vue` respaldada por `TenantModulesAuditTab.vue` con consulta WORM SHA-256 de `audit_logs` y reversión rollback en 1 clic. 544 tests backend Pytest (100% éxito), 412 tests frontend en 56 suites Vitest (100% éxito), 97 escenarios BDD Karate Labs API, 46 escenarios BDD Karate Labs UI, y validación visual interactiva en navegador con `browser_subagent`.
 - **Internacionalización Integral (i18n) en Inglés y Español de 16 Vistas/Módulos Críticos:** COMPLETADO al 100% y certificado en Docker. Cobertura simétrica total en `vue3/src/locales/es.json` y `vue3/src/locales/en.json` para las 16 áreas clave: Maker-Checker, IPAM, Mapa Unificado de Clientes/ONUs, Desplegables de Técnico de Campo, Topología L2 PoE, Comparador Diff de Respaldos Git, Operaciones Masivas & Golden Config, Gestión de Usuarios y Roles RBAC, Administración de Empresas Multi-Tenant & Módulos Studio, CIS Hardening, Matriz CVE, Auditoría Forense WORM, SD-WAN WireGuard, Seguridad L2 & Rogue DHCP, Telemetría de SLA y Canales de Notificación Multicanal. 405 tests en 55 suites Vitest pasando al 100%, 45 escenarios BDD en Karate Labs UI (incorporado Escenario 45 de conmutación interactiva), 543 tests backend en Pytest pasando al 100%, validación estática limpia con `vue-tsc --noEmit`, `ruff check` y `mypy`, y 0 hallazgos en auditoría de secretos.
@@ -764,6 +764,17 @@
 
 ---
 
+- [ ] **27.11** **Expansión de CIS Benchmark Hardening Interactivo (ISP vs Empresa con Enlaces Oficiales) y Catálogo de 10 Plantillas Masivas Avanzadas (`docs/specs/50_EXPANSION_CIS_BENCHMARK_INTERACTIVO_Y_CATALOGO_PLANTILLAS_COMPLEJAS.md`):**
+  - **27.11.1 Ampliación del Catálogo de Directivas CIS (28 Directivas Totales):** Implementación de 8 directivas especializadas para ISP/Telecom (`CIS-ISP-1` a `CIS-ISP-8`: Ingress Bogon Filtering en RAW, mitigación total de Open DNS Resolver en WAN, autenticación BGP TCP-AO/MD5, CoPP rate-limiting en `input`, aislamiento en Management VRF, autenticación OSPF SHA-256, supresión de ICMP redirects y apagado de proxies no autorizados) y 8 directivas especializadas para Redes Corporativas/Campus (`CIS-CORP-1` a `CIS-CORP-8`: Desactivación de servidor btest, restricción estricta de MAC-WinBox/MAC-Telnet, hardening SSH con llaves Ed25519, DHCP Snooping con Option 82 en bridges, erradicación de SNMP v1/v2c con SNMPv3 USM SHA256/AES, auditoría forense con logging completo `account`, `system,info`, `firewall,info`, desactivación de RoMON y descubrimiento en LAN, y cifrado obligatorio AES-256 en respaldos).
+  - **27.11.2 Trazabilidad Normativa y Metadatos de Enlaces Oficiales (Backend & Esquemas):** Extensión de esquemas Pydantic v2 en `fastapi/src/schemas/enterprise.py` (`CisDirectiveResult` y `CisCatalogItem`) con campos `standard_ref`, `standard_url` (IETF RFC, CISecurity, NIST) y `reference_url` (`manual.mikrotik.com`).
+  - **27.11.3 Soberanía Operativa y Filtrado por Perfiles en UI (`EnterpriseComplianceView.vue` & `CisPoliciesModal.vue`):** Catálogo general 100% visible sin ocultar directivas por perfil; el perfil (`ISP`, `CORPORATE`, `DATACENTER`) actúa como plantilla de activación recomendada. Selector de vistas tácticas (`Todos`, `Recomendados ISP`, `Recomendados Empresa`), switches individuales por fila con recálculo dinámico instantáneo del *Security Score* (0–100%) evaluando únicamente directivas activas, y badges interactivos accesibles con enlaces externos directos (`[ 🔗 Estándar Oficial ]` y `[ 📖 Manual MikroTik v7 ]`).
+  - **27.11.4 Catálogo Extendido de 10 Nuevas Plantillas Masivas Avanzadas (Bulk-Ops):** Registro de plantillas parametrizadas con Safe Mode de 60s en `fastapi/src/api/v1/bulk_and_updates.py`: `ISP_BGP_RPKI_STRICT_VALIDATION`, `ISP_CGNAT_DETERMINISTIC_OVERLOAD`, `ISP_IPV6_DUAL_STACK_PD`, `COPP_CONTROL_PLANE_PROTECTION`, `BCP38_ANTI_SPOOFING_FILTER`, `TCP_MSS_CLAMPING_OPTIMIZER`, `ENTERPRISE_BRIDGE_VLAN_TRUNK_ACCESS`, `QOS_CAKE_SMART_QUEUE`, `SDWAN_WIREGUARD_SITE_TO_SITE` y `NIGHTLY_ENCRYPTED_BACKUP_SFTP`.
+  - **27.11.5 Interfaz Táctica de Plantillas Masivas (`BulkOperationsView.vue`):** Formulario interactivo con validación de tipos para variables dinámicas, visor en vivo de comandos CLI resultantes y pasos REST equivalentes antes del despacho, selector de radio de impacto y barra de progreso de ejecución con rollback en caso de fallo.
+  - **27.11.6 Auto-Remediación Asistida con Safe Mode de 60s:** Botón táctico `[ ⚡ Auto-Remediar ]` en directivas CIS fallidas con modal interactivo de confirmación y ejecución atómica bajo Safe Mode (60s).
+  - **27.11.7 Aseguramiento de Calidad 11X Multi-Capa y Compuerta de Certificación:** Pruebas unitarias backend Pytest (>= 95% cobertura) para las 28 directivas CIS y las 10 plantillas masivas, pruebas unitarias frontend Vitest para componentes de filtrado, switches y badges de enlaces externos, escenarios BDD en Karate Labs API/UI, 0 errores en `ruff check` y `vue-tsc --noEmit`, y 0 hallazgos en `make audit`.
+
+---
+
 ## 📦 HITO 28: Cierre de `CHANGELOG.md`, Auditoría Trivy y Publicación en Docker Hub (`scripts/build.sh`)
 
 > **Archivo Guía:** `docs/specs/01_DOCKER_INFRASTRUCTURE_AND_IMMUTABLE_IMAGES.md`
@@ -771,47 +782,6 @@
 - [ ] **28.1** Actualizar `CHANGELOG.md` consolidando los cambios de `[Unreleased]` dentro del lanzamiento oficial `[1.0.0]` con las métricas certificadas en `TESTING.md`.
 - [ ] **28.2** Ejecutar `./scripts/build.sh` (como usuario no-root) con `docker buildx` (`container-builder` + `tonistiigi/binfmt`) para construir y publicar `sinfallas/rosgrid-backend:latest` (`:1.0.0`) y `sinfallas/rosgrid-frontend:latest` (`:1.0.0`) en Docker Hub y limpiar cachés con `prune -af`.
 
----
-
-## 🛡️ HITO 29: Expansión de CIS Benchmark Hardening Interactivo (ISP vs Empresa con Enlaces Oficiales) y Catálogo de 10 Plantillas Masivas Avanzadas
-
-> **Archivo Guía:** `docs/specs/50_EXPANSION_CIS_BENCHMARK_INTERACTIVO_Y_CATALOGO_PLANTILLAS_COMPLEJAS.md`
-
-- [ ] **29.1** **Ampliación del Catálogo de Directivas CIS (28 Directivas Totales):**
-  - Implementación de 8 directivas especializadas para ISP/Telecom (`CIS-ISP-1` a `CIS-ISP-8`): Ingress Bogon Filtering (RFC 1918/6598 en RAW), mitigación total de Open DNS Resolver en WAN, autenticación BGP TCP-AO/MD5, Control Plane Policing (CoPP) con rate-limiting en cadena `input`, aislamiento en Management VRF, autenticación OSPF SHA-256, supresión de ICMP redirects y apagado de proxies no autorizados.
-  - Implementación de 8 directivas especializadas para Redes Corporativas/Campus (`CIS-CORP-1` a `CIS-CORP-8`): Desactivación de servidor btest, restricción estricta de MAC-WinBox/MAC-Telnet a lista de gestión, hardening SSH con llaves Ed25519 y deshabilitación de password login, DHCP Snooping con Option 82 en bridges, erradicación de SNMP v1/v2c (exigencia SNMPv3 USM SHA256/AES), auditoría forense con logging completo (`account`, `system,info`, `firewall,info`), desactivación de RoMON y descubrimiento en segmentos de usuario, y cifrado obligatorio AES-256 en respaldos.
-- [ ] **29.2** **Trazabilidad Normativa y Metadatos de Enlaces Oficiales (Backend & Esquemas):**
-  - Extensión de esquemas Pydantic v2 en `fastapi/src/schemas/enterprise.py` (`CisDirectiveResult` y `CisCatalogItem`) con campos `standard_ref`, `standard_url` (IETF RFC, CISecurity, NIST) y `reference_url` (`manual.mikrotik.com`).
-  - Validación de enlaces y esquemas estrictos sin errores de serialización.
-- [ ] **29.3** **Soberanía Operativa y Filtrado por Perfiles en UI (`EnterpriseComplianceView.vue` & `CisPoliciesModal.vue`):**
-  - Catálogo general 100% visible sin ocultar directivas por perfil; el perfil (`ISP`, `CORPORATE`, `DATACENTER`) actúa como plantilla de activación recomendada.
-  - Selector de vistas tácticas: `[ Todos (28) ]`, `[ Recomendados para mi perfil: ISP (14) ]` / `[ Recomendados Empresa (18) ]`, `[ Activas ]` e `[ Inactivas ]`.
-  - Interruptor reactivo (Switch Toggle) por fila para encender o apagar directivas individualmente, con recálculo dinámico instantáneo del *Security Score* (0–100%) evaluando únicamente directivas activas.
-  - Badges interactivos accesibles con enlaces externos directos: `[ 🔗 Estándar Oficial ]` y `[ 📖 Manual MikroTik v7 ]` con atributos `target="_blank" rel="noopener noreferrer"` y etiquetas WCAG 2.1 AA.
-- [ ] **29.4** **Catálogo Extendido de 10 Nuevas Plantillas Masivas Avanzadas (Bulk-Ops):**
-  - Registro de plantillas parametrizadas con Safe Mode de 60s en `fastapi/src/api/v1/bulk_and_updates.py`:
-    1. `ISP_BGP_RPKI_STRICT_VALIDATION`: Validación de origen ROA y filtros de rutas v7.
-    2. `ISP_CGNAT_DETERMINISTIC_OVERLOAD`: Carrier-Grade NAT RFC 6598 con rangos de puertos 1024-65535.
-    3. `ISP_IPV6_DUAL_STACK_PD`: Cliente DHCPv6-PD, delegación de prefijo y SLAAC.
-    4. `COPP_CONTROL_PLANE_PROTECTION`: Rate-limiting y protección de CPU contra DoS en `input`.
-    5. `BCP38_ANTI_SPOOFING_FILTER`: Filtrado Ingress para impedir IPs de origen falsificadas.
-    6. `TCP_MSS_CLAMPING_OPTIMIZER`: Ajuste de MSS a Path MTU en túneles para evitar fragmentación.
-    7. `ENTERPRISE_BRIDGE_VLAN_TRUNK_ACCESS`: Despliegue L2 de Bridge VLAN Filtering multi-puerto.
-    8. `QOS_CAKE_SMART_QUEUE`: Mitigación de Bufferbloat con algoritmo CAKE y flowmode triple-isolate.
-    9. `SDWAN_WIREGUARD_SITE_TO_SITE`: Malla de túneles WireGuard inter-sede en 1 clic.
-    10. `NIGHTLY_ENCRYPTED_BACKUP_SFTP`: Tarea programada en scheduler para backup cifrado AES y export RSC a SFTP.
-- [ ] **29.5** **Interfaz Táctica de Plantillas Masivas (`BulkOperationsView.vue`):**
-  - Formulario interactivo con validación de tipos para variables dinámicas (`{{ variable }}`).
-  - Visor en vivo de comandos CLI resultantes y pasos REST equivalentes antes del despacho.
-  - Selector de radio de impacto y barra de progreso de ejecución con rollback en caso de fallo.
-- [ ] **29.6** **Auto-Remediación Asistida con Safe Mode de 60s:**
-  - Botón táctico `[ ⚡ Auto-Remediar ]` en directivas CIS fallidas con modal interactivo de confirmación.
-  - Ejecución atómica de la directiva bajo Safe Mode (60s) con confirmación explícita antes del commit final.
-- [ ] **29.7** **Aseguramiento de Calidad 11X Multi-Capa y Compuerta de Certificación:**
-  - Pruebas unitarias backend Pytest (>= 95% cobertura) para las 28 directivas CIS y las 10 plantillas masivas.
-  - Pruebas unitarias frontend Vitest para componentes de filtrado, switches y badges de enlaces externos.
-  - Escenarios BDD en Karate Labs API y UI para la consulta del catálogo CIS, conmutación de directivas y ejecución de plantillas masivas.
-  - 0 errores en `ruff check` y `vue-tsc --noEmit`, y 0 hallazgos en `make audit`.
 
 
 
