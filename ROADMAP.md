@@ -777,6 +777,7 @@
   - [x] **27.12.1 Cobertura Unitaria al 100% de Componentes y Vistas Vue 3:** Creación de suites dedicadas Nivel 11X para los 6 componentes/vistas faltantes (`FiberCutAlertBanner.unit.ts`, `IpamIpGridModal.unit.ts`, `CorporateIpv6ManagerModal.unit.ts`, `IpamPrefixTable.unit.ts`, `FieldTechOperationsView.unit.ts` e `IpamManagementView.unit.ts`), alcanzando 67 suites aprobadas con 453 pruebas Vitest al 100% y 0 errores en `vue-tsc --noEmit`.
   - [x] **27.12.2 Auto-Sincronización Idempotente de las 9 Directivas de Syslog y Parseo BSD RouterOS v7:** Despacho automatizado de reglas de auditoría (`system,info`, `account`, `firewall,info`) en inventario y receptor UDP (`syslog_collector.py`) con inferencia dinámica de tópicos y limpieza de identidad repetida para formato BSD clásico de MikroTik.
   - [x] **27.12.3 Contratos y Escenarios BDD Karate Labs:** Incorporación del Escenario 57 de Karate UI para la vista y rejilla IPAM, y sincronización canónica en `docs/examples/`.
+  - [x] **27.12.4 Persistencia y Paridad de Flag `rogue_dhcp_enabled` en Gobernanza Modular:** Incorporación del atributo `rogue_dhcp_enabled` en el modelo ORM `Tenant`, migración Alembic `0011_tenant_rogue_dhcp_flag.py`, esquemas Pydantic `UpdateTenantFeaturesRequest` y `TenantFeatureFlagsMixin`, inclusión en `defaultTenantFeatures` del store Pinia, ajuste del contador reactivo en `RgFeatureFlagsGrid.vue` a 19 módulos funcionales y certificación interactiva de guardado sin errores en navegador real (Escenario 114 de API y Escenario 60 de UI en Karate Labs).
 
 ---
 

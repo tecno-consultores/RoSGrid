@@ -785,6 +785,11 @@ Permite la administración global de organizaciones, control de cuotas de hardwa
     "sdwan_orchestrator_enabled": false,
     "capsman_wifi_enabled": false,
     "sla_tracker_enabled": false,
+    "l2_topology_enabled": true,
+    "syslog_collector_enabled": true,
+    "cve_scanner_enabled": true,
+    "prometheus_fleet_exporter_enabled": true,
+    "rogue_dhcp_enabled": true,
     "mass_outage_threshold": 10,
     "default_locale": "es"
   }
@@ -794,7 +799,7 @@ Permite la administración global de organizaciones, control de cuotas de hardwa
 
 - **Roles:** Exclusivo `SUPERADMIN_GLOBAL`.
 - **Cabecera Requerida:** `Idempotency-Key: {uuid}`.
-- **Entrada:** Cualquier subconjunto de los 16 atributos del esquema anterior.
+- **Entrada:** Cualquier subconjunto de los 19 atributos del esquema anterior.
 - **Comportamiento:** Persiste en PostgreSQL, invalida la caché KeyDB y genera traza forense inmutable WORM en `audit_logs` con `event_action: "TENANT_FEATURE_FLAGS_UPDATED"`.
 - **Salida (200 OK):** Objeto con el estado consolidado de los Feature Flags del tenant.
 

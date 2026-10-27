@@ -221,7 +221,8 @@
   ];
 
   const activeCount = computed(() => {
-    return Object.values(props.modelValue).filter((v) => v === true).length;
+    const allKeys = quadrants.flatMap((q) => q.features.map((f) => f.key));
+    return allKeys.filter((k) => props.modelValue[k] === true).length;
   });
 
   const totalCount = computed(() => {
@@ -316,6 +317,7 @@
       current.cve_scanner_enabled = true;
       current.prometheus_fleet_exporter_enabled = true;
       current.ai_mcp_integration_enabled = true;
+      current.rogue_dhcp_enabled = true;
       current.sla_tracker_enabled = false; // Requiere ISP
     } else if (presetType === 'ISP') {
       current.isp_module_enabled = true;

@@ -77,8 +77,16 @@
       setTimeout(() => {
         saveSuccessMessage.value = '';
       }, 4000);
-    } catch {
-      errorMessage.value = 'Error al guardar los cambios de módulos del tenant.';
+    } catch (err: unknown) {
+      const apiErr = err as { data?: { detail?: string | Array<{ msg?: string; loc?: string[] }> }; message?: string };
+      const detailMsg = apiErr?.data?.detail;
+      if (typeof detailMsg === 'string') {
+        errorMessage.value = `Error al guardar: ${detailMsg}`;
+      } else if (Array.isArray(detailMsg) && detailMsg[0]?.msg) {
+        errorMessage.value = `Error al guardar: ${detailMsg[0].msg} (${detailMsg[0].loc?.join('.')})`;
+      } else {
+        errorMessage.value = 'Error al guardar los cambios de módulos del tenant.';
+      }
     } finally {
       isSaving.value = false;
     }

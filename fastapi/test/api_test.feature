@@ -852,6 +852,20 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 113. Consulta de perfiles SSIDs y clientes WiFi CAPsMAN en router sin autenticación devuelve 401
+    Given path '/api/v1/wifi/capsman/3fc15cff-31eb-4230-81c6-800130be18e8/ssids'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 114. Actualización modular de Feature Flags con rogue_dhcp_enabled sin autenticación devuelve 401
+    Given path '/api/v1/tenants/00000000-0000-0000-0000-000000000001/features'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000114'
+    And request { isp_module_enabled: true, enforce_maker_checker: true, rogue_dhcp_enabled: true }
+    When method patch
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
 
 
 

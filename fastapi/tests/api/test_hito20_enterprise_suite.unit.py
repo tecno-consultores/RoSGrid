@@ -592,6 +592,33 @@ async def test_capsman_overview_ssids_and_clients(sample_tenant_id: uuid.UUID, s
         {"enabled": "yes"},
         [{"name": "cap1"}, {"name": "cap2"}],
         [{"mac-address": "A1:B2:C3:D4:E5:F6"}, {"mac-address": "11:22:33:44:55:66"}],
+        # Para list_capsman_ssids
+        [
+            {
+                ".id": "*1",
+                "name": "Corporativo-802.1X",
+                "ssid": "CORP-SECURE-WIFI",
+                "security.authentication-types": "WPA3-Enterprise 802.1X",
+                "datapath.vlan-id": "20",
+                "datapath.client-isolation": "no",
+                "rates": "100M/50M",
+            }
+        ],
+        # Para list_wifi_clients
+        [
+            {
+                "mac-address": "F4:D4:88:12:34:56",
+                "interface": "CAP-Piso3-Presidencia",
+                "ssid": "CORP-SECURE-WIFI",
+                "signal": "-54",
+                "snr": "38",
+                "standard": "Wi-Fi 6 (802.11ax)",
+                "802.11r": True,
+                "tx-rate": "866.7Mbps",
+                "rx-rate": "866.7Mbps",
+                "uptime": "2h",
+            }
+        ],
     ]
 
     with patch("src.api.v1.wifi.get_router_and_client", return_value=(mock_router, mock_client)):
@@ -600,31 +627,44 @@ async def test_capsman_overview_ssids_and_clients(sample_tenant_id: uuid.UUID, s
         assert overview.managed_aps_count == 2
         assert overview.connected_clients_count == 2
 
-    # SSIDs
-    ssids = await list_capsman_ssids(router_id=router_id, db=db, claims=sample_claims)
-    assert len(ssids) == 3
-    assert any(s.ssid == "CORP-SECURE-WIFI" for s in ssids)
-    assert any(s.security_type == "WPA3-Enterprise 802.1X" for s in ssids)
+        # SSIDs con datos reales del router
+        ssids = await list_capsman_ssids(router_id=router_id, db=db, claims=sample_claims)
+        assert len(ssids) == 1
+        assert ssids[0].ssid == "CORP-SECURE-WIFI"
+        assert ssids[0].security_type == "WPA3-Enterprise 802.1X"
+        assert ssids[0].vlan_id == 20
 
-    # Create SSID
-    create_req = WifiSsidProfile(
-        id="mock-ssid-1",
-        name="Portal-Invitados",
-        ssid="RoSGrid-Guest-Portal",
-        security_type="WPA2-PSK",
-        vlan_id=200,
-        client_isolation=True,
-        rate_limit_profile="20M/5M",
-    )
-    new_ssid = await create_capsman_ssid(router_id=router_id, payload=create_req, db=db, claims=sample_claims)
-    assert new_ssid.ssid == "RoSGrid-Guest-Portal"
-    assert new_ssid.vlan_id == 200
+        # Create SSID
+        create_req = WifiSsidProfile(
+            id="mock-ssid-1",
+            name="Portal-Invitados",
+            ssid="RoSGrid-Guest-Portal",
+            security_type="WPA2-PSK",
+            vlan_id=200,
+            client_isolation=True,
+            rate_limit_profile="20M/5M",
+        )
+        new_ssid = await create_capsman_ssid(router_id=router_id, payload=create_req, db=db, claims=sample_claims)
+        assert new_ssid.ssid == "RoSGrid-Guest-Portal"
+        assert new_ssid.vlan_id == 200
 
-    # Clients
-    clients = await list_wifi_clients(router_id=router_id, db=db, claims=sample_claims)
-    assert len(clients) >= 2
-    assert clients[0].signal_rssi_dbm < 0
-    assert clients[0].fast_roaming_supported is True
+        # Clients con datos reales del router
+        clients = await list_wifi_clients(router_id=router_id, db=db, claims=sample_claims)
+        assert len(clients) == 1
+        assert clients[0].mac_address == "F4:D4:88:12:34:56"
+        assert clients[0].signal_rssi_dbm == -54
+        assert clients[0].fast_roaming_supported is True
+        assert clients[0].connected_duration_seconds == 7200
+
+    # Prueba caso vacío: router sin CAPsMAN ni SSIDs ni clientes
+    mock_client_empty = AsyncMock()
+    mock_client_empty.get.return_value = []
+    with patch("src.api.v1.wifi.get_router_and_client", return_value=(mock_router, mock_client_empty)):
+        empty_ssids = await list_capsman_ssids(router_id=router_id, db=db, claims=sample_claims)
+        assert empty_ssids == []
+
+        empty_clients = await list_wifi_clients(router_id=router_id, db=db, claims=sample_claims)
+        assert empty_clients == []
 
 
 @pytest.mark.asyncio

@@ -399,6 +399,37 @@ describe('EnterpriseComplianceView.vue — Hito 20 Suite Corporativa', () => {
     });
   });
 
+  it('muestra mensajes de estado vacío cuando no hay SSIDs ni clientes WiFi ni CAPsMAN activo', async () => {
+    vi.spyOn(http, 'get').mockImplementation(async (url: string) => {
+      let data: unknown = [];
+      if (url.includes('/wifi/capsman/') && url.includes('/overview')) {
+        data = {
+          router_id: 'r-1',
+          capsman_running: false,
+          active_radios_count: 0,
+          managed_aps_count: 0,
+          connected_clients_count: 0,
+        };
+      } else if (url.includes('/wifi/capsman/') && url.includes('/ssids')) {
+        data = [];
+      } else if (url.includes('/wifi/clients/')) {
+        data = [];
+      }
+      return { data, status: 200, headers: new Headers() } as unknown as ApiResponse;
+    });
+
+    const wrapper = mount(EnterpriseComplianceView);
+    const wifiTabBtn = wrapper.find('#tab-btn-wifi');
+    await wifiTabBtn.trigger('click');
+
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain('No se encontraron perfiles de SSIDs');
+      expect(wrapper.text()).toContain('No hay clientes inalámbricos conectados en este momento');
+      expect(wrapper.text()).toContain('El controlador CAPsMAN / WiFi no se encuentra activo');
+    });
+  });
+
+
   it('ejecuta reversión de config drift en 1 clic', async () => {
     vi.spyOn(http, 'post').mockResolvedValueOnce({
       data: {

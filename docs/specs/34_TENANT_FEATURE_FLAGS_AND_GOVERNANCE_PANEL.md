@@ -24,6 +24,11 @@ Se incorporan los siguientes atributos a la tabla `tenants` (gestionados mediant
 | `sdwan_orchestrator_enabled` | Boolean | `false` | Habilita el aprovisionamiento automatizado de túneles WireGuard y failover multi-WAN. |
 | `capsman_wifi_enabled` | Boolean | `false` | Habilita el panel de gestión centralizada de WiFi corporativo (CAPsMAN). |
 | `sla_tracker_enabled` | Boolean | `false` | Habilita el monitor de cumplimiento de SLA para enlaces WAN dedicados. |
+| `l2_topology_enabled` | Boolean | `true` | Topología L2 MNDP/LLDP con visualización dinámica en Canvas 2D. |
+| `syslog_collector_enabled` | Boolean | `true` | Colector Syslog UDP 514/5514 en tiempo real con RingBuffer en KeyDB. |
+| `cve_scanner_enabled` | Boolean | `true` | Matriz y cruce de vulnerabilidades CVE para versiones de RouterOS. |
+| `prometheus_fleet_exporter_enabled` | Boolean | `true` | Exportador Prometheus corporativo para métricas agregadas de flota. |
+| `rogue_dhcp_enabled` | Boolean | `true` | Detección de Rogue DHCP en switches L2 y aislamiento preventivo de puertos. |
 | `mass_outage_threshold` | Integer | `10` | Cantidad de equipos caídos simultáneamente para disparar la alarma NOC masiva. |
 | `default_locale` | String | `'es'` | Código ISO del idioma por defecto para la interfaz del tenant (`es`, `en`). |
 

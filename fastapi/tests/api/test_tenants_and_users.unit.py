@@ -419,6 +419,7 @@ async def test_tenant_features_endpoints(
     t.sla_tracker_enabled = False
     t.mass_outage_threshold = 10
     t.default_locale = "es"
+    t.rogue_dhcp_enabled = True
 
     db = MockDbSession(tenants=[t])
     app.dependency_overrides[get_db_session] = lambda: db
@@ -429,6 +430,7 @@ async def test_tenant_features_endpoints(
         data_get = res_get.json()
         assert data_get["isp_module_enabled"] is True
         assert data_get["bgp_looking_glass_enabled"] is False
+        assert data_get["rogue_dhcp_enabled"] is True
         assert data_get["mass_outage_threshold"] == 10
         assert data_get["default_locale"] == "es"
 
@@ -436,6 +438,7 @@ async def test_tenant_features_endpoints(
         patch_body = {
             "isp_module_enabled": False,
             "bgp_looking_glass_enabled": True,
+            "rogue_dhcp_enabled": False,
             "mass_outage_threshold": 25,
             "default_locale": "en",
         }
@@ -448,6 +451,7 @@ async def test_tenant_features_endpoints(
         data_patch = res_patch.json()
         assert data_patch["isp_module_enabled"] is False
         assert data_patch["bgp_looking_glass_enabled"] is True
+        assert data_patch["rogue_dhcp_enabled"] is False
         assert data_patch["mass_outage_threshold"] == 25
         assert data_patch["default_locale"] == "en"
 

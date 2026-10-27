@@ -27,6 +27,7 @@ export const defaultTenantFeatures: TenantFeatureFlags = {
   syslog_collector_enabled: true,
   cve_scanner_enabled: true,
   prometheus_fleet_exporter_enabled: true,
+  rogue_dhcp_enabled: true,
 };
 
 function getStoredUser(): UserInfo | null {

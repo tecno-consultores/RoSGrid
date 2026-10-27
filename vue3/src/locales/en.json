@@ -326,6 +326,8 @@
     "wifi_th_standard": "Wi-Fi Standard",
     "wifi_th_fast_roaming": "Fast Roaming",
     "wifi_no_clients": "No wireless clients currently connected.",
+    "wifi_no_ssids": "No wireless SSID profiles found provisioned on this router.",
+    "wifi_capsman_inactive": "The CAPsMAN / WiFi controller is not active or not managing remote radios on this router.",
     "tabs_aria": "Compliance Modules",
     "presets_aria": "Enterprise Predefined Profiles"
   },

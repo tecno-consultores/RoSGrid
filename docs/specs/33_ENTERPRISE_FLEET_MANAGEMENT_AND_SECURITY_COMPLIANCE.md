@@ -120,19 +120,27 @@ Las empresas pagan tarifas premium por enlaces de fibra con compromisos contract
 
 ## 6. Gestión Centralizada de WiFi Corporativo (CAPsMAN / WiFiWave2)
 
-### 6.1. Orquestación Unificada de Puntos de Acceso (APs)
+### 6.1. Orquestación Unificada de Puntos de Acceso (APs) y Erradicación de Mocks
 
 Para campus, centros de distribución, clínicas y edificios corporativos:
 
+- **Consulta Dinámica sin Mock Blindness:** Los endpoints `/api/v1/wifi/capsman/{router_id}/overview`, `/api/v1/wifi/capsman/{router_id}/ssids` y `/api/v1/wifi/clients/{router_id}` consultan directamente el hardware RouterOS v7 en tiempo real:
+  - Driver moderno RouterOS v7.13+ (`/interface/wifi/capsman`, `/interface/wifi/configuration`, `/interface/wifi/remote-cap`, `/interface/wifi/registration-table`).
+  - Fallback transparente a drivers legados (`/caps-man/*`, `/interface/wireless/*`).
+  - **Estado Vacío Estricto:** Cuando el router no tiene el controlador activo o carece de radios/clientes asociados, la API retorna colecciones vacías (`[]`) y 0 contadores, prohibiendo estrictamente perfiles o clientes simulados/mock.
 - **SSID Corporativo Seguro:** WPA3-Enterprise con autenticación 802.1X / EAP-TLS y asignación dinámica de VLANs según el rol del empleado.
 - **SSID Invitados:** Aislado en su propia VLAN, con límite de velocidad estricto y aislamiento de clientes (Client Isolation activo para evitar que un invitado vea a otros equipos).
 - **SSID Dispositivos IoT / Operativos:** Clave precompartida WPA2/WPA3 con direccionamiento estático o DHCP reservado para impresoras de red, cámaras y lectores de códigos de barras.
 
-### 6.2. Telemetría de Radiofrecuencia y Roaming
+### 6.2. Telemetría de Radiofrecuencia, Roaming y Estado Táctico en UI
 
-- Visor centralizado de clientes inalámbricos conectados:
-  - Nivel de señal RSSI (dBm), relación señal a ruido (SNR) y estándar en uso (802.11ax / ac / n).
-  - Trazabilidad de eventos de itinerancia (*Fast Roaming 802.11r/k/v*) entre puntos de acceso sin cortes de llamada en VoIP.
+- **Panel de Supervisión en `EnterpriseComplianceView.vue`:**
+  - Si el controlador no está activo en el router seleccionado, muestra banner informativo táctico: *«El controlador CAPsMAN / WiFi no se encuentra activo o no gestiona radios remotas en este equipo.»*.
+  - Tabla de SSIDs con fila de estado vacío: *«No se encontraron perfiles de SSIDs inalámbricos aprovisionados en el router.»*.
+  - Tabla de Clientes en Tiempo Real con fila de estado vacío: *«No hay clientes inalámbricos conectados en este momento.»*.
+  - Visor centralizado de clientes inalámbricos conectados reales:
+    - Nivel de señal RSSI (dBm), relación señal a ruido (SNR) y estándar en uso (802.11ax / ac / n).
+    - Trazabilidad de eventos de itinerancia (*Fast Roaming 802.11r/k/v*) entre puntos de acceso sin cortes de llamada en VoIP.
 
 ---
 

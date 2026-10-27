@@ -326,6 +326,8 @@
     "wifi_th_standard": "Estándar Wi-Fi",
     "wifi_th_fast_roaming": "Fast Roaming",
     "wifi_no_clients": "No hay clientes inalámbricos conectados en este momento.",
+    "wifi_no_ssids": "No se encontraron perfiles de SSIDs inalámbricos aprovisionados en el router.",
+    "wifi_capsman_inactive": "El controlador CAPsMAN / WiFi no se encuentra activo o no gestiona radios remotas en este equipo.",
     "tabs_aria": "Módulos de Cumplimiento",
     "presets_aria": "Perfiles predefinidos de empresa"
   },

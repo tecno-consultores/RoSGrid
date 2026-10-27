@@ -111,7 +111,7 @@ En la barra de presets rápidos de [`TenantModulesStudioView.vue`](file:///home/
 | :--- | :--- | :--- |
 | **Telemetría Pesada** | `syslog_collector_enabled`, `ipfix_analytics_enabled`, `prometheus_fleet_exporter_enabled`, `sfp_ddm_telemetry_enabled` | N/A |
 | **Monitoreo Secundario** | `config_drift_monitoring_enabled`, `sdwan_orchestrator_enabled` | N/A |
-| **Núcleo & Gobernanza** | N/A | `isp_module_enabled`, `cis_audit_enabled`, `enforce_maker_checker`, `auto_safemode_enforced`, `l2_topology_enabled`, `nightly_backups_enabled` |
+| **Núcleo & Gobernanza** | N/A | `isp_module_enabled`, `cis_audit_enabled`, `enforce_maker_checker`, `auto_safemode_enforced`, `l2_topology_enabled`, `nightly_backups_enabled`, `rogue_dhcp_enabled` |
 
 * **Banner Informativo en UI:** Al aplicar el preset, se despliega un banner de notificación:  
   `⚠️ Modo Contingencia Aplicado: Se han suspendido los recolectores de alta frecuencia para liberar recursos de CPU y ancho de banda en los routers.`
@@ -122,12 +122,12 @@ En la barra de presets rápidos de [`TenantModulesStudioView.vue`](file:///home/
 
 ### 5.1 Estructura Bimodal de Pestañas en la Sub-pantalla
 La vista `/admin/tenants/:tenantId/modules` se amplía con dos pestañas de navegación:
-1. `[ ⚙️ Matriz de Módulos ]`: Cuadrícula con los 4 cuadrantes, arquetipos y switches.
+1. `[ ⚙️ Matriz de Módulos ]`: Cuadrícula con los 4 cuadrantes (19 módulos), arquetipos y switches.
 2. `[ 📜 Historial de Modificaciones ]`: Componente `TenantModulesAuditTab.vue`.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│ 🏢 Telecomunicaciones Fibra Norte C.A.  [ 12/16 Módulos Activos ]      │
+│ 🏢 Telecomunicaciones Fibra Norte C.A.  [ 19/19 Módulos Activos ]      │
 ├────────────────────────────────────────────────────────────────────────┤
 │ [ ⚙️ Matriz de Módulos ]   [ 📜 Historial de Modificaciones (Reciente) ] │
 ├────────────────────────────────────────────────────────────────────────┤

@@ -553,6 +553,41 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     Then match text("#tab-btn-nap") contains 'Registrar Caja NAP'
     And match text("#tab-btn-customer") contains 'Alta de Cliente'
 
+  Scenario: 57. Gestión IPAM y Diagnóstico de Red — Interfaz Táctica y Rejilla IP
+    Given driver baseUrl + '/ipam'
+    And waitFor(".ipam-view")
+    And waitFor(".ipam-toolbar")
+    Then match text(".ipam-header-left") contains 'IPAM'
+    And waitFor(".ipam-prefix-table-container")
+
+  Scenario: 58. Visualización de Red Unificada — Agrupación y Spiderfy de Equipos Co-ubicados en Guacara
+    Given driver baseUrl + '/noc-wallboard'
+    And waitFor(".wallboard-view")
+    And waitFor(".unified-network-map-wrapper")
+    And waitFor(".btn-layer-routers")
+    Then match text(".btn-layer-routers") contains 'Routers'
+
+  Scenario: 59. Gestión de Flota & Cumplimiento — Pestaña Wi-Fi CAPsMAN con Estado Limpio sin Datos de Muestra
+    Given driver baseUrl + '/enterprise/compliance?tab=wifi'
+    And waitFor("#panel-wifi")
+    And waitFor(".wifi-overview-grid")
+    Then match text("#panel-wifi") contains 'No se encontraron perfiles de SSIDs'
+    And match text("#panel-wifi") contains 'No hay clientes inalámbricos conectados en este momento'
+
+  Scenario: 60. Estudio de Módulos y Capacidades del Tenant — Activación y Guardado de Rogue DHCP y Maker-Checker
+    Given driver baseUrl + '/admin/tenants/a2388bbf-f35e-46d0-9626-e4e111757f1a/modules'
+    And waitFor(".tenant-modules-studio")
+    And waitFor(".features-grid-container")
+    Then match text(".counter-badge") contains '19 / 19'
+    And match text(".tenant-modules-studio") contains 'Rogue DHCP & DHCP Snooping'
+    And match text(".tenant-modules-studio") contains 'Maker-Checker Estricto (4 Ojos)'
+    And waitFor(".btn-save")
+    When click(".btn-save")
+    And waitFor(".feedback-banner--success")
+    Then match text(".feedback-banner--success") contains 'Capacidades y módulos guardados exitosamente.'
+
+
+
 
 
 

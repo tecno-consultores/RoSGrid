@@ -403,6 +403,7 @@ def _extract_tenant_features(tenant: Tenant) -> dict[str, Any]:
         "syslog_collector_enabled": True,
         "cve_scanner_enabled": True,
         "prometheus_fleet_exporter_enabled": True,
+        "rogue_dhcp_enabled": True,
         "mass_outage_threshold": 10,
         "default_locale": "es",
     }

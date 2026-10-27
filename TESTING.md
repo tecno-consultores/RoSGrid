@@ -2,7 +2,7 @@
 
 **Licencia:** GPL-3.0-only  
 **Estándar Aplicado:** QA Testing Blueprints (Nivel 11X)  
-**Estado Actual:** Hito 27.13 Completado y Certificado al 100% en Contenedores Docker Efímeros — Soporte de Agrupación Táctica Geodésica y Spiderfy para Equipos Co-ubicados en Mapa Unificado (Guacara), 454 pruebas Vitest en 67 suites aprobadas al 100%, Escenario BDD 58 Karate UI y Validación Visual Interactiva en Navegador Real.
+**Estado Actual:** Hito 27.12 Completado y Certificado al 100% en Contenedores Docker Efímeros — Paridad Total de Gobernanza Modular (19/19 Flags con rogue_dhcp_enabled y enforce_maker_checker persistidos en DB), Cobertura 100% de Componentes Vue (65/65), 455 pruebas Vitest en 67 suites aprobadas al 100%, 561 pruebas unitarias backend Pytest (100%), Escenarios BDD 114 Karate API y 60 Karate UI.
 
 ---
 

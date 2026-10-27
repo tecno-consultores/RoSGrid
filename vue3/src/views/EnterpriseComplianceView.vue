@@ -1778,6 +1778,15 @@
           </div>
         </div>
 
+        <div
+          v-if="capsmanOverview && !capsmanOverview.capsman_running"
+          class="alert-box alert-box--info"
+          style="margin-top: 1.25rem; display: flex; align-items: center; gap: 0.75rem; padding: 0.85rem 1.25rem; border-radius: 6px; background: rgba(0, 210, 255, 0.08); border: 1px solid rgba(0, 210, 255, 0.25); color: #a5f3fc;"
+        >
+          <span style="font-size: 1.2rem;">ℹ️</span>
+          <span>{{ t('enterprise.wifi_capsman_inactive', 'El controlador CAPsMAN / WiFi no se encuentra activo o no gestiona radios remotas en este equipo.') }}</span>
+        </div>
+
         <!-- Perfiles de SSIDs -->
         <h2 class="section-subtitle" style="margin-top: 1.5rem">
           {{ t('enterprise.wifi_ssids_title', 'Perfiles de Redes Inalámbricas (SSIDs)') }}
@@ -1804,6 +1813,11 @@
                 <td class="font-mono">{{ s.vlan_id ? `VLAN ${s.vlan_id}` : t('enterprise.wifi_native_vlan', 'Nativa') }}</td>
                 <td>{{ s.client_isolation ? t('enterprise.wifi_isolated_yes', 'Sí (Aislado)') : t('common.no', 'No') }}</td>
                 <td class="font-mono text-subtle">{{ s.rate_limit_profile || t('enterprise.wifi_unlimited', 'Ilimitado') }}</td>
+              </tr>
+              <tr v-if="wifiSsids.length === 0">
+                <td colspan="6" class="text-center text-subtle" style="padding: 1.5rem">
+                  {{ t('enterprise.wifi_no_ssids', 'No se encontraron perfiles de SSIDs inalámbricos aprovisionados en el router.') }}
+                </td>
               </tr>
             </tbody>
           </table>
@@ -1853,7 +1867,7 @@
                 </td>
               </tr>
               <tr v-if="wifiClients.length === 0">
-                <td colspan="8" class="text-center text-subtle">
+                <td colspan="8" class="text-center text-subtle" style="padding: 1.5rem">
                   {{ t('enterprise.wifi_no_clients', 'No hay clientes inalámbricos conectados en este momento.') }}
                 </td>
               </tr>
@@ -1861,6 +1875,7 @@
           </table>
         </div>
       </section>
+
 
       <!-- ================================================================= -->
       <!-- TAB 7: Canales de Notificación y Alertas                          -->
