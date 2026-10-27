@@ -10,6 +10,11 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Changed
 
+- **Ergonomía Táctica en Operaciones de Campo FTTH (`vue3/src/components/field/FieldTechMobileView.vue`, `vue3/src/components/field/FieldTechMobileView.unit.ts`, `vue3/test/ui_business_flow.feature`):**
+  - **Eliminación del Contador en Pestaña "Registrar Caja NAP":** Retiro del badge `.tab-badge` en el botón `#tab-btn-nap`, homogeneizando las pestañas operativas (`📦 Registrar Caja NAP`, `🔌 Alta de Cliente FTTH`, `⚡ Diagnósticos Rápidos`, `🗺️ Mapa de Zona`) sin contadores asimétricos ni distractores numéricos en movilidad.
+  - **Aseguramiento Unitario y BDD:** Actualización de la suite Vitest en `FieldTechMobileView.unit.ts` verificando la inexistencia de `.tab-badge` en el botón y creación del Escenario 56 en Karate Labs UI.
+
+
 - **Ergonomía Táctica de Pestañas WebFig (Anti-Falsos Negativos Visuales — `vue3/src/views/BridgeView.vue`, `vue3/src/views/WireGuardVpnView.vue`, `vue3/src/views/PppAndQueuesView.vue`, `vue3/src/views/bridgeViewVlan.unit.ts`):**
   - **Eliminación de Contadores Acoplados en Pestañas con Carga Perezosa (*Lazy Loading*):** Retiro de los contadores `(0)` acoplados a la longitud de colecciones locales no cargadas en las pestañas de Bridge (`🌉 Bridges`, `🔌 Puertos Miembro`, `🏷️ Tabla VLANs`, `💻 Hosts / FDB MAC`), WireGuard (`🛡️ Interfaces de Túnel`, `👥 Peers & Claves Públicas`) y PPP/Queues (`🟢 Sesiones Activas`, `🔑 Secretos / Usuarios`, `📋 Perfiles`, `📡 Servidores PPPoE`, `⚡ Simple Queues`).
   - **Consistencia Visual con Módulos Nativos:** Homogeneización de la navegación con los módulos de Firewall (`FirewallRulesView.vue`), Direccionamiento IP/DHCP (`IpAddressesAndDhcpView.vue`) y Pila Dual IPv6 (`Ipv6DualStackView.vue`), donde los conteos de registros son gestionados exclusivamente por el componente de tabla de alta densidad (`RgDataTable`), erradicando falsos negativos de configuración en routers bajo inspección.

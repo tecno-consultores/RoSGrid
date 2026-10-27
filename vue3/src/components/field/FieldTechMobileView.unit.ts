@@ -48,6 +48,7 @@ describe('FieldTechMobileView.vue — Panel Responsive del Técnico de Campo FTT
     const wrapper = mount(FieldTechMobileView);
     expect(wrapper.find('.field-header').exists()).toBe(true);
     expect(wrapper.find('#tab-btn-nap').exists()).toBe(true);
+    expect(wrapper.find('#tab-btn-nap .tab-badge').exists()).toBe(false);
     expect(wrapper.find('#tab-btn-customer').exists()).toBe(true);
     expect(wrapper.find('#tab-btn-diagnostics').exists()).toBe(true);
   });

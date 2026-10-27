@@ -451,7 +451,6 @@
           @click="activeTab = 'nap'"
         >
           📦 {{ t('field_tech.tab_nap') }}
-          <span class="tab-badge">{{ fieldStore.opticalBoxes.length }}</span>
         </button>
         <button
           id="tab-btn-customer"

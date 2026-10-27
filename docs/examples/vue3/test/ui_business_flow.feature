@@ -546,6 +546,13 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And match text(".tabs-nav") contains 'Tabla VLANs'
     And match text(".tabs-nav") contains 'Hosts / FDB MAC'
 
+  Scenario: 56. Técnico de Campo FTTH — Pestañas Limpias sin Contador en Registrar Caja NAP
+    Given driver baseUrl + '/field-ops'
+    And waitFor(".field-tech-operations-view")
+    And waitFor("#tab-btn-nap")
+    Then match text("#tab-btn-nap") contains 'Registrar Caja NAP'
+    And match text("#tab-btn-customer") contains 'Alta de Cliente'
+
 
 
 
