@@ -438,7 +438,7 @@
         :class="{ 'tab-btn--active': activeTab === 'bridges' }"
         @click="setTab('bridges')"
       >
-        🌉 Bridges ({{ bridgesList.length }})
+        🌉 Bridges
       </button>
       <button
         type="button"
@@ -446,7 +446,7 @@
         :class="{ 'tab-btn--active': activeTab === 'ports' }"
         @click="setTab('ports')"
       >
-        🔌 Puertos Miembro ({{ portsList.length }})
+        🔌 Puertos Miembro
       </button>
       <button
         type="button"
@@ -454,7 +454,7 @@
         :class="{ 'tab-btn--active': activeTab === 'vlans' }"
         @click="setTab('vlans')"
       >
-        🏷️ Tabla VLANs ({{ vlansList.length }})
+        🏷️ Tabla VLANs
       </button>
       <button
         type="button"
@@ -462,7 +462,7 @@
         :class="{ 'tab-btn--active': activeTab === 'hosts' }"
         @click="setTab('hosts')"
       >
-        💻 Hosts / FDB MAC ({{ hostsList.length }})
+        💻 Hosts / FDB MAC
       </button>
     </nav>
 

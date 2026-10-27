@@ -506,7 +506,7 @@
         :aria-selected="activeTab === 'pppoe-active'"
         @click="setTab('pppoe-active')"
       >
-        🟢 Sesiones Activas ({{ pppSessions.length }})
+        🟢 Sesiones Activas
       </button>
       <button
         type="button"
@@ -516,7 +516,7 @@
         :aria-selected="activeTab === 'ppp-secrets'"
         @click="setTab('ppp-secrets')"
       >
-        🔑 Secretos / Usuarios ({{ pppSecrets.length }})
+        🔑 Secretos / Usuarios
       </button>
       <button
         type="button"
@@ -526,7 +526,7 @@
         :aria-selected="activeTab === 'ppp-profiles'"
         @click="setTab('ppp-profiles')"
       >
-        📋 Perfiles ({{ pppProfiles.length }})
+        📋 Perfiles
       </button>
       <button
         type="button"
@@ -536,7 +536,7 @@
         :aria-selected="activeTab === 'pppoe-servers'"
         @click="setTab('pppoe-servers')"
       >
-        📡 Servidores PPPoE ({{ pppoeServers.length }})
+        📡 Servidores PPPoE
       </button>
       <button
         type="button"
@@ -546,7 +546,7 @@
         :aria-selected="activeTab === 'simple-queues'"
         @click="setTab('simple-queues')"
       >
-        ⚡ Simple Queues ({{ simpleQueues.length }})
+        ⚡ Simple Queues
       </button>
     </nav>
 

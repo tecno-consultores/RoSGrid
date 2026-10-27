@@ -145,4 +145,29 @@ describe('BridgeView & InterfacesAndSfpView VLAN Creation Parity', () => {
       }),
     );
   });
+
+  it('renders BridgeView tab labels cleanly without misleading (0) counters', async () => {
+    vi.spyOn(http, 'get').mockResolvedValue({
+      data: [{ id: '*B1', name: 'bridge1', vlan_filtering: true }],
+    } as any);
+
+    const wrapper = mount(BridgeView, {
+      global: {
+        stubs: {
+          RgDataTable: { template: '<div class="rg-data-table-stub" />' },
+        },
+      },
+    });
+
+    await flushPromises();
+
+    const tabs = wrapper.findAll('.tab-btn');
+    expect(tabs.length).toBe(4);
+    expect(tabs[0].text()).toBe('🌉 Bridges');
+    expect(tabs[1].text()).toBe('🔌 Puertos Miembro');
+    expect(tabs[2].text()).toBe('🏷️ Tabla VLANs');
+    expect(tabs[3].text()).toBe('💻 Hosts / FDB MAC');
+    expect(wrapper.text()).not.toMatch(/\(\d+\)/);
+  });
 });
+

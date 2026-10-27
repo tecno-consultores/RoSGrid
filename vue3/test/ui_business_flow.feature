@@ -537,6 +537,15 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     Then waitFor(".sla-actions")
     And waitFor("#btn-export-sla")
 
+  Scenario: 55. Consola WebFig v7 — Navegación Táctica por Pestañas Limpias sin Contadores (0)
+    Given driver baseUrl + '/routers/01928900-aaaa-7bbb-8ccc-111122223333/webfig/bridge'
+    And waitFor(".bridge-view")
+    And waitFor(".tabs-nav")
+    Then match text(".tabs-nav") contains 'Bridges'
+    And match text(".tabs-nav") contains 'Puertos Miembro'
+    And match text(".tabs-nav") contains 'Tabla VLANs'
+    And match text(".tabs-nav") contains 'Hosts / FDB MAC'
+
 
 
 

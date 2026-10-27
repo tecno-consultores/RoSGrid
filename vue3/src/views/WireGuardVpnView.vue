@@ -255,7 +255,7 @@
         :class="{ 'tab-btn--active': activeTab === 'interfaces' }"
         @click="setTab('interfaces')"
       >
-        🛡️ Interfaces de Túnel ({{ ifacesList.length }})
+        🛡️ Interfaces de Túnel
       </button>
       <button
         type="button"
@@ -263,7 +263,7 @@
         :class="{ 'tab-btn--active': activeTab === 'peers' }"
         @click="setTab('peers')"
       >
-        👥 Peers & Claves Públicas ({{ peersList.length }})
+        👥 Peers & Claves Públicas
       </button>
     </nav>
 
