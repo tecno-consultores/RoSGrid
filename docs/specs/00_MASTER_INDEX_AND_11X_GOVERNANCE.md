@@ -234,6 +234,7 @@ Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `
 * `docs/specs/48_WEBFIG_V7_IP_STACK_DHCPV4_AND_DHCPV6_DUAL_STACK.md` — WebFig v7 Capa 1: Módulo IP Dedicado, DHCPv4 Server & Client, Leases en Vivo con Make Static, Pila Dual IPv6 Nativa, DHCPv6-PD y Descubrimiento de Vecinos (NDP).
 * `docs/specs/49_WEBFIG_V7_ROUTING_DYNAMIC_BGP_OSPF_AND_NAT_WIZARDS.md` — WebFig v7 Capa 1: Rutas Estáticas Dual-Stack IPv4/IPv6 con Check Gateway, BGP v7 Interactivo (Sessions, Connections & Templates), Policy-Based Routing (FIB/Rules) y Asistentes NAT en 1 Clic (Masquerade y Port Forwarding).
 * `docs/specs/50_EXPANSION_CIS_BENCHMARK_INTERACTIVO_Y_CATALOGO_PLANTILLAS_COMPLEJAS.md` — Expansión de CIS Benchmark Hardening Interactivo (28 Directivas para ISP y Empresa con Enlaces a Estándares Oficiales y Manual v7), Soberanía Total de Selección de Directivas por Usuario y Catálogo de 10 Nuevas Plantillas Masivas Avanzadas (CoPP, CAKE QoS, BCP38, RPKI y Backups SFTP).
+* `docs/specs/51_INTERACTIVE_CAPSMAN_WIFI_V7_CONFIGURATION_AND_FLEET_PROVISIONING.md` — Consola Táctica Interactiva CAPsMAN v7, Aprovisionamiento Masivo de Wi-Fi y Gestión de Clientes en Tiempo Real: Bimodalidad v7.13+ moderno (`/interface/wifi/`) vs legado (`/caps-man/`), control de Manager, gestión de SSIDs y VLAN Datapaths, perfiles de seguridad WPA2/WPA3, aprovisionamiento automático por bandas de frecuencia, reprovisionamiento en caliente, desautenticación forzosa (*Kick Client*), Asistente Quick-Setup en 1 Clic y Safe Mode transaccional de 60s.
 
 
 ---

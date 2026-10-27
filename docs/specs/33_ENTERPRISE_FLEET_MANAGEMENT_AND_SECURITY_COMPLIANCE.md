@@ -142,6 +142,11 @@ Para campus, centros de distribución, clínicas y edificios corporativos:
     - Nivel de señal RSSI (dBm), relación señal a ruido (SNR) y estándar en uso (802.11ax / ac / n).
     - Trazabilidad de eventos de itinerancia (*Fast Roaming 802.11r/k/v*) entre puntos de acceso sin cortes de llamada en VoIP.
 
+### 6.3. Evolución a Consola Táctica Interactiva y Aprovisionamiento en Vivo (Spec 51)
+
+Para trascender del monitoreo a la configuración operativa plena bajo la directiva *Zero Read-Only Operational Consoles (WebFig v7 Parity)*, la arquitectura técnica detallada de mutaciones (toggle de manager, modales de SSID y seguridad, reglas de provisioning por bandas, asistente Quick-Setup en 1 clic y Kick Client) se encuentra formalmente especificada en:
+👉 [51_INTERACTIVE_CAPSMAN_WIFI_V7_CONFIGURATION_AND_FLEET_PROVISIONING.md](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/docs/specs/51_INTERACTIVE_CAPSMAN_WIFI_V7_CONFIGURATION_AND_FLEET_PROVISIONING.md).
+
 ---
 
 ## 7. Integración de Canales de Alerta y Notificación Multicanal (`NotificationChannelsPanel.vue`)

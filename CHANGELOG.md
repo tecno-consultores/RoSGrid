@@ -10,6 +10,11 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Added
 
+- **Especificación Técnica y Arquitectura de Consola Táctica Interactiva CAPsMAN v7 (`docs/specs/51_INTERACTIVE_CAPSMAN_WIFI_V7_CONFIGURATION_AND_FLEET_PROVISIONING.md`, `docs/specs/00`, `docs/specs/33`, `docs/06`, `ROADMAP.md`):**
+  - **Soberanía Operativa y Paridad WebFig v7:** Transición de la pestaña Wi-Fi de un visor de solo monitoreo a una consola de aprovisionamiento masivo de flota inalámbrica, documentando la matriz de comandos canónicos de MikroTik RouterOS v7.13+ moderno (`/interface/wifi/*`) y legado (`/caps-man/*`).
+  - **Catálogo de Endpoints REST de Mutación:** Definición de especificaciones para activación/desactivación del gestor con certificados automáticos, perfiles criptográficos WPA2-PSK/WPA3-SAE, segmentación L2 por VLAN Datapath, reglas de provisioning por bandas (2.4GHz, 5GHz, 6GHz), reprovisionamiento de flota en caliente, desautenticación forzosa de clientes (*Kick Client*) y Asistente Quick-Setup en 1 clic bajo Safe Mode de 60s.
+  - **Planificación de Hito 27.13 en Roadmap:** Incorporación del Hito 27.13 en `ROADMAP.md` preservando estrictamente al Hito 28 como el hito de cierre definitivo.
+
 - **Auditoría y Cobertura Unitaria al 100% de Componentes Vue (`vue3/src/components/`, `vue3/src/views/`):**
   - **Cero Componentes Huérfanos (Zero-Orphan Vue Component):** Creación e integración de 6 suites de prueba Nivel 11X en Vitest cubriendo los componentes y vistas que no contaban con suite unitaria dedicada:
     1. `FiberCutAlertBanner.unit.ts`: validación de alerta visual crítica GPON, desglose de puerto PON / caja NAP y refresco manual.

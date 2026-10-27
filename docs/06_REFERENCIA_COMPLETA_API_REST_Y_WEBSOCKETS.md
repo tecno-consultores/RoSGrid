@@ -1280,20 +1280,70 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
 
 #### 4.5.6 Wi-Fi Corporativo CAPsMAN / WiFiWave2 (`/api/v1/wifi`)
 
+> **Especificación Detallada:** Véase [Spec 51: Consola Táctica Interactiva CAPsMAN v7](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/docs/specs/51_INTERACTIVE_CAPSMAN_WIFI_V7_CONFIGURATION_AND_FLEET_PROVISIONING.md) para la matriz completa de mapeo REST, compatibilidad bimodal RouterOS v7.13+ moderno (`/interface/wifi/`) vs legado (`/caps-man/`), y Safe Mode de 60 segundos.
+
 ##### `GET /api/v1/wifi/capsman/{router_id}/overview`
 
-- **Propósito:** Consultar el estado operativo del controlador central CAPsMAN, radios y APs activos.
+- **Propósito:** Consultar el estado operativo del controlador central CAPsMAN, estado de activación, radios y APs remotos activos.
 - **Rol Mínimo:** `OPERATOR`.
 
-##### `GET /api/v1/wifi/capsman/{router_id}/ssids` y `POST /api/v1/wifi/capsman/{router_id}/ssids`
+##### `POST /api/v1/wifi/capsman/{router_id}/manager/toggle`
 
-- **Propósito:** Gestionar perfiles de SSID centralizados (WPA3-Enterprise 802.1X, Invitados, IoT).
+- **Propósito:** Conmutar el estado del servicio gestor CAPsMAN (`enabled=yes/no`) con certificados automáticos y Safe Mode.
 - **Rol Mínimo:** `TENANT_ADMIN`.
+- **Cabecera Requerida:** `Idempotency-Key: {uuid}`.
+
+##### `GET /api/v1/wifi/capsman/{router_id}/ssids`
+
+- **Propósito:** Listar configuraciones de SSID aprovisionadas en el router en tiempo real.
+- **Rol Mínimo:** `OPERATOR`.
+
+##### `POST /api/v1/wifi/capsman/{router_id}/configurations`
+
+- **Propósito:** Crear una nueva configuración inalámbrica / SSID con asignación opcional de VLAN Datapath y perfil de seguridad.
+- **Rol Mínimo:** `TENANT_ADMIN`.
+- **Cabecera Requerida:** `Idempotency-Key: {uuid}`.
+
+##### `PATCH /api/v1/wifi/capsman/{router_id}/configurations/{cfg_id}`
+
+- **Propósito:** Modificar parámetros de un SSID existente (nombre, VLAN, perfil de seguridad, estado deshabilitado).
+- **Rol Mínimo:** `TENANT_ADMIN`.
+
+##### `DELETE /api/v1/wifi/capsman/{router_id}/configurations/{cfg_id}`
+
+- **Propósito:** Eliminar una configuración inalámbrica del router bajo Safe Mode (previa validación de dependencias).
+- **Rol Mínimo:** `TENANT_ADMIN`.
+
+##### `POST /api/v1/wifi/capsman/{router_id}/security-profiles`
+
+- **Propósito:** Crear perfiles criptográficos WPA2-PSK / WPA3-SAE con soporte de roaming 802.11r/k/v.
+- **Rol Mínimo:** `TENANT_ADMIN`.
+
+##### `POST /api/v1/wifi/capsman/{router_id}/provisioning`
+
+- **Propósito:** Crear reglas de aprovisionamiento dinámico automático basadas en bandas (2.4GHz, 5GHz, 6GHz) o nombres de APs.
+- **Rol Mínimo:** `TENANT_ADMIN`.
+
+##### `POST /api/v1/wifi/capsman/{router_id}/reprovision`
+
+- **Propósito:** Forzar reenvío en caliente de configuraciones inalámbricas a todos los puntos de acceso remotos conectados.
+- **Rol Mínimo:** `NETWORK_ENGINEER`.
 
 ##### `GET /api/v1/wifi/clients/{router_id}`
 
-- **Propósito:** Telemetría en tiempo real de clientes Wi-Fi conectados con niveles de señal RSSI (dBm), SNR (dB) y soporte de roaming rápido 802.11r/k/v.
+- **Propósito:** Telemetría en tiempo real de clientes Wi-Fi conectados con niveles de señal RSSI (dBm), SNR (dB) y estándar de conexión.
 - **Rol Mínimo:** `OPERATOR`.
+
+##### `DELETE /api/v1/wifi/clients/{router_id}/{client_id}`
+
+- **Propósito:** Expulsión táctica forzosa (*Kick Client*) de un cliente conectado para mitigar ataques o forzar roaming.
+- **Rol Mínimo:** `SUPPORT_L2`.
+
+##### `POST /api/v1/wifi/capsman/{router_id}/quick-setup`
+
+- **Propósito:** Asistente rápido de despliegue en 1 clic: activa el manager, crea perfiles de seguridad, genera SSIDs corporativo y de invitados (aislado en VLAN) y crea reglas de provisioning en una sola transacción protegida por Safe Mode de 60s.
+- **Rol Mínimo:** `TENANT_ADMIN`.
+- **Cabecera Requerida:** `Idempotency-Key: {uuid}`.
 
 ---
 
