@@ -202,15 +202,29 @@
   async function toggleRouterMaintenance(item: RouterItem) {
     const nextState = item.admin_state === 'MAINTENANCE' ? 'PRODUCTION' : 'MAINTENANCE';
     const actionDesc =
-      nextState === 'MAINTENANCE' ? 'poner en MANTENIMIENTO' : 'regresar a PRODUCCIÓN';
-    if (!confirm(`¿Deseas ${actionDesc} el equipo "${item.display_name}"?`)) return;
+      nextState === 'MAINTENANCE'
+        ? t('inventory.action_put_maintenance', 'poner en MANTENIMIENTO')
+        : t('inventory.action_return_production', 'regresar a PRODUCCIÓN');
+    if (
+      !confirm(
+        t('inventory.confirm_toggle_maintenance', {
+          action: actionDesc,
+          name: item.display_name,
+        }),
+      )
+    ) {
+      return;
+    }
 
     actionMessage.value = '';
     actionError.value = '';
     try {
       await http.put(`/api/v1/inventory/routers/${item.id}`, { admin_state: nextState });
       item.admin_state = nextState as 'PRODUCTION' | 'MAINTENANCE' | 'PROVISIONING' | 'DECOMMISSIONED';
-      actionMessage.value = `El router "${item.display_name}" ahora se encuentra en estado ${nextState}.`;
+      actionMessage.value = t('inventory.router_state_updated', {
+        name: item.display_name,
+        state: nextState,
+      });
       await inventoryStore.fetchRouters();
       setTimeout(() => {
         actionMessage.value = '';
@@ -269,12 +283,12 @@
 
       <div class="header-actions">
         <!-- Selector de Modos de Vista -->
-        <div class="view-mode-toggle" role="group" aria-label="Modo de visualización de inventario">
+        <div class="view-mode-toggle" role="group" :aria-label="t('inventory.view_mode_aria', 'Modo de visualización de inventario')">
           <button
             type="button"
             class="btn-toggle"
             :class="{ 'btn-toggle--active': currentViewMode === 'table' }"
-            aria-label="Ver solo tabla"
+            :aria-label="t('inventory.aria_view_table', 'Ver solo tabla')"
             @click="currentViewMode = 'table'"
           >
             {{ t('inventory.view_table') }}
@@ -283,7 +297,7 @@
             type="button"
             class="btn-toggle"
             :class="{ 'btn-toggle--active': currentViewMode === 'split' }"
-            aria-label="Ver modo dividido (tabla y mapa)"
+            :aria-label="t('inventory.aria_view_split', 'Ver modo dividido (tabla y mapa)')"
             @click="currentViewMode = 'split'"
           >
             {{ t('inventory.view_split') }}
@@ -292,7 +306,7 @@
             type="button"
             class="btn-toggle"
             :class="{ 'btn-toggle--active': currentViewMode === 'map' }"
-            aria-label="Ver solo mapa geográfico"
+            :aria-label="t('inventory.aria_view_map', 'Ver solo mapa geográfico')"
             @click="currentViewMode = 'map'"
           >
             {{ t('inventory.view_map') }}
@@ -303,7 +317,7 @@
           v-if="isVaultAuthorized"
           type="button"
           class="btn-manage-roles"
-          aria-label="Personalizar roles de red de equipos"
+          :aria-label="t('inventory.aria_manage_roles', 'Personalizar roles de red de equipos')"
           @click="isRolesModalOpen = true"
         >
           {{ t('inventory.btn_roles') }}
@@ -312,7 +326,7 @@
         <button
           type="button"
           class="btn-import-csv"
-          aria-label="Abrir asistente de importación CSV"
+          :aria-label="t('inventory.aria_import_csv', 'Abrir asistente de importación CSV')"
           @click="isCsvModalOpen = true"
         >
           {{ t('inventory.btn_import_csv') }}
@@ -321,7 +335,7 @@
         <button
           type="button"
           class="btn-cve-matrix"
-          aria-label="Ver matriz de vulnerabilidades CVE"
+          :aria-label="t('inventory.aria_cve_matrix', 'Ver matriz de vulnerabilidades CVE')"
           @click="router.push('/inventory/cves')"
         >
           {{ t('inventory.btn_cve_matrix') }}
@@ -330,7 +344,7 @@
         <button
           type="button"
           class="btn-maintenance-windows"
-          aria-label="Abrir gestión de ventanas de mantenimiento"
+          :aria-label="t('inventory.aria_maintenance_windows', 'Abrir gestión de ventanas de mantenimiento')"
           @click="router.push('/inventory/maintenance-windows')"
         >
           <span class="btn-icon" aria-hidden="true">🛠️</span>
@@ -342,7 +356,7 @@
           class="btn btn-primary"
           :class="{ 'btn-primary--loading': isRefreshing }"
           :disabled="isRefreshing"
-          aria-label="Actualizar datos de la flota"
+          :aria-label="t('inventory.aria_refresh_fleet', 'Actualizar datos de la flota')"
           @click="handleManualRefresh"
         >
           <span v-if="isRefreshing" class="btn-spinner" aria-hidden="true">⏳</span>
@@ -433,7 +447,7 @@
       <section
         v-if="currentViewMode !== 'map'"
         class="panel-table"
-        aria-label="Tabla de inventario de routers"
+        :aria-label="t('inventory.table_aria', 'Tabla de inventario de routers')"
       >
         <div class="table-wrapper">
           <RgDataTable
@@ -447,7 +461,7 @@
                 <button
                   type="button"
                   class="btn-row-action btn-row-action--webfig"
-                  aria-label="Abrir consola WebFig"
+                  :aria-label="t('inventory.action_webfig')"
                   @click="openWebFig(String(row.id))"
                 >
                   {{ t('inventory.action_webfig') }}
@@ -467,7 +481,7 @@
                   v-if="(row as unknown as RouterItem).latitude !== undefined"
                   type="button"
                   class="btn-row-action btn-row-action--map"
-                  aria-label="Centrar en el mapa"
+                  :aria-label="t('inventory.action_map')"
                   @click="focusOnMap(String(row.id))"
                 >
                   {{ t('inventory.action_map') }}
@@ -477,7 +491,7 @@
                   v-if="isVaultAuthorized"
                   type="button"
                   class="btn-row-action btn-row-action--vault"
-                  aria-label="Consultar Bóveda de credenciales"
+                  :aria-label="t('inventory.action_vault')"
                   @click="openVaultModal(row as unknown as RouterItem)"
                 >
                   {{ t('inventory.action_vault') }}
@@ -487,16 +501,16 @@
                   type="button"
                   class="btn-row-action"
                   :class="(row as unknown as RouterItem).admin_state === 'MAINTENANCE' ? 'btn-row-action--prod' : 'btn-row-action--maint'"
-                  :aria-label="((row as unknown as RouterItem).admin_state === 'MAINTENANCE' ? 'Regresar a Producción' : 'Poner en Mantenimiento') + ` ${(row as unknown as RouterItem).display_name}`"
+                  :aria-label="((row as unknown as RouterItem).admin_state === 'MAINTENANCE' ? t('inventory.action_return_production') : t('inventory.action_put_maintenance')) + ` ${(row as unknown as RouterItem).display_name}`"
                   @click="toggleRouterMaintenance(row as unknown as RouterItem)"
                 >
-                  {{ (row as unknown as RouterItem).admin_state === 'MAINTENANCE' ? '🟢 En Servicio' : '🛠️ Mantenimiento' }}
+                  {{ (row as unknown as RouterItem).admin_state === 'MAINTENANCE' ? t('inventory.btn_in_service', '🟢 En Servicio') : t('inventory.btn_maintenance', '🛠️ Mantenimiento') }}
                 </button>
 
                 <button
                   type="button"
                   class="btn-row-action btn-row-action--tofu"
-                  aria-label="Disparar autodescubrimiento"
+                  :aria-label="t('inventory.action_tofu')"
                   @click="triggerDiscovery(row as unknown as RouterItem)"
                 >
                   {{ t('inventory.action_tofu') }}
@@ -506,7 +520,7 @@
                   v-if="isVaultAuthorized"
                   type="button"
                   class="btn-row-action btn-row-action--delete"
-                  aria-label="Eliminar router del inventario"
+                  :aria-label="t('inventory.action_delete')"
                   @click="handleDeleteRouter(row as unknown as RouterItem)"
                 >
                   {{ t('inventory.action_delete') }}
@@ -521,7 +535,7 @@
       <section
         v-if="currentViewMode !== 'table'"
         class="panel-map"
-        aria-label="Mapa interactivo de nodos MikroTik"
+        :aria-label="t('inventory.map_aria', 'Mapa interactivo de nodos MikroTik')"
       >
         <OsmRouterMap
           :routers="filteredRouters"

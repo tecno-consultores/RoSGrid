@@ -272,7 +272,7 @@ onMounted(() => {
     </div>
 
     <!-- Tiras KPI Tácticas -->
-    <section class="kpi-grid" aria-label="Resumen de métricas de seguridad">
+    <section class="kpi-grid" :aria-label="t('cve_matrix.kpi_grid_aria', 'Resumen de métricas de seguridad')">
       <div class="kpi-card">
         <span class="kpi-label">{{ t('cve_matrix.kpi_evaluated', 'Routers Evaluados') }}</span>
         <span class="kpi-val">{{ cveSummary?.total_evaluated_routers ?? 0 }}</span>
@@ -301,7 +301,7 @@ onMounted(() => {
     </section>
 
     <!-- Barra de Filtros y Controles -->
-    <section class="cve-filters" aria-label="Filtros de búsqueda de vulnerabilidades">
+    <section class="cve-filters" :aria-label="t('cve_matrix.filters_aria', 'Filtros de búsqueda de vulnerabilidades')">
       <div class="filter-item">
         <label for="cve-search" class="filter-label">{{ t('inventory.filter_search_label', 'Buscar Router:') }}</label>
         <input
@@ -328,7 +328,7 @@ onMounted(() => {
         type="button"
         class="btn-refresh"
         :disabled="loading"
-        aria-label="Refrescar matriz de vulnerabilidades"
+        :aria-label="t('cve_matrix.btn_refresh_aria', 'Refrescar matriz de vulnerabilidades')"
         @click="loadCveSummary"
       >
         <span aria-hidden="true">↻</span>
@@ -337,7 +337,7 @@ onMounted(() => {
     </section>
 
     <!-- Tabla Táctica de Vulnerabilidades -->
-    <section class="table-container" aria-label="Tabla de vulnerabilidades CVE detectadas">
+    <section class="table-container" :aria-label="t('cve_matrix.table_aria', 'Tabla de vulnerabilidades CVE detectadas')">
       <div v-if="loading && !cveSummary" class="loading-state">
         <span class="spinner" aria-hidden="true"></span>
         <p>{{ t('cve_matrix.loading_eval', 'Evaluando flota contra catálogo de vulnerabilidades...') }}</p>

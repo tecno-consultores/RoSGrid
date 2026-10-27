@@ -289,7 +289,45 @@
     "wan_primary": "Primary WAN",
     "wan_backup": "Backup WAN (LTE/Radio)",
     "wan_check_host": "Probe Host (Netwatch)",
-    "wan_threshold": "Failover Threshold (ms)"
+    "wan_threshold": "Failover Threshold (ms)",
+    "sdwan_branch_placeholder": "E.g. Branch-North-Office",
+    "sdwan_static_routes": "Static Routes / PBR",
+    "sdwan_table_aria": "SD-WAN Spoke Tunnels",
+    "sdwan_no_spokes": "No Spoke tunnels provisioned for current tenant.",
+    "switching_rogue_aria": "Rogue DHCP Alerts",
+    "switching_zero_rogue": "Zero rogue DHCP servers detected on the network.",
+    "sla_table_aria": "SLA Compliance Metrics",
+    "sla_no_metrics": "No SLA probe cycles recorded for this router.",
+    "sla_target_host_label": "Target Host / IP",
+    "sla_target_name_label": "Link Name",
+    "sla_threshold_label": "Max Threshold (ms)",
+    "wifi_stat_aps": "Managed Access Points (APs)",
+    "wifi_stat_radios": "Active Radios (2.4GHz / 5GHz / 6GHz)",
+    "wifi_stat_clients": "Connected Wireless Clients",
+    "wifi_ssids_title": "Wireless Network Profiles (SSIDs)",
+    "wifi_ssids_aria": "CAPsMAN SSIDs",
+    "wifi_th_profile_name": "Profile Name",
+    "wifi_th_ssid": "Broadcast SSID",
+    "wifi_th_sec_proto": "Security Protocol",
+    "wifi_th_vlan": "VLAN",
+    "wifi_th_isolation": "Client Isolation",
+    "wifi_th_bandwidth": "Bandwidth Profile",
+    "wifi_native_vlan": "Native",
+    "wifi_isolated_yes": "Yes (Isolated)",
+    "wifi_unlimited": "Unlimited",
+    "wifi_clients_title": "Real-Time WiFi Clients (Fast Roaming 802.11r/k/v)",
+    "wifi_clients_aria": "WiFi Clients",
+    "wifi_th_mac": "MAC Address",
+    "wifi_th_hostname": "Hostname / Device",
+    "wifi_th_ap": "Connected AP",
+    "wifi_th_client_ssid": "SSID",
+    "wifi_th_rssi": "RSSI Signal (dBm)",
+    "wifi_th_snr": "SNR",
+    "wifi_th_standard": "Wi-Fi Standard",
+    "wifi_th_fast_roaming": "Fast Roaming",
+    "wifi_no_clients": "No wireless clients currently connected.",
+    "tabs_aria": "Compliance Modules",
+    "presets_aria": "Enterprise Predefined Profiles"
   },
   "enums": {
     "admin_state": {
@@ -367,7 +405,25 @@
     "confirm_delete": "Are you sure you want to permanently delete device \"{name}\"?",
     "table_caption": "List of MikroTiks registered in RoSGrid",
     "discovery_ok": "TOFU auto-discovery completed for {name}.",
-    "deleted_ok": "Router \"{name}\" deleted successfully."
+    "deleted_ok": "Router \"{name}\" deleted successfully.",
+    "view_mode_aria": "Inventory display mode",
+    "aria_view_table": "View table only",
+    "aria_view_split": "View split mode (table and map)",
+    "aria_view_map": "View geographical map only",
+    "aria_manage_roles": "Customize equipment network roles",
+    "aria_import_csv": "Open CSV import wizard",
+    "aria_cve_matrix": "View CVE vulnerability matrix",
+    "aria_maintenance_windows": "Open maintenance windows management",
+    "btn_maintenance_windows": "Maintenance Windows",
+    "aria_refresh_fleet": "Refresh fleet data",
+    "table_aria": "Routers inventory table",
+    "btn_in_service": "🟢 In Service",
+    "btn_maintenance": "🛠️ Maintenance",
+    "map_aria": "MikroTik nodes interactive map",
+    "confirm_toggle_maintenance": "Do you want to {action} the device \"{name}\"?",
+    "action_put_maintenance": "put in MAINTENANCE",
+    "action_return_production": "return to PRODUCTION",
+    "router_state_updated": "Router \"{name}\" is now in {state} state."
   },
   "dashboard": {
     "title": "Command Center",
@@ -661,7 +717,40 @@
     "btn_check_ros": "Check Latest Version",
     "btn_batch_upgrade": "Upgrade Selected Fleet ({count})",
     "btn_upgrade_single": "Upgrade with Backup",
-    "upgrading": "⏳ Upgrading..."
+    "upgrading": "⏳ Upgrading...",
+    "single_param": "1 parameter",
+    "multi_params": "{count} parameters",
+    "single_field": "1 field",
+    "multi_fields": "{count} fields",
+    "no_params_needed": "This template does not require additional configuration parameters. It will execute with its predefined commands.",
+    "template_select_aria": "Select template {name}",
+    "safemode_60s_active": "Safe Mode 60s Active",
+    "step_3_title": "Step 3: Execution Progress",
+    "progress_completed": "{percent}% Completed",
+    "th_res_router": "Router",
+    "th_res_status": "Status",
+    "th_res_progress": "Progress",
+    "th_res_details": "Details / Rollback",
+    "btn_new_bulk_op": "New Bulk Operation",
+    "templates_empty": "No Golden Config templates registered for this Tenant.",
+    "templates_list_aria": "Selectable Golden Config templates list",
+    "updates_center_aria": "RouterOS update center",
+    "updates_desc": "RoSGrid generates an encrypted .rsc + .backup backup prior to initiating any update.",
+    "target_version_label": "Recommended Target Version:",
+    "poe_aware_label": "⚡ PoE-Aware Ordering (PD leaves first, intermediate PSE switches, Core last)",
+    "safety_stop_label": "Emergency Brake (Safety Stop):",
+    "safety_1_strict": "1.0% failures (Strict)",
+    "safety_2": "2.0% failures",
+    "safety_5_permissive": "5.0% failures (Permissive)",
+    "updating_poe_stages": "⏳ Processing PoE stages...",
+    "btn_update_poe": "⚡ Update Selected Fleet with PoE-Aware",
+    "th_device": "Device",
+    "th_current_version": "Current Version",
+    "th_target_version": "Target Version",
+    "th_diff": "Difference",
+    "th_action": "Update Action",
+    "status_updated": "Updated",
+    "status_pending": "Pending Upgrade"
   },
   "users_mgmt": {
     "title": "User Management & RBAC Roles (11 Roles)",
@@ -779,7 +868,11 @@
     "btn_details": "▼ Details",
     "published": "Published:",
     "remediation_title": "Suggested Mitigation & Remediation:",
-    "fleet_affected_title": "Fleet Routers Affected by this Vulnerability:"
+    "fleet_affected_title": "Fleet Routers Affected by this Vulnerability:",
+    "kpi_grid_aria": "Security metrics summary",
+    "filters_aria": "Vulnerability search filters",
+    "btn_refresh_aria": "Refresh vulnerability matrix",
+    "table_aria": "Detected CVE vulnerabilities table"
   },
   "audit_logs": {
     "title": "Immutable Audit Logs (WORM)",
@@ -849,5 +942,197 @@
     "l2_topology": "Layer 2 Physical Topology",
     "approvals": "Approvals Inbox — Maker-Checker",
     "diff_backups": "Git Backup History & Diff"
+  },
+  "cis_directives": {
+    "CIS_1_1": {
+      "title": "Disable insecure services (Telnet, FTP, cleartext HTTP, cleartext API)",
+      "rationale": "Cleartext protocols expose administrative credentials and are vulnerable to interception and spoofing."
+    },
+    "CIS_1_2": {
+      "title": "Disable or rename default admin user ('admin')",
+      "rationale": "The default admin user is the primary target in automated brute-force attacks."
+    },
+    "CIS_1_3": {
+      "title": "Restrict authorized IP subnets for WinBox and REST API",
+      "rationale": "Restricting management access to trusted subnets prevents attacks originating from untrusted networks."
+    },
+    "CIS_1_4": {
+      "title": "Protection against Open DNS Resolver on public interfaces",
+      "rationale": "An open DNS resolver allows threat actors to abuse the router as an amplifier in volumetric DDoS attacks."
+    },
+    "CIS_1_5": {
+      "title": "Disable MAC-Server and Neighbor Discovery on WAN interfaces",
+      "rationale": "MNDP, CDP, and LLDP broadcast topology and identity details in cleartext across the link layer to untrusted networks."
+    },
+    "CIS_1_6": {
+      "title": "Security patching and updates for RouterOS and RouterBOOT firmware",
+      "rationale": "Keeping RouterOS and RouterBOOT on the stable patch branch resolves known CVEs and kernel vulnerabilities."
+    },
+    "CIS_1_7": {
+      "title": "Strict Bogon / RFC 1918 packet filtering on WAN ingress",
+      "rationale": "Packets originating from unallocated or private prefixes on WAN signify IP spoofing and DDoS attacks."
+    },
+    "CIS_1_8": {
+      "title": "Dynamic defense against brute-force attacks (SSH/WinBox)",
+      "rationale": "Automated dynamic blacklisting limits the capability of mass port scanners to compromise management credentials."
+    },
+    "CIS_1_9": {
+      "title": "Strong VPN cryptography (prohibition of DES, 3DES, and MD5)",
+      "rationale": "Deprecated ciphers (DES/3DES/MD5) are vulnerable to collision attacks and cryptanalytic decryption."
+    },
+    "CIS_1_10": {
+      "title": "Isolation of management traffic on dedicated VLAN",
+      "rationale": "Segregating control and management planes from subscriber payload via 802.1Q VLANs prevents traffic eavesdropping."
+    },
+    "CIS_2_1": {
+      "title": "BGP peering security and boundaries (Prefix-Limit, TCP-AO / MD5)",
+      "rationale": "Cryptographic peer authentication prevents fraudulent prefix injections (BGP hijacking) and TCP reset attacks."
+    },
+    "CIS_2_2": {
+      "title": "Selective high-performance FastTrack (prevent QoS bypass)",
+      "rationale": "FastTrack must bypass only non-shaped packets to ensure bandwidth management and latency policies are honored."
+    },
+    "CIS_ISP_1": {
+      "title": "Bogon and Martian packet filtering on ingress (RFC 1918, RFC 6598, RFC 5737)",
+      "rationale": "Drops non-routable ingress traffic on the WAN perimeter before consuming stateful connection tracking CPU cycles."
+    },
+    "CIS_ISP_2": {
+      "title": "Complete Open DNS Resolver protection on WAN",
+      "rationale": "Blocks incoming public DNS queries, preventing the router from being exploited in DNS reflection amplification attacks."
+    },
+    "CIS_ISP_3": {
+      "title": "Cryptographic authentication on BGP peerings (MD5 / TCP-AO)",
+      "rationale": "Enforces TCP MD5 or TCP-AO signatures on all BGP peers to eliminate rogue in-flight route manipulation."
+    },
+    "CIS_ISP_4": {
+      "title": "Control Plane Policing (CoPP) for signaling and management traffic",
+      "rationale": "Establishes rate-limiting quotas on control plane traffic (BGP, OSPF, ICMP) destined directly to the router CPU."
+    },
+    "CIS_ISP_5": {
+      "title": "Out-of-band management isolation via dedicated Management VRF",
+      "rationale": "Isolates control plane routing tables and management sockets inside a distinct VRF separate from client traffic."
+    },
+    "CIS_ISP_6": {
+      "title": "Cryptographic authentication for OSPFv2/v3 (SHA-256)",
+      "rationale": "Prevents rogue internal actors or transit links from injecting unauthorized LSAs or manipulating the SPF tree."
+    },
+    "CIS_ISP_7": {
+      "title": "Suppression of ICMP Redirects and unreachable response rate-limiting",
+      "rationale": "Disables transmission of ICMP redirects to neutralize MitM redirection attacks and throttles error replies."
+    },
+    "CIS_ISP_8": {
+      "title": "Disable unauthorized Web Proxy and SOCKS servers",
+      "rationale": "Misconfigured or open proxies allow attackers to abuse the router as an anonymizing proxy or pivot hop."
+    },
+    "CIS_CORP_1": {
+      "title": "Disable built-in Bandwidth-Test server ('btest')",
+      "rationale": "An unauthenticated bandwidth test server can be abused to exhaust CPU resources and saturate corporate uplinks."
+    },
+    "CIS_CORP_2": {
+      "title": "Disable MAC-WinBox and MAC-Telnet on user access interfaces",
+      "rationale": "Layer 2 MAC-based management bypasses IP firewall filters and must not be exposed on end-user access ports."
+    },
+    "CIS_CORP_3": {
+      "title": "Strict SSH hardening (Ed25519 strong keys only, disable password auth)",
+      "rationale": "Eliminates password guessing vulnerabilities and enforces modern public-key cryptography with Ed25519."
+    },
+    "CIS_CORP_4": {
+      "title": "DHCP Snooping and Option 82 enforcement on switching bridges",
+      "rationale": "Blocks rogue DHCP servers on untrusted bridge ports and inserts Option 82 sub-options for circuit tracking."
+    },
+    "CIS_CORP_5": {
+      "title": "Eradicate SNMP v1/v2c (enforce SNMPv3 USM with SHA-256 and AES)",
+      "rationale": "SNMP v1/v2c transmits community strings in plaintext; SNMPv3 delivers cryptographic authentication and privacy."
+    },
+    "CIS_CORP_6": {
+      "title": "Comprehensive audit streaming to Centralized Syslog (account, system,info, firewall,info)",
+      "rationale": "Guarantees real-time streaming of authentication records, configuration modifications, and firewall drops."
+    },
+    "CIS_CORP_7": {
+      "title": "Disable RoMON and discovery protocols (MNDP/CDP/LLDP) on user segments",
+      "rationale": "RoMON enables out-of-band L2 bridging and discovery; must remain deactivated on untrusted user segments."
+    },
+    "CIS_CORP_8": {
+      "title": "Mandatory AES-256 encryption on binary backups and exports",
+      "rationale": "Router backups contain credentials and network secrets; mandatory AES encryption prevents unauthorized exfiltration."
+    }
+  },
+  "template_catalog": {
+    "syslog_centralizado": {
+      "name": "Centralized RoSGrid Syslog",
+      "description": "Centralized RoSGrid Syslog with complete remote rules for configuration mutations (system,info), administrative access (account), and firewall filter drops (firewall,info) to collector 10.250.3.4:5514."
+    },
+    "cake_qos": {
+      "name": "CAKE QoS Bufferbloat Mitigation & Fair Queueing",
+      "description": "Advanced Bufferbloat mitigation using CAKE (Common Applications Kept Enhanced) algorithm with per-host flow isolation (triple-isolate) and RTT congestion control on WAN."
+    },
+    "copp_cpu": {
+      "name": "CoPP CPU Protection & Management Plane Rate-Limiting",
+      "description": "Comprehensive Control Plane Policing (CoPP) rate-limiting BGP, OSPF, ICMP, DNS, and SSH packets destined to router CPU to mitigate Denial-of-Service attacks."
+    },
+    "bridge_vlan": {
+      "name": "Bridge VLAN Filtering Trunk & Access Hardening",
+      "description": "L2 switching segmentation with strict Bridge VLAN Filtering (802.1Q), isolating trunk uplinks and user access ports while discarding untagged frames."
+    },
+    "cgnat_rfc6598": {
+      "name": "CGNAT Carrier-Grade NAT Pool & RFC 6598 Deterministic",
+      "description": "Carrier-Grade NAT (CGNAT) bulk provisioning with RFC 6598 shared address space (100.64.0.0/10) and deterministic port allocation to public WAN transit IP."
+    },
+    "bcp38_urpf": {
+      "name": "BCP 38 Anti-Spoofing & Unicast RPF (uRPF) Strict",
+      "description": "IP Anti-Spoofing defense compliant with IETF BCP 38 / RFC 2827 and strict Unicast Reverse Path Forwarding (uRPF) on WAN edge and customer BGP interfaces."
+    },
+    "bgp_rpki": {
+      "name": "BGP RPKI Route Origin Authorization (ROA) Validation",
+      "description": "BGP Route Origin Authorization (RPKI ROA) validation to eliminate route hijacking via RouterOS v7 RPKI cache servers and automatic prefix invalidation."
+    },
+    "sdwan_wireguard": {
+      "name": "SD-WAN WireGuard Hub-and-Spoke Interconnection",
+      "description": "Automated SD-WAN overlay deployment over WireGuard with BGP/OSPF dynamic routing, Curve25519 cryptographic keys, and Multi-WAN failover."
+    },
+    "vrrp_gateway": {
+      "name": "VRRP Dual-Router Gateway Redundancy",
+      "description": "Dual-router default gateway redundancy via VRRP (Virtual Router Redundancy Protocol v3) with sub-second failover timers."
+    },
+    "encrypted_sftp_backup": {
+      "name": "Encrypted SFTP Cloud Configuration Backup Automation",
+      "description": "Scheduled encrypted binary backup (AES-256) and configuration export automation to corporate SFTP repository with automated rotation."
+    },
+    "dhcp_snooping_dai": {
+      "name": "DHCP Snooping & Dynamic ARP Inspection (DAI) L2 Shield",
+      "description": "Layer 2 switching shield combining DHCP Snooping with Option 82 and Dynamic ARP Inspection (DAI) to eradicate Rogue DHCP servers and ARP poisoning."
+    },
+    "ntp_cloud": {
+      "name": "Cloudflare / Google NTP Time Synchronization",
+      "description": "Redundant time synchronization against Cloudflare and Google NTP pool servers (NTP Client v7)."
+    },
+    "dns_doh": {
+      "name": "Secure DNS-over-HTTPS (DoH) Cloudflare",
+      "description": "Secure DNS-over-HTTPS (DoH) configuration using Cloudflare upstream and SSL certificate verification."
+    },
+    "ssh_hardening": {
+      "name": "SSH Hardening with Ed25519 Keys",
+      "description": "Ed25519 key configuration, deprecation of weak ciphers, and prohibition of password authentication over SSH."
+    },
+    "cliente_ntp": {
+      "name": "Redundant NTP Client",
+      "description": "Enables the NTP client and adds primary and secondary pool time synchronization servers."
+    },
+    "dns_corporativo_resiliente": {
+      "name": "Resilient Corporate DNS",
+      "description": "Configures redundant DNS servers (Quad9 and Cloudflare) and flushes the resolution cache."
+    },
+    "snmp_v2c_monitoreo_noc": {
+      "name": "SNMP v2c NOC Monitoring",
+      "description": "Configures SNMP v2c community for monitoring and telemetry from the NOC Wallboard."
+    },
+    "isp_ipv6_dual_stack_pd": {
+      "name": "IPv6 Dual-Stack DHCPv6-PD",
+      "description": "Configures DHCPv6-PD client for prefix delegation /56 or /48 and SLAAC allocation to LAN."
+    },
+    "tcp_mss_clamping_optimizer": {
+      "name": "TCP MSS Clamping Optimizer",
+      "description": "Automatically clamps MSS in mangle to avoid fragmentation across PPPoE, GRE or WireGuard tunnels."
+    }
   }
 }

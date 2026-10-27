@@ -828,6 +828,25 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 109. Consulta de políticas CIS personalizadas por Tenant sin sesión devuelve 401
+    Given path '/api/v1/compliance/cis-policies'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 110. Consulta del catálogo de plantillas de configuración sin autenticación devuelve 401
+    Given path '/api/v1/operations/templates'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 111. Consulta de presets de plantillas Golden Config sin autenticación devuelve 401
+    Given path '/api/v1/operations/templates/presets'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
 
 
 

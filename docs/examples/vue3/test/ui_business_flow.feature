@@ -485,6 +485,59 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     Then waitFor(".modal-card")
     And match text("#modal-vlan-title") contains 'Definir VLAN en Bridge'
 
+  Scenario: 51. Suite Corporativa — Cumplimiento CIS Hardening con 28 Directivas, Enlaces Normativos y Filtros (Hito 27.11)
+    Given driver baseUrl + '/enterprise?tab=cis'
+    And waitFor(".enterprise-compliance-view")
+    And waitFor("#tab-btn-cis")
+    When click("#tab-btn-cis")
+    Then waitFor(".cis-filters-toolbar")
+    And waitFor("#filter-cis-all")
+    And waitFor("#filter-cis-isp")
+    And waitFor("#filter-cis-corporate")
+    And waitFor("#filter-cis-enabled")
+    And waitFor("#filter-cis-disabled")
+    And waitFor("#cis-directives-table")
+    And waitFor(".cis-directive-toggle")
+    And waitFor(".cis-standard-link")
+    And waitFor(".cis-reference-link")
+
+  Scenario: 52. Suite Corporativa — Auto-Remediación Asistida CIS bajo Safe Mode de 60 Segundos (Hito 27.11)
+    Given driver baseUrl + '/enterprise?tab=cis'
+    And waitFor(".enterprise-compliance-view")
+    And waitFor("#tab-btn-cis")
+    When click("#tab-btn-cis")
+    Then waitFor("#cis-directives-table")
+    When click(".btn-apply-remediation")
+    Then waitFor("#modal-remediate-directive")
+    And match text("#modal-remediation-title") contains 'Auto-Remediación Asistida'
+    And match text(".safemode-shield-alert") contains 'Safe Mode (60 segundos)'
+    And waitFor(".command-code")
+    And waitFor("#btn-confirm-safe-remediate")
+
+  Scenario: 53. Operaciones Masivas — Asistente Golden Config y Parametrización Dinámica i18n
+    Given driver baseUrl + '/bulk-ops'
+    And waitFor(".bulk-view")
+    And waitFor(".wizard-steps-nav")
+    Then match text(".bulk-title") contains 'Operaciones Masivas'
+    When click("//button[contains(@class, 'tab-btn') and contains(., 'Plantillas')]")
+    Then waitFor(".templates-list-wrapper")
+    And waitFor(".template-card")
+    And waitFor(".vars-title")
+
+  Scenario: 54. Suite Corporativa — SD-WAN WireGuard y Telemetría de SLA i18n
+    Given driver baseUrl + '/enterprise?tab=sdwan'
+    And waitFor(".enterprise-compliance-view")
+    And waitFor("#tab-btn-sdwan")
+    When click("#tab-btn-sdwan")
+    Then waitFor(".sdwan-grid")
+    And waitFor("#spoke-name-input")
+    And waitFor("#spoke-proto-select")
+    And waitFor("#wan-primary-input")
+    When click("#tab-btn-sla")
+    Then waitFor(".sla-actions")
+    And waitFor("#btn-export-sla")
+
+
 
 
 

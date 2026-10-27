@@ -606,6 +606,21 @@
     }
   }
 
+  function getDirectiveCodeKey(code: string): string {
+    return code.replace(/[^a-zA-Z0-9]/g, '_');
+  }
+
+  function getDirectiveTitle(d: { code: string; title: string }): string {
+    const key = `cis_directives.${getDirectiveCodeKey(d.code)}.title`;
+    return t(key, d.title);
+  }
+
+  function getDirectiveRationale(d: { code: string; rationale?: string }): string {
+    if (!d.rationale) return '';
+    const key = `cis_directives.${getDirectiveCodeKey(d.code)}.rationale`;
+    return t(key, d.rationale);
+  }
+
   onMounted(() => {
     if (inventoryStore.routers.length === 0) {
       inventoryStore.fetchRouters();
@@ -620,7 +635,7 @@
   <main
     class="enterprise-compliance-view"
     role="main"
-    aria-label="Gestión de Flota & Cumplimiento Normativo"
+    :aria-label="t('enterprise.title', 'Gestión de Flota & Cumplimiento Normativo')"
   >
     <!-- Header Corporativo -->
     <header class="view-header">
@@ -643,7 +658,7 @@
       <div class="header-controls">
         <div
           class="safemode-badge"
-          title="Todas las mutaciones están protegidas bajo Safe Mode de 60s"
+          :title="t('enterprise.safemode_title', 'Todas las mutaciones están protegidas bajo Safe Mode de 60s')"
         >
           <span class="indicator-dot pulse"></span>
           <span>{{ t('enterprise.safemode_notice', 'Safe Mode (60s) Activo') }}</span>
@@ -651,13 +666,13 @@
 
         <div class="router-selector-box">
           <label for="compliance-router-select" class="sr-only"
-            >Seleccionar Router de la Flota</label
+            >{{ t('enterprise.select_router_fleet', 'Seleccionar Router de la Flota') }}</label
           >
           <select
             id="compliance-router-select"
             v-model="selectedRouterId"
             class="tactical-select"
-            aria-label="Seleccionar router de la flota"
+            :aria-label="t('enterprise.select_router_fleet', 'Seleccionar router de la flota')"
           >
             <option value="" disabled>{{ t('enterprise.select_router_placeholder', 'Seleccione un equipo...') }}</option>
             <option v-for="r in routersList" :key="r.id" :value="r.id">
@@ -679,7 +694,7 @@
     </div>
 
     <!-- Barra de Pestañas Tácticas (Módulos dinámicos por Feature Flags) -->
-    <nav class="tactical-tabs-nav" aria-label="Módulos de Cumplimiento">
+    <nav class="tactical-tabs-nav" :aria-label="t('enterprise.tabs_aria', 'Módulos de Cumplimiento')">
       <button
         v-if="authStore.isFeatureEnabled('config_drift_monitoring_enabled')"
         id="tab-btn-drift"
@@ -817,7 +832,7 @@
     <div class="tab-content-container">
       <div v-if="isLoading" class="loading-state" aria-busy="true">
         <div class="tactical-spinner"></div>
-        <p>Sincronizando estado técnico con RouterOS v7...</p>
+        <p>{{ t('enterprise.syncing_state', 'Sincronizando estado técnico con RouterOS v7...') }}</p>
       </div>
 
       <!-- ================================================================= -->
@@ -833,22 +848,22 @@
         <div class="panel-action-bar">
           <div class="drift-summary-meta">
             <span class="meta-item">
-              <strong>Plantilla Maestra:</strong>
-              {{ driftResult?.baseline_template_name || 'Predeterminada' }}
+              <strong>{{ t('enterprise.drift_master_template', 'Plantilla Maestra:') }}</strong>
+              {{ driftResult?.baseline_template_name || t('enterprise.drift_default', 'Predeterminada') }}
             </span>
             <span class="meta-item">
-              <strong>Estado:</strong>
+              <strong>{{ t('enterprise.drift_status', 'Estado:') }}</strong>
               <span
                 class="badge"
                 :class="driftResult?.drift_detected ? 'badge-danger' : 'badge-success'"
               >
                 {{
-                  driftResult?.drift_detected ? 'DESVIACIÓN DETECTADA' : 'CONFIGURACIÓN HOMOLOGADA'
+                  driftResult?.drift_detected ? t('enterprise.drift_detected', 'DESVIACIÓN DETECTADA') : t('enterprise.drift_clean', 'CONFIGURACIÓN HOMOLOGADA')
                 }}
               </span>
             </span>
             <span class="meta-item">
-              <strong>Líneas no autorizadas:</strong>
+              <strong>{{ t('enterprise.drift_unauth_lines', 'Líneas no autorizadas:') }}</strong>
               {{ driftResult?.total_drift_lines || 0 }}
             </span>
           </div>
@@ -866,10 +881,10 @@
         </div>
 
         <!-- Visor de Git Diff Unificado -->
-        <div class="git-diff-viewer" aria-label="Diferencias de configuración">
+        <div class="git-diff-viewer" :aria-label="t('enterprise.drift_diff_title', 'Diferencias de configuración')">
           <div class="diff-header">
-            <span>Diferencias contra Línea Base Golden Template</span>
-            <span class="diff-sub">Verde: Añadido en router | Rojo: Faltante según estándar</span>
+            <span>{{ t('enterprise.drift_diff_title', 'Diferencias contra Línea Base Golden Template') }}</span>
+            <span class="diff-sub">{{ t('enterprise.drift_diff_legend', 'Verde: Añadido en router | Rojo: Faltante según estándar') }}</span>
           </div>
           <pre class="diff-pre"><code><span
             v-for="(line, lineIdx) in (driftResult?.diff_unified || '').split('\n')"
@@ -947,7 +962,7 @@
         </div>
 
         <!-- Barra de Filtros Tácticos por Perfil / Estado -->
-        <div class="cis-filters-toolbar mb-3" role="group" aria-label="Filtros de directivas CIS">
+        <div class="cis-filters-toolbar mb-3" role="group" :aria-label="t('enterprise.filter_cis_aria', 'Filtros de directivas CIS')">
           <button
             id="filter-cis-all"
             type="button"
@@ -955,7 +970,7 @@
             :class="{ active: cisFilterProfile === 'ALL' }"
             @click="cisFilterProfile = 'ALL'"
           >
-            📋 Todos ({{ cisAudit?.directives?.length || 28 }})
+            📋 {{ t('enterprise.filter_all', 'Todos') }} ({{ cisAudit?.directives?.length || 28 }})
           </button>
           <button
             id="filter-cis-isp"
@@ -964,7 +979,7 @@
             :class="{ active: cisFilterProfile === 'ISP' }"
             @click="cisFilterProfile = 'ISP'"
           >
-            🌐 Recomendados ISP ({{ (cisAudit?.directives || []).filter(d => d.profile_target === 'ALL' || d.profile_target === 'ISP').length }})
+            🌐 {{ t('enterprise.filter_isp', 'Recomendados ISP') }} ({{ (cisAudit?.directives || []).filter(d => d.profile_target === 'ALL' || d.profile_target === 'ISP').length }})
           </button>
           <button
             id="filter-cis-corporate"
@@ -973,7 +988,7 @@
             :class="{ active: cisFilterProfile === 'CORPORATE' }"
             @click="cisFilterProfile = 'CORPORATE'"
           >
-            🏢 Recomendados Empresa ({{ (cisAudit?.directives || []).filter(d => d.profile_target === 'ALL' || d.profile_target === 'CORPORATE').length }})
+            🏢 {{ t('enterprise.filter_corporate', 'Recomendados Empresa') }} ({{ (cisAudit?.directives || []).filter(d => d.profile_target === 'ALL' || d.profile_target === 'CORPORATE').length }})
           </button>
           <button
             id="filter-cis-enabled"
@@ -982,7 +997,7 @@
             :class="{ active: cisFilterProfile === 'ENABLED' }"
             @click="cisFilterProfile = 'ENABLED'"
           >
-            ✅ Activas ({{ (cisAudit?.directives || []).filter(d => d.enabled !== false).length }})
+            ✅ {{ t('enterprise.filter_enabled', 'Activas') }} ({{ (cisAudit?.directives || []).filter(d => d.enabled !== false).length }})
           </button>
           <button
             id="filter-cis-disabled"
@@ -991,24 +1006,24 @@
             :class="{ active: cisFilterProfile === 'DISABLED' }"
             @click="cisFilterProfile = 'DISABLED'"
           >
-            ⏸️ Desactivadas ({{ (cisAudit?.directives || []).filter(d => d.enabled === false).length }})
+            ⏸️ {{ t('enterprise.filter_disabled', 'Desactivadas') }} ({{ (cisAudit?.directives || []).filter(d => d.enabled === false).length }})
           </button>
         </div>
 
         <!-- Tabla de Directivas CIS Hardening -->
         <div class="tactical-table-wrapper">
-          <table id="cis-directives-table" class="tactical-table cis-table" aria-label="Directivas CIS Hardening">
+          <table id="cis-directives-table" class="tactical-table cis-table" :aria-label="t('enterprise.tab_cis', 'Directivas CIS Hardening')">
             <thead>
               <tr>
-                <th scope="col" style="width: 70px;">Activa</th>
-                <th scope="col" style="width: 110px;">Código</th>
-                <th scope="col">Directiva Técnica</th>
-                <th scope="col" style="min-width: 220px;">Referencias Normativas</th>
-                <th scope="col" style="width: 80px;">Peso</th>
-                <th scope="col" style="width: 120px;">Estado</th>
-                <th scope="col">Hallazgo Técnico</th>
-                <th scope="col">Remediación RouterOS v7</th>
-                <th scope="col" style="width: 130px;">Acción</th>
+                <th scope="col" style="width: 70px;">{{ t('enterprise.cis_th_active', 'Activa') }}</th>
+                <th scope="col" style="width: 110px;">{{ t('enterprise.cis_th_code', 'Código') }}</th>
+                <th scope="col">{{ t('enterprise.cis_th_title', 'Directiva Técnica') }}</th>
+                <th scope="col" style="min-width: 220px;">{{ t('enterprise.cis_th_standards', 'Referencias Normativas') }}</th>
+                <th scope="col" style="width: 80px;">{{ t('enterprise.cis_th_weight', 'Peso') }}</th>
+                <th scope="col" style="width: 120px;">{{ t('enterprise.cis_th_status', 'Estado') }}</th>
+                <th scope="col">{{ t('enterprise.cis_th_finding', 'Hallazgo Técnico') }}</th>
+                <th scope="col">{{ t('enterprise.cis_th_remediation', 'Remediación RouterOS v7') }}</th>
+                <th scope="col" style="width: 130px;">{{ t('enterprise.cis_th_action', 'Acción') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -1037,7 +1052,7 @@
                   </span>
                 </td>
                 <td>
-                  <strong>{{ d.title }}</strong>
+                  <strong>{{ getDirectiveTitle(d) }}</strong>
                   <div class="text-subtle text-xs font-mono mt-0.5">{{ d.category }}</div>
                 </td>
                 <td>
@@ -1053,7 +1068,7 @@
                       class="link-ref cis-standard-link"
                       :aria-label="`Abrir estándar oficial para ${d.code} en nueva pestaña`"
                     >
-                      <span>🔗</span> Estándar
+                      <span>🔗</span> {{ t('enterprise.link_standard', 'Estándar') }}
                     </a>
                     <a
                       v-if="d.reference_url"
@@ -1063,7 +1078,7 @@
                       class="link-ref link-mikrotik cis-reference-link"
                       :aria-label="`Abrir documentación oficial de MikroTik para ${d.code} en nueva pestaña`"
                     >
-                      <span>📖</span> MikroTik v7
+                      <span>📖</span> {{ t('enterprise.link_mikrotik', 'MikroTik v7') }}
                     </a>
                   </div>
                 </td>
@@ -1073,7 +1088,7 @@
                     v-if="d.enabled === false"
                     class="badge badge-secondary"
                   >
-                    DESACTIVADA
+                    {{ t('enterprise.status_disabled', 'DESACTIVADA') }}
                   </span>
                   <span
                     v-else
@@ -1109,7 +1124,7 @@
                     v-else
                     class="text-subtle text-xs font-mono"
                   >
-                    (Inactiva)
+                    {{ t('enterprise.status_inactive', '(Inactiva)') }}
                   </span>
                 </td>
               </tr>
@@ -1129,12 +1144,12 @@
           <div class="modal-card remediation-modal">
             <header class="modal-header">
               <h3 id="modal-remediation-title">
-                ⚡ Auto-Remediación Asistida — Safe Mode (60s)
+                {{ t('enterprise.modal_remediate_title', '⚡ Auto-Remediación Asistida — Safe Mode (60s)') }}
               </h3>
               <button
                 type="button"
                 class="btn-close"
-                aria-label="Cerrar modal de remediación"
+                :aria-label="t('enterprise.modal_close', 'Cerrar modal de remediación')"
                 @click="remediationTargetDirective = null"
               >
                 ✕
@@ -1143,24 +1158,24 @@
             <div class="modal-body">
               <div class="remediation-directive-info mb-3">
                 <span class="font-mono text-cyan font-bold">{{ remediationTargetDirective.code }}</span>
-                <strong> — {{ remediationTargetDirective.title }}</strong>
+                <strong> — {{ getDirectiveTitle(remediationTargetDirective) }}</strong>
                 <p v-if="remediationTargetDirective.rationale" class="text-subtle text-xs mt-1">
-                  {{ remediationTargetDirective.rationale }}
+                  {{ getDirectiveRationale(remediationTargetDirective) }}
                 </p>
               </div>
 
               <div class="safemode-shield-alert mb-3">
                 <span class="shield-icon">🛡️</span>
                 <div class="shield-text">
-                  <strong>Protección Safe Mode (60 segundos):</strong>
+                  <strong>{{ t('enterprise.safemode_shield_title', 'Protección Safe Mode (60 segundos):') }}</strong>
                   <p class="text-xs text-subtle mb-0">
-                    La configuración se aplicará en una sesión transaccional temporal de RouterOS v7. Si la conectividad hacia RoSGrid se interrumpe durante 60 segundos, el router revertirá automáticamente todos los cambios para prevenir bloqueos de gestión.
+                    {{ t('enterprise.safemode_shield_desc', 'La configuración se aplicará en una sesión transaccional temporal de RouterOS v7. Si la conectividad hacia RoSGrid se interrumpe durante 60 segundos, el router revertirá automáticamente todos los cambios para prevenir bloqueos de gestión.') }}
                   </p>
                 </div>
               </div>
 
               <div class="command-preview-card mb-3">
-                <span class="label text-xs text-subtle font-mono">COMANDO ROUTEROS V7 QUE SE EJECUTARÁ:</span>
+                <span class="label text-xs text-subtle font-mono">{{ t('enterprise.command_preview_label', 'COMANDO ROUTEROS V7 QUE SE EJECUTARÁ:') }}</span>
                 <pre class="command-code"><code>{{ remediationTargetDirective.remediation_cmd }}</code></pre>
               </div>
 
@@ -1170,7 +1185,7 @@
                   class="tactical-btn btn-secondary"
                   @click="remediationTargetDirective = null"
                 >
-                  Cancelar
+                  {{ t('common.cancel', 'Cancelar') }}
                 </button>
                 <button
                   id="btn-confirm-safe-remediate"
@@ -1179,8 +1194,8 @@
                   :disabled="actionLoading"
                   @click="confirmApplyDirective"
                 >
-                  <span v-if="actionLoading">⏳ Aplicando bajo Safe Mode...</span>
-                  <span v-else>⚡ Confirmar y Aplicar (Safe Mode)</span>
+                  <span v-if="actionLoading">{{ t('enterprise.applying_safemode', '⏳ Aplicando bajo Safe Mode...') }}</span>
+                  <span v-else>{{ t('enterprise.btn_confirm_safe_remediate', '⚡ Confirmar y Aplicar (Safe Mode)') }}</span>
                 </button>
               </div>
             </div>
@@ -1198,12 +1213,12 @@
           <div class="modal-card cis-policies-modal">
             <header class="modal-header">
               <h3 id="modal-cis-policies-title">
-                ⚙️ Políticas de Seguridad CIS Hardening — Personalización de Empresa
+                {{ t('enterprise.modal_policies_title', '⚙️ Políticas de Seguridad CIS Hardening — Personalización de Empresa') }}
               </h3>
               <button
                 type="button"
                 class="btn-close"
-                aria-label="Cerrar modal"
+                :aria-label="t('enterprise.modal_close', 'Cerrar modal')"
                 @click="showCisPolicyModal = false"
               >
                 ✕
@@ -1212,11 +1227,11 @@
 
             <div class="modal-body">
               <p class="modal-intro text-subtle text-xs mb-3">
-                Selecciona una plantilla base según el tipo de infraestructura (ISP vs Corporativo) o ajusta individualmente las directivas, severidades y pesos ponderados de auditoría.
+                {{ t('enterprise.modal_policies_intro', 'Selecciona una plantilla base según el tipo de infraestructura (ISP vs Corporativo) o ajusta individualmente las directivas, severidades y pesos ponderados de auditoría.') }}
               </p>
 
               <!-- Selector de Presets de Empresa -->
-              <div class="profile-presets-row" role="group" aria-label="Perfiles predefinidos de empresa">
+              <div class="profile-presets-row" role="group" :aria-label="t('enterprise.presets_aria', 'Perfiles predefinidos de empresa')">
                 <button
                   type="button"
                   class="preset-btn"
@@ -1225,8 +1240,8 @@
                 >
                   <span class="preset-icon">🏢</span>
                   <div class="preset-text">
-                    <strong>Corporativo / Empresa</strong>
-                    <small>VLAN de gestión, puertos de acceso, servicios confinados</small>
+                    <strong>{{ t('enterprise.preset_corp_title', 'Corporativo / Empresa') }}</strong>
+                    <small>{{ t('enterprise.preset_corp_desc', 'VLAN de gestión, puertos de acceso, servicios confinados') }}</small>
                   </div>
                 </button>
                 <button
@@ -1237,8 +1252,8 @@
                 >
                   <span class="preset-icon">🌐</span>
                   <div class="preset-text">
-                    <strong>Proveedor ISP / WISP</strong>
-                    <small>BGP Prefix Limit, MD5, FastTrack selectivo QoS, Bogons</small>
+                    <strong>{{ t('enterprise.preset_isp_title', 'Proveedor ISP / WISP') }}</strong>
+                    <small>{{ t('enterprise.preset_isp_desc', 'BGP Prefix Limit, MD5, FastTrack selectivo QoS, Bogons') }}</small>
                   </div>
                 </button>
                 <button
@@ -1249,23 +1264,23 @@
                 >
                   <span class="preset-icon">🖥️</span>
                   <div class="preset-text">
-                    <strong>Data Center / Tránsito</strong>
-                    <small>Seguridad estricta en todas las directivas (Máxima exigencia)</small>
+                    <strong>{{ t('enterprise.preset_dc_title', 'Data Center / Tránsito') }}</strong>
+                    <small>{{ t('enterprise.preset_dc_desc', 'Seguridad estricta en todas las directivas (Máxima exigencia)') }}</small>
                   </div>
                 </button>
               </div>
 
               <!-- Tabla de directivas configurables -->
               <div class="directives-config-table-wrapper">
-                <table class="tactical-table policies-table" aria-label="Configuración de Directivas CIS">
+                <table class="tactical-table policies-table" :aria-label="t('enterprise.modal_policies_title', 'Configuración de Directivas CIS')">
                   <thead>
                     <tr>
-                      <th scope="col" style="width: 70px;">Activa</th>
-                      <th scope="col" style="width: 100px;">Código</th>
-                      <th scope="col">Directiva Técnica</th>
-                      <th scope="col" style="width: 110px;">Severidad</th>
-                      <th scope="col" style="width: 90px;">Peso</th>
-                      <th scope="col">Comando RouterOS Remediación</th>
+                      <th scope="col" style="width: 70px;">{{ t('enterprise.policies_th_active', 'Activa') }}</th>
+                      <th scope="col" style="width: 100px;">{{ t('enterprise.policies_th_code', 'Código') }}</th>
+                      <th scope="col">{{ t('enterprise.policies_th_title', 'Directiva Técnica') }}</th>
+                      <th scope="col" style="width: 110px;">{{ t('enterprise.policies_th_severity', 'Severidad') }}</th>
+                      <th scope="col" style="width: 90px;">{{ t('enterprise.policies_th_weight', 'Peso') }}</th>
+                      <th scope="col">{{ t('enterprise.policies_th_remediation', 'Comando RouterOS Remediación') }}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1284,7 +1299,7 @@
                       </td>
                       <td class="font-mono text-cyan font-bold">{{ rule.code }}</td>
                       <td>
-                        <strong>{{ rule.title }}</strong>
+                        <strong>{{ getDirectiveTitle(rule) }}</strong>
                         <div class="text-subtle text-xs font-mono">{{ rule.category }}</div>
                       </td>
                       <td>
@@ -1323,8 +1338,8 @@
 
             <footer class="modal-footer">
               <div class="footer-summary">
-                <span>Habilitadas: <strong>{{ editingPolicies.filter(r => r.enabled).length }}/{{ editingPolicies.length }}</strong></span>
-                <span class="ml-4">Peso Total: <strong>{{ editingPolicies.filter(r => r.enabled).reduce((acc, r) => acc + (r.weight || 0), 0) }} pts</strong></span>
+                <span>{{ t('enterprise.policies_enabled_count', 'Habilitadas:') }} <strong>{{ editingPolicies.filter(r => r.enabled).length }}/{{ editingPolicies.length }}</strong></span>
+                <span class="ml-4">{{ t('enterprise.policies_total_weight', 'Peso Total:') }} <strong>{{ editingPolicies.filter(r => r.enabled).reduce((acc, r) => acc + (r.weight || 0), 0) }} pts</strong></span>
               </div>
               <div class="footer-actions">
                 <button
@@ -1332,7 +1347,7 @@
                   class="tactical-btn btn-secondary"
                   @click="showCisPolicyModal = false"
                 >
-                  Cancelar
+                  {{ t('common.cancel', 'Cancelar') }}
                 </button>
                 <button
                   id="btn-save-cis-policies"
@@ -1341,8 +1356,8 @@
                   :disabled="savingPolicies"
                   @click="saveCisPolicies"
                 >
-                  <span v-if="savingPolicies">💾 Guardando...</span>
-                  <span v-else>💾 Guardar Políticas del Tenant</span>
+                  <span v-if="savingPolicies">{{ t('enterprise.policies_saving', '💾 Guardando...') }}</span>
+                  <span v-else>{{ t('enterprise.policies_save_btn', '💾 Guardar Políticas del Tenant') }}</span>
                 </button>
               </div>
             </footer>
@@ -1389,22 +1404,22 @@
         <div class="sdwan-grid">
           <!-- Formulario de Aprovisionamiento Spoke -->
           <div class="sdwan-card">
-            <h2 class="card-title">Aprovisionar Sucursal Spoke</h2>
+            <h2 class="card-title">{{ t('enterprise.spoke_provision_title', 'Aprovisionar Sucursal Spoke') }}</h2>
             <form class="tactical-form" @submit.prevent="handleProvisionSpoke">
               <div class="form-group">
-                <label for="spoke-name-input">Nombre de la Sucursal</label>
+                <label for="spoke-name-input">{{ t('enterprise.spoke_branch_name', 'Nombre de la Sucursal') }}</label>
                 <input
                   id="spoke-name-input"
                   v-model="newSpoke.spoke_name"
                   type="text"
                   class="tactical-input"
-                  placeholder="Ej: Sucursal-Valencia-Norte"
+                  :placeholder="t('enterprise.sdwan_branch_placeholder', 'Ej: Sucursal-Valencia-Norte')"
                   required
                 />
               </div>
 
               <div class="form-group">
-                <label for="spoke-proto-select">Protocolo de Enrutamiento</label>
+                <label for="spoke-proto-select">{{ t('enterprise.spoke_routing_proto', 'Protocolo de Enrutamiento') }}</label>
                 <select
                   id="spoke-proto-select"
                   v-model="newSpoke.routing_protocol"
@@ -1412,7 +1427,7 @@
                 >
                   <option value="BGP">BGP (Border Gateway Protocol v7)</option>
                   <option value="OSPF">OSPFv3</option>
-                  <option value="STATIC">Rutas Estáticas / PBR</option>
+                  <option value="STATIC">{{ t('enterprise.sdwan_static_routes', 'Rutas Estáticas / PBR') }}</option>
                 </select>
               </div>
 
@@ -1425,11 +1440,11 @@
 
           <!-- Failover Multi-WAN PBR -->
           <div class="sdwan-card">
-            <h2 class="card-title">Políticas Multi-WAN & Netwatch Failover</h2>
+            <h2 class="card-title">{{ t('enterprise.multiwan_policies_title', 'Políticas Multi-WAN & Netwatch Failover') }}</h2>
             <form class="tactical-form" @submit.prevent="handleDeployMultiWan">
               <div class="form-row">
                 <div class="form-group">
-                  <label for="wan-primary-input">WAN Primaria</label>
+                  <label for="wan-primary-input">{{ t('enterprise.wan_primary', 'WAN Primaria') }}</label>
                   <input
                     id="wan-primary-input"
                     v-model="multiWanForm.primary_wan_interface"
@@ -1439,7 +1454,7 @@
                   />
                 </div>
                 <div class="form-group">
-                  <label for="wan-backup-input">WAN Respaldo (LTE/Radio)</label>
+                  <label for="wan-backup-input">{{ t('enterprise.wan_backup', 'WAN Respaldo (LTE/Radio)') }}</label>
                   <input
                     id="wan-backup-input"
                     v-model="multiWanForm.backup_wan_interface"
@@ -1452,7 +1467,7 @@
 
               <div class="form-row">
                 <div class="form-group">
-                  <label for="wan-check-host">Host Sondeo (Netwatch)</label>
+                  <label for="wan-check-host">{{ t('enterprise.wan_check_host', 'Host Sondeo (Netwatch)') }}</label>
                   <input
                     id="wan-check-host"
                     v-model="multiWanForm.check_host"
@@ -1462,7 +1477,7 @@
                   />
                 </div>
                 <div class="form-group">
-                  <label for="wan-threshold-ms">Umbral Conmutación (ms)</label>
+                  <label for="wan-threshold-ms">{{ t('enterprise.wan_threshold', 'Umbral Conmutación (ms)') }}</label>
                   <input
                     id="wan-threshold-ms"
                     v-model="multiWanForm.failover_threshold_ms"
@@ -1483,7 +1498,7 @@
 
         <!-- Lista de Túneles Spoke Activos -->
         <div class="tactical-table-wrapper" style="margin-top: 1.5rem">
-          <table class="tactical-table" aria-label="Túneles SD-WAN Spoke">
+          <table class="tactical-table" :aria-label="t('enterprise.sdwan_table_aria', 'Túneles SD-WAN Spoke')">
             <thead>
               <tr>
                 <th scope="col">{{ t('enterprise.sdwan_th_spoke', 'Sucursal Spoke') }}</th>
@@ -1504,7 +1519,7 @@
                 <td>
                   <span class="badge badge-info">{{ s.routing_protocol }}</span>
                 </td>
-                <td>{{ s.multi_wan_failover_enabled ? 'Habilitado' : 'Deshabilitado' }}</td>
+                <td>{{ s.multi_wan_failover_enabled ? t('common.enabled', 'Habilitado') : t('common.disabled', 'Deshabilitado') }}</td>
                 <td>
                   <span
                     class="badge"
@@ -1516,7 +1531,7 @@
               </tr>
               <tr v-if="sdwanSpokes.length === 0">
                 <td colspan="7" class="text-center text-subtle">
-                  No hay túneles Spoke aprovisionados en el tenant actual.
+                  {{ t('enterprise.sdwan_no_spokes', 'No hay túneles Spoke aprovisionados en el tenant actual.') }}
                 </td>
               </tr>
             </tbody>
@@ -1542,7 +1557,7 @@
                 class="badge"
                 :class="b.dhcp_snooping_enabled ? 'badge-success' : 'badge-danger'"
               >
-                DHCP Snooping: {{ b.dhcp_snooping_enabled ? 'ACTIVO' : 'INACTIVO' }}
+                DHCP Snooping: {{ b.dhcp_snooping_enabled ? t('common.status_active', 'ACTIVO') : t('common.status_inactive', 'INACTIVO') }}
               </span>
             </div>
 
@@ -1575,7 +1590,7 @@
           {{ t('enterprise.switching_rogue_title', 'Servidores DHCP No Autorizados Detectados (Rogue DHCP)') }}
         </h2>
         <div class="tactical-table-wrapper">
-          <table class="tactical-table" aria-label="Alertas Rogue DHCP">
+          <table class="tactical-table" :aria-label="t('enterprise.switching_rogue_aria', 'Alertas Rogue DHCP')">
             <thead>
               <tr>
                 <th scope="col">{{ t('enterprise.switching_th_alert', 'ID Alerta') }}</th>
@@ -1614,7 +1629,7 @@
               </tr>
               <tr v-if="rogueAlerts.length === 0">
                 <td colspan="6" class="text-center text-success">
-                  Cero servidores DHCP no autorizados detectados en la red.
+                  {{ t('enterprise.switching_zero_rogue', 'Cero servidores DHCP no autorizados detectados en la red.') }}
                 </td>
               </tr>
             </tbody>
@@ -1649,7 +1664,7 @@
 
         <!-- Tabla de Métricas de SLA -->
         <div class="tactical-table-wrapper">
-          <table class="tactical-table" aria-label="Métricas de Cumplimiento de SLA">
+          <table class="tactical-table" :aria-label="t('enterprise.sla_table_aria', 'Métricas de Cumplimiento de SLA')">
             <thead>
               <tr>
                 <th scope="col">{{ t('enterprise.sla_th_target', 'Destino / Gateway') }}</th>
@@ -1686,7 +1701,7 @@
               </tr>
               <tr v-if="slaMetrics.length === 0">
                 <td colspan="10" class="text-center text-subtle">
-                  No se han registrado ciclos de sondeo SLA para este router.
+                  {{ t('enterprise.sla_no_metrics', 'No se han registrado ciclos de sondeo SLA para este router.') }}
                 </td>
               </tr>
             </tbody>
@@ -1698,7 +1713,7 @@
           <h2 class="card-title">{{ t('enterprise.sla_probe_title', 'Ejecutar Ciclo de Sondeo Inmediato') }}</h2>
           <form class="tactical-form form-inline" @submit.prevent="handleTriggerProbe">
             <div class="form-group">
-              <label for="sla-target-host">Host / IP Destino</label>
+              <label for="sla-target-host">{{ t('enterprise.sla_target_host_label', 'Host / IP Destino') }}</label>
               <input
                 id="sla-target-host"
                 v-model="slaProbeForm.target_host"
@@ -1708,7 +1723,7 @@
               />
             </div>
             <div class="form-group">
-              <label for="sla-target-name">Nombre del Enlace</label>
+              <label for="sla-target-name">{{ t('enterprise.sla_target_name_label', 'Nombre del Enlace') }}</label>
               <input
                 id="sla-target-name"
                 v-model="slaProbeForm.target_name"
@@ -1717,7 +1732,7 @@
               />
             </div>
             <div class="form-group">
-              <label for="sla-threshold">Umbral Máximo (ms)</label>
+              <label for="sla-threshold">{{ t('enterprise.sla_threshold_label', 'Umbral Máximo (ms)') }}</label>
               <input
                 id="sla-threshold"
                 v-model="slaProbeForm.sla_threshold_ms"
@@ -1747,36 +1762,36 @@
         <div class="wifi-overview-grid">
           <div class="wifi-stat-card">
             <div class="stat-number text-cyan">{{ capsmanOverview?.managed_aps_count || 0 }}</div>
-            <div class="stat-label">Puntos de Acceso (APs) Gestionados</div>
+            <div class="stat-label">{{ t('enterprise.wifi_stat_aps', 'Puntos de Acceso (APs) Gestionados') }}</div>
           </div>
           <div class="wifi-stat-card">
             <div class="stat-number text-success">
               {{ capsmanOverview?.active_radios_count || 0 }}
             </div>
-            <div class="stat-label">Radios Activas (2.4GHz / 5GHz / 6GHz)</div>
+            <div class="stat-label">{{ t('enterprise.wifi_stat_radios', 'Radios Activas (2.4GHz / 5GHz / 6GHz)') }}</div>
           </div>
           <div class="wifi-stat-card">
             <div class="stat-number text-primary">
               {{ capsmanOverview?.connected_clients_count || 0 }}
             </div>
-            <div class="stat-label">Clientes Inalámbricos Conectados</div>
+            <div class="stat-label">{{ t('enterprise.wifi_stat_clients', 'Clientes Inalámbricos Conectados') }}</div>
           </div>
         </div>
 
         <!-- Perfiles de SSIDs -->
         <h2 class="section-subtitle" style="margin-top: 1.5rem">
-          Perfiles de Redes Inalámbricas (SSIDs)
+          {{ t('enterprise.wifi_ssids_title', 'Perfiles de Redes Inalámbricas (SSIDs)') }}
         </h2>
         <div class="tactical-table-wrapper">
-          <table class="tactical-table" aria-label="SSIDs CAPsMAN">
+          <table class="tactical-table" :aria-label="t('enterprise.wifi_ssids_aria', 'SSIDs CAPsMAN')">
             <thead>
               <tr>
-                <th scope="col">Nombre Perfil</th>
-                <th scope="col">SSID Emitido</th>
-                <th scope="col">Protocolo de Seguridad</th>
-                <th scope="col">VLAN</th>
-                <th scope="col">Aislamiento de Clientes</th>
-                <th scope="col">Perfil Ancho de Banda</th>
+                <th scope="col">{{ t('enterprise.wifi_th_profile_name', 'Nombre Perfil') }}</th>
+                <th scope="col">{{ t('enterprise.wifi_th_ssid', 'SSID Emitido') }}</th>
+                <th scope="col">{{ t('enterprise.wifi_th_sec_proto', 'Protocolo de Seguridad') }}</th>
+                <th scope="col">{{ t('enterprise.wifi_th_vlan', 'VLAN') }}</th>
+                <th scope="col">{{ t('enterprise.wifi_th_isolation', 'Aislamiento de Clientes') }}</th>
+                <th scope="col">{{ t('enterprise.wifi_th_bandwidth', 'Perfil Ancho de Banda') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -1786,9 +1801,9 @@
                 <td>
                   <span class="badge badge-info">{{ s.security_type }}</span>
                 </td>
-                <td class="font-mono">{{ s.vlan_id ? `VLAN ${s.vlan_id}` : 'Nativa' }}</td>
-                <td>{{ s.client_isolation ? 'Sí (Aislado)' : 'No' }}</td>
-                <td class="font-mono text-subtle">{{ s.rate_limit_profile || 'Ilimitado' }}</td>
+                <td class="font-mono">{{ s.vlan_id ? `VLAN ${s.vlan_id}` : t('enterprise.wifi_native_vlan', 'Nativa') }}</td>
+                <td>{{ s.client_isolation ? t('enterprise.wifi_isolated_yes', 'Sí (Aislado)') : t('common.no', 'No') }}</td>
+                <td class="font-mono text-subtle">{{ s.rate_limit_profile || t('enterprise.wifi_unlimited', 'Ilimitado') }}</td>
               </tr>
             </tbody>
           </table>
@@ -1796,26 +1811,26 @@
 
         <!-- Clientes WiFi Conectados -->
         <h2 class="section-subtitle" style="margin-top: 1.5rem">
-          Clientes WiFi en Tiempo Real (Fast Roaming 802.11r/k/v)
+          {{ t('enterprise.wifi_clients_title', 'Clientes WiFi en Tiempo Real (Fast Roaming 802.11r/k/v)') }}
         </h2>
         <div class="tactical-table-wrapper">
-          <table class="tactical-table" aria-label="Clientes WiFi">
+          <table class="tactical-table" :aria-label="t('enterprise.wifi_clients_aria', 'Clientes WiFi')">
             <thead>
               <tr>
-                <th scope="col">MAC Address</th>
-                <th scope="col">Hostname / Dispositivo</th>
-                <th scope="col">AP Conectado</th>
-                <th scope="col">SSID</th>
-                <th scope="col">Señal RSSI (dBm)</th>
-                <th scope="col">SNR</th>
-                <th scope="col">Estándar Wi-Fi</th>
-                <th scope="col">Fast Roaming</th>
+                <th scope="col">{{ t('enterprise.wifi_th_mac', 'MAC Address') }}</th>
+                <th scope="col">{{ t('enterprise.wifi_th_hostname', 'Hostname / Dispositivo') }}</th>
+                <th scope="col">{{ t('enterprise.wifi_th_ap', 'AP Conectado') }}</th>
+                <th scope="col">{{ t('enterprise.wifi_th_client_ssid', 'SSID') }}</th>
+                <th scope="col">{{ t('enterprise.wifi_th_rssi', 'Señal RSSI (dBm)') }}</th>
+                <th scope="col">{{ t('enterprise.wifi_th_snr', 'SNR') }}</th>
+                <th scope="col">{{ t('enterprise.wifi_th_standard', 'Estándar Wi-Fi') }}</th>
+                <th scope="col">{{ t('enterprise.wifi_th_fast_roaming', 'Fast Roaming') }}</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="c in wifiClients" :key="c.mac_address">
                 <td class="font-mono font-bold">{{ c.mac_address }}</td>
-                <td>{{ c.hostname || 'Desconocido' }}</td>
+                <td>{{ c.hostname || t('common.unknown', 'Desconocido') }}</td>
                 <td class="text-cyan">{{ c.ap_name }}</td>
                 <td>{{ c.ssid }}</td>
                 <td
@@ -1839,7 +1854,7 @@
               </tr>
               <tr v-if="wifiClients.length === 0">
                 <td colspan="8" class="text-center text-subtle">
-                  No hay clientes inalámbricos conectados en este momento.
+                  {{ t('enterprise.wifi_no_clients', 'No hay clientes inalámbricos conectados en este momento.') }}
                 </td>
               </tr>
             </tbody>

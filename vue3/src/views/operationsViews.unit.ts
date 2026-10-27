@@ -842,7 +842,7 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
 
     // Primera plantilla seleccionada por defecto
     expect((radioInputs[0].element as HTMLInputElement).checked).toBe(true);
-    expect(wrapper.find('.vars-title-hint').text()).toContain('CLIENTE_NTP');
+    expect(wrapper.find('.vars-title-hint').text()).toMatch(/CLIENTE_NTP|Cliente NTP/);
     expect(wrapper.findAll('.vars-grid .form-group').length).toBe(1);
     expect(wrapper.find('.form-label').text()).toContain('Servidor NTP');
 
@@ -851,7 +851,7 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
     await flushPromises();
 
     expect((radioInputs[1].element as HTMLInputElement).checked).toBe(true);
-    expect(wrapper.find('.vars-title-hint').text()).toContain('DNS_CORPORATIVO');
+    expect(wrapper.find('.vars-title-hint').text()).toMatch(/DNS_CORPORATIVO|DNS Corporativo/);
     expect(wrapper.findAll('.vars-grid .form-group').length).toBe(2);
 
     // 4. Seleccionar la tercera plantilla (sin parámetros)

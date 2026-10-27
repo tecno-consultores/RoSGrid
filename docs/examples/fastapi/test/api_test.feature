@@ -809,6 +809,43 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 106. Consulta del catálogo canónico de 28 directivas CIS Benchmark sin sesión devuelve 401
+    Given path '/api/v1/compliance/cis-catalog'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 107. Consulta de auditoría CIS sin autenticación devuelve 401
+    Given path '/api/v1/compliance/cis-audit/00000000-0000-0000-0000-000000000001'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 108. Solicitud de remediación asistida CIS bajo Safe Mode sin autenticación devuelve 401
+    Given path '/api/v1/compliance/cis-audit/00000000-0000-0000-0000-000000000001/auto-harden'
+    And request { directive_codes_to_apply: ['CIS-1.1'] }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 109. Consulta de políticas CIS personalizadas por Tenant sin sesión devuelve 401
+    Given path '/api/v1/compliance/cis-policies'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 110. Consulta del catálogo de plantillas de configuración sin autenticación devuelve 401
+    Given path '/api/v1/operations/templates'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 111. Consulta de presets de plantillas Golden Config sin autenticación devuelve 401
+    Given path '/api/v1/operations/templates/presets'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
 
 
 

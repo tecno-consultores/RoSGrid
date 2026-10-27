@@ -2,7 +2,7 @@
 
 **Licencia:** GPL-3.0-only  
 **Estándar Aplicado:** QA Testing Blueprints (Nivel 11X)  
-**Estado Actual:** Hito 27.11 Completado y Certificado al 100% en Contenedores Docker Efímeros — Expansión CIS Benchmark Hardening (28 Directivas Totales), Enlaces Oficiales MikroTik/NIST/RFCs, Soberanía de Selección por Usuario, Catálogo de 10 Nuevas Plantillas Masivas Avanzadas y Corrección Integral de Syslog.
+**Estado Actual:** Hito 27.11 Completado y Certificado al 100% en Contenedores Docker Efímeros — Expansión CIS Benchmark Hardening (28 Directivas Totales), Enlaces Canónicos RouterOS v7 (0 Errores 404), Soberanía de Selección por Usuario, Catálogo de 10 Nuevas Plantillas Masivas Avanzadas, Corrección Integral de Syslog e Internacionalización Total (CIS, SD-WAN, Flota y Operaciones Masivas).
 
 ---
 
@@ -189,7 +189,7 @@ docker compose -f docker-compose.qa.yml down --remove-orphans
 | **Hito 26** | Gobernanza Táctica de Módulos B2B, DAG Hard Lock, Blindaje RBAC, Contingencia y Auditoría Forense con Rollback | **100%** (544 tests Pytest)<br>**100%** (412 tests Vitest en 56 suites)<br>**100%** (97 BDD API / 46 BDD UI) | N/A | DAG Watcher + RBAC 403 Fail-Closed + WORM Audit Tab + browser_subagent visual pass | ✅ **Certificado** |
 | **Hito 26.8** | Identidad de Marca y Despliegue de Logos Vectoriales Oficiales (Shell, Login, Wallboard, PWA y Metadatos) | **100%** (414 tests Vitest en 56 suites)<br>**100%** (vue-tsc 0 err) | N/A | SVG Vectorial Oficial + Glow Neón Cian + PWA Maskable + Cache Inmutable Nginx | ✅ **Certificado** |
 | **Hito 27** | WebFig v7 Táctico: Paridad Operativa Total, Modales de Creación (Firewall/Queues/PPPoE), Módulos IP & DHCPv4/v6, Pila Dual IPv6, Routing Dinámico y Asistentes NAT | **100%** (551 tests Pytest)<br>**100%** (431 tests Vitest en 59 suites)<br>**100%** (103 BDD API / 49 BDD UI) | N/A | Safe Mode 60s + DHCP Setup Wizard + SLAAC/PD IPv6 + BGP v7 + NAT Wizards | ✅ **Certificado** |
-| **Hito 27.11** | Expansión CIS Benchmark (28 Directivas: 12 Base + 8 ISP + 8 Empresa), Enlaces Oficiales MikroTik/NIST/RFCs, Soberanía Operativa, 10 Nuevas Plantillas Masivas Avanzadas y Corrección Integral Syslog | **100%** (560 tests Pytest)<br>**100%** (416 tests Vitest en 57 suites)<br>**100%** (108 BDD API / 52 BDD UI) | N/A | Safe Mode 60s + Catálogo 28 CIS + 10 Plantillas Bulk-Ops + Trivy IaC/FS (0 err) | ✅ **Certificado** |
+| **Hito 27.11** | Expansión CIS Benchmark (28 Directivas: 12 Base + 8 ISP + 8 Empresa), Enlaces Canónicos RouterOS v7 (0 Errores 404), Soberanía Operativa, 10 Nuevas Plantillas Masivas Avanzadas, Corrección Integral Syslog e Internacionalización Integral (CIS, SD-WAN, Flota y Bulk-Ops) | **100%** (560 tests Pytest)<br>**100%** (416 tests Vitest en 57 suites)<br>**100%** (111 BDD API / 54 BDD UI) | N/A | Safe Mode 60s + Catálogo 28 CIS + 10 Plantillas Bulk-Ops + Trivy IaC/FS (0 err) + 0 colisiones i18n | ✅ **Certificado** |
 
 ---
 

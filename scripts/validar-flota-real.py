@@ -25,8 +25,8 @@ from typing import Any
 
 import httpx
 
-API_BASE_URL = os.environ.get("ROSGRID_API_URL", "http://rosgrid_api:8000")
-TENANT_ID = os.environ.get("ROSGRID_TENANT_ID", "dc5332f8-e565-4e7b-a328-c879a030c2f9")
+API_BASE_URL = os.environ.get("ROSGRID_API_URL", "http://127.0.0.1:8000")
+TENANT_ID = os.environ.get("ROSGRID_TENANT_ID", "a2388bbf-f35e-46d0-9626-e4e111757f1a")
 TENANT_SLUG = os.environ.get("ROSGRID_TENANT_SLUG", "sistemas")
 
 

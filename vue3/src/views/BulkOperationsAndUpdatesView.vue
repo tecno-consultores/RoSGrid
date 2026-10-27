@@ -242,6 +242,58 @@
     }
   }
 
+  function getTemplateKey(name: string): string {
+    const normalized = name.trim().toUpperCase();
+    const mapping: Record<string, string> = {
+      CLIENTE_NTP: 'cliente_ntp',
+      DNS_CORPORATIVO_RESILIENTE: 'dns_corporativo_resiliente',
+      SNMP_V2C_MONITOREO_NOC: 'snmp_v2c_monitoreo_noc',
+      SYSLOG_CENTRALIZADO_ROSGRID: 'syslog_centralizado',
+      ISP_BGP_RPKI_STRICT_VALIDATION: 'bgp_rpki',
+      ISP_CGNAT_DETERMINISTIC_OVERLOAD: 'cgnat_rfc6598',
+      ISP_IPV6_DUAL_STACK_PD: 'isp_ipv6_dual_stack_pd',
+      COPP_CONTROL_PLANE_PROTECTION: 'copp_cpu',
+      BCP38_ANTI_SPOOFING_FILTER: 'bcp38_urpf',
+      TCP_MSS_CLAMPING_OPTIMIZER: 'tcp_mss_clamping_optimizer',
+      ENTERPRISE_BRIDGE_VLAN_TRUNK_ACCESS: 'bridge_vlan',
+      QOS_CAKE_SMART_QUEUE: 'cake_qos',
+      SDWAN_WIREGUARD_SITE_TO_SITE: 'sdwan_wireguard',
+      NIGHTLY_ENCRYPTED_BACKUP_SFTP: 'encrypted_sftp_backup',
+    };
+    if (mapping[normalized]) return mapping[normalized];
+    return name.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+  }
+
+  function getTemplateName(tpl: ConfigTemplate | TemplateItem | null | undefined): string {
+    if (!tpl) return '';
+    const key = getTemplateKey(tpl.name);
+    const translated = t(`template_catalog.${key}.name`);
+    return translated && translated !== `template_catalog.${key}.name` ? translated : tpl.name;
+  }
+
+  function getTemplateDescription(tpl: ConfigTemplate | TemplateItem | null | undefined): string {
+    if (!tpl) return '';
+    const key = getTemplateKey(tpl.name);
+    const translated = t(`template_catalog.${key}.description`);
+    return translated && translated !== `template_catalog.${key}.description`
+      ? translated
+      : tpl.description;
+  }
+
+  function formatParamCount(count: number): string {
+    if (count === 1) {
+      return t('bulk_ops.single_param', '1 parámetro');
+    }
+    return t('bulk_ops.multi_params', `${count} parámetros`, { count });
+  }
+
+  function formatFieldCount(count: number): string {
+    if (count === 1) {
+      return t('bulk_ops.single_field', '1 campo');
+    }
+    return t('bulk_ops.multi_fields', `${count} campos`, { count });
+  }
+
   interface RenderedStep {
     method: string;
     endpoint: string;
@@ -669,13 +721,13 @@
         </div>
 
         <div v-if="templates.length === 0" class="empty-state-banner">
-          <p>No existen plantillas Golden Config registradas para este Tenant.</p>
+          <p>{{ t('bulk_ops.templates_empty', 'No existen plantillas Golden Config registradas para este Tenant.') }}</p>
         </div>
         <div v-else class="templates-list-wrapper">
           <div
             class="templates-list-scroll"
             role="radiogroup"
-            aria-label="Lista de plantillas Golden Config seleccionables"
+            :aria-label="t('bulk_ops.templates_list_aria', 'Lista de plantillas Golden Config seleccionables')"
           >
             <div
               v-for="tpl in templates"
@@ -700,7 +752,7 @@
                   :value="tpl.id"
                   :checked="selectedTemplateId === tpl.id"
                   class="tpl-radio-input"
-                  :aria-label="`Seleccionar plantilla ${tpl.name}`"
+                  :aria-label="t('bulk_ops.template_select_aria', { name: getTemplateName(tpl) })"
                   @change="onSelectTemplate(tpl.id)"
                   @click.stop
                 />
@@ -708,7 +760,7 @@
               <div class="tpl-item-content">
                 <div class="tpl-item-header">
                   <label :for="`tpl-radio-${tpl.id}`" class="tpl-name cursor-pointer">
-                    {{ tpl.name }}
+                    {{ getTemplateName(tpl) }}
                   </label>
                   <div class="tpl-item-badges">
                     <span class="tag tag--role">{{ tpl.category }}</span>
@@ -716,11 +768,11 @@
                       Safe Mode
                     </span>
                     <span class="tag tag--info">
-                      {{ (tpl.variables_schema || []).length }} parámetros
+                      {{ formatParamCount((tpl.variables_schema || []).length) }}
                     </span>
                   </div>
                 </div>
-                <p class="tpl-desc">{{ tpl.description }}</p>
+                <p class="tpl-desc">{{ getTemplateDescription(tpl) }}</p>
               </div>
             </div>
           </div>
@@ -732,14 +784,14 @@
             <h3 class="vars-title">
               {{ t('bulk_ops.vars_title') }}
               <span v-if="selectedTemplate" class="vars-title-hint">
-                — {{ selectedTemplate.name }}
+                — {{ getTemplateName(selectedTemplate) }}
               </span>
             </h3>
             <span
               v-if="selectedTemplate && (selectedTemplate.variables_schema || []).length > 0"
               class="badge badge--info font-mono"
             >
-              {{ (selectedTemplate.variables_schema || []).length }} campos
+              {{ formatFieldCount((selectedTemplate.variables_schema || []).length) }}
             </span>
           </div>
 
@@ -754,7 +806,7 @@
             class="vars-empty-state"
           >
             <p class="text-muted">
-              Esta plantilla no requiere parámetros adicionales de configuración. Se ejecutará con sus comandos predefinidos.
+              {{ t('bulk_ops.no_params_needed', 'Esta plantilla no requiere parámetros adicionales de configuración. Se ejecutará con sus comandos predefinidos.') }}
             </p>
           </div>
 
@@ -784,7 +836,7 @@
         <div v-if="selectedTemplateId" class="preview-box">
           <div class="preview-header">
             <span>{{ t('bulk_ops.preview_title') }}</span>
-            <span class="badge badge--safe">Safe Mode 60s Activado</span>
+            <span class="badge badge--safe">{{ t('bulk_ops.safemode_60s_active', 'Safe Mode 60s Activado') }}</span>
           </div>
           <pre class="preview-code">{{ previewPayload }}</pre>
         </div>
@@ -806,22 +858,22 @@
 
       <!-- PASO 3: Ejecución en Tiempo Real -->
       <div v-if="wizardStep === 3" class="wizard-step-card">
-        <h2 class="step-title">Paso 3: Progreso de Ejecución</h2>
+        <h2 class="step-title">{{ t('bulk_ops.step_3_title', 'Paso 3: Progreso de Ejecución') }}</h2>
 
         <div class="progress-container">
           <div class="progress-bar-bg">
             <div class="progress-bar-fill" :style="{ width: `${progressPercent}%` }"></div>
           </div>
-          <span class="progress-text">{{ progressPercent }}% Completado</span>
+          <span class="progress-text">{{ t('bulk_ops.progress_completed', { percent: progressPercent }) }}</span>
         </div>
 
         <table class="fleet-table">
           <thead>
             <tr>
-              <th>Router</th>
-              <th>Estado</th>
-              <th>Progreso</th>
-              <th>Detalles / Rollback</th>
+              <th>{{ t('bulk_ops.th_res_router', 'Router') }}</th>
+              <th>{{ t('bulk_ops.th_res_status', 'Estado') }}</th>
+              <th>{{ t('bulk_ops.th_res_progress', 'Progreso') }}</th>
+              <th>{{ t('bulk_ops.th_res_details', 'Detalles / Rollback') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -852,28 +904,27 @@
             :disabled="executing"
             @click="wizardStep = 1"
           >
-            Nueva Operación Masiva
+            {{ t('bulk_ops.btn_new_bulk_op', 'Nueva Operación Masiva') }}
           </button>
         </div>
       </div>
     </section>
 
     <!-- Pestaña 2: Actualizador de RouterOS v7 -->
-    <section v-else class="updates-container" aria-label="Centro de actualizaciones RouterOS">
+    <section v-else class="updates-container" :aria-label="t('bulk_ops.updates_center_aria', 'Centro de actualizaciones RouterOS')">
       <div v-if="updateSuccess" class="alert alert--success">✅ {{ updateSuccess }}</div>
 
       <div class="updates-header-card">
         <div>
-          <h2 class="step-title">Matriz de Versiones de RouterOS v7</h2>
+          <h2 class="step-title">{{ t('bulk_ops.updates_title', 'Matriz de Versiones de RouterOS v7') }}</h2>
           <p class="text-muted">
-            RoSGrid genera un respaldo encriptado .rsc + .backup antes de iniciar cualquier
-            actualización.
+            {{ t('bulk_ops.updates_desc', 'RoSGrid genera un respaldo encriptado .rsc + .backup antes de iniciar cualquier actualización.') }}
           </p>
         </div>
 
         <div class="target-version-selector">
           <label class="form-label">
-            Versión Objetivo Recomendada:
+            {{ t('bulk_ops.target_version_label', 'Versión Objetivo Recomendada:') }}
             <select v-model="targetRosVersion" class="form-select">
               <option value="7.16.1">RouterOS 7.16.1 (Stable)</option>
               <option value="7.16.2">RouterOS 7.16.2 (Testing)</option>
@@ -887,19 +938,18 @@
         <div class="poe-safety-options">
           <label class="toggle-poe-label">
             <input v-model="poeAware" type="checkbox" class="checkbox-poe" />
-            <span class="font-bold"
-              >⚡ Ordenamiento PoE-Aware (Hojas PD primero, Switches PSE intermedios, Core
-              final)</span
-            >
+            <span class="font-bold">
+              {{ t('bulk_ops.poe_aware_label', '⚡ Ordenamiento PoE-Aware (Hojas PD primero, Switches PSE intermedios, Core final)') }}
+            </span>
           </label>
 
           <div class="safety-stop-selector">
             <label class="form-label">
-              Freno de Emergencia (Safety Stop):
+              {{ t('bulk_ops.safety_stop_label', 'Freno de Emergencia (Safety Stop):') }}
               <select v-model.number="safetyStopThreshold" class="form-select select-sm">
-                <option :value="1.0">1.0% de fallos (Estricto)</option>
-                <option :value="2.0">2.0% de fallos</option>
-                <option :value="5.0">5.0% de fallos (Permisivo)</option>
+                <option :value="1.0">{{ t('bulk_ops.safety_1_strict', '1.0% de fallos (Estricto)') }}</option>
+                <option :value="2.0">{{ t('bulk_ops.safety_2', '2.0% de fallos') }}</option>
+                <option :value="5.0">{{ t('bulk_ops.safety_5_permissive', '5.0% de fallos (Permisivo)') }}</option>
               </select>
             </label>
           </div>
@@ -909,23 +959,23 @@
           type="button"
           class="btn btn--primary btn-poe-upgrade"
           :disabled="updatingFleet"
-          aria-label="Actualizar flota con ordenamiento PoE-Aware"
+          :aria-label="t('bulk_ops.btn_update_poe', 'Actualizar flota con ordenamiento PoE-Aware')"
           @click="triggerFleetPoeUpdate"
         >
-          <span v-if="updatingFleet">⏳ Procesando etapas PoE...</span>
-          <span v-else>⚡ Actualizar Flota Seleccionada con PoE-Aware</span>
+          <span v-if="updatingFleet">{{ t('bulk_ops.updating_poe_stages', '⏳ Procesando etapas PoE...') }}</span>
+          <span v-else>{{ t('bulk_ops.btn_update_poe', '⚡ Actualizar Flota Seleccionada con PoE-Aware') }}</span>
         </button>
       </div>
 
       <table class="fleet-table">
         <thead>
           <tr>
-            <th>Equipo</th>
-            <th>IP Primaria</th>
-            <th>Versión Actual</th>
-            <th>Versión Objetivo</th>
-            <th>Diferencia</th>
-            <th>Acción de Actualización</th>
+            <th>{{ t('bulk_ops.th_device', 'Equipo') }}</th>
+            <th>{{ t('bulk_ops.th_ip', 'IP Primaria') }}</th>
+            <th>{{ t('bulk_ops.th_current_version', 'Versión Actual') }}</th>
+            <th>{{ t('bulk_ops.th_target_version', 'Versión Objetivo') }}</th>
+            <th>{{ t('bulk_ops.th_diff', 'Diferencia') }}</th>
+            <th>{{ t('bulk_ops.th_action', 'Acción de Actualización') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -936,9 +986,11 @@
             <td class="font-mono">v{{ targetRosVersion }}</td>
             <td>
               <span v-if="r.ros_version === targetRosVersion" class="badge badge--success">
-                Actualizado
+                {{ t('bulk_ops.status_updated', 'Actualizado') }}
               </span>
-              <span v-else class="badge badge--warning"> Pendiente de Upgrade </span>
+              <span v-else class="badge badge--warning">
+                {{ t('bulk_ops.status_pending', 'Pendiente de Upgrade') }}
+              </span>
             </td>
             <td>
               <button
@@ -948,8 +1000,8 @@
                 :disabled="r.ros_version === targetRosVersion || upgradingRouterId === r.id"
                 @click="triggerRosUpdate(r)"
               >
-                <span v-if="upgradingRouterId === r.id">⏳ Actualizando...</span>
-                <span v-else>Actualizar con Backup</span>
+                <span v-if="upgradingRouterId === r.id">{{ t('bulk_ops.upgrading', '⏳ Actualizando...') }}</span>
+                <span v-else>{{ t('bulk_ops.btn_upgrade_single', 'Actualizar con Backup') }}</span>
               </button>
             </td>
           </tr>

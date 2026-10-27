@@ -514,6 +514,29 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And waitFor(".command-code")
     And waitFor("#btn-confirm-safe-remediate")
 
+  Scenario: 53. Operaciones Masivas — Asistente Golden Config y Parametrización Dinámica i18n
+    Given driver baseUrl + '/bulk-ops'
+    And waitFor(".bulk-view")
+    And waitFor(".wizard-steps-nav")
+    Then match text(".bulk-title") contains 'Operaciones Masivas'
+    When click("//button[contains(@class, 'tab-btn') and contains(., 'Plantillas')]")
+    Then waitFor(".templates-list-wrapper")
+    And waitFor(".template-card")
+    And waitFor(".vars-title")
+
+  Scenario: 54. Suite Corporativa — SD-WAN WireGuard y Telemetría de SLA i18n
+    Given driver baseUrl + '/enterprise?tab=sdwan'
+    And waitFor(".enterprise-compliance-view")
+    And waitFor("#tab-btn-sdwan")
+    When click("#tab-btn-sdwan")
+    Then waitFor(".sdwan-grid")
+    And waitFor("#spoke-name-input")
+    And waitFor("#spoke-proto-select")
+    And waitFor("#wan-primary-input")
+    When click("#tab-btn-sla")
+    Then waitFor(".sla-actions")
+    And waitFor("#btn-export-sla")
+
 
 
 
