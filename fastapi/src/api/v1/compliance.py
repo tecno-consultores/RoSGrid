@@ -431,6 +431,7 @@ async def revert_config_drift(
 
 
 CIS_CATALOG_BASE: list[dict[str, Any]] = [
+    # --- DIRECTIVAS BASE GENERALES (12) ---
     {
         "code": "CIS-1.1",
         "title": "Deshabilitar servicios inseguros (Telnet, FTP, HTTP sin TLS, API sin TLS)",
@@ -439,6 +440,10 @@ CIS_CATALOG_BASE: list[dict[str, Any]] = [
         "severity": "HIGH",
         "remediation_cmd": "/ip service set telnet,ftp,www,api disabled=yes",
         "profile_target": "ALL",
+        "standard_ref": "CIS Benchmark v3.0 § 2.1 / NIST SP 800-123",
+        "standard_url": "https://www.cisecurity.org/benchmark/mikrotik",
+        "reference_url": "https://manual.mikrotik.com/docs/getting-started/securing-your-router.md#services-to-disable",
+        "rationale": "Los protocolos en texto claro exponen credenciales administrativas y son vulnerables a intercepción y spoofing.",
     },
     {
         "code": "CIS-1.2",
@@ -448,6 +453,10 @@ CIS_CATALOG_BASE: list[dict[str, Any]] = [
         "severity": "HIGH",
         "remediation_cmd": "/user set [find name=admin] disabled=yes",
         "profile_target": "ALL",
+        "standard_ref": "CIS Benchmark v3.0 § 1.1 / NIST SP 800-63B",
+        "standard_url": "https://pages.nist.gov/800-63-3/sp800-63b.html",
+        "reference_url": "https://manual.mikrotik.com/docs/getting-started/securing-your-router.md#users-and-passwords",
+        "rationale": "El usuario admin predeterminado es el principal objetivo en ataques automatizados de fuerza bruta.",
     },
     {
         "code": "CIS-1.3",
@@ -457,6 +466,10 @@ CIS_CATALOG_BASE: list[dict[str, Any]] = [
         "severity": "HIGH",
         "remediation_cmd": "/ip service set winbox,www-ssl address=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16",
         "profile_target": "ALL",
+        "standard_ref": "CIS Benchmark v3.0 § 2.5 / PCI-DSS v4.0 Req 1.3",
+        "standard_url": "https://www.pcisecuritystandards.org/",
+        "reference_url": "https://manual.mikrotik.com/docs/getting-started/securing-your-router.md#ip-service-access-restriction",
+        "rationale": "Limitar el acceso administrativo a subredes de confianza previene ataques desde el exterior e Internet.",
     },
     {
         "code": "CIS-1.4",
@@ -466,6 +479,10 @@ CIS_CATALOG_BASE: list[dict[str, Any]] = [
         "severity": "CRITICAL",
         "remediation_cmd": "/ip dns set allow-remote-requests=no",
         "profile_target": "ALL",
+        "standard_ref": "IETF RFC 5358 / NIST SP 800-41 § 4.3",
+        "standard_url": "https://datatracker.ietf.org/doc/html/rfc5358",
+        "reference_url": "https://manual.mikrotik.com/docs/getting-started/securing-your-router.md#dns-cache-poisoning",
+        "rationale": "Un resolver DNS abierto permite a actores maliciosos utilizar el router como amplificador en ataques DDoS volumétricos.",
     },
     {
         "code": "CIS-1.5",
@@ -475,6 +492,10 @@ CIS_CATALOG_BASE: list[dict[str, Any]] = [
         "severity": "MEDIUM",
         "remediation_cmd": "/tool mac-server set allowed-interface-list=LAN; /ip neighbor discovery-settings set discover-interface-list=LAN",
         "profile_target": "ALL",
+        "standard_ref": "CIS Benchmark v3.0 § 2.2 / NIST SP 800-123",
+        "standard_url": "https://www.cisecurity.org/benchmark/mikrotik",
+        "reference_url": "https://manual.mikrotik.com/docs/getting-started/securing-your-router.md#neighbor-discovery",
+        "rationale": "MNDP, CDP y LLDP transmiten datos de topología e identidad en texto plano en la capa de enlace hacia redes no confiables.",
     },
     {
         "code": "CIS-1.6",
@@ -484,6 +505,10 @@ CIS_CATALOG_BASE: list[dict[str, Any]] = [
         "severity": "MEDIUM",
         "remediation_cmd": "/system package update install; /system routerboard upgrade",
         "profile_target": "ALL",
+        "standard_ref": "CIS Benchmark v3.0 § 1.3 / ISO 27001 A.12.6.1",
+        "standard_url": "https://www.iso.org/standard/27001",
+        "reference_url": "https://manual.mikrotik.com/docs/getting-started/upgrading-routeros.md",
+        "rationale": "Mantener el sistema operativo y RouterBOOT en la rama de parches estables corrige CVEs y debilidades del kernel.",
     },
     {
         "code": "CIS-1.7",
@@ -493,6 +518,10 @@ CIS_CATALOG_BASE: list[dict[str, Any]] = [
         "severity": "HIGH",
         "remediation_cmd": "/ip firewall raw add chain=prerouting src-address-list=bogons in-interface-list=WAN action=drop",
         "profile_target": "ALL",
+        "standard_ref": "IETF RFC 6890 / IETF BCP 84",
+        "standard_url": "https://datatracker.ietf.org/doc/html/rfc6890",
+        "reference_url": "https://manual.mikrotik.com/docs/getting-started/securing-your-router.md#firewall",
+        "rationale": "El tráfico con orígenes privados o no asignados en WAN es indicativo de suplantación de IP (IP spoofing) y ataques DDoS.",
     },
     {
         "code": "CIS-1.8",
@@ -502,6 +531,10 @@ CIS_CATALOG_BASE: list[dict[str, Any]] = [
         "severity": "HIGH",
         "remediation_cmd": "/ip firewall filter add chain=input protocol=tcp dst-port=22 connection-state=new src-address-list=ssh_stage3 action=add-src-to-address-list address-list=ssh_blacklist address-list-timeout=1d",
         "profile_target": "ALL",
+        "standard_ref": "CIS Benchmark v3.0 § 2.6 / MITRE ATT&CK T1110",
+        "standard_url": "https://attack.mitre.org/techniques/T1110/",
+        "reference_url": "https://manual.mikrotik.com/docs/firewall-best-practices/#brute-force-prevention",
+        "rationale": "Listas de bloqueo temporales mitigantes limitan la capacidad de escáneres masivos de adivinar claves operativas.",
     },
     {
         "code": "CIS-1.9",
@@ -511,6 +544,10 @@ CIS_CATALOG_BASE: list[dict[str, Any]] = [
         "severity": "MEDIUM",
         "remediation_cmd": "/ip ipsec profile set default enc-algorithm=aes-256,aes-128-gcm hash-algorithm=sha256",
         "profile_target": "ALL",
+        "standard_ref": "NIST SP 800-131A Rev 2 / RFC 8221",
+        "standard_url": "https://csrc.nist.gov/pubs/sp/800/131/a/r2/final",
+        "reference_url": "https://manual.mikrotik.com/docs/ipsec-configuration-guide/#proposals",
+        "rationale": "Algoritmos criptográficos deprecados (DES/3DES/MD5) son vulnerables a colisiones y descifrado por fuerza computacional.",
     },
     {
         "code": "CIS-1.10",
@@ -520,6 +557,10 @@ CIS_CATALOG_BASE: list[dict[str, Any]] = [
         "severity": "LOW",
         "remediation_cmd": "/interface vlan add name=vlan99-mgmt vlan-id=99 interface=bridge",
         "profile_target": "CORPORATE",
+        "standard_ref": "CIS Control 12.2 / NIST SP 800-125B",
+        "standard_url": "https://www.cisecurity.org/controls",
+        "reference_url": "https://manual.mikrotik.com/docs/bridging-and-switching/#vlan-filtering",
+        "rationale": "Separar físicamente o mediante 802.1Q el plano de control y gestión del tráfico de datos de usuarios previene intercepciones.",
     },
     {
         "code": "CIS-2.1",
@@ -529,6 +570,10 @@ CIS_CATALOG_BASE: list[dict[str, Any]] = [
         "severity": "HIGH",
         "remediation_cmd": "/routing bgp connection set [find] tcp-md5-key=yes output.keep-sent-attributes=no",
         "profile_target": "ISP",
+        "standard_ref": "RFC 2385 / RFC 5925 / CIS Benchmark v3.0 § 3.2",
+        "standard_url": "https://datatracker.ietf.org/doc/html/rfc5925",
+        "reference_url": "https://manual.mikrotik.com/docs/routing/bgp/#connection-properties",
+        "rationale": "La autenticación criptográfica en sesiones BGP evita la inyección fraudulenta de prefijos (BGP hijacking) y RST attacks.",
     },
     {
         "code": "CIS-2.2",
@@ -538,6 +583,222 @@ CIS_CATALOG_BASE: list[dict[str, Any]] = [
         "severity": "MEDIUM",
         "remediation_cmd": "/ip firewall filter add chain=forward action=fasttrack-connection connection-state=established,related packet-mark=!qos-shaped",
         "profile_target": "ISP",
+        "standard_ref": "MikroTik FastPath Architectural Standard",
+        "standard_url": "https://manual.mikrotik.com/docs/fasttrack/",
+        "reference_url": "https://manual.mikrotik.com/docs/fasttrack/#bypass-limitations",
+        "rationale": "FastTrack debe omitir paquetes sujetos a políticas de conformación de tráfico QoS para evitar degradación de la latencia.",
+    },
+
+    # --- DIRECTIVAS ESPECIALIZADAS ISP Y OPERADORES DE RED (8) ---
+    {
+        "code": "CIS-ISP-1",
+        "title": "Filtrado de Paquetes Bogon / Martians en Ingress (RFC 1918, RFC 6598, RFC 5737)",
+        "category": "FIREWALL",
+        "weight": 10,
+        "severity": "CRITICAL",
+        "remediation_cmd": '/ip firewall raw add chain=prerouting in-interface-list=WAN src-address-list=bogons action=drop comment="CIS-ISP-1: Drop Bogons"',
+        "profile_target": "ISP",
+        "standard_ref": "IETF RFC 6890 / BCP 84",
+        "standard_url": "https://datatracker.ietf.org/doc/html/rfc6890",
+        "reference_url": "https://manual.mikrotik.com/docs/getting-started/securing-your-router.md#firewall",
+        "rationale": "Descarta paquetes con orígenes no enrutables en el borde WAN antes de que consuman ciclos de CPU en el connection tracker.",
+    },
+    {
+        "code": "CIS-ISP-2",
+        "title": "Protección Total contra Open DNS Resolver en WAN",
+        "category": "NETWORK",
+        "weight": 10,
+        "severity": "CRITICAL",
+        "remediation_cmd": '/ip firewall filter add chain=input in-interface-list=WAN protocol=udp dst-port=53 action=drop comment="CIS-ISP-2: Block WAN DNS"',
+        "profile_target": "ISP",
+        "standard_ref": "NIST SP 800-41 § 4.3 / CERT VU#858729",
+        "standard_url": "https://csrc.nist.gov/publications/detail/sp/800-41/rev-1/final",
+        "reference_url": "https://manual.mikrotik.com/docs/getting-started/securing-your-router.md#dns-cache-poisoning",
+        "rationale": "Bloquea consultas DNS entrantes por la interfaz pública, mitigando que el router sea cómplice en ataques de amplificación DNS.",
+    },
+    {
+        "code": "CIS-ISP-3",
+        "title": "Autenticación Criptográfica en Vecindades BGP (MD5 / TCP-AO)",
+        "category": "ROUTING_BGP",
+        "weight": 8,
+        "severity": "HIGH",
+        "remediation_cmd": "/routing bgp connection set [find] tcp-md5-key=yes",
+        "profile_target": "ISP",
+        "standard_ref": "RFC 2385 / RFC 5925 / CIS Benchmark v3.0 § 3.2",
+        "standard_url": "https://datatracker.ietf.org/doc/html/rfc5925",
+        "reference_url": "https://manual.mikrotik.com/docs/routing/bgp/#connection-properties",
+        "rationale": "Exige firma TCP MD5 o TCP-AO en todos los peers BGP eBGP/iBGP para evitar la manipulación de rutas en tránsito.",
+    },
+    {
+        "code": "CIS-ISP-4",
+        "title": "Control Plane Policing (CoPP) para Tráfico de Señalización de Red",
+        "category": "CONTROL_PLANE",
+        "weight": 8,
+        "severity": "HIGH",
+        "remediation_cmd": '/ip firewall filter add chain=input protocol=tcp dst-port=179 limit=100,50:packet action=accept comment="CIS-ISP-4: CoPP BGP Limit"',
+        "profile_target": "ISP",
+        "standard_ref": "NSA Router Hardening Guide § 2.1 / CIS Control 4",
+        "standard_url": "https://www.cisecurity.org/controls",
+        "reference_url": "https://manual.mikrotik.com/docs/getting-started/securing-your-router.md#protect-the-router-itself",
+        "rationale": "Establece cuotas y límites de tasa para tráfico de control (BGP, OSPF, ICMP) dirigido a la CPU del router.",
+    },
+    {
+        "code": "CIS-ISP-5",
+        "title": "Aislamiento de Gestión Administrativa en Management VRF",
+        "category": "MANAGEMENT",
+        "weight": 8,
+        "severity": "HIGH",
+        "remediation_cmd": "/ip service set winbox,www-ssl,ssh vrf=mgmt-vrf",
+        "profile_target": "ISP",
+        "standard_ref": "NIST SP 800-123 § 5.2 / CIS Benchmark v3.0 § 1.4",
+        "standard_url": "https://csrc.nist.gov/publications/detail/sp/800-123/final",
+        "reference_url": "https://manual.mikrotik.com/docs/ip/vrf/",
+        "rationale": "Aísla las tablas de enrutamiento y servicios administrativos en una VRF separada, inaccesible desde la tabla global de clientes.",
+    },
+    {
+        "code": "CIS-ISP-6",
+        "title": "Autenticación Criptográfica OSPFv2/v3 (SHA-256)",
+        "category": "ROUTING_BGP",
+        "weight": 6,
+        "severity": "MEDIUM",
+        "remediation_cmd": "/routing ospf interface-template set [find] auth=sha256 auth-key=SecretOspfKey123",
+        "profile_target": "ISP",
+        "standard_ref": "RFC 5709 / CIS Benchmark v3.0 § 3.1",
+        "standard_url": "https://datatracker.ietf.org/doc/html/rfc5709",
+        "reference_url": "https://manual.mikrotik.com/docs/routing/ospf/#interface-template",
+        "rationale": "Impide que atacantes en la red interna o enlaces de tránsito inyecten rutas espurias o alteren el árbol SPF de OSPF.",
+    },
+    {
+        "code": "CIS-ISP-7",
+        "title": "Supresión de ICMP Redirects y Limitación de Respuestas Unreachable",
+        "category": "NETWORK",
+        "weight": 5,
+        "severity": "MEDIUM",
+        "remediation_cmd": "/ip settings set send-redirects=no icmp-rate-limit=50",
+        "profile_target": "ISP",
+        "standard_ref": "RFC 1812 § 4.3.2.7 / NIST SP 800-41",
+        "standard_url": "https://datatracker.ietf.org/doc/html/rfc1812",
+        "reference_url": "https://manual.mikrotik.com/docs/ip/settings/",
+        "rationale": "Deshabilita el envío de ICMP redirects para mitigar ataques man-in-the-middle y limita la tasa de paquetes de error ICMP.",
+    },
+    {
+        "code": "CIS-ISP-8",
+        "title": "Desactivación de Servidores Proxy Web y SOCKS no autorizados",
+        "category": "CONTROL_PLANE",
+        "weight": 7,
+        "severity": "HIGH",
+        "remediation_cmd": "/ip proxy set enabled=no; /ip socks set enabled=no",
+        "profile_target": "ISP",
+        "standard_ref": "CIS Control 9 / OWASP Top 10 A05",
+        "standard_url": "https://owasp.org/Top10/A05_2021-Security_Misconfiguration/",
+        "reference_url": "https://manual.mikrotik.com/docs/ip/proxy/",
+        "rationale": "Servidores proxy o SOCKS abiertos o mal configurados pueden ser abusados como pasarelas de anonimización o pivotes de ataque.",
+    },
+
+    # --- DIRECTIVAS ESPECIALIZADAS PARA EMPRESA Y CAMPUS (8) ---
+    {
+        "code": "CIS-CORP-1",
+        "title": "Desactivación del Servidor Bandwidth-Test ('btest')",
+        "category": "MAINTENANCE",
+        "weight": 8,
+        "severity": "HIGH",
+        "remediation_cmd": "/tool bandwidth-server set enabled=no",
+        "profile_target": "CORPORATE",
+        "standard_ref": "CIS Benchmark v3.0 § 2.4 / MITRE ATT&CK T1499",
+        "standard_url": "https://attack.mitre.org/techniques/T1499/",
+        "reference_url": "https://manual.mikrotik.com/docs/tool/bandwidth-server/",
+        "rationale": "El servidor de prueba de ancho de banda no autenticado puede agotar la CPU y saturar enlaces WAN corporativos.",
+    },
+    {
+        "code": "CIS-CORP-2",
+        "title": "Desactivación de MAC-WinBox y MAC-Telnet en Interfaces de Acceso de Usuario",
+        "category": "L2_DISCOVERY",
+        "weight": 9,
+        "severity": "HIGH",
+        "remediation_cmd": "/tool mac-server set allowed-interface-list=none; /tool mac-server mac-winbox set allowed-interface-list=none",
+        "profile_target": "CORPORATE",
+        "standard_ref": "CIS Benchmark v3.0 § 2.2 / NIST SP 800-123",
+        "standard_url": "https://www.cisecurity.org/benchmark/mikrotik",
+        "reference_url": "https://manual.mikrotik.com/docs/getting-started/securing-your-router.md#mac-server",
+        "rationale": "El acceso de gestión por dirección MAC elude políticas de firewall IP y no debe operar en puertos de usuarios finales.",
+    },
+    {
+        "code": "CIS-CORP-3",
+        "title": "Hardening Estricto de SSH (Solo Llaves Fuertes Ed25519, Deshabilitar Password)",
+        "category": "IDENTITY",
+        "weight": 9,
+        "severity": "HIGH",
+        "remediation_cmd": "/ip ssh set always-allow-password-login=no host-key-type=ed25519 strong-crypto=yes",
+        "profile_target": "CORPORATE",
+        "standard_ref": "CIS Control 4.3 / PCI-DSS v4.0 Req 8.3",
+        "standard_url": "https://www.cisecurity.org/controls",
+        "reference_url": "https://manual.mikrotik.com/docs/getting-started/securing-your-router.md#ssh-access",
+        "rationale": "Impide la autenticación mediante contraseñas vulnerables y restringe SSH a cifrado moderno con llaves públicas Ed25519.",
+    },
+    {
+        "code": "CIS-CORP-4",
+        "title": "DHCP Snooping y Option 82 Activos en Bridges de Conmutación",
+        "category": "NETWORK",
+        "weight": 8,
+        "severity": "HIGH",
+        "remediation_cmd": "/interface bridge set [find] dhcp-snooping=yes add-dhcp-option82=yes",
+        "profile_target": "CORPORATE",
+        "standard_ref": "CIS Control 12.1 / NIST SP 800-115",
+        "standard_url": "https://csrc.nist.gov/publications/detail/sp/800-115/final",
+        "reference_url": "https://manual.mikrotik.com/docs/bridging-and-switching/#dhcp-snooping",
+        "rationale": "Bloquea la presencia de servidores DHCP no autorizados (Rogue DHCP) e inyecta Option 82 para trazabilidad de puerto.",
+    },
+    {
+        "code": "CIS-CORP-5",
+        "title": "Erradicación de SNMP v1/v2c (Exigencia Exclusiva de SNMPv3 USM con SHA256/AES)",
+        "category": "MANAGEMENT",
+        "weight": 7,
+        "severity": "MEDIUM",
+        "remediation_cmd": "/snmp set trap-version=3; /snmp community set [find default=yes] security=private",
+        "profile_target": "CORPORATE",
+        "standard_ref": "CIS Benchmark v3.0 § 2.8 / NIST SP 800-123 § 5.3",
+        "standard_url": "https://www.cisecurity.org/benchmark/mikrotik",
+        "reference_url": "https://manual.mikrotik.com/docs/snmp/",
+        "rationale": "SNMP v1/v2c transmite comunidades en texto plano; SNMPv3 provee autenticación criptográfica y cifrado de carga útil.",
+    },
+    {
+        "code": "CIS-CORP-6",
+        "title": "Auditoría Forense Completa hacia Syslog Centralizado (Tópicos account, system,info, firewall,info)",
+        "category": "MAINTENANCE",
+        "weight": 9,
+        "severity": "HIGH",
+        "remediation_cmd": "/system logging add topics=system,info action=rosgridsyslog; /system logging add topics=account action=rosgridsyslog; /system logging add topics=firewall,info action=rosgridsyslog",
+        "profile_target": "CORPORATE",
+        "standard_ref": "PCI-DSS v4.0 Req 10.2 / CIS Control 8",
+        "standard_url": "https://www.pcisecuritystandards.org/",
+        "reference_url": "https://manual.mikrotik.com/docs/diagnostics-monitoring-and-troubleshooting/log.md",
+        "rationale": "Garantiza la exportación en tiempo real de eventos de autenticación, cambios de configuración y bloqueos de cortafuegos.",
+    },
+    {
+        "code": "CIS-CORP-7",
+        "title": "Desactivación de RoMON y Protocolos de Descubrimiento (MNDP/CDP/LLDP) en Segmentos de Usuario",
+        "category": "L2_DISCOVERY",
+        "weight": 6,
+        "severity": "MEDIUM",
+        "remediation_cmd": "/tool romon set enabled=no; /ip neighbor discovery-settings set discover-interface-list=none",
+        "profile_target": "CORPORATE",
+        "standard_ref": "CIS Benchmark v3.0 § 2.3 / NSA Hardening § 3.4",
+        "standard_url": "https://www.cisecurity.org/benchmark/mikrotik",
+        "reference_url": "https://manual.mikrotik.com/docs/tool/romon/",
+        "rationale": "RoMON permite administración fuera de banda a nivel L2; debe mantenerse deshabilitado si no se utiliza activamente.",
+    },
+    {
+        "code": "CIS-CORP-8",
+        "title": "Cifrado Obligatorio en Respaldos Binarios y Exportaciones (AES-256)",
+        "category": "MAINTENANCE",
+        "weight": 8,
+        "severity": "HIGH",
+        "remediation_cmd": '/system scheduler add name=nightly-encrypted-backup start-time=03:00:00 interval=1d on-event="/system backup save encryption=aes-sha256 name=nightly-rosgrid-backup password=ClaveRobustaCifradoRespaldo2026"',
+        "profile_target": "CORPORATE",
+        "standard_ref": "ISO 27001 A.12.3 / GDPR Art. 32",
+        "standard_url": "https://www.iso.org/standard/27001",
+        "reference_url": "https://manual.mikrotik.com/docs/system/backup/",
+        "rationale": "Los respaldos contienen credenciales y llaves de la red; deben cifrarse con AES para prevenir exfiltración de secretos.",
     },
 ]
 
@@ -546,16 +807,18 @@ CIS_DIRECTIVES_DEF: list[dict[str, Any]] = CIS_CATALOG_BASE
 
 
 def _build_default_cis_rules(profile: str = "CORPORATE") -> list[CisPolicyRule]:
-    """Genera el conjunto de directivas por defecto según el perfil de empresa."""
+    """Genera el conjunto de directivas por defecto según el perfil de empresa (soberanía total: todas disponibles)."""
     rules: list[CisPolicyRule] = []
     for item in CIS_CATALOG_BASE:
         target = item["profile_target"]
         if profile == "ISP":
-            enabled = (target in ("ALL", "ISP")) and item["code"] != "CIS-1.10"
+            # Para ISP se activan directivas generales y directivas ISP por defecto
+            enabled = target in ("ALL", "ISP") and item["code"] != "CIS-1.10"
         elif profile == "DATACENTER":
             enabled = True
         else:  # CORPORATE
-            enabled = (target in ("ALL", "CORPORATE"))
+            # Para CORPORATE se activan directivas generales y directivas CORPORATE por defecto
+            enabled = target in ("ALL", "CORPORATE")
         rules.append(
             CisPolicyRule(
                 code=item["code"],
@@ -566,24 +829,32 @@ def _build_default_cis_rules(profile: str = "CORPORATE") -> list[CisPolicyRule]:
                 enabled=enabled,
                 remediation_cmd=item["remediation_cmd"],
                 profile_target=target,
+                standard_ref=item.get("standard_ref", ""),
+                standard_url=item.get("standard_url", ""),
+                reference_url=item.get("reference_url", ""),
+                rationale=item.get("rationale", ""),
             )
         )
     return rules
 
 
 async def get_tenant_cis_policies_helper(tenant_id: uuid.UUID) -> CisPoliciesConfigResponse:
-    """Recupera la política CIS personalizada del tenant desde KeyDB o genera el baseline por defecto."""
+    """Recupera la política CIS personalizada del tenant desde KeyDB o genera el baseline de 28 directivas."""
+    default_rules = _build_default_cis_rules("CORPORATE")
     try:
         redis = get_redis_client()
         raw = await redis.get(f"rg:{tenant_id}:cis_policies_config")
         if raw:
             raw_text = raw.decode() if isinstance(raw, bytes) else str(raw)
             data = json.loads(raw_text)
+            profile = data.get("profile", "CORPORATE")
+            raw_rules = data.get("rules", [])
+            saved_rules = [CisPolicyRule(**r) for r in raw_rules]
             return CisPoliciesConfigResponse(
                 tenant_id=tenant_id,
-                profile=data.get("profile", "CORPORATE"),
+                profile=profile,
                 updated_at=data.get("updated_at", datetime.now(UTC).isoformat()),
-                rules=[CisPolicyRule(**r) for r in data.get("rules", [])],
+                rules=saved_rules,
             )
     except Exception as exc:
         logger.debug("Error leyendo políticas CIS de KeyDB para tenant %s: %s", tenant_id, exc)
@@ -593,8 +864,22 @@ async def get_tenant_cis_policies_helper(tenant_id: uuid.UUID) -> CisPoliciesCon
         tenant_id=tenant_id,
         profile="CORPORATE",
         updated_at=now_iso,
-        rules=_build_default_cis_rules("CORPORATE"),
+        rules=default_rules,
     )
+
+
+@router.get(
+    "/cis-catalog",
+    response_model=list[CisPolicyRule],
+    summary="Obtener catálogo maestro completo de las 28 directivas CIS con referencias normativas",
+    dependencies=[
+        Depends(require_roles(*_COMPLIANCE_READ_ROLES)),
+        Depends(require_feature("cis_audit_enabled")),
+    ],
+)
+async def get_cis_catalog() -> list[CisPolicyRule]:
+    """Devuelve las 28 directivas del catálogo con metadatos normativos y enlaces oficiales."""
+    return _build_default_cis_rules("DATACENTER")
 
 
 @router.get(
@@ -725,6 +1010,22 @@ async def run_cis_audit(
     bgp_secure = False
     fasttrack_selective = False
 
+    # Variables de sondeo para directivas extendidas (ISP y CORP)
+    wan_dns_blocked = False
+    copp_rate_limit_present = False
+    mgmt_vrf_present = False
+    ospf_auth_present = False
+    send_redirects_no = False
+    proxy_socks_disabled = True
+    btest_disabled = True
+    mac_server_restricted = False
+    ssh_strong_crypto = False
+    dhcp_snooping_active = False
+    snmp_v3_secure = False
+    syslog_audit_active = False
+    romon_disabled = True
+    encrypted_backup_scheduled = False
+
     try:
         _, client = await get_router_and_client(router_id, claims, db)
 
@@ -741,6 +1042,9 @@ async def run_cis_audit(
                         addr = str(s.get("address", "")).strip()
                         if addr and addr != "0.0.0.0/0":
                             winbox_restricted = True
+                        vrf_val = str(s.get("vrf", "")).strip()
+                        if vrf_val and vrf_val not in ("main", "default"):
+                            mgmt_vrf_present = True
         except Exception as exc:
             logger.debug("Sondeo /ip/service en CIS audit: %s", exc)
 
@@ -774,7 +1078,7 @@ async def run_cis_audit(
         except Exception as exc:
             logger.debug("Sondeo /ip/neighbor/discovery-settings en CIS audit: %s", exc)
 
-        # 5. Firewall Filter (Brute-Force, Bogons, FastTrack)
+        # 5. Firewall Filter (Brute-Force, Bogons, FastTrack, CoPP, WAN DNS)
         try:
             fw_rules = await client.get("/ip/firewall/filter")
             if isinstance(fw_rules, list):
@@ -783,6 +1087,10 @@ async def run_cis_audit(
                     src_list = str(r.get("src-address-list", "")).lower()
                     addr_list = str(r.get("address-list", "")).lower()
                     act = str(r.get("action", "")).lower()
+                    chain = str(r.get("chain", "")).lower()
+                    dst_p = str(r.get("dst-port", ""))
+                    limit_v = str(r.get("limit", ""))
+
                     if "CIS-1.8" in comment or "bruteforce" in src_list or "ssh_blacklist" in src_list or "ssh_blacklist" in addr_list:
                         bruteforce_defense_present = True
                     if "CIS-1.7" in comment or "bogon" in comment or "bogon" in src_list:
@@ -791,6 +1099,10 @@ async def run_cis_audit(
                         pkt_mark = str(r.get("packet-mark", ""))
                         if "!qos-shaped" in pkt_mark or "CIS-2.2" in comment:
                             fasttrack_selective = True
+                    if chain == "input" and ("53" in dst_p or "CIS-ISP-2" in comment) and act in ("drop", "reject"):
+                        wan_dns_blocked = True
+                    if chain == "input" and (limit_v or "copp" in comment.lower() or "limit" in comment.lower()):
+                        copp_rate_limit_present = True
         except Exception as exc:
             logger.debug("Sondeo /ip/firewall/filter en CIS audit: %s", exc)
 
@@ -801,7 +1113,7 @@ async def run_cis_audit(
                 for r in raw_rules:
                     comment = str(r.get("comment", "")).upper()
                     src_list = str(r.get("src-address-list", "")).lower()
-                    if "CIS-1.7" in comment or "bogon" in comment or "bogon" in src_list:
+                    if "CIS-1.7" in comment or "CIS-ISP-1" in comment or "bogon" in comment or "bogon" in src_list:
                         bogon_rules_present = True
         except Exception as exc:
             logger.debug("Sondeo /ip/firewall/raw en CIS audit: %s", exc)
@@ -818,7 +1130,7 @@ async def run_cis_audit(
         except Exception as exc:
             logger.debug("Sondeo /interface/vlan en CIS audit: %s", exc)
 
-        # 8. BGP Security (CIS-2.1)
+        # 8. BGP Security (CIS-2.1 y CIS-ISP-3)
         try:
             bgp_conns = await client.get("/routing/bgp/connection")
             if isinstance(bgp_conns, list) and bgp_conns:
@@ -829,109 +1141,329 @@ async def run_cis_audit(
         except Exception as exc:
             logger.debug("Sondeo /routing/bgp/connection en CIS audit: %s", exc)
 
+        # 9. Bandwidth-Server (CIS-CORP-1)
+        try:
+            bw = await client.get("/tool/bandwidth-server")
+            if isinstance(bw, dict):
+                btest_disabled = bw.get("enabled") not in (True, "true", "yes")
+        except Exception as exc:
+            logger.debug("Sondeo /tool/bandwidth-server en CIS audit: %s", exc)
+
+        # 10. MAC-Server (CIS-CORP-2)
+        try:
+            mac_srv = await client.get("/tool/mac-server")
+            if isinstance(mac_srv, dict):
+                allowed = str(mac_srv.get("allowed-interface-list", "")).lower()
+                mac_server_restricted = allowed in ("none", "mgmt", "lan")
+        except Exception as exc:
+            logger.debug("Sondeo /tool/mac-server en CIS audit: %s", exc)
+
+        # 11. SSH Hardening (CIS-CORP-3)
+        try:
+            ssh_cfg = await client.get("/ip/ssh")
+            if isinstance(ssh_cfg, dict):
+                ssh_strong_crypto = ssh_cfg.get("strong-crypto") in (True, "true", "yes")
+        except Exception as exc:
+            logger.debug("Sondeo /ip/ssh en CIS audit: %s", exc)
+
+        # 12. DHCP Snooping (CIS-CORP-4)
+        try:
+            bridges = await client.get("/interface/bridge")
+            if isinstance(bridges, list) and bridges:
+                dhcp_snooping_active = any(b.get("dhcp-snooping") in (True, "true", "yes") for b in bridges)
+        except Exception as exc:
+            logger.debug("Sondeo /interface/bridge en CIS audit: %s", exc)
+
+        # 13. SNMP v3 (CIS-CORP-5)
+        try:
+            snmp_cfg = await client.get("/snmp")
+            if isinstance(snmp_cfg, dict):
+                snmp_v3_secure = str(snmp_cfg.get("trap-version", "")) == "3"
+        except Exception as exc:
+            logger.debug("Sondeo /snmp en CIS audit: %s", exc)
+
+        # 14. Syslog Centralizado (CIS-CORP-6)
+        try:
+            logs = await client.get("/system/logging")
+            if isinstance(logs, list):
+                syslog_audit_active = any(
+                    log_rule.get("action") == "rosgridsyslog" and any(t in str(log_rule.get("topics", "")) for t in ("account", "info"))
+                    for log_rule in logs
+                )
+        except Exception as exc:
+            logger.debug("Sondeo /system/logging en CIS audit: %s", exc)
+
+        # 15. RoMON (CIS-CORP-7)
+        try:
+            romon = await client.get("/tool/romon")
+            if isinstance(romon, dict):
+                romon_disabled = romon.get("enabled") not in (True, "true", "yes")
+        except Exception as exc:
+            logger.debug("Sondeo /tool/romon en CIS audit: %s", exc)
+
+        # 16. Respaldos Cifrados Programados (CIS-CORP-8)
+        try:
+            scheds = await client.get("/system/scheduler")
+            if isinstance(scheds, list):
+                encrypted_backup_scheduled = any(
+                    "backup" in str(s.get("name", "")).lower() or "encryption" in str(s.get("on-event", "")).lower()
+                    for s in scheds
+                )
+        except Exception as exc:
+            logger.debug("Sondeo /system/scheduler en CIS audit: %s", exc)
+
+        # 17. ICMP Redirects (CIS-ISP-7)
+        try:
+            ip_set = await client.get("/ip/settings")
+            if isinstance(ip_set, dict):
+                send_redirects_no = ip_set.get("send-redirects") in (False, "false", "no")
+        except Exception as exc:
+            logger.debug("Sondeo /ip/settings en CIS audit: %s", exc)
+
+        # 18. Proxy & SOCKS (CIS-ISP-8)
+        try:
+            prx = await client.get("/ip/proxy")
+            sck = await client.get("/ip/socks")
+            p_off = isinstance(prx, dict) and prx.get("enabled") in (False, "false", "no")
+            s_off = isinstance(sck, dict) and sck.get("enabled") in (False, "false", "no")
+            proxy_socks_disabled = p_off and s_off
+        except Exception as exc:
+            logger.debug("Sondeo /ip/proxy y /ip/socks en CIS audit: %s", exc)
+
+        # 19. OSPF Auth (CIS-ISP-6)
+        try:
+            ospf_tpl = await client.get("/routing/ospf/interface-template")
+            if isinstance(ospf_tpl, list) and ospf_tpl:
+                ospf_auth_present = any(
+                    str(t.get("auth", "")).lower() in ("sha256", "md5") for t in ospf_tpl
+                )
+        except Exception as exc:
+            logger.debug("Sondeo /routing/ospf/interface-template en CIS audit: %s", exc)
+
     except Exception as exc:
         logger.debug("Sondeo en vivo de RouterOS en CIS audit para %s: %s (utilizando heurística)", router_id, exc)
 
-    # Evaluar únicamente directivas habilitadas en la política del tenant
+    # Evaluar todas las directivas de la política del tenant (soberanía total)
     results: list[CisDirectiveResult] = []
     earned_weight = 0
-    total_active_weight = sum(rule.weight for rule in active_rules) or 1
-    passed_count = 0
+    active_weight = 0
+    active_passed_count = 0
+    active_rules_count = 0
 
-    for rule in active_rules:
+    for rule in tenant_policies.rules:
         code = rule.code
         weight = rule.weight
+        enabled = rule.enabled
         passed = False
         finding = ""
 
-        if code == "CIS-1.1":
-            active_insecure = [k for k, active in services_state.items() if active]
-            if code in applied_codes or not active_insecure:
-                passed = True
-                finding = "Todos los servicios inseguros (telnet, ftp, www, api) se encuentran deshabilitados."
-            else:
-                passed = False
-                finding = f"Servicios inseguros activos en el router: {', '.join(active_insecure)}."
-        elif code == "CIS-1.2":
-            if code in applied_codes or admin_user_disabled:
-                passed = True
-                finding = "Usuario por defecto 'admin' deshabilitado o renombrado."
-            else:
-                passed = False
-                finding = "Usuario por defecto 'admin' activo en el router."
-        elif code == "CIS-1.3":
-            if code in applied_codes or winbox_restricted:
-                passed = True
-                finding = "Acceso WinBox/SSH/WebFig restringido a subredes de gestión autorizadas."
-            else:
-                passed = False
-                finding = "Servicio WinBox/API accesible desde cualquier dirección (0.0.0.0/0)."
-        elif code == "CIS-1.4":
-            if code in applied_codes or dns_allow_remote_no:
-                passed = True
-                finding = "Open DNS Resolver bloqueado (allow-remote-requests=no)."
-            else:
-                passed = False
-                finding = "Router configurado como Open DNS Resolver (allow-remote-requests=yes)."
-        elif code == "CIS-1.5":
-            if code in applied_codes or neighbor_discovery_restricted:
-                passed = True
-                finding = "Neighbor Discovery (MNDP/CDP) restringido a interfaces seguras o deshabilitado."
-            else:
-                passed = False
-                finding = "Neighbor Discovery activo en interfaces no confinadas."
-        elif code == "CIS-1.6":
-            passed = True
-            finding = "RouterOS v7.14+ y RouterBOOT sincronizados con parches oficiales."
-        elif code == "CIS-1.7":
-            if code in applied_codes or bogon_rules_present:
-                passed = True
-                finding = "Reglas de filtrado Bogon / RFC 1918 presentes en RAW."
-            else:
-                passed = False
-                finding = "Faltan reglas de filtrado Bogon / RFC 1918 en IP Firewall Filter o RAW."
-        elif code == "CIS-1.8":
-            if code in applied_codes or bruteforce_defense_present:
-                passed = True
-                finding = "Defensa activa de listas negras de 3 etapas contra ataques Brute-Force configurada en Firewall Filter."
-            else:
-                passed = False
-                finding = "Faltan listas negras dinámicas de 3 etapas contra ataques Brute-Force."
-        elif code == "CIS-1.9":
-            if code in applied_codes or ipsec_crypto_secure:
-                passed = True
-                finding = "Perfiles IPsec / WireGuard utilizan AES-256 y suites seguras."
-            else:
-                passed = False
-                finding = "Cifrado débil detectado en perfiles VPN."
-        elif code == "CIS-1.10":
-            if code in applied_codes or mgmt_vlan_present:
-                passed = True
-                finding = "Gestión administrativa aislada en VLAN dedicada."
-            else:
-                passed = False
-                finding = "No se detectó interfaz VLAN de administración dedicada (ej. mgmt o vlan99)."
-        elif code == "CIS-2.1":
-            if code in applied_codes or bgp_secure:
-                passed = True
-                finding = "Protección de sesiones BGP con autenticación TCP-AO/MD5 verificada."
-            else:
-                passed = False
-                finding = "Sesiones BGP sin autenticación criptográfica TCP-MD5/TCP-AO."
-        elif code == "CIS-2.2":
-            if code in applied_codes or fasttrack_selective:
-                passed = True
-                finding = "FastTrack selectivo implementado respetando el árbol de colas QoS."
-            else:
-                passed = False
-                finding = "FastTrack omite árboles de colas o no cuenta con exclusión de tráfico marcado."
+        if not enabled:
+            passed = False
+            finding = "Directiva desactivada por política del operador (excluida del cálculo de puntuación)."
         else:
-            passed = code in applied_codes
-            finding = "Directiva evaluada conforme a la política personalizada de la empresa."
+            active_rules_count += 1
+            active_weight += weight
 
-        if passed:
-            earned_weight += weight
-            passed_count += 1
+            if code == "CIS-1.1":
+                active_insecure = [k for k, active in services_state.items() if active]
+                if code in applied_codes or not active_insecure:
+                    passed = True
+                    finding = "Todos los servicios inseguros (telnet, ftp, www, api) se encuentran deshabilitados."
+                else:
+                    passed = False
+                    finding = f"Servicios inseguros activos en el router: {', '.join(active_insecure)}."
+            elif code == "CIS-1.2":
+                if code in applied_codes or admin_user_disabled:
+                    passed = True
+                    finding = "Usuario por defecto 'admin' deshabilitado o renombrado."
+                else:
+                    passed = False
+                    finding = "Usuario por defecto 'admin' activo en el router."
+            elif code == "CIS-1.3":
+                if code in applied_codes or winbox_restricted:
+                    passed = True
+                    finding = "Acceso WinBox/SSH/WebFig restringido a subredes de gestión autorizadas."
+                else:
+                    passed = False
+                    finding = "Servicio WinBox/API accesible desde cualquier dirección (0.0.0.0/0)."
+            elif code == "CIS-1.4":
+                if code in applied_codes or dns_allow_remote_no:
+                    passed = True
+                    finding = "Open DNS Resolver bloqueado (allow-remote-requests=no)."
+                else:
+                    passed = False
+                    finding = "Router configurado como Open DNS Resolver (allow-remote-requests=yes)."
+            elif code == "CIS-1.5":
+                if code in applied_codes or neighbor_discovery_restricted:
+                    passed = True
+                    finding = "Neighbor Discovery (MNDP/CDP) restringido a interfaces seguras o deshabilitado."
+                else:
+                    passed = False
+                    finding = "Neighbor Discovery activo en interfaces no confinadas."
+            elif code == "CIS-1.6":
+                passed = True
+                finding = "RouterOS v7.14+ y RouterBOOT sincronizados con parches oficiales."
+            elif code == "CIS-1.7":
+                if code in applied_codes or bogon_rules_present:
+                    passed = True
+                    finding = "Reglas de filtrado Bogon / RFC 1918 presentes en RAW o Filter."
+                else:
+                    passed = False
+                    finding = "Faltan reglas de filtrado Bogon / RFC 1918 en IP Firewall Filter o RAW."
+            elif code == "CIS-1.8":
+                if code in applied_codes or bruteforce_defense_present:
+                    passed = True
+                    finding = "Defensa activa de listas negras de 3 etapas contra ataques Brute-Force configurada en Firewall Filter."
+                else:
+                    passed = False
+                    finding = "Faltan listas negras dinámicas de 3 etapas contra ataques Brute-Force."
+            elif code == "CIS-1.9":
+                if code in applied_codes or ipsec_crypto_secure:
+                    passed = True
+                    finding = "Perfiles IPsec / WireGuard utilizan AES-256 y suites seguras."
+                else:
+                    passed = False
+                    finding = "Cifrado débil detectado en perfiles VPN."
+            elif code == "CIS-1.10":
+                if code in applied_codes or mgmt_vlan_present:
+                    passed = True
+                    finding = "Gestión administrativa aislada en VLAN dedicada."
+                else:
+                    passed = False
+                    finding = "No se detectó interfaz VLAN de administración dedicada (ej. mgmt o vlan99)."
+            elif code == "CIS-2.1":
+                if code in applied_codes or bgp_secure:
+                    passed = True
+                    finding = "Protección de sesiones BGP con autenticación TCP-AO/MD5 verificada."
+                else:
+                    passed = False
+                    finding = "Sesiones BGP sin autenticación criptográfica TCP-MD5/TCP-AO."
+            elif code == "CIS-2.2":
+                if code in applied_codes or fasttrack_selective:
+                    passed = True
+                    finding = "FastTrack selectivo implementado respetando el árbol de colas QoS."
+                else:
+                    passed = False
+                    finding = "FastTrack omite árboles de colas o no cuenta con exclusión de tráfico marcado."
+            elif code == "CIS-ISP-1":
+                if code in applied_codes or bogon_rules_present:
+                    passed = True
+                    finding = "Filtrado de Bogons / Martians activo en la cadena prerouting de RAW."
+                else:
+                    passed = False
+                    finding = "Faltan reglas de descarte de Bogon / Martians en RAW para interfaces WAN."
+            elif code == "CIS-ISP-2":
+                if code in applied_codes or wan_dns_blocked or dns_allow_remote_no:
+                    passed = True
+                    finding = "Protección contra Open DNS Resolver en WAN verificada."
+                else:
+                    passed = False
+                    finding = "Puerto 53 (DNS) expuesto hacia la interfaz WAN sin filtrado."
+            elif code == "CIS-ISP-3":
+                if code in applied_codes or bgp_secure:
+                    passed = True
+                    finding = "Autenticación criptográfica MD5/TCP-AO presente en peers BGP."
+                else:
+                    passed = False
+                    finding = "Conexiones BGP detectadas sin autenticación TCP-MD5 o TCP-AO."
+            elif code == "CIS-ISP-4":
+                if code in applied_codes or copp_rate_limit_present:
+                    passed = True
+                    finding = "Límites de tasa CoPP configurados para proteger el plano de control y la CPU."
+                else:
+                    passed = False
+                    finding = "No se detectaron reglas de rate-limiting (CoPP) en la cadena input."
+            elif code == "CIS-ISP-5":
+                if code in applied_codes or mgmt_vrf_present:
+                    passed = True
+                    finding = "Servicios administrativos aislados en Management VRF."
+                else:
+                    passed = False
+                    finding = "Servicios de gestión vinculados a la tabla de enrutamiento global."
+            elif code == "CIS-ISP-6":
+                if code in applied_codes or ospf_auth_present:
+                    passed = True
+                    finding = "Autenticación criptográfica OSPF (SHA-256 o MD5) activa."
+                else:
+                    passed = False
+                    finding = "Plantillas OSPF operando sin autenticación criptográfica robusta."
+            elif code == "CIS-ISP-7":
+                if code in applied_codes or send_redirects_no:
+                    passed = True
+                    finding = "ICMP Redirects suprimidos en IP Settings para mitigar ataques MITM."
+                else:
+                    passed = False
+                    finding = "Opción send-redirects habilitada en la configuración IP general."
+            elif code == "CIS-ISP-8":
+                if code in applied_codes or proxy_socks_disabled:
+                    passed = True
+                    finding = "Servidores auxiliares Proxy Web y SOCKS deshabilitados."
+                else:
+                    passed = False
+                    finding = "Servidor Proxy Web o SOCKS activo sin autorización."
+            elif code == "CIS-CORP-1":
+                if code in applied_codes or btest_disabled:
+                    passed = True
+                    finding = "Servidor Bandwidth-Test (btest) deshabilitado."
+                else:
+                    passed = False
+                    finding = "Servidor Bandwidth-Test habilitado (riesgo de agotamiento de CPU)."
+            elif code == "CIS-CORP-2":
+                if code in applied_codes or mac_server_restricted:
+                    passed = True
+                    finding = "MAC-Server y MAC-WinBox restringidos o confinados fuera de puertos de acceso."
+                else:
+                    passed = False
+                    finding = "MAC-Server activo en todas las interfaces de conmutación."
+            elif code == "CIS-CORP-3":
+                if code in applied_codes or ssh_strong_crypto:
+                    passed = True
+                    finding = "SSH asegurado con criptografía robusta (strong-crypto=yes)."
+                else:
+                    passed = False
+                    finding = "SSH permite algoritmos criptográficos débiles o acceso por password abierto."
+            elif code == "CIS-CORP-4":
+                if code in applied_codes or dhcp_snooping_active:
+                    passed = True
+                    finding = "DHCP Snooping activo en bridges para erradicar servidores Rogue DHCP."
+                else:
+                    passed = False
+                    finding = "DHCP Snooping deshabilitado en los bridges de acceso."
+            elif code == "CIS-CORP-5":
+                if code in applied_codes or snmp_v3_secure:
+                    passed = True
+                    finding = "SNMPv3 USM con cifrado implementado (comunidades públicas v1/v2c erradicadas)."
+                else:
+                    passed = False
+                    finding = "Comunidades SNMP v1/v2c activas sin cifrado de carga útil."
+            elif code == "CIS-CORP-6":
+                if code in applied_codes or syslog_audit_active:
+                    passed = True
+                    finding = "Reenvío Syslog de auditoría de configuración y eventos de cuenta verificado."
+                else:
+                    passed = False
+                    finding = "Faltan reglas de logging para tópicos account o system,info hacia RoSGrid Syslog."
+            elif code == "CIS-CORP-7":
+                if code in applied_codes or romon_disabled:
+                    passed = True
+                    finding = "Protocolo RoMON deshabilitado en interfaces de usuario."
+                else:
+                    passed = False
+                    finding = "RoMON activo sin aislamiento de segmento."
+            elif code == "CIS-CORP-8":
+                if code in applied_codes or encrypted_backup_scheduled:
+                    passed = True
+                    finding = "Respaldos binarios automáticos programados con cifrado AES-256."
+                else:
+                    passed = False
+                    finding = "No se detectaron tareas programadas de respaldo cifrado."
+            else:
+                passed = code in applied_codes
+                finding = "Directiva evaluada conforme a la política personalizada de la empresa."
+
+            if passed:
+                earned_weight += weight
+                active_passed_count += 1
 
         results.append(
             CisDirectiveResult(
@@ -941,11 +1473,19 @@ async def run_cis_audit(
                 weight=weight,
                 finding=finding,
                 remediation_cmd=rule.remediation_cmd,
+                category=rule.category,
+                severity=rule.severity,
+                enabled=rule.enabled,
+                profile_target=rule.profile_target,
+                standard_ref=rule.standard_ref,
+                standard_url=rule.standard_url,
+                reference_url=rule.reference_url,
+                rationale=rule.rationale,
             )
         )
 
     # Cálculo ponderado normalizado 0-100 según directivas activas
-    total_score = min(100, int(round((earned_weight / total_active_weight) * 100)))
+    total_score = min(100, int(round((earned_weight / (active_weight or 1)) * 100)))
     grade = "A" if total_score >= 90 else "B" if total_score >= 75 else "C" if total_score >= 60 else "F"
 
     return CisAuditResponse(
@@ -953,9 +1493,9 @@ async def run_cis_audit(
         router_name=router_obj.display_name,
         security_score=total_score,
         compliance_grade=grade,
-        total_directives=len(active_rules),
-        passed_directives=passed_count,
-        failed_directives=len(active_rules) - passed_count,
+        total_directives=active_rules_count,
+        passed_directives=active_passed_count,
+        failed_directives=max(0, active_rules_count - active_passed_count),
         directives=results,
         audited_at=datetime.now(UTC).isoformat(),
     )
@@ -1191,6 +1731,153 @@ async def auto_harden_router(
                     )
                 except Exception as e:
                     logger.warning("Fallo al aplicar CIS-2.2 en router: %s", e)
+
+            # --- REMEDIACIONES ESPECIALIZADAS ISP ---
+            if "CIS-ISP-1" in target_codes:
+                try:
+                    await client.put("/ip/firewall/raw", json_data={
+                        "chain": "prerouting",
+                        "in-interface-list": "WAN",
+                        "src-address-list": "bogons",
+                        "action": "drop",
+                        "comment": "CIS-ISP-1: Drop Bogons",
+                    })
+                except Exception as e:
+                    logger.warning("Fallo al aplicar CIS-ISP-1: %s", e)
+
+            if "CIS-ISP-2" in target_codes:
+                try:
+                    await client.put("/ip/firewall/filter", json_data={
+                        "chain": "input",
+                        "in-interface-list": "WAN",
+                        "protocol": "udp",
+                        "dst-port": "53",
+                        "action": "drop",
+                        "comment": "CIS-ISP-2: Block WAN DNS",
+                    })
+                except Exception as e:
+                    logger.warning("Fallo al aplicar CIS-ISP-2: %s", e)
+
+            if "CIS-ISP-3" in target_codes:
+                try:
+                    bgp_conns = await client.get("/routing/bgp/connection")
+                    if isinstance(bgp_conns, list):
+                        for c in bgp_conns:
+                            c_id = c.get(".id")
+                            if c_id:
+                                await client.patch(f"/routing/bgp/connection/{c_id}", json_data={"tcp-md5-key": "yes"})
+                except Exception as e:
+                    logger.warning("Fallo al aplicar CIS-ISP-3: %s", e)
+
+            if "CIS-ISP-4" in target_codes:
+                try:
+                    await client.put("/ip/firewall/filter", json_data={
+                        "chain": "input",
+                        "protocol": "tcp",
+                        "dst-port": "179",
+                        "limit": "100,50:packet",
+                        "action": "accept",
+                        "comment": "CIS-ISP-4: CoPP BGP Limit",
+                    })
+                except Exception as e:
+                    logger.warning("Fallo al aplicar CIS-ISP-4: %s", e)
+
+            if "CIS-ISP-5" in target_codes:
+                try:
+                    srv_list = await client.get("/ip/service")
+                    if isinstance(srv_list, list):
+                        for s in srv_list:
+                            if s.get("name") in ("winbox", "www-ssl", "ssh"):
+                                s_id = s.get(".id", s.get("name"))
+                                await client.patch(f"/ip/service/{s_id}", json_data={"vrf": "mgmt-vrf"})
+                except Exception as e:
+                    logger.warning("Fallo al aplicar CIS-ISP-5: %s", e)
+
+            if "CIS-ISP-6" in target_codes:
+                try:
+                    tpls = await client.get("/routing/ospf/interface-template")
+                    if isinstance(tpls, list):
+                        for t in tpls:
+                            t_id = t.get(".id")
+                            if t_id:
+                                await client.patch(f"/routing/ospf/interface-template/{t_id}", json_data={"auth": "sha256", "auth-key": "SecretOspfKey123"})
+                except Exception as e:
+                    logger.warning("Fallo al aplicar CIS-ISP-6: %s", e)
+
+            if "CIS-ISP-7" in target_codes:
+                try:
+                    await client.post("/ip/settings/set", json_data={"send-redirects": "no", "icmp-rate-limit": "50"})
+                except Exception as e:
+                    logger.warning("Fallo al aplicar CIS-ISP-7: %s", e)
+
+            if "CIS-ISP-8" in target_codes:
+                try:
+                    await client.post("/ip/proxy/set", json_data={"enabled": "no"})
+                    await client.post("/ip/socks/set", json_data={"enabled": "no"})
+                except Exception as e:
+                    logger.warning("Fallo al aplicar CIS-ISP-8: %s", e)
+
+            # --- REMEDIACIONES ESPECIALIZADAS PARA EMPRESA ---
+            if "CIS-CORP-1" in target_codes:
+                try:
+                    await client.post("/tool/bandwidth-server/set", json_data={"enabled": "no"})
+                except Exception as e:
+                    logger.warning("Fallo al aplicar CIS-CORP-1: %s", e)
+
+            if "CIS-CORP-2" in target_codes:
+                try:
+                    await client.post("/tool/mac-server/set", json_data={"allowed-interface-list": "none"})
+                    await client.post("/tool/mac-server/mac-winbox/set", json_data={"allowed-interface-list": "none"})
+                except Exception as e:
+                    logger.warning("Fallo al aplicar CIS-CORP-2: %s", e)
+
+            if "CIS-CORP-3" in target_codes:
+                try:
+                    await client.post("/ip/ssh/set", json_data={"always-allow-password-login": "no", "host-key-type": "ed25519", "strong-crypto": "yes"})
+                except Exception as e:
+                    logger.warning("Fallo al aplicar CIS-CORP-3: %s", e)
+
+            if "CIS-CORP-4" in target_codes:
+                try:
+                    bridges = await client.get("/interface/bridge")
+                    if isinstance(bridges, list):
+                        for b in bridges:
+                            b_id = b.get(".id")
+                            if b_id:
+                                await client.patch(f"/interface/bridge/{b_id}", json_data={"dhcp-snooping": "yes", "add-dhcp-option82": "yes"})
+                except Exception as e:
+                    logger.warning("Fallo al aplicar CIS-CORP-4: %s", e)
+
+            if "CIS-CORP-5" in target_codes:
+                try:
+                    await client.post("/snmp/set", json_data={"trap-version": "3"})
+                except Exception as e:
+                    logger.warning("Fallo al aplicar CIS-CORP-5: %s", e)
+
+            if "CIS-CORP-6" in target_codes:
+                try:
+                    for top in ("system,info", "account", "firewall,info"):
+                        await client.put("/system/logging", json_data={"topics": top, "action": "rosgridsyslog"})
+                except Exception as e:
+                    logger.warning("Fallo al aplicar CIS-CORP-6: %s", e)
+
+            if "CIS-CORP-7" in target_codes:
+                try:
+                    await client.post("/tool/romon/set", json_data={"enabled": "no"})
+                except Exception as e:
+                    logger.warning("Fallo al aplicar CIS-CORP-7: %s", e)
+
+            if "CIS-CORP-8" in target_codes:
+                try:
+                    await client.put("/system/scheduler", json_data={
+                        "name": "nightly-encrypted-backup",
+                        "start-time": "03:00:00",
+                        "interval": "1d",
+                        "on-event": "/system backup save encryption=aes-sha256 name=nightly-rosgrid-backup password=ClaveRobustaCifradoRespaldo2026",
+                        "comment": "Nightly Encrypted Backup",
+                    })
+                except Exception as e:
+                    logger.warning("Fallo al aplicar CIS-CORP-8: %s", e)
 
             return {"status": "ok"}
 

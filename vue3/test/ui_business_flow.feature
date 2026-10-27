@@ -485,6 +485,36 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     Then waitFor(".modal-card")
     And match text("#modal-vlan-title") contains 'Definir VLAN en Bridge'
 
+  Scenario: 51. Suite Corporativa — Cumplimiento CIS Hardening con 28 Directivas, Enlaces Normativos y Filtros (Hito 27.11)
+    Given driver baseUrl + '/enterprise?tab=cis'
+    And waitFor(".enterprise-compliance-view")
+    And waitFor("#tab-btn-cis")
+    When click("#tab-btn-cis")
+    Then waitFor(".cis-filters-toolbar")
+    And waitFor("#filter-cis-all")
+    And waitFor("#filter-cis-isp")
+    And waitFor("#filter-cis-corporate")
+    And waitFor("#filter-cis-enabled")
+    And waitFor("#filter-cis-disabled")
+    And waitFor("#cis-directives-table")
+    And waitFor(".cis-directive-toggle")
+    And waitFor(".cis-standard-link")
+    And waitFor(".cis-reference-link")
+
+  Scenario: 52. Suite Corporativa — Auto-Remediación Asistida CIS bajo Safe Mode de 60 Segundos (Hito 27.11)
+    Given driver baseUrl + '/enterprise?tab=cis'
+    And waitFor(".enterprise-compliance-view")
+    And waitFor("#tab-btn-cis")
+    When click("#tab-btn-cis")
+    Then waitFor("#cis-directives-table")
+    When click(".btn-apply-remediation")
+    Then waitFor("#modal-remediate-directive")
+    And match text("#modal-remediation-title") contains 'Auto-Remediación Asistida'
+    And match text(".safemode-shield-alert") contains 'Safe Mode (60 segundos)'
+    And waitFor(".command-code")
+    And waitFor("#btn-confirm-safe-remediate")
+
+
 
 
 

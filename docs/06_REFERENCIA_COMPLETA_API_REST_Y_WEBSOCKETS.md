@@ -1134,9 +1134,15 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
 
 #### 4.5.2 Auditoría & Auto-Hardening CIS Benchmark (`/api/v1/compliance`)
 
+##### `GET /api/v1/compliance/cis-catalog`
+
+- **Propósito:** Catálogo canónico canónicamente indexado de las 28 directivas de endurecimiento CIS Benchmark (12 Base + 8 ISP + 8 Empresa) con trazabilidad normativa y enlaces oficiales.
+- **Rol Mínimo:** `OPERATOR`.
+- **Respuesta (200 OK):** Lista de 28 directivas con `code`, `title`, `category`, `weight`, `severity`, `enabled`, `profile_target`, `standard_ref`, `standard_url`, `reference_url`, `rationale` y `remediation_cmd`.
+
 ##### `GET /api/v1/compliance/cis-audit/{router_id}`
 
-- **Propósito:** Auditar las 10 directivas críticas de seguridad para MikroTik RouterOS v7.
+- **Propósito:** Auditar las 28 directivas de seguridad para MikroTik RouterOS v7 con recálculo dinámico ponderado únicamente sobre las directivas activas por el operador (soberanía total).
 - **Rol Mínimo:** `OPERATOR`.
 - **Respuesta (200 OK):**
 
@@ -1146,27 +1152,55 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
     "router_name": "Core-CCR2004",
     "security_score": 85,
     "compliance_grade": "B",
-    "total_directives": 10,
-    "passed_directives": 8,
-    "failed_directives": 2,
+    "total_directives": 28,
+    "passed_directives": 20,
+    "failed_directives": 8,
     "directives": [
       {
         "code": "CIS-1.1",
-        "title": "Deshabilitar Telnet",
+        "title": "Deshabilitar servicios obsoletos e inseguros",
+        "category": "CONTROL_PLANE",
+        "weight": 10,
+        "severity": "HIGH",
+        "enabled": true,
         "passed": false,
-        "weight": 15,
-        "finding": "Telnet está activo en puerto 23",
-        "remediation_cmd": "/ip service set telnet disabled=yes"
+        "finding": "Servicio telnet activo en puerto 23",
+        "remediation_cmd": "/ip service set telnet disabled=yes",
+        "profile_target": "ALL",
+        "standard_ref": "CIS Benchmark 1.1 / NIST SP 800-123",
+        "standard_url": "https://www.cisecurity.org/benchmark/mikrotik",
+        "reference_url": "https://manual.mikrotik.com/docs/getting-started/securing-your-router.md#unused-services",
+        "rationale": "Los protocolos Telnet, FTP y HTTP transmiten credenciales y sesiones en texto plano."
       }
     ],
-    "audited_at": "2026-10-19T20:00:00Z"
+    "audited_at": "2026-10-26T20:00:00Z"
   }
   ```
 
 ##### `POST /api/v1/compliance/cis-audit/{router_id}/auto-harden`
 
-- **Propósito:** Auto-endurecimiento en 1 clic aplicando las directivas CIS fallidas bajo Safe Mode (60s).
+- **Propósito:** Auto-remediación asistida individual o global aplicando directivas CIS bajo Safe Mode transaccional de 60 segundos con reversión automática ante corte de gestión.
 - **Rol Mínimo:** `TENANT_ADMIN`.
+- **Payload Entrada:**
+
+  ```json
+  {
+    "directive_codes_to_apply": ["CIS-1.1", "CIS-ISP-1"]
+  }
+  ```
+
+- **Respuesta (200 OK):**
+
+  ```json
+  {
+    "router_id": "7b8d4f10-1234-4567-89ab-cdef01234567",
+    "applied_directives_count": 2,
+    "remediation_script": "/ip service set telnet disabled=yes\n/ip firewall raw add chain=prerouting src-address-list=bogons in-interface-list=WAN action=drop",
+    "new_security_score": 95,
+    "executed_under_safemode": true,
+    "safemode_timeout_seconds": 60
+  }
+  ```
 
 #### 4.5.3 Orquestación SD-WAN WireGuard Hub & Spoke (`/api/v1/sdwan`)
 

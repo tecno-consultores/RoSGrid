@@ -487,7 +487,7 @@ async def test_bulk_templates_and_jobs(fake_op_context: dict[str, Any]) -> None:
     assert len(syslog_preset["variables_schema"]) == 2
     assert syslog_preset["variables_schema"][0]["key"] == "rosgrid_server_ip"
     assert syslog_preset["variables_schema"][1]["key"] == "rosgrid_syslog_port"
-    assert len(syslog_preset["rest_steps_template"]) == 7
+    assert len(syslog_preset["rest_steps_template"]) == 10
     assert syslog_preset["rest_steps_template"][0]["endpoint"] == "system/logging/action"
     assert syslog_preset["rest_steps_template"][0]["method"] == "PUT"
     assert syslog_preset["rest_steps_template"][1]["endpoint"] == "system/logging"

@@ -35,6 +35,9 @@ add topics=route,ospf,warning action="rosgridsyslog"
 add topics=system,error,critical action="rosgridsyslog"
 add topics=dhcp,critical action="rosgridsyslog"
 add topics=firewall,warning action="rosgridsyslog"
+add topics=system,info action="rosgridsyslog"
+add topics=account action="rosgridsyslog"
+add topics=firewall,info action="rosgridsyslog"
 """
 
 

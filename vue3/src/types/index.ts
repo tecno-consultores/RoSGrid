@@ -858,6 +858,14 @@ export interface CisDirectiveResult {
   weight: number;
   finding: string;
   remediation_cmd: string;
+  category?: string;
+  severity?: string;
+  enabled?: boolean;
+  profile_target?: string;
+  standard_ref?: string;
+  standard_url?: string;
+  reference_url?: string;
+  rationale?: string;
 }
 
 export interface CisAuditResponse {
@@ -895,6 +903,10 @@ export interface CisPolicyRule {
   enabled: boolean;
   remediation_cmd: string;
   profile_target: string;
+  standard_ref?: string;
+  standard_url?: string;
+  reference_url?: string;
+  rationale?: string;
 }
 
 export interface CisPoliciesConfigRequest {

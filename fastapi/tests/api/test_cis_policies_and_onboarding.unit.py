@@ -245,12 +245,13 @@ async def test_tenant_onboarding_lifecycle(
             bgp_looking_glass_enabled=True,
             onboarding_completed=True,
         )
+        superadmin_claims = {**sample_claims, "rol": "SUPERADMIN_GLOBAL"}
         updated = await update_tenant_features(
             tenant_id=sample_tenant_id,
             body=update_req,
             request=mock_request,
             db=db,
-            claims=sample_claims,
+            claims=superadmin_claims,
         )
         assert updated.isp_module_enabled is True
         assert updated.bgp_looking_glass_enabled is True

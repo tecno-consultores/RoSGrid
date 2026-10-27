@@ -12,6 +12,7 @@
     CapsmanOverviewResponse,
     CisAuditResponse,
     CisAutoHardenResponse,
+    CisDirectiveResult,
     CisPoliciesConfigRequest,
     CisPoliciesConfigResponse,
     CisPolicyRule,
@@ -126,6 +127,68 @@
   const editingPolicies = ref<CisPolicyRule[]>([]);
   const selectedCisProfile = ref<string>('CORPORATE');
   const savingPolicies = ref(false);
+  const cisFilterProfile = ref<'ALL' | 'ISP' | 'CORPORATE' | 'ENABLED' | 'DISABLED'>('ALL');
+  const remediationTargetDirective = ref<CisDirectiveResult | null>(null);
+
+  const filteredDirectives = computed(() => {
+    const list = cisAudit.value?.directives || [];
+    if (cisFilterProfile.value === 'ISP') {
+      return list.filter((d) => d.profile_target === 'ALL' || d.profile_target === 'ISP');
+    }
+    if (cisFilterProfile.value === 'CORPORATE') {
+      return list.filter((d) => d.profile_target === 'ALL' || d.profile_target === 'CORPORATE');
+    }
+    if (cisFilterProfile.value === 'ENABLED') {
+      return list.filter((d) => d.enabled !== false);
+    }
+    if (cisFilterProfile.value === 'DISABLED') {
+      return list.filter((d) => d.enabled === false);
+    }
+    return list;
+  });
+
+  function recalculateLocalScore() {
+    if (!cisAudit.value?.directives) return;
+    const active = cisAudit.value.directives.filter((d) => d.enabled !== false);
+    const totalActiveWeight = active.reduce((acc, cur) => acc + (cur.weight || 0), 0) || 1;
+    const earned = active.filter((d) => d.passed).reduce((acc, cur) => acc + (cur.weight || 0), 0);
+    const score = Math.min(100, Math.round((earned / totalActiveWeight) * 100));
+    cisAudit.value.security_score = score;
+    cisAudit.value.compliance_grade = score >= 90 ? 'A' : score >= 75 ? 'B' : score >= 60 ? 'C' : 'F';
+    cisAudit.value.total_directives = active.length;
+    cisAudit.value.passed_directives = active.filter((d) => d.passed).length;
+    cisAudit.value.failed_directives = Math.max(0, active.length - cisAudit.value.passed_directives);
+  }
+
+  async function toggleDirectiveEnabled(d: CisDirectiveResult) {
+    d.enabled = d.enabled === false ? true : false;
+    recalculateLocalScore();
+    if (cisPoliciesConfig.value?.rules) {
+      const match = cisPoliciesConfig.value.rules.find((r) => r.code === d.code);
+      if (match) {
+        match.enabled = d.enabled;
+      }
+      try {
+        await http.put<CisPoliciesConfigResponse>('/api/v1/compliance/cis-policies', {
+          profile: cisPoliciesConfig.value.profile,
+          rules: cisPoliciesConfig.value.rules,
+        });
+      } catch (err) {
+        console.debug('Error sincronizando regla CIS:', err);
+      }
+    }
+  }
+
+  function openRemediationModal(d: CisDirectiveResult) {
+    remediationTargetDirective.value = d;
+  }
+
+  async function confirmApplyDirective() {
+    if (!remediationTargetDirective.value) return;
+    const code = remediationTargetDirective.value.code;
+    remediationTargetDirective.value = null;
+    await handleApplySingleDirective(code);
+  }
 
   // 3. SD-WAN State
   const sdwanTopology = ref<SdwanTopologyResponse | null>(null);
@@ -883,51 +946,245 @@
           </div>
         </div>
 
+        <!-- Barra de Filtros Tácticos por Perfil / Estado -->
+        <div class="cis-filters-toolbar mb-3" role="group" aria-label="Filtros de directivas CIS">
+          <button
+            id="filter-cis-all"
+            type="button"
+            class="filter-pill"
+            :class="{ active: cisFilterProfile === 'ALL' }"
+            @click="cisFilterProfile = 'ALL'"
+          >
+            📋 Todos ({{ cisAudit?.directives?.length || 28 }})
+          </button>
+          <button
+            id="filter-cis-isp"
+            type="button"
+            class="filter-pill"
+            :class="{ active: cisFilterProfile === 'ISP' }"
+            @click="cisFilterProfile = 'ISP'"
+          >
+            🌐 Recomendados ISP ({{ (cisAudit?.directives || []).filter(d => d.profile_target === 'ALL' || d.profile_target === 'ISP').length }})
+          </button>
+          <button
+            id="filter-cis-corporate"
+            type="button"
+            class="filter-pill"
+            :class="{ active: cisFilterProfile === 'CORPORATE' }"
+            @click="cisFilterProfile = 'CORPORATE'"
+          >
+            🏢 Recomendados Empresa ({{ (cisAudit?.directives || []).filter(d => d.profile_target === 'ALL' || d.profile_target === 'CORPORATE').length }})
+          </button>
+          <button
+            id="filter-cis-enabled"
+            type="button"
+            class="filter-pill"
+            :class="{ active: cisFilterProfile === 'ENABLED' }"
+            @click="cisFilterProfile = 'ENABLED'"
+          >
+            ✅ Activas ({{ (cisAudit?.directives || []).filter(d => d.enabled !== false).length }})
+          </button>
+          <button
+            id="filter-cis-disabled"
+            type="button"
+            class="filter-pill"
+            :class="{ active: cisFilterProfile === 'DISABLED' }"
+            @click="cisFilterProfile = 'DISABLED'"
+          >
+            ⏸️ Desactivadas ({{ (cisAudit?.directives || []).filter(d => d.enabled === false).length }})
+          </button>
+        </div>
+
         <!-- Tabla de Directivas CIS Hardening -->
         <div class="tactical-table-wrapper">
-          <table class="tactical-table" aria-label="Directivas CIS Hardening">
+          <table id="cis-directives-table" class="tactical-table cis-table" aria-label="Directivas CIS Hardening">
             <thead>
               <tr>
-                <th scope="col">{{ t('enterprise.cis_th_code', 'Código') }}</th>
-                <th scope="col">{{ t('enterprise.cis_th_title', 'Directiva Técnica') }}</th>
-                <th scope="col">{{ t('enterprise.cis_th_weight', 'Peso') }}</th>
-                <th scope="col">{{ t('enterprise.cis_th_status', 'Estado') }}</th>
-                <th scope="col">{{ t('enterprise.cis_th_finding', 'Hallazgo Técnico') }}</th>
-                <th scope="col">{{ t('enterprise.cis_th_remediation', 'Remediación Automática') }}</th>
-                <th scope="col">{{ t('enterprise.cis_th_action', 'Acción') }}</th>
+                <th scope="col" style="width: 70px;">Activa</th>
+                <th scope="col" style="width: 110px;">Código</th>
+                <th scope="col">Directiva Técnica</th>
+                <th scope="col" style="min-width: 220px;">Referencias Normativas</th>
+                <th scope="col" style="width: 80px;">Peso</th>
+                <th scope="col" style="width: 120px;">Estado</th>
+                <th scope="col">Hallazgo Técnico</th>
+                <th scope="col">Remediación RouterOS v7</th>
+                <th scope="col" style="width: 130px;">Acción</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="d in cisAudit?.directives || []" :key="d.code">
-                <td class="font-mono text-cyan">{{ d.code }}</td>
-                <td>{{ d.title }}</td>
+              <tr
+                v-for="d in filteredDirectives"
+                :key="d.code"
+                :class="{ 'row-disabled': d.enabled === false }"
+              >
+                <!-- Switch de Activación Individual -->
+                <td>
+                  <input
+                    type="checkbox"
+                    class="tactical-checkbox cis-directive-toggle"
+                    :checked="d.enabled !== false"
+                    :aria-label="`Alternar estado de directiva ${d.code}`"
+                    @change="toggleDirectiveEnabled(d)"
+                  />
+                </td>
+                <td>
+                  <div class="font-mono text-cyan font-bold">{{ d.code }}</div>
+                  <span
+                    class="badge badge-xs mt-1"
+                    :class="'badge-' + (d.severity === 'CRITICAL' ? 'danger' : d.severity === 'HIGH' ? 'warning' : 'info')"
+                  >
+                    {{ d.severity || 'HIGH' }}
+                  </span>
+                </td>
+                <td>
+                  <strong>{{ d.title }}</strong>
+                  <div class="text-subtle text-xs font-mono mt-0.5">{{ d.category }}</div>
+                </td>
+                <td>
+                  <div v-if="d.standard_ref" class="text-xs text-subtle font-mono mb-1">
+                    {{ d.standard_ref }}
+                  </div>
+                  <div class="links-row">
+                    <a
+                      v-if="d.standard_url"
+                      :href="d.standard_url"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="link-ref cis-standard-link"
+                      :aria-label="`Abrir estándar oficial para ${d.code} en nueva pestaña`"
+                    >
+                      <span>🔗</span> Estándar
+                    </a>
+                    <a
+                      v-if="d.reference_url"
+                      :href="d.reference_url"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="link-ref link-mikrotik cis-reference-link"
+                      :aria-label="`Abrir documentación oficial de MikroTik para ${d.code} en nueva pestaña`"
+                    >
+                      <span>📖</span> MikroTik v7
+                    </a>
+                  </div>
+                </td>
                 <td>{{ d.weight }} pts</td>
                 <td>
-                  <span class="badge" :class="d.passed ? 'badge-success' : 'badge-danger'">
+                  <span
+                    v-if="d.enabled === false"
+                    class="badge badge-secondary"
+                  >
+                    DESACTIVADA
+                  </span>
+                  <span
+                    v-else
+                    class="badge"
+                    :class="d.passed ? 'badge-success' : 'badge-danger'"
+                  >
                     {{ d.passed ? t('enterprise.cis_passed', 'APROBADO') : t('enterprise.cis_failed', 'FALLIDO') }}
                   </span>
                 </td>
-                <td class="text-subtle">{{ d.finding }}</td>
+                <td class="text-subtle text-xs">{{ d.finding }}</td>
                 <td>
                   <code class="remediation-snippet">{{ d.remediation_cmd }}</code>
                 </td>
                 <td class="action-cell">
                   <button
-                    v-if="!d.passed"
+                    v-if="d.enabled !== false && !d.passed"
                     type="button"
                     class="btn-apply-remediation"
                     :disabled="actionLoading || applyingDirectiveCode === d.code"
-                    :aria-label="`Aplicar remediación para directiva ${d.code}`"
-                    @click="handleApplySingleDirective(d.code)"
+                    :aria-label="`Auto-remediar directiva ${d.code} con Safe Mode`"
+                    @click="openRemediationModal(d)"
                   >
                     <span v-if="applyingDirectiveCode === d.code">{{ t('enterprise.applying', '⏳ Aplicando...') }}</span>
-                    <span v-else>{{ t('enterprise.btn_apply', '⚡ Aplicar') }}</span>
+                    <span v-else>{{ t('enterprise.btn_apply', '⚡ Auto-Remediar') }}</span>
                   </button>
-                  <span v-else class="text-success text-xs font-mono font-bold">{{ t('enterprise.compliant', '✓ Cumplido') }}</span>
+                  <span
+                    v-else-if="d.enabled !== false && d.passed"
+                    class="text-success text-xs font-mono font-bold"
+                  >
+                    {{ t('enterprise.compliant', '✓ Cumplido') }}
+                  </span>
+                  <span
+                    v-else
+                    class="text-subtle text-xs font-mono"
+                  >
+                    (Inactiva)
+                  </span>
                 </td>
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- Modal: Confirmación Asistida de Remediación con Safe Mode (60s) -->
+        <div
+          v-if="remediationTargetDirective"
+          id="modal-remediate-directive"
+          class="modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-remediation-title"
+        >
+          <div class="modal-card remediation-modal">
+            <header class="modal-header">
+              <h3 id="modal-remediation-title">
+                ⚡ Auto-Remediación Asistida — Safe Mode (60s)
+              </h3>
+              <button
+                type="button"
+                class="btn-close"
+                aria-label="Cerrar modal de remediación"
+                @click="remediationTargetDirective = null"
+              >
+                ✕
+              </button>
+            </header>
+            <div class="modal-body">
+              <div class="remediation-directive-info mb-3">
+                <span class="font-mono text-cyan font-bold">{{ remediationTargetDirective.code }}</span>
+                <strong> — {{ remediationTargetDirective.title }}</strong>
+                <p v-if="remediationTargetDirective.rationale" class="text-subtle text-xs mt-1">
+                  {{ remediationTargetDirective.rationale }}
+                </p>
+              </div>
+
+              <div class="safemode-shield-alert mb-3">
+                <span class="shield-icon">🛡️</span>
+                <div class="shield-text">
+                  <strong>Protección Safe Mode (60 segundos):</strong>
+                  <p class="text-xs text-subtle mb-0">
+                    La configuración se aplicará en una sesión transaccional temporal de RouterOS v7. Si la conectividad hacia RoSGrid se interrumpe durante 60 segundos, el router revertirá automáticamente todos los cambios para prevenir bloqueos de gestión.
+                  </p>
+                </div>
+              </div>
+
+              <div class="command-preview-card mb-3">
+                <span class="label text-xs text-subtle font-mono">COMANDO ROUTEROS V7 QUE SE EJECUTARÁ:</span>
+                <pre class="command-code"><code>{{ remediationTargetDirective.remediation_cmd }}</code></pre>
+              </div>
+
+              <div class="modal-actions-row">
+                <button
+                  type="button"
+                  class="tactical-btn btn-secondary"
+                  @click="remediationTargetDirective = null"
+                >
+                  Cancelar
+                </button>
+                <button
+                  id="btn-confirm-safe-remediate"
+                  type="button"
+                  class="tactical-btn btn-primary"
+                  :disabled="actionLoading"
+                  @click="confirmApplyDirective"
+                >
+                  <span v-if="actionLoading">⏳ Aplicando bajo Safe Mode...</span>
+                  <span v-else>⚡ Confirmar y Aplicar (Safe Mode)</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Modal: Personalización de Políticas CIS de la Empresa -->
@@ -1887,6 +2144,147 @@
   .diff-line-ctx {
     color: #94a3b8;
     display: block;
+  }
+
+  /* CIS Filters Toolbar */
+  .cis-filters-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    background: #080f1d;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid #1a2a40;
+    border-radius: 6px;
+  }
+
+  .filter-pill {
+    background: #0b1526;
+    border: 1px solid #1e293b;
+    color: #94a3b8;
+    padding: 0.35rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .filter-pill:hover {
+    border-color: #00e5ff;
+    color: #e2e8f0;
+  }
+
+  .filter-pill.active {
+    background: rgba(0, 229, 255, 0.15);
+    border-color: #00e5ff;
+    color: #00e5ff;
+    box-shadow: 0 0 8px rgba(0, 229, 255, 0.25);
+  }
+
+  /* Links Normativos */
+  .links-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.25rem;
+  }
+
+  .link-ref {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.7rem;
+    color: #38bdf8;
+    text-decoration: none;
+    background: rgba(56, 189, 248, 0.08);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: 4px;
+    padding: 0.15rem 0.45rem;
+    transition: all 0.15s ease;
+  }
+
+  .link-ref:hover {
+    background: rgba(56, 189, 248, 0.2);
+    border-color: #38bdf8;
+    color: #ffffff;
+    text-decoration: underline;
+  }
+
+  .link-ref.link-mikrotik {
+    color: #00e5ff;
+    border-color: rgba(0, 229, 255, 0.3);
+    background: rgba(0, 229, 255, 0.08);
+  }
+
+  .link-ref.link-mikrotik:hover {
+    background: rgba(0, 229, 255, 0.2);
+    border-color: #00e5ff;
+    color: #ffffff;
+  }
+
+  .badge-xs {
+    font-size: 0.65rem;
+    padding: 0.1rem 0.35rem;
+  }
+
+  .row-disabled {
+    opacity: 0.4;
+    background: rgba(15, 23, 42, 0.5);
+  }
+
+  /* Modal de Remediación Asistida */
+  .remediation-modal {
+    max-width: 650px;
+    width: 90vw;
+  }
+
+  .safemode-shield-alert {
+    display: flex;
+    gap: 0.75rem;
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    align-items: flex-start;
+  }
+
+  .shield-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+  }
+
+  .shield-text strong {
+    color: #34d399;
+    font-size: 0.85rem;
+    display: block;
+    margin-bottom: 0.25rem;
+  }
+
+  .command-preview-card {
+    background: #02050b;
+    border: 1px solid #1a2a40;
+    border-radius: 6px;
+    padding: 0.75rem;
+  }
+
+  .command-code {
+    margin: 0.35rem 0 0 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: #38bdf8;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .modal-actions-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
   }
 
   /* CIS Policy Banner & Modal */

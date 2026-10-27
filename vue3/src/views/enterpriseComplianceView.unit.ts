@@ -342,6 +342,14 @@ describe('EnterpriseComplianceView.vue — Hito 20 Suite Corporativa', () => {
     expect(applyBtn.text()).toContain('Aplicar');
 
     await applyBtn.trigger('click');
+
+    await vi.waitFor(() => {
+      expect(wrapper.find('#modal-remediate-directive').exists()).toBe(true);
+    });
+    const confirmBtn = wrapper.find('#btn-confirm-safe-remediate');
+    expect(confirmBtn.exists()).toBe(true);
+    await confirmBtn.trigger('click');
+
     expect(http.post).toHaveBeenCalledWith(
       expect.stringContaining('/auto-harden'),
       expect.objectContaining({

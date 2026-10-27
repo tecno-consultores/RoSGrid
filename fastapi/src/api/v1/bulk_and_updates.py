@@ -314,7 +314,10 @@ _DEFAULT_STARTER_TEMPLATES = [
             '/system logging add topics=route,ospf,warning action="rosgridsyslog"\n'
             '/system logging add topics=system,error,critical action="rosgridsyslog"\n'
             '/system logging add topics=dhcp,critical action="rosgridsyslog"\n'
-            '/system logging add topics=firewall,warning action="rosgridsyslog"'
+            '/system logging add topics=firewall,warning action="rosgridsyslog"\n'
+            '/system logging add topics=system,info action="rosgridsyslog"\n'
+            '/system logging add topics=account action="rosgridsyslog"\n'
+            '/system logging add topics=firewall,info action="rosgridsyslog"'
         ),
         "variables_schema": [
             {
@@ -384,6 +387,406 @@ _DEFAULT_STARTER_TEMPLATES = [
                 "payload": {"topics": "firewall,warning", "action": "rosgridsyslog"},
                 "cli_command": '/system logging add topics=firewall,warning action="rosgridsyslog"',
             },
+            {
+                "method": "PUT",
+                "endpoint": "system/logging",
+                "payload": {"topics": "system,info", "action": "rosgridsyslog"},
+                "cli_command": '/system logging add topics=system,info action="rosgridsyslog"',
+            },
+            {
+                "method": "PUT",
+                "endpoint": "system/logging",
+                "payload": {"topics": "account", "action": "rosgridsyslog"},
+                "cli_command": '/system logging add topics=account action="rosgridsyslog"',
+            },
+            {
+                "method": "PUT",
+                "endpoint": "system/logging",
+                "payload": {"topics": "firewall,info", "action": "rosgridsyslog"},
+                "cli_command": '/system logging add topics=firewall,info action="rosgridsyslog"',
+            },
+        ],
+        "requires_safemode": True,
+    },
+    {
+        "name": "ISP_BGP_RPKI_STRICT_VALIDATION",
+        "category": "ROUTING",
+        "description": "Valida rutas BGP entrantes contra bases RPKI (ROA) y aplica filtros para descartar orígenes Inválidos.",
+        "ros_command_template": (
+            "/routing rpki add address={{ rpki_server }} port={{ rpki_port }} name=rpki-validator\n"
+            '/routing filter rule add chain=RPKI_IN rule="if (rpki-verify() == invalid) { reject }" comment="Drop BGP RPKI Invalid"'
+        ),
+        "variables_schema": [
+            {"key": "rpki_server", "label": "Servidor Caché RPKI", "default_val": "10.0.0.250", "var_type": "string"},
+            {"key": "rpki_port", "label": "Puerto RTR RPKI", "default_val": "8282", "var_type": "string"},
+        ],
+        "rest_steps_template": [
+            {
+                "method": "PUT",
+                "endpoint": "routing/rpki",
+                "payload": {"name": "rpki-validator", "address": "{{ rpki_server }}", "port": "{{ rpki_port }}"},
+                "cli_command": "/routing rpki add address={{ rpki_server }} port={{ rpki_port }} name=rpki-validator",
+            },
+            {
+                "method": "PUT",
+                "endpoint": "routing/filter/rule",
+                "payload": {"chain": "RPKI_IN", "rule": "if (rpki-verify() == invalid) { reject }", "comment": "Drop BGP RPKI Invalid"},
+                "cli_command": '/routing filter rule add chain=RPKI_IN rule="if (rpki-verify() == invalid) { reject }" comment="Drop BGP RPKI Invalid"',
+            },
+        ],
+        "requires_safemode": True,
+    },
+    {
+        "name": "ISP_CGNAT_DETERMINISTIC_OVERLOAD",
+        "category": "FIREWALL",
+        "description": "Implementa Carrier-Grade NAT (CGNAT) RFC 6598 (100.64.0.0/10) con mapeo hacia IPs públicas de salida.",
+        "ros_command_template": (
+            '/ip firewall nat add chain=srcnat src-address={{ cgnat_subnet }} out-interface={{ wan_interface }} action=src-nat to-addresses={{ public_ip_pool }} comment="CGNAT RFC 6598 Carrier Grade NAT"'
+        ),
+        "variables_schema": [
+            {"key": "cgnat_subnet", "label": "Subred de Clientes CGNAT", "default_val": "100.64.0.0/10", "var_type": "string"},
+            {"key": "public_ip_pool", "label": "Rango/IPs Públicas Pool NAT", "default_val": "203.0.113.1-203.0.113.8", "var_type": "string"},
+            {"key": "wan_interface", "label": "Interfaz de Salida WAN", "default_val": "ether1", "var_type": "string"},
+        ],
+        "rest_steps_template": [
+            {
+                "method": "PUT",
+                "endpoint": "ip/firewall/nat",
+                "payload": {
+                    "chain": "srcnat",
+                    "src-address": "{{ cgnat_subnet }}",
+                    "out-interface": "{{ wan_interface }}",
+                    "action": "src-nat",
+                    "to-addresses": "{{ public_ip_pool }}",
+                    "comment": "CGNAT RFC 6598 Carrier Grade NAT",
+                },
+                "cli_command": '/ip firewall nat add chain=srcnat src-address={{ cgnat_subnet }} out-interface={{ wan_interface }} action=src-nat to-addresses={{ public_ip_pool }} comment="CGNAT RFC 6598 Carrier Grade NAT"',
+            },
+        ],
+        "requires_safemode": True,
+    },
+    {
+        "name": "ISP_IPV6_DUAL_STACK_PD",
+        "category": "NETWORK",
+        "description": "Configura cliente DHCPv6 con delegación de prefijo (PD) y asignación a bridge LAN corporativo.",
+        "ros_command_template": (
+            '/ipv6 dhcp-client add interface={{ wan_interface }} pool-name={{ pool_name }} pool-prefix-length=64 request=prefix comment="DHCPv6 PD Client"\n'
+            '/ipv6 address add from-pool={{ pool_name }} interface={{ lan_interface }} advertise=yes comment="IPv6 LAN SLAAC / PD"'
+        ),
+        "variables_schema": [
+            {"key": "wan_interface", "label": "Interfaz WAN DHCPv6", "default_val": "ether1", "var_type": "string"},
+            {"key": "lan_interface", "label": "Interfaz LAN para IPv6", "default_val": "bridge", "var_type": "string"},
+            {"key": "pool_name", "label": "Nombre del Pool Delegado", "default_val": "ipv6-pd-pool", "var_type": "string"},
+        ],
+        "rest_steps_template": [
+            {
+                "method": "PUT",
+                "endpoint": "ipv6/dhcp-client",
+                "payload": {
+                    "interface": "{{ wan_interface }}",
+                    "pool-name": "{{ pool_name }}",
+                    "pool-prefix-length": "64",
+                    "request": "prefix",
+                    "comment": "DHCPv6 PD Client",
+                },
+                "cli_command": '/ipv6 dhcp-client add interface={{ wan_interface }} pool-name={{ pool_name }} pool-prefix-length=64 request=prefix comment="DHCPv6 PD Client"',
+            },
+            {
+                "method": "PUT",
+                "endpoint": "ipv6/address",
+                "payload": {
+                    "from-pool": "{{ pool_name }}",
+                    "interface": "{{ lan_interface }}",
+                    "advertise": "yes",
+                    "comment": "IPv6 LAN SLAAC / PD",
+                },
+                "cli_command": '/ipv6 address add from-pool={{ pool_name }} interface={{ lan_interface }} advertise=yes comment="IPv6 LAN SLAAC / PD"',
+            },
+        ],
+        "requires_safemode": True,
+    },
+    {
+        "name": "COPP_CONTROL_PLANE_PROTECTION",
+        "category": "SECURITY",
+        "description": "Control Plane Policing: Protección integral de la CPU de RouterOS frente a inundaciones y ataques de denegación de servicio.",
+        "ros_command_template": (
+            '/ip firewall filter add chain=input protocol=icmp limit={{ icmp_rate_limit }},5:packet action=accept comment="CoPP: Limit ICMP to CPU"\n'
+            '/ip firewall filter add chain=input protocol=icmp action=drop comment="CoPP: Drop excess ICMP"\n'
+            '/ip firewall filter add chain=input protocol=tcp dst-port=22,8291 connection-state=new limit={{ ssh_syn_limit }},5:packet action=accept comment="CoPP: Limit Management SYNs"'
+        ),
+        "variables_schema": [
+            {"key": "icmp_rate_limit", "label": "Límite paquetes ICMP/s", "default_val": "50", "var_type": "string"},
+            {"key": "ssh_syn_limit", "label": "Límite conexiones SSH/Winbox", "default_val": "10/min", "var_type": "string"},
+        ],
+        "rest_steps_template": [
+            {
+                "method": "PUT",
+                "endpoint": "ip/firewall/filter",
+                "payload": {
+                    "chain": "input",
+                    "protocol": "icmp",
+                    "limit": "{{ icmp_rate_limit }},5:packet",
+                    "action": "accept",
+                    "comment": "CoPP: Limit ICMP to CPU",
+                },
+                "cli_command": '/ip firewall filter add chain=input protocol=icmp limit={{ icmp_rate_limit }},5:packet action=accept comment="CoPP: Limit ICMP to CPU"',
+            },
+            {
+                "method": "PUT",
+                "endpoint": "ip/firewall/filter",
+                "payload": {
+                    "chain": "input",
+                    "protocol": "icmp",
+                    "action": "drop",
+                    "comment": "CoPP: Drop excess ICMP",
+                },
+                "cli_command": '/ip firewall filter add chain=input protocol=icmp action=drop comment="CoPP: Drop excess ICMP"',
+            },
+            {
+                "method": "PUT",
+                "endpoint": "ip/firewall/filter",
+                "payload": {
+                    "chain": "input",
+                    "protocol": "tcp",
+                    "dst-port": "22,8291",
+                    "connection-state": "new",
+                    "limit": "{{ ssh_syn_limit }},5:packet",
+                    "action": "accept",
+                    "comment": "CoPP: Limit Management SYNs",
+                },
+                "cli_command": '/ip firewall filter add chain=input protocol=tcp dst-port=22,8291 connection-state=new limit={{ ssh_syn_limit }},5:packet action=accept comment="CoPP: Limit Management SYNs"',
+            },
+        ],
+        "requires_safemode": True,
+    },
+    {
+        "name": "BCP38_ANTI_SPOOFING_FILTER",
+        "category": "SECURITY",
+        "description": "Aplica filtrado estricto contra IP Source Address Spoofing (BCP 38 / RFC 2827) en interfaces perimetrales y clientes.",
+        "ros_command_template": (
+            '/ip firewall filter add chain=forward in-interface={{ customer_interface }} src-address={{ allowed_customer_prefixes }} action=accept comment="BCP 38: Accept valid customer prefixes"\n'
+            '/ip firewall filter add chain=forward in-interface={{ customer_interface }} action=drop comment="BCP 38: Drop spoofed customer traffic"'
+        ),
+        "variables_schema": [
+            {"key": "allowed_customer_prefixes", "label": "Prefijos Autorizados del Cliente", "default_val": "198.51.100.0/24,203.0.113.0/24", "var_type": "string"},
+            {"key": "customer_interface", "label": "Interfaz del Cliente / Enlace", "default_val": "ether2", "var_type": "string"},
+        ],
+        "rest_steps_template": [
+            {
+                "method": "PUT",
+                "endpoint": "ip/firewall/filter",
+                "payload": {
+                    "chain": "forward",
+                    "in-interface": "{{ customer_interface }}",
+                    "src-address": "{{ allowed_customer_prefixes }}",
+                    "action": "accept",
+                    "comment": "BCP 38: Accept valid customer prefixes",
+                },
+                "cli_command": '/ip firewall filter add chain=forward in-interface={{ customer_interface }} src-address={{ allowed_customer_prefixes }} action=accept comment="BCP 38: Accept valid customer prefixes"',
+            },
+            {
+                "method": "PUT",
+                "endpoint": "ip/firewall/filter",
+                "payload": {
+                    "chain": "forward",
+                    "in-interface": "{{ customer_interface }}",
+                    "action": "drop",
+                    "comment": "BCP 38: Drop spoofed customer traffic",
+                },
+                "cli_command": '/ip firewall filter add chain=forward in-interface={{ customer_interface }} action=drop comment="BCP 38: Drop spoofed customer traffic"',
+            },
+        ],
+        "requires_safemode": True,
+    },
+    {
+        "name": "TCP_MSS_CLAMPING_OPTIMIZER",
+        "category": "NETWORK",
+        "description": "Ajusta automáticamente el MSS en paquetes TCP SYN para evitar fragmentación excesiva en enlaces PPPoE o túneles VPN.",
+        "ros_command_template": (
+            '/ip firewall mangle add chain=forward protocol=tcp tcp-flags=syn out-interface={{ wan_interface }} action=change-mss new-mss={{ tcp_mss_ipv4 }} passthrough=yes comment="Clamp TCP MSS WAN Out"\n'
+            '/ip firewall mangle add chain=forward protocol=tcp tcp-flags=syn in-interface={{ wan_interface }} action=change-mss new-mss={{ tcp_mss_ipv4 }} passthrough=yes comment="Clamp TCP MSS WAN In"'
+        ),
+        "variables_schema": [
+            {"key": "wan_interface", "label": "Interfaz WAN / PPPoE / VPN", "default_val": "all-ppp", "var_type": "string"},
+            {"key": "tcp_mss_ipv4", "label": "Valor MSS TCP", "default_val": "1452", "var_type": "string"},
+        ],
+        "rest_steps_template": [
+            {
+                "method": "PUT",
+                "endpoint": "ip/firewall/mangle",
+                "payload": {
+                    "chain": "forward",
+                    "protocol": "tcp",
+                    "tcp-flags": "syn",
+                    "out-interface": "{{ wan_interface }}",
+                    "action": "change-mss",
+                    "new-mss": "{{ tcp_mss_ipv4 }}",
+                    "passthrough": "yes",
+                    "comment": "Clamp TCP MSS WAN Out",
+                },
+                "cli_command": '/ip firewall mangle add chain=forward protocol=tcp tcp-flags=syn out-interface={{ wan_interface }} action=change-mss new-mss={{ tcp_mss_ipv4 }} passthrough=yes comment="Clamp TCP MSS WAN Out"',
+            },
+            {
+                "method": "PUT",
+                "endpoint": "ip/firewall/mangle",
+                "payload": {
+                    "chain": "forward",
+                    "protocol": "tcp",
+                    "tcp-flags": "syn",
+                    "in-interface": "{{ wan_interface }}",
+                    "action": "change-mss",
+                    "new-mss": "{{ tcp_mss_ipv4 }}",
+                    "passthrough": "yes",
+                    "comment": "Clamp TCP MSS WAN In",
+                },
+                "cli_command": '/ip firewall mangle add chain=forward protocol=tcp tcp-flags=syn in-interface={{ wan_interface }} action=change-mss new-mss={{ tcp_mss_ipv4 }} passthrough=yes comment="Clamp TCP MSS WAN In"',
+            },
+        ],
+        "requires_safemode": True,
+    },
+    {
+        "name": "ENTERPRISE_BRIDGE_VLAN_TRUNK_ACCESS",
+        "category": "NETWORK",
+        "description": "Configuración estandarizada de Bridge con filtrado VLAN 802.1Q, separando Trunk (uplink) de puertos Access de usuario.",
+        "ros_command_template": (
+            "/interface bridge port add bridge={{ bridge_name }} interface={{ access_interface }} pvid={{ access_vlan_id }}\n"
+            "/interface bridge vlan add bridge={{ bridge_name }} vlan-ids={{ access_vlan_id }} tagged={{ trunk_interface }} untagged={{ access_interface }}\n"
+            "/interface bridge set {{ bridge_name }} vlan-filtering=yes"
+        ),
+        "variables_schema": [
+            {"key": "bridge_name", "label": "Nombre del Bridge", "default_val": "bridge", "var_type": "string"},
+            {"key": "trunk_interface", "label": "Interfaz Trunk (Uplink)", "default_val": "sfp-sfpplus1", "var_type": "string"},
+            {"key": "access_interface", "label": "Puerto Access de Usuario", "default_val": "ether2", "var_type": "string"},
+            {"key": "access_vlan_id", "label": "VLAN ID Acceso", "default_val": "10", "var_type": "string"},
+        ],
+        "rest_steps_template": [
+            {
+                "method": "PUT",
+                "endpoint": "interface/bridge/port",
+                "payload": {
+                    "bridge": "{{ bridge_name }}",
+                    "interface": "{{ access_interface }}",
+                    "pvid": "{{ access_vlan_id }}",
+                },
+                "cli_command": "/interface bridge port add bridge={{ bridge_name }} interface={{ access_interface }} pvid={{ access_vlan_id }}",
+            },
+            {
+                "method": "PUT",
+                "endpoint": "interface/bridge/vlan",
+                "payload": {
+                    "bridge": "{{ bridge_name }}",
+                    "vlan-ids": "{{ access_vlan_id }}",
+                    "tagged": "{{ trunk_interface }}",
+                    "untagged": "{{ access_interface }}",
+                },
+                "cli_command": "/interface bridge vlan add bridge={{ bridge_name }} vlan-ids={{ access_vlan_id }} tagged={{ trunk_interface }} untagged={{ access_interface }}",
+            },
+        ],
+        "requires_safemode": True,
+    },
+    {
+        "name": "QOS_CAKE_SMART_QUEUE",
+        "category": "NETWORK",
+        "description": "Erradicación de Bufferbloat mediante colas inteligentes CAKE (Common Applications Kept Enhanced) con aislamiento de flujos.",
+        "ros_command_template": (
+            "/queue type add name=cake-rosgrid kind=cake cake-bandwidth=0 cake-nat=yes\n"
+            '/queue simple add name=cake-qos-traffic target={{ target_interface }} max-limit={{ upload_rate }}/{{ download_rate }} queue=cake-rosgrid/cake-rosgrid comment="CAKE Anti-Bufferbloat"'
+        ),
+        "variables_schema": [
+            {"key": "target_interface", "label": "Interfaz o Target Subred", "default_val": "ether1", "var_type": "string"},
+            {"key": "download_rate", "label": "Ancho de Banda Bajada (Download)", "default_val": "100M", "var_type": "string"},
+            {"key": "upload_rate", "label": "Ancho de Banda Subida (Upload)", "default_val": "50M", "var_type": "string"},
+        ],
+        "rest_steps_template": [
+            {
+                "method": "PUT",
+                "endpoint": "queue/type",
+                "payload": {
+                    "name": "cake-rosgrid",
+                    "kind": "cake",
+                    "cake-bandwidth": "0",
+                    "cake-nat": "yes",
+                },
+                "cli_command": "/queue type add name=cake-rosgrid kind=cake cake-bandwidth=0 cake-nat=yes",
+            },
+            {
+                "method": "PUT",
+                "endpoint": "queue/simple",
+                "payload": {
+                    "name": "cake-qos-traffic",
+                    "target": "{{ target_interface }}",
+                    "max-limit": "{{ upload_rate }}/{{ download_rate }}",
+                    "queue": "cake-rosgrid/cake-rosgrid",
+                    "comment": "CAKE Anti-Bufferbloat",
+                },
+                "cli_command": '/queue simple add name=cake-qos-traffic target={{ target_interface }} max-limit={{ upload_rate }}/{{ download_rate }} queue=cake-rosgrid/cake-rosgrid comment="CAKE Anti-Bufferbloat"',
+            },
+        ],
+        "requires_safemode": True,
+    },
+    {
+        "name": "SDWAN_WIREGUARD_SITE_TO_SITE",
+        "category": "VPN",
+        "description": "Túnel VPN WireGuard punto a punto de alto rendimiento cifrado con ChaCha20-Poly1305 para sucursales corporativas.",
+        "ros_command_template": (
+            "/interface wireguard add name={{ wg_interface }} listen-port={{ listen_port }}\n"
+            "/interface wireguard peers add interface={{ wg_interface }} public-key={{ peer_public_key }} endpoint-address={{ peer_endpoint }} endpoint-port={{ peer_endpoint_port }} allowed-address={{ allowed_ips }} persistent-keepalive=25s"
+        ),
+        "variables_schema": [
+            {"key": "wg_interface", "label": "Nombre Interfaz WireGuard", "default_val": "wg-sdwan0", "var_type": "string"},
+            {"key": "listen_port", "label": "Puerto de Escucha UDP", "default_val": "13231", "var_type": "string"},
+            {"key": "peer_public_key", "label": "Clave Pública del Peer Remoto", "default_val": "PEER_PUBLIC_KEY_BASE64_HERE", "var_type": "string"},
+            {"key": "peer_endpoint", "label": "IP o Hostname del Peer Remoto", "default_val": "198.51.100.1", "var_type": "string"},
+            {"key": "peer_endpoint_port", "label": "Puerto UDP del Peer Remoto", "default_val": "13231", "var_type": "string"},
+            {"key": "allowed_ips", "label": "Subredes Remotas Autorizadas (Allowed IPs)", "default_val": "10.100.0.0/24", "var_type": "string"},
+        ],
+        "rest_steps_template": [
+            {
+                "method": "PUT",
+                "endpoint": "interface/wireguard",
+                "payload": {"name": "{{ wg_interface }}", "listen-port": "{{ listen_port }}"},
+                "cli_command": "/interface wireguard add name={{ wg_interface }} listen-port={{ listen_port }}",
+            },
+            {
+                "method": "PUT",
+                "endpoint": "interface/wireguard/peers",
+                "payload": {
+                    "interface": "{{ wg_interface }}",
+                    "public-key": "{{ peer_public_key }}",
+                    "endpoint-address": "{{ peer_endpoint }}",
+                    "endpoint-port": "{{ peer_endpoint_port }}",
+                    "allowed-address": "{{ allowed_ips }}",
+                    "persistent-keepalive": "25s",
+                },
+                "cli_command": "/interface wireguard peers add interface={{ wg_interface }} public-key={{ peer_public_key }} endpoint-address={{ peer_endpoint }} endpoint-port={{ peer_endpoint_port }} allowed-address={{ allowed_ips }} persistent-keepalive=25s",
+            },
+        ],
+        "requires_safemode": True,
+    },
+    {
+        "name": "NIGHTLY_ENCRYPTED_BACKUP_SFTP",
+        "category": "MAINTENANCE",
+        "description": "Crea tarea programada nocturna para generar backup binario cifrado con AES-SHA256 en RouterOS v7.",
+        "ros_command_template": (
+            '/system scheduler add name=nightly-encrypted-backup start-time={{ schedule_time }} interval=1d on-event="/system backup save encryption=aes-sha256 name=nightly-rosgrid-backup password={{ backup_password }}" comment="Nightly Encrypted Backup"'
+        ),
+        "variables_schema": [
+            {"key": "schedule_time", "label": "Hora de Ejecución Diaria", "default_val": "03:00:00", "var_type": "string"},
+            {"key": "backup_password", "label": "Contraseña de Cifrado AES", "default_val": "ClaveRobustaCifradoRespaldo2026", "var_type": "string"},
+        ],
+        "rest_steps_template": [
+            {
+                "method": "PUT",
+                "endpoint": "system/scheduler",
+                "payload": {
+                    "name": "nightly-encrypted-backup",
+                    "start-time": "{{ schedule_time }}",
+                    "interval": "1d",
+                    "on-event": "/system backup save encryption=aes-sha256 name=nightly-rosgrid-backup password={{ backup_password }}",
+                    "comment": "Nightly Encrypted Backup",
+                },
+                "cli_command": '/system scheduler add name=nightly-encrypted-backup start-time={{ schedule_time }} interval=1d on-event="/system backup save encryption=aes-sha256 name=nightly-rosgrid-backup password={{ backup_password }}" comment="Nightly Encrypted Backup"',
+            },
         ],
         "requires_safemode": True,
     },
@@ -401,8 +804,10 @@ async def list_templates(
     stmt = select(ConfigTemplate).where(ConfigTemplate.tenant_id == tenant_id).order_by(ConfigTemplate.name)
     templates = list((await db.execute(stmt)).scalars().all())
 
-    if not templates:
-        for starter in _DEFAULT_STARTER_TEMPLATES:
+    existing_names = {t.name for t in templates}
+    missing_starters = [s for s in _DEFAULT_STARTER_TEMPLATES if s["name"] not in existing_names]
+    if missing_starters:
+        for starter in missing_starters:
             tpl = ConfigTemplate(
                 tenant_id=tenant_id,
                 name=starter["name"],
@@ -722,12 +1127,24 @@ async def _execute_single_step(client: MikrotikRestClient, step: dict[str, Any])
     payload = step.get("payload", {})
 
     # Auto-redirección de endpoints singulares que no admiten PATCH en RouterOS v7
-    if endpoint == "snmp" and method in ("PATCH", "POST"):
-        return await client.post("snmp/set", payload)
-    if endpoint == "system/ntp/client" and method in ("PATCH", "POST"):
-        return await client.post("system/ntp/client/set", payload)
-    if endpoint == "ip/dns" and method in ("PATCH", "POST"):
-        return await client.post("ip/dns/set", payload)
+    singleton_menus = (
+        "snmp",
+        "system/ntp/client",
+        "ip/dns",
+        "tool/mac-server",
+        "tool/mac-server/mac-winbox",
+        "tool/mac-server/ping",
+        "tool/bandwidth-server",
+        "tool/romon",
+        "ip/ssh",
+        "ip/settings",
+        "ip/neighbor/discovery-settings",
+        "ip/proxy",
+        "ip/socks",
+    )
+    if (endpoint in singleton_menus or endpoint.endswith("/set")) and method in ("PATCH", "POST"):
+        set_endpoint = endpoint if endpoint.endswith("/set") else f"{endpoint}/set"
+        return await client.post(set_endpoint, payload)
 
     if method == "PUT":
         # Idempotencia preventiva para /system/logging: no duplicar reglas con misma acción y tópicos
@@ -768,6 +1185,9 @@ async def _execute_single_step(client: MikrotikRestClient, step: dict[str, Any])
             # Idempotencia para /system/ntp/client/servers si ya existe la dirección registrada
             if "duplicate address" in err_msg and endpoint == "system/ntp/client/servers":
                 logger.info("Servidor NTP ya registrado en router, ignorando duplicado: %s", payload.get("address"))
+                return []
+            if "already exists" in err_msg and endpoint in ("queue/type", "routing/rpki", "system/scheduler", "interface/wireguard"):
+                logger.info("Recurso en %s ya existe en router, tratando como idempotente", endpoint)
                 return []
             raise
     elif method == "POST":

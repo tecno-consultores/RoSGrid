@@ -155,7 +155,7 @@ class SdwanMultiWanFailoverResponse(BaseModel):
 
 
 class CisDirectiveResult(BaseModel):
-    """Resultado individual de una de las 10 directivas críticas CIS."""
+    """Resultado individual de una directiva CIS evaluada."""
 
     code: str
     title: str
@@ -163,6 +163,14 @@ class CisDirectiveResult(BaseModel):
     weight: int
     finding: str
     remediation_cmd: str
+    category: str = "CONTROL_PLANE"
+    severity: str = "HIGH"
+    enabled: bool = True
+    profile_target: str = "ALL"
+    standard_ref: str = ""
+    standard_url: str = ""
+    reference_url: str = ""
+    rationale: str = ""
 
 
 class CisAuditResponse(BaseModel):
@@ -208,6 +216,10 @@ class CisPolicyRule(BaseModel):
     enabled: bool = Field(True)
     remediation_cmd: str = Field(..., max_length=512)
     profile_target: str = Field("ALL", max_length=32)
+    standard_ref: str = Field("", max_length=128)
+    standard_url: str = Field("", max_length=512)
+    reference_url: str = Field("", max_length=512)
+    rationale: str = Field("", max_length=512)
 
 
 class CisPoliciesConfigRequest(StrictBaseModel):
