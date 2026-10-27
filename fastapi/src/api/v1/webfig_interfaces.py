@@ -23,6 +23,8 @@ from src.schemas.webfig_l1_net import (
     BridgeCreateRequest,
     BridgePortCreateRequest,
     BridgeUpdateRequest,
+    BridgeVlanCreateRequest,
+    BridgeVlanUpdateRequest,
     CablePairStatus,
     CableTestResponse,
     SfpDiagnosticsResponse,
@@ -472,6 +474,117 @@ async def list_bridge_vlans(
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         return await cached_mikrotik_get(redis, tenant_id, router_id, "/interface/bridge/vlan", client, refresh)
+
+
+@router.post("/bridge/vlans", status_code=status.HTTP_201_CREATED)
+async def create_bridge_vlan(
+    router_id: uuid.UUID,
+    payload: BridgeVlanCreateRequest,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Crea una entrada en la tabla de VLANs del Bridge bajo Safe Mode."""
+    _, client = await get_router_and_client(router_id, claims, db)
+    body: dict[str, Any] = {
+        "bridge": payload.bridge,
+        "vlan-ids": payload.vlan_ids,
+        "disabled": payload.disabled,
+    }
+    if payload.tagged:
+        body["tagged"] = payload.tagged
+    if payload.untagged:
+        body["untagged"] = payload.untagged
+    if payload.comment:
+        body["comment"] = payload.comment
+
+    async with client:
+        return await execute_safe_mutation(
+            client=client,
+            menu="interface/bridge/vlan",
+            action="create",
+            before_state=body,
+            coro_fn=lambda: client.put("/interface/bridge/vlan", json_data=body),
+        )
+
+
+@router.patch("/bridge/vlans/{item_id}")
+async def update_bridge_vlan(
+    router_id: uuid.UUID,
+    item_id: str,
+    payload: BridgeVlanUpdateRequest,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Modifica una entrada en la tabla de VLANs del Bridge bajo Safe Mode."""
+    _, client = await get_router_and_client(router_id, claims, db)
+    patch_data: dict[str, Any] = {}
+    if payload.bridge:
+        patch_data["bridge"] = payload.bridge
+    if payload.vlan_ids:
+        patch_data["vlan-ids"] = payload.vlan_ids
+    if payload.tagged is not None:
+        patch_data["tagged"] = payload.tagged
+    if payload.untagged is not None:
+        patch_data["untagged"] = payload.untagged
+    if payload.comment is not None:
+        patch_data["comment"] = payload.comment
+    if payload.disabled is not None:
+        patch_data["disabled"] = payload.disabled
+
+    async with client:
+        before = await client.get(f"/interface/bridge/vlan/{item_id}")
+        return await execute_safe_mutation(
+            client=client,
+            menu="interface/bridge/vlan",
+            action="set",
+            item_id=item_id,
+            before_state=before if isinstance(before, dict) else {},
+            coro_fn=lambda: client.patch(f"/interface/bridge/vlan/{item_id}", json_data=patch_data),
+        )
+
+
+@router.delete("/bridge/vlans/{item_id}")
+async def delete_bridge_vlan(
+    router_id: uuid.UUID,
+    item_id: str,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+        )
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Elimina una entrada de la tabla de VLANs del Bridge bajo Safe Mode."""
+    _, client = await get_router_and_client(router_id, claims, db)
+    async with client:
+        before = await client.get(f"/interface/bridge/vlan/{item_id}")
+        return await execute_safe_mutation(
+            client=client,
+            menu="interface/bridge/vlan",
+            action="delete",
+            item_id=item_id,
+            before_state=before if isinstance(before, dict) else {},
+            coro_fn=lambda: client.delete(f"/interface/bridge/vlan/{item_id}"),
+        )
 
 
 @router.get("/bridge/hosts")

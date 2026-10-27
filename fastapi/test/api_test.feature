@@ -795,6 +795,20 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 104. Creación de entrada Bridge VLAN Filtering sin autenticación devuelve 401
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/interfaces/bridge/vlans'
+    And request { bridge: 'bridge1', vlan_ids: '10,20', tagged: 'ether1', untagged: 'ether2' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 105. Creación de subinterfaz VLAN 802.1Q sin autenticación devuelve 401
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/interfaces/vlan'
+    And request { name: 'vlan100-mgmt', vlan_id: 100, interface: 'bridge1' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
 
 
 

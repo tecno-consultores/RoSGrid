@@ -472,6 +472,19 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And match text(".header-actions") contains 'Masquerade'
     And match text(".header-actions") contains 'Port Forwarding'
 
+  Scenario: 50. WebFig v7 — Gestor Bridge & VLAN Switching con Definición de VLANs y Subinterfaces 802.1Q (Hito 27)
+    Given driver baseUrl + '/routers/00000000-0000-0000-0000-000000000001/webfig/bridge'
+    And waitFor(".bridge-view")
+    And match text(".view-title") contains 'Gestor Bridge & VLAN Switching'
+    And waitFor(".tabs-nav")
+    When click("//button[contains(@class, 'tab-btn') and contains(., 'Tabla VLANs')]")
+    Then waitFor(".header-actions")
+    And match text(".header-actions") contains '+ Definir VLAN en Bridge'
+    And match text(".header-actions") contains '+ Subinterfaz 802.1Q'
+    When click("//button[contains(., '+ Definir VLAN en Bridge')]")
+    Then waitFor(".modal-card")
+    And match text("#modal-vlan-title") contains 'Definir VLAN en Bridge'
+
 
 
 

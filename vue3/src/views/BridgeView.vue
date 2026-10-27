@@ -87,6 +87,25 @@
     ingress_filtering: false,
   });
 
+  const isCreateVlanModalOpen = ref(false);
+  const newVlan = ref({
+    bridge: '',
+    vlan_ids: '10',
+    tagged: '',
+    untagged: '',
+    comment: '',
+    disabled: false,
+  });
+
+  const isCreateInterfaceVlanModalOpen = ref(false);
+  const newInterfaceVlan = ref({
+    name: 'vlan10',
+    vlan_id: 10,
+    interface: '',
+    mtu: 1500,
+    comment: '',
+  });
+
   const bridgeColumns: TableColumn<BridgeRow>[] = [
     { key: 'name', label: 'Nombre Bridge', sortable: true },
     { key: 'mac_address', label: 'Dirección MAC' },
@@ -122,6 +141,7 @@
     { key: 'untagged', label: 'Untagged' },
     { key: 'current_tagged', label: 'Current Tagged' },
     { key: 'current_untagged', label: 'Current Untagged' },
+    { key: 'actions', label: 'Acciones', align: 'center' },
   ];
 
   const hostColumns: TableColumn<BridgeHostRow>[] = [
@@ -244,6 +264,99 @@
     }
   }
 
+  function openCreateVlanModal() {
+    if (bridgesList.value.length > 0 && !newVlan.value.bridge) {
+      newVlan.value.bridge = bridgesList.value[0].name;
+    }
+    isCreateVlanModalOpen.value = true;
+  }
+
+  function openCreateInterfaceVlanModal() {
+    if (bridgesList.value.length > 0 && !newInterfaceVlan.value.interface) {
+      newInterfaceVlan.value.interface = bridgesList.value[0].name;
+    }
+    isCreateInterfaceVlanModalOpen.value = true;
+  }
+
+  async function handleCreateVlan() {
+    isLoading.value = true;
+    errorMessage.value = '';
+    webFigStore.startSafeModeCountdown(60);
+    try {
+      await http.post(
+        `/api/v1/routers/${routerId.value}/webfig/interfaces/bridge/vlans`,
+        newVlan.value,
+      );
+      statusMessage.value = `VLAN(s) "${newVlan.value.vlan_ids}" agregada(s) al Bridge "${newVlan.value.bridge}" bajo Safe Mode.`;
+      isCreateVlanModalOpen.value = false;
+      newVlan.value = {
+        bridge: bridgesList.value[0]?.name || 'bridge',
+        vlan_ids: '',
+        tagged: '',
+        untagged: '',
+        comment: '',
+        disabled: false,
+      };
+      loadData();
+    } catch (err: unknown) {
+      const error = err as { message?: string; detail?: string; response?: { data?: { detail?: string } } };
+      errorMessage.value =
+        error.response?.data?.detail || error.detail || error.message || 'Error al crear la VLAN en el bridge.';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function handleDeleteVlan(vlan: BridgeVlanRow) {
+    if (!confirm(`¿Eliminar la entrada de VLAN "${vlan.vlan_ids}" del Bridge "${vlan.bridge}" bajo Safe Mode (60s)?`)) {
+      return;
+    }
+    isLoading.value = true;
+    errorMessage.value = '';
+    webFigStore.startSafeModeCountdown(60);
+    try {
+      await http.delete(
+        `/api/v1/routers/${routerId.value}/webfig/interfaces/bridge/vlans/${vlan.id}`,
+      );
+      statusMessage.value = `VLAN "${vlan.vlan_ids}" eliminada del Bridge con éxito.`;
+      loadData();
+    } catch (err: unknown) {
+      const error = err as { message?: string; detail?: string; response?: { data?: { detail?: string } } };
+      errorMessage.value =
+        error.response?.data?.detail || error.detail || error.message || 'Error al eliminar la VLAN del bridge.';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function handleCreateInterfaceVlan() {
+    isLoading.value = true;
+    errorMessage.value = '';
+    webFigStore.startSafeModeCountdown(60);
+    try {
+      await http.post(
+        `/api/v1/routers/${routerId.value}/webfig/interfaces/vlan`,
+        newInterfaceVlan.value,
+      );
+      statusMessage.value = `Subinterfaz VLAN "${newInterfaceVlan.value.name}" (ID ${newInterfaceVlan.value.vlan_id}) creada exitosamente bajo Safe Mode.`;
+      isCreateInterfaceVlanModalOpen.value = false;
+      newInterfaceVlan.value = {
+        name: `vlan${Number(newInterfaceVlan.value.vlan_id) + 10}`,
+        vlan_id: Number(newInterfaceVlan.value.vlan_id) + 10,
+        interface: bridgesList.value[0]?.name || 'bridge',
+        mtu: 1500,
+        comment: '',
+      };
+      loadData();
+    } catch (err: unknown) {
+      const error = err as { message?: string; detail?: string; response?: { data?: { detail?: string } } };
+      errorMessage.value =
+        error.response?.data?.detail || error.detail || error.message || 'Error al crear la subinterfaz VLAN.';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   function setTab(tab: 'bridges' | 'ports' | 'vlans' | 'hosts') {
     activeTab.value = tab;
     loadData();
@@ -281,6 +394,22 @@
           @click="isCreatePortModalOpen = true"
         >
           + Agregar Puerto
+        </button>
+        <button
+          v-if="activeTab === 'vlans'"
+          type="button"
+          class="btn-primary"
+          @click="openCreateVlanModal"
+        >
+          + Definir VLAN en Bridge
+        </button>
+        <button
+          v-if="activeTab === 'vlans'"
+          type="button"
+          class="btn-secondary"
+          @click="openCreateInterfaceVlanModal"
+        >
+          + Subinterfaz 802.1Q
         </button>
         <button
           type="button"
@@ -363,7 +492,19 @@
           :rows="vlansList"
           caption="Tabla VLAN Switching"
           row-key="id"
-        />
+        >
+          <template #actions="{ row }">
+            <button
+              type="button"
+              class="btn-table-action btn-table-action--delete"
+              title="Eliminar regla de VLAN del Bridge"
+              aria-label="Eliminar regla de VLAN del Bridge"
+              @click="handleDeleteVlan(row as BridgeVlanRow)"
+            >
+              🗑️
+            </button>
+          </template>
+        </RgDataTable>
       </div>
 
       <div v-else-if="activeTab === 'hosts'">
@@ -497,6 +638,139 @@
             </button>
             <button type="submit" class="btn-primary" :disabled="isLoading">
               Asignar con Safe Mode
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Definir VLAN en Bridge (/interface/bridge/vlan) -->
+    <div
+      v-if="isCreateVlanModalOpen"
+      class="modal-backdrop"
+      @click.self="isCreateVlanModalOpen = false"
+    >
+      <div class="modal-card" role="dialog" aria-labelledby="modal-vlan-title" aria-modal="true">
+        <header class="modal-header">
+          <h2 id="modal-vlan-title">Definir VLAN en Bridge (/interface/bridge/vlan)</h2>
+          <button type="button" class="btn-close" @click="isCreateVlanModalOpen = false">✕</button>
+        </header>
+        <form class="modal-form" @submit.prevent="handleCreateVlan">
+          <div class="form-group">
+            <label for="vlan-bridge">Bridge Destino:</label>
+            <select id="vlan-bridge" v-model="newVlan.bridge" required>
+              <option v-for="b in bridgesList" :key="b.name" :value="b.name">
+                {{ b.name }}
+              </option>
+              <option v-if="bridgesList.length === 0" value="bridge">bridge</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="vlan-ids">VLAN IDs (Rango o Lista):</label>
+            <input
+              id="vlan-ids"
+              v-model="newVlan.vlan_ids"
+              required
+              placeholder="ej. 10 o 10-20 o 10,20,30"
+            />
+            <small class="form-help">Identificador 802.1Q de la VLAN (1-4094 o rango).</small>
+          </div>
+          <div class="form-group">
+            <label for="vlan-tagged">Puertos Tagged (Troncales / Trunk):</label>
+            <input
+              id="vlan-tagged"
+              v-model="newVlan.tagged"
+              placeholder="ej. ether1,sfp-sfpplus1,bridge"
+            />
+            <small class="form-help">Interfaces que transportan tráfico etiquetado separadas por coma.</small>
+          </div>
+          <div class="form-group">
+            <label for="vlan-untagged">Puertos Untagged (Acceso / Access):</label>
+            <input
+              id="vlan-untagged"
+              v-model="newVlan.untagged"
+              placeholder="ej. ether2,ether3"
+            />
+            <small class="form-help">Interfaces de acceso sin etiqueta para esta VLAN.</small>
+          </div>
+          <div class="form-group">
+            <label for="vlan-comment">Comentario:</label>
+            <input id="vlan-comment" v-model="newVlan.comment" placeholder="ej. VLAN Clientes Residenciales" />
+          </div>
+          <footer class="modal-footer">
+            <button type="button" class="btn-secondary" @click="isCreateVlanModalOpen = false">
+              Cancelar
+            </button>
+            <button type="submit" class="btn-primary" :disabled="isLoading">
+              Definir con Safe Mode
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Crear Subinterfaz VLAN 802.1Q (/interface/vlan) -->
+    <div
+      v-if="isCreateInterfaceVlanModalOpen"
+      class="modal-backdrop"
+      @click.self="isCreateInterfaceVlanModalOpen = false"
+    >
+      <div class="modal-card" role="dialog" aria-labelledby="modal-iface-vlan-title" aria-modal="true">
+        <header class="modal-header">
+          <h2 id="modal-iface-vlan-title">Crear Subinterfaz VLAN (/interface/vlan)</h2>
+          <button type="button" class="btn-close" @click="isCreateInterfaceVlanModalOpen = false">✕</button>
+        </header>
+        <form class="modal-form" @submit.prevent="handleCreateInterfaceVlan">
+          <div class="form-group">
+            <label for="iface-vlan-name">Nombre de la Subinterfaz:</label>
+            <input
+              id="iface-vlan-name"
+              v-model="newInterfaceVlan.name"
+              required
+              placeholder="ej. vlan10-mgmt"
+            />
+          </div>
+          <div class="form-group">
+            <label for="iface-vlan-id">VLAN ID (Tag 802.1Q):</label>
+            <input
+              id="iface-vlan-id"
+              v-model.number="newInterfaceVlan.vlan_id"
+              type="number"
+              min="1"
+              max="4094"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="iface-vlan-parent">Interfaz Base (Padre):</label>
+            <input
+              id="iface-vlan-parent"
+              v-model="newInterfaceVlan.interface"
+              required
+              placeholder="ej. bridge o ether1"
+            />
+          </div>
+          <div class="form-group">
+            <label for="iface-vlan-mtu">MTU:</label>
+            <input
+              id="iface-vlan-mtu"
+              v-model.number="newInterfaceVlan.mtu"
+              type="number"
+              min="68"
+              max="65535"
+              placeholder="1500"
+            />
+          </div>
+          <div class="form-group">
+            <label for="iface-vlan-comment">Comentario:</label>
+            <input id="iface-vlan-comment" v-model="newInterfaceVlan.comment" placeholder="ej. Subinterfaz Gateway para IP" />
+          </div>
+          <footer class="modal-footer">
+            <button type="button" class="btn-secondary" @click="isCreateInterfaceVlanModalOpen = false">
+              Cancelar
+            </button>
+            <button type="submit" class="btn-primary" :disabled="isLoading">
+              Crear con Safe Mode
             </button>
           </footer>
         </form>

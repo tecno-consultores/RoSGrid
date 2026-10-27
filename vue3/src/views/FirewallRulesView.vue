@@ -68,7 +68,30 @@
     return `${bytes} B`;
   }
 
+  const computedColumns = computed(() => {
+    if (activeTab.value === 'address-list') {
+      return [
+        { key: 'chain', label: 'Nombre Lista', sortable: true },
+        { key: 'action', label: 'Dirección IP / Red', sortable: true },
+        { key: 'comment', label: 'Comentario / Timeout' },
+      ];
+    }
+    if (activeTab.value === 'connections') {
+      return [
+        { key: 'protocol', label: 'Protocolo', sortable: true },
+        { key: 'src_address', label: 'Origen (Src)' },
+        { key: 'dst_address', label: 'Destino (Dst)' },
+        { key: 'chain', label: 'Estado TCP' },
+        { key: 'comment', label: 'Timeout' },
+      ];
+    }
+    return columns;
+  });
+
   const filteredRules = computed(() => {
+    if (activeTab.value === 'address-list' || activeTab.value === 'connections') {
+      return rulesList.value;
+    }
     return rulesList.value.filter((r) => {
       if (chainFilter.value === 'all') return true;
       return r.chain.toLowerCase() === chainFilter.value.toLowerCase();
@@ -86,15 +109,27 @@
       rulesList.value = raw.map((item: any) => ({
         ...item,
         id: item.id || item['.id'] || '',
-        chain: item.chain || 'forward',
-        action: item.action || 'accept',
+        chain:
+          item.chain ||
+          (activeTab.value === 'address-list'
+            ? item.list || ''
+            : activeTab.value === 'connections'
+              ? item['tcp-state'] || 'active'
+              : 'forward'),
+        action:
+          item.action ||
+          (activeTab.value === 'address-list'
+            ? item.address || ''
+            : activeTab.value === 'connections'
+              ? item.protocol || ''
+              : 'accept'),
         src_address: item.src_address || item['src-address'] || '',
         dst_address: item.dst_address || item['dst-address'] || '',
         protocol: item.protocol || '',
         dst_port: item.dst_port || item['dst-port'] || '',
         bytes: Number(item.bytes || 0),
         packets: Number(item.packets || 0),
-        comment: item.comment || '',
+        comment: item.comment || item.timeout || '',
         disabled: item.disabled === true || item.disabled === 'true',
         dynamic: item.dynamic === true || item.dynamic === 'true',
         invalid: item.invalid === true || item.invalid === 'true',
@@ -379,7 +414,7 @@
     </header>
 
     <!-- Filtro rápido por Cadena (Chain) -->
-    <div class="filter-toolbar">
+    <div v-if="activeTab !== 'address-list' && activeTab !== 'connections'" class="filter-toolbar">
       <div class="filter-item">
         <label for="filter-chain-select" class="filter-label">Filtrar por Cadena:</label>
         <select id="filter-chain-select" v-model="chainFilter" class="filter-select font-tabular">
@@ -406,9 +441,9 @@
     <!-- Tabla de Reglas con Barras de Tráfico Proporcionales -->
     <div class="table-card">
       <RgDataTable
-        :columns="columns"
+        :columns="computedColumns as any"
         :rows="filteredRules"
-        :sortable-rows="true"
+        :sortable-rows="activeTab !== 'address-list' && activeTab !== 'connections'"
         caption="Reglas de Firewall RouterOS"
         row-key="id"
         @reorder="handleReorder"

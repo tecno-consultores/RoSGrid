@@ -103,6 +103,24 @@ class BridgePortCreateRequest(StrictBaseModel):
     ingress_filtering: bool = False
 
 
+class BridgeVlanCreateRequest(StrictBaseModel):
+    bridge: str = Field(..., min_length=1, max_length=64)
+    vlan_ids: str = Field(..., min_length=1, max_length=64)
+    tagged: str | None = None
+    untagged: str | None = None
+    comment: str | None = None
+    disabled: bool = False
+
+
+class BridgeVlanUpdateRequest(StrictBaseModel):
+    bridge: str | None = Field(default=None, min_length=1, max_length=64)
+    vlan_ids: str | None = Field(default=None, min_length=1, max_length=64)
+    tagged: str | None = None
+    untagged: str | None = None
+    comment: str | None = None
+    disabled: bool | None = None
+
+
 class WireGuardCreateRequest(StrictBaseModel):
     name: str = Field(..., min_length=1, max_length=64)
     listen_port: int = Field(..., ge=1, le=65535)

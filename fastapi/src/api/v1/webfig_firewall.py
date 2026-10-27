@@ -74,6 +74,10 @@ async def list_rules(
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Lista reglas de Firewall en orden estricto con contadores de bytes y paquetes."""
+    if table_type in {"address-list", "address-lists"}:
+        return await list_address_lists(router_id=router_id, proto=proto, refresh=refresh, claims=claims, db=db)
+    if table_type in {"connection", "connections"}:
+        return await list_connections(router_id=router_id, refresh=refresh, claims=claims, db=db)
     _validate_firewall_params(proto, table_type)
     tenant_id = uuid.UUID(claims["tid"])
     redis = get_redis_client()
@@ -297,6 +301,7 @@ async def reset_counters(
 
 
 @router.get("/{proto}/address-lists")
+@router.get("/{proto}/address-list")
 async def list_address_lists(
     router_id: uuid.UUID,
     proto: str,
@@ -383,6 +388,8 @@ async def delete_address_list(
 
 
 @router.get("/connections")
+@router.get("/{proto}/connections")
+@router.get("/{proto}/connection")
 async def list_connections(
     router_id: uuid.UUID,
     refresh: bool = Query(default=False),
