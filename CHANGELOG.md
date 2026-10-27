@@ -8,6 +8,14 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ## [Unreleased]
 
+### Fixed
+
+- **Corrección y Auto-Sincronización de Reglas Syslog RouterOS v7 (`fastapi/src/workers/syslog_collector.py`, `fastapi/src/api/v1/inventory_helpers.py`, `fastapi/tests/api/test_hito23_cve_and_syslog.unit.py`, `fastapi/test/api_test.feature`):**
+  - **Aprovisionamiento Automático de Tópicos Críticos (`system,info`, `account`, `firewall,info`):** Se identificó que las modificaciones operativas en routers (como la creación/edición de reglas de firewall en WinBox o WebFig) emiten eventos bajo los tópicos nativos `system,info` y `account`. Al contar el router inicialmente con solo 6 directivas de error/crítico, RouterOS v7 no reenviaba dichos eventos al colector remoto (`rosgridsyslog`). Se implementó auto-sincronización idempotente en `discover_and_persist_syslog_status` para routers enrolados, aprovisionando de inmediato las 9 reglas completas del estándar canónico.
+  - **Parser BSD Syslog Optimizado e Inferencia de Tópicos:** Reemplazo del split elemental por regex estricto `BSD_SYSLOG_PATTERN`, eliminando el prefijo de timestamp BSD y hostname del cuerpo del mensaje en la UI (`RouterSyslogTerminalView.vue`), e infiriendo topics ante tramas estándar de RouterOS v7.
+  - **Retroalimentación y Recuperación Histórica:** Ingesta y certificación de las reglas agregadas por el usuario en `r1` (`comment=bbbbbbbb`) persistidas en el RingBuffer de KeyDB y expuestas vía `GET /api/v1/routers/{id}/syslog`.
+  - **Aseguramiento 11X:** Nueva prueba unitaria `test_parse_syslog_routeros_v7_winbox_and_rest_samples` (36 tests pasados) y Escenario 112 en Karate Labs API.
+
 ### Changed
 
 - **Ergonomía Táctica en Operaciones de Campo FTTH (`vue3/src/components/field/FieldTechMobileView.vue`, `vue3/src/components/field/FieldTechMobileView.unit.ts`, `vue3/test/ui_business_flow.feature`):**

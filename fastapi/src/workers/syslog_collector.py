@@ -26,12 +26,28 @@ CRITICAL_PATTERNS = [
 ]
 
 
+BSD_SYSLOG_PATTERN = re.compile(
+    r"^(?:<(?P<pri>\d+)>)?\s*"
+    r"(?:(?P<bsd_time>[A-Z][a-z]{2}\s+\d+\s+\d+:\d+:\d+)\s+)?"
+    r"(?:(?P<host>[^\s:,]+)\s+)?"
+    r"(?:(?P<topics>[a-zA-Z0-9_\-]+(?:,[a-zA-Z0-9_\-]+)+)[:\s]+)?"
+    r"(?P<msg>.*)$"
+)
+
+
 def parse_syslog_message(raw_text: str) -> SyslogEvent:
     """Parsea un mensaje Syslog estilo BSD emitido por MikroTik RouterOS v7."""
     clean = raw_text.strip()
-    match = re.match(r"^<(\d+)>?(.*)$", clean)
-    pri = int(match.group(1)) if match else 13
-    rest = match.group(2).strip() if match else clean
+    m = BSD_SYSLOG_PATTERN.match(clean)
+    if m:
+        pri = int(m.group("pri")) if m.group("pri") else 13
+        topics = m.group("topics") or ""
+        message = m.group("msg") or clean
+    else:
+        match_pri = re.match(r"^<(\d+)>?(.*)$", clean)
+        pri = int(match_pri.group(1)) if match_pri else 13
+        message = match_pri.group(2).strip() if match_pri else clean
+        topics = ""
 
     severity_code = pri & 0x07
     facility_code = pri >> 3
@@ -48,12 +64,20 @@ def parse_syslog_message(raw_text: str) -> SyslogEvent:
     }
     severity = severity_map.get(severity_code, "info")
 
-    topics = ""
-    message = rest
-    parts = rest.split(" ", 3)
-    if len(parts) >= 4 and ("," in parts[2] or parts[2].startswith("system")):
-        topics = parts[2]
-        message = parts[3]
+    if not topics:
+        msg_lower = message.lower()
+        if "logged in" in msg_lower or "logged out" in msg_lower:
+            topics = "system,info,account"
+        elif "filter rule" in msg_lower or "firewall" in msg_lower:
+            topics = "system,info"
+        elif "link down" in msg_lower or "link up" in msg_lower:
+            topics = "interface,warning"
+        elif "bgp" in msg_lower:
+            topics = "route,bgp"
+        elif "ospf" in msg_lower:
+            topics = "route,ospf"
+        elif "dhcp" in msg_lower:
+            topics = "dhcp"
 
     is_critical = any(p.search(clean) for p in CRITICAL_PATTERNS) or severity_code <= 2
 

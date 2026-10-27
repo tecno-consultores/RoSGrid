@@ -187,6 +187,27 @@ async def discover_and_persist_syslog_status(
         if has_syslog:
             await r_client.set(syslog_conf_key, "1", ex=86400)
             await r_client.set(syslog_active_key, "1", ex=3600)
+            # Auto-sincronizar tópicos críticos de auditoría y firewall si el router ya está enrolado
+            existing_topics = [
+                str(r.get("topics", ""))
+                for r in rules
+                if isinstance(r, dict) and str(r.get("action", "")).strip().lower() == "rosgridsyslog"
+            ]
+            for crit_topic in ("system,info", "account", "firewall,info"):
+                if crit_topic not in existing_topics:
+                    try:
+                        await client.put(
+                            "/system/logging",
+                            json_data={"topics": crit_topic, "action": "rosgridsyslog"},
+                        )
+                        existing_topics.append(crit_topic)
+                    except Exception as err:
+                        logger.debug(
+                            "No se pudo auto-sincronizar regla %s en router %s: %s",
+                            crit_topic,
+                            router_id,
+                            err,
+                        )
         else:
             await r_client.delete(syslog_conf_key)
             await r_client.delete(syslog_active_key)

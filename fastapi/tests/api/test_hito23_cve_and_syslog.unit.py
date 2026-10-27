@@ -130,6 +130,22 @@ def test_parse_syslog_bsd_message():
     assert event_crit.is_critical is True
 
 
+def test_parse_syslog_routeros_v7_winbox_and_rest_samples():
+    raw_winbox = '<30>Oct 27 14:24:46 1 filter rule added by mac-msg(winbox):sinfallas@F4:B5:20:5E:2B:50 (*4 = /ip firewall filter add action=accept chain=input comment=bbbbbbbb disabled=no log=no log-prefix="")'
+    ev_winbox = parse_syslog_message(raw_winbox)
+    assert ev_winbox.severity == "info"
+    assert ev_winbox.topics == "system,info"
+    assert "filter rule added" in ev_winbox.message
+    assert "Oct 27" not in ev_winbox.message
+
+    raw_api_del = "<30>Oct 27 14:32:18 1 filter rule removed by api:rosgrid_agent@::/action:0 (/ip firewall filter remove *5)"
+    ev_api = parse_syslog_message(raw_api_del)
+    assert ev_api.severity == "info"
+    assert ev_api.topics == "system,info"
+    assert "filter rule removed" in ev_api.message
+    assert "Oct 27" not in ev_api.message
+
+
 @pytest.mark.asyncio
 async def test_syslog_ringbuffer_push_and_query():
     tid = uuid.uuid4()
