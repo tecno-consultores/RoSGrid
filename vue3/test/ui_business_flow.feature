@@ -560,6 +560,13 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     Then match text(".ipam-header-left") contains 'IPAM'
     And waitFor(".ipam-prefix-table-container")
 
+  Scenario: 58. Visualización de Red Unificada — Agrupación y Spiderfy de Equipos Co-ubicados en Guacara
+    Given driver baseUrl + '/noc-wallboard'
+    And waitFor(".wallboard-view")
+    And waitFor(".unified-network-map-wrapper")
+    And waitFor(".btn-layer-routers")
+    Then match text(".btn-layer-routers") contains 'Routers'
+
 
 
 

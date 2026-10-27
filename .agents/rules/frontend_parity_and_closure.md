@@ -15,6 +15,8 @@
 2. **Zero Orphan API Endpoints:** Every route defined under `fastapi/src/api/v1/` MUST be paired with a frontend interface enabling visual inspection, parameter configuration, and interactive verification.
 3. **Bidirectional Audit Sync:** Maintenance CLI scripts issuing tokens or altering sessions MUST sync metadata into KeyDB/Redis (`issued_by_username: "CLI (Terminal)"`) so they are visible and revocable via `ActiveSessionsKillSwitchView.vue`.
 4. **Zero Read-Only Operational Consoles (WebFig v7 Parity):** Every router management table (Firewall, Queues, PPP, DHCPv4, Dual-Stack IPv6, Routing) MUST offer tactical mutation actions (create, edit, toggle enable/disable, delete with confirmation and 1-click setup wizards) guarded by 60s Safe Mode. No screen may be left in view-only state when RouterOS REST API supports mutations.
+5. **Zero-Overlap Geographic Co-location Invariant (Anti-Superposición Cartográfica):** Any cartographic or topology map rendering network entities (routers, ONUs, switches) in Leaflet/OpenStreetMap (`UnifiedNetworkMap.vue`, `OsmRouterMap.vue`, `OsmOnuMap.vue`) MUST group co-located items (distance `<= 25m`) into a distinct cluster marker (`rg-map-pin--multi`) with a numeric count badge. It MUST provide radial spiderfication upon click and a detailed side-drawer card listing all co-located items to prevent any device from being hidden or obscured by DOM injection order.
+
 
 ---
 

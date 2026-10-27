@@ -328,4 +328,57 @@ describe('UnifiedNetworkMap.vue — Mapa de Red Unificado & Gobierno RCA (Hito 2
     expect(wrapper.find('.router-health-pill').exists()).toBe(true);
     expect(wrapper.text()).toContain('ONLINE / OPERATIVO');
   });
+
+  it('agrupa correctamente múltiples routers co-ubicados (ej. 5 equipos en Guacara) y despliega tarjeta de sitio compartido', async () => {
+    const guacaraRouters: RouterItem[] = [
+      { id: 'r2', tenant_id: 't-1', display_name: 'r2', ip_address: '10.2.0.2', latitude: 10.230979, longitude: -67.880417, admin_state: 'PRODUCTION', is_reachable: true, serial_number: 'SN-R2' } as RouterItem,
+      { id: 'r3', tenant_id: 't-1', display_name: 'r3', ip_address: '10.2.0.3', latitude: 10.230970, longitude: -67.880410, admin_state: 'PRODUCTION', is_reachable: true, serial_number: 'SN-R3' } as RouterItem,
+      { id: 'r4', tenant_id: 't-1', display_name: 'r4', ip_address: '10.2.0.4', latitude: 10.230970, longitude: -67.880410, admin_state: 'PRODUCTION', is_reachable: true, serial_number: 'SN-R4' } as RouterItem,
+      { id: 'r5', tenant_id: 't-1', display_name: 'r5', ip_address: '10.2.0.5', latitude: 10.230970, longitude: -67.880410, admin_state: 'PRODUCTION', is_reachable: true, serial_number: 'SN-R5' } as RouterItem,
+      { id: 'r6', tenant_id: 't-1', display_name: 'r6', ip_address: '10.2.0.6', latitude: 10.230970, longitude: -67.880410, admin_state: 'PRODUCTION', is_reachable: true, serial_number: 'SN-R6' } as RouterItem,
+    ];
+
+    const wrapper = mount(UnifiedNetworkMap, {
+      props: {
+        mode: 'wallboard',
+        routers: guacaraRouters,
+      },
+      global: {
+        plugins: [pinia],
+        stubs: { RouterLink: true },
+      },
+    });
+
+    const vm = wrapper.vm as unknown as {
+      buildLocationGroups: (r: RouterItem[]) => Array<{ lat: number; lng: number; routers: RouterItem[] }>;
+      activeLocationGroup: { lat: number; lng: number; routers: RouterItem[] } | null;
+    };
+
+    const groups = vm.buildLocationGroups(guacaraRouters);
+    expect(groups.length).toBe(1);
+    expect(groups[0].routers.length).toBe(5);
+
+    // Simular activación del grupo al hacer click en el pin múltiple
+    vm.activeLocationGroup = groups[0];
+    await wrapper.vm.$nextTick();
+
+    const groupCard = wrapper.find('.location-group-card');
+    expect(groupCard.exists()).toBe(true);
+    expect(groupCard.text()).toContain('Sitio Compartido (5 Equipos)');
+    expect(groupCard.text()).toContain('r2');
+    expect(groupCard.text()).toContain('r3');
+    expect(groupCard.text()).toContain('r4');
+    expect(groupCard.text()).toContain('r5');
+    expect(groupCard.text()).toContain('r6');
+
+    // Seleccionar el router r4 desde el panel
+    const selectBtns = groupCard.findAll('.btn-select-group-router');
+    expect(selectBtns.length).toBe(5);
+    await selectBtns[2].trigger('click'); // r4
+
+    expect(wrapper.emitted('select-router')).toBeTruthy();
+    expect(wrapper.emitted('select-router')?.[0]).toEqual(['r4']);
+    expect(vm.activeLocationGroup).toBeNull();
+  });
 });
+

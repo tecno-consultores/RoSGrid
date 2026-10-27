@@ -97,8 +97,16 @@
   // Filtro de estado
   const statusFilter = ref<'ALL' | 'ONLINE' | 'OFFLINE'>('ALL');
 
+  // Interfaz para sitios o nodos con múltiples routers co-ubicados
+  export interface LocationGroup {
+    lat: number;
+    lng: number;
+    routers: RouterItem[];
+  }
+
   // Elementos seleccionados para el drawer lateral
   const activeRouter = ref<RouterItem | null>(null);
+  const activeLocationGroup = ref<LocationGroup | null>(null);
   const activeBox = ref<OpticalBoxItem | null>(null);
   const activeSubscriber = ref<SubscriberDeviceItem | null>(null);
   const operationalLock = ref<OperationalStatusResponse | null>(null);
@@ -122,10 +130,164 @@
   const mapContainer = ref<HTMLDivElement | null>(null);
   let mapInstance: L.Map | null = null;
   let routersLayer: L.LayerGroup | null = null;
+  let spiderLayer: L.LayerGroup | null = null;
   let boxesLayer: L.LayerGroup | null = null;
   let subscribersLayer: L.LayerGroup | null = null;
   let linesLayer: L.LayerGroup | null = null;
   let resizeObserver: ResizeObserver | null = null;
+
+  function clearSpiderLayer(): void {
+    if (spiderLayer) {
+      spiderLayer.clearLayers();
+    }
+  }
+
+  function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371000;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  function buildLocationGroups(routers: RouterItem[]): LocationGroup[] {
+    const groups: LocationGroup[] = [];
+    for (const r of routers) {
+      if (
+        r.latitude === undefined ||
+        r.latitude === null ||
+        (r.latitude as unknown) === '' ||
+        r.longitude === undefined ||
+        r.longitude === null ||
+        (r.longitude as unknown) === ''
+      ) {
+        continue;
+      }
+      const lat = Number(r.latitude);
+      const lng = Number(r.longitude);
+      if (Number.isNaN(lat) || Number.isNaN(lng) || (lat === 0 && lng === 0)) {
+        continue;
+      }
+      const match = groups.find((g) => getDistanceMeters(g.lat, g.lng, lat, lng) <= 25);
+      if (match) {
+        match.routers.push(r);
+      } else {
+        groups.push({ lat, lng, routers: [r] });
+      }
+    }
+    return groups;
+  }
+
+  function getGroupStatus(routers: RouterItem[]): { color: string; label: string; badgeClass: string; pulseClass: string } {
+    if (routers.some((r) => !r.is_reachable || r.admin_state === 'DECOMMISSIONED')) {
+      return {
+        color: '#EF4444',
+        label: 'ALERTAS / SIN ALCANCE',
+        badgeClass: 'badge-offline',
+        pulseClass: 'router-pulse-danger',
+      };
+    }
+    if (routers.some((r) => r.admin_state === 'MAINTENANCE' || r.admin_state === 'PROVISIONING')) {
+      return {
+        color: '#F59E0B',
+        label: 'MANTENIMIENTO / PROVISIÓN',
+        badgeClass: 'badge-warning',
+        pulseClass: 'router-pulse-warning',
+      };
+    }
+    return {
+      color: '#10B981',
+      label: 'ONLINE / OPERATIVO',
+      badgeClass: 'badge-online',
+      pulseClass: '',
+    };
+  }
+
+  function getSpiderfiedPositions(center: L.LatLng, count: number): L.LatLng[] {
+    if (!mapInstance) return new Array(count).fill(center);
+    if (count <= 1) return [center];
+
+    const centerPoint = mapInstance.latLngToLayerPoint(center);
+    const radius = Math.min(75, 45 + count * 5);
+    const positions: L.LatLng[] = [];
+
+    const angleStep = (2 * Math.PI) / count;
+    const startAngle = -Math.PI / 2;
+
+    for (let i = 0; i < count; i++) {
+      const angle = startAngle + i * angleStep;
+      const pt = L.point(
+        centerPoint.x + radius * Math.cos(angle),
+        centerPoint.y + radius * Math.sin(angle),
+      );
+      positions.push(mapInstance.layerPointToLatLng(pt));
+    }
+
+    return positions;
+  }
+
+  function spiderfyGroup(grp: LocationGroup): void {
+    if (!mapInstance || !spiderLayer) return;
+    spiderLayer.clearLayers();
+
+    const center = L.latLng(grp.lat, grp.lng);
+    const count = grp.routers.length;
+    const positions = getSpiderfiedPositions(center, count);
+
+    for (let i = 0; i < count; i++) {
+      const r = grp.routers[i];
+      const pos = positions[i];
+      const health = getRouterHealth(r);
+
+      try {
+        const leg = L.polyline([center, pos], {
+          color: '#00F0FF',
+          weight: 1.5,
+          opacity: 0.8,
+          dashArray: '3, 4',
+        });
+        spiderLayer.addLayer(leg);
+      } catch {
+        // Ignorar en JSDOM/entornos headless sin motor SVG
+      }
+
+      const icon = L.divIcon({
+        className: 'rg-map-pin-container',
+        html: `
+          <div class="rg-map-pin" style="--pin-color: ${health.color};" role="button" tabindex="0" title="${escapeHtml(r.display_name)} (${health.label})">
+            <div class="pin-pulse ${health.pulseClass}"></div>
+            <div class="pin-dot"></div>
+            <span class="pin-router-label">${escapeHtml(r.display_name)}</span>
+          </div>
+        `,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12],
+      });
+
+      const marker = L.marker(pos, { icon });
+      marker.on('click', (ev) => {
+        L.DomEvent.stopPropagation(ev);
+        activeRouter.value = r;
+        activeLocationGroup.value = null;
+        activeBox.value = null;
+        activeSubscriber.value = null;
+        emit('select-router', r.id);
+      });
+      spiderLayer.addLayer(marker);
+    }
+  }
+
+  function selectRouterFromGroup(r: RouterItem): void {
+    activeRouter.value = r;
+    activeLocationGroup.value = null;
+    emit('select-router', r.id);
+  }
 
   function initMap(): void {
     if (!mapContainer.value) return;
@@ -147,11 +309,19 @@
       }).addTo(mapInstance);
 
       routersLayer = L.layerGroup().addTo(mapInstance);
+      spiderLayer = L.layerGroup().addTo(mapInstance);
       boxesLayer = L.layerGroup().addTo(mapInstance);
       subscribersLayer = L.layerGroup().addTo(mapInstance);
       linesLayer = L.layerGroup().addTo(mapInstance);
 
       renderAllLayers();
+
+      mapInstance.on('zoomstart', () => {
+        clearSpiderLayer();
+      });
+      mapInstance.on('click', () => {
+        clearSpiderLayer();
+      });
 
       resizeObserver = new ResizeObserver(() => {
         if (mapInstance) {
@@ -180,43 +350,79 @@
     if (!mapInstance || isHeadlessTest.value) return;
 
     routersLayer?.clearLayers();
+    spiderLayer?.clearLayers();
     boxesLayer?.clearLayers();
     subscribersLayer?.clearLayers();
     linesLayer?.clearLayers();
 
-    // 1. Capa de Routers de Red
+    // 1. Capa de Routers de Red (con soporte para Sitios Compartidos / Co-ubicados)
     if (showRouters.value && routersLayer) {
-      props.routers.forEach((r) => {
-        if (r.latitude === undefined || r.longitude === undefined) return;
-        const lat = Number(r.latitude);
-        const lng = Number(r.longitude);
-        if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) return;
+      const groups = buildLocationGroups(props.routers);
 
-        const health = getRouterHealth(r);
-        const color = health.color;
-        const pulseClass = health.pulseClass;
+      groups.forEach((grp) => {
+        if (grp.routers.length === 1) {
+          const r = grp.routers[0];
+          const health = getRouterHealth(r);
+          const color = health.color;
+          const pulseClass = health.pulseClass;
 
-        const icon = L.divIcon({
-          className: 'rg-map-pin-container',
-          html: `
-            <div class="rg-map-pin" style="--pin-color: ${color};" role="button" tabindex="0" title="${escapeHtml(r.display_name)} (${health.label})">
-              <div class="pin-pulse ${pulseClass}"></div>
-              <div class="pin-dot"></div>
-              <span class="pin-router-label">${escapeHtml(r.display_name)}</span>
-            </div>
-          `,
-          iconSize: [24, 24],
-          iconAnchor: [12, 12],
-        });
+          const icon = L.divIcon({
+            className: 'rg-map-pin-container',
+            html: `
+              <div class="rg-map-pin" style="--pin-color: ${color};" role="button" tabindex="0" title="${escapeHtml(r.display_name)} (${health.label})">
+                <div class="pin-pulse ${pulseClass}"></div>
+                <div class="pin-dot"></div>
+                <span class="pin-router-label">${escapeHtml(r.display_name)}</span>
+              </div>
+            `,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12],
+          });
 
-        const marker = L.marker([lat, lng], { icon });
-        marker.on('click', () => {
-          activeRouter.value = r;
-          activeBox.value = null;
-          activeSubscriber.value = null;
-          emit('select-router', r.id);
-        });
-        routersLayer?.addLayer(marker);
+          const marker = L.marker([grp.lat, grp.lng], { icon });
+          marker.on('click', () => {
+            clearSpiderLayer();
+            activeRouter.value = r;
+            activeLocationGroup.value = null;
+            activeBox.value = null;
+            activeSubscriber.value = null;
+            emit('select-router', r.id);
+          });
+          routersLayer?.addLayer(marker);
+        } else {
+          // Múltiples routers co-ubicados (ej. 5 equipos en Guacara)
+          const groupHealth = getGroupStatus(grp.routers);
+          const count = grp.routers.length;
+          const names = grp.routers.map((r) => r.display_name).join(', ');
+
+          const icon = L.divIcon({
+            className: 'rg-map-pin-container',
+            html: `
+              <div class="rg-map-pin rg-map-pin--multi" style="--pin-color: ${groupHealth.color};" role="button" tabindex="0" title="Sitio con ${count} routers: ${escapeHtml(names)}">
+                <div class="pin-pulse pin-pulse--multi ${groupHealth.pulseClass}"></div>
+                <div class="pin-dot pin-dot--multi">
+                  <span class="pin-count-badge">${count}</span>
+                </div>
+                <span class="pin-router-label pin-router-label--multi">${count} Equipos (${escapeHtml(grp.routers[0].display_name)}+)</span>
+              </div>
+            `,
+            iconSize: [28, 28],
+            iconAnchor: [14, 14],
+          });
+
+          const marker = L.marker([grp.lat, grp.lng], { icon });
+          marker.on('click', () => {
+            activeLocationGroup.value = grp;
+            activeRouter.value = null;
+            activeBox.value = null;
+            activeSubscriber.value = null;
+            spiderfyGroup(grp);
+            if (grp.routers.length > 0) {
+              emit('select-router', grp.routers[0].id);
+            }
+          });
+          routersLayer?.addLayer(marker);
+        }
       });
     }
 
@@ -323,6 +529,30 @@
     { deep: true },
   );
 
+  watch(
+    () => props.selectedId,
+    (newId) => {
+      if (!newId) return;
+      const target = props.routers.find((r) => r.id === newId);
+      if (target) {
+        activeRouter.value = target;
+        activeLocationGroup.value = null;
+      }
+    },
+    { immediate: true },
+  );
+
+  defineExpose({
+    activeRouter,
+    activeLocationGroup,
+    buildLocationGroups,
+    getDistanceMeters,
+    getGroupStatus,
+    renderAllLayers,
+    spiderfyGroup,
+    clearSpiderLayer,
+  });
+
   onMounted(() => {
     initMap();
   });
@@ -425,7 +655,53 @@
       <div ref="mapContainer" class="unified-leaflet-container" tabindex="0" aria-label="Mapa de Red Unificado"></div>
 
       <!-- Drawer Lateral de Detalle con Gobernanza RBAC y Prevención de Colisiones -->
-      <aside v-if="activeRouter || activeBox || activeSubscriber" class="unified-detail-drawer" aria-label="Panel de Información">
+      <aside v-if="activeRouter || activeLocationGroup || activeBox || activeSubscriber" class="unified-detail-drawer" aria-label="Panel de Información">
+        <!-- Detalle de Sitio / Nodo Co-ubicado con Múltiples Equipos -->
+        <div v-if="activeLocationGroup" class="drawer-card location-group-card">
+          <div class="card-header">
+            <h3>🏢 Sitio Compartido ({{ activeLocationGroup.routers.length }} Equipos)</h3>
+            <button type="button" class="btn-close-card" @click="activeLocationGroup = null; clearSpiderLayer()">✖</button>
+          </div>
+          <div class="card-body">
+            <p class="site-location-meta">
+              <strong>Ubicación:</strong> <code>{{ Number(activeLocationGroup.lat).toFixed(5) }}, {{ Number(activeLocationGroup.lng).toFixed(5) }}</code>
+            </p>
+            <div class="group-routers-list">
+              <div
+                v-for="r in activeLocationGroup.routers"
+                :key="r.id"
+                class="group-router-item"
+              >
+                <div class="group-router-header">
+                  <span class="router-status-dot" :style="{ backgroundColor: getRouterHealth(r).color }"></span>
+                  <strong class="group-router-name">{{ r.display_name }}</strong>
+                  <span class="badge-role">{{ r.network_role || 'DISTRIBUTION' }}</span>
+                </div>
+                <div class="group-router-info">
+                  <span>IP: <code>{{ r.ip_address || r.api_base_url || '--' }}</code></span>
+                  <span class="group-router-status" :class="getRouterHealth(r).badgeClass">{{ getRouterHealth(r).label }}</span>
+                </div>
+                <div class="group-router-actions">
+                  <button
+                    type="button"
+                    class="btn-select-group-router"
+                    @click="selectRouterFromGroup(r)"
+                  >
+                    🔍 Seleccionar
+                  </button>
+                  <RouterLink
+                    v-if="allowWebfig && canAccessWebFig"
+                    :to="'/routers/' + r.id + '/webfig'"
+                    class="btn-webfig-group-router"
+                  >
+                    ⚡ WebFig
+                  </RouterLink>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Detalle de Router -->
         <div v-if="activeRouter" class="drawer-card router-detail-card">
           <div class="card-header">
@@ -821,6 +1097,125 @@
     box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
   }
 }
+
+.site-location-meta {
+  font-size: 0.75rem;
+  color: #94A3B8;
+  margin-bottom: 0.75rem;
+}
+
+.site-location-meta code {
+  color: #00F0FF;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+}
+
+.group-routers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.group-router-item {
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 4px;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  transition: border-color 0.2s;
+}
+
+.group-router-item:hover {
+  border-color: rgba(0, 240, 255, 0.4);
+}
+
+.group-router-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.router-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.group-router-name {
+  font-size: 0.8125rem;
+  color: #F8FAFC;
+  flex: 1;
+}
+
+.badge-role {
+  font-size: 0.625rem;
+  background: rgba(0, 240, 255, 0.15);
+  color: #00F0FF;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+.group-router-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.6875rem;
+  color: #94A3B8;
+}
+
+.group-router-info code {
+  color: #E2E8F0;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+}
+
+.group-router-actions {
+  display: flex;
+  gap: 0.375rem;
+  margin-top: 0.25rem;
+}
+
+.btn-select-group-router {
+  flex: 1;
+  padding: 0.25rem 0.5rem;
+  background: rgba(148, 163, 184, 0.2);
+  color: #F8FAFC;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 3px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-select-group-router:hover {
+  background: rgba(0, 240, 255, 0.2);
+  border-color: #00F0FF;
+  color: #00F0FF;
+}
+
+.btn-webfig-group-router {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.5rem;
+  background: #00F0FF;
+  color: #0B0F19;
+  border-radius: 3px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+
+.btn-webfig-group-router:hover {
+  opacity: 0.9;
+}
 </style>
 
 <!-- Clases globales para marcadores inyectados dinámicamente en el DOM de Leaflet (Estilo Wallboard NOC) -->
@@ -890,6 +1285,44 @@
   border: 1px solid rgba(255, 255, 255, 0.15);
   pointer-events: none;
   z-index: 3;
+}
+
+/* Pin para Múltiples Equipos en la Misma Ubicación (Co-ubicados) */
+.rg-map-pin--multi {
+  width: 28px;
+  height: 28px;
+}
+
+.pin-dot--multi {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background-color: var(--pin-color, #00F0FF);
+  border: 2px solid #0B0F19;
+  box-shadow: 0 0 12px var(--pin-color, #00F0FF);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+}
+
+.pin-count-badge {
+  font-size: 11px;
+  font-weight: 800;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #0B0F19;
+  line-height: 1;
+  user-select: none;
+}
+
+.pin-pulse--multi {
+  width: 36px;
+  height: 36px;
+}
+
+.pin-router-label--multi {
+  border-color: rgba(0, 240, 255, 0.4);
+  color: #00F0FF;
 }
 
 @keyframes pin-pulsate {

@@ -62,6 +62,18 @@ En lugar de agrupar cajas y clientes en un solo interruptor, la barra superior d
 | **💻 Dispositivos / Clientes** | **Modo Dispositivos de Red:** PCs, APs WiFi, cámaras CCTV, servidores obtenidos de leases DHCP. | **Modo Abonados FTTH:** ONUs, routers residenciales y rosetas ópticas con líneas drop. |
 | **Líneas de Enlace** | Líneas de salto lógico hacia el Router asignador. | Líneas de cable drop físico hacia la Caja NAP y de la NAP al Router/OLT. |
 
+### 2.2. Agrupación Táctica de Equipos Co-ubicados y Spiderficación Radial (Anti-Superposición)
+
+En nodos de distribución, torres de telecomunicaciones y salas de datos, es habitual que múltiples routers RouterOS compartan idénticas o casi idénticas coordenadas geográficas (ej. Guacara con 5 routers a menos de 25 metros de distancia). Para evitar que los pines se superpongan en el mismo píxel ocultando los equipos anteriores y dejando visible únicamente el último añadido en el DOM:
+
+1. **Agrupación de Sitios (`buildLocationGroups`):** Se calcula la distancia geodésica mediante la fórmula de Haversine (`getDistanceMeters`). Los routers a `<= 25` metros se agrupan automáticamente en una entidad `LocationGroup`.
+2. **Distintivo Visual de Clúster (`rg-map-pin--multi`):**
+   - El marcador proyecta un badge numérico con la cantidad exacta de equipos (`pin-count-badge`, ej. `5`).
+   - El pulso y color del marcador se rigen por el estado más crítico de los equipos del nodo (Verde: todos operativos; Naranja: algún equipo en mantenimiento; Rojo: fallas o caídas).
+3. **Mecanismo Dual de Interacción (Visual & Drawer):**
+   - **Spiderficación Radial:** Al pulsar sobre el clúster, los marcadores individuales se despliegan en abanico/estrella radial con líneas punteadas conectoras (`spider legs`), permitiendo seleccionar directamente cualquiera de los routers.
+   - **Tarjeta de Sitio Compartido (`location-group-card`):** En el panel lateral se lista la totalidad de equipos del nodo con sus IPs, roles, estados de salud y accesos directos a WebFig / selección.
+
 ---
 
 ## 3. Matriz de Perfiles y Control de Acceso RBAC en el Mapa

@@ -2,7 +2,7 @@
 
 **Licencia:** GPL-3.0-only  
 **Estándar Aplicado:** QA Testing Blueprints (Nivel 11X)  
-**Estado Actual:** Hito 27.12 Completado y Certificado al 100% en Contenedores Docker Efímeros — Cobertura Unitaria al 100% de Componentes Vue (65 de 65 componentes testeados en 67 suites Vitest con 453 pruebas aprobadas), Auto-Sincronización de 9 Directivas Syslog de Auditoría, Escenario BDD 57 Karate UI y Gobernanza Level-11X.
+**Estado Actual:** Hito 27.13 Completado y Certificado al 100% en Contenedores Docker Efímeros — Soporte de Agrupación Táctica Geodésica y Spiderfy para Equipos Co-ubicados en Mapa Unificado (Guacara), 454 pruebas Vitest en 67 suites aprobadas al 100%, Escenario BDD 58 Karate UI y Validación Visual Interactiva en Navegador Real.
 
 ---
 
@@ -2021,4 +2021,24 @@ Conforme a la Especificación 43 v2.0.0 y la directiva `.agents/rules/ground_tru
    - `./scripts/verificar-secretos.sh` -> 0 secretos detectados.
    - `python3 .agents/scripts/verify_alembic_orm_parity.py` -> 26 tablas SQLAlchemy ORM 100% sincronizadas.
    - `python3 .agents/scripts/verify_json_no_duplicate_keys.py` -> 0 duplicados en catálogos i18n (`es.json`, `en.json`).
+
+### J. Hito 27.13: Soporte de Agrupación Táctica Geodésica y Spiderfy para Equipos Co-ubicados en Mapa Unificado (Completado y Certificado al 100%)
+
+1. **Frontend Unitario (Vitest en Docker `sinfallas/base-node-ionic:26`):**
+   - `vue3/src/components/network/UnifiedNetworkMap.unit.ts`: **8 de 8 pruebas PASADAS (100%)**, incorporando validaciones de agrupación geodésica mediante Haversine (`buildLocationGroups` con radio `<= 25m`), detección de 5 equipos en Guacara (`r2`, `r3`, `r4`, `r5`, `r6`), renderizado de tarjeta de sitio compartido (`location-group-card`) y selección individual con emisión reactiva de `select-router`.
+   - Total frontend: **67 suites aprobadas (100%), 454 de 454 pruebas unitarias PASADAS al 100%**.
+
+2. **Tipado Estricto y Análisis Estático:**
+   - `npx vue-tsc --noEmit` en contenedor efímero: **0 errores de tipos**.
+
+3. **Escenarios BDD Karate Labs:**
+   - **UI WebFig / NOC (`vue3/test/ui_business_flow.feature` & `docs/examples/vue3/test/ui_business_flow.feature`):** **58 escenarios BDD PASADOS (100%)** (incorporado Escenario 58: Visualización de Red Unificada — Agrupación y Spiderfy de Equipos Co-ubicados en Guacara).
+
+4. **Validación Interactiva en Navegador Real (`browser_subagent`):**
+   - Inspección en vivo sobre `http://localhost:8085/noc-wallboard` certificando:
+     1. Marcador táctico de clúster en Guacara con badge numérico destacado (`5`).
+     2. Apertura radial (spiderfy) con líneas conectoras punteadas (`spider legs`) y pines individuales con nombres y semáforos de salud.
+     3. Tarjeta lateral `Sitio Compartido (5 Equipos)` con los 5 routers listados, IPs y accesos interactivos.
+     4. Selección del router `r4` y actualización sincronizada del HUD de Wallboard.
+
 
