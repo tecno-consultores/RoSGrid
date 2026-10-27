@@ -586,6 +586,16 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And waitFor(".feedback-banner--success")
     Then match text(".feedback-banner--success") contains 'Capacidades y módulos guardados exitosamente.'
 
+  Scenario: 61. Consola Táctica Interactiva CAPsMAN v7 — Botonera de Acción Rápida y Modales de Configuración Wi-Fi
+    Given driver baseUrl + '/enterprise/compliance?tab=wifi'
+    And waitFor("#panel-wifi")
+    And waitFor(".wifi-action-toolbar")
+    And waitFor("#btn-wifi-quick-setup")
+    Then match text("#btn-wifi-quick-setup") contains 'Asistente Wi-Fi Rápido'
+    And match text("#btn-wifi-sec-profiles") contains 'Perfiles WPA2 / WPA3'
+    And match text("#btn-wifi-new-ssid") contains 'Nueva Configuración SSID'
+
+
 
 
 

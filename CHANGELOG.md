@@ -23,7 +23,7 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
     4. `IpamPrefixTable.unit.ts`: renderizado de tabla, badges de utilización, modales de adición y cálculo de direcciones.
     5. `FieldTechOperationsView.unit.ts`: navegación táctica por pestañas de técnico de campo y aislamiento de vista.
     6. `IpamManagementView.unit.ts`: integración de tabla IPAM, banner de corte de fibra y modales de red.
-  - **Aseguramiento de Calidad:** 67 suites aprobadas al 100% con 453 pruebas Vitest exitosas, 0 errores en `vue-tsc --noEmit` y paridad absoluta sobre los 65 componentes `.vue` del frontend.
+  - **Aseguramiento de Calidad:** 70 suites aprobadas al 100% con 465 pruebas Vitest exitosas, 0 componentes huérfanos validados mediante `.agents/scripts/verify_zero_orphan_vue_components.py` integrado en `certify_task_completion.sh`, 0 errores en `vue-tsc --noEmit` y paridad absoluta sobre los 68 componentes `.vue` del frontend.
 - **Escenario 57 BDD Karate Labs UI (`vue3/test/ui_business_flow.feature`, `docs/examples/vue3/test/ui_business_flow.feature`):**
   - Incorporación del escenario de aceptación para la vista IPAM, barra de herramientas táctica y tabla de prefijos, sincronizado en el catálogo de ejemplos canónicos.
 - **Gobernanza Agéntica Institucional (`.agents/rules/mandatory_qa_pyramid_and_doc_sync.md`, `AGENTS.md`):**

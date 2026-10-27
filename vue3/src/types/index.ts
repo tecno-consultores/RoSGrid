@@ -1063,6 +1063,42 @@ export interface WifiSsidProfile {
   vlan_id?: number | null;
   client_isolation: boolean;
   rate_limit_profile?: string | null;
+  disabled?: boolean;
+  security_profile?: string | null;
+  hide_ssid?: boolean;
+  comment?: string | null;
+}
+
+export interface WifiSecurityProfileItem {
+  id: string;
+  name: string;
+  authentication_types: string[];
+  passphrase_masked: string;
+  wps_disabled: boolean;
+  ft_enabled: boolean;
+  comment?: string | null;
+}
+
+export interface WifiProvisioningRuleItem {
+  id: string;
+  name: string;
+  action: string;
+  master_configuration: string;
+  slave_configurations: string[];
+  supported_bands: string[];
+  identity_regex: string;
+  disabled: boolean;
+  comment?: string | null;
+}
+
+export interface WifiQuickSetupPayload {
+  corporate_ssid: string;
+  corporate_passphrase: string;
+  guest_ssid_enabled: boolean;
+  guest_ssid?: string;
+  guest_passphrase?: string;
+  guest_vlan_id?: number;
+  bridge_name?: string;
 }
 
 export interface WifiClientItem {

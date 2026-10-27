@@ -5,16 +5,17 @@
 
 import uuid
 from unittest.mock import AsyncMock, patch
+
 import pytest
 
+from src.api.v1.webfig_firewall import list_rules
 from src.api.v1.webfig_interfaces import (
     create_bridge_vlan,
-    update_bridge_vlan,
-    delete_bridge_vlan,
     create_vlan,
+    delete_bridge_vlan,
     delete_vlan,
+    update_bridge_vlan,
 )
-from src.api.v1.webfig_firewall import list_rules
 from src.schemas.webfig_l1_net import (
     BridgeVlanCreateRequest,
     BridgeVlanUpdateRequest,

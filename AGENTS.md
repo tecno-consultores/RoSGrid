@@ -77,8 +77,9 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
 - `verify_alembic_orm_parity.py`: Automated parity validator between SQLAlchemy ORM models and Alembic migrations (detects schema drift).
 - `verify_json_no_duplicate_keys.py`: Automated integrity validator detecting duplicate keys in i18n JSON locale files.
 - `verify_topological_health.py`: Automated AST architectural validator detecting forbidden cross-layer coupling and layer boundary violations.
-- `inspect_blast_radius.py`: Automated impact analyzer computing direct and transitive inbound callers for symbols before refactoring.
-- `certify_task_completion.sh`: End-to-end certification gate enforcing secret scanning, ORM parity, front-back contracts, i18n integrity, topological health, and documentation sync.
+- `inspect_blast_radius.py`: Automated pre-refactoring blast radius inspector calculating incoming dependency edges across the codebase.
+- `verify_zero_orphan_vue_components.py`: Automated parity validator ensuring 100% of Vue components and views have dedicated or active unit test suites.
+- `certify_task_completion.sh`: End-to-end certification gate enforcing secret scanning, ORM parity, front-back contracts, i18n integrity, topological health, zero orphan Vue components, and documentation sync.
 
 ---
 

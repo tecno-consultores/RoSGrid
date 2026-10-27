@@ -92,7 +92,7 @@ Whenever code is added, updated, or refactored, the AI agent **MUST OBLIGATORILY
    - Update complete REST/WebSockets reference in `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md` whenever endpoints, query params, or schemas change.
    - Update AI integration guides (`docs/07`) when MCP tools change.
 2. **`docs/specs/` Directory:**
-   - Update all affected domain and functional specifications (`docs/specs/01` through `docs/specs/35`).
+   - Update all affected domain and functional specifications (`docs/specs/01` through `docs/specs/51`).
 3. **Monorepo Root:**
    - **`CHANGELOG.md`:** Document changes under `## [Unreleased]` (`Added`, `Fixed`, `Changed`) with technical detail.
    - **`ROADMAP.md`:** Update milestone checkpoints, sub-task statuses, and deliverables.

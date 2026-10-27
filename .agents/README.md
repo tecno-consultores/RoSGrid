@@ -31,7 +31,8 @@ Este directorio implementa el estándar abierto y emergente de la industria para
     ├── verify_json_no_duplicate_keys.py              # Auditoría estricta anti-colisión de claves duplicadas en JSON i18n
     ├── verify_topological_health.py                  # Auditoría estricta de salud topológica y límites de capas AST
     ├── inspect_blast_radius.py                       # Análisis de radio de impacto pre-refactorización (aristas entrantes)
-    └── certify_task_completion.sh                    # Compuerta de certificación pre-commit automatizada (7 etapas)
+    ├── verify_zero_orphan_vue_components.py          # Auditoría estricta: paridad y cobertura de componentes Vue 3 (0 huérfanos)
+    └── certify_task_completion.sh                    # Compuerta de certificación pre-commit automatizada (8 etapas)
 ```
 
 ---
@@ -104,6 +105,9 @@ Para certificar localmente que una tarea cumple con todos los requisitos antes d
 ```bash
 # Ejecutar compuerta integral de certificación 11X
 ./.agents/scripts/certify_task_completion.sh
+
+# Auditar paridad 100% de componentes Vue sin huérfanos
+python3 ./.agents/scripts/verify_zero_orphan_vue_components.py
 
 # Auditar que no existen modelos ORM huérfanos sin migración
 docker exec -t rosgrid_api_local python scripts/verify_alembic_orm_parity.py

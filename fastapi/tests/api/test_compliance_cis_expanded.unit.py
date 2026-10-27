@@ -16,13 +16,10 @@ from src.api.v1.compliance import (
     CIS_CATALOG_BASE,
     _build_default_cis_rules,
     get_cis_catalog,
-    get_cis_policies,
     run_cis_audit,
-    update_cis_policies,
 )
-from src.models.inventory import Router, RouterNetworkRoleEnum
+from src.models.inventory import Router
 from src.schemas.enterprise import (
-    CisPoliciesConfigRequest,
     CisPolicyRule,
 )
 

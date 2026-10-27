@@ -33,6 +33,9 @@
   } from '@/types';
 
   import NotificationChannelsPanel from '@/components/operations/NotificationChannelsPanel.vue';
+  import CapsmanQuickSetupModal from '@/components/wifi/CapsmanQuickSetupModal.vue';
+  import CapsmanSecurityProfilesModal from '@/components/wifi/CapsmanSecurityProfilesModal.vue';
+  import CapsmanSsidModal from '@/components/wifi/CapsmanSsidModal.vue';
 
   const FleetCveMatrix = defineAsyncComponent(() => import('@/views/FleetCveMatrix.vue'));
   const ImmutableAuditLogsView = defineAsyncComponent(
@@ -225,6 +228,76 @@
   const capsmanOverview = ref<CapsmanOverviewResponse | null>(null);
   const wifiSsids = ref<WifiSsidProfile[]>([]);
   const wifiClients = ref<WifiClientItem[]>([]);
+  const showQuickSetupModal = ref(false);
+  const showSecProfilesModal = ref(false);
+  const showSsidModal = ref(false);
+  const selectedSsidForEdit = ref<WifiSsidProfile | null>(null);
+  const isTogglingCapsman = ref(false);
+  const isReprovisioning = ref(false);
+
+  async function handleToggleCapsman(enabled: boolean) {
+    if (!selectedRouterId.value) return;
+    isTogglingCapsman.value = true;
+    try {
+      const res = await http.post<{ message?: string }>(`/api/v1/wifi/capsman/${selectedRouterId.value}/manager/toggle`, {
+        enabled,
+        require_peer_certificate: false,
+        auto_certificates: true,
+      });
+      successMessage.value = res.data?.message || 'Estado de CAPsMAN conmutado exitosamente.';
+      await loadWifiTab();
+    } catch (err: any) {
+      errorMessage.value = err.response?.data?.detail || err.message || 'Error al conmutar CAPsMAN.';
+    } finally {
+      isTogglingCapsman.value = false;
+    }
+  }
+
+  async function handleReprovisionFleet() {
+    if (!selectedRouterId.value) return;
+    isReprovisioning.value = true;
+    try {
+      const res = await http.post<{ message?: string }>(`/api/v1/wifi/capsman/${selectedRouterId.value}/reprovision`);
+      successMessage.value = res.data?.message || 'Señal de reprovisionamiento enviada a la flota de APs.';
+      await loadWifiTab();
+    } catch (err: any) {
+      errorMessage.value = err.response?.data?.detail || err.message || 'Error al reprovisionar flota de APs.';
+    } finally {
+      isReprovisioning.value = false;
+    }
+  }
+
+  function handleOpenNewSsid() {
+    selectedSsidForEdit.value = null;
+    showSsidModal.value = true;
+  }
+
+  function handleEditSsid(ssid: WifiSsidProfile) {
+    selectedSsidForEdit.value = ssid;
+    showSsidModal.value = true;
+  }
+
+  async function handleDeleteSsid(ssid: WifiSsidProfile) {
+    if (!confirm(`¿Eliminar la configuración SSID ${ssid.name}?`)) return;
+    try {
+      await http.delete(`/api/v1/wifi/capsman/${selectedRouterId.value}/configurations/${encodeURIComponent(ssid.id)}`);
+      successMessage.value = `Configuración ${ssid.name} eliminada.`;
+      await loadWifiTab();
+    } catch (err: any) {
+      errorMessage.value = err.response?.data?.detail || err.message || 'Error al eliminar SSID.';
+    }
+  }
+
+  async function handleKickClient(client: WifiClientItem) {
+    if (!confirm(`¿Expulsar al cliente ${client.mac_address} (${client.hostname || client.ssid})?`)) return;
+    try {
+      await http.delete(`/api/v1/wifi/clients/${selectedRouterId.value}/${encodeURIComponent(client.mac_address)}`);
+      successMessage.value = `Cliente ${client.mac_address} expulsado exitosamente.`;
+      await loadWifiTab();
+    } catch (err: any) {
+      errorMessage.value = err.response?.data?.detail || err.message || 'Error al expulsar cliente.';
+    }
+  }
 
   const routersList = computed(() => inventoryStore.routers);
 
@@ -1778,6 +1851,52 @@
           </div>
         </div>
 
+        <!-- Barra de Operaciones Tácticas Wi-Fi -->
+        <div class="wifi-action-toolbar" style="margin-top: 1.25rem; display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
+          <button
+            id="btn-wifi-quick-setup"
+            type="button"
+            class="rg-btn-primary"
+            @click="showQuickSetupModal = true"
+          >
+            ⚡ {{ t('wifi.btn_quick_setup', 'Asistente Wi-Fi Rápido (1 Clic)') }}
+          </button>
+          <button
+            id="btn-wifi-sec-profiles"
+            type="button"
+            class="rg-btn-secondary"
+            @click="showSecProfilesModal = true"
+          >
+            🔐 {{ t('wifi.btn_sec_profiles', 'Perfiles WPA2 / WPA3') }}
+          </button>
+          <button
+            id="btn-wifi-new-ssid"
+            type="button"
+            class="rg-btn-secondary"
+            @click="handleOpenNewSsid"
+          >
+            ➕ {{ t('wifi.btn_new_ssid', 'Nueva Configuración SSID') }}
+          </button>
+          <button
+            id="btn-wifi-reprovision"
+            type="button"
+            class="rg-btn-secondary"
+            :disabled="isReprovisioning"
+            @click="handleReprovisionFleet"
+          >
+            🔄 {{ isReprovisioning ? t('common.loading', 'Reprovisionando...') : t('wifi.btn_reprovision', 'Forzar Reprovisión APs') }}
+          </button>
+          <button
+            id="btn-wifi-toggle-capsman"
+            type="button"
+            class="rg-btn-secondary"
+            :disabled="isTogglingCapsman"
+            @click="handleToggleCapsman(!capsmanOverview?.capsman_running)"
+          >
+            📶 {{ capsmanOverview?.capsman_running ? t('wifi.btn_disable_capsman', 'Desactivar CAPsMAN') : t('wifi.btn_enable_capsman', 'Activar CAPsMAN') }}
+          </button>
+        </div>
+
         <div
           v-if="capsmanOverview && !capsmanOverview.capsman_running"
           class="alert-box alert-box--info"
@@ -1799,8 +1918,9 @@
                 <th scope="col">{{ t('enterprise.wifi_th_ssid', 'SSID Emitido') }}</th>
                 <th scope="col">{{ t('enterprise.wifi_th_sec_proto', 'Protocolo de Seguridad') }}</th>
                 <th scope="col">{{ t('enterprise.wifi_th_vlan', 'VLAN') }}</th>
-                <th scope="col">{{ t('enterprise.wifi_th_isolation', 'Aislamiento de Clientes') }}</th>
+                <th scope="col">{{ t('enterprise.wifi_th_isolation', 'Aislamiento') }}</th>
                 <th scope="col">{{ t('enterprise.wifi_th_bandwidth', 'Perfil Ancho de Banda') }}</th>
+                <th scope="col">{{ t('common.actions', 'Acciones') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -1813,9 +1933,31 @@
                 <td class="font-mono">{{ s.vlan_id ? `VLAN ${s.vlan_id}` : t('enterprise.wifi_native_vlan', 'Nativa') }}</td>
                 <td>{{ s.client_isolation ? t('enterprise.wifi_isolated_yes', 'Sí (Aislado)') : t('common.no', 'No') }}</td>
                 <td class="font-mono text-subtle">{{ s.rate_limit_profile || t('enterprise.wifi_unlimited', 'Ilimitado') }}</td>
+                <td>
+                  <div style="display: flex; gap: 0.4rem;">
+                    <button
+                      type="button"
+                      class="rg-btn-secondary"
+                      style="padding: 0.2rem 0.5rem; font-size: 0.75rem;"
+                      :aria-label="`${t('common.edit', 'Editar')} ${s.name}`"
+                      @click="handleEditSsid(s)"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      type="button"
+                      class="rg-btn-danger-sm"
+                      style="padding: 0.2rem 0.5rem; font-size: 0.75rem;"
+                      :aria-label="`${t('common.delete', 'Eliminar')} ${s.name}`"
+                      @click="handleDeleteSsid(s)"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </td>
               </tr>
               <tr v-if="wifiSsids.length === 0">
-                <td colspan="6" class="text-center text-subtle" style="padding: 1.5rem">
+                <td colspan="7" class="text-center text-subtle" style="padding: 1.5rem">
                   {{ t('enterprise.wifi_no_ssids', 'No se encontraron perfiles de SSIDs inalámbricos aprovisionados en el router.') }}
                 </td>
               </tr>
@@ -1839,6 +1981,7 @@
                 <th scope="col">{{ t('enterprise.wifi_th_snr', 'SNR') }}</th>
                 <th scope="col">{{ t('enterprise.wifi_th_standard', 'Estándar Wi-Fi') }}</th>
                 <th scope="col">{{ t('enterprise.wifi_th_fast_roaming', 'Fast Roaming') }}</th>
+                <th scope="col">{{ t('common.actions', 'Acciones') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -1865,9 +2008,20 @@
                     {{ c.fast_roaming_supported ? '802.11r/k/v OK' : 'Legacy' }}
                   </span>
                 </td>
+                <td>
+                  <button
+                    type="button"
+                    class="rg-btn-danger-sm"
+                    style="padding: 0.2rem 0.5rem; font-size: 0.75rem;"
+                    :aria-label="`${t('wifi.kick_client', 'Expulsar cliente')} ${c.mac_address}`"
+                    @click="handleKickClient(c)"
+                  >
+                    🚫 Kick
+                  </button>
+                </td>
               </tr>
               <tr v-if="wifiClients.length === 0">
-                <td colspan="8" class="text-center text-subtle" style="padding: 1.5rem">
+                <td colspan="9" class="text-center text-subtle" style="padding: 1.5rem">
                   {{ t('enterprise.wifi_no_clients', 'No hay clientes inalámbricos conectados en este momento.') }}
                 </td>
               </tr>
@@ -1890,6 +2044,27 @@
         <NotificationChannelsPanel />
       </section>
     </div>
+
+    <!-- Wi-Fi CAPsMAN Modals -->
+    <CapsmanQuickSetupModal
+      :show="showQuickSetupModal"
+      :router-id="selectedRouterId"
+      @close="showQuickSetupModal = false"
+      @saved="loadWifiTab"
+    />
+    <CapsmanSecurityProfilesModal
+      :show="showSecProfilesModal"
+      :router-id="selectedRouterId"
+      @close="showSecProfilesModal = false"
+      @updated="loadWifiTab"
+    />
+    <CapsmanSsidModal
+      :show="showSsidModal"
+      :router-id="selectedRouterId"
+      :edit-item="selectedSsidForEdit"
+      @close="showSsidModal = false"
+      @saved="loadWifiTab"
+    />
   </main>
 </template>
 

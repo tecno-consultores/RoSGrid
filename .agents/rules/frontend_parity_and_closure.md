@@ -54,7 +54,7 @@ After **EVERY** task or turn that adds, edits, or removes code or configuration 
    - Run `./scripts/verificar-secretos.sh` (0 secret leaks).
    - Run `make audit` (or `./scripts/auditar-infra.sh` in ephemeral Docker, certifying 0 CRITICAL/HIGH findings).
    - Run `python3 .agents/scripts/verify_json_no_duplicate_keys.py` (0 duplicate keys in locale files).
-   - Run `./.agents/scripts/certify_task_completion.sh` (all 6 gates passed).
+   - Run `./.agents/scripts/certify_task_completion.sh` (all 8 gates passed).
 5. **Mandatory Git Commit & Push:**
    - Run `git add .`
    - Create a commit following Conventional Commits in Spanish: `git commit -m "<tipo>(<ámbito>): <descripción_en_español>"`

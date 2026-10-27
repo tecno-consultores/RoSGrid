@@ -362,6 +362,10 @@ class WifiSsidProfile(BaseModel):
     vlan_id: int | None = None
     client_isolation: bool = False
     rate_limit_profile: str | None = None
+    disabled: bool = False
+    security_profile: str | None = None
+    hide_ssid: bool = False
+    comment: str | None = None
 
 
 class WifiClientItem(BaseModel):
@@ -379,3 +383,126 @@ class WifiClientItem(BaseModel):
     rx_rate_mbps: float
     fast_roaming_supported: bool
     connected_duration_seconds: int
+
+
+class CapsmanToggleRequest(BaseModel):
+    """Petición para activar o desactivar el servicio CAPsMAN."""
+
+    enabled: bool = True
+    require_peer_certificate: bool = False
+    auto_certificates: bool = True
+
+
+class CapsmanToggleResponse(BaseModel):
+    """Respuesta tras conmutar el estado del manager CAPsMAN."""
+
+    router_id: uuid.UUID
+    driver: str
+    manager_enabled: bool
+    message: str
+
+
+class WifiSecurityProfileCreate(BaseModel):
+    """Creación de perfil de seguridad inalámbrico WPA2/WPA3."""
+
+    name: str
+    authentication_types: list[str] = ["wpa2-psk", "wpa3-psk"]
+    passphrase: str
+    wps_disabled: bool = True
+    ft_enabled: bool = True
+    comment: str | None = None
+
+
+class WifiSecurityProfileItem(BaseModel):
+    """Perfil de seguridad existente en el router."""
+
+    id: str
+    name: str
+    authentication_types: list[str] = []
+    passphrase_masked: str = "********"
+    wps_disabled: bool = True
+    ft_enabled: bool = True
+    comment: str | None = None
+
+
+class WifiConfigurationCreate(BaseModel):
+    """Creación de nueva configuración de SSID inalámbrico."""
+
+    name: str
+    ssid: str
+    security_profile: str | None = None
+    vlan_id: int | None = None
+    client_isolation: bool = False
+    hide_ssid: bool = False
+    disabled: bool = False
+    comment: str | None = None
+
+
+class WifiConfigurationUpdate(BaseModel):
+    """Actualización de configuración de SSID inalámbrico."""
+
+    ssid: str | None = None
+    security_profile: str | None = None
+    vlan_id: int | None = None
+    client_isolation: bool | None = None
+    hide_ssid: bool | None = None
+    disabled: bool | None = None
+    comment: str | None = None
+
+
+class WifiProvisioningRuleCreate(BaseModel):
+    """Creación de regla de aprovisionamiento por radiofrecuencia."""
+
+    name: str
+    action: str = "create-dynamic-enabled"
+    master_configuration: str
+    slave_configurations: list[str] = []
+    supported_bands: list[str] = ["2ghz-ax", "5ghz-ax"]
+    identity_regex: str = ".*"
+    comment: str | None = None
+
+
+class WifiProvisioningRuleItem(BaseModel):
+    """Regla de aprovisionamiento dinámico existente."""
+
+    id: str
+    name: str
+    action: str
+    master_configuration: str
+    slave_configurations: list[str] = []
+    supported_bands: list[str] = []
+    identity_regex: str = ".*"
+    disabled: bool = False
+    comment: str | None = None
+
+
+class WifiQuickSetupRequest(BaseModel):
+    """Asistente rápido de despliegue Wi-Fi en 1 Clic."""
+
+    corporate_ssid: str
+    corporate_passphrase: str
+    guest_ssid_enabled: bool = False
+    guest_ssid: str | None = None
+    guest_passphrase: str | None = None
+    guest_vlan_id: int | None = 200
+    bridge_name: str = "bridge"
+
+
+class WifiQuickSetupResponse(BaseModel):
+    """Resultado del despliegue masivo en 1 clic."""
+
+    router_id: uuid.UUID
+    manager_enabled: bool
+    corporate_ssid: str
+    guest_ssid: str | None = None
+    guest_vlan_id: int | None = None
+    provisioning_rules_count: int
+    message: str
+
+
+class CapsmanReprovisionResponse(BaseModel):
+    """Resultado del reprovisionamiento en caliente de la flota de APs."""
+
+    success: bool
+    provisioned_radios_count: int
+    message: str
