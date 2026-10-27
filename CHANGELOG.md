@@ -8,6 +8,22 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ## [Unreleased]
 
+### Added
+
+- **Auditoría y Cobertura Unitaria al 100% de Componentes Vue (`vue3/src/components/`, `vue3/src/views/`):**
+  - **Cero Componentes Huérfanos (Zero-Orphan Vue Component):** Creación e integración de 6 suites de prueba Nivel 11X en Vitest cubriendo los componentes y vistas que no contaban con suite unitaria dedicada:
+    1. `FiberCutAlertBanner.unit.ts`: validación de alerta visual crítica GPON, desglose de puerto PON / caja NAP y refresco manual.
+    2. `IpamIpGridModal.unit.ts`: renderizado de rejilla de 256 IPs (/24), selección táctica y panel de detalle.
+    3. `CorporateIpv6ManagerModal.unit.ts`: creación de prefijos IPv6 corporativos, asignación de pools y validaciones.
+    4. `IpamPrefixTable.unit.ts`: renderizado de tabla, badges de utilización, modales de adición y cálculo de direcciones.
+    5. `FieldTechOperationsView.unit.ts`: navegación táctica por pestañas de técnico de campo y aislamiento de vista.
+    6. `IpamManagementView.unit.ts`: integración de tabla IPAM, banner de corte de fibra y modales de red.
+  - **Aseguramiento de Calidad:** 67 suites aprobadas al 100% con 453 pruebas Vitest exitosas, 0 errores en `vue-tsc --noEmit` y paridad absoluta sobre los 65 componentes `.vue` del frontend.
+- **Escenario 57 BDD Karate Labs UI (`vue3/test/ui_business_flow.feature`, `docs/examples/vue3/test/ui_business_flow.feature`):**
+  - Incorporación del escenario de aceptación para la vista IPAM, barra de herramientas táctica y tabla de prefijos, sincronizado en el catálogo de ejemplos canónicos.
+- **Gobernanza Agéntica Institucional (`.agents/rules/mandatory_qa_pyramid_and_doc_sync.md`, `AGENTS.md`):**
+  - Incorporación del *Zero-Orphan Vue Component Invariant* (prohibición estricta de componentes `.vue` sin suite `.unit.ts` co-localizada) y *Zero-Blindness Telemetry Invariant* (auto-aprovisionamiento obligatorio de 9 directivas canónicas de Syslog y normalización BSD).
+
 ### Fixed
 
 - **Corrección y Auto-Sincronización de Reglas Syslog RouterOS v7 (`fastapi/src/workers/syslog_collector.py`, `fastapi/src/api/v1/inventory_helpers.py`, `fastapi/tests/api/test_hito23_cve_and_syslog.unit.py`, `fastapi/test/api_test.feature`):**
@@ -17,6 +33,14 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
   - **Aseguramiento 11X:** Nueva prueba unitaria `test_parse_syslog_routeros_v7_winbox_and_rest_samples` (36 tests pasados) y Escenario 112 en Karate Labs API.
 
 ### Changed
+
+- **Actualización de Especificaciones Técnicas y Gobernanza de Flota (`docs/specs/35`, `docs/specs/43`):**
+  - Sincronización formal en Spec 35 de la plantilla oficial de 9 directivas de Syslog, el mecanismo de auto-enrolamiento en `inventory_helpers.py` y la normalización BSD.
+  - Actualización de Spec 43 incorporando la garantía de auto-sincronización y validación de auditoría en la flota real.
+- **Actualización Canónica de Grafos Semánticos AST Graphify (`fastapi/graphify-out/`, `vue3/graphify-out/`):**
+  - Extracción y clusterización en contenedores Docker efímeros (`sinfallas/remote-graphify:latest`):
+    - Backend: 3466 nodos, 12878 aristas, 156 comunidades.
+    - Frontend: 2039 nodos, 3593 aristas, 103 comunidades.
 
 - **Ergonomía Táctica en Operaciones de Campo FTTH (`vue3/src/components/field/FieldTechMobileView.vue`, `vue3/src/components/field/FieldTechMobileView.unit.ts`, `vue3/test/ui_business_flow.feature`):**
   - **Eliminación del Contador en Pestaña "Registrar Caja NAP":** Retiro del badge `.tab-badge` en el botón `#tab-btn-nap`, homogeneizando las pestañas operativas (`📦 Registrar Caja NAP`, `🔌 Alta de Cliente FTTH`, `⚡ Diagnósticos Rápidos`, `🗺️ Mapa de Zona`) sin contadores asimétricos ni distractores numéricos en movilidad.

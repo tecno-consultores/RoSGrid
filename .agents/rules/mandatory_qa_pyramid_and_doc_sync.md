@@ -46,6 +46,19 @@ Any modification, addition, or bugfix in source code (`fastapi/src/` or `vue3/sr
 2. **Frontend Changes (Views, Modals, Buttons, Links, Tables):** MUST add or update interactive BDD scenarios in `vue3/test/ui_business_flow.feature` AND mirror them identically in `docs/examples/vue3/test/ui_business_flow.feature`.
 3. An AI agent or developer MUST NEVER consider a task completed without verifying that both Karate Labs feature files have been updated with scenarios covering the newly introduced functionality.
 
+### 1.3 Invariante de Cero Componentes Vue Huérfanos (Zero-Orphan Vue Component Invariant)
+
+Every `.vue` file located in `vue3/src/` (views, components, modals, widgets) **MUST** possess a co-located `.unit.ts` unit test suite.
+- Zero orphaned components permitted: 100% of `.vue` components must be tested for mounting, empty/loading/error states, reactivity, and user interaction.
+- Vitest pass rate must strictly remain 100% across all suites.
+- Type integrity verified via `vue-tsc --noEmit` with 0 type errors.
+
+### 1.4 Invariante de Telemetría Auto-Sincronizada e Inferencia BSD (Zero-Blindness Telemetry Invariant)
+
+When interacting with RouterOS v7 telemetry or Syslog:
+- The system must verify and auto-provision all 9 canonical logging topics (`system,info`, `account`, `firewall,info`, etc.) to prevent administrative changes in WinBox/WebFig from going undetected.
+- The UDP Syslog collector must parse legacy BSD datagrams, strip duplicate identities, and dynamically infer topics if missing in the payload body.
+
 ---
 
 ## 2. Mandatory Test Execution Upon Task Completion

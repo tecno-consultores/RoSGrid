@@ -17,6 +17,8 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
 
 1. [mandatory_qa_pyramid_and_doc_sync.md](file:///.agents/rules/mandatory_qa_pyramid_and_doc_sync.md):
    - **Supreme Directive — Mandatory 11X Test Creation:** Any code addition or modification MUST strictly include corresponding test suites across all layers of the 11X quality pyramid, using the canonical blueprints provided in `docs/examples/` (`docs/examples/fastapi/` and `docs/examples/vue3/`). Includes backend unit tests (`fastapi/tests/**/*.unit.py` with `>= 95%` coverage), frontend unit tests (`vue3/src/**/*.unit.ts` Vitest 100% pass), real PostgreSQL and Alembic schema verification, front-back integration contracts, and **ALWAYS Karate Labs BDD scenarios** for both API (`fastapi/test/api_test.feature`) and UI (`vue3/test/ui_business_flow.feature`), synchronized in `docs/examples/`.
+   - **Zero-Orphan Vue Component Invariant:** Every `.vue` component or view in `vue3/src/` must have a dedicated, co-located `.unit.ts` suite maintaining 100% pass rate.
+   - **Zero-Blindness Telemetry Invariant:** Proactively auto-provision all 9 canonical Syslog topics (`system,info`, `account`, `firewall,info`) and parse RouterOS v7 BSD logs cleanly.
    - **Mandatory Test Execution:** The full test suite MUST be executed and passed inside ephemeral Docker containers (`Rule Zero`) after EACH task modifying code before concluding.
    - **Continuous Mandatory Documentation Sync:** Autonomously and continuously update after any code modification:
      - All affected operational guides and technical manuals in `docs/`.

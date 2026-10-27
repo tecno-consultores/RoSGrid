@@ -95,6 +95,12 @@ El entorno de laboratorio físico dispone de 6 routers MikroTik (`r1` a `r6`):
 ### 4.2 Principio Fail-Closed
 Si cualquier equipo de fábrica (`r4, r5, r6`) reporta un valor positivo en sensores exclusivos de RoSGrid, el script `scripts/validar-flota-real.py` (`make smoke-fleet`) termina inmediatamente con código de salida `1`, impidiendo commits o publicación en Git.
 
+### 4.3 Auto-Sincronización de Directivas de Auditoría y Parseo BSD
+Para evitar que routers nominales (`r1, r2, r3`) sufran de ceguera ante cambios administrativos de WinBox o reglas firewall aplicadas localmente:
+- El sensor de inventario valida que las 9 directivas canónicas estén activas y en caso de faltar las provisiona automáticamente.
+- El receptor UDP normaliza paquetes BSD de RouterOS v7 e infiere los tópicos dinámicamente (`system,info`, `account`, `firewall,info`, `interface,warning`) incluso si el router emite el mensaje sin prefijos canónicos.
+- Los smoke tests verifican que ante una mutación en el router, el log de auditoría se emita, normalice y almacene en KeyDB sin latencia ni pérdida de eventos.
+
 ---
 
 ## 5. Protocolo de Bitácora Activa de Tareas (Tolerancia a Compactación)

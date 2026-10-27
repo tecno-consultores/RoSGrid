@@ -108,14 +108,14 @@ El receptor analiza cada mensaje entrante en memoria en microsegundos:
 
 ---
 
-## 4. Plantilla Estandarizada para Enrolamiento Masivo de Routers al Syslog
+## 4. Plantilla Estandarizada y Auto-Sincronización para Enrolamiento de Routers al Syslog
 
-Para que los routers envíen sus logs a RoSGrid, se incorpora al catálogo de plantillas (*Config Templates*) la plantilla oficial de aprovisionamiento Syslog:
+Para que los routers envíen sus logs a RoSGrid garantizando auditoría administrativa completa, se incorpora al catálogo de plantillas (*Config Templates*) y al motor de auto-sincronización la especificación canónica oficial de 9 directivas de aprovisionamiento Syslog:
 
 ```routeros
 # ==============================================================================
 # Plantilla RoSGrid: Enrolamiento de Syslog Remoto Efímero (RouterOS v7)
-# Parámetros: {{ROSGRID_SERVER_IP}}, {{ROSGRID_SYSLOG_PORT}} (por defecto 5514)
+# Parámetros: {{ROSGRID_SERVER_IP}}, {{ROSGRID_SYSLOG_PORT}} (por defecto 5514 / 514)
 # ==============================================================================
 
 /system logging action
@@ -130,9 +130,26 @@ add topics=route,ospf,warning action="rosgridsyslog"
 add topics=system,error,critical action="rosgridsyslog"
 add topics=dhcp,critical action="rosgridsyslog"
 add topics=firewall,warning action="rosgridsyslog"
+add topics=system,info action="rosgridsyslog"
+add topics=account action="rosgridsyslog"
+add topics=firewall,info action="rosgridsyslog"
 ```
 
-Esta plantilla puede desplegarse en 1 clic sobre 50 o 500 routers mediante el módulo de Operaciones Masivas (*Bulk Ops*) bajo Safe Mode. El despachador de pasos en backend garantiza idempotencia previa consultando `GET /system/logging` para evitar duplicar reglas existentes con idéntica acción y tópicos. Asimismo, el worker de salud detecta la presencia de la acción `rosgridsyslog` para asegurar la insignia `🟢 Activo` en el inventario.
+### 4.1. Auto-Sincronización Idempotente en Inventario (`inventory_helpers.py`)
+Cuando el sistema ejecuta el descubrimiento o auditoría de un router enrolado con `has_syslog = True`:
+1. El backend consulta `GET /rest/system/logging` verificando no solo la existencia de la acción `rosgridsyslog`, sino que los tópicos críticos de auditoría (`system,info`, `account`, `firewall,info`) estén efectivamente presentes.
+2. Si un router fue enrolado previamente con directivas incompletas o se detecta que faltan tópicos, el backend aprovisiona automáticamente las directivas faltantes vía `PUT /rest/system/logging` o `POST /rest/system/logging/add` de forma no destructiva e idempotente.
+3. Esto garantiza que cualquier cambio administrativo ejecutado desde WinBox, WebFig o SSH (p. ej. creación de reglas firewall, cambio de contraseñas o reinicio de interfaces) sea transmitido de inmediato al colector UDP y proyectado en la consola sin intervención manual.
+
+### 4.2. Motor de Inferencia y Normalización BSD en Colector UDP (`syslog_collector.py`)
+RouterOS v7 puede emitir datagramas bajo formato BSD clásico (`<PRI>Mmm dd hh:mm:ss identity message`) donde el prefijo de tópicos no siempre se envía explícitamente en el cuerpo del mensaje:
+* El colector limpia la identidad redundante del host si viene prefijada en el mensaje.
+* Infiere dinámicamente los tópicos analizando patrones del mensaje:
+  - Cambios de configuración/sistema (`user ... logged in`, `firewall rule added`, `system,info`): `system,info` o `account`.
+  - Eventos de enlace (`link up`, `link down`): `interface,info` o `interface,warning`.
+  - Mensajes de firewall con prefijo: `firewall,info`.
+* Encripta y publica el evento en KeyDB Pub/Sub (`syslog:events:<tenant_id>`) y en el RingBuffer efímero (`syslog:stream:<tenant_id>:<router_id>`) con TTL de 24 horas y rotación LIFO (máx. 1000 mensajes).
+
 
 ---
 

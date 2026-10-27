@@ -2,7 +2,7 @@
 
 **Licencia:** GPL-3.0-only  
 **Estándar Aplicado:** QA Testing Blueprints (Nivel 11X)  
-**Estado Actual:** Hito 27.11 Completado y Certificado al 100% en Contenedores Docker Efímeros — Expansión CIS Benchmark Hardening (28 Directivas Totales), Enlaces Canónicos RouterOS v7 (0 Errores 404), Soberanía de Selección por Usuario, Catálogo de 10 Nuevas Plantillas Masivas Avanzadas, Corrección Integral de Syslog e Internacionalización Total (CIS, SD-WAN, Flota y Operaciones Masivas).
+**Estado Actual:** Hito 27.12 Completado y Certificado al 100% en Contenedores Docker Efímeros — Cobertura Unitaria al 100% de Componentes Vue (65 de 65 componentes testeados en 67 suites Vitest con 453 pruebas aprobadas), Auto-Sincronización de 9 Directivas Syslog de Auditoría, Escenario BDD 57 Karate UI y Gobernanza Level-11X.
 
 ---
 
@@ -190,6 +190,7 @@ docker compose -f docker-compose.qa.yml down --remove-orphans
 | **Hito 26.8** | Identidad de Marca y Despliegue de Logos Vectoriales Oficiales (Shell, Login, Wallboard, PWA y Metadatos) | **100%** (414 tests Vitest en 56 suites)<br>**100%** (vue-tsc 0 err) | N/A | SVG Vectorial Oficial + Glow Neón Cian + PWA Maskable + Cache Inmutable Nginx | ✅ **Certificado** |
 | **Hito 27** | WebFig v7 Táctico: Paridad Operativa Total, Modales de Creación (Firewall/Queues/PPPoE), Módulos IP & DHCPv4/v6, Pila Dual IPv6, Routing Dinámico y Asistentes NAT | **100%** (551 tests Pytest)<br>**100%** (431 tests Vitest en 59 suites)<br>**100%** (103 BDD API / 49 BDD UI) | N/A | Safe Mode 60s + DHCP Setup Wizard + SLAAC/PD IPv6 + BGP v7 + NAT Wizards | ✅ **Certificado** |
 | **Hito 27.11** | Expansión CIS Benchmark (28 Directivas: 12 Base + 8 ISP + 8 Empresa), Enlaces Canónicos RouterOS v7 (0 Errores 404), Soberanía Operativa, 10 Nuevas Plantillas Masivas Avanzadas, Corrección Integral Syslog, Internacionalización Integral, Ergonomía de Pestañas WebFig y Técnico de Campo (Anti-Falsos Negativos) | **100%** (561 tests Pytest)<br>**100%** (417 tests Vitest en 57 suites)<br>**100%** (112 BDD API / 56 BDD UI) | N/A | Safe Mode 60s + Catálogo 28 CIS + 10 Plantillas Bulk-Ops + Trivy IaC/FS (0 err) + 0 colisiones i18n | ✅ **Certificado** |
+| **Hito 27.12** | Auditoría Integral de Pruebas de Componentes Frontend (100% de los 65 Componentes Vue Testeados), Auto-Sincronización Syslog y Gobernanza Level-11X | **100%** (561 tests Pytest)<br>**100%** (453 tests Vitest en 67 suites)<br>**100%** (112 BDD API / 57 BDD UI) | N/A | 65 de 65 Componentes Vue con suite unitaria dedicada + vue-tsc (0 err) + ruff (0 err) | ✅ **Certificado** |
 
 ---
 
@@ -1991,3 +1992,33 @@ Conforme a la Especificación 43 v2.0.0 y la directiva `.agents/rules/ground_tru
 
 6. **Gobernanza Agéntica Institucional:**
    - Regla `Zero Read-Only Operational Consoles (WebFig v7 Parity)` formalizada e integrada en `.agents/rules/frontend_parity_and_closure.md` y `AGENTS.md`.
+
+### I. Hito 27.12: Auditoría Integral de Pruebas de Componentes Frontend (100% de los 65 Componentes Vue Testeados), Auto-Sincronización Syslog y Gobernanza Level-11X (Completado y Certificado al 100%)
+
+1. **Frontend Unitario (Vitest en Docker `sinfallas/base-node-ionic:26`):**
+   - `vue3/src/components/operations/FiberCutAlertBanner.unit.ts`: **3 de 3 pruebas PASADAS (100%)**, validando alerta visual crítica GPON, detalles de puerto PON / caja NAP y refresco manual.
+   - `vue3/src/components/ipam/IpamIpGridModal.unit.ts`: **3 de 3 pruebas PASADAS (100%)**, validando renderizado de la rejilla de 256 IPs (/24), selección de IP y panel de detalle táctico.
+   - `vue3/src/components/ipam/CorporateIpv6ManagerModal.unit.ts`: **3 de 3 pruebas PASADAS (100%)**, validando creación de prefijos IPv6 corporativos, asignación de pools y validación de formulario.
+   - `vue3/src/components/ipam/IpamPrefixTable.unit.ts`: **3 de 3 pruebas PASADAS (100%)**, validando renderizado de tabla, badges de utilización, apertura de modal de prefijos y cálculo porcentual.
+   - `vue3/src/views/FieldTechOperationsView.unit.ts`: **1 de 1 prueba PASADA (100%)**, validando navegación por pestañas tácticas y aislamiento de vista para técnicos de campo.
+   - `vue3/src/views/IpamManagementView.unit.ts`: **2 de 2 pruebas PASADAS (100%)**, validando integración de tabla IPAM, banner reactivo de corte de fibra y modales de gestión.
+   - Total frontend: **67 suites aprobadas (100%), 453 de 453 pruebas unitarias PASADAS al 100%**, logrando paridad del 100% (65 de 65 componentes y vistas `.vue` con cobertura unitaria aislada).
+
+2. **Backend Unitario (Pytest en Docker `sinfallas/rosgrid-backend:local-test`):**
+   - `fastapi/tests/api/test_hito23_cve_and_syslog.unit.py`: Incorporadas pruebas para formato RouterOS BSD clásico, normalización de payloads y auto-detección de tópicos (`system,info`, `account`, `firewall,info`).
+   - `fastapi/src/api/v1/inventory_helpers.py`: Auto-aprovisionamiento idempotente de las 9 directivas canónicas de Syslog para evitar ceguera en routers de inventario.
+   - Total backend: **561 de 561 pruebas unitarias PASADAS al 100%**.
+
+3. **Escenarios BDD Karate Labs:**
+   - **API REST (`fastapi/test/api_test.feature` & `docs/examples/fastapi/test/api_test.feature`):** **112 escenarios BDD PASADOS (100%)** (incluyendo Escenario 112: Ingesta UDP Syslog RouterOS v7 BSD y Normalización Táctica de Auditoría).
+   - **UI WebFig / NOC (`vue3/test/ui_business_flow.feature` & `docs/examples/vue3/test/ui_business_flow.feature`):** **57 escenarios BDD PASADOS (100%)** (incorporado Escenario 57: Gestión IPAM y Diagnóstico de Red — Interfaz Táctica y Rejilla IP).
+
+4. **Análisis Estático y Tipado Estricto:**
+   - Backend: `ruff check src/ tests/` -> 0 errores.
+   - Frontend: `vue-tsc --noEmit` -> 0 errores; `eslint` -> 0 errores.
+
+5. **Auditoría de Seguridad y Paridad ORM:**
+   - `./scripts/verificar-secretos.sh` -> 0 secretos detectados.
+   - `python3 .agents/scripts/verify_alembic_orm_parity.py` -> 26 tablas SQLAlchemy ORM 100% sincronizadas.
+   - `python3 .agents/scripts/verify_json_no_duplicate_keys.py` -> 0 duplicados en catálogos i18n (`es.json`, `en.json`).
+

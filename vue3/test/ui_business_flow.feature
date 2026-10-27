@@ -553,6 +553,14 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     Then match text("#tab-btn-nap") contains 'Registrar Caja NAP'
     And match text("#tab-btn-customer") contains 'Alta de Cliente'
 
+  Scenario: 57. Gestión IPAM y Diagnóstico de Red — Interfaz Táctica y Rejilla IP
+    Given driver baseUrl + '/ipam'
+    And waitFor(".ipam-view")
+    And waitFor(".ipam-toolbar")
+    Then match text(".ipam-header-left") contains 'IPAM'
+    And waitFor(".ipam-prefix-table-container")
+
+
 
 
 
