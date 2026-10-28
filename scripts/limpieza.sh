@@ -88,10 +88,16 @@ rm -f ./trivy-results* 2>/dev/null || true
 rm -rf ./.trivycache 2>/dev/null || true
 rm -f ./mutmut-*.json 2>/dev/null || true
 
+# Residuos y cachés en la raíz (incluyendo carpetas creadas por Docker como root)
+rm -rf ./.ruff_cache ./karate.jar 2>/dev/null || true
+if [[ -e ./.ruff_cache ]] || [[ -e ./karate.jar ]]; then
+    docker run --rm -v "${REPO_ROOT}:/workspace" alpine rm -rf /workspace/.ruff_cache /workspace/karate.jar 2>/dev/null || true
+fi
+
 # Normalización de permisos para evitar candados (root:root) en el entorno gráfico (Nautilus)
 CURRENT_UID="$(id -u)"
 CURRENT_GID="$(id -g)"
-docker run --rm -v "${REPO_ROOT}:/workspace" alpine chown -R "${CURRENT_UID}:${CURRENT_GID}" /workspace/fastapi /workspace/vue3 2>/dev/null || true
+docker run --rm -v "${REPO_ROOT}:/workspace" alpine sh -c "chown -R ${CURRENT_UID}:${CURRENT_GID} /workspace/fastapi /workspace/vue3 /workspace/scripts 2>/dev/null || true; find /workspace -maxdepth 1 -user 0 -exec chown ${CURRENT_UID}:${CURRENT_GID} {} + 2>/dev/null || true" 2>/dev/null || true
 
 docker system prune -af
 

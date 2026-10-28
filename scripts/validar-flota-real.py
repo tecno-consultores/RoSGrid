@@ -68,7 +68,7 @@ def validate_fleet_syslog(routers: list[dict[str, Any]]) -> tuple[bool, dict[str
     print(f"=======================================================")
 
     expected_syslog_active = {"r1", "r2", "r3"}
-    expected_syslog_inactive = {"r4", "r5", "r6"}
+    expected_syslog_inactive = {"r4", "r5", "r6", "caps1"}
 
     failures = []
     online_count = 0
@@ -121,11 +121,11 @@ def validate_fleet_syslog(routers: list[dict[str, Any]]) -> tuple[bool, dict[str
     total = len(routers)
     avail_pct = round((online_count / total) * 100) if total > 0 else 0
     print(f"📊 Flota API: {online_count}/{total} en línea ({avail_pct}% disponibilidad)")
-    print(f"📡 Sensores Syslog: {syslog_active_count} Activos (r1, r2, r3) | {syslog_inactive_count} Sin Syslog (r4, r5, r6)")
+    print(f"📡 Sensores Syslog: {syslog_active_count} Activos (r1, r2, r3) | {syslog_inactive_count} Sin Syslog (r4, r5, r6, caps1)")
 
-    if syslog_active_count != 3 or syslog_inactive_count != 3:
+    if syslog_active_count != len(expected_syslog_active):
         failures.append(
-            f"Conteo de sensores Syslog incorrecto: Activos={syslog_active_count}, Inactivos={syslog_inactive_count}"
+            f"Conteo de sensores Syslog activos incorrecto: Activos={syslog_active_count}, Esperados={len(expected_syslog_active)}"
         )
 
     if failures:

@@ -70,9 +70,10 @@ flowchart TD
 
 ## 4. Guardrail de Validación de Flota Real (`scripts/validar-flota-real.py`)
 
-El entorno de laboratorio físico dispone de 6 routers MikroTik (`r1` a `r6`):
-- `r1` (`10.250.3.8`), `r2` (`10.250.3.13`), `r3` (`10.250.3.14`): Enrolados con servicios RoSGrid.
-- `r4` (`10.250.3.15`), `r5` (`10.250.3.17`), `r6` (`10.250.3.19`): Mantenidos intencionalmente de fábrica.
+El entorno de laboratorio físico dispone de 7 nodos MikroTik (`r1` a `r6` y `caps1`):
+- `r1` (`10.250.3.8`), `r2` (`10.250.3.13`), `r3` (`10.250.3.14`): Enrolados con servicios RoSGrid y Syslog activo.
+- `r4` (`10.250.3.15`), `r5` (`10.250.3.17`), `r6` (`10.250.3.19`): Mantenidos intencionalmente de fábrica (sin Syslog).
+- `caps1` (`10.250.3.21`): Punto de acceso y nodo wireless de pruebas (sin Syslog RoSGrid por defecto).
 
 ### 4.1 Aserciones Cruzadas Multi-Dominio
 
@@ -84,7 +85,7 @@ El entorno de laboratorio físico dispone de 6 routers MikroTik (`r1` a `r6`):
   - CIS Score: >= 70
   - IPAM Leases: Sincronizados
 
-[Aserción Negativa Obligatoria]: r4, r5, r6 DEBEN reportar:
+[Aserción Negativa Obligatoria]: r4, r5, r6, caps1 DEBEN reportar:
   - Reachable: True (Físicamente vivos en lab)
   - Status: ONLINE
   - Syslog Active: FALSE (⚪ Sin Syslog)
@@ -93,7 +94,7 @@ El entorno de laboratorio físico dispone de 6 routers MikroTik (`r1` a `r6`):
 ```
 
 ### 4.2 Principio Fail-Closed
-Si cualquier equipo de fábrica (`r4, r5, r6`) reporta un valor positivo en sensores exclusivos de RoSGrid, el script `scripts/validar-flota-real.py` (`make smoke-fleet`) termina inmediatamente con código de salida `1`, impidiendo commits o publicación en Git.
+Si cualquier equipo de fábrica o no aprovisionado (`r4, r5, r6, caps1`) reporta un valor positivo en sensores exclusivos de RoSGrid, el script `scripts/validar-flota-real.py` (`make smoke-fleet`) termina inmediatamente con código de salida `1`, impidiendo commits o publicación en Git.
 
 ### 4.3 Auto-Sincronización de Directivas de Auditoría y Parseo BSD
 Para evitar que routers nominales (`r1, r2, r3`) sufran de ceguera ante cambios administrativos de WinBox o reglas firewall aplicadas localmente:

@@ -115,6 +115,8 @@ target/
 **/target/
 test/target/
 **/test/target/
+karate.jar
+karate*.jar
 *.log
 **/*.log
 zap-report.html

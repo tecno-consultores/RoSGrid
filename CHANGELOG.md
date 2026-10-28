@@ -10,6 +10,14 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Added
 
+- **Limpieza Unificada y Purga de Residuos en Raíz (`scripts/limpieza.sh`, `.gitignore`, `fastapi/tests/core/test_vulnerability_audit_gate.unit.py`):**
+  - **Purga de Carpetas Residuales (.ruff_cache y karate.jar):** Se actualizó el paso [4/4] de `scripts/limpieza.sh` para eliminar definitivamente los directorios residuales `.ruff_cache` y `karate.jar` generados en la raíz del proyecto.
+  - **Mecanismo de Rescate con Contenedor Docker:** Se incorporó un fallback automático ejecutando un contenedor efímero `alpine` para purgar con éxito directorios creados con pertenencia a `root:root` (que mostraban iconos de candado en Nautilus).
+  - **Normalización de Permisos Extendida:** Se extendió la restitución de propiedad a nivel de raíz (`find /workspace -maxdepth 1 -user 0 -exec chown ...`) y sobre `scripts/`, devolviendo la titularidad al usuario del host (`UID:GID`).
+  - **Blindaje en `.gitignore`:** Inclusión explícita de `karate.jar` y `karate*.jar` para prevenir seguimiento involuntario.
+  - **Aseguramiento Level-11X:** Nueva prueba unitaria `test_limpieza_script_purges_root_residual_directories` en `fastapi/tests/core/test_vulnerability_audit_gate.unit.py` (562 tests Pytest al 100%) y certificación limpia con `ShellCheck`.
+
+
 - **Especificación Técnica y Arquitectura de Consola Táctica Interactiva CAPsMAN v7 (`docs/specs/51_INTERACTIVE_CAPSMAN_WIFI_V7_CONFIGURATION_AND_FLEET_PROVISIONING.md`, `docs/specs/00`, `docs/specs/33`, `docs/06`, `ROADMAP.md`):**
   - **Soberanía Operativa y Paridad WebFig v7:** Transición de la pestaña Wi-Fi de un visor de solo monitoreo a una consola de aprovisionamiento masivo de flota inalámbrica, documentando la matriz de comandos canónicos de MikroTik RouterOS v7.13+ moderno (`/interface/wifi/*`) y legado (`/caps-man/*`).
   - **Catálogo de Endpoints REST de Mutación:** Definición de especificaciones para activación/desactivación del gestor con certificados automáticos, perfiles criptográficos WPA2-PSK/WPA3-SAE, segmentación L2 por VLAN Datapath, reglas de provisioning por bandas (2.4GHz, 5GHz, 6GHz), reprovisionamiento de flota en caliente, desautenticación forzosa de clientes (*Kick Client*) y Asistente Quick-Setup en 1 clic bajo Safe Mode de 60s.

@@ -2,7 +2,7 @@
 
 **Licencia:** GPL-3.0-only  
 **Estándar Aplicado:** QA Testing Blueprints (Nivel 11X)  
-**Estado Actual:** Hito 27.12 Completado y Certificado al 100% en Contenedores Docker Efímeros — Paridad Total de Gobernanza Modular (19/19 Flags con rogue_dhcp_enabled y enforce_maker_checker persistidos en DB), Cobertura 100% de Componentes Vue (68/68 auditados con verify_zero_orphan_vue_components.py), 465 pruebas Vitest en 70 suites aprobadas al 100%, 561 pruebas unitarias backend Pytest (100%), Escenarios BDD 116 Karate API y 61 Karate UI.
+**Estado Actual:** Hito 27.12 Completado y Certificado al 100% en Contenedores Docker Efímeros — Paridad Total de Gobernanza Modular (19/19 Flags con rogue_dhcp_enabled y enforce_maker_checker persistidos en DB), Cobertura 100% de Componentes Vue (68/68 auditados con verify_zero_orphan_vue_components.py), 465 pruebas Vitest en 70 suites aprobadas al 100%, 562 pruebas unitarias backend Pytest (100%), Escenarios BDD 116 Karate API y 61 Karate UI.
 
 ---
 
@@ -2007,7 +2007,7 @@ Conforme a la Especificación 43 v2.0.0 y la directiva `.agents/rules/ground_tru
 2. **Backend Unitario (Pytest en Docker `sinfallas/rosgrid-backend:local-test`):**
    - `fastapi/tests/api/test_hito23_cve_and_syslog.unit.py`: Incorporadas pruebas para formato RouterOS BSD clásico, normalización de payloads y auto-detección de tópicos (`system,info`, `account`, `firewall,info`).
    - `fastapi/src/api/v1/inventory_helpers.py`: Auto-aprovisionamiento idempotente de las 9 directivas canónicas de Syslog para evitar ceguera en routers de inventario.
-   - Total backend: **561 de 561 pruebas unitarias PASADAS al 100%**.
+   - Total backend: **562 de 562 pruebas unitarias PASADAS al 100%**.
 
 3. **Escenarios BDD Karate Labs:**
    - **API REST (`fastapi/test/api_test.feature` & `docs/examples/fastapi/test/api_test.feature`):** **112 escenarios BDD PASADOS (100%)** (incluyendo Escenario 112: Ingesta UDP Syslog RouterOS v7 BSD y Normalización Táctica de Auditoría).
