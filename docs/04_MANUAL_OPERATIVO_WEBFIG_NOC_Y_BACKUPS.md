@@ -282,3 +282,14 @@ Para solventar la "ceguera de estado" en aplicaciones SPA donde el frontend sigu
   - **Pestañas Inactivas:** La `Page Visibility API` suspende el sondeo cuando la pestaña se minimiza.
   - **Sincronización Multitarea:** Mediante `BroadcastChannel`, si el operador tiene varias pestañas abiertas, una sola realiza el chequeo y sincroniza a las demás sin multiplicar el tráfico de red.
 
+---
+
+## 11. Ergonomía Visual Refactoring UI y Accesibilidad para Operadores NOC
+
+La interfaz operativa aplica las reglas de jerarquía visual de **Refactoring UI** adaptadas a entornos NOC de alta densidad:
+
+- **Jerarquía de Botones sin Saturación Cromática:** Cada vista destaca una única acción principal en cian táctico; los botones auxiliares de cabecera y las acciones secundarias/destructivas por fila (`Syslog`, `Bóveda`, `Mantenimiento`, `TOFU`, `Eliminar`) permanecen en reposo con borde neutro para no fatigar la vista y se iluminan en su color semántico al pasar el cursor o enfocar con teclado (`Tab`).
+- **Indicadores Geométricos para Daltonismo:** Los indicadores de estado *Online* (círculo sólido verde) y *Offline* (anillo hueco de borde rojo) se distinguen por su forma geométrica además del color.
+- **Estados Vacíos Tácticos:** Toda tabla `RgDataTable` sin registros muestra un panel informativo (`role="status"`) indicando la ausencia de datos en la vista o filtro actual.
+
+

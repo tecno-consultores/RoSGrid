@@ -314,11 +314,13 @@
     gap: 4px;
   }
 
+  /* Refactoring UI: Loosen all-caps text with tracking-wider (0.05em) */
   .group-label {
-    font-size: 0.72rem;
+    font-size: var(--rg-text-2xs, 0.6875rem);
     font-weight: 700;
     color: var(--rg-text-muted);
     text-transform: uppercase;
+    letter-spacing: 0.05em;
     margin-bottom: 2px;
     padding-left: 6px;
   }

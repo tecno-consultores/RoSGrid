@@ -15,6 +15,7 @@
       selectedKey?: string | null;
       ariaLabel?: string;
       caption?: string;
+      emptyMessage?: string;
     }>(),
     {
       rowKey: 'id',
@@ -22,6 +23,7 @@
       selectedKey: null,
       ariaLabel: 'Tabla de datos técnicos',
       caption: 'Listado de recursos MikroTik',
+      emptyMessage: 'No se encontraron registros para mostrar en esta vista.',
     },
   );
 
@@ -33,6 +35,7 @@
   defineSlots<{
     default?(): unknown;
     actions?(props: { row: T }): unknown;
+    empty?(): unknown;
   }>();
 
   const themeStore = useThemeAndLayoutStore();
@@ -345,6 +348,19 @@
           </tr>
         </tbody>
       </table>
+
+      <!-- Refactoring UI: Empty State Táctico ("Empty states come first") -->
+      <div
+        v-if="totalRows === 0"
+        class="rg-table-empty"
+        role="status"
+        aria-live="polite"
+      >
+        <slot name="empty">
+          <span class="rg-table-empty__icon" aria-hidden="true">📭</span>
+          <p class="rg-table-empty__text">{{ emptyMessage }}</p>
+        </slot>
+      </div>
     </div>
   </div>
 </template>
@@ -355,7 +371,8 @@
     flex-direction: column;
     background: var(--rg-bg-surface);
     border: 1px solid var(--rg-border-panel);
-    border-radius: 6px;
+    border-radius: var(--rg-radius-lg, 8px);
+    box-shadow: var(--rg-inset-highlight);
     overflow: hidden;
   }
 
@@ -363,13 +380,13 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 12px;
+    padding: var(--rg-space-2, 8px) var(--rg-space-3, 12px);
     background: var(--rg-bg-elevated);
     border-bottom: 1px solid var(--rg-border-grid);
   }
 
   .rg-table-counter {
-    font-size: 12px;
+    font-size: var(--rg-text-xs, 0.75rem);
     color: var(--rg-text-muted);
     font-family: var(--rg-font-mono);
   }
@@ -378,9 +395,9 @@
     background: transparent;
     border: 1px solid var(--rg-border-panel);
     color: var(--rg-text-secondary);
-    font-size: 12px;
+    font-size: var(--rg-text-xs, 0.75rem);
     padding: 4px 8px;
-    border-radius: 4px;
+    border-radius: var(--rg-radius-sm, 4px);
     cursor: pointer;
   }
 
@@ -398,7 +415,7 @@
   .rg-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 13px;
+    font-size: var(--rg-text-sm, 0.8125rem);
   }
 
   /* Densidad Compacta (32px WinBox) */
@@ -424,7 +441,7 @@
     background: var(--rg-bg-elevated);
     color: var(--rg-text-secondary);
     font-weight: 600;
-    font-size: 12px;
+    font-size: var(--rg-text-xs, 0.75rem);
     text-align: left;
     z-index: 10;
     user-select: none;
@@ -480,21 +497,62 @@
     border: 1px solid var(--rg-border-panel);
     color: var(--rg-accent-cyan);
     padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 11px;
+    border-radius: var(--rg-radius-sm, 4px);
+    font-size: var(--rg-text-2xs, 0.6875rem);
     cursor: pointer;
   }
 
   .rg-row-details td {
     background: var(--rg-bg-canvas);
-    padding: 12px;
+    padding: var(--rg-space-3, 12px);
   }
 
+  /* Refactoring UI: Demote labels (<dt>) so values (<dd>) stand out */
   .details-grid {
     display: grid;
     grid-template-columns: 140px 1fr;
     row-gap: 6px;
-    font-size: 12px;
+    align-items: baseline;
+    font-size: var(--rg-text-xs, 0.75rem);
+  }
+
+  .details-grid dt {
+    font-size: var(--rg-text-2xs, 0.6875rem);
+    font-weight: 600;
+    color: var(--rg-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .details-grid dd {
+    font-size: var(--rg-text-xs, 0.75rem);
+    font-weight: 600;
+    color: var(--rg-text-primary);
+  }
+
+  .rg-table-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--rg-space-2, 8px);
+    padding: var(--rg-space-8, 32px) var(--rg-space-4, 16px);
+    text-align: center;
+    color: var(--rg-text-muted);
+    background: var(--rg-bg-surface);
+  }
+
+  .rg-table-empty__icon {
+    font-size: var(--rg-text-xl, 1.5rem);
+    opacity: 0.65;
+    line-height: 1;
+  }
+
+  .rg-table-empty__text {
+    font-size: var(--rg-text-sm, 0.8125rem);
+    color: var(--rg-text-secondary);
+    max-width: 55ch;
+    margin: 0;
   }
 
   .sr-only {

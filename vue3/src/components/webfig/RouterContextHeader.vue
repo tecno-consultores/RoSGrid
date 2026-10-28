@@ -164,15 +164,19 @@
     gap: 10px;
   }
 
+  /* Refactoring UI: Color supports, never carries — Hollow ring for offline vs Solid dot for online */
   .status-indicator {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: #ef4444;
+    background: transparent;
+    border: 2px solid var(--rg-status-critical, #ef4444);
+    flex-shrink: 0;
   }
 
   .status-indicator--online {
-    background: #10b981;
+    background: var(--rg-status-online, #10b981);
+    border: none;
     box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
   }
 

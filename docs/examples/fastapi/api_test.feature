@@ -866,6 +866,31 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 115. Toggle interactivo del Manager CAPsMAN WiFi v7 sin autenticación devuelve 401
+    Given path '/api/v1/wifi/capsman/3fc15cff-31eb-4230-81c6-800130be18e8/manager/toggle'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000115'
+    And request { enabled: true, comment: 'Activar CAPsMAN v7' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 116. Quick Setup asistente WiFi corporativo sin autenticación devuelve 401
+    Given path '/api/v1/wifi/capsman/3fc15cff-31eb-4230-81c6-800130be18e8/quick-setup'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000116'
+    And request { corp_ssid: 'CORP-NET', corp_passphrase: 'supersecretpass', create_guest: false }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 117. Autodescubrimiento TOFU de router en inventario sin autenticación devuelve 401
+    Given path '/api/v1/inventory/routers/00000000-0000-0000-0000-000000000001/discover'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000117'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
+
 
 
 

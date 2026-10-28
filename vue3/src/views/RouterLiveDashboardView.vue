@@ -105,6 +105,14 @@
     }
   }
 
+  function getThemeToken(tokenName: string, fallback: string): string {
+    if (typeof document === 'undefined' || typeof getComputedStyle !== 'function') {
+      return fallback;
+    }
+    const val = getComputedStyle(document.documentElement).getPropertyValue(tokenName).trim();
+    return val || fallback;
+  }
+
   function drawAreaChart(
     ctx: CanvasRenderingContext2D,
     width: number,
@@ -117,8 +125,8 @@
   ) {
     ctx.clearRect(0, 0, width, height);
 
-    // Cuadrícula táctica estilo WinBox
-    ctx.strokeStyle = '#1E293B';
+    // Cuadrícula táctica estilo WinBox adaptativa al tema activo
+    ctx.strokeStyle = getThemeToken('--rg-border-grid', '#1E293B');
     ctx.lineWidth = 1;
     for (let y = 0; y <= height; y += height / 4) {
       ctx.beginPath();
@@ -128,7 +136,7 @@
     }
 
     if (points.length < 2) {
-      ctx.fillStyle = '#64748B';
+      ctx.fillStyle = getThemeToken('--rg-text-muted', '#64748B');
       ctx.font = '12px monospace';
       ctx.fillText('Esperando telemetría en vivo...', width / 2 - 80, height / 2);
       return;
@@ -171,8 +179,8 @@
   ) {
     ctx.clearRect(0, 0, width, height);
 
-    // Cuadrícula de fondo
-    ctx.strokeStyle = '#1E293B';
+    // Cuadrícula de fondo adaptativa al tema activo
+    ctx.strokeStyle = getThemeToken('--rg-border-grid', '#1E293B');
     ctx.lineWidth = 1;
     for (let y = 0; y <= height; y += height / 4) {
       ctx.beginPath();
@@ -404,13 +412,15 @@
     color: var(--rg-text-muted);
   }
 
+  /* Refactoring UI: Segmented Control con Radios Concéntricos (8px ext - 3px pad = 5px int) */
   .window-selectors {
     display: flex;
-    gap: 6px;
+    gap: 4px;
     background: var(--rg-bg-canvas);
     padding: 3px;
     border: 1px solid var(--rg-border-grid);
-    border-radius: 6px;
+    border-radius: var(--rg-radius-lg, 8px);
+    box-shadow: var(--rg-inset-well);
   }
 
   .btn-window {
@@ -418,10 +428,10 @@
     border: none;
     color: var(--rg-text-secondary);
     padding: 4px 10px;
-    font-size: 0.75rem;
-    border-radius: 4px;
+    font-size: var(--rg-text-xs, 0.75rem);
+    border-radius: var(--rg-radius-concentric, 5px);
     cursor: pointer;
-    font-family: 'JetBrains Mono', 'Ubuntu Mono', ui-monospace, monospace;
+    font-family: var(--rg-font-mono);
     transition: all 0.15s ease;
   }
 
@@ -429,23 +439,25 @@
     background: var(--rg-bg-elevated);
     color: var(--rg-accent-cyan);
     font-weight: 600;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--rg-inset-highlight), var(--rg-shadow-sm);
   }
 
   .kpi-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 12px;
+    gap: var(--rg-space-3, 12px);
   }
 
+  /* Refactoring UI: Lighter surface reads raised on dark mode ("Depth without shadows") */
   .kpi-card {
-    background: var(--rg-bg-canvas);
-    border: 1px solid var(--rg-border-grid);
-    border-radius: 8px;
-    padding: 12px;
+    background: var(--rg-bg-elevated);
+    border: 1px solid var(--rg-border-panel);
+    border-radius: var(--rg-radius-lg, 8px);
+    padding: var(--rg-space-3, 12px);
+    box-shadow: var(--rg-inset-highlight);
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: var(--rg-space-1, 4px);
   }
 
   .kpi-title {

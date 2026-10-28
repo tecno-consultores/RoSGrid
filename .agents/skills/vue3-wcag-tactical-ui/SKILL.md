@@ -57,3 +57,22 @@ This skill governs all stores, composables, components, and views inside `vue3/`
    - Reorderable rows in `RgDataTable.vue` MUST provide keyboard shortcuts (`Alt + ArrowUp` / `Alt + ArrowDown` with `aria-label="Mover regla *1C hacia arriba"`) to fulfill **WCAG 2.1.1**.
 4. **Heading Hierarchy & Document Title:**
    - Exactly one `<h1>` per view, followed by consecutive `<h2>`/`<h3>` headings without skipping levels. Dynamically update `document.title` in `router.beforeEach`.
+
+---
+
+## 4. Refactoring UI Hierarchy, Token Systems & Polish Invariants
+
+1. **Zero-Orphan CSS Tokens & Named Scales (`vue3/src/assets/themes.css`):**
+   - Every `var(--rg-*)` token referenced in components MUST be explicitly defined across all 3 themes (`dark`, `light`, `noc-high-contrast`) in `themes.css`. Never rely on hardcoded dark-mode fallbacks that break `data-theme="light"`.
+   - Use named spacing (`--rg-space-1` to `--rg-space-12`), radius (`--rg-radius-xs` to `--rg-radius-xl`), and 7-step typography (`--rg-text-2xs` to `--rg-text-xl`) scales rather than arbitrary fractional values.
+2. **Button Rank Hierarchy & Neutral Row Actions (*Severity Is Not Rank*):**
+   - Enforce a single primary button per view (`.rg-btn--primary` / `.btn-primary`). Secondary header actions (`Import CSV`, `CVE Matrix`, `Maintenance Windows`, `Manage Roles`, `NAT Wizards`) MUST use neutral surface/border tokens at rest and reveal semantic accents only on `:hover` / `:focus-visible`.
+   - In dense tables (`RgDataTable`), keep inline row actions visible (1-click NOC ergonomics) with only the primary row action (`WebFig`) highlighted at rest; secondary/destructive actions (`Syslog`, `Vault`, `Maintenance`, `TOFU`, `Delete`) remain neutral at rest and illuminate semantically on `:hover` / `:focus-visible`.
+3. **Concentric Border Radii & Overhead Lighting (`Depth & Polish`):**
+   - Nested segmented controls (`.view-mode-toggle`, `.subtabs-bar`, `.window-selectors`, `.dropdown-toggle-group`) MUST maintain concentric radii (`r_outer = 8px`, `padding = 3px`, `r_inner = 5px`).
+   - Use overhead inset highlights (`--rg-inset-highlight`) and stepped surface lightness (`--rg-bg-canvas` -> `--rg-bg-surface` -> `--rg-bg-elevated`) for dark-mode depth, avoiding double concentric borders around `RgDataTable`.
+   - `RgDataTable.vue` MUST render an accessible tactical empty state (`.rg-table-empty` with `role="status"` and customizable `#empty` slot) whenever `rows.length === 0`.
+4. **Colorblind Safety (*Color Supports, Never Carries*) & Dynamic Canvas Tokens:**
+   - Status indicators MUST combine color with shape/border geometry (solid filled dot `#10B981` for Online vs. hollow 2px ring `#EF4444` for Offline).
+   - 2D `<canvas>` charts MUST resolve `--rg-border-grid` and `--rg-text-muted` via `getComputedStyle(document.documentElement)` instead of hardcoding dark hex colors.
+

@@ -565,129 +565,129 @@
 
 <style scoped>
   .inventory-view {
-    padding: 24px;
+    padding: var(--rg-space-4, 16px) var(--rg-space-6, 24px) var(--rg-space-6, 24px);
     background-color: var(--rg-bg-canvas, #0b0f19);
     min-height: 100%;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: var(--rg-space-4, 16px);
   }
 
   .inventory-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: baseline;
     flex-wrap: wrap;
-    gap: 16px;
+    gap: var(--rg-space-4, 16px);
   }
 
   .inventory-title {
-    font-size: 1.5rem;
+    font-size: var(--rg-text-xl, 1.5rem);
     font-weight: 700;
-    color: var(--rg-accent-cyan, #22d3ee);
+    color: var(--rg-text-primary, #f8fafc);
+    letter-spacing: -0.025em;
     margin: 0;
   }
 
   .inventory-subtitle {
-    font-size: 0.85rem;
+    font-size: var(--rg-text-sm, 0.8125rem);
     color: var(--rg-text-muted, #94a3b8);
+    max-width: 65ch;
     margin: 4px 0 0 0;
   }
 
   .header-actions {
     display: flex;
     align-items: center;
-    gap: 12px;
+    flex-wrap: wrap;
+    gap: var(--rg-space-2, 8px);
   }
 
+  /* Refactoring UI: Segmented Control con Radios Concéntricos (8px ext - 3px pad = 5px int) */
   .view-mode-toggle {
-    display: flex;
-    border: 1px solid var(--rg-border-grid, #1e293b);
-    border-radius: 6px;
-    overflow: hidden;
+    display: inline-flex;
+    gap: 3px;
+    padding: 3px;
+    background: var(--rg-bg-canvas, #0b0f19);
+    border: 1px solid var(--rg-border-panel, #334155);
+    border-radius: var(--rg-radius-lg, 8px);
+    box-shadow: var(--rg-inset-well);
   }
 
   .btn-toggle {
-    background: var(--rg-bg-surface, #111827);
+    background: transparent;
     border: none;
-    color: var(--rg-text-muted, #94a3b8);
-    padding: 8px 14px;
-    font-size: 0.8rem;
+    color: var(--rg-text-secondary, #cbd5e1);
+    padding: 5px 12px;
+    font-size: var(--rg-text-xs, 0.75rem);
+    font-weight: 600;
+    border-radius: var(--rg-radius-concentric, 5px);
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.15s ease;
+  }
+
+  .btn-toggle:hover:not(.btn-toggle--active) {
+    color: var(--rg-text-primary, #f8fafc);
+    background: var(--rg-bg-surface, #111827);
   }
 
   .btn-toggle--active {
     background: var(--rg-accent-cyan, #22d3ee);
     color: #0b0f19;
     font-weight: 700;
+    box-shadow: var(--rg-shadow-sm);
   }
 
-  .btn-import-csv {
-    background: transparent;
-    border: 1px solid var(--rg-accent-cyan, #22d3ee);
-    color: var(--rg-accent-cyan, #22d3ee);
-    padding: 8px 14px;
-    border-radius: 6px;
-    font-size: 0.85rem;
+  /* Refactoring UI: De-emphasize secondary header actions so primary stands out */
+  .btn-import-csv,
+  .btn-cve-matrix,
+  .btn-maintenance-windows,
+  .btn-manage-roles {
+    background: var(--rg-bg-surface, #111827);
+    border: 1px solid var(--rg-border-panel, #334155);
+    color: var(--rg-text-secondary, #cbd5e1);
+    padding: 7px 12px;
+    border-radius: var(--rg-radius-md, 6px);
+    font-size: var(--rg-text-sm, 0.8125rem);
     font-weight: 600;
     cursor: pointer;
-  }
-
-  .btn-cve-matrix {
-    background: rgba(245, 158, 11, 0.15);
-    border: 1px solid #f59e0b;
-    color: #fbbf24;
-    padding: 8px 14px;
-    border-radius: 6px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .btn-cve-matrix:hover {
-    background: rgba(245, 158, 11, 0.25);
-    color: #fff;
-  }
-
-  .btn-maintenance-windows {
-    background: rgba(147, 51, 234, 0.15);
-    border: 1px solid #a855f7;
-    color: #c084fc;
-    padding: 8px 14px;
-    border-radius: 6px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
+    box-shadow: var(--rg-inset-highlight);
+    transition: all 0.15s ease;
     display: inline-flex;
     align-items: center;
     gap: 6px;
   }
 
-  .btn-maintenance-windows:hover {
-    background: rgba(147, 51, 234, 0.25);
-    color: #fff;
+  .btn-import-csv:hover,
+  .btn-import-csv:focus-visible {
+    background: var(--rg-bg-elevated, #1e293b);
+    border-color: var(--rg-accent-cyan, #22d3ee);
+    color: var(--rg-accent-cyan, #22d3ee);
+  }
+
+  .btn-cve-matrix:hover,
+  .btn-cve-matrix:focus-visible {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: var(--rg-status-warning, #f59e0b);
+    color: var(--rg-status-warning-text, #fde68a);
+  }
+
+  .btn-maintenance-windows:hover,
+  .btn-maintenance-windows:focus-visible {
+    background: rgba(147, 51, 234, 0.15);
+    border-color: #a855f7;
+    color: #c084fc;
   }
 
   .btn-manage-roles {
-    background: rgba(14, 165, 233, 0.15);
-    border: 1px solid rgba(14, 165, 233, 0.4);
-    color: #38bdf8;
-    padding: 8px 14px;
-    border-radius: 6px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    font-family: monospace;
-    transition: all 0.2s;
+    font-family: var(--rg-font-mono, monospace);
   }
 
-  .btn-manage-roles:hover {
-    background: rgba(14, 165, 233, 0.25);
-    border-color: #38bdf8;
-    color: #fff;
+  .btn-manage-roles:hover,
+  .btn-manage-roles:focus-visible {
+    background: rgba(14, 165, 233, 0.15);
+    border-color: var(--rg-status-info, #38bdf8);
+    color: var(--rg-status-info-text, #bae6fd);
   }
 
   .filter-label-wrap {
@@ -701,8 +701,8 @@
     background: transparent;
     border: none;
     color: var(--rg-accent-cyan, #22d3ee);
-    font-size: 0.72rem;
-    font-family: monospace;
+    font-size: var(--rg-text-2xs, 0.6875rem);
+    font-family: var(--rg-font-mono, monospace);
     cursor: pointer;
     padding: 0;
     text-decoration: underline;
@@ -712,71 +712,80 @@
 
   .btn-text-action:hover {
     opacity: 1;
-    color: #38bdf8;
+    color: var(--rg-cyan-300, #67e8f9);
   }
 
   .banner {
     padding: 10px 14px;
-    border-radius: 6px;
-    font-size: 0.85rem;
+    border-radius: var(--rg-radius-md, 6px);
+    font-size: var(--rg-text-sm, 0.8125rem);
   }
 
   .banner--success {
     background: rgba(16, 185, 129, 0.15);
-    border: 1px solid #10b981;
-    color: #34d399;
+    border: 1px solid var(--rg-status-online, #10b981);
+    color: var(--rg-status-online-text, #6ee7b7);
   }
 
   .banner--error {
     background: rgba(239, 68, 68, 0.15);
-    border: 1px solid #ef4444;
-    color: #f87171;
+    border: 1px solid var(--rg-status-critical, #ef4444);
+    color: var(--rg-status-critical-text, #fca5a5);
   }
 
+  /* Refactoring UI: Give each filter the width it needs */
   .filters-bar {
     display: flex;
-    gap: 12px;
+    gap: var(--rg-space-3, 12px);
     background: var(--rg-bg-surface, #111827);
-    padding: 12px 16px;
-    border: 1px solid var(--rg-border-grid, #1e293b);
-    border-radius: 8px;
+    padding: var(--rg-space-3, 12px) var(--rg-space-4, 16px);
+    border: 1px solid var(--rg-border-panel, #334155);
+    border-radius: var(--rg-radius-lg, 8px);
+    box-shadow: var(--rg-inset-highlight);
     flex-wrap: wrap;
+    align-items: flex-end;
   }
 
   .filter-item {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    flex: 1;
-    min-width: 170px;
+    gap: var(--rg-space-1, 4px);
+    flex: 0 1 210px;
+    min-width: 165px;
+  }
+
+  .filter-item:first-child {
+    flex: 2 1 280px;
   }
 
   .filter-label {
-    font-size: 0.75rem;
+    font-size: var(--rg-text-xs, 0.75rem);
+    font-weight: 600;
     color: var(--rg-text-muted, #94a3b8);
   }
 
   .filter-input,
   .filter-select {
-    padding: 8px 12px;
-    background: var(--rg-bg-canvas, #0b0f19);
+    padding: 7px 12px;
+    background: var(--rg-bg-input, #0b0f19);
     border: 1px solid var(--rg-border-grid, #1e293b);
-    border-radius: 6px;
+    border-radius: var(--rg-radius-md, 6px);
     color: var(--rg-text-primary, #f8fafc);
-    font-size: 0.85rem;
+    font-size: var(--rg-text-sm, 0.8125rem);
+    box-shadow: var(--rg-inset-well);
   }
 
   .inventory-content {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: var(--rg-space-4, 16px);
     flex: 1;
   }
 
   .inventory-content--split {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
+    gap: var(--rg-space-4, 16px);
   }
 
   @media (max-width: 1024px) {
@@ -785,11 +794,9 @@
     }
   }
 
+  /* Refactoring UI: Fewer borders (RgDataTable already renders its own panel border) */
   .panel-table {
-    background: var(--rg-bg-surface, #111827);
-    border: 1px solid var(--rg-border-grid, #1e293b);
-    border-radius: 8px;
-    overflow: hidden;
+    min-width: 0;
   }
 
   .panel-map {
@@ -798,13 +805,14 @@
     max-height: calc(100vh - 180px);
     position: relative;
     overflow: hidden;
-    border-radius: 8px;
-    border: 1px solid var(--rg-border-grid, #1e293b);
+    border-radius: var(--rg-radius-lg, 8px);
+    border: 1px solid var(--rg-border-panel, #334155);
   }
 
+  /* Refactoring UI: Severity is not rank — Neutral secondary actions at rest, semantic on hover */
   .table-row-actions {
     display: flex;
-    gap: 4px;
+    gap: var(--rg-space-1, 4px);
   }
 
   .btn-row-action {
@@ -812,45 +820,64 @@
     border: 1px solid var(--rg-border-grid, #1e293b);
     color: var(--rg-text-secondary, #cbd5e1);
     padding: 3px 8px;
-    border-radius: 4px;
-    font-size: 0.7rem;
+    border-radius: var(--rg-radius-sm, 4px);
+    font-size: var(--rg-text-2xs, 0.6875rem);
     cursor: pointer;
+    transition: all 0.15s ease;
   }
 
+  .btn-row-action:hover,
+  .btn-row-action:focus-visible {
+    background: var(--rg-bg-elevated, #1e293b);
+    border-color: var(--rg-border-panel, #334155);
+    color: var(--rg-text-primary, #f8fafc);
+  }
+
+  /* Acción primaria de fila: WebFig conserva su rango cian */
   .btn-row-action--webfig {
     border-color: var(--rg-accent-cyan, #22d3ee);
     color: var(--rg-accent-cyan, #22d3ee);
-  }
-
-  .btn-row-action--syslog {
-    border-color: #38bdf8;
-    color: #38bdf8;
-  }
-
-  .btn-row-action--syslog-active {
-    background: rgba(16, 185, 129, 0.2);
-    border-color: #10b981;
-    color: #34d399;
     font-weight: 600;
   }
 
-  .btn-row-action--vault {
-    border-color: #fbbf24;
-    color: #fbbf24;
+  .btn-row-action--webfig:hover,
+  .btn-row-action--webfig:focus-visible {
+    background: rgba(34, 211, 238, 0.15);
+    border-color: var(--rg-accent-cyan, #22d3ee);
+    color: var(--rg-text-primary, #f8fafc);
   }
 
-  .btn-row-action--maint {
+  .btn-row-action--syslog:hover,
+  .btn-row-action--syslog:focus-visible {
+    border-color: var(--rg-status-info, #38bdf8);
+    color: var(--rg-status-info, #38bdf8);
+    background: rgba(56, 189, 248, 0.12);
+  }
+
+  .btn-row-action--syslog-active {
+    background: rgba(16, 185, 129, 0.16);
+    border-color: var(--rg-status-online, #10b981);
+    color: var(--rg-status-online-text, #6ee7b7);
+    font-weight: 600;
+  }
+
+  .btn-row-action--vault:hover,
+  .btn-row-action--vault:focus-visible {
+    border-color: var(--rg-status-warning, #fbbf24);
+    color: var(--rg-status-warning-text, #fde68a);
+    background: rgba(245, 158, 11, 0.14);
+  }
+
+  .btn-row-action--maint:hover,
+  .btn-row-action--maint:focus-visible {
     border-color: #a855f7;
     color: #c084fc;
-  }
-
-  .btn-row-action--maint:hover {
     background: rgba(168, 85, 247, 0.15);
   }
 
   .btn-row-action--prod {
-    border-color: #10b981;
-    color: #34d399;
+    border-color: var(--rg-status-online, #10b981);
+    color: var(--rg-status-online-text, #6ee7b7);
     background: rgba(16, 185, 129, 0.12);
   }
 
@@ -858,12 +885,10 @@
     background: rgba(16, 185, 129, 0.25);
   }
 
-  .btn-row-action--delete {
-    border-color: #ef4444;
-    color: #f87171;
-  }
-
-  .btn-row-action--delete:hover {
+  .btn-row-action--delete:hover,
+  .btn-row-action--delete:focus-visible {
+    border-color: var(--rg-status-critical, #ef4444);
+    color: var(--rg-status-critical-text, #fca5a5);
     background: rgba(239, 68, 68, 0.15);
   }
 

@@ -6,11 +6,18 @@
   --rg-bg-canvas: #0B0F19;
   --rg-bg-surface: #111827;
   --rg-bg-elevated: #1E293B;
+  --rg-bg-card: #111827;
+  --rg-bg-input: #0B0F19;
+  --rg-surface: #111827;
   --rg-border-grid: #1E293B;
   --rg-border-panel: #334155;
+  --rg-border: #334155;
 
   --rg-accent-cyan: #22D3EE;
   --rg-accent-cyan-dark: #06B6D4;
+  --rg-accent-cyan-border: #06B6D4;
+  --rg-cyan-300: #67E8F9;
+  --rg-primary: #22D3EE;
   --rg-cyan-glow: 0 0 12px rgba(6, 182, 212, 0.28);
 
   --rg-text-primary: #F8FAFC;
@@ -20,14 +27,17 @@
   --rg-status-online: #10B981;
   --rg-status-online-text: #6EE7B7;
   --rg-status-online-bg: #064E3B;
+  --rg-success: #10B981;
 
   --rg-status-warning: #F59E0B;
   --rg-status-warning-text: #FDE68A;
   --rg-status-warning-bg: #78350F;
+  --rg-warning: #F59E0B;
 
   --rg-status-critical: #EF4444;
   --rg-status-critical-text: #FCA5A5;
   --rg-status-critical-bg: #7F1D1D;
+  --rg-danger: #EF4444;
 
   --rg-status-info: #38BDF8;
   --rg-status-info-text: #BAE6FD;
@@ -35,6 +45,42 @@
 
   --rg-font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, sans-serif;
   --rg-font-mono: 'JetBrains Mono', 'Ubuntu Mono', ui-monospace, SFMono-Regular, monospace;
+
+  /* Refactoring UI — Escala de Espaciado no lineal (≥ 25% de separación perceptual) */
+  --rg-space-1: 4px;
+  --rg-space-2: 8px;
+  --rg-space-3: 12px;
+  --rg-space-4: 16px;
+  --rg-space-5: 20px;
+  --rg-space-6: 24px;
+  --rg-space-8: 32px;
+  --rg-space-10: 48px;
+  --rg-space-12: 64px;
+
+  /* Refactoring UI — Escala de Radios y Radios Concéntricos */
+  --rg-radius-xs: 2px;
+  --rg-radius-sm: 4px;
+  --rg-radius-concentric: 5px;
+  --rg-radius-md: 6px;
+  --rg-radius-lg: 8px;
+  --rg-radius-xl: 12px;
+  --rg-radius-pill: 9999px;
+
+  /* Refactoring UI — Escala Tipográfica Táctica (7 peldaños definidos) */
+  --rg-text-2xs: 0.6875rem; /* 11px */
+  --rg-text-xs: 0.75rem;    /* 12px */
+  --rg-text-sm: 0.8125rem;  /* 13px */
+  --rg-text-base: 0.875rem; /* 14px */
+  --rg-text-md: 1rem;       /* 16px */
+  --rg-text-lg: 1.25rem;    /* 20px */
+  --rg-text-xl: 1.5rem;     /* 24px */
+
+  /* Refactoring UI — Profundidad, Sombras en Dos Partes e Iluminación Cenital */
+  --rg-inset-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --rg-inset-well: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+  --rg-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.25);
+  --rg-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.3);
+  --rg-shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.65), 0 4px 10px rgba(0, 0, 0, 0.4);
 
   --rg-row-height-compact: 32px;
   --rg-row-height-comfortable: 44px;
@@ -44,11 +90,18 @@
   --rg-bg-canvas: #F8FAFC;
   --rg-bg-surface: #FFFFFF;
   --rg-bg-elevated: #F1F5F9;
+  --rg-bg-card: #FFFFFF;
+  --rg-bg-input: #FFFFFF;
+  --rg-surface: #FFFFFF;
   --rg-border-grid: #E2E8F0;
   --rg-border-panel: #CBD5E1;
+  --rg-border: #CBD5E1;
 
   --rg-accent-cyan: #0E7490;
   --rg-accent-cyan-dark: #155E75;
+  --rg-accent-cyan-border: #0891B2;
+  --rg-cyan-300: #0E7490;
+  --rg-primary: #0E7490;
   --rg-cyan-glow: 0 0 8px rgba(14, 116, 144, 0.2);
 
   --rg-text-primary: #0F172A;
@@ -58,29 +111,45 @@
   --rg-status-online: #059669;
   --rg-status-online-text: #065F46;
   --rg-status-online-bg: #D1FAE5;
+  --rg-success: #059669;
 
   --rg-status-warning: #D97706;
   --rg-status-warning-text: #92400E;
   --rg-status-warning-bg: #FEF3C7;
+  --rg-warning: #D97706;
 
   --rg-status-critical: #DC2626;
   --rg-status-critical-text: #991B1B;
   --rg-status-critical-bg: #FEE2E2;
+  --rg-danger: #DC2626;
 
   --rg-status-info: #0284C7;
   --rg-status-info-text: #075985;
   --rg-status-info-bg: #E0F2FE;
+
+  --rg-inset-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --rg-inset-well: inset 0 1px 2px rgba(15, 23, 42, 0.06);
+  --rg-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.05);
+  --rg-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.1), 0 2px 4px rgba(15, 23, 42, 0.06);
+  --rg-shadow-lg: 0 16px 36px rgba(15, 23, 42, 0.16), 0 4px 10px rgba(15, 23, 42, 0.08);
 }
 
 [data-theme="noc-high-contrast"] {
   --rg-bg-canvas: #000000;
   --rg-bg-surface: #0A0A0A;
   --rg-bg-elevated: #171717;
+  --rg-bg-card: #0A0A0A;
+  --rg-bg-input: #000000;
+  --rg-surface: #0A0A0A;
   --rg-border-grid: #06B6D4;
   --rg-border-panel: #22D3EE;
+  --rg-border: #22D3EE;
 
   --rg-accent-cyan: #38BDF8;
   --rg-accent-cyan-dark: #0284C7;
+  --rg-accent-cyan-border: #38BDF8;
+  --rg-cyan-300: #7DD3FC;
+  --rg-primary: #38BDF8;
   --rg-cyan-glow: 0 0 16px rgba(56, 189, 248, 0.5);
 
   --rg-text-primary: #FFFFFF;
@@ -90,18 +159,24 @@
   --rg-status-online: #34D399;
   --rg-status-online-text: #FFFFFF;
   --rg-status-online-bg: #064E3B;
+  --rg-success: #34D399;
 
   --rg-status-warning: #FBBF24;
   --rg-status-warning-text: #000000;
   --rg-status-warning-bg: #F59E0B;
+  --rg-warning: #FBBF24;
 
   --rg-status-critical: #F87171;
   --rg-status-critical-text: #FFFFFF;
   --rg-status-critical-bg: #991B1B;
+  --rg-danger: #F87171;
 
   --rg-status-info: #38BDF8;
   --rg-status-info-text: #000000;
   --rg-status-info-bg: #38BDF8;
+
+  --rg-inset-highlight: none;
+  --rg-inset-well: none;
 }
 
 /* Global Reset & Box Sizing */
@@ -204,3 +279,134 @@ tr.rg-row--active {
   border-left: 2px solid var(--rg-accent-cyan-dark);
   background-color: var(--rg-bg-elevated);
 }
+
+/* ============================================================================
+ * Refactoring UI — Sistema Global de Jerarquía Visual, Botones y Superficies
+ * ============================================================================ */
+
+/* Título de vista unificado (Visual Hierarchy != Document Hierarchy) */
+.rg-page-title {
+  font-size: var(--rg-text-lg, 1.25rem);
+  font-weight: 700;
+  color: var(--rg-text-primary);
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+  margin: 0;
+}
+
+.rg-page-subtitle {
+  font-size: var(--rg-text-sm, 0.8125rem);
+  color: var(--rg-text-muted);
+  max-width: 65ch;
+  line-height: 1.5;
+  margin: 4px 0 0 0;
+}
+
+/* Botonera Táctica de 3 Rangos (Primary, Secondary, Tertiary) */
+.rg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--rg-space-2, 8px);
+  padding: 7px 14px;
+  border-radius: var(--rg-radius-md, 6px);
+  font-size: var(--rg-text-sm, 0.8125rem);
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.1s ease;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.rg-btn:focus-visible {
+  outline: 2px solid var(--rg-accent-cyan);
+  outline-offset: 2px;
+}
+
+.rg-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Rango 1: Primary (1 por vista, alto contraste táctico) */
+.rg-btn--primary {
+  background-color: var(--rg-accent-cyan);
+  border: 1px solid var(--rg-accent-cyan);
+  color: #0B0F19;
+  font-weight: 700;
+  box-shadow: var(--rg-inset-highlight), var(--rg-shadow-sm);
+}
+
+.rg-btn--primary:hover:not(:disabled) {
+  background-color: var(--rg-cyan-300);
+  border-color: var(--rg-cyan-300);
+  box-shadow: var(--rg-cyan-glow);
+}
+
+.rg-btn--primary:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+/* Rango 2: Secondary (Claro pero no prominente; neutro en reposo) */
+.rg-btn--secondary {
+  background-color: var(--rg-bg-surface);
+  border: 1px solid var(--rg-border-panel);
+  color: var(--rg-text-secondary);
+  box-shadow: var(--rg-inset-highlight);
+}
+
+.rg-btn--secondary:hover:not(:disabled) {
+  background-color: var(--rg-bg-elevated);
+  border-color: var(--rg-accent-cyan);
+  color: var(--rg-text-primary);
+}
+
+/* Rango 3: Tertiary / Ghost (Descubrible, sin borde pesado) */
+.rg-btn--tertiary {
+  background-color: transparent;
+  border: 1px solid transparent;
+  color: var(--rg-text-muted);
+}
+
+.rg-btn--tertiary:hover:not(:disabled) {
+  background-color: var(--rg-bg-elevated);
+  color: var(--rg-text-primary);
+}
+
+/* Controles Segmentados con Radios Concéntricos (r_outer: 8px, pad: 3px -> r_inner: 5px) */
+.rg-segmented-control {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--rg-space-1, 4px);
+  padding: 3px;
+  background-color: var(--rg-bg-canvas);
+  border: 1px solid var(--rg-border-grid);
+  border-radius: var(--rg-radius-lg, 8px);
+  box-shadow: var(--rg-inset-well);
+}
+
+.rg-segmented-btn {
+  background: transparent;
+  border: none;
+  color: var(--rg-text-secondary);
+  padding: 5px 12px;
+  font-size: var(--rg-text-xs, 0.75rem);
+  font-weight: 600;
+  border-radius: var(--rg-radius-concentric, 5px);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rg-segmented-btn--active {
+  background-color: var(--rg-bg-elevated);
+  color: var(--rg-accent-cyan);
+  box-shadow: var(--rg-inset-highlight), var(--rg-shadow-sm);
+}
+

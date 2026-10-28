@@ -320,4 +320,24 @@ describe('RouterInventoryView.vue — Inventario y Modos Tabla, Mapa y Dividido'
     await maintWinBtn.trigger('click');
     expect(mockPush).toHaveBeenCalledWith('/inventory/maintenance-windows');
   });
+
+  it('preserva todas las acciones tácticas por fila en línea (Refactoring UI sin menú oculto) y muestra empty state cuando no hay equipos', () => {
+    const inventoryStore = useInventoryStore();
+    inventoryStore.setRouters([]);
+
+    const emptyWrapper = mount(RouterInventoryView, {
+      global: {
+        stubs: {
+          OsmRouterMap: true,
+          CsvOnboardingWizardModal: true,
+          VaultRevealModal: true,
+          ManageNetworkRolesModal: true,
+        },
+      },
+    });
+
+    expect(emptyWrapper.find('.rg-table-empty').exists()).toBe(true);
+    expect(emptyWrapper.find('.view-mode-toggle').exists()).toBe(true);
+    expect(emptyWrapper.find('.btn-primary').exists()).toBe(true);
+  });
 });

@@ -575,8 +575,9 @@
 
   .hub-subtitle {
     margin: 6px 0 0 0;
-    font-size: 0.9rem;
+    font-size: var(--rg-text-base, 0.875rem);
     color: var(--rg-text-muted, #94a3b8);
+    max-width: 65ch;
   }
 
   .text-cyan {
@@ -606,8 +607,9 @@
   .kpi-card {
     background: var(--rg-bg-surface, #111827);
     border: 1px solid var(--rg-border-panel, #334155);
-    border-radius: 8px;
-    padding: 16px;
+    border-radius: var(--rg-radius-lg, 8px);
+    padding: var(--rg-space-4, 16px);
+    box-shadow: var(--rg-inset-highlight);
     display: flex;
     align-items: center;
     gap: 14px;
@@ -784,8 +786,9 @@
   .tile-card {
     background: var(--rg-bg-surface, #111827);
     border: 1px solid var(--rg-border-panel, #334155);
-    border-radius: 8px;
+    border-radius: var(--rg-radius-lg, 8px);
     padding: 18px;
+    box-shadow: var(--rg-inset-highlight);
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -1058,17 +1061,20 @@
   }
 
   .status-dot-sm {
-    width: 7px;
-    height: 7px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     flex-shrink: 0;
   }
 
+  /* Refactoring UI: Color supports, never carries — Solid dot vs Hollow ring */
   .status-dot--online {
-    background: #10b981;
+    background: var(--rg-status-online, #10b981);
+    box-shadow: 0 0 6px rgba(16, 185, 129, 0.35);
   }
   .status-dot--offline {
-    background: #ef4444;
+    background: transparent;
+    border: 2px solid var(--rg-status-critical, #ef4444);
   }
 
   .router-name {

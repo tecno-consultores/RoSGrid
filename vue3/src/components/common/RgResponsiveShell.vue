@@ -869,15 +869,15 @@
     top: calc(100% + 8px);
     right: 0;
     background-color: var(--rg-bg-surface, #111827);
-    border: 1px solid var(--rg-border, #1f293d);
-    border-radius: 10px;
+    border: 1px solid var(--rg-border-panel, #334155);
+    border-radius: var(--rg-radius-xl, 12px);
     width: 280px;
-    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65);
+    box-shadow: var(--rg-inset-highlight), var(--rg-shadow-lg, 0 16px 36px rgba(0, 0, 0, 0.65));
     z-index: 2000;
-    padding: 12px;
+    padding: var(--rg-space-3, 12px);
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--rg-space-2, 8px);
     animation: fadeInMenu 0.15s ease-out;
   }
 
@@ -930,13 +930,15 @@
     color: var(--rg-text-muted, #94a3b8);
   }
 
+  /* Refactoring UI: Radios concéntricos (8px ext - 3px pad = 5px int) */
   .dropdown-toggle-group {
     display: flex;
     gap: 4px;
-    background: rgba(0, 0, 0, 0.4);
+    background: var(--rg-bg-canvas, rgba(0, 0, 0, 0.4));
     padding: 3px;
-    border-radius: 6px;
-    border: 1px solid var(--rg-border, #1f293d);
+    border-radius: var(--rg-radius-lg, 8px);
+    border: 1px solid var(--rg-border-panel, #334155);
+    box-shadow: var(--rg-inset-well);
   }
 
   .toggle-btn {
@@ -944,10 +946,10 @@
     background: transparent;
     border: none;
     color: var(--rg-text-secondary, #cbd5e1);
-    font-size: 0.78rem;
+    font-size: var(--rg-text-xs, 0.75rem);
     font-weight: 600;
     padding: 5px 8px;
-    border-radius: 4px;
+    border-radius: var(--rg-radius-concentric, 5px);
     cursor: pointer;
     transition: all 0.15s ease;
     text-align: center;

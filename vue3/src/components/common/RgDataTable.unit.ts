@@ -189,4 +189,32 @@ describe('RgDataTable.vue — WinBox 32px / Táctil 44px & RouterOS Flags', () =
     expect(wrapper.findAll('.col-custom-actions').length).toBe(5);
     expect(wrapper.find('.test-action-btn').exists()).toBe(true);
   });
+
+  it('renderiza el Empty State táctico (Refactoring UI) cuando rows está vacío y soporta slot personalizado', () => {
+    const defaultEmptyWrapper = mount(RgDataTable, {
+      props: {
+        columns,
+        rows: [],
+        emptyMessage: 'No hay reglas de firewall registradas.',
+      },
+    });
+
+    const emptyBox = defaultEmptyWrapper.find('.rg-table-empty');
+    expect(emptyBox.exists()).toBe(true);
+    expect(emptyBox.attributes('role')).toBe('status');
+    expect(emptyBox.text()).toContain('No hay reglas de firewall registradas.');
+
+    const customSlotWrapper = mount(RgDataTable, {
+      props: {
+        columns,
+        rows: [],
+      },
+      slots: {
+        empty: '<div class="custom-empty-cta">+ Crear Primera Regla</div>',
+      },
+    });
+
+    expect(customSlotWrapper.find('.custom-empty-cta').exists()).toBe(true);
+    expect(customSlotWrapper.find('.custom-empty-cta').text()).toBe('+ Crear Primera Regla');
+  });
 });

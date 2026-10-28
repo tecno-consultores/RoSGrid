@@ -129,3 +129,23 @@ Los umbrales de `lighthouserc.js` exigen `performance >= 0.90`, `accessibility >
    - Separar `vendor-vue` (`vue`, `vue-router`, `pinia`) y `vendor-map` (`leaflet`) en `build.rollupOptions.output.manualChunks` para que el *First Contentful Paint (FCP)* y el *Largest Contentful Paint (LCP)* ocurran en menos de 800ms.
 3. **Metadatos SEO / Best Practices en `vue3/index.html`:**
    - Atributo `<html lang="es" data-theme="dark">`, `<meta name="viewport" content="width=device-width, initial-scale=1.0">`, `<meta name="theme-color" content="#0B0F19">`, `<meta name="description" content="RoSGrid - Consola Centralizada Multi-Tenant para Gestión de Flotas MikroTik RouterOS v7+">` y enlace al `manifest.webmanifest`.
+
+---
+
+## 5. Estándar Refactoring UI (Sistemas de Tokens, Jerarquía Visual y Pulido Táctico)
+
+Para garantizar coherencia estética de grado corporativo sin sacrificar la densidad tipo WinBox:
+
+1. **Cero Tokens CSS Huérfanos y Escalas con Nombre (`themes.css`):**
+   - Toda propiedad `var(--rg-*)` empleada en vistas o modales está declarada en los tres temas (`dark`, `light`, `noc-high-contrast`), incluyendo `--rg-bg-card`, `--rg-bg-input`, `--rg-border`, `--rg-space-1` a `--rg-space-12`, `--rg-radius-xs` a `--rg-radius-xl`, y la escala tipográfica de 7 peldaños (`--rg-text-2xs` a `--rg-text-xl`).
+2. **Jerarquía de Botonera y Acciones de Fila (*Severity is not rank*):**
+   - Cada pantalla exhibe una única acción primaria destacada (`.rg-btn--primary` / `.btn-primary`). Las acciones secundarias de cabecera (`Importar CSV`, `Matriz CVE`, `Ventanas de Mantenimiento`, `Personalizar Roles`, `Wizards NAT`) mantienen superficie y borde neutros en reposo, revelando su color semántico en `:hover` / `:focus-visible`.
+   - En las filas de `RgDataTable.vue`, se mantienen todas las acciones visibles en línea (ergonomía NOC de 1 clic): solo `WebFig` conserva acento cian en reposo y las demás acciones (`Syslog`, `Vault`, `Mantenimiento`, `TOFU`, `Eliminar`) permanecen neutras hasta `:hover` / `:focus-visible`.
+3. **Radios Concéntricos, Profundidad en Modo Oscuro y Estados Vacíos:**
+   - Los controles segmentados usan `border-radius: 8px` externo con `padding: 3px` y botones internos de `border-radius: 5px` (`--rg-radius-concentric`).
+   - La elevación en modo oscuro se apoya en iluminación cenital (`--rg-inset-highlight`) y escalones de superficie (`canvas` ➔ `surface` ➔ `elevated`), eliminando bordes dobles concéntricos.
+   - `RgDataTable.vue` presenta automáticamente un estado vacío táctico accesible (`.rg-table-empty`, `role="status"`) cuando `rows.length === 0`.
+4. **Seguridad para Daltonismo (*Color supports, never carries*) y `<canvas>` Dinámico:**
+   - Los indicadores de conectividad combinan color y geometría: círculo sólido verde (`#10B981`) para *Online* frente a anillo hueco de `2px` (`#EF4444`) para *Offline*.
+   - Las gráficas 2D `<canvas>` en `RouterLiveDashboardView.vue` leen `--rg-border-grid` y `--rg-text-muted` dinámicamente mediante `getComputedStyle`.
+
