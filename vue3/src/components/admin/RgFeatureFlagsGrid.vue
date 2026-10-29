@@ -729,7 +729,7 @@
   /* Grid de Cuadrantes */
   .quadrants-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
     gap: 16px;
   }
 
@@ -946,7 +946,7 @@
     border: 1px solid rgba(239, 68, 68, 0.4);
     border-radius: 8px;
     padding: 20px;
-    width: 440px;
+    width: min(440px, calc(100% - 24px));
     max-width: 90vw;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
     display: flex;

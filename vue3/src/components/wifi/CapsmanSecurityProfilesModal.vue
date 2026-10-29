@@ -278,6 +278,8 @@ onMounted(() => {
 .rg-toolbar {
   display: flex;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 .rg-add-form {
   background: #1e293b;
@@ -312,6 +314,7 @@ onMounted(() => {
 }
 .rg-checkbox-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 1rem;
 }
 .rg-checkbox-label {

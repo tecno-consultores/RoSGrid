@@ -604,6 +604,17 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And waitFor(".btn-primary")
     And waitFor(".btn-import-csv")
 
+  Scenario: 63. Responsive Design 11X — Shell Adaptativo, Tablas Desplazables (.table-wrapper) y Barra WebFig Inline
+    Given driver baseUrl + '/inventory'
+    And waitFor(".rg-shell")
+    And waitFor("header.rg-header")
+    And waitFor("nav.rg-rail")
+    And waitFor(".rg-table-scroll.table-wrapper")
+    When driver baseUrl + '/routers/r-01/webfig/live'
+    And waitFor(".webfig-layout")
+    And waitFor(".btn-webfig-menu-inline")
+
+
 
 
 

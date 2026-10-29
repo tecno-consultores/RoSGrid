@@ -644,4 +644,14 @@
     border-radius: 6px;
     cursor: pointer;
   }
+
+  @media (max-width: 640px) {
+    .vault-meta-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .ops-buttons {
+      flex-direction: column;
+    }
+  }
 </style>

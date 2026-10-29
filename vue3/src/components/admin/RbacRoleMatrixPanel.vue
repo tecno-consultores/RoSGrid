@@ -553,6 +553,7 @@
   /* Estadísticas */
   .role-stats-summary {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
   }
   .stat-badge {
@@ -629,6 +630,7 @@
   }
   .action-tools {
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
   }
   .btn-reset {
@@ -678,7 +680,7 @@
   }
   .actions-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
     gap: 12px;
   }
   .action-card {
@@ -711,6 +713,7 @@
   /* Segmented Buttons de Permiso */
   .permission-selector {
     display: flex;
+    flex-wrap: wrap;
     background: #090d16;
     border: 1px solid var(--rg-border-grid, #334155);
     border-radius: 6px;

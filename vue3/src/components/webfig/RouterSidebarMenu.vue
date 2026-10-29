@@ -274,7 +274,9 @@
     flex-direction: column;
     gap: 12px;
     max-height: calc(100vh - 120px);
+    max-height: calc(100dvh - 120px);
     overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   .sidebar-header {
@@ -370,8 +372,11 @@
       bottom: 0;
       left: -280px;
       width: 270px;
+      max-width: calc(100dvw - 32px);
       height: 100vh;
+      height: 100dvh;
       max-height: 100vh;
+      max-height: 100dvh;
       border-radius: 0;
       z-index: 1000;
       transition: left 0.25s ease;

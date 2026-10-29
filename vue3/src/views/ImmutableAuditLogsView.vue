@@ -456,6 +456,7 @@
 
   .audit-header-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.5rem;
   }
 
@@ -490,6 +491,7 @@
     border-radius: 6px;
     padding: 1rem 1.25rem;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 1rem;
   }

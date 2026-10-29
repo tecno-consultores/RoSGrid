@@ -75,6 +75,16 @@
       role="tablist"
       :aria-label="t('webfig.tabs_aria_label')"
     >
+      <button
+        type="button"
+        class="btn-webfig-menu-inline"
+        :aria-label="t('webfig.sidebar_title', 'Menú RouterOS')"
+        @click="emit('toggle-sidebar')"
+      >
+        <span aria-hidden="true">☰</span>
+        <span class="menu-inline-label">{{ t('webfig.tab_menu_short', 'Menú') }}</span>
+      </button>
+
       <div
         v-for="tab in webFigStore.openRouterTabs"
         :key="tab.tabId"
@@ -170,6 +180,27 @@
     overflow-x: auto;
     white-space: nowrap;
     scrollbar-width: thin;
+  }
+
+  .btn-webfig-menu-inline {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: var(--rg-bg-elevated);
+    border: 1px solid var(--rg-border-panel);
+    border-radius: 5px;
+    color: var(--rg-accent-cyan);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 1024px) {
+    .btn-webfig-menu-inline {
+      display: inline-flex;
+    }
   }
 
   .webfig-tab {
@@ -270,10 +301,6 @@
 
     .mobile-bottom-bar {
       display: flex;
-    }
-
-    .workspace-tabs-container {
-      margin-bottom: 60px;
     }
   }
 </style>

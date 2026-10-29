@@ -623,6 +623,7 @@ watch([searchQuery, onlyPoeFilter], () => {
   background-color: var(--rg-bg-canvas, #0b0f19);
   color: var(--rg-text-primary, #f8fafc);
   height: calc(100vh - 4.5rem);
+  height: calc(100dvh - 4.5rem);
   box-sizing: border-box;
 }
 
@@ -649,6 +650,7 @@ watch([searchQuery, onlyPoeFilter], () => {
 
 .header-controls {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
 }
 
@@ -685,6 +687,11 @@ watch([searchQuery, onlyPoeFilter], () => {
   padding: 0.65rem 1rem;
 }
 
+.search-wrap {
+  flex: 1 1 200px;
+  max-width: 280px;
+}
+
 .input-search {
   background-color: var(--rg-bg-canvas, #0b0f19);
   border: 1px solid var(--rg-border-grid, #334155);
@@ -692,7 +699,7 @@ watch([searchQuery, onlyPoeFilter], () => {
   color: var(--rg-text-primary, #f8fafc);
   padding: 0.35rem 0.75rem;
   font-size: 0.875rem;
-  width: 280px;
+  width: 100%;
   outline: none;
 }
 
@@ -711,6 +718,7 @@ watch([searchQuery, onlyPoeFilter], () => {
 
 .legend-wrap {
   display: flex;
+  flex-wrap: wrap;
   gap: 1rem;
   margin-left: auto;
   align-items: center;
@@ -781,6 +789,7 @@ watch([searchQuery, onlyPoeFilter], () => {
   top: 1rem;
   right: 1rem;
   width: 300px;
+  max-width: calc(100% - 2rem);
   background-color: var(--rg-bg-surface, #111827);
   border: 1px solid var(--rg-border-grid, #334155);
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
@@ -789,6 +798,36 @@ watch([searchQuery, onlyPoeFilter], () => {
   z-index: 10;
   display: flex;
   flex-direction: column;
+}
+
+@media (max-width: 768px) {
+  .l2-topology-view {
+    height: auto;
+    min-height: calc(100dvh - 110px);
+    padding: 0.75rem;
+  }
+
+  .search-wrap {
+    max-width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .legend-wrap {
+    margin-left: 0;
+  }
+
+  .canvas-wrapper {
+    min-height: 380px;
+  }
+
+  .detail-drawer {
+    left: 0.5rem;
+    right: 0.5rem;
+    top: auto;
+    bottom: 0.5rem;
+    width: auto;
+    max-width: calc(100% - 1rem);
+  }
 }
 
 .drawer-header {

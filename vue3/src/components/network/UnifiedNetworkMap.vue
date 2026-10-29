@@ -823,6 +823,7 @@
 
 .layers-toggles-group {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
 }
@@ -872,6 +873,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   background: rgba(220, 38, 38, 0.9);
   color: #FFFFFF;
   padding: 0.5rem 1rem;
@@ -929,13 +932,28 @@
   top: 1rem;
   right: 1rem;
   width: 20rem;
-  max-width: calc(100vw - 2rem);
+  max-width: calc(100% - 2rem);
+  max-height: calc(100% - 2rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: rgba(15, 23, 42, 0.96);
   border: 1px solid rgba(0, 240, 255, 0.4);
   border-radius: 6px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7);
   z-index: 1000;
   backdrop-filter: blur(8px);
+}
+
+@media (max-width: 640px) {
+  .unified-detail-drawer {
+    left: 0.5rem;
+    right: 0.5rem;
+    top: auto;
+    bottom: 0.5rem;
+    width: auto;
+    max-width: calc(100% - 1rem);
+    max-height: 60%;
+  }
 }
 
 .drawer-card {

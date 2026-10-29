@@ -701,6 +701,7 @@
     display: flex;
     flex-direction: column;
     height: calc(100vh - 64px);
+    height: calc(100dvh - 64px);
     background: #060b13;
     color: #fff;
     padding: 1rem 1.5rem;
@@ -737,6 +738,7 @@
 
   .kpi-ribbon {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.75rem;
   }
 
@@ -834,6 +836,7 @@
 
   .filter-chips {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.5rem;
   }
 
@@ -893,6 +896,7 @@
     top: 10px;
     right: 10px;
     width: 320px;
+    max-width: calc(100% - 20px);
     max-height: calc(100% - 20px);
     background: rgba(13, 22, 40, 0.95);
     backdrop-filter: blur(8px);
@@ -900,8 +904,41 @@
     border-radius: 8px;
     z-index: 1000;
     overflow-y: auto;
+    overscroll-behavior: contain;
     padding: 1rem;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  }
+
+  @media (max-width: 768px) {
+    .subscribers-map-view {
+      height: auto;
+      min-height: calc(100dvh - 110px);
+      padding: 0.75rem;
+    }
+
+    .kpi-ribbon {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .search-box {
+      flex: 1 1 100%;
+      max-width: 100%;
+    }
+
+    .map-stage {
+      min-height: 400px;
+    }
+
+    .onu-detail-drawer {
+      left: 8px;
+      right: 8px;
+      top: auto;
+      bottom: 8px;
+      width: auto;
+      max-height: 65%;
+    }
   }
 
   .drawer-header {

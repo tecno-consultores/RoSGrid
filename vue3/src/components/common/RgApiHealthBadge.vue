@@ -526,4 +526,25 @@
       animation: none !important;
     }
   }
+
+  @media (max-width: 640px) {
+    .rg-health-badge {
+      padding: 4px 7px;
+      gap: 5px;
+      font-size: 0.75rem;
+    }
+
+    .status-prefix {
+      display: none;
+    }
+
+    .rg-health-popover {
+      position: fixed;
+      top: 58px;
+      left: 8px;
+      right: 8px;
+      width: auto;
+      max-width: calc(100dvw - 16px);
+    }
+  }
 </style>

@@ -927,4 +927,30 @@
     background: rgba(56, 189, 248, 0.2);
     border-color: #38bdf8;
   }
+
+  @media (max-width: 640px) {
+    .modal-body {
+      padding: 1rem;
+    }
+
+    .target-field {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.2rem;
+    }
+
+    .field-label {
+      min-width: 0;
+    }
+
+    .session-meta-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .token-input-group,
+    .skill-info-banner,
+    .modal-footer {
+      flex-wrap: wrap;
+    }
+  }
 </style>

@@ -596,6 +596,21 @@
     padding: 1.5rem;
     background: #080d1a;
     min-height: calc(100vh - 60px);
+    min-height: calc(100dvh - 60px);
+  }
+
+  .view-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
   }
 
   .ipam-kpi-grid {
@@ -641,6 +656,7 @@
 
   .ipam-tabs-nav {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.75rem;
     border-bottom: 2px solid rgba(255, 255, 255, 0.08);
     padding-bottom: 0.5rem;
@@ -675,6 +691,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
     margin-bottom: 1rem;
   }
 
@@ -742,11 +760,13 @@
 
   .form-row-sync {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.75rem;
   }
 
   .select-lg {
-    flex: 1;
+    flex: 1 1 220px;
+    min-width: 0;
     padding: 0.65rem 0.85rem;
     font-size: 0.95rem;
   }
@@ -771,10 +791,61 @@
 
   .result-counters {
     display: flex;
+    flex-wrap: wrap;
     gap: 1.5rem;
     margin-top: 0.5rem;
     font-size: 0.85rem;
     color: #cbd5e1;
+  }
+
+  .table-scroll-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .rg-table {
+    width: 100%;
+    min-width: 680px;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+
+  .rg-table th,
+  .rg-table td {
+    padding: 0.65rem 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    text-align: left;
+  }
+
+  .form-row {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .flex-1 {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .w-30 {
+    width: 30%;
+    min-width: 120px;
+  }
+
+  @media (max-width: 768px) {
+    .ipam-management-view {
+      padding: 0.85rem;
+    }
+
+    .form-row {
+      flex-direction: column;
+    }
+
+    .w-30 {
+      width: 100%;
+    }
   }
 
   /* Estilos de Ubicación GPS de Clientes */

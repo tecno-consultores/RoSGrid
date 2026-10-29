@@ -410,3 +410,34 @@ tr.rg-row--active {
   box-shadow: var(--rg-inset-highlight), var(--rg-shadow-sm);
 }
 
+/* ============================================================================
+ * Salvaguardas Globales Responsive (Mobile 375px / Tablet 768px / Desktop 1440px)
+ * ============================================================================ */
+
+.table-container,
+.table-scroll-wrapper,
+.table-scroll,
+.tactical-table-wrapper,
+.logs-table-container,
+.results-table-container,
+.rg-table-container,
+.table-wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+@media (max-width: 768px) {
+  .rg-page-title {
+    font-size: 1.125rem;
+  }
+
+  .rg-segmented-control {
+    flex-wrap: wrap;
+    max-width: 100%;
+  }
+}
+
+

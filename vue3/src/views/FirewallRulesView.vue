@@ -883,4 +883,14 @@
   .font-mono {
     font-family: monospace;
   }
+
+  @media (max-width: 640px) {
+    .form-row {
+      grid-template-columns: 1fr;
+    }
+
+    .modal-actions {
+      flex-wrap: wrap;
+    }
+  }
 </style>

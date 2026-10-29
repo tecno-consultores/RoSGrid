@@ -59,6 +59,7 @@ Para optimizar el trabajo tanto en salas de control de escritorio como en campo 
 
 - **Modo WinBox PC (`32px` por fila):** Filas compactas de 32 píxeles de alto, fuentes monoespaciadas y controles de alta densidad que permiten visualizar más de 30 reglas o interfaces en pantalla simultáneamente.
 - **Modo Táctil / Campo (`44px` por fila):** Al detectar pantalla táctil o resolución móvil, los controles se expanden automáticamente a 44 píxeles para cumplir el estándar de accesibilidad **WCAG 2.1 AA** (objetivos de toque para dedos sin clics accidentales).
+- **Navegación Responsive Multi-Viewport (`375px` Móvil / `768px` Tablet / `1440px` Escritorio):** En resoluciones `<= 1024px`, la barra de pestañas de trabajo (`RouterWorkspaceTabsBar.vue`) expone el botón integrado `☰ Módulos` (`.btn-webfig-menu-inline`) para desplegar el catálogo completo de módulos RouterOS v7 (Capa 1 y Capa 2) como cajón lateral táctil con bloqueo de scroll (`overscroll-behavior: contain`), mientras que todas las tablas técnicas se encapsulan en regiones desplazables (`.table-wrapper`) con cero desbordamiento horizontal del viewport.
 - **Virtual Scrolling Nativo:** Los componentes de tabla (`RgDataTable.vue`) renderizan únicamente los elementos visibles en el viewport más un buffer de seguridad, permitiendo desplazarse fluidamente sobre tablas con más de 5,000 clientes PPPoE o rutas BGP sin degradar el navegador.
 
 ---

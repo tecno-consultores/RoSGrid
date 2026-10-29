@@ -620,5 +620,43 @@ describe('RgResponsiveShell.vue — Doble Contexto & Menú de Usuario 11X', () =
     await toggleBtn.trigger('click');
     expect(rail.classes()).not.toContain('rg-rail--collapsed');
   });
+
+  it('permite abrir el drawer móvil/tablet (rg-rail--open) incluso cuando la barra lateral de escritorio está colapsada (rg-rail--collapsed)', async () => {
+    const themeStore = useThemeAndLayoutStore();
+    themeStore.windowWidth = 375;
+
+    const wrapper = mount(RgResponsiveShell, {
+      global: {
+        stubs: {
+          RouterView: true,
+          RgCommandPalette: true,
+          RgSafeModeBanner: true,
+          ChangePasswordModal: true,
+          RgStepUp2FAModal: true,
+          RgMcpTokenModal: true,
+        },
+      },
+    });
+
+    const toggleDesktopBtn = wrapper.find('#btn-toggle-sidebar');
+    await toggleDesktopBtn.trigger('click');
+
+    const rail = wrapper.find('nav.rg-rail');
+    expect(rail.classes()).toContain('rg-rail--collapsed');
+
+    // Abrir el drawer móvil desde el botón inferior .btn-mobile-menu
+    const mobileMenuBtn = wrapper.find('.btn-mobile-menu');
+    expect(mobileMenuBtn.exists()).toBe(true);
+    await mobileMenuBtn.trigger('click');
+    expect(rail.classes()).toContain('rg-rail--open');
+    expect(rail.classes()).toContain('rg-rail--collapsed');
+
+    // Cerrar desde el botón hamburguesa superior
+    const hamburgerBtn = wrapper.find('.btn-hamburger');
+    expect(hamburgerBtn.exists()).toBe(true);
+    await hamburgerBtn.trigger('click');
+    expect(rail.classes()).not.toContain('rg-rail--open');
+  });
 });
+
 

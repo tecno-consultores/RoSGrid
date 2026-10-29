@@ -415,6 +415,7 @@
   /* Refactoring UI: Segmented Control con Radios Concéntricos (8px ext - 3px pad = 5px int) */
   .window-selectors {
     display: flex;
+    flex-wrap: wrap;
     gap: 4px;
     background: var(--rg-bg-canvas);
     padding: 3px;
@@ -492,7 +493,7 @@
 
   .charts-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
     gap: 16px;
   }
 
@@ -504,12 +505,15 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
+    min-width: 0;
   }
 
   .panel-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
   .panel-title {

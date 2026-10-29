@@ -614,44 +614,46 @@
           </div>
         </div>
 
-        <table class="fleet-table">
-          <thead>
-            <tr>
-              <th class="th-chk">
-                <input
-                  type="checkbox"
-                  :aria-label="t('bulk_ops.th_select_all')"
-                  @change="toggleAllVisible(($event.target as HTMLInputElement).checked)"
-                />
-              </th>
-              <th>{{ t('bulk_ops.th_identity') }}</th>
-              <th>{{ t('bulk_ops.th_ip') }}</th>
-              <th>{{ t('bulk_ops.th_role') }}</th>
-              <th>{{ t('bulk_ops.th_tag') }}</th>
-              <th>{{ t('bulk_ops.th_ros') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="r in filteredFleet" :key="r.id" :class="{ 'tr-selected': r.selected }">
-              <td class="td-chk">
-                <input
-                  v-model="r.selected"
-                  type="checkbox"
-                  :aria-label="`Seleccionar router ${r.identity}`"
-                />
-              </td>
-              <td class="font-bold">{{ r.identity }}</td>
-              <td class="font-mono">{{ r.ip_address }}</td>
-              <td>
-                <span class="tag tag--role">{{ r.network_role }}</span>
-              </td>
-              <td>
-                <span class="tag tag--info">{{ r.tag }}</span>
-              </td>
-              <td class="font-mono">v{{ r.ros_version }}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="table-scroll-wrapper">
+          <table class="fleet-table">
+            <thead>
+              <tr>
+                <th class="th-chk">
+                  <input
+                    type="checkbox"
+                    :aria-label="t('bulk_ops.th_select_all')"
+                    @change="toggleAllVisible(($event.target as HTMLInputElement).checked)"
+                  />
+                </th>
+                <th>{{ t('bulk_ops.th_identity') }}</th>
+                <th>{{ t('bulk_ops.th_ip') }}</th>
+                <th>{{ t('bulk_ops.th_role') }}</th>
+                <th>{{ t('bulk_ops.th_tag') }}</th>
+                <th>{{ t('bulk_ops.th_ros') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="r in filteredFleet" :key="r.id" :class="{ 'tr-selected': r.selected }">
+                <td class="td-chk">
+                  <input
+                    v-model="r.selected"
+                    type="checkbox"
+                    :aria-label="`Seleccionar router ${r.identity}`"
+                  />
+                </td>
+                <td class="font-bold">{{ r.identity }}</td>
+                <td class="font-mono">{{ r.ip_address }}</td>
+                <td>
+                  <span class="tag tag--role">{{ r.network_role }}</span>
+                </td>
+                <td>
+                  <span class="tag tag--info">{{ r.tag }}</span>
+                </td>
+                <td class="font-mono">v{{ r.ros_version }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
         <div class="step-footer">
           <span>{{ t('bulk_ops.selected_count', { count: selectedRoutersCount }) }}</span>
@@ -867,35 +869,37 @@
           <span class="progress-text">{{ t('bulk_ops.progress_completed', { percent: progressPercent }) }}</span>
         </div>
 
-        <table class="fleet-table">
-          <thead>
-            <tr>
-              <th>{{ t('bulk_ops.th_res_router', 'Router') }}</th>
-              <th>{{ t('bulk_ops.th_res_status', 'Estado') }}</th>
-              <th>{{ t('bulk_ops.th_res_progress', 'Progreso') }}</th>
-              <th>{{ t('bulk_ops.th_res_details', 'Detalles / Rollback') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="res in executionResults" :key="res.id">
-              <td class="font-bold">{{ res.identity }}</td>
-              <td>
-                <span
-                  class="badge"
-                  :class="{
-                    'badge--success': res.status === 'SUCCESS',
-                    'badge--warning': res.status === 'ROLLED_BACK',
-                    'badge--info': res.status === 'RUNNING',
-                  }"
-                >
-                  {{ res.status }}
-                </span>
-              </td>
-              <td>{{ res.progress }}%</td>
-              <td class="text-muted">{{ res.details }}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="table-scroll-wrapper">
+          <table class="fleet-table">
+            <thead>
+              <tr>
+                <th>{{ t('bulk_ops.th_res_router', 'Router') }}</th>
+                <th>{{ t('bulk_ops.th_res_status', 'Estado') }}</th>
+                <th>{{ t('bulk_ops.th_res_progress', 'Progreso') }}</th>
+                <th>{{ t('bulk_ops.th_res_details', 'Detalles / Rollback') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="res in executionResults" :key="res.id">
+                <td class="font-bold">{{ res.identity }}</td>
+                <td>
+                  <span
+                    class="badge"
+                    :class="{
+                      'badge--success': res.status === 'SUCCESS',
+                      'badge--warning': res.status === 'ROLLED_BACK',
+                      'badge--info': res.status === 'RUNNING',
+                    }"
+                  >
+                    {{ res.status }}
+                  </span>
+                </td>
+                <td>{{ res.progress }}%</td>
+                <td class="text-muted">{{ res.details }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
         <div class="step-footer">
           <button
@@ -967,46 +971,48 @@
         </button>
       </div>
 
-      <table class="fleet-table">
-        <thead>
-          <tr>
-            <th>{{ t('bulk_ops.th_device', 'Equipo') }}</th>
-            <th>{{ t('bulk_ops.th_ip', 'IP Primaria') }}</th>
-            <th>{{ t('bulk_ops.th_current_version', 'Versión Actual') }}</th>
-            <th>{{ t('bulk_ops.th_target_version', 'Versión Objetivo') }}</th>
-            <th>{{ t('bulk_ops.th_diff', 'Diferencia') }}</th>
-            <th>{{ t('bulk_ops.th_action', 'Acción de Actualización') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="r in fleetRouters" :key="r.id">
-            <td class="font-bold">{{ r.identity }}</td>
-            <td class="font-mono">{{ r.ip_address }}</td>
-            <td class="font-mono">v{{ r.ros_version }}</td>
-            <td class="font-mono">v{{ targetRosVersion }}</td>
-            <td>
-              <span v-if="r.ros_version === targetRosVersion" class="badge badge--success">
-                {{ t('bulk_ops.status_updated', 'Actualizado') }}
-              </span>
-              <span v-else class="badge badge--warning">
-                {{ t('bulk_ops.status_pending', 'Pendiente de Upgrade') }}
-              </span>
-            </td>
-            <td>
-              <button
-                type="button"
-                class="btn btn--sm"
-                :class="r.ros_version === targetRosVersion ? 'btn--secondary' : 'btn--primary'"
-                :disabled="r.ros_version === targetRosVersion || upgradingRouterId === r.id"
-                @click="triggerRosUpdate(r)"
-              >
-                <span v-if="upgradingRouterId === r.id">{{ t('bulk_ops.upgrading', '⏳ Actualizando...') }}</span>
-                <span v-else>{{ t('bulk_ops.btn_upgrade_single', 'Actualizar con Backup') }}</span>
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="table-scroll-wrapper">
+        <table class="fleet-table">
+          <thead>
+            <tr>
+              <th>{{ t('bulk_ops.th_device', 'Equipo') }}</th>
+              <th>{{ t('bulk_ops.th_ip', 'IP Primaria') }}</th>
+              <th>{{ t('bulk_ops.th_current_version', 'Versión Actual') }}</th>
+              <th>{{ t('bulk_ops.th_target_version', 'Versión Objetivo') }}</th>
+              <th>{{ t('bulk_ops.th_diff', 'Diferencia') }}</th>
+              <th>{{ t('bulk_ops.th_action', 'Acción de Actualización') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="r in fleetRouters" :key="r.id">
+              <td class="font-bold">{{ r.identity }}</td>
+              <td class="font-mono">{{ r.ip_address }}</td>
+              <td class="font-mono">v{{ r.ros_version }}</td>
+              <td class="font-mono">v{{ targetRosVersion }}</td>
+              <td>
+                <span v-if="r.ros_version === targetRosVersion" class="badge badge--success">
+                  {{ t('bulk_ops.status_updated', 'Actualizado') }}
+                </span>
+                <span v-else class="badge badge--warning">
+                  {{ t('bulk_ops.status_pending', 'Pendiente de Upgrade') }}
+                </span>
+              </td>
+              <td>
+                <button
+                  type="button"
+                  class="btn btn--sm"
+                  :class="r.ros_version === targetRosVersion ? 'btn--secondary' : 'btn--primary'"
+                  :disabled="r.ros_version === targetRosVersion || upgradingRouterId === r.id"
+                  @click="triggerRosUpdate(r)"
+                >
+                  <span v-if="upgradingRouterId === r.id">{{ t('bulk_ops.upgrading', '⏳ Actualizando...') }}</span>
+                  <span v-else>{{ t('bulk_ops.btn_upgrade_single', 'Actualizar con Backup') }}</span>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </section>
 
     <!-- Modal de Configuración de Plantillas Golden Config -->
@@ -1053,6 +1059,7 @@
 
   .tabs-nav {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.5rem;
   }
 
@@ -1075,6 +1082,7 @@
   /* Step Indicator */
   .step-indicator {
     display: flex;
+    flex-wrap: wrap;
     list-style: none;
     padding: 0;
     margin: 0 0 1rem;
@@ -1193,6 +1201,7 @@
 
   .step-filters {
     display: flex;
+    flex-wrap: wrap;
     gap: 1rem;
   }
 
@@ -1556,6 +1565,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
     border-top: 1px solid #1e293b;
     padding-top: 1rem;
   }
@@ -1649,8 +1660,20 @@
 
   .tpl-action-buttons {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.5rem;
     align-items: center;
+  }
+
+  @media (max-width: 768px) {
+    .bulk-view {
+      padding: 0.75rem;
+    }
+
+    .wizard-step-card,
+    .updates-container {
+      padding: 0.85rem;
+    }
   }
 
   .btn-primary-sm {

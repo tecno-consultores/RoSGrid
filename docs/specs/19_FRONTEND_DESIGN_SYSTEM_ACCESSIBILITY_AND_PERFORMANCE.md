@@ -149,3 +149,20 @@ Para garantizar coherencia estética de grado corporativo sin sacrificar la dens
    - Los indicadores de conectividad combinan color y geometría: círculo sólido verde (`#10B981`) para *Online* frente a anillo hueco de `2px` (`#EF4444`) para *Offline*.
    - Las gráficas 2D `<canvas>` en `RouterLiveDashboardView.vue` leen `--rg-border-grid` y `--rg-text-muted` dinámicamente mediante `getComputedStyle`.
 
+---
+
+## 6. Arquitectura Responsive Integral Multi-Viewport (Móvil `375px`, Tablet `768px`, Escritorio `1440px`)
+
+1. **Unidades de Viewport Dinámicas (`100dvh`) y Aislamiento de Scroll (`overscroll-behavior: contain`):**
+   - `App.vue`, `RgResponsiveShell.vue` y `RouterWebFigLayout.vue` emplean `height: 100vh; height: 100dvh` con mejora progresiva y `overscroll-behavior: contain` en `.rg-rail`, `.rg-main` y `.router-sidebar` para adaptarse a barras dinámicas de navegadores móviles y evitar encadenamiento de scroll.
+2. **Independencia entre Colapso de Escritorio y Drawer Móvil/Tablet:**
+   - En viewports `<= 1023px`, el botón `#btn-toggle-sidebar` de escritorio se oculta y la regla `.rg-rail.rg-rail--collapsed.rg-rail--open` garantiza que el cajón lateral abra siempre a `260px` aunque exista preferencia previa en `localStorage`.
+3. **Contención Horizontal de Tablas (`.table-wrapper` y `role="region"`):**
+   - `RgDataTable.vue` (`.rg-table-scroll.table-wrapper`) y todas las tablas nativas (`.table-scroll-wrapper` en IPAM, Operaciones Masivas, Interfaces, Firewall, RBAC, CVE, Auditoría WORM y Canales de Notificación) envuelven los elementos `<table>` con `overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain`, garantizando `document.documentElement.scrollWidth <= window.innerWidth` en cualquier resolución.
+4. **Acceso Táctico a Módulos WebFig en Tablet y Móvil (`<= 1024px`):**
+   - `RouterWorkspaceTabsBar.vue` incorpora el botón en línea `.btn-webfig-menu-inline` (`☰ Módulos`) para abrir el cajón de navegación de módulos RouterOS v7 tanto en tablets (`768px–1024px`) como en teléfonos móviles (`< 768px`), sin depender exclusivamente de la barra inferior.
+5. **Rejillas intrínsecas (`minmax(min(100%, ...), 1fr)`) y Drawers Cartográficos Adaptativos:**
+   - Las rejillas de gráficas (`RouterLiveDashboardView.vue`), Feature Flags (`RgFeatureFlagsGrid.vue`) y formularios de 2 columnas colapsan limpiamente a 1 columna en `<= 640px`, mientras que la matriz IPAM de 256 IPs (`IpamIpGridModal.vue`) adapta sus columnas de `16` (escritorio) a `8` (`<= 768px`) y `4` (`<= 480px`).
+   - Los paneles laterales de mapas (`UnifiedNetworkMap.vue`, `SubscribersMapView.vue`, `L2TopologyView.vue`) se anclan al borde inferior del lienzo (`left: 8px; right: 8px; width: auto; max-height: 55%`) en pantallas estrechas.
+
+

@@ -657,7 +657,9 @@
 <style scoped>
   .rg-shell {
     height: 100vh;
+    height: 100dvh;
     max-height: 100vh;
+    max-height: 100dvh;
     display: flex;
     flex-direction: column;
     background: var(--rg-bg-canvas);
@@ -1023,6 +1025,7 @@
     padding: 12px 8px;
     overflow-y: auto;
     overflow-x: hidden;
+    overscroll-behavior: contain;
     scrollbar-width: thin;
     scrollbar-color: rgba(148, 163, 184, 0.2) transparent;
     transition: width 0.2s ease, opacity 0.15s ease, padding 0.2s ease;
@@ -1103,6 +1106,7 @@
     flex-direction: column;
     overflow-y: auto;
     overflow-x: hidden;
+    overscroll-behavior: contain;
     outline: none;
     scroll-behavior: smooth;
     scrollbar-width: thin;
@@ -1171,12 +1175,17 @@
     font-size: 18px;
   }
 
-  /* Drawer móvil */
+  /* Drawer móvil y tablet */
   @media (max-width: 1023px) {
+    .btn-sidebar-toggle {
+      display: none;
+    }
+
     .rg-rail {
       position: fixed;
       top: 52px;
-      bottom: 56px;
+      bottom: 0;
+      height: auto;
       left: -260px;
       width: 240px;
       z-index: 850;
@@ -1184,23 +1193,72 @@
       box-shadow: 4px 0 16px rgba(0, 0, 0, 0.5);
     }
 
-    .rg-rail--open {
+    .rg-rail--open,
+    .rg-rail.rg-rail--collapsed.rg-rail--open {
       left: 0;
+      width: 240px !important;
+      padding: 12px 8px !important;
+      border-right: 1px solid var(--rg-border-panel) !important;
+      overflow-y: auto !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
     }
   }
 
   @media (max-width: 767px) {
-    .rg-main {
-      padding-bottom: 72px; /* Espacio para barra inferior */
+    .rg-header {
+      padding: 0 8px;
     }
 
+    .header-left,
+    .header-right {
+      gap: 6px;
+    }
+
+    .rg-rail {
+      bottom: 56px;
+    }
+
+    .rg-main {
+      padding: 12px 10px 72px 10px; /* Espacio para barra inferior */
+    }
+
+    .brand-version,
+    .header-clock,
     .search-label,
     .search-kbd {
       display: none;
     }
 
+    .btn-search-trigger {
+      padding: 6px 8px;
+    }
+
+    .user-dropdown-menu {
+      width: min(280px, calc(100dvw - 16px));
+      right: 0;
+    }
+
     .rg-global-footer {
       margin-bottom: 56px; /* Para no solaparse con mobile bottom bar */
+    }
+  }
+
+  @media (max-width: 480px) {
+    .user-username {
+      display: none;
+    }
+
+    .user-profile-btn {
+      padding: 6px 8px;
+      gap: 4px;
+    }
+
+    .footer-content {
+      flex-wrap: wrap;
+      justify-content: center;
+      text-align: center;
+      padding: 0 8px;
     }
   }
 

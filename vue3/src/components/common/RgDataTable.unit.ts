@@ -217,4 +217,20 @@ describe('RgDataTable.vue — WinBox 32px / Táctil 44px & RouterOS Flags', () =
     expect(customSlotWrapper.find('.custom-empty-cta').exists()).toBe(true);
     expect(customSlotWrapper.find('.custom-empty-cta').text()).toBe('+ Crear Primera Regla');
   });
+
+  it('expone región desplazable responsive (.table-wrapper y role="region") para viewports estrechos', () => {
+    const wrapper = mount(RgDataTable, {
+      props: {
+        columns,
+        rows: sampleRows,
+        ariaLabel: 'Tabla Responsive NOC',
+      },
+    });
+
+    const scrollRegion = wrapper.find('.rg-table-scroll');
+    expect(scrollRegion.exists()).toBe(true);
+    expect(scrollRegion.classes()).toContain('table-wrapper');
+    expect(scrollRegion.attributes('role')).toBe('region');
+    expect(scrollRegion.attributes('aria-label')).toBe('Tabla Responsive NOC');
+  });
 });

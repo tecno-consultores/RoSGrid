@@ -617,4 +617,10 @@
     font-family: 'JetBrains Mono', 'Ubuntu Mono', ui-monospace, monospace;
     font-variant-numeric: tabular-nums;
   }
+
+  @media (max-width: 640px) {
+    .ddm-grid {
+      grid-template-columns: 1fr;
+    }
+  }
 </style>

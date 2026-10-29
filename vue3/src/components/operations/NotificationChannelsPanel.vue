@@ -667,6 +667,7 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
+    flex-wrap: wrap;
     gap: 1.5rem;
     background: #0f172a;
     border: 1px solid #1e293b;
@@ -691,6 +692,7 @@
 
   .toolbar-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.75rem;
     flex-shrink: 0;
   }
@@ -794,7 +796,7 @@
 
   .channels-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
     gap: 1.25rem;
   }
 
@@ -977,10 +979,7 @@
   /* Modales */
   .modal-backdrop {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
+    inset: 0;
     background: rgba(0, 0, 0, 0.75);
     display: flex;
     align-items: center;
@@ -996,6 +995,7 @@
     width: 100%;
     max-width: 580px;
     max-height: 90vh;
+    max-height: 90dvh;
     display: flex;
     flex-direction: column;
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
@@ -1165,5 +1165,19 @@
   .result-detail {
     font-size: 0.85rem;
     margin: 0;
+  }
+
+  @media (max-width: 640px) {
+    .panel-toolbar {
+      padding: 1rem;
+    }
+
+    .form-row {
+      flex-direction: column;
+    }
+
+    .modal-footer {
+      flex-wrap: wrap;
+    }
   }
 </style>

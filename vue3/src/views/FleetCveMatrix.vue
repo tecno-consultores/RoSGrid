@@ -580,6 +580,7 @@ onMounted(() => {
 
 .cve-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
   align-items: center;
 }
@@ -879,6 +880,14 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .cve-matrix-view {
+    padding: 0.85rem;
+  }
 }
 
 .cve-detail-title {

@@ -254,6 +254,7 @@
     top: calc(100% + 6px);
     left: 0;
     width: 280px;
+    max-width: calc(100dvw - 16px);
     max-height: 360px;
     background: var(--rg-bg-surface, #0f172a);
     border: 1px solid rgba(6, 182, 212, 0.3);
@@ -263,6 +264,24 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+  }
+
+  @media (max-width: 640px) {
+    .tenant-badge,
+    .switcher-slug {
+      max-width: 96px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .tenant-switcher-popover {
+      position: fixed;
+      top: 58px;
+      left: 8px;
+      right: 8px;
+      width: auto;
+    }
   }
 
   .popover-header {

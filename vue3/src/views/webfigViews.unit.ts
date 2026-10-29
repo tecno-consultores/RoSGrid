@@ -177,6 +177,12 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
     for (const btn of mobileBtns) {
       await btn.trigger('click');
     }
+
+    // Botón inline de módulos WebFig para tablet/móvil (<= 1024px)
+    const inlineMenuBtn = wrapper.find('.btn-webfig-menu-inline');
+    expect(inlineMenuBtn.exists()).toBe(true);
+    await inlineMenuBtn.trigger('click');
+    expect(wrapper.emitted('toggle-sidebar')).toBeTruthy();
   });
 
   it('RouterSidebarMenu — navega por todos los módulos nativos y de capa 2', async () => {

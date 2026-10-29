@@ -187,6 +187,7 @@
     color: var(--rg-text-primary);
     display: flex;
     align-items: baseline;
+    flex-wrap: wrap;
     gap: 6px;
   }
 
@@ -201,6 +202,7 @@
     color: var(--rg-text-secondary);
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 6px;
     margin-top: 2px;
   }
@@ -230,6 +232,7 @@
   .header-telemetry {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
   }
 

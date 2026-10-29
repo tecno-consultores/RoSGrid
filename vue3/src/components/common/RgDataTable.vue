@@ -181,10 +181,11 @@
       </div>
     </header>
 
-    <!-- Contenedor con Scroll Virtual -->
+    <!-- Contenedor con Scroll Virtual y Container Queries -->
     <div
       ref="scrollContainerRef"
-      class="rg-table-scroll"
+      class="rg-table-scroll table-wrapper"
+      role="region"
       tabindex="0"
       :aria-label="ariaLabel"
       @scroll.passive="handleScroll"
@@ -380,6 +381,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: var(--rg-space-2, 8px);
     padding: var(--rg-space-2, 8px) var(--rg-space-3, 12px);
     background: var(--rg-bg-elevated);
     border-bottom: 1px solid var(--rg-border-grid);
@@ -410,6 +413,9 @@
     max-height: 520px;
     overflow: auto;
     position: relative;
+    container-type: inline-size;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   .rg-table {
@@ -528,6 +534,29 @@
     font-size: var(--rg-text-xs, 0.75rem);
     font-weight: 600;
     color: var(--rg-text-primary);
+    word-break: break-word;
+  }
+
+  @container (max-width: 480px) {
+    .details-grid {
+      grid-template-columns: 1fr;
+      row-gap: 4px;
+    }
+
+    .details-grid dd {
+      margin-bottom: 6px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .details-grid {
+      grid-template-columns: 1fr;
+      row-gap: 4px;
+    }
+
+    .details-grid dd {
+      margin-bottom: 6px;
+    }
   }
 
   .rg-table-empty {

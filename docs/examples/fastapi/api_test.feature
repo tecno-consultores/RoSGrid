@@ -889,6 +889,13 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 118. Consulta de catálogo de módulos WebFig v7 para navegación responsive sin autenticación devuelve 401
+    Given path '/api/v1/routers/3fc15cff-31eb-4230-81c6-800130be18e8/webfig-catalog'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
 
 
 

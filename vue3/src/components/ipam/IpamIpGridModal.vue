@@ -191,6 +191,18 @@
     overflow-y: auto;
   }
 
+  @media (max-width: 768px) {
+    .grid-container {
+      grid-template-columns: repeat(8, 1fr);
+    }
+  }
+
+  @media (max-width: 480px) {
+    .grid-container {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
   .ip-tile {
     aspect-ratio: 1;
     display: flex;
