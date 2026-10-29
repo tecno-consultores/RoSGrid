@@ -8,7 +8,6 @@
   import { useWebFigStore } from '@/stores/useWebFigStore';
   import type { TableColumn, BgpSessionItem } from '@/types';
   import RgDataTable from '@/components/common/RgDataTable.vue';
-  import RgSafeModeBanner from '@/components/common/RgSafeModeBanner.vue';
 
   interface OspfNeighborItem extends Record<string, unknown> {
     id: string;
@@ -242,8 +241,6 @@
 
 <template>
   <div class="routing-view">
-    <RgSafeModeBanner />
-
     <header class="view-header">
       <div>
         <h2 class="view-title">🌐 Routing v7 — Protocolos BGP, OSPF, Rutas y PBR</h2>

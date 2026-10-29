@@ -4,7 +4,7 @@
 """Pruebas unitarias para Bridge VLAN Filtering (/interface/bridge/vlan), Subinterfaces VLAN (/interface/vlan) y Firewall parity."""
 
 import uuid
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -173,3 +173,116 @@ async def test_firewall_list_rules_address_lists_and_connections_delegation(mock
         assert len(res_conn) == 1
         assert res_conn[0]["protocol"] == "tcp"
         mock_conn.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_firewall_support_l2_maker_checker_interception():
+    from fastapi.responses import JSONResponse
+
+    from src.api.v1.webfig_firewall import (
+        create_address_list,
+        create_rule,
+        delete_address_list,
+        delete_rule,
+        update_rule,
+    )
+    from src.schemas.webfig_firewall import (
+        AddressListCreateRequest,
+        FirewallRuleCreateRequest,
+        FirewallRuleUpdateRequest,
+    )
+
+    router_id = uuid.uuid4()
+    l2_claims = {
+        "sub": str(uuid.uuid4()),
+        "tid": str(uuid.uuid4()),
+        "rol": "SUPPORT_L2",
+    }
+    mock_db = AsyncMock()
+    mock_db.add = MagicMock()
+
+    res_create = await create_rule(
+        router_id=router_id,
+        proto="ip",
+        table_type="filter",
+        payload=FirewallRuleCreateRequest(chain="input", action="accept", comment="L2 rule"),
+        claims=l2_claims,
+        db=mock_db,
+    )
+    assert isinstance(res_create, JSONResponse)
+    assert res_create.status_code == 202
+
+    res_update = await update_rule(
+        router_id=router_id,
+        proto="ip",
+        table_type="filter",
+        rule_id="*1",
+        payload=FirewallRuleUpdateRequest(disabled=True),
+        claims=l2_claims,
+        db=mock_db,
+    )
+    assert isinstance(res_update, JSONResponse)
+    assert res_update.status_code == 202
+
+    res_del = await delete_rule(
+        router_id=router_id,
+        proto="ip",
+        table_type="filter",
+        rule_id="*1",
+        claims=l2_claims,
+        db=mock_db,
+    )
+    assert isinstance(res_del, JSONResponse)
+    assert res_del.status_code == 202
+
+    res_al_create = await create_address_list(
+        router_id=router_id,
+        proto="ip",
+        payload=AddressListCreateRequest(list="bogons", address="10.99.0.0/16"),
+        claims=l2_claims,
+        db=mock_db,
+    )
+    assert isinstance(res_al_create, JSONResponse)
+    assert res_al_create.status_code == 202
+
+    res_al_del = await delete_address_list(
+        router_id=router_id,
+        proto="ip",
+        item_id="*AL1",
+        claims=l2_claims,
+        db=mock_db,
+    )
+    assert isinstance(res_al_del, JSONResponse)
+    assert res_al_del.status_code == 202
+
+
+@pytest.mark.asyncio
+async def test_mikrotik_client_error_global_handler():
+    from starlette.requests import Request
+
+    from src.main import app
+    from src.mikrotik.client import (
+        MikrotikApiError,
+        MikrotikAuthFailedError,
+        MikrotikClientError,
+        MikrotikConnectionError,
+    )
+
+    handler = app.exception_handlers[MikrotikClientError]
+    scope = {
+        "type": "http",
+        "method": "POST",
+        "path": "/api/v1/test",
+        "query_string": b"",
+        "headers": [],
+    }
+    req = Request(scope)
+
+    res_api = await handler(req, MikrotikApiError(400, "failure: pool with such name exists"))
+    assert res_api.status_code == 400
+
+    res_auth = await handler(req, MikrotikAuthFailedError("Invalid credentials"))
+    assert res_auth.status_code == 502
+
+    res_conn = await handler(req, MikrotikConnectionError("No route to host"))
+    assert res_conn.status_code == 502

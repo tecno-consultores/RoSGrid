@@ -33,29 +33,49 @@ TENANT_SLUG = os.environ.get("ROSGRID_TENANT_SLUG", "sistemas")
 def generate_direct_token() -> str:
     """Genera un token de SuperAdmin válido y registra su sesión en KeyDB para pruebas."""
     import asyncio
+    from sqlalchemy import select
     from src.api.v1.auth import create_jwt_access_token
+    from src.db.session import async_session_maker
+    from src.models.core import Tenant, User
     from src.redis_layer.sessions import create_session
 
-    user_id = "d7512cfc-71c4-4dd5-acc4-f9af7cfd45f0"
+    async def _register_session() -> tuple[str, str, str, str]:
+        tenant_id = TENANT_ID
+        tenant_slug = TENANT_SLUG
+        user_id = "d7512cfc-71c4-4dd5-acc4-f9af7cfd45f0"
+        username = "sinfallas"
+        try:
+            async with async_session_maker() as session:
+                u_res = await session.execute(select(User).where(User.role == "SUPERADMIN_GLOBAL").limit(1))
+                u_obj = u_res.scalar_one_or_none()
+                if u_obj:
+                    user_id = str(u_obj.id)
+                    tenant_id = str(u_obj.tenant_id)
+                    username = u_obj.username
+                    t_res = await session.execute(select(Tenant).where(Tenant.id == u_obj.tenant_id))
+                    t_obj = t_res.scalar_one_or_none()
+                    if t_obj:
+                        tenant_slug = t_obj.slug
+        except Exception:
+            pass
 
-    async def _register_session() -> str:
         sess_id, _, _ = await create_session(
-            tenant_id=TENANT_ID,
+            tenant_id=tenant_id,
             user_id=user_id,
-            username="sinfallas",
+            username=username,
             full_name="SuperAdmin Sinfallas",
             role="SUPERADMIN_GLOBAL",
             ip_address="127.0.0.1",
             user_agent="RoSGrid-SmokeTest/1.0",
         )
-        return sess_id
+        return sess_id, user_id, tenant_id, tenant_slug
 
-    session_id = asyncio.run(_register_session())
+    session_id, user_id, tenant_id, tenant_slug = asyncio.run(_register_session())
 
     return create_jwt_access_token(
         user_id=user_id,
-        tenant_id=TENANT_ID,
-        tenant_slug=TENANT_SLUG,
+        tenant_id=tenant_id,
+        tenant_slug=tenant_slug,
         session_id=session_id,
         role="SUPERADMIN_GLOBAL",
         all_routers=True,

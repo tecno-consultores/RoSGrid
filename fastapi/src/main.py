@@ -22,6 +22,13 @@ from src.core.config import settings
 from src.core.csrf import CSRFProtectionMiddleware
 from src.core.security_headers import SecurityHeadersMiddleware
 from src.db.session import engine
+from src.mikrotik.client import (
+    MikrotikApiError,
+    MikrotikAuthFailedError,
+    MikrotikClientError,
+    MikrotikConnectionError,
+    MikrotikTimeoutError,
+)
 from src.redis_layer.client import close_redis_client, get_redis_client
 from src.redis_layer.idempotency import IdempotencyMiddleware
 
@@ -199,6 +206,40 @@ def create_app() -> FastAPI:
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content={"detail": exc.errors()},
+        )
+
+    @app.exception_handler(MikrotikClientError)
+    async def mikrotik_exception_handler(request: Request, exc: MikrotikClientError) -> JSONResponse:
+        logger.warning(
+            "Error de cliente MikroTik en %s %s: %s",
+            request.method,
+            request.url.path,
+            exc,
+        )
+        if isinstance(exc, MikrotikApiError):
+            http_status = (
+                exc.status_code
+                if exc.status_code in (400, 404, 409, 422)
+                else status.HTTP_400_BAD_REQUEST
+            )
+            error_detail = exc.message or exc.detail or str(exc)
+            return JSONResponse(
+                status_code=http_status,
+                content={"detail": f"Error en RouterOS REST API: {error_detail}"},
+            )
+        if isinstance(exc, MikrotikAuthFailedError):
+            return JSONResponse(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                content={"detail": f"Fallo de autenticación con el router: {exc}"},
+            )
+        if isinstance(exc, (MikrotikTimeoutError, MikrotikConnectionError)):
+            return JSONResponse(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                content={"detail": f"El router MikroTik no responde o rechazó la conexión: {exc}"},
+            )
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"detail": str(exc)},
         )
 
     return app

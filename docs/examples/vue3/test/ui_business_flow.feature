@@ -595,6 +595,38 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And match text("#btn-wifi-sec-profiles") contains 'Perfiles WPA2 / WPA3'
     And match text("#btn-wifi-new-ssid") contains 'Nueva Configuración SSID'
 
+  Scenario: 62. Refactoring UI — Jerarquía de Botonera Táctica, Controles Segmentados Concéntricos y Tabla de Inventario
+    Given driver baseUrl + '/inventory'
+    And waitFor(".inventory-view")
+    And waitFor(".view-mode-toggle")
+    And waitFor(".filters-bar")
+    Then match text(".inventory-title") contains 'Inventario de Equipos'
+    And waitFor(".btn-primary")
+    And waitFor(".btn-import-csv")
+
+  Scenario: 63. Responsive Design 11X — Shell Adaptativo, Tablas Desplazables (.table-wrapper) y Barra WebFig Inline
+    Given driver baseUrl + '/inventory'
+    And waitFor(".rg-shell")
+    And waitFor("header.rg-header")
+    And waitFor("nav.rg-rail")
+    And waitFor(".rg-table-scroll.table-wrapper")
+    When driver baseUrl + '/routers/r-01/webfig/live'
+    And waitFor(".webfig-layout")
+    And waitFor(".btn-webfig-menu-inline")
+
+  Scenario: 64. WebFig Firewall RouterOS v7 — Sin Duplicación de Safe Mode, Asistente NAT Masquerade e Intercepción Maker-Checker
+    Given driver baseUrl + '/routers/r-01/webfig/firewall'
+    And waitFor(".firewall-view")
+    Then waitUntil("!document.querySelector('.firewall-view .safemode-banner')")
+    When click("//button[contains(@class, 'btn-subtab') and contains(., 'NAT')]")
+    Then waitFor(".btn-wizard-action")
+    And match text(".header-actions") contains 'Masquerade'
+    When driver baseUrl + '/approvals'
+    Then waitFor(".approvals-view")
+
+
+
+
 
 
 

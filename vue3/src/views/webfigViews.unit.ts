@@ -677,11 +677,20 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
 
     // Wizards NAT (Masquerade & Port Forwarding)
     const vmFw = wrapper.vm as any;
+    const postSpyFw = vi.spyOn(http, 'post');
     vmFw.activeTab = 'nat';
     vmFw.masqueradeWan = 'ether1';
     await vmFw.handleExecuteMasquerade();
     await flushPromises();
     expect(vmFw.actionMessage).toContain('Masquerade');
+    expect(postSpyFw).toHaveBeenCalledWith(
+      '/api/v1/routers/r-01/webfig/firewall/ip/nat',
+      expect.objectContaining({
+        chain: 'srcnat',
+        out_interface: 'ether1',
+        action: 'masquerade',
+      }),
+    );
 
     vmFw.portForward = {
       in_interface: 'ether1',
@@ -694,6 +703,33 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
     await vmFw.handleExecutePortForward();
     await flushPromises();
     expect(vmFw.actionMessage).toContain('Redirección de puertos');
+    expect(postSpyFw).toHaveBeenCalledWith(
+      '/api/v1/routers/r-01/webfig/firewall/ip/nat',
+      expect.objectContaining({
+        chain: 'dstnat',
+        dst_port: '8080',
+        to_ports: '80',
+        action: 'dst-nat',
+      }),
+    );
+
+    // Verificar intercepción HTTP 202 Maker-Checker para operadores L2
+    postSpyFw.mockResolvedValueOnce({
+      status: 202,
+      isMakerCheckerIntercepted: true,
+      data: {
+        status: 'INTERCEPTED_FOR_APPROVAL',
+        detail: 'Solicitud enviada a la bandeja Maker-Checker para aprobación.',
+      },
+      headers: new Headers(),
+    });
+    await vmFw.handleSaveRule({
+      chain: 'input',
+      action: 'accept',
+      comment: 'L2 Maker-Checker Test',
+    });
+    await flushPromises();
+    expect(vmFw.actionMessage).toContain('Maker-Checker');
   });
 
   it('RoutingBgpOspfView — cambia entre pestañas BGP, OSPF y formatea estado', async () => {

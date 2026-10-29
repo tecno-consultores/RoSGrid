@@ -308,3 +308,67 @@ async def test_webfig_ipv6_pools_and_ndp(fake_client_and_router: tuple[Router, A
         # 5. List IPv6 ND Settings (Router Advertisements)
         res_nd = await api_wf_ipv6.list_ipv6_nd_settings(r.id, claims=claims, db=db)
         assert isinstance(res_nd, list)
+
+
+@pytest.mark.asyncio
+async def test_webfig_dhcp_idempotent_creation_on_duplicate(
+    fake_client_and_router: tuple[Router, AsyncMock],
+) -> None:
+    from src.mikrotik.client import MikrotikApiError
+    from src.schemas.webfig_l1_net import IpPoolCreateRequest
+
+    r, client = fake_client_and_router
+    db = AsyncMock()
+    claims = {"tid": str(r.tenant_id), "sub": str(uuid.uuid4()), "rol": "SUPPORT_L2"}
+
+    async def _put_side_effect(endpoint: str, *args: object, **kwargs: object) -> dict[str, str]:
+        if endpoint in {"/ip/pool", "/ip/dhcp-server/network", "/ip/dhcp-server"}:
+            raise MikrotikApiError(400, "failure: already exists")
+        return {".id": "*sched1"}
+
+    client.put.side_effect = _put_side_effect
+    client.get.return_value = [
+        {
+            ".id": "*existing1",
+            "name": "pool-ether1",
+            "address": "192.168.88.0/24",
+            "interface": "ether1",
+        }
+    ]
+    client.patch.return_value = {"ret": "*existing1"}
+
+    with (
+        patch("src.api.v1.webfig_ip.get_router_and_client", return_value=(r, client)),
+        patch("src.api.v1.webfig_ip.invalidate_webfig_cache", new_callable=AsyncMock),
+    ):
+        res_pool = await api_wf_ip.create_pool(
+            r.id,
+            IpPoolCreateRequest(name="pool-ether1", ranges="192.168.88.10-192.168.88.254"),
+            claims=claims,
+            db=db,
+        )
+        assert res_pool == {"ret": "*existing1"}
+
+        res_net = await api_wf_ip.create_dhcp_network(
+            r.id,
+            DhcpNetworkCreateRequest(
+                address="192.168.88.0/24", gateway="192.168.88.1", dns_server="8.8.8.8"
+            ),
+            claims=claims,
+            db=db,
+        )
+        assert res_net == {"ret": "*existing1"}
+
+        res_srv = await api_wf_ip.create_dhcp_server(
+            r.id,
+            DhcpServerCreateRequest(
+                name="dhcp-ether1",
+                interface="ether1",
+                address_pool="pool-ether1",
+                lease_time="12h",
+                disabled=False,
+            ),
+            claims=claims,
+            db=db,
+        )
+        assert res_srv == {"ret": "*existing1"}

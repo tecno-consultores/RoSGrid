@@ -89,13 +89,19 @@ class BgpConnectionCreateRequest(StrictBaseModel):
     name: str = Field(..., min_length=1, max_length=64)
     remote_address: str = Field(..., min_length=1)
     remote_as: int = Field(..., ge=1, le=4294967295)
+    local_as: int | None = Field(default=None, ge=1, le=4294967295)
     local_role: str = Field(default="ebgp", min_length=1, max_length=32)
     templates: str | None = None
+    connect: bool | None = None
+    listen: bool | None = None
+    disabled: bool = False
 
 
 class BgpConnectionUpdateRequest(StrictBaseModel):
     remote_address: str | None = None
     remote_as: int | None = Field(default=None, ge=1, le=4294967295)
+    local_as: int | None = Field(default=None, ge=1, le=4294967295)
+    local_role: str | None = None
     disabled: bool | None = None
 
 

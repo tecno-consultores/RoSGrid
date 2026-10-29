@@ -6,7 +6,6 @@
   import { useRoute } from 'vue-router';
   import { http } from '@/api/httpClient';
   import { useWebFigStore } from '@/stores/useWebFigStore';
-  import RgSafeModeBanner from '@/components/common/RgSafeModeBanner.vue';
 
   const route = useRoute();
   const webFigStore = useWebFigStore();
@@ -42,7 +41,7 @@
   const newAddress = ref({ address: '', interface: 'ether1', comment: '', disabled: false });
 
   const isServerModalOpen = ref(false);
-  const newServer = ref({ name: 'dhcp-lan', interface: 'bridge1', address_pool: '', lease_time: '12h', disabled: false });
+  const newServer = ref({ name: 'dhcp-lan', interface: 'ether1', address_pool: 'pool-ether1', lease_time: '12h', disabled: false });
 
   const isNetworkModalOpen = ref(false);
   const newNetwork = ref({ address: '192.168.88.0/24', gateway: '192.168.88.1', dns_server: '8.8.8.8,1.1.1.1', domain: '', comment: '' });
@@ -56,7 +55,7 @@
   // Wizard DHCP Setup en 3 pasos
   const isDhcpWizardOpen = ref(false);
   const dhcpWizard = ref({
-    interface: 'bridge1',
+    interface: 'ether1',
     address: '192.168.88.1/24',
     network: '192.168.88.0/24',
     gateway: '192.168.88.1',
@@ -334,8 +333,6 @@
 
 <template>
   <div class="webfig-ip-view">
-    <RgSafeModeBanner />
-
     <header class="view-header">
       <div class="header-titles">
         <h1 class="view-title">🔢 Módulo IP & Servicios DHCP (Layer 3)</h1>

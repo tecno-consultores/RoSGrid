@@ -205,8 +205,16 @@ async def create_bgp_connection(
         "remote.as": payload.remote_as,
         "local.role": payload.local_role,
     }
+    if payload.local_as is not None:
+        body["local.as"] = payload.local_as
     if payload.templates:
         body["templates"] = payload.templates
+    if payload.connect is not None:
+        body["connect"] = "yes" if payload.connect else "no"
+    if payload.listen is not None:
+        body["listen"] = "yes" if payload.listen else "no"
+    if payload.disabled is not None:
+        body["disabled"] = payload.disabled
     async with client:
         return await execute_safe_mutation(
             client=client,

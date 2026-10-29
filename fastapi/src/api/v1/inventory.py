@@ -89,6 +89,48 @@ DEFAULT_NETWORK_ROLES = [
 ]
 
 
+async def _ensure_custom_network_roles(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    role_names: set[str] | list[str],
+    description: str = "Rol detectado y registrado automáticamente",
+) -> list[TenantCustomRole]:
+    """Registra de forma idempotente cualquier rol de red personalizado que no exista aún en el Tenant."""
+    standard_set = set(DEFAULT_NETWORK_ROLES) | {r.value for r in RouterNetworkRoleEnum}
+    candidates = {
+        r.strip().upper()
+        for r in role_names
+        if isinstance(r, str) and len(r.strip()) >= 2 and r.strip().upper() not in standard_set
+    }
+    if not candidates:
+        return []
+
+    try:
+        existing_res = await db.execute(
+            select(TenantCustomRole.role_name).where(
+                TenantCustomRole.tenant_id == tenant_id,
+                TenantCustomRole.role_name.in_(candidates),
+            )
+        )
+        existing_names = set(existing_res.scalars().all())
+    except Exception:
+        existing_names = set()
+
+    created: list[TenantCustomRole] = []
+    now_utc = datetime.now(UTC)
+    for new_name in sorted(candidates - existing_names):
+        new_role = TenantCustomRole(
+            id=uuid.uuid4(),
+            tenant_id=tenant_id,
+            role_name=new_name,
+            description=description,
+            created_at=now_utc,
+        )
+        db.add(new_role)
+        created.append(new_role)
+    return created
+
+
 @router.get("/network-roles", response_model=NetworkRolesListResponse)
 async def list_network_roles(
     claims: dict[str, Any] = Depends(get_current_user_claims),
@@ -97,7 +139,33 @@ async def list_network_roles(
     """Lista todos los roles de red disponibles (estándar + personalizados por la empresa)."""
     tenant_id = uuid.UUID(claims["tid"])
     stmt = select(TenantCustomRole).where(TenantCustomRole.tenant_id == tenant_id).order_by(TenantCustomRole.role_name)
-    custom_records = (await db.execute(stmt)).scalars().all()
+    custom_records = list((await db.execute(stmt)).scalars().all())
+
+    # Sincronizar cualquier network_role presente en routers del tenant que aún no esté en tenant_custom_roles
+    try:
+        router_roles_res = await db.execute(
+            select(Router.network_role).where(Router.tenant_id == tenant_id).distinct()
+        )
+        router_roles = {
+            str(r).strip().upper()
+            for r in router_roles_res.scalars().all()
+            if r and isinstance(r, str)
+        }
+        known_custom = {cr.role_name for cr in custom_records}
+        missing_roles = router_roles - set(DEFAULT_NETWORK_ROLES) - known_custom
+        if missing_roles:
+            newly_created = await _ensure_custom_network_roles(
+                db,
+                tenant_id,
+                missing_roles,
+                description="Rol sincronizado automáticamente desde inventario de routers",
+            )
+            if newly_created:
+                await db.commit()
+                custom_records.extend(newly_created)
+                custom_records.sort(key=lambda x: x.role_name)
+    except Exception:
+        pass
 
     custom_items = [
         CustomNetworkRoleItem(
@@ -246,13 +314,13 @@ def _apply_role_filters(
 
 def _apply_query_search_filters(
     query: Any,
-    network_role: RouterNetworkRoleEnum | None = None,
+    network_role: str | None = None,
     admin_state: RouterAdminStateEnum | None = None,
     tag: str | None = None,
     search: str | None = None,
 ) -> Any:
     if network_role:
-        query = query.where(Router.network_role == network_role)
+        query = query.where(Router.network_role == network_role.strip().upper())
     if admin_state:
         query = query.where(Router.admin_state == admin_state)
     if tag:
@@ -279,7 +347,7 @@ def _apply_query_search_filters(
 
 @router.get("/routers", response_model=list[RouterResponse])
 async def list_routers(
-    network_role: RouterNetworkRoleEnum | None = None,
+    network_role: str | None = None,
     admin_state: RouterAdminStateEnum | None = None,
     tag: str | None = None,
     search: str | None = None,
@@ -386,13 +454,20 @@ async def create_router(
     tenant_id = uuid.UUID(claims["tid"])
     user_id = uuid.UUID(claims["sub"])
     await _check_tenant_router_quota(db, tenant_id)
+    normalized_role = payload.network_role.strip().upper()
+    await _ensure_custom_network_roles(
+        db,
+        tenant_id,
+        {normalized_role},
+        description="Rol personalizado creado al dar de alta router",
+    )
 
     new_router = Router(
         tenant_id=tenant_id,
         display_name=payload.display_name.strip(),
         api_base_url=payload.api_base_url.strip(),
         api_port=payload.api_port,
-        network_role=payload.network_role,
+        network_role=normalized_role,
         admin_state=payload.admin_state,
         physical_location=payload.physical_location.strip(),
         latitude=payload.latitude,
@@ -509,6 +584,14 @@ async def update_router(
         raise HTTPException(status_code=404, detail="Router no encontrado")
 
     apply_router_scalar_updates(r, payload)
+    if payload.network_role:
+        r.network_role = payload.network_role.strip().upper()
+        await _ensure_custom_network_roles(
+            db,
+            tenant_id,
+            {r.network_role},
+            description="Rol personalizado registrado al actualizar router",
+        )
 
     if payload.tags is not None:
         await db.execute(delete(RouterTag).where(RouterTag.router_id == r.id))
@@ -717,10 +800,14 @@ async def import_csv_dry_run(
 
     previews = []
     seen_serials: set[str] = set()
+    detected_csv_roles: set[str] = set()
     row_num = 1
 
     for row in reader:
         row_num += 1
+        raw_role = (row.get("network_role") or "").strip().upper()
+        if raw_role:
+            detected_csv_roles.add(raw_role)
         is_valid, errors = validate_single_csv_row(row, existing_serials, seen_serials)
         name = (row.get("display_name") or row.get("name") or f"Fila {row_num}").strip()
         url = (row.get("api_base_url") or row.get("ip_address") or row.get("ip") or "").strip()
@@ -739,6 +826,16 @@ async def import_csv_dry_run(
         previews.append(item)
         if row_num > 501:
             raise HTTPException(status_code=400, detail="El archivo excede el límite de 500 filas")
+
+    if detected_csv_roles:
+        created_custom = await _ensure_custom_network_roles(
+            db,
+            tenant_id,
+            detected_csv_roles,
+            description="Rol detectado e importado automáticamente desde archivo CSV",
+        )
+        if created_custom:
+            await db.commit()
 
     valid_count = sum(1 for p in previews if p.is_valid)
     invalid_count = len(previews) - valid_count
@@ -804,24 +901,14 @@ async def import_csv_commit(
     created_ids = []
 
     # Auto-registrar roles dinámicos presentes en el CSV que no sean estándar
-    standard_roles = {r.value for r in RouterNetworkRoleEnum}
-    csv_roles = {item.network_role for item in items if item.network_role and item.network_role not in standard_roles}
+    csv_roles = {item.network_role.strip().upper() for item in items if item.network_role}
     if csv_roles:
-        existing_custom_res = await db.execute(
-            select(TenantCustomRole.role_name).where(
-                TenantCustomRole.tenant_id == tenant_id,
-                TenantCustomRole.role_name.in_(csv_roles),
-            )
+        await _ensure_custom_network_roles(
+            db,
+            tenant_id,
+            csv_roles,
+            description="Rol detectado e importado automáticamente desde archivo CSV",
         )
-        existing_custom_roles = set(existing_custom_res.scalars().all())
-        for new_role_name in csv_roles - existing_custom_roles:
-            db.add(
-                TenantCustomRole(
-                    tenant_id=tenant_id,
-                    role_name=new_role_name,
-                    description="Rol detectado e importado automáticamente desde archivo CSV",
-                )
-            )
 
     for item in items:
         r, tags, vault = build_router_from_csv(item, tenant_id, user_id)

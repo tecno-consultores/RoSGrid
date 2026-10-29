@@ -895,6 +895,23 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 119. Creación de regla NAT Masquerade en WebFig Firewall RouterOS v7 sin autenticación devuelve 401
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/firewall/ip/nat'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000119'
+    And request { chain: 'srcnat', out_interface: 'ether1', action: 'masquerade', comment: 'NAT Masquerade RoSGrid Wizard' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 120. Creación idempotente de Servidor DHCP en WebFig IP RouterOS v7 sin autenticación devuelve 401
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/ip/dhcp-servers'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000120'
+    And request { name: 'dhcp-ether1', interface: 'ether1', address_pool: 'pool-ether1', lease_time: '12h', disabled: false }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
 
 
 

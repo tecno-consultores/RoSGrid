@@ -47,8 +47,10 @@ Eliminar de raíz la condición de "solo lectura" en los módulos más utilizado
   - Si `action == 'src-nat'`: `to_addresses` (IP pública fija de salida).
 - **Campos Específicos para Mangle:**
   - `new_packet_mark`, `new_connection_mark`, `passthrough` (boolean).
-- **Gobernanza de Seguridad:**
-  - Si `chain == 'input'` y `action == 'drop'`: Advertencia visual roja y activación forzada de Safe Mode de 60 segundos. Si el usuario tiene rol inferior a `SUPPORT_L3`, intercepción HTTP 202 Maker-Checker.
+- **Gobernanza de Seguridad, Intercepción Maker-Checker L2 y Banner Único Safe Mode:**
+  - Todas las mutaciones de Firewall (`create_rule`, `update_rule`, `delete_rule`, `create_address_list`, `delete_address_list`) realizadas por operadores `SUPPORT_L1` o `SUPPORT_L2` son interceptadas automáticamente por `intercept_maker_checker_if_needed`, persistiendo una solicitud `ApprovalRequest` en PostgreSQL y retornando `HTTP 202 Accepted` (`INTERCEPTED_FOR_APPROVAL`). En el frontend (`FirewallRulesView.vue`), al recibir `HTTP 202` se detiene inmediatamente el temporizador local de Safe Mode y se presenta confirmación de envío a la bandeja `/approvals`.
+  - Los asistentes rápidos de **NAT Masquerade** y **Port Forwarding** invocan directamente las rutas canónicas `POST /api/v1/routers/{id}/webfig/firewall/ip/nat` y `POST /api/v1/routers/{id}/webfig/firewall/ip/filter`.
+  - El banner de cuenta regresiva `<RgSafeModeBanner />` se renderiza una única vez a nivel de shell global (`RgResponsiveShell.vue` + indicador en `RouterContextHeader.vue`), evitando duplicación visual dentro de las vistas hijas de WebFig.
 
 ---
 

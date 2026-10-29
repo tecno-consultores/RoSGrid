@@ -2,10 +2,10 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { ref, computed } from 'vue';
+  import { ref, computed, watch } from 'vue';
   import { useInventoryStore } from '@/stores/useInventoryStore';
 
-  defineProps<{
+  const props = defineProps<{
     isOpen: boolean;
   }>();
 
@@ -14,6 +14,15 @@
   }>();
 
   const inventoryStore = useInventoryStore();
+
+  watch(
+    () => props.isOpen,
+    (open) => {
+      if (open) {
+        void inventoryStore.fetchNetworkRoles();
+      }
+    },
+  );
 
   const newRoleName = ref('');
   const newRoleDesc = ref('');
@@ -67,7 +76,8 @@
       newRoleName.value = '';
       newRoleDesc.value = '';
     } catch (err: any) {
-      errorMessage.value = err.response?.data?.detail || 'Error al guardar el rol de red.';
+      errorMessage.value =
+        err?.detail || err?.response?.data?.detail || err?.message || 'Error al guardar el rol de red.';
     } finally {
       isSubmitting.value = false;
     }
@@ -86,7 +96,8 @@
       await inventoryStore.deleteCustomRole(roleName);
       successMessage.value = `Rol "${roleName}" eliminado correctamente.`;
     } catch (err: any) {
-      errorMessage.value = err.response?.data?.detail || 'Error al eliminar el rol.';
+      errorMessage.value =
+        err?.detail || err?.response?.data?.detail || err?.message || 'Error al eliminar el rol.';
     } finally {
       isSubmitting.value = false;
     }

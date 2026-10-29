@@ -8,7 +8,6 @@
   import { useWebFigStore } from '@/stores/useWebFigStore';
   import type { TableColumn, Layer2ResourceResponse } from '@/types';
   import RgDataTable from '@/components/common/RgDataTable.vue';
-  import RgSafeModeBanner from '@/components/common/RgSafeModeBanner.vue';
 
   const route = useRoute();
   const routerId = computed(() => String(route.params.routerId || ''));
@@ -133,11 +132,6 @@
 
 <template>
   <div class="layer2-view">
-    <RgSafeModeBanner
-      :is-active="webFigStore.isSafeModeActive"
-      :remaining-seconds="webFigStore.safeModeCountdownSeconds"
-    />
-
     <header class="view-header">
       <div>
         <h2 class="view-title">Motor Dinámico Capa 2 — {{ resourceData.title }}</h2>

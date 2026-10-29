@@ -134,6 +134,7 @@ class WireGuardPeerCreateRequest(StrictBaseModel):
     allowed_address: str = Field(..., min_length=3)
     endpoint_address: str | None = None
     endpoint_port: int | None = Field(default=None, ge=1, le=65535)
+    persistent_keepalive: int | str | None = None
     comment: str | None = None
 
 

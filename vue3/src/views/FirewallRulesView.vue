@@ -8,7 +8,6 @@
   import { useWebFigStore } from '@/stores/useWebFigStore';
   import type { TableColumn, FirewallRuleItem } from '@/types';
   import RgDataTable from '@/components/common/RgDataTable.vue';
-  import RgSafeModeBanner from '@/components/common/RgSafeModeBanner.vue';
   import RgFirewallRuleModal from '@/components/webfig/RgFirewallRuleModal.vue';
 
   const route = useRoute();
@@ -136,10 +135,19 @@
       }));
     } catch (e: any) {
       rulesList.value = [];
-      errorMessage.value = e?.response?.data?.detail || 'Error al cargar las reglas de firewall.';
+      errorMessage.value =
+        e?.detail || e?.response?.data?.detail || e?.message || 'Error al cargar las reglas de firewall.';
     } finally {
       isLoading.value = false;
     }
+  }
+
+  function isInterceptedResponse(res: any): boolean {
+    return (
+      res?.status === 202 ||
+      Boolean(res?.isMakerCheckerIntercepted) ||
+      (res?.data as any)?.status === 'INTERCEPTED_FOR_APPROVAL'
+    );
   }
 
   function openCreateRuleModal() {
@@ -166,36 +174,53 @@
     actionMessage.value = '';
 
     try {
+      let res;
       if (isEditingRule.value && selectedRule.value?.id) {
-        await http.patch(
+        res = await http.patch(
           `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}/${selectedRule.value.id}`,
           payload,
         );
-        actionMessage.value = 'Regla modificada exitosamente con Safe Mode activo.';
+        actionMessage.value = isInterceptedResponse(res)
+          ? (res.data as any)?.detail || 'Solicitud enviada a la bandeja Maker-Checker para aprobación.'
+          : 'Regla modificada exitosamente con Safe Mode activo.';
       } else {
-        await http.post(
+        res = await http.post(
           `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}`,
           payload,
         );
-        actionMessage.value = 'Nueva regla creada exitosamente bajo Safe Mode.';
+        actionMessage.value = isInterceptedResponse(res)
+          ? (res.data as any)?.detail || 'Solicitud enviada a la bandeja Maker-Checker para aprobación.'
+          : 'Nueva regla creada exitosamente bajo Safe Mode.';
+      }
+      if (isInterceptedResponse(res)) {
+        webFigStore.stopSafeMode?.();
       }
       isRuleModalOpen.value = false;
       await loadFirewallRules();
     } catch (e: any) {
-      errorMessage.value = e?.response?.data?.detail || 'Error al persistir la regla de firewall.';
+      webFigStore.stopSafeMode?.();
+      errorMessage.value =
+        e?.detail || e?.response?.data?.detail || e?.message || 'Error al persistir la regla de firewall.';
     }
   }
 
   async function handleToggleRule(rule: FirewallRuleItem) {
     webFigStore.startSafeModeCountdown(60);
     try {
-      await http.patch(
+      const res = await http.patch(
         `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}/${rule.id}`,
         { disabled: !rule.disabled },
       );
+      if (isInterceptedResponse(res)) {
+        webFigStore.stopSafeMode?.();
+        actionMessage.value =
+          (res.data as any)?.detail || 'Solicitud enviada a la bandeja Maker-Checker para aprobación.';
+      }
       await loadFirewallRules();
     } catch (e: any) {
-      errorMessage.value = e?.response?.data?.detail || 'Error al conmutar estado de la regla.';
+      webFigStore.stopSafeMode?.();
+      errorMessage.value =
+        e?.detail || e?.response?.data?.detail || e?.message || 'Error al conmutar estado de la regla.';
     }
   }
 
@@ -205,13 +230,21 @@
     }
     webFigStore.startSafeModeCountdown(60);
     try {
-      await http.delete(
+      const res = await http.delete(
         `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}/${rule.id}`,
       );
-      actionMessage.value = 'Regla eliminada exitosamente.';
+      if (isInterceptedResponse(res)) {
+        webFigStore.stopSafeMode?.();
+        actionMessage.value =
+          (res.data as any)?.detail || 'Solicitud enviada a la bandeja Maker-Checker para aprobación.';
+      } else {
+        actionMessage.value = 'Regla eliminada exitosamente.';
+      }
       await loadFirewallRules();
     } catch (e: any) {
-      errorMessage.value = e?.response?.data?.detail || 'Error al eliminar la regla de firewall.';
+      webFigStore.stopSafeMode?.();
+      errorMessage.value =
+        e?.detail || e?.response?.data?.detail || e?.message || 'Error al eliminar la regla de firewall.';
     }
   }
 
@@ -227,7 +260,8 @@
       actionMessage.value = 'Contadores de tráfico reiniciados a cero.';
       await loadFirewallRules();
     } catch (e: any) {
-      errorMessage.value = e?.response?.data?.detail || 'Error al reiniciar contadores.';
+      errorMessage.value =
+        e?.detail || e?.response?.data?.detail || e?.message || 'Error al reiniciar contadores.';
     } finally {
       isResetting.value = false;
     }
@@ -261,9 +295,10 @@
 
   async function handleExecuteMasquerade() {
     webFigStore.startSafeModeCountdown(60);
+    errorMessage.value = '';
     try {
-      await http.post(
-        `/api/v1/routers/${routerId.value}/webfig/firewall/rules?table=nat`,
+      const res = await http.post(
+        `/api/v1/routers/${routerId.value}/webfig/firewall/ip/nat`,
         {
           chain: 'srcnat',
           out_interface: masqueradeWan.value,
@@ -271,25 +306,34 @@
           comment: 'NAT Masquerade RoSGrid Wizard',
         },
       );
-      actionMessage.value = `Regla Masquerade creada para salida WAN en ${masqueradeWan.value}.`;
+      if (isInterceptedResponse(res)) {
+        webFigStore.stopSafeMode?.();
+        actionMessage.value =
+          (res.data as any)?.detail || 'Solicitud Masquerade enviada a la bandeja Maker-Checker.';
+      } else {
+        actionMessage.value = `Regla Masquerade creada para salida WAN en ${masqueradeWan.value}.`;
+      }
       isMasqueradeWizardOpen.value = false;
       await loadFirewallRules();
     } catch (err: any) {
-      errorMessage.value = err?.detail || err?.message || 'Error al crear regla Masquerade.';
+      webFigStore.stopSafeMode?.();
+      errorMessage.value =
+        err?.detail || err?.response?.data?.detail || err?.message || 'Error al crear regla Masquerade.';
     }
   }
 
   async function handleExecutePortForward() {
     webFigStore.startSafeModeCountdown(60);
+    errorMessage.value = '';
     try {
       // 1. Regla Dst-NAT
-      await http.post(
-        `/api/v1/routers/${routerId.value}/webfig/firewall/rules?table=nat`,
+      const resNat = await http.post(
+        `/api/v1/routers/${routerId.value}/webfig/firewall/ip/nat`,
         {
           chain: 'dstnat',
           in_interface: portForward.value.in_interface,
           protocol: portForward.value.protocol,
-          dst_port: portForward.value.dst_port,
+          dst_port: String(portForward.value.dst_port),
           action: 'dst-nat',
           to_addresses: portForward.value.to_addresses,
           to_ports: String(portForward.value.to_ports),
@@ -298,25 +342,38 @@
       );
 
       // 2. Regla opcional en Filter forward
+      let resFilter: any = null;
       if (portForward.value.auto_filter) {
-        await http.post(
-          `/api/v1/routers/${routerId.value}/webfig/firewall/rules?table=filter`,
+        resFilter = await http.post(
+          `/api/v1/routers/${routerId.value}/webfig/firewall/ip/filter`,
           {
             chain: 'forward',
             dst_address: portForward.value.to_addresses,
             protocol: portForward.value.protocol,
-            dst_port: portForward.value.to_ports,
+            dst_port: String(portForward.value.to_ports),
             action: 'accept',
             comment: `Permitir Port Forward a ${portForward.value.to_addresses}:${portForward.value.to_ports}`,
           },
         );
       }
 
-      actionMessage.value = `Redirección de puertos :${portForward.value.dst_port} -> ${portForward.value.to_addresses}:${portForward.value.to_ports} completada con éxito.`;
+      if (isInterceptedResponse(resNat) || isInterceptedResponse(resFilter)) {
+        webFigStore.stopSafeMode?.();
+        actionMessage.value =
+          (resNat.data as any)?.detail ||
+          'Solicitud de Port Forwarding enviada a la bandeja Maker-Checker.';
+      } else {
+        actionMessage.value = `Redirección de puertos :${portForward.value.dst_port} -> ${portForward.value.to_addresses}:${portForward.value.to_ports} completada con éxito.`;
+      }
       isPortForwardWizardOpen.value = false;
       await loadFirewallRules();
     } catch (err: any) {
-      errorMessage.value = err?.detail || err?.message || 'Error al ejecutar asistente de Port Forwarding.';
+      webFigStore.stopSafeMode?.();
+      errorMessage.value =
+        err?.detail ||
+        err?.response?.data?.detail ||
+        err?.message ||
+        'Error al ejecutar asistente de Port Forwarding.';
     }
   }
 
@@ -327,12 +384,6 @@
 
 <template>
   <div class="firewall-view">
-    <!-- Banner de Safe Mode si está activo -->
-    <RgSafeModeBanner
-      :is-active="webFigStore.isSafeModeActive"
-      :remaining-seconds="webFigStore.safeModeCountdownSeconds"
-    />
-
     <!-- Alertas informativas / de error -->
     <div v-if="actionMessage" class="feedback-banner feedback-banner--success" role="status">
       <span>✅ {{ actionMessage }}</span>

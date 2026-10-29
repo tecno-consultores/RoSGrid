@@ -242,6 +242,7 @@
   function handleCsvImported(count: number) {
     actionMessage.value = `Se importaron ${count} routers correctamente. Sincronizando inventario...`;
     inventoryStore.fetchRouters();
+    inventoryStore.fetchNetworkRoles();
     setTimeout(() => {
       actionMessage.value = '';
     }, 4000);
@@ -253,7 +254,10 @@
   async function handleManualRefresh() {
     isRefreshing.value = true;
     try {
-      await inventoryStore.fetchRouters(true);
+      await Promise.all([
+        inventoryStore.fetchRouters(true),
+        inventoryStore.fetchNetworkRoles(),
+      ]);
       isFleetUpdated.value = true;
       setTimeout(() => {
         isFleetUpdated.value = false;

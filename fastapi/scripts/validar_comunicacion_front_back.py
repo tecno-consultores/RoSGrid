@@ -441,6 +441,95 @@ async def verify_router_specific_endpoints(
     except Exception as e:
         log_test(f"GET /api/v1/routers/{router_id}/webfig/interfaces", False, str(e))
 
+    # Firewall NAT Masquerade & Intercepción Maker-Checker L2
+    try:
+        masq_headers = {**auth_headers, "Idempotency-Key": str(uuid.uuid4())}
+        r_masq = await client.post(
+            f"/api/v1/routers/{router_id}/webfig/firewall/ip/nat",
+            headers=masq_headers,
+            json={
+                "chain": "srcnat",
+                "out_interface": "ether1",
+                "action": "masquerade",
+                "comment": "QA-FrontBack-Masquerade-Check",
+            },
+        )
+        log_test(
+            f"POST /api/v1/routers/{router_id}/webfig/firewall/ip/nat (Wizard NAT Masquerade)",
+            r_masq.status_code in (200, 201, 502),
+            f"HTTP {r_masq.status_code} (Cero 404/500)",
+        )
+        if r_masq.status_code in (200, 201):
+            created_id = (r_masq.json() or {}).get("ret") or (r_masq.json() or {}).get(".id") or (r_masq.json() or {}).get("id")
+            if created_id:
+                await client.delete(
+                    f"/api/v1/routers/{router_id}/webfig/firewall/ip/nat/{created_id}",
+                    headers={**auth_headers, "Idempotency-Key": str(uuid.uuid4())},
+                )
+    except Exception as e:
+        log_test(f"POST /api/v1/routers/{router_id}/webfig/firewall/ip/nat", False, str(e))
+
+    # Intercepción Maker-Checker HTTP 202 para operador SUPPORT_L2
+    try:
+        from sqlalchemy import select
+
+        from src.api.v1.auth import create_jwt_access_token
+        from src.db.session import async_session_maker
+        from src.models.core import Tenant, User
+        from src.redis_layer.sessions import create_session
+
+        async with async_session_maker() as session:
+            u_res = await session.execute(select(User).limit(1))
+            any_u = u_res.scalar_one_or_none()
+            t_slug = "isp-local"
+            if any_u:
+                t_res = await session.execute(select(Tenant).where(Tenant.id == any_u.tenant_id))
+                t_obj = t_res.scalar_one_or_none()
+                if t_obj:
+                    t_slug = t_obj.slug
+                l2_sid, _, _ = await create_session(
+                    tenant_id=str(any_u.tenant_id),
+                    user_id=str(any_u.id),
+                    username="qa_l2_checker",
+                    full_name="Operador L2 QA",
+                    role="SUPPORT_L2",
+                    ip_address="127.0.0.1",
+                    user_agent="RoSGrid-L2-Validator/1.0",
+                )
+                l2_token = create_jwt_access_token(
+                    user_id=str(any_u.id),
+                    tenant_id=str(any_u.tenant_id),
+                    tenant_slug=t_slug,
+                    session_id=l2_sid,
+                    role="SUPPORT_L2",
+                    all_routers=True,
+                )
+                l2_headers = {
+                    "Authorization": f"Bearer {l2_token}",
+                    "X-CSRF-Token": "test_csrf_token_for_front_back_validation",
+                    "Idempotency-Key": str(uuid.uuid4()),
+                }
+                r_l2_fw = await client.post(
+                    f"/api/v1/routers/{router_id}/webfig/firewall/ip/filter",
+                    headers=l2_headers,
+                    json={"chain": "forward", "action": "accept", "comment": "Regla L2 Maker-Checker QA"},
+                )
+                l2_body = r_l2_fw.json() if r_l2_fw.status_code == 202 else {}
+                appr_id = l2_body.get("approval_request_id")
+                log_test(
+                    f"POST /api/v1/routers/{router_id}/webfig/firewall/ip/filter (SUPPORT_L2 -> HTTP 202 Maker-Checker)",
+                    r_l2_fw.status_code == 202 and l2_body.get("status") == "INTERCEPTED_FOR_APPROVAL",
+                    f"HTTP {r_l2_fw.status_code} (Approval ID: {appr_id})",
+                )
+                if appr_id:
+                    await client.post(
+                        f"/api/v1/operations/approvals/{appr_id}/reject",
+                        headers={**auth_headers, "Idempotency-Key": str(uuid.uuid4())},
+                        json={"review_comment": "Limpieza automática suite QA Front-Back"},
+                    )
+    except Exception as e:
+        log_test("Intercepción Maker-Checker SUPPORT_L2 Firewall", False, str(e))
+
     # Limpieza higiénica EXCLUSIVAMENTE del equipo de prueba temporal (nunca de inventario preexistente)
     if test_router_to_clean:
         try:

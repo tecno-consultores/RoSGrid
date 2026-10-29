@@ -80,6 +80,7 @@ En `fastapi/src/api/v1/webfig_ip.py` y nuevo router `fastapi/src/api/v1/webfig_i
 ---
 
 ## 5. Aseguramiento 11X y Seguridad
-- Toda creación o modificación de direcciones IP y servidores DHCP se ejecuta bajo la protección de **Safe Mode (60s Dead Man's Switch)**.
+- Toda creación o modificación de direcciones IP y servidores DHCP se ejecuta bajo la protección de **Safe Mode (60s Dead Man's Switch)**, habilitada para roles desde `SUPPORT_L2` hasta `SUPERADMIN_GLOBAL`.
+- **Creación Idempotente de Pools, Redes y Servidores DHCP:** Los endpoints `POST /pools`, `POST /dhcp-server/networks` y `POST /dhcp-servers` detectan colisiones de recursos preexistentes en RouterOS v7 (`MikrotikApiError` HTTP 400) y actualizan de forma idempotente el registro existente vía `PATCH`, invalidando el caché corto de KeyDB (`invalidate_webfig_cache`) y evitando errores `HTTP 500`.
 - Regla Anti-Suicidio: Prohibición de eliminar o modificar la dirección IP a través de la cual RoSGrid está conectado al router sin activación explícita de Safe Mode y confirmación visual.
 - Cobertura de pruebas unitarias `>= 95%` en backend y 100% de aserciones pasando en Vitest frontend.

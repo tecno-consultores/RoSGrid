@@ -49,6 +49,15 @@ export function readCsrfCookie(): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+function readStoredCsrfToken(): string | null {
+  if (typeof localStorage === 'undefined') return null;
+  try {
+    return localStorage.getItem('rosgrid_csrf');
+  } catch {
+    return null;
+  }
+}
+
 export function generateUuidV7(): string {
   const bytes = new Uint8Array(16);
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
@@ -96,7 +105,7 @@ function buildHeaders(method: string, options: RequestOptions, csrfToken?: strin
     headers.set('Accept', 'application/json');
   }
   if (isMutableMethod(method)) {
-    const token = csrfToken || readCsrfCookie();
+    const token = csrfToken || readCsrfCookie() || readStoredCsrfToken();
     if (token) headers.set('X-CSRF-Token', token);
     if (!headers.has('Idempotency-Key')) {
       headers.set('Idempotency-Key', options.idempotencyKey || generateUuidV7());
@@ -134,6 +143,16 @@ async function executeRefreshTokenRotation(): Promise<boolean> {
       credentials: 'include',
       headers: { Accept: 'application/json' },
     });
+    if (res.ok && typeof localStorage !== 'undefined' && typeof res.json === 'function') {
+      try {
+        const body = await res.json();
+        if (body?.csrf_token) {
+          localStorage.setItem('rosgrid_csrf', String(body.csrf_token));
+        }
+      } catch {
+        // Ignora si la respuesta no contiene JSON
+      }
+    }
     return res.ok;
   } catch {
     return false;

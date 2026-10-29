@@ -4,6 +4,7 @@
 <script setup lang="ts">
   import { ref } from 'vue';
   import { http, resolveUrl } from '@/api/httpClient';
+  import { useInventoryStore } from '@/stores/useInventoryStore';
   import type { CsvDryRunResponse } from '@/types';
 
   defineProps<{
@@ -16,6 +17,15 @@
   }>();
 
   const templateDownloadUrl = resolveUrl('/api/v1/inventory/template-csv');
+
+  function refreshNetworkRoles() {
+    try {
+      const inventoryStore = useInventoryStore();
+      void inventoryStore.fetchNetworkRoles();
+    } catch {
+      // Ignorar si Pinia no está inicializado en tests unitarios aislados
+    }
+  }
 
   const step = ref<1 | 2>(1);
   const isProcessing = ref(false);
@@ -58,8 +68,10 @@
       );
       dryRunResult.value = res.data;
       step.value = 2;
+      refreshNetworkRoles();
     } catch (err: any) {
       errorMessage.value =
+        err?.detail ||
         err?.response?.data?.detail ||
         err?.message ||
         'Error al validar el archivo CSV con el servidor';
@@ -82,11 +94,13 @@
         formData,
       );
       const count = res.data?.imported_count ?? dryRunResult.value?.valid_rows_count ?? 0;
+      refreshNetworkRoles();
       emit('imported', count);
       resetState();
       emit('close');
     } catch (err: any) {
       errorMessage.value =
+        err?.detail ||
         err?.response?.data?.detail ||
         err?.message ||
         'Error al importar los equipos en el servidor';

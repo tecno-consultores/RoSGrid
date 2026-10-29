@@ -8,10 +8,11 @@ import json
 import logging
 import uuid
 from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import HTTPException, status
+from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -21,6 +22,11 @@ from src.mikrotik.client import MikrotikRestClient
 from src.mikrotik.safemode import build_rollback_command, execute_with_safemode
 from src.models.core import SystemRoleEnum, UserRouterPermission
 from src.models.inventory import Router, SSLTrustStatusEnum
+from src.models.operations import (
+    ApprovalRequest,
+    ApprovalStatusEnum,
+    CriticalActionTypeEnum,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -163,6 +169,87 @@ async def cached_mikrotik_get(
         except Exception as exc:
             logger.debug("Fallo al escribir en caché Redis: %s", exc)
     return data
+
+
+async def invalidate_webfig_cache(
+    redis: Any,
+    tenant_id: uuid.UUID,
+    router_id: uuid.UUID,
+    endpoint: str,
+) -> None:
+    """Invalida las entradas de caché corto de un endpoint WebFig tras una mutación."""
+    if not redis:
+        return
+    clean_ep = endpoint.strip("/")
+    for candidate in (f"/{clean_ep}", clean_ep):
+        ep_hash = hashlib.sha256(candidate.encode("utf-8")).hexdigest()[:16]
+        cache_key = f"rg:{tenant_id}:rcache:{router_id}:{ep_hash}"
+        try:
+            await redis.delete(cache_key)
+        except Exception as exc:
+            logger.debug("Fallo al invalidar caché Redis %s: %s", cache_key, exc)
+
+
+_MAKER_CHECKER_INTERCEPT_ROLES = {
+    SystemRoleEnum.SUPPORT_L2.value,
+    SystemRoleEnum.SUPPORT_L1.value,
+}
+
+
+async def intercept_maker_checker_if_needed(
+    db: AsyncSession,
+    claims: dict[str, Any],
+    router_id: uuid.UUID,
+    summary: str,
+    ros_rest_method: str,
+    ros_rest_path: str,
+    request_payload: dict[str, Any],
+    action_type: CriticalActionTypeEnum = CriticalActionTypeEnum.FIREWALL_INPUT_OR_SERVICE_PORT_CHANGE,
+    previous_state_snapshot: dict[str, Any] | None = None,
+    requester_justification: str | None = None,
+) -> JSONResponse | None:
+    """Intercepta mutaciones sensibles realizadas por roles L1/L2 y las envía a la bandeja Maker-Checker (HTTP 202)."""
+    role = str(claims.get("rol", ""))
+    if role not in _MAKER_CHECKER_INTERCEPT_ROLES:
+        return None
+
+    tenant_id = uuid.UUID(str(claims["tid"]))
+    user_id = uuid.UUID(str(claims["sub"]))
+    now_utc = datetime.now(UTC)
+    approval_id = uuid.uuid4()
+    justification = (
+        requester_justification
+        or str(request_payload.get("comment") or "")
+        or f"Cambio solicitado desde consola WebFig por operador ({role})"
+    )
+
+    approval = ApprovalRequest(
+        id=approval_id,
+        tenant_id=tenant_id,
+        router_id=router_id,
+        action_type=action_type,
+        status=ApprovalStatusEnum.PENDING,
+        summary=summary[:255],
+        requester_justification=justification,
+        ros_rest_method=ros_rest_method.upper(),
+        ros_rest_path=f"/{ros_rest_path.strip('/')}",
+        request_payload=request_payload,
+        previous_state_snapshot=previous_state_snapshot,
+        requested_by=user_id,
+        expires_at=now_utc + timedelta(hours=24),
+        created_at=now_utc,
+    )
+    db.add(approval)
+    await db.commit()
+
+    return JSONResponse(
+        status_code=status.HTTP_202_ACCEPTED,
+        content={
+            "status": "INTERCEPTED_FOR_APPROVAL",
+            "approval_request_id": str(approval.id),
+            "detail": "Operación interceptada por gobernanza Maker-Checker. Pendiente de aprobación por Nivel 3 o Administrador.",
+        },
+    )
 
 
 async def execute_safe_mutation(

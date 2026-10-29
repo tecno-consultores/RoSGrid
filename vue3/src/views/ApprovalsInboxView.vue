@@ -90,7 +90,10 @@
       await loadApprovals();
     } catch (err: any) {
       errorMessage.value =
-        err?.response?.data?.detail || err?.message || 'Error al aprobar solicitud en el servidor';
+        err?.detail ||
+        err?.response?.data?.detail ||
+        err?.message ||
+        'Error al aprobar solicitud en el servidor';
       setTimeout(() => {
         errorMessage.value = '';
       }, 4000);
@@ -111,7 +114,10 @@
       await loadApprovals();
     } catch (err: any) {
       errorMessage.value =
-        err?.response?.data?.detail || err?.message || 'Error al rechazar solicitud en el servidor';
+        err?.detail ||
+        err?.response?.data?.detail ||
+        err?.message ||
+        'Error al rechazar solicitud en el servidor';
       setTimeout(() => {
         errorMessage.value = '';
       }, 4000);

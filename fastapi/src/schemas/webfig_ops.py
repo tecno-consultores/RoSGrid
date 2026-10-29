@@ -24,6 +24,7 @@ class PppSecretCreateRequest(StrictBaseModel):
     password: str = Field(..., min_length=1)
     service: str = Field(default="any", min_length=1, max_length=32)
     profile: str = Field(default="default", min_length=1, max_length=64)
+    local_address: str | None = None
     remote_address: str | None = None
     comment: str | None = None
     disabled: bool = False
@@ -33,6 +34,7 @@ class PppSecretUpdateRequest(StrictBaseModel):
     password: str | None = None
     service: str | None = None
     profile: str | None = None
+    local_address: str | None = None
     remote_address: str | None = None
     comment: str | None = None
     disabled: bool | None = None
@@ -45,6 +47,7 @@ class PppProfileCreateRequest(StrictBaseModel):
     rate_limit: str | None = None
     dns_server: str | None = None
     address_list: str | None = None
+    only_one: str | None = None
 
 
 class PppProfileUpdateRequest(StrictBaseModel):
@@ -53,6 +56,7 @@ class PppProfileUpdateRequest(StrictBaseModel):
     rate_limit: str | None = None
     dns_server: str | None = None
     address_list: str | None = None
+    only_one: str | None = None
 
 
 class PppoeServerCreateRequest(StrictBaseModel):
@@ -60,6 +64,9 @@ class PppoeServerCreateRequest(StrictBaseModel):
     interface: str = Field(..., min_length=1, max_length=64)
     default_profile: str = Field(default="default", min_length=1, max_length=64)
     max_mtu: int = Field(default=1480, ge=576, le=65535)
+    max_mru: int | None = Field(default=None, ge=576, le=65535)
+    one_session_per_host: bool | None = None
+    disabled: bool = False
 
 
 # ============================================================================

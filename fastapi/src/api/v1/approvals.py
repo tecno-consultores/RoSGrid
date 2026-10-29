@@ -17,11 +17,13 @@ from src.api.v1.bulk_and_updates import execute_bulk_job_on_fleet
 from src.api.v1.webfig_common import (
     execute_safe_mutation,
     get_router_and_client,
+    invalidate_webfig_cache,
 )
 from src.core.audit import write_audit_log
 from src.db.session import get_tenant_db_session
 from src.mikrotik.client import MikrotikRestClient
-from src.models.core import SystemRoleEnum
+from src.models.core import SystemRoleEnum, User
+from src.models.inventory import Router
 from src.models.operations import (
     ApprovalRequest,
     ApprovalStatusEnum,
@@ -29,6 +31,7 @@ from src.models.operations import (
     BulkJobStatusEnum,
     CriticalActionTypeEnum,
 )
+from src.redis_layer.client import get_redis_client
 from src.schemas.approvals import (
     ApprovalListResponse,
     ApprovalRequestResponse,
@@ -85,26 +88,37 @@ async def _execute_deferred_operation(
 ) -> Any:
     method = approval.ros_rest_method.upper()
     path = approval.ros_rest_path.strip("/")
-    payload = approval.request_payload
+    if path.startswith("rest/"):
+        path = path[5:].strip("/")
+    payload = approval.request_payload if isinstance(approval.request_payload, dict) else {}
+    clean_payload = {k: v for k, v in payload.items() if k != ".id"}
 
     async def _action() -> Any:
         if method == "PUT":
-            return await client.put(path, payload)
+            return await client.put(f"/{path}", clean_payload)
         elif method == "PATCH":
-            return await client.patch(path, payload)
+            return await client.patch(f"/{path}", clean_payload)
         elif method == "DELETE":
-            return await client.delete(path)
+            return await client.delete(f"/{path}")
         elif method == "POST":
-            return await client.post(path, payload)
+            return await client.post(f"/{path}", clean_payload)
         raise ValueError(f"Método REST no soportado: {method}")
 
-    action_name = "deferred_execution"
+    menu_path = path
+    inferred_id = payload.get(".id") if isinstance(payload, dict) else None
+    if method in ("PATCH", "DELETE") and "/" in path:
+        parts = path.rsplit("/", 1)
+        if parts[1].startswith("*") or parts[1].isdigit():
+            menu_path = parts[0]
+            inferred_id = inferred_id or parts[1]
+
+    action_name = "create" if method == "PUT" else ("delete" if method == "DELETE" else "set")
     return await execute_safe_mutation(
         client=client,
-        menu=path,
+        menu=menu_path,
         action=action_name,
         coro_fn=_action,
-        item_id=payload.get(".id") if isinstance(payload, dict) else None,
+        item_id=inferred_id,
         before_state=approval.previous_state_snapshot,
     )
 
@@ -137,30 +151,49 @@ async def list_approvals(
     stmt = stmt.order_by(desc(ApprovalRequest.created_at)).limit(limit).offset(offset)
     records = (await db.execute(stmt)).scalars().all()
 
-    items = [
-        ApprovalRequestResponse(
-            id=r.id,
-            tenant_id=r.tenant_id,
-            router_id=r.router_id,
-            action_type=r.action_type.value,
-            status=r.status.value,
-            summary=r.summary,
-            requester_justification=r.requester_justification,
-            ros_rest_method=r.ros_rest_method,
-            ros_rest_path=r.ros_rest_path,
-            request_payload=r.request_payload,
-            previous_state_snapshot=r.previous_state_snapshot,
-            requested_by=r.requested_by,
-            reviewed_by=r.reviewed_by,
-            review_comment=r.review_comment,
-            expires_at=r.expires_at,
-            reviewed_at=r.reviewed_at,
-            executed_at=r.executed_at,
-            execution_result=r.execution_result,
-            created_at=r.created_at,
+    items: list[ApprovalRequestResponse] = []
+    for r in records:
+        req_username: str | None = None
+        req_role: str | None = None
+        r_name: str | None = None
+        try:
+            u_obj = await db.get(User, r.requested_by)
+            if isinstance(u_obj, User):
+                req_username = u_obj.username
+                req_role = u_obj.role.value if hasattr(u_obj.role, "value") else str(u_obj.role)
+            if r.router_id:
+                rt_obj = await db.get(Router, r.router_id)
+                if isinstance(rt_obj, Router):
+                    r_name = rt_obj.display_name
+        except Exception:
+            pass
+
+        items.append(
+            ApprovalRequestResponse(
+                id=r.id,
+                tenant_id=r.tenant_id,
+                router_id=r.router_id,
+                router_name=r_name,
+                action_type=r.action_type.value,
+                status=r.status.value,
+                summary=r.summary,
+                requester_justification=r.requester_justification,
+                ros_rest_method=r.ros_rest_method,
+                ros_rest_path=r.ros_rest_path,
+                request_payload=r.request_payload,
+                previous_state_snapshot=r.previous_state_snapshot,
+                requested_by=r.requested_by,
+                requested_by_username=req_username,
+                requested_by_role=req_role,
+                reviewed_by=r.reviewed_by,
+                review_comment=r.review_comment,
+                expires_at=r.expires_at,
+                reviewed_at=r.reviewed_at,
+                executed_at=r.executed_at,
+                execution_result=r.execution_result,
+                created_at=r.created_at,
+            )
         )
-        for r in records
-    ]
 
     return ApprovalListResponse(total=total, items=items)
 
@@ -296,10 +329,23 @@ async def approve_request(
     await db.commit()
     await db.refresh(approval)
 
+    if approval.router_id and approval.ros_rest_path:
+        try:
+            redis = get_redis_client()
+            clean_p = approval.ros_rest_path.strip("/")
+            if clean_p.startswith("rest/"):
+                clean_p = clean_p[5:].strip("/")
+            await invalidate_webfig_cache(redis, tenant_id, approval.router_id, f"/{clean_p}")
+            if "/" in clean_p:
+                await invalidate_webfig_cache(redis, tenant_id, approval.router_id, f"/{clean_p.rsplit('/', 1)[0]}")
+        except Exception:
+            pass
+
     return ApprovalRequestResponse(
         id=approval.id,
         tenant_id=approval.tenant_id,
         router_id=approval.router_id,
+        router_name=router_name,
         action_type=approval.action_type.value,
         status=approval.status.value,
         summary=approval.summary,

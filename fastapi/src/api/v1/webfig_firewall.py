@@ -15,9 +15,12 @@ from src.api.v1.webfig_common import (
     cached_mikrotik_get,
     execute_safe_mutation,
     get_router_and_client,
+    intercept_maker_checker_if_needed,
+    invalidate_webfig_cache,
 )
 from src.db.session import get_tenant_db_session
 from src.models.core import SystemRoleEnum
+from src.models.operations import CriticalActionTypeEnum
 from src.redis_layer.client import get_redis_client
 from src.schemas.webfig_firewall import (
     AddressListCreateRequest,
@@ -104,11 +107,9 @@ async def create_rule(
     ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
-    """Crea una nueva regla de Firewall protegida por Safe Mode."""
+    """Crea una nueva regla de Firewall protegida por Safe Mode o interceptada por Maker-Checker (L2)."""
     _validate_firewall_params(proto, table_type)
-    _check_input_chain_permission(payload.chain, claims.get("rol", ""))
 
-    _, client = await get_router_and_client(router_id, claims, db)
     body: dict[str, Any] = {"chain": payload.chain, "action": payload.action, "disabled": payload.disabled}
     if payload.src_address:
         body["src-address"] = payload.src_address
@@ -135,14 +136,33 @@ async def create_rule(
     body.update(payload.extra_params)
 
     menu = f"{proto}/firewall/{table_type}"
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Crear regla Firewall {proto.upper()}/{table_type} (chain={payload.chain}, action={payload.action})",
+        ros_rest_method="PUT",
+        ros_rest_path=f"/{menu}",
+        request_payload=body,
+        action_type=CriticalActionTypeEnum.FIREWALL_INPUT_OR_SERVICE_PORT_CHANGE,
+        requester_justification=payload.comment,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _check_input_chain_permission(payload.chain, claims.get("rol", ""))
+
+    _, client = await get_router_and_client(router_id, claims, db)
     async with client:
-        return await execute_safe_mutation(
+        res = await execute_safe_mutation(
             client=client,
             menu=menu,
             action="create",
             before_state=body,
             coro_fn=lambda: client.put(f"/{menu}", json_data=body),
         )
+    await invalidate_webfig_cache(get_redis_client(), uuid.UUID(claims["tid"]), router_id, f"/{menu}")
+    return res
 
 
 def _build_firewall_patch_data(payload: FirewallRuleUpdateRequest) -> dict[str, Any]:
@@ -184,17 +204,31 @@ async def update_rule(
     ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
-    """Modifica una regla de Firewall existente bajo Safe Mode."""
+    """Modifica una regla de Firewall existente bajo Safe Mode o Maker-Checker (L2)."""
     _validate_firewall_params(proto, table_type)
+    patch_data = _build_firewall_patch_data(payload)
+    menu = f"{proto}/firewall/{table_type}"
+
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Modificar regla Firewall {proto.upper()}/{table_type} ({rule_id})",
+        ros_rest_method="PATCH",
+        ros_rest_path=f"/{menu}/{rule_id}",
+        request_payload=patch_data,
+        action_type=CriticalActionTypeEnum.FIREWALL_INPUT_OR_SERVICE_PORT_CHANGE,
+        requester_justification=payload.comment,
+    )
+    if intercepted is not None:
+        return intercepted
+
     _check_input_chain_permission(payload.chain, claims.get("rol", ""))
 
     _, client = await get_router_and_client(router_id, claims, db)
-    patch_data = _build_firewall_patch_data(payload)
-
-    menu = f"{proto}/firewall/{table_type}"
     async with client:
         before = await client.get(f"/{menu}/{rule_id}")
-        return await execute_safe_mutation(
+        res = await execute_safe_mutation(
             client=client,
             menu=menu,
             action="set",
@@ -202,6 +236,8 @@ async def update_rule(
             before_state=before if isinstance(before, dict) else {},
             coro_fn=lambda: client.patch(f"/{menu}/{rule_id}", json_data=patch_data),
         )
+    await invalidate_webfig_cache(get_redis_client(), uuid.UUID(claims["tid"]), router_id, f"/{menu}")
+    return res
 
 
 @router.delete("/{proto}/{table_type}/{rule_id}")
@@ -221,15 +257,37 @@ async def delete_rule(
     ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
-    """Elimina una regla de Firewall bajo Safe Mode (deshabilitación preventiva)."""
+    """Elimina una regla de Firewall bajo Safe Mode (deshabilitación preventiva) o Maker-Checker (L2)."""
+    if table_type in {"address-list", "address-lists"}:
+        return await delete_address_list(
+            router_id=router_id,
+            proto=proto,
+            item_id=rule_id,
+            claims=claims,
+            db=db,
+        )
     _validate_firewall_params(proto, table_type)
-    _, client = await get_router_and_client(router_id, claims, db)
     menu = f"{proto}/firewall/{table_type}"
+
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Eliminar regla Firewall {proto.upper()}/{table_type} ({rule_id})",
+        ros_rest_method="DELETE",
+        ros_rest_path=f"/{menu}/{rule_id}",
+        request_payload={".id": rule_id},
+        action_type=CriticalActionTypeEnum.FIREWALL_INPUT_OR_SERVICE_PORT_CHANGE,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         before = await client.get(f"/{menu}/{rule_id}")
         if isinstance(before, dict):
             _check_input_chain_permission(before.get("chain"), claims.get("rol", ""))
-        return await execute_safe_mutation(
+        res = await execute_safe_mutation(
             client=client,
             menu=menu,
             action="delete",
@@ -237,6 +295,8 @@ async def delete_rule(
             before_state=before if isinstance(before, dict) else {},
             coro_fn=lambda: client.delete(f"/{menu}/{rule_id}"),
         )
+    await invalidate_webfig_cache(get_redis_client(), uuid.UUID(claims["tid"]), router_id, f"/{menu}")
+    return res
 
 
 @router.post("/{proto}/{table_type}/move")
@@ -329,6 +389,7 @@ async def list_address_lists(
 
 
 @router.post("/{proto}/address-lists", status_code=status.HTTP_201_CREATED)
+@router.post("/{proto}/address-list", status_code=status.HTTP_201_CREATED)
 async def create_address_list(
     router_id: uuid.UUID,
     proto: str,
@@ -336,10 +397,9 @@ async def create_address_list(
     claims: dict[str, Any] = Depends(get_current_user_claims),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
-    """Agrega una IP o prefijo a una Address-List bajo Safe Mode."""
+    """Agrega una IP o prefijo a una Address-List bajo Safe Mode o Maker-Checker (L2)."""
     if proto not in _VALID_PROTOS:
         raise HTTPException(status_code=400, detail="Protocolo inválido")
-    _, client = await get_router_and_client(router_id, claims, db)
     body: dict[str, Any] = {"list": payload.list, "address": payload.address}
     if payload.timeout:
         body["timeout"] = payload.timeout
@@ -347,17 +407,35 @@ async def create_address_list(
         body["comment"] = payload.comment
 
     menu = f"{proto}/firewall/address-list"
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Agregar Address-List {payload.list}: {payload.address}",
+        ros_rest_method="PUT",
+        ros_rest_path=f"/{menu}",
+        request_payload=body,
+        action_type=CriticalActionTypeEnum.FIREWALL_INPUT_OR_SERVICE_PORT_CHANGE,
+        requester_justification=payload.comment,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
     async with client:
-        return await execute_safe_mutation(
+        res = await execute_safe_mutation(
             client=client,
             menu=menu,
             action="create",
             before_state=body,
             coro_fn=lambda: client.put(f"/{menu}", json_data=body),
         )
+    await invalidate_webfig_cache(get_redis_client(), uuid.UUID(claims["tid"]), router_id, f"/{menu}")
+    return res
 
 
 @router.delete("/{proto}/address-lists/{item_id}")
+@router.delete("/{proto}/address-list/{item_id}")
 async def delete_address_list(
     router_id: uuid.UUID,
     proto: str,
@@ -365,14 +443,27 @@ async def delete_address_list(
     claims: dict[str, Any] = Depends(get_current_user_claims),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
-    """Elimina una entrada de Address-List bajo Safe Mode."""
+    """Elimina una entrada de Address-List bajo Safe Mode o Maker-Checker (L2)."""
     if proto not in _VALID_PROTOS:
         raise HTTPException(status_code=400, detail="Protocolo inválido")
-    _, client = await get_router_and_client(router_id, claims, db)
     menu = f"{proto}/firewall/address-list"
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Eliminar entrada Address-List {proto.upper()} ({item_id})",
+        ros_rest_method="DELETE",
+        ros_rest_path=f"/{menu}/{item_id}",
+        request_payload={".id": item_id},
+        action_type=CriticalActionTypeEnum.FIREWALL_INPUT_OR_SERVICE_PORT_CHANGE,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         before = await client.get(f"/{menu}/{item_id}")
-        return await execute_safe_mutation(
+        res = await execute_safe_mutation(
             client=client,
             menu=menu,
             action="delete",
@@ -380,6 +471,8 @@ async def delete_address_list(
             before_state=before if isinstance(before, dict) else {},
             coro_fn=lambda: client.delete(f"/{menu}/{item_id}"),
         )
+    await invalidate_webfig_cache(get_redis_client(), uuid.UUID(claims["tid"]), router_id, f"/{menu}")
+    return res
 
 
 # ============================================================================

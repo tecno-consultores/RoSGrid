@@ -3,12 +3,16 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
+import { createPinia, setActivePinia } from 'pinia';
 import CsvOnboardingWizardModal from './CsvOnboardingWizardModal.vue';
 import { http } from '@/api/httpClient';
+import { useInventoryStore } from '@/stores/useInventoryStore';
 
 describe('CsvOnboardingWizardModal.vue — Asistente de Importación CSV en 2 Pasos', () => {
   beforeEach(() => {
+    setActivePinia(createPinia());
     vi.restoreAllMocks();
+    vi.spyOn(useInventoryStore(), 'fetchNetworkRoles').mockResolvedValue();
     window.URL.revokeObjectURL = vi.fn();
   });
 

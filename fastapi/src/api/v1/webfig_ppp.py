@@ -128,6 +128,8 @@ async def create_secret(
         "profile": payload.profile,
         "disabled": payload.disabled,
     }
+    if payload.local_address:
+        body["local-address"] = payload.local_address
     if payload.remote_address:
         body["remote-address"] = payload.remote_address
     if payload.comment:
@@ -153,6 +155,8 @@ async def update_secret(
         patch_data["service"] = payload.service
     if payload.profile:
         patch_data["profile"] = payload.profile
+    if payload.local_address:
+        patch_data["local-address"] = payload.local_address
     if payload.remote_address:
         patch_data["remote-address"] = payload.remote_address
     if payload.comment is not None:
@@ -211,6 +215,8 @@ async def create_profile(
         body["dns-server"] = payload.dns_server
     if payload.address_list:
         body["address-list"] = payload.address_list
+    if payload.only_one:
+        body["only-one"] = payload.only_one
     async with client:
         return await client.put("/ppp/profile", json_data=body)
 
@@ -236,6 +242,8 @@ async def update_profile(
         patch_data["dns-server"] = payload.dns_server
     if payload.address_list:
         patch_data["address-list"] = payload.address_list
+    if payload.only_one:
+        patch_data["only-one"] = payload.only_one
     async with client:
         return await client.patch(f"/ppp/profile/{item_id}", json_data=patch_data)
 
@@ -274,7 +282,12 @@ async def create_pppoe_server(
         "interface": payload.interface,
         "default-profile": payload.default_profile,
         "max-mtu": payload.max_mtu,
+        "disabled": payload.disabled,
     }
+    if payload.max_mru is not None:
+        body["max-mru"] = payload.max_mru
+    if payload.one_session_per_host is not None:
+        body["one-session-per-host"] = "yes" if payload.one_session_per_host else "no"
     menu = "interface/pppoe-server/server"
     async with client:
         return await execute_safe_mutation(

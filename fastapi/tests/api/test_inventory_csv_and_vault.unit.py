@@ -458,3 +458,25 @@ async def test_download_inventory_csv_template_endpoint() -> None:
     assert "display_name,ip_address,api_port" in decoded_body
     assert "CCR2004-Edge-Norte" in decoded_body
     assert "RB5009-Tower-Sur" in decoded_body
+
+
+@pytest.mark.asyncio
+async def test_ensure_custom_network_roles_registers_non_standard_roles(
+    test_tenant_id: uuid.UUID,
+) -> None:
+    from src.api.v1.inventory import _ensure_custom_network_roles
+
+    mock_db = AsyncMock()
+    mock_res = MagicMock()
+    mock_res.scalars.return_value.all.return_value = ["L1"]
+    mock_db.execute.return_value = mock_res
+    added_objs: list = []
+    mock_db.add = MagicMock(side_effect=lambda obj: added_objs.append(obj))
+
+    await _ensure_custom_network_roles(
+        mock_db,
+        test_tenant_id,
+        ["CORE", "L1", "L2", "CAPS", ""],
+    )
+    added_names = {obj.role_name for obj in added_objs}
+    assert added_names == {"L2", "CAPS"}

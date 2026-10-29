@@ -61,6 +61,7 @@ async def create_ipv6_address(
             SystemRoleEnum.TENANT_ADMIN,
             SystemRoleEnum.SUPERVISOR,
             SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
         )
     ),
     db: AsyncSession = Depends(get_tenant_db_session),
@@ -97,6 +98,7 @@ async def delete_ipv6_address(
             SystemRoleEnum.TENANT_ADMIN,
             SystemRoleEnum.SUPERVISOR,
             SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
         )
     ),
     db: AsyncSession = Depends(get_tenant_db_session),
@@ -145,6 +147,7 @@ async def create_ipv6_dhcp_client(
             SystemRoleEnum.TENANT_ADMIN,
             SystemRoleEnum.SUPERVISOR,
             SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
         )
     ),
     db: AsyncSession = Depends(get_tenant_db_session),
@@ -183,6 +186,7 @@ async def delete_ipv6_dhcp_client(
             SystemRoleEnum.TENANT_ADMIN,
             SystemRoleEnum.SUPERVISOR,
             SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
         )
     ),
     db: AsyncSession = Depends(get_tenant_db_session),
@@ -231,6 +235,7 @@ async def create_ipv6_dhcp_server(
             SystemRoleEnum.TENANT_ADMIN,
             SystemRoleEnum.SUPERVISOR,
             SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
         )
     ),
     db: AsyncSession = Depends(get_tenant_db_session),
@@ -264,6 +269,7 @@ async def delete_ipv6_dhcp_server(
             SystemRoleEnum.TENANT_ADMIN,
             SystemRoleEnum.SUPERVISOR,
             SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
         )
     ),
     db: AsyncSession = Depends(get_tenant_db_session),
@@ -312,6 +318,7 @@ async def create_ipv6_pool(
             SystemRoleEnum.TENANT_ADMIN,
             SystemRoleEnum.SUPERVISOR,
             SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
         )
     ),
     db: AsyncSession = Depends(get_tenant_db_session),
@@ -343,6 +350,7 @@ async def delete_ipv6_pool(
             SystemRoleEnum.TENANT_ADMIN,
             SystemRoleEnum.SUPERVISOR,
             SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
         )
     ),
     db: AsyncSession = Depends(get_tenant_db_session),

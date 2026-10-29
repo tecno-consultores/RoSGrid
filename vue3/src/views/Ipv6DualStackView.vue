@@ -6,7 +6,6 @@
   import { useRoute, useRouter } from 'vue-router';
   import { http } from '@/api/httpClient';
   import { useWebFigStore } from '@/stores/useWebFigStore';
-  import RgSafeModeBanner from '@/components/common/RgSafeModeBanner.vue';
 
   const route = useRoute();
   const router = useRouter();
@@ -188,8 +187,6 @@
 
 <template>
   <div class="webfig-ipv6-view">
-    <RgSafeModeBanner />
-
     <header class="view-header">
       <div class="header-titles">
         <h1 class="view-title">🌐 Pila Dual IPv6 & Delegación de Prefijos (PD)</h1>

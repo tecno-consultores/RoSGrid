@@ -54,6 +54,24 @@ export const useAuthStore = defineStore('auth', () => {
     typeof localStorage !== 'undefined' ? localStorage.getItem('rosgrid_csrf') : null,
   );
 
+  if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+    window.addEventListener('storage', (event: StorageEvent) => {
+      if (event.key === 'rosgrid_user') {
+        const nextUser = getStoredUser();
+        user.value = nextUser;
+        currentRole.value = nextUser?.role ?? null;
+        tenantSlug.value = nextUser?.tenant_slug ?? null;
+        tenantFeatures.value = {
+          ...((nextUser?.tenant_feature_flags as Partial<TenantFeatureFlags>) ||
+            nextUser?.features ||
+            {}),
+        };
+      } else if (event.key === 'rosgrid_csrf') {
+        csrfToken.value = event.newValue;
+      }
+    });
+  }
+
   const isAuthenticated = computed<boolean>(() => user.value !== null);
 
   function setAuth(userInfo: UserInfo, token?: string | null): void {

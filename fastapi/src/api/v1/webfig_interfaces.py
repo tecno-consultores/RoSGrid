@@ -690,6 +690,9 @@ async def create_wireguard_peer(
         body["endpoint-address"] = payload.endpoint_address
     if payload.endpoint_port:
         body["endpoint-port"] = payload.endpoint_port
+    if payload.persistent_keepalive is not None and str(payload.persistent_keepalive).strip():
+        ka = str(payload.persistent_keepalive).strip()
+        body["persistent-keepalive"] = f"{ka}s" if ka.isdigit() else ka
     if payload.comment:
         body["comment"] = payload.comment
     async with client:
