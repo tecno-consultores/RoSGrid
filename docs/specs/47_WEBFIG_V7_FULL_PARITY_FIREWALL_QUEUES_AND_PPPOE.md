@@ -10,7 +10,7 @@
 ## 1. Justificación y Objetivos de la Fase 1
 
 Eliminar de raíz la condición de "solo lectura" en los módulos más utilizados de la consola WebFig:
-1. **Firewall:** Permitir la adición y edición reactiva de reglas en las tablas *Filter*, *NAT*, *Mangle* y *RAW*, con posicionamiento asistido (`place-before`), soporte de Safe Mode automático (60s) y Maker-Checker en cadena `input`.
+1. **Firewall:** Permitir la adición y edición reactiva de reglas en las tablas *Filter*, *NAT*, *Mangle* y *RAW*, con posicionamiento asistido (`place-before`), soporte de Safe Mode automático (60s) para ejecución directa (`L3`, `SUPERVISOR`, `TENANT_ADMIN`, `SUPERADMIN_GLOBAL`) y notificación de espera humana en bandeja Maker-Checker (`HTTP 202 Accepted` con deduplicación y sin temporizador de 60s) para operadores `SUPPORT_L1` y `SUPPORT_L2`.
 2. **Simple Queues (QoS):** Permitir la creación y edición de colas simples de limitación de ancho de banda con botones de presets rápidos (`10M`, `50M`, `100M`, `300M`, `1G`), burst y semáforo cromático de saturación en tiempo real.
 3. **PPPoE Operativo:** Incorporar la acción de desconexión inmediata de clientes activos (*Kick Session*), así como la edición y borrado de Secrets y Profiles.
 

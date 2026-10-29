@@ -257,6 +257,78 @@ async def test_firewall_support_l2_maker_checker_interception():
 
 
 @pytest.mark.asyncio
+async def test_webfig_vlan_l1_maker_checker_and_deduplication():
+    import json
+    from datetime import UTC, datetime, timedelta
+
+    from fastapi.responses import JSONResponse
+
+    from src.api.v1.webfig_interfaces import create_vlan
+    from src.models.operations import ApprovalRequest, ApprovalStatusEnum, CriticalActionTypeEnum
+    from src.schemas.webfig_l1_net import VlanCreateRequest
+
+    router_id = uuid.uuid4()
+    tenant_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    l1_claims = {
+        "sub": str(user_id),
+        "tid": str(tenant_id),
+        "rol": "SUPPORT_L1",
+    }
+
+    mock_db = AsyncMock()
+    mock_db.add = MagicMock()
+
+    res_vlan = await create_vlan(
+        router_id=router_id,
+        payload=VlanCreateRequest(name="vlan20", vlan_id=20, interface="ether1", comment="VLAN L1"),
+        claims=l1_claims,
+        db=mock_db,
+    )
+    assert isinstance(res_vlan, JSONResponse)
+    assert res_vlan.status_code == 202
+    assert mock_db.add.call_count == 1
+
+    # Deduplicación cuando ya existe la misma petición en estado PENDING
+    existing_req = ApprovalRequest(
+        id=uuid.uuid4(),
+        tenant_id=tenant_id,
+        router_id=router_id,
+        action_type=CriticalActionTypeEnum.WAN_TRUNK_INTERFACE_OR_IP_CHANGE,
+        status=ApprovalStatusEnum.PENDING,
+        summary="Crear VLAN vlan20",
+        requester_justification="VLAN L1",
+        ros_rest_method="PUT",
+        ros_rest_path="/interface/vlan",
+        request_payload={"name": "vlan20", "vlan-id": 20, "interface": "ether1", "comment": "VLAN L1"},
+        requested_by=user_id,
+        expires_at=datetime.now(UTC) + timedelta(hours=24),
+        created_at=datetime.now(UTC),
+    )
+
+    mock_perm_res = MagicMock()
+    mock_perm_res.scalar_one_or_none.return_value = None
+    mock_dup_res = MagicMock()
+    mock_dup_scalars = MagicMock()
+    mock_dup_scalars.all.return_value = [existing_req]
+    mock_dup_res.scalars.return_value = mock_dup_scalars
+    mock_db.execute.side_effect = [mock_perm_res, mock_dup_res]
+
+    res_dup = await create_vlan(
+        router_id=router_id,
+        payload=VlanCreateRequest(name="vlan20", vlan_id=20, interface="ether1", comment="VLAN L1"),
+        claims=l1_claims,
+        db=mock_db,
+    )
+    assert isinstance(res_dup, JSONResponse)
+    assert res_dup.status_code == 202
+    dup_body = json.loads(res_dup.body.decode("utf-8"))
+    assert dup_body["deduplicated"] is True
+    assert dup_body["approval_request_id"] == str(existing_req.id)
+    assert mock_db.add.call_count == 1
+
+
+@pytest.mark.asyncio
 async def test_mikrotik_client_error_global_handler():
     from starlette.requests import Request
 

@@ -614,6 +614,24 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And waitFor(".webfig-layout")
     And waitFor(".btn-webfig-menu-inline")
 
+  Scenario: 64. WebFig Firewall RouterOS v7 — Sin Duplicación de Safe Mode, Asistente NAT Masquerade e Intercepción Maker-Checker
+    Given driver baseUrl + '/routers/r-01/webfig/firewall'
+    And waitFor(".firewall-view")
+    Then waitUntil("!document.querySelector('.firewall-view .safemode-banner')")
+    When click("//button[contains(@class, 'btn-subtab') and contains(., 'NAT')]")
+    Then waitFor(".btn-wizard-action")
+    And match text(".header-actions") contains 'Masquerade'
+    When driver baseUrl + '/approvals'
+    Then waitFor(".approvals-view")
+
+  Scenario: 65. Bandeja Maker-Checker — Autorización Humana de Cambios sin Cuenta Regresiva de 60s en Espera
+    Given driver baseUrl + '/approvals'
+    And waitFor(".approvals-view")
+    Then match text(".view-title") contains 'Maker-Checker'
+    And match text(".view-subtitle") contains 'autorización humana'
+    And waitUntil("!document.querySelector('.rg-safemode-banner')")
+
+
 
 
 

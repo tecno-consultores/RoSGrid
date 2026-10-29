@@ -15,9 +15,11 @@ from src.api.v1.webfig_common import (
     cached_mikrotik_get,
     execute_safe_mutation,
     get_router_and_client,
+    intercept_maker_checker_if_needed,
 )
 from src.db.session import get_tenant_db_session
 from src.models.core import SystemRoleEnum
+from src.models.operations import CriticalActionTypeEnum
 from src.redis_layer.client import get_redis_client
 from src.schemas.webfig_l1_net import (
     BridgeCreateRequest,
@@ -131,13 +133,27 @@ async def update_interface(
             SystemRoleEnum.SUPERVISOR,
             SystemRoleEnum.SUPPORT_L3,
             SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
         )
     ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
-    """Modifica MTU, comentario o estado disabled de una interfaz bajo Safe Mode."""
-    _, client = await get_router_and_client(router_id, claims, db)
+    """Modifica MTU, comentario o estado disabled de una interfaz bajo Safe Mode o Maker-Checker."""
     patch_data = payload.model_dump(exclude_unset=True)
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Modificar interfaz ({item_id})",
+        ros_rest_method="PATCH",
+        ros_rest_path=f"/interface/{item_id}",
+        request_payload=patch_data,
+        action_type=CriticalActionTypeEnum.WAN_TRUNK_INTERFACE_OR_IP_CHANGE,
+        requester_justification=payload.comment,
+    )
+    if intercepted is not None:
+        return intercepted
+    _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         before = await client.get(f"/interface/{item_id}")
         return await execute_safe_mutation(
@@ -221,17 +237,33 @@ async def create_vlan(
             SystemRoleEnum.SUPERVISOR,
             SystemRoleEnum.SUPPORT_L3,
             SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
         )
     ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
-    """Crea una nueva VLAN 802.1Q con protección Safe Mode."""
-    _, client = await get_router_and_client(router_id, claims, db)
-    body = {"name": payload.name, "vlan-id": payload.vlan_id, "interface": payload.interface}
+    """Crea una nueva VLAN 802.1Q con protección Safe Mode o interceptación Maker-Checker."""
+    body: dict[str, Any] = {"name": payload.name, "vlan-id": payload.vlan_id, "interface": payload.interface}
     if payload.mtu:
         body["mtu"] = payload.mtu
     if payload.comment:
         body["comment"] = payload.comment
+
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Crear VLAN {payload.name} (ID {payload.vlan_id}) en {payload.interface}",
+        ros_rest_method="PUT",
+        ros_rest_path="/interface/vlan",
+        request_payload=body,
+        action_type=CriticalActionTypeEnum.WAN_TRUNK_INTERFACE_OR_IP_CHANGE,
+        requester_justification=payload.comment,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         return await execute_safe_mutation(
             client=client,
@@ -254,12 +286,12 @@ async def update_vlan(
             SystemRoleEnum.SUPERVISOR,
             SystemRoleEnum.SUPPORT_L3,
             SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
         )
     ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
-    """Modifica parámetros de una VLAN existente protegida por Safe Mode."""
-    _, client = await get_router_and_client(router_id, claims, db)
+    """Modifica parámetros de una VLAN existente protegida por Safe Mode o Maker-Checker."""
     patch_data: dict[str, Any] = {}
     if payload.name:
         patch_data["name"] = payload.name
@@ -274,6 +306,21 @@ async def update_vlan(
     if payload.comment is not None:
         patch_data["comment"] = payload.comment
 
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Modificar VLAN ({item_id})",
+        ros_rest_method="PATCH",
+        ros_rest_path=f"/interface/vlan/{item_id}",
+        request_payload=patch_data,
+        action_type=CriticalActionTypeEnum.WAN_TRUNK_INTERFACE_OR_IP_CHANGE,
+        requester_justification=payload.comment,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         before = await client.get(f"/interface/vlan/{item_id}")
         return await execute_safe_mutation(
@@ -296,11 +343,26 @@ async def delete_vlan(
             SystemRoleEnum.TENANT_ADMIN,
             SystemRoleEnum.SUPERVISOR,
             SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
         )
     ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
-    """Elimina una VLAN bajo Safe Mode con deshabilitación preventiva."""
+    """Elimina una VLAN bajo Safe Mode con deshabilitación preventiva o Maker-Checker."""
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Eliminar VLAN ({item_id})",
+        ros_rest_method="DELETE",
+        ros_rest_path=f"/interface/vlan/{item_id}",
+        request_payload={".id": item_id},
+        action_type=CriticalActionTypeEnum.WAN_TRUNK_INTERFACE_OR_IP_CHANGE,
+    )
+    if intercepted is not None:
+        return intercepted
+
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         before = await client.get(f"/interface/vlan/{item_id}")
@@ -340,12 +402,12 @@ async def create_bridge(
             SystemRoleEnum.SUPERVISOR,
             SystemRoleEnum.SUPPORT_L3,
             SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
         )
     ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
-    """Crea un nuevo Bridge bajo Safe Mode."""
-    _, client = await get_router_and_client(router_id, claims, db)
+    """Crea un nuevo Bridge bajo Safe Mode o Maker-Checker."""
     body: dict[str, Any] = {
         "name": payload.name,
         "vlan-filtering": "yes" if payload.vlan_filtering else "no",
@@ -356,6 +418,22 @@ async def create_bridge(
         body["mtu"] = payload.mtu
     if payload.comment:
         body["comment"] = payload.comment
+
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Crear Bridge {payload.name}",
+        ros_rest_method="PUT",
+        ros_rest_path="/interface/bridge",
+        request_payload=body,
+        action_type=CriticalActionTypeEnum.WAN_TRUNK_INTERFACE_OR_IP_CHANGE,
+        requester_justification=payload.comment,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         return await execute_safe_mutation(
             client=client,
@@ -377,12 +455,13 @@ async def update_bridge(
             SystemRoleEnum.TENANT_ADMIN,
             SystemRoleEnum.SUPERVISOR,
             SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
         )
     ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
-    """Modifica parámetros de un Bridge bajo Safe Mode (ej. activar vlan-filtering)."""
-    _, client = await get_router_and_client(router_id, claims, db)
+    """Modifica parámetros de un Bridge bajo Safe Mode o Maker-Checker (ej. activar vlan-filtering)."""
     patch_data: dict[str, Any] = {}
     if payload.name:
         patch_data["name"] = payload.name
@@ -397,6 +476,21 @@ async def update_bridge(
     if payload.comment is not None:
         patch_data["comment"] = payload.comment
 
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Modificar Bridge ({item_id})",
+        ros_rest_method="PATCH",
+        ros_rest_path=f"/interface/bridge/{item_id}",
+        request_payload=patch_data,
+        action_type=CriticalActionTypeEnum.WAN_TRUNK_INTERFACE_OR_IP_CHANGE,
+        requester_justification=payload.comment,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         before = await client.get(f"/interface/bridge/{item_id}")
         return await execute_safe_mutation(
@@ -435,12 +529,12 @@ async def create_bridge_port(
             SystemRoleEnum.SUPERVISOR,
             SystemRoleEnum.SUPPORT_L3,
             SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
         )
     ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
-    """Agrega un puerto a un Bridge bajo Safe Mode."""
-    _, client = await get_router_and_client(router_id, claims, db)
+    """Agrega un puerto a un Bridge bajo Safe Mode o Maker-Checker."""
     body: dict[str, Any] = {
         "bridge": payload.bridge,
         "interface": payload.interface,
@@ -451,6 +545,21 @@ async def create_bridge_port(
         body["frame-types"] = payload.frame_types
     if payload.ingress_filtering is not None:
         body["ingress-filtering"] = "yes" if payload.ingress_filtering else "no"
+
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Agregar puerto {payload.interface} al Bridge {payload.bridge}",
+        ros_rest_method="PUT",
+        ros_rest_path="/interface/bridge/port",
+        request_payload=body,
+        action_type=CriticalActionTypeEnum.WAN_TRUNK_INTERFACE_OR_IP_CHANGE,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         return await execute_safe_mutation(
             client=client,
@@ -487,12 +596,12 @@ async def create_bridge_vlan(
             SystemRoleEnum.SUPERVISOR,
             SystemRoleEnum.SUPPORT_L3,
             SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
         )
     ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
-    """Crea una entrada en la tabla de VLANs del Bridge bajo Safe Mode."""
-    _, client = await get_router_and_client(router_id, claims, db)
+    """Crea una entrada en la tabla de VLANs del Bridge bajo Safe Mode o Maker-Checker."""
     body: dict[str, Any] = {
         "bridge": payload.bridge,
         "vlan-ids": payload.vlan_ids,
@@ -505,6 +614,21 @@ async def create_bridge_vlan(
     if payload.comment:
         body["comment"] = payload.comment
 
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Crear Bridge VLAN {payload.vlan_ids} en {payload.bridge}",
+        ros_rest_method="PUT",
+        ros_rest_path="/interface/bridge/vlan",
+        request_payload=body,
+        action_type=CriticalActionTypeEnum.WAN_TRUNK_INTERFACE_OR_IP_CHANGE,
+        requester_justification=payload.comment,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         return await execute_safe_mutation(
             client=client,
@@ -527,12 +651,12 @@ async def update_bridge_vlan(
             SystemRoleEnum.SUPERVISOR,
             SystemRoleEnum.SUPPORT_L3,
             SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
         )
     ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
-    """Modifica una entrada en la tabla de VLANs del Bridge bajo Safe Mode."""
-    _, client = await get_router_and_client(router_id, claims, db)
+    """Modifica una entrada en la tabla de VLANs del Bridge bajo Safe Mode o Maker-Checker."""
     patch_data: dict[str, Any] = {}
     if payload.bridge:
         patch_data["bridge"] = payload.bridge
@@ -547,6 +671,21 @@ async def update_bridge_vlan(
     if payload.disabled is not None:
         patch_data["disabled"] = payload.disabled
 
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Modificar Bridge VLAN ({item_id})",
+        ros_rest_method="PATCH",
+        ros_rest_path=f"/interface/bridge/vlan/{item_id}",
+        request_payload=patch_data,
+        action_type=CriticalActionTypeEnum.WAN_TRUNK_INTERFACE_OR_IP_CHANGE,
+        requester_justification=payload.comment,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         before = await client.get(f"/interface/bridge/vlan/{item_id}")
         return await execute_safe_mutation(
@@ -569,11 +708,26 @@ async def delete_bridge_vlan(
             SystemRoleEnum.TENANT_ADMIN,
             SystemRoleEnum.SUPERVISOR,
             SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
         )
     ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
-    """Elimina una entrada de la tabla de VLANs del Bridge bajo Safe Mode."""
+    """Elimina una entrada de la tabla de VLANs del Bridge bajo Safe Mode o Maker-Checker."""
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Eliminar Bridge VLAN ({item_id})",
+        ros_rest_method="DELETE",
+        ros_rest_path=f"/interface/bridge/vlan/{item_id}",
+        request_payload={".id": item_id},
+        action_type=CriticalActionTypeEnum.WAN_TRUNK_INTERFACE_OR_IP_CHANGE,
+    )
+    if intercepted is not None:
+        return intercepted
+
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         before = await client.get(f"/interface/bridge/vlan/{item_id}")
@@ -628,17 +782,33 @@ async def create_wireguard(
             SystemRoleEnum.SUPERVISOR,
             SystemRoleEnum.SUPPORT_L3,
             SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
         )
     ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
-    """Crea una interfaz túnel WireGuard bajo Safe Mode."""
-    _, client = await get_router_and_client(router_id, claims, db)
+    """Crea una interfaz túnel WireGuard bajo Safe Mode o Maker-Checker."""
     body: dict[str, Any] = {"name": payload.name, "listen-port": payload.listen_port}
     if payload.mtu:
         body["mtu"] = payload.mtu
     if payload.comment:
         body["comment"] = payload.comment
+
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Crear interfaz WireGuard {payload.name} (puerto {payload.listen_port})",
+        ros_rest_method="PUT",
+        ros_rest_path="/interface/wireguard",
+        request_payload=body,
+        action_type=CriticalActionTypeEnum.WAN_TRUNK_INTERFACE_OR_IP_CHANGE,
+        requester_justification=payload.comment,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         return await execute_safe_mutation(
             client=client,
@@ -675,12 +845,12 @@ async def create_wireguard_peer(
             SystemRoleEnum.SUPERVISOR,
             SystemRoleEnum.SUPPORT_L3,
             SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
         )
     ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
-    """Registra un nuevo Peer WireGuard bajo Safe Mode."""
-    _, client = await get_router_and_client(router_id, claims, db)
+    """Registra un nuevo Peer WireGuard bajo Safe Mode o Maker-Checker."""
     body: dict[str, Any] = {
         "interface": payload.interface,
         "public-key": payload.public_key,
@@ -695,6 +865,22 @@ async def create_wireguard_peer(
         body["persistent-keepalive"] = f"{ka}s" if ka.isdigit() else ka
     if payload.comment:
         body["comment"] = payload.comment
+
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Crear Peer WireGuard en {payload.interface} ({payload.allowed_address})",
+        ros_rest_method="PUT",
+        ros_rest_path="/interface/wireguard/peers",
+        request_payload=body,
+        action_type=CriticalActionTypeEnum.WAN_TRUNK_INTERFACE_OR_IP_CHANGE,
+        requester_justification=payload.comment,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         return await execute_safe_mutation(
             client=client,

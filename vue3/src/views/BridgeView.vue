@@ -221,13 +221,15 @@
   async function handleCreateBridge() {
     isLoading.value = true;
     errorMessage.value = '';
-    webFigStore.startSafeModeCountdown(60);
     try {
-      await http.post(
+      const res = await http.post(
         `/api/v1/routers/${routerId.value}/webfig/interfaces/bridge`,
         newBridge.value,
       );
-      statusMessage.value = `Bridge "${newBridge.value.name}" creado exitosamente bajo Safe Mode.`;
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      statusMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Solicitud de Bridge en espera de aprobación humana en Maker-Checker.'
+        : `Bridge "${newBridge.value.name}" creado exitosamente bajo Safe Mode.`;
       isCreateBridgeModalOpen.value = false;
       newBridge.value = {
         name: `bridge${bridgesList.value.length + 1}`,
@@ -237,6 +239,7 @@
       };
       loadData();
     } catch (err: unknown) {
+      webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string };
       errorMessage.value = error.detail || error.message || 'Error al crear el bridge.';
     } finally {
@@ -247,16 +250,19 @@
   async function handleCreatePort() {
     isLoading.value = true;
     errorMessage.value = '';
-    webFigStore.startSafeModeCountdown(60);
     try {
-      await http.post(
+      const res = await http.post(
         `/api/v1/routers/${routerId.value}/webfig/interfaces/bridge/ports`,
         newPort.value,
       );
-      statusMessage.value = `Puerto agregado al Bridge "${newPort.value.bridge}" exitosamente.`;
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      statusMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Solicitud de puerto Bridge en espera de aprobación humana en Maker-Checker.'
+        : `Puerto agregado al Bridge "${newPort.value.bridge}" exitosamente.`;
       isCreatePortModalOpen.value = false;
       loadData();
     } catch (err: unknown) {
+      webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string };
       errorMessage.value = error.detail || error.message || 'Error al agregar el puerto al bridge.';
     } finally {
@@ -281,13 +287,15 @@
   async function handleCreateVlan() {
     isLoading.value = true;
     errorMessage.value = '';
-    webFigStore.startSafeModeCountdown(60);
     try {
-      await http.post(
+      const res = await http.post(
         `/api/v1/routers/${routerId.value}/webfig/interfaces/bridge/vlans`,
         newVlan.value,
       );
-      statusMessage.value = `VLAN(s) "${newVlan.value.vlan_ids}" agregada(s) al Bridge "${newVlan.value.bridge}" bajo Safe Mode.`;
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      statusMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Solicitud de Bridge VLAN en espera de aprobación humana en Maker-Checker.'
+        : `VLAN(s) "${newVlan.value.vlan_ids}" agregada(s) al Bridge "${newVlan.value.bridge}" bajo Safe Mode.`;
       isCreateVlanModalOpen.value = false;
       newVlan.value = {
         bridge: bridgesList.value[0]?.name || 'bridge',
@@ -299,6 +307,7 @@
       };
       loadData();
     } catch (err: unknown) {
+      webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string; response?: { data?: { detail?: string } } };
       errorMessage.value =
         error.response?.data?.detail || error.detail || error.message || 'Error al crear la VLAN en el bridge.';
@@ -308,19 +317,22 @@
   }
 
   async function handleDeleteVlan(vlan: BridgeVlanRow) {
-    if (!confirm(`¿Eliminar la entrada de VLAN "${vlan.vlan_ids}" del Bridge "${vlan.bridge}" bajo Safe Mode (60s)?`)) {
+    if (!confirm(`¿Eliminar la entrada de VLAN "${vlan.vlan_ids}" del Bridge "${vlan.bridge}"?`)) {
       return;
     }
     isLoading.value = true;
     errorMessage.value = '';
-    webFigStore.startSafeModeCountdown(60);
     try {
-      await http.delete(
+      const res = await http.delete(
         `/api/v1/routers/${routerId.value}/webfig/interfaces/bridge/vlans/${vlan.id}`,
       );
-      statusMessage.value = `VLAN "${vlan.vlan_ids}" eliminada del Bridge con éxito.`;
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      statusMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Solicitud de eliminación en espera de aprobación humana en Maker-Checker.'
+        : `VLAN "${vlan.vlan_ids}" eliminada del Bridge con éxito.`;
       loadData();
     } catch (err: unknown) {
+      webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string; response?: { data?: { detail?: string } } };
       errorMessage.value =
         error.response?.data?.detail || error.detail || error.message || 'Error al eliminar la VLAN del bridge.';
@@ -332,13 +344,15 @@
   async function handleCreateInterfaceVlan() {
     isLoading.value = true;
     errorMessage.value = '';
-    webFigStore.startSafeModeCountdown(60);
     try {
-      await http.post(
+      const res = await http.post(
         `/api/v1/routers/${routerId.value}/webfig/interfaces/vlan`,
         newInterfaceVlan.value,
       );
-      statusMessage.value = `Subinterfaz VLAN "${newInterfaceVlan.value.name}" (ID ${newInterfaceVlan.value.vlan_id}) creada exitosamente bajo Safe Mode.`;
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      statusMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Solicitud de subinterfaz VLAN en espera de aprobación humana en Maker-Checker.'
+        : `Subinterfaz VLAN "${newInterfaceVlan.value.name}" (ID ${newInterfaceVlan.value.vlan_id}) creada exitosamente bajo Safe Mode.`;
       isCreateInterfaceVlanModalOpen.value = false;
       newInterfaceVlan.value = {
         name: `vlan${Number(newInterfaceVlan.value.vlan_id) + 10}`,
@@ -349,6 +363,7 @@
       };
       loadData();
     } catch (err: unknown) {
+      webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string; response?: { data?: { detail?: string } } };
       errorMessage.value =
         error.response?.data?.detail || error.detail || error.message || 'Error al crear la subinterfaz VLAN.';

@@ -3,6 +3,7 @@
 
 <script setup lang="ts">
   import { ref, watch, computed } from 'vue';
+  import { useAuthStore } from '@/stores/useAuthStore';
   import type { FirewallRuleItem } from '@/types';
 
   const props = defineProps<{
@@ -17,6 +18,15 @@
     (e: 'close'): void;
     (e: 'save', payload: Record<string, any>): void;
   }>();
+
+  const isMakerCheckerRole = computed(() => {
+    try {
+      const authStore = useAuthStore();
+      return ['SUPPORT_L1', 'SUPPORT_L2'].includes(String(authStore.currentRole || ''));
+    } catch {
+      return false;
+    }
+  });
 
   const chain = ref('forward');
   const action = ref('accept');
@@ -204,7 +214,11 @@
             <span class="table-badge">[{{ tableType.toUpperCase() }}]</span>
           </h3>
           <p class="modal-subtitle">
-            Configuración atómica con protección Safe Mode (60s Dead Man's Switch)
+            {{
+              isMakerCheckerRole
+                ? '⏳ Esta operación quedará en espera de aprobación humana en la bandeja Maker-Checker (sin cuenta regresiva de 60s)'
+                : "Configuración atómica con protección Safe Mode (60s Dead Man's Switch)"
+            }}
           </p>
         </div>
         <button
@@ -388,7 +402,13 @@
             Cancelar
           </button>
           <button type="submit" class="btn-submit">
-            {{ isEditing ? 'Guardar Cambios' : 'Aplicar Regla con Safe Mode' }}
+            {{
+              isMakerCheckerRole
+                ? '⏳ Enviar a Aprobación (Maker-Checker)'
+                : isEditing
+                  ? 'Guardar Cambios'
+                  : 'Aplicar Regla con Safe Mode'
+            }}
           </button>
         </footer>
       </form>

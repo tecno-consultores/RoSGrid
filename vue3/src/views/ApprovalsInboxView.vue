@@ -62,13 +62,19 @@
       requests.value = [];
     } finally {
       isLoading.value = false;
-      if (filteredRequests.value.length > 0 && !selectedRequest.value) {
+      if (
+        selectedRequest.value &&
+        !filteredRequests.value.some((r) => r.id === selectedRequest.value?.id)
+      ) {
+        selectedRequest.value = filteredRequests.value[0] || null;
+      } else if (filteredRequests.value.length > 0 && !selectedRequest.value) {
         selectedRequest.value = filteredRequests.value[0];
       }
     }
   }
 
   function isSelfApproval(request: ApprovalRequestItem): boolean {
+    if (authStore.currentRole === 'SUPERADMIN_GLOBAL') return false;
     return Boolean(authStore.user?.id && request.requested_by === authStore.user.id);
   }
 
@@ -76,7 +82,7 @@
     if (isSelfApproval(request)) return;
     try {
       const res = await http.post<any>(`/api/v1/operations/approvals/${request.id}/approve`, {
-        review_comment: reviewComment.value || 'Aprobado con Safe Mode (60s)',
+        review_comment: reviewComment.value || 'Aprobado y ejecutado por Supervisor/Administrador',
       });
       request.status = 'APPROVED';
       if (res.data?.execution_result) {

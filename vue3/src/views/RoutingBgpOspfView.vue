@@ -145,9 +145,8 @@
 
   // --- Operaciones de Rutas Estáticas ---
   async function handleCreateRoute() {
-    webFigStore.startSafeModeCountdown(60);
     try {
-      await http.post(`/api/v1/routers/${routerId.value}/webfig/ip/routes`, {
+      const res = await http.post(`/api/v1/routers/${routerId.value}/webfig/ip/routes`, {
         dst_address: newRoute.value.dst_address,
         gateway: newRoute.value.gateway,
         distance: Number(newRoute.value.distance),
@@ -156,43 +155,50 @@
         comment: newRoute.value.comment || undefined,
         disabled: newRoute.value.disabled,
       });
-      actionMessage.value = `Ruta hacia ${newRoute.value.dst_address} creada con éxito.`;
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      actionMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Solicitud en espera de aprobación humana en Maker-Checker.'
+        : `Ruta hacia ${newRoute.value.dst_address} creada con éxito.`;
       isRouteModalOpen.value = false;
       loadRoutingData();
     } catch (err: any) {
+      webFigStore.stopSafeMode?.();
       errorMessage.value = err?.detail || err?.message || 'Error al crear ruta estática.';
     }
   }
 
   async function handleToggleRoute(r: StaticRouteItem) {
-    webFigStore.startSafeModeCountdown(60);
     try {
-      await http.patch(`/api/v1/routers/${routerId.value}/webfig/ip/routes/${r.id}`, {
+      const res = await http.patch(`/api/v1/routers/${routerId.value}/webfig/ip/routes/${r.id}`, {
         disabled: !r.disabled,
       });
+      webFigStore.handleMutationResponse(res, 60);
       loadRoutingData();
     } catch (err: any) {
+      webFigStore.stopSafeMode?.();
       errorMessage.value = err?.detail || 'Error al conmutar ruta.';
     }
   }
 
   async function handleDeleteRoute(r: StaticRouteItem) {
     if (!confirm(`¿Eliminar la ruta hacia ${r.dst_address}?`)) return;
-    webFigStore.startSafeModeCountdown(60);
     try {
-      await http.delete(`/api/v1/routers/${routerId.value}/webfig/ip/routes/${r.id}`);
-      actionMessage.value = `Ruta hacia ${r.dst_address} eliminada.`;
+      const res = await http.delete(`/api/v1/routers/${routerId.value}/webfig/ip/routes/${r.id}`);
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      actionMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Solicitud en espera de aprobación humana en Maker-Checker.'
+        : `Ruta hacia ${r.dst_address} eliminada.`;
       loadRoutingData();
     } catch (err: any) {
+      webFigStore.stopSafeMode?.();
       errorMessage.value = err?.detail || 'Error al eliminar ruta.';
     }
   }
 
   // --- Operaciones BGP Connections ---
   async function handleCreateBgpConnection() {
-    webFigStore.startSafeModeCountdown(60);
     try {
-      await http.post(`/api/v1/routers/${routerId.value}/webfig/routing/bgp/connections`, {
+      const res = await http.post(`/api/v1/routers/${routerId.value}/webfig/routing/bgp/connections`, {
         name: newBgp.value.name,
         remote_address: newBgp.value.remote_address,
         remote_as: Number(newBgp.value.remote_as),
@@ -201,35 +207,45 @@
         connect: newBgp.value.connect,
         listen: newBgp.value.listen,
       });
-      actionMessage.value = `Conexión BGP "${newBgp.value.name}" configurada.`;
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      actionMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Solicitud de conexión BGP en espera de aprobación humana en Maker-Checker.'
+        : `Conexión BGP "${newBgp.value.name}" configurada.`;
       isBgpModalOpen.value = false;
       loadRoutingData();
     } catch (err: any) {
+      webFigStore.stopSafeMode?.();
       errorMessage.value = err?.detail || 'Error al crear conexión BGP.';
     }
   }
 
   // --- Operaciones Policy Routing ---
   async function handleCreateTable() {
-    webFigStore.startSafeModeCountdown(60);
     try {
-      await http.post(`/api/v1/routers/${routerId.value}/webfig/routing/tables`, newTable.value);
-      actionMessage.value = `Tabla de enrutamiento FIB "${newTable.value.name}" creada.`;
+      const res = await http.post(`/api/v1/routers/${routerId.value}/webfig/routing/tables`, newTable.value);
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      actionMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Solicitud de tabla FIB en espera de aprobación humana en Maker-Checker.'
+        : `Tabla de enrutamiento FIB "${newTable.value.name}" creada.`;
       isTableModalOpen.value = false;
       loadRoutingData();
     } catch (err: any) {
+      webFigStore.stopSafeMode?.();
       errorMessage.value = err?.detail || 'Error al crear tabla FIB.';
     }
   }
 
   async function handleCreateRule() {
-    webFigStore.startSafeModeCountdown(60);
     try {
-      await http.post(`/api/v1/routers/${routerId.value}/webfig/routing/rules`, newRule.value);
-      actionMessage.value = `Regla de enrutamiento PBR creada.`;
+      const res = await http.post(`/api/v1/routers/${routerId.value}/webfig/routing/rules`, newRule.value);
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      actionMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Solicitud de regla PBR en espera de aprobación humana en Maker-Checker.'
+        : `Regla de enrutamiento PBR creada.`;
       isRuleModalOpen.value = false;
       loadRoutingData();
     } catch (err: any) {
+      webFigStore.stopSafeMode?.();
       errorMessage.value = err?.detail || 'Error al crear regla PBR.';
     }
   }

@@ -15,9 +15,11 @@ from src.api.v1.webfig_common import (
     cached_mikrotik_get,
     execute_safe_mutation,
     get_router_and_client,
+    intercept_maker_checker_if_needed,
 )
 from src.db.session import get_tenant_db_session
 from src.models.core import SystemRoleEnum
+from src.models.operations import CriticalActionTypeEnum
 from src.redis_layer.client import get_redis_client
 from src.schemas.webfig_firewall import (
     BgpConnectionCreateRequest,
@@ -39,6 +41,8 @@ _ROUTING_WRITE_ROLES = (
     SystemRoleEnum.TENANT_ADMIN,
     SystemRoleEnum.SUPERVISOR,
     SystemRoleEnum.SUPPORT_L3,
+    SystemRoleEnum.SUPPORT_L2,
+    SystemRoleEnum.SUPPORT_L1,
 )
 
 
@@ -99,11 +103,26 @@ async def create_table(
     claims: dict[str, Any] = Depends(require_roles(*_ROUTING_WRITE_ROLES)),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
-    """Crea una nueva tabla de enrutamiento FIB bajo Safe Mode."""
-    _, client = await get_router_and_client(router_id, claims, db)
+    """Crea una nueva tabla de enrutamiento FIB bajo Safe Mode o Maker-Checker."""
     body: dict[str, Any] = {"name": payload.name, "fib": payload.fib}
     if payload.comment:
         body["comment"] = payload.comment
+
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Crear tabla de enrutamiento FIB {payload.name}",
+        ros_rest_method="PUT",
+        ros_rest_path="/routing/table",
+        request_payload=body,
+        action_type=CriticalActionTypeEnum.ROUTING_BGP_OSPF_DEFAULT_CHANGE,
+        requester_justification=payload.comment,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         return await execute_safe_mutation(
             client=client,
@@ -136,8 +155,7 @@ async def create_rule(
     claims: dict[str, Any] = Depends(require_roles(*_ROUTING_WRITE_ROLES)),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
-    """Crea una regla de Policy Routing bajo Safe Mode."""
-    _, client = await get_router_and_client(router_id, claims, db)
+    """Crea una regla de Policy Routing bajo Safe Mode o Maker-Checker."""
     body: dict[str, Any] = {"table": payload.table, "action": payload.action}
     if payload.src_address:
         body["src-address"] = payload.src_address
@@ -145,6 +163,21 @@ async def create_rule(
         body["dst-address"] = payload.dst_address
     if payload.routing_mark:
         body["routing-mark"] = payload.routing_mark
+
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Crear regla Policy Routing (table={payload.table}, action={payload.action})",
+        ros_rest_method="PUT",
+        ros_rest_path="/routing/rule",
+        request_payload=body,
+        action_type=CriticalActionTypeEnum.ROUTING_BGP_OSPF_DEFAULT_CHANGE,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         return await execute_safe_mutation(
             client=client,
@@ -197,8 +230,7 @@ async def create_bgp_connection(
     claims: dict[str, Any] = Depends(require_roles(*_ROUTING_WRITE_ROLES)),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
-    """Crea una nueva conexión BGP en RouterOS v7 bajo Safe Mode."""
-    _, client = await get_router_and_client(router_id, claims, db)
+    """Crea una nueva conexión BGP en RouterOS v7 bajo Safe Mode o Maker-Checker."""
     body: dict[str, Any] = {
         "name": payload.name,
         "remote.address": payload.remote_address,
@@ -215,6 +247,21 @@ async def create_bgp_connection(
         body["listen"] = "yes" if payload.listen else "no"
     if payload.disabled is not None:
         body["disabled"] = payload.disabled
+
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Crear conexión BGP {payload.name} (AS {payload.remote_as})",
+        ros_rest_method="PUT",
+        ros_rest_path="/routing/bgp/connection",
+        request_payload=body,
+        action_type=CriticalActionTypeEnum.ROUTING_BGP_OSPF_DEFAULT_CHANGE,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         return await execute_safe_mutation(
             client=client,
@@ -233,8 +280,7 @@ async def update_bgp_connection(
     claims: dict[str, Any] = Depends(require_roles(*_ROUTING_WRITE_ROLES)),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
-    """Modifica o habilita/deshabilita un peer BGP bajo Safe Mode."""
-    _, client = await get_router_and_client(router_id, claims, db)
+    """Modifica o habilita/deshabilita un peer BGP bajo Safe Mode o Maker-Checker."""
     patch_data: dict[str, Any] = {}
     if payload.remote_address:
         patch_data["remote.address"] = payload.remote_address
@@ -243,6 +289,20 @@ async def update_bgp_connection(
     if payload.disabled is not None:
         patch_data["disabled"] = payload.disabled
 
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Modificar conexión BGP ({item_id})",
+        ros_rest_method="PATCH",
+        ros_rest_path=f"/routing/bgp/connection/{item_id}",
+        request_payload=patch_data,
+        action_type=CriticalActionTypeEnum.ROUTING_BGP_OSPF_DEFAULT_CHANGE,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         before = await client.get(f"/routing/bgp/connection/{item_id}")
         return await execute_safe_mutation(
@@ -262,7 +322,20 @@ async def delete_bgp_connection(
     claims: dict[str, Any] = Depends(require_roles(*_ROUTING_WRITE_ROLES)),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
-    """Elimina una conexión BGP bajo Safe Mode."""
+    """Elimina una conexión BGP bajo Safe Mode o Maker-Checker."""
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Eliminar conexión BGP ({item_id})",
+        ros_rest_method="DELETE",
+        ros_rest_path=f"/routing/bgp/connection/{item_id}",
+        request_payload={".id": item_id},
+        action_type=CriticalActionTypeEnum.ROUTING_BGP_OSPF_DEFAULT_CHANGE,
+    )
+    if intercepted is not None:
+        return intercepted
+
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         before = await client.get(f"/routing/bgp/connection/{item_id}")
@@ -417,11 +490,26 @@ async def create_filter_rule(
     claims: dict[str, Any] = Depends(require_roles(*_ROUTING_WRITE_ROLES)),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
-    """Crea una regla de filtro de prefijos bajo Safe Mode."""
-    _, client = await get_router_and_client(router_id, claims, db)
+    """Crea una regla de filtro de prefijos bajo Safe Mode o Maker-Checker."""
     body: dict[str, Any] = {"chain": payload.chain, "rule": payload.rule, "disabled": payload.disabled}
     if payload.comment:
         body["comment"] = payload.comment
+
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Crear filtro de enrutamiento ({payload.chain})",
+        ros_rest_method="PUT",
+        ros_rest_path="/routing/filter/rule",
+        request_payload=body,
+        action_type=CriticalActionTypeEnum.ROUTING_BGP_OSPF_DEFAULT_CHANGE,
+        requester_justification=payload.comment,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         return await execute_safe_mutation(
             client=client,
@@ -440,8 +528,7 @@ async def update_filter_rule(
     claims: dict[str, Any] = Depends(require_roles(*_ROUTING_WRITE_ROLES)),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
-    """Modifica una regla de filtro de prefijos bajo Safe Mode."""
-    _, client = await get_router_and_client(router_id, claims, db)
+    """Modifica una regla de filtro de prefijos bajo Safe Mode o Maker-Checker."""
     patch_data: dict[str, Any] = {}
     if payload.chain:
         patch_data["chain"] = payload.chain
@@ -452,6 +539,21 @@ async def update_filter_rule(
     if payload.disabled is not None:
         patch_data["disabled"] = payload.disabled
 
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Modificar filtro de enrutamiento ({item_id})",
+        ros_rest_method="PATCH",
+        ros_rest_path=f"/routing/filter/rule/{item_id}",
+        request_payload=patch_data,
+        action_type=CriticalActionTypeEnum.ROUTING_BGP_OSPF_DEFAULT_CHANGE,
+        requester_justification=payload.comment,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         before = await client.get(f"/routing/filter/rule/{item_id}")
         return await execute_safe_mutation(

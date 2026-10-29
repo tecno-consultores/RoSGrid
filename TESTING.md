@@ -2,7 +2,7 @@
 
 **Licencia:** GPL-3.0-only  
 **Estándar Aplicado:** QA Testing Blueprints (Nivel 11X)  
-**Estado Actual:** Hito 27.12 Completado y Certificado al 100% en Contenedores Docker Efímeros — Paridad Total de Gobernanza Modular (19/19 Flags con rogue_dhcp_enabled y enforce_maker_checker persistidos en DB), Paridad Integral WebFig v7 (Firewall/NAT Masquerade, Intercepción L2 Maker-Checker HTTP 202, DHCP Idempotente y Auto-Registro de Roles CSV), Sistema de Diseño Refactoring UI y Adaptación Responsive Multi-Viewport consolidados, Cobertura 100% de Componentes Vue (68/68 auditados con verify_zero_orphan_vue_components.py), 469 pruebas Vitest en 70 suites aprobadas al 100%, 572 pruebas unitarias backend Pytest (100%), Escenarios BDD 120 Karate API y 64 Karate UI.
+**Estado Actual:** Hito 27.12 Completado y Certificado al 100% en Contenedores Docker Efímeros — Paridad Total de Gobernanza Modular (19/19 Flags con rogue_dhcp_enabled y enforce_maker_checker persistidos en DB), Paridad Integral WebFig v7 (Firewall/NAT Masquerade, Intercepción L1/L2 Maker-Checker HTTP 202 con Deduplicación y Notificación de Espera Humana sin Cuenta Regresiva de 60s, DHCP Idempotente y Auto-Registro de Roles CSV), Sistema de Diseño Refactoring UI y Adaptación Responsive Multi-Viewport consolidados, Cobertura 100% de Componentes Vue (68/68 auditados con verify_zero_orphan_vue_components.py), 470 pruebas Vitest en 70 suites aprobadas al 100%, 573 pruebas unitarias backend Pytest (100%), Escenarios BDD 121 Karate API y 65 Karate UI.
 
 ---
 

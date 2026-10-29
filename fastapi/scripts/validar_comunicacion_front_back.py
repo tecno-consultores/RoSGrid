@@ -475,12 +475,15 @@ async def verify_router_specific_endpoints(
 
         from src.api.v1.auth import create_jwt_access_token
         from src.db.session import async_session_maker
-        from src.models.core import Tenant, User
+        from src.models.core import SystemRoleEnum, Tenant, User
         from src.redis_layer.sessions import create_session
 
         async with async_session_maker() as session:
-            u_res = await session.execute(select(User).limit(1))
+            u_res = await session.execute(select(User).where(User.role != SystemRoleEnum.SUPERADMIN_GLOBAL).limit(1))
             any_u = u_res.scalar_one_or_none()
+            if any_u is None:
+                u_res_any = await session.execute(select(User).limit(1))
+                any_u = u_res_any.scalar_one_or_none()
             t_slug = "isp-local"
             if any_u:
                 t_res = await session.execute(select(Tenant).where(Tenant.id == any_u.tenant_id))
@@ -522,11 +525,12 @@ async def verify_router_specific_endpoints(
                     f"HTTP {r_l2_fw.status_code} (Approval ID: {appr_id})",
                 )
                 if appr_id:
-                    await client.post(
-                        f"/api/v1/operations/approvals/{appr_id}/reject",
-                        headers={**auth_headers, "Idempotency-Key": str(uuid.uuid4())},
-                        json={"review_comment": "Limpieza automática suite QA Front-Back"},
-                    )
+                    from sqlalchemy import delete
+
+                    from src.models.operations import ApprovalRequest
+
+                    await session.execute(delete(ApprovalRequest).where(ApprovalRequest.id == uuid.UUID(appr_id)))
+                    await session.commit()
     except Exception as e:
         log_test("Intercepción Maker-Checker SUPPORT_L2 Firewall", False, str(e))
 

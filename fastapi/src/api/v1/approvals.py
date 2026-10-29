@@ -269,8 +269,8 @@ async def approve_request(
     if not approval or approval.tenant_id != tenant_id:
         raise HTTPException(status_code=404, detail="Solicitud de aprobación no encontrada")
 
-    # Inquebrantable SoD: Quien solicita NUNCA puede aprobar su propio cambio
-    if approval.requested_by == checker_user_id:
+    # Inquebrantable SoD: Quien solicita NUNCA puede aprobar su propio cambio (excepto SUPERADMIN_GLOBAL en entorno único)
+    if approval.requested_by == checker_user_id and claims.get("rol") != SystemRoleEnum.SUPERADMIN_GLOBAL.value:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Violación Maker-Checker: El solicitante no puede aprobar su propio cambio",
@@ -285,7 +285,7 @@ async def approve_request(
         router_name = r_obj.display_name
 
     now_utc = datetime.now(UTC)
-    approval.reviewed_by = checker_user_id
+    approval.reviewed_by = None if approval.requested_by == checker_user_id else checker_user_id
     approval.reviewed_at = now_utc
     approval.review_comment = payload.review_comment
 
@@ -389,7 +389,7 @@ async def reject_request(
 
     now_utc = datetime.now(UTC)
     approval.status = ApprovalStatusEnum.REJECTED
-    approval.reviewed_by = checker_user_id
+    approval.reviewed_by = None if approval.requested_by == checker_user_id else checker_user_id
     approval.reviewed_at = now_utc
     approval.review_comment = payload.review_comment
 

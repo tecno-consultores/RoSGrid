@@ -50,4 +50,33 @@ describe('RgSafeModeBanner.vue — Dead Man Switch 60s Banner', () => {
 
     expect(webFigStore.isSafeModeActive).toBe(false);
   });
+
+  it('muestra banner de espera de aprobación Maker-Checker (sin cuenta regresiva de 60s) ante HTTP 202', async () => {
+    const webFigStore = useWebFigStore();
+    webFigStore.startSafeModeCountdown(60);
+    expect(webFigStore.isSafeModeActive).toBe(true);
+
+    const intercepted = webFigStore.handleMutationResponse({
+      status: 202,
+      isMakerCheckerIntercepted: true,
+      data: {
+        status: 'INTERCEPTED_FOR_APPROVAL',
+        approval_request_id: 'appr-001',
+        detail: 'Operación en espera de aprobación humana en la bandeja Maker-Checker.',
+      },
+    });
+
+    expect(intercepted).toBe(true);
+    expect(webFigStore.isSafeModeActive).toBe(false);
+    expect(webFigStore.isMakerCheckerPending).toBe(true);
+
+    const wrapper = mount(RgSafeModeBanner);
+    expect(wrapper.find('.rg-safemode-banner').exists()).toBe(false);
+    expect(wrapper.find('.rg-maker-checker-banner').exists()).toBe(true);
+    expect(wrapper.text()).toContain('EN ESPERA DE APROBACIÓN HUMANA (Maker-Checker)');
+    expect(wrapper.text()).toContain('PENDIENTE DE REVISIÓN');
+
+    await wrapper.find('.banner-btn--mc').trigger('click');
+    expect(webFigStore.isMakerCheckerPending).toBe(false);
+  });
 });

@@ -624,6 +624,13 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     When driver baseUrl + '/approvals'
     Then waitFor(".approvals-view")
 
+  Scenario: 65. Bandeja Maker-Checker — Autorización Humana de Cambios sin Cuenta Regresiva de 60s en Espera
+    Given driver baseUrl + '/approvals'
+    And waitFor(".approvals-view")
+    Then match text(".view-title") contains 'Maker-Checker'
+    And match text(".view-subtitle") contains 'autorización humana'
+    And waitUntil("!document.querySelector('.rg-safemode-banner')")
+
 
 
 

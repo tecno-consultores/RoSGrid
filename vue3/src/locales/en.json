@@ -576,7 +576,7 @@
   },
   "approvals": {
     "title": "Approval Inbox — Maker-Checker",
-    "subtitle": "Four-Eyes Principle control for critical network changes with Safe Mode (60s)",
+    "subtitle": "Four-Eyes Principle control for human authorization of network changes",
     "subtabs_aria": "Maker-Checker request statuses",
     "tab_pending": "Pending Signature",
     "tab_approved": "Approved & Executed",
@@ -595,7 +595,7 @@
     "review_comment_label": "Review Comment:",
     "review_comment_placeholder": "Write a technical note or backing ticket reference...",
     "btn_reject": "✕ Reject Request",
-    "btn_approve": "✓ Approve & Execute with Safe Mode (60s)",
+    "btn_approve": "✓ Approve & Execute Change",
     "execution_result_title": "⚡ Execution Result on MikroTik Fleet:",
     "status_executed": "✓ Successfully Executed",
     "status_failed": "✕ Execution Failed"

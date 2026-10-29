@@ -207,15 +207,59 @@ async def intercept_maker_checker_if_needed(
     action_type: CriticalActionTypeEnum = CriticalActionTypeEnum.FIREWALL_INPUT_OR_SERVICE_PORT_CHANGE,
     previous_state_snapshot: dict[str, Any] | None = None,
     requester_justification: str | None = None,
+    intercept_roles: set[str] | None = None,
 ) -> JSONResponse | None:
     """Intercepta mutaciones sensibles realizadas por roles L1/L2 y las envía a la bandeja Maker-Checker (HTTP 202)."""
     role = str(claims.get("rol", ""))
-    if role not in _MAKER_CHECKER_INTERCEPT_ROLES:
+    target_roles = intercept_roles if intercept_roles is not None else _MAKER_CHECKER_INTERCEPT_ROLES
+    if role not in target_roles:
         return None
 
     tenant_id = uuid.UUID(str(claims["tid"]))
     user_id = uuid.UUID(str(claims["sub"]))
     now_utc = datetime.now(UTC)
+    clean_path = f"/{ros_rest_path.strip('/')}"
+
+    try:
+        perm_stmt = select(UserRouterPermission).where(
+            UserRouterPermission.tenant_id == tenant_id,
+            UserRouterPermission.user_id == user_id,
+            UserRouterPermission.router_id == router_id,
+        )
+        perm_res = await db.execute(perm_stmt)
+        perm = perm_res.scalar_one_or_none() if perm_res is not None and hasattr(perm_res, "scalar_one_or_none") else None
+        if isinstance(perm, UserRouterPermission) and perm.bypass_maker_checker is True:
+            return None
+
+        dup_stmt = select(ApprovalRequest).where(
+            ApprovalRequest.tenant_id == tenant_id,
+            ApprovalRequest.router_id == router_id,
+            ApprovalRequest.status == ApprovalStatusEnum.PENDING,
+            ApprovalRequest.ros_rest_method == ros_rest_method.upper(),
+            ApprovalRequest.ros_rest_path == clean_path,
+        )
+        dup_res = await db.execute(dup_stmt)
+        scalars_obj = dup_res.scalars() if dup_res is not None and hasattr(dup_res, "scalars") else None
+        candidates = scalars_obj.all() if scalars_obj is not None and hasattr(scalars_obj, "all") else []
+        if isinstance(candidates, list):
+            for existing in candidates:
+                if (
+                    isinstance(existing, ApprovalRequest)
+                    and existing.request_payload == request_payload
+                    and existing.expires_at > now_utc
+                ):
+                    return JSONResponse(
+                        status_code=status.HTTP_202_ACCEPTED,
+                        content={
+                            "status": "INTERCEPTED_FOR_APPROVAL",
+                            "approval_request_id": str(existing.id),
+                            "deduplicated": True,
+                            "detail": "Esta solicitud ya se encuentra en espera de aprobación humana en la bandeja Maker-Checker.",
+                        },
+                    )
+    except Exception as exc:
+        logger.debug("Omitiendo verificación previa de Maker-Checker: %s", exc)
+
     approval_id = uuid.uuid4()
     justification = (
         requester_justification
@@ -232,7 +276,7 @@ async def intercept_maker_checker_if_needed(
         summary=summary[:255],
         requester_justification=justification,
         ros_rest_method=ros_rest_method.upper(),
-        ros_rest_path=f"/{ros_rest_path.strip('/')}",
+        ros_rest_path=clean_path,
         request_payload=request_payload,
         previous_state_snapshot=previous_state_snapshot,
         requested_by=user_id,
@@ -247,7 +291,7 @@ async def intercept_maker_checker_if_needed(
         content={
             "status": "INTERCEPTED_FOR_APPROVAL",
             "approval_request_id": str(approval.id),
-            "detail": "Operación interceptada por gobernanza Maker-Checker. Pendiente de aprobación por Nivel 3 o Administrador.",
+            "detail": "Operación enviada a Maker-Checker. En espera de aprobación humana por Nivel 3, Supervisor o Administrador.",
         },
     )
 

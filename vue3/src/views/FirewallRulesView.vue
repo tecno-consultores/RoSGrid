@@ -169,7 +169,6 @@
   }
 
   async function handleSaveRule(payload: Record<string, any>) {
-    webFigStore.startSafeModeCountdown(60);
     errorMessage.value = '';
     actionMessage.value = '';
 
@@ -180,20 +179,19 @@
           `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}/${selectedRule.value.id}`,
           payload,
         );
-        actionMessage.value = isInterceptedResponse(res)
-          ? (res.data as any)?.detail || 'Solicitud enviada a la bandeja Maker-Checker para aprobación.'
+        const intercepted = webFigStore.handleMutationResponse(res, 60);
+        actionMessage.value = intercepted
+          ? (res.data as any)?.detail || 'Solicitud en espera de aprobación humana en la bandeja Maker-Checker.'
           : 'Regla modificada exitosamente con Safe Mode activo.';
       } else {
         res = await http.post(
           `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}`,
           payload,
         );
-        actionMessage.value = isInterceptedResponse(res)
-          ? (res.data as any)?.detail || 'Solicitud enviada a la bandeja Maker-Checker para aprobación.'
+        const intercepted = webFigStore.handleMutationResponse(res, 60);
+        actionMessage.value = intercepted
+          ? (res.data as any)?.detail || 'Solicitud en espera de aprobación humana en la bandeja Maker-Checker.'
           : 'Nueva regla creada exitosamente bajo Safe Mode.';
-      }
-      if (isInterceptedResponse(res)) {
-        webFigStore.stopSafeMode?.();
       }
       isRuleModalOpen.value = false;
       await loadFirewallRules();
@@ -205,16 +203,15 @@
   }
 
   async function handleToggleRule(rule: FirewallRuleItem) {
-    webFigStore.startSafeModeCountdown(60);
     try {
       const res = await http.patch(
         `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}/${rule.id}`,
         { disabled: !rule.disabled },
       );
-      if (isInterceptedResponse(res)) {
-        webFigStore.stopSafeMode?.();
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      if (intercepted) {
         actionMessage.value =
-          (res.data as any)?.detail || 'Solicitud enviada a la bandeja Maker-Checker para aprobación.';
+          (res.data as any)?.detail || 'Solicitud en espera de aprobación humana en la bandeja Maker-Checker.';
       }
       await loadFirewallRules();
     } catch (e: any) {
@@ -228,15 +225,14 @@
     if (!confirm(`¿Eliminar la regla ${rule.id} [${rule.chain}] ${rule.action}?`)) {
       return;
     }
-    webFigStore.startSafeModeCountdown(60);
     try {
       const res = await http.delete(
         `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}/${rule.id}`,
       );
-      if (isInterceptedResponse(res)) {
-        webFigStore.stopSafeMode?.();
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      if (intercepted) {
         actionMessage.value =
-          (res.data as any)?.detail || 'Solicitud enviada a la bandeja Maker-Checker para aprobación.';
+          (res.data as any)?.detail || 'Solicitud en espera de aprobación humana en la bandeja Maker-Checker.';
       } else {
         actionMessage.value = 'Regla eliminada exitosamente.';
       }
@@ -273,28 +269,27 @@
     row: FirewallRuleItem;
   }) {
     isMoving.value = true;
-    webFigStore.startSafeModeCountdown(60);
 
     const moved = rulesList.value.splice(event.fromIndex, 1)[0];
     rulesList.value.splice(event.toIndex, 0, moved);
 
     try {
-      await http.post(
+      const res = await http.post(
         `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}/move`,
         {
           numbers: event.row.id,
           destination: String(event.toIndex),
         },
       );
+      webFigStore.handleMutationResponse(res, 60);
     } catch {
-      // Manejo silencioso en fallo de red
+      webFigStore.stopSafeMode?.();
     } finally {
       isMoving.value = false;
     }
   }
 
   async function handleExecuteMasquerade() {
-    webFigStore.startSafeModeCountdown(60);
     errorMessage.value = '';
     try {
       const res = await http.post(
@@ -306,10 +301,10 @@
           comment: 'NAT Masquerade RoSGrid Wizard',
         },
       );
-      if (isInterceptedResponse(res)) {
-        webFigStore.stopSafeMode?.();
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      if (intercepted) {
         actionMessage.value =
-          (res.data as any)?.detail || 'Solicitud Masquerade enviada a la bandeja Maker-Checker.';
+          (res.data as any)?.detail || 'Solicitud Masquerade en espera de aprobación humana en Maker-Checker.';
       } else {
         actionMessage.value = `Regla Masquerade creada para salida WAN en ${masqueradeWan.value}.`;
       }
@@ -323,7 +318,6 @@
   }
 
   async function handleExecutePortForward() {
-    webFigStore.startSafeModeCountdown(60);
     errorMessage.value = '';
     try {
       // 1. Regla Dst-NAT
@@ -358,11 +352,15 @@
       }
 
       if (isInterceptedResponse(resNat) || isInterceptedResponse(resFilter)) {
-        webFigStore.stopSafeMode?.();
+        webFigStore.notifyMakerCheckerPending(
+          (resNat.data as any)?.detail ||
+            'Solicitud de Port Forwarding en espera de aprobación humana en Maker-Checker.',
+        );
         actionMessage.value =
           (resNat.data as any)?.detail ||
-          'Solicitud de Port Forwarding enviada a la bandeja Maker-Checker.';
+          'Solicitud de Port Forwarding en espera de aprobación humana en Maker-Checker.';
       } else {
+        webFigStore.startSafeModeCountdown(60);
         actionMessage.value = `Redirección de puertos :${portForward.value.dst_port} -> ${portForward.value.to_addresses}:${portForward.value.to_ports} completada con éxito.`;
       }
       isPortForwardWizardOpen.value = false;

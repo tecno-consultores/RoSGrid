@@ -103,6 +103,7 @@ async def create_rule(
             SystemRoleEnum.SUPERVISOR,
             SystemRoleEnum.SUPPORT_L3,
             SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
         )
     ),
     db: AsyncSession = Depends(get_tenant_db_session),
@@ -200,6 +201,7 @@ async def update_rule(
             SystemRoleEnum.SUPERVISOR,
             SystemRoleEnum.SUPPORT_L3,
             SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
         )
     ),
     db: AsyncSession = Depends(get_tenant_db_session),
@@ -253,6 +255,7 @@ async def delete_rule(
             SystemRoleEnum.SUPERVISOR,
             SystemRoleEnum.SUPPORT_L3,
             SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
         )
     ),
     db: AsyncSession = Depends(get_tenant_db_session),
@@ -312,15 +315,29 @@ async def move_rule(
             SystemRoleEnum.SUPERVISOR,
             SystemRoleEnum.SUPPORT_L3,
             SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
         )
     ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
-    """Reordena una regla de Firewall (Drag & Drop) bajo Safe Mode."""
+    """Reordena una regla de Firewall (Drag & Drop) bajo Safe Mode o Maker-Checker."""
     _validate_firewall_params(proto, table_type)
-    _, client = await get_router_and_client(router_id, claims, db)
     menu = f"{proto}/firewall/{table_type}"
     body = {"numbers": payload.numbers, "destination": payload.destination}
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Reordenar regla Firewall {proto.upper()}/{table_type} ({payload.numbers} -> {payload.destination})",
+        ros_rest_method="POST",
+        ros_rest_path=f"/{menu}/move",
+        request_payload=body,
+        action_type=CriticalActionTypeEnum.FIREWALL_INPUT_OR_SERVICE_PORT_CHANGE,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         return await execute_safe_mutation(
             client=client,

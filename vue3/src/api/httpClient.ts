@@ -262,6 +262,9 @@ export async function request<T = unknown>(
   }
 
   if (!response.ok && response.status !== 202) {
+    if (isMutableMethod(method) && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('rosgrid:mutation-failed', { detail: data }));
+    }
     throw new ApiError(response.status, response.statusText, data);
   }
 

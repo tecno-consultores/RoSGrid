@@ -139,13 +139,15 @@
   async function handleCreateVlan() {
     isLoading.value = true;
     errorMessage.value = '';
-    webFigStore.startSafeModeCountdown(60);
     try {
-      await http.post(
+      const res = await http.post(
         `/api/v1/routers/${routerId.value}/webfig/interfaces/vlan`,
         newVlan.value,
       );
-      statusMessage.value = `Interfaz VLAN "${newVlan.value.name}" (ID ${newVlan.value.vlan_id}) creada exitosamente bajo Safe Mode.`;
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      statusMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Solicitud de VLAN en espera de aprobación humana en la bandeja Maker-Checker.'
+        : `Interfaz VLAN "${newVlan.value.name}" (ID ${newVlan.value.vlan_id}) creada exitosamente bajo Safe Mode.`;
       isCreateVlanModalOpen.value = false;
       newVlan.value = {
         name: `vlan${Number(newVlan.value.vlan_id) + 10}`,
@@ -156,6 +158,7 @@
       };
       loadInterfaces();
     } catch (err: unknown) {
+      webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string; response?: { data?: { detail?: string } } };
       errorMessage.value =
         error.response?.data?.detail || error.detail || error.message || 'Error al crear la interfaz VLAN.';
@@ -165,19 +168,22 @@
   }
 
   async function handleDeleteVlan(iface: InterfaceRow) {
-    if (!confirm(`¿Eliminar la interfaz VLAN "${iface.name}" bajo Safe Mode (60s)?`)) {
+    if (!confirm(`¿Eliminar la interfaz VLAN "${iface.name}"?`)) {
       return;
     }
     isLoading.value = true;
     errorMessage.value = '';
-    webFigStore.startSafeModeCountdown(60);
     try {
-      await http.delete(
+      const res = await http.delete(
         `/api/v1/routers/${routerId.value}/webfig/interfaces/vlan/${iface.id}`,
       );
-      statusMessage.value = `Interfaz VLAN "${iface.name}" eliminada exitosamente.`;
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      statusMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Solicitud de eliminación en espera de aprobación humana en Maker-Checker.'
+        : `Interfaz VLAN "${iface.name}" eliminada exitosamente.`;
       loadInterfaces();
     } catch (err: unknown) {
+      webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string; response?: { data?: { detail?: string } } };
       errorMessage.value =
         error.response?.data?.detail || error.detail || error.message || 'Error al eliminar la interfaz VLAN.';

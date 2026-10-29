@@ -138,13 +138,15 @@
   async function handleCreateIface() {
     isLoading.value = true;
     errorMessage.value = '';
-    webFigStore.startSafeModeCountdown(60);
     try {
-      await http.post(
+      const res = await http.post(
         `/api/v1/routers/${routerId.value}/webfig/interfaces/wireguard`,
         newIface.value,
       );
-      statusMessage.value = `Interfaz WireGuard "${newIface.value.name}" creada exitosamente bajo Safe Mode.`;
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      statusMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Solicitud WireGuard en espera de aprobación humana en Maker-Checker.'
+        : `Interfaz WireGuard "${newIface.value.name}" creada exitosamente bajo Safe Mode.`;
       isCreateIfaceModalOpen.value = false;
       newIface.value = {
         name: `wg${ifacesList.value.length + 1}`,
@@ -154,6 +156,7 @@
       };
       loadData();
     } catch (err: unknown) {
+      webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string };
       errorMessage.value = error.detail || error.message || 'Error al crear la interfaz WireGuard.';
     } finally {
@@ -164,13 +167,15 @@
   async function handleCreatePeer() {
     isLoading.value = true;
     errorMessage.value = '';
-    webFigStore.startSafeModeCountdown(60);
     try {
-      await http.post(
+      const res = await http.post(
         `/api/v1/routers/${routerId.value}/webfig/interfaces/wireguard/peers`,
         newPeer.value,
       );
-      statusMessage.value = `Peer WireGuard registrado exitosamente bajo Safe Mode.`;
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      statusMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Solicitud de Peer WireGuard en espera de aprobación humana en Maker-Checker.'
+        : `Peer WireGuard registrado exitosamente bajo Safe Mode.`;
       isCreatePeerModalOpen.value = false;
       newPeer.value = {
         interface: ifacesList.value[0]?.name || 'wg0',
@@ -183,6 +188,7 @@
       };
       loadData();
     } catch (err: unknown) {
+      webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string };
       errorMessage.value = error.detail || error.message || 'Error al agregar el Peer WireGuard.';
     } finally {

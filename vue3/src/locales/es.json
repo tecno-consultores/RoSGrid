@@ -576,7 +576,7 @@
   },
   "approvals": {
     "title": "Bandeja de Aprobaciones — Maker-Checker",
-    "subtitle": "Control de cuatro ojos (Four-Eyes Principle) para cambios críticos de red con Safe Mode (60s)",
+    "subtitle": "Control de cuatro ojos (Four-Eyes Principle) para autorización humana de cambios en red",
     "subtabs_aria": "Estados de solicitudes Maker-Checker",
     "tab_pending": "Pendientes de Firma",
     "tab_approved": "Aprobadas y Ejecutadas",
@@ -595,7 +595,7 @@
     "review_comment_label": "Comentario de Revisión:",
     "review_comment_placeholder": "Escribe un comentario técnico o ticket de respaldo...",
     "btn_reject": "✕ Rechazar Solicitud",
-    "btn_approve": "✓ Aprobar y Ejecutar con Safe Mode (60s)",
+    "btn_approve": "✓ Aprobar y Ejecutar Cambio",
     "execution_result_title": "⚡ Resultado de la Ejecución en Flota MikroTik:",
     "status_executed": "✓ Ejecutado Exitosamente",
     "status_failed": "✕ Fallo en la Ejecución"

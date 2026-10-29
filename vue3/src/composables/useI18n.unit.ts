@@ -96,7 +96,7 @@ describe('useI18n — Composable de Internacionalización Reactivo', () => {
       // 1. Maker-Checker
       { key: 'approvals.title', es: 'Bandeja de Aprobaciones — Maker-Checker', en: 'Approval Inbox — Maker-Checker' },
       { key: 'approvals.tab_pending', es: 'Pendientes de Firma', en: 'Pending Signature' },
-      { key: 'approvals.btn_approve', es: '✓ Aprobar y Ejecutar con Safe Mode (60s)', en: '✓ Approve & Execute with Safe Mode (60s)' },
+      { key: 'approvals.btn_approve', es: '✓ Aprobar y Ejecutar Cambio', en: '✓ Approve & Execute Change' },
       // 2. IPAM
       { key: 'ipam.total_subscribers', es: 'Total Abonados / Servicios', en: 'Total Subscribers / Services' },
       { key: 'ipam.tab_sync', es: '🔄 Sincronización MikroTik', en: '🔄 MikroTik Sync' },

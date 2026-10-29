@@ -11,8 +11,42 @@
 </script>
 
 <template>
+  <!-- Banner En Espera de Aprobación Humana (Maker-Checker — Sin cuenta regresiva de 60s) -->
   <aside
-    v-if="webFigStore.isSafeModeActive"
+    v-if="webFigStore.isMakerCheckerPending"
+    class="rg-maker-checker-banner"
+    role="status"
+    aria-live="polite"
+    aria-label="Estado de Solicitud en Espera de Aprobación Maker-Checker"
+  >
+    <div class="banner-content">
+      <span class="banner-icon" aria-hidden="true">⏳</span>
+      <div class="banner-text">
+        <strong class="banner-title">EN ESPERA DE APROBACIÓN HUMANA (Maker-Checker)</strong>
+        <span class="banner-desc">
+          {{
+            webFigStore.makerCheckerMessage ||
+            'Esta operación requiere autorización de un Supervisor, Nivel 3 o Administrador antes de aplicarse en el router (sin límite de 60s).'
+          }}
+        </span>
+      </div>
+      <div class="banner-badge-pending">
+        <span class="badge-pending-val">PENDIENTE DE REVISIÓN</span>
+      </div>
+      <button
+        type="button"
+        class="banner-btn banner-btn--mc"
+        aria-label="Cerrar notificación de espera Maker-Checker"
+        @click="webFigStore.dismissMakerCheckerPending()"
+      >
+        Entendido
+      </button>
+    </div>
+  </aside>
+
+  <!-- Banner Safe Mode Activo (60s Rollback — Solo para cambios aplicados directamente en el router) -->
+  <aside
+    v-else-if="webFigStore.isSafeModeActive"
     class="rg-safemode-banner"
     :class="{ 'rg-safemode-banner--warning': isLowTime }"
     role="status"
@@ -43,6 +77,37 @@
 </template>
 
 <style scoped>
+  .rg-maker-checker-banner {
+    background: var(--rg-accent-subtle, rgba(6, 182, 212, 0.14));
+    border-bottom: 2px solid var(--rg-accent-primary, #06b6d4);
+    color: var(--rg-text-primary);
+    padding: 8px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 900;
+    box-shadow: 0 4px 12px rgba(6, 182, 212, 0.18);
+  }
+
+  .banner-badge-pending {
+    background: rgba(6, 182, 212, 0.15);
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--rg-accent-primary, #06b6d4);
+  }
+
+  .badge-pending-val {
+    font-family: var(--rg-font-mono);
+    font-weight: 700;
+    font-size: 11px;
+    color: var(--rg-accent-primary, #06b6d4);
+    letter-spacing: 0.4px;
+  }
+
+  .banner-btn--mc {
+    border-color: var(--rg-accent-primary, #06b6d4);
+    color: var(--rg-accent-primary, #06b6d4);
+  }
+
   .rg-safemode-banner {
     background: var(--rg-status-warning-bg);
     border-bottom: 2px solid var(--rg-status-warning);

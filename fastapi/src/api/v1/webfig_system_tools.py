@@ -15,11 +15,13 @@ from src.api.v1.webfig_common import (
     cached_mikrotik_get,
     execute_safe_mutation,
     get_router_and_client,
+    intercept_maker_checker_if_needed,
 )
 from src.core.audit import write_audit_log
 from src.db.session import get_tenant_db_session
 from src.mikrotik.client import MikrotikRestClient
 from src.models.core import SystemRoleEnum
+from src.models.operations import CriticalActionTypeEnum
 from src.redis_layer.client import get_redis_client
 from src.schemas.webfig_ops import (
     RouterPingRequest,
@@ -306,10 +308,36 @@ async def reboot_router(
     router_id: uuid.UUID,
     payload: SystemRebootRequest,
     request: Request,
-    claims: dict[str, Any] = Depends(require_roles(*_SYSTEM_ADMIN_ROLES)),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            *_SYSTEM_ADMIN_ROLES,
+            SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
+            SystemRoleEnum.FIELD_TECH,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
-) -> dict[str, str]:
-    """Reinicia el router registrando el motivo en auditoría inmutable."""
+) -> Any:
+    """Reinicia el router registrando el motivo en auditoría inmutable o intercepta en Maker-Checker (L1/L2/FIELD_TECH)."""
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Reinicio remoto de router ({payload.reason})",
+        ros_rest_method="POST",
+        ros_rest_path="/system/reboot",
+        request_payload={},
+        action_type=CriticalActionTypeEnum.ROUTER_REBOOT_OR_SHUTDOWN,
+        requester_justification=payload.reason,
+        intercept_roles={
+            SystemRoleEnum.SUPPORT_L2.value,
+            SystemRoleEnum.SUPPORT_L1.value,
+            SystemRoleEnum.FIELD_TECH.value,
+        },
+    )
+    if intercepted is not None:
+        return intercepted
+
     router_obj, client = await get_router_and_client(router_id, claims, db)
     tenant_id = uuid.UUID(claims["tid"])
     user_id = uuid.UUID(claims["sub"])

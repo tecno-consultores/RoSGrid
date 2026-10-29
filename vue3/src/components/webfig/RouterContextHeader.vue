@@ -108,8 +108,19 @@
         <strong class="chip-val">{{ tempValue }}°C</strong>
       </div>
 
-      <!-- Badge Safe Mode -->
+      <!-- Badge Safe Mode / Maker-Checker -->
       <button
+        v-if="webFigStore.isMakerCheckerPending"
+        type="button"
+        class="safemode-badge safemode-badge--pending"
+        aria-label="Solicitud en espera de aprobación humana en Maker-Checker"
+        @click="webFigStore.dismissMakerCheckerPending()"
+      >
+        <span class="safemode-icon">⏳</span>
+        <span class="safemode-text">En Espera de Aprobación (Maker-Checker)</span>
+      </button>
+      <button
+        v-else
         type="button"
         class="safemode-badge"
         :class="{ 'safemode-badge--active': webFigStore.isSafeModeActive }"
