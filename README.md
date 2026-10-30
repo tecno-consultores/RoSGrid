@@ -207,7 +207,7 @@ rosgrid/
 │   ├── INSTALL.md                  # Guía paso a paso de instalación, KeyDB vs DragonflyDB y MikroTik
 │   ├── FAQ.md                      # Preguntas frecuentes técnicas y operativas
 │   ├── RESOURCES.md                # Catálogo de recursos, imágenes Docker y RFCs
-│   ├── specs/                      # Enciclopedia de 36 especificaciones arquitectónicas + Blueprints QA 11X
+│   ├── specs/                      # Enciclopedia de 54 especificaciones arquitectónicas + Blueprints QA 11X
 │   └── examples/                   # Plantillas de referencia y blueprints canónicos (FastAPI y Vue 3)
 ├── fastapi/                        # Ecosistema Backend (FastAPI + SQLAlchemy 2.0 + KeyDB + QA 11X)
 └── vue3/                           # Ecosistema Frontend (Vue 3 + TypeScript + Pinia + Leaflet + QA 11X)

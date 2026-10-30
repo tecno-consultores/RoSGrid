@@ -171,4 +171,22 @@ Para garantizar coherencia estética de grado corporativo sin sacrificar la dens
    - Las rejillas de gráficas (`RouterLiveDashboardView.vue`), Feature Flags (`RgFeatureFlagsGrid.vue`) y formularios de 2 columnas colapsan limpiamente a 1 columna en `<= 640px`, mientras que la matriz IPAM de 256 IPs (`IpamIpGridModal.vue`) adapta sus columnas de `16` (escritorio) a `8` (`<= 768px`) y `4` (`<= 480px`).
    - Los paneles laterales de mapas (`UnifiedNetworkMap.vue`, `SubscribersMapView.vue`, `L2TopologyView.vue`) se anclan al borde inferior del lienzo (`left: 8px; right: 8px; width: auto; max-height: 55%`) en pantallas estrechas.
 
+---
+
+## 7. Paridad con `rosgrid-web`, Persistencia de Tema/Densidad, Blindaje `X-Robots-Tag` y Generador `llms.txt` (`docs/specs/53`)
+
+Para la homologación completa entre el producto real (`RoSGrid/vue3/`) y el portal interactivo (`rosgrid-web`), véase [`docs/specs/53_FRONTEND_DESIGN_SYSTEM_METADATA_A11Y_AND_MOBILE_PARITY.md`](./53_FRONTEND_DESIGN_SYSTEM_METADATA_A11Y_AND_MOBILE_PARITY.md):
+
+1. **Persistencia de Tema y Densidad + `color-scheme` Nativo (`useThemeAndLayoutStore.ts` & `themes.css`):**
+   - Persistencia automática de `rg_theme` (`dark`, `light`, `noc-high-contrast`) y `rg_table_density` (`auto`, `compact`, `comfortable`) en `localStorage`, sincronización dinámica de `<meta name="theme-color">` y propiedad `color-scheme: dark` / `color-scheme: light` para controles nativos del navegador (`<select>`, `<input type="datetime-local">`, scrollbars).
+2. **Contraste WCAG 2.1 AA en Botones de Fila para Tema `light` y Tokens de Marca:**
+   - Variables semánticas `--rg-btn-action-bg`, `--rg-btn-action-fg` y `--rg-btn-action-border` en `themes.css` para que `.btn-table-action` y `.btn-row-action` cumplan contraste `>= 7.5:1` en `data-theme="light"`, junto con `--rg-brand-cyber-blue` (`#00D2FF`), `--rg-brand-electric-orange` (`#FF8400`) y `--rg-bg-terminal`.
+3. **Inyección Automática de `:data-label="col.label"` y `.num-col` en `RgDataTable.vue`:**
+   - Renderizado declarativo de etiquetas de columna en tarjetas apiladas móviles (`<= 640px`) y alineación tabular monoespaciada en columnas numéricas.
+4. **Blindaje Anti-Indexación (`X-Robots-Tag`) y Contexto Dinámico de Router en `<title>`:**
+   - Cabecera `X-Robots-Tag: "noindex, nofollow, noarchive, nosnippet"` en `vue3/nginx/default.conf`, `<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">` en `vue3/index.html` y prefijo `[<display_name> · <host>]` en `document.title` cuando el operador navega dentro de `/routers/:routerId/webfig/*`.
+5. **Logo Vectorial Reactivo (`RgBrandLogo.vue`) y Contexto `llms.txt` en `RgMcpTokenModal.vue`:**
+   - Componente SVG reactivo al tema activo y botón `[ 📋 Copiar Contexto llms.txt para Agente IA ]` para asistentes MCP (`Claude`, `Hermes Agent`).
+
+
 
