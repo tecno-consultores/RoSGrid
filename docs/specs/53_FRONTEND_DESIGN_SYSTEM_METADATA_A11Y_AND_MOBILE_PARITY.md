@@ -106,9 +106,20 @@ En [`vue3/src/components/common/RgDataTable.vue`](file:///home/sinfallas/Dropbox
 </td>
 ```
 
-### 2.5. Generador de Contexto `llms.txt` Integrado en `RgMcpTokenModal.vue`
+### 2.5. Generador de Contexto `llms.txt`, Conectores Multi-Cliente MCP (6 Clientes) y Acción `Copiar como Markdown` ("LLM-Ready Docs")
 
-En [`vue3/src/components/admin/RgMcpTokenModal.vue`](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/vue3/src/components/admin/RgMcpTokenModal.vue), añadir un botón táctico `[ 📋 Copiar Contexto llms.txt para Agente IA ]` que copie al portapapeles la ficha de contexto MCP pre-parametrizada con el `window.location.origin` actual de la instancia RoSGrid, las 22 herramientas semánticas `rosgrid_*` (niveles 1, 2 y 3), las reglas de `Idempotency-Key` (`UUIDv7`), Safe Mode de 60s y Maker-Checker (`HTTP 202`), lista para pegar en las instrucciones de **Hermes Agent**, **Claude Desktop** o **Claude Code**.
+Siguiendo el estándar **LLM-Ready Docs** ([`gitbook.com/docs/getting-started/llm-ready-docs`](https://gitbook.com/docs/getting-started/llm-ready-docs)):
+
+1. **En [`vue3/src/components/users/RgMcpTokenModal.vue`](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/vue3/src/components/users/RgMcpTokenModal.vue):**
+   - Ampliar el selector de clientes MCP para ofrecer comandos e integraciones de 1 clic para los **6 entornos de agentes IA modernos**:
+     - **Claude Code CLI:** `claude mcp add --transport http rosgrid-noc <origin>/api/v1/mcp`
+     - **OpenAI Codex CLI:** `codex mcp add rosgrid-noc <origin>/api/v1/mcp` (`[mcp_servers.rosgrid-noc]`)
+     - **Cursor IDE (`.cursor/mcp.json`):** `{"mcpServers": {"rosgrid-noc": {"url": "<origin>/api/v1/mcp"}}}`
+     - **VS Code / GitHub Copilot (`mcp.json`):** `{"servers": {"rosgrid-noc": {"type": "http", "url": "<origin>/api/v1/mcp"}}}`
+     - **Claude Desktop / Web Connectors** y **Hermes Agent**.
+   - Añadir el botón táctico `[ 📋 Copiar Contexto llms.txt para Agente IA ]` que incluye la ficha de contexto MCP con las 22 herramientas `rosgrid_*` (incluyendo `#21 rosgrid_search_mikrotik_docs` y `#22 rosgrid_get_mikrotik_doc_topic`), los 8 SOP Playbooks y un bloque final `# Agent Instructions` explicando cómo consultar el servidor MCP definiendo la pregunta específica (`ask`) y el objetivo operativo (`goal`).
+2. **En `RgContextualHelpDrawer.vue` (`docs/specs/52`):**
+   - Incorporar la acción de página **`[ 📋 Copiar Guía como Markdown ]`** (*Page Action: Copy as Markdown*) en la cabecera del cajón de ayuda contextual para que el operador pueda copiar en 1 clic la guía técnica de la pantalla actual en formato Markdown puro y pegarla en su asistente IA (manteniendo estrictamente **cero botón de conversión PDF** dentro de la interfaz operativa de `RoSGrid`).
 
 ---
 
