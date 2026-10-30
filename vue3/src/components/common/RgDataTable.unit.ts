@@ -255,4 +255,37 @@ describe('RgDataTable.vue — WinBox 32px / Táctil 44px & RouterOS Flags', () =
     expect(firstRowCells[2].attributes('data-label')).toBe('Estado');
     expect(firstRowCells[2].classes()).toContain('num-col');
   });
+
+  it('soporta selección múltiple por fila y selección global cuando selectable es true (Spec 54 — 27.16.5)', async () => {
+    const wrapper = mount(RgDataTable, {
+      props: {
+        columns,
+        rows: sampleRows,
+        selectable: true,
+        selectedKeys: ['1'],
+      },
+    });
+
+    const selectAllCheckbox = wrapper.find('.rg-checkbox-select-all');
+    expect(selectAllCheckbox.exists()).toBe(true);
+    const rowCheckboxes = wrapper.findAll('.rg-checkbox-row');
+    expect(rowCheckboxes.length).toBe(4);
+
+    // Desmarcar fila '1'
+    await rowCheckboxes[0].trigger('change');
+    expect(wrapper.emitted('update:selectedKeys')?.[0]).toEqual([[]]);
+
+    // Marcar fila '2'
+    await rowCheckboxes[1].trigger('change');
+    expect(wrapper.emitted('update:selectedKeys')?.[1]).toEqual([['1', '2']]);
+
+    // Seleccionar todas
+    await selectAllCheckbox.trigger('change');
+    expect(wrapper.emitted('update:selectedKeys')?.[2]).toEqual([['1', '2', '3', '4']]);
+
+    // Si todas están seleccionadas y se pulsa select-all, desmarca todas
+    await wrapper.setProps({ selectedKeys: ['1', '2', '3', '4'] });
+    await selectAllCheckbox.trigger('change');
+    expect(wrapper.emitted('update:selectedKeys')?.[3]).toEqual([[]]);
+  });
 });

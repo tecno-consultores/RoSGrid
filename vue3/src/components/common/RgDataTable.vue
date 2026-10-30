@@ -12,6 +12,8 @@
       rows: T[];
       rowKey?: string;
       sortableRows?: boolean;
+      selectable?: boolean;
+      selectedKeys?: string[];
       selectedKey?: string | null;
       ariaLabel?: string;
       caption?: string;
@@ -20,6 +22,8 @@
     {
       rowKey: 'id',
       sortableRows: false,
+      selectable: false,
+      selectedKeys: () => [],
       selectedKey: null,
       ariaLabel: 'Tabla de datos técnicos',
       caption: 'Listado de recursos MikroTik',
@@ -29,6 +33,7 @@
 
   const emit = defineEmits<{
     (e: 'select-row', row: T): void;
+    (e: 'update:selectedKeys', keys: string[]): void;
     (e: 'reorder', payload: { fromIndex: number; toIndex: number; row: T }): void;
   }>();
 
@@ -108,6 +113,38 @@
 
   function handleRowClick(row: T): void {
     emit('select-row', row);
+  }
+
+  const allRowKeys = computed<string[]>(() =>
+    props.rows.map((row, idx) => getKey(row, idx)),
+  );
+
+  const isAllSelected = computed<boolean>(() => {
+    if (!props.selectable || allRowKeys.value.length === 0) return false;
+    return allRowKeys.value.every((k) => props.selectedKeys.includes(k));
+  });
+
+  function isRowSelected(key: string): boolean {
+    return props.selectedKeys.includes(key);
+  }
+
+  function toggleRowSelection(key: string): void {
+    if (props.selectedKeys.includes(key)) {
+      emit(
+        'update:selectedKeys',
+        props.selectedKeys.filter((k) => k !== key),
+      );
+    } else {
+      emit('update:selectedKeys', [...props.selectedKeys, key]);
+    }
+  }
+
+  function toggleSelectAll(): void {
+    if (isAllSelected.value) {
+      emit('update:selectedKeys', []);
+    } else {
+      emit('update:selectedKeys', [...allRowKeys.value]);
+    }
   }
 
   function toggleDetails(key: string): void {
@@ -205,6 +242,15 @@
         </caption>
         <thead>
           <tr>
+            <th v-if="selectable" class="col-select" scope="col">
+              <input
+                type="checkbox"
+                class="rg-checkbox-select-all"
+                :checked="isAllSelected"
+                aria-label="Seleccionar todas las filas"
+                @change="toggleSelectAll"
+              />
+            </th>
             <th v-if="sortableRows" class="col-drag" scope="col" aria-label="Orden">#</th>
             <th class="col-flags" scope="col" aria-label="Banderas MikroTik">Flags</th>
             <th
@@ -250,6 +296,17 @@
               @dragover.prevent
               @drop="handleDrop(visibleRange.start + idx, $event)"
             >
+              <!-- Casilla de Selección Múltiple (Spec 54 — 27.16.5) -->
+              <td v-if="selectable" class="col-select" @click.stop>
+                <input
+                  type="checkbox"
+                  class="rg-checkbox-row"
+                  :checked="isRowSelected(getKey(row, visibleRange.start + idx))"
+                  :aria-label="`Seleccionar fila ${getKey(row, visibleRange.start + idx)}`"
+                  @change="toggleRowSelection(getKey(row, visibleRange.start + idx))"
+                />
+              </td>
+
               <!-- Drag / Reorder Controls -->
               <td v-if="sortableRows" class="col-drag" @click.stop>
                 <div class="drag-controls">

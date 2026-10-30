@@ -1239,6 +1239,144 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
     vi.useRealTimers();
   });
 
+  it('DynamicLayer2ResourceView — soporta acciones RPC, Query Builder, operaciones Bulk, exportación .rsc y Presets (Spec 54)', async () => {
+    const certPath = 'certificate';
+    const sampleCert = 'router-tls-cert';
+    vi.spyOn(http, 'get').mockResolvedValue({
+      status: 200,
+      data: {
+        ros_path: certPath,
+        is_singleton: false,
+        schema_source: 'inspect',
+        rpc_actions: [
+          {
+            action: 'add-acme',
+            label: 'Emitir Certificado ACME',
+            icon: '🔐',
+            scope: 'menu',
+            requires_safe_mode: true,
+            requires_confirmation: false,
+            params_schema: [{ key: 'common-name', label: 'Dominio', type: 'string', required: true }],
+          },
+          {
+            action: 'sign',
+            label: 'Firmar Certificado (CA)',
+            icon: '✍️',
+            scope: 'row',
+            requires_safe_mode: true,
+            requires_confirmation: true,
+            params_schema: [],
+          },
+        ],
+        columns_schema: [
+          { key: '.id', label: 'ID', type: 'string' },
+          { key: 'name', label: 'Name', type: 'string', description: 'Nombre único' },
+          { key: 'key-type', label: 'Key Type', type: 'enum', enum_options: ['rsa', 'prime256v1'] },
+        ],
+        items: [{ '.id': '*cert1', name: sampleCert, 'key-type': 'rsa' }],
+      },
+      headers: new Headers(),
+    });
+
+    mockRouteParam = { routerId: 'r-01', rosPath: certPath };
+    const wrapperCert = mount(DynamicLayer2ResourceView);
+    await flushPromises();
+
+    interface Layer2TestVm {
+      activeRecord: Record<string, unknown>;
+      proplistActive: boolean;
+      queryFilters: Array<{ field: string; operator: string; value: string }>;
+      selectedRowIds: string[];
+      bulkCommentDraft: string;
+      handleExecuteRpcAction: (p: Record<string, unknown>) => Promise<void>;
+      handleExecuteServerQuery: () => Promise<void>;
+    }
+    const vm = wrapperCert.vm as unknown as Layer2TestVm;
+
+    expect(wrapperCert.text()).toContain('/console/inspect');
+
+    // Guardar y resetear perfil de columnas
+    await wrapperCert.find('#btn-column-selector').trigger('click');
+    await wrapperCert.find('#btn-save-column-profile').trigger('click');
+    await wrapperCert.find('#btn-reset-column-profile').trigger('click');
+
+    // Abrir modal Crear y aplicar plantilla rápida en 1 clic
+    await wrapperCert.find('.btn-primary').trigger('click');
+    await wrapperCert.find('#btn-preset-cert-ca-root').trigger('click');
+    expect(vm.activeRecord['common-name']).toBe('RoSGrid Root CA');
+    await wrapperCert.find('.btn-close').trigger('click');
+
+    // Ejecutar acción RPC de menú
+    vi.spyOn(http, 'post').mockResolvedValueOnce({
+      status: 200,
+      data: { status: 'success', action: 'add-acme', result: {} },
+      headers: new Headers(),
+    });
+    await wrapperCert.find('#btn-rpc-menu-add-acme').trigger('click');
+    await vm.handleExecuteRpcAction({
+      action: 'add-acme',
+      params: { 'common-name': 'noc.example.com' },
+      requires_safe_mode: true,
+    });
+    await flushPromises();
+
+    // Ejecutar consulta Server-Side (.query / .proplist)
+    await wrapperCert.find('#btn-toggle-query-builder').trigger('click');
+    vm.proplistActive = true;
+    vm.queryFilters = [{ field: 'name', operator: '=', value: sampleCert }];
+    vi.spyOn(http, 'post').mockResolvedValueOnce({
+      status: 200,
+      data: {
+        ros_path: certPath,
+        title: 'Certificate',
+        is_singleton: false,
+        columns_schema: [],
+        items: [{ '.id': '*cert1', name: sampleCert }],
+        active_proplist: ['.id', 'name'],
+        active_query: [`name=${sampleCert}`],
+      },
+      headers: new Headers(),
+    });
+    await vm.handleExecuteServerQuery();
+    await flushPromises();
+
+    // Ejecutar operación por lote (Bulk comment)
+    vm.selectedRowIds = ['*cert1'];
+    vm.bulkCommentDraft = 'Auditado NOC';
+    await flushPromises();
+    vi.spyOn(http, 'post').mockResolvedValueOnce({
+      status: 200,
+      data: {
+        status: 'success',
+        ros_path: certPath,
+        action: 'comment',
+        total_requested: 1,
+        succeeded_ids: ['*cert1'],
+        failed_items: [],
+        safe_mode_window_sec: 60,
+      },
+      headers: new Headers(),
+    });
+    await wrapperCert.find('#btn-bulk-comment').trigger('click');
+    await flushPromises();
+
+    // Ejecutar exportación contextual .rsc y Diff
+    vi.spyOn(http, 'post').mockResolvedValueOnce({
+      status: 200,
+      data: {
+        ros_path: certPath,
+        exported_rsc: '/certificate\nadd name=router-tls-cert',
+        baseline_rsc: '',
+        unified_diff: '+add name=router-tls-cert',
+        has_drift: true,
+      },
+      headers: new Headers(),
+    });
+    await wrapperCert.find('#btn-layer2-rsc-export').trigger('click');
+    await flushPromises();
+    expect(wrapperCert.find('#layer2-rsc-export-modal').exists()).toBe(true);
+  });
+
   it('BridgeView — renderiza pestañas de bridges, puertos, vlans y hosts y maneja modales', async () => {
     vi.spyOn(http, 'get').mockResolvedValue({
       status: 200,

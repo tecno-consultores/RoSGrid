@@ -2,7 +2,7 @@
 
 **Licencia:** GPL-3.0-only  
 **Estándar Aplicado:** QA Testing Blueprints (Nivel 11X)  
-**Estado Actual:** Hitos 27.12, 27.13, 27.14 y 27.15 Completados y Certificados al 100% en Contenedores Docker Efímeros — Cajón de Ayuda Contextual In-App (`RgContextualHelpDrawer.vue`, `useContextualHelp.ts`, `helpCatalog.ts` con 28 guías paso a paso y copia como Markdown LLM-Ready), Paridad de Sistema de Diseño Frontend (`rg_theme`, `rg_table_density`, `color-scheme`, `RgBrandLogo.vue`, contraste WCAG 2.1 AA en tema `light`), Blindaje Anti-Indexación (`X-Robots-Tag: noindex, nofollow, noarchive, nosnippet`), Título Dinámico de Pestaña por Router y Generador de Contexto `llms.txt` (`# Agent Instructions` `ask` + `goal`) para los 6 Clientes MCP en `RgMcpTokenModal.vue`, Consola Táctica Interactiva CAPsMAN Wi-Fi v7 (`/interface/wifi` y `/caps-man`), Motor Universal Capa 2 Responsivo (`DynamicLayer2ResourceView.vue` y `RgDataTable.vue`), Cobertura 100% de Componentes Vue (71/71 auditados con verify_zero_orphan_vue_components.py), 491 pruebas Vitest en 74 suites aprobadas al 100%, 580 pruebas unitarias backend Pytest (100%), Escenarios BDD 127 Karate API y 71 Karate UI.
+**Estado Actual:** Hitos 27.12, 27.13, 27.14, 27.15 y 27.16 Completados y Certificados al 100% en Contenedores Docker Efímeros — Motor Dinámico Universal WebFig Capa 2 Next-Gen (`webfig_layer2.py`, `DynamicLayer2ResourceView.vue`, `RgLayer2RpcActionModal.vue`, `RgLayer2QueryBuilder.vue`, `RgLayer2RscExportDiffModal.vue`, `useLayer2ColumnProfiles.ts`, `layer2PresetsCatalog.ts` con acciones RPC por menú/fila, introspección `/rest/console/inspect`, filtrado server-side `.query`/`.proplist`, operaciones por lote Bulk bajo Safe Mode 60s, exportación `.rsc` con Diff unificado y perfiles/plantillas en 1 clic), Cajón de Ayuda Contextual In-App (`RgContextualHelpDrawer.vue`, `useContextualHelp.ts`, `helpCatalog.ts` con 28 guías paso a paso y copia como Markdown LLM-Ready), Paridad de Sistema de Diseño Frontend (`rg_theme`, `rg_table_density`, `color-scheme`, `RgBrandLogo.vue`, contraste WCAG 2.1 AA en tema `light`), Blindaje Anti-Indexación (`X-Robots-Tag: noindex, nofollow, noarchive, nosnippet`), Título Dinámico de Pestaña por Router y Generador de Contexto `llms.txt` (`# Agent Instructions` `ask` + `goal`) para los 6 Clientes MCP en `RgMcpTokenModal.vue`, Consola Táctica Interactiva CAPsMAN Wi-Fi v7 (`/interface/wifi` y `/caps-man`), Cobertura 100% de Componentes Vue (74/74 auditados con verify_zero_orphan_vue_components.py), 500 pruebas Vitest en 78 suites aprobadas al 100%, 588 pruebas unitarias backend Pytest (100%), Escenarios BDD 128 Karate API y 72 Karate UI.
 
 ---
 
@@ -2040,5 +2040,26 @@ Conforme a la Especificación 43 v2.0.0 y la directiva `.agents/rules/ground_tru
      2. Apertura radial (spiderfy) con líneas conectoras punteadas (`spider legs`) y pines individuales con nombres y semáforos de salud.
      3. Tarjeta lateral `Sitio Compartido (5 Equipos)` con los 5 routers listados, IPs y accesos interactivos.
      4. Selección del router `r4` y actualización sincronizada del HUD de Wallboard.
+
+### K. Hito 27.16: Evolución Next-Gen del Motor Dinámico Universal WebFig Capa 2 (Acciones RPC, `/console/inspect`, `.query`/`.proplist`, Operaciones Bulk, Exportación `.rsc`/Diff y Perfiles/Presets — Completado y Certificado al 100%)
+
+1. **Backend Unitario (Pytest en Docker `sinfallas/base-python-uv:3.15`):**
+   - `fastapi/tests/api/test_webfig_layer2_universal.unit.py`: **15 de 15 pruebas PASADAS (100%)**, validando catálogo RPC por ruta, parseo y caché KeyDB de `/rest/console/inspect`, validación `.proplist` y construcción RPN `.query`, ejecución por lote (`enable`, `disable`, `comment`, `remove`) bajo ventana única Safe Mode 60s, y extracción/síntesis `.rsc` con `unified_diff`.
+   - Complejidad Ciclomática Radon (`radon cc --min C src/api/v1/webfig_layer2.py`): **0 funciones con grado C o peor (100% Grado A/B)**.
+   - Total backend: **588 de 588 pruebas unitarias PASADAS al 100%**.
+
+2. **Frontend Unitario (Vitest en Docker `sinfallas/base-node-ionic:26`):**
+   - `vue3/src/composables/useLayer2ColumnProfiles.unit.ts`: **3 de 3 pruebas PASADAS (100%)**.
+   - `vue3/src/components/webfig/RgLayer2RpcActionModal.unit.ts`: **2 de 2 pruebas PASADAS (100%)**.
+   - `vue3/src/components/webfig/RgLayer2QueryBuilder.unit.ts`: **1 de 1 prueba PASADA (100%)**.
+   - `vue3/src/components/webfig/RgLayer2RscExportDiffModal.unit.ts`: **1 de 1 prueba PASADA (100%)**.
+   - `vue3/src/components/common/RgDataTable.unit.ts`: **12 de 12 pruebas PASADAS (100%)** (incluyendo selección múltiple `selectable` y región desplazable con teclado).
+   - `vue3/src/views/webfigViews.unit.ts`: **21 de 21 pruebas PASADAS (100%)** (incluyendo flujo completo Spec 54 en `DynamicLayer2ResourceView.vue`).
+   - Total frontend: **78 suites aprobadas (100%), 500 de 500 pruebas unitarias PASADAS al 100%**, con **0 componentes `.vue` huérfanos (74 de 74 auditados)**.
+
+3. **Escenarios BDD Karate Labs:**
+   - **API REST (`fastapi/test/api_test.feature` & `docs/examples/fastapi/test/api_test.feature`):** **128 escenarios BDD** (incorporado Escenario 128: Operaciones por Lote Bulk en Capa 2 `/webfig/layer2/bulk/certificate`).
+   - **UI WebFig / NOC (`vue3/test/ui_business_flow.feature` & `docs/examples/vue3/test/ui_business_flow.feature`):** **72 escenarios BDD** (incorporado Escenario 72: Query Builder Server-Side `.query` / `.proplist` y Exportación Contextual `.rsc` / Diff en Capa 2).
+
 
 

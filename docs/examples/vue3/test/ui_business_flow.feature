@@ -688,6 +688,17 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     Then match script("document.querySelector('meta[name=\"robots\"]').getAttribute('content')") contains 'noindex, nofollow'
     And match script("document.querySelector('meta[name=\"color-scheme\"]').getAttribute('content')") != null
 
+  Scenario: 72. Motor Universal Capa 2 Next-Gen: Query Builder Server-Side (.query / .proplist), Exportación Contextual .rsc / Diff y Perfiles de Columnas (Hito 27.16)
+    Given driver baseUrl + '/routers/00000000-0000-0000-0000-000000000001/webfig/layer2/certificate'
+    And waitFor(".layer2-view")
+    And waitFor("#btn-toggle-query-builder")
+    And waitFor("#btn-layer2-rsc-export")
+    When click("#btn-toggle-query-builder")
+    Then waitFor("#layer2-query-builder")
+    And waitFor("#btn-apply-l2-query")
+    And waitFor("#chk-proplist-optimize")
+
+
 
 
 

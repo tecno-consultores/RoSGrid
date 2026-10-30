@@ -396,11 +396,70 @@ export interface Layer2CatalogItem {
   is_singleton: boolean;
 }
 
+export interface Layer2RpcParamItem {
+  key: string;
+  label: string;
+  type: 'string' | 'integer' | 'boolean_ros' | 'enum' | 'reference' | string;
+  required: boolean;
+  default?: unknown;
+  options?: string[];
+  description?: string;
+}
+
+export interface Layer2RpcActionDescriptor {
+  action: string;
+  label: string;
+  icon: string;
+  scope: 'menu' | 'row';
+  requires_safe_mode: boolean;
+  requires_confirmation: boolean;
+  params_schema: Layer2RpcParamItem[];
+}
+
+export interface Layer2ColumnSchemaItem {
+  key: string;
+  label: string;
+  type: string;
+  read_only?: boolean;
+  required?: boolean;
+  enum_options?: string[];
+  description?: string;
+}
+
+export interface Layer2QueryFilterItem {
+  field: string;
+  operator: '=' | '!=' | '~' | '>' | '<';
+  value: string;
+}
+
+export interface Layer2BulkResponse {
+  status: string;
+  ros_path: string;
+  action: 'enable' | 'disable' | 'comment' | 'remove';
+  total_requested: number;
+  succeeded_ids: string[];
+  failed_items: Array<Record<string, string>>;
+  safe_mode_window_sec: number;
+}
+
+export interface Layer2ExportResponse {
+  ros_path: string;
+  exported_rsc: string;
+  baseline_rsc: string;
+  unified_diff: string;
+  has_drift: boolean;
+  backup_timestamp?: string | null;
+}
+
 export interface Layer2ResourceResponse {
   ros_path: string;
   title: string;
   is_singleton: boolean;
-  columns_schema: Array<{ key: string; label: string; type: string }>;
+  columns_schema: Layer2ColumnSchemaItem[];
+  rpc_actions?: Layer2RpcActionDescriptor[];
+  schema_source?: 'inspect' | 'inferred' | 'catalog_fallback';
+  active_proplist?: string[] | null;
+  active_query?: string[] | null;
   items: Array<Record<string, unknown>>;
   form_data?: Record<string, unknown>;
 }
