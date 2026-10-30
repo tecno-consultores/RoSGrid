@@ -29,7 +29,9 @@ from src.schemas.webfig_firewall import (
     RoutingFilterRuleCreateRequest,
     RoutingFilterRuleUpdateRequest,
     RoutingRuleCreateRequest,
+    RoutingRuleUpdateRequest,
     RoutingTableCreateRequest,
+    RoutingTableUpdateRequest,
 )
 
 logger = logging.getLogger(__name__)
@@ -133,6 +135,86 @@ async def create_table(
         )
 
 
+@router.patch("/tables/{item_id}")
+async def update_table(
+    router_id: uuid.UUID,
+    item_id: str,
+    payload: RoutingTableUpdateRequest,
+    claims: dict[str, Any] = Depends(require_roles(*_ROUTING_WRITE_ROLES)),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Modifica una tabla de enrutamiento FIB existente."""
+    patch_data: dict[str, Any] = {}
+    if payload.name is not None:
+        patch_data["name"] = payload.name
+    if payload.fib is not None:
+        patch_data["fib"] = payload.fib
+    if payload.disabled is not None:
+        patch_data["disabled"] = payload.disabled
+    if payload.comment is not None:
+        patch_data["comment"] = payload.comment
+
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Modificar tabla de enrutamiento FIB ({item_id})",
+        ros_rest_method="PATCH",
+        ros_rest_path=f"/routing/table/{item_id}",
+        request_payload=patch_data,
+        action_type=CriticalActionTypeEnum.ROUTING_BGP_OSPF_DEFAULT_CHANGE,
+        requester_justification=payload.comment,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
+    async with client:
+        before = await client.get(f"/routing/table/{item_id}")
+        return await execute_safe_mutation(
+            client=client,
+            menu="routing/table",
+            action="update",
+            item_id=item_id,
+            before_state=before if isinstance(before, dict) else {},
+            coro_fn=lambda: client.patch(f"/routing/table/{item_id}", json_data=patch_data),
+        )
+
+
+@router.delete("/tables/{item_id}")
+async def delete_table(
+    router_id: uuid.UUID,
+    item_id: str,
+    claims: dict[str, Any] = Depends(require_roles(*_ROUTING_WRITE_ROLES)),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Elimina una tabla de enrutamiento FIB personalizada."""
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Eliminar tabla de enrutamiento FIB ({item_id})",
+        ros_rest_method="DELETE",
+        ros_rest_path=f"/routing/table/{item_id}",
+        request_payload={".id": item_id},
+        action_type=CriticalActionTypeEnum.ROUTING_BGP_OSPF_DEFAULT_CHANGE,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
+    async with client:
+        before = await client.get(f"/routing/table/{item_id}")
+        return await execute_safe_mutation(
+            client=client,
+            menu="routing/table",
+            action="delete",
+            item_id=item_id,
+            before_state=before if isinstance(before, dict) else {},
+            coro_fn=lambda: client.delete(f"/routing/table/{item_id}"),
+        )
+
+
 @router.get("/rules")
 async def list_rules(
     router_id: uuid.UUID,
@@ -185,6 +267,92 @@ async def create_rule(
             action="create",
             before_state=body,
             coro_fn=lambda: client.put("/routing/rule", json_data=body),
+        )
+
+
+@router.patch("/rules/{item_id}")
+async def update_rule(
+    router_id: uuid.UUID,
+    item_id: str,
+    payload: RoutingRuleUpdateRequest,
+    claims: dict[str, Any] = Depends(require_roles(*_ROUTING_WRITE_ROLES)),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Modifica una regla de Policy Routing existente."""
+    patch_data: dict[str, Any] = {}
+    if payload.src_address is not None:
+        patch_data["src-address"] = payload.src_address
+    if payload.dst_address is not None:
+        patch_data["dst-address"] = payload.dst_address
+    if payload.routing_mark is not None:
+        patch_data["routing-mark"] = payload.routing_mark
+    if payload.table is not None:
+        patch_data["table"] = payload.table
+    if payload.action is not None:
+        patch_data["action"] = payload.action
+    if payload.disabled is not None:
+        patch_data["disabled"] = payload.disabled
+    if payload.comment is not None:
+        patch_data["comment"] = payload.comment
+
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Modificar regla Policy Routing ({item_id})",
+        ros_rest_method="PATCH",
+        ros_rest_path=f"/routing/rule/{item_id}",
+        request_payload=patch_data,
+        action_type=CriticalActionTypeEnum.ROUTING_BGP_OSPF_DEFAULT_CHANGE,
+        requester_justification=payload.comment,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
+    async with client:
+        before = await client.get(f"/routing/rule/{item_id}")
+        return await execute_safe_mutation(
+            client=client,
+            menu="routing/rule",
+            action="update",
+            item_id=item_id,
+            before_state=before if isinstance(before, dict) else {},
+            coro_fn=lambda: client.patch(f"/routing/rule/{item_id}", json_data=patch_data),
+        )
+
+
+@router.delete("/rules/{item_id}")
+async def delete_rule(
+    router_id: uuid.UUID,
+    item_id: str,
+    claims: dict[str, Any] = Depends(require_roles(*_ROUTING_WRITE_ROLES)),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Elimina una regla de Policy Routing."""
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Eliminar regla Policy Routing ({item_id})",
+        ros_rest_method="DELETE",
+        ros_rest_path=f"/routing/rule/{item_id}",
+        request_payload={".id": item_id},
+        action_type=CriticalActionTypeEnum.ROUTING_BGP_OSPF_DEFAULT_CHANGE,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
+    async with client:
+        before = await client.get(f"/routing/rule/{item_id}")
+        return await execute_safe_mutation(
+            client=client,
+            menu="routing/rule",
+            action="delete",
+            item_id=item_id,
+            before_state=before if isinstance(before, dict) else {},
+            coro_fn=lambda: client.delete(f"/routing/rule/{item_id}"),
         )
 
 
@@ -563,4 +731,38 @@ async def update_filter_rule(
             item_id=item_id,
             before_state=before if isinstance(before, dict) else {},
             coro_fn=lambda: client.patch(f"/routing/filter/rule/{item_id}", json_data=patch_data),
+        )
+
+
+@router.delete("/filters/rules/{item_id}")
+async def delete_filter_rule(
+    router_id: uuid.UUID,
+    item_id: str,
+    claims: dict[str, Any] = Depends(require_roles(*_ROUTING_WRITE_ROLES)),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Elimina una regla de filtro de enrutamiento bajo Safe Mode o Maker-Checker."""
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Eliminar filtro de enrutamiento ({item_id})",
+        ros_rest_method="DELETE",
+        ros_rest_path=f"/routing/filter/rule/{item_id}",
+        request_payload={".id": item_id},
+        action_type=CriticalActionTypeEnum.ROUTING_BGP_OSPF_DEFAULT_CHANGE,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
+    async with client:
+        before = await client.get(f"/routing/filter/rule/{item_id}")
+        return await execute_safe_mutation(
+            client=client,
+            menu="routing/filter/rule",
+            action="delete",
+            item_id=item_id,
+            before_state=before if isinstance(before, dict) else {},
+            coro_fn=lambda: client.delete(f"/routing/filter/rule/{item_id}"),
         )

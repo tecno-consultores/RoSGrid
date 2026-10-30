@@ -72,7 +72,31 @@
 
   // Modals
   const isCreateBridgeModalOpen = ref(false);
+  const isEditBridgeModalOpen = ref(false);
+  const editingBridgeId = ref('');
+  const editBridgeForm = ref({
+    name: '',
+    vlan_filtering: false,
+    protocol_mode: 'rstp',
+    mtu: 1500,
+    disabled: false,
+    comment: '',
+  });
+
   const isCreatePortModalOpen = ref(false);
+  const isEditPortModalOpen = ref(false);
+  const editingPortId = ref('');
+  const editPortForm = ref({
+    interface: '',
+    bridge: '',
+    pvid: 1,
+    frame_types: 'admit-all',
+    hw: true,
+    trusted: false,
+    disabled: false,
+    comment: '',
+  });
+
   const newBridge = ref({
     name: 'bridge1',
     vlan_filtering: false,
@@ -88,6 +112,16 @@
   });
 
   const isCreateVlanModalOpen = ref(false);
+  const isEditVlanModalOpen = ref(false);
+  const editingVlanId = ref('');
+  const editVlanForm = ref({
+    bridge: '',
+    vlan_ids: '',
+    tagged: '',
+    untagged: '',
+    comment: '',
+    disabled: false,
+  });
   const newVlan = ref({
     bridge: '',
     vlan_ids: '10',
@@ -118,6 +152,7 @@
     },
     { key: 'mtu', label: 'MTU', align: 'right' },
     { key: 'comment', label: 'Comentario' },
+    { key: 'actions', label: 'Acciones', align: 'center' },
   ];
 
   const portColumns: TableColumn<BridgePortRow>[] = [
@@ -132,6 +167,7 @@
       formatter: (row) => (row.ingress_filtering ? 'Sí' : 'No'),
     },
     { key: 'priority', label: 'Prioridad', align: 'right' },
+    { key: 'actions', label: 'Acciones', align: 'center' },
   ];
 
   const vlanColumns: TableColumn<BridgeVlanRow>[] = [
@@ -265,6 +301,167 @@
       webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string };
       errorMessage.value = error.detail || error.message || 'Error al agregar el puerto al bridge.';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  function openEditBridgeModal(bridge: BridgeRow) {
+    editingBridgeId.value = bridge.id;
+    editBridgeForm.value = {
+      name: bridge.name,
+      vlan_filtering: Boolean(bridge.vlan_filtering),
+      protocol_mode: bridge.protocol_mode || 'rstp',
+      mtu: Number(bridge.mtu || 1500),
+      disabled: Boolean(bridge.disabled),
+      comment: String(bridge.comment || ''),
+    };
+    isEditBridgeModalOpen.value = true;
+  }
+
+  async function handleUpdateBridge() {
+    if (!editingBridgeId.value) return;
+    isLoading.value = true;
+    errorMessage.value = '';
+    try {
+      const res = await http.patch(
+        `/api/v1/routers/${routerId.value}/webfig/interfaces/bridge/${encodeURIComponent(editingBridgeId.value)}`,
+        editBridgeForm.value,
+      );
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      statusMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Modificación de Bridge en espera de aprobación en Maker-Checker.'
+        : `Bridge "${editBridgeForm.value.name}" actualizado exitosamente bajo Safe Mode.`;
+      isEditBridgeModalOpen.value = false;
+      loadData();
+    } catch (err: unknown) {
+      webFigStore.stopSafeMode?.();
+      const error = err as { message?: string; detail?: string };
+      errorMessage.value = error.detail || error.message || 'Error al actualizar el bridge.';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function handleDeleteBridge(bridge: BridgeRow) {
+    if (!confirm(`¿Eliminar el Bridge "${bridge.name}"?`)) {
+      return;
+    }
+    isLoading.value = true;
+    errorMessage.value = '';
+    try {
+      const res = await http.delete(
+        `/api/v1/routers/${routerId.value}/webfig/interfaces/bridge/${encodeURIComponent(bridge.id)}`,
+      );
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      statusMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Eliminación de Bridge en espera de aprobación en Maker-Checker.'
+        : `Bridge "${bridge.name}" eliminado exitosamente bajo Safe Mode.`;
+      loadData();
+    } catch (err: unknown) {
+      webFigStore.stopSafeMode?.();
+      const error = err as { message?: string; detail?: string };
+      errorMessage.value = error.detail || error.message || 'Error al eliminar el bridge.';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  function openEditPortModal(port: BridgePortRow) {
+    editingPortId.value = port.id;
+    editPortForm.value = {
+      interface: port.interface,
+      bridge: port.bridge,
+      pvid: Number(port.pvid || 1),
+      frame_types: port.frame_types || 'admit-all',
+      hw: port.hw !== false && port.hw !== 'false',
+      trusted: port.trusted === true || port.trusted === 'true',
+      disabled: Boolean(port.disabled),
+      comment: String(port.comment || ''),
+    };
+    isEditPortModalOpen.value = true;
+  }
+
+  async function handleUpdatePort() {
+    if (!editingPortId.value) return;
+    isLoading.value = true;
+    errorMessage.value = '';
+    try {
+      const res = await http.patch(
+        `/api/v1/routers/${routerId.value}/webfig/interfaces/bridge/ports/${encodeURIComponent(editingPortId.value)}`,
+        editPortForm.value,
+      );
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      statusMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Modificación de puerto Bridge en espera de aprobación en Maker-Checker.'
+        : `Puerto "${editPortForm.value.interface}" actualizado en Bridge "${editPortForm.value.bridge}".`;
+      isEditPortModalOpen.value = false;
+      loadData();
+    } catch (err: unknown) {
+      webFigStore.stopSafeMode?.();
+      const error = err as { message?: string; detail?: string };
+      errorMessage.value = error.detail || error.message || 'Error al actualizar el puerto del bridge.';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function handleDeletePort(port: BridgePortRow) {
+    if (!confirm(`¿Sacar la interfaz "${port.interface}" del Bridge "${port.bridge}"?`)) {
+      return;
+    }
+    isLoading.value = true;
+    errorMessage.value = '';
+    try {
+      const res = await http.delete(
+        `/api/v1/routers/${routerId.value}/webfig/interfaces/bridge/ports/${encodeURIComponent(port.id)}`,
+      );
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      statusMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Solicitud para sacar puerto del Bridge en espera de aprobación en Maker-Checker.'
+        : `Puerto "${port.interface}" liberado del Bridge "${port.bridge}" exitosamente.`;
+      loadData();
+    } catch (err: unknown) {
+      webFigStore.stopSafeMode?.();
+      const error = err as { message?: string; detail?: string };
+      errorMessage.value = error.detail || error.message || 'Error al sacar el puerto del bridge.';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  function openEditVlanModal(vlan: BridgeVlanRow) {
+    editingVlanId.value = vlan.id;
+    editVlanForm.value = {
+      bridge: vlan.bridge,
+      vlan_ids: String(vlan.vlan_ids || ''),
+      tagged: String(vlan.tagged || ''),
+      untagged: String(vlan.untagged || ''),
+      comment: String(vlan.comment || ''),
+      disabled: Boolean(vlan.disabled),
+    };
+    isEditVlanModalOpen.value = true;
+  }
+
+  async function handleUpdateVlan() {
+    if (!editingVlanId.value) return;
+    isLoading.value = true;
+    errorMessage.value = '';
+    try {
+      const res = await http.patch(
+        `/api/v1/routers/${routerId.value}/webfig/interfaces/bridge/vlans/${encodeURIComponent(editingVlanId.value)}`,
+        editVlanForm.value,
+      );
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      statusMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Modificación de VLAN Bridge en espera de aprobación en Maker-Checker.'
+        : `VLAN "${editVlanForm.value.vlan_ids}" actualizada exitosamente.`;
+      isEditVlanModalOpen.value = false;
+      loadData();
+    } catch (err: unknown) {
+      webFigStore.stopSafeMode?.();
+      const error = err as { message?: string; detail?: string };
+      errorMessage.value = error.detail || error.message || 'Error al actualizar la VLAN del bridge.';
     } finally {
       isLoading.value = false;
     }
@@ -489,7 +686,30 @@
           :rows="bridgesList"
           caption="Interfaces Bridge RouterOS"
           row-key="id"
-        />
+        >
+          <template #actions="{ row }">
+            <div class="row-actions">
+              <button
+                type="button"
+                class="btn-table-action"
+                title="Editar Bridge"
+                aria-label="Editar Bridge"
+                @click="openEditBridgeModal(row as BridgeRow)"
+              >
+                ✏️ Editar
+              </button>
+              <button
+                type="button"
+                class="btn-table-action btn-table-action--delete"
+                title="Eliminar Bridge"
+                aria-label="Eliminar Bridge"
+                @click="handleDeleteBridge(row as BridgeRow)"
+              >
+                🗑️
+              </button>
+            </div>
+          </template>
+        </RgDataTable>
       </div>
 
       <div v-else-if="activeTab === 'ports'">
@@ -498,7 +718,30 @@
           :rows="portsList"
           caption="Puertos Miembros Bridge"
           row-key="id"
-        />
+        >
+          <template #actions="{ row }">
+            <div class="row-actions">
+              <button
+                type="button"
+                class="btn-table-action"
+                title="Editar parámetros de puerto en Bridge"
+                aria-label="Editar puerto de Bridge"
+                @click="openEditPortModal(row as BridgePortRow)"
+              >
+                ✏️ Editar
+              </button>
+              <button
+                type="button"
+                class="btn-table-action btn-table-action--delete"
+                title="Sacar interfaz de este Bridge"
+                aria-label="Sacar puerto del Bridge"
+                @click="handleDeletePort(row as BridgePortRow)"
+              >
+                ⏏ Sacar del Bridge
+              </button>
+            </div>
+          </template>
+        </RgDataTable>
       </div>
 
       <div v-else-if="activeTab === 'vlans'">
@@ -509,15 +752,26 @@
           row-key="id"
         >
           <template #actions="{ row }">
-            <button
-              type="button"
-              class="btn-table-action btn-table-action--delete"
-              title="Eliminar regla de VLAN del Bridge"
-              aria-label="Eliminar regla de VLAN del Bridge"
-              @click="handleDeleteVlan(row as BridgeVlanRow)"
-            >
-              🗑️
-            </button>
+            <div class="row-actions">
+              <button
+                type="button"
+                class="btn-table-action"
+                title="Editar regla de VLAN del Bridge"
+                aria-label="Editar regla de VLAN del Bridge"
+                @click="openEditVlanModal(row as BridgeVlanRow)"
+              >
+                ✏️ Editar
+              </button>
+              <button
+                type="button"
+                class="btn-table-action btn-table-action--delete"
+                title="Eliminar regla de VLAN del Bridge"
+                aria-label="Eliminar regla de VLAN del Bridge"
+                @click="handleDeleteVlan(row as BridgeVlanRow)"
+              >
+                🗑️
+              </button>
+            </div>
           </template>
         </RgDataTable>
       </div>
@@ -786,6 +1040,157 @@
             </button>
             <button type="submit" class="btn-primary" :disabled="isLoading">
               Crear con Safe Mode
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Editar Bridge -->
+    <div
+      v-if="isEditBridgeModalOpen"
+      class="modal-backdrop"
+      @click.self="isEditBridgeModalOpen = false"
+    >
+      <div class="modal-card" role="dialog" aria-labelledby="modal-edit-bridge-title" aria-modal="true">
+        <header class="modal-header">
+          <h2 id="modal-edit-bridge-title">Editar Bridge ({{ editBridgeForm.name }})</h2>
+          <button type="button" class="btn-close" @click="isEditBridgeModalOpen = false">✕</button>
+        </header>
+        <form class="modal-form" @submit.prevent="handleUpdateBridge">
+          <div class="form-group">
+            <label for="edit-bridge-name">Nombre del Bridge:</label>
+            <input id="edit-bridge-name" v-model="editBridgeForm.name" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-bridge-protocol">Protocolo Spanning Tree (STP):</label>
+            <select id="edit-bridge-protocol" v-model="editBridgeForm.protocol_mode">
+              <option value="rstp">RSTP (Rapid STP)</option>
+              <option value="stp">STP Estándar</option>
+              <option value="mstp">MSTP</option>
+              <option value="none">Sin STP (None)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="edit-bridge-mtu">MTU:</label>
+            <input id="edit-bridge-mtu" v-model.number="editBridgeForm.mtu" type="number" min="68" max="65535" />
+          </div>
+          <div class="form-group form-group--checkbox">
+            <label>
+              <input v-model="editBridgeForm.vlan_filtering" type="checkbox" />
+              Activar VLAN Filtering (v7 Hardware Offload)
+            </label>
+          </div>
+          <div class="form-group form-group--checkbox">
+            <label>
+              <input v-model="editBridgeForm.disabled" type="checkbox" />
+              Deshabilitado (Disabled)
+            </label>
+          </div>
+          <div class="form-group">
+            <label for="edit-bridge-comment">Comentario:</label>
+            <input id="edit-bridge-comment" v-model="editBridgeForm.comment" />
+          </div>
+          <footer class="modal-footer">
+            <button type="button" class="btn-secondary" @click="isEditBridgeModalOpen = false">
+              Cancelar
+            </button>
+            <button type="submit" class="btn-primary" :disabled="isLoading">
+              Guardar Cambios
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Editar Puerto de Bridge -->
+    <div
+      v-if="isEditPortModalOpen"
+      class="modal-backdrop"
+      @click.self="isEditPortModalOpen = false"
+    >
+      <div class="modal-card" role="dialog" aria-labelledby="modal-edit-port-title" aria-modal="true">
+        <header class="modal-header">
+          <h2 id="modal-edit-port-title">Editar Puerto de Bridge ({{ editPortForm.interface }})</h2>
+          <button type="button" class="btn-close" @click="isEditPortModalOpen = false">✕</button>
+        </header>
+        <form class="modal-form" @submit.prevent="handleUpdatePort">
+          <div class="form-group">
+            <label for="edit-port-iface">Interfaz Física:</label>
+            <input id="edit-port-iface" v-model="editPortForm.interface" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-port-bridge">Bridge Destino:</label>
+            <input id="edit-port-bridge" v-model="editPortForm.bridge" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-port-pvid">PVID (Port VLAN ID):</label>
+            <input id="edit-port-pvid" v-model.number="editPortForm.pvid" type="number" min="1" max="4094" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-port-frame-types">Frame Types:</label>
+            <select id="edit-port-frame-types" v-model="editPortForm.frame_types">
+              <option value="admit-all">Admit All (Tagged y Untagged)</option>
+              <option value="admit-only-untagged-and-priority-tagged">Solo Untagged (Acceso)</option>
+              <option value="admit-only-vlan-tagged">Solo Tagged (Trunk)</option>
+            </select>
+          </div>
+          <div class="form-group form-group--checkbox">
+            <label>
+              <input v-model="editPortForm.hw" type="checkbox" />
+              Hardware Offload (L2 Switch Chip)
+            </label>
+          </div>
+          <div class="form-group">
+            <label for="edit-port-comment">Comentario:</label>
+            <input id="edit-port-comment" v-model="editPortForm.comment" />
+          </div>
+          <footer class="modal-footer">
+            <button type="button" class="btn-secondary" @click="isEditPortModalOpen = false">
+              Cancelar
+            </button>
+            <button type="submit" class="btn-primary" :disabled="isLoading">
+              Guardar Cambios
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Editar VLAN de Bridge -->
+    <div
+      v-if="isEditVlanModalOpen"
+      class="modal-backdrop"
+      @click.self="isEditVlanModalOpen = false"
+    >
+      <div class="modal-card" role="dialog" aria-labelledby="modal-edit-vlan-title" aria-modal="true">
+        <header class="modal-header">
+          <h2 id="modal-edit-vlan-title">Editar VLAN en Bridge</h2>
+          <button type="button" class="btn-close" @click="isEditVlanModalOpen = false">✕</button>
+        </header>
+        <form class="modal-form" @submit.prevent="handleUpdateVlan">
+          <div class="form-group">
+            <label for="edit-vlan-ids">VLAN IDs:</label>
+            <input id="edit-vlan-ids" v-model="editVlanForm.vlan_ids" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-vlan-tagged">Puertos Tagged:</label>
+            <input id="edit-vlan-tagged" v-model="editVlanForm.tagged" />
+          </div>
+          <div class="form-group">
+            <label for="edit-vlan-untagged">Puertos Untagged:</label>
+            <input id="edit-vlan-untagged" v-model="editVlanForm.untagged" />
+          </div>
+          <div class="form-group">
+            <label for="edit-vlan-comment">Comentario:</label>
+            <input id="edit-vlan-comment" v-model="editVlanForm.comment" />
+          </div>
+          <footer class="modal-footer">
+            <button type="button" class="btn-secondary" @click="isEditVlanModalOpen = false">
+              Cancelar
+            </button>
+            <button type="submit" class="btn-primary" :disabled="isLoading">
+              Guardar Cambios
             </button>
           </footer>
         </form>

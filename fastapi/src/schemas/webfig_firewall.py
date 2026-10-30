@@ -66,6 +66,14 @@ class AddressListCreateRequest(StrictBaseModel):
     comment: str | None = None
 
 
+class AddressListUpdateRequest(StrictBaseModel):
+    list: str | None = Field(default=None, min_length=1, max_length=64)
+    address: str | None = Field(default=None, min_length=1, max_length=64)
+    timeout: str | None = None
+    comment: str | None = None
+    disabled: bool | None = None
+
+
 # ============================================================================
 # ROUTING AVANZADO v7 (TABLES, RULES, BGP, OSPF, BFD, FILTERS)
 # ============================================================================
@@ -77,12 +85,29 @@ class RoutingTableCreateRequest(StrictBaseModel):
     comment: str | None = None
 
 
+class RoutingTableUpdateRequest(StrictBaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=64)
+    fib: bool | None = None
+    comment: str | None = None
+    disabled: bool | None = None
+
+
 class RoutingRuleCreateRequest(StrictBaseModel):
     table: str = Field(..., min_length=1, max_length=64)
     action: str = Field(default="lookup", min_length=1, max_length=32)
     src_address: str | None = None
     dst_address: str | None = None
     routing_mark: str | None = None
+
+
+class RoutingRuleUpdateRequest(StrictBaseModel):
+    table: str | None = Field(default=None, min_length=1, max_length=64)
+    action: str | None = Field(default=None, min_length=1, max_length=32)
+    src_address: str | None = None
+    dst_address: str | None = None
+    routing_mark: str | None = None
+    disabled: bool | None = None
+    comment: str | None = None
 
 
 class BgpConnectionCreateRequest(StrictBaseModel):

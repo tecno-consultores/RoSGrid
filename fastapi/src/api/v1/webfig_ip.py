@@ -29,10 +29,15 @@ from src.schemas.webfig_l1_net import (
     DhcpNetworkUpdateRequest,
     DhcpServerCreateRequest,
     DhcpServerUpdateRequest,
+    DnsSettingsUpdateRequest,
+    DnsStaticCreateRequest,
+    DnsStaticUpdateRequest,
     IpAddressCreateRequest,
     IpAddressUpdateRequest,
     IpArpCreateRequest,
+    IpArpUpdateRequest,
     IpPoolCreateRequest,
+    IpPoolUpdateRequest,
     IpRouteCreateRequest,
     IpRouteUpdateRequest,
     IpServiceUpdateRequest,
@@ -365,7 +370,44 @@ async def create_arp(
     if payload.comment:
         body["comment"] = payload.comment
     async with client:
-        return await client.put("/ip/arp", json_data=body)
+        res = await client.put("/ip/arp", json_data=body)
+    await invalidate_webfig_cache(get_redis_client(), uuid.UUID(claims["tid"]), router_id, "/ip/arp")
+    return res
+
+
+@router.patch("/arp/{item_id}")
+async def update_arp(
+    router_id: uuid.UUID,
+    item_id: str,
+    payload: IpArpUpdateRequest,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Modifica una entrada ARP estática existente."""
+    _, client = await get_router_and_client(router_id, claims, db)
+    patch_data: dict[str, Any] = {}
+    if payload.address is not None:
+        patch_data["address"] = payload.address
+    if payload.mac_address is not None:
+        patch_data["mac-address"] = payload.mac_address
+    if payload.interface is not None:
+        patch_data["interface"] = payload.interface
+    if payload.disabled is not None:
+        patch_data["disabled"] = payload.disabled
+    if payload.comment is not None:
+        patch_data["comment"] = payload.comment
+    async with client:
+        res = await client.patch(f"/ip/arp/{item_id}", json_data=patch_data)
+    await invalidate_webfig_cache(get_redis_client(), uuid.UUID(claims["tid"]), router_id, "/ip/arp")
+    return res
 
 
 @router.delete("/arp/{item_id}")
@@ -378,7 +420,9 @@ async def delete_arp(
     """Limpia o elimina una entrada ARP."""
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
-        return await client.delete(f"/ip/arp/{item_id}")
+        res = await client.delete(f"/ip/arp/{item_id}")
+    await invalidate_webfig_cache(get_redis_client(), uuid.UUID(claims["tid"]), router_id, "/ip/arp")
+    return res
 
 
 # ============================================================================
@@ -441,6 +485,79 @@ async def create_pool(
             if existing is None:
                 raise
             res = await client.patch(f"/ip/pool/{existing['.id']}", json_data=body)
+    await invalidate_webfig_cache(get_redis_client(), uuid.UUID(claims["tid"]), router_id, "/ip/pool")
+    return res
+
+
+@router.patch("/pools/{item_id}")
+async def update_pool(
+    router_id: uuid.UUID,
+    item_id: str,
+    payload: IpPoolUpdateRequest,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Modifica los rangos, nombre o next-pool de un pool IP existente."""
+    _, client = await get_router_and_client(router_id, claims, db)
+    patch_data: dict[str, Any] = {}
+    if payload.name is not None:
+        patch_data["name"] = payload.name
+    if payload.ranges is not None:
+        patch_data["ranges"] = payload.ranges
+    if payload.next_pool is not None:
+        patch_data["next-pool"] = payload.next_pool
+    if payload.comment is not None:
+        patch_data["comment"] = payload.comment
+
+    async with client:
+        before = await client.get(f"/ip/pool/{item_id}")
+        res = await execute_safe_mutation(
+            client=client,
+            menu="ip/pool",
+            action="update",
+            item_id=item_id,
+            before_state=before if isinstance(before, dict) else {},
+            coro_fn=lambda: client.patch(f"/ip/pool/{item_id}", json_data=patch_data),
+        )
+    await invalidate_webfig_cache(get_redis_client(), uuid.UUID(claims["tid"]), router_id, "/ip/pool")
+    return res
+
+
+@router.delete("/pools/{item_id}")
+async def delete_pool(
+    router_id: uuid.UUID,
+    item_id: str,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Elimina un pool de conexiones IP bajo Safe Mode."""
+    _, client = await get_router_and_client(router_id, claims, db)
+    async with client:
+        before = await client.get(f"/ip/pool/{item_id}")
+        res = await execute_safe_mutation(
+            client=client,
+            menu="ip/pool",
+            action="delete",
+            item_id=item_id,
+            before_state=before if isinstance(before, dict) else {},
+            coro_fn=lambda: client.delete(f"/ip/pool/{item_id}"),
+        )
     await invalidate_webfig_cache(get_redis_client(), uuid.UUID(claims["tid"]), router_id, "/ip/pool")
     return res
 
@@ -770,12 +887,16 @@ async def update_dhcp_network(
     """Modifica una red existente del servidor DHCP."""
     _, client = await get_router_and_client(router_id, claims, db)
     patch_data: dict[str, Any] = {}
+    if payload.address is not None:
+        patch_data["address"] = payload.address
     if payload.gateway is not None:
         patch_data["gateway"] = payload.gateway
     if payload.dns_server is not None:
         patch_data["dns-server"] = payload.dns_server
     if payload.domain is not None:
         patch_data["domain"] = payload.domain
+    if payload.ntp_server is not None:
+        patch_data["ntp-server"] = payload.ntp_server
     if payload.comment is not None:
         patch_data["comment"] = payload.comment
 
@@ -900,12 +1021,16 @@ async def update_dhcp_client(
     """Modifica opciones de un cliente DHCP WAN."""
     _, client = await get_router_and_client(router_id, claims, db)
     patch_data: dict[str, Any] = {}
+    if payload.interface is not None:
+        patch_data["interface"] = payload.interface
     if payload.add_default_route is not None:
         patch_data["add-default-route"] = "yes" if payload.add_default_route else "no"
     if payload.use_peer_dns is not None:
         patch_data["use-peer-dns"] = "yes" if payload.use_peer_dns else "no"
     if payload.use_peer_ntp is not None:
         patch_data["use-peer-ntp"] = "yes" if payload.use_peer_ntp else "no"
+    if payload.default_route_distance is not None:
+        patch_data["default-route-distance"] = payload.default_route_distance
     if payload.disabled is not None:
         patch_data["disabled"] = payload.disabled
     if payload.comment is not None:
@@ -913,7 +1038,7 @@ async def update_dhcp_client(
 
     async with client:
         before = await client.get(f"/ip/dhcp-client/{item_id}")
-        return await execute_safe_mutation(
+        res = await execute_safe_mutation(
             client=client,
             menu="ip/dhcp-client",
             action="update",
@@ -921,6 +1046,8 @@ async def update_dhcp_client(
             before_state=before if isinstance(before, dict) else {},
             coro_fn=lambda: client.patch(f"/ip/dhcp-client/{item_id}", json_data=patch_data),
         )
+    await invalidate_webfig_cache(get_redis_client(), uuid.UUID(claims["tid"]), router_id, "/ip/dhcp-client")
+    return res
 
 
 @router.delete("/dhcp-clients/{item_id}")
@@ -1015,6 +1142,166 @@ async def get_dns_info(
             "config": dns_config if isinstance(dns_config, dict) else {},
             "static_records": static_records if isinstance(static_records, list) else [],
         }
+
+
+@router.patch("/dns")
+@router.post("/dns/set")
+async def update_dns_settings(
+    router_id: uuid.UUID,
+    payload: DnsSettingsUpdateRequest,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Actualiza los parámetros globales del resolver DNS del router (menú singleton /ip/dns/set)."""
+    _, client = await get_router_and_client(router_id, claims, db)
+    patch_data: dict[str, Any] = {}
+    if payload.servers is not None:
+        patch_data["servers"] = payload.servers
+    if payload.allow_remote_requests is not None:
+        patch_data["allow-remote-requests"] = "yes" if payload.allow_remote_requests else "no"
+    if payload.max_udp_packet_size is not None:
+        patch_data["max-udp-packet-size"] = payload.max_udp_packet_size
+    if payload.cache_size is not None:
+        patch_data["cache-size"] = payload.cache_size
+    if payload.cache_max_ttl is not None:
+        patch_data["cache-max-ttl"] = payload.cache_max_ttl
+    if payload.use_doh_server is not None:
+        patch_data["use-doh-server"] = payload.use_doh_server
+    if payload.verify_doh_cert is not None:
+        patch_data["verify-doh-cert"] = "yes" if payload.verify_doh_cert else "no"
+
+    async with client:
+        before = await client.get("/ip/dns")
+        return await execute_safe_mutation(
+            client=client,
+            menu="ip/dns",
+            action="set",
+            before_state=before if isinstance(before, dict) else {},
+            coro_fn=lambda: client.post("/ip/dns/set", json_data=patch_data),
+        )
+
+
+@router.post("/dns/static", status_code=status.HTTP_201_CREATED)
+async def create_dns_static(
+    router_id: uuid.UUID,
+    payload: DnsStaticCreateRequest,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Crea un registro DNS estático local en el router."""
+    _, client = await get_router_and_client(router_id, claims, db)
+    body: dict[str, Any] = {
+        "name": payload.name,
+        "type": payload.type,
+        "ttl": payload.ttl,
+        "disabled": payload.disabled,
+    }
+    if payload.address:
+        body["address"] = payload.address
+    if payload.cname:
+        body["cname"] = payload.cname
+    if payload.comment:
+        body["comment"] = payload.comment
+
+    async with client:
+        return await execute_safe_mutation(
+            client=client,
+            menu="ip/dns/static",
+            action="create",
+            before_state=body,
+            coro_fn=lambda: client.put("/ip/dns/static", json_data=body),
+        )
+
+
+@router.patch("/dns/static/{item_id}")
+async def update_dns_static(
+    router_id: uuid.UUID,
+    item_id: str,
+    payload: DnsStaticUpdateRequest,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Modifica un registro DNS estático existente."""
+    _, client = await get_router_and_client(router_id, claims, db)
+    patch_data: dict[str, Any] = {}
+    if payload.name is not None:
+        patch_data["name"] = payload.name
+    if payload.address is not None:
+        patch_data["address"] = payload.address
+    if payload.cname is not None:
+        patch_data["cname"] = payload.cname
+    if payload.type is not None:
+        patch_data["type"] = payload.type
+    if payload.ttl is not None:
+        patch_data["ttl"] = payload.ttl
+    if payload.disabled is not None:
+        patch_data["disabled"] = payload.disabled
+    if payload.comment is not None:
+        patch_data["comment"] = payload.comment
+
+    async with client:
+        before = await client.get(f"/ip/dns/static/{item_id}")
+        return await execute_safe_mutation(
+            client=client,
+            menu="ip/dns/static",
+            action="update",
+            item_id=item_id,
+            before_state=before if isinstance(before, dict) else {},
+            coro_fn=lambda: client.patch(f"/ip/dns/static/{item_id}", json_data=patch_data),
+        )
+
+
+@router.delete("/dns/static/{item_id}")
+async def delete_dns_static(
+    router_id: uuid.UUID,
+    item_id: str,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Elimina un registro DNS estático."""
+    _, client = await get_router_and_client(router_id, claims, db)
+    async with client:
+        before = await client.get(f"/ip/dns/static/{item_id}")
+        return await execute_safe_mutation(
+            client=client,
+            menu="ip/dns/static",
+            action="delete",
+            item_id=item_id,
+            before_state=before if isinstance(before, dict) else {},
+            coro_fn=lambda: client.delete(f"/ip/dns/static/{item_id}"),
+        )
 
 
 @router.post("/dns/flush-cache")

@@ -1305,5 +1305,141 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
         await flushPromises();
       }
     }
+
+    // Editar y eliminar interfaz de túnel WireGuard y Peer
+    vi.spyOn(http, 'patch').mockResolvedValue({ status: 200, data: { status: 'success' }, headers: new Headers() });
+    vi.spyOn(http, 'delete').mockResolvedValue({ status: 200, data: { status: 'success' }, headers: new Headers() });
+    const wgVm = wrapper.vm as any;
+    wgVm.openEditIfaceModal({ id: '*wg1', name: 'wg0', listen_port: 13231, mtu: 1420, public_key: 'abc=', running: true, disabled: false, comment: 'Túnel' });
+    await wgVm.handleUpdateIface();
+    await flushPromises();
+
+    vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
+    await wgVm.handleDeleteIface({ id: '*wg1', name: 'wg0', listen_port: 13231, mtu: 1420, public_key: 'abc=', running: true, disabled: false, comment: '' });
+    await flushPromises();
+
+    wgVm.openEditPeerModal({
+      id: '*wgp1',
+      interface: 'wg0',
+      public_key: 'peerkey=',
+      allowed_address: '10.0.0.2/32',
+      endpoint_address: '1.2.3.4',
+      endpoint_port: 51820,
+      persistent_keepalive: '25s',
+      rx: '0',
+      tx: '0',
+      last_handshake: 'never',
+      disabled: false,
+      comment: 'Peer 1',
+    });
+    await wgVm.handleUpdatePeer();
+    await flushPromises();
+
+    vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
+    await wgVm.handleDeletePeer({
+      id: '*wgp1',
+      interface: 'wg0',
+      public_key: 'peerkey=',
+      allowed_address: '10.0.0.2/32',
+      endpoint_address: '1.2.3.4',
+      endpoint_port: 51820,
+      persistent_keepalive: '25s',
+      rx: '0',
+      tx: '0',
+      last_handshake: 'never',
+      disabled: false,
+      comment: 'Peer 1',
+    });
+    await flushPromises();
+  });
+
+  it('BridgeView y PppAndQueuesView — permiten sacar puertos de un bridge y editar secretos/perfiles/servidores PPPoE', async () => {
+    vi.spyOn(http, 'get').mockResolvedValue({ status: 200, data: [], headers: new Headers() });
+    const patchSpy = vi.spyOn(http, 'patch').mockResolvedValue({ status: 200, data: { status: 'success' }, headers: new Headers() });
+    const deleteSpy = vi.spyOn(http, 'delete').mockResolvedValue({ status: 200, data: { status: 'success' }, headers: new Headers() });
+
+    // 1. BridgeView: editar puerto y sacar puerto del bridge
+    const bridgeWrapper = mount(BridgeView);
+    await flushPromises();
+    const brVm = bridgeWrapper.vm as any;
+    brVm.openEditPortModal({
+      id: '*bp1',
+      interface: 'ether2',
+      bridge: 'bridge1',
+      pvid: 10,
+      frame_types: 'admit-all',
+      ingress_filtering: true,
+      hw: true,
+      horizon: 'none',
+      role: 'designated-port',
+      disabled: false,
+      comment: 'Trunk',
+    });
+    await brVm.handleUpdatePort();
+    await flushPromises();
+    expect(patchSpy).toHaveBeenCalledWith(
+      expect.stringContaining('/webfig/interfaces/bridge/ports/*bp1'),
+      expect.any(Object),
+    );
+
+    vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
+    await brVm.handleDeletePort({
+      id: '*bp1',
+      interface: 'ether2',
+      bridge: 'bridge1',
+      pvid: 10,
+      frame_types: 'admit-all',
+      ingress_filtering: true,
+      hw: true,
+      horizon: 'none',
+      role: 'designated-port',
+      disabled: false,
+      comment: 'Trunk',
+    });
+    await flushPromises();
+    expect(deleteSpy).toHaveBeenCalledWith(expect.stringContaining('/webfig/interfaces/bridge/ports/*bp1'));
+
+    // 2. PppAndQueuesView: editar secreto, perfil y servidor PPPoE
+    const pppWrapper = mount(PppAndQueuesView);
+    await flushPromises();
+    const pppVm = pppWrapper.vm as any;
+
+    pppVm.openEditSecretModal({
+      id: '*sec1',
+      name: 'user1',
+      service: 'pppoe',
+      profile: 'default',
+      local_address: '10.0.0.1',
+      remote_address: '10.0.0.2',
+      disabled: false,
+      comment: 'Cliente 1',
+    });
+    await pppVm.handleUpdateSecret();
+    await flushPromises();
+
+    pppVm.openEditProfileModal({
+      id: '*prof1',
+      name: 'plan-100m',
+      local_address: '10.0.0.1',
+      remote_address: 'pool-pppoe',
+      rate_limit: '100M/100M',
+      dns_server: '1.1.1.1',
+      only_one: 'yes',
+    });
+    await pppVm.handleUpdateProfile();
+    await flushPromises();
+
+    pppVm.openEditServerModal({
+      id: '*srv1',
+      service_name: 'pppoe-isp',
+      interface: 'ether2',
+      default_profile: 'plan-100m',
+      max_mtu: 1480,
+      max_mru: 1480,
+      one_session_per_host: true,
+      disabled: false,
+    });
+    await pppVm.handleUpdateServer();
+    await flushPromises();
   });
 });

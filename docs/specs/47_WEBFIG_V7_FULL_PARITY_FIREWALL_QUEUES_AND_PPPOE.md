@@ -89,11 +89,12 @@ Eliminar de raíz la condición de "solo lectura" en los módulos más utilizado
 - Confirmación mediante diálogo modal accesible con tecla `Escape` o `Enter`.
 - Actualización inmediata de la lista de sesiones activas sin recarga de página.
 
-### 4.2 Edición y Borrado de Secrets y Profiles
-- Añadir botones de acción por fila en las tablas `Secrets` y `Profiles`:
-  - `[ ✏ Editar ]`: Abre el modal con datos pre-cargados.
+### 4.2 Edición y Borrado de Secrets, Profiles y Servidores Concentradores PPPoE
+- Añadir botones de acción por fila en las tablas `Secrets`, `Profiles` y `PPPoE Servers`:
+  - `[ ✏ Editar ]`: Abre el modal con datos pre-cargados (`PATCH /secrets/{id}`, `PATCH /profiles/{id}`, `PATCH /pppoe-servers/{id}` incluyendo `name`, `service_name`, `interface`, `default_profile`, `authentication`, `max_mtu`, `max_mru`, `one_session_per_host`, `routes`, `rate_limit`, `local_address`, `remote_address`, `comment`).
   - `[ ⏸ Deshabilitar / ▶ Habilitar ]`: Conmuta la bandera `disabled` mediante `PATCH`.
-  - `[ 🗑 Eliminar ]`: Confirmación previa y eliminación mediante `DELETE`.
+  - `[ 🗑 Eliminar ]`: Confirmación previa y eliminación mediante `DELETE` (`DELETE /secrets/{id}`, `DELETE /profiles/{id}`, `DELETE /pppoe-servers/{id}`).
+- En `FirewallRulesView.vue` (pestaña `Address-Lists`), se habilita igualmente la creación, edición (`PATCH /{proto}/address-lists/{id}`) y eliminación (`DELETE /{proto}/address-lists/{id}`) de entradas.
 
 ---
 

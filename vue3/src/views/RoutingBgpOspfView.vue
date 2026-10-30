@@ -60,6 +60,17 @@
     comment: '',
     disabled: false,
   });
+  const isEditRouteModalOpen = ref(false);
+  const editingRouteId = ref('');
+  const editRouteForm = ref({
+    dst_address: '',
+    gateway: '',
+    distance: 1,
+    routing_table: 'main',
+    check_gateway: 'none',
+    comment: '',
+    disabled: false,
+  });
 
   const isBgpModalOpen = ref(false);
   const newBgp = ref({
@@ -71,15 +82,35 @@
     connect: true,
     listen: true,
   });
+  const isEditBgpModalOpen = ref(false);
+  const editingBgpId = ref('');
+  const editBgpForm = ref({
+    name: '',
+    remote_address: '',
+    remote_as: 65001,
+    disabled: false,
+  });
 
   const isTableModalOpen = ref(false);
   const newTable = ref({ name: 'to_wan2', fib: true });
+  const isEditTableModalOpen = ref(false);
+  const editingTableId = ref('');
+  const editTableForm = ref({ name: '', fib: true, comment: '' });
 
   const isRuleModalOpen = ref(false);
   const newRule = ref({
     src_address: '192.168.88.100/32',
     action: 'lookup-only-in-table',
     table: 'to_wan2',
+  });
+  const isEditRuleModalOpen = ref(false);
+  const editingRuleId = ref('');
+  const editRuleForm = ref({
+    src_address: '',
+    dst_address: '',
+    action: 'lookup-only-in-table',
+    table: 'to_wan2',
+    comment: '',
   });
 
   const bgpColumns: TableColumn<BgpSessionItem>[] = [
@@ -93,6 +124,7 @@
     },
     { key: 'prefixes_received', label: 'Prefijos RX', align: 'right' },
     { key: 'uptime', label: 'Uptime', align: 'right' },
+    { key: 'actions', label: 'Acciones', align: 'center' },
   ];
 
   const ospfColumns: TableColumn<OspfNeighborItem>[] = [
@@ -192,6 +224,191 @@
     } catch (err: any) {
       webFigStore.stopSafeMode?.();
       errorMessage.value = err?.detail || 'Error al eliminar ruta.';
+    }
+  }
+
+  function openEditRouteModal(r: StaticRouteItem) {
+    editingRouteId.value = r.id;
+    editRouteForm.value = {
+      dst_address: r.dst_address,
+      gateway: r.gateway,
+      distance: Number(r.distance || 1),
+      routing_table: r.routing_table || 'main',
+      check_gateway: r.check_gateway || 'none',
+      comment: String(r.comment || ''),
+      disabled: Boolean(r.disabled),
+    };
+    isEditRouteModalOpen.value = true;
+  }
+
+  async function handleUpdateRoute() {
+    if (!editingRouteId.value) return;
+    try {
+      const res = await http.patch(
+        `/api/v1/routers/${routerId.value}/webfig/ip/routes/${encodeURIComponent(editingRouteId.value)}`,
+        {
+          gateway: editRouteForm.value.gateway,
+          distance: Number(editRouteForm.value.distance),
+          routing_table: editRouteForm.value.routing_table,
+          check_gateway: editRouteForm.value.check_gateway !== 'none' ? editRouteForm.value.check_gateway : undefined,
+          comment: editRouteForm.value.comment,
+          disabled: editRouteForm.value.disabled,
+        },
+      );
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      actionMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Solicitud en espera de aprobación humana en Maker-Checker.'
+        : `Ruta hacia ${editRouteForm.value.dst_address} actualizada.`;
+      isEditRouteModalOpen.value = false;
+      loadRoutingData();
+    } catch (err: any) {
+      webFigStore.stopSafeMode?.();
+      errorMessage.value = err?.detail || 'Error al actualizar ruta.';
+    }
+  }
+
+  function openEditBgpModal(peer: any) {
+    editingBgpId.value = String(peer.id || peer['.id'] || '');
+    editBgpForm.value = {
+      name: String(peer.name || ''),
+      remote_address: String(peer.remote_address || peer['remote.address'] || ''),
+      remote_as: Number(peer.remote_as || peer['remote.as'] || 65001),
+      disabled: Boolean(peer.disabled),
+    };
+    isEditBgpModalOpen.value = true;
+  }
+
+  async function handleUpdateBgpConnection() {
+    if (!editingBgpId.value) return;
+    try {
+      const res = await http.patch(
+        `/api/v1/routers/${routerId.value}/webfig/routing/bgp/connections/${encodeURIComponent(editingBgpId.value)}`,
+        {
+          remote_address: editBgpForm.value.remote_address,
+          remote_as: Number(editBgpForm.value.remote_as),
+          disabled: editBgpForm.value.disabled,
+        },
+      );
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      actionMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Solicitud BGP en espera de aprobación humana en Maker-Checker.'
+        : `Conexión BGP "${editBgpForm.value.name}" actualizada.`;
+      isEditBgpModalOpen.value = false;
+      loadRoutingData();
+    } catch (err: any) {
+      webFigStore.stopSafeMode?.();
+      errorMessage.value = err?.detail || 'Error al actualizar conexión BGP.';
+    }
+  }
+
+  async function handleDeleteBgpConnection(peer: any) {
+    if (!confirm(`¿Eliminar la conexión BGP "${peer.name}"?`)) return;
+    try {
+      const res = await http.delete(
+        `/api/v1/routers/${routerId.value}/webfig/routing/bgp/connections/${encodeURIComponent(peer.id || peer['.id'])}`,
+      );
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      actionMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Solicitud BGP en espera de aprobación humana en Maker-Checker.'
+        : `Conexión BGP "${peer.name}" eliminada.`;
+      loadRoutingData();
+    } catch (err: any) {
+      webFigStore.stopSafeMode?.();
+      errorMessage.value = err?.detail || 'Error al eliminar conexión BGP.';
+    }
+  }
+
+  function openEditTableModal(tbl: any) {
+    editingTableId.value = String(tbl.id || tbl['.id'] || '');
+    editTableForm.value = {
+      name: String(tbl.name || ''),
+      fib: tbl.fib === 'true' || tbl.fib === true,
+      comment: String(tbl.comment || ''),
+    };
+    isEditTableModalOpen.value = true;
+  }
+
+  async function handleUpdateTable() {
+    if (!editingTableId.value) return;
+    try {
+      const res = await http.patch(
+        `/api/v1/routers/${routerId.value}/webfig/routing/tables/${encodeURIComponent(editingTableId.value)}`,
+        editTableForm.value,
+      );
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      actionMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Solicitud FIB en espera de aprobación humana en Maker-Checker.'
+        : `Tabla FIB "${editTableForm.value.name}" actualizada.`;
+      isEditTableModalOpen.value = false;
+      loadRoutingData();
+    } catch (err: any) {
+      webFigStore.stopSafeMode?.();
+      errorMessage.value = err?.detail || 'Error al actualizar tabla FIB.';
+    }
+  }
+
+  async function handleDeleteTable(tbl: any) {
+    if (!confirm(`¿Eliminar la tabla FIB "${tbl.name}"?`)) return;
+    try {
+      const res = await http.delete(
+        `/api/v1/routers/${routerId.value}/webfig/routing/tables/${encodeURIComponent(tbl.id || tbl['.id'])}`,
+      );
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      actionMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Solicitud FIB en espera de aprobación humana en Maker-Checker.'
+        : `Tabla FIB "${tbl.name}" eliminada.`;
+      loadRoutingData();
+    } catch (err: any) {
+      webFigStore.stopSafeMode?.();
+      errorMessage.value = err?.detail || 'Error al eliminar tabla FIB.';
+    }
+  }
+
+  function openEditRuleModal(rule: any) {
+    editingRuleId.value = String(rule.id || rule['.id'] || '');
+    editRuleForm.value = {
+      src_address: String(rule['src-address'] || rule.src_address || ''),
+      dst_address: String(rule['dst-address'] || rule.dst_address || ''),
+      action: String(rule.action || 'lookup-only-in-table'),
+      table: String(rule.table || 'main'),
+      comment: String(rule.comment || ''),
+    };
+    isEditRuleModalOpen.value = true;
+  }
+
+  async function handleUpdateRule() {
+    if (!editingRuleId.value) return;
+    try {
+      const res = await http.patch(
+        `/api/v1/routers/${routerId.value}/webfig/routing/rules/${encodeURIComponent(editingRuleId.value)}`,
+        editRuleForm.value,
+      );
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      actionMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Solicitud PBR en espera de aprobación humana en Maker-Checker.'
+        : `Regla PBR actualizada.`;
+      isEditRuleModalOpen.value = false;
+      loadRoutingData();
+    } catch (err: any) {
+      webFigStore.stopSafeMode?.();
+      errorMessage.value = err?.detail || 'Error al actualizar regla PBR.';
+    }
+  }
+
+  async function handleDeleteRule(rule: any) {
+    if (!confirm(`¿Eliminar la regla PBR hacia tabla "${rule.table}"?`)) return;
+    try {
+      const res = await http.delete(
+        `/api/v1/routers/${routerId.value}/webfig/routing/rules/${encodeURIComponent(rule.id || rule['.id'])}`,
+      );
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      actionMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Solicitud PBR en espera de aprobación humana en Maker-Checker.'
+        : `Regla PBR eliminada.`;
+      loadRoutingData();
+    } catch (err: any) {
+      webFigStore.stopSafeMode?.();
+      errorMessage.value = err?.detail || 'Error al eliminar regla PBR.';
     }
   }
 
@@ -352,7 +569,28 @@
         :rows="bgpSessions"
         caption="Sesiones de Enrutamiento BGP v7"
         row-key="id"
-      />
+      >
+        <template #actions="{ row }">
+          <div class="row-actions-group">
+            <button
+              type="button"
+              class="btn-icon"
+              title="Editar Conexión BGP"
+              @click="openEditBgpModal(row)"
+            >
+              ✏️
+            </button>
+            <button
+              type="button"
+              class="btn-icon btn-danger"
+              title="Eliminar Conexión BGP"
+              @click="handleDeleteBgpConnection(row)"
+            >
+              🗑
+            </button>
+          </div>
+        </template>
+      </RgDataTable>
     </div>
 
     <!-- VISTA 2: VECINOS OSPF -->
@@ -398,6 +636,14 @@
               <button
                 type="button"
                 class="btn-icon"
+                title="Editar Ruta Estática"
+                @click="openEditRouteModal(r)"
+              >
+                ✏️
+              </button>
+              <button
+                type="button"
+                class="btn-icon"
                 :title="r.disabled ? 'Habilitar Ruta' : 'Deshabilitar Ruta'"
                 @click="handleToggleRoute(r)"
               >
@@ -427,16 +673,21 @@
               <th>Nombre de la Tabla</th>
               <th>FIB</th>
               <th>Deshabilitada</th>
+              <th class="actions-col">Acciones</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="routingTables.length === 0">
-              <td colspan="3" class="empty-cell">No hay tablas FIB personalizadas.</td>
+              <td colspan="4" class="empty-cell">No hay tablas FIB personalizadas.</td>
             </tr>
             <tr v-for="t in routingTables" :key="t.id || t['.id']">
               <td class="font-bold text-cyan">{{ t.name }}</td>
               <td>{{ t.fib === 'true' || t.fib === true ? 'Sí' : 'No' }}</td>
               <td>{{ t.disabled === 'true' || t.disabled === true ? 'Sí' : 'No' }}</td>
+              <td class="actions-col">
+                <button type="button" class="btn-icon" title="Editar Tabla FIB" @click="openEditTableModal(t)">✏️</button>
+                <button type="button" class="btn-icon btn-danger" title="Eliminar Tabla FIB" @click="handleDeleteTable(t)">🗑</button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -450,16 +701,21 @@
               <th>IP Origen</th>
               <th>Acción</th>
               <th>Tabla de Consulta</th>
+              <th class="actions-col">Acciones</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="routingRules.length === 0">
-              <td colspan="3" class="empty-cell">No hay reglas PBR definidas.</td>
+              <td colspan="4" class="empty-cell">No hay reglas PBR definidas.</td>
             </tr>
             <tr v-for="rule in routingRules" :key="rule.id || rule['.id']">
               <td class="font-mono text-cyan">{{ rule['src-address'] || rule.src_address || 'any' }}</td>
               <td>{{ rule.action }}</td>
               <td class="font-bold">{{ rule.table }}</td>
+              <td class="actions-col">
+                <button type="button" class="btn-icon" title="Editar Regla PBR" @click="openEditRuleModal(rule)">✏️</button>
+                <button type="button" class="btn-icon btn-danger" title="Eliminar Regla PBR" @click="handleDeleteRule(rule)">🗑</button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -569,6 +825,106 @@
           <div class="modal-actions">
             <button type="button" class="btn-tactical btn-outline" @click="isRuleModalOpen = false">Cancelar</button>
             <button type="submit" class="btn-tactical btn-cyan">Crear Regla</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL: EDITAR RUTA ESTÁTICA -->
+    <div v-if="isEditRouteModalOpen" class="modal-backdrop">
+      <div class="modal-window">
+        <h2 class="modal-title">Editar Ruta Estática ({{ editRouteForm.dst_address }})</h2>
+        <form @submit.prevent="handleUpdateRoute">
+          <div class="form-group">
+            <label for="edit-route-gw">Puerta de Enlace (Gateway)</label>
+            <input id="edit-route-gw" v-model="editRouteForm.gateway" type="text" class="form-input font-mono" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-route-dist">Distancia Administrativa</label>
+            <input id="edit-route-dist" v-model.number="editRouteForm.distance" type="number" class="form-input font-mono" min="1" max="255" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-route-check">Check Gateway</label>
+            <select id="edit-route-check" v-model="editRouteForm.check_gateway" class="form-input">
+              <option value="none">Sin chequeo (none)</option>
+              <option value="ping">Ping ICMP</option>
+              <option value="arp">ARP Probe</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="edit-route-table">Tabla de Enrutamiento</label>
+            <input id="edit-route-table" v-model="editRouteForm.routing_table" type="text" class="form-input" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-route-comm">Comentario</label>
+            <input id="edit-route-comm" v-model="editRouteForm.comment" type="text" class="form-input" />
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-tactical btn-outline" @click="isEditRouteModalOpen = false">Cancelar</button>
+            <button type="submit" class="btn-tactical btn-cyan">Guardar Cambios</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL: EDITAR CONEXIÓN BGP -->
+    <div v-if="isEditBgpModalOpen" class="modal-backdrop">
+      <div class="modal-window">
+        <h2 class="modal-title">Editar Conexión BGP ({{ editBgpForm.name }})</h2>
+        <form @submit.prevent="handleUpdateBgpConnection">
+          <div class="form-group">
+            <label for="edit-bgp-rem-ip">IP Remota del Peer</label>
+            <input id="edit-bgp-rem-ip" v-model="editBgpForm.remote_address" type="text" class="form-input font-mono" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-bgp-rem-as">AS Remoto</label>
+            <input id="edit-bgp-rem-as" v-model.number="editBgpForm.remote_as" type="number" class="form-input font-mono" required />
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-tactical btn-outline" @click="isEditBgpModalOpen = false">Cancelar</button>
+            <button type="submit" class="btn-tactical btn-cyan">Guardar Cambios</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL: EDITAR TABLA FIB -->
+    <div v-if="isEditTableModalOpen" class="modal-backdrop">
+      <div class="modal-window">
+        <h2 class="modal-title">Editar Tabla FIB</h2>
+        <form @submit.prevent="handleUpdateTable">
+          <div class="form-group">
+            <label for="edit-tbl-name">Nombre de la Tabla</label>
+            <input id="edit-tbl-name" v-model="editTableForm.name" type="text" class="form-input" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-tbl-comm">Comentario</label>
+            <input id="edit-tbl-comm" v-model="editTableForm.comment" type="text" class="form-input" />
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-tactical btn-outline" @click="isEditTableModalOpen = false">Cancelar</button>
+            <button type="submit" class="btn-tactical btn-cyan">Guardar Cambios</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL: EDITAR REGLA PBR -->
+    <div v-if="isEditRuleModalOpen" class="modal-backdrop">
+      <div class="modal-window">
+        <h2 class="modal-title">Editar Regla PBR</h2>
+        <form @submit.prevent="handleUpdateRule">
+          <div class="form-group">
+            <label for="edit-rul-src">IP Origen</label>
+            <input id="edit-rul-src" v-model="editRuleForm.src_address" type="text" class="form-input font-mono" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-rul-tbl">Tabla Destino</label>
+            <input id="edit-rul-tbl" v-model="editRuleForm.table" type="text" class="form-input" required />
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-tactical btn-outline" @click="isEditRuleModalOpen = false">Cancelar</button>
+            <button type="submit" class="btn-tactical btn-cyan">Guardar Cambios</button>
           </div>
         </form>
       </div>

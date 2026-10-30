@@ -103,6 +103,18 @@ class BridgePortCreateRequest(StrictBaseModel):
     ingress_filtering: bool = False
 
 
+class BridgePortUpdateRequest(StrictBaseModel):
+    bridge: str | None = Field(default=None, min_length=1, max_length=64)
+    interface: str | None = Field(default=None, min_length=1, max_length=64)
+    pvid: int | None = Field(default=None, ge=1, le=4094)
+    hw: bool | None = None
+    frame_types: str | None = None
+    ingress_filtering: bool | None = None
+    horizon: str | None = None
+    disabled: bool | None = None
+    comment: str | None = None
+
+
 class BridgeVlanCreateRequest(StrictBaseModel):
     bridge: str = Field(..., min_length=1, max_length=64)
     vlan_ids: str = Field(..., min_length=1, max_length=64)
@@ -128,6 +140,14 @@ class WireGuardCreateRequest(StrictBaseModel):
     comment: str | None = None
 
 
+class WireGuardUpdateRequest(StrictBaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=64)
+    listen_port: int | None = Field(default=None, ge=1, le=65535)
+    mtu: int | None = Field(default=None, ge=68, le=65535)
+    disabled: bool | None = None
+    comment: str | None = None
+
+
 class WireGuardPeerCreateRequest(StrictBaseModel):
     interface: str = Field(..., min_length=1, max_length=64)
     public_key: str = Field(..., min_length=32, max_length=64)
@@ -135,6 +155,17 @@ class WireGuardPeerCreateRequest(StrictBaseModel):
     endpoint_address: str | None = None
     endpoint_port: int | None = Field(default=None, ge=1, le=65535)
     persistent_keepalive: int | str | None = None
+    comment: str | None = None
+
+
+class WireGuardPeerUpdateRequest(StrictBaseModel):
+    interface: str | None = Field(default=None, min_length=1, max_length=64)
+    public_key: str | None = Field(default=None, min_length=4, max_length=128)
+    allowed_address: str | None = Field(default=None, min_length=3)
+    endpoint_address: str | None = None
+    endpoint_port: int | None = Field(default=None, ge=1, le=65535)
+    persistent_keepalive: int | str | None = None
+    disabled: bool | None = None
     comment: str | None = None
 
 
@@ -186,10 +217,25 @@ class IpArpCreateRequest(StrictBaseModel):
     comment: str | None = None
 
 
+class IpArpUpdateRequest(StrictBaseModel):
+    address: str | None = Field(default=None, min_length=3, max_length=64)
+    mac_address: str | None = Field(default=None, min_length=11, max_length=17)
+    interface: str | None = Field(default=None, min_length=1, max_length=64)
+    comment: str | None = None
+    disabled: bool | None = None
+
+
 class IpPoolCreateRequest(StrictBaseModel):
     name: str = Field(..., min_length=1, max_length=64)
     ranges: str = Field(..., min_length=3)
     next_pool: str | None = Field(default=None, max_length=64)
+
+
+class IpPoolUpdateRequest(StrictBaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=64)
+    ranges: str | None = Field(default=None, min_length=3)
+    next_pool: str | None = Field(default=None, max_length=64)
+    comment: str | None = None
 
 
 class DhcpLeaseUpdateRequest(StrictBaseModel):
@@ -234,9 +280,11 @@ class DhcpNetworkCreateRequest(StrictBaseModel):
 
 
 class DhcpNetworkUpdateRequest(StrictBaseModel):
+    address: str | None = Field(default=None, min_length=3, max_length=64)
     gateway: str | None = None
     dns_server: str | None = None
     domain: str | None = None
+    ntp_server: str | None = None
     comment: str | None = None
 
 
@@ -250,11 +298,43 @@ class DhcpClientCreateRequest(StrictBaseModel):
 
 
 class DhcpClientUpdateRequest(StrictBaseModel):
+    interface: str | None = Field(default=None, min_length=1, max_length=64)
     add_default_route: bool | None = None
     use_peer_dns: bool | None = None
     use_peer_ntp: bool | None = None
+    default_route_distance: int | None = Field(default=None, ge=1, le=255)
     disabled: bool | None = None
     comment: str | None = None
+
+
+class DnsSettingsUpdateRequest(StrictBaseModel):
+    servers: str | None = None
+    allow_remote_requests: bool | None = None
+    max_udp_packet_size: int | None = Field(default=None, ge=512, le=65507)
+    cache_size: int | str | None = None
+    cache_max_ttl: str | None = None
+    use_doh_server: str | None = None
+    verify_doh_cert: bool | None = None
+
+
+class DnsStaticCreateRequest(StrictBaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+    address: str | None = Field(default=None, min_length=3, max_length=64)
+    cname: str | None = Field(default=None, max_length=255)
+    type: str | None = Field(default="A", max_length=16)
+    ttl: str | None = Field(default="1d", max_length=32)
+    comment: str | None = None
+    disabled: bool = False
+
+
+class DnsStaticUpdateRequest(StrictBaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    address: str | None = Field(default=None, min_length=3, max_length=64)
+    cname: str | None = Field(default=None, max_length=255)
+    type: str | None = Field(default=None, max_length=16)
+    ttl: str | None = Field(default=None, max_length=32)
+    comment: str | None = None
+    disabled: bool | None = None
 
 
 # ============================================================================
@@ -271,6 +351,15 @@ class Ipv6AddressCreateRequest(StrictBaseModel):
     comment: str | None = None
 
 
+class Ipv6AddressUpdateRequest(StrictBaseModel):
+    address: str | None = Field(default=None, min_length=3, max_length=64)
+    interface: str | None = Field(default=None, min_length=1, max_length=64)
+    advertise: bool | None = None
+    eui_64: bool | None = None
+    disabled: bool | None = None
+    comment: str | None = None
+
+
 class Ipv6DhcpClientCreateRequest(StrictBaseModel):
     interface: str = Field(..., min_length=1, max_length=64)
     request: str = Field(default="prefix", max_length=16)
@@ -278,6 +367,17 @@ class Ipv6DhcpClientCreateRequest(StrictBaseModel):
     pool_prefix_length: int = Field(default=64, ge=16, le=128)
     add_default_route: bool = True
     disabled: bool = False
+    comment: str | None = None
+
+
+class Ipv6DhcpClientUpdateRequest(StrictBaseModel):
+    interface: str | None = Field(default=None, min_length=1, max_length=64)
+    request: str | None = Field(default=None, max_length=16)
+    pool_name: str | None = Field(default=None, max_length=64)
+    pool_prefix_length: int | None = Field(default=None, ge=16, le=128)
+    add_default_route: bool | None = None
+    use_peer_dns: bool | None = None
+    disabled: bool | None = None
     comment: str | None = None
 
 
@@ -289,8 +389,24 @@ class Ipv6DhcpServerCreateRequest(StrictBaseModel):
     disabled: bool = False
 
 
+class Ipv6DhcpServerUpdateRequest(StrictBaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=64)
+    interface: str | None = Field(default=None, min_length=1, max_length=64)
+    address_pool: str | None = Field(default=None, min_length=1, max_length=64)
+    lease_time: str | None = Field(default=None, max_length=16)
+    disabled: bool | None = None
+    comment: str | None = None
+
+
 class Ipv6PoolCreateRequest(StrictBaseModel):
     name: str = Field(..., min_length=1, max_length=64)
     prefix: str = Field(..., min_length=3, max_length=64)
     prefix_length: int = Field(default=64, ge=16, le=128)
+
+
+class Ipv6PoolUpdateRequest(StrictBaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=64)
+    prefix: str | None = Field(default=None, min_length=3, max_length=64)
+    prefix_length: int | None = Field(default=None, ge=16, le=128)
+    comment: str | None = None
 

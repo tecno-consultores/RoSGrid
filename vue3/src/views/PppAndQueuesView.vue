@@ -61,8 +61,44 @@
 
   // Modals
   const isCreateSecretModalOpen = ref(false);
+  const isEditSecretModalOpen = ref(false);
+  const editingSecretId = ref('');
+  const editSecretForm = ref({
+    name: '',
+    password: '',
+    service: 'any',
+    profile: 'default',
+    local_address: '',
+    remote_address: '',
+    comment: '',
+    disabled: false,
+  });
+
   const isCreateProfileModalOpen = ref(false);
+  const isEditProfileModalOpen = ref(false);
+  const editingProfileId = ref('');
+  const editProfileForm = ref({
+    name: '',
+    local_address: '',
+    remote_address: '',
+    rate_limit: '',
+    dns_server: '',
+    only_one: 'default',
+  });
+
   const isCreateServerModalOpen = ref(false);
+  const isEditServerModalOpen = ref(false);
+  const editingServerId = ref('');
+  const editServerForm = ref({
+    service_name: '',
+    interface: '',
+    default_profile: 'default',
+    max_mtu: 1492,
+    max_mru: 1492,
+    one_session_per_host: true,
+    disabled: false,
+  });
+
   const isCreateQueueModalOpen = ref(false);
   const isEditingQueue = ref(false);
   const selectedQueue = ref<SimpleQueueItem | null>(null);
@@ -101,6 +137,7 @@
     { key: 'caller_id', label: 'MAC / Caller-ID' },
     { key: 'uptime', label: 'Uptime', align: 'right' },
     { key: 'service', label: 'Servicio', align: 'center' },
+    { key: 'actions', label: 'Acciones', align: 'center' },
   ];
 
   const secretColumns: TableColumn<PppSecretItem>[] = [
@@ -116,6 +153,7 @@
       formatter: (row) => (row.disabled ? '🔴 Deshabilitado' : '🟢 Activo'),
     },
     { key: 'comment', label: 'Comentario' },
+    { key: 'actions', label: 'Acciones', align: 'center' },
   ];
 
   const profileColumns: TableColumn<PppProfileItem>[] = [
@@ -125,6 +163,7 @@
     { key: 'rate_limit', label: 'Rate Limit (Límite Ancho de Banda)', align: 'center' },
     { key: 'dns_server', label: 'Servidores DNS' },
     { key: 'only_one', label: 'Sesión Única', align: 'center' },
+    { key: 'actions', label: 'Acciones', align: 'center' },
   ];
 
   const serverColumns: TableColumn<PppoeServerItem>[] = [
@@ -138,6 +177,7 @@
       align: 'center',
       formatter: (row) => (row.disabled ? '🔴 Inactivo' : '🟢 Activo'),
     },
+    { key: 'actions', label: 'Acciones', align: 'center' },
   ];
 
   const queueColumns: TableColumn<SimpleQueueItem>[] = [
@@ -150,6 +190,7 @@
       align: 'right',
       formatter: (row) => `${formatBytes(row.bytes_in)} / ${formatBytes(row.bytes_out)}`,
     },
+    { key: 'actions', label: 'Acciones', align: 'center' },
   ];
 
   function formatBytes(b: number): string {
@@ -411,6 +452,145 @@
     }
   }
 
+  function openEditSecretModal(secret: PppSecretItem) {
+    editingSecretId.value = secret.id;
+    editSecretForm.value = {
+      name: secret.name,
+      password: '',
+      service: String(secret.service || 'any'),
+      profile: String(secret.profile || 'default'),
+      local_address: String(secret.local_address || ''),
+      remote_address: String(secret.remote_address || ''),
+      comment: String(secret.comment || ''),
+      disabled: Boolean(secret.disabled),
+    };
+    isEditSecretModalOpen.value = true;
+  }
+
+  async function handleUpdateSecret() {
+    if (!editingSecretId.value) return;
+    isLoading.value = true;
+    errorMessage.value = '';
+    webFigStore.startSafeModeCountdown(60);
+    try {
+      const payload: Record<string, any> = {
+        name: editSecretForm.value.name,
+        service: editSecretForm.value.service,
+        profile: editSecretForm.value.profile,
+        local_address: editSecretForm.value.local_address,
+        remote_address: editSecretForm.value.remote_address,
+        comment: editSecretForm.value.comment,
+        disabled: editSecretForm.value.disabled,
+      };
+      if (editSecretForm.value.password.trim()) {
+        payload.password = editSecretForm.value.password;
+      }
+      await http.patch(
+        `/api/v1/routers/${routerId.value}/webfig/ppp/secrets/${encodeURIComponent(editingSecretId.value)}`,
+        payload,
+      );
+      actionMessage.value = `Usuario PPP "${editSecretForm.value.name}" actualizado exitosamente.`;
+      isEditSecretModalOpen.value = false;
+      loadPppData();
+    } catch (err: any) {
+      errorMessage.value = err?.response?.data?.detail || err?.detail || 'Error al actualizar usuario PPP.';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  function openEditProfileModal(profile: PppProfileItem) {
+    editingProfileId.value = profile.id;
+    editProfileForm.value = {
+      name: profile.name,
+      local_address: String(profile.local_address || ''),
+      remote_address: String(profile.remote_address || ''),
+      rate_limit: String(profile.rate_limit || ''),
+      dns_server: String(profile.dns_server || ''),
+      only_one: String(profile.only_one || 'default'),
+    };
+    isEditProfileModalOpen.value = true;
+  }
+
+  async function handleUpdateProfile() {
+    if (!editingProfileId.value) return;
+    isLoading.value = true;
+    errorMessage.value = '';
+    webFigStore.startSafeModeCountdown(60);
+    try {
+      await http.patch(
+        `/api/v1/routers/${routerId.value}/webfig/ppp/profiles/${encodeURIComponent(editingProfileId.value)}`,
+        editProfileForm.value,
+      );
+      actionMessage.value = `Perfil PPP "${editProfileForm.value.name}" actualizado exitosamente.`;
+      isEditProfileModalOpen.value = false;
+      loadPppData();
+    } catch (err: any) {
+      errorMessage.value = err?.response?.data?.detail || err?.detail || 'Error al actualizar perfil PPP.';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  function openEditServerModal(srv: PppoeServerItem) {
+    editingServerId.value = srv.id;
+    editServerForm.value = {
+      service_name: srv.service_name,
+      interface: srv.interface,
+      default_profile: String(srv.default_profile || 'default'),
+      max_mtu: Number(srv.max_mtu || 1492),
+      max_mru: Number((srv as any).max_mru || srv.max_mtu || 1492),
+      one_session_per_host: (srv as any)['one-session-per-host'] !== 'no' && (srv as any).one_session_per_host !== false,
+      disabled: Boolean(srv.disabled),
+    };
+    isEditServerModalOpen.value = true;
+  }
+
+  async function handleUpdateServer() {
+    if (!editingServerId.value) return;
+    isLoading.value = true;
+    errorMessage.value = '';
+    webFigStore.startSafeModeCountdown(60);
+    try {
+      await http.patch(
+        `/api/v1/routers/${routerId.value}/webfig/ppp/pppoe-servers/${encodeURIComponent(editingServerId.value)}`,
+        editServerForm.value,
+      );
+      actionMessage.value = `Servidor PPPoE "${editServerForm.value.service_name}" actualizado exitosamente.`;
+      isEditServerModalOpen.value = false;
+      loadPppData();
+    } catch (err: any) {
+      errorMessage.value = err?.response?.data?.detail || err?.detail || 'Error al actualizar servidor PPPoE.';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function handleToggleServer(srv: PppoeServerItem) {
+    webFigStore.startSafeModeCountdown(60);
+    try {
+      await http.patch(
+        `/api/v1/routers/${routerId.value}/webfig/ppp/pppoe-servers/${encodeURIComponent(srv.id)}`,
+        { disabled: !srv.disabled },
+      );
+      loadPppData();
+    } catch (err: any) {
+      errorMessage.value = err?.response?.data?.detail || 'Error al conmutar servidor PPPoE.';
+    }
+  }
+
+  async function handleDeleteServer(srv: PppoeServerItem) {
+    if (!confirm(`¿Eliminar el servidor PPPoE "${srv.service_name}"?`)) return;
+    webFigStore.startSafeModeCountdown(60);
+    try {
+      await http.delete(`/api/v1/routers/${routerId.value}/webfig/ppp/pppoe-servers/${encodeURIComponent(srv.id)}`);
+      actionMessage.value = `Servidor PPPoE "${srv.service_name}" eliminado.`;
+      loadPppData();
+    } catch (err: any) {
+      errorMessage.value = err?.response?.data?.detail || 'Error al eliminar servidor PPPoE.';
+    }
+  }
+
   async function handleDeleteProfile(profile: PppProfileItem) {
     if (!confirm(`¿Eliminar el perfil PPP "${profile.name}"?`)) return;
     webFigStore.startSafeModeCountdown(60);
@@ -587,6 +767,15 @@
               <button
                 type="button"
                 class="btn-row-action"
+                title="Editar usuario PPP"
+                :aria-label="`Editar usuario ${(row as any).name}`"
+                @click="openEditSecretModal(row as any)"
+              >
+                ✏
+              </button>
+              <button
+                type="button"
+                class="btn-row-action"
                 :title="(row as any).disabled ? 'Habilitar usuario' : 'Deshabilitar usuario'"
                 :aria-label="(row as any).disabled ? 'Habilitar usuario' : 'Deshabilitar usuario'"
                 @click="handleToggleSecret(row as any)"
@@ -616,15 +805,26 @@
           row-key="id"
         >
           <template #actions="{ row }">
-            <button
-              type="button"
-              class="btn-row-action btn-row-action--danger"
-              title="Eliminar perfil"
-              :aria-label="`Eliminar perfil ${(row as any).name}`"
-              @click="handleDeleteProfile(row as any)"
-            >
-              🗑
-            </button>
+            <div class="row-actions-group">
+              <button
+                type="button"
+                class="btn-row-action"
+                title="Editar perfil PPP"
+                :aria-label="`Editar perfil ${(row as any).name}`"
+                @click="openEditProfileModal(row as any)"
+              >
+                ✏
+              </button>
+              <button
+                type="button"
+                class="btn-row-action btn-row-action--danger"
+                title="Eliminar perfil"
+                :aria-label="`Eliminar perfil ${(row as any).name}`"
+                @click="handleDeleteProfile(row as any)"
+              >
+                🗑
+              </button>
+            </div>
           </template>
         </RgDataTable>
       </div>
@@ -636,7 +836,39 @@
           :rows="pppoeServers"
           caption="Servidores de Autenticación PPPoE"
           row-key="id"
-        />
+        >
+          <template #actions="{ row }">
+            <div class="row-actions-group">
+              <button
+                type="button"
+                class="btn-row-action"
+                title="Editar servidor PPPoE"
+                :aria-label="`Editar servidor PPPoE ${(row as any).service_name}`"
+                @click="openEditServerModal(row as any)"
+              >
+                ✏
+              </button>
+              <button
+                type="button"
+                class="btn-row-action"
+                :title="(row as any).disabled ? 'Habilitar servidor PPPoE' : 'Deshabilitar servidor PPPoE'"
+                :aria-label="(row as any).disabled ? 'Habilitar servidor PPPoE' : 'Deshabilitar servidor PPPoE'"
+                @click="handleToggleServer(row as any)"
+              >
+                {{ (row as any).disabled ? '▶' : '⏸' }}
+              </button>
+              <button
+                type="button"
+                class="btn-row-action btn-row-action--danger"
+                title="Eliminar servidor PPPoE"
+                :aria-label="`Eliminar servidor PPPoE ${(row as any).service_name}`"
+                @click="handleDeleteServer(row as any)"
+              >
+                🗑
+              </button>
+            </div>
+          </template>
+        </RgDataTable>
       </div>
 
       <!-- Pestaña 5: Simple Queues -->
@@ -849,6 +1081,156 @@
             </button>
             <button type="submit" class="btn-primary" :disabled="isLoading">
               Activar Servidor
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Editar Secreto PPP -->
+    <div
+      v-if="isEditSecretModalOpen"
+      class="modal-backdrop"
+      @click.self="isEditSecretModalOpen = false"
+    >
+      <div class="modal-card" role="dialog" aria-labelledby="modal-edit-secret-title" aria-modal="true">
+        <header class="modal-header">
+          <h2 id="modal-edit-secret-title">Editar Usuario / Secreto PPP ({{ editSecretForm.name }})</h2>
+          <button type="button" class="btn-close" @click="isEditSecretModalOpen = false">✕</button>
+        </header>
+        <form class="modal-form" @submit.prevent="handleUpdateSecret">
+          <div class="form-group">
+            <label for="edit-sec-name">Nombre de Usuario:</label>
+            <input id="edit-sec-name" v-model="editSecretForm.name" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-sec-pwd">Nueva Contraseña (dejar en blanco para conservar):</label>
+            <input id="edit-sec-pwd" v-model="editSecretForm.password" type="password" placeholder="Sin cambios" />
+          </div>
+          <div class="form-group">
+            <label for="edit-sec-svc">Servicio:</label>
+            <select id="edit-sec-svc" v-model="editSecretForm.service">
+              <option value="any">Cualquiera (any)</option>
+              <option value="pppoe">PPPoE</option>
+              <option value="pptp">PPTP</option>
+              <option value="l2tp">L2TP</option>
+              <option value="ovpn">OpenVPN</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="edit-sec-prof">Perfil:</label>
+            <input id="edit-sec-prof" v-model="editSecretForm.profile" />
+          </div>
+          <div class="form-group">
+            <label for="edit-sec-local">IP Local (Gateway):</label>
+            <input id="edit-sec-local" v-model="editSecretForm.local_address" />
+          </div>
+          <div class="form-group">
+            <label for="edit-sec-remote">IP Remota (Cliente):</label>
+            <input id="edit-sec-remote" v-model="editSecretForm.remote_address" />
+          </div>
+          <div class="form-group">
+            <label for="edit-sec-comment">Comentario:</label>
+            <input id="edit-sec-comment" v-model="editSecretForm.comment" />
+          </div>
+          <footer class="modal-footer">
+            <button type="button" class="btn-secondary" @click="isEditSecretModalOpen = false">
+              Cancelar
+            </button>
+            <button type="submit" class="btn-primary" :disabled="isLoading">
+              Guardar Cambios
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Editar Perfil PPP -->
+    <div
+      v-if="isEditProfileModalOpen"
+      class="modal-backdrop"
+      @click.self="isEditProfileModalOpen = false"
+    >
+      <div class="modal-card" role="dialog" aria-labelledby="modal-edit-profile-title" aria-modal="true">
+        <header class="modal-header">
+          <h2 id="modal-edit-profile-title">Editar Perfil PPP ({{ editProfileForm.name }})</h2>
+          <button type="button" class="btn-close" @click="isEditProfileModalOpen = false">✕</button>
+        </header>
+        <form class="modal-form" @submit.prevent="handleUpdateProfile">
+          <div class="form-group">
+            <label for="edit-prof-name">Nombre del Perfil:</label>
+            <input id="edit-prof-name" v-model="editProfileForm.name" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-prof-local">Pool / IP Local:</label>
+            <input id="edit-prof-local" v-model="editProfileForm.local_address" />
+          </div>
+          <div class="form-group">
+            <label for="edit-prof-remote">Pool / IP Remota:</label>
+            <input id="edit-prof-remote" v-model="editProfileForm.remote_address" />
+          </div>
+          <div class="form-group">
+            <label for="edit-prof-rate">Rate Limit (Subida/Bajada):</label>
+            <input id="edit-prof-rate" v-model="editProfileForm.rate_limit" placeholder="ej. 10M/20M" />
+          </div>
+          <div class="form-group">
+            <label for="edit-prof-dns">Servidores DNS:</label>
+            <input id="edit-prof-dns" v-model="editProfileForm.dns_server" />
+          </div>
+          <div class="form-group">
+            <label for="edit-prof-only-one">Sesión Única (Only One):</label>
+            <select id="edit-prof-only-one" v-model="editProfileForm.only_one">
+              <option value="default">default</option>
+              <option value="yes">yes</option>
+              <option value="no">no</option>
+            </select>
+          </div>
+          <footer class="modal-footer">
+            <button type="button" class="btn-secondary" @click="isEditProfileModalOpen = false">
+              Cancelar
+            </button>
+            <button type="submit" class="btn-primary" :disabled="isLoading">
+              Guardar Cambios
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Editar Servidor PPPoE -->
+    <div
+      v-if="isEditServerModalOpen"
+      class="modal-backdrop"
+      @click.self="isEditServerModalOpen = false"
+    >
+      <div class="modal-card" role="dialog" aria-labelledby="modal-edit-server-title" aria-modal="true">
+        <header class="modal-header">
+          <h2 id="modal-edit-server-title">Editar Servidor PPPoE ({{ editServerForm.service_name }})</h2>
+          <button type="button" class="btn-close" @click="isEditServerModalOpen = false">✕</button>
+        </header>
+        <form class="modal-form" @submit.prevent="handleUpdateServer">
+          <div class="form-group">
+            <label for="edit-srv-name">Nombre del Servicio:</label>
+            <input id="edit-srv-name" v-model="editServerForm.service_name" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-srv-iface">Interfaz Física / Bridge:</label>
+            <input id="edit-srv-iface" v-model="editServerForm.interface" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-srv-prof">Perfil Predeterminado:</label>
+            <input id="edit-srv-prof" v-model="editServerForm.default_profile" />
+          </div>
+          <div class="form-group">
+            <label for="edit-srv-mtu">Max MTU:</label>
+            <input id="edit-srv-mtu" v-model.number="editServerForm.max_mtu" type="number" min="1280" max="1500" />
+          </div>
+          <footer class="modal-footer">
+            <button type="button" class="btn-secondary" @click="isEditServerModalOpen = false">
+              Cancelar
+            </button>
+            <button type="submit" class="btn-primary" :disabled="isLoading">
+              Guardar Cambios
             </button>
           </footer>
         </form>

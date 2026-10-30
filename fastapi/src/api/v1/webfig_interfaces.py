@@ -24,6 +24,7 @@ from src.redis_layer.client import get_redis_client
 from src.schemas.webfig_l1_net import (
     BridgeCreateRequest,
     BridgePortCreateRequest,
+    BridgePortUpdateRequest,
     BridgeUpdateRequest,
     BridgeVlanCreateRequest,
     BridgeVlanUpdateRequest,
@@ -35,6 +36,8 @@ from src.schemas.webfig_l1_net import (
     VlanUpdateRequest,
     WireGuardCreateRequest,
     WireGuardPeerCreateRequest,
+    WireGuardPeerUpdateRequest,
+    WireGuardUpdateRequest,
 )
 
 logger = logging.getLogger(__name__)
@@ -503,6 +506,49 @@ async def update_bridge(
         )
 
 
+@router.delete("/bridge/{item_id}")
+async def delete_bridge(
+    router_id: uuid.UUID,
+    item_id: str,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
+        )
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Elimina una interfaz Bridge bajo Safe Mode o Maker-Checker."""
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Eliminar Bridge ({item_id})",
+        ros_rest_method="DELETE",
+        ros_rest_path=f"/interface/bridge/{item_id}",
+        request_payload={".id": item_id},
+        action_type=CriticalActionTypeEnum.WAN_TRUNK_INTERFACE_OR_IP_CHANGE,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
+    async with client:
+        before = await client.get(f"/interface/bridge/{item_id}")
+        return await execute_safe_mutation(
+            client=client,
+            menu="interface/bridge",
+            action="delete",
+            item_id=item_id,
+            before_state=before if isinstance(before, dict) else {},
+            coro_fn=lambda: client.delete(f"/interface/bridge/{item_id}"),
+        )
+
+
 @router.get("/bridge/ports")
 async def list_bridge_ports(
     router_id: uuid.UUID,
@@ -567,6 +613,114 @@ async def create_bridge_port(
             action="create",
             before_state=body,
             coro_fn=lambda: client.put("/interface/bridge/port", json_data=body),
+        )
+
+
+@router.patch("/bridge/ports/{item_id}")
+async def update_bridge_port(
+    router_id: uuid.UUID,
+    item_id: str,
+    payload: BridgePortUpdateRequest,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
+        )
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Modifica opciones de un puerto miembro del Bridge (PVID, frame-types, ingress-filtering, bridge)."""
+    patch_data: dict[str, Any] = {}
+    if payload.bridge:
+        patch_data["bridge"] = payload.bridge
+    if payload.interface:
+        patch_data["interface"] = payload.interface
+    if payload.pvid is not None:
+        patch_data["pvid"] = payload.pvid
+    if payload.hw is not None:
+        patch_data["hw"] = "yes" if payload.hw else "no"
+    if payload.frame_types:
+        patch_data["frame-types"] = payload.frame_types
+    if payload.ingress_filtering is not None:
+        patch_data["ingress-filtering"] = "yes" if payload.ingress_filtering else "no"
+    if payload.horizon is not None:
+        patch_data["horizon"] = payload.horizon
+    if payload.disabled is not None:
+        patch_data["disabled"] = "yes" if payload.disabled else "no"
+    if payload.comment is not None:
+        patch_data["comment"] = payload.comment
+
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Modificar puerto de Bridge ({item_id})",
+        ros_rest_method="PATCH",
+        ros_rest_path=f"/interface/bridge/port/{item_id}",
+        request_payload=patch_data,
+        action_type=CriticalActionTypeEnum.WAN_TRUNK_INTERFACE_OR_IP_CHANGE,
+        requester_justification=payload.comment,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
+    async with client:
+        before = await client.get(f"/interface/bridge/port/{item_id}")
+        return await execute_safe_mutation(
+            client=client,
+            menu="interface/bridge/port",
+            action="set",
+            item_id=item_id,
+            before_state=before if isinstance(before, dict) else {},
+            coro_fn=lambda: client.patch(f"/interface/bridge/port/{item_id}", json_data=patch_data),
+        )
+
+
+@router.delete("/bridge/ports/{item_id}")
+async def delete_bridge_port(
+    router_id: uuid.UUID,
+    item_id: str,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
+        )
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Saca/desvincula un puerto miembro de un Bridge bajo Safe Mode o Maker-Checker."""
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Sacar puerto del Bridge ({item_id})",
+        ros_rest_method="DELETE",
+        ros_rest_path=f"/interface/bridge/port/{item_id}",
+        request_payload={".id": item_id},
+        action_type=CriticalActionTypeEnum.WAN_TRUNK_INTERFACE_OR_IP_CHANGE,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
+    async with client:
+        before = await client.get(f"/interface/bridge/port/{item_id}")
+        return await execute_safe_mutation(
+            client=client,
+            menu="interface/bridge/port",
+            action="delete",
+            item_id=item_id,
+            before_state=before if isinstance(before, dict) else {},
+            coro_fn=lambda: client.delete(f"/interface/bridge/port/{item_id}"),
         )
 
 
@@ -819,6 +973,106 @@ async def create_wireguard(
         )
 
 
+@router.patch("/wireguard/{item_id}")
+async def update_wireguard(
+    router_id: uuid.UUID,
+    item_id: str,
+    payload: WireGuardUpdateRequest,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
+        )
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Modifica una interfaz túnel WireGuard bajo Safe Mode o Maker-Checker."""
+    patch_data: dict[str, Any] = {}
+    if payload.name:
+        patch_data["name"] = payload.name
+    if payload.listen_port is not None:
+        patch_data["listen-port"] = payload.listen_port
+    if payload.mtu is not None:
+        patch_data["mtu"] = payload.mtu
+    if payload.disabled is not None:
+        patch_data["disabled"] = "yes" if payload.disabled else "no"
+    if payload.comment is not None:
+        patch_data["comment"] = payload.comment
+
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Modificar interfaz WireGuard ({item_id})",
+        ros_rest_method="PATCH",
+        ros_rest_path=f"/interface/wireguard/{item_id}",
+        request_payload=patch_data,
+        action_type=CriticalActionTypeEnum.WAN_TRUNK_INTERFACE_OR_IP_CHANGE,
+        requester_justification=payload.comment,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
+    async with client:
+        before = await client.get(f"/interface/wireguard/{item_id}")
+        return await execute_safe_mutation(
+            client=client,
+            menu="interface/wireguard",
+            action="set",
+            item_id=item_id,
+            before_state=before if isinstance(before, dict) else {},
+            coro_fn=lambda: client.patch(f"/interface/wireguard/{item_id}", json_data=patch_data),
+        )
+
+
+@router.delete("/wireguard/{item_id}")
+async def delete_wireguard(
+    router_id: uuid.UUID,
+    item_id: str,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
+        )
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Elimina una interfaz túnel WireGuard bajo Safe Mode o Maker-Checker."""
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Eliminar interfaz túnel WireGuard ({item_id})",
+        ros_rest_method="DELETE",
+        ros_rest_path=f"/interface/wireguard/{item_id}",
+        request_payload={".id": item_id},
+        action_type=CriticalActionTypeEnum.WAN_TRUNK_INTERFACE_OR_IP_CHANGE,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
+    async with client:
+        before = await client.get(f"/interface/wireguard/{item_id}")
+        return await execute_safe_mutation(
+            client=client,
+            menu="interface/wireguard",
+            action="delete",
+            item_id=item_id,
+            before_state=before if isinstance(before, dict) else {},
+            coro_fn=lambda: client.delete(f"/interface/wireguard/{item_id}"),
+        )
+
+
 @router.get("/wireguard/peers")
 async def list_wireguard_peers(
     router_id: uuid.UUID,
@@ -888,6 +1142,113 @@ async def create_wireguard_peer(
             action="create",
             before_state=body,
             coro_fn=lambda: client.put("/interface/wireguard/peers", json_data=body),
+        )
+
+
+@router.patch("/wireguard/peers/{item_id}")
+async def update_wireguard_peer(
+    router_id: uuid.UUID,
+    item_id: str,
+    payload: WireGuardPeerUpdateRequest,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
+        )
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Modifica un Peer WireGuard existente bajo Safe Mode o Maker-Checker."""
+    patch_data: dict[str, Any] = {}
+    if payload.interface:
+        patch_data["interface"] = payload.interface
+    if payload.public_key:
+        patch_data["public-key"] = payload.public_key
+    if payload.allowed_address:
+        patch_data["allowed-address"] = payload.allowed_address
+    if payload.endpoint_address is not None:
+        patch_data["endpoint-address"] = payload.endpoint_address
+    if payload.endpoint_port is not None:
+        patch_data["endpoint-port"] = payload.endpoint_port
+    if payload.persistent_keepalive is not None and str(payload.persistent_keepalive).strip():
+        ka = str(payload.persistent_keepalive).strip()
+        patch_data["persistent-keepalive"] = f"{ka}s" if ka.isdigit() else ka
+    if payload.disabled is not None:
+        patch_data["disabled"] = "yes" if payload.disabled else "no"
+    if payload.comment is not None:
+        patch_data["comment"] = payload.comment
+
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Modificar Peer WireGuard ({item_id})",
+        ros_rest_method="PATCH",
+        ros_rest_path=f"/interface/wireguard/peers/{item_id}",
+        request_payload=patch_data,
+        action_type=CriticalActionTypeEnum.WAN_TRUNK_INTERFACE_OR_IP_CHANGE,
+        requester_justification=payload.comment,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
+    async with client:
+        before = await client.get(f"/interface/wireguard/peers/{item_id}")
+        return await execute_safe_mutation(
+            client=client,
+            menu="interface/wireguard/peers",
+            action="set",
+            item_id=item_id,
+            before_state=before if isinstance(before, dict) else {},
+            coro_fn=lambda: client.patch(f"/interface/wireguard/peers/{item_id}", json_data=patch_data),
+        )
+
+
+@router.delete("/wireguard/peers/{item_id}")
+async def delete_wireguard_peer(
+    router_id: uuid.UUID,
+    item_id: str,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
+        )
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Elimina un Peer WireGuard bajo Safe Mode o Maker-Checker."""
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Eliminar Peer WireGuard ({item_id})",
+        ros_rest_method="DELETE",
+        ros_rest_path=f"/interface/wireguard/peers/{item_id}",
+        request_payload={".id": item_id},
+        action_type=CriticalActionTypeEnum.WAN_TRUNK_INTERFACE_OR_IP_CHANGE,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
+    async with client:
+        before = await client.get(f"/interface/wireguard/peers/{item_id}")
+        return await execute_safe_mutation(
+            client=client,
+            menu="interface/wireguard/peers",
+            action="delete",
+            item_id=item_id,
+            before_state=before if isinstance(before, dict) else {},
+            coro_fn=lambda: client.delete(f"/interface/wireguard/peers/{item_id}"),
         )
 
 

@@ -926,6 +926,35 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 400
     And match response.detail contains 'session_id'
 
+  Scenario: 123. Liberar puerto miembro de un Bridge (DELETE /bridge/ports/{id}) en WebFig Interfaces sin autenticación devuelve 401
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/interfaces/bridge/ports/*BP1'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000123'
+    When method delete
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 124. Eliminar interfaz de túnel WireGuard (DELETE /wireguard/{id}) en WebFig Interfaces sin autenticación devuelve 401
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/interfaces/wireguard/*WG1'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000124'
+    When method delete
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 125. Editar parámetros de red DHCP, Pool IP y configuración DNS Singleton (PATCH /dns) en WebFig IP sin autenticación devuelve 401
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/ip/dns'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000125'
+    And request { servers: '1.1.1.1,8.8.8.8', allow_remote_requests: true, cache_size: 4096 }
+    When method patch
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 126. Eliminar Pool de conexiones IP (DELETE /pools/{id}) y editar servidor PPPoE (PATCH /pppoe-servers/{id}) sin autenticación devuelve 401
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/ip/pools/*P1'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000126'
+    When method delete
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
 
 
 

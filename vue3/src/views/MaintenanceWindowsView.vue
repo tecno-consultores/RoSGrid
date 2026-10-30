@@ -2,7 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { ref, computed, onMounted } from 'vue';
+  import { ref, computed, onMounted, onUnmounted } from 'vue';
   import { http } from '@/api/httpClient';
   import { useInventoryStore } from '@/stores/useInventoryStore';
   import type { MaintenanceWindowItem } from '@/types';
@@ -13,6 +13,7 @@
   const errorMessage = ref('');
   const successMessage = ref('');
   const windowsList = ref<MaintenanceWindowItem[]>([]);
+  let expirationCheckTimer: ReturnType<typeof setInterval> | null = null;
 
   // Modal Crear Ventana
   const isCreateModalOpen = ref(false);
@@ -161,7 +162,11 @@
         '/api/v1/maintenance/windows',
       );
       const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
-      windowsList.value = raw;
+      const nowMs = Date.now();
+      windowsList.value = raw.filter((w) => {
+        const endMs = new Date(w.ends_at).getTime();
+        return Number.isNaN(endMs) || endMs > nowMs;
+      });
     } catch {
       // Sin datos de demostración en producción
       windowsList.value = [];
@@ -277,6 +282,23 @@
     if (inventoryStore.routers.length === 0) {
       await inventoryStore.fetchRouters();
     }
+    expirationCheckTimer = setInterval(() => {
+      const nowMs = Date.now();
+      const hasExpired = windowsList.value.some((w) => {
+        const endMs = new Date(w.ends_at).getTime();
+        return !Number.isNaN(endMs) && endMs <= nowMs;
+      });
+      if (hasExpired) {
+        void loadMaintenanceWindows();
+      }
+    }, 30000);
+  });
+
+  onUnmounted(() => {
+    if (expirationCheckTimer !== null) {
+      clearInterval(expirationCheckTimer);
+      expirationCheckTimer = null;
+    }
   });
 </script>
 
@@ -286,7 +308,7 @@
       <div>
         <h1 class="view-title">Ventanas de Mantenimiento Programadas</h1>
         <p class="view-subtitle">
-          Programación de trabajos en caliente y supresión temporal de alertas (Telegram, SMTP, Webhook).
+          Programación de trabajos en caliente, supresión temporal de alertas y auto-eliminación automática al finalizar con registro en AuditLog WORM.
         </p>
       </div>
       <button

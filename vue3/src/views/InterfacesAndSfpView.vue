@@ -45,6 +45,8 @@
       align: 'right',
       formatter: (row) => `${formatTraffic(row.rx_bps)} / ${formatTraffic(row.tx_bps)}`,
     },
+    { key: 'comment', label: 'Comentario' },
+    { key: 'actions', label: 'Acciones', align: 'center' },
   ];
 
   function formatTraffic(bps?: number): string {
@@ -121,6 +123,89 @@
   const statusMessage = ref('');
   const errorMessage = ref('');
   const isCreateVlanModalOpen = ref(false);
+  const isEditIfaceModalOpen = ref(false);
+  const editingIface = ref<InterfaceRow | null>(null);
+  const editIfaceForm = ref({
+    name: '',
+    mtu: 1500,
+    vlan_id: 10,
+    interface: '',
+    comment: '',
+    disabled: false,
+  });
+
+  function openEditIfaceModal(iface: InterfaceRow) {
+    editingIface.value = iface;
+    editIfaceForm.value = {
+      name: iface.name,
+      mtu: Number(iface.mtu || 1500),
+      vlan_id: Number((iface as any).vlan_id || (iface as any)['vlan-id'] || 10),
+      interface: String((iface as any).interface || ''),
+      comment: String(iface.comment || ''),
+      disabled: Boolean(iface.disabled),
+    };
+    isEditIfaceModalOpen.value = true;
+  }
+
+  async function handleUpdateIface() {
+    if (!editingIface.value) return;
+    isLoading.value = true;
+    errorMessage.value = '';
+    try {
+      const isVlan = editingIface.value.type === 'vlan';
+      const endpoint = isVlan
+        ? `/api/v1/routers/${routerId.value}/webfig/interfaces/vlan/${encodeURIComponent(editingIface.value.id)}`
+        : `/api/v1/routers/${routerId.value}/webfig/interfaces/${encodeURIComponent(editingIface.value.id)}`;
+      const payload = isVlan
+        ? {
+            name: editIfaceForm.value.name,
+            vlan_id: Number(editIfaceForm.value.vlan_id),
+            interface: editIfaceForm.value.interface || undefined,
+            mtu: Number(editIfaceForm.value.mtu),
+            comment: editIfaceForm.value.comment,
+            disabled: editIfaceForm.value.disabled,
+          }
+        : {
+            name: editIfaceForm.value.name,
+            mtu: Number(editIfaceForm.value.mtu),
+            comment: editIfaceForm.value.comment,
+            disabled: editIfaceForm.value.disabled,
+          };
+      const res = await http.patch(endpoint, payload);
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      statusMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Modificación de interfaz en espera de aprobación en Maker-Checker.'
+        : `Interfaz "${editIfaceForm.value.name}" actualizada exitosamente bajo Safe Mode.`;
+      isEditIfaceModalOpen.value = false;
+      loadInterfaces();
+    } catch (err: unknown) {
+      webFigStore.stopSafeMode?.();
+      const error = err as { message?: string; detail?: string; response?: { data?: { detail?: string } } };
+      errorMessage.value =
+        error.response?.data?.detail || error.detail || error.message || 'Error al actualizar la interfaz.';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function handleToggleIface(iface: InterfaceRow) {
+    isLoading.value = true;
+    errorMessage.value = '';
+    try {
+      const res = await http.patch(
+        `/api/v1/routers/${routerId.value}/webfig/interfaces/${encodeURIComponent(iface.id)}`,
+        { disabled: !iface.disabled },
+      );
+      webFigStore.handleMutationResponse(res, 60);
+      loadInterfaces();
+    } catch (err: unknown) {
+      webFigStore.stopSafeMode?.();
+      const error = err as { message?: string; detail?: string };
+      errorMessage.value = error.detail || error.message || 'Error al cambiar estado de la interfaz.';
+    } finally {
+      isLoading.value = false;
+    }
+  }
   const newVlan = ref({
     name: 'vlan10',
     vlan_id: 10,
@@ -266,6 +351,24 @@
               @click="openSfpDdm(row.name)"
             >
               🔍 DDM Óptico
+            </button>
+            <button
+              type="button"
+              class="btn-table-action"
+              title="Editar parámetros de interfaz"
+              aria-label="Editar interfaz"
+              @click="openEditIfaceModal(row as InterfaceRow)"
+            >
+              ✏️
+            </button>
+            <button
+              type="button"
+              class="btn-table-action"
+              :title="row.disabled ? 'Habilitar interfaz' : 'Deshabilitar interfaz'"
+              :aria-label="row.disabled ? 'Habilitar interfaz' : 'Deshabilitar interfaz'"
+              @click="handleToggleIface(row as InterfaceRow)"
+            >
+              {{ row.disabled ? '▶' : '⏸' }}
             </button>
             <button
               v-if="row.type === 'vlan'"
@@ -416,6 +519,74 @@
             </button>
             <button type="submit" class="btn-primary" :disabled="isLoading">
               Crear con Safe Mode
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Editar Interfaz -->
+    <div
+      v-if="isEditIfaceModalOpen && editingIface"
+      class="rg-modal-backdrop"
+      @click.self="isEditIfaceModalOpen = false"
+    >
+      <div class="rg-modal" role="dialog" aria-modal="true" aria-labelledby="modal-iface-edit-title">
+        <header class="modal-header">
+          <h3 id="modal-iface-edit-title" class="modal-title">
+            ✏️ Editar Interfaz — {{ editingIface.name }}
+          </h3>
+          <button
+            type="button"
+            class="btn-close"
+            aria-label="Cerrar modal"
+            @click="isEditIfaceModalOpen = false"
+          >
+            ✕
+          </button>
+        </header>
+
+        <form class="modal-form" @submit.prevent="handleUpdateIface">
+          <div class="form-group">
+            <label for="iface-edit-name">Nombre de la Interfaz:</label>
+            <input id="iface-edit-name" v-model="editIfaceForm.name" required />
+          </div>
+
+          <div v-if="editingIface.type === 'vlan'" class="form-group">
+            <label for="iface-edit-vlan-id">VLAN ID (Tag 802.1Q):</label>
+            <input
+              id="iface-edit-vlan-id"
+              v-model.number="editIfaceForm.vlan_id"
+              type="number"
+              min="1"
+              max="4094"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="iface-edit-mtu">MTU:</label>
+            <input
+              id="iface-edit-mtu"
+              v-model.number="editIfaceForm.mtu"
+              type="number"
+              min="68"
+              max="65535"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="iface-edit-comment">Comentario:</label>
+            <input id="iface-edit-comment" v-model="editIfaceForm.comment" />
+          </div>
+
+          <footer class="modal-footer">
+            <button type="button" class="btn-secondary" @click="isEditIfaceModalOpen = false">
+              Cancelar
+            </button>
+            <button type="submit" class="btn-primary" :disabled="isLoading">
+              Guardar Cambios
             </button>
           </footer>
         </form>

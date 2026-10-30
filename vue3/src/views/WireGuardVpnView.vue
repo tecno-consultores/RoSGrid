@@ -49,7 +49,29 @@
 
   // Modals
   const isCreateIfaceModalOpen = ref(false);
+  const isEditIfaceModalOpen = ref(false);
+  const editingIfaceId = ref('');
+  const editIfaceForm = ref({
+    name: '',
+    listen_port: 13231,
+    mtu: 1420,
+    disabled: false,
+    comment: '',
+  });
+
   const isCreatePeerModalOpen = ref(false);
+  const isEditPeerModalOpen = ref(false);
+  const editingPeerId = ref('');
+  const editPeerForm = ref({
+    interface: '',
+    public_key: '',
+    endpoint_address: '',
+    endpoint_port: 13231,
+    allowed_address: '',
+    persistent_keepalive: 25,
+    disabled: false,
+    comment: '',
+  });
 
   const newIface = ref({
     name: 'wg0',
@@ -80,6 +102,7 @@
       formatter: (row) => (row.running ? '🟢 En Servicio' : '⚪ Detenida'),
     },
     { key: 'comment', label: 'Comentario' },
+    { key: 'actions', label: 'Acciones', align: 'center' },
   ];
 
   const peerColumns: TableColumn<WireGuardPeerRow>[] = [
@@ -90,6 +113,7 @@
     { key: 'endpoint_port', label: 'Puerto', align: 'center' },
     { key: 'last_handshake', label: 'Último Handshake', align: 'right' },
     { key: 'comment', label: 'Comentario' },
+    { key: 'actions', label: 'Acciones', align: 'center' },
   ];
 
   async function loadData() {
@@ -196,6 +220,129 @@
     }
   }
 
+  function openEditIfaceModal(iface: WireGuardIfaceRow) {
+    editingIfaceId.value = iface.id;
+    editIfaceForm.value = {
+      name: iface.name,
+      listen_port: Number(iface.listen_port || 13231),
+      mtu: Number(iface.mtu || 1420),
+      disabled: Boolean(iface.disabled),
+      comment: String(iface.comment || ''),
+    };
+    isEditIfaceModalOpen.value = true;
+  }
+
+  async function handleUpdateIface() {
+    if (!editingIfaceId.value) return;
+    isLoading.value = true;
+    errorMessage.value = '';
+    try {
+      const res = await http.patch(
+        `/api/v1/routers/${routerId.value}/webfig/interfaces/wireguard/${encodeURIComponent(editingIfaceId.value)}`,
+        editIfaceForm.value,
+      );
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      statusMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Modificación de interfaz WireGuard en espera de aprobación en Maker-Checker.'
+        : `Interfaz WireGuard "${editIfaceForm.value.name}" actualizada exitosamente bajo Safe Mode.`;
+      isEditIfaceModalOpen.value = false;
+      loadData();
+    } catch (err: unknown) {
+      webFigStore.stopSafeMode?.();
+      const error = err as { message?: string; detail?: string };
+      errorMessage.value = error.detail || error.message || 'Error al actualizar la interfaz WireGuard.';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function handleDeleteIface(iface: WireGuardIfaceRow) {
+    if (!confirm(`¿Eliminar la interfaz de túnel WireGuard "${iface.name}"?`)) {
+      return;
+    }
+    isLoading.value = true;
+    errorMessage.value = '';
+    try {
+      const res = await http.delete(
+        `/api/v1/routers/${routerId.value}/webfig/interfaces/wireguard/${encodeURIComponent(iface.id)}`,
+      );
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      statusMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Eliminación de interfaz WireGuard en espera de aprobación en Maker-Checker.'
+        : `Interfaz de túnel WireGuard "${iface.name}" eliminada exitosamente.`;
+      loadData();
+    } catch (err: unknown) {
+      webFigStore.stopSafeMode?.();
+      const error = err as { message?: string; detail?: string };
+      errorMessage.value = error.detail || error.message || 'Error al eliminar la interfaz WireGuard.';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  function openEditPeerModal(peer: WireGuardPeerRow) {
+    editingPeerId.value = peer.id;
+    editPeerForm.value = {
+      interface: peer.interface,
+      public_key: peer.public_key,
+      endpoint_address: String(peer.endpoint_address || ''),
+      endpoint_port: Number(peer.endpoint_port || 13231),
+      allowed_address: String(peer.allowed_address || ''),
+      persistent_keepalive: Number((peer as any).persistent_keepalive || 25),
+      disabled: Boolean(peer.disabled),
+      comment: String(peer.comment || ''),
+    };
+    isEditPeerModalOpen.value = true;
+  }
+
+  async function handleUpdatePeer() {
+    if (!editingPeerId.value) return;
+    isLoading.value = true;
+    errorMessage.value = '';
+    try {
+      const res = await http.patch(
+        `/api/v1/routers/${routerId.value}/webfig/interfaces/wireguard/peers/${encodeURIComponent(editingPeerId.value)}`,
+        editPeerForm.value,
+      );
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      statusMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Modificación de Peer WireGuard en espera de aprobación en Maker-Checker.'
+        : `Peer WireGuard actualizado exitosamente bajo Safe Mode.`;
+      isEditPeerModalOpen.value = false;
+      loadData();
+    } catch (err: unknown) {
+      webFigStore.stopSafeMode?.();
+      const error = err as { message?: string; detail?: string };
+      errorMessage.value = error.detail || error.message || 'Error al actualizar el Peer WireGuard.';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function handleDeletePeer(peer: WireGuardPeerRow) {
+    if (!confirm(`¿Eliminar el Peer WireGuard de la interfaz "${peer.interface}"?`)) {
+      return;
+    }
+    isLoading.value = true;
+    errorMessage.value = '';
+    try {
+      const res = await http.delete(
+        `/api/v1/routers/${routerId.value}/webfig/interfaces/wireguard/peers/${encodeURIComponent(peer.id)}`,
+      );
+      const intercepted = webFigStore.handleMutationResponse(res, 60);
+      statusMessage.value = intercepted
+        ? (res.data as any)?.detail || 'Eliminación de Peer WireGuard en espera de aprobación en Maker-Checker.'
+        : `Peer WireGuard eliminado exitosamente.`;
+      loadData();
+    } catch (err: unknown) {
+      webFigStore.stopSafeMode?.();
+      const error = err as { message?: string; detail?: string };
+      errorMessage.value = error.detail || error.message || 'Error al eliminar el Peer WireGuard.';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   function setTab(tab: 'interfaces' | 'peers') {
     activeTab.value = tab;
     loadData();
@@ -281,7 +428,30 @@
           :rows="ifacesList"
           caption="Túneles WireGuard Configurados"
           row-key="id"
-        />
+        >
+          <template #actions="{ row }">
+            <div class="row-actions">
+              <button
+                type="button"
+                class="btn-table-action"
+                title="Editar interfaz de túnel WireGuard"
+                aria-label="Editar interfaz WireGuard"
+                @click="openEditIfaceModal(row as WireGuardIfaceRow)"
+              >
+                ✏️ Editar
+              </button>
+              <button
+                type="button"
+                class="btn-table-action btn-table-action--delete"
+                title="Eliminar interfaz de túnel WireGuard"
+                aria-label="Eliminar interfaz WireGuard"
+                @click="handleDeleteIface(row as WireGuardIfaceRow)"
+              >
+                🗑️ Eliminar
+              </button>
+            </div>
+          </template>
+        </RgDataTable>
       </div>
 
       <div v-else-if="activeTab === 'peers'">
@@ -290,7 +460,30 @@
           :rows="peersList"
           caption="Peers Criptográficos WireGuard"
           row-key="id"
-        />
+        >
+          <template #actions="{ row }">
+            <div class="row-actions">
+              <button
+                type="button"
+                class="btn-table-action"
+                title="Editar Peer WireGuard"
+                aria-label="Editar Peer WireGuard"
+                @click="openEditPeerModal(row as WireGuardPeerRow)"
+              >
+                ✏️ Editar
+              </button>
+              <button
+                type="button"
+                class="btn-table-action btn-table-action--delete"
+                title="Eliminar Peer WireGuard"
+                aria-label="Eliminar Peer WireGuard"
+                @click="handleDeletePeer(row as WireGuardPeerRow)"
+              >
+                🗑️ Eliminar
+              </button>
+            </div>
+          </template>
+        </RgDataTable>
       </div>
     </div>
 
@@ -410,6 +603,94 @@
             </button>
             <button type="submit" class="btn-primary" :disabled="isLoading">
               Registrar Peer con Safe Mode
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Editar Interfaz WireGuard -->
+    <div
+      v-if="isEditIfaceModalOpen"
+      class="modal-backdrop"
+      @click.self="isEditIfaceModalOpen = false"
+    >
+      <div class="modal-card" role="dialog" aria-labelledby="modal-edit-wg-title" aria-modal="true">
+        <header class="modal-header">
+          <h2 id="modal-edit-wg-title">Editar Interfaz WireGuard ({{ editIfaceForm.name }})</h2>
+          <button type="button" class="btn-close" @click="isEditIfaceModalOpen = false">✕</button>
+        </header>
+        <form class="modal-form" @submit.prevent="handleUpdateIface">
+          <div class="form-group">
+            <label for="edit-wg-name">Nombre de Interfaz:</label>
+            <input id="edit-wg-name" v-model="editIfaceForm.name" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-wg-port">Puerto de Escucha UDP:</label>
+            <input id="edit-wg-port" v-model.number="editIfaceForm.listen_port" type="number" min="1024" max="65535" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-wg-mtu">MTU:</label>
+            <input id="edit-wg-mtu" v-model.number="editIfaceForm.mtu" type="number" min="1280" max="65535" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-wg-comment">Comentario:</label>
+            <input id="edit-wg-comment" v-model="editIfaceForm.comment" />
+          </div>
+          <footer class="modal-footer">
+            <button type="button" class="btn-secondary" @click="isEditIfaceModalOpen = false">
+              Cancelar
+            </button>
+            <button type="submit" class="btn-primary" :disabled="isLoading">
+              Guardar Cambios
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Editar Peer WireGuard -->
+    <div
+      v-if="isEditPeerModalOpen"
+      class="modal-backdrop"
+      @click.self="isEditPeerModalOpen = false"
+    >
+      <div class="modal-card" role="dialog" aria-labelledby="modal-edit-peer-title" aria-modal="true">
+        <header class="modal-header">
+          <h2 id="modal-edit-peer-title">Editar Peer WireGuard</h2>
+          <button type="button" class="btn-close" @click="isEditPeerModalOpen = false">✕</button>
+        </header>
+        <form class="modal-form" @submit.prevent="handleUpdatePeer">
+          <div class="form-group">
+            <label for="edit-peer-iface">Interfaz WireGuard Local:</label>
+            <input id="edit-peer-iface" v-model="editPeerForm.interface" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-peer-pubkey">Clave Pública (Base64):</label>
+            <input id="edit-peer-pubkey" v-model="editPeerForm.public_key" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-peer-allowed">Allowed IPs (Redes Enrutadas):</label>
+            <input id="edit-peer-allowed" v-model="editPeerForm.allowed_address" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-peer-endpoint">Endpoint Remoto:</label>
+            <input id="edit-peer-endpoint" v-model="editPeerForm.endpoint_address" />
+          </div>
+          <div class="form-group">
+            <label for="edit-peer-eport">Puerto Endpoint:</label>
+            <input id="edit-peer-eport" v-model.number="editPeerForm.endpoint_port" type="number" min="1" max="65535" />
+          </div>
+          <div class="form-group">
+            <label for="edit-peer-comment">Comentario:</label>
+            <input id="edit-peer-comment" v-model="editPeerForm.comment" />
+          </div>
+          <footer class="modal-footer">
+            <button type="button" class="btn-secondary" @click="isEditPeerModalOpen = false">
+              Cancelar
+            </button>
+            <button type="submit" class="btn-primary" :disabled="isLoading">
+              Guardar Cambios
             </button>
           </footer>
         </form>

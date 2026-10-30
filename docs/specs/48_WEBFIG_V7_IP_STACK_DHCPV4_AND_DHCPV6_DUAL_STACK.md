@@ -31,13 +31,13 @@ Proveer a los operadores de red de una interfaz centralizada y ergonómica para 
      - Asistente **"DHCP Setup en 3 Pasos"**: Wizard guiado para crear Pool, Network y Server en una sola transacción.
 3. **`[ Cliente DHCP ]` (`/ip/dhcp-client`):**
    - Tabla con interfaces WAN, estado de negociación (`bound`, `searching`, `renewing`), IP asignada por el proveedor y Gateway.
-   - Botón `[ 🔄 Renovar Concesión (Renew) ]` y `[ ❌ Liberar (Release) ]`.
+   - Botón `[ ✏ Editar ]` (`PATCH .../dhcp-clients/{id}` para modificar `interface`, `add_default_route`, `use_peer_dns`, `use_peer_ntp`, `default_route_distance`, `disabled`, `comment`), `[ 🔄 Renovar Concesión (Renew) ]`, `[ ❌ Liberar (Release) ]` y `[ 🗑 Eliminar ]`.
 4. **`[ Pools de Direcciones ]` (`/ip/pool`):**
-   - Creación y edición de rangos de direcciones (ej. `192.168.88.10-192.168.88.254`).
+   - Creación, edición (`PATCH .../pools/{id}`) y eliminación (`DELETE .../pools/{id}`) de rangos de direcciones (ej. `192.168.88.10-192.168.88.254`) y `next-pool`.
 5. **`[ DNS y Caché ]` (`/ip/dns`):**
-   - Servidores DNS Upstream, selector `Allow Remote Requests`, botón `[ 🧹 Vaciar Caché DNS ]` y tabla de registros DNS estáticos.
+   - Edición de parámetros globales del resolver DNS (`PATCH .../ip/dns` -> singleton `/ip/dns/set`: `servers`, `allow-remote-requests`, `cache-size`, `max-udp-packet-size`, `use-doh-server`, `verify-doh-cert`), botón `[ 🧹 Vaciar Caché DNS ]` y CRUD completo (`POST`, `PATCH`, `DELETE`) sobre registros DNS estáticos (`/ip/dns/static`).
 6. **`[ Tabla ARP ]` (`/ip/arp`):**
-   - Inspección de IP vs. MAC aprendidas, con botón para convertir entradas dinámicas en estáticas (*Make Static*).
+   - Inspección de IP vs. MAC aprendidas, con botón para convertir entradas dinámicas en estáticas (*Make Static*), además de creación, edición (`PATCH .../arp/{id}`) y eliminación (`DELETE .../arp/{id}`) de entradas ARP estáticas.
 
 ---
 

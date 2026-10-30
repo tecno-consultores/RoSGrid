@@ -30,6 +30,16 @@
   const isEditingRule = ref(false);
   const selectedRule = ref<FirewallRuleItem | null>(null);
 
+  const isAddressListModalOpen = ref(false);
+  const isEditingAddressList = ref(false);
+  const editingAddressListId = ref('');
+  const addressListForm = ref({
+    list: 'allowlist-noc',
+    address: '',
+    timeout: '',
+    comment: '',
+  });
+
   // Wizards NAT
   const isMasqueradeWizardOpen = ref(false);
   const masqueradeWan = ref('ether1');
@@ -58,6 +68,7 @@
       formatter: (row) => `${formatBytes(row.bytes)} (${row.packets} pkts)`,
     },
     { key: 'comment', label: 'Comentario' },
+    { key: 'actions', label: 'Acciones', align: 'center' },
   ];
 
   function formatBytes(bytes: number): string {
@@ -73,6 +84,7 @@
         { key: 'chain', label: 'Nombre Lista', sortable: true },
         { key: 'action', label: 'Dirección IP / Red', sortable: true },
         { key: 'comment', label: 'Comentario / Timeout' },
+        { key: 'actions', label: 'Acciones', align: 'center' },
       ];
     }
     if (activeTab.value === 'connections') {
@@ -151,15 +163,77 @@
   }
 
   function openCreateRuleModal() {
+    if (activeTab.value === 'address-list') {
+      isEditingAddressList.value = false;
+      editingAddressListId.value = '';
+      addressListForm.value = { list: 'allowlist-noc', address: '', timeout: '', comment: '' };
+      isAddressListModalOpen.value = true;
+      return;
+    }
     isEditingRule.value = false;
     selectedRule.value = null;
     isRuleModalOpen.value = true;
   }
 
   function openEditRuleModal(rule: FirewallRuleItem) {
+    if (activeTab.value === 'address-list') {
+      isEditingAddressList.value = true;
+      editingAddressListId.value = rule.id;
+      addressListForm.value = {
+        list: rule.chain,
+        address: rule.action,
+        timeout: String((rule as any).timeout || ''),
+        comment: String(rule.comment || ''),
+      };
+      isAddressListModalOpen.value = true;
+      return;
+    }
     isEditingRule.value = true;
     selectedRule.value = rule;
     isRuleModalOpen.value = true;
+  }
+
+  async function handleSaveAddressList() {
+    errorMessage.value = '';
+    actionMessage.value = '';
+    try {
+      let res;
+      if (isEditingAddressList.value && editingAddressListId.value) {
+        res = await http.patch(
+          `/api/v1/routers/${routerId.value}/webfig/firewall/ip/address-lists/${encodeURIComponent(editingAddressListId.value)}`,
+          {
+            list: addressListForm.value.list,
+            address: addressListForm.value.address,
+            timeout: addressListForm.value.timeout || undefined,
+            comment: addressListForm.value.comment,
+          },
+        );
+        const intercepted = webFigStore.handleMutationResponse(res, 60);
+        actionMessage.value = intercepted
+          ? (res.data as any)?.detail || 'Solicitud de Address-List en espera de aprobación en Maker-Checker.'
+          : 'Entrada de Address-List actualizada exitosamente.';
+      } else {
+        res = await http.post(
+          `/api/v1/routers/${routerId.value}/webfig/firewall/ip/address-lists`,
+          {
+            list: addressListForm.value.list,
+            address: addressListForm.value.address,
+            timeout: addressListForm.value.timeout || undefined,
+            comment: addressListForm.value.comment || undefined,
+          },
+        );
+        const intercepted = webFigStore.handleMutationResponse(res, 60);
+        actionMessage.value = intercepted
+          ? (res.data as any)?.detail || 'Solicitud de Address-List en espera de aprobación en Maker-Checker.'
+          : 'Entrada agregada a Address-List exitosamente.';
+      }
+      isAddressListModalOpen.value = false;
+      await loadFirewallRules();
+    } catch (e: any) {
+      webFigStore.stopSafeMode?.();
+      errorMessage.value =
+        e?.detail || e?.response?.data?.detail || e?.message || 'Error al guardar entrada en Address-List.';
+    }
   }
 
   function handleDuplicateRule(rule: FirewallRuleItem) {
@@ -418,12 +492,12 @@
           🧙‍♂️ Port Forwarding
         </button>
         <button
-          v-if="activeTab === 'filter' || activeTab === 'nat' || activeTab === 'mangle' || activeTab === 'raw'"
+          v-if="activeTab === 'filter' || activeTab === 'nat' || activeTab === 'mangle' || activeTab === 'raw' || activeTab === 'address-list'"
           type="button"
           class="btn-primary-action"
           @click="openCreateRuleModal"
         >
-          + Nueva Regla
+          {{ activeTab === 'address-list' ? '+ Agregar a Address-List' : '+ Nueva Regla' }}
         </button>
         <button
           type="button"
@@ -551,6 +625,37 @@
       @close="isRuleModalOpen = false"
       @save="handleSaveRule"
     />
+
+    <!-- Modal Crear / Editar Entrada de Address-List -->
+    <div v-if="isAddressListModalOpen" class="modal-backdrop">
+      <div class="modal-window">
+        <h3 class="modal-title">
+          {{ isEditingAddressList ? '✏️ Editar Entrada de Address-List' : '+ Agregar a Address-List' }}
+        </h3>
+        <form @submit.prevent="handleSaveAddressList">
+          <div class="form-group">
+            <label for="al-list">Nombre de la Lista (List)</label>
+            <input id="al-list" v-model="addressListForm.list" type="text" class="form-input" required />
+          </div>
+          <div class="form-group">
+            <label for="al-addr">Dirección IP / Prefijo CIDR / Dominio</label>
+            <input id="al-addr" v-model="addressListForm.address" type="text" class="form-input font-mono" placeholder="192.168.88.10 o 10.0.0.0/24" required />
+          </div>
+          <div class="form-group">
+            <label for="al-timeout">Timeout Opcional (ej. 1d o 02:00:00)</label>
+            <input id="al-timeout" v-model="addressListForm.timeout" type="text" class="form-input font-mono" placeholder="Permanente si queda vacío" />
+          </div>
+          <div class="form-group">
+            <label for="al-comment">Comentario</label>
+            <input id="al-comment" v-model="addressListForm.comment" type="text" class="form-input" />
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary-action" @click="isAddressListModalOpen = false">Cancelar</button>
+            <button type="submit" class="btn-primary-action">Guardar en Address-List</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <!-- Wizard Masquerade -->
     <div v-if="isMasqueradeWizardOpen" class="modal-backdrop">

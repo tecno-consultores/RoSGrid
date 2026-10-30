@@ -14,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from src.api.v1.inventory_helpers import discover_hardware, inspect_router_syslog_config
+from src.api.v1.maintenance import purge_expired_maintenance_windows
 from src.api.v1.webfig_common import _create_client_from_vault
 from src.db.session import async_session_maker
 from src.mikrotik.client import MikrotikRestClient
@@ -175,6 +176,10 @@ async def run_health_monitor_cycle() -> None:
                 await _evaluate_single_router(session, redis, r)
             except Exception as exc:
                 logger.error("Error al monitorear router %s: %s", r.id, exc)
+        try:
+            await purge_expired_maintenance_windows(session)
+        except Exception as m_exc:
+            logger.error("Error al purgar ventanas de mantenimiento expiradas: %s", m_exc)
         await session.commit()
 
 

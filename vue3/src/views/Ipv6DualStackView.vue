@@ -31,15 +31,27 @@
   // Modales
   const isAddressModalOpen = ref(false);
   const newAddress = ref({ address: '', interface: 'ether2', advertise: true, eui_64: false, comment: '', disabled: false });
+  const isEditAddressModalOpen = ref(false);
+  const editingAddressId = ref('');
+  const editAddressForm = ref({ address: '', interface: 'ether2', advertise: true, eui_64: false, comment: '', disabled: false });
 
   const isClientModalOpen = ref(false);
   const newClient = ref({ interface: 'ether1', request: 'prefix', pool_name: 'pool-v6-delegated', pool_prefix_length: 64, add_default_route: true, comment: '' });
+  const isEditClientModalOpen = ref(false);
+  const editingClientId = ref('');
+  const editClientForm = ref({ interface: 'ether1', request: 'prefix', pool_name: '', pool_prefix_length: 64, add_default_route: true, disabled: false, comment: '' });
 
   const isServerModalOpen = ref(false);
   const newServer = ref({ name: 'dhcp6-lan', interface: 'bridge1', address_pool: 'pool-v6-delegated', lease_time: '24h', disabled: false });
+  const isEditServerModalOpen = ref(false);
+  const editingServerId = ref('');
+  const editServerForm = ref({ name: '', interface: '', address_pool: '', lease_time: '24h', disabled: false });
 
   const isPoolModalOpen = ref(false);
   const newPool = ref({ name: 'pool-v6-static', prefix: '2001:db8:cafe::/48', prefix_length: 64 });
+  const isEditPoolModalOpen = ref(false);
+  const editingPoolId = ref('');
+  const editPoolForm = ref({ name: '', prefix: '', prefix_length: 64 });
 
   async function loadData() {
     isLoading.value = true;
@@ -177,6 +189,120 @@
       loadData();
     } catch (err: any) {
       errorMessage.value = err?.detail || err?.message || 'Error al eliminar pool IPv6.';
+    }
+  }
+
+  function openEditAddressModal(addr: any) {
+    editingAddressId.value = String(addr.id || addr['.id'] || '');
+    editAddressForm.value = {
+      address: String(addr.address || ''),
+      interface: String(addr.interface || 'ether2'),
+      advertise: addr.advertise === 'true' || addr.advertise === true || addr.advertise === 'yes',
+      eui_64: addr['eui-64'] === 'true' || addr['eui-64'] === true || addr.eui_64 === true,
+      comment: String(addr.comment || ''),
+      disabled: addr.disabled === 'true' || addr.disabled === true,
+    };
+    isEditAddressModalOpen.value = true;
+  }
+
+  async function handleUpdateAddress() {
+    if (!editingAddressId.value) return;
+    webFigStore.startSafeModeCountdown(60);
+    try {
+      await http.patch(
+        `/api/v1/routers/${routerId.value}/webfig/ipv6/addresses/${encodeURIComponent(editingAddressId.value)}`,
+        editAddressForm.value,
+      );
+      actionMessage.value = `Dirección IPv6 ${editAddressForm.value.address} actualizada.`;
+      isEditAddressModalOpen.value = false;
+      loadData();
+    } catch (err: any) {
+      errorMessage.value = err?.detail || err?.message || 'Error al actualizar dirección IPv6.';
+    }
+  }
+
+  function openEditDhcpClientModal(cli: any) {
+    editingClientId.value = String(cli.id || cli['.id'] || '');
+    const addDef = cli['add-default-route'] ?? cli.add_default_route;
+    editClientForm.value = {
+      interface: String(cli.interface || ''),
+      request: String(cli.request || 'prefix'),
+      pool_name: String(cli['pool-name'] || cli.pool_name || ''),
+      pool_prefix_length: Number(cli['pool-prefix-length'] || cli.pool_prefix_length || 64),
+      add_default_route: addDef !== 'no' && addDef !== false,
+      disabled: cli.disabled === 'true' || cli.disabled === true,
+      comment: String(cli.comment || ''),
+    };
+    isEditClientModalOpen.value = true;
+  }
+
+  async function handleUpdateDhcpClient() {
+    if (!editingClientId.value) return;
+    webFigStore.startSafeModeCountdown(60);
+    try {
+      await http.patch(
+        `/api/v1/routers/${routerId.value}/webfig/ipv6/dhcp-clients/${encodeURIComponent(editingClientId.value)}`,
+        editClientForm.value,
+      );
+      actionMessage.value = `Cliente DHCPv6 en ${editClientForm.value.interface} actualizado.`;
+      isEditClientModalOpen.value = false;
+      loadData();
+    } catch (err: any) {
+      errorMessage.value = err?.detail || err?.message || 'Error al actualizar cliente DHCPv6.';
+    }
+  }
+
+  function openEditDhcpServerModal(srv: any) {
+    editingServerId.value = String(srv.id || srv['.id'] || '');
+    editServerForm.value = {
+      name: String(srv.name || ''),
+      interface: String(srv.interface || ''),
+      address_pool: String(srv['address-pool'] || srv.address_pool || ''),
+      lease_time: String(srv['lease-time'] || srv.lease_time || '24h'),
+      disabled: srv.disabled === 'true' || srv.disabled === true,
+    };
+    isEditServerModalOpen.value = true;
+  }
+
+  async function handleUpdateDhcpServer() {
+    if (!editingServerId.value) return;
+    webFigStore.startSafeModeCountdown(60);
+    try {
+      await http.patch(
+        `/api/v1/routers/${routerId.value}/webfig/ipv6/dhcp-servers/${encodeURIComponent(editingServerId.value)}`,
+        editServerForm.value,
+      );
+      actionMessage.value = `Servidor DHCPv6 "${editServerForm.value.name}" actualizado.`;
+      isEditServerModalOpen.value = false;
+      loadData();
+    } catch (err: any) {
+      errorMessage.value = err?.detail || err?.message || 'Error al actualizar servidor DHCPv6.';
+    }
+  }
+
+  function openEditPoolModal(pool: any) {
+    editingPoolId.value = String(pool.id || pool['.id'] || '');
+    editPoolForm.value = {
+      name: String(pool.name || ''),
+      prefix: String(pool.prefix || ''),
+      prefix_length: Number(pool['prefix-length'] || pool.prefix_length || 64),
+    };
+    isEditPoolModalOpen.value = true;
+  }
+
+  async function handleUpdatePool() {
+    if (!editingPoolId.value) return;
+    webFigStore.startSafeModeCountdown(60);
+    try {
+      await http.patch(
+        `/api/v1/routers/${routerId.value}/webfig/ipv6/pools/${encodeURIComponent(editingPoolId.value)}`,
+        editPoolForm.value,
+      );
+      actionMessage.value = `Pool IPv6 "${editPoolForm.value.name}" actualizado.`;
+      isEditPoolModalOpen.value = false;
+      loadData();
+    } catch (err: any) {
+      errorMessage.value = err?.detail || err?.message || 'Error al actualizar pool IPv6.';
     }
   }
 
@@ -340,6 +466,14 @@
               <td class="actions-col">
                 <button
                   type="button"
+                  class="btn-icon btn-cyan"
+                  title="Editar Dirección IPv6"
+                  @click="openEditAddressModal(addr)"
+                >
+                  ✏️
+                </button>
+                <button
+                  type="button"
                   class="btn-icon btn-danger"
                   title="Eliminar Dirección IPv6"
                   @click="handleDeleteAddress(addr)"
@@ -386,6 +520,14 @@
               <td class="actions-col">
                 <button
                   type="button"
+                  class="btn-icon btn-cyan"
+                  title="Editar Cliente DHCPv6"
+                  @click="openEditDhcpClientModal(cli)"
+                >
+                  ✏️
+                </button>
+                <button
+                  type="button"
                   class="btn-icon btn-danger"
                   title="Eliminar Cliente DHCPv6"
                   @click="handleDeleteDhcpClient(cli)"
@@ -430,6 +572,14 @@
               <td class="actions-col">
                 <button
                   type="button"
+                  class="btn-icon btn-cyan"
+                  title="Editar Servidor DHCPv6"
+                  @click="openEditDhcpServerModal(srv)"
+                >
+                  ✏️
+                </button>
+                <button
+                  type="button"
                   class="btn-icon btn-danger"
                   title="Eliminar Servidor DHCPv6"
                   @click="handleDeleteDhcpServer(srv)"
@@ -464,6 +614,14 @@
               <td class="font-mono">{{ pool.prefix }}</td>
               <td class="font-mono">/{{ pool['prefix-length'] || pool.prefix_length || 64 }}</td>
               <td class="actions-col">
+                <button
+                  type="button"
+                  class="btn-icon btn-cyan"
+                  title="Editar Pool IPv6"
+                  @click="openEditPoolModal(pool)"
+                >
+                  ✏️
+                </button>
                 <button
                   type="button"
                   class="btn-icon btn-danger"
@@ -619,6 +777,112 @@
           <div class="modal-actions">
             <button type="button" class="btn-tactical btn-outline" @click="isPoolModalOpen = false">Cancelar</button>
             <button type="submit" class="btn-tactical btn-cyan">Crear Pool</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL: EDITAR DIRECCIÓN IPv6 -->
+    <div v-if="isEditAddressModalOpen" class="modal-backdrop">
+      <div class="modal-window">
+        <h2 class="modal-title">Editar Dirección IPv6</h2>
+        <form @submit.prevent="handleUpdateAddress">
+          <div class="form-group">
+            <label for="edit-v6-addr">Dirección IPv6 con Prefijo</label>
+            <input id="edit-v6-addr" v-model="editAddressForm.address" type="text" class="form-input font-mono" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-v6-iface">Interfaz</label>
+            <input id="edit-v6-iface" v-model="editAddressForm.interface" type="text" class="form-input" required />
+          </div>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input v-model="editAddressForm.advertise" type="checkbox" />
+              Publicar Prefijo a Clientes (SLAAC)
+            </label>
+          </div>
+          <div class="form-group">
+            <label for="edit-v6-comment">Comentario</label>
+            <input id="edit-v6-comment" v-model="editAddressForm.comment" type="text" class="form-input" />
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-tactical btn-outline" @click="isEditAddressModalOpen = false">Cancelar</button>
+            <button type="submit" class="btn-tactical btn-cyan">Guardar Cambios</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL: EDITAR CLIENTE DHCPv6 -->
+    <div v-if="isEditClientModalOpen" class="modal-backdrop">
+      <div class="modal-window">
+        <h2 class="modal-title">Editar Cliente DHCPv6 WAN</h2>
+        <form @submit.prevent="handleUpdateDhcpClient">
+          <div class="form-group">
+            <label for="edit-v6-cli-iface">Interfaz WAN</label>
+            <input id="edit-v6-cli-iface" v-model="editClientForm.interface" type="text" class="form-input" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-v6-cli-pool">Nombre del Pool Local</label>
+            <input id="edit-v6-cli-pool" v-model="editClientForm.pool_name" type="text" class="form-input" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-v6-cli-len">Longitud del Sub-Prefijo</label>
+            <input id="edit-v6-cli-len" v-model.number="editClientForm.pool_prefix_length" type="number" class="form-input" min="48" max="64" required />
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-tactical btn-outline" @click="isEditClientModalOpen = false">Cancelar</button>
+            <button type="submit" class="btn-tactical btn-cyan">Guardar Cambios</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL: EDITAR SERVIDOR DHCPv6 -->
+    <div v-if="isEditServerModalOpen" class="modal-backdrop">
+      <div class="modal-window">
+        <h2 class="modal-title">Editar Servidor DHCPv6</h2>
+        <form @submit.prevent="handleUpdateDhcpServer">
+          <div class="form-group">
+            <label for="edit-v6-srv-name">Nombre del Servidor</label>
+            <input id="edit-v6-srv-name" v-model="editServerForm.name" type="text" class="form-input" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-v6-srv-iface">Interfaz</label>
+            <input id="edit-v6-srv-iface" v-model="editServerForm.interface" type="text" class="form-input" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-v6-srv-pool">Pool de Prefijos IPv6</label>
+            <input id="edit-v6-srv-pool" v-model="editServerForm.address_pool" type="text" class="form-input" required />
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-tactical btn-outline" @click="isEditServerModalOpen = false">Cancelar</button>
+            <button type="submit" class="btn-tactical btn-cyan">Guardar Cambios</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL: EDITAR POOL IPv6 -->
+    <div v-if="isEditPoolModalOpen" class="modal-backdrop">
+      <div class="modal-window">
+        <h2 class="modal-title">Editar Pool de Prefijos IPv6</h2>
+        <form @submit.prevent="handleUpdatePool">
+          <div class="form-group">
+            <label for="edit-v6-p-name">Nombre del Pool</label>
+            <input id="edit-v6-p-name" v-model="editPoolForm.name" type="text" class="form-input" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-v6-p-prefix">Prefijo Base IPv6</label>
+            <input id="edit-v6-p-prefix" v-model="editPoolForm.prefix" type="text" class="form-input font-mono" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-v6-p-len">Longitud de Delegación</label>
+            <input id="edit-v6-p-len" v-model.number="editPoolForm.prefix_length" type="number" class="form-input" min="48" max="64" required />
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-tactical btn-outline" @click="isEditPoolModalOpen = false">Cancelar</button>
+            <button type="submit" class="btn-tactical btn-cyan">Guardar Cambios</button>
           </div>
         </form>
       </div>

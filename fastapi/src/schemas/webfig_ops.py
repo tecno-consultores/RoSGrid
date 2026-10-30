@@ -31,11 +31,13 @@ class PppSecretCreateRequest(StrictBaseModel):
 
 
 class PppSecretUpdateRequest(StrictBaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=64)
     password: str | None = None
     service: str | None = None
     profile: str | None = None
     local_address: str | None = None
     remote_address: str | None = None
+    routes: str | None = None
     comment: str | None = None
     disabled: bool | None = None
 
@@ -51,22 +53,37 @@ class PppProfileCreateRequest(StrictBaseModel):
 
 
 class PppProfileUpdateRequest(StrictBaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=64)
     local_address: str | None = None
     remote_address: str | None = None
     rate_limit: str | None = None
     dns_server: str | None = None
     address_list: str | None = None
     only_one: str | None = None
+    comment: str | None = None
 
 
 class PppoeServerCreateRequest(StrictBaseModel):
     service_name: str = Field(..., min_length=1, max_length=64)
     interface: str = Field(..., min_length=1, max_length=64)
     default_profile: str = Field(default="default", min_length=1, max_length=64)
+    authentication: str | None = None
     max_mtu: int = Field(default=1480, ge=576, le=65535)
     max_mru: int | None = Field(default=None, ge=576, le=65535)
     one_session_per_host: bool | None = None
     disabled: bool = False
+
+
+class PppoeServerUpdateRequest(StrictBaseModel):
+    service_name: str | None = Field(default=None, min_length=1, max_length=64)
+    interface: str | None = Field(default=None, min_length=1, max_length=64)
+    default_profile: str | None = Field(default=None, min_length=1, max_length=64)
+    authentication: str | None = None
+    max_mtu: int | None = Field(default=None, ge=576, le=65535)
+    max_mru: int | None = Field(default=None, ge=576, le=65535)
+    one_session_per_host: bool | None = None
+    disabled: bool | None = None
+    comment: str | None = None
 
 
 # ============================================================================

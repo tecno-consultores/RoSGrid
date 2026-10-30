@@ -301,4 +301,55 @@ describe('MaintenanceWindowsView.vue — Ventanas de Mantenimiento Programadas',
     expect(calendarButtons[0].attributes('title')).toBe('Abrir selector de fecha y hora');
     expect(calendarButtons[1].attributes('title')).toBe('Abrir selector de fecha y hora');
   });
+
+  it('filtra automáticamente ventanas cuya hora de finalización haya pasado y recarga la lista en el intervalo de 30s', async () => {
+    const getSpy = vi.spyOn(http, 'get').mockResolvedValueOnce({
+      status: 200,
+      data: [
+        {
+          id: 'mw-soon-expiring',
+          tenant_id: 't-1',
+          router_id: 'r-01',
+          title: 'Ventana Próxima a Expirar',
+          reason: 'Mantenimiento corto',
+          starts_at: new Date(Date.now() - 60000).toISOString(),
+          ends_at: new Date(Date.now() + 10000).toISOString(),
+          suppress_alerts: true,
+          is_cancelled: false,
+        },
+        {
+          id: 'mw-already-expired',
+          tenant_id: 't-1',
+          router_id: 'r-02',
+          title: 'Ventana Ya Expirada',
+          reason: 'Debe filtrarse inmediatamente',
+          starts_at: new Date(Date.now() - 7200000).toISOString(),
+          ends_at: new Date(Date.now() - 60000).toISOString(),
+          suppress_alerts: true,
+          is_cancelled: false,
+        },
+      ],
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(MaintenanceWindowsView);
+    await flushPromises();
+
+    // La ventana ya expirada no debe mostrarse, pero la próxima a expirar sí
+    expect(wrapper.text()).toContain('Ventana Próxima a Expirar');
+    expect(wrapper.text()).not.toContain('Ventana Ya Expirada');
+
+    // Avanzar el tiempo 30 segundos (superando los 10s restantes de mw-soon-expiring)
+    getSpy.mockResolvedValueOnce({
+      status: 200,
+      data: [],
+      headers: new Headers(),
+    });
+    vi.advanceTimersByTime(30000);
+    await flushPromises();
+
+    expect(getSpy).toHaveBeenCalledTimes(2);
+    expect(wrapper.text()).not.toContain('Ventana Próxima a Expirar');
+    wrapper.unmount();
+  });
 });

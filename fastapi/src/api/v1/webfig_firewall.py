@@ -24,6 +24,7 @@ from src.models.operations import CriticalActionTypeEnum
 from src.redis_layer.client import get_redis_client
 from src.schemas.webfig_firewall import (
     AddressListCreateRequest,
+    AddressListUpdateRequest,
     FirewallRuleCreateRequest,
     FirewallRuleMoveRequest,
     FirewallRuleUpdateRequest,
@@ -446,6 +447,61 @@ async def create_address_list(
             action="create",
             before_state=body,
             coro_fn=lambda: client.put(f"/{menu}", json_data=body),
+        )
+    await invalidate_webfig_cache(get_redis_client(), uuid.UUID(claims["tid"]), router_id, f"/{menu}")
+    return res
+
+
+@router.patch("/{proto}/address-lists/{item_id}")
+@router.patch("/{proto}/address-list/{item_id}")
+async def update_address_list(
+    router_id: uuid.UUID,
+    proto: str,
+    item_id: str,
+    payload: AddressListUpdateRequest,
+    claims: dict[str, Any] = Depends(get_current_user_claims),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Modifica una entrada existente de Address-List bajo Safe Mode o Maker-Checker."""
+    if proto not in _VALID_PROTOS:
+        raise HTTPException(status_code=400, detail="Protocolo inválido")
+    patch_data: dict[str, Any] = {}
+    if payload.list is not None:
+        patch_data["list"] = payload.list
+    if payload.address is not None:
+        patch_data["address"] = payload.address
+    if payload.timeout is not None:
+        patch_data["timeout"] = payload.timeout
+    if payload.disabled is not None:
+        patch_data["disabled"] = payload.disabled
+    if payload.comment is not None:
+        patch_data["comment"] = payload.comment
+
+    menu = f"{proto}/firewall/address-list"
+    intercepted = await intercept_maker_checker_if_needed(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        summary=f"Modificar entrada Address-List {proto.upper()} ({item_id})",
+        ros_rest_method="PATCH",
+        ros_rest_path=f"/{menu}/{item_id}",
+        request_payload=patch_data,
+        action_type=CriticalActionTypeEnum.FIREWALL_INPUT_OR_SERVICE_PORT_CHANGE,
+        requester_justification=payload.comment,
+    )
+    if intercepted is not None:
+        return intercepted
+
+    _, client = await get_router_and_client(router_id, claims, db)
+    async with client:
+        before = await client.get(f"/{menu}/{item_id}")
+        res = await execute_safe_mutation(
+            client=client,
+            menu=menu,
+            action="update",
+            item_id=item_id,
+            before_state=before if isinstance(before, dict) else {},
+            coro_fn=lambda: client.patch(f"/{menu}/{item_id}", json_data=patch_data),
         )
     await invalidate_webfig_cache(get_redis_client(), uuid.UUID(claims["tid"]), router_id, f"/{menu}")
     return res

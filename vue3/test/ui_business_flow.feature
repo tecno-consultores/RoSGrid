@@ -638,6 +638,26 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     Then match text(".banner--warning") contains 'Tu sesión ha expirado'
     And match driver.url contains '/login?reason=session_expired'
 
+  Scenario: 67. Paridad CRUD Completa en WebFig v7 — Sacar Puerto de Bridge, Eliminar Túnel WireGuard, Editar Redes/Clientes DHCP, Pools, DNS y PPPoE
+    Given driver baseUrl + '/routers/00000000-0000-0000-0000-000000000001/webfig/bridge'
+    And waitFor(".bridge-view")
+    When click("//button[contains(@class, 'tab-btn') and contains(., 'Puertos Miembro')]")
+    Then waitFor(".table-wrapper")
+    When driver baseUrl + '/routers/00000000-0000-0000-0000-000000000001/webfig/wireguard'
+    Then waitFor(".wireguard-view")
+    When driver baseUrl + '/routers/00000000-0000-0000-0000-000000000001/webfig/ip'
+    Then waitFor(".webfig-ip-view")
+    When click("//button[contains(@class, 'tab-btn') and contains(., 'DNS & Caché')]")
+    Then waitFor("//button[contains(., 'Editar Parámetros DNS')]")
+    When driver baseUrl + '/routers/00000000-0000-0000-0000-000000000001/webfig/ppp-queues'
+    Then waitFor(".ppp-queues-view")
+
+  Scenario: 68. Auto-Eliminación de Ventanas de Mantenimiento Vencidas con Registro Inmutable en AuditLog WORM
+    Given driver baseUrl + '/maintenance'
+    And waitFor(".maintenance-view")
+    Then match text(".view-title") contains 'Ventanas de Mantenimiento Programadas'
+    And match text(".view-subtitle") contains 'auto-eliminación automática al finalizar con registro en AuditLog WORM'
+
 
 
 

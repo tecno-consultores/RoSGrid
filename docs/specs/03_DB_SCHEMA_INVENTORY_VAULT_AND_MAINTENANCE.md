@@ -502,6 +502,12 @@ CREATE INDEX idx\_maint\_active\_window ON maintenance\_windows (tenant\_id, sta
 
     WHERE is\_cancelled = FALSE;
 
+### **5.1 Auto-Expiración Automática y Registro Forense en AuditLog WORM**
+
+- Toda ventana de mantenimiento cuya marca temporal `ends_at` sea menor o igual a la hora actual (`ends_at <= NOW()`) es **eliminada automáticamente** tanto por el ciclo periódico del worker (`run_health_monitor_cycle` en `health_monitor_worker.py` invocando `purge_expired_maintenance_windows`) como de forma reactiva al consultar `GET /api/v1/maintenance/windows` (`list_maintenance_windows`).
+- Antes de eliminar el registro de PostgreSQL, el motor escribe obligatoriamente una entrada inmutable en `audit_logs` (WORM con firma HMAC-SHA256) bajo `event_category = 'OPERATIONS'` y `event_action = 'MAINTENANCE_WINDOW_EXPIRED_AUTO_DELETED'`, conservando en `before_state` los metadatos completos de la ventana vencida (`window_id`, `title`, `reason`, `target_tag`, `starts_at`, `ends_at`) y registrando además el evento en el log del sistema.
+- En el frontend (`MaintenanceWindowsView.vue`), un temporizador reactivo de 30 segundos filtra y recarga automáticamente la tabla cuando cualquier ventana alcanza su hora de finalización.
+
 
 
 

@@ -21,6 +21,7 @@ from src.models.core import SystemRoleEnum
 from src.redis_layer.client import get_redis_client
 from src.schemas.webfig_ops import (
     PppoeServerCreateRequest,
+    PppoeServerUpdateRequest,
     PppProfileCreateRequest,
     PppProfileUpdateRequest,
     PppSecretCreateRequest,
@@ -149,6 +150,8 @@ async def update_secret(
     """Modifica perfil de velocidad, IP o estado de un secret PPP."""
     _, client = await get_router_and_client(router_id, claims, db)
     patch_data: dict[str, Any] = {}
+    if payload.name:
+        patch_data["name"] = payload.name
     if payload.password:
         patch_data["password"] = payload.password
     if payload.service:
@@ -159,6 +162,8 @@ async def update_secret(
         patch_data["local-address"] = payload.local_address
     if payload.remote_address:
         patch_data["remote-address"] = payload.remote_address
+    if payload.routes is not None:
+        patch_data["routes"] = payload.routes
     if payload.comment is not None:
         patch_data["comment"] = payload.comment
     if payload.disabled is not None:
@@ -232,20 +237,37 @@ async def update_profile(
     """Modifica un perfil PPP existente."""
     _, client = await get_router_and_client(router_id, claims, db)
     patch_data: dict[str, Any] = {}
-    if payload.local_address:
+    if payload.name:
+        patch_data["name"] = payload.name
+    if payload.local_address is not None:
         patch_data["local-address"] = payload.local_address
-    if payload.remote_address:
+    if payload.remote_address is not None:
         patch_data["remote-address"] = payload.remote_address
-    if payload.rate_limit:
+    if payload.rate_limit is not None:
         patch_data["rate-limit"] = payload.rate_limit
-    if payload.dns_server:
+    if payload.dns_server is not None:
         patch_data["dns-server"] = payload.dns_server
-    if payload.address_list:
+    if payload.address_list is not None:
         patch_data["address-list"] = payload.address_list
     if payload.only_one:
         patch_data["only-one"] = payload.only_one
+    if payload.comment is not None:
+        patch_data["comment"] = payload.comment
     async with client:
         return await client.patch(f"/ppp/profile/{item_id}", json_data=patch_data)
+
+
+@router.delete("/profiles/{item_id}")
+async def delete_profile(
+    router_id: uuid.UUID,
+    item_id: str,
+    claims: dict[str, Any] = Depends(require_roles(*_PPP_WRITE_ROLES)),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Elimina un perfil PPP personalizado."""
+    _, client = await get_router_and_client(router_id, claims, db)
+    async with client:
+        return await client.delete(f"/ppp/profile/{item_id}")
 
 
 # ============================================================================
@@ -296,6 +318,69 @@ async def create_pppoe_server(
             action="create",
             before_state=body,
             coro_fn=lambda: client.put(f"/{menu}", json_data=body),
+        )
+
+
+@router.patch("/pppoe-servers/{item_id}")
+async def update_pppoe_server(
+    router_id: uuid.UUID,
+    item_id: str,
+    payload: PppoeServerUpdateRequest,
+    claims: dict[str, Any] = Depends(require_roles(*_PPP_WRITE_ROLES)),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Modifica un servidor concentrador PPPoE existente bajo Safe Mode."""
+    _, client = await get_router_and_client(router_id, claims, db)
+    patch_data: dict[str, Any] = {}
+    if payload.service_name is not None:
+        patch_data["service-name"] = payload.service_name
+    if payload.interface is not None:
+        patch_data["interface"] = payload.interface
+    if payload.default_profile is not None:
+        patch_data["default-profile"] = payload.default_profile
+    if payload.authentication is not None:
+        patch_data["authentication"] = payload.authentication
+    if payload.max_mtu is not None:
+        patch_data["max-mtu"] = payload.max_mtu
+    if payload.max_mru is not None:
+        patch_data["max-mru"] = payload.max_mru
+    if payload.one_session_per_host is not None:
+        patch_data["one-session-per-host"] = "yes" if payload.one_session_per_host else "no"
+    if payload.disabled is not None:
+        patch_data["disabled"] = payload.disabled
+
+    menu = "interface/pppoe-server/server"
+    async with client:
+        before = await client.get(f"/{menu}/{item_id}")
+        return await execute_safe_mutation(
+            client=client,
+            menu=menu,
+            action="update",
+            item_id=item_id,
+            before_state=before if isinstance(before, dict) else {},
+            coro_fn=lambda: client.patch(f"/{menu}/{item_id}", json_data=patch_data),
+        )
+
+
+@router.delete("/pppoe-servers/{item_id}")
+async def delete_pppoe_server(
+    router_id: uuid.UUID,
+    item_id: str,
+    claims: dict[str, Any] = Depends(require_roles(*_PPP_WRITE_ROLES)),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Elimina una instancia de servidor concentrador PPPoE bajo Safe Mode."""
+    _, client = await get_router_and_client(router_id, claims, db)
+    menu = "interface/pppoe-server/server"
+    async with client:
+        before = await client.get(f"/{menu}/{item_id}")
+        return await execute_safe_mutation(
+            client=client,
+            menu=menu,
+            action="delete",
+            item_id=item_id,
+            before_state=before if isinstance(before, dict) else {},
+            coro_fn=lambda: client.delete(f"/{menu}/{item_id}"),
         )
 
 

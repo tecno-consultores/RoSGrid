@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 RoSGrid Contributors
 
-"""Endpoints de Ventanas de Mantenimiento Programadas (Silenciamiento de Alertas)."""
+"""Endpoints de Ventanas de Mantenimiento Programadas (Silenciamiento de Alertas y Auto-Purga)."""
 
+import logging
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -21,7 +22,77 @@ from src.schemas.inventory import (
     MaintenanceWindowResponse,
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/maintenance", tags=["Maintenance"])
+
+
+def _is_window_expired(window: Any, now_utc: datetime) -> bool:
+    """Verifica de forma segura si un registro de ventana de mantenimiento ha superado su ends_at."""
+    ends_at = getattr(window, "ends_at", None)
+    if not isinstance(ends_at, datetime) or not hasattr(window, "starts_at") or not hasattr(window, "title"):
+        return False
+    if ends_at.tzinfo is None:
+        ends_at = ends_at.replace(tzinfo=UTC)
+    return ends_at <= now_utc
+
+
+async def _delete_and_audit_expired_window(session: Any, window: Any, now_utc: datetime) -> None:
+    """Elimina una ventana de mantenimiento vencida y deja constancia WORM en el AuditLog y en el log del sistema."""
+    logger.info(
+        "Eliminando automáticamente ventana de mantenimiento expirada id=%s title='%s' (ends_at=%s)",
+        window.id,
+        window.title,
+        window.ends_at,
+    )
+    starts_at = getattr(window, "starts_at", None)
+    ends_at = getattr(window, "ends_at", None)
+    await write_audit_log(
+        session=session,
+        tenant_id=window.tenant_id,
+        actor_user_id=getattr(window, "created_by", None),
+        actor_username="system:maintenance-auto-purger",
+        actor_role=SystemRoleEnum.SUPERADMIN_GLOBAL.value,
+        actor_ip="127.0.0.1",
+        actor_user_agent="RoSGrid-Maintenance-Auto-Purger/1.0",
+        event_category="OPERATIONS",
+        event_action="MAINTENANCE_WINDOW_EXPIRED_AUTO_DELETED",
+        router_id=getattr(window, "router_id", None),
+        before_state={
+            "window_id": str(window.id),
+            "title": window.title,
+            "reason": getattr(window, "reason", ""),
+            "target_tag": getattr(window, "target_tag", None),
+            "starts_at": starts_at.isoformat() if isinstance(starts_at, datetime) else None,
+            "ends_at": ends_at.isoformat() if isinstance(ends_at, datetime) else None,
+        },
+        after_state={
+            "window_id": str(window.id),
+            "status": "EXPIRED_AND_DELETED",
+            "deleted_at": now_utc.isoformat(),
+        },
+    )
+    await session.delete(window)
+
+
+async def purge_expired_maintenance_windows(
+    session: Any,
+    tenant_id: uuid.UUID | None = None,
+    commit: bool = False,
+) -> int:
+    """Busca y elimina todas las ventanas de mantenimiento cuya hora de finalización haya pasado."""
+    now_utc = datetime.now(UTC)
+    stmt = select(MaintenanceWindow).where(MaintenanceWindow.ends_at <= now_utc)
+    if tenant_id is not None:
+        stmt = stmt.where(MaintenanceWindow.tenant_id == tenant_id)
+    result = await session.execute(stmt)
+    candidates = result.scalars().all()
+    expired = [w for w in candidates if _is_window_expired(w, now_utc)]
+    for w in expired:
+        await _delete_and_audit_expired_window(session, w, now_utc)
+    if expired and commit:
+        await session.commit()
+    return len(expired)
 
 
 def _apply_window_filters(
@@ -63,8 +134,19 @@ async def list_maintenance_windows(
     query = query.order_by(MaintenanceWindow.starts_at.desc())
 
     result = await db.execute(query)
-    windows = result.scalars().all()
-    return [MaintenanceWindowResponse.model_validate(w) for w in windows]
+    windows = list(result.scalars().all())
+    now_utc = datetime.now(UTC)
+    active_windows: list[Any] = []
+    purged_any = False
+    for w in windows:
+        if _is_window_expired(w, now_utc):
+            await _delete_and_audit_expired_window(db, w, now_utc)
+            purged_any = True
+        else:
+            active_windows.append(w)
+    if purged_any:
+        await db.commit()
+    return [MaintenanceWindowResponse.model_validate(w) for w in active_windows]
 
 
 @router.post("", response_model=MaintenanceWindowResponse, status_code=status.HTTP_201_CREATED)

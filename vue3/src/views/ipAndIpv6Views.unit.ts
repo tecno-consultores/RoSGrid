@@ -187,9 +187,60 @@ describe('WebFig Layer 3: IpAddressesAndDhcpView & Ipv6DualStackView', () => {
     await vm.handleCreatePool();
     await flushPromises();
 
+    // Editar y eliminar Pool IP
+    vm.openEditPoolModal({ id: '*p1', name: 'pool-lan', ranges: '192.168.88.10-192.168.88.254', 'next-pool': '' });
+    await vm.handleUpdatePool();
+    await flushPromises();
+    vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
+    await vm.handleDeletePool({ id: '*p1', name: 'pool-lan' });
+    await flushPromises();
+
+    // Editar Red DHCP y Cliente DHCP
+    vm.openEditNetworkModal({
+      id: '*net1',
+      address: '192.168.88.0/24',
+      gateway: '192.168.88.1',
+      'dns-server': '1.1.1.1',
+      domain: 'lan.corp',
+      'ntp-server': '192.168.88.1',
+      comment: 'LAN',
+    });
+    await vm.handleUpdateNetwork();
+    await flushPromises();
+
+    vm.openEditClientModal({
+      id: '*c1',
+      interface: 'ether1',
+      'add-default-route': 'yes',
+      'use-peer-dns': true,
+      'use-peer-ntp': true,
+      'default-route-distance': 1,
+      disabled: false,
+      comment: 'WAN',
+    });
+    await vm.handleUpdateClient();
+    await flushPromises();
+
     vm.setTab('dns');
     await flushPromises();
     await vm.handleFlushDnsCache();
+    await flushPromises();
+
+    // Editar parámetros DNS y registros DNS estáticos
+    vm.openEditDnsModal();
+    await vm.handleUpdateDnsSettings();
+    await flushPromises();
+
+    vm.newDnsStatic = { name: 'router.lan', address: '192.168.88.1', ttl: '1d', comment: 'Local' };
+    await vm.handleCreateDnsStatic();
+    await flushPromises();
+
+    vm.openEditDnsStaticModal({ id: '*dns1', name: 'router.lan', address: '192.168.88.1', ttl: '1d', disabled: false, comment: 'Local' });
+    await vm.handleUpdateDnsStatic();
+    await flushPromises();
+
+    vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
+    await vm.handleDeleteDnsStatic({ id: '*dns1', name: 'router.lan' });
     await flushPromises();
 
     vm.setTab('arp');
