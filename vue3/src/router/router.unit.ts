@@ -7,8 +7,31 @@ import { router } from './index';
 import { useAuthStore } from '@/stores/useAuthStore';
 import type { UserInfo } from '@/types';
 
+const storageMock = (() => {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] ?? null,
+    setItem: (key: string, value: string) => {
+      store[key] = String(value);
+    },
+    clear: () => {
+      store = {};
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+  };
+})();
+
+Object.defineProperty(window, 'localStorage', {
+  value: storageMock,
+  writable: true,
+  configurable: true,
+});
+
 describe('Router — Navigation Guards & RBAC 11 Roles', () => {
   beforeEach(async () => {
+    window.localStorage.clear();
     setActivePinia(createPinia());
     document.title = 'RoSGrid';
     await router.push('/login');
@@ -92,6 +115,18 @@ describe('Router — Navigation Guards & RBAC 11 Roles', () => {
     await router.push('/inventory');
     await router.push('/login');
     expect(router.currentRoute.value.path).toBe('/inventory');
+  });
+
+  it('limpia sesión obsoleta y permanece en /login cuando query.reason es session_expired (evita bucle infinito)', async () => {
+    const auth = useAuthStore();
+    auth.setAuth(normalUser);
+    expect(auth.isAuthenticated).toBe(true);
+
+    await router.push({ path: '/login', query: { reason: 'session_expired' } });
+    expect(router.currentRoute.value.path).toBe('/login');
+    expect(router.currentRoute.value.query.reason).toBe('session_expired');
+    expect(auth.isAuthenticated).toBe(false);
+    expect(window.localStorage.getItem('rosgrid_user')).toBeNull();
   });
 
   it('redirige a /noc-wallboard si el rol es NOC_MONITOR', async () => {

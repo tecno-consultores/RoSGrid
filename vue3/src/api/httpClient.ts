@@ -49,10 +49,29 @@ export function readCsrfCookie(): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
-function readStoredCsrfToken(): string | null {
-  if (typeof localStorage === 'undefined') return null;
+function getSafeLocalStorage(): Storage | null {
   try {
-    return localStorage.getItem('rosgrid_csrf');
+    if (
+      typeof window !== 'undefined' &&
+      window.localStorage &&
+      typeof window.localStorage.getItem === 'function'
+    ) {
+      return window.localStorage;
+    }
+    if (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function') {
+      return localStorage;
+    }
+  } catch {
+    // Ignora acceso bloqueado a storage
+  }
+  return null;
+}
+
+function readStoredCsrfToken(): string | null {
+  const storage = getSafeLocalStorage();
+  if (!storage) return null;
+  try {
+    return storage.getItem('rosgrid_csrf');
   } catch {
     return null;
   }
@@ -143,11 +162,12 @@ async function executeRefreshTokenRotation(): Promise<boolean> {
       credentials: 'include',
       headers: { Accept: 'application/json' },
     });
-    if (res.ok && typeof localStorage !== 'undefined' && typeof res.json === 'function') {
+    const storage = getSafeLocalStorage();
+    if (res.ok && storage && typeof res.json === 'function') {
       try {
         const body = await res.json();
         if (body?.csrf_token) {
-          localStorage.setItem('rosgrid_csrf', String(body.csrf_token));
+          storage.setItem('rosgrid_csrf', String(body.csrf_token));
         }
       } catch {
         // Ignora si la respuesta no contiene JSON
@@ -174,11 +194,29 @@ function notifyMakerChecker(payload: unknown): void {
   }
 }
 
+export function clearPersistedSessionStorage(): void {
+  const storage = getSafeLocalStorage();
+  if (storage) {
+    try {
+      storage.removeItem('rosgrid_user');
+      storage.removeItem('rosgrid_csrf');
+      storage.removeItem('rosgrid_session_id');
+    } catch {
+      // Ignora fallos de storage en contextos restringidos
+    }
+  }
+}
+
 function triggerSessionExpiredRedirect(): void {
+  clearPersistedSessionStorage();
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('rosgrid:session-expired'));
     if (window.location.pathname !== '/login') {
-      window.location.href = '/login?reason=session_expired';
+      try {
+        window.location.href = '/login?reason=session_expired';
+      } catch {
+        // Fallback para entornos de prueba JSDOM donde window.location.href arroja error de navegación
+      }
     }
   }
 }

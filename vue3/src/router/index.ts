@@ -417,7 +417,23 @@ router.beforeEach((to, _from, next) => {
   const authStore = useAuthStore();
   const requiresAuth = to.meta.requiresAuth !== false;
 
-  // 2. Control de autenticación
+  // 2. Control de autenticación y prevención de bucle infinito en expiración de sesión
+  const forcedLogoutReasons = new Set([
+    'session_expired',
+    'session_revoked',
+    'killed_by_admin',
+    'SESSION_KILLED',
+    'unauthorized',
+  ]);
+  if (
+    to.path === '/login' &&
+    typeof to.query.reason === 'string' &&
+    forcedLogoutReasons.has(to.query.reason) &&
+    authStore.isAuthenticated
+  ) {
+    authStore.clearAuth();
+  }
+
   if (requiresAuth && !authStore.isAuthenticated) {
     return next({ path: '/login', query: { redirect: to.fullPath } });
   }

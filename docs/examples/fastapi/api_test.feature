@@ -919,6 +919,14 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 122. Notificación de cierre de navegador (session-closing) con comodín session_id 'current' sin cookie activa devuelve 400
+    Given path '/api/v1/auth/session-closing'
+    And request { session_id: 'current', client_timestamp: 1730240000000 }
+    When method post
+    Then status 400
+    And match response.detail contains 'session_id'
+
+
 
 
 

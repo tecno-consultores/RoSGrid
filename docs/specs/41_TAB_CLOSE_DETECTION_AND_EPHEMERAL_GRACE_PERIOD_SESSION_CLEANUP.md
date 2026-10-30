@@ -91,6 +91,12 @@ window.addEventListener('pagehide', (event: PageTransitionEvent) => {
 });
 ```
 
+### 3.3. Prevención de Bucle Infinito de Redirección (*Ping-Pong*) al Reabrir el Navegador
+Cuando el operador cierra completamente el navegador (p. ej. Google Chrome) y lo vuelve a abrir pasados los 35 segundos del período de gracia (o cuando el navegador purga las cookies de sesión `__Host-rg_at` / `__Host-rg_rt` al salir), el estado persistido en `localStorage` (`rosgrid_user`, `rosgrid_csrf`, `rosgrid_session_id`) podría seguir presente en el disco local. Para evitar un bucle infinito de redirección entre `/inventory` y `/login?reason=session_expired`:
+1. **Purga Atómica en `httpClient.ts` (`triggerSessionExpiredRedirect`):** Antes de emitir el evento `rosgrid:session-expired` y redirigir a `/login?reason=session_expired` tras un fallo definitivo de `POST /api/v1/auth/refresh` (`401 Unauthorized`), `clearPersistedSessionStorage()` elimina inmediatamente `rosgrid_user`, `rosgrid_csrf` y `rosgrid_session_id` de `localStorage`.
+2. **Suscripción Reactiva en `useAuthStore.ts` y `useNocEventsStore.ts`:** `useAuthStore` escucha el evento global `rosgrid:session-expired` e invoca `clearAuth()` para anular `user.value` (`isAuthenticated = false`), mientras que `useNocEventsStore` cierra el WebSocket de eventos y cancela cualquier temporizador de reconexión.
+3. **Salvaguarda Defensiva en el Guard de Vue Router (`router/index.ts`):** Si `router.beforeEach` intercepta una navegación hacia `/login` con `query.reason` en `{'session_expired', 'session_revoked', 'killed_by_admin', 'SESSION_KILLED', 'unauthorized'}` y `authStore.isAuthenticated` aún evalúa a `true`, invoca `authStore.clearAuth()` en el acto, garantizando que el usuario permanezca en `/login` sin rebotar hacia `/inventory`.
+
 ---
 
 ## 4. Capa Backend: Endpoint de Despedida y Período de Gracia en KeyDB

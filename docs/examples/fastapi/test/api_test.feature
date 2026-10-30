@@ -911,6 +911,22 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 121. Creación de subinterfaz VLAN 802.1Q en WebFig Interfaces con intercepción Maker-Checker L1/L2 sin autenticación devuelve 401
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/interfaces/vlan'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000121'
+    And request { name: 'vlan20', vlan_id: 20, interface: 'ether1', mtu: 1500, comment: 'VLAN L1 Maker-Checker' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 122. Notificación de cierre de navegador (session-closing) con comodín session_id 'current' sin cookie activa devuelve 400
+    Given path '/api/v1/auth/session-closing'
+    And request { session_id: 'current', client_timestamp: 1730240000000 }
+    When method post
+    Then status 400
+    And match response.detail contains 'session_id'
+
+
 
 
 

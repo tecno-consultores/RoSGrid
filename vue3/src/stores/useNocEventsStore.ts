@@ -102,6 +102,10 @@ export const useNocEventsStore = defineStore('nocEvents', () => {
       socket.onclose = () => {
         isConnected.value = false;
         socket = null;
+        const authStore = useAuthStore();
+        if (!authStore.isAuthenticated) {
+          return;
+        }
         // Reintento con backoff
         reconnectTimer = setTimeout(() => {
           connectEventsWebSocket(wsUrl);
@@ -125,6 +129,7 @@ export const useNocEventsStore = defineStore('nocEvents', () => {
       reconnectTimer = null;
     }
     if (socket) {
+      socket.onclose = null;
       socket.close();
       socket = null;
     }
@@ -169,6 +174,9 @@ export const useNocEventsStore = defineStore('nocEvents', () => {
       setTimeout(() => {
         connectEventsWebSocket();
       }, 150);
+    });
+    window.addEventListener('rosgrid:session-expired', () => {
+      disconnectEventsWebSocket();
     });
   }
 

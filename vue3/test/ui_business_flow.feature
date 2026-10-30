@@ -631,6 +631,14 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And match text(".view-subtitle") contains 'autorización humana'
     And waitUntil("!document.querySelector('.rg-safemode-banner')")
 
+  Scenario: 66. Prevención de Bucle Infinito (Ping-Pong) al Reabrir Navegador con Sesión Expirada (/login?reason=session_expired)
+    Given driver baseUrl + '/login?reason=session_expired'
+    And waitFor("#login-heading")
+    And waitFor(".banner--warning")
+    Then match text(".banner--warning") contains 'Tu sesión ha expirado'
+    And match driver.url contains '/login?reason=session_expired'
+
+
 
 
 

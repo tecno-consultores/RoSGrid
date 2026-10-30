@@ -659,6 +659,9 @@ async def session_closing(
         except Exception:
             sid = None
 
+    if sid == "current":
+        sid = None
+
     token = extract_token_from_request(request)
     tenant_id: str | None = None
 

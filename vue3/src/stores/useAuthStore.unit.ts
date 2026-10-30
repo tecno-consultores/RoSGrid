@@ -6,8 +6,31 @@ import { setActivePinia, createPinia } from 'pinia';
 import { useAuthStore } from './useAuthStore';
 import type { UserInfo } from '@/types';
 
+const storageMock = (() => {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] ?? null,
+    setItem: (key: string, value: string) => {
+      store[key] = String(value);
+    },
+    clear: () => {
+      store = {};
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+  };
+})();
+
+Object.defineProperty(window, 'localStorage', {
+  value: storageMock,
+  writable: true,
+  configurable: true,
+});
+
 describe('useAuthStore — Autenticación Zero-Trust & RBAC', () => {
   beforeEach(() => {
+    window.localStorage.clear();
     setActivePinia(createPinia());
   });
 
@@ -113,5 +136,23 @@ describe('useAuthStore — Autenticación Zero-Trust & RBAC', () => {
     expect(auth.isFeatureEnabled('isp_module_enabled')).toBe(true);
     expect(auth.isFeatureEnabled('nightly_backups_enabled')).toBe(false);
     expect(auth.isFeatureEnabled('unknown_flag')).toBe(false);
+  });
+
+  it('purga la sesión reactivamente al recibir el evento rosgrid:session-expired', () => {
+    const auth = useAuthStore();
+    auth.setAuth(sampleUser, 'csrf-tok-123', 'sid-999');
+    expect(auth.isAuthenticated).toBe(true);
+    expect(auth.sessionId).toBe('sid-999');
+    expect(window.localStorage.getItem('rosgrid_user')).toBeTruthy();
+
+    window.dispatchEvent(new CustomEvent('rosgrid:session-expired'));
+
+    expect(auth.isAuthenticated).toBe(false);
+    expect(auth.user).toBeNull();
+    expect(auth.csrfToken).toBeNull();
+    expect(auth.sessionId).toBeNull();
+    expect(window.localStorage.getItem('rosgrid_user')).toBeNull();
+    expect(window.localStorage.getItem('rosgrid_csrf')).toBeNull();
+    expect(window.localStorage.getItem('rosgrid_session_id')).toBeNull();
   });
 });

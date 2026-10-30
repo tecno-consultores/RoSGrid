@@ -193,9 +193,11 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
   ```
 - **Mecánica de Seguridad y Resiliencia:**
   - Clave efímera en KeyDB `rg:{tenant}:sess_closing:{session_id}` con TTL de 35 segundos e inserción en el sorted set `closing_sessions_queue`.
+  - Si el cliente envía `"session_id": "current"`, el backend resuelve automáticamente el identificador real de sesión (`sid`) a partir de los claims de la cookie `__Host-rg_at` / `rg_at`.
   - Excluido de validaciones CSRF e Idempotency-Key para permitir el envío nativo por el motor Beacon del navegador.
   - Cancelación reactiva incondicional si el usuario realiza cualquier petición autenticada o abre un canal WebSocket dentro de los 35s (frecuente en recargas F5 y reconexiones de red).
   - Recolección desatendida por el worker `session_lifecycle_worker` que tras 35s revoca la sesión y genera el registro de auditoría WORM `SESSION_CLOSED_ON_DISCONNECT`.
+  - Si el usuario reabre el navegador después de haber expirado la sesión, `httpClient.ts` (`clearPersistedSessionStorage`), `useAuthStore.ts` (evento `rosgrid:session-expired`) y el guard `router.beforeEach` purgan atómicamente `rosgrid_user`, `rosgrid_csrf` y `rosgrid_session_id` de `localStorage`, evitando bucles de redirección entre `/login?reason=session_expired` e `/inventory`.
 
 #### `POST /api/v1/auth/switch-tenant` *(Conmutador Rápido de Contexto de Tenant para SuperAdmin)*
 

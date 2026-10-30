@@ -170,6 +170,7 @@
         backup_codes?: string[];
         user?: UserInfo;
         csrf_token?: string;
+        session_id?: string;
       }>('/api/v1/auth/login', {
         tenant_slug: tenantSlug.value.trim(),
         email: trimmedIdent,
@@ -191,7 +192,7 @@
         challengeId.value = data.challenge_id || '';
         startCountdown(180);
       } else if (data.user) {
-        completeLogin(data.user, data.csrf_token);
+        completeLogin(data.user, data.csrf_token, data.session_id);
       }
     } catch (err: unknown) {
       const error = err as { message?: string; detail?: string };
@@ -212,7 +213,7 @@
 
     isLoading.value = true;
     try {
-      const res = await http.post<{ user: UserInfo; csrf_token?: string }>(
+      const res = await http.post<{ user: UserInfo; csrf_token?: string; session_id?: string }>(
         '/api/v1/auth/2fa/confirm-enrollment',
         {
           challenge_id: challengeId.value,
@@ -220,7 +221,7 @@
         },
       );
       stopCountdown();
-      completeLogin(res.data.user, res.data.csrf_token);
+      completeLogin(res.data.user, res.data.csrf_token, res.data.session_id);
     } catch (err: unknown) {
       const error = err as { message?: string; detail?: string };
       errorMessage.value =
@@ -248,7 +249,7 @@
 
     isLoading.value = true;
     try {
-      const res = await http.post<{ user: UserInfo; csrf_token?: string }>(
+      const res = await http.post<{ user: UserInfo; csrf_token?: string; session_id?: string }>(
         '/api/v1/auth/2fa/verify',
         {
           challenge_id: challengeId.value,
@@ -256,7 +257,7 @@
         },
       );
       stopCountdown();
-      completeLogin(res.data.user, res.data.csrf_token);
+      completeLogin(res.data.user, res.data.csrf_token, res.data.session_id);
     } catch (err: unknown) {
       const error = err as { message?: string; detail?: string };
       errorMessage.value =
@@ -289,8 +290,8 @@
     errorMessage.value = '';
   }
 
-  function completeLogin(user: UserInfo, csrfToken?: string) {
-    authStore.setAuth(user, csrfToken || 'csrf-session');
+  function completeLogin(user: UserInfo, csrfToken?: string, sessionId?: string) {
+    authStore.setAuth(user, csrfToken || 'csrf-session', sessionId);
     const redirect =
       (route.query.redirect as string) || (user.role === 'NOC_MONITOR' ? '/noc-wallboard' : '/');
     router.push(redirect);

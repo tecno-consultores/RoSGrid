@@ -30,10 +30,29 @@ export const defaultTenantFeatures: TenantFeatureFlags = {
   rogue_dhcp_enabled: true,
 };
 
-function getStoredUser(): UserInfo | null {
-  if (typeof localStorage === 'undefined') return null;
+function getSafeLocalStorage(): Storage | null {
   try {
-    const raw = localStorage.getItem('rosgrid_user');
+    if (
+      typeof window !== 'undefined' &&
+      window.localStorage &&
+      typeof window.localStorage.getItem === 'function'
+    ) {
+      return window.localStorage;
+    }
+    if (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function') {
+      return localStorage;
+    }
+  } catch {
+    // Ignora acceso bloqueado a storage
+  }
+  return null;
+}
+
+function getStoredUser(): UserInfo | null {
+  const storage = getSafeLocalStorage();
+  if (!storage) return null;
+  try {
+    const raw = storage.getItem('rosgrid_user');
     return raw ? (JSON.parse(raw) as UserInfo) : null;
   } catch {
     return null;
@@ -41,6 +60,7 @@ function getStoredUser(): UserInfo | null {
 }
 
 export const useAuthStore = defineStore('auth', () => {
+  const storage = getSafeLocalStorage();
   const initialUser = getStoredUser();
   const user = ref<UserInfo | null>(initialUser);
   const tenantSlug = ref<string | null>(initialUser?.tenant_slug ?? null);
@@ -50,9 +70,8 @@ export const useAuthStore = defineStore('auth', () => {
       initialUser?.features ||
       {},
   );
-  const csrfToken = ref<string | null>(
-    typeof localStorage !== 'undefined' ? localStorage.getItem('rosgrid_csrf') : null,
-  );
+  const csrfToken = ref<string | null>(storage ? storage.getItem('rosgrid_csrf') : null);
+  const sessionId = ref<string | null>(storage ? storage.getItem('rosgrid_session_id') : null);
 
   if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
     window.addEventListener('storage', (event: StorageEvent) => {
@@ -68,13 +87,20 @@ export const useAuthStore = defineStore('auth', () => {
         };
       } else if (event.key === 'rosgrid_csrf') {
         csrfToken.value = event.newValue;
+      } else if (event.key === 'rosgrid_session_id') {
+        sessionId.value = event.newValue;
       }
+    });
+
+    window.addEventListener('rosgrid:session-expired', () => {
+      clearAuth();
     });
   }
 
   const isAuthenticated = computed<boolean>(() => user.value !== null);
 
-  function setAuth(userInfo: UserInfo, token?: string | null): void {
+  function setAuth(userInfo: UserInfo, token?: string | null, sid?: string | null): void {
+    const activeStorage = getSafeLocalStorage();
     user.value = userInfo;
     currentRole.value = userInfo.role;
     tenantSlug.value = userInfo.tenant_slug;
@@ -83,18 +109,28 @@ export const useAuthStore = defineStore('auth', () => {
         userInfo.features ||
         {}),
     };
-    if (typeof localStorage !== 'undefined') {
+    if (activeStorage) {
       try {
-        localStorage.setItem('rosgrid_user', JSON.stringify(userInfo));
+        activeStorage.setItem('rosgrid_user', JSON.stringify(userInfo));
       } catch {
         // Ignora fallos de storage cuota
       }
     }
     if (token) {
       csrfToken.value = token;
-      if (typeof localStorage !== 'undefined') {
+      if (activeStorage) {
         try {
-          localStorage.setItem('rosgrid_csrf', token);
+          activeStorage.setItem('rosgrid_csrf', token);
+        } catch {
+          // Ignora fallos de storage cuota
+        }
+      }
+    }
+    if (sid) {
+      sessionId.value = sid;
+      if (activeStorage) {
+        try {
+          activeStorage.setItem('rosgrid_session_id', sid);
         } catch {
           // Ignora fallos de storage cuota
         }
@@ -103,10 +139,11 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function setCsrfToken(token: string): void {
+    const activeStorage = getSafeLocalStorage();
     csrfToken.value = token;
-    if (typeof localStorage !== 'undefined') {
+    if (activeStorage) {
       try {
-        localStorage.setItem('rosgrid_csrf', token);
+        activeStorage.setItem('rosgrid_csrf', token);
       } catch {
         // Ignora fallos de storage cuota
       }
@@ -114,15 +151,18 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function clearAuth(): void {
+    const activeStorage = getSafeLocalStorage();
     user.value = null;
     currentRole.value = null;
     tenantSlug.value = null;
     csrfToken.value = null;
+    sessionId.value = null;
     tenantFeatures.value = {};
-    if (typeof localStorage !== 'undefined') {
+    if (activeStorage) {
       try {
-        localStorage.removeItem('rosgrid_user');
-        localStorage.removeItem('rosgrid_csrf');
+        activeStorage.removeItem('rosgrid_user');
+        activeStorage.removeItem('rosgrid_csrf');
+        activeStorage.removeItem('rosgrid_session_id');
       } catch {
         // Ignora fallos de storage cuota
       }
@@ -130,6 +170,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function updateTenantFeatures(features: Partial<TenantFeatureFlags>): void {
+    const activeStorage = getSafeLocalStorage();
     tenantFeatures.value = { ...tenantFeatures.value, ...features };
     if (user.value) {
       user.value = {
@@ -140,9 +181,9 @@ export const useAuthStore = defineStore('auth', () => {
           ...features,
         },
       };
-      if (typeof localStorage !== 'undefined') {
+      if (activeStorage) {
         try {
-          localStorage.setItem('rosgrid_user', JSON.stringify(user.value));
+          activeStorage.setItem('rosgrid_user', JSON.stringify(user.value));
         } catch {
           // Ignora fallos de storage cuota
         }
@@ -212,7 +253,7 @@ export const useAuthStore = defineStore('auth', () => {
       }>('/api/v1/auth/switch-tenant', { target_tenant_id: targetTenantId });
 
       if (res.data?.user) {
-        setAuth(res.data.user, res.data.csrf_token);
+        setAuth(res.data.user, res.data.csrf_token, res.data.session_id);
         if (typeof window !== 'undefined') {
           window.dispatchEvent(
             new CustomEvent('rosgrid:tenant-switched', {
@@ -233,6 +274,7 @@ export const useAuthStore = defineStore('auth', () => {
     tenantSlug,
     currentRole,
     csrfToken,
+    sessionId,
     tenantFeatures,
     isAuthenticated,
     setAuth,

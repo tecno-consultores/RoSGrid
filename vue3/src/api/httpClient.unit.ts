@@ -25,10 +25,33 @@ function createMockResponse(data: unknown, status = 200, statusText = 'OK', isJs
   };
 }
 
+const storageMock = (() => {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] ?? null,
+    setItem: (key: string, value: string) => {
+      store[key] = String(value);
+    },
+    clear: () => {
+      store = {};
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+  };
+})();
+
+Object.defineProperty(window, 'localStorage', {
+  value: storageMock,
+  writable: true,
+  configurable: true,
+});
+
 describe('httpClient — Zero Trust & Interceptores', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     document.cookie = '';
+    window.localStorage.clear();
   });
 
   afterEach(() => {
@@ -164,7 +187,11 @@ describe('httpClient — Zero Trust & Interceptores', () => {
       expect(mockFetch).toHaveBeenCalledTimes(3);
     });
 
-    it('dispara redirección y lanza ApiError cuando la rotación de token falla (401)', async () => {
+    it('dispara redirección, purga localStorage y lanza ApiError cuando la rotación de token falla (401)', async () => {
+      window.localStorage.setItem('rosgrid_user', JSON.stringify({ id: 'usr-1', username: 'admin' }));
+      window.localStorage.setItem('rosgrid_csrf', 'stale-csrf');
+      window.localStorage.setItem('rosgrid_session_id', 'stale-sid');
+
       const mockFetch = vi.fn().mockImplementation((url: string) => {
         if (url === '/api/v1/auth/refresh') {
           return Promise.resolve(
@@ -182,6 +209,9 @@ describe('httpClient — Zero Trust & Interceptores', () => {
 
       await expect(fetchWithInterceptors('/api/v1/protected')).rejects.toThrow(ApiError);
       expect(expiredSpy).toHaveBeenCalledOnce();
+      expect(window.localStorage.getItem('rosgrid_user')).toBeNull();
+      expect(window.localStorage.getItem('rosgrid_csrf')).toBeNull();
+      expect(window.localStorage.getItem('rosgrid_session_id')).toBeNull();
 
       window.removeEventListener('rosgrid:session-expired', expiredSpy);
     });

@@ -138,6 +138,46 @@ async def test_session_closing_endpoint_cookies_and_raw_body(
 
 
 @pytest.mark.asyncio
+async def test_session_closing_endpoint_with_current_keyword_resolves_cookie_sid(
+    async_client: AsyncClient,
+    sample_tenant: Tenant,
+    sample_user: User,
+    fake_redis: FakeAsyncRedis,
+) -> None:
+    session_id, _, _ = await create_session(
+        tenant_id=str(sample_tenant.id),
+        user_id=str(sample_user.id),
+        username=sample_user.username,
+        full_name=sample_user.full_name,
+        role=sample_user.role.value,
+        ip_address="192.168.10.52",
+        user_agent="Chrome/131.0",
+    )
+
+    token = create_jwt_access_token(
+        user_id=str(sample_user.id),
+        tenant_id=str(sample_tenant.id),
+        tenant_slug=sample_tenant.slug,
+        session_id=session_id,
+        role=sample_user.role.value,
+        all_routers=True,
+    )
+
+    cookies = {"rg_at": token}
+    response = await async_client.post(
+        "/api/v1/auth/session-closing",
+        content='{"session_id": "current", "client_timestamp": 1730000000000}',
+        headers={"Content-Type": "application/json"},
+        cookies=cookies,
+    )
+
+    assert response.status_code == 202
+    data = response.json()
+    assert data["status"] == "GRACE_PERIOD_ACTIVE"
+    assert data["session_id"] == session_id
+
+
+@pytest.mark.asyncio
 async def test_session_closing_mismatch_session_id_403(
     async_client: AsyncClient,
     sample_tenant: Tenant,
