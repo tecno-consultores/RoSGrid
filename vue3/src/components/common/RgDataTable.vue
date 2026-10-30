@@ -98,8 +98,12 @@
 
   // Selector de filas y detalles en móvil
   function getKey(row: T, index: number): string {
-    const k = row[props.rowKey];
+    const k = row[props.rowKey] ?? row['.id'] ?? row['id'];
     return k !== undefined && k !== null ? String(k) : String(index);
+  }
+
+  function getCellText(col: TableColumn<T>, row: T): string {
+    return String(col.formatter ? col.formatter(row) : (row[col.key] ?? '—'));
   }
 
   function handleRowClick(row: T): void {
@@ -295,9 +299,11 @@
                 v-for="col in dataColumns"
                 :key="col.key"
                 class="rg-data"
+                :data-label="col.label"
+                :title="getCellText(col, row)"
                 :style="{ textAlign: col.align || 'left' }"
               >
-                {{ col.formatter ? col.formatter(row) : (row[col.key] ?? '—') }}
+                {{ getCellText(col, row) }}
               </td>
 
               <!-- Acciones Personalizadas -->
@@ -373,6 +379,9 @@
   .rg-table-wrapper {
     display: flex;
     flex-direction: column;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
     background: var(--rg-bg-surface);
     border: 1px solid var(--rg-border-panel);
     border-radius: var(--rg-radius-lg, 8px);
@@ -413,6 +422,8 @@
   }
 
   .rg-table-scroll {
+    width: 100%;
+    max-width: 100%;
     max-height: 520px;
     overflow: auto;
     position: relative;
@@ -425,6 +436,13 @@
     width: 100%;
     border-collapse: collapse;
     font-size: var(--rg-text-sm, 0.8125rem);
+  }
+
+  td.rg-data {
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   /* Densidad Compacta (32px WinBox) */
@@ -452,6 +470,7 @@
     font-weight: 600;
     font-size: var(--rg-text-xs, 0.75rem);
     text-align: left;
+    white-space: nowrap;
     z-index: 10;
     user-select: none;
   }
@@ -514,6 +533,20 @@
   .col-custom-actions {
     white-space: nowrap;
     text-align: right;
+    position: sticky;
+    right: 0;
+    background: var(--rg-bg-surface);
+    box-shadow: -4px 0 8px rgba(0, 0, 0, 0.2);
+    z-index: 5;
+  }
+
+  thead th.col-custom-actions {
+    background: var(--rg-bg-elevated);
+    z-index: 12;
+  }
+
+  .rg-table-row:hover td.col-custom-actions {
+    background: var(--rg-bg-elevated);
   }
 
   .col-custom-actions :deep(.row-actions),

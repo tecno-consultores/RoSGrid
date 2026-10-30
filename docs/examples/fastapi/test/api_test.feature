@@ -955,6 +955,15 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 127. Creación de Regla de Aprovisionamiento de Radios CAPsMAN v7 (/provisioning) y Reprovisión de Flota sin autenticación devuelve 401
+    Given path '/api/v1/wifi/capsman/00000000-0000-0000-0000-000000000001/provisioning'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000127'
+    And request { name: 'prov-all-bands', action: 'create-dynamic-enabled', master_configuration: 'cfg-corporate', slave_configurations: ['cfg-guest'], supported_bands: ['2ghz-ax', '5ghz-ax', '6ghz-ax'], identity_regex: '.*' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
 
 
 

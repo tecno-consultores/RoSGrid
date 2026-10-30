@@ -6,7 +6,7 @@
 import uuid
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class StrictBaseModel(BaseModel):
@@ -63,6 +63,19 @@ class DynamicLayer2CollectionResponse(StrictBaseModel):
 class DynamicLayer2WriteRequest(StrictBaseModel):
     attributes: dict[str, Any] = Field(default_factory=dict)
     enable_safemode: bool = True
+
+    @model_validator(mode="before")
+    @classmethod
+    def _wrap_flat_attributes(cls, data: Any) -> Any:
+        if isinstance(data, dict) and "attributes" not in data:
+            enable_sm = bool(data.get("enable_safemode", True))
+            attrs = {
+                k: v
+                for k, v in data.items()
+                if k not in ("enable_safemode", ".id", "id")
+            }
+            return {"attributes": attrs, "enable_safemode": enable_sm}
+        return data
 
 
 class DynamicLayer2CommandRequest(StrictBaseModel):

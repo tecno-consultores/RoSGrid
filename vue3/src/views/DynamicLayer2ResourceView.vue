@@ -9,6 +9,41 @@
   import type { TableColumn, Layer2ResourceResponse } from '@/types';
   import RgDataTable from '@/components/common/RgDataTable.vue';
 
+  type Layer2ColumnSchema = Layer2ResourceResponse['columns_schema'][number];
+
+  const MAX_COMPACT_COLUMNS = 8;
+  const MAX_CELL_CHARS = 42;
+
+  const PRIORITY_COLUMN_KEYS = [
+    '.id',
+    'id',
+    'name',
+    'common-name',
+    'subject-alt-name',
+    'issuer',
+    'comment',
+    'type',
+    'interface',
+    'address',
+    'network',
+    'gateway',
+    'remote-peer',
+    'vpls-id',
+    'key-type',
+    'key-size',
+    'days-valid',
+    'expires-after',
+    'trusted',
+    'ca',
+    'expired',
+    'revoked',
+    'enabled',
+    'disabled',
+    'running',
+    'mtu',
+    'status',
+  ];
+
   const route = useRoute();
   const routerId = computed(() => String(route.params.routerId || ''));
   const rosPath = computed(() => String(route.params.rosPath || 'mpls'));
@@ -28,33 +63,122 @@
     form_data: {},
   });
 
+  const searchQuery = ref('');
+  const compactColumnsMode = ref(true);
+  const isColumnPickerOpen = ref(false);
+  const customSelectedKeys = ref<string[]>([]);
+
   const isModalOpen = ref(false);
   const activeRecord = ref<Record<string, unknown>>({});
   const successMessage = ref('');
   const errorMessage = ref('');
 
+  const hasWideSchema = computed(
+    () => resourceData.value.columns_schema.length > MAX_COMPACT_COLUMNS,
+  );
+
+  const visibleSchemaColumns = computed<Layer2ColumnSchema[]>(() => {
+    const allCols = resourceData.value.columns_schema;
+    if (customSelectedKeys.value.length > 0) {
+      return allCols.filter((c) => customSelectedKeys.value.includes(c.key));
+    }
+    if (!compactColumnsMode.value || allCols.length <= MAX_COMPACT_COLUMNS) {
+      return allCols;
+    }
+
+    const prioritized: Layer2ColumnSchema[] = [];
+    const seen = new Set<string>();
+
+    for (const pKey of PRIORITY_COLUMN_KEYS) {
+      const found = allCols.find((c) => c.key === pKey);
+      if (found && !seen.has(found.key)) {
+        prioritized.push(found);
+        seen.add(found.key);
+        if (prioritized.length >= MAX_COMPACT_COLUMNS) break;
+      }
+    }
+
+    for (const col of allCols) {
+      if (prioritized.length >= MAX_COMPACT_COLUMNS) break;
+      if (!seen.has(col.key)) {
+        prioritized.push(col);
+        seen.add(col.key);
+      }
+    }
+
+    return prioritized;
+  });
+
   const tableColumns = computed<TableColumn[]>(() => {
-    return resourceData.value.columns_schema.map((col) => ({
+    return visibleSchemaColumns.value.map((col) => ({
       key: col.key,
       label: col.label,
       sortable: true,
       formatter: (row: Record<string, unknown>) => {
         const val = row[col.key];
         if (typeof val === 'boolean') return val ? 'true' : 'false';
-        return String(val ?? '');
+        const rawStr = String(val ?? '');
+        if (rawStr.length > MAX_CELL_CHARS) {
+          return `${rawStr.slice(0, MAX_CELL_CHARS - 3)}...`;
+        }
+        return rawStr;
       },
     }));
   });
 
+  const filteredItems = computed<Record<string, unknown>[]>(() => {
+    const q = searchQuery.value.trim().toLowerCase();
+    if (!q) return resourceData.value.items;
+    return resourceData.value.items.filter((row) =>
+      Object.values(row).some((val) =>
+        String(val ?? '')
+          .toLowerCase()
+          .includes(q),
+      ),
+    );
+  });
+
+  function toggleCompactColumnsMode() {
+    customSelectedKeys.value = [];
+    compactColumnsMode.value = !compactColumnsMode.value;
+  }
+
+  function isColumnChecked(key: string): boolean {
+    return visibleSchemaColumns.value.some((c) => c.key === key);
+  }
+
+  function toggleSingleColumn(key: string) {
+    const currentKeys = visibleSchemaColumns.value.map((c) => c.key);
+    if (currentKeys.includes(key)) {
+      if (currentKeys.length <= 1) return;
+      customSelectedKeys.value = currentKeys.filter((k) => k !== key);
+    } else {
+      customSelectedKeys.value = [...currentKeys, key];
+    }
+  }
+
+  function getRecordId(row: Record<string, unknown>): string {
+    return String(row.id ?? row['.id'] ?? '');
+  }
+
   async function loadResource() {
     isLoading.value = true;
     errorMessage.value = '';
+    customSelectedKeys.value = [];
+    compactColumnsMode.value = true;
     try {
       const res = await http.get<Layer2ResourceResponse>(
         `/api/v1/routers/${routerId.value}/webfig/layer2/resource/${rosPath.value}`,
       );
+      const rawTitle =
+        res.data.title ||
+        rosPath.value
+          .split('/')
+          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(' / ');
       resourceData.value = {
         ...res.data,
+        title: rawTitle,
         form_data:
           res.data.form_data ||
           (res.data.is_singleton && res.data.items?.[0] ? { ...res.data.items[0] } : {}),
@@ -94,9 +218,10 @@
         );
         successMessage.value = 'Configuración singleton actualizada con Safe Mode.';
       } else {
-        if (activeRecord.value.id) {
+        const recId = getRecordId(activeRecord.value);
+        if (recId) {
           await http.patch(
-            `/api/v1/routers/${routerId.value}/webfig/layer2/resource/${rosPath.value}/${activeRecord.value.id}`,
+            `/api/v1/routers/${routerId.value}/webfig/layer2/resource/${rosPath.value}/${encodeURIComponent(recId)}`,
             activeRecord.value,
           );
         } else {
@@ -121,6 +246,24 @@
     }
   }
 
+  async function handleDeleteRecord(row: Record<string, unknown>) {
+    const recId = getRecordId(row);
+    if (!recId) return;
+    webFigStore.startSafeModeCountdown(60);
+    try {
+      await http.delete(
+        `/api/v1/routers/${routerId.value}/webfig/layer2/resource/${rosPath.value}/${encodeURIComponent(recId)}`,
+      );
+      successMessage.value = 'Registro eliminado con Safe Mode.';
+      setTimeout(() => {
+        successMessage.value = '';
+      }, 4000);
+      loadResource();
+    } catch {
+      errorMessage.value = 'No fue posible eliminar el registro seleccionado.';
+    }
+  }
+
   watch(
     [routerId, rosPath],
     () => {
@@ -133,32 +276,112 @@
 <template>
   <div class="layer2-view">
     <header class="view-header">
-      <div>
+      <div class="view-header__info">
         <h2 class="view-title">Motor Dinámico Capa 2 — {{ resourceData.title }}</h2>
         <p class="view-subtitle">
           Ruta RouterOS: <code>/{{ rosPath }}</code>
+          <span v-if="resourceData.columns_schema.length > 0" class="schema-badge">
+            {{ visibleSchemaColumns.length }}/{{ resourceData.columns_schema.length }} columnas visibles
+          </span>
         </p>
       </div>
 
-      <button
-        v-if="!resourceData.is_singleton"
-        type="button"
-        class="btn-primary"
-        @click="openCreateModal"
-      >
-        + Nuevo Registro
-      </button>
+      <div class="view-header__actions">
+        <button
+          v-if="!resourceData.is_singleton"
+          type="button"
+          class="btn-primary"
+          @click="openCreateModal"
+        >
+          + Nuevo Registro
+        </button>
+      </div>
     </header>
+
+    <!-- Barra de herramientas responsiva para tablas de Capa 2 -->
+    <div v-if="!resourceData.is_singleton" class="layer2-toolbar">
+      <div class="toolbar-search-wrap">
+        <input
+          id="layer2-search-input"
+          v-model="searchQuery"
+          type="search"
+          class="toolbar-search-input"
+          placeholder="🔍 Filtrar por nombre, CN, huella, serie o atributo..."
+          aria-label="Filtrar registros de Capa 2"
+        />
+      </div>
+
+      <div class="toolbar-controls">
+        <button
+          v-if="hasWideSchema"
+          id="btn-toggle-columns-mode"
+          type="button"
+          class="btn-toolbar"
+          :class="{ 'btn-toolbar--active': compactColumnsMode && customSelectedKeys.length === 0 }"
+          @click="toggleCompactColumnsMode"
+        >
+          {{
+            compactColumnsMode && customSelectedKeys.length === 0
+              ? `📐 Vista Compacta (${visibleSchemaColumns.length}/${resourceData.columns_schema.length})`
+              : `📐 Mostrar Compacta (${resourceData.columns_schema.length} cols activas)`
+          }}
+        </button>
+
+        <div v-if="resourceData.columns_schema.length > 0" class="column-picker-container">
+          <button
+            id="btn-column-selector"
+            type="button"
+            class="btn-toolbar"
+            :aria-expanded="isColumnPickerOpen"
+            @click="isColumnPickerOpen = !isColumnPickerOpen"
+          >
+            ⚙️ Columnas ({{ visibleSchemaColumns.length }})
+          </button>
+
+          <div v-if="isColumnPickerOpen" class="column-picker-popover" role="dialog" aria-label="Selector de columnas">
+            <div class="column-picker-header">
+              <span>Atributos disponibles ({{ resourceData.columns_schema.length }})</span>
+              <button
+                type="button"
+                class="btn-picker-close"
+                aria-label="Cerrar selector de columnas"
+                @click="isColumnPickerOpen = false"
+              >
+                ✕
+              </button>
+            </div>
+            <div class="column-picker-grid">
+              <label
+                v-for="col in resourceData.columns_schema"
+                :key="col.key"
+                class="column-picker-item"
+              >
+                <input
+                  type="checkbox"
+                  :checked="isColumnChecked(col.key)"
+                  @change="toggleSingleColumn(col.key)"
+                />
+                <span class="column-picker-label" :title="col.key">{{ col.label }}</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div v-if="successMessage" class="banner banner--success font-tabular" role="status">
       {{ successMessage }}
+    </div>
+
+    <div v-if="errorMessage" class="banner banner--error font-tabular" role="alert">
+      {{ errorMessage }}
     </div>
 
     <!-- Caso 1: Colección Tabular (is_singleton === false) -->
     <div v-if="!resourceData.is_singleton" class="table-card font-tabular">
       <RgDataTable
         :columns="tableColumns"
-        :rows="resourceData.items"
+        :rows="filteredItems"
         :caption="`Recurso ${resourceData.title}`"
         row-key="id"
         @select-row="openEditModal"
@@ -168,11 +391,21 @@
             <button
               type="button"
               class="btn-table-action"
-              title="Editar registro"
+              title="Inspeccionar o editar registro"
               aria-label="Editar registro"
               @click="openEditModal(row)"
             >
               ✏️ Editar
+            </button>
+            <button
+              v-if="getRecordId(row)"
+              type="button"
+              class="btn-table-action btn-table-action--delete"
+              title="Eliminar registro"
+              aria-label="Eliminar registro"
+              @click="handleDeleteRecord(row)"
+            >
+              🗑️
             </button>
           </div>
         </template>
@@ -182,27 +415,29 @@
     <!-- Caso 2: Formulario Directo (is_singleton === true) -->
     <div v-else-if="resourceData.form_data" class="form-card font-tabular">
       <form class="singleton-form" @submit.prevent="handleSaveRecord">
-        <div v-for="(val, key) in resourceData.form_data" :key="key" class="form-field">
-          <label :for="`field-${key}`" class="field-label">{{ key }}:</label>
-          <input
-            v-if="typeof val === 'boolean' || val === 'true' || val === 'false'"
-            :id="`field-${key}`"
-            :checked="val === true || val === 'true'"
-            type="checkbox"
-            class="field-checkbox"
-            @change="
-              resourceData.form_data[key] = ($event.target as HTMLInputElement).checked
-                ? 'true'
-                : 'false'
-            "
-          />
-          <input
-            v-else
-            :id="`field-${key}`"
-            v-model="resourceData.form_data[key]"
-            type="text"
-            class="field-input"
-          />
+        <div class="singleton-fields-grid">
+          <div v-for="(val, key) in resourceData.form_data" :key="key" class="form-field">
+            <label :for="`field-${key}`" class="field-label">{{ key }}:</label>
+            <input
+              v-if="typeof val === 'boolean' || val === 'true' || val === 'false'"
+              :id="`field-${key}`"
+              :checked="val === true || val === 'true'"
+              type="checkbox"
+              class="field-checkbox"
+              @change="
+                resourceData.form_data[key] = ($event.target as HTMLInputElement).checked
+                  ? 'true'
+                  : 'false'
+              "
+            />
+            <input
+              v-else
+              :id="`field-${key}`"
+              v-model="resourceData.form_data[key]"
+              type="text"
+              class="field-input"
+            />
+          </div>
         </div>
 
         <button type="submit" class="btn-primary">💾 Guardar con Safe Mode (60s)</button>
@@ -214,29 +449,31 @@
       <div class="rg-modal" role="dialog" aria-modal="true">
         <header class="modal-header">
           <h3 class="modal-title">
-            {{ activeRecord.id ? 'Editar' : 'Crear' }} {{ resourceData.title }}
+            {{ getRecordId(activeRecord) ? 'Editar' : 'Crear' }} {{ resourceData.title }}
           </h3>
           <button type="button" class="btn-close" @click="isModalOpen = false">✕</button>
         </header>
 
         <form class="modal-body" @submit.prevent="handleSaveRecord">
-          <div v-for="col in resourceData.columns_schema" :key="col.key" class="form-field">
-            <label :for="`modal-field-${col.key}`" class="field-label">{{ col.label }}:</label>
-            <input
-              v-if="col.type !== 'boolean_ros'"
-              :id="`modal-field-${col.key}`"
-              v-model="activeRecord[col.key]"
-              :type="col.type === 'integer' ? 'number' : 'text'"
-              class="field-input"
-              required
-            />
-            <input
-              v-else
-              :id="`modal-field-${col.key}`"
-              v-model="activeRecord[col.key]"
-              type="checkbox"
-              class="field-checkbox"
-            />
+          <div class="modal-fields-grid">
+            <div v-for="col in resourceData.columns_schema" :key="col.key" class="form-field">
+              <label :for="`modal-field-${col.key}`" class="field-label">{{ col.label }}:</label>
+              <input
+                v-if="col.type !== 'boolean_ros'"
+                :id="`modal-field-${col.key}`"
+                v-model="activeRecord[col.key]"
+                :type="col.type === 'integer' ? 'number' : 'text'"
+                :readonly="col.key === '.id'"
+                class="field-input"
+              />
+              <input
+                v-else
+                :id="`modal-field-${col.key}`"
+                v-model="activeRecord[col.key]"
+                type="checkbox"
+                class="field-checkbox"
+              />
+            </div>
           </div>
 
           <footer class="modal-footer">
@@ -255,13 +492,22 @@
   .layer2-view {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 14px;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
   }
 
   .view-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .view-header__info {
+    min-width: 0;
   }
 
   .view-title {
@@ -271,9 +517,143 @@
   }
 
   .view-subtitle {
-    margin: 2px 0 0 0;
+    margin: 4px 0 0 0;
     font-size: 0.8rem;
     color: var(--rg-text-muted);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .schema-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    background: rgba(34, 211, 238, 0.12);
+    border: 1px solid rgba(34, 211, 238, 0.35);
+    color: var(--rg-accent-cyan, #22d3ee);
+  }
+
+  .layer2-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--rg-bg-canvas);
+    border: 1px solid var(--rg-border-grid);
+    border-radius: 8px;
+  }
+
+  .toolbar-search-wrap {
+    flex: 1 1 240px;
+    min-width: 0;
+  }
+
+  .toolbar-search-input {
+    width: 100%;
+    padding: 6px 12px;
+    background: var(--rg-bg-elevated);
+    border: 1px solid var(--rg-border-grid);
+    border-radius: 6px;
+    color: var(--rg-text-primary);
+    font-size: 0.82rem;
+  }
+
+  .toolbar-controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .btn-toolbar {
+    padding: 6px 12px;
+    background: var(--rg-bg-elevated);
+    border: 1px solid var(--rg-border-grid);
+    border-radius: 6px;
+    color: var(--rg-text-secondary);
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .btn-toolbar:hover,
+  .btn-toolbar--active {
+    border-color: var(--rg-accent-cyan, #22d3ee);
+    color: var(--rg-accent-cyan, #22d3ee);
+    background: rgba(34, 211, 238, 0.1);
+  }
+
+  .column-picker-container {
+    position: relative;
+  }
+
+  .column-picker-popover {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    width: min(460px, 90vw);
+    max-height: 320px;
+    overflow-y: auto;
+    background: var(--rg-bg-surface);
+    border: 1px solid var(--rg-border-panel, #334155);
+    border-radius: 8px;
+    padding: 12px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.65);
+    z-index: 40;
+  }
+
+  .column-picker-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--rg-border-grid);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--rg-text-primary);
+  }
+
+  .btn-picker-close {
+    background: transparent;
+    border: none;
+    color: var(--rg-text-muted);
+    cursor: pointer;
+  }
+
+  .column-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+    gap: 6px;
+  }
+
+  .column-picker-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: var(--rg-text-secondary);
+    cursor: pointer;
+    overflow: hidden;
+  }
+
+  .column-picker-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .table-card {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
   }
 
   .btn-primary {
@@ -296,17 +676,33 @@
     font-size: 0.85rem;
   }
 
+  .banner--error {
+    padding: 10px 14px;
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid #ef4444;
+    border-radius: 6px;
+    color: #fca5a5;
+    font-size: 0.85rem;
+  }
+
   .form-card {
     background: var(--rg-bg-canvas);
     border: 1px solid var(--rg-border-grid);
     border-radius: 8px;
     padding: 16px;
-    max-width: 600px;
+    width: 100%;
+    max-width: 780px;
   }
 
   .singleton-form {
     display: flex;
     flex-direction: column;
+    gap: 14px;
+  }
+
+  .singleton-fields-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 12px;
   }
 
@@ -314,11 +710,15 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+    min-width: 0;
   }
 
   .field-label {
     font-size: 0.78rem;
     color: var(--rg-text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .field-input {
@@ -328,6 +728,7 @@
     border-radius: 6px;
     color: var(--rg-text-primary);
     font-size: 0.85rem;
+    width: 100%;
   }
 
   .rg-modal-backdrop {
@@ -338,6 +739,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 16px;
     z-index: 1000;
   }
 
@@ -346,7 +748,10 @@
     border: 1px solid var(--rg-border-grid);
     border-radius: 8px;
     width: 100%;
-    max-width: 480px;
+    max-width: 680px;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
   }
 
@@ -376,13 +781,25 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+    overflow: hidden;
+  }
+
+  .modal-fields-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding-right: 4px;
   }
 
   .modal-footer {
     display: flex;
     justify-content: flex-end;
     gap: 8px;
-    margin-top: 12px;
+    margin-top: 8px;
+    padding-top: 10px;
+    border-top: 1px solid var(--rg-border-grid);
   }
 
   .btn-secondary {

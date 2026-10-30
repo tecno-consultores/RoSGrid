@@ -659,6 +659,18 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     Then match text(".view-title") contains 'Ventanas de Mantenimiento Programadas'
     And match text(".view-subtitle") contains 'auto-eliminación automática al finalizar con registro en AuditLog WORM'
 
+  Scenario: 69. Reglas de Aprovisionamiento CAPsMAN v7 y Motor Universal Capa 2 Responsivo (/certificate)
+    Given driver baseUrl + '/enterprise/compliance?tab=wifi'
+    And waitFor("#panel-wifi")
+    And waitFor("#btn-wifi-provisioning")
+    Then match text("#btn-wifi-provisioning") contains 'Reglas de Aprovisionamiento'
+    When click("#btn-wifi-provisioning")
+    Then waitFor("#prov-rules-title")
+    When driver baseUrl + '/routers/00000000-0000-0000-0000-000000000001/webfig/layer2/certificate'
+    Then waitFor(".layer2-view")
+    And waitFor("#layer2-search-input")
+
+
 
 
 

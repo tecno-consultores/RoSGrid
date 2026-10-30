@@ -206,6 +206,8 @@
   .console-view-container {
     flex: 1;
     min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
     background: var(--rg-bg-surface);
     border: 1px solid var(--rg-border-grid);
     border-radius: 8px;

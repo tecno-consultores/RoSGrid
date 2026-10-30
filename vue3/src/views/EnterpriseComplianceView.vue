@@ -33,6 +33,7 @@
   } from '@/types';
 
   import NotificationChannelsPanel from '@/components/operations/NotificationChannelsPanel.vue';
+  import CapsmanProvisioningModal from '@/components/wifi/CapsmanProvisioningModal.vue';
   import CapsmanQuickSetupModal from '@/components/wifi/CapsmanQuickSetupModal.vue';
   import CapsmanSecurityProfilesModal from '@/components/wifi/CapsmanSecurityProfilesModal.vue';
   import CapsmanSsidModal from '@/components/wifi/CapsmanSsidModal.vue';
@@ -230,6 +231,7 @@
   const wifiClients = ref<WifiClientItem[]>([]);
   const showQuickSetupModal = ref(false);
   const showSecProfilesModal = ref(false);
+  const showProvisioningModal = ref(false);
   const showSsidModal = ref(false);
   const selectedSsidForEdit = ref<WifiSsidProfile | null>(null);
   const isTogglingCapsman = ref(false);
@@ -275,6 +277,24 @@
   function handleEditSsid(ssid: WifiSsidProfile) {
     selectedSsidForEdit.value = ssid;
     showSsidModal.value = true;
+  }
+
+  async function handleToggleSsidDisabled(ssid: WifiSsidProfile) {
+    if (!selectedRouterId.value) return;
+    const nextDisabled = !ssid.disabled;
+    try {
+      await http.patch(
+        `/api/v1/wifi/capsman/${selectedRouterId.value}/configurations/${encodeURIComponent(ssid.id)}`,
+        { disabled: nextDisabled },
+      );
+      successMessage.value = nextDisabled
+        ? `SSID ${ssid.name} deshabilitado [X].`
+        : `SSID ${ssid.name} habilitado exitosamente.`;
+      await loadWifiTab();
+    } catch (err: any) {
+      errorMessage.value =
+        err.response?.data?.detail || err.message || 'Error al alternar estado del SSID.';
+    }
   }
 
   async function handleDeleteSsid(ssid: WifiSsidProfile) {
@@ -1878,6 +1898,14 @@
             ➕ {{ t('wifi.btn_new_ssid', 'Nueva Configuración SSID') }}
           </button>
           <button
+            id="btn-wifi-provisioning"
+            type="button"
+            class="rg-btn-secondary"
+            @click="showProvisioningModal = true"
+          >
+            📡 {{ t('wifi.btn_provisioning', 'Reglas de Aprovisionamiento') }}
+          </button>
+          <button
             id="btn-wifi-reprovision"
             type="button"
             class="rg-btn-secondary"
@@ -1924,8 +1952,11 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="s in wifiSsids" :key="s.id">
-                <td class="font-bold">{{ s.name }}</td>
+              <tr v-for="s in wifiSsids" :key="s.id" :class="{ 'row-disabled': s.disabled }">
+                <td class="font-bold">
+                  <span v-if="s.disabled" class="badge badge-danger" style="margin-right: 0.35rem;" title="Deshabilitado">[X]</span>
+                  {{ s.name }}
+                </td>
                 <td class="font-mono text-cyan">{{ s.ssid }}</td>
                 <td>
                   <span class="badge badge-info">{{ s.security_type }}</span>
@@ -1935,6 +1966,15 @@
                 <td class="font-mono text-subtle">{{ s.rate_limit_profile || t('enterprise.wifi_unlimited', 'Ilimitado') }}</td>
                 <td>
                   <div style="display: flex; gap: 0.4rem;">
+                    <button
+                      type="button"
+                      class="rg-btn-secondary btn-toggle-ssid-state"
+                      style="padding: 0.2rem 0.5rem; font-size: 0.75rem;"
+                      :aria-label="`${s.disabled ? 'Habilitar' : 'Deshabilitar'} ${s.name}`"
+                      @click="handleToggleSsidDisabled(s)"
+                    >
+                      {{ s.disabled ? '▶️' : '⏸️' }}
+                    </button>
                     <button
                       type="button"
                       class="rg-btn-secondary"
@@ -2056,6 +2096,13 @@
       :show="showSecProfilesModal"
       :router-id="selectedRouterId"
       @close="showSecProfilesModal = false"
+      @updated="loadWifiTab"
+    />
+    <CapsmanProvisioningModal
+      :show="showProvisioningModal"
+      :router-id="selectedRouterId"
+      :available-configs="wifiSsids"
+      @close="showProvisioningModal = false"
       @updated="loadWifiTab"
     />
     <CapsmanSsidModal

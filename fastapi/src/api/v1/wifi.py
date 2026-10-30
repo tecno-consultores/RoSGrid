@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_current_user_claims, require_feature, require_roles
 from src.api.v1.webfig_common import execute_safe_mutation, get_router_and_client
+from src.core.audit import write_audit_log
 from src.db.session import get_tenant_db_session
 from src.models.core import SystemRoleEnum
 from src.models.inventory import Router
@@ -66,6 +67,45 @@ _WIFI_OPERATOR_ROLES = (
     SystemRoleEnum.SUPPORT_L3,
     SystemRoleEnum.SUPPORT_L2,
 )
+
+
+async def _record_wifi_audit(
+    db: AsyncSession,
+    claims: dict[str, Any],
+    router_id: uuid.UUID,
+    event_action: str,
+    ros_rest_method: str,
+    ros_rest_endpoint: str,
+    after_state: dict[str, Any] | None = None,
+    status_code: int = 200,
+) -> None:
+    """Registra eventos de mutación Wi-Fi CAPsMAN en la bitácora de auditoría WORM."""
+    try:
+        tenant_id = uuid.UUID(str(claims["tid"]))
+        user_sub = claims.get("sub")
+        actor_user_id = uuid.UUID(str(user_sub)) if user_sub else None
+        actor_role = str(
+            claims.get("rol")
+            or (claims.get("roles", [SystemRoleEnum.SUPPORT_L3.value])[0] if claims.get("roles") else SystemRoleEnum.SUPPORT_L3.value)
+        )
+        await write_audit_log(
+            session=db,
+            tenant_id=tenant_id,
+            actor_username=str(claims.get("preferred_username") or claims.get("username") or "noc-operator"),
+            actor_role=actor_role,
+            actor_ip="127.0.0.1",
+            event_category="WIFI_CAPSMAN",
+            event_action=event_action,
+            actor_user_id=actor_user_id,
+            router_id=router_id,
+            ros_rest_method=ros_rest_method,
+            ros_rest_endpoint=ros_rest_endpoint,
+            after_state=after_state,
+            status_code=status_code,
+        )
+        await db.commit()
+    except Exception as exc:
+        logger.debug("No se pudo persistir auditoría WORM Wi-Fi (%s): %s", event_action, exc)
 
 
 @router.get(
@@ -218,6 +258,15 @@ async def toggle_capsman_manager(
         ) from exc
 
     state_str = "activado" if payload.enabled else "desactivado"
+    await _record_wifi_audit(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        event_action="WIFI_CAPSMAN_MANAGER_TOGGLED",
+        ros_rest_method="POST",
+        ros_rest_endpoint="/rest/interface/wifi/capsman/set" if driver == "wifi" else "/rest/caps-man/manager/set",
+        after_state={"enabled": payload.enabled, "driver": driver},
+    )
     return CapsmanToggleResponse(
         router_id=router_id,
         driver=driver,
@@ -393,6 +442,21 @@ async def create_capsman_configuration(
                 is_modern = False
 
             if is_modern:
+                if payload.vlan_id:
+                    dp_name = f"dp-vlan-{payload.vlan_id}"
+                    try:
+                        await client.put(
+                            "/interface/wifi/datapath",
+                            json_data={
+                                "name": dp_name,
+                                "vlan-id": str(payload.vlan_id),
+                                "client-isolation": "yes" if payload.client_isolation else "no",
+                            },
+                        )
+                        cfg_body["datapath"] = dp_name
+                    except Exception:
+                        pass
+
                 res = await execute_safe_mutation(
                     client=client,
                     menu="/interface/wifi/configuration",
@@ -427,6 +491,16 @@ async def create_capsman_configuration(
             detail=f"Fallo al aprovisionar configuración Wi-Fi en RouterOS: {exc}",
         ) from exc
 
+    await _record_wifi_audit(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        event_action="WIFI_CONFIGURATION_CREATED",
+        ros_rest_method="PUT",
+        ros_rest_endpoint="/rest/interface/wifi/configuration",
+        after_state={"id": created_id, "name": payload.name, "ssid": payload.ssid, "vlan_id": payload.vlan_id},
+        status_code=201,
+    )
     return WifiSsidProfile(
         id=created_id,
         name=payload.name,
@@ -507,6 +581,15 @@ async def update_capsman_configuration(
             detail=f"Fallo al actualizar configuración en RouterOS: {exc}",
         ) from exc
 
+    await _record_wifi_audit(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        event_action="WIFI_CONFIGURATION_UPDATED",
+        ros_rest_method="PATCH",
+        ros_rest_endpoint=f"/rest/interface/wifi/configuration/{cfg_id}",
+        after_state=payload.model_dump(exclude_none=True),
+    )
     return {"status": "ok", "message": f"Configuración {cfg_id} actualizada exitosamente."}
 
 
@@ -533,10 +616,50 @@ async def delete_capsman_configuration(
         _, client = await get_router_and_client(router_id, claims, db)
         async with client:
             is_modern = True
+            existing_cfgs: Any = None
             try:
-                await client.get("/interface/wifi/configuration")
+                existing_cfgs = await client.get("/interface/wifi/configuration")
             except Exception:
                 is_modern = False
+
+            # Resolver nombre de la configuración si cfg_id es un .id (*C1)
+            candidate_names = {cfg_id}
+            if isinstance(existing_cfgs, list):
+                for c_item in existing_cfgs:
+                    if isinstance(c_item, dict) and str(c_item.get(".id", "")) == cfg_id and c_item.get("name"):
+                        candidate_names.add(str(c_item["name"]))
+
+            # Verificar integridad referencial contra reglas activas de aprovisionamiento
+            prov_endpoint = "/interface/wifi/provisioning" if is_modern else "/caps-man/provisioning"
+            try:
+                prov_rules = await client.get(prov_endpoint)
+            except Exception:
+                prov_rules = []
+
+            if isinstance(prov_rules, list):
+                for rule in prov_rules:
+                    if not isinstance(rule, dict):
+                        continue
+                    if "master-configuration" not in rule and "slave-configurations" not in rule:
+                        continue
+                    if str(rule.get("disabled", "no")).lower() in ("yes", "true"):
+                        continue
+                    master_cfg = str(rule.get("master-configuration") or "").strip()
+                    slave_cfgs = {
+                        s.strip()
+                        for s in str(rule.get("slave-configurations") or "").split(",")
+                        if s.strip()
+                    }
+                    referenced = ({master_cfg} if master_cfg else set()) | slave_cfgs
+                    if candidate_names & referenced:
+                        rule_name = rule.get("name") or rule.get(".id") or "provisioning-rule"
+                        raise HTTPException(
+                            status_code=status.HTTP_409_CONFLICT,
+                            detail=(
+                                f"No se puede eliminar la configuración '{cfg_id}': "
+                                f"está en uso por la regla activa de aprovisionamiento '{rule_name}'."
+                            ),
+                        )
 
             target_path = (
                 f"/interface/wifi/configuration/{cfg_id}"
@@ -558,6 +681,17 @@ async def delete_capsman_configuration(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"Fallo al eliminar configuración en RouterOS: {exc}",
         ) from exc
+
+    await _record_wifi_audit(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        event_action="WIFI_CONFIGURATION_DELETED",
+        ros_rest_method="DELETE",
+        ros_rest_endpoint=f"/rest/interface/wifi/configuration/{cfg_id}",
+        after_state={"deleted_id": cfg_id},
+        status_code=204,
+    )
 
 
 @router.get(
@@ -703,6 +837,21 @@ async def create_security_profile(
             detail=f"Fallo al crear perfil de seguridad en RouterOS: {exc}",
         ) from exc
 
+    await _record_wifi_audit(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        event_action="WIFI_SECURITY_PROFILE_CREATED",
+        ros_rest_method="PUT",
+        ros_rest_endpoint="/rest/interface/wifi/security",
+        after_state={
+            "id": created_id,
+            "name": payload.name,
+            "authentication_types": payload.authentication_types,
+            "passphrase": "********",
+        },
+        status_code=201,
+    )
     return WifiSecurityProfileItem(
         id=created_id,
         name=payload.name,
@@ -914,6 +1063,16 @@ async def create_provisioning_rule(
             detail=f"Fallo al crear regla de aprovisionamiento en RouterOS: {exc}",
         ) from exc
 
+    await _record_wifi_audit(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        event_action="WIFI_PROVISIONING_RULE_APPLIED",
+        ros_rest_method="PUT",
+        ros_rest_endpoint="/rest/interface/wifi/provisioning",
+        after_state={"id": created_id, "name": payload.name, "master_configuration": payload.master_configuration},
+        status_code=201,
+    )
     return WifiProvisioningRuleItem(
         id=created_id,
         name=payload.name,
@@ -1035,6 +1194,15 @@ async def reprovision_capsman_fleet(
             detail=f"Fallo al forzar reprovisionamiento en RouterOS: {exc}",
         ) from exc
 
+    await _record_wifi_audit(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        event_action="WIFI_FLEET_REPROVISIONED",
+        ros_rest_method="POST",
+        ros_rest_endpoint="/rest/interface/wifi/radio/provision",
+        after_state={"provisioned_radios_count": count},
+    )
     return CapsmanReprovisionResponse(
         success=True,
         provisioned_radios_count=count,
@@ -1424,6 +1592,20 @@ async def quick_setup_wifi(
             detail=f"Fallo en ejecución de Quick-Setup Wi-Fi: {exc}",
         ) from exc
 
+    await _record_wifi_audit(
+        db=db,
+        claims=claims,
+        router_id=router_id,
+        event_action="WIFI_QUICK_SETUP_APPLIED",
+        ros_rest_method="POST",
+        ros_rest_endpoint="/rest/interface/wifi/quick-setup",
+        after_state={
+            "corporate_ssid": payload.corporate_ssid,
+            "guest_ssid": payload.guest_ssid if payload.guest_ssid_enabled else None,
+            "guest_vlan_id": payload.guest_vlan_id if payload.guest_ssid_enabled else None,
+        },
+        status_code=201,
+    )
     return WifiQuickSetupResponse(
         router_id=router_id,
         manager_enabled=True,

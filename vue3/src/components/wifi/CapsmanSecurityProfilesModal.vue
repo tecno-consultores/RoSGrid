@@ -24,6 +24,7 @@ const errorMsg = ref('');
 
 // Formulario nuevo perfil
 const showAddForm = ref(false);
+const showPassphrase = ref(false);
 const newProfile = ref({
   name: '',
   authentication_types: ['wpa2-psk', 'wpa3-psk'],
@@ -152,7 +153,24 @@ onMounted(() => {
           </div>
           <div class="rg-field-row">
             <label for="new-sec-pass" class="rg-label">{{ t('wifi.label_passphrase', 'Contraseña (PSK):') }}</label>
-            <input id="new-sec-pass" v-model="newProfile.passphrase" type="password" class="rg-input" placeholder="Mínimo 8 caracteres" />
+            <div class="rg-pass-wrap">
+              <input
+                id="new-sec-pass"
+                v-model="newProfile.passphrase"
+                :type="showPassphrase ? 'text' : 'password'"
+                class="rg-input rg-input-flex"
+                placeholder="Mínimo 8 caracteres"
+              />
+              <button
+                id="btn-toggle-sec-pass"
+                type="button"
+                class="rg-btn-secondary"
+                :aria-label="showPassphrase ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                @click="showPassphrase = !showPassphrase"
+              >
+                {{ showPassphrase ? '🙈' : '👁️' }}
+              </button>
+            </div>
           </div>
           <div class="rg-checkbox-row">
             <label class="rg-checkbox-label">
@@ -311,6 +329,13 @@ onMounted(() => {
   padding: 0.4rem 0.6rem;
   border-radius: 4px;
   font-size: 0.85rem;
+}
+.rg-pass-wrap {
+  display: flex;
+  gap: 0.4rem;
+}
+.rg-input-flex {
+  flex: 1;
 }
 .rg-checkbox-row {
   display: flex;

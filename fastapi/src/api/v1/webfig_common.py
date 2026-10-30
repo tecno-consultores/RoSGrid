@@ -18,8 +18,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.core.crypto import decrypt_aes_gcm
-from src.mikrotik.client import MikrotikRestClient
+from src.mikrotik.client import MikrotikClientError, MikrotikRestClient
 from src.mikrotik.safemode import build_rollback_command, execute_with_safemode
+from src.mikrotik.ssl_tofu import MikrotikSSLError
 from src.models.core import SystemRoleEnum, UserRouterPermission
 from src.models.inventory import Router, SSLTrustStatusEnum
 from src.models.operations import (
@@ -94,7 +95,7 @@ def _create_client_from_vault(r: Router, tenant_id: uuid.UUID) -> MikrotikRestCl
         password=cur_pass,
         previous_password=prev_pass,
         ssl_pinned_fingerprint=r.ssl_sha256_fingerprint,
-        timeout=10.0,
+        timeout=4.0,
     )
 
 
@@ -162,7 +163,15 @@ async def cached_mikrotik_get(
             except Exception as exc:
                 logger.debug("Error al deserializar caché: %s", exc)
 
-    data = await client.get(endpoint)
+    try:
+        data = await client.get(endpoint)
+    except HTTPException:
+        raise
+    except (ConnectionError, TimeoutError, OSError, MikrotikClientError, MikrotikSSLError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"No se pudo conectar al router MikroTik en {endpoint}: {exc}",
+        ) from exc
     if data is not None:
         try:
             await redis.setex(cache_key, ttl_seconds, json.dumps(data))
@@ -311,9 +320,17 @@ async def execute_safe_mutation(
         item_id=item_id,
         before_state=before_state,
     )
-    return await execute_with_safemode(
-        client=client,
-        rollback_cli=rollback_cmd,
-        operation_fn=coro_fn,
-        interval_seconds=60,
-    )
+    try:
+        return await execute_with_safemode(
+            client=client,
+            rollback_cli=rollback_cmd,
+            operation_fn=coro_fn,
+            interval_seconds=60,
+        )
+    except HTTPException:
+        raise
+    except (ConnectionError, TimeoutError, OSError, MikrotikClientError, MikrotikSSLError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"No se pudo ejecutar mutación en el router MikroTik ({menu}): {exc}",
+        ) from exc

@@ -669,3 +669,40 @@ async def test_not_found_and_exception_branches(
         with pytest.raises(HTTPException) as exc_e:
             await delete_wifi_client(mock_router.id, "*1", mock_db, sample_claims)
         assert exc_e.value.status_code == 502
+
+
+@pytest.mark.asyncio
+async def test_delete_configuration_conflict_when_used_in_provisioning(
+    sample_claims: dict, mock_router: Router, mock_db: AsyncMock
+) -> None:
+    """Verifica que eliminar una configuración vinculada a una regla activa arroja HTTP 409 Conflict."""
+    fake_client = AsyncMock()
+
+    async def fake_get(path: str, *args, **kwargs):
+        if "configuration" in path:
+            return [{".id": "*C1", "name": "cfg-corporate-hq", "ssid": "CorpNet"}]
+        if "provisioning" in path:
+            return [
+                {
+                    ".id": "*P1",
+                    "name": "prov-global",
+                    "master-configuration": "cfg-corporate-hq",
+                    "slave-configurations": "cfg-guest",
+                    "disabled": "no",
+                }
+            ]
+        return []
+
+    fake_client.get = AsyncMock(side_effect=fake_get)
+
+    with patch("src.api.v1.wifi.get_router_and_client", return_value=(mock_router, fake_client)):
+        with pytest.raises(HTTPException) as exc_conflict:
+            await delete_capsman_configuration(
+                router_id=mock_router.id,
+                cfg_id="*C1",
+                db=mock_db,
+                claims=sample_claims,
+            )
+        assert exc_conflict.value.status_code == 409
+        assert "prov-global" in exc_conflict.value.detail
+

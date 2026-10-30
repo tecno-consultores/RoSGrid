@@ -1181,6 +1181,61 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
       await flushPromises();
     }
 
+    // Modo ancho (> 8 columnas, ej. /certificate) con selector de columnas, filtro y eliminación
+    vi.spyOn(http, 'get').mockResolvedValueOnce({
+      status: 200,
+      data: {
+        ros_path: 'certificate',
+        is_singleton: false,
+        columns_schema: Array.from({ length: 12 }, (_, idx) => ({
+          key: idx === 0 ? '.id' : idx === 1 ? 'name' : idx === 2 ? 'fingerprint' : `attr-${idx}`,
+          label: idx === 0 ? 'ID' : idx === 1 ? 'Name' : idx === 2 ? 'Fingerprint' : `Attr ${idx}`,
+          type: 'string',
+        })),
+        items: [
+          {
+            '.id': '*cert1',
+            name: 'router-tls-cert',
+            fingerprint: '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
+            'attr-3': 'val3',
+          },
+        ],
+      },
+      headers: new Headers(),
+    });
+    vi.spyOn(http, 'delete').mockResolvedValue({ status: 200, data: {}, headers: new Headers() });
+
+    mockRouteParam = { routerId: 'r-01', rosPath: 'certificate' };
+    const wrapperCert = mount(DynamicLayer2ResourceView);
+    await flushPromises();
+
+    // Debe activar Vista Compacta (8/12 columnas visibles) y truncar fingerprint > 42 chars
+    expect(wrapperCert.text()).toContain('8/12 columnas visibles');
+    const toggleModeBtn = wrapperCert.find('#btn-toggle-columns-mode');
+    expect(toggleModeBtn.exists()).toBe(true);
+    await toggleModeBtn.trigger('click');
+    expect(wrapperCert.text()).toContain('12/12 columnas visibles');
+
+    // Abrir selector de columnas y alternar una columna
+    await wrapperCert.find('#btn-column-selector').trigger('click');
+    const colChecks = wrapperCert.findAll('.column-picker-item input[type="checkbox"]');
+    if (colChecks.length > 0) {
+      await colChecks[0].trigger('change');
+      await colChecks[0].trigger('change');
+    }
+
+    // Filtrar por texto
+    const searchInput = wrapperCert.find('#layer2-search-input');
+    await searchInput.setValue('router-tls-cert');
+    expect(wrapperCert.text()).toContain('router-tls-cert');
+
+    // Eliminar registro por .id
+    const delBtn = wrapperCert.find('.btn-table-action--delete');
+    if (delBtn.exists()) {
+      await delBtn.trigger('click');
+      await flushPromises();
+    }
+
     vi.useRealTimers();
   });
 

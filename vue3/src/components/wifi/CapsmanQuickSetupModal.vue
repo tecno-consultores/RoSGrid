@@ -30,6 +30,8 @@ const form = ref<WifiQuickSetupPayload>({
 
 const isSubmitting = ref(false);
 const errorMsg = ref('');
+const showCorpPass = ref(false);
+const showGuestPass = ref(false);
 
 function validateForm(): boolean {
   errorMsg.value = '';
@@ -115,14 +117,25 @@ async function handleDeploy() {
           </div>
           <div class="rg-field-row">
             <label for="corp-pass" class="rg-label">{{ t('wifi.label_passphrase', 'Contraseña (WPA2/WPA3):') }}</label>
-            <input
-              id="corp-pass"
-              v-model="form.corporate_passphrase"
-              type="password"
-              class="rg-input"
-              placeholder="Mínimo 8 caracteres"
-              required
-            />
+            <div class="rg-pass-wrap">
+              <input
+                id="corp-pass"
+                v-model="form.corporate_passphrase"
+                :type="showCorpPass ? 'text' : 'password'"
+                class="rg-input rg-input-flex"
+                placeholder="Mínimo 8 caracteres"
+                required
+              />
+              <button
+                id="btn-toggle-corp-pass"
+                type="button"
+                class="rg-btn-secondary"
+                :aria-label="showCorpPass ? 'Ocultar contraseña corporativa' : 'Mostrar contraseña corporativa'"
+                @click="showCorpPass = !showCorpPass"
+              >
+                {{ showCorpPass ? '🙈' : '👁️' }}
+              </button>
+            </div>
           </div>
         </fieldset>
 
@@ -152,14 +165,25 @@ async function handleDeploy() {
             </div>
             <div class="rg-field-row">
               <label for="guest-pass" class="rg-label">{{ t('wifi.label_guest_passphrase', 'Contraseña Invitados:') }}</label>
-              <input
-                id="guest-pass"
-                v-model="form.guest_passphrase"
-                type="password"
-                class="rg-input"
-                placeholder="Mínimo 8 caracteres"
-                required
-              />
+              <div class="rg-pass-wrap">
+                <input
+                  id="guest-pass"
+                  v-model="form.guest_passphrase"
+                  :type="showGuestPass ? 'text' : 'password'"
+                  class="rg-input rg-input-flex"
+                  placeholder="Mínimo 8 caracteres"
+                  required
+                />
+                <button
+                  id="btn-toggle-guest-pass"
+                  type="button"
+                  class="rg-btn-secondary"
+                  :aria-label="showGuestPass ? 'Ocultar contraseña de invitados' : 'Mostrar contraseña de invitados'"
+                  @click="showGuestPass = !showGuestPass"
+                >
+                  {{ showGuestPass ? '🙈' : '👁️' }}
+                </button>
+              </div>
             </div>
             <div class="rg-field-row">
               <label for="guest-vlan" class="rg-label">{{ t('wifi.label_guest_vlan', 'ID de VLAN (Datapath):') }}</label>
@@ -297,6 +321,13 @@ async function handleDeploy() {
   padding: 0.5rem 0.75rem;
   border-radius: 4px;
   font-size: 0.875rem;
+}
+.rg-pass-wrap {
+  display: flex;
+  gap: 0.4rem;
+}
+.rg-input-flex {
+  flex: 1;
 }
 .rg-input:focus {
   outline: none;
