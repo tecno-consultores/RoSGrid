@@ -294,4 +294,18 @@ La interfaz operativa aplica las reglas de jerarquía visual de **Refactoring UI
 - **Indicadores Geométricos para Daltonismo:** Los indicadores de estado *Online* (círculo sólido verde) y *Offline* (anillo hueco de borde rojo) se distinguen por su forma geométrica además del color.
 - **Estados Vacíos Tácticos:** Toda tabla `RgDataTable` sin registros muestra un panel informativo (`role="status"`) indicando la ausencia de datos en la vista o filtro actual.
 
+---
+
+## 12. Evolución Next-Gen del Motor Dinámico Universal WebFig Capa 2 (Hito 27.16 — Spec 54)
+
+El Motor Dinámico Universal de Capa 2 (`DynamicLayer2ResourceView.vue` y `fastapi/src/api/v1/webfig_layer2.py`) incorpora 6 capacidades de ingeniería NOC sobre `/rest/*`:
+
+1. **Acciones RPC Específicas por Menú (`POST /rest/<menu>/<acción>`):** Catálogo contextual de verbos RPC seguros para emitir certificados Let's Encrypt ACME (`add-acme`), firmar certificados con `rosgrid-ca` (`sign`), exportar `.pem`/`.p12` (`export-certificate`), convertir concesiones o ARP en estáticos (`make-static`), operar contenedores OCI (`start`/`stop`) o ejecutar scripts (`run`) en 1 clic.
+2. **Introspección Automática de Esquema con `/rest/console/inspect`:** Consulta automática de `syntax` y `completion` con caché en KeyDB (TTL 24h) para descubrir el 100% de los atributos válidos, tipos, enumeraciones y descripciones incluso cuando la tabla en el router tiene **0 registros**.
+3. **Filtrado Server-Side (`.query`) y Proyección de Columnas (`.proplist`):** Ejecución de `POST /rest/<menu>/print` con `.proplist` y `.query` directamente en el motor C++ de RouterOS v7, reduciendo hasta en un **85%** el payload JSON en tablas masivas (`/ip/firewall/address-list`, `/ip/arp`, `/routing/route`, `/certificate`).
+4. **Operaciones por Lote (`Bulk Enable / Disable / Comment / Remove`):** Selección múltiple en `RgDataTable.vue` y barra flotante táctica que ejecuta mutaciones en bloque bajo un **único scheduler atómico de reversión Safe Mode de 60 segundos**.
+5. **Exportación Contextual `.rsc` por Submenú y Diff Git:** Generación de `POST /rest/<menu>/export` (`compact`/`terse`) y previsualización `unified_diff` contra la sección homónima del último respaldo Git en PostgreSQL.
+6. **Perfiles de Columnas Guardados y Presets de Plantillas Rápidas JSON:** Persistencia por operador y submenú en `localStorage` (`rg_l2_cols:<tenant>:<ros_path>`) de las columnas seleccionadas y barra de plantillas prellenadas al pulsar **`+ Nuevo Registro`**.
+
+
 

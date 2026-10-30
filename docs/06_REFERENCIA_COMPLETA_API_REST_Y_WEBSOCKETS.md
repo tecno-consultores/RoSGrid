@@ -481,10 +481,33 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
 
 - **Salida (200 / 201):** Identificador del puerto creado en RouterOS.
 
-#### `GET/POST/PATCH/DELETE /api/v1/routers/{id}/layer2/{resource_path}`
+#### `GET/POST/PATCH/DELETE /api/v1/routers/{id}/webfig/layer2/resource/{ros_path}`
 
-- **Roles:** `can_write_layer2` en matriz de permisos.
-- **Descripción:** Acceso transparente a recursos de Capa 2 (Bridges, VLANs, Switch, WireGuard, Capsman, IoT).
+- **Roles:** Lectura general / `can_write_layer2` en matriz de permisos para mutaciones (`POST`, `PATCH`, `DELETE`).
+- **Descripción:** Acceso universal a cualquier recurso o colección de Capa 2 (`/certificate`, `/mpls/interface`, `/snmp/community`, `/container`, `/zerotier`, etc.) con detección automática de menús *singleton*, soporte `?proplist=` para proyección de columnas y Safe Mode de 60s.
+
+#### `GET /api/v1/routers/{id}/webfig/layer2/inspect/{ros_path}` y `GET .../rpc-catalog/{ros_path}` (Hito 27.16 — Spec 54)
+
+- **Roles:** Lectura concedida.
+- **Propósito:**
+  - `/inspect/{ros_path}`: Invoca `POST /rest/console/inspect` (`syntax` y `completion`) con caché en KeyDB (TTL 24h) para obtener el 100% de las propiedades válidas, tipos, enumeraciones y descripciones incluso cuando el submenú tiene **0 registros**.
+  - `/rpc-catalog/{ros_path}`: Devuelve el catálogo tipado de verbos RPC seguros soportados por ese submenú (`add-acme`, `sign`, `export-certificate`, `make-static`, `start`, `stop`, `run`).
+
+#### `POST /api/v1/routers/{id}/webfig/layer2/query/{ros_path}` (Hito 27.16 — Spec 54)
+
+- **Roles:** Lectura concedida.
+- **Propósito:** Delega el filtrado (`.query`) y la selección de columnas (`.proplist`) al motor C++ de RouterOS v7 mediante `POST /rest/{ros_path}/print`, reduciendo hasta en un 85% el payload JSON en tablas masivas.
+
+#### `POST /api/v1/routers/{id}/webfig/layer2/bulk/{ros_path}` (Hito 27.16 — Spec 54)
+
+- **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`, `SUPPORT_L3` (`can_write_layer2`).
+- **Protección:** **Ventana única de Safe Mode (60s)** y bitácora WORM (`L2_BULK_MUTATION_EXECUTED`).
+- **Propósito:** Ejecuta operaciones por lote (`enable`, `disable`, `comment`, `remove`) sobre una lista de `.id` seleccionados bajo un único punto de reversión atómico en `/system/scheduler`.
+
+#### `POST /api/v1/routers/{id}/webfig/layer2/export/{ros_path}` (Hito 27.16 — Spec 54)
+
+- **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`, `SUPERVISOR`, `SUPPORT_L3`, `SUPPORT_L2`, `AUDITOR`.
+- **Propósito:** Exporta únicamente la sección CLI `.rsc` del submenú inspeccionado (`POST /rest/{ros_path}/export` con `compact`/`terse`) y devuelve el `unified_diff` contra la sección correspondiente del último respaldo Git en `router_backups`.
 
 #### `POST /api/v1/routers/{id}/webfig/ip/dhcp-servers`
 

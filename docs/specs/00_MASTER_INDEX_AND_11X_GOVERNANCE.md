@@ -1,6 +1,6 @@
 # 00 — ÍNDICE MAESTRO, GOBERNANZA ARQUITECTÓNICA Y ESTÁNDAR 11X (RoSGrid)
 
-> **[DIRECTIVA DE SISTEMA PARA AGENTES DE IA / ANTIGRAVITY]:** Actúa como un Principal Systems Architect, Staff Backend/Frontend Engineer y Staff QA Automation Engineer. Lee, analiza y aplica de forma estricta e innegociable todas las especificaciones contenidas en esta enciclopedia documental de 54 archivos ubicada en `docs/specs/` (specs 00 a 53) para construir **RoSGrid**: Plataforma Centralizada Multi-Tenant de Gestión Técnica y Operativa para Flotas MikroTik RouterOS v7+. Procesa la lógica al máximo nivel de razonamiento técnico y genera todo el código, comentarios, commits y documentación en **Español**.
+> **[DIRECTIVA DE SISTEMA PARA AGENTES DE IA / ANTIGRAVITY]:** Actúa como un Principal Systems Architect, Staff Backend/Frontend Engineer y Staff QA Automation Engineer. Lee, analiza y aplica de forma estricta e innegociable todas las especificaciones contenidas en esta enciclopedia documental de 55 archivos ubicada en `docs/specs/` (specs 00 a 54) para construir **RoSGrid**: Plataforma Centralizada Multi-Tenant de Gestión Técnica y Operativa para Flotas MikroTik RouterOS v7+. Procesa la lógica al máximo nivel de razonamiento técnico y genera todo el código, comentarios, commits y documentación en **Español**.
 
 ---
 
@@ -161,7 +161,7 @@ rosgrid/
 
 ---
 
-## 4. Índice Maestro de los 54 Archivos de Especificación (00 a 53) (Carpeta `docs/specs/`)
+## 4. Índice Maestro de los 55 Archivos de Especificación (00 a 54) (Carpeta `docs/specs/`)
 
 Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `docs/specs/` siguiendo rigurosamente el orden de los 5 Bloques listados a continuación:
 
@@ -239,6 +239,7 @@ Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `
 * `docs/specs/51_INTERACTIVE_CAPSMAN_WIFI_V7_CONFIGURATION_AND_FLEET_PROVISIONING.md` — Consola Táctica Interactiva CAPsMAN v7, Aprovisionamiento Masivo de Wi-Fi y Gestión de Clientes en Tiempo Real: Bimodalidad v7.13+ moderno (`/interface/wifi/`) vs legado (`/caps-man/`), control de Manager, gestión de SSIDs y VLAN Datapaths, perfiles de seguridad WPA2/WPA3, aprovisionamiento automático por bandas de frecuencia, reprovisionamiento en caliente, desautenticación forzosa (*Kick Client*), Asistente Quick-Setup en 1 Clic y Safe Mode transaccional de 60s.
 * `docs/specs/52_CONTEXTUAL_IN_APP_HELP_DRAWER_AND_DUAL_PDF_READY_MANUALS.md` — Sistema de Ayuda Contextual Transversal en Consola (`RgContextualHelpDrawer.vue` + `helpCatalog.ts`, sin botón PDF en la app operativa), Manuales Duales en Markdown Optimizados para Conversión a PDF con Gráficos Mermaid (`docs/MANUAL_ADMINISTRADOR_E_INSTALADOR.md` y `docs/MANUAL_USUARIO_Y_OPERADOR_NOC.md`) y Exportación Dinámica desde GitHub a PDF en `rosgrid-web`.
 * `docs/specs/53_FRONTEND_DESIGN_SYSTEM_METADATA_A11Y_AND_MOBILE_PARITY.md` — Paridad de Sistema de Diseño Frontend con `rosgrid-web`, Persistencia de Tema (`rg_theme`) y Densidad (`rg_table_density`) en `localStorage`, `color-scheme` Nativo, Blindaje Zero-Trust `X-Robots-Tag: noindex`, Título Dinámico con Identidad de Router Activo (`[r1 · 10.250.3.8]`), Contraste WCAG 2.1 AA en Botones de Fila para Tema `light`, Atributo `:data-label="col.label"` y `.num-col` Automáticos en `RgDataTable.vue`, Logo Vectorial Reactivo (`RgBrandLogo.vue`) y Generador de Contexto `llms.txt` en `RgMcpTokenModal.vue`.
+* `docs/specs/54_WEBFIG_L2_UNIVERSAL_ENGINE_NEXTGEN_RPC_INSPECT_QUERY_BULK_AND_PROFILES.md` — Evolución Next-Gen del Motor Dinámico Universal WebFig Capa 2 (Hito 27.16): Catálogo Contextual de Acciones RPC por Menú (`POST /rest/<menu>/<acción>`), Introspección Automática de Esquema y Autocompletado con `/rest/console/inspect`, Filtrado Server-Side (`.query`) y Proyección de Columnas (`.proplist`), Operaciones por Lote (`Bulk Enable/Disable/Comment/Remove`) bajo Ventana Única de Safe Mode (60s), Exportación Contextual `.rsc` por Submenú con Diff contra el Último Respaldo Git y Perfiles de Columnas Guardados + Presets de Plantillas Rápidas JSON.
 
 
 ---

@@ -189,6 +189,15 @@ Permite operar redes IPv6 de última generación en 5 pestañas:
 - **`Secretos PPP`, `Perfiles PPP` y `Servidores PPPoE`:** Cuentan con botones para crear, **`✏️ Editar`** (contraseña, servicio, perfil, IP local/remota, `Rate Limit`, servidores DNS, `Max MTU`), habilitar/deshabilitar y **`🗑️ Eliminar`**.
 - **`Simple Queues`:** Creación y edición (`✏️`) de colas de ancho de banda con barra de **Presets en 1 Clic** (`10M`, `25M/50M`, `50M/100M`, `100M/300M`, `200M/600M`, `1G`) y semáforo de saturación en tiempo real.
 
+### 4.10 Motor Dinámico Universal de Capa 2 (`DynamicLayer2ResourceView` — Hito 27.16)
+Permite operar el 100% restante de los menús de RouterOS v7 (`/certificate`, `/mpls/interface`, `/mpls/ldp`, `/snmp/community`, `/container`, `/zerotier`, `/ip/ipsec/*`, etc.) con 6 capacidades tácticas avanzadas:
+1. **Vista Compacta Responsiva (8 Columnas Prioritarias) y Perfiles Guardados (`⚙️ Columnas`):** Muestra por defecto las 8 columnas operativas clave, permite personalizar qué atributos ver y guarda su perfil de columnas por submenú en el navegador (`rg_l2_cols`).
+2. **Acciones RPC Contextuales por Menú (`POST /rest/<menu>/<acción>`):** Botones directos para emitir certificados Let's Encrypt ACME (`add-acme`), firmar certificados con `rosgrid-ca` (`sign`), exportar `.pem`/`.p12` (`export-certificate`), fijar leases/ARP (`make-static`) o iniciar contenedores (`start`/`stop`).
+3. **Introspección Automática con `/console/inspect` y Presets JSON:** Descubre el 100% de los campos y opciones válidas aun cuando la tabla del router esté vacía (`0 registros`) y ofrece plantillas prellenadas al pulsar **`+ Nuevo Registro`**.
+4. **Filtrado Server-Side (`.query`) y Proyección de Columnas (`.proplist`):** Filtra tablas masivas directamente en el motor C++ de RouterOS v7 reduciendo hasta en un 85% el tráfico JSON.
+5. **Operaciones por Lote (`Bulk Enable / Disable / Comment / Remove`):** Seleccione múltiples filas con las casillas de verificación para habilitarlas, deshabilitarlas, comentarlas o eliminarlas en bloque bajo una única ventana de **Safe Mode de 60 segundos**.
+6. **Exportación Contextual `.rsc` y Comparador Diff por Submenú:** Genere el script CLI `.rsc` exclusivo del submenú activo y compárelo línea por línea contra el último respaldo Git antes de aplicar cambios.
+
 <div style="page-break-after: always;"></div>
 
 ---

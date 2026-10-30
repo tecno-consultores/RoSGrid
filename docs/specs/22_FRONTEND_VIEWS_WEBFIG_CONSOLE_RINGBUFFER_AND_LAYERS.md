@@ -94,3 +94,12 @@ Cuando un ingeniero de Soporte N3 o Administrador navega a cualquier ruta `/rout
 1. Consulta `GET /api/v1/routers/{router_id}/webfig/layer2/resource/{ros_path}` y abre o enfoca su pestaña en `RouterWorkspaceTabsBar.vue`.
 2. Si `is_singleton === false`, construye automáticamente la tabla `RgDataTable.vue` a partir de `columns_schema` (respetando la densidad adaptativa `32px`/`44px` y el *Virtual Scrolling*) y genera dinámicamente el modal de **Crear / Editar Registro** mapeando cada tipo de atributo (`string`, `integer`, `boolean_ros`).
 3. Si `is_singleton === true`, renderiza directamente el formulario de configuración del módulo con el switch **"Proteger cambio con Safe Mode (60s Rollback)"** activado por defecto.
+4. **Vista Compacta Responsiva (8 Columnas Prioritarias) y Selector Individual (`⚙️ Columnas`):**
+   - En submenús con más de 8 atributos (ej. `/certificate` con 35+ propiedades), muestra por defecto las 8 columnas operativas más relevantes (`PRIORITY_COLUMN_KEYS`), truncando cadenas largas con elipsis + tooltip y fijando la columna `Acciones` a la derecha (`position: sticky; right: 0`).
+5. **Capacidades Next-Gen de Capa 2 (Hito 27.16 — Spec 54):**
+   - **Acciones RPC Contextuales (`RgLayer2RpcActionModal.vue`):** Botones dinámicos por menú y por fila para verbos RPC nativos (`add-acme`, `sign`, `export-certificate`, `make-static`, `start`, `stop`, `run`).
+   - **Formularios Guiados por `/console/inspect` y Presets JSON (`layer2PresetsCatalog.ts`):** Renderizado del 100% de campos y enumeraciones aun en tablas vacías (`0 registros`), acompañado de barra de plantillas prellenadas en 1 clic al pulsar **`+ Nuevo Registro`**.
+   - **Constructor de Filtros Server-Side (`.query`) y Proyección (`.proplist`) (`RgLayer2QueryBuilder.vue`):** Ejecución de consultas filtradas directamente en el motor C++ de RouterOS v7.
+   - **Operaciones por Lote (`Bulk Enable / Disable / Comment / Remove`):** Selección múltiple con checkboxes en `RgDataTable.vue` y barra flotante táctica gobernada por una ventana única de Safe Mode de 60 segundos.
+   - **Exportación `.rsc` por Submenú con Diff (`RgLayer2RscExportDiffModal.vue`):** Inspección del script CLI `.rsc` del submenú activo y comparación `unified_diff` contra el último respaldo Git.
+   - **Perfiles de Columnas Guardados (`useLayer2ColumnProfiles.ts`):** Persistencia por operador/tenant y submenú en `localStorage` (`rg_l2_cols:<tenant>:<ros_path>`).

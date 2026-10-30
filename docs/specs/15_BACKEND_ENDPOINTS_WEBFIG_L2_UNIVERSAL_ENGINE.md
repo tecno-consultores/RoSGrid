@@ -237,3 +237,20 @@
 ### **2.6 POST /api/v1/routers/\{router\_id\}/webfig/layer2/command/\{ros\_path:path\} — Ejecución Controlada de Acciones CLI vía REST**
 
 - Permite invocar métodos específicos de un submenú (ej. POST /rest/certificate/sign, POST /rest/container/start o POST /rest/container/stop) auditando la entrada y el resultado.
+
+---
+
+## **3. Extensiones Next-Gen del Motor Universal de Capa 2 (Hito 27.16 — Spec 54)**
+
+> **Referencia Canónica:** Véase [docs/specs/54_WEBFIG_L2_UNIVERSAL_ENGINE_NEXTGEN_RPC_INSPECT_QUERY_BULK_AND_PROFILES.md](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/docs/specs/54_WEBFIG_L2_UNIVERSAL_ENGINE_NEXTGEN_RPC_INSPECT_QUERY_BULK_AND_PROFILES.md) para el detalle integral de esquemas Pydantic, flujos de seguridad y componentes UI.
+
+1. **`GET /api/v1/routers/{router_id}/webfig/layer2/rpc-catalog/{ros_path:path}` y Catálogo de Verbos RPC (`L2_RPC_ACTIONS_CATALOG`):**
+   - Expone los verbos RPC seguros soportados por cada submenú (`add-acme`, `sign`, `export-certificate`, `create-certificate-request`, `make-static`, `start`, `stop`, `run`, `kill-connections`) con validación de argumentos, soporte por menú o por fila (`.id`) y ejecución bajo Safe Mode (60s) / Maker-Checker (`HTTP 202`).
+2. **`GET /api/v1/routers/{router_id}/webfig/layer2/inspect/{ros_path:path}` — Introspección Automática con `/rest/console/inspect`:**
+   - Consulta `POST /rest/console/inspect` (`request="syntax"` y `request="completion"`) con caché en KeyDB (`rg:{tid}:l2_schema:{ros_ver}:{ros_path}`, TTL 24h) para descubrir el 100% de las propiedades válidas, tipos, enumeraciones y descripciones incluso cuando la tabla en el router tiene **0 registros**.
+3. **`POST /api/v1/routers/{router_id}/webfig/layer2/query/{ros_path:path}` y Query Param `?proplist=` — Filtrado Server-Side (`.query`) y Proyección (`.proplist`):**
+   - Delega el filtrado (`.query`) y la selección de columnas (`.proplist`) al motor C++ de RouterOS v7 mediante `POST /rest/{ros_path}/print`, reduciendo hasta en un **85%** el payload JSON en tablas masivas (`/ip/arp`, `/ip/firewall/address-list`, `/routing/route`, `/certificate`).
+4. **`POST /api/v1/routers/{router_id}/webfig/layer2/bulk/{ros_path:path}` — Operaciones por Lote (`Bulk Enable / Disable / Comment / Remove`):**
+   - Ejecuta mutaciones masivas sobre múltiples `.id` seleccionados bajo un **único scheduler atómico de reversión Safe Mode (60s)** y un registro consolidado WORM (`L2_BULK_MUTATION_EXECUTED`).
+5. **`POST /api/v1/routers/{router_id}/webfig/layer2/export/{ros_path:path}` — Exportación Contextual `.rsc` y Comparador Diff:**
+   - Invoca `POST /rest/{ros_path}/export` (`compact`/`terse`) y calcula el `unified_diff` contra la sección homónima del último respaldo Git almacenado en `router_backups`.
