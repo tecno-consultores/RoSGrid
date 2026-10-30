@@ -2,9 +2,17 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { ref, watch, onMounted, onBeforeUnmount } from 'vue';
+  import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
   import { http } from '@/api/httpClient';
   import type { UserManagementItem, McpTokenResponse } from '@/types';
+
+  export type McpClientId =
+    | 'claude-desktop'
+    | 'claude-code'
+    | 'codex'
+    | 'cursor'
+    | 'vscode'
+    | 'hermes';
 
   const props = defineProps<{
     user: UserManagementItem | null;
@@ -22,7 +30,104 @@
   const generatedTokenData = ref<McpTokenResponse | null>(null);
   const isCopied = ref(false);
   const isSkillCopied = ref(false);
+  const isLlmsContextCopied = ref(false);
   const isDownloadingSkill = ref(false);
+  const CLIENT_CLAUDE_DESKTOP: McpClientId = 'claude-desktop';
+  const DEFAULT_LOCAL_ORIGIN = 'http://localhost:8000';
+  const DEFAULT_CLAUDE_CONFIG_FILE = 'claude_desktop_config.json';
+
+  const selectedMcpClient = ref<McpClientId>(CLIENT_CLAUDE_DESKTOP);
+
+  const mcpClientsList: Array<{ id: McpClientId; label: string; configFile: string }> = [
+    { id: CLIENT_CLAUDE_DESKTOP, label: 'Claude Desktop', configFile: DEFAULT_CLAUDE_CONFIG_FILE },
+    { id: 'claude-code', label: 'Claude Code CLI', configFile: 'claude mcp add --transport http' },
+    { id: 'codex', label: 'OpenAI Codex CLI', configFile: '~/.codex/config.toml' },
+    { id: 'cursor', label: 'Cursor IDE', configFile: '.cursor/mcp.json' },
+    { id: 'vscode', label: 'VS Code Copilot', configFile: '.vscode/mcp.json' },
+    { id: 'hermes', label: 'Hermes Agent', configFile: '~/.hermes/config.yaml' },
+  ];
+
+  const mcpEndpointUrl = computed<string>(() => {
+    const origin =
+      typeof window !== 'undefined' && window.location?.origin
+        ? window.location.origin
+        : DEFAULT_LOCAL_ORIGIN;
+    return `${origin}/api/v1/mcp`;
+  });
+
+  const tokenPreview = computed<string>(() => {
+    const tok = generatedTokenData.value?.token;
+    return tok ? `${tok.substring(0, 16)}...` : '<TU_TOKEN_BEARER_MCP>';
+  });
+
+  const activeClientSnippet = computed<string>(() => {
+    const endpoint = mcpEndpointUrl.value;
+    const token = tokenPreview.value;
+    switch (selectedMcpClient.value) {
+      case 'claude-code':
+        return `claude mcp add --transport http rosgrid ${endpoint} \\\n  --header "Authorization: Bearer ${token}"`;
+      case 'codex':
+        return `[mcp_servers.rosgrid]\nurl = "${endpoint}"\nhttp_headers = { "Authorization" = "Bearer ${token}" }`;
+      case 'cursor':
+        return `{\n  "mcpServers": {\n    "rosgrid": {\n      "url": "${endpoint}",\n      "headers": {\n        "Authorization": "Bearer ${token}"\n      }\n    }\n  }\n}`;
+      case 'vscode':
+        return `{\n  "servers": {\n    "rosgrid": {\n      "type": "http",\n      "url": "${endpoint}",\n      "headers": {\n        "Authorization": "Bearer ${token}"\n      }\n    }\n  }\n}`;
+      case 'hermes':
+        return `mcp_servers:\n  rosgrid:\n    transport: streamable_http\n    url: "${endpoint}"\n    headers:\n      Authorization: "Bearer ${token}"`;
+      case CLIENT_CLAUDE_DESKTOP:
+      default:
+        return `{\n  "mcpServers": {\n    "rosgrid": {\n      "command": "npx",\n      "args": [\n        "-y",\n        "@modelcontextprotocol/server-fetch",\n        "${endpoint}"\n      ],\n      "env": {\n        "AUTHORIZATION": "Bearer ${token}"\n      }\n    }\n  }\n}`;
+    }
+  });
+
+  function buildLlmsTxtContext(): string {
+    const origin =
+      typeof window !== 'undefined' && window.location?.origin
+        ? window.location.origin
+        : DEFAULT_LOCAL_ORIGIN;
+    const tenantSlug = generatedTokenData.value?.tenant_slug || 'default-tenant';
+    return [
+      '# RoSGrid NOC — LLM-Ready Context & MCP Server Index (llms.txt)',
+      `> Multi-Tenant WebFig v7 Console & Autonomous NOC MCP Server (${origin}/api/v1/mcp) | Tenant: ${tenantSlug}`,
+      '',
+      '## Canonical MCP Endpoints',
+      `- Streamable HTTP JSON-RPC 2.0: ${origin}/api/v1/mcp`,
+      `- Dynamic System Prompt / Skill (SKILL.md): ${origin}/api/v1/mcp/skill`,
+      '',
+      '## 22 Registered MCP Tools (rosgrid_*)',
+      '- Telemetry & Inventory (Read-Only): `rosgrid_list_routers`, `rosgrid_get_router_health`, `rosgrid_get_sfp_optical_ddm`, `rosgrid_get_routing_bgp_ospf`, `rosgrid_list_wireguard_peers`, `rosgrid_list_firewall_rules`, `rosgrid_get_dhcp_leases_and_arp`, `rosgrid_get_ppp_active_and_queues`, `rosgrid_search_syslog_events`, `rosgrid_get_cve_compliance_matrix`, `rosgrid_get_rsc_backup_diff`, `rosgrid_list_ipam_prefixes`, `rosgrid_get_l2_topology_neighbors`',
+      '- Diagnostics & Governed Mutations (Safe Mode 60s + Maker-Checker HTTP 202): `rosgrid_run_diagnostic_tool`, `rosgrid_query_routeros_rest`, `rosgrid_toggle_interface_state`, `rosgrid_manage_firewall_address_list`, `rosgrid_reorder_firewall_rule`, `rosgrid_reset_ppp_or_dhcp_session`, `rosgrid_create_wireguard_peer`, `rosgrid_trigger_rsc_backup`, `rosgrid_execute_bulk_fleet_playbook`',
+      '',
+      '## 8 Autonomous NOC SOP Playbooks',
+      '1. SOP-01: Diagnóstico 360° de nodo degradado (CPU, RAM, SFP DDM, BGP/OSPF).',
+      '2. SOP-02: Detección y aislamiento de corte de fibra óptica PON / SFP Rx Power < -27 dBm.',
+      '3. SOP-03: Mitigación de tormenta de rutas o flapping BGP/OSPF en RouterOS v7.',
+      '4. SOP-04: Contención DDoS / Fuerza Bruta mediante `/ip/firewall/address-list` con timeout.',
+      '5. SOP-05: Auditoría de deriva de configuración (`.rsc` Git Diff) y cumplimiento CIS.',
+      '6. SOP-06: Diagnóstico de sesiones PPPoE colgadas y saturación de Simple Queues.',
+      '7. SOP-07: Verificación de matriz CVE y planificación en ventanas de mantenimiento.',
+      '8. SOP-08: Aprovisionamiento gobernado de túneles WireGuard y pares remotos.',
+      '',
+      '# Agent Instructions',
+      '- **ask**: "Always query the live RoSGrid MCP tools (`rosgrid_list_routers`, `rosgrid_get_router_health`, `rosgrid_run_diagnostic_tool`) and read `/api/v1/mcp/skill` before proposing RouterOS v7 mutations."',
+      '- **goal**: "Ensure zero-lockout network operations by enforcing 60-second Safe Mode, Maker-Checker HTTP 202 governance for L1/L2 operators, and UUID v4 `Idempotency-Key` headers on every state-modifying action."',
+    ].join('\n');
+  }
+
+  async function handleCopyLlmsContext() {
+    const contextText = buildLlmsTxtContext();
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(contextText);
+      }
+    } catch {
+      // Ignorar fallo de permisos del portapapeles
+    }
+    isLlmsContextCopied.value = true;
+    setTimeout(() => {
+      isLlmsContextCopied.value = false;
+    }, 3000);
+  }
 
   function resetState() {
     expiryDays.value = 365;
@@ -31,7 +136,9 @@
     generatedTokenData.value = null;
     isCopied.value = false;
     isSkillCopied.value = false;
+    isLlmsContextCopied.value = false;
     isDownloadingSkill.value = false;
+    selectedMcpClient.value = CLIENT_CLAUDE_DESKTOP;
   }
 
   watch(
@@ -259,6 +366,19 @@
               >
                 ⬇️ Descargar
               </button>
+              <button
+                id="btn-copy-llms-context"
+                type="button"
+                class="btn-skill-mini"
+                :class="{ 'btn-skill-mini--copied': isLlmsContextCopied }"
+                @click="handleCopyLlmsContext"
+              >
+                {{
+                  isLlmsContextCopied
+                    ? '✔ ¡Contexto llms.txt Copiado!'
+                    : '📋 Copiar Contexto llms.txt para Agente IA'
+                }}
+              </button>
             </div>
           </div>
 
@@ -331,41 +451,48 @@
             </div>
           </div>
 
-          <!-- Snippet de Configuración para Agentes IA -->
-          <details class="snippet-accordion">
+          <!-- Snippet de Configuración para los 6 Clientes MCP -->
+          <details class="snippet-accordion" open>
             <summary class="snippet-summary">
-              📖 Ver Configuración de Ejemplo para Claude Desktop y Hermes Agent
+              📖 Ver Configuración de Ejemplo para Claude Desktop y Hermes Agent (6 Clientes MCP)
             </summary>
             <div class="snippet-content">
+              <div class="mcp-clients-tabs" role="tablist" aria-label="Clientes MCP soportados">
+                <button
+                  v-for="client in mcpClientsList"
+                  :key="client.id"
+                  type="button"
+                  role="tab"
+                  class="mcp-client-tab"
+                  :class="{ 'mcp-client-tab--active': selectedMcpClient === client.id }"
+                  :aria-selected="selectedMcpClient === client.id"
+                  :data-client-id="client.id"
+                  @click="selectedMcpClient = client.id"
+                >
+                  {{ client.label }}
+                </button>
+              </div>
               <p class="snippet-instruction">
-                Agrega este bloque en tu archivo <code>claude_desktop_config.json</code>:
+                Agrega este bloque en tu archivo
+                <code>{{
+                  mcpClientsList.find((c) => c.id === selectedMcpClient)?.configFile ||
+                  DEFAULT_CLAUDE_CONFIG_FILE
+                }}</code>
+                (compatible con <code>claude_desktop_config.json</code>, Claude Code CLI, Codex CLI,
+                Cursor IDE, VS Code Copilot y Hermes Agent):
               </p>
-              <pre class="snippet-pre"><code>{
-  "mcpServers": {
-    "rosgrid": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-fetch",
-        "http://localhost:8000/api/v1/mcp"
-      ],
-      "env": {
-        "AUTHORIZATION": "Bearer {{ generatedTokenData.token.substring(0, 16) }}..."
-      }
-    }
-  }
-}</code></pre>
+              <pre class="snippet-pre"><code>{{ activeClientSnippet }}</code></pre>
             </div>
           </details>
 
-          <!-- Skill Oficial de Operaciones para Agentes IA -->
+          <!-- Skill Oficial de Operaciones y Contexto llms.txt para Agentes IA -->
           <div class="skill-download-box">
             <div class="skill-header">
               <span class="skill-badge">🧠 Skill Oficial</span>
               <span class="skill-name">rosgrid-noc-operator</span>
             </div>
             <p class="skill-desc">
-              Instrucciones operativas, 5 Playbooks SOP (Diagnóstico 360°, cortes de fibra PON, inestabilidad BGP/OSPF, auditoría CIS y aislamiento) y gobierno Maker-Checker con Safe Mode (60s).
+              Instrucciones operativas, 8 Playbooks SOP (Diagnóstico 360°, cortes de fibra PON, inestabilidad BGP/OSPF, auditoría CIS y aislamiento) y gobierno Maker-Checker con Safe Mode (60s).
             </p>
             <div class="skill-actions">
               <button
@@ -383,6 +510,19 @@
                 @click="handleDownloadSkill"
               >
                 {{ isDownloadingSkill ? 'Descargando...' : '⬇️ Descargar SKILL.md' }}
+              </button>
+              <button
+                id="btn-copy-llms-context"
+                type="button"
+                class="btn-skill-action btn-skill-copy"
+                :class="{ 'btn-skill-action--copied': isLlmsContextCopied }"
+                @click="handleCopyLlmsContext"
+              >
+                {{
+                  isLlmsContextCopied
+                    ? '✔ ¡Contexto llms.txt Copiado!'
+                    : '📋 Copiar Contexto llms.txt para Agente IA'
+                }}
               </button>
             </div>
           </div>
@@ -710,6 +850,32 @@
   .snippet-content {
     padding: 0.75rem 1rem;
     border-top: 1px solid #1e293b;
+  }
+
+  .mcp-clients-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-bottom: 0.65rem;
+  }
+
+  .mcp-client-tab {
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #cbd5e1;
+    border-radius: 4px;
+    padding: 0.25rem 0.55rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .mcp-client-tab--active,
+  .mcp-client-tab:hover {
+    background: rgba(56, 189, 248, 0.16);
+    border-color: #38bdf8;
+    color: #38bdf8;
   }
 
   .snippet-instruction {

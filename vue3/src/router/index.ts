@@ -5,6 +5,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw, type RouteLocation
 import type { SystemRole, TenantFeatureFlags } from '@/types';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useWebFigStore } from '@/stores/useWebFigStore';
+import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useI18n } from '@/composables/useI18n';
 
 const routes: RouteRecordRaw[] = [
@@ -402,17 +403,47 @@ function syncWebFigTab(to: RouteLocationNormalized): void {
   });
 }
 
-router.beforeEach((to, _from, next) => {
-  // 1. Actualización de título para WCAG 2.1 AA y SEO
-  if (typeof document !== 'undefined') {
-    const titleKey = to.meta.titleKey as string | undefined;
-    if (titleKey) {
-      const { t } = useI18n();
-      document.title = `${t(titleKey)} — RoSGrid`;
-    } else if (to.meta.title) {
-      document.title = String(to.meta.title);
-    }
+function resolveBaseRouteTitle(to: RouteLocationNormalized): string {
+  const titleKey = to.meta.titleKey as string | undefined;
+  if (titleKey) {
+    const { t } = useI18n();
+    return `${t(titleKey)} — RoSGrid`;
   }
+  if (to.meta.title) {
+    return String(to.meta.title);
+  }
+  return typeof document !== 'undefined' ? document.title : 'RoSGrid';
+}
+
+function updateDocumentTitleWithRouterContext(to: RouteLocationNormalized): void {
+  if (typeof document === 'undefined') return;
+  const baseTitle = resolveBaseRouteTitle(to);
+  const routerIdParam = to.params.routerId ? String(to.params.routerId) : '';
+  if (!routerIdParam) {
+    document.title = baseTitle;
+    return;
+  }
+
+  const inventoryStore = useInventoryStore();
+  const webFigStore = useWebFigStore();
+  const matchedRouter =
+    inventoryStore.routers.find((r) => r.id === routerIdParam) ||
+    (webFigStore.currentRouter?.id === routerIdParam ? webFigStore.currentRouter : null);
+
+  if (!matchedRouter) {
+    document.title = baseTitle;
+    return;
+  }
+
+  const routerName = matchedRouter.display_name || routerIdParam;
+  const routerIp = matchedRouter.ip_address || '';
+  const prefix = routerIp ? `[${routerName} · ${routerIp}] ` : `[${routerName}] `;
+  document.title = `${prefix}${baseTitle}`;
+}
+
+router.beforeEach((to, _from, next) => {
+  // 1. Actualización de título para WCAG 2.1 AA, SEO y Contexto de Router Multi-Pestaña (Hito 27.15)
+  updateDocumentTitleWithRouterContext(to);
 
   const authStore = useAuthStore();
   const requiresAuth = to.meta.requiresAuth !== false;

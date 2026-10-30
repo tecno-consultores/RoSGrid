@@ -160,4 +160,27 @@ describe('Router — Navigation Guards & RBAC 11 Roles', () => {
     expect(router.currentRoute.value.path).toBe('/webfig/custom-tool');
     expect(router.currentRoute.value.name).toBe('CustomToolTab');
   });
+
+  it('antepone el contexto dinámico del router ([display_name · ip_address]) en document.title para rutas /routers/:routerId/* (Hito 27.15)', async () => {
+    const auth = useAuthStore();
+    auth.setAuth(adminUser);
+
+    const { useInventoryStore } = await import('@/stores/useInventoryStore');
+    const inventoryStore = useInventoryStore();
+    inventoryStore.routers = [
+      {
+        id: 'r-core-01',
+        name: 'CCR2216-Core-CCS',
+        display_name: 'CCR2216-Core-CCS',
+        ip_address: '10.99.0.1',
+        host: '10.99.0.1',
+        port: 443,
+        is_reachable: true,
+      } as never,
+    ];
+
+    await router.push('/routers/r-core-01/webfig/firewall');
+    expect(document.title).toContain('[CCR2216-Core-CCS · 10.99.0.1]');
+    expect(document.title).toContain('Reglas de Firewall');
+  });
 });

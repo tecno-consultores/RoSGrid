@@ -4,6 +4,7 @@
 # 📘 Especificación Técnica 52: Sistema de Ayuda Contextual Transversal en Consola (`RgContextualHelpDrawer`), Manuales Duales en Markdown Optimizados para PDF con Mermaid y Conversión Dinámica desde `rosgrid-web`
 
 **Estándar:** Nivel 11X (QA Corporativo, WCAG 2.1 AA, Refactoring UI, Cero Componentes Huérfanos)  
+**Estado:** IMPLEMENTADO Y CERTIFICADO 11X (Hito 27.14 Completado en `RoSGrid` y `rosgrid-web`)  
 **Módulos Afectados en `RoSGrid`:**
 - `vue3/src/components/common/RgContextualHelpDrawer.vue` (+ `RgContextualHelpDrawer.unit.ts`)
 - `vue3/src/composables/useContextualHelp.ts` (+ `useContextualHelp.unit.ts`)

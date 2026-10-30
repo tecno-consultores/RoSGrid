@@ -5,8 +5,31 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 import { useThemeAndLayoutStore } from './useThemeAndLayoutStore';
 
+const storageMock = (() => {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] ?? null,
+    setItem: (key: string, value: string) => {
+      store[key] = String(value);
+    },
+    clear: () => {
+      store = {};
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+  };
+})();
+
+Object.defineProperty(window, 'localStorage', {
+  value: storageMock,
+  writable: true,
+  configurable: true,
+});
+
 describe('useThemeAndLayoutStore — Densidad Dual & Temas WCAG 2.1 AA', () => {
   beforeEach(() => {
+    window.localStorage.clear();
     setActivePinia(createPinia());
     document.documentElement.removeAttribute('data-theme');
   });
@@ -92,5 +115,39 @@ describe('useThemeAndLayoutStore — Densidad Dual & Temas WCAG 2.1 AA', () => {
 
     store.toggleTimeFormat();
     expect(store.timeFormat).toBe('12h');
+  });
+
+  it('persiste e hidrata rg_theme y rg_table_density en localStorage y sincroniza meta color-scheme y theme-color (Hito 27.15)', () => {
+    const colorSchemeMeta = document.createElement('meta');
+    colorSchemeMeta.setAttribute('name', 'color-scheme');
+    colorSchemeMeta.setAttribute('content', 'dark light');
+    document.head.appendChild(colorSchemeMeta);
+
+    const themeColorMeta = document.createElement('meta');
+    themeColorMeta.setAttribute('name', 'theme-color');
+    themeColorMeta.setAttribute('content', '#0B111E');
+    document.head.appendChild(themeColorMeta);
+
+    const store = useThemeAndLayoutStore();
+    store.setTheme('light');
+    store.setTableDensityMode('comfortable');
+
+    expect(window.localStorage.getItem('rg_theme')).toBe('light');
+    expect(window.localStorage.getItem('rg_table_density')).toBe('comfortable');
+    expect(colorSchemeMeta.getAttribute('content')).toBe('light');
+    expect(themeColorMeta.getAttribute('content')).toBe('#F8FAFC');
+
+    store.setTheme('noc-high-contrast');
+    expect(colorSchemeMeta.getAttribute('content')).toBe('dark');
+    expect(themeColorMeta.getAttribute('content')).toBe('#000000');
+
+    // Nueva instancia de Pinia hidrata los valores guardados
+    setActivePinia(createPinia());
+    const hydratedStore = useThemeAndLayoutStore();
+    expect(hydratedStore.theme).toBe('noc-high-contrast');
+    expect(hydratedStore.tableDensityMode).toBe('comfortable');
+
+    document.head.removeChild(colorSchemeMeta);
+    document.head.removeChild(themeColorMeta);
   });
 });

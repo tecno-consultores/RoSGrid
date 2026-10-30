@@ -211,6 +211,7 @@
               v-for="col in dataColumns"
               :key="col.key"
               scope="col"
+              :class="{ 'num-col': col.align === 'right' }"
               :style="{ width: col.width, textAlign: col.align || 'left' }"
             >
               {{ col.label }}
@@ -299,6 +300,7 @@
                 v-for="col in dataColumns"
                 :key="col.key"
                 class="rg-data"
+                :class="{ 'num-col': col.align === 'right' }"
                 :data-label="col.label"
                 :title="getCellText(col, row)"
                 :style="{ textAlign: col.align || 'left' }"
@@ -445,6 +447,10 @@
     white-space: nowrap;
   }
 
+  .num-col {
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
   /* Densidad Compacta (32px WinBox) */
   .rg-density-compact th,
   .rg-density-compact td {
@@ -564,10 +570,10 @@
     align-items: center;
     justify-content: center;
     gap: 4px;
-    background: rgba(15, 23, 42, 0.75);
-    border: 1px solid var(--rg-border-panel, #334155);
+    background: var(--rg-btn-action-bg, #1e293b);
+    border: 1px solid var(--rg-btn-action-border, #334155);
     border-radius: var(--rg-radius-sm, 4px);
-    color: var(--rg-text-secondary, #cbd5e1);
+    color: var(--rg-btn-action-fg, #cbd5e1);
     font-size: 0.75rem;
     font-weight: 500;
     padding: 3px 8px;
@@ -589,8 +595,8 @@
   .col-custom-actions :deep(.btn-table-action--danger),
   .col-custom-actions :deep(.btn-row-action--danger),
   .col-custom-actions :deep(.btn-danger) {
-    border-color: rgba(239, 68, 68, 0.35);
-    color: #fca5a5;
+    border-color: var(--rg-btn-action-danger-border, rgba(239, 68, 68, 0.45));
+    color: var(--rg-btn-action-danger-fg, #fca5a5);
   }
 
   .col-custom-actions :deep(.btn-table-action--delete:hover),

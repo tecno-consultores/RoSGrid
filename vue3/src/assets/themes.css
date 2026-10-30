@@ -1,17 +1,31 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Copyright (C) 2026 RoSGrid Contributors */
 
+:root {
+  color-scheme: light dark;
+}
+
 :root,
 [data-theme="dark"] {
+  color-scheme: dark;
   --rg-bg-canvas: #0B0F19;
   --rg-bg-surface: #111827;
   --rg-bg-elevated: #1E293B;
   --rg-bg-card: #111827;
   --rg-bg-input: #0B0F19;
+  --rg-bg-terminal: #06090F;
   --rg-surface: #111827;
   --rg-border-grid: #1E293B;
   --rg-border-panel: #334155;
   --rg-border: #334155;
+
+  --rg-brand-cyber-blue: #00D2FF;
+  --rg-brand-electric-orange: #FF8400;
+  --rg-btn-action-bg: #1E293B;
+  --rg-btn-action-fg: #CBD5E1;
+  --rg-btn-action-border: #334155;
+  --rg-btn-action-danger-fg: #FCA5A5;
+  --rg-btn-action-danger-border: rgba(239, 68, 68, 0.45);
 
   --rg-accent-cyan: #22D3EE;
   --rg-accent-cyan-dark: #06B6D4;
@@ -87,15 +101,25 @@
 }
 
 [data-theme="light"] {
+  color-scheme: light;
   --rg-bg-canvas: #F8FAFC;
   --rg-bg-surface: #FFFFFF;
   --rg-bg-elevated: #F1F5F9;
   --rg-bg-card: #FFFFFF;
   --rg-bg-input: #FFFFFF;
+  --rg-bg-terminal: #0F172A;
   --rg-surface: #FFFFFF;
   --rg-border-grid: #E2E8F0;
   --rg-border-panel: #CBD5E1;
   --rg-border: #CBD5E1;
+
+  --rg-brand-cyber-blue: #0284C7;
+  --rg-brand-electric-orange: #C2410C;
+  --rg-btn-action-bg: #F1F5F9;
+  --rg-btn-action-fg: #1E293B;
+  --rg-btn-action-border: #CBD5E1;
+  --rg-btn-action-danger-fg: #B91C1C;
+  --rg-btn-action-danger-border: #FCA5A5;
 
   --rg-accent-cyan: #0E7490;
   --rg-accent-cyan-dark: #155E75;
@@ -135,15 +159,25 @@
 }
 
 [data-theme="noc-high-contrast"] {
+  color-scheme: dark;
   --rg-bg-canvas: #000000;
   --rg-bg-surface: #0A0A0A;
   --rg-bg-elevated: #171717;
   --rg-bg-card: #0A0A0A;
   --rg-bg-input: #000000;
+  --rg-bg-terminal: #000000;
   --rg-surface: #0A0A0A;
   --rg-border-grid: #06B6D4;
   --rg-border-panel: #22D3EE;
   --rg-border: #22D3EE;
+
+  --rg-brand-cyber-blue: #00FFFF;
+  --rg-brand-electric-orange: #FF9900;
+  --rg-btn-action-bg: #0A0A0A;
+  --rg-btn-action-fg: #FFFFFF;
+  --rg-btn-action-border: #22D3EE;
+  --rg-btn-action-danger-fg: #F87171;
+  --rg-btn-action-danger-border: #F87171;
 
   --rg-accent-cyan: #38BDF8;
   --rg-accent-cyan-dark: #0284C7;

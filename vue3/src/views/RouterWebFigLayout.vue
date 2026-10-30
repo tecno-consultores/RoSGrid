@@ -12,11 +12,13 @@
   import RouterContextHeader from '@/components/webfig/RouterContextHeader.vue';
   import RouterWorkspaceTabsBar from '@/components/webfig/RouterWorkspaceTabsBar.vue';
   import RouterSidebarMenu from '@/components/webfig/RouterSidebarMenu.vue';
+  import { useContextualHelp } from '@/composables/useContextualHelp';
 
   const route = useRoute();
   const webFigStore = useWebFigStore();
   const liveTelemetryStore = useLiveTelemetryStore();
   const inventoryStore = useInventoryStore();
+  const { openHelp, currentHelpEntry } = useContextualHelp();
 
   const isMobileSidebarOpen = ref(false);
   const routerId = computed(() => String(route.params.routerId || ''));
@@ -175,6 +177,19 @@
         role="main"
         aria-label="Módulo WebFig activo"
       >
+        <div class="webfig-module-help-bar">
+          <span class="webfig-module-help-title">{{ currentHelpEntry.title }}</span>
+          <button
+            id="btn-webfig-module-help"
+            type="button"
+            class="btn-webfig-module-help"
+            aria-label="Abrir guía contextual de este módulo WebFig"
+            @click="openHelp()"
+          >
+            ❓ Guía del Módulo
+          </button>
+        </div>
+
         <router-view v-slot="{ Component }">
           <keep-alive :max="5">
             <component :is="Component" :key="route.name" />
@@ -213,6 +228,40 @@
     border-radius: 8px;
     padding: 16px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .webfig-module-help-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--rg-border-grid);
+  }
+
+  .webfig-module-help-title {
+    font-size: 0.75rem;
+    font-family: var(--rg-font-mono);
+    color: var(--rg-text-muted);
+  }
+
+  .btn-webfig-module-help {
+    background: var(--rg-bg-canvas);
+    border: 1px solid var(--rg-border-panel);
+    color: var(--rg-accent-cyan);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .btn-webfig-module-help:hover {
+    background: var(--rg-bg-elevated);
+    border-color: var(--rg-accent-cyan);
   }
 
   @media (max-width: 1024px) {

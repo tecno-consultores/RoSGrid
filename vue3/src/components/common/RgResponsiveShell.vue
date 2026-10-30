@@ -9,10 +9,13 @@
   import { useThemeAndLayoutStore } from '@/stores/useThemeAndLayoutStore';
   import { useApiHeartbeatStore } from '@/stores/useApiHeartbeatStore';
   import { useI18n } from '@/composables/useI18n';
+  import { useContextualHelp } from '@/composables/useContextualHelp';
   import { http } from '@/api/httpClient';
   import RgCommandPalette from './RgCommandPalette.vue';
   import RgSafeModeBanner from './RgSafeModeBanner.vue';
   import RgApiHealthBadge from './RgApiHealthBadge.vue';
+  import RgBrandLogo from './RgBrandLogo.vue';
+  import RgContextualHelpDrawer from './RgContextualHelpDrawer.vue';
   import ChangePasswordModal from '@/components/common/ChangePasswordModal.vue';
   import RgStepUp2FAModal from '@/components/common/RgStepUp2FAModal.vue';
   import RgMcpTokenModal from '@/components/admin/RgMcpTokenModal.vue';
@@ -25,6 +28,7 @@
   const nocStore = useNocEventsStore();
   const heartbeatStore = useApiHeartbeatStore();
   const { t, locale, toggleLocale } = useI18n();
+  const { isHelpOpen, toggleHelp } = useContextualHelp();
 
   const isRouterContext = computed(() => route.path.includes('/routers/'));
   const currentRouterId = computed(() => String(route.params.routerId || ''));
@@ -281,14 +285,7 @@
           ☰
         </button>
         <router-link to="/" class="brand" :aria-label="t('nav.dashboard', 'Ir al Centro de Mando')">
-          <img
-            src="/favicon.svg"
-            alt=""
-            class="brand-icon brand-logo"
-            width="22"
-            height="22"
-            aria-hidden="true"
-          />
+          <RgBrandLogo :size="22" img-class="brand-logo" />
           <span class="brand-name">RoSGrid</span>
           <span class="brand-version">v1.0</span>
         </router-link>
@@ -330,6 +327,21 @@
           <span aria-hidden="true">🔍</span>
           <span class="search-label">{{ t('shell.search_label', 'Buscar...') }}</span>
           <kbd class="search-kbd" aria-hidden="true">Ctrl K</kbd>
+        </button>
+
+        <!-- Botón de Ayuda Contextual In-App (Hito 27.14) -->
+        <button
+          id="btn-contextual-help"
+          type="button"
+          class="btn-contextual-help"
+          :aria-expanded="isHelpOpen"
+          aria-controls="rg-contextual-help-drawer"
+          :title="t('shell.help_title', 'Ayuda de esta pantalla (F1 / Alt+H)')"
+          :aria-label="t('shell.help_aria', 'Abrir ayuda contextual de esta pantalla')"
+          @click="toggleHelp()"
+        >
+          <span aria-hidden="true">❓</span>
+          <span class="help-btn-label">{{ t('shell.help_label', 'Ayuda') }}</span>
         </button>
 
         <!-- Menú Desplegable Táctico de Usuario -->
@@ -651,6 +663,9 @@
       :user="authStore.user as any"
       @close="isMcpTokenModalOpen = false"
     />
+
+    <!-- Cajón de Ayuda Contextual In-App (Hito 27.14) -->
+    <RgContextualHelpDrawer />
   </div>
 </template>
 
@@ -809,6 +824,27 @@
   .btn-search-trigger:hover {
     border-color: var(--rg-accent-cyan);
     color: var(--rg-accent-cyan);
+  }
+
+  .btn-contextual-help {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--rg-bg-canvas);
+    border: 1px solid var(--rg-border-panel);
+    color: var(--rg-accent-cyan);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .btn-contextual-help:hover,
+  .btn-contextual-help[aria-expanded="true"] {
+    border-color: var(--rg-accent-cyan);
+    background: var(--rg-bg-elevated);
   }
 
   .search-kbd {

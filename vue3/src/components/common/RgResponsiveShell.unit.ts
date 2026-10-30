@@ -657,6 +657,31 @@ describe('RgResponsiveShell.vue — Doble Contexto & Menú de Usuario 11X', () =
     await hamburgerBtn.trigger('click');
     expect(rail.classes()).not.toContain('rg-rail--open');
   });
+
+  it('incluye el botón global de Ayuda Contextual (#btn-contextual-help) y despliega RgContextualHelpDrawer (Hito 27.14)', async () => {
+    const wrapper = mount(RgResponsiveShell, {
+      global: {
+        stubs: {
+          RouterView: true,
+          RgCommandPalette: true,
+          RgSafeModeBanner: true,
+          ChangePasswordModal: true,
+          RgStepUp2FAModal: true,
+          RgMcpTokenModal: true,
+        },
+      },
+    });
+
+    const helpBtn = wrapper.find('#btn-contextual-help');
+    expect(helpBtn.exists()).toBe(true);
+    expect(wrapper.find('#rg-contextual-help-drawer').exists()).toBe(false);
+
+    await helpBtn.trigger('click');
+    expect(wrapper.find('#rg-contextual-help-drawer').exists()).toBe(true);
+
+    await helpBtn.trigger('click');
+    expect(wrapper.find('#rg-contextual-help-drawer').exists()).toBe(false);
+  });
 });
 
 

@@ -239,4 +239,20 @@ describe('RgDataTable.vue — WinBox 32px / Táctil 44px & RouterOS Flags', () =
     expect(scrollRegion.attributes('role')).toBe('region');
     expect(scrollRegion.attributes('aria-label')).toBe('Tabla Responsive NOC');
   });
+
+  it('inyecta data-label en cada celda td.rg-data y aplica la clase num-col a columnas alineadas a la derecha (Hito 27.15)', () => {
+    const wrapper = mount(RgDataTable, {
+      props: {
+        columns,
+        rows: sampleRows,
+      },
+    });
+
+    const firstRowCells = wrapper.findAll('tbody tr.rg-table-row:first-child td.rg-data');
+    expect(firstRowCells.length).toBe(3);
+    expect(firstRowCells[0].attributes('data-label')).toBe('Nombre');
+    expect(firstRowCells[0].classes()).not.toContain('num-col');
+    expect(firstRowCells[2].attributes('data-label')).toBe('Estado');
+    expect(firstRowCells[2].classes()).toContain('num-col');
+  });
 });

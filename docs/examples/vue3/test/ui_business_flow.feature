@@ -670,6 +670,25 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     Then waitFor(".layer2-view")
     And waitFor("#layer2-search-input")
 
+  Scenario: 70. Cajón de Ayuda Contextual In-App, Selector de Tópicos y Copia como Markdown LLM-Ready (Hito 27.14)
+    Given driver baseUrl + '/inventory'
+    And waitFor("#btn-contextual-help")
+    When click("#btn-contextual-help")
+    Then waitFor("#rg-contextual-help-drawer")
+    And waitFor("#help-drawer-title")
+    And waitFor("#help-topic-selector")
+    And waitFor("#btn-copy-help-markdown")
+    When click("#btn-close-contextual-help")
+    Then waitUntil("!document.querySelector('#rg-contextual-help-drawer')")
+
+  Scenario: 71. Paridad de Diseño 11X, Blindaje Anti-Indexación (noindex), Persistencia de Tema y Contexto llms.txt MCP (Hito 27.15)
+    Given driver baseUrl + '/inventory'
+    And waitFor("header.rg-header")
+    And waitFor(".rg-brand-logo-svg")
+    Then match script("document.querySelector('meta[name=\"robots\"]').getAttribute('content')") contains 'noindex, nofollow'
+    And match script("document.querySelector('meta[name=\"color-scheme\"]').getAttribute('content')") != null
+
+
 
 
 

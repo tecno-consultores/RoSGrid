@@ -7,6 +7,7 @@
   import QRCode from 'qrcode';
   import { http } from '@/api/httpClient';
   import { useAuthStore } from '@/stores/useAuthStore';
+  import RgBrandLogo from '@/components/common/RgBrandLogo.vue';
   import type { UserInfo } from '@/types';
 
   const route = useRoute();
@@ -479,13 +480,7 @@
           aria-label="Sitio web oficial de RoSGrid (abre en una nueva pestaña)"
           title="Sitio web oficial de RoSGrid"
         >
-          <img
-            src="/favicon.svg"
-            alt="RoSGrid"
-            class="brand-logo-img"
-            width="64"
-            height="64"
-          />
+          <RgBrandLogo :size="64" img-class="brand-logo-img" />
         </a>
         <h1 id="login-heading" class="brand-title">RoSGrid</h1>
         <p class="brand-subtitle">Gestión Multi-Tenant para Flotas MikroTik RouterOS v7+</p>

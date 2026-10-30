@@ -196,4 +196,58 @@ describe('RgMcpTokenModal.vue — Emisión de Tokens MCP para Agentes IA', () =>
 
     expect(createElementSpy).toHaveBeenCalledWith('a');
   });
+
+  it('copia el contexto llms.txt con # Agent Instructions (ask y goal) y soporta los 6 clientes MCP (Hito 27.15)', async () => {
+    vi.spyOn(http, 'post').mockResolvedValueOnce({
+      data: mockMcpResponse,
+      status: 200,
+      headers: new Headers(),
+    } as unknown as ApiResponse);
+
+    const writeTextSpy = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: writeTextSpy,
+      },
+    });
+
+    const wrapper = mount(RgMcpTokenModal, {
+      props: {
+        isOpen: true,
+        user: mockUser,
+      },
+    });
+
+    const llmsBtn = wrapper.find('#btn-copy-llms-context');
+    expect(llmsBtn.exists()).toBe(true);
+    await llmsBtn.trigger('click');
+    expect(writeTextSpy).toHaveBeenCalled();
+    const copiedLlms = writeTextSpy.mock.calls[0][0] as string;
+    expect(copiedLlms).toContain('# Agent Instructions');
+    expect(copiedLlms).toContain('- **ask**:');
+    expect(copiedLlms).toContain('- **goal**:');
+    expect(copiedLlms).toContain('rosgrid_list_routers');
+
+    // Generar token y probar los 6 conectores de clientes MCP
+    await wrapper.find('form').trigger('submit.prevent');
+    await flushPromises();
+
+    const clientTabs = wrapper.findAll('.mcp-client-tab');
+    expect(clientTabs.length).toBe(6);
+
+    await wrapper.find('[data-client-id="claude-code"]').trigger('click');
+    expect(wrapper.find('.snippet-pre').text()).toContain('claude mcp add --transport http rosgrid');
+
+    await wrapper.find('[data-client-id="codex"]').trigger('click');
+    expect(wrapper.find('.snippet-pre').text()).toContain('[mcp_servers.rosgrid]');
+
+    await wrapper.find('[data-client-id="cursor"]').trigger('click');
+    expect(wrapper.find('.snippet-pre').text()).toContain('"mcpServers"');
+
+    await wrapper.find('[data-client-id="vscode"]').trigger('click');
+    expect(wrapper.find('.snippet-pre').text()).toContain('"servers"');
+
+    await wrapper.find('[data-client-id="hermes"]').trigger('click');
+    expect(wrapper.find('.snippet-pre').text()).toContain('transport: streamable_http');
+  });
 });
