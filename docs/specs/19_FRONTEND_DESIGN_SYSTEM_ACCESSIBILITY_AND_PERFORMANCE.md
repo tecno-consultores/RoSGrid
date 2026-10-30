@@ -101,6 +101,12 @@ Para evitar duplicación de código y mantener complejidad cognitiva baja en Son
   - **Pausa Automática en Segundo Plano (`Page Visibility API`):** Pausa el sondeo por completo cuando la pestaña está oculta o minimizada (`document.hidden`), reanudando y evaluando frescura al volver al primer plano.
   - **Popover Diagnóstico Táctico:** Despliegue interactivo con desglose de latencia, estado de FastAPI, PostgreSQL y KeyDB, y acción para reintentar ping manualmente de forma inmediata.
 
+### 2.7 `RgContextualHelpDrawer.vue` (Cajón de Ayuda Contextual por Pantalla y Submódulo WebFig)
+
+- **Ubicación y Activación (`docs/specs/52`):** Invocable desde el botón táctico `[ ❓ Ayuda ]` en la barra superior de `RgResponsiveShell.vue`, desde el botón `[ ❓ Guía del Módulo ]` en `RouterWebFigLayout.vue` o mediante el atajo de teclado `F1` / `Alt + H`.
+- **Resolución Contextual Automática (`helpCatalog.ts`):** Detecta la ruta activa (`route.name` / `route.path`) y la pestaña seleccionada en WebFig para mostrar el propósito de la pantalla, guía paso a paso de acciones CRUD, reglas de Safe Mode (60s) / Maker-Checker (HTTP 202) y notas de RouterOS v7.
+- **Frontera Arquitectónica Estricta:** El componente en `RoSGrid` **no** incluye botón de conversión a PDF (la descarga y conversión de los manuales `docs/MANUAL_ADMINISTRADOR_E_INSTALADOR.md` y `docs/MANUAL_USUARIO_Y_OPERADOR_NOC.md` desde GitHub a PDF reside exclusivamente en el portal de presentación `rosgrid-web`).
+
 ---
 
 ## 3. Reglas Estrictas de Accesibilidad para Aprobar `@axe-core/playwright` (0 Violaciones)

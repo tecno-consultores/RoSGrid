@@ -90,6 +90,8 @@ rosgrid/
 │   └── verificar-secretos.sh                # Detección preventiva de credenciales y secretos hardcodeados
 │
 ├── docs/                                    # DOCUMENTACIÓN OFICIAL DE ROSGRID
+│   ├── MANUAL_ADMINISTRADOR_E_INSTALADOR.md # Manual integral para Administradores/Instaladores (PDF-ready + Mermaid)
+│   ├── MANUAL_USUARIO_Y_OPERADOR_NOC.md     # Manual integral para Usuarios y Operadores NOC (PDF-ready + Mermaid)
 │   ├── INSTALL.md                           # Guía paso a paso de instalación, KeyDB vs DragonflyDB y MikroTik
 │   ├── FAQ.md                               # Preguntas frecuentes técnicas y operativas
 │   ├── RESOURCES.md                         # Catálogo de recursos, imágenes Docker y RFCs
@@ -235,6 +237,7 @@ Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `
 * `docs/specs/49_WEBFIG_V7_ROUTING_DYNAMIC_BGP_OSPF_AND_NAT_WIZARDS.md` — WebFig v7 Capa 1: Rutas Estáticas Dual-Stack IPv4/IPv6 con Check Gateway, BGP v7 Interactivo (Sessions, Connections & Templates), Policy-Based Routing (FIB/Rules) y Asistentes NAT en 1 Clic (Masquerade y Port Forwarding).
 * `docs/specs/50_EXPANSION_CIS_BENCHMARK_INTERACTIVO_Y_CATALOGO_PLANTILLAS_COMPLEJAS.md` — Expansión de CIS Benchmark Hardening Interactivo (28 Directivas para ISP y Empresa con Enlaces a Estándares Oficiales y Manual v7), Soberanía Total de Selección de Directivas por Usuario y Catálogo de 10 Nuevas Plantillas Masivas Avanzadas (CoPP, CAKE QoS, BCP38, RPKI y Backups SFTP).
 * `docs/specs/51_INTERACTIVE_CAPSMAN_WIFI_V7_CONFIGURATION_AND_FLEET_PROVISIONING.md` — Consola Táctica Interactiva CAPsMAN v7, Aprovisionamiento Masivo de Wi-Fi y Gestión de Clientes en Tiempo Real: Bimodalidad v7.13+ moderno (`/interface/wifi/`) vs legado (`/caps-man/`), control de Manager, gestión de SSIDs y VLAN Datapaths, perfiles de seguridad WPA2/WPA3, aprovisionamiento automático por bandas de frecuencia, reprovisionamiento en caliente, desautenticación forzosa (*Kick Client*), Asistente Quick-Setup en 1 Clic y Safe Mode transaccional de 60s.
+* `docs/specs/52_CONTEXTUAL_IN_APP_HELP_DRAWER_AND_DUAL_PDF_READY_MANUALS.md` — Sistema de Ayuda Contextual Transversal en Consola (`RgContextualHelpDrawer.vue` + `helpCatalog.ts`, sin botón PDF en la app operativa), Manuales Duales en Markdown Optimizados para Conversión a PDF con Gráficos Mermaid (`docs/MANUAL_ADMINISTRADOR_E_INSTALADOR.md` y `docs/MANUAL_USUARIO_Y_OPERADOR_NOC.md`) y Exportación Dinámica desde GitHub a PDF en `rosgrid-web`.
 
 
 ---

@@ -10,6 +10,11 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Added
 
+- **Especificación Técnica 52 y Manuales Duales en Markdown Optimizados para PDF con Gráficos Mermaid (`docs/specs/52_CONTEXTUAL_IN_APP_HELP_DRAWER_AND_DUAL_PDF_READY_MANUALS.md`, `docs/MANUAL_ADMINISTRADOR_E_INSTALADOR.md`, `docs/MANUAL_USUARIO_Y_OPERADOR_NOC.md`, `docs/specs/00`, `docs/specs/19`, `README.md`, `ROADMAP.md`):**
+  - **Arquitectura de Ayuda Contextual Transversal (`docs/specs/52`):** Definición técnica de `RgContextualHelpDrawer.vue`, `useContextualHelp.ts` y `helpCatalog.ts` para proveer un botón `[ ❓ Ayuda ]` (y atajo `F1`) en cada pantalla y submódulo WebFig v7 de `RoSGrid`, manteniendo la frontera arquitectónica estricta de **cero botón de conversión PDF dentro de la consola operativa** y delegando la descarga y conversión dinámica de GitHub a PDF al portal de presentación `rosgrid-web` (`https://rosgrid.net`).
+  - **Manuales Oficiales PDF-Ready con Diagramas Mermaid (`docs/MANUAL_ADMINISTRADOR_E_INSTALADOR.md` y `docs/MANUAL_USUARIO_Y_OPERADOR_NOC.md`):** Creación de los dos manuales integrales en el repositorio con portada YAML Frontmatter, índice numerado, saltos de página limpios, tablas de ancho controlado y diagramas vectoriales **Mermaid** (`flowchart TB`, `flowchart LR`, `sequenceDiagram`, `stateDiagram-v2`) de alto contraste para exportación a PDF.
+  - **Planificación de Hito 27.14 en Roadmap (`ROADMAP.md`):** Incorporación del Hito 27.14 desglosando la implementación del cajón de ayuda en `RoSGrid` y el exportador GitHub-a-PDF en `rosgrid-web`, preservando al Hito 28 como cierre definitivo.
+
 - **Limpieza Unificada y Purga de Residuos en Raíz (`scripts/limpieza.sh`, `.gitignore`, `fastapi/tests/core/test_vulnerability_audit_gate.unit.py`):**
   - **Purga de Carpetas Residuales (.ruff_cache y karate.jar):** Se actualizó el paso [4/4] de `scripts/limpieza.sh` para eliminar definitivamente los directorios residuales `.ruff_cache` y `karate.jar` generados en la raíz del proyecto.
   - **Mecanismo de Rescate con Contenedor Docker:** Se incorporó un fallback automático ejecutando un contenedor efímero `alpine` para purgar con éxito directorios creados con pertenencia a `root:root` (que mostraban iconos de candado en Nautilus).

@@ -219,6 +219,8 @@ Para una referencia exhaustiva de operación, seguridad y despliegue, consulta l
 
 | Manual | Descripción Técnica |
 | :--- | :--- |
+| **[`docs/MANUAL_ADMINISTRADOR_E_INSTALADOR.md`](./docs/MANUAL_ADMINISTRADOR_E_INSTALADOR.md)** | **Manual Maestro de Administrador e Instalador (PDF-Ready + Mermaid):** Requisitos, despliegue Turnkey/Docker, `.env`, preparación MikroTik v7, gobierno Multi-Tenant (19 Feature Flags), 11 roles RBAC, Bóveda 2FA, MCP y mantenimiento. |
+| **[`docs/MANUAL_USUARIO_Y_OPERADOR_NOC.md`](./docs/MANUAL_USUARIO_Y_OPERADOR_NOC.md)** | **Manual Maestro de Usuario y Operador NOC (PDF-Ready + Mermaid):** Guía paso a paso de todas las pantallas WebFig v7 (Bridge, WireGuard, IP/DHCP/Pools/DNS, IPv6, Firewall, Routing, PPPoE), Safe Mode 60s, Maker-Checker, IPAM, Mapa Bimodal, Ventanas de Mantenimiento y Auditoría WORM. |
 | **[`docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md`](./docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md)** | Variables `.env`, entropía criptográfica, arquitectura **KeyDB Multi-Hilo por defecto** vs. perfil **DragonflyDB**, Compose y `./scripts/build.sh`. |
 | **[`docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md`](./docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md)** | Comandos CLI RouterOS v7.1+, política obligatoria `rest-api` (v7.13+), certificados TLS para Pinning TOFU (`SHA-256`), `/ip/service/www-ssl` y Safe Mode. |
 | **[`docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md`](./docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md)** | Aislamiento RLS en PostgreSQL 17, matriz de 11 roles RBAC, permisos por router, Bóveda 2FA (30s), Kill-Switch y Auto-Registro con Maker-Checker. |
