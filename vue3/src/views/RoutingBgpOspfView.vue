@@ -1055,6 +1055,13 @@
     white-space: nowrap;
   }
 
+  .row-actions-group {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
   .btn-tactical {
     font-size: 0.82rem;
     font-weight: 600;
@@ -1062,6 +1069,7 @@
     border-radius: 6px;
     cursor: pointer;
     border: none;
+    transition: all 0.15s ease;
   }
 
   .btn-cyan {
@@ -1070,23 +1078,52 @@
   }
 
   .btn-outline {
-    background: transparent;
+    background: rgba(15, 23, 42, 0.75);
     border: 1px solid #475569;
     color: #f8fafc;
   }
 
-  .btn-icon {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0.25rem 0.5rem;
-    font-size: 0.95rem;
-    border-radius: 4px;
-    color: #f8fafc;
+  .btn-outline:hover {
+    border-color: #22d3ee;
+    color: #22d3ee;
+    background: rgba(34, 211, 238, 0.12);
   }
 
-  .btn-icon:hover {
-    background: rgba(255, 255, 255, 0.1);
+  .btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid #334155;
+    cursor: pointer;
+    padding: 3px 8px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    border-radius: 4px;
+    color: #cbd5e1;
+    margin-left: 4px;
+    transition: all 0.15s ease;
+  }
+
+  .btn-icon:hover,
+  .btn-icon.btn-cyan:hover {
+    border-color: #22d3ee;
+    color: #22d3ee;
+    background: rgba(34, 211, 238, 0.12);
+    box-shadow: 0 0 8px rgba(34, 211, 238, 0.15);
+  }
+
+  .btn-icon.btn-danger {
+    border-color: rgba(239, 68, 68, 0.35);
+    color: #fca5a5;
+  }
+
+  .btn-icon.btn-danger:hover {
+    border-color: #ef4444;
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.15);
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.2);
   }
 
   .badge-tag {

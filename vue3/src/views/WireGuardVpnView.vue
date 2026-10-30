@@ -838,11 +838,60 @@
     margin-top: 20px;
   }
   .btn-secondary {
-    background: transparent;
-    color: var(--rg-text-secondary);
-    border: 1px solid var(--rg-border-grid);
+    background: rgba(15, 23, 42, 0.75);
+    color: var(--rg-text-secondary, #cbd5e1);
+    border: 1px solid var(--rg-border-panel, #334155);
     padding: 8px 14px;
     border-radius: 6px;
+    font-weight: 500;
     cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .btn-secondary:hover {
+    border-color: var(--rg-accent-cyan, #22d3ee);
+    color: var(--rg-accent-cyan, #22d3ee);
+    background: rgba(34, 211, 238, 0.12);
+  }
+  .btn-refresh:hover {
+    border-color: var(--rg-accent-cyan, #22d3ee);
+    color: var(--rg-accent-cyan, #22d3ee);
+  }
+  .row-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+  .btn-table-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid var(--rg-border-panel, #334155);
+    border-radius: 4px;
+    color: var(--rg-text-secondary, #cbd5e1);
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    line-height: 1.2;
+  }
+  .btn-table-action:hover {
+    border-color: var(--rg-accent-cyan, #22d3ee);
+    color: var(--rg-accent-cyan, #22d3ee);
+    background: rgba(34, 211, 238, 0.12);
+    box-shadow: 0 0 8px rgba(34, 211, 238, 0.15);
+  }
+  .btn-table-action--delete {
+    border-color: rgba(239, 68, 68, 0.35);
+    color: #fca5a5;
+  }
+  .btn-table-action--delete:hover {
+    border-color: #ef4444;
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.15);
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.2);
   }
 </style>

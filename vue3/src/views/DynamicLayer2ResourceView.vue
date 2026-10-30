@@ -162,7 +162,21 @@
         :caption="`Recurso ${resourceData.title}`"
         row-key="id"
         @select-row="openEditModal"
-      />
+      >
+        <template #actions="{ row }">
+          <div class="row-actions">
+            <button
+              type="button"
+              class="btn-table-action"
+              title="Editar registro"
+              aria-label="Editar registro"
+              @click="openEditModal(row)"
+            >
+              ✏️ Editar
+            </button>
+          </div>
+        </template>
+      </RgDataTable>
     </div>
 
     <!-- Caso 2: Formulario Directo (is_singleton === true) -->

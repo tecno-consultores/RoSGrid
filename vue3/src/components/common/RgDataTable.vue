@@ -40,6 +40,9 @@
 
   const themeStore = useThemeAndLayoutStore();
 
+  // Filtrar columna 'actions' duplicada cuando se usa el slot #actions
+  const dataColumns = computed(() => props.columns.filter((c) => c.key !== 'actions'));
+
   // Virtual Scrolling Nativo (> 100 filas)
   const scrollContainerRef = ref<HTMLElement | null>(null);
   const scrollTop = ref<number>(0);
@@ -201,7 +204,7 @@
             <th v-if="sortableRows" class="col-drag" scope="col" aria-label="Orden">#</th>
             <th class="col-flags" scope="col" aria-label="Banderas MikroTik">Flags</th>
             <th
-              v-for="col in columns"
+              v-for="col in dataColumns"
               :key="col.key"
               scope="col"
               :style="{ width: col.width, textAlign: col.align || 'left' }"
@@ -225,7 +228,7 @@
             :style="{ height: `${topSpacerHeight}px` }"
             aria-hidden="true"
           >
-            <td :colspan="columns.length + 3"></td>
+            <td :colspan="dataColumns.length + 3"></td>
           </tr>
 
           <!-- Filas Visibles -->
@@ -289,7 +292,7 @@
 
               <!-- Celdas de Datos -->
               <td
-                v-for="col in columns"
+                v-for="col in dataColumns"
                 :key="col.key"
                 class="rg-data"
                 :style="{ textAlign: col.align || 'left' }"
@@ -326,9 +329,9 @@
               v-if="expandedRowKeys.has(getKey(row, visibleRange.start + idx))"
               class="rg-row-details"
             >
-              <td :colspan="columns.length + 3">
+              <td :colspan="dataColumns.length + 3">
                 <dl class="details-grid">
-                  <template v-for="col in columns" :key="col.key">
+                  <template v-for="col in dataColumns" :key="col.key">
                     <dt>{{ col.label }}:</dt>
                     <dd class="rg-data">
                       {{ col.formatter ? col.formatter(row) : (row[col.key] ?? '—') }}
@@ -345,7 +348,7 @@
             :style="{ height: `${bottomSpacerHeight}px` }"
             aria-hidden="true"
           >
-            <td :colspan="columns.length + 3"></td>
+            <td :colspan="dataColumns.length + 3"></td>
           </tr>
         </tbody>
       </table>
@@ -506,6 +509,65 @@
     border-radius: var(--rg-radius-sm, 4px);
     font-size: var(--rg-text-2xs, 0.6875rem);
     cursor: pointer;
+  }
+
+  .col-custom-actions {
+    white-space: nowrap;
+    text-align: right;
+  }
+
+  .col-custom-actions :deep(.row-actions),
+  .col-custom-actions :deep(.row-actions-group) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  .col-custom-actions :deep(.btn-table-action),
+  .col-custom-actions :deep(.btn-row-action),
+  .col-custom-actions :deep(.btn-icon) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid var(--rg-border-panel, #334155);
+    border-radius: var(--rg-radius-sm, 4px);
+    color: var(--rg-text-secondary, #cbd5e1);
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    line-height: 1.2;
+  }
+
+  .col-custom-actions :deep(.btn-table-action:hover),
+  .col-custom-actions :deep(.btn-row-action:hover),
+  .col-custom-actions :deep(.btn-icon:hover) {
+    border-color: var(--rg-accent-cyan, #22d3ee);
+    color: var(--rg-accent-cyan, #22d3ee);
+    background: rgba(34, 211, 238, 0.12);
+    box-shadow: 0 0 8px rgba(34, 211, 238, 0.15);
+  }
+
+  .col-custom-actions :deep(.btn-table-action--delete),
+  .col-custom-actions :deep(.btn-table-action--danger),
+  .col-custom-actions :deep(.btn-row-action--danger),
+  .col-custom-actions :deep(.btn-danger) {
+    border-color: rgba(239, 68, 68, 0.35);
+    color: #fca5a5;
+  }
+
+  .col-custom-actions :deep(.btn-table-action--delete:hover),
+  .col-custom-actions :deep(.btn-table-action--danger:hover),
+  .col-custom-actions :deep(.btn-row-action--danger:hover),
+  .col-custom-actions :deep(.btn-danger:hover) {
+    border-color: #ef4444;
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.15);
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.2);
   }
 
   .rg-row-details td {

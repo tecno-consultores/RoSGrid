@@ -2051,23 +2051,85 @@
   }
 
   .btn-outline {
-    background: transparent;
+    background: rgba(15, 23, 42, 0.75);
     border: 1px solid #475569;
     color: #f8fafc;
+    transition: all 0.15s ease;
+  }
+
+  .btn-outline:hover {
+    border-color: #22d3ee;
+    color: #22d3ee;
+    background: rgba(34, 211, 238, 0.12);
   }
 
   .btn-icon {
-    background: none;
-    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid #334155;
     cursor: pointer;
-    padding: 0.3rem 0.5rem;
-    font-size: 1rem;
+    padding: 3px 8px;
+    font-size: 0.78rem;
+    font-weight: 500;
     border-radius: 4px;
-    transition: background 0.2s;
+    color: #cbd5e1;
+    margin-left: 4px;
+    transition: all 0.15s ease;
   }
 
-  .btn-icon:hover {
-    background: rgba(255, 255, 255, 0.1);
+  .btn-icon:hover,
+  .btn-icon.btn-cyan:hover {
+    border-color: #22d3ee;
+    color: #22d3ee;
+    background: rgba(34, 211, 238, 0.12);
+    box-shadow: 0 0 8px rgba(34, 211, 238, 0.15);
+  }
+
+  .btn-icon.btn-cyan {
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid #334155;
+    color: #cbd5e1;
+  }
+
+  .btn-icon.btn-warning {
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    color: #fcd34d;
+  }
+
+  .btn-icon.btn-warning:hover {
+    border-color: #f59e0b;
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.15);
+  }
+
+  .btn-icon.btn-danger {
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    color: #fca5a5;
+  }
+
+  .btn-icon.btn-danger:hover {
+    border-color: #ef4444;
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.15);
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.2);
+  }
+
+  .dns-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .dns-card-header .card-title {
+    margin-bottom: 0;
   }
 
   .badge-interface {

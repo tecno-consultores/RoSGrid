@@ -638,17 +638,18 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     Then match text(".banner--warning") contains 'Tu sesión ha expirado'
     And match driver.url contains '/login?reason=session_expired'
 
-  Scenario: 67. Paridad CRUD Completa en WebFig v7 — Sacar Puerto de Bridge, Eliminar Túnel WireGuard, Editar Redes/Clientes DHCP, Pools, DNS y PPPoE
+  Scenario: 67. Paridad CRUD Completa y Homologación Táctica de Botones en WebFig v7 — Sacar Puerto de Bridge, Eliminar Túnel WireGuard, Editar Redes/Clientes DHCP, Pools, DNS y PPPoE
     Given driver baseUrl + '/routers/00000000-0000-0000-0000-000000000001/webfig/bridge'
     And waitFor(".bridge-view")
     When click("//button[contains(@class, 'tab-btn') and contains(., 'Puertos Miembro')]")
     Then waitFor(".table-wrapper")
+    And waitFor("th.col-custom-actions")
     When driver baseUrl + '/routers/00000000-0000-0000-0000-000000000001/webfig/wireguard'
     Then waitFor(".wireguard-view")
     When driver baseUrl + '/routers/00000000-0000-0000-0000-000000000001/webfig/ip'
     Then waitFor(".webfig-ip-view")
     When click("//button[contains(@class, 'tab-btn') and contains(., 'DNS & Caché')]")
-    Then waitFor("//button[contains(., 'Editar Parámetros DNS')]")
+    Then waitFor("//button[contains(., 'Editar Parámetros')]")
     When driver baseUrl + '/routers/00000000-0000-0000-0000-000000000001/webfig/ppp-queues'
     Then waitFor(".ppp-queues-view")
 

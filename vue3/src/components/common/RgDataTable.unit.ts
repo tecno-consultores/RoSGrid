@@ -176,18 +176,24 @@ describe('RgDataTable.vue — WinBox 32px / Táctil 44px & RouterOS Flags', () =
     expect(wrapper.find('.rg-row-details').exists()).toBe(false);
   });
 
-  it('renderiza el slot de acciones personalizadas cuando se proporciona', () => {
+  it('renderiza el slot de acciones personalizadas cuando se proporciona y filtra columna actions duplicada', () => {
+    const colsWithActions: TableColumn<Record<string, unknown>>[] = [
+      ...columns,
+      { key: 'actions', label: 'Acciones', align: 'center' },
+    ];
     const wrapper = mount(RgDataTable, {
       props: {
-        columns,
+        columns: colsWithActions,
         rows: sampleRows,
       },
       slots: {
-        actions: '<button class="test-action-btn">Acción</button>',
+        actions: '<button class="btn-table-action">✏️ Editar</button>',
       },
     });
     expect(wrapper.findAll('.col-custom-actions').length).toBe(5);
-    expect(wrapper.find('.test-action-btn').exists()).toBe(true);
+    expect(wrapper.find('.btn-table-action').exists()).toBe(true);
+    const headers = wrapper.findAll('th').map((th) => th.text());
+    expect(headers.filter((h) => h === 'Acciones').length).toBe(1);
   });
 
   it('renderiza el Empty State táctico (Refactoring UI) cuando rows está vacío y soporta slot personalizado', () => {

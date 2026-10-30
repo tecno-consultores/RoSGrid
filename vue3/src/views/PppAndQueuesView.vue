@@ -1381,36 +1381,60 @@
     margin-top: 20px;
   }
   .btn-secondary {
-    background: transparent;
-    color: var(--rg-text-secondary);
-    border: 1px solid var(--rg-border-grid);
+    background: rgba(15, 23, 42, 0.75);
+    color: var(--rg-text-secondary, #cbd5e1);
+    border: 1px solid var(--rg-border-panel, #334155);
     padding: 8px 14px;
     border-radius: 6px;
-    cursor: pointer;
-  }
-  .row-actions-group {
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-  }
-  .btn-row-action {
-    background: transparent;
-    border: 1px solid var(--rg-border-grid, #334155);
-    border-radius: 4px;
-    color: var(--rg-text-secondary, #94a3b8);
-    font-size: 0.8rem;
-    padding: 2px 8px;
+    font-weight: 500;
     cursor: pointer;
     transition: all 0.15s ease;
   }
+  .btn-secondary:hover {
+    border-color: var(--rg-accent-cyan, #22d3ee);
+    color: var(--rg-accent-cyan, #22d3ee);
+    background: rgba(34, 211, 238, 0.12);
+  }
+  .btn-refresh:hover {
+    border-color: var(--rg-accent-cyan, #22d3ee);
+    color: var(--rg-accent-cyan, #22d3ee);
+  }
+  .row-actions-group {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    justify-content: flex-end;
+  }
+  .btn-row-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid var(--rg-border-panel, #334155);
+    border-radius: 4px;
+    color: var(--rg-text-secondary, #cbd5e1);
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    line-height: 1.2;
+  }
   .btn-row-action:hover {
-    border-color: var(--rg-accent-cyan, #00d2ff);
-    color: var(--rg-accent-cyan, #00d2ff);
-    background: rgba(0, 210, 255, 0.1);
+    border-color: var(--rg-accent-cyan, #22d3ee);
+    color: var(--rg-accent-cyan, #22d3ee);
+    background: rgba(34, 211, 238, 0.12);
+    box-shadow: 0 0 8px rgba(34, 211, 238, 0.15);
+  }
+  .btn-row-action--danger {
+    border-color: rgba(239, 68, 68, 0.35);
+    color: #fca5a5;
   }
   .btn-row-action--danger:hover {
     border-color: #ef4444;
     color: #ef4444;
     background: rgba(239, 68, 68, 0.15);
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.2);
   }
 </style>
