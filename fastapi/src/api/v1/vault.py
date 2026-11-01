@@ -39,6 +39,7 @@ from src.schemas.inventory import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/inventory/routers", tags=["Vault"])
+vault_legacy_router = APIRouter(prefix="/vault/routers", tags=["Vault Legacy"], include_in_schema=False)
 
 _SAFE_ROS_CHARACTERS = string.ascii_letters + string.digits + "!#$%&*+-.:;=?@^_~"
 
@@ -190,7 +191,9 @@ async def _rotate_on_device(
             raise HTTPException(status_code=502, detail="Fallo de verificación de nueva contraseña en MikroTik")
 
 
+@router.post("/{router_id}/vault/rotate", response_model=VaultRotateResponse, include_in_schema=False)
 @router.post("/{router_id}/vault/rotate-now", response_model=VaultRotateResponse)
+@vault_legacy_router.post("/{router_id}/rotate", response_model=VaultRotateResponse)
 async def rotate_now(
     router_id: uuid.UUID,
     request: Request,
@@ -257,3 +260,7 @@ async def rotate_now(
         status="SUCCESS",
         last_rotated_at=r.vault.last_rotated_at,
     )
+
+
+rotate_api_key_now_alias = rotate_now
+

@@ -161,7 +161,7 @@ describe('VaultRevealModal.vue — Bóveda Criptográfica con Step-Up 2FA y Purg
     expect(wrapper.find('.banner--error').text()).toContain('Fallo al rotar clave');
 
     // Confirmar rotación con éxito
-    vi.spyOn(http, 'post').mockResolvedValueOnce({
+    const postSpy = vi.spyOn(http, 'post').mockResolvedValueOnce({
       status: 200,
       data: { success: true },
       headers: new Headers(),
@@ -170,6 +170,7 @@ describe('VaultRevealModal.vue — Bóveda Criptográfica con Step-Up 2FA y Purg
     await wrapper.find('.btn-op--rotate').trigger('click');
     await flushPromises();
     expect(wrapper.emitted('rotated')).toBeTruthy();
+    expect(postSpy).toHaveBeenCalledWith('/api/v1/inventory/routers/r-vault-1/vault/rotate-now');
 
     // Re-pin SSL con rechazo
     vi.spyOn(http, 'post').mockRejectedValueOnce({
@@ -180,7 +181,7 @@ describe('VaultRevealModal.vue — Bóveda Criptográfica con Step-Up 2FA y Purg
     expect(wrapper.find('.banner--error').text()).toContain('Fallo al re-anclar SSL');
 
     // Re-pin SSL exitoso
-    vi.spyOn(http, 'post').mockResolvedValueOnce({
+    const repinSpy = vi.spyOn(http, 'post').mockResolvedValueOnce({
       status: 200,
       data: { success: true },
       headers: new Headers(),
@@ -189,6 +190,7 @@ describe('VaultRevealModal.vue — Bóveda Criptográfica con Step-Up 2FA y Purg
     await wrapper.find('.btn-op--repin').trigger('click');
     await flushPromises();
     expect(wrapper.emitted('repinned')).toBeTruthy();
+    expect(repinSpy).toHaveBeenCalledWith('/api/v1/inventory/routers/r-vault-1/repin-ssl');
 
     // Cerrar modal
     await wrapper.find('.btn-close').trigger('click');

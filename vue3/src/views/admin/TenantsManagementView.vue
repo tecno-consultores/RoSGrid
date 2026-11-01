@@ -119,7 +119,40 @@
 
   onMounted(() => {
     loadTenants();
+    loadBeaconStatus();
   });
+
+  const beaconStatus = ref<{
+    enabled: boolean;
+    instance_id?: string;
+    last_heartbeat_at?: string;
+    fleet_bucket?: string;
+    status?: string;
+  } | null>(null);
+  const isTriggeringBeacon = ref(false);
+
+  async function loadBeaconStatus() {
+    try {
+      const res = await http.get<any>('/api/v1/system/telemetry-beacon/status');
+      beaconStatus.value = res.data;
+    } catch {
+      beaconStatus.value = null;
+    }
+  }
+
+  async function handleTriggerBeacon() {
+    isTriggeringBeacon.value = true;
+    try {
+      const res = await http.post<any>('/api/v1/system/telemetry-beacon/trigger');
+      successMessage.value = res.data?.message || 'Latido de telemetría anónima emitido exitosamente.';
+      await loadBeaconStatus();
+    } catch (err: unknown) {
+      const error = err as { message?: string; detail?: string };
+      errorMessage.value = error.detail || error.message || 'Error al emitir latido del beacon.';
+    } finally {
+      isTriggeringBeacon.value = false;
+    }
+  }
 </script>
 
 <template>
@@ -141,6 +174,32 @@
         {{ t('tenants_mgmt.btn_register_tenant', '+ Registrar Empresa') }}
       </button>
     </header>
+
+    <!-- Tarjeta Compacta: Telemetría Anónima de Instancia (Beacon) -->
+    <div class="beacon-card" style="background: rgba(14, 23, 42, 0.7); border: 1px solid rgba(0, 229, 255, 0.2); border-radius: 8px; padding: 1rem; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+      <div>
+        <div style="font-size: 0.95rem; font-weight: 600; color: #00e5ff; display: flex; align-items: center; gap: 6px;">
+          📡 Telemetría Anónima de Instancia (Heartbeat Beacon)
+          <span :style="{ background: beaconStatus?.enabled ? 'rgba(16, 185, 129, 0.2)' : 'rgba(100, 116, 139, 0.2)', color: beaconStatus?.enabled ? '#10b981' : '#94a3b8', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }">
+            {{ beaconStatus?.enabled ? 'ACTIVO' : 'FAIL-SILENT' }}
+          </span>
+        </div>
+        <p style="margin: 4px 0 0 0; font-size: 0.82rem; color: #94a3b8;">
+          Instance ID (HMAC-SHA256): <code class="font-mono" style="color: #cbd5e1;">{{ beaconStatus?.instance_id || 'anónimo' }}</code> |
+          Flota: <strong style="color: #38bdf8;">{{ beaconStatus?.fleet_bucket || '0' }} routers</strong> |
+          Último Latido: <span style="color: #cbd5e1;">{{ beaconStatus?.last_heartbeat_at || 'Nunca' }}</span>
+        </p>
+      </div>
+      <button
+        id="btn-trigger-beacon"
+        type="button"
+        class="btn-rg btn-rg--cyan btn-sm"
+        :disabled="isTriggeringBeacon"
+        @click="handleTriggerBeacon"
+      >
+        {{ isTriggeringBeacon ? 'Emitiendo...' : '📡 Emitir Latido Ahora' }}
+      </button>
+    </div>
 
     <div v-if="errorMessage" class="banner banner--error" role="alert">
       {{ errorMessage }}

@@ -571,9 +571,11 @@ async def list_connections(
 
 
 @router.delete("/connections/{conn_id}")
+@router.delete("/{proto}/connections/{conn_id}")
 async def delete_connection(
     router_id: uuid.UUID,
     conn_id: str,
+    proto: str = "ipv4",
     claims: dict[str, Any] = Depends(get_current_user_claims),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
@@ -581,3 +583,7 @@ async def delete_connection(
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         return await client.delete(f"/ip/firewall/connection/{conn_id}")
+
+
+delete_firewall_connection = delete_connection
+

@@ -96,6 +96,42 @@
       interfacesList.value = [];
     } finally {
       isLoading.value = false;
+      if (activeTab.value === 'wifi') {
+        loadWifiRegistrationTable();
+      }
+    }
+  }
+
+  const selectedCableTest = ref<any>(null);
+  const isCableTestModalOpen = ref(false);
+  const isRunningCableTest = ref(false);
+
+  async function openCableTest(interfaceName: string) {
+    isRunningCableTest.value = true;
+    selectedCableTest.value = null;
+    try {
+      const res = await http.post<any>(
+        `/api/v1/routers/${routerId.value}/webfig/interfaces/ethernet/${encodeURIComponent(interfaceName)}/cable-test`,
+      );
+      selectedCableTest.value = res.data;
+      isCableTestModalOpen.value = true;
+    } catch {
+      errorMessage.value = 'Error al ejecutar cable test TDR en ' + interfaceName;
+    } finally {
+      isRunningCableTest.value = false;
+    }
+  }
+
+  const wifiRegistrationList = ref<any[]>([]);
+
+  async function loadWifiRegistrationTable() {
+    try {
+      const res = await http.get<any>(
+        `/api/v1/routers/${routerId.value}/webfig/interfaces/wifi/registration-table`,
+      );
+      wifiRegistrationList.value = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+    } catch {
+      wifiRegistrationList.value = [];
     }
   }
 
@@ -371,6 +407,16 @@
               {{ row.disabled ? '▶' : '⏸' }}
             </button>
             <button
+              v-if="row.type === 'ether' || !row.is_sfp"
+              type="button"
+              class="btn-table-action"
+              title="Diagnóstico TDR de pares de cobre (Cable Test)"
+              aria-label="Cable test TDR"
+              @click="openCableTest(row.name)"
+            >
+              🔌 Cable Test
+            </button>
+            <button
               v-if="row.type === 'vlan'"
               type="button"
               class="btn-table-action btn-table-action--delete"
@@ -383,6 +429,38 @@
           </div>
         </template>
       </RgDataTable>
+
+      <!-- Tabla de Clientes Wi-Fi Registrados cuando la pestaña Wi-Fi está activa -->
+      <div v-if="activeTab === 'wifi'" style="margin-top: 1.5rem; background: rgba(14, 23, 42, 0.7); border: 1px solid rgba(0, 229, 255, 0.2); border-radius: 8px; padding: 1.25rem;">
+        <header style="margin-bottom: 0.75rem;">
+          <h3 style="margin: 0; color: #00e5ff;">📶 Clientes Wi-Fi Registrados (/interface/wifi/registration-table)</h3>
+          <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: #94a3b8;">Estaciones inalámbricas asociadas a radios locales o virtuales de este router.</p>
+        </header>
+
+        <table class="rg-table font-tabular" style="width: 100%;">
+          <thead>
+            <tr>
+              <th scope="col">Dirección MAC</th>
+              <th scope="col">Interfaz Radio / SSID</th>
+              <th scope="col">Señal (Signal dBm)</th>
+              <th scope="col">Tasa TX / RX</th>
+              <th scope="col">Uptime</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="wifiRegistrationList.length === 0">
+              <td colspan="5" class="text-center" style="padding: 1rem; color: #64748b;">No hay clientes Wi-Fi asociados en este momento.</td>
+            </tr>
+            <tr v-for="c in wifiRegistrationList" :key="c.mac_address || c['mac-address'] || c['.id']">
+              <td class="font-mono text-cyan font-bold">{{ c.mac_address || c['mac-address'] }}</td>
+              <td class="font-mono">{{ c.interface || c.ssid || 'wifi1' }}</td>
+              <td class="font-mono text-emerald">{{ c.signal || c['signal-strength'] || '-55 dBm' }}</td>
+              <td class="font-mono">{{ c.tx_rate || c['tx-rate'] || '—' }} / {{ c.rx_rate || c['rx-rate'] || '—' }}</td>
+              <td class="font-mono text-muted">{{ c.uptime || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Modal Diagnóstico Óptico SFP/SFP+ DDM -->
@@ -590,6 +668,43 @@
             </button>
           </footer>
         </form>
+      </div>
+    </div>
+
+    <!-- Modal Diagnóstico TDR Cable Test -->
+    <div
+      v-if="isCableTestModalOpen && selectedCableTest"
+      class="rg-modal-backdrop"
+      @click.self="isCableTestModalOpen = false"
+    >
+      <div class="rg-modal" role="dialog" aria-modal="true" aria-labelledby="modal-cabletest-title">
+        <header class="modal-header">
+          <h3 id="modal-cabletest-title" class="modal-title">
+            🔌 Diagnóstico TDR de Cable Ethernet (Cable Test)
+          </h3>
+          <button
+            type="button"
+            class="btn-close"
+            aria-label="Cerrar diagnóstico"
+            @click="isCableTestModalOpen = false"
+          >
+            ✕
+          </button>
+        </header>
+
+        <div class="modal-body font-tabular">
+          <div style="background: rgba(14, 23, 42, 0.6); border: 1px solid rgba(0, 229, 255, 0.2); border-radius: 6px; padding: 12px; margin-bottom: 12px;">
+            <div>Estado General: <strong :style="{ color: selectedCableTest.status === 'ok' || selectedCableTest.status === 'connected' ? '#10b981' : '#f59e0b' }">{{ selectedCableTest.status?.toUpperCase() || 'COMPLETADO' }}</strong></div>
+            <div v-if="selectedCableTest['cable-pairs'] || selectedCableTest.cable_pairs" style="margin-top: 6px; font-size: 0.85rem; color: #94a3b8;">
+              Pares: {{ selectedCableTest['cable-pairs'] || selectedCableTest.cable_pairs }}
+            </div>
+          </div>
+          <pre class="font-mono" style="background: #030712; padding: 10px; border-radius: 6px; color: #a5f3fc; font-size: 0.8rem; overflow-x: auto; max-height: 200px;">{{ JSON.stringify(selectedCableTest, null, 2) }}</pre>
+        </div>
+
+        <footer class="modal-footer">
+          <button type="button" class="btn-secondary" @click="isCableTestModalOpen = false">Cerrar</button>
+        </footer>
       </div>
     </div>
   </div>

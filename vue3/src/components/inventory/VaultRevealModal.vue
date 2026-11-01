@@ -134,7 +134,7 @@
     isOperating.value = true;
     errorMessage.value = '';
     try {
-      await http.post(`/api/v1/vault/routers/${props.router.id}/rotate`);
+      await http.post(`/api/v1/inventory/routers/${props.router.id}/vault/rotate-now`);
       successMessage.value = 'Rotación de clave API ejecutada exitosamente.';
       emit('rotated', props.router.id);
       purgeSecretMemory();
@@ -155,7 +155,7 @@
     isOperating.value = true;
     errorMessage.value = '';
     try {
-      await http.post(`/api/v1/vault/routers/${props.router.id}/repin-ssl`);
+      await http.post(`/api/v1/inventory/routers/${props.router.id}/repin-ssl`);
       successMessage.value = 'Certificado SSL re-anclado (Pinned) correctamente.';
       emit('repinned', props.router.id);
     } catch (err: unknown) {

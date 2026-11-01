@@ -7,6 +7,7 @@ import { createPinia, setActivePinia } from 'pinia';
 import IpamManagementView from './IpamManagementView.vue';
 import { useIpamStore } from '@/stores/useIpamStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
+import { http } from '@/api/httpClient';
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -18,6 +19,7 @@ describe('IpamManagementView.vue — Centro de Mando IPAM y Gestión de Clientes
     setActivePinia(createPinia());
     vi.restoreAllMocks();
     window.alert = vi.fn();
+    vi.spyOn(http, 'get').mockResolvedValue({ data: [] } as any);
   });
 
   it('renderiza la cabecera IPAM, métricas KPI y las pestañas operativas', async () => {
@@ -37,7 +39,7 @@ describe('IpamManagementView.vue — Centro de Mando IPAM y Gestión de Clientes
     expect(wrapper.find('.ipam-tabs-nav').exists()).toBe(true);
   });
 
-  it('permite alternar entre pestañas de Prefijos, Abonados y Sincronización MikroTik', async () => {
+  it('permite alternar entre pestañas de Prefijos, Abonados, Sincronización MikroTik y QoS', async () => {
     const ipamStore = useIpamStore();
     const invStore = useInventoryStore();
 
@@ -50,14 +52,20 @@ describe('IpamManagementView.vue — Centro de Mando IPAM y Gestión de Clientes
     await flushPromises();
 
     const tabs = wrapper.findAll('.tab-btn');
-    expect(tabs.length).toBeGreaterThanOrEqual(3);
+    expect(tabs.length).toBeGreaterThanOrEqual(4);
 
     // Click en la pestaña de Abonados
     await tabs[1].trigger('click');
     expect(wrapper.find('.subscribers-section').exists()).toBe(true);
+    expect(wrapper.find('#btn-simulate-dhcp-subscribers').exists()).toBe(true);
 
     // Click en la pestaña de Sincronización MikroTik
     await tabs[2].trigger('click');
     expect(wrapper.find('.sync-section').exists()).toBe(true);
+
+    // Click en la pestaña de Planes de Ancho de Banda (QoS)
+    await tabs[3].trigger('click');
+    await flushPromises();
+    expect(wrapper.find('.bandwidth-section').exists()).toBe(true);
   });
 });

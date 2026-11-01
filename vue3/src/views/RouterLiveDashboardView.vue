@@ -255,6 +255,65 @@
       animationFrameId = null;
     }
   });
+
+  const isChangingIdentity = ref(false);
+  const isSubmittingIdentity = computed(() => isChangingIdentity.value);
+  const isSyncingDiscovery = ref(false);
+  const isRebooting = ref(false);
+  const isIdentityModalOpen = ref(false);
+  const newIdentityName = ref('');
+  const actionBannerMsg = ref('');
+
+  function openIdentityModal() {
+    newIdentityName.value = '';
+    isIdentityModalOpen.value = true;
+  }
+
+  async function handleChangeIdentity() {
+    if (!newIdentityName.value.trim()) return;
+    isChangingIdentity.value = true;
+    try {
+      await http.patch(`/api/v1/routers/${routerId.value}/webfig/system/identity`, {
+        name: newIdentityName.value.trim(),
+      });
+      actionBannerMsg.value = `Identidad actualizada a '${newIdentityName.value.trim()}'`;
+      isIdentityModalOpen.value = false;
+    } catch {
+      actionBannerMsg.value = 'Error al actualizar identidad en RouterOS';
+    } finally {
+      isChangingIdentity.value = false;
+    }
+  }
+
+  async function handleSyncDiscovery() {
+    isSyncingDiscovery.value = true;
+    try {
+      const res = await http.post<any>(`/api/v1/inventory/routers/${routerId.value}/sync-discovery`);
+      actionBannerMsg.value = res.data?.message || 'Sincronización de hardware y paquetes completada.';
+    } catch {
+      actionBannerMsg.value = 'Error al sincronizar datos del router';
+    } finally {
+      isSyncingDiscovery.value = false;
+    }
+  }
+
+  async function handleRebootRouter() {
+    if (!confirm('⚠️ ¿Confirmas el reinicio inmediato del router MikroTik? Se interrumpirá el tráfico de red durante el ciclo de booteo.')) {
+      return;
+    }
+    if (!confirm('⚠️ CONFIRMACIÓN FINAL: ¿Reiniciar ahora?')) {
+      return;
+    }
+    isRebooting.value = true;
+    try {
+      await http.post(`/api/v1/routers/${routerId.value}/webfig/system/reboot`);
+      actionBannerMsg.value = 'Comando de reinicio enviado exitosamente al router.';
+    } catch {
+      actionBannerMsg.value = 'Error al enviar comando de reinicio';
+    } finally {
+      isRebooting.value = false;
+    }
+  }
 </script>
 
 <template>
@@ -271,25 +330,63 @@
         </p>
       </div>
 
-      <!-- Selectores de Ventana Temporal (2m, 15m, 1h, 3h) -->
-      <div
-        class="window-selectors"
-        role="group"
-        aria-label="Selector de ventana temporal de telemetría"
-      >
-        <button
-          v-for="(pts, key) in WINDOW_POINTS_MAP"
-          :key="key"
-          type="button"
-          class="btn-window"
-          :class="{ 'btn-window--active': currentWindow === key }"
-          :aria-pressed="currentWindow === key"
-          @click="handleSelectWindow(key as TelemetryWindowKey)"
+      <!-- Selectores de Ventana Temporal (2m, 15m, 1h, 3h) & Acciones Rápidas -->
+      <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+        <div
+          class="window-selectors"
+          role="group"
+          aria-label="Selector de ventana temporal de telemetría"
         >
-          {{ key }} ({{ pts }} pts)
-        </button>
+          <button
+            v-for="(pts, key) in WINDOW_POINTS_MAP"
+            :key="key"
+            type="button"
+            class="btn-window"
+            :class="{ 'btn-window--active': currentWindow === key }"
+            :aria-pressed="currentWindow === key"
+            @click="handleSelectWindow(key as TelemetryWindowKey)"
+          >
+            {{ key }} ({{ pts }} pts)
+          </button>
+        </div>
+
+        <div class="dashboard-quick-actions" style="display: flex; gap: 6px;">
+          <button
+            id="btn-change-identity"
+            type="button"
+            class="btn-rg btn-rg--secondary btn-sm"
+            title="Cambiar identidad del router en RouterOS"
+            @click="openIdentityModal"
+          >
+            ✏️ Identidad
+          </button>
+          <button
+            id="btn-sync-discovery"
+            type="button"
+            class="btn-rg btn-rg--cyan btn-sm"
+            :disabled="isSyncingDiscovery"
+            title="Sincronizar paquetes y recursos del router"
+            @click="handleSyncDiscovery"
+          >
+            {{ isSyncingDiscovery ? 'Sincronizando...' : '🔄 Sincronizar Datos' }}
+          </button>
+          <button
+            id="btn-reboot-router"
+            type="button"
+            class="btn-rg btn-rg--red btn-sm"
+            :disabled="isRebooting"
+            title="Reiniciar router MikroTik"
+            @click="handleRebootRouter"
+          >
+            {{ isRebooting ? 'Reiniciando...' : '⚠️ Reiniciar Router' }}
+          </button>
+        </div>
       </div>
     </header>
+
+    <div v-if="actionBannerMsg" class="banner banner--success" role="status" style="margin-bottom: 12px;">
+      {{ actionBannerMsg }}
+    </div>
 
     <!-- Resumen de Tarjetas Métricas Rápidas -->
     <section class="kpi-grid font-tabular" aria-label="Métricas del sistema">
@@ -379,6 +476,54 @@
             role="img"
           ></canvas>
         </div>
+      </div>
+    </div>
+
+    <!-- Modal Táctico: Cambio de Identidad del Router -->
+    <div
+      v-if="isIdentityModalOpen"
+      class="modal-backdrop"
+      @click.self="isIdentityModalOpen = false"
+    >
+      <div class="modal-card" role="dialog" aria-labelledby="modal-identity-title" aria-modal="true">
+        <header class="modal-header">
+          <h2 id="modal-identity-title">Cambiar Identidad del Router (System Identity)</h2>
+          <button type="button" class="btn-close" @click="isIdentityModalOpen = false">
+            ✕
+          </button>
+        </header>
+        <form class="modal-form" @submit.prevent="handleChangeIdentity">
+          <div class="form-group">
+            <label for="identity-name">Nuevo Nombre de Identidad (Identity):</label>
+            <input
+              id="identity-name"
+              v-model="newIdentityName"
+              type="text"
+              required
+              class="form-control font-tabular"
+              placeholder="ej. Core-CCR2004-Edge"
+            />
+            <small class="form-hint">
+              Este cambio invocará <code>PATCH /api/v1/routers/{id}/webfig/system/identity</code> con Safe Mode de 60s activado.
+            </small>
+          </div>
+          <footer class="modal-footer">
+            <button
+              type="button"
+              class="btn-secondary"
+              @click="isIdentityModalOpen = false"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="btn-primary"
+              :disabled="!newIdentityName.trim() || isSubmittingIdentity"
+            >
+              {{ isSubmittingIdentity ? 'Guardando...' : 'Aplicar Identidad' }}
+            </button>
+          </footer>
+        </form>
       </div>
     </div>
   </div>
@@ -594,5 +739,108 @@
     .charts-grid {
       grid-template-columns: 1fr;
     }
+  }
+
+  /* Modal Táctico NOC */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(3, 7, 18, 0.75);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .modal-card {
+    background: var(--rg-bg-surface, #0f172a);
+    border: 1px solid var(--rg-border-grid, #1e293b);
+    border-radius: var(--rg-radius-lg, 8px);
+    width: 90%;
+    max-width: 480px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--rg-border-grid, #1e293b);
+    background: var(--rg-bg-elevated, #1e293b);
+  }
+
+  .modal-header h2 {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--rg-text-primary, #f8fafc);
+  }
+
+  .btn-close {
+    background: transparent;
+    border: none;
+    color: var(--rg-text-muted, #94a3b8);
+    font-size: 1.1rem;
+    cursor: pointer;
+  }
+
+  .modal-form {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .form-control {
+    background: var(--rg-bg-canvas, #090d16);
+    border: 1px solid var(--rg-border-grid, #1e293b);
+    color: var(--rg-text-primary, #f8fafc);
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+  }
+
+  .form-hint {
+    font-size: 0.75rem;
+    color: var(--rg-text-muted, #94a3b8);
+  }
+
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .btn-secondary {
+    background: var(--rg-bg-elevated, #1e293b);
+    border: 1px solid var(--rg-border-grid, #334155);
+    color: var(--rg-text-secondary, #cbd5e1);
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .btn-primary {
+    background: #00bcd4;
+    border: 1px solid #00acc1;
+    color: #030712;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 </style>

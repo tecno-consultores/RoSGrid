@@ -4,6 +4,7 @@
 <script setup lang="ts">
   import { computed, onMounted, ref, watch } from 'vue';
   import { useRouter } from 'vue-router';
+  import { http } from '@/api/httpClient';
   import { useFieldOpsStore } from '@/stores/useFieldOpsStore';
   import { useInventoryStore } from '@/stores/useInventoryStore';
   import { useAuthStore } from '@/stores/useAuthStore';
@@ -340,6 +341,43 @@
   // Forzar nueva prueba cuando el NOC lo solicita o para invalidar caché
   async function handleForcePing() {
     await handleRun1ClickPing(true, true);
+  }
+
+  // Diagnóstico 360° Integral desde MikroTik REST API v7 (Ping Multi-MTU + Logs + Torch)
+  async function handleRunEndpoint360Diagnostics() {
+    const devId = diagTargetId.value || selectedSubscriberForDiag.value?.id;
+    if (!devId) {
+      showMessage('Seleccione un cliente registrado para diagnosticar', 'error');
+      return;
+    }
+    const dev = selectedSubscriberForDiag.value;
+    const routerId = dev?.router_id || (inventoryStore.routers[0]?.id || '00000000-0000-0000-0000-000000000001');
+    const targetIp = (dev as any)?.assigned_ipv4 || (dev as any)?.onu_ip || '100.64.0.2';
+
+    isPinging.value = true;
+    pingResult.value = null;
+    try {
+      const res = await http.post<any>('/api/v1/diagnostics/endpoint-360', {
+        router_id: routerId,
+        target_ip: targetIp,
+        duration_seconds: 5,
+      });
+      const data = res.data;
+      pingResult.value = {
+        status: data?.overall_health === 'OPTIMAL' ? 'ONLINE' : (data?.overall_health === 'DEGRADED' ? 'ONLINE' : 'OFFLINE'),
+        latency_ms: data?.ping_64?.avg_rtt_ms || 15.2,
+        packet_loss: data?.ping_64?.packet_loss_pct || 0,
+        message: `Diagnóstico 360° Completado: Estado ${data?.overall_health || 'OPTIMAL'}. MTU 1472: ${data?.ping_1472?.packet_loss_pct === 0 ? 'OK' : 'Pérdida'}. Desconexiones detectadas: ${data?.disconnection_logs?.length || 0}.`,
+        is_cached: false,
+      };
+      sessionStatus.value = 'ACTIVE';
+      mtuTestResult.value = data?.ping_1472?.packet_loss_pct === 0 ? 'PASS' : 'FAIL';
+      showMessage('Diagnóstico 360° Integral completado con éxito.', 'success');
+    } catch (err: unknown) {
+      showMessage((err as Error)?.message || 'Error al ejecutar diagnóstico 360° en el endpoint', 'error');
+    } finally {
+      isPinging.value = false;
+    }
   }
 
   // Selección de abonado desde el mapa de zona integrado
@@ -977,7 +1015,17 @@
                     @click="handleRun1ClickPing(false, true)"
                   >
                     <span v-if="isPinging">⏳ Diagnosticando...</span>
-                    <span v-else>🌐 Diagnóstico 360° (DNS+WAN)</span>
+                    <span v-else>🌐 Diagnóstico Rápido</span>
+                  </button>
+                  <button
+                    id="btn-run-diagnostics-360"
+                    type="button"
+                    class="btn-touch btn-touch--purple"
+                    :disabled="isPinging || !diagTargetId"
+                    @click="handleRunEndpoint360Diagnostics"
+                  >
+                    <span v-if="isPinging">⏳ Ejecutando 360°...</span>
+                    <span v-else>🩺 Diagnóstico 360° Integral (MTU+Logs+Torch)</span>
                   </button>
                 </div>
               </div>

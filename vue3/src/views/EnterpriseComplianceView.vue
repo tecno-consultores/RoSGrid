@@ -667,6 +667,42 @@
       selectedSlaPresetHost.value = '9.9.9.9';
       handleSlaPresetChange();
     }
+    await loadTrafficAnomalies();
+  }
+
+  const trafficAnomalies = ref<any[]>([]);
+  const isMitigatingTraffic = ref(false);
+
+  async function loadTrafficAnomalies() {
+    if (!selectedRouterId.value) return;
+    try {
+      const res = await http.get<any>(`/api/v1/traffic-flow/anomalies?router_id=${selectedRouterId.value}`);
+      trafficAnomalies.value = res.data?.items || [];
+    } catch {
+      trafficAnomalies.value = [];
+    }
+  }
+
+  async function handleMitigateAnomaly(targetIp?: string) {
+    if (!selectedRouterId.value) return;
+    isMitigatingTraffic.value = true;
+    try {
+      const ip = targetIp || (trafficAnomalies.value[0]?.ip_address || '198.51.100.99');
+      await http.post('/api/v1/traffic-flow/mitigate', {
+        router_id: selectedRouterId.value,
+        target_ip: ip,
+        action: 'fast_drop',
+        duration_seconds: 300,
+        comment: 'Mitigación 1-Clic desde Consola SLA',
+      });
+      successMessage.value = `Mitigación de anomalía para ${ip} aplicada exitosamente en MikroTik (300s).`;
+      await loadTrafficAnomalies();
+    } catch (err: unknown) {
+      const e = err as { message?: string; detail?: string };
+      errorMessage.value = e.detail || e.message || 'Error al ejecutar mitigación de anomalía';
+    } finally {
+      isMitigatingTraffic.value = false;
+    }
   }
 
   async function loadWifiTab() {
@@ -819,7 +855,7 @@
     actionLoading.value = true;
     errorMessage.value = '';
     try {
-      await http.post('/api/v1/sdwan/spokes', {
+      await http.post('/api/v1/sdwan/provision-spoke', {
         hub_router_id: newSpoke.value.hub_router_id || selectedRouterId.value,
         spoke_router_id: newSpoke.value.spoke_router_id || selectedRouterId.value,
         spoke_name: newSpoke.value.spoke_name,
@@ -843,7 +879,7 @@
     actionLoading.value = true;
     try {
       const res = await http.post<SdwanMultiWanFailoverResponse>(
-        '/api/v1/sdwan/multi-wan/failover',
+        '/api/v1/sdwan/multi-wan-failover',
         {
           router_id: selectedRouterId.value,
           ...multiWanForm.value,
@@ -2293,6 +2329,64 @@
               {{ t('enterprise.sla_btn_probe', 'Ejecutar Sondeo Inmediato') }}
             </button>
           </form>
+        </div>
+
+        <!-- Panel de Anomalías de Tráfico & Mitigación en 1 Clic -->
+        <div class="traffic-anomalies-card" style="margin-top: 1.5rem; background: rgba(14, 23, 42, 0.7); border: 1px solid rgba(0, 229, 255, 0.2); border-radius: 8px; padding: 1.25rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <h3 style="margin: 0; color: #00e5ff; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+                🚨 Detección de Anomalías de Tráfico & Mitigación en 1 Clic
+              </h3>
+              <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: #94a3b8;">
+                Monitoreo volumétrico en tiempo real con FastDrop automático para mitigar ataques DoS / anomalías.
+              </p>
+            </div>
+            <button
+              id="btn-mitigate-traffic-anomaly"
+              type="button"
+              class="tactical-btn btn-secondary"
+              :disabled="isMitigatingTraffic"
+              @click="handleMitigateAnomaly()"
+            >
+              <span>🛡️</span>
+              {{ isMitigatingTraffic ? 'Mitigando...' : 'Mitigar Anomalía (FastDrop 300s)' }}
+            </button>
+          </div>
+
+          <div v-if="trafficAnomalies.length === 0" style="padding: 12px; background: rgba(15, 23, 42, 0.5); border-radius: 6px; color: #10b981; font-size: 0.9rem;">
+            ✔ Cero anomalías volumétricas detectadas en el router en la ventana actual.
+          </div>
+          <div v-else class="tactical-table-wrapper">
+            <table class="tactical-table font-tabular" style="width: 100%;">
+              <thead>
+                <tr>
+                  <th scope="col">IP Origen</th>
+                  <th scope="col">Conexiones Concurrentes</th>
+                  <th scope="col">Tasa de Tráfico</th>
+                  <th scope="col">Severidad</th>
+                  <th scope="col">Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="a in trafficAnomalies" :key="a.ip_address || a.ip">
+                  <td class="font-mono text-cyan">{{ a.ip_address || a.ip }}</td>
+                  <td>{{ a.conns_count || a.conns || '—' }}</td>
+                  <td>{{ a.rate_mbps ? `${a.rate_mbps} Mbps` : '—' }}</td>
+                  <td><span class="badge badge-danger">ANOMALÍA</span></td>
+                  <td>
+                    <button
+                      type="button"
+                      class="btn-rg btn-rg--amber btn-sm"
+                      @click="handleMitigateAnomaly(a.ip_address || a.ip)"
+                    >
+                      🛡️ FastDrop
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 

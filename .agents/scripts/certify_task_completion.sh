@@ -12,32 +12,37 @@ echo "   🤖 RoSGrid Agent Certification Gate (Regla Cero & QA 11X)        "
 echo "══════════════════════════════════════════════════════════════════════"
 
 # 1. Auditoría de Secretos
-echo -e "\n🔒 [1/8] Verificando que no existan secretos expuestos en Git..."
+echo -e "\n🔒 [1/9] Verificando que no existan secretos expuestos en Git..."
 "${REPO_ROOT}/scripts/verificar-secretos.sh"
 echo "✔ Cero secretos detectados."
 
 # 2. Auditoría Preventiva de Vulnerabilidades y Misconfiguraciones IaC (Trivy)
-echo -e "\n🛡️ [2/8] Ejecutando escaneo preventivo de vulnerabilidades y seguridad (Trivy)..."
+echo -e "\n🛡️ [2/9] Ejecutando escaneo preventivo de vulnerabilidades y seguridad (Trivy)..."
 "${REPO_ROOT}/scripts/auditar-infra.sh"
 echo "✔ Cero vulnerabilidades críticas o de alto impacto detectadas."
 
 # 3. Integridad de Diccionarios i18n (Anti-Colisión de Claves JSON)
-echo -e "\n🌐 [3/8] Verificando integridad de diccionarios i18n (anti-colisión de claves)..."
+echo -e "\n🌐 [3/9] Verificando integridad de diccionarios i18n (anti-colisión de claves)..."
 python3 "${REPO_ROOT}/.agents/scripts/verify_json_no_duplicate_keys.py"
 echo "✔ Diccionarios i18n validados sin claves duplicadas."
 
 # 4. Invariante de Cero Componentes Vue Huérfanos
-echo -e "\n🧩 [4/8] Verificando cobertura de componentes Vue (invariante cero componentes huérfanos)..."
+echo -e "\n🧩 [4/9] Verificando cobertura de componentes Vue (invariante cero componentes huérfanos)..."
 python3 "${REPO_ROOT}/.agents/scripts/verify_zero_orphan_vue_components.py"
 echo "✔ Todos los componentes Vue cuentan con suite de prueba activa."
 
 # 5. Salud Topológica y Límites de Capas (Graphify AST)
-echo -e "\n🧠 [5/8] Auditando salud topológica y límites de capas arquitectónicas (Graphify AST)..."
+echo -e "\n🧠 [5/9] Auditando salud topológica y límites de capas arquitectónicas (Graphify AST)..."
 python3 "${REPO_ROOT}/.agents/scripts/verify_topological_health.py"
 echo "✔ Salud topológica y límites de capas certificados (0 acoplamientos indebidos)."
 
-# 6. Paridad ORM vs Alembic en Docker
-echo -e "\n🗄️ [6/8] Verificando paridad entre modelos ORM y migraciones Alembic..."
+# 6. Invariante de Cero Endpoints de API Huérfanos
+echo -e "\n🔗 [6/9] Verificando paridad de endpoints API e invariante cero huérfanos..."
+python3 "${REPO_ROOT}/.agents/scripts/verify_no_orphan_api_endpoints.py"
+echo "✔ Paridad bidireccional API certificada (0 llamadas 404/405)."
+
+# 7. Paridad ORM vs Alembic en Docker
+echo -e "\n🗄️ [7/9] Verificando paridad entre modelos ORM y migraciones Alembic..."
 if docker ps --format '{{.Names}}' | grep -q "^rosgrid_api_local$"; then
     docker cp "${REPO_ROOT}/.agents/scripts/verify_alembic_orm_parity.py" rosgrid_api_local:/app/scripts/verify_alembic_orm_parity.py
     docker exec -t rosgrid_api_local python scripts/verify_alembic_orm_parity.py
@@ -45,8 +50,8 @@ else
     echo "ℹ️ Contenedor rosgrid_api_local inactivo (stack apagado); omitiendo verificación en vivo de ORM."
 fi
 
-# 7. Contratos de Integración Front-Back
-echo -e "\n🧪 [7/8] Ejecutando suite de Contratos Front-Back (25 pruebas)..."
+# 8. Contratos de Integración Front-Back
+echo -e "\n🧪 [8/9] Ejecutando suite de Contratos Front-Back (25 pruebas)..."
 if docker ps --format '{{.Names}}' | grep -q "^rosgrid_api_local$"; then
     if curl -fsS http://127.0.0.1:8000/api/v1/auth/bootstrap-status 2>/dev/null | grep -q '"is_bootstrapped":false'; then
         echo "ℹ️ Contenedor rosgrid_api_local en modo Wizard limpio (is_bootstrapped: false); omitiendo validación autenticada para preservar estado virgen."
@@ -58,8 +63,8 @@ else
     echo "ℹ️ Contenedor rosgrid_api_local inactivo (stack apagado); omitiendo validación en vivo de contratos front-back."
 fi
 
-# 8. Verificación de Sincronización Documental
-echo -e "\n📚 [8/8] Verificando sincronización de documentación y pruebas obligatorias..."
+# 9. Verificación de Sincronización Documental
+echo -e "\n📚 [9/9] Verificando sincronización de documentación y pruebas obligatorias..."
 CODE_CHANGES=$(git diff --name-only HEAD 2>/dev/null | grep -E '^(fastapi/src|vue3/src)' || true)
 
 if [ -n "${CODE_CHANGES}" ]; then

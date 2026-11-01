@@ -769,6 +769,25 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And match text(".tactical-tabs-nav") contains 'Seguridad L2'
     And match text(".tactical-tabs-nav") contains 'SLA Telemetría'
 
+  Scenario: 80. Paridad Total de Endpoints Operativos y Acciones Tácticas en UI (Hito 28.5)
+    # 1. Verificación de Pestaña QoS y Simulación DHCP en IPAM
+    Given driver baseUrl + '/ipam'
+    And waitFor(".ipam-management-view")
+    And waitFor("#tab-btn-bandwidth-profiles")
+    When click("#tab-btn-bandwidth-profiles")
+    Then waitFor("#btn-simulate-dhcp-subscribers")
+    # 2. Verificación de Telemetría Beacon en Administración de Empresas
+    Given driver baseUrl + '/admin/tenants'
+    And waitFor(".tenants-management-view")
+    And waitFor("#btn-trigger-beacon")
+    # 3. Verificación de Acciones Rápidas en Live Dashboard
+    Given driver baseUrl + '/routers/01928000-0000-7000-8000-000000000001/dashboard'
+    And waitFor(".live-dashboard")
+    And waitFor("#btn-change-identity")
+    And waitFor("#btn-sync-discovery")
+    And waitFor("#btn-reboot-router")
+
+
 
 
 

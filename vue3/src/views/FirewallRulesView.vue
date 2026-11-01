@@ -94,6 +94,7 @@
         { key: 'dst_address', label: 'Destino (Dst)' },
         { key: 'chain', label: 'Estado TCP' },
         { key: 'comment', label: 'Timeout' },
+        { key: 'actions', label: 'Acciones', align: 'center' },
       ];
     }
     return columns;
@@ -113,9 +114,11 @@
     isLoading.value = true;
     errorMessage.value = '';
     try {
-      const res = await http.get<FirewallRuleItem[] | { items: FirewallRuleItem[] }>(
-        `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}`,
-      );
+      const endpoint =
+        activeTab.value === 'connections'
+          ? `/api/v1/routers/${routerId.value}/webfig/firewall/connections`
+          : `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}`;
+      const res = await http.get<FirewallRuleItem[] | { items: FirewallRuleItem[] }>(endpoint);
       const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
       rulesList.value = raw.map((item: any) => ({
         ...item,
@@ -300,9 +303,11 @@
       return;
     }
     try {
-      const res = await http.delete(
-        `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}/${rule.id}`,
-      );
+      const deleteUrl =
+        activeTab.value === 'connections'
+          ? `/api/v1/routers/${routerId.value}/webfig/firewall/connections/${encodeURIComponent(rule.id)}`
+          : `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}/${rule.id}`;
+      const res = await http.delete(deleteUrl);
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       if (intercepted) {
         actionMessage.value =

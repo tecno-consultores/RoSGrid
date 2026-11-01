@@ -14,6 +14,7 @@ from src.api.v1.cve import router as cve_router
 from src.api.v1.diagnostics_360 import router as diagnostics_360_router
 from src.api.v1.field_ops import router as field_ops_router
 from src.api.v1.fleet_metrics import router as fleet_metrics_router
+from src.api.v1.inventory import inventory_legacy_router
 from src.api.v1.inventory import router as inventory_router
 from src.api.v1.ipam import router as ipam_router
 from src.api.v1.maintenance import router as maintenance_router
@@ -34,6 +35,7 @@ from src.api.v1.topology_l2 import router as topology_l2_router
 from src.api.v1.traffic_flow import router as traffic_flow_router
 from src.api.v1.users import router as users_router
 from src.api.v1.vault import router as vault_router
+from src.api.v1.vault import vault_legacy_router
 from src.api.v1.webfig_firewall import router as webfig_firewall_router
 from src.api.v1.webfig_interfaces import router as webfig_interfaces_router
 from src.api.v1.webfig_ip import router as webfig_ip_router
@@ -56,6 +58,7 @@ api_v1_router.include_router(tenants_router)
 api_v1_router.include_router(users_router)
 api_v1_router.include_router(sessions_router)
 api_v1_router.include_router(inventory_router)
+api_v1_router.include_router(inventory_legacy_router)
 api_v1_router.include_router(ipam_router)
 api_v1_router.include_router(bandwidth_router)
 api_v1_router.include_router(subscribers_router)
@@ -63,6 +66,7 @@ api_v1_router.include_router(optical_boxes_router)
 api_v1_router.include_router(network_services_router)
 api_v1_router.include_router(field_ops_router)
 api_v1_router.include_router(vault_router)
+api_v1_router.include_router(vault_legacy_router)
 api_v1_router.include_router(maintenance_router)
 api_v1_router.include_router(webfig_interfaces_router)
 api_v1_router.include_router(webfig_ip_router)

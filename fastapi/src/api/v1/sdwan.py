@@ -62,6 +62,14 @@ def _generate_mock_wireguard_key() -> str:
 
 
 @router.post(
+    "/spokes",
+    response_model=SdwanSpokeTunnelResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Alias de aprovisionamiento Zero-Touch de sucursal Spoke sobre malla WireGuard",
+    dependencies=[Depends(require_roles(*_SDWAN_WRITE_ROLES))],
+    include_in_schema=False,
+)
+@router.post(
     "/provision-spoke",
     response_model=SdwanSpokeTunnelResponse,
     status_code=status.HTTP_201_CREATED,
@@ -237,6 +245,13 @@ async def get_sdwan_topology(
     )
 
 
+@router.post(
+    "/multi-wan/failover",
+    response_model=SdwanMultiWanFailoverResponse,
+    summary="Alias de despliegue de PBR y Netwatch recursivo para conmutación Multi-WAN",
+    dependencies=[Depends(require_roles(*_SDWAN_WRITE_ROLES))],
+    include_in_schema=False,
+)
 @router.post(
     "/multi-wan-failover",
     response_model=SdwanMultiWanFailoverResponse,

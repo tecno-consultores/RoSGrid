@@ -69,6 +69,7 @@ from src.schemas.inventory import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/inventory", tags=["Inventory"])
+inventory_legacy_router = APIRouter(prefix="/vault/routers", tags=["Inventory Legacy"], include_in_schema=False)
 
 _GLOBAL_ROUTER_ROLES = {
     SystemRoleEnum.SUPERADMIN_GLOBAL.value,
@@ -682,6 +683,7 @@ async def sync_discovery(
     return build_router_response(r, telemetry)
 
 
+@inventory_legacy_router.post("/{router_id}/repin-ssl", status_code=status.HTTP_200_OK)
 @router.post("/routers/{router_id}/repin-ssl", status_code=status.HTTP_200_OK)
 async def repin_ssl(
     router_id: uuid.UUID,
@@ -745,6 +747,10 @@ async def repin_ssl(
     )
     await db.commit()
     return {"status": "SUCCESS", "fingerprint": r.ssl_sha256_fingerprint}
+
+
+repin_ssl_legacy_alias = repin_ssl
+
 
 
 # ============================================================================

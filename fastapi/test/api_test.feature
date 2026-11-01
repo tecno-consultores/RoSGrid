@@ -1053,6 +1053,52 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 137. Paridad de Endpoints Operativos: Alias de Rotación de Credenciales de Bóveda (POST /vault/routers/{id}/rotate) sin autenticación devuelve 401 (Hito 28.5)
+    Given path '/api/v1/vault/routers/01928000-0000-7000-8000-000000000001/rotate'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000137'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 138. Paridad de Endpoints Operativos: Alias de Re-Pinning SSL TOFU (POST /vault/routers/{id}/repin-ssl) sin autenticación devuelve 401 (Hito 28.5)
+    Given path '/api/v1/vault/routers/01928000-0000-7000-8000-000000000001/repin-ssl'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000138'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 139. Paridad de Endpoints Operativos: Alias de Aprovisionamiento SD-WAN Spoke (POST /sdwan/spokes) sin autenticación devuelve 401 (Hito 28.5)
+    Given path '/api/v1/sdwan/spokes'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000139'
+    And request { spoke_router_id: '01928000-0000-7000-8000-000000000001', hub_router_id: '01928000-0000-7000-8000-000000000002', tunnel_subnet: '10.255.0.0/30', endpoint_address: '198.51.100.1' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 140. Paridad de Endpoints Operativos: Alias de Failover Multi-WAN (POST /sdwan/multi-wan/failover) sin autenticación devuelve 401 (Hito 28.5)
+    Given path '/api/v1/sdwan/multi-wan/failover'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000140'
+    And request { router_id: '01928000-0000-7000-8000-000000000001', primary_interface: 'ether1', primary_gateway: '192.168.1.1', secondary_interface: 'ether2', secondary_gateway: '192.168.2.1' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 141. Paridad de Endpoints Operativos: Mutación de Recurso Singleton WebFig Capa 2 (PATCH /webfig/layer2/singleton/{ros_path}) sin autenticación devuelve 401 (Hito 28.5)
+    Given path '/api/v1/routers/01928000-0000-7000-8000-000000000001/webfig/layer2/singleton/system/ntp/client'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000141'
+    And request { attributes: { enabled: true }, enable_safemode: true }
+    When method patch
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 142. Paridad de Endpoints Operativos: Terminación de Conexión Activa Firewall Conntrack (DELETE /webfig/firewall/{proto}/connections/{conn_id}) sin autenticación devuelve 401 (Hito 28.5)
+    Given path '/api/v1/routers/01928000-0000-7000-8000-000000000001/webfig/firewall/ipv4/connections/*4A'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000142'
+    When method delete
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
 
 
 

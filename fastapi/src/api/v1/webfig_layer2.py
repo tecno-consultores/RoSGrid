@@ -64,6 +64,27 @@ _GLOBAL_L2_WRITE_ROLES = {
     SystemRoleEnum.TENANT_ADMIN.value,
 }
 
+_KNOWN_SINGLETON_PATHS = {
+    "system/identity",
+    "system/clock",
+    "system/ntp/client",
+    "system/ntp/server",
+    "ip/dns",
+    "ip/settings",
+    "ipv6/settings",
+    "interface/bridge/settings",
+}
+
+
+def _extract_attributes_and_safemode(payload: Any) -> tuple[dict[str, Any], bool]:
+    if isinstance(payload, DynamicLayer2WriteRequest):
+        return payload.attributes, payload.enable_safemode
+    if isinstance(payload, dict):
+        if "attributes" in payload and isinstance(payload["attributes"], dict):
+            return payload["attributes"], bool(payload.get("enable_safemode", True))
+        return payload, True
+    return {}, True
+
 # ============================================================================
 # CATÁLOGO CANÓNICO DE VERBOS RPC Y ESQUEMAS FALLBACK (/console/inspect)
 # ============================================================================
@@ -835,7 +856,7 @@ async def update_resource(
     router_id: uuid.UUID,
     ros_path: str,
     item_id: str,
-    payload: DynamicLayer2WriteRequest,
+    payload: DynamicLayer2WriteRequest | dict[str, Any],
     request: Request,
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
     claims: dict[str, Any] = Depends(get_current_user_claims),
@@ -846,13 +867,59 @@ async def update_resource(
     perm = await _get_user_perm(db, uuid.UUID(claims["tid"]), uuid.UUID(claims["sub"]), router_id)
     _check_l2_write_permission(claims, perm)
 
+    full_path = f"{clean_path}/{item_id}"
     router_obj, client = await get_router_and_client(router_id, claims, db)
+    attributes, enable_safemode = _extract_attributes_and_safemode(payload)
+
+    if full_path in _KNOWN_SINGLETON_PATHS:
+        before_state = await client.get(full_path)
+
+        async def _action_singleton() -> Any:
+            try:
+                return await client.post(f"{full_path}/set", attributes)
+            except Exception:
+                return await client.patch(full_path, attributes)
+
+        if enable_safemode:
+            res = await execute_safe_mutation(
+                client,
+                full_path,
+                "update_singleton",
+                _action_singleton,
+                item_id=None,
+                before_state=before_state if isinstance(before_state, dict) else None,
+            )
+        else:
+            res = await _action_singleton()
+
+        await invalidate_webfig_cache(from_deps_redis(), uuid.UUID(claims["tid"]), router_id, full_path)
+        await write_audit_log(
+            session=db,
+            tenant_id=uuid.UUID(claims["tid"]),
+            actor_username=claims.get("preferred_username", "unknown"),
+            actor_role=claims.get("rol", SystemRoleEnum.SUPPORT_L3.value),
+            actor_ip=request.client.host if request.client else "127.0.0.1",
+            event_category="WEBFIG_L2",
+            event_action="L2_SINGLETON_UPDATED",
+            actor_user_id=uuid.UUID(claims["sub"]),
+            router_id=router_id,
+            router_display_name=router_obj.display_name,
+            ros_rest_method="PATCH",
+            ros_rest_endpoint=f"/rest/{full_path}",
+            idempotency_key=idempotency_key,
+            before_state=before_state if isinstance(before_state, dict) else None,
+            after_state=attributes,
+            status_code=200,
+        )
+        await db.commit()
+        return res
+
     before_state = await client.get(f"{clean_path}/{item_id}")
 
     async def _action() -> Any:
-        return await client.patch(f"{clean_path}/{item_id}", payload.attributes)
+        return await client.patch(f"{clean_path}/{item_id}", attributes)
 
-    if payload.enable_safemode:
+    if enable_safemode:
         res = await execute_safe_mutation(
             client,
             clean_path,
@@ -880,11 +947,76 @@ async def update_resource(
         ros_rest_endpoint=f"/rest/{clean_path}/{item_id}",
         idempotency_key=idempotency_key,
         before_state=before_state if isinstance(before_state, dict) else None,
-        after_state=payload.attributes,
+        after_state=attributes,
         status_code=200,
     )
     await db.commit()
     return res
+
+
+@router.patch("/resource/{ros_path:path}")
+@router.patch("/singleton/{ros_path:path}")
+async def update_singleton_resource(
+    router_id: uuid.UUID,
+    ros_path: str,
+    payload: DynamicLayer2WriteRequest | dict[str, Any],
+    request: Request,
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+    claims: dict[str, Any] = Depends(get_current_user_claims),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Edición universal de recurso singleton en Capa 2 / Sistema / IP con antes/después y Safe Mode."""
+    clean_path = _validate_l2_path(ros_path)
+    perm = await _get_user_perm(db, uuid.UUID(claims["tid"]), uuid.UUID(claims["sub"]), router_id)
+    _check_l2_write_permission(claims, perm)
+
+    attributes, enable_safemode = _extract_attributes_and_safemode(payload)
+    router_obj, client = await get_router_and_client(router_id, claims, db)
+    before_state = await client.get(clean_path)
+
+    async def _action_singleton() -> Any:
+        try:
+            return await client.post(f"{clean_path}/set", attributes)
+        except Exception:
+            return await client.patch(clean_path, attributes)
+
+    if enable_safemode:
+        res = await execute_safe_mutation(
+            client,
+            clean_path,
+            "update_singleton",
+            _action_singleton,
+            item_id=None,
+            before_state=before_state if isinstance(before_state, dict) else None,
+        )
+    else:
+        res = await _action_singleton()
+
+    await invalidate_webfig_cache(from_deps_redis(), uuid.UUID(claims["tid"]), router_id, clean_path)
+
+    await write_audit_log(
+        session=db,
+        tenant_id=uuid.UUID(claims["tid"]),
+        actor_username=claims.get("preferred_username", "unknown"),
+        actor_role=claims.get("rol", SystemRoleEnum.SUPPORT_L3.value),
+        actor_ip=request.client.host if request.client else "127.0.0.1",
+        event_category="WEBFIG_L2",
+        event_action="L2_SINGLETON_UPDATED",
+        actor_user_id=uuid.UUID(claims["sub"]),
+        router_id=router_id,
+        router_display_name=router_obj.display_name,
+        ros_rest_method="PATCH",
+        ros_rest_endpoint=f"/rest/{clean_path}",
+        idempotency_key=idempotency_key,
+        before_state=before_state if isinstance(before_state, dict) else None,
+        after_state=attributes,
+        status_code=200,
+    )
+    await db.commit()
+    return res
+
+
+update_resource_singleton = update_singleton_resource
 
 
 @router.delete("/resource/{ros_path:path}/{item_id}")

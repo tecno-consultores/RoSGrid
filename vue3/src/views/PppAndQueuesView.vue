@@ -46,7 +46,7 @@
   const webFigStore = useWebFigStore();
 
   const activeTab = ref<
-    'pppoe-active' | 'ppp-secrets' | 'ppp-profiles' | 'pppoe-servers' | 'simple-queues'
+    'pppoe-active' | 'ppp-secrets' | 'ppp-profiles' | 'pppoe-servers' | 'simple-queues' | 'queue-tree'
   >('pppoe-active');
   const isLoading = ref(false);
   const pppSearchQuery = ref('');
@@ -58,6 +58,19 @@
   const pppProfiles = ref<PppProfileItem[]>([]);
   const pppoeServers = ref<PppoeServerItem[]>([]);
   const simpleQueues = ref<SimpleQueueItem[]>([]);
+  const queueTrees = ref<any[]>([]);
+  const queueTypes = ref<any[]>([]);
+
+  // Modals Queue Tree
+  const isCreateTreeModalOpen = ref(false);
+  const newTreeForm = ref({
+    name: 'queue-htb-1',
+    parent: 'global',
+    packet_mark: 'no-mark',
+    limit_at: '1M',
+    max_limit: '10M',
+    priority: 8,
+  });
 
   // Modals
   const isCreateSecretModalOpen = ref(false);
@@ -257,6 +270,13 @@
           max_mtu: srv.max_mtu ? Number(srv.max_mtu) : Number(srv['max-mtu'] || 1492),
           disabled: srv.disabled === 'true' || srv.disabled === true,
         }));
+      } else if (activeTab.value === 'queue-tree') {
+        const [treesRes, typesRes] = await Promise.all([
+          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/queues/tree`).catch(() => ({ data: [] })),
+          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/queues/types`).catch(() => ({ data: [] })),
+        ]);
+        queueTrees.value = Array.isArray(treesRes.data) ? treesRes.data : treesRes.data?.items || [];
+        queueTypes.value = Array.isArray(typesRes.data) ? typesRes.data : typesRes.data?.items || [];
       } else {
         const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/queues/simple`);
         const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
@@ -274,9 +294,46 @@
       else if (activeTab.value === 'ppp-secrets') pppSecrets.value = [];
       else if (activeTab.value === 'ppp-profiles') pppProfiles.value = [];
       else if (activeTab.value === 'pppoe-servers') pppoeServers.value = [];
+      else if (activeTab.value === 'queue-tree') queueTrees.value = [];
       else simpleQueues.value = [];
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  async function handleMoveSimpleQueue(event: { numbers?: string; destination?: string } | any) {
+    try {
+      const body = {
+        numbers: event.numbers || event.id || event.from,
+        destination: event.destination || event.to || '0',
+      };
+      await http.post(`/api/v1/routers/${routerId.value}/webfig/queues/simple/move`, body);
+      actionMessage.value = 'Cola reordenada exitosamente en RouterOS.';
+      await loadPppData();
+    } catch {
+      errorMessage.value = 'Error al reordenar cola simple';
+    }
+  }
+
+  async function handleCreateQueueTree() {
+    try {
+      await http.post(`/api/v1/routers/${routerId.value}/webfig/queues/tree`, newTreeForm.value);
+      isCreateTreeModalOpen.value = false;
+      actionMessage.value = 'Cola Tree creada exitosamente.';
+      await loadPppData();
+    } catch (err: unknown) {
+      errorMessage.value = 'Error al crear cola Tree';
+    }
+  }
+
+  async function handleDeleteQueueTree(tree: any) {
+    if (!confirm(`¿Eliminar la cola Tree ${tree.name || tree.id}?`)) return;
+    try {
+      await http.delete(`/api/v1/routers/${routerId.value}/webfig/queues/tree/${tree.id || tree['.id'] || tree.name}`);
+      actionMessage.value = 'Cola Tree eliminada exitosamente.';
+      await loadPppData();
+    } catch {
+      errorMessage.value = 'Error al eliminar cola Tree';
     }
   }
 
@@ -658,6 +715,14 @@
           + Crear Cola Simple
         </button>
         <button
+          v-if="activeTab === 'queue-tree'"
+          type="button"
+          class="btn-primary"
+          @click="isCreateTreeModalOpen = true"
+        >
+          + Nueva Cola Tree (HTB)
+        </button>
+        <button
           type="button"
           class="btn-refresh"
           :disabled="isLoading"
@@ -727,6 +792,16 @@
         @click="setTab('simple-queues')"
       >
         ⚡ Simple Queues
+      </button>
+      <button
+        type="button"
+        class="btn-subtab"
+        :class="{ 'btn-subtab--active': activeTab === 'queue-tree' }"
+        role="tab"
+        :aria-selected="activeTab === 'queue-tree'"
+        @click="setTab('queue-tree')"
+      >
+        🌳 Queue Tree & Tipos
       </button>
     </nav>
 
@@ -878,6 +953,8 @@
           :rows="simpleQueues"
           caption="Colas de Ancho de Banda Simples"
           row-key="id"
+          :sortable-rows="true"
+          @move-row="handleMoveSimpleQueue"
         >
           <template #actions="{ row }">
             <div class="row-actions-group">
@@ -911,6 +988,71 @@
             </div>
           </template>
         </RgDataTable>
+      </div>
+
+      <!-- Pestaña 6: Queue Tree (HTB) & Tipos -->
+      <div v-else-if="activeTab === 'queue-tree'" class="font-tabular">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <div>
+            <h3 style="margin: 0; color: #00e5ff;">🌳 Árbol de Colas Jerárquicas HTB (/queue/tree)</h3>
+            <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: #94a3b8;">Asignación de prioridades y límites de ancho de banda por marcas de paquetes (packet-mark).</p>
+          </div>
+          <button type="button" class="btn-primary" @click="isCreateTreeModalOpen = true">
+            + Nueva Cola Tree
+          </button>
+        </div>
+
+        <table class="rg-table font-tabular" style="width: 100%;">
+          <thead>
+            <tr>
+              <th scope="col">Nombre</th>
+              <th scope="col">Padre (Parent)</th>
+              <th scope="col">Marca de Paquete</th>
+              <th scope="col">Limit At (Garantizado)</th>
+              <th scope="col">Max Limit (Tope)</th>
+              <th scope="col">Prioridad</th>
+              <th scope="col">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="queueTrees.length === 0">
+              <td colspan="7" class="text-center" style="padding: 1rem; color: #64748b;">No hay colas de árbol HTB configuradas en el router.</td>
+            </tr>
+            <tr v-for="t in queueTrees" :key="t.name || t['.id']">
+              <td class="font-bold text-cyan font-mono">{{ t.name }}</td>
+              <td class="font-mono">{{ t.parent }}</td>
+              <td class="font-mono text-emerald">{{ t['packet-mark'] || t.packet_mark || 'no-mark' }}</td>
+              <td class="font-mono">{{ t['limit-at'] || t.limit_at || '0' }}</td>
+              <td class="font-mono font-bold">{{ t['max-limit'] || t.max_limit || '0' }}</td>
+              <td><span class="badge-type">P{{ t.priority || 8 }}</span></td>
+              <td>
+                <button
+                  type="button"
+                  class="btn-row-action btn-row-action--danger"
+                  title="Eliminar cola Tree"
+                  @click="handleDeleteQueueTree(t)"
+                >
+                  🗑
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Visualizador de Queue Types -->
+        <div style="margin-top: 1.5rem; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 1rem;">
+          <h4 style="margin: 0 0 8px 0; color: #cbd5e1;">📋 Tipos de Colas Disponibles (/queue/type) ({{ queueTypes.length }})</h4>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <span
+              v-for="qt in queueTypes"
+              :key="qt.name || qt['.id']"
+              class="badge-type font-mono"
+              :title="`Kind: ${qt.kind || 'default'}`"
+            >
+              {{ qt.name }} ({{ qt.kind || 'pcq' }})
+            </span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1232,6 +1374,48 @@
             <button type="submit" class="btn-primary" :disabled="isLoading">
               Guardar Cambios
             </button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Crear Queue Tree -->
+    <div
+      v-if="isCreateTreeModalOpen"
+      class="modal-backdrop"
+      @click.self="isCreateTreeModalOpen = false"
+    >
+      <div class="modal-card" role="dialog" aria-labelledby="modal-tree-title" aria-modal="true">
+        <header class="modal-header">
+          <h2 id="modal-tree-title">➕ Nueva Cola HTB (Queue Tree)</h2>
+          <button type="button" class="btn-close" @click="isCreateTreeModalOpen = false">✕</button>
+        </header>
+        <form class="modal-form" @submit.prevent="handleCreateQueueTree">
+          <div class="form-group">
+            <label for="tree-name">Nombre de la Cola *</label>
+            <input id="tree-name" v-model="newTreeForm.name" required placeholder="ej. queue-streaming" />
+          </div>
+          <div class="form-group">
+            <label for="tree-parent">Padre (Parent) *</label>
+            <input id="tree-parent" v-model="newTreeForm.parent" required placeholder="global / ether1" />
+          </div>
+          <div class="form-group">
+            <label for="tree-pmark">Marca de Paquete (Packet Mark):</label>
+            <input id="tree-pmark" v-model="newTreeForm.packet_mark" placeholder="no-mark / streaming_pkts" />
+          </div>
+          <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div class="form-group">
+              <label for="tree-limit">Limit At (Garantizado):</label>
+              <input id="tree-limit" v-model="newTreeForm.limit_at" placeholder="1M" />
+            </div>
+            <div class="form-group">
+              <label for="tree-max">Max Limit (Tope):</label>
+              <input id="tree-max" v-model="newTreeForm.max_limit" placeholder="10M" />
+            </div>
+          </div>
+          <footer class="modal-footer">
+            <button type="button" class="btn-secondary" @click="isCreateTreeModalOpen = false">Cancelar</button>
+            <button type="submit" class="btn-primary" :disabled="isLoading">Crear Cola Tree</button>
           </footer>
         </form>
       </div>

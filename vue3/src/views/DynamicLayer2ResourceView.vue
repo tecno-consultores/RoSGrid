@@ -236,18 +236,27 @@
     compactColumnsMode.value = true;
     customSelectedKeys.value = columnProfiles.loadSavedColumns(rosPath.value);
     try {
-      const res = await http.get<Layer2ResourceResponse>(
-        `/api/v1/routers/${routerId.value}/webfig/layer2/resource/${rosPath.value}`,
-      );
+      const [res, rpcRes] = await Promise.all([
+        http.get<Layer2ResourceResponse>(
+          `/api/v1/routers/${routerId.value}/webfig/layer2/resource/${rosPath.value}`,
+        ),
+        http
+          .get<Layer2RpcActionDescriptor[]>(
+            `/api/v1/routers/${routerId.value}/webfig/layer2/rpc-catalog/${rosPath.value}`,
+          )
+          .catch(() => ({ data: [] as Layer2RpcActionDescriptor[] })),
+      ]);
       const rawTitle =
         res.data.title ||
         rosPath.value
           .split('/')
           .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
           .join(' / ');
+      const mergedRpc = (rpcRes.data?.length ? rpcRes.data : res.data.rpc_actions) || [];
       resourceData.value = {
         ...res.data,
         title: rawTitle,
+        rpc_actions: mergedRpc,
         form_data:
           res.data.form_data ||
           (res.data.is_singleton && res.data.items?.[0] ? { ...res.data.items[0] } : {}),
@@ -264,6 +273,27 @@
       errorMessage.value = extractErrorDetail(err, 'Error al consultar recurso en el router');
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  const isInspectingSchema = ref(false);
+  async function handleInspectSchema() {
+    isInspectingSchema.value = true;
+    try {
+      const res = await http.get<any>(
+        `/api/v1/routers/${routerId.value}/webfig/layer2/inspect/${rosPath.value}`,
+      );
+      if (res.data?.columns_schema?.length) {
+        resourceData.value.columns_schema = res.data.columns_schema;
+        resourceData.value.schema_source = res.data.source || 'console_inspect';
+        showSuccessBanner(`Esquema introspeccionado en vivo: ${res.data.columns_schema.length} propiedades descubiertas.`);
+      } else {
+        showSuccessBanner('Introspección completada.');
+      }
+    } catch (err: unknown) {
+      errorMessage.value = extractErrorDetail(err, 'Error al introspeccionar esquema RouterOS');
+    } finally {
+      isInspectingSchema.value = false;
     }
   }
 
@@ -411,7 +441,7 @@
       if (resourceData.value.is_singleton) {
         await http.patch(
           `/api/v1/routers/${routerId.value}/webfig/layer2/resource/${rosPath.value}`,
-          resourceData.value.form_data,
+          { attributes: resourceData.value.form_data, enable_safemode: true },
         );
         showSuccessBanner('Configuración singleton actualizada con Safe Mode.');
       } else {
@@ -488,6 +518,17 @@
       </div>
 
       <div class="view-header__actions">
+        <!-- Botón de Introspección de Esquema en Vivo -->
+        <button
+          id="btn-inspect-schema"
+          type="button"
+          class="btn-toolbar"
+          :disabled="isInspectingSchema"
+          @click="handleInspectSchema"
+        >
+          🔍 {{ isInspectingSchema ? 'Introspeccionando...' : 'Introspeccionar Esquema' }}
+        </button>
+
         <!-- Spec 54 — 27.16.2: Acciones RPC a Nivel de Menú -->
         <button
           v-for="rpc in menuRpcActions"

@@ -36,7 +36,7 @@
   const webFigStore = useWebFigStore();
   const routerId = computed(() => String(route.params.routerId || ''));
 
-  type RoutingTab = 'bgp' | 'ospf' | 'routes' | 'policy-routing';
+  type RoutingTab = 'bgp' | 'ospf' | 'routes' | 'policy-routing' | 'filters' | 'bfd';
   const activeTab = ref<RoutingTab>('bgp');
   const isLoading = ref(false);
   const actionMessage = ref('');
@@ -44,10 +44,29 @@
 
   // Colecciones
   const bgpSessions = ref<BgpSessionItem[]>([]);
+  const bgpTemplates = ref<any[]>([]);
+  const bgpAdvertisements = ref<any[]>([]);
   const ospfNeighbors = ref<OspfNeighborItem[]>([]);
+  const ospfInstances = ref<any[]>([]);
+  const ospfAreas = ref<any[]>([]);
+  const ospfInterfaceTemplates = ref<any[]>([]);
   const staticRoutes = ref<StaticRouteItem[]>([]);
   const routingTables = ref<any[]>([]);
   const routingRules = ref<any[]>([]);
+  const routingFilters = ref<any[]>([]);
+  const bfdSessions = ref<any[]>([]);
+
+  // BGP Looking Glass State
+  const lgMode = ref<'route' | 'advertised'>('route');
+  const lgDstPrefix = ref('1.1.1.0/24');
+  const lgPeerName = ref('');
+  const lgRouteResult = ref<any>(null);
+  const lgAdvResult = ref<any>(null);
+  const isLgLoading = ref(false);
+
+  // Modales
+  const isFilterModalOpen = ref(false);
+  const newFilter = ref({ chain: 'bgp-in', rule: 'if (dst == 10.0.0.0/8) { accept; }', disabled: false });
 
   // Modales
   const isRouteModalOpen = ref(false);
@@ -141,12 +160,26 @@
     errorMessage.value = '';
     try {
       if (activeTab.value === 'bgp') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/bgp/sessions`);
+        const [res, tplRes, advRes] = await Promise.all([
+          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/bgp/sessions`),
+          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/bgp/templates`).catch(() => ({ data: [] })),
+          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/bgp/advertisements`).catch(() => ({ data: [] })),
+        ]);
         const data: any = res.data;
         bgpSessions.value = Array.isArray(data) ? data : data?.sessions || data?.peers || data?.items || [];
+        bgpTemplates.value = Array.isArray(tplRes.data) ? tplRes.data : [];
+        bgpAdvertisements.value = Array.isArray(advRes.data) ? advRes.data : [];
       } else if (activeTab.value === 'ospf') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/ospf/neighbors`);
+        const [res, instRes, areasRes, ifTplRes] = await Promise.all([
+          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/ospf/neighbors`),
+          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/ospf/instances`).catch(() => ({ data: [] })),
+          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/ospf/areas`).catch(() => ({ data: [] })),
+          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/ospf/interface-templates`).catch(() => ({ data: [] })),
+        ]);
         ospfNeighbors.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
+        ospfInstances.value = Array.isArray(instRes.data) ? instRes.data : [];
+        ospfAreas.value = Array.isArray(areasRes.data) ? areasRes.data : [];
+        ospfInterfaceTemplates.value = Array.isArray(ifTplRes.data) ? ifTplRes.data : [];
       } else if (activeTab.value === 'routes') {
         const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/routes`);
         const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
@@ -167,11 +200,70 @@
         routingTables.value = Array.isArray(resT.data) ? resT.data : resT.data?.items || [];
         const resR = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/rules`);
         routingRules.value = Array.isArray(resR.data) ? resR.data : resR.data?.items || [];
+      } else if (activeTab.value === 'filters') {
+        const resF = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/filters/rules`);
+        routingFilters.value = Array.isArray(resF.data) ? resF.data : [];
+      } else if (activeTab.value === 'bfd') {
+        const resBfd = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/bfd/sessions`);
+        bfdSessions.value = Array.isArray(resBfd.data) ? resBfd.data : [];
       }
     } catch (err: any) {
       errorMessage.value = err?.detail || err?.message || 'Error al cargar datos de enrutamiento.';
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  // --- BGP Looking Glass Queries ---
+  async function handleQueryLookingGlassRoute() {
+    if (!lgDstPrefix.value) return;
+    isLgLoading.value = true;
+    lgRouteResult.value = null;
+    try {
+      const res = await http.get<any>(
+        `/api/v1/bgp/looking-glass/route?router_id=${routerId.value}&dst_prefix=${encodeURIComponent(lgDstPrefix.value)}`,
+      );
+      lgRouteResult.value = res.data;
+    } catch (err: any) {
+      errorMessage.value = err?.detail || 'Error al consultar Looking Glass de ruta';
+    } finally {
+      isLgLoading.value = false;
+    }
+  }
+
+  async function handleQueryLookingGlassAdvertised() {
+    if (!lgPeerName.value) return;
+    isLgLoading.value = true;
+    lgAdvResult.value = null;
+    try {
+      const res = await http.get<any>(
+        `/api/v1/bgp/looking-glass/advertised?router_id=${routerId.value}&peer_name=${encodeURIComponent(lgPeerName.value)}`,
+      );
+      lgAdvResult.value = res.data;
+    } catch (err: any) {
+      errorMessage.value = err?.detail || 'Error al consultar Looking Glass de prefijos anunciados';
+    } finally {
+      isLgLoading.value = false;
+    }
+  }
+
+  async function handleCreateFilterRule() {
+    try {
+      await http.post(`/api/v1/routers/${routerId.value}/webfig/routing/filters/rules`, newFilter.value);
+      isFilterModalOpen.value = false;
+      await loadRoutingData();
+    } catch (err: any) {
+      errorMessage.value = err?.detail || 'Error al crear regla de filtro de ruteo';
+    }
+  }
+
+  async function handleDeleteFilterRule(ruleId: string) {
+    if (!confirm('¿Eliminar esta regla de filtro de ruteo?')) return;
+    try {
+      await http.delete(`/api/v1/routers/${routerId.value}/webfig/routing/filters/rules/${ruleId}`);
+      await loadRoutingData();
+    } catch (err: any) {
+      errorMessage.value = err?.detail || 'Error al eliminar regla de filtro';
     }
   }
 
@@ -520,6 +612,15 @@
         </button>
 
         <button
+          v-if="activeTab === 'filters'"
+          type="button"
+          class="btn-tactical btn-cyan"
+          @click="isFilterModalOpen = true"
+        >
+          + Nueva Regla de Filtro
+        </button>
+
+        <button
           type="button"
           class="btn-tactical btn-outline"
           :disabled="isLoading"
@@ -533,10 +634,12 @@
       <nav class="subtabs-bar" role="tablist" aria-label="Módulos de Routing v7">
         <button
           v-for="tab in [
-            { id: 'bgp', label: 'BGP v7 Sessions' },
-            { id: 'ospf', label: 'OSPF Neighbors' },
+            { id: 'bgp', label: 'BGP v7 Sessions & Looking Glass' },
+            { id: 'ospf', label: 'OSPF v7 (Instancias / Áreas / Vecinos)' },
             { id: 'routes', label: 'Rutas Estáticas' },
             { id: 'policy-routing', label: 'Policy Routing (PBR)' },
+            { id: 'filters', label: '🛡️ Filtros de Ruteo' },
+            { id: 'bfd', label: '⚡ Sesiones BFD' },
           ]"
           :key="tab.id"
           type="button"
@@ -591,9 +694,101 @@
           </div>
         </template>
       </RgDataTable>
+
+      <!-- Panel Interactivo Looking Glass BGP -->
+      <div class="looking-glass-panel" style="margin-top: 1.5rem; background: rgba(14, 23, 42, 0.6); border: 1px solid rgba(0, 229, 255, 0.2); border-radius: 8px; padding: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 8px;">
+          <div>
+            <h3 style="margin: 0; color: #00e5ff; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+              🔍 BGP Looking Glass en Vivo (RouterOS v7)
+            </h3>
+            <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: #94a3b8;">
+              Consulta diagnóstica de tablas RIB/FIB BGP y prefijos anunciados a peers sin alterar configuraciones.
+            </p>
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <button
+              type="button"
+              class="btn-tactical"
+              :class="lgMode === 'route' ? 'btn-cyan' : 'btn-outline'"
+              @click="lgMode = 'route'"
+            >
+              Ruta Específica
+            </button>
+            <button
+              type="button"
+              class="btn-tactical"
+              :class="lgMode === 'advertised' ? 'btn-cyan' : 'btn-outline'"
+              @click="lgMode = 'advertised'"
+            >
+              Prefijos Anunciados
+            </button>
+          </div>
+        </div>
+
+        <div v-if="lgMode === 'route'" style="display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap;">
+          <label style="flex: 1; min-width: 200px;">
+            <span style="font-size: 0.85rem; color: #cbd5e1;">Prefijo IP Destino (CIDR):</span>
+            <input v-model="lgDstPrefix" type="text" class="tactical-input" placeholder="Ej: 8.8.8.0/24 o 1.1.1.0/24" style="width: 100%; margin-top: 4px;" />
+          </label>
+          <button
+            type="button"
+            class="btn-tactical btn-cyan"
+            :disabled="isLgLoading || !lgDstPrefix"
+            @click="handleQueryLookingGlassRoute"
+          >
+            {{ isLgLoading ? 'Consultando...' : '🔍 Consultar Ruta' }}
+          </button>
+        </div>
+
+        <div v-else style="display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap;">
+          <label style="flex: 1; min-width: 200px;">
+            <span style="font-size: 0.85rem; color: #cbd5e1;">Nombre del Peer BGP:</span>
+            <input v-model="lgPeerName" type="text" class="tactical-input" placeholder="Ej: peer-upstream-1" style="width: 100%; margin-top: 4px;" />
+          </label>
+          <button
+            type="button"
+            class="btn-tactical btn-cyan"
+            :disabled="isLgLoading || !lgPeerName"
+            @click="handleQueryLookingGlassAdvertised"
+          >
+            {{ isLgLoading ? 'Consultando...' : '📡 Consultar Anuncios' }}
+          </button>
+        </div>
+
+        <!-- Resultado de Looking Glass -->
+        <div v-if="lgRouteResult || lgAdvResult" style="margin-top: 1rem; background: #030712; border: 1px solid rgba(0, 229, 255, 0.15); border-radius: 6px; padding: 12px;">
+          <div style="font-weight: 600; color: #38bdf8; margin-bottom: 6px; font-size: 0.9rem;">
+            Resultado de Consulta Looking Glass:
+          </div>
+          <pre class="font-mono" style="margin: 0; color: #a5f3fc; font-size: 0.82rem; overflow-x: auto; white-space: pre-wrap;">{{ JSON.stringify(lgRouteResult || lgAdvResult, null, 2) }}</pre>
+        </div>
+      </div>
+
+      <!-- Tablas Secundarias: Templates & Advertisements -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; margin-top: 1.5rem;">
+        <div style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 1rem;">
+          <h4 style="margin: 0 0 8px 0; color: #cbd5e1;">📑 Templates BGP Registrados ({{ bgpTemplates.length }})</h4>
+          <div v-if="bgpTemplates.length === 0" style="color: #64748b; font-size: 0.85rem;">No hay templates configurados en el router.</div>
+          <ul v-else style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem; color: #94a3b8;">
+            <li v-for="t in bgpTemplates" :key="t.name || t['.id']" class="font-mono">
+              <strong>{{ t.name }}</strong> (AS: {{ t['as'] || t.as || 'default' }})
+            </li>
+          </ul>
+        </div>
+        <div style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 1rem;">
+          <h4 style="margin: 0 0 8px 0; color: #cbd5e1;">📡 Prefijos Anunciados (Advertisements) ({{ bgpAdvertisements.length }})</h4>
+          <div v-if="bgpAdvertisements.length === 0" style="color: #64748b; font-size: 0.85rem;">No hay anuncios activos registrados.</div>
+          <ul v-else style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem; color: #94a3b8;">
+            <li v-for="adv in bgpAdvertisements" :key="adv.prefix || adv['.id']" class="font-mono">
+              <strong>{{ adv.dst || adv.prefix }}</strong> &rarr; Peer: {{ adv.peer || 'all' }}
+            </li>
+          </ul>
+        </div>
+      </div>
     </div>
 
-    <!-- VISTA 2: VECINOS OSPF -->
+    <!-- VISTA 2: OSPF (VECINOS, INSTANCIAS, ÁREAS, INTERFACE TEMPLATES) -->
     <div v-else-if="activeTab === 'ospf'" class="table-card font-tabular">
       <RgDataTable
         :columns="ospfColumns"
@@ -601,6 +796,122 @@
         caption="Adyacencias OSPF RouterOS"
         row-key="id"
       />
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-top: 1.5rem;">
+        <div style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 1rem;">
+          <h4 style="margin: 0 0 8px 0; color: #cbd5e1;">⚙️ Instancias OSPF ({{ ospfInstances.length }})</h4>
+          <div v-if="ospfInstances.length === 0" style="color: #64748b; font-size: 0.85rem;">Sin instancias explícitas.</div>
+          <ul v-else style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem; color: #94a3b8;">
+            <li v-for="inst in ospfInstances" :key="inst.name || inst['.id']" class="font-mono">
+              <strong>{{ inst.name }}</strong> (Router-ID: {{ inst['router-id'] || inst.router_id || 'auto' }})
+            </li>
+          </ul>
+        </div>
+
+        <div style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 1rem;">
+          <h4 style="margin: 0 0 8px 0; color: #cbd5e1;">🗺️ Áreas OSPF ({{ ospfAreas.length }})</h4>
+          <div v-if="ospfAreas.length === 0" style="color: #64748b; font-size: 0.85rem;">Sin áreas adicionales.</div>
+          <ul v-else style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem; color: #94a3b8;">
+            <li v-for="area in ospfAreas" :key="area.name || area['.id']" class="font-mono">
+              <strong>{{ area.name }}</strong> (ID: {{ area['area-id'] || area.area_id || '0.0.0.0' }})
+            </li>
+          </ul>
+        </div>
+
+        <div style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 1rem;">
+          <h4 style="margin: 0 0 8px 0; color: #cbd5e1;">🔌 Interface Templates ({{ ospfInterfaceTemplates.length }})</h4>
+          <div v-if="ospfInterfaceTemplates.length === 0" style="color: #64748b; font-size: 0.85rem;">Sin plantillas de interfaz.</div>
+          <ul v-else style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem; color: #94a3b8;">
+            <li v-for="it in ospfInterfaceTemplates" :key="it.interfaces || it['.id']" class="font-mono">
+              <strong>{{ it.interfaces || 'all' }}</strong> (Área: {{ it.area || 'backbone' }})
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- VISTA 3: FILTROS DE RUTEO -->
+    <div v-else-if="activeTab === 'filters'" class="table-card font-tabular">
+      <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <div>
+          <h3 style="margin: 0; color: #00e5ff;">🛡️ Reglas de Filtros de Ruteo (/routing/filter/rule)</h3>
+          <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: #94a3b8;">Políticas BGP/OSPF de aceptación, descarte y manipulación de atributos en RouterOS v7.</p>
+        </div>
+        <button type="button" class="btn-tactical btn-cyan" @click="isFilterModalOpen = true">
+          + Nueva Regla de Filtro
+        </button>
+      </header>
+
+      <table class="tactical-table">
+        <thead>
+          <tr>
+            <th>Cadena (Chain)</th>
+            <th>Regla de Filtro (Sintaxis v7)</th>
+            <th>Estado</th>
+            <th class="actions-col">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-if="routingFilters.length === 0">
+            <td colspan="4" class="text-center text-subtle">No hay reglas de filtros de ruteo configuradas.</td>
+          </tr>
+          <tr v-for="f in routingFilters" :key="f.id || f['.id']">
+            <td class="font-mono font-bold text-cyan">{{ f.chain || 'main' }}</td>
+            <td class="font-mono">{{ f.rule }}</td>
+            <td>
+              <span class="badge" :class="f.disabled === 'true' || f.disabled === true ? 'badge-danger' : 'badge-success'">
+                {{ f.disabled === 'true' || f.disabled === true ? 'DESHABILITADA' : 'ACTIVA' }}
+              </span>
+            </td>
+            <td class="actions-col">
+              <button
+                type="button"
+                class="btn-icon btn-danger"
+                title="Eliminar regla de filtro"
+                @click="handleDeleteFilterRule(f.id || f['.id'])"
+              >
+                🗑
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- VISTA 4: SESIONES BFD -->
+    <div v-else-if="activeTab === 'bfd'" class="table-card font-tabular">
+      <header style="margin-bottom: 1rem;">
+        <h3 style="margin: 0; color: #00e5ff;">⚡ Sesiones BFD (Bidirectional Forwarding Detection)</h3>
+        <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: #94a3b8;">Detección sub-segundo de fallos de enlace en peers BGP y OSPF.</p>
+      </header>
+
+      <table class="tactical-table">
+        <thead>
+          <tr>
+            <th>Dirección Destino</th>
+            <th>Interfaz</th>
+            <th>Estado</th>
+            <th>Intervalo TX/RX</th>
+            <th>Multiplicador</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-if="bfdSessions.length === 0">
+            <td colspan="5" class="text-center text-subtle">No hay sesiones BFD activas registradas en el router.</td>
+          </tr>
+          <tr v-for="b in bfdSessions" :key="b.id || b['.id']">
+            <td class="font-mono font-bold text-cyan">{{ b.address || b['dest-address'] || '—' }}</td>
+            <td class="font-mono">{{ b.interface || '—' }}</td>
+            <td>
+              <span class="badge" :class="b.state === 'up' ? 'badge-success' : 'badge-danger'">
+                {{ (b.state || 'UNKNOWN').toUpperCase() }}
+              </span>
+            </td>
+            <td class="font-mono text-muted">{{ b['tx-interval'] || b.tx_interval || '—' }} / {{ b['rx-interval'] || b.rx_interval || '—' }}</td>
+            <td>{{ b.multiplier || 3 }}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- VISTA 3: TABLA DE RUTAS ESTÁTICAS -->
@@ -925,6 +1236,30 @@
           <div class="modal-actions">
             <button type="button" class="btn-tactical btn-outline" @click="isEditRuleModalOpen = false">Cancelar</button>
             <button type="submit" class="btn-tactical btn-cyan">Guardar Cambios</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal: Nueva Regla de Filtro de Ruteo -->
+    <div v-if="isFilterModalOpen" class="modal-backdrop" role="dialog" aria-modal="true">
+      <div class="modal-box">
+        <div class="modal-header">
+          <h3>🛡️ Nueva Regla de Filtro de Ruteo (/routing/filter/rule)</h3>
+          <button type="button" class="btn-close" @click="isFilterModalOpen = false">✕</button>
+        </div>
+        <form class="modal-body" @submit.prevent="handleCreateFilterRule">
+          <div class="form-group">
+            <label for="filter-chain">Cadena (Chain) *</label>
+            <input id="filter-chain" v-model="newFilter.chain" type="text" class="form-input" placeholder="bgp-in / ospf-out" required />
+          </div>
+          <div class="form-group">
+            <label for="filter-rule">Regla de Filtro (Sintaxis RouterOS v7) *</label>
+            <textarea id="filter-rule" v-model="newFilter.rule" class="form-input font-mono" rows="3" placeholder="if (dst == 10.0.0.0/8) { accept; }" required></textarea>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-tactical btn-outline" @click="isFilterModalOpen = false">Cancelar</button>
+            <button type="submit" class="btn-tactical btn-cyan">Crear Regla</button>
           </div>
         </form>
       </div>
