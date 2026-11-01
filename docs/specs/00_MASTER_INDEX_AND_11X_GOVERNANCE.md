@@ -161,7 +161,7 @@ rosgrid/
 
 ---
 
-## 4. Índice Maestro de los 65 Archivos de Especificación (00 a 64) (Carpeta `docs/specs/`)
+## 4. Índice Maestro de los 66 Archivos de Especificación (00 a 65) (Carpeta `docs/specs/`)
 
 Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `docs/specs/` siguiendo rigurosamente el orden de los 5 Bloques listados a continuación:
 
@@ -250,6 +250,7 @@ Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `
 * `docs/specs/62_SESSION_KILLSWITCH_TARGET_SCOPING_AND_WS_ISOLATION.md` — Aislamiento Estricto de Destinatario en Kill-Switch de Sesiones (`SESSION_KILLED`): Normalización del Payload Pub/Sub en `sessions.py`, Filtrado por `target_session_id`/`target_user_id` en el Multiplexor WebSocket (`websockets.py`) y Verificación de Sesión Propia en `useNocEventsStore.ts` para impedir que la expulsión de un operador cierre colateralmente la sesión del SuperAdmin en otro navegador (Hito 28.7).
 * `docs/specs/63_RESPONSIVE_AUTO_FIT_DATA_COLUMNS_AND_INVENTORY_TABLE_ERGONOMICS.md` — Columnas Auto-Ajustables al Contenido (*Content-Hugging* `width: 1%`) en `RgDataTable.vue`, Normalización Compacta de Modelos Virtuales `CHR QEMU (x86_64)` y Cabeceras Concisas en `RouterInventoryView.vue` (`es.json` / `en.json`) para Evitar Solapamiento con la Botonera Fija de Acciones (Hito 28.8).
 * `docs/specs/64_RBAC_UI_VISIBILITY_ENFORCEMENT_ZERO_403_DEAD_ENDS.md` — Aplicación Estricta de Visibilidad RBAC en Interfaz (*Zero 403 Dead-Ends*): Matriz `ROLE_POLICY_MATRIX` (11 Roles × 30 Acciones) integrada en `useAuthStore.canUseUserFeature`, Filtrado de Menú Lateral Global (`RgResponsiveShell.vue`), Ocultación de Pestañas y Acciones de Mutación Restringidas en `EnterpriseComplianceView.vue`, `DashboardHomeView.vue`, `RouterInventoryView.vue` y `RouterSidebarMenu.vue`, y Paridad de Roles `READ_ONLY` en `sdwan.py`, `switching.py`, `sla.py` y `wifi.py` (Hito 28.9).
+* `docs/specs/65_TELEMETRY_BEACON_RLS_FLEET_COUNT_AND_STATUS_UI_CONTRACT.md` — Corrección de Conteo de Flota con Contexto RLS SuperAdmin (`await set_tenant_context(session, None, is_superadmin=True)` en `_count_active_routers_safe`), Persistencia de `fleet_bucket` y `router_count` en KeyDB (`rg:system:telemetry_beacon_state`) y Alineación del Contrato UI de Telemetría Anónima (`last_heartbeat_at` / `last_sent_at`) en `/admin/tenants` (`TenantsManagementView.vue` — Hito 28.10).
 
 
 ---
