@@ -245,7 +245,11 @@
 
   2. Ejecuta POST \<api\_base\_url\>/rest/system/package/update/install (o agenda su ejecución dentro de una **Ventana de Mantenimiento** activa).
 
-  3. Opcionalmente configura auto-upgrade=yes en /rest/system/routerboard/settings para que el RouterBOOT también quede actualizado tras el reinicio.
+  3. En routers físicos **RouterBOARD** (`!_is_chr_router`), configura `auto-upgrade=yes` mediante el menú singleton `POST /rest/system/routerboard/settings/set` e invoca `POST /rest/system/routerboard/upgrade` para actualizar también el RouterBOOT; si detecta que el router es un **CHR (Cloud Hosted Router)** (`board_name`/`model_name` con `"CHR"` o `routerboard == "false"`), omite automáticamente `/system/routerboard/*` y actualiza únicamente el Sistema Operativo (véase `docs/specs/56_CVE_REMEDIATION_SMART_OS_FIRMWARE_UPDATE_TEMPLATE_AND_CHR_DETECTION.md`).
+
+### **4.3 POST /api/v1/operations/ros-updates/check — Selección de Canal y Sondeo en Vivo de Versión Disponible**
+
+- Configura el canal (`stable`, `long-term`, `testing`, `development`) mediante `POST /rest/system/package/update/set`, ejecuta `POST /rest/system/package/update/check-for-updates`, lee `installed-version` y `latest-version` junto con `/rest/system/routerboard`, sincroniza PostgreSQL y devuelve la versión disponible junto con el plan `CHR_OS_ONLY` o `ROUTERBOARD_OS_AND_FIRMWARE`.
 
 
 

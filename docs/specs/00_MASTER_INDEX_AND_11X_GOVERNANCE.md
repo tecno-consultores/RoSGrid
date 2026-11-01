@@ -161,7 +161,7 @@ rosgrid/
 
 ---
 
-## 4. Índice Maestro de los 56 Archivos de Especificación (00 a 55) (Carpeta `docs/specs/`)
+## 4. Índice Maestro de los 57 Archivos de Especificación (00 a 56) (Carpeta `docs/specs/`)
 
 Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `docs/specs/` siguiendo rigurosamente el orden de los 5 Bloques listados a continuación:
 
@@ -241,6 +241,7 @@ Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `
 * `docs/specs/53_FRONTEND_DESIGN_SYSTEM_METADATA_A11Y_AND_MOBILE_PARITY.md` — Paridad de Sistema de Diseño Frontend con `rosgrid-web`, Persistencia de Tema (`rg_theme`) y Densidad (`rg_table_density`) en `localStorage`, `color-scheme` Nativo, Blindaje Zero-Trust `X-Robots-Tag: noindex`, Título Dinámico con Identidad de Router Activo (`[r1 · 10.250.3.8]`), Contraste WCAG 2.1 AA en Botones de Fila para Tema `light`, Atributo `:data-label="col.label"` y `.num-col` Automáticos en `RgDataTable.vue`, Logo Vectorial Reactivo (`RgBrandLogo.vue`) y Generador de Contexto `llms.txt` en `RgMcpTokenModal.vue`.
 * `docs/specs/54_WEBFIG_L2_UNIVERSAL_ENGINE_NEXTGEN_RPC_INSPECT_QUERY_BULK_AND_PROFILES.md` — Evolución Next-Gen del Motor Dinámico Universal WebFig Capa 2 (Hito 27.16): Catálogo Contextual de Acciones RPC por Menú (`POST /rest/<menu>/<acción>`), Introspección Automática de Esquema y Autocompletado con `/rest/console/inspect`, Filtrado Server-Side (`.query`) y Proyección de Columnas (`.proplist`), Operaciones por Lote (`Bulk Enable/Disable/Comment/Remove`) bajo Ventana Única de Safe Mode (60s), Exportación Contextual `.rsc` por Submenú con Diff contra el Último Respaldo Git y Perfiles de Columnas Guardados + Presets de Plantillas Rápidas JSON.
 * `docs/specs/55_GRANULAR_USER_PROFILE_FLAGS_TELEMETRY_BEACON_AND_PROMETHEUS_GRAFANA_OBSERVABILITY.md` — Gobernanza Granular de Flags en Perfiles de Usuario (Matriz RBAC de 30 Acciones + 10 Permisos por Router + Overrides Individuales `feature_flags_override`), Telemetría Anónima de Instancias Activas (*Privacy-Preserving Heartbeat Beacon* hacia `rosgrid-web` en Cloudflare Pages Functions + KV con TTL 24h) y Arquitectura Dual de Observabilidad Prometheus (`GET /metrics` Plataforma FastAPI vs `GET /api/v1/metrics/fleet` Flota MikroTik) con Guía de Integración Grafana y Alertmanager (Hitos 27.17, 27.18 y 27.19).
+* `docs/specs/56_CVE_REMEDIATION_SMART_OS_FIRMWARE_UPDATE_TEMPLATE_AND_CHR_DETECTION.md` — Remediación Directa de CVEs, Plantilla Masiva Inteligente #15 (`ACTUALIZACION_ROUTEROS_Y_FIRMWARE`), Sondeo en Vivo de Canal (`POST /api/v1/operations/ros-updates/check` con `stable`, `long-term`, `testing`, `development`) mostrando la actualización disponible, y Auto-Detección de CHR vs. RouterBOARD Físico (actualizando RouterOS + Firmware RouterBOOT en hardware físico y solo RouterOS cuando se detecta CHR — Hito 28.1).
 
 
 ---

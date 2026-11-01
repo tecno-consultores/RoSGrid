@@ -1553,14 +1553,19 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
 - **Respuesta (200 OK / text/plain):**
   - Métricas: `rosgrid_router_status`, `rosgrid_router_cpu_percent`, `rosgrid_router_memory_usage_ratio`, `rosgrid_router_active_cves_count`.
 
-#### 4.6.5 Actualizaciones Masivas PoE-Aware con Safety Stop (`/api/v1/operations/ros-updates/execute`)
+#### 4.6.5 Actualizaciones Masivas PoE-Aware con Safety Stop, Sondeo de Canal y Auto-Detección CHR (`/api/v1/operations/ros-updates/*`)
+
+##### `POST /api/v1/operations/ros-updates/check`
+
+- **Propósito:** Configura el canal de actualización (`stable`, `long-term`, `testing`, `development`) en los routers seleccionados (`POST /rest/system/package/update/set`), consulta en vivo a los servidores de MikroTik (`POST /rest/system/package/update/check-for-updates`), inspecciona `/rest/system/routerboard` para detectar si el equipo es **CHR** (`CHR_OS_ONLY`) o **RouterBOARD físico** (`ROUTERBOARD_OS_AND_FIRMWARE`), y devuelve la versión instalada y la versión disponible (`latest_version`).
 
 ##### `POST /api/v1/operations/ros-updates/execute`
 
-- **Propósito:** Ejecuta actualizaciones masivas de RouterOS v7 ordenadas topológicamente mediante DAG inverso (dispositivos terminales alimentados por PoE primero, switches inyectores intermedios después, core al final).
+- **Propósito:** Ejecuta actualizaciones masivas de RouterOS v7 ordenadas topológicamente mediante DAG inverso (dispositivos terminales alimentados por PoE primero, switches inyectores intermedios después, core al final). En equipos físicos actualiza tanto RouterOS como el Firmware RouterBOOT (`POST /rest/system/routerboard/settings/set` con `auto-upgrade=yes` y `POST /rest/system/routerboard/upgrade`); en equipos **CHR** omite automáticamente las llamadas a RouterBOOT y actualiza únicamente el Sistema Operativo.
 - **Parámetros Clave:**
+  - `channel: str` (`stable`, `long-term`, `testing`, `development`).
   - `poe_aware: bool` (por defecto `true`).
-  - `safety_stop_threshold_pct: float` (por defecto `1.0%`).
+  - `safety_stop_threshold_percent: float` (por defecto `1.0%`).
 - **Gobernanza:** Si supera el umbral de fallos, activa el *Safety Stop*, aborta las etapas posteriores y emite alertas de alta prioridad.
 
 #### 4.6.6 Plantillas de Configuración y Trabajos Masivos (`/api/v1/operations/templates*` y `/api/v1/operations/bulk-jobs*`)
