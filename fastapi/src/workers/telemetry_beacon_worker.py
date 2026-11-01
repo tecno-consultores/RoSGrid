@@ -25,6 +25,10 @@ from src.redis_layer.client import get_redis_client
 logger = logging.getLogger(__name__)
 
 BEACON_STATE_KEY = "rg:system:telemetry_beacon_state"
+BEACON_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (compatible; RoSGrid-Beacon/1.0; +https://rosgrid.net)",
+    "Accept": "application/json",
+}
 
 
 def compute_anonymous_instance_id(seed: str) -> str:
@@ -106,6 +110,16 @@ async def get_telemetry_beacon_status() -> dict[str, Any]:
     }
 
 
+async def _dispatch_beacon_http(payload: dict[str, Any]) -> int:
+    """Envía el latido vía POST con fallback automático a GET ante reglas WAF 403/405 (CC = 3)."""
+    async with httpx.AsyncClient(timeout=5.0, headers=BEACON_HEADERS) as client:
+        resp = await client.post(settings.ROSGRID_TELEMETRY_BEACON_URL, json=payload)
+        if resp.status_code in (403, 405):
+            query_params = {k: str(v) for k, v in payload.items()}
+            resp = await client.get(settings.ROSGRID_TELEMETRY_BEACON_URL, params=query_params)
+        return int(resp.status_code)
+
+
 async def send_telemetry_heartbeat_once(router_count: int | None = None) -> dict[str, Any]:
     """Envía un único latido anónimo Zero-PII hacia rosgrid-web de forma fail-silent (CC = 4)."""
     instance_id = compute_anonymous_instance_id(settings.ROSGRID_JWT_SECRET_KEY[:16])
@@ -127,9 +141,8 @@ async def send_telemetry_heartbeat_once(router_count: int | None = None) -> dict
 
     status_str = "sent"
     try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            resp = await client.post(settings.ROSGRID_TELEMETRY_BEACON_URL, json=payload)
-            status_str = f"http_{resp.status_code}"
+        code = await _dispatch_beacon_http(payload)
+        status_str = f"http_{code}"
     except Exception as exc:
         logger.debug("Telemetry beacon fail-silent: %s", exc)
         status_str = "offline_skipped"

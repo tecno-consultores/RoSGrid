@@ -10,6 +10,7 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ### Fixed
 
+- **Compatibilidad WAF Cloudflare (`User-Agent` y Fallback `POST` → `GET`) en el Worker de Telemetría Anónima (`fastapi/src/workers/telemetry_beacon_worker.py`, `fastapi/tests/workers/test_telemetry_beacon_worker.unit.py`):** Incorporada la cabecera `User-Agent: Mozilla/5.0 (compatible; RoSGrid-Beacon/1.0; +https://rosgrid.net)` y fallback automático a `GET /api/telemetry/heartbeat` con parámetros de consulta cuando el WAF de borde rechaza peticiones `POST` con `403`/`405`, garantizando el registro `http_202` de instancias activas en `https://rosgrid.net`.
 - **Deduplicación de Enlaces `Maker-Checker` (`/approvals`) e `IPAM` (`/ipam`) en Barra Lateral Global (`vue3/src/components/common/RgResponsiveShell.vue`, `vue3/src/components/common/RgResponsiveShell.unit.ts`):** Eliminadas las entradas estáticas duplicadas en el arreglo base de `navItems` que coexistían con las inserciones condicionales RBAC del Hito 28.9, garantizando una única instancia por ruta en el menú lateral para todos los roles autorizados.
 
 ### Added

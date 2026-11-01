@@ -142,6 +142,29 @@ async def test_send_telemetry_heartbeat_once_success_http_202() -> None:
 
 
 @pytest.mark.asyncio
+async def test_send_telemetry_heartbeat_once_waf_403_fallback_to_get() -> None:
+    """Certifica que ante un bloqueo WAF 403 en POST se realice fallback automático a GET con estado http_202."""
+    mock_post_resp = MagicMock()
+    mock_post_resp.status_code = 403
+    mock_get_resp = MagicMock()
+    mock_get_resp.status_code = 202
+
+    with (
+        patch.object(settings, "ROSGRID_TELEMETRY_BEACON_ENABLED", True),
+        patch("httpx.AsyncClient.post", new_callable=AsyncMock, return_value=mock_post_resp) as mock_post,
+        patch("httpx.AsyncClient.get", new_callable=AsyncMock, return_value=mock_get_resp) as mock_get,
+        patch("src.workers.telemetry_beacon_worker._persist_beacon_state", new_callable=AsyncMock) as mock_persist,
+    ):
+        res = await send_telemetry_heartbeat_once(router_count=7)
+        assert res["enabled"] is True
+        assert res["last_status"] == "http_202"
+        assert res["fleet_bucket"] == "1-10"
+        mock_post.assert_awaited_once()
+        mock_get.assert_awaited_once()
+        mock_persist.assert_awaited_once()
+
+
+@pytest.mark.asyncio
 async def test_send_telemetry_heartbeat_once_network_error_fail_silent() -> None:
     """Certifica que un fallo de red o timeout sea fail-silent y marque offline_skipped."""
     with (
