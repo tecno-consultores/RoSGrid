@@ -63,29 +63,83 @@
   interface TabDef {
     id: TabType;
     flag?: keyof TenantFeatureFlags;
+    actionKey?: string;
+    allowedRoles?: string[];
   }
 
   const allTabs: TabDef[] = [
-    { id: 'drift', flag: 'config_drift_monitoring_enabled' },
-    { id: 'cis', flag: 'cis_audit_enabled' },
-    { id: 'cves' },
-    { id: 'audit' },
-    { id: 'sdwan', flag: 'sdwan_orchestrator_enabled' },
-    { id: 'switching' },
-    { id: 'sla', flag: 'sla_tracker_enabled' },
-    { id: 'wifi', flag: 'capsman_wifi_enabled' },
-    { id: 'notifications', flag: 'outbound_webhooks_enabled' },
+    {
+      id: 'drift',
+      flag: 'config_drift_monitoring_enabled',
+      actionKey: 'ENTERPRISE_CIS_DRIFT_COMPLIANCE',
+    },
+    {
+      id: 'cis',
+      flag: 'cis_audit_enabled',
+      actionKey: 'ENTERPRISE_CIS_DRIFT_COMPLIANCE',
+    },
+    { id: 'cves', actionKey: 'TOPOLOGY_L2_CVE_SYSLOG_MCP' },
+    { id: 'audit', actionKey: 'AUDIT_LOGS_QUERY' },
+    {
+      id: 'sdwan',
+      flag: 'sdwan_orchestrator_enabled',
+      actionKey: 'ENTERPRISE_SDWAN_SLA_ROGUEDHCP',
+    },
+    { id: 'switching', actionKey: 'ENTERPRISE_SDWAN_SLA_ROGUEDHCP' },
+    {
+      id: 'sla',
+      flag: 'sla_tracker_enabled',
+      actionKey: 'ENTERPRISE_SDWAN_SLA_ROGUEDHCP',
+    },
+    {
+      id: 'wifi',
+      flag: 'capsman_wifi_enabled',
+      actionKey: 'WIFI_CAPSMAN_PROVISIONING',
+    },
+    {
+      id: 'notifications',
+      flag: 'outbound_webhooks_enabled',
+      allowedRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'SUPERVISOR'],
+    },
   ];
 
   const availableTabs = computed(() => {
-    return allTabs.filter((tab) => !tab.flag || authStore.isFeatureEnabled(tab.flag));
+    return allTabs.filter((tab) => {
+      if (tab.flag && !authStore.isFeatureEnabled(tab.flag)) {
+        return false;
+      }
+      if (authStore.user) {
+        const activeRole = authStore.currentRole || authStore.user?.role;
+        if (tab.allowedRoles && (!activeRole || !tab.allowedRoles.includes(activeRole))) {
+          return false;
+        }
+        if (tab.actionKey && !authStore.canUseUserFeature(tab.actionKey, false)) {
+          return false;
+        }
+      }
+      return true;
+    });
   });
+
+  function isTabAllowed(tabId: TabType): boolean {
+    return availableTabs.value.some((t) => t.id === tabId);
+  }
+
+  const canWriteCompliance = computed(
+    () => !authStore.user || authStore.canUseUserFeature('ENTERPRISE_CIS_DRIFT_COMPLIANCE', true),
+  );
+  const canWriteSdwanSlaSwitching = computed(
+    () => !authStore.user || authStore.canUseUserFeature('ENTERPRISE_SDWAN_SLA_ROGUEDHCP', true),
+  );
+  const canWriteWifi = computed(
+    () => !authStore.user || authStore.canUseUserFeature('WIFI_CAPSMAN_PROVISIONING', true),
+  );
 
   const initialQueryTab = route?.query?.tab as TabType | undefined;
   const activeTab = ref<TabType>(
-    initialQueryTab && allTabs.some((t) => t.id === initialQueryTab)
+    initialQueryTab && availableTabs.value.some((t) => t.id === initialQueryTab)
       ? initialQueryTab
-      : availableTabs.value[0]?.id || 'switching',
+      : availableTabs.value[0]?.id || 'cves',
   );
 
   watch(activeTab, (newTab) => {
@@ -97,7 +151,7 @@
   watch(
     () => route?.query?.tab,
     (newTab) => {
-      if (newTab && typeof newTab === 'string' && allTabs.some((t) => t.id === newTab)) {
+      if (newTab && typeof newTab === 'string' && availableTabs.value.some((t) => t.id === newTab)) {
         activeTab.value = newTab as TabType;
       }
     },
@@ -207,23 +261,180 @@
   const multiWanForm = ref({
     primary_wan_interface: 'ether1-fiber',
     backup_wan_interface: 'lte1',
-    check_host: '1.1.1.1',
+    check_host: '9.9.9.9',
     failover_threshold_ms: 80,
   });
 
   // 4. Switching & Rogue DHCP State
   const snoopingBridges = ref<DhcpSnoopingState[]>([]);
   const rogueAlerts = ref<RogueDhcpAlertItem[]>([]);
+  const selectedBridgeForSnooping = ref<DhcpSnoopingState | null>(null);
+  const snoopingForm = ref<{
+    bridge_name: string;
+    enabled: boolean;
+    add_dhcp_option82: boolean;
+    all_ports: string[];
+    trusted_ports: string[];
+    manual_trusted_port: string;
+  }>({
+    bridge_name: '',
+    enabled: true,
+    add_dhcp_option82: false,
+    all_ports: [],
+    trusted_ports: [],
+    manual_trusted_port: '',
+  });
+
+  function openSnoopingConfigModal(bridge: DhcpSnoopingState) {
+    const allPorts = Array.from(
+      new Set([...(bridge.trusted_ports || []), ...(bridge.untrusted_ports || [])]),
+    );
+    selectedBridgeForSnooping.value = bridge;
+    snoopingForm.value = {
+      bridge_name: bridge.bridge_name,
+      enabled: !bridge.dhcp_snooping_enabled ? true : bridge.dhcp_snooping_enabled,
+      add_dhcp_option82: Boolean(bridge.add_dhcp_option82),
+      all_ports: allPorts,
+      trusted_ports: [...(bridge.trusted_ports || [])],
+      manual_trusted_port: '',
+    };
+  }
+
+  function toggleTrustedPortInForm(portName: string) {
+    const idx = snoopingForm.value.trusted_ports.indexOf(portName);
+    if (idx >= 0) {
+      snoopingForm.value.trusted_ports.splice(idx, 1);
+    } else {
+      snoopingForm.value.trusted_ports.push(portName);
+    }
+  }
+
+  function addManualTrustedPort() {
+    const p = snoopingForm.value.manual_trusted_port.trim();
+    if (!p) return;
+    if (!snoopingForm.value.all_ports.includes(p)) {
+      snoopingForm.value.all_ports.push(p);
+    }
+    if (!snoopingForm.value.trusted_ports.includes(p)) {
+      snoopingForm.value.trusted_ports.push(p);
+    }
+    snoopingForm.value.manual_trusted_port = '';
+  }
+
+  async function handleSaveBridgeSnooping() {
+    if (!selectedRouterId.value || !selectedBridgeForSnooping.value) return;
+    actionLoading.value = true;
+    errorMessage.value = '';
+    const untrusted = snoopingForm.value.all_ports.filter(
+      (p) => !snoopingForm.value.trusted_ports.includes(p),
+    );
+    try {
+      const res = await http.post<DhcpSnoopingState>('/api/v1/switching/dhcp-snooping/enable', {
+        router_id: selectedRouterId.value,
+        bridge_name: snoopingForm.value.bridge_name,
+        enabled: snoopingForm.value.enabled,
+        add_dhcp_option82: snoopingForm.value.add_dhcp_option82,
+        trusted_ports: snoopingForm.value.trusted_ports,
+        untrusted_ports: untrusted,
+      });
+      const target = snoopingBridges.value.find((b) => b.bridge_name === res.data.bridge_name);
+      if (target) {
+        target.dhcp_snooping_enabled = res.data.dhcp_snooping_enabled;
+        target.add_dhcp_option82 = res.data.add_dhcp_option82;
+        target.trusted_ports = res.data.trusted_ports;
+        target.untrusted_ports = res.data.untrusted_ports;
+      }
+      successMessage.value = res.data.dhcp_snooping_enabled
+        ? `DHCP Snooping activado en ${res.data.bridge_name} bajo Safe Mode (60s).`
+        : `DHCP Snooping desactivado en ${res.data.bridge_name} bajo Safe Mode (60s).`;
+      selectedBridgeForSnooping.value = null;
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { detail?: string } }; message?: string };
+      errorMessage.value = e.response?.data?.detail || e.message || 'Error al configurar DHCP Snooping';
+    } finally {
+      actionLoading.value = false;
+    }
+  }
+
+  function navigateToBulkDhcpSnooping(bridgeName?: string) {
+    router.push({
+      path: '/bulk-ops',
+      query: {
+        template: 'SEGURIDAD_L2_DHCP_SNOOPING_Y_OPTION82',
+        bridge: bridgeName || snoopingBridges.value[0]?.bridge_name || 'bridge1',
+        from: 'switching',
+      },
+    });
+  }
 
   // 5. SLA State
+  interface SlaDiscoveredTargetItem {
+    target_host: string;
+    target_name: string;
+    category: 'ROUTER_GATEWAY' | 'ROUTER_DNS' | 'PUBLIC_REFERENCE';
+    recommended_threshold_ms: number;
+    interface?: string | null;
+  }
+
+  const DEFAULT_SLA_TARGETS: SlaDiscoveredTargetItem[] = [
+    {
+      target_host: '9.9.9.9',
+      target_name: 'Quad9-Primary-DNS (Anycast Security)',
+      category: 'PUBLIC_REFERENCE',
+      recommended_threshold_ms: 40,
+    },
+    {
+      target_host: '149.112.112.112',
+      target_name: 'Quad9-Secondary-DNS',
+      category: 'PUBLIC_REFERENCE',
+      recommended_threshold_ms: 40,
+    },
+    {
+      target_host: '1.1.1.1',
+      target_name: 'Cloudflare-Primary-DNS',
+      category: 'PUBLIC_REFERENCE',
+      recommended_threshold_ms: 40,
+    },
+    {
+      target_host: '8.8.8.8',
+      target_name: 'Google-Primary-DNS',
+      category: 'PUBLIC_REFERENCE',
+      recommended_threshold_ms: 45,
+    },
+    {
+      target_host: '208.67.222.222',
+      target_name: 'Cisco-OpenDNS',
+      category: 'PUBLIC_REFERENCE',
+      recommended_threshold_ms: 45,
+    },
+  ];
+
   const slaMetrics = ref<SlaMetricItem[]>([]);
+  const slaDiscoveredTargets = ref<SlaDiscoveredTargetItem[]>([...DEFAULT_SLA_TARGETS]);
+  const selectedSlaPresetHost = ref<string>('9.9.9.9');
   const slaProbeForm = ref({
-    target_host: '8.8.8.8',
-    target_name: 'Google-Primary-DNS',
-    sla_threshold_ms: 45,
+    target_host: '9.9.9.9',
+    target_name: 'Quad9-Primary-DNS (Anycast Security)',
+    sla_threshold_ms: 40,
     count: 10,
   });
   const slaReport = ref<SlaReportSummary | null>(null);
+
+  function handleSlaPresetChange() {
+    if (selectedSlaPresetHost.value === 'CUSTOM') {
+      slaProbeForm.value.target_host = '';
+      slaProbeForm.value.target_name = 'Enlace Personalizado';
+      return;
+    }
+    const found = slaDiscoveredTargets.value.find(
+      (item) => item.target_host === selectedSlaPresetHost.value,
+    );
+    if (found) {
+      slaProbeForm.value.target_host = found.target_host;
+      slaProbeForm.value.target_name = found.target_name;
+      slaProbeForm.value.sla_threshold_ms = found.recommended_threshold_ms;
+    }
+  }
 
   // 6. Wi-Fi CAPsMAN State
   const capsmanOverview = ref<CapsmanOverviewResponse | null>(null);
@@ -437,10 +648,25 @@
   }
 
   async function loadSlaTab() {
-    const metricsRes = await http.get<SlaMetricItem[]>(
-      `/api/v1/sla/metrics/${selectedRouterId.value}?limit=20`,
-    );
+    const [metricsRes, targetsRes] = await Promise.all([
+      http.get<SlaMetricItem[]>(`/api/v1/sla/metrics/${selectedRouterId.value}?limit=20`),
+      http
+        .get<SlaDiscoveredTargetItem[]>(`/api/v1/sla/targets/${selectedRouterId.value}`)
+        .catch(() => ({ data: DEFAULT_SLA_TARGETS })),
+    ]);
     slaMetrics.value = metricsRes.data || [];
+    const targets =
+      Array.isArray(targetsRes.data) && targetsRes.data.length > 0
+        ? targetsRes.data
+        : [...DEFAULT_SLA_TARGETS];
+    slaDiscoveredTargets.value = targets;
+    if (
+      selectedSlaPresetHost.value !== 'CUSTOM' &&
+      !targets.some((t) => t.target_host === selectedSlaPresetHost.value)
+    ) {
+      selectedSlaPresetHost.value = '9.9.9.9';
+      handleSlaPresetChange();
+    }
   }
 
   async function loadWifiTab() {
@@ -463,7 +689,11 @@
       }
       return;
     }
-    if (activeTab.value === 'notifications') {
+    if (
+      activeTab.value === 'notifications' ||
+      activeTab.value === 'cves' ||
+      activeTab.value === 'audit'
+    ) {
       return;
     }
     if (!selectedRouterId.value) return;
@@ -670,6 +900,36 @@
     }
   }
 
+  async function handleQuickBaselineProbe() {
+    if (!selectedRouterId.value) return;
+    actionLoading.value = true;
+    errorMessage.value = '';
+    try {
+      const gwTarget = slaDiscoveredTargets.value.find((t) => t.category === 'ROUTER_GATEWAY');
+      const quad9Target =
+        slaDiscoveredTargets.value.find((t) => t.target_host === '9.9.9.9') ||
+        DEFAULT_SLA_TARGETS[0];
+      const batch = gwTarget ? [gwTarget, quad9Target] : [quad9Target];
+      for (const item of batch) {
+        await http.post('/api/v1/sla/probes/run', {
+          router_id: selectedRouterId.value,
+          target_host: item.target_host,
+          target_name: item.target_name,
+          sla_threshold_ms: item.recommended_threshold_ms,
+          count: 10,
+        });
+      }
+      successMessage.value =
+        'Sondeo real de Gateway WAN y referencia Quad9 (9.9.9.9) completado con éxito.';
+      await loadTabData();
+    } catch (err: unknown) {
+      const e = err as { message?: string; detail?: string };
+      errorMessage.value = e.detail || e.message || 'Error al ejecutar sondeo base SLA';
+    } finally {
+      actionLoading.value = false;
+    }
+  }
+
   // Export SLA Report
   async function handleExportSlaReport() {
     actionLoading.value = true;
@@ -786,10 +1046,10 @@
       <span>{{ successMessage }}</span>
     </div>
 
-    <!-- Barra de Pestañas Tácticas (Módulos dinámicos por Feature Flags) -->
+    <!-- Barra de Pestañas Tácticas (Módulos dinámicos por Feature Flags + RBAC) -->
     <nav class="tactical-tabs-nav" :aria-label="t('enterprise.tabs_aria', 'Módulos de Cumplimiento')">
       <button
-        v-if="authStore.isFeatureEnabled('config_drift_monitoring_enabled')"
+        v-if="isTabAllowed('drift')"
         id="tab-btn-drift"
         type="button"
         class="tab-btn"
@@ -804,7 +1064,7 @@
       </button>
 
       <button
-        v-if="authStore.isFeatureEnabled('cis_audit_enabled')"
+        v-if="isTabAllowed('cis')"
         id="tab-btn-cis"
         type="button"
         class="tab-btn"
@@ -819,6 +1079,7 @@
       </button>
 
       <button
+        v-if="isTabAllowed('cves')"
         id="tab-btn-cves"
         type="button"
         class="tab-btn"
@@ -833,6 +1094,7 @@
       </button>
 
       <button
+        v-if="isTabAllowed('audit')"
         id="tab-btn-audit"
         type="button"
         class="tab-btn"
@@ -847,7 +1109,7 @@
       </button>
 
       <button
-        v-if="authStore.isFeatureEnabled('sdwan_orchestrator_enabled')"
+        v-if="isTabAllowed('sdwan')"
         id="tab-btn-sdwan"
         type="button"
         class="tab-btn"
@@ -862,6 +1124,7 @@
       </button>
 
       <button
+        v-if="isTabAllowed('switching')"
         id="tab-btn-switching"
         type="button"
         class="tab-btn"
@@ -876,7 +1139,7 @@
       </button>
 
       <button
-        v-if="authStore.isFeatureEnabled('sla_tracker_enabled')"
+        v-if="isTabAllowed('sla')"
         id="tab-btn-sla"
         type="button"
         class="tab-btn"
@@ -891,7 +1154,7 @@
       </button>
 
       <button
-        v-if="authStore.isFeatureEnabled('capsman_wifi_enabled')"
+        v-if="isTabAllowed('wifi')"
         id="tab-btn-wifi"
         type="button"
         class="tab-btn"
@@ -906,7 +1169,7 @@
       </button>
 
       <button
-        v-if="authStore.isFeatureEnabled('outbound_webhooks_enabled')"
+        v-if="isTabAllowed('notifications')"
         id="tab-btn-notifications"
         type="button"
         class="tab-btn"
@@ -962,6 +1225,7 @@
           </div>
 
           <button
+            v-if="canWriteCompliance"
             id="btn-revert-drift"
             type="button"
             class="tactical-btn btn-danger"
@@ -1494,7 +1758,7 @@
         aria-labelledby="tab-btn-sdwan"
         class="tab-panel"
       >
-        <div class="sdwan-grid">
+        <div v-if="canWriteSdwanSlaSwitching" class="sdwan-grid">
           <!-- Formulario de Aprovisionamiento Spoke -->
           <div class="sdwan-card">
             <h2 class="card-title">{{ t('enterprise.spoke_provision_title', 'Aprovisionar Sucursal Spoke') }}</h2>
@@ -1633,7 +1897,7 @@
       </section>
 
       <!-- ================================================================= -->
-      <!-- TAB 4: Seguridad L2 & Rogue DHCP (Sub-tarea 20.4)                 -->
+      <!-- TAB 4: Seguridad L2 & Rogue DHCP (Sub-tarea 20.4 / Hito 28.4)     -->
       <!-- ================================================================= -->
       <section
         v-else-if="activeTab === 'switching'"
@@ -1642,16 +1906,47 @@
         aria-labelledby="tab-btn-switching"
         class="tab-panel"
       >
+        <div class="panel-action-bar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+          <div>
+            <span class="text-subtle text-xs">
+              Configure <strong>DHCP Snooping</strong> individualmente por Bridge bajo Safe Mode (60s) o despliegue la política en toda la flota.
+            </span>
+          </div>
+          <button
+            id="btn-bulk-dhcp-snooping"
+            type="button"
+            class="tactical-btn btn-secondary"
+            @click="navigateToBulkDhcpSnooping()"
+          >
+            <span>🚀</span>
+            <span>{{ t('enterprise.btn_bulk_dhcp_snooping', 'Desplegar en Flota (Acciones Masivas)') }}</span>
+          </button>
+        </div>
+
         <div class="snooping-cards-grid">
           <div v-for="b in snoopingBridges" :key="b.bridge_name" class="bridge-card">
-            <div class="bridge-header">
+            <div class="bridge-header" style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
               <h2 class="bridge-name">Bridge: {{ b.bridge_name }}</h2>
-              <span
-                class="badge"
-                :class="b.dhcp_snooping_enabled ? 'badge-success' : 'badge-danger'"
-              >
-                DHCP Snooping: {{ b.dhcp_snooping_enabled ? t('common.status_active', 'ACTIVO') : t('common.status_inactive', 'INACTIVO') }}
-              </span>
+              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <span
+                  class="badge"
+                  :class="b.dhcp_snooping_enabled ? 'badge-success' : 'badge-danger'"
+                >
+                  DHCP Snooping: {{ b.dhcp_snooping_enabled ? t('common.status_active', 'ACTIVO') : t('common.status_inactive', 'INACTIVO') }}
+                </span>
+                <span v-if="b.add_dhcp_option82" class="badge badge-info">Option 82</span>
+                <button
+                  :id="`btn-toggle-snooping-${b.bridge_name}`"
+                  type="button"
+                  class="tactical-btn"
+                  :class="b.dhcp_snooping_enabled ? 'btn-secondary' : 'btn-primary'"
+                  style="padding: 0.25rem 0.65rem; font-size: 0.75rem;"
+                  @click="openSnoopingConfigModal(b)"
+                >
+                  <span v-if="b.dhcp_snooping_enabled">⚙️ Configurar / Desactivar</span>
+                  <span v-else>⚡ Activar DHCP Snooping</span>
+                </button>
+              </div>
             </div>
 
             <div class="ports-classification">
@@ -1661,6 +1956,7 @@
                   <span v-for="p in b.trusted_ports" :key="p" class="port-tag tag-trusted">
                     {{ p }}
                   </span>
+                  <span v-if="b.trusted_ports.length === 0" class="text-subtle text-xs">Ningún puerto marcado como Trusted</span>
                 </div>
               </div>
 
@@ -1672,7 +1968,110 @@
                   <span v-for="p in b.untrusted_ports" :key="p" class="port-tag tag-untrusted">
                     {{ p }}
                   </span>
+                  <span v-if="b.untrusted_ports.length === 0" class="text-subtle text-xs">Sin puertos Untrusted en este bridge</span>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal Táctico de Activación / Configuración de DHCP Snooping por Bridge -->
+        <div
+          v-if="selectedBridgeForSnooping"
+          id="modal-dhcp-snooping-config"
+          class="modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-snooping-title"
+        >
+          <div class="modal-card remediation-modal">
+            <header class="modal-header">
+              <h3 id="modal-snooping-title">
+                🛡️ Configurar DHCP Snooping — Bridge: {{ snoopingForm.bridge_name }}
+              </h3>
+              <button
+                type="button"
+                class="btn-close"
+                aria-label="Cerrar modal de DHCP Snooping"
+                @click="selectedBridgeForSnooping = null"
+              >
+                ✕
+              </button>
+            </header>
+            <div class="modal-body">
+              <div class="safemode-shield-alert mb-3">
+                <span class="shield-icon">⚠️</span>
+                <div class="shield-text">
+                  <strong>Regla de Oro en RouterOS v7 (Puertos Trusted):</strong>
+                  <p class="text-xs text-subtle mb-0">
+                    Al activar <code>dhcp-snooping=yes</code>, RouterOS descarta paquetes <code>DHCP Offer/Ack</code> en todos los puertos <em>Untrusted</em>. Asegúrese de marcar el puerto troncal (Uplink hacia el servidor DHCP legítimo) como <strong>Trusted</strong>.
+                  </p>
+                </div>
+              </div>
+
+              <div class="form-group mb-3">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                  <input id="chk-snooping-enabled" v-model="snoopingForm.enabled" type="checkbox" />
+                  <strong>Habilitar DHCP Snooping en <code>{{ snoopingForm.bridge_name }}</code></strong>
+                </label>
+              </div>
+
+              <div class="form-group mb-3">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                  <input id="chk-snooping-option82" v-model="snoopingForm.add_dhcp_option82" type="checkbox" :disabled="!snoopingForm.enabled" />
+                  <span>Inyectar <strong>DHCP Option 82</strong> (Agent Circuit ID / Remote ID)</span>
+                </label>
+              </div>
+
+              <div class="form-group mb-3">
+                <label class="text-xs font-bold mb-1" style="display: block;">
+                  Seleccione los Puertos Confiables (Trusted / Uplink) en <code>{{ snoopingForm.bridge_name }}</code>:
+                </label>
+                <div v-if="snoopingForm.all_ports.length > 0" class="tags-group" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
+                  <button
+                    v-for="p in snoopingForm.all_ports"
+                    :key="p"
+                    type="button"
+                    class="port-tag"
+                    :class="snoopingForm.trusted_ports.includes(p) ? 'tag-trusted' : 'tag-untrusted'"
+                    style="cursor: pointer; border: 1px solid currentColor;"
+                    @click="toggleTrustedPortInForm(p)"
+                  >
+                    {{ snoopingForm.trusted_ports.includes(p) ? `✓ Trusted: ${p}` : `Untrusted: ${p}` }}
+                  </button>
+                </div>
+                <p v-else class="text-xs text-subtle mb-2">
+                  Este bridge aún no tiene puertos miembros asociados en <code>/interface/bridge/port</code>.
+                </p>
+
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                  <input
+                    id="input-manual-trusted-port"
+                    v-model="snoopingForm.manual_trusted_port"
+                    type="text"
+                    class="tactical-input"
+                    placeholder="Añadir interfaz troncal (ej: ether1 o sfp-sfpplus1)"
+                  />
+                  <button type="button" class="tactical-btn btn-secondary" @click="addManualTrustedPort">
+                    + Añadir Trusted
+                  </button>
+                </div>
+              </div>
+
+              <div class="modal-actions-row">
+                <button type="button" class="tactical-btn btn-secondary" @click="selectedBridgeForSnooping = null">
+                  {{ t('common.cancel', 'Cancelar') }}
+                </button>
+                <button
+                  id="btn-save-dhcp-snooping"
+                  type="button"
+                  class="tactical-btn btn-primary"
+                  :disabled="actionLoading"
+                  @click="handleSaveBridgeSnooping"
+                >
+                  <span v-if="actionLoading">⏳ Aplicando bajo Safe Mode...</span>
+                  <span v-else>⚡ Guardar y Aplicar (Safe Mode 60s)</span>
+                </button>
               </div>
             </div>
           </div>
@@ -1741,7 +2140,17 @@
         class="tab-panel"
       >
         <div class="panel-action-bar">
-          <div class="sla-actions">
+          <div class="sla-actions" style="display: flex; gap: 0.75rem; flex-wrap: wrap">
+            <button
+              id="btn-quick-baseline-sla"
+              type="button"
+              class="tactical-btn btn-secondary"
+              :disabled="actionLoading"
+              @click="handleQuickBaselineProbe"
+            >
+              <span>⚡</span>
+              {{ t('enterprise.quick_baseline_sla', 'Sondear Gateway WAN + Quad9 (9.9.9.9)') }}
+            </button>
             <button
               id="btn-export-sla"
               type="button"
@@ -1794,7 +2203,7 @@
               </tr>
               <tr v-if="slaMetrics.length === 0">
                 <td colspan="10" class="text-center text-subtle">
-                  {{ t('enterprise.sla_no_metrics', 'No se han registrado ciclos de sondeo SLA para este router.') }}
+                  {{ t('enterprise.sla_no_metrics', 'No se han registrado ciclos de sondeo SLA para este router. Use "Sondear Gateway WAN + Quad9 (9.9.9.9)" o el formulario inferior.') }}
                 </td>
               </tr>
             </tbody>
@@ -1802,9 +2211,53 @@
         </div>
 
         <!-- Formulario de Ejecución de Sondeo Inmediato -->
-        <div class="sla-form-card" style="margin-top: 1.5rem">
+        <div v-if="canWriteSdwanSlaSwitching" class="sla-form-card" style="margin-top: 1.5rem">
           <h2 class="card-title">{{ t('enterprise.sla_probe_title', 'Ejecutar Ciclo de Sondeo Inmediato') }}</h2>
           <form class="tactical-form form-inline" @submit.prevent="handleTriggerProbe">
+            <div class="form-group">
+              <label for="sla-target-preset">{{ t('enterprise.sla_target_preset_label', 'Destino Sugerido / Gateway') }}</label>
+              <select
+                id="sla-target-preset"
+                v-model="selectedSlaPresetHost"
+                class="tactical-select"
+                @change="handleSlaPresetChange"
+              >
+                <optgroup
+                  v-if="slaDiscoveredTargets.some((item) => item.category === 'ROUTER_GATEWAY')"
+                  label="🌐 Gateways WAN Detectados en Router (/ip/route)"
+                >
+                  <option
+                    v-for="gw in slaDiscoveredTargets.filter((item) => item.category === 'ROUTER_GATEWAY')"
+                    :key="gw.target_host"
+                    :value="gw.target_host"
+                  >
+                    {{ gw.target_host }} — {{ gw.target_name }}
+                  </option>
+                </optgroup>
+                <optgroup
+                  v-if="slaDiscoveredTargets.some((item) => item.category === 'ROUTER_DNS')"
+                  label="🖧 DNS Configurados en Router (/ip/dns)"
+                >
+                  <option
+                    v-for="dns in slaDiscoveredTargets.filter((item) => item.category === 'ROUTER_DNS')"
+                    :key="dns.target_host"
+                    :value="dns.target_host"
+                  >
+                    {{ dns.target_host }} — {{ dns.target_name }}
+                  </option>
+                </optgroup>
+                <optgroup label="🛡️ Referencias Públicas DNS / Anycast">
+                  <option
+                    v-for="pub in slaDiscoveredTargets.filter((item) => item.category === 'PUBLIC_REFERENCE')"
+                    :key="pub.target_host"
+                    :value="pub.target_host"
+                  >
+                    {{ pub.target_host }} — {{ pub.target_name }}
+                  </option>
+                </optgroup>
+                <option value="CUSTOM">✍️ Otra IP / Host Personalizado...</option>
+              </select>
+            </div>
             <div class="form-group">
               <label for="sla-target-host">{{ t('enterprise.sla_target_host_label', 'Host / IP Destino') }}</label>
               <input
@@ -1812,6 +2265,7 @@
                 v-model="slaProbeForm.target_host"
                 type="text"
                 class="tactical-input"
+                :readonly="selectedSlaPresetHost !== 'CUSTOM'"
                 required
               />
             </div>
@@ -1872,7 +2326,7 @@
         </div>
 
         <!-- Barra de Operaciones Tácticas Wi-Fi -->
-        <div class="wifi-action-toolbar" style="margin-top: 1.25rem; display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
+        <div v-if="canWriteWifi" class="wifi-action-toolbar" style="margin-top: 1.25rem; display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center;">
           <button
             id="btn-wifi-quick-setup"
             type="button"

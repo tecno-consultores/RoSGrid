@@ -4,8 +4,8 @@
 # 56 — REMEDIACIÓN DIRECTA DE CVES, PLANTILLA MASIVA INTELIGENTE DE ACTUALIZACIÓN ROUTEROS V7 + FIRMWARE ROUTERBOOT, SONDEO DE CANAL EN VIVO Y AUTO-DETECCIÓN CHR (RoSGrid — Hito 28.1)
 
 > **[ESTADO DE IMPLEMENTACIÓN Y CERTIFICACIÓN 11X]:**
-> - **Hito 28.1.1 (Especificación Arquitectónica Flash-Ready y Grounding MikroTik RouterOS v7):** COMPLETADO AL 100%.
-> - **Hitos 28.1.2 a 28.1.4 (Implementación Backend, Frontend y Pruebas Level-11X):** PLANIFICADO — Listo para ejecución determinista con **Gemini 3.8 Flash High**.
+> - **Hito 28.1 (Remediación Directa de CVEs, Plantilla Masiva #15, Sondeo de Canal, Auto-Detección CHR y Enlace Contextual):** COMPLETADO AL 100% Y CERTIFICADO EN DOCKER EFÍMERO.
+> - **Aseguramiento:** Suite `test_smart_os_firmware_update_chr.unit.py`, `fleetCveMatrix.unit.ts`, `operationsViews.unit.ts` y Escenarios Karate Labs BDD (API 133 / UI 76).
 
 > **[DIRECTIVA DE SISTEMA PARA GEMINI 3.8 FLASH HIGH / ANTIGRAVITY]:** Este documento especifica la arquitectura técnica detallada y el **Blueprint Literal Paso a Paso** del **Hito 28.1**, resolviendo la brecha operativa detectada durante las pruebas manuales de la **Matriz de Vulnerabilidades CVE (`/inventory/cves`)** y **Acciones Masivas (`/bulk-ops`)**:
 >

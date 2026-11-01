@@ -32,7 +32,9 @@ from src.api.v1.sdwan import (
     provision_spoke_tunnel,
 )
 from src.api.v1.sla import (
+    _parse_ros7_ping_time_ms,
     export_sla_report,
+    get_sla_discovered_targets,
     get_sla_metrics,
     run_sla_probe,
 )
@@ -404,7 +406,7 @@ async def test_dhcp_snooping_state_and_enable(
         assert state_res[0].dhcp_snooping_enabled is True
         assert "sfp-sfpplus1" in state_res[0].trusted_ports
 
-    # Enable DHCP Snooping
+    # Enable DHCP Snooping with trusted and untrusted ports + Option 82 (Hito 28.4)
     with (
         patch("src.api.v1.switching.get_router_and_client", return_value=(mock_router, mock_client)),
         patch("src.api.v1.switching.execute_safe_mutation", AsyncMock(return_value={"status": "ok"})),
@@ -413,11 +415,26 @@ async def test_dhcp_snooping_state_and_enable(
         enable_req = DhcpSnoopingEnableRequest(
             router_id=router_id,
             bridge_name="bridge1",
+            enabled=True,
+            add_dhcp_option82=True,
             trusted_ports=["sfp-sfpplus1", "ether1"],
+            untrusted_ports=["ether2", "ether3"],
         )
         en_res = await enable_dhcp_snooping(payload=enable_req, request=mock_request, db=db, claims=sample_claims)
         assert en_res.dhcp_snooping_enabled is True
+        assert en_res.add_dhcp_option82 is True
         assert "ether1" in en_res.trusted_ports
+
+        # Disable DHCP Snooping
+        disable_req = DhcpSnoopingEnableRequest(
+            router_id=router_id,
+            bridge_name="bridge1",
+            enabled=False,
+            add_dhcp_option82=False,
+            trusted_ports=[],
+        )
+        dis_res = await enable_dhcp_snooping(payload=disable_req, request=mock_request, db=db, claims=sample_claims)
+        assert dis_res.dhcp_snooping_enabled is False
 
 
 @pytest.mark.asyncio
@@ -567,6 +584,102 @@ async def test_export_sla_compliance_report(sample_tenant_id: uuid.UUID, sample_
     assert len(report.metrics) == 1
     assert report.global_uptime_percent > 99.0
     assert report.total_targets_monitored >= 1
+
+
+def test_parse_ros7_ping_time_ms() -> None:
+    """Verifica la conversión exacta de cadenas de tiempo RTT de RouterOS v7 (Hito 28.6)."""
+    assert _parse_ros7_ping_time_ms("4ms520us") == 4.52
+    assert _parse_ros7_ping_time_ms("650us") == 0.65
+    assert _parse_ros7_ping_time_ms("1s15ms") == 1015.0
+    assert _parse_ros7_ping_time_ms("12ms") == 12.0
+    assert _parse_ros7_ping_time_ms("15.4ms") == 15.4
+    assert _parse_ros7_ping_time_ms(14.2) == 14.2
+    assert _parse_ros7_ping_time_ms(None) is None
+    assert _parse_ros7_ping_time_ms("") is None
+    assert _parse_ros7_ping_time_ms("invalid") is None
+
+
+@pytest.mark.asyncio
+async def test_get_sla_discovered_targets_and_real_wan_gateway(
+    sample_tenant_id: uuid.UUID, sample_claims: dict[str, str]
+) -> None:
+    """Verifica el autodescubrimiento de Gateways WAN reales y servidores DNS con presets Quad9 (Hito 28.6)."""
+    db = AsyncMock()
+    router_id = uuid.uuid4()
+    mock_router = Router(
+        id=router_id,
+        tenant_id=sample_tenant_id,
+        display_name="Edge-CCR2004",
+        network_role=RouterNetworkRoleEnum.CORE,
+        api_base_url="https://10.0.0.1:443",
+    )
+    db.execute.return_value = MockDbResult([mock_router])
+
+    mock_client = AsyncMock()
+    mock_client.get.side_effect = lambda ep: {
+        "/ip/route": [
+            {
+                "dst-address": "0.0.0.0/0",
+                "gateway": "10.250.3.1",
+                "immediate-gw": "10.250.3.1%ether1",
+                "disabled": "false",
+                "comment": "Uplink Principal Fibra",
+            },
+            {
+                "dst-address": "192.168.88.0/24",
+                "gateway": "bridge1",
+            },
+        ],
+        "/ip/dns": {
+            "servers": "1.1.1.1",
+            "dynamic-servers": "8.8.8.8",
+        },
+    }.get(ep, [])
+
+    with patch("src.api.v1.sla.get_router_and_client", return_value=(mock_router, mock_client)):
+        targets = await get_sla_discovered_targets(router_id=router_id, db=db, claims=sample_claims)
+        assert len(targets) >= 3
+
+        # Gateway WAN descubierto
+        gw = next((t for t in targets if t.category == "ROUTER_GATEWAY"), None)
+        assert gw is not None
+        assert gw.target_host == "10.250.3.1"
+        assert gw.interface == "ether1"
+        assert gw.target_name == "Uplink Principal Fibra"
+
+        # DNS descubierto
+        dns = next((t for t in targets if t.category == "ROUTER_DNS"), None)
+        assert dns is not None
+
+        # Referencia pública Quad9
+        quad9 = next((t for t in targets if t.target_host == "9.9.9.9"), None)
+        assert quad9 is not None
+        assert quad9.category == "PUBLIC_REFERENCE"
+        assert "Quad9" in quad9.target_name
+
+
+@pytest.mark.asyncio
+async def test_get_sla_metrics_empty_returns_zero_synthetic_data(
+    sample_tenant_id: uuid.UUID, sample_claims: dict[str, str]
+) -> None:
+    """Verifica que get_sla_metrics retorna lista vacía cuando no hay métricas (cero mocks 190.202.10.1) (Hito 28.6)."""
+    db = AsyncMock()
+    router_id = uuid.uuid4()
+    mock_router = Router(
+        id=router_id,
+        tenant_id=sample_tenant_id,
+        display_name="Edge-CCR2004",
+        network_role=RouterNetworkRoleEnum.CORE,
+        api_base_url="https://10.0.0.1:443",
+    )
+    db.execute.side_effect = [
+        MockDbResult([mock_router]),
+        MockDbResult([]),
+    ]
+
+    metrics = await get_sla_metrics(router_id=router_id, limit=20, db=db, claims=sample_claims)
+    assert len(metrics) == 0
+    assert not any(m.target_host == "190.202.10.1" for m in metrics)
 
 
 # ============================================================================
@@ -733,4 +846,17 @@ async def test_cis_1_8_bruteforce_remediation_and_audit_reactivity(
         cis18_re = next(d for d in re_audit.directives if d.code == "CIS-1.8")
         assert cis18_re.passed is True
         assert "Defensa activa" in cis18_re.finding
+
+
+def test_starter_templates_includes_dhcp_snooping_template() -> None:
+    """Verifica que la plantilla #16 SEGURIDAD_L2_DHCP_SNOOPING_Y_OPTION82 está registrada (Hito 28.4)."""
+    from src.api.v1.bulk_and_updates import _DEFAULT_STARTER_TEMPLATES
+
+    tpl = next((t for t in _DEFAULT_STARTER_TEMPLATES if t["name"] == "SEGURIDAD_L2_DHCP_SNOOPING_Y_OPTION82"), None)
+    assert tpl is not None
+    assert "DHCP Snooping" in tpl["description"]
+    assert "Option 82" in tpl["description"]
+    assert len(tpl["rest_steps_template"]) == 2
+    assert tpl["rest_steps_template"][0]["endpoint"] == "interface/bridge/port/set"
+    assert tpl["rest_steps_template"][1]["endpoint"] == "interface/bridge/set"
 

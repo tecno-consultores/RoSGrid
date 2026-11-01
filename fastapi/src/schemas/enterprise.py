@@ -244,20 +244,24 @@ class CisPoliciesConfigResponse(BaseModel):
 
 
 class DhcpSnoopingState(BaseModel):
-    """Estado de DHCP Snooping en un bridge específico."""
+    """Estado de DHCP Snooping, Option 82 y puertos confiables en el bridge."""
 
     bridge_name: str
     dhcp_snooping_enabled: bool
+    add_dhcp_option82: bool = False
     trusted_ports: list[str]
     untrusted_ports: list[str]
 
 
 class DhcpSnoopingEnableRequest(StrictBaseModel):
-    """Solicitud para habilitar DHCP Snooping y marcar puertos troncales/acceso."""
+    """Solicitud para habilitar/configurar DHCP Snooping y marcar puertos troncales/acceso."""
 
     router_id: uuid.UUID
     bridge_name: str = Field("bridge", max_length=64)
+    enabled: bool = True
+    add_dhcp_option82: bool = False
     trusted_ports: list[str] = Field(default_factory=list)
+    untrusted_ports: list[str] = Field(default_factory=list)
 
 
 class RogueDhcpAlertItem(BaseModel):
@@ -294,6 +298,19 @@ class RogueDhcpIsolatePortResponse(BaseModel):
 # ============================================================================
 # 5. Monitor de Cumplimiento de SLA para Enlaces Dedicados (Sub-tarea 20.5)
 # ============================================================================
+
+
+class SlaDiscoveredTargetItem(BaseModel):
+    """Destino candidato para sondeo SLA (autodescubierto en RouterOS v7 o preset público)."""
+
+    target_host: str
+    target_name: str
+    category: str = Field(
+        ...,
+        description="ROUTER_GATEWAY | ROUTER_DNS | PUBLIC_REFERENCE",
+    )
+    recommended_threshold_ms: float = 40.0
+    interface: str | None = None
 
 
 class SlaMetricItem(BaseModel):

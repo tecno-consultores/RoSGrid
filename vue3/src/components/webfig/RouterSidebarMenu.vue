@@ -2,9 +2,10 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { ref, onMounted } from 'vue';
+  import { ref, computed, onMounted } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
   import { http } from '@/api/httpClient';
+  import { useAuthStore } from '@/stores/useAuthStore';
   import { useI18n } from '@/composables/useI18n';
   import type { Layer2CatalogItem } from '@/types';
 
@@ -19,7 +20,15 @@
 
   const route = useRoute();
   const router = useRouter();
+  const authStore = useAuthStore();
   const { t } = useI18n();
+
+  const canUseBackups = computed(
+    () => !authStore.user || authStore.canUseUserFeature('MANUAL_BACKUP_DIFF_GIT', false),
+  );
+  const canUseLayer2 = computed(
+    () => !authStore.user || authStore.canUseUserFeature('WEBFIG_L2_UNIVERSAL', false),
+  );
 
   const layer2Catalog = ref<Layer2CatalogItem[]>([
     { ros_path: 'mpls', title: 'MPLS & VPLS', category: 'Transport', is_singleton: false },
@@ -83,7 +92,9 @@
   }
 
   onMounted(() => {
-    loadLayer2Catalog();
+    if (canUseLayer2.value) {
+      loadLayer2Catalog();
+    }
   });
 </script>
 
@@ -233,6 +244,7 @@
           </button>
 
           <button
+            v-if="canUseBackups"
             type="button"
             class="nav-item"
             :class="{ 'nav-item--active': route.path.includes('/backups') }"
@@ -244,7 +256,7 @@
         </div>
 
         <!-- Sección 3: Capa 2 Dinámica -->
-        <div class="nav-group">
+        <div v-if="canUseLayer2" class="nav-group">
           <span class="group-label">{{ t('webfig.group_layer2') }}</span>
           <button
             v-for="item in layer2Catalog"

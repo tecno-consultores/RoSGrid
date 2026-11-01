@@ -117,6 +117,12 @@ Apply these non-negotiable security directives before writing any code:
     - **AsyncSession MissingGreenlet Invariant:** In async SQLAlchemy sessions (`AsyncSession`), accessing lazy-loaded relationships or model properties calling relationship attributes triggers `MissingGreenlet`. Never invoke `ChildResponse.model_validate(orm_obj)` if child relationships are not explicitly loaded via `selectinload()`. Always serialize via `BaseResponse.model_validate(orm_obj).model_dump()` or access attributes defensively via `self.__dict__.get("rel_attr")`.
     - **Modern FastAPI HTTP Status Constants:** In FastAPI/Starlette, prefer `status.HTTP_422_UNPROCESSABLE_CONTENT` over deprecated `HTTP_422_UNPROCESSABLE_ENTITY` to avoid deprecation warnings.
 
+14. **RBAC UI Visibility & Read Roles Parity Invariant (Zero 403 Dead-Ends — Spec 64):**
+    - **Defensive Role Resolution in Pinia:** In `useAuthStore.ts`, always evaluate `currentRole.value || user.value?.role` so permission checks in `canUseUserFeature` remain fully functional regardless of whether the store was initialized with `setAuth()` or direct `user` object assignment.
+    - **Read Roles Backend Parity:** All endpoints with role-based read restrictions (`_READ_ROLES`) MUST maintain strict parity with `POLICY_MATRIX` (including `SUPPORT_L1`, `FIELD_TECH` and `AUDITOR` where read operations are permitted).
+    - **Proactive Navigation & Control Guarding:** UI components and navigation shells MUST evaluate `canUseUserFeature(actionKey)` with `v-if` to conceal unauthorized views, tabs, and mutation controls before unauthorized API calls trigger HTTP 403 errors.
+    - **Defensive Asynchronous Collection Access:** Nested view components (such as `FleetCveMatrix.vue`) MUST use optional chaining (`cveSummary.value?.vulnerable_routers?.length`) and safe fallbacks to prevent `TypeError: Cannot read properties of undefined` during initial render cycles before API responses resolve.
+
 ---
 
 ## 3. Pre-Commit 11X Checklist

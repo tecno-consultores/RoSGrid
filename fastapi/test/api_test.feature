@@ -1027,6 +1027,35 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 133. Actualización Inteligente RouterOS y Firmware con Auto-Detección CHR: Sondeo de Canal (POST /operations/ros-updates/check) sin autenticación devuelve 401 (Hito 28.1)
+    Given path '/api/v1/operations/ros-updates/check'
+    And request { channel: 'stable', router_ids: [] }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 134. Activación/Configuración de DHCP Snooping en Bridge (POST /switching/dhcp-snooping/enable) sin autenticación devuelve 401 (Hito 28.4)
+    Given path '/api/v1/switching/dhcp-snooping/enable'
+    And request { router_id: '01928000-0000-7000-8000-000000000001', bridge_name: 'bridge1', enabled: true, trusted_ports: ['ether1'] }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 135. Telemetría SLA Real: Autodescubrimiento de Gateways WAN y Presets Quad9 (GET /sla/targets/{router_id}) sin autenticación devuelve 401 (Hito 28.6)
+    Given path '/api/v1/sla/targets/01928000-0000-7000-8000-000000000001'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 136. Paridad de Roles RBAC y Visibilidad Estricta: Endpoints de Monitoreo de Cumplimiento sin autenticación devuelven 401 (Hito 28.9)
+    Given path '/api/v1/compliance/config-drift/01928000-0000-7000-8000-000000000001'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
+
+
 
 
 

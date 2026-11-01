@@ -50,6 +50,8 @@ _WIFI_READ_ROLES = (
     SystemRoleEnum.SUPPORT_L3,
     SystemRoleEnum.SUPPORT_L2,
     SystemRoleEnum.SUPPORT_L1,
+    SystemRoleEnum.FIELD_TECH,
+    SystemRoleEnum.AUDITOR,
     SystemRoleEnum.NOC_MONITOR,
 )
 

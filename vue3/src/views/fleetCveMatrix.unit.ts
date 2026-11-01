@@ -188,7 +188,15 @@ describe('FleetCveMatrix.vue — Hito 23.5 Matriz de Vulnerabilidades CVE', () =
     const remediateBtn = wrapper.find('.btn-remediate-fleet');
     await remediateBtn.trigger('click');
 
-    expect(mockPush).toHaveBeenCalledWith('/bulk-ops');
+    expect(mockPush).toHaveBeenCalledWith({
+      path: '/bulk-ops',
+      query: {
+        template: 'ACTUALIZACION_ROUTEROS_Y_FIRMWARE',
+        channel: 'stable',
+        from: 'cve',
+        recommended: '7.16.2',
+      },
+    });
   });
 
   it('despliega el badge de estado de caché de 24 horas vigente con tiempo restante', async () => {

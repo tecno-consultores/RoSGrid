@@ -84,9 +84,15 @@ async def get_telemetry_beacon_status() -> dict[str, Any]:
         redis = get_redis_client()
         raw_state = await redis.hgetall(BEACON_STATE_KEY)
         if raw_state:
-            last_sent_at = raw_state.get("last_sent_at")
-            last_status = raw_state.get("last_status", "untriggered")
-            instance_id = raw_state.get("instance_id", instance_id)
+            sent_val = raw_state.get("last_sent_at")
+            if sent_val is not None:
+                last_sent_at = sent_val.decode() if isinstance(sent_val, bytes) else str(sent_val)
+            status_val = raw_state.get("last_status")
+            if status_val is not None:
+                last_status = status_val.decode() if isinstance(status_val, bytes) else str(status_val)
+            inst_val = raw_state.get("instance_id")
+            if inst_val is not None:
+                instance_id = inst_val.decode() if isinstance(inst_val, bytes) else str(inst_val)
     except Exception as exc:
         logger.debug("Lectura de estado de beacon en KeyDB omitida: %s", exc)
 

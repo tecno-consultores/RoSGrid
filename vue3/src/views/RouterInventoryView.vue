@@ -25,6 +25,14 @@
     return r === 'SUPERADMIN_GLOBAL' || r === 'TENANT_ADMIN';
   });
 
+  const canImportCsv = computed(
+    () => !authStore.user || authStore.canUseUserFeature('ROUTER_INVENTORY_CSV', true),
+  );
+
+  const canScheduleMaintenance = computed(
+    () => !authStore.user || authStore.canUseUserFeature('SCHEDULE_MAINTENANCE', true),
+  );
+
   // Modos de visualización
   type ViewMode = 'table' | 'map' | 'split';
   const currentViewMode = ref<ViewMode>('table');
@@ -332,6 +340,7 @@
         </button>
 
         <button
+          v-if="canImportCsv"
           type="button"
           class="btn-import-csv"
           :aria-label="t('inventory.aria_import_csv', 'Abrir asistente de importación CSV')"
@@ -350,6 +359,7 @@
         </button>
 
         <button
+          v-if="canScheduleMaintenance"
           type="button"
           class="btn-maintenance-windows"
           :aria-label="t('inventory.aria_maintenance_windows', 'Abrir gestión de ventanas de mantenimiento')"
@@ -506,6 +516,7 @@
                 </button>
 
                 <button
+                  v-if="canScheduleMaintenance"
                   type="button"
                   class="btn-row-action"
                   :class="(row as unknown as RouterItem).admin_state === 'MAINTENANCE' ? 'btn-row-action--prod' : 'btn-row-action--maint'"

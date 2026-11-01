@@ -36,6 +36,8 @@ _SWITCHING_READ_ROLES = (
     SystemRoleEnum.SUPERVISOR,
     SystemRoleEnum.SUPPORT_L3,
     SystemRoleEnum.SUPPORT_L2,
+    SystemRoleEnum.SUPPORT_L1,
+    SystemRoleEnum.AUDITOR,
     SystemRoleEnum.NOC_MONITOR,
 )
 
@@ -71,43 +73,85 @@ async def get_dhcp_snooping_state(
         bridges = await client.get("/interface/bridge")
         ports = await client.get("/interface/bridge/port")
 
-        states: list[DhcpSnoopingState] = []
         if isinstance(bridges, list):
-            for b in bridges:
-                b_name = str(b.get("name", "bridge"))
-                snooping = b.get("dhcp-snooping") in (True, "true", "yes")
-
-                trusted: list[str] = []
-                untrusted: list[str] = []
-                if isinstance(ports, list):
-                    for p in ports:
-                        if str(p.get("bridge")) == b_name:
-                            p_name = str(p.get("interface", ""))
-                            is_trusted = p.get("trusted") in (True, "true", "yes")
-                            if is_trusted:
-                                trusted.append(p_name)
-                            else:
-                                untrusted.append(p_name)
-
-                states.append(
-                    DhcpSnoopingState(
-                        bridge_name=b_name,
-                        dhcp_snooping_enabled=snooping,
-                        trusted_ports=trusted,
-                        untrusted_ports=untrusted,
-                    )
-                )
-            return states
+            return _parse_bridge_snooping_states(bridges, ports if isinstance(ports, list) else [])
     except Exception as exc:
         logger.debug("Sondeo REST de DHCP Snooping: %s", exc)
 
     return []
 
 
+def _classify_bridge_ports(b_name: str, ports: list[dict[str, Any]]) -> tuple[list[str], list[str]]:
+    """Separa los puertos de un bridge en listas trusted y untrusted."""
+    trusted: list[str] = []
+    untrusted: list[str] = []
+    for p in ports:
+        if str(p.get("bridge")) != b_name:
+            continue
+        p_name = str(p.get("interface", ""))
+        if p.get("trusted") in (True, "true", "yes"):
+            trusted.append(p_name)
+        else:
+            untrusted.append(p_name)
+    return trusted, untrusted
+
+
+def _parse_bridge_snooping_states(
+    bridges: list[dict[str, Any]],
+    ports: list[dict[str, Any]],
+) -> list[DhcpSnoopingState]:
+    """Construye la lista de estados de DHCP Snooping por cada bridge del router."""
+    states: list[DhcpSnoopingState] = []
+    for b in bridges:
+        b_name = str(b.get("name", "bridge"))
+        snooping = b.get("dhcp-snooping") in (True, "true", "yes")
+        opt82 = b.get("add-dhcp-option82") in (True, "true", "yes")
+        trusted, untrusted = _classify_bridge_ports(b_name, ports)
+        states.append(
+            DhcpSnoopingState(
+                bridge_name=b_name,
+                dhcp_snooping_enabled=snooping,
+                add_dhcp_option82=opt82,
+                trusted_ports=trusted,
+                untrusted_ports=untrusted,
+            )
+        )
+    return states
+
+
+async def _mutate_bridge_snooping_on_ros(
+    client: Any,
+    payload: DhcpSnoopingEnableRequest,
+    trusted_list: list[str],
+) -> None:
+    """Aplica dhcp-snooping, add-dhcp-option82 y puertos trusted/untrusted en RouterOS v7."""
+    snoop_str = "yes" if payload.enabled else "no"
+    opt82_str = "yes" if (payload.enabled and payload.add_dhcp_option82) else "no"
+    await client.post(
+        "/interface/bridge/set",
+        json_data={
+            "numbers": payload.bridge_name,
+            "dhcp-snooping": snoop_str,
+            "add-dhcp-option82": opt82_str,
+        },
+    )
+    for p_trusted in trusted_list:
+        await client.post(
+            "/interface/bridge/port/set",
+            json_data={"numbers": p_trusted, "trusted": "yes"},
+        )
+    for p_untrusted in payload.untrusted_ports:
+        if p_untrusted not in trusted_list:
+            await client.post(
+                "/interface/bridge/port/set",
+                json_data={"numbers": p_untrusted, "trusted": "no"},
+            )
+
+
 @router.post(
     "/dhcp-snooping/enable",
     response_model=DhcpSnoopingState,
-    summary="Activar DHCP Snooping en bridge y marcar puertos troncales como confiables (Trusted)",
+    summary="Activar/Configurar DHCP Snooping en bridge y marcar puertos troncales como confiables (Trusted)",
     dependencies=[Depends(require_roles(*_SWITCHING_WRITE_ROLES))],
 )
 async def enable_dhcp_snooping(
@@ -124,15 +168,13 @@ async def enable_dhcp_snooping(
     if not router_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Router no encontrado")
 
-    trusted_list = payload.trusted_ports or ["sfp-sfpplus1"]
+    trusted_list = list(payload.trusted_ports)
 
     try:
         _, client = await get_router_and_client(router_obj.id, claims, db)
 
         async def _apply_snooping() -> dict[str, Any]:
-            await client.patch(f"/interface/bridge/{payload.bridge_name}", json_data={"dhcp-snooping": "true"})
-            for p in trusted_list:
-                await client.patch(f"/interface/bridge/port/{p}", json_data={"trusted": "true"})
+            await _mutate_bridge_snooping_on_ros(client, payload, trusted_list)
             return {"status": "ok"}
 
         await execute_safe_mutation(
@@ -142,9 +184,8 @@ async def enable_dhcp_snooping(
             coro_fn=_apply_snooping,
         )
     except Exception as exc:
-        logger.warning("Simulación de activación DHCP Snooping: %s", exc)
+        logger.warning("Simulación de configuración DHCP Snooping: %s", exc)
 
-    # WORM log
     actor = audit_actor_from_claims(claims, request)
     await write_audit_log(
         session=db,
@@ -155,19 +196,26 @@ async def enable_dhcp_snooping(
         actor_ip=actor["actor_ip"],
         actor_user_agent=actor["actor_user_agent"],
         event_category="SWITCHING_SECURITY",
-        event_action="ENABLE_DHCP_SNOOPING",
+        event_action="ENABLE_DHCP_SNOOPING" if payload.enabled else "DISABLE_DHCP_SNOOPING",
         router_id=router_obj.id,
         router_display_name=router_obj.display_name,
-        before_state={"snooping": False},
-        after_state={"bridge": payload.bridge_name, "trusted_ports": trusted_list},
+        before_state={"snooping": not payload.enabled},
+        after_state={
+            "bridge": payload.bridge_name,
+            "enabled": payload.enabled,
+            "add_dhcp_option82": payload.add_dhcp_option82,
+            "trusted_ports": trusted_list,
+        },
         status_code=200,
     )
 
+    remaining_untrusted = [p for p in payload.untrusted_ports if p not in trusted_list]
     return DhcpSnoopingState(
         bridge_name=payload.bridge_name,
-        dhcp_snooping_enabled=True,
+        dhcp_snooping_enabled=payload.enabled,
+        add_dhcp_option82=payload.enabled and payload.add_dhcp_option82,
         trusted_ports=trusted_list,
-        untrusted_ports=[],
+        untrusted_ports=remaining_untrusted,
     )
 
 

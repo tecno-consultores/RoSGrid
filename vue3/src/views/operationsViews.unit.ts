@@ -861,4 +861,102 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
     expect((radioInputs[2].element as HTMLInputElement).checked).toBe(true);
     expect(wrapper.find('.vars-empty-state').text()).toContain('no requiere parámetros adicionales');
   });
+
+  it('BulkOperationsAndUpdatesView — selecciona plantilla ACTUALIZACION_ROUTEROS_Y_FIRMWARE, sondea canal y detecta CHR (Hito 28.1)', async () => {
+    const postSpy = vi.spyOn(http, 'post').mockImplementation((url) => {
+      if (url === '/api/v1/operations/ros-updates/check') {
+        return Promise.resolve({
+          status: 200,
+          data: {
+            channel: 'stable',
+            checked_count: 2,
+            updates_available_count: 1,
+            chr_count: 1,
+            routerboard_count: 1,
+            items: [
+              {
+                router_id: 'r-01',
+                display_name: 'chr-core',
+                is_chr: true,
+                channel: 'stable',
+                installed_version: '7.21.5',
+                latest_version: '7.24.2',
+                update_available: true,
+                action_plan: 'CHR_OS_ONLY',
+              },
+              {
+                router_id: 'r-02',
+                display_name: 'rb-access',
+                is_chr: false,
+                channel: 'stable',
+                installed_version: '7.16.2',
+                latest_version: '7.16.2',
+                update_available: false,
+                action_plan: 'ROUTERBOARD_OS_AND_FIRMWARE',
+              },
+            ],
+          },
+          headers: new Headers(),
+        } as any);
+      }
+      return Promise.resolve({ status: 200, data: {}, headers: new Headers() } as any);
+    });
+
+    vi.spyOn(http, 'get').mockImplementation((url) => {
+      if (url === '/api/v1/operations/templates') {
+        return Promise.resolve({
+          status: 200,
+          data: [
+            {
+              id: 'tpl-15',
+              name: 'ACTUALIZACION_ROUTEROS_Y_FIRMWARE',
+              category: 'SYSTEM',
+              description: 'Actualiza RouterOS v7 y Firmware con auto-detección CHR.',
+              variables_schema: [
+                { key: 'update_channel', label: 'Canal de Actualización', default_val: 'stable' },
+                { key: 'upgrade_firmware', label: 'Actualizar Firmware', default_val: 'yes' },
+              ],
+              rest_steps_template: [
+                { method: 'POST', endpoint: 'system/package/update/set', payload: { channel: '{{ update_channel }}' } },
+                { method: 'POST', endpoint: 'system/package/update/check-for-updates', payload: {} },
+                { method: 'POST', endpoint: 'system/routerboard/settings/set', payload: { 'auto-upgrade': '{{ upgrade_firmware }}' } },
+                { method: 'POST', endpoint: 'system/routerboard/upgrade', payload: {} },
+                { method: 'POST', endpoint: 'system/package/update/install', payload: {} },
+              ],
+              requires_safemode: false,
+            },
+          ],
+          headers: new Headers(),
+        } as any);
+      }
+      return Promise.resolve({ status: 200, data: [], headers: new Headers() } as any);
+    });
+
+    const wrapper = mount(BulkOperationsAndUpdatesView);
+    await flushPromises();
+
+    (wrapper.vm as any).wizardStep = 2;
+    await flushPromises();
+
+    (wrapper.vm as any).onSelectTemplate('tpl-15');
+    await flushPromises();
+
+    expect(wrapper.find('#channel-update-discovery-box').exists()).toBe(true);
+
+    const checkBtn = wrapper.find('#btn-check-channel-updates');
+    expect(checkBtn.exists()).toBe(true);
+    await checkBtn.trigger('click');
+    await flushPromises();
+
+    expect(postSpy).toHaveBeenCalledWith(
+      '/api/v1/operations/ros-updates/check',
+      expect.objectContaining({
+        channel: 'stable',
+      }),
+    );
+
+    expect(wrapper.find('#channel-update-discovery-box').text()).toContain('CHR (Solo OS)');
+    expect(wrapper.find('#channel-update-discovery-box').text()).toContain('RouterBOARD (OS + Firmware)');
+    expect(wrapper.find('#channel-update-discovery-box').text()).toContain('CHR_OS_ONLY');
+  });
 });

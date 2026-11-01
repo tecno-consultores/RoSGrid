@@ -1136,6 +1136,14 @@
     "tcp_mss_clamping_optimizer": {
       "name": "TCP MSS Clamping Optimizer",
       "description": "Automatically clamps MSS in mangle to avoid fragmentation across PPPoE, GRE or WireGuard tunnels."
+    },
+    "actualizacion_routeros_y_firmware": {
+      "name": "Smart RouterOS v7 & Firmware Update (CHR Auto-Detection)",
+      "description": "Selects the update channel (stable, long-term, testing, development), displays the available version, and upgrades RouterOS + RouterBOOT Firmware (if CHR is detected, upgrades the OS only)."
+    },
+    "seguridad_l2_dhcp_snooping_y_option82": {
+      "name": "L2 Security DHCP Snooping & Option 82",
+      "description": "Enables DHCP Snooping and Option 82 on the specified bridge and configures the uplink trunk port as Trusted to prevent Rogue DHCP servers."
     }
   }
 }

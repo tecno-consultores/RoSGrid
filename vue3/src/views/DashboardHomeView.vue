@@ -22,7 +22,9 @@
     }
     inventoryStore.fetchNetworkRoles();
     nocStore.connectEventsWebSocket();
-    nocStore.fetchRecentAuditLogs();
+    if (!authStore.user || authStore.canUseUserFeature('AUDIT_LOGS_QUERY', false)) {
+      nocStore.fetchRecentAuditLogs();
+    }
   });
 
   // Métricas calculadas
@@ -148,6 +150,7 @@
       icon: '📦',
       route: '/backups',
       requiredFeature: 'nightly_backups_enabled',
+      requiredRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'SUPERVISOR', 'SUPPORT_L3', 'SUPPORT_L2', 'INVENTORY_MANAGER', 'AUDITOR'],
     },
     {
       id: 'bulk-ops',
@@ -156,6 +159,7 @@
       description: t('dashboard.tools.bulk_ops_desc'),
       icon: '⚡',
       route: '/bulk-ops',
+      requiredRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'SUPERVISOR', 'SUPPORT_L3', 'SUPPORT_L2'],
     },
     {
       id: 'compliance',
@@ -172,7 +176,7 @@
       description: t('dashboard.tools.sessions_desc'),
       icon: '🛑',
       route: '/users?tab=sessions',
-      requiredRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'SECURITY_OFFICER'],
+      requiredRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'SUPERVISOR', 'AUDITOR', 'SECURITY_OFFICER'],
     },
     {
       id: 'users',
@@ -190,6 +194,7 @@
       description: t('dashboard.tools.audit_desc'),
       icon: '📜',
       route: '/enterprise/compliance?tab=audit',
+      requiredRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'SUPERVISOR', 'AUDITOR', 'SECURITY_OFFICER'],
     },
   ]);
 

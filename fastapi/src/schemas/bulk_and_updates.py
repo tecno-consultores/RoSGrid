@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 class StrictBaseModel(BaseModel):
@@ -125,6 +125,8 @@ class BulkJobDetailResponse(StrictBaseModel):
 class RosUpdateRouterStatus(StrictBaseModel):
     router_id: uuid.UUID
     display_name: str
+    board_name: str | None = None
+    is_chr: bool = False
     ros_version: str | None
     update_available_version: str | None
     firmware_version: str | None
@@ -139,11 +141,47 @@ class RosFleetUpdateStatusResponse(StrictBaseModel):
     routers: list[RosUpdateRouterStatus] = Field(default_factory=list)
 
 
+class RosUpdateChannelCheckRequest(StrictBaseModel):
+    router_ids: list[uuid.UUID] = Field(default_factory=list)
+    channel: str = Field(default="stable", pattern="^(stable|long-term|testing|development)$")
+
+
+class RosUpdateChannelCheckItem(StrictBaseModel):
+    router_id: uuid.UUID
+    display_name: str
+    board_name: str | None = None
+    is_chr: bool
+    channel: str
+    installed_version: str | None = None
+    latest_version: str | None = None
+    update_available: bool = False
+    status_text: str = ""
+    current_firmware: str | None = None
+    upgrade_firmware: str | None = None
+    action_plan: str
+
+
+class RosUpdateChannelCheckResponse(StrictBaseModel):
+    channel: str
+    checked_count: int
+    updates_available_count: int
+    chr_count: int
+    routerboard_count: int
+    items: list[RosUpdateChannelCheckItem] = Field(default_factory=list)
+
+
 class RosUpdateExecuteRequest(StrictBaseModel):
     router_ids: list[uuid.UUID] = Field(..., min_length=1)
+    channel: str = Field(default="stable", pattern="^(stable|long-term|testing|development)$")
     auto_upgrade_firmware: bool = True
     poe_aware: bool = False
-    safety_stop_threshold_percent: float = Field(1.0, ge=0.1, le=100.0)
+    safety_stop_threshold_percent: float = Field(
+        1.0,
+        ge=0.1,
+        le=100.0,
+        validation_alias=AliasChoices("safety_stop_threshold_percent", "safety_stop_threshold_pct"),
+    )
+    target_version: str | None = None
 
 
 class RosUpdateExecuteResponse(StrictBaseModel):

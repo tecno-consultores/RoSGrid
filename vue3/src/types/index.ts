@@ -1041,6 +1041,7 @@ export interface SdwanMultiWanFailoverResponse {
 export interface DhcpSnoopingState {
   bridge_name: string;
   dhcp_snooping_enabled: boolean;
+  add_dhcp_option82?: boolean;
   trusted_ports: string[];
   untrusted_ports: string[];
 }

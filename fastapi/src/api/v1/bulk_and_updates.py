@@ -42,6 +42,9 @@ from src.schemas.bulk_and_updates import (
     ConfigTemplateResponse,
     ConfigTemplateUpdateRequest,
     RosFleetUpdateStatusResponse,
+    RosUpdateChannelCheckItem,
+    RosUpdateChannelCheckRequest,
+    RosUpdateChannelCheckResponse,
     RosUpdateExecuteRequest,
     RosUpdateExecuteResponse,
     RosUpdateRouterStatus,
@@ -149,6 +152,30 @@ async def _perform_pre_upgrade_backup(
     except Exception as exc:
         logger.error("Fallo de backup obligatorio previo al upgrade en %s: %s", router_obj.display_name, exc)
         return False
+
+
+def _is_chr_router(router_obj: Router, rb_data: dict[str, Any] | None = None) -> bool:
+    """Detecta determinísticamente si un equipo MikroTik es CHR (Cloud Hosted Router)."""
+    board = (router_obj.board_name or "").upper()
+    model = (router_obj.model_name or "").upper()
+    if "CHR" in board or "CHR" in model:
+        return True
+    if isinstance(rb_data, dict):
+        rb_flag = str(rb_data.get("routerboard", "")).strip().lower()
+        if rb_flag in ("false", "no"):
+            return True
+    return False
+
+
+def _should_skip_step_for_router(step: dict[str, Any], is_chr: bool, vars_dict: dict[str, Any]) -> bool:
+    """Determina si un paso REST de RouterBOOT debe omitirse por tratarse de un CHR o estar desactivado."""
+    endpoint = str(step.get("endpoint", "")).strip("/").lower()
+    if not endpoint.startswith("system/routerboard"):
+        return False
+    if is_chr:
+        return True
+    upg_fw = str(vars_dict.get("upgrade_firmware", "yes")).strip().lower()
+    return upg_fw in ("no", "false", "0")
 
 
 # ============================================================================
@@ -790,6 +817,122 @@ _DEFAULT_STARTER_TEMPLATES = [
         ],
         "requires_safemode": True,
     },
+    {
+        "name": "ACTUALIZACION_ROUTEROS_Y_FIRMWARE",
+        "category": "SYSTEM",
+        "description": (
+            "Actualiza RouterOS v7 en el canal seleccionado y actualiza el Firmware RouterBOOT "
+            "en equipos físicos (si detecta CHR, actualiza únicamente el Sistema Operativo)."
+        ),
+        "ros_command_template": (
+            "/system package update set channel={{ update_channel }}\n"
+            "/system package update check-for-updates\n"
+            "# En equipos físicos RouterBOARD (omitido automáticamente en CHR):\n"
+            "/system routerboard settings set auto-upgrade={{ upgrade_firmware }}\n"
+            "/system routerboard upgrade\n"
+            "/system package update install"
+        ),
+        "variables_schema": [
+            {
+                "key": "update_channel",
+                "label": "Canal de Actualización (stable, long-term, testing, development)",
+                "default_val": "stable",
+                "var_type": "select",
+                "options": ["stable", "long-term", "testing", "development"],
+            },
+            {
+                "key": "upgrade_firmware",
+                "label": "Actualizar Firmware RouterBOOT (auto-omitido en CHR)",
+                "default_val": "yes",
+                "var_type": "select",
+                "options": ["yes", "no"],
+            },
+        ],
+        "rest_steps_template": [
+            {
+                "method": "POST",
+                "endpoint": "system/package/update/set",
+                "payload": {"channel": "{{ update_channel }}"},
+                "cli_command": "/system package update set channel={{ update_channel }}",
+            },
+            {
+                "method": "POST",
+                "endpoint": "system/package/update/check-for-updates",
+                "payload": {},
+                "cli_command": "/system package update check-for-updates",
+            },
+            {
+                "method": "POST",
+                "endpoint": "system/routerboard/settings/set",
+                "payload": {"auto-upgrade": "{{ upgrade_firmware }}"},
+                "cli_command": "/system routerboard settings set auto-upgrade={{ upgrade_firmware }}",
+            },
+            {
+                "method": "POST",
+                "endpoint": "system/routerboard/upgrade",
+                "payload": {},
+                "cli_command": "/system routerboard upgrade",
+            },
+            {
+                "method": "POST",
+                "endpoint": "system/package/update/install",
+                "payload": {},
+                "cli_command": "/system package update install",
+            },
+        ],
+        "requires_safemode": False,
+    },
+    {
+        "name": "SEGURIDAD_L2_DHCP_SNOOPING_Y_OPTION82",
+        "category": "SECURITY",
+        "description": (
+            "Activa DHCP Snooping y DHCP Option 82 en el bridge especificado y configura "
+            "el puerto troncal (Uplink) como Trusted para prevenir servidores Rogue DHCP en la LAN."
+        ),
+        "ros_command_template": (
+            "/interface bridge port set [find where bridge={{ bridge_name }} and interface={{ trusted_uplink_port }}] trusted=yes\n"
+            "/interface bridge set [find where name={{ bridge_name }}] dhcp-snooping=yes add-dhcp-option82={{ add_option82 }}"
+        ),
+        "variables_schema": [
+            {
+                "key": "bridge_name",
+                "label": "Nombre del Bridge Objetivo",
+                "default_val": "bridge1",
+            },
+            {
+                "key": "trusted_uplink_port",
+                "label": "Puerto Troncal Confiable (Trusted / Uplink hacia DHCP Server)",
+                "default_val": "ether1",
+            },
+            {
+                "key": "add_option82",
+                "label": "Inyectar DHCP Option 82 (yes / no)",
+                "default_val": "yes",
+            },
+        ],
+        "rest_steps_template": [
+            {
+                "method": "POST",
+                "endpoint": "interface/bridge/port/set",
+                "payload": {
+                    "numbers": "{{ trusted_uplink_port }}",
+                    "trusted": "yes",
+                },
+                "cli_command": "/interface bridge port set {{ trusted_uplink_port }} trusted=yes",
+            },
+            {
+                "method": "POST",
+                "endpoint": "interface/bridge/set",
+                "payload": {
+                    "numbers": "{{ bridge_name }}",
+                    "dhcp-snooping": "yes",
+                    "add-dhcp-option82": "{{ add_option82 }}",
+                },
+                "cli_command": "/interface bridge set {{ bridge_name }} dhcp-snooping=yes add-dhcp-option82={{ add_option82 }}",
+            },
+        ],
+        "requires_safemode": True,
+    },
 ]
 
 
@@ -1130,6 +1273,8 @@ async def _execute_single_step(client: MikrotikRestClient, step: dict[str, Any])
     singleton_menus = (
         "snmp",
         "system/ntp/client",
+        "system/package/update",
+        "system/routerboard/settings",
         "ip/dns",
         "tool/mac-server",
         "tool/mac-server/mac-winbox",
@@ -1228,6 +1373,28 @@ async def _execute_single_step(client: MikrotikRestClient, step: dict[str, Any])
         raise ValueError(f"Método REST no soportado: {method}")
 
 
+async def _run_router_template_steps(
+    client: MikrotikRestClient,
+    router_obj: Router,
+    rendered_steps: list[dict[str, Any]],
+    vars_dict: dict[str, Any],
+) -> dict[str, Any]:
+    """Ejecuta los pasos de una plantilla omitiendo comandos RouterBOOT si el equipo es CHR."""
+    is_chr = _is_chr_router(router_obj)
+    executed = 0
+    skipped_chr = 0
+    for step in rendered_steps:
+        if _should_skip_step_for_router(step, is_chr, vars_dict):
+            skipped_chr += 1
+            continue
+        await _execute_single_step(client, step)
+        executed += 1
+    msg = f"Aplicados {executed} pasos con éxito"
+    if is_chr and skipped_chr > 0:
+        msg += f" (CHR detectado: omitidos {skipped_chr} pasos de firmware RouterBOOT; actualizado solo OS)"
+    return {"message": msg, "is_chr": is_chr, "executed_steps": executed, "skipped_steps": skipped_chr}
+
+
 async def execute_bulk_job_on_fleet(
     job: BulkJob,
     db: AsyncSession,
@@ -1312,11 +1479,10 @@ async def execute_bulk_job_on_fleet(
         client: MikrotikRestClient | None = None
         try:
             client = _create_client_from_vault(router_obj, job.tenant_id)
-            for step in rendered_steps:
-                await _execute_single_step(client, step)
+            summary = await _run_router_template_steps(client, router_obj, rendered_steps, vars_dict)
 
             item.status = "SUCCESS"
-            item.response_summary = {"message": f"Aplicados {len(rendered_steps)} pasos con éxito"}
+            item.response_summary = summary
             item.error_detail = None
             succeeded_count += 1
         except Exception as exc:
@@ -1506,6 +1672,8 @@ async def get_fleet_updates_status(
             RosUpdateRouterStatus(
                 router_id=r.id,
                 display_name=r.display_name,
+                board_name=r.board_name,
+                is_chr=_is_chr_router(r),
                 ros_version=r.ros_version,
                 update_available_version=r.update_available_version,
                 firmware_version=r.firmware_version,
@@ -1519,6 +1687,100 @@ async def get_fleet_updates_status(
         up_to_date_count=up_to_date_count,
         pending_update_count=pending_count,
         routers=statuses,
+    )
+
+
+async def _probe_single_router_update(
+    r_obj: Router,
+    channel: str,
+    tenant_id: uuid.UUID,
+) -> RosUpdateChannelCheckItem:
+    """Configura el canal y consulta en vivo la versión disponible en MikroTik y estado CHR/RouterBOARD."""
+    is_chr = _is_chr_router(r_obj)
+    installed_ver = r_obj.ros_version
+    latest_ver = r_obj.update_available_version or r_obj.ros_version
+    status_text = "Cached inventory state"
+    cur_fw = None if is_chr else r_obj.firmware_version
+    upg_fw = None if is_chr else r_obj.upgrade_firmware_version
+
+    if r_obj.vault:
+        client = _create_client_from_vault(r_obj, tenant_id)
+        try:
+            await client.post("system/package/update/set", {"channel": channel})
+            await client.post("system/package/update/check-for-updates", {})
+            pkg_data = await client.get("system/package/update")
+            if isinstance(pkg_data, dict):
+                installed_ver = str(pkg_data.get("installed-version") or installed_ver or "")
+                latest_ver = str(pkg_data.get("latest-version") or installed_ver or "")
+                status_text = str(pkg_data.get("status") or "Checked")
+                if installed_ver:
+                    r_obj.ros_version = installed_ver
+                if latest_ver:
+                    r_obj.update_available_version = latest_ver
+            rb_data = await client.get("system/routerboard")
+            if isinstance(rb_data, dict):
+                is_chr = _is_chr_router(r_obj, rb_data)
+                if not is_chr:
+                    cur_fw = rb_data.get("current-firmware", cur_fw)
+                    upg_fw = rb_data.get("upgrade-firmware", upg_fw)
+                    r_obj.firmware_version = cur_fw
+                    r_obj.upgrade_firmware_version = upg_fw
+        except Exception as exc:
+            logger.warning("Fallo al sondear canal %s en %s: %s", channel, r_obj.display_name, exc)
+            status_text = f"Offline / Cache ({installed_ver or 'v7'})"
+        finally:
+            await client.close()
+
+    clean_inst = (installed_ver or "").split()[0].strip()
+    clean_lat = (latest_ver or "").split()[0].strip()
+    has_upd = bool(clean_lat and clean_lat != clean_inst)
+    plan = "CHR_OS_ONLY" if is_chr else "ROUTERBOARD_OS_AND_FIRMWARE"
+    return RosUpdateChannelCheckItem(
+        router_id=r_obj.id,
+        display_name=r_obj.display_name,
+        board_name=r_obj.board_name,
+        is_chr=is_chr,
+        channel=channel,
+        installed_version=installed_ver,
+        latest_version=latest_ver,
+        update_available=has_upd,
+        status_text=status_text,
+        current_firmware=cur_fw,
+        upgrade_firmware=upg_fw,
+        action_plan=plan,
+    )
+
+
+@router.post("/ros-updates/check", response_model=RosUpdateChannelCheckResponse)
+async def check_fleet_updates_by_channel(
+    payload: RosUpdateChannelCheckRequest,
+    claims: dict[str, Any] = Depends(require_roles(*_OPERATOR_ROLES)),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> RosUpdateChannelCheckResponse:
+    """Selecciona el canal de actualización y consulta la versión disponible en la flota."""
+    tenant_id = uuid.UUID(claims["tid"])
+    stmt = select(Router).options(selectinload(Router.vault)).where(Router.tenant_id == tenant_id)
+    if payload.router_ids:
+        stmt = stmt.where(Router.id.in_(payload.router_ids))
+    stmt = stmt.order_by(Router.display_name)
+    routers = list((await db.execute(stmt)).scalars().all())
+
+    items: list[RosUpdateChannelCheckItem] = []
+    for r_obj in routers:
+        item = await _probe_single_router_update(r_obj, payload.channel, tenant_id)
+        items.append(item)
+
+    await db.commit()
+    avail_cnt = sum(1 for i in items if i.update_available)
+    chr_cnt = sum(1 for i in items if i.is_chr)
+    rb_cnt = len(items) - chr_cnt
+    return RosUpdateChannelCheckResponse(
+        channel=payload.channel,
+        checked_count=len(items),
+        updates_available_count=avail_cnt,
+        chr_count=chr_cnt,
+        routerboard_count=rb_cnt,
+        items=items,
     )
 
 
@@ -1544,18 +1806,32 @@ async def _execute_single_router_upgrade(
     user_id: uuid.UUID,
     stage_idx: int,
 ) -> tuple[dict[str, Any], bool]:
-    """Ejecuta backup e instalación para un router individual. Retorna (resultado, fue_exitoso)."""
+    """Ejecuta backup e instalación para un router individual respetando auto-detección CHR."""
     try:
         r_obj, client = await get_router_and_client(rid, claims, db)
         backup_ok = await _perform_pre_upgrade_backup(client, r_obj, tenant_id, user_id, db)
         if not backup_ok:
             return {"router_id": str(rid), "status": "ABORTED_PRE_BACKUP_FAILED", "stage": stage_idx}, False
 
-        if payload.auto_upgrade_firmware:
-            await client.patch("system/routerboard/settings", {"auto-upgrade": "yes"})
+        is_chr = _is_chr_router(r_obj)
+        await client.post("system/package/update/set", {"channel": payload.channel})
+        await client.post("system/package/update/check-for-updates", {})
+
+        if payload.auto_upgrade_firmware and not is_chr:
+            await client.post("system/routerboard/settings/set", {"auto-upgrade": "yes"})
+            await client.post("system/routerboard/upgrade", {})
 
         update_res = await client.post("system/package/update/install", {})
-        return {"router_id": str(rid), "status": "UPGRADE_TRIGGERED", "detail": update_res, "stage": stage_idx}, True
+        mode = "CHR_OS_ONLY" if is_chr else "ROUTERBOARD_OS_AND_FIRMWARE"
+        return {
+            "router_id": str(rid),
+            "status": "UPGRADE_TRIGGERED",
+            "mode": mode,
+            "is_chr": is_chr,
+            "channel": payload.channel,
+            "detail": update_res,
+            "stage": stage_idx,
+        }, True
     except Exception as exc:
         return {"router_id": str(rid), "status": "FAILED", "error": str(exc), "stage": stage_idx}, False
 

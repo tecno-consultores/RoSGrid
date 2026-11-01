@@ -192,14 +192,43 @@
       },
     ];
 
-    items.push({
-      name: 'SubscribersMap',
-      path: '/subscribers/map',
-      label: t('nav.subscribers_map', 'Mapa de Clientes'),
-      icon: '📍',
-    });
+    if (
+      !authStore.user ||
+      authStore.canUseUserFeature('APPROVE_MAKER_CHECKER', false) ||
+      authStore.canUseUserFeature('CONFIG_STANDARD_L1', true) ||
+      authStore.canUseUserFeature('REBOOT_SHUTDOWN', true)
+    ) {
+      items.push({
+        name: 'ApprovalsInbox',
+        path: '/approvals',
+        label: t('nav.maker_checker', 'Maker-Checker'),
+        icon: '🛡️',
+        badge: nocStore.pendingApprovalsCount,
+      });
+    }
 
-    if (authStore.isFeatureEnabled('isp_module_enabled')) {
+    if (!authStore.user || authStore.canUseUserFeature('IPAM_VRFS_PREFIXES_MGMT', false)) {
+      items.push({
+        name: 'IpamManagement',
+        path: '/ipam',
+        label: t('nav.ipam', 'IPAM'),
+        icon: '🌐',
+      });
+    }
+
+    if (!authStore.user || authStore.canUseUserFeature('SUBSCRIBERS_QOS_PROVISIONING', false)) {
+      items.push({
+        name: 'SubscribersMap',
+        path: '/subscribers/map',
+        label: t('nav.subscribers_map', 'Mapa de Clientes'),
+        icon: '📍',
+      });
+    }
+
+    if (
+      authStore.isFeatureEnabled('isp_module_enabled') &&
+      (!authStore.user || authStore.canUseUserFeature('FIELD_OPS_OPTICAL_NAP_MGMT', false))
+    ) {
       items.push({
         name: 'FieldTechOperations',
         path: '/field-ops',
@@ -208,14 +237,19 @@
       });
     }
 
-    items.push({
-      name: 'L2Topology',
-      path: '/topology/l2',
-      label: t('nav.l2_topology', 'Topología L2'),
-      icon: '🗺️',
-    });
+    if (!authStore.user || authStore.canUseUserFeature('TOPOLOGY_L2_CVE_SYSLOG_MCP', false)) {
+      items.push({
+        name: 'L2Topology',
+        path: '/topology/l2',
+        label: t('nav.l2_topology', 'Topología L2'),
+        icon: '🗺️',
+      });
+    }
 
-    if (authStore.isFeatureEnabled('nightly_backups_enabled')) {
+    if (
+      authStore.isFeatureEnabled('nightly_backups_enabled') &&
+      (!authStore.user || authStore.canUseUserFeature('MANUAL_BACKUP_DIFF_GIT', false))
+    ) {
       items.push({
         name: 'RscGitDiff',
         path: '/backups',
@@ -224,20 +258,27 @@
       });
     }
 
-    items.push(
-      {
+    if (!authStore.user || authStore.canUseUserFeature('BULK_ACTIONS_UPGRADE_ROS', false)) {
+      items.push({
         name: 'BulkOperations',
         path: '/bulk-ops',
         label: t('nav.bulk_ops', 'Acciones Masivas'),
         icon: '⚡',
-      },
-      {
+      });
+    }
+
+    if (
+      !authStore.user ||
+      authStore.canUseUserFeature('USER_MANAGEMENT', false) ||
+      authStore.canUseUserFeature('VIEW_ACTIVE_SESSIONS_KILLSWITCH', false)
+    ) {
+      items.push({
         name: 'UsersAndPermissions',
         path: '/users',
         label: t('nav.users_rbac', 'Usuarios & RBAC'),
         icon: '👥',
-      },
-    );
+      });
+    }
 
     if (authStore.currentRole === 'SUPERADMIN_GLOBAL' || authStore.currentRole === 'TENANT_ADMIN') {
       items.push({
@@ -248,12 +289,21 @@
       });
     }
 
-    items.push({
-      name: 'EnterpriseCompliance',
-      path: '/enterprise/compliance',
-      label: t('nav.compliance', 'Flota & Seguridad'),
-      icon: '🛡️',
-    });
+    if (
+      !authStore.user ||
+      authStore.canUseUserFeature('ENTERPRISE_CIS_DRIFT_COMPLIANCE', false) ||
+      authStore.canUseUserFeature('ENTERPRISE_SDWAN_SLA_ROGUEDHCP', false) ||
+      authStore.canUseUserFeature('TOPOLOGY_L2_CVE_SYSLOG_MCP', false) ||
+      authStore.canUseUserFeature('AUDIT_LOGS_QUERY', false) ||
+      authStore.canUseUserFeature('WIFI_CAPSMAN_PROVISIONING', false)
+    ) {
+      items.push({
+        name: 'EnterpriseCompliance',
+        path: '/enterprise/compliance',
+        label: t('nav.compliance', 'Flota & Seguridad'),
+        icon: '🛡️',
+      });
+    }
 
     return items;
   });

@@ -155,4 +155,33 @@ describe('useAuthStore — Autenticación Zero-Trust & RBAC', () => {
     expect(window.localStorage.getItem('rosgrid_csrf')).toBeNull();
     expect(window.localStorage.getItem('rosgrid_session_id')).toBeNull();
   });
+
+  it('evalúa ROLE_POLICY_MATRIX en canUseUserFeature para SUPPORT_L1 y respeta feature_flags_override (Hito 28.9)', () => {
+    const auth = useAuthStore();
+    auth.setAuth({
+      ...sampleUser,
+      role: 'SUPPORT_L1',
+    });
+
+    expect(auth.canUseUserFeature('ENTERPRISE_CIS_DRIFT_COMPLIANCE', false)).toBe(false);
+    expect(auth.canUseUserFeature('AUDIT_LOGS_QUERY', false)).toBe(false);
+    expect(auth.canUseUserFeature('MANUAL_BACKUP_DIFF_GIT', false)).toBe(false);
+    expect(auth.canUseUserFeature('BULK_ACTIONS_UPGRADE_ROS', false)).toBe(false);
+    expect(auth.canUseUserFeature('USER_MANAGEMENT', false)).toBe(false);
+    expect(auth.canUseUserFeature('WEBFIG_L2_UNIVERSAL', false)).toBe(false);
+    expect(auth.canUseUserFeature('ENTERPRISE_SDWAN_SLA_ROGUEDHCP', false)).toBe(true);
+    expect(auth.canUseUserFeature('ENTERPRISE_SDWAN_SLA_ROGUEDHCP', true)).toBe(false);
+    expect(auth.canUseUserFeature('CONFIG_STANDARD_L1', true)).toBe(true);
+
+    // Con override de usuario
+    auth.setAuth({
+      ...sampleUser,
+      role: 'SUPPORT_L1',
+      feature_flags_override: {
+        ENTERPRISE_CIS_DRIFT_COMPLIANCE: 'READ_ONLY',
+      },
+    });
+    expect(auth.canUseUserFeature('ENTERPRISE_CIS_DRIFT_COMPLIANCE', false)).toBe(true);
+    expect(auth.canUseUserFeature('ENTERPRISE_CIS_DRIFT_COMPLIANCE', true)).toBe(false);
+  });
 });

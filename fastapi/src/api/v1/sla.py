@@ -4,6 +4,7 @@
 """Endpoints del Monitor de Cumplimiento de SLA para Enlaces Dedicados (Hito 20.5 / docs/specs/33 §5)."""
 
 import logging
+import re
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -19,6 +20,7 @@ from src.models.core import SystemRoleEnum
 from src.models.inventory import Router
 from src.models.operations import SlaProbeMetric
 from src.schemas.enterprise import (
+    SlaDiscoveredTargetItem,
     SlaMetricItem,
     SlaProbeRunRequest,
     SlaReportSummary,
@@ -32,12 +34,150 @@ router = APIRouter(
     dependencies=[Depends(require_feature("sla_tracker_enabled"))],
 )
 
+_ROS7_TIME_RE = re.compile(
+    r"^(?:(?P<s>\d+(?:\.\d+)?)s)?(?:(?P<ms>\d+(?:\.\d+)?)ms)?(?:(?P<us>\d+(?:\.\d+)?)us)?$"
+)
+
+_PUBLIC_SLA_REFERENCE_TARGETS: list[SlaDiscoveredTargetItem] = [
+    SlaDiscoveredTargetItem(
+        target_host="9.9.9.9",
+        target_name="Quad9-Primary-DNS (Anycast Security)",
+        category="PUBLIC_REFERENCE",
+        recommended_threshold_ms=40.0,
+    ),
+    SlaDiscoveredTargetItem(
+        target_host="149.112.112.112",
+        target_name="Quad9-Secondary-DNS",
+        category="PUBLIC_REFERENCE",
+        recommended_threshold_ms=40.0,
+    ),
+    SlaDiscoveredTargetItem(
+        target_host="1.1.1.1",
+        target_name="Cloudflare-Primary-DNS",
+        category="PUBLIC_REFERENCE",
+        recommended_threshold_ms=40.0,
+    ),
+    SlaDiscoveredTargetItem(
+        target_host="8.8.8.8",
+        target_name="Google-Primary-DNS",
+        category="PUBLIC_REFERENCE",
+        recommended_threshold_ms=45.0,
+    ),
+    SlaDiscoveredTargetItem(
+        target_host="208.67.222.222",
+        target_name="Cisco-OpenDNS",
+        category="PUBLIC_REFERENCE",
+        recommended_threshold_ms=45.0,
+    ),
+]
+
+
+def _parse_ros7_ping_time_ms(raw_time: Any) -> float | None:
+    """Convierte tiempos RTT de RouterOS v7 ('4ms520us', '650us', '12ms', '1s20ms') a ms."""
+    if raw_time is None:
+        return None
+    if isinstance(raw_time, (int, float)):
+        return float(raw_time)
+    text = str(raw_time).strip().lower()
+    if not text:
+        return None
+    m = _ROS7_TIME_RE.match(text)
+    if m and (m.group("s") or m.group("ms") or m.group("us")):
+        sec = float(m.group("s") or 0.0)
+        ms = float(m.group("ms") or 0.0)
+        us = float(m.group("us") or 0.0)
+        return round((sec * 1000.0) + ms + (us / 1000.0), 2)
+    try:
+        return round(float(text.replace("ms", "").strip()), 2)
+    except ValueError:
+        return None
+
+
+def _extract_clean_gw_and_iface(raw_gw: str, raw_imm_gw: str = "") -> tuple[str, str | None]:
+    """Extrae la IP limpia del gateway y el nombre de la interfaz desde '/ip/route' de RouterOS v7."""
+    candidate = (raw_gw or raw_imm_gw or "").strip()
+    iface: str | None = None
+    if "%" in raw_imm_gw:
+        parts = raw_imm_gw.split("%", 1)
+        if not candidate or "%" in candidate:
+            candidate = parts[0].strip()
+        iface = parts[1].strip() or None
+    elif "%" in candidate:
+        parts = candidate.split("%", 1)
+        candidate = parts[0].strip()
+        iface = parts[1].strip() or None
+    if "," in candidate:
+        candidate = candidate.split(",", 1)[0].strip()
+    return candidate, iface
+
+
+def _parse_route_gateways(
+    routes: list[Any],
+    seen_hosts: set[str],
+    discovered: list[SlaDiscoveredTargetItem],
+) -> None:
+    """Extrae gateways de rutas predeterminadas 0.0.0.0/0 activas."""
+    for r in routes:
+        if not isinstance(r, dict):
+            continue
+        if str(r.get("dst-address", "")).strip() != "0.0.0.0/0":
+            continue
+        if str(r.get("disabled", "false")).lower() in ("true", "yes"):
+            continue
+        gw_ip, iface = _extract_clean_gw_and_iface(
+            str(r.get("gateway", "")),
+            str(r.get("immediate-gw", "")),
+        )
+        if not gw_ip or gw_ip in seen_hosts:
+            continue
+        seen_hosts.add(gw_ip)
+        comment = str(r.get("comment", "")).strip()
+        label = comment or (
+            f"Carrier WAN Gateway ({iface})" if iface else "Carrier WAN Default Gateway"
+        )
+        discovered.append(
+            SlaDiscoveredTargetItem(
+                target_host=gw_ip,
+                target_name=label,
+                category="ROUTER_GATEWAY",
+                recommended_threshold_ms=25.0,
+                interface=iface,
+            )
+        )
+
+
+def _parse_dns_servers(
+    dns_cfg: dict[str, Any],
+    seen_hosts: set[str],
+    discovered: list[SlaDiscoveredTargetItem],
+) -> None:
+    """Extrae servidores DNS estáticos y dinámicos configurados en RouterOS v7."""
+    raw_servers = ",".join(
+        [
+            str(dns_cfg.get("servers", "")),
+            str(dns_cfg.get("dynamic-servers", "")),
+        ]
+    )
+    for srv in [s.strip() for s in raw_servers.split(",") if s.strip()]:
+        if srv not in seen_hosts:
+            seen_hosts.add(srv)
+            discovered.append(
+                SlaDiscoveredTargetItem(
+                    target_host=srv,
+                    target_name=f"Router Configured DNS ({srv})",
+                    category="ROUTER_DNS",
+                    recommended_threshold_ms=35.0,
+                )
+            )
+
+
 _SLA_READ_ROLES = (
     SystemRoleEnum.SUPERADMIN_GLOBAL,
     SystemRoleEnum.TENANT_ADMIN,
     SystemRoleEnum.SUPERVISOR,
     SystemRoleEnum.SUPPORT_L3,
     SystemRoleEnum.SUPPORT_L2,
+    SystemRoleEnum.SUPPORT_L1,
     SystemRoleEnum.AUDITOR,
     SystemRoleEnum.NOC_MONITOR,
 )
@@ -48,6 +188,48 @@ _SLA_WRITE_ROLES = (
     SystemRoleEnum.SUPERVISOR,
     SystemRoleEnum.SUPPORT_L3,
 )
+
+
+@router.get(
+    "/targets/{router_id}",
+    response_model=list[SlaDiscoveredTargetItem],
+    summary="Autodescubrir Gateways WAN reales (/ip/route, /ip/dns) del router y presets públicos SLA",
+    dependencies=[Depends(require_roles(*_SLA_READ_ROLES))],
+)
+async def get_sla_discovered_targets(
+    router_id: uuid.UUID,
+    db: AsyncSession = Depends(get_tenant_db_session),
+    claims: dict[str, Any] = Depends(get_current_user_claims),
+) -> list[SlaDiscoveredTargetItem]:
+    tenant_id = uuid.UUID(str(claims["tid"]))
+
+    r_stmt = select(Router).where(Router.id == router_id, Router.tenant_id == tenant_id)
+    r_res = await db.execute(r_stmt)
+    router_obj = r_res.scalar_one_or_none()
+    if not router_obj:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Router no encontrado")
+
+    discovered: list[SlaDiscoveredTargetItem] = []
+    seen_hosts: set[str] = set()
+
+    try:
+        _, client = await get_router_and_client(router_obj.id, claims, db)
+        routes = await client.get("/ip/route")
+        if isinstance(routes, list):
+            _parse_route_gateways(routes, seen_hosts, discovered)
+
+        dns_cfg = await client.get("/ip/dns")
+        if isinstance(dns_cfg, dict):
+            _parse_dns_servers(dns_cfg, seen_hosts, discovered)
+    except Exception as exc:
+        logger.debug("Autodescubrimiento de destinos SLA en router %s omitido: %s", router_id, exc)
+
+    for preset in _PUBLIC_SLA_REFERENCE_TARGETS:
+        if preset.target_host not in seen_hosts:
+            seen_hosts.add(preset.target_host)
+            discovered.append(preset)
+
+    return discovered
 
 
 @router.get(
@@ -79,42 +261,6 @@ async def get_sla_metrics(
     )
     res = await db.execute(stmt)
     items = list(res.scalars().all())
-
-    if not items:
-        # Generar registros representativos en memoria si aún no hay sondeos persistidos
-        now = datetime.now(UTC)
-        return [
-            SlaMetricItem(
-                id=uuid.uuid4(),
-                router_id=router_obj.id,
-                target_host="190.202.10.1",
-                target_name="Carrier Core Gateway (Primary Fiber)",
-                uptime_percent=99.98,
-                avg_latency_ms=12.4,
-                p95_latency_ms=18.2,
-                p99_latency_ms=24.5,
-                jitter_ms=1.2,
-                packet_loss_pct=0.0,
-                sla_threshold_ms=30.0,
-                compliance_status="COMPLIANT",
-                recorded_at=now,
-            ),
-            SlaMetricItem(
-                id=uuid.uuid4(),
-                router_id=router_obj.id,
-                target_host="1.1.1.1",
-                target_name="Public Reference DNS",
-                uptime_percent=100.0,
-                avg_latency_ms=15.1,
-                p95_latency_ms=21.0,
-                p99_latency_ms=28.4,
-                jitter_ms=1.8,
-                packet_loss_pct=0.0,
-                sla_threshold_ms=40.0,
-                compliance_status="COMPLIANT",
-                recorded_at=now,
-            ),
-        ]
 
     return [
         SlaMetricItem(
@@ -172,19 +318,29 @@ async def run_sla_probe(
             json_data={"address": payload.target_host, "count": count},
         )
         if isinstance(ping_res, list) and ping_res:
-            rtts = [float(p["time"].replace("ms", "")) for p in ping_res if "time" in p]
+            rtts = [
+                parsed
+                for p in ping_res
+                if isinstance(p, dict) and (parsed := _parse_ros7_ping_time_ms(p.get("time"))) is not None
+            ]
             if rtts:
+                diffs = [abs(rtts[i] - rtts[i - 1]) for i in range(1, len(rtts))]
+                jitter = (sum(diffs) / len(diffs)) if diffs else 0.1
                 rtts.sort()
                 avg_ms = sum(rtts) / len(rtts)
                 p95_idx = int(len(rtts) * 0.95)
                 p99_idx = int(len(rtts) * 0.99)
                 p95_ms = rtts[min(p95_idx, len(rtts) - 1)]
                 p99_ms = rtts[min(p99_idx, len(rtts) - 1)]
-                loss_pct = ((count - len(rtts)) / count) * 100
-                diffs = [abs(rtts[i] - rtts[i - 1]) for i in range(1, len(rtts))]
-                jitter = (sum(diffs) / len(diffs)) if diffs else 1.0
+                loss_pct = max(0.0, ((count - len(rtts)) / count) * 100.0)
+            else:
+                avg_ms = 0.0
+                p95_ms = 999.0
+                p99_ms = 999.0
+                jitter = 0.0
+                loss_pct = 100.0
     except Exception as exc:
-        logger.debug("Sondeo ping en SLA probe: %s. Utilizando cálculo estocástico.", exc)
+        logger.debug("Sondeo ping en SLA probe: %s. Utilizando cálculo de contingencia.", exc)
 
     compliance = "COMPLIANT" if (p95_ms <= threshold and loss_pct <= 1.0) else "BREACHED"
     uptime = 100.0 if loss_pct == 0.0 else max(0.0, 100.0 - loss_pct)

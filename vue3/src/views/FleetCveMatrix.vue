@@ -168,8 +168,9 @@ const recommendedFleetVersion = computed<string>(() => {
 });
 
 const maxFleetCvss = computed<number>(() => {
-  if (!cveSummary.value || !cveSummary.value.vulnerable_routers.length) return 0.0;
-  return Math.max(...cveSummary.value.vulnerable_routers.map((r) => r.max_cvss_score || 0));
+  if (!cveSummary.value || !cveSummary.value.vulnerable_routers?.length) return 0.0;
+  const scores = cveSummary.value.vulnerable_routers.map((r) => r.max_cvss_score || 0);
+  return scores.length ? Math.max(...scores) : 0.0;
 });
 
 function toggleExpandCve(cveId: string): void {
@@ -177,7 +178,15 @@ function toggleExpandCve(cveId: string): void {
 }
 
 function navigateToBulkUpdates(): void {
-  router.push('/bulk-ops');
+  router.push({
+    path: '/bulk-ops',
+    query: {
+      template: 'ACTUALIZACION_ROUTEROS_Y_FIRMWARE',
+      channel: 'stable',
+      from: 'cve',
+      recommended: recommendedFleetVersion.value,
+    },
+  });
 }
 
 function openRouterWebFig(routerId: string): void {

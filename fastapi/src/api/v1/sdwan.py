@@ -43,6 +43,8 @@ _SDWAN_READ_ROLES = (
     SystemRoleEnum.SUPERVISOR,
     SystemRoleEnum.SUPPORT_L3,
     SystemRoleEnum.SUPPORT_L2,
+    SystemRoleEnum.SUPPORT_L1,
+    SystemRoleEnum.AUDITOR,
     SystemRoleEnum.NOC_MONITOR,
 )
 

@@ -111,7 +111,8 @@ def _classify_session_kill_event(ev: dict[str, Any], sid: str, uid: str) -> tupl
     ev_name = ev.get("event_name") or ev.get("event")
     if ev_name != "SESSION_KILLED":
         return False, False
-    p = ev.get("payload") if isinstance(ev.get("payload"), dict) else ev
+    payload = ev.get("payload")
+    p: dict[str, Any] = payload if isinstance(payload, dict) else ev
     if p.get("killed_by") == "SUPERADMIN_TENANT_SWITCH":
         return True, False
     target_sid = p.get("target_session_id")

@@ -1,6 +1,6 @@
 # Especificación Técnica 64: Aplicación Estricta de Visibilidad RBAC en Interfaz (Zero 403 Dead-Ends) & Paridad de Roles de Lectura
 
-**Estado:** Aprobado (Listo para Ejecución Determinista — Gemini 3.8 Flash High)  
+**Estado:** COMPLETADO AL 100% Y CERTIFICADO EN DOCKER EFÍMERO  
 **Hito Asociado:** Hito 28 — Sub-tarea `28.9`  
 **Dominios Afectados:**
 - Frontend Pinia Auth Store: `vue3/src/stores/useAuthStore.ts`

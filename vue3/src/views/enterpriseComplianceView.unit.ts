@@ -9,6 +9,18 @@ import { http, type ApiResponse } from '@/api/httpClient';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 
+const mockPush = vi.fn().mockResolvedValue({});
+const mockReplace = vi.fn().mockResolvedValue({});
+vi.mock('vue-router', () => ({
+  useRouter: () => ({
+    push: mockPush,
+    replace: mockReplace,
+  }),
+  useRoute: () => ({
+    query: {},
+  }),
+}));
+
 const T_CORP = 't-corp-1';
 const CORE_NAME = 'Core-CCR2004';
 const SSID_NAME = 'CORP-SECURE-WIFI';
@@ -17,8 +29,11 @@ describe('EnterpriseComplianceView.vue — Hito 20 Suite Corporativa', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.restoreAllMocks();
+    mockReplace.mockReturnValue(Promise.resolve());
+    mockPush.mockReturnValue(Promise.resolve());
 
     const authStore = useAuthStore();
+    authStore.currentRole = 'SUPERADMIN_GLOBAL';
     authStore.user = {
       id: 'u-1',
       email: 'admin@corp.net',
@@ -205,6 +220,22 @@ describe('EnterpriseComplianceView.vue — Hito 20 Suite Corporativa', () => {
             recorded_at: new Date().toISOString(),
           },
         ];
+      } else if (url.includes('/sla/targets/')) {
+        data = [
+          {
+            target_host: '10.250.3.1',
+            target_name: 'Uplink Principal Fibra (ether1)',
+            category: 'ROUTER_GATEWAY',
+            recommended_threshold_ms: 25.0,
+            interface: 'ether1',
+          },
+          {
+            target_host: '9.9.9.9',
+            target_name: 'Quad9-Primary-DNS (Anycast Security)',
+            category: 'PUBLIC_REFERENCE',
+            recommended_threshold_ms: 40.0,
+          },
+        ];
       } else if (url.includes('/sla/reports/export')) {
         data = {
           tenant_name: 'Corp Tenant',
@@ -253,6 +284,17 @@ describe('EnterpriseComplianceView.vue — Hito 20 Suite Corporativa', () => {
             connected_duration_seconds: 3600,
           },
         ];
+      } else if (url.includes('/cves/')) {
+        data = {
+          total_evaluated_routers: 2,
+          vulnerable_routers_count: 0,
+          critical_routers_count: 0,
+          high_routers_count: 0,
+          medium_routers_count: 0,
+          last_sync_timestamp: new Date().toISOString(),
+          is_cache_fresh: true,
+          vulnerable_routers: [],
+        };
       }
       return { data, status: 200, headers: new Headers() } as unknown as ApiResponse;
     });
@@ -475,5 +517,170 @@ describe('EnterpriseComplianceView.vue — Hito 20 Suite Corporativa', () => {
 
     expect(wrapper.find('#tab-btn-drift').exists()).toBe(false);
     expect(wrapper.find('#panel-drift').exists()).toBe(false);
+  });
+
+  it('permite abrir el modal reactivo de DHCP Snooping y guardar configuración de puertos confiables y option 82 (Hito 28.4)', async () => {
+    const wrapper = mount(EnterpriseComplianceView);
+    const switchTabBtn = wrapper.find('#tab-btn-switching');
+    await switchTabBtn.trigger('click');
+
+    await vi.waitFor(() => {
+      expect(wrapper.find('#btn-toggle-snooping-bridge1').exists()).toBe(true);
+    });
+
+    const openBtn = wrapper.find('#btn-toggle-snooping-bridge1');
+    await openBtn.trigger('click');
+
+    await vi.waitFor(() => {
+      expect(wrapper.find('#modal-dhcp-snooping-config').exists()).toBe(true);
+    });
+
+    // Validar checkboxes y campos
+    const chkOption82 = wrapper.find('#chk-snooping-option82');
+    expect(chkOption82.exists()).toBe(true);
+
+    vi.spyOn(http, 'post').mockResolvedValueOnce({
+      data: {
+        bridge_name: 'bridge1',
+        dhcp_snooping_enabled: true,
+        add_dhcp_option82: true,
+        trusted_ports: ['sfp-sfpplus1'],
+        untrusted_ports: ['ether2', 'ether3'],
+      },
+      status: 200,
+      headers: new Headers(),
+    } as unknown as ApiResponse);
+
+    const saveBtn = wrapper.find('#btn-save-dhcp-snooping');
+    await saveBtn.trigger('click');
+
+    expect(http.post).toHaveBeenCalledWith(
+      '/api/v1/switching/dhcp-snooping/enable',
+      expect.objectContaining({
+        router_id: 'r-1',
+        bridge_name: 'bridge1',
+        enabled: true,
+      }),
+    );
+  });
+
+  it('navega a Bulk Operations con la plantilla de DHCP Snooping al pulsar el botón masivo (Hito 28.4)', async () => {
+    const wrapper = mount(EnterpriseComplianceView);
+    const switchTabBtn = wrapper.find('#tab-btn-switching');
+    await switchTabBtn.trigger('click');
+
+    await vi.waitFor(() => {
+      expect(wrapper.find('#btn-bulk-dhcp-snooping').exists()).toBe(true);
+    });
+
+    const bulkBtn = wrapper.find('#btn-bulk-dhcp-snooping');
+    await bulkBtn.trigger('click');
+
+    expect(mockPush).toHaveBeenCalledWith({
+      path: '/bulk-ops',
+      query: {
+        template: 'SEGURIDAD_L2_DHCP_SNOOPING_Y_OPTION82',
+        bridge: 'bridge1',
+        from: 'switching',
+      },
+    });
+  });
+
+  it('permite seleccionar presets SLA de Quad9 y autodescubrimiento WAN o ingresar host personalizado (Hito 28.6)', async () => {
+    const wrapper = mount(EnterpriseComplianceView);
+    const slaTabBtn = wrapper.find('#tab-btn-sla');
+    await slaTabBtn.trigger('click');
+
+    await vi.waitFor(() => {
+      expect(wrapper.find('#sla-target-preset').exists()).toBe(true);
+    });
+
+    const select = wrapper.find<HTMLSelectElement>('#sla-target-preset');
+    expect(select.exists()).toBe(true);
+
+    // Verificar opción Quad9
+    expect(wrapper.text()).toContain('Quad9');
+
+    // Cambiar a personalizado (CUSTOM)
+    await select.setValue('CUSTOM');
+    const hostInput = wrapper.find<HTMLInputElement>('#sla-target-host');
+    expect(hostInput.element.readOnly).toBe(false);
+  });
+
+  it('ejecuta sondeo rápido de Gateway WAN y Quad9 con el botón táctico (Hito 28.6)', async () => {
+    const wrapper = mount(EnterpriseComplianceView);
+    const slaTabBtn = wrapper.find('#tab-btn-sla');
+    await slaTabBtn.trigger('click');
+
+    await vi.waitFor(() => {
+      expect(wrapper.find('#btn-quick-baseline-sla').exists()).toBe(true);
+    });
+
+    vi.spyOn(http, 'post').mockResolvedValue({
+      data: {
+        id: 'metric-quick-1',
+        router_id: 'r-1',
+        target_host: '9.9.9.9',
+        target_name: 'Quad9',
+        compliance_status: 'COMPLIANT',
+        avg_latency_ms: 15.0,
+      },
+      status: 200,
+      headers: new Headers(),
+    } as unknown as ApiResponse);
+
+    const quickBtn = wrapper.find('#btn-quick-baseline-sla');
+    await quickBtn.trigger('click');
+
+    await vi.waitFor(() => {
+      expect(http.post).toHaveBeenCalledWith(
+        '/api/v1/sla/probes/run',
+        expect.objectContaining({
+          router_id: 'r-1',
+        }),
+      );
+    });
+  });
+
+  it('oculta pestañas restringidas (drift, cis, audit, notifications) para SUPPORT_L1 evitando errores 403 al entrar (Hito 28.9)', async () => {
+    const authStore = useAuthStore();
+    authStore.setAuth({
+      id: 'u-l1',
+      email: 'l1@corp.net',
+      username: 'prueba_l1',
+      tenant_id: T_CORP,
+      tenant_slug: 'corp-tenant',
+      role: 'SUPPORT_L1',
+      totp_enabled: false,
+      tenant_feature_flags: {
+        config_drift_monitoring_enabled: true,
+        cis_audit_enabled: true,
+        sdwan_orchestrator_enabled: true,
+        sla_tracker_enabled: true,
+        capsman_wifi_enabled: true,
+        outbound_webhooks_enabled: true,
+      },
+    });
+
+    const wrapper = mount(EnterpriseComplianceView, {
+      global: {
+        stubs: {
+          FleetCveMatrix: { template: '<div id="cve-matrix-stub">CVE Matrix</div>' },
+          ImmutableAuditLogsView: true,
+          OutboundWebhooksConfigPanel: true,
+        },
+      },
+    });
+
+    expect(wrapper.find('#tab-btn-drift').exists()).toBe(false);
+    expect(wrapper.find('#tab-btn-cis').exists()).toBe(false);
+    expect(wrapper.find('#tab-btn-audit').exists()).toBe(false);
+    expect(wrapper.find('#tab-btn-notifications').exists()).toBe(false);
+    expect(wrapper.find('#tab-btn-cves').exists()).toBe(true);
+    expect(wrapper.find('#tab-btn-sdwan').exists()).toBe(true);
+    expect(wrapper.find('#tab-btn-switching').exists()).toBe(true);
+    expect(wrapper.find('#tab-btn-sla').exists()).toBe(true);
+    expect(wrapper.find('#tab-btn-wifi').exists()).toBe(true);
+    expect(wrapper.find('.alert-error').exists()).toBe(false);
   });
 });

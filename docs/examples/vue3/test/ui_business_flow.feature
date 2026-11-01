@@ -735,6 +735,41 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And waitFor(".table-row-actions")
     And waitFor(".btn-row-action")
 
+  Scenario: 76. Remediación Masiva Inteligente desde Matriz CVE y Auto-Detección CHR en Acciones Masivas (Hito 28.1)
+    Given driver baseUrl + '/inventory/cves'
+    And waitFor(".cve-matrix-view")
+    And waitFor(".btn-remediate-fleet")
+    When click(".btn-remediate-fleet")
+    Then waitFor(".bulk-view")
+    And waitFor("#var-update_channel")
+    And waitFor("#channel-update-discovery-box")
+
+  Scenario: 77. Seguridad L2 DHCP Snooping y Option 82: Conmutación Interactiva de Puertos Confiables y Despliegue Masivo (Hito 28.4)
+    Given driver baseUrl + '/enterprise/compliance?tab=switching'
+    And waitFor("#panel-switching")
+    And waitFor("#btn-bulk-dhcp-snooping")
+    Then match text("#panel-switching") contains 'DHCP Snooping'
+    When click("#btn-bulk-dhcp-snooping")
+    Then waitFor(".bulk-view")
+
+  Scenario: 78. Telemetría SLA Real: Autodescubrimiento de Gateways WAN, Presets Quad9 y Sondeo Táctico de Línea Base (Hito 28.6)
+    Given driver baseUrl + '/enterprise/compliance?tab=sla'
+    And waitFor("#panel-sla")
+    And waitFor("#sla-target-preset")
+    And waitFor("#btn-quick-baseline-sla")
+    Then match text("#panel-sla") contains 'Quad9'
+    When click("#btn-quick-baseline-sla")
+    Then waitFor(".badge-success")
+
+  Scenario: 79. Aplicación Estricta de Visibilidad RBAC: Ocultación de Pestañas y Acciones Restringidas Evitando Callejones sin Salida 403 (Hito 28.9)
+    Given driver baseUrl + '/enterprise/compliance'
+    And waitFor(".enterprise-compliance-view")
+    And waitFor(".tactical-tabs-nav")
+    Then match text(".tactical-tabs-nav") contains 'Matriz de CVEs'
+    And match text(".tactical-tabs-nav") contains 'Seguridad L2'
+    And match text(".tactical-tabs-nav") contains 'SLA Telemetría'
+
+
 
 
 
