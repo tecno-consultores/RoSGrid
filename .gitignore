@@ -134,6 +134,8 @@ trivy-results*
 .vscode/
 .idea/
 .antigravity/
+/ACTIVE_TASK.md
+ACTIVE_TASK.md
 .agents/ACTIVE_TASK.md
 .agents/*.scratchpad.md
 .task_scratchpad.md

@@ -136,6 +136,7 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
   - Incorporación del escenario de aceptación para la vista IPAM, barra de herramientas táctica y tabla de prefijos, sincronizado en el catálogo de ejemplos canónicos.
 - **Gobernanza Agéntica Institucional (`.agents/rules/mandatory_qa_pyramid_and_doc_sync.md`, `AGENTS.md`):**
   - Incorporación del *Zero-Orphan Vue Component Invariant* (prohibición estricta de componentes `.vue` sin suite `.unit.ts` co-localizada) y *Zero-Blindness Telemetry Invariant* (auto-aprovisionamiento obligatorio de 9 directivas canónicas de Syslog y normalización BSD).
+  - **Invariante Canónica de Ubicación de `ACTIVE_TASK.md` e Higiene del Repositorio (`.agents/ACTIVE_TASK.md`, `.gitignore`):** Eliminación de `ACTIVE_TASK.md` del directorio raíz del monorepo y establecimiento formal de la regla de gobernanza que exige que el diario de tarea activa resida estricta y exclusivamente en `.agents/ACTIVE_TASK.md`. Incorporación de reglas de exclusión en `.gitignore` para blindar la raíz contra creaciones involuntarias.
 
 ### Fixed
 

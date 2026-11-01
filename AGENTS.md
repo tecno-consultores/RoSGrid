@@ -27,6 +27,7 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
      - Milestone and sub-task progress tracking in `ROADMAP.md`.
      - Quality metrics and test counts in `TESTING.md`.
      - Repository root documentation (`README.md`, etc., when applicable) or operational guides in `docs/` (`INSTALL.md`, `FAQ.md`, `RESOURCES.md`).
+     - **Canonical Location Invariant for `ACTIVE_TASK.md`:** The agent task diary (`ACTIVE_TASK.md`) MUST reside strictly and exclusively within `.agents/ACTIVE_TASK.md`. Creating, moving, or committing `ACTIVE_TASK.md` in the project root directory is strictly prohibited.
 
 2. [secure_development_and_testing_guidelines.md](file:///.agents/rules/secure_development_and_testing_guidelines.md):
    - **Anti-Mock Blindness & AsyncSession MissingGreenlet Invariant:** ORM changes (`src/models/`) require immediate versioned Alembic migrations verified in PostgreSQL (`\d <table>`). In `AsyncSession`, accessing lazy-loaded relationships or model properties calling un-preloaded relationships triggers `MissingGreenlet`. Always construct Pydantic responses from base model dicts without accessing unloaded child collections, use defensive `self.__dict__.get("attr")` in properties, and avoid reusing static `Idempotency-Key` headers across multiple distinct mutation tests.

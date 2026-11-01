@@ -100,6 +100,7 @@ Whenever code is added, updated, or refactored, the AI agent **MUST OBLIGATORILY
    - **`README.md` & Root Docs:** Update user-facing features, installation guidelines, architecture descriptions, or table of contents whenever applicable.
 4. **`.agents/` Directory:**
    - Proactively update directives, skills, and automation scripts upon identifying improvement opportunities, unhandled edge cases, or automation potential (see [continuous_agent_evolution.md](file:///.agents/rules/continuous_agent_evolution.md)).
+   - **Canonical Location Invariant for `ACTIVE_TASK.md`:** The agent task diary (`ACTIVE_TASK.md`) MUST reside strictly and exclusively within `.agents/ACTIVE_TASK.md`. Creating, moving, or committing `ACTIVE_TASK.md` in the project root directory is strictly prohibited across all workspaces.
 
 ---
 
