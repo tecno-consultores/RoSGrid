@@ -27,6 +27,17 @@ ALL_ACTIONS = [
     "BULK_ACTIONS_UPGRADE_ROS",
     "APPROVE_MAKER_CHECKER",
     "AUDIT_LOGS_QUERY",
+    "WEBFIG_L2_RPC_COMMANDS",
+    "WEBFIG_L2_BULK_OPS",
+    "WEBFIG_L2_EXPORT_RSC",
+    "IPAM_VRFS_PREFIXES_MGMT",
+    "SUBSCRIBERS_QOS_PROVISIONING",
+    "FIELD_OPS_OPTICAL_NAP_MGMT",
+    "BGP_LOOKING_GLASS_IPFIX",
+    "ENTERPRISE_CIS_DRIFT_COMPLIANCE",
+    "ENTERPRISE_SDWAN_SLA_ROGUEDHCP",
+    "WIFI_CAPSMAN_PROVISIONING",
+    "TOPOLOGY_L2_CVE_SYSLOG_MCP",
 ]
 
 
@@ -34,7 +45,7 @@ def test_matrix_contains_all_11_roles() -> None:
     assert len(POLICY_MATRIX) == 11
     for role in SystemRoleEnum:
         assert role in POLICY_MATRIX
-        assert len(POLICY_MATRIX[role]) == 19
+        assert len(POLICY_MATRIX[role]) == 30
 
 
 @pytest.mark.parametrize("action", ALL_ACTIONS)

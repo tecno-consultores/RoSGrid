@@ -242,3 +242,30 @@ En el menú **`Flota & Seguridad`** (`/enterprise` y `/fleet-cves`):
 - **Config Drift (Desviación de Configuración):** Detecta si algún cambio manual desvió al router de su plantilla maestra (*Golden Baseline*) y permite revertirlo en 1 clic.
 - **Detección de Rogue DHCP y Monitor de SLA:** Detecta servidores DHCP piratas en la red LAN y mide latencia/jitter P95/P99 hacia proveedores upstream.
 - **Bitácora de Auditoría Forense WORM (`/audit-logs`):** Exclusiva para Auditores y Administradores; permite inspeccionar cada acción humana o de IA con su estado previo/posterior y verificar criptográficamente la cadena de bloques `HMAC-SHA256` que impide alterar o borrar cualquier registro histórico.
+
+---
+
+## 8. Administración de Usuarios, Roles y Gobernanza de Flags Granulares (`/admin/users`)
+
+En el menú de **`Usuarios y Permisos`** (`/admin/users`), los administradores disponen de dos herramientas complementarias para gobernar el acceso de los operadores del NOC:
+
+### 8.1 Matriz de Asignación por Router (`UserRouterMatrixModal`)
+Permite seleccionar exactamente a qué routers físicos tiene acceso un usuario técnico y con qué nivel de privilegios (10 banderas granulares):
+- `Lectura`: Visualización de telemetría y estado.
+- `Capa 1`: Edición de interfaces, firewall, colas y rutas.
+- `Capa 2`: Edición de recursos universales (/certificate, /snmp, etc.).
+- `L2 RPC`: Ejecución de acciones contextuales (Let's Encrypt, firma CA, scripts).
+- `L2 Bulk`: Operaciones masivas por lote.
+- `L2 .rsc`: Exportación de scripts y comparador Diff.
+- `Diagnóstico`: Ping, traceroute y sondeos de cable.
+- `Respaldos`: Generación de backups manuales.
+- `Reinicio`: Reboot controlado del MikroTik.
+- `Bypass M-C`: Salto de aprobación Maker-Checker en emergencias.
+
+### 8.2 Flags de Función por Perfil de Usuario (`RgUserProfileFlagsModal`)
+Permite personalizar cualquiera de las **30 funciones del sistema** para un usuario particular sin necesidad de crear un nuevo rol:
+1. Haga clic en el botón **`🚩 Flags de Función`** (`#btn-user-profile-flags-<username>`) en la tabla de usuarios.
+2. Filtre por categoría táctica (*Operaciones y Configuración*, *Módulos ISP*, *Módulos Corporativos*, *Telemetría*, etc.).
+3. El sistema muestra si el permiso actual está heredado de su rol base.
+4. Puede forzar `Permitir`, `Maker-Checker`, `Solo Lectura` o `Denegar`, o pulsar `↺ Heredar del Rol` para restablecer el comportamiento estándar.
+5. Los cambios se sincronizan en caliente e invalidan inmediatamente la sesión en caché.

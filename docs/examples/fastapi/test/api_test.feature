@@ -971,6 +971,19 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 129. Gobernanza Granular de Flags en Perfiles de Usuario: Consulta de Permisos Efectivos (GET /users/{id}/effective-permissions) y Overrides Individuales (PATCH /users/{id}/feature-flags) sin autenticación devuelve 401 (Hito 27.17)
+    Given path '/api/v1/users/00000000-0000-0000-0000-000000000001/effective-permissions'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/users/00000000-0000-0000-0000-000000000001/feature-flags'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000129'
+    And request { feature_flags_override: { WEBFIG_L2_RPC_COMMANDS: 'ALLOW', LIVE_DIAGNOSTICS: 'DENY' } }
+    When method patch
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
 
 
 

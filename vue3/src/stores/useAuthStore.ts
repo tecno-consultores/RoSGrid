@@ -208,6 +208,31 @@ export const useAuthStore = defineStore('auth', () => {
     return Boolean((tenantFeatures.value as Record<string, unknown>)[flagName]);
   }
 
+  function canUseUserFeature(actionKey: string, requireWrite = false): boolean {
+    if (!user.value || !currentRole.value) return false;
+    const role = currentRole.value;
+    if (role === 'SUPERADMIN_GLOBAL') return true;
+
+    const userOverrides = user.value.feature_flags_override;
+    if (userOverrides && actionKey in userOverrides) {
+      const level = userOverrides[actionKey];
+      if (level === 'DENY') return false;
+      if (level === 'READ_ONLY') return !requireWrite;
+      if (level === 'ALLOW' || level === 'MAKER_CHECKER') return true;
+    }
+
+    if (role === 'TENANT_ADMIN') {
+      return actionKey !== 'TENANT_MANAGEMENT';
+    }
+    if (role === 'AUDITOR') {
+      return !requireWrite;
+    }
+    if (role === 'NOC_MONITOR') {
+      return !requireWrite && (actionKey === 'VIEW_OSM_MAP_NOC_CHARTS' || actionKey.startsWith('VIEW_'));
+    }
+    return true;
+  }
+
   function hasCapability(actionCode: string): boolean {
     if (!currentRole.value) return false;
     const role = currentRole.value;
@@ -284,6 +309,7 @@ export const useAuthStore = defineStore('auth', () => {
     fetchTenantFeatures,
     switchTenant,
     isFeatureEnabled,
+    canUseUserFeature,
     hasCapability,
     forceKillSwitchLogout,
   };

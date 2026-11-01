@@ -72,6 +72,9 @@ class RouterAssignmentItem(BaseModel):
     can_read: bool = True
     can_write_layer1: bool = False
     can_write_layer2: bool = False
+    can_execute_l2_rpc: bool = False
+    can_bulk_edit_l2: bool = False
+    can_export_l2_rsc: bool = True
     can_execute_diagnostics: bool = True
     can_trigger_backup: bool = False
     can_reboot: bool = False
@@ -106,7 +109,15 @@ class UserResponse(BaseModel):
     failed_login_attempts: int
     totp_enabled: bool
     has_all_routers_access: bool
+    feature_flags_override: dict[str, str] = Field(default_factory=dict)
     allowed_cidr_list: list[str]
+
+    @field_validator("feature_flags_override", mode="before")
+    @classmethod
+    def _default_feature_flags_override(cls, val: Any) -> dict[str, str]:
+        if val is None or not isinstance(val, dict):
+            return {}
+        return val
     last_login_at: datetime | None
     created_at: datetime
     updated_at: datetime
@@ -132,3 +143,12 @@ class McpTokenResponse(BaseModel):
     role: str
     allowed_cidr_list: list[str]
     issued_by: str
+
+
+class UpdateUserFeatureFlagsRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    feature_flags_override: dict[str, str | bool | None] = Field(
+        default_factory=dict,
+        description="Mapa de action_key -> ALLOW | MAKER_CHECKER | READ_ONLY | DENY | true | false | null (hereda del rol)",
+    )

@@ -93,6 +93,7 @@ describe('UsersAndPermissionsView.vue — Gestión de 11 Roles y Matriz RBAC', (
           RgStepUp2FAModal: true,
           UserRouterMatrixModal: true,
           RbacRoleMatrixPanel: true,
+          RgUserProfileFlagsModal: true,
         },
       },
     });
@@ -138,6 +139,7 @@ describe('UsersAndPermissionsView.vue — Gestión de 11 Roles y Matriz RBAC', (
           RgStepUp2FAModal: true,
           UserRouterMatrixModal: true,
           RbacRoleMatrixPanel: true,
+          RgUserProfileFlagsModal: true,
         },
       },
     });
@@ -274,6 +276,7 @@ describe('UsersAndPermissionsView.vue — Gestión de 11 Roles y Matriz RBAC', (
           RgStepUp2FAModal: true,
           UserRouterMatrixModal: true,
           RbacRoleMatrixPanel: true,
+          RgUserProfileFlagsModal: true,
         },
       },
     });
@@ -311,5 +314,32 @@ describe('UsersAndPermissionsView.vue — Gestión de 11 Roles y Matriz RBAC', (
     // Cambiar a rol AUDITOR
     await wrapper.find('#u-role').setValue('AUDITOR');
     expect(wrapper.find('.role-desc-preview').text()).toContain('Auditor de Seguridad');
+  });
+
+  it('permite abrir y cerrar el modal de flags de perfil de usuario', async () => {
+    const wrapper = mount(UsersAndPermissionsView, {
+      global: {
+        stubs: {
+          RgStepUp2FAModal: true,
+          UserRouterMatrixModal: true,
+          RbacRoleMatrixPanel: true,
+          RgUserProfileFlagsModal: true,
+        },
+      },
+    });
+
+    await flushPromises();
+
+    const flagsBtn = wrapper.find('.btn-flags');
+    expect(flagsBtn.exists()).toBe(true);
+    await flagsBtn.trigger('click');
+
+    const flagsModal = wrapper.findComponent({ name: 'RgUserProfileFlagsModal' });
+    expect(flagsModal.exists()).toBe(true);
+    expect(flagsModal.props('isOpen')).toBe(true);
+
+    flagsModal.vm.$emit('close');
+    await flushPromises();
+    expect(flagsModal.props('isOpen')).toBe(false);
   });
 });

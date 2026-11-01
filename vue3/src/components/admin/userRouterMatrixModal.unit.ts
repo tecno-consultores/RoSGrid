@@ -100,6 +100,21 @@ describe('UserRouterMatrixModal.vue — Asignación Granular de Permisos por Rou
       await chkL2.setValue(true);
       await chkL2.setValue(false);
     }
+    const chkRpc = wrapper.find('#chk-rpc-r-1');
+    if (chkRpc.exists()) {
+      await chkRpc.setValue(true);
+      await chkRpc.setValue(false);
+    }
+    const chkBulk = wrapper.find('#chk-bulk-r-1');
+    if (chkBulk.exists()) {
+      await chkBulk.setValue(true);
+      await chkBulk.setValue(false);
+    }
+    const chkExport = wrapper.find('#chk-export-r-1');
+    if (chkExport.exists()) {
+      await chkExport.setValue(false);
+      await chkExport.setValue(true);
+    }
     const chkDiag = wrapper.find('#chk-diag-r-1');
     if (chkDiag.exists()) {
       await chkDiag.setValue(false);

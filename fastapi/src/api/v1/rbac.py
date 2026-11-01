@@ -217,6 +217,72 @@ ACTIONS_METADATA: list[dict[str, Any]] = [
         "category": "Administración y Seguridad",
         "description": "Verificación de integridad de cadena SHA-256 y exportación firmada.",
     },
+    {
+        "key": "WEBFIG_L2_RPC_COMMANDS",
+        "label": "Comandos RPC Contextuales Capa 2",
+        "category": "Motor Universal Capa 2",
+        "description": "Ejecución de verbos POST dinámicos (add-acme, sign, export-certificate, make-static, run).",
+    },
+    {
+        "key": "WEBFIG_L2_BULK_OPS",
+        "label": "Operaciones Masivas por Lote en Capa 2",
+        "category": "Motor Universal Capa 2",
+        "description": "Habilitar, deshabilitar, comentar o eliminar múltiples registros de Capa 2 bajo Safe Mode.",
+    },
+    {
+        "key": "WEBFIG_L2_EXPORT_RSC",
+        "label": "Exportación e Importación Contextual .rsc",
+        "category": "Motor Universal Capa 2",
+        "description": "Exportación CLI (.rsc) por submenú de Capa 2 y comparador Diff contra respaldo Git.",
+    },
+    {
+        "key": "IPAM_VRFS_PREFIXES_MGMT",
+        "label": "Gestión de IPAM Dual-Stack, VRFs y Prefijos",
+        "category": "Módulos ISP & Telecom",
+        "description": "Administración de VRFs, bloques CIDR IPv4/IPv6 y grilla de asignación de direcciones IP.",
+    },
+    {
+        "key": "SUBSCRIBERS_QOS_PROVISIONING",
+        "label": "Aprovisionamiento de Suscriptores y Planes QoS",
+        "category": "Módulos ISP & Telecom",
+        "description": "Alta de abonados PPPoE/DHCP, corte/reconexión (isolate/restore) y perfiles de velocidad.",
+    },
+    {
+        "key": "FIELD_OPS_OPTICAL_NAP_MGMT",
+        "label": "Toolkit de Campo y Cajas Ópticas FTTH (NAP/CTO)",
+        "category": "Módulos ISP & Telecom",
+        "description": "Gestión de cajas de distribución óptica, puertos 1..16, presupuesto láser y cortes de fibra.",
+    },
+    {
+        "key": "BGP_LOOKING_GLASS_IPFIX",
+        "label": "BGP Looking Glass y Analítica IPFIX",
+        "category": "Telemetría y Diagnóstico",
+        "description": "Consultas de tablas BGP v7 en vivo y colector de flujos Traffic-Flow / IPFIX.",
+    },
+    {
+        "key": "ENTERPRISE_CIS_DRIFT_COMPLIANCE",
+        "label": "Auditoría CIS Benchmark y Config Drift",
+        "category": "Módulos Corporativos & Seguridad",
+        "description": "Evaluación de las 28 directivas CIS RouterOS v7, auto-hardening y reversión de desviaciones.",
+    },
+    {
+        "key": "ENTERPRISE_SDWAN_SLA_ROGUEDHCP",
+        "label": "Orquestador SD-WAN, Monitor SLA y Rogue DHCP",
+        "category": "Módulos Corporativos & Seguridad",
+        "description": "Mallas WireGuard Hub & Spoke, sondas de latencia/jitter SLA y alerta de servidores DHCP intrusos.",
+    },
+    {
+        "key": "WIFI_CAPSMAN_PROVISIONING",
+        "label": "Consola Interactiva WiFi CAPsMAN v7",
+        "category": "Módulos Corporativos & Seguridad",
+        "description": "Aprovisionamiento de radios WiFi/Wave2, SSIDs, seguridad WPA2/WPA3, canales y expulsión de clientes.",
+    },
+    {
+        "key": "TOPOLOGY_L2_CVE_SYSLOG_MCP",
+        "label": "Topología Física L2, Matriz CVE, Syslog Live y MCP",
+        "category": "Telemetría y Diagnóstico",
+        "description": "Descubrimiento de vecinos MNDP/LLDP, escáner de CVEs por versión, terminal Syslog y agentes IA MCP.",
+    },
 ]
 
 
@@ -293,7 +359,7 @@ async def list_actions_metadata(
         )
     ),
 ) -> list[dict[str, Any]]:
-    """Devuelve el catálogo de 19 acciones auditables y configurables."""
+    """Devuelve el catálogo de 30 acciones auditables y configurables."""
     return ACTIONS_METADATA
 
 

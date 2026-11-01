@@ -2,7 +2,7 @@
 
 **Licencia:** GPL-3.0-only  
 **Estándar Aplicado:** QA Testing Blueprints (Nivel 11X)  
-**Estado Actual:** Hitos 27.12, 27.13, 27.14, 27.15 y 27.16 Completados y Certificados al 100% en Contenedores Docker Efímeros — Motor Dinámico Universal WebFig Capa 2 Next-Gen (`webfig_layer2.py`, `DynamicLayer2ResourceView.vue`, `RgLayer2RpcActionModal.vue`, `RgLayer2QueryBuilder.vue`, `RgLayer2RscExportDiffModal.vue`, `useLayer2ColumnProfiles.ts`, `layer2PresetsCatalog.ts` con acciones RPC por menú/fila, introspección `/rest/console/inspect`, filtrado server-side `.query`/`.proplist`, operaciones por lote Bulk bajo Safe Mode 60s, exportación `.rsc` con Diff unificado y perfiles/plantillas en 1 clic), Cajón de Ayuda Contextual In-App (`RgContextualHelpDrawer.vue`, `useContextualHelp.ts`, `helpCatalog.ts` con 28 guías paso a paso y copia como Markdown LLM-Ready), Paridad de Sistema de Diseño Frontend (`rg_theme`, `rg_table_density`, `color-scheme`, `RgBrandLogo.vue`, contraste WCAG 2.1 AA en tema `light`), Blindaje Anti-Indexación (`X-Robots-Tag: noindex, nofollow, noarchive, nosnippet`), Título Dinámico de Pestaña por Router y Generador de Contexto `llms.txt` (`# Agent Instructions` `ask` + `goal`) para los 6 Clientes MCP en `RgMcpTokenModal.vue`, Consola Táctica Interactiva CAPsMAN Wi-Fi v7 (`/interface/wifi` y `/caps-man`), Cobertura 100% de Componentes Vue (74/74 auditados con verify_zero_orphan_vue_components.py), 500 pruebas Vitest en 78 suites aprobadas al 100%, 588 pruebas unitarias backend Pytest (100%), Escenarios BDD 128 Karate API y 72 Karate UI.
+**Estado Actual:** Hitos 27.12, 27.13, 27.14, 27.15, 27.16 y 27.17 Completados y Certificados al 100% en Contenedores Docker Efímeros — Gobernanza Granular de Flags en Perfiles de Usuario (30 Acciones RBAC en `ACTIONS_METADATA` y `POLICY_MATRIX` 30×11, 10 Permisos por Router en `user_router_permissions`, Overrides Individuales en `users.feature_flags_override`, Endpoints `GET .../effective-permissions` y `PATCH .../feature-flags` con auditoría WORM, y modal interactivo `RgUserProfileFlagsModal.vue`), Motor Dinámico Universal WebFig Capa 2 Next-Gen (`webfig_layer2.py`, `DynamicLayer2ResourceView.vue`, `RgLayer2RpcActionModal.vue`, `RgLayer2QueryBuilder.vue`, `RgLayer2RscExportDiffModal.vue`, `useLayer2ColumnProfiles.ts`, `layer2PresetsCatalog.ts`), Cajón de Ayuda Contextual In-App (`RgContextualHelpDrawer.vue`, `useContextualHelp.ts`, `helpCatalog.ts`), Paridad de Sistema de Diseño Frontend (`rg_theme`, `rg_table_density`, `color-scheme`, `RgBrandLogo.vue`, contraste WCAG 2.1 AA en tema `light`), Blindaje Anti-Indexación (`X-Robots-Tag`), Título Dinámico de Pestaña por Router y Generador `llms.txt` para 6 Clientes MCP en `RgMcpTokenModal.vue`, Cobertura 100% de Componentes Vue (75/75 auditados con `verify_zero_orphan_vue_components.py`), 507 pruebas Vitest en 79 suites aprobadas al 100%, 605 pruebas unitarias backend Pytest (100%), Escenarios BDD 129 Karate API y 73 Karate UI.
 
 ---
 
@@ -2060,6 +2060,33 @@ Conforme a la Especificación 43 v2.0.0 y la directiva `.agents/rules/ground_tru
 3. **Escenarios BDD Karate Labs:**
    - **API REST (`fastapi/test/api_test.feature` & `docs/examples/fastapi/test/api_test.feature`):** **128 escenarios BDD** (incorporado Escenario 128: Operaciones por Lote Bulk en Capa 2 `/webfig/layer2/bulk/certificate`).
    - **UI WebFig / NOC (`vue3/test/ui_business_flow.feature` & `docs/examples/vue3/test/ui_business_flow.feature`):** **72 escenarios BDD** (incorporado Escenario 72: Query Builder Server-Side `.query` / `.proplist` y Exportación Contextual `.rsc` / Diff en Capa 2).
+
+### L. Hito 27.17: Gobernanza Granular de Flags en Perfiles de Usuario (30 Acciones RBAC, 10 Permisos por Router y Overrides por Operador Individual — Completado y Certificado al 100%)
+
+1. **Backend Unitario (Pytest en Docker `sinfallas/rosgrid-backend:local-test`):**
+   - `fastapi/tests/rbac/test_rbac_30_actions_and_user_overrides.unit.py`: **5 de 5 pruebas PASADAS (100%)**, validando paridad de las 30 acciones en `ACTIONS_METADATA` y `POLICY_MATRIX` (11 roles), normalización determinista de overrides (`ALLOW`, `MAKER_CHECKER`, `READ_ONLY`, `DENY`), sanitización defensiva y rechazo de claves desconocidas (HTTP 400), consulta de permisos efectivos consolidados (`GET /api/v1/users/{user_id}/effective-permissions`) y actualización parcial de overrides (`PATCH /api/v1/users/{user_id}/feature-flags`) con bitácora WORM inmutable (`USER_PROFILE_FLAGS_UPDATED`).
+   - `fastapi/tests/rbac/test_rbac_11_roles_matrix.unit.py`: **11 de 11 pruebas PASADAS (100%)**, asegurando integridad de la matriz 30×11.
+   - Complejidad Ciclomática Radon (`radon cc -a -nc src/api/v1/users.py`): **100% de funciones auxiliares y endpoints en Grado A (`CC <= 5`)**.
+   - Total backend: **605 de 605 pruebas unitarias PASADAS al 100%**.
+
+2. **Frontend Unitario (Vitest en Docker `sinfallas/base-node-ionic:26`):**
+   - `vue3/src/components/admin/RgUserProfileFlagsModal.unit.ts`: **6 de 6 pruebas PASADAS (100%)**, validando apertura, filtrado por texto y categorías, conmutación de estado de flags, indicador de herencia del rol y guardado con feedback táctico.
+   - `vue3/src/views/admin/usersAndPermissionsView.unit.ts`: **11 de 11 pruebas PASADAS (100%)**, validando presencia del botón `#btn-user-profile-flags-${username}` y orquestación del modal.
+   - `vue3/src/components/admin/userRouterMatrixModal.unit.ts`: **3 de 3 pruebas PASADAS (100%)**, validando las 10 banderas de router (incluyendo `can_execute_l2_rpc`, `can_bulk_edit_l2`, `can_export_l2_rsc`).
+   - Invariante Cero Componentes Huérfanos: **75 de 75 componentes `.vue` auditados con suites `.unit.ts` activas (100% cobertura)**.
+   - Total frontend: **79 suites aprobadas (100%), 507 de 507 pruebas unitarias PASADAS al 100%**.
+
+3. **Escenarios BDD Karate Labs:**
+   - **API REST (`fastapi/test/api_test.feature` & `docs/examples/fastapi/test/api_test.feature`):** **129 escenarios BDD** (incorporado Escenario 129: Gobernanza Granular de Flags en Perfil de Usuario — Consulta y Modificación de Overrides con Bitácora WORM).
+   - **UI WebFig / NOC (`vue3/test/ui_business_flow.feature` & `docs/examples/vue3/test/ui_business_flow.feature`):** **73 escenarios BDD** (incorporado Escenario 73: Modal de Flags en Perfil de Usuario — Filtrado por Categoría, Indicador de Herencia y Persistencia).
+
+4. **Análisis Estático, Tipado Estricto y Paridad de Esquemas:**
+   - Backend: `ruff check` -> 0 errores.
+   - Frontend: `npx vue-tsc --noEmit` -> 0 errores de TypeScript.
+   - i18n Anti-Colisión: `verify_json_no_duplicate_keys.py` -> 0 claves duplicadas en `es.json` y `en.json`.
+   - Salud Topológica: `verify_topological_health.py` -> 0 violaciones de capas arquitectónicas.
+   - Auditoría de Seguridad: `auditar-infra.sh` (Trivy IaC/FS) -> 0 misconfiguraciones, 0 CVEs.
+   - Secretos: `verificar-secretos.sh` -> 0 secretos expuestos.
 
 
 

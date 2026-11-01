@@ -791,6 +791,7 @@
     "scope_all": "Todos los Routers ({count})",
     "scope_partial": "{count} Routers Asignados",
     "btn_router_matrix": "🎯 Matriz de Routers",
+    "btn_profile_flags": "🎛️ Flags de Funciones",
     "btn_mcp_token": "🤖 Token MCP",
     "btn_change_pass": "🔑 Cambiar Clave",
     "btn_reset_2fa": "🔄 Reset 2FA",

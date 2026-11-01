@@ -65,15 +65,34 @@ graph LR
     Perms -->|Router Borde-BGP| P3[Acceso Denegado 403 Forbidden]
 ```
 
-### 3.1 Banderas de Control por Router
+### 3.1 Banderas de Control por Router (10 Banderas)
 
 - `can_read`: Permite visualizar el router y su telemetría en la lista y mapa.
 - `can_write_layer1`: Permite alterar interfaces, firewall, rutas, colas y servicios.
 - `can_write_layer2`: Permite modificar recursos universales de Capa 2.
+- `can_execute_l2_rpc`: Permite ejecutar acciones RPC contextuales de Capa 2 (Let's Encrypt ACME, firma de certificados, start/stop de contenedores, scripts).
+- `can_bulk_edit_l2`: Permite mutaciones masivas por lote (Bulk enable/disable/comment/remove) en submenús de Capa 2 bajo Safe Mode.
+- `can_export_l2_rsc`: Permite exportar scripts CLI `.rsc` acotados al submenú de Capa 2 y compararlos contra el último respaldo Git.
 - `can_execute_diagnostics`: Permite correr ping, traceroute y tests de cable.
 - `can_trigger_backup`: Permite disparar la generación manual de respaldos `.rsc`.
 - `can_reboot`: Habilita el botón de reinicio controlado del MikroTik.
 - `bypass_maker_checker`: Solo concedible a ingenieros certificados para saltar la retención de cambios en emergencias operativas.
+
+### 3.2 Gobernanza Granular de Flags en Perfiles de Usuario (`RgUserProfileFlagsModal.vue`)
+
+Además del rol global asignado (`SystemRoleEnum`), RoSGrid permite a los administradores ajustar individualmente el permiso de cualquiera de las **30 acciones RBAC** para cada operador específico:
+
+1. **Modelo de Evaluación de 4 Niveles:**
+   $$\text{Tenant Feature Flag} \longrightarrow \text{User Profile Override} \longrightarrow \text{Role Matrix 30}\times\text{11} \longrightarrow \text{Router Permissions (10 Flags)}$$
+2. **Acceso Táctico:** Desde la vista de *Usuarios y Permisos* (`/admin/users`), pulse el botón **`🚩 Flags de Función`** (`#btn-user-profile-flags-<username>`) en la fila del operador deseado.
+3. **Indicador de Herencia:** El modal exhibe si el permiso actual está heredado de la matriz base del rol (ej. `(Heredado: Permitido)`) o si ha sido personalizado para ese usuario específico.
+4. **Valores Posibles:**
+   - `Heredar del Rol`: Elimina el override y retoma el valor por defecto del perfil.
+   - `Permitir (ALLOW)`: Habilita la función para este usuario, incluso si su rol base no la posee.
+   - `Maker-Checker`: Exige aprobación de un segundo operador para aplicar cambios.
+   - `Solo Lectura (READ_ONLY)`: Permite consultar datos e inspeccionar la vista pero bloquea mutaciones.
+   - `Denegar (DENY)`: Prohíbe terminantemente el acceso al módulo o acción.
+5. **Auditoría Forense Inmutable:** Cada modificación de flags queda asentada en `audit_logs` bajo el evento `USER_PROFILE_FLAGS_UPDATED` e invalida de forma inmediata la caché reactiva en KeyDB.
 
 ---
 

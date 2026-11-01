@@ -2,6 +2,7 @@
 # Copyright (C) 2026 RoSGrid Contributors
 
 import json
+import logging
 import secrets
 import time
 import uuid
@@ -14,11 +15,13 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import require_roles
+from src.api.v1.rbac import ACTIONS_METADATA, _get_tenant_role_overrides
 from src.core.audit import write_audit_log
 from src.core.config import settings
 from src.core.crypto import hash_password, verify_password
 from src.db.session import get_db_session, set_tenant_context
 from src.models.core import SystemRoleEnum, Tenant, User, UserRouterPermission
+from src.rbac.policy_matrix import POLICY_MATRIX
 from src.redis_layer.client import get_redis_client
 from src.redis_layer.sessions import kill_all_user_sessions
 from src.schemas.users import (
@@ -27,8 +30,11 @@ from src.schemas.users import (
     CreateUserRequest,
     GenerateMcpTokenRequest,
     McpTokenResponse,
+    UpdateUserFeatureFlagsRequest,
     UserResponse,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -187,6 +193,9 @@ async def get_user_router_permissions(
                 "can_read": p.can_read if p else False,
                 "can_write_layer1": p.can_write_layer1 if p else False,
                 "can_write_layer2": p.can_write_layer2 if p else False,
+                "can_execute_l2_rpc": p.can_execute_l2_rpc if p else False,
+                "can_bulk_edit_l2": p.can_bulk_edit_l2 if p else False,
+                "can_export_l2_rsc": p.can_export_l2_rsc if p else True,
                 "can_execute_diagnostics": p.can_execute_diagnostics if p else False,
                 "can_trigger_backup": p.can_trigger_backup if p else False,
                 "can_reboot": p.can_reboot if p else False,
@@ -237,6 +246,9 @@ async def assign_router_permissions(
             can_read=item.can_read,
             can_write_layer1=item.can_write_layer1,
             can_write_layer2=item.can_write_layer2,
+            can_execute_l2_rpc=item.can_execute_l2_rpc,
+            can_bulk_edit_l2=item.can_bulk_edit_l2,
+            can_export_l2_rsc=item.can_export_l2_rsc,
             can_execute_diagnostics=item.can_execute_diagnostics,
             can_trigger_backup=item.can_trigger_backup,
             can_reboot=item.can_reboot,
@@ -616,3 +628,135 @@ async def generate_user_mcp_token(
         allowed_cidr_list=target_user.allowed_cidr_list,
         issued_by=str(caller_username),
     )
+
+
+def _normalize_flag_override_value(raw_val: str | bool | None) -> str | None:
+    """Convierte booleanos o niveles RBAC en nivel canónico (CC = 4)."""
+    if raw_val is None:
+        return None
+    if isinstance(raw_val, bool):
+        return "ALLOW" if raw_val else "DENY"
+    upper = str(raw_val).strip().upper()
+    return upper if upper in ("ALLOW", "MAKER_CHECKER", "READ_ONLY", "DENY") else None
+
+
+def _sanitize_user_flag_overrides(
+    existing: dict[str, str], incoming: dict[str, str | bool | None], valid_keys: set[str]
+) -> dict[str, str]:
+    """Aplica cambios de overrides eliminando claves con None y validando action_keys (CC = 4)."""
+    merged = dict(existing or {})
+    for key, raw_val in incoming.items():
+        if key not in valid_keys:
+            raise HTTPException(status_code=400, detail=f"Flag de función desconocido: '{key}'")
+        if raw_val is None:
+            merged.pop(key, None)
+            continue
+        norm = _normalize_flag_override_value(raw_val)
+        if norm is None:
+            raise HTTPException(status_code=400, detail=f"Valor de permiso inválido para '{key}'")
+        merged[key] = norm
+    return merged
+
+
+@router.get("/{user_id}/effective-permissions")
+async def get_user_effective_permissions(
+    user_id: uuid.UUID,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.AUDITOR,
+        )
+    ),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict[str, Any]:
+    """Devuelve los permisos efectivos consolidando matriz de rol, tenant y overrides de usuario (CC = 5)."""
+    tenant_id = uuid.UUID(claims["tid"])
+    is_sa = claims["rol"] == SystemRoleEnum.SUPERADMIN_GLOBAL.value
+    await set_tenant_context(db, tenant_id, is_superadmin=is_sa)
+
+    stmt = select(User).where(User.id == user_id)
+    if not is_sa:
+        stmt = stmt.where(User.tenant_id == tenant_id)
+    res = await db.execute(stmt)
+    target_user = res.scalar_one_or_none()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    role_defaults = dict(POLICY_MATRIX.get(target_user.role, {}))
+    tenant_role_overrides = await _get_tenant_role_overrides(str(target_user.tenant_id), target_user.role.value)
+    effective_permissions = {**role_defaults, **(tenant_role_overrides or {})}
+
+    user_overrides = dict(target_user.feature_flags_override or {})
+    for key, val in user_overrides.items():
+        if val is not None:
+            effective_permissions[key] = val
+
+    return {
+        "user_id": str(target_user.id),
+        "username": target_user.username,
+        "role": target_user.role.value,
+        "role_defaults": role_defaults,
+        "tenant_role_overrides": tenant_role_overrides or {},
+        "user_overrides": user_overrides,
+        "effective_permissions": effective_permissions,
+        "actions_catalog": ACTIONS_METADATA,
+    }
+
+
+@router.patch("/{user_id}/feature-flags")
+async def update_user_feature_flags(
+    user_id: uuid.UUID,
+    body: UpdateUserFeatureFlagsRequest,
+    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)),
+    db: AsyncSession = Depends(get_db_session),
+) -> dict[str, Any]:
+    """Actualiza overrides individuales de flags para un operador e invalida caché (CC = 4)."""
+    tenant_id = uuid.UUID(claims["tid"])
+    is_sa = claims["rol"] == SystemRoleEnum.SUPERADMIN_GLOBAL.value
+    await set_tenant_context(db, tenant_id, is_superadmin=is_sa)
+
+    stmt = select(User).where(User.id == user_id)
+    if not is_sa:
+        stmt = stmt.where(User.tenant_id == tenant_id)
+    res = await db.execute(stmt)
+    target_user = res.scalar_one_or_none()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    valid_keys = {action["key"] for action in ACTIONS_METADATA}
+    old_overrides = dict(target_user.feature_flags_override or {})
+    new_overrides = _sanitize_user_flag_overrides(old_overrides, body.feature_flags_override, valid_keys)
+
+    target_user.feature_flags_override = new_overrides
+
+    # Invalidar caché en KeyDB
+    try:
+        redis = get_redis_client()
+        await redis.delete(f"rg:{target_user.tenant_id}:user_perms:{target_user.id}")
+    except Exception as exc:
+        logger.warning("Fallo al invalidar cache user_perms en KeyDB: %s", exc)
+
+    actor_username = str(claims.get("preferred_username") or claims.get("sub"))
+    await write_audit_log(
+        session=db,
+        tenant_id=target_user.tenant_id,
+        actor_username=actor_username,
+        actor_role=str(claims.get("rol") or "ADMIN"),
+        actor_ip=str(claims.get("ip_address") or "127.0.0.1"),
+        event_category="USER_MANAGEMENT",
+        event_action="USER_PROFILE_FLAGS_UPDATED",
+        actor_user_id=uuid.UUID(claims["sub"]),
+        before_state={"feature_flags_override": old_overrides},
+        after_state={"feature_flags_override": target_user.feature_flags_override},
+        status_code=200,
+    )
+    await db.commit()
+    await db.refresh(target_user)
+
+    return {
+        "status": "success",
+        "user_id": str(target_user.id),
+        "feature_flags_override": target_user.feature_flags_override,
+    }

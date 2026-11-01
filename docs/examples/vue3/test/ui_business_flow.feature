@@ -698,6 +698,21 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And waitFor("#btn-apply-l2-query")
     And waitFor("#chk-proplist-optimize")
 
+  Scenario: 73. Gobernanza Granular de Flags en Perfiles de Usuario: Modal Táctico de 30 Funciones (RgUserProfileFlagsModal), Filtro por Categoría y Overrides por Operador (Hito 27.17)
+    Given driver baseUrl + '/admin/users'
+    And waitFor(".users-view")
+    And waitFor(".rg-table")
+    And waitFor(".btn-flags")
+    When click(".btn-flags")
+    Then waitFor(".rg-profile-flags-modal")
+    And waitFor("#profile-flags-title")
+    And waitFor("#search-profile-flags")
+    And waitFor("#filter-profile-category")
+    And waitFor(".flags-table")
+    And waitFor("#btn-save-user-flags")
+    When click(".btn-close")
+    Then waitUntil("!document.querySelector('.rg-profile-flags-modal')")
+
 
 
 

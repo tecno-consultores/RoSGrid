@@ -285,7 +285,41 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
 #### `PUT /api/v1/users/{user_id}/router-permissions`
 
 - **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`.
-- **Propósito:** Asignar granularmente la matriz de routers autorizados para un técnico (`can_read`, `can_write_layer1`, `can_write_layer2`, `can_reboot`, `bypass_maker_checker`).
+- **Propósito:** Asignar granularmente la matriz de routers autorizados para un técnico con las 10 banderas: `can_read`, `can_write_layer1`, `can_write_layer2`, `can_execute_l2_rpc`, `can_bulk_edit_l2`, `can_export_l2_rsc`, `can_execute_diagnostics`, `can_trigger_backup`, `can_reboot`, `bypass_maker_checker`.
+- **Auditoría WORM:** Registra evento `USER_ROUTER_PERMISSIONS_UPDATED` e invalida la caché en KeyDB.
+
+#### `GET /api/v1/users/{user_id}/effective-permissions`
+
+- **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`.
+- **Propósito:** Obtener la resolución consolidada de permisos en 4 niveles para un usuario específico, combinando la matriz base de su rol (`POLICY_MATRIX`), las anulaciones de rol por tenant en KeyDB (`_get_tenant_role_overrides`) y sus anulaciones individuales (`feature_flags_override`).
+- **Salida (200):**
+  ```json
+  {
+    "user_id": "UUID",
+    "role": "SUPPORT_L2",
+    "role_defaults": { "LIVE_DIAGNOSTICS": "ALLOW", ... },
+    "overrides": { "WEBFIG_L2_RPC_COMMANDS": "ALLOW" },
+    "effective_permissions": { "WEBFIG_L2_RPC_COMMANDS": "ALLOW", ... },
+    "actions_catalog": [ ... 30 acciones RBAC ... ]
+  }
+  ```
+
+#### `PATCH /api/v1/users/{user_id}/feature-flags`
+
+- **Roles:** `SUPERADMIN_GLOBAL`, `TENANT_ADMIN`.
+- **Cabeceras Obligatorias:** `Authorization: Bearer <token>`, `Idempotency-Key: <UUIDv7>`.
+- **Propósito:** Actualizar selectivamente o eliminar overrides individuales de las 30 funciones para un usuario. Enviar `null` como valor de un flag elimina el override y reanuda la herencia del rol.
+- **Entrada (`UpdateUserFeatureFlagsRequest`):**
+  ```json
+  {
+    "overrides": {
+      "WEBFIG_L2_RPC_COMMANDS": "ALLOW",
+      "LIVE_DIAGNOSTICS": null
+    }
+  }
+  ```
+- **Auditoría WORM:** Registra evento `USER_PROFILE_FLAGS_UPDATED` con valores anteriores y nuevos e invalida de inmediato la caché en KeyDB (`rg:{tenant_id}:user_perms:{user_id}`).
+- **Salida (200):** Diccionario actualizado de overrides del usuario.
 
 #### `POST /api/v1/users/{user_id}/reset-2fa`
 

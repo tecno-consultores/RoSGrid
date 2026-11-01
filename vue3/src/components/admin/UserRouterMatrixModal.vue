@@ -240,6 +240,9 @@
                   <th scope="col">Lectura</th>
                   <th scope="col">Escritura L1</th>
                   <th scope="col">Escritura L2</th>
+                  <th scope="col">RPC L2</th>
+                  <th scope="col">Bulk L2</th>
+                  <th scope="col">Export RSC</th>
                   <th scope="col">Diagnóstico</th>
                   <th scope="col">Backup</th>
                   <th scope="col">Reboot</th>
@@ -281,6 +284,30 @@
                   </td>
                   <td class="cell-check">
                     <input
+                      :id="`chk-rpc-${item.router_id}`"
+                      v-model="item.can_execute_l2_rpc"
+                      type="checkbox"
+                      :aria-label="`RPC L2 en ${item.router_name}`"
+                    />
+                  </td>
+                  <td class="cell-check">
+                    <input
+                      :id="`chk-bulk-${item.router_id}`"
+                      v-model="item.can_bulk_edit_l2"
+                      type="checkbox"
+                      :aria-label="`Bulk L2 en ${item.router_name}`"
+                    />
+                  </td>
+                  <td class="cell-check">
+                    <input
+                      :id="`chk-export-${item.router_id}`"
+                      v-model="item.can_export_l2_rsc"
+                      type="checkbox"
+                      :aria-label="`Export RSC L2 en ${item.router_name}`"
+                    />
+                  </td>
+                  <td class="cell-check">
+                    <input
                       :id="`chk-diag-${item.router_id}`"
                       v-model="item.can_execute_diagnostics"
                       type="checkbox"
@@ -313,7 +340,7 @@
                   </td>
                 </tr>
                 <tr v-if="filteredPermissions.length === 0">
-                  <td colspan="9" class="cell-empty">
+                  <td colspan="12" class="cell-empty">
                     No hay routers disponibles o que coincidan con la búsqueda.
                   </td>
                 </tr>

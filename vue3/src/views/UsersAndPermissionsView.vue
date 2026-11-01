@@ -13,6 +13,7 @@
   import UserRouterMatrixModal from '@/components/admin/UserRouterMatrixModal.vue';
   import RbacRoleMatrixPanel from '@/components/admin/RbacRoleMatrixPanel.vue';
   import RgMcpTokenModal from '@/components/admin/RgMcpTokenModal.vue';
+  import RgUserProfileFlagsModal from '@/components/admin/RgUserProfileFlagsModal.vue';
 
   const { t } = useI18n();
 
@@ -80,6 +81,15 @@
   // Modal Matriz de Routers
   const isMatrixModalOpen = ref(false);
   const selectedUserForMatrix = ref<UserManagementItem | null>(null);
+
+  // Modal Flags de Perfil de Usuario
+  const isProfileFlagsModalOpen = ref(false);
+  const selectedUserForProfileFlags = ref<UserManagementItem | null>(null);
+
+  function openProfileFlagsModal(user: UserManagementItem) {
+    selectedUserForProfileFlags.value = user;
+    isProfileFlagsModalOpen.value = true;
+  }
 
   // Modal Generador de Token MCP (Agentes IA)
   const isMcpTokenModalOpen = ref(false);
@@ -683,6 +693,17 @@
 
                   <button
                     v-if="isWriteAuthorized"
+                    :id="`btn-user-profile-flags-${u.username}`"
+                    type="button"
+                    class="btn-flags"
+                    aria-label="Configurar flags de funciones y permisos para este operador"
+                    @click="openProfileFlagsModal(u)"
+                  >
+                    {{ t('users_mgmt.btn_profile_flags', '🎛️ Flags') }}
+                  </button>
+
+                  <button
+                    v-if="isWriteAuthorized"
                     type="button"
                     class="btn-change-password"
                     aria-label="Cambiar o restablecer contraseña de este operador"
@@ -891,6 +912,14 @@
       :is-open="isMatrixModalOpen"
       :user="selectedUserForMatrix"
       @close="isMatrixModalOpen = false"
+      @saved="loadUsers"
+    />
+
+    <!-- Modal de Flags de Funciones en Perfil de Usuario -->
+    <RgUserProfileFlagsModal
+      :is-open="isProfileFlagsModalOpen"
+      :user="selectedUserForProfileFlags"
+      @close="isProfileFlagsModalOpen = false"
       @saved="loadUsers"
     />
 
@@ -1294,6 +1323,23 @@
     font-size: 0.75rem;
     cursor: pointer;
     margin-right: 6px;
+  }
+
+  .btn-flags {
+    background: transparent;
+    border: 1px solid var(--rg-accent-cyan, #00d2ff);
+    color: var(--rg-accent-cyan, #00d2ff);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    margin-right: 6px;
+    transition: background-color 0.15s, color 0.15s;
+  }
+
+  .btn-flags:hover {
+    background: rgba(0, 210, 255, 0.15);
+    color: #fff;
   }
 
   .btn-reset-2fa {

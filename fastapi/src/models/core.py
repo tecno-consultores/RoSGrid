@@ -125,6 +125,9 @@ class User(Base):
 
     allowed_cidr_list: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
     has_all_routers_access: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    feature_flags_override: Mapped[dict[str, str]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
 
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_login_ip: Mapped[str | None] = mapped_column(INET, nullable=True)
@@ -161,6 +164,9 @@ class UserRouterPermission(Base):
     can_read: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     can_write_layer1: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     can_write_layer2: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    can_execute_l2_rpc: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
+    can_bulk_edit_l2: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
+    can_export_l2_rsc: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("true"))
     can_execute_diagnostics: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     can_trigger_backup: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     can_reboot: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

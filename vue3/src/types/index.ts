@@ -70,6 +70,7 @@ export interface UserInfo {
   assigned_router_ids?: string[];
   features?: Partial<TenantFeatureFlags>;
   tenant_feature_flags?: Partial<TenantFeatureFlags> | Record<string, boolean>;
+  feature_flags_override?: Record<string, string>;
 }
 
 export type TableDensityMode = 'auto' | 'compact' | 'comfortable';
@@ -188,6 +189,7 @@ export interface UserManagementItem {
   allowed_cidr_list?: string[];
   has_all_routers_access: boolean;
   assigned_router_ids?: string[];
+  feature_flags_override?: Record<string, string>;
   created_at?: string;
 }
 
@@ -199,6 +201,9 @@ export interface RouterPermissionItem {
   can_read: boolean;
   can_write_layer1: boolean;
   can_write_layer2: boolean;
+  can_execute_l2_rpc?: boolean;
+  can_bulk_edit_l2?: boolean;
+  can_export_l2_rsc?: boolean;
   can_execute_diagnostics: boolean;
   can_trigger_backup: boolean;
   can_reboot: boolean;
