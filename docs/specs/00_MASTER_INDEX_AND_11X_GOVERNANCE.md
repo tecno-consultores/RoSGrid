@@ -161,7 +161,7 @@ rosgrid/
 
 ---
 
-## 4. Índice Maestro de los 63 Archivos de Especificación (00 a 62) (Carpeta `docs/specs/`)
+## 4. Índice Maestro de los 64 Archivos de Especificación (00 a 63) (Carpeta `docs/specs/`)
 
 Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `docs/specs/` siguiendo rigurosamente el orden de los 5 Bloques listados a continuación:
 
@@ -248,6 +248,7 @@ Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `
 * `docs/specs/60_ORPHAN_API_ENDPOINTS_AUDIT_AND_FRONTEND_PARITY.md` — Auditoría Integral Bidireccional de las 374 Operaciones OpenAPI frente a los 99 Archivos de `vue3/src/`, Corrección de los 5 Desajustes de Ruta Front ↔ Back (`VaultRevealModal.vue`, `EnterpriseComplianceView.vue` SD-WAN y `webfig_layer2.py`), Conexión en UI de los Endpoints Operativos Huérfanos (Bandwidth Profiles, Acciones de Servicio de Abonados, BGP Looking Glass, Anomalías de Tráfico, Diagnóstico 360°, Telemetría Beacon, Cable Test Ethernet, Conntrack, Queue Tree y OSPF/BFD/Filtros) y Guardrail `.agents/scripts/verify_no_orphan_api_endpoints.py` (Hito 28.5).
 * `docs/specs/61_SLA_TELEMETRY_REAL_GATEWAY_DISCOVERY_QUAD9_PRESETS_AND_ROS7_PING_PARSER.md` — Telemetría de SLA Real: Eliminación de IPs Sintéticas Hardcodeadas (`190.202.10.1` y `1.1.1.1` en `sla.py`), Autodescubrimiento en Vivo de Gateways WAN (`0.0.0.0/0` en `/rest/ip/route`) y Servidores DNS (`/rest/ip/dns`) en `GET /api/v1/sla/targets/{router_id}`, Selector Desplegable (`<select>`) con Referencia Predeterminada Quad9 (`9.9.9.9`) + Opción Personalizada y Parser Nativo de RTT en RouterOS v7 (`4ms520us` / `650us` — Hito 28.6).
 * `docs/specs/62_SESSION_KILLSWITCH_TARGET_SCOPING_AND_WS_ISOLATION.md` — Aislamiento Estricto de Destinatario en Kill-Switch de Sesiones (`SESSION_KILLED`): Normalización del Payload Pub/Sub en `sessions.py`, Filtrado por `target_session_id`/`target_user_id` en el Multiplexor WebSocket (`websockets.py`) y Verificación de Sesión Propia en `useNocEventsStore.ts` para impedir que la expulsión de un operador cierre colateralmente la sesión del SuperAdmin en otro navegador (Hito 28.7).
+* `docs/specs/63_RESPONSIVE_AUTO_FIT_DATA_COLUMNS_AND_INVENTORY_TABLE_ERGONOMICS.md` — Columnas Auto-Ajustables al Contenido (*Content-Hugging* `width: 1%`) en `RgDataTable.vue`, Normalización Compacta de Modelos Virtuales `CHR QEMU (x86_64)` y Cabeceras Concisas en `RouterInventoryView.vue` (`es.json` / `en.json`) para Evitar Solapamiento con la Botonera Fija de Acciones (Hito 28.8).
 
 
 ---
