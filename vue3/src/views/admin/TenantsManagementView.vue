@@ -125,8 +125,11 @@
   const beaconStatus = ref<{
     enabled: boolean;
     instance_id?: string;
-    last_heartbeat_at?: string;
+    last_sent_at?: string | null;
+    last_heartbeat_at?: string | null;
     fleet_bucket?: string;
+    router_count?: number;
+    last_status?: string;
     status?: string;
   } | null>(null);
   const isTriggeringBeacon = ref(false);
@@ -142,9 +145,14 @@
 
   async function handleTriggerBeacon() {
     isTriggeringBeacon.value = true;
+    errorMessage.value = '';
     try {
       const res = await http.post<any>('/api/v1/system/telemetry-beacon/trigger');
-      successMessage.value = res.data?.message || 'Latido de telemetría anónima emitido exitosamente.';
+      if (res.data && typeof res.data === 'object') {
+        beaconStatus.value = { ...beaconStatus.value, ...res.data };
+      }
+      successMessage.value =
+        res.data?.message || 'Latido de telemetría anónima emitido exitosamente.';
       await loadBeaconStatus();
     } catch (err: unknown) {
       const error = err as { message?: string; detail?: string };
@@ -186,8 +194,9 @@
         </div>
         <p style="margin: 4px 0 0 0; font-size: 0.82rem; color: #94a3b8;">
           Instance ID (HMAC-SHA256): <code class="font-mono" style="color: #cbd5e1;">{{ beaconStatus?.instance_id || 'anónimo' }}</code> |
-          Flota: <strong style="color: #38bdf8;">{{ beaconStatus?.fleet_bucket || '0' }} routers</strong> |
-          Último Latido: <span style="color: #cbd5e1;">{{ beaconStatus?.last_heartbeat_at || 'Nunca' }}</span>
+          Flota: <strong style="color: #38bdf8;">{{ beaconStatus?.router_count ?? beaconStatus?.fleet_bucket ?? '0' }} routers ({{ beaconStatus?.fleet_bucket || '0' }})</strong> |
+          Último Latido: <span style="color: #cbd5e1;">{{ beaconStatus?.last_sent_at || beaconStatus?.last_heartbeat_at || 'Nunca' }}</span>
+          <span v-if="beaconStatus?.last_status && beaconStatus.last_status !== 'untriggered'" class="font-mono" style="margin-left: 6px; color: #10b981;">[{{ beaconStatus.last_status }}]</span>
         </p>
       </div>
       <button

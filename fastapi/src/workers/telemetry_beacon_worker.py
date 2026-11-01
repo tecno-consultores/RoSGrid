@@ -18,7 +18,7 @@ import httpx
 from sqlalchemy import func, select
 
 from src.core.config import settings
-from src.db.session import async_session_maker
+from src.db.session import async_session_maker, set_tenant_context
 from src.models.inventory import Router, RouterAdminStateEnum
 from src.redis_layer.client import get_redis_client
 
@@ -49,9 +49,10 @@ def resolve_fleet_bucket(router_count: int) -> str:
 
 
 async def _count_active_routers_safe() -> int:
-    """Cuenta routers activos de forma fail-silent sin abortar la ejecución (CC = 2)."""
+    """Cuenta routers activos globalmente (bypass RLS SuperAdmin) de forma fail-silent (CC = 2)."""
     try:
         async with async_session_maker() as session:
+            await set_tenant_context(session, None, is_superadmin=True)
             stmt = select(func.count(Router.id)).where(Router.admin_state == RouterAdminStateEnum.PRODUCTION)
             res = await session.execute(stmt)
             count = res.scalar() or 0
@@ -61,7 +62,13 @@ async def _count_active_routers_safe() -> int:
         return 0
 
 
-async def _persist_beacon_state(instance_id: str, now_iso: str, status_str: str) -> None:
+async def _persist_beacon_state(
+    instance_id: str,
+    now_iso: str,
+    status_str: str,
+    fleet_bucket: str = "0",
+    router_count: int = 0,
+) -> None:
     """Guarda el último estado del latido en KeyDB sin fallar si KeyDB está mockeado (CC = 2)."""
     try:
         redis = get_redis_client()
@@ -71,6 +78,8 @@ async def _persist_beacon_state(instance_id: str, now_iso: str, status_str: str)
                 "instance_id": instance_id,
                 "last_sent_at": now_iso,
                 "last_status": status_str,
+                "fleet_bucket": fleet_bucket,
+                "router_count": str(router_count),
                 "beacon_url": settings.ROSGRID_TELEMETRY_BEACON_URL,
             },
         )
@@ -78,35 +87,43 @@ async def _persist_beacon_state(instance_id: str, now_iso: str, status_str: str)
         logger.debug("Persistencia de beacon en KeyDB omitida: %s", exc)
 
 
+def _decode_redis_str(val: Any, default: str | None = None) -> str | None:
+    """Decodifica un valor de KeyDB (bytes o str) de forma segura (CC = 3)."""
+    if val is None:
+        return default
+    return val.decode() if isinstance(val, bytes) else str(val)
+
+
 async def get_telemetry_beacon_status() -> dict[str, Any]:
-    """Obtiene el estado actual del latido de telemetría para diagnósticos locales (CC = 3)."""
+    """Obtiene el estado actual del latido de telemetría para diagnósticos locales (CC = 4)."""
     instance_id = compute_anonymous_instance_id(settings.ROSGRID_JWT_SECRET_KEY[:16])
-    last_sent_at = None
+    last_sent_at: str | None = None
     last_status = "untriggered"
+    fleet_bucket: str | None = None
+    router_count = await _count_active_routers_safe()
 
     try:
         redis = get_redis_client()
         raw_state = await redis.hgetall(BEACON_STATE_KEY)
         if raw_state:
-            sent_val = raw_state.get("last_sent_at")
-            if sent_val is not None:
-                last_sent_at = sent_val.decode() if isinstance(sent_val, bytes) else str(sent_val)
-            status_val = raw_state.get("last_status")
-            if status_val is not None:
-                last_status = status_val.decode() if isinstance(status_val, bytes) else str(status_val)
-            inst_val = raw_state.get("instance_id")
-            if inst_val is not None:
-                instance_id = inst_val.decode() if isinstance(inst_val, bytes) else str(inst_val)
+            instance_id = _decode_redis_str(raw_state.get("instance_id"), instance_id) or instance_id
+            last_sent_at = _decode_redis_str(raw_state.get("last_sent_at"), None)
+            last_status = _decode_redis_str(raw_state.get("last_status"), "untriggered") or "untriggered"
+            fleet_bucket = _decode_redis_str(raw_state.get("fleet_bucket"), None)
     except Exception as exc:
         logger.debug("Lectura de estado de beacon en KeyDB omitida: %s", exc)
 
+    resolved_bucket = fleet_bucket or resolve_fleet_bucket(router_count)
     return {
         "enabled": settings.ROSGRID_TELEMETRY_BEACON_ENABLED,
         "instance_id": instance_id,
         "beacon_url": settings.ROSGRID_TELEMETRY_BEACON_URL,
         "interval_seconds": settings.ROSGRID_TELEMETRY_BEACON_INTERVAL_SECONDS,
         "last_sent_at": last_sent_at,
+        "last_heartbeat_at": last_sent_at,
         "last_status": last_status,
+        "fleet_bucket": resolved_bucket,
+        "router_count": router_count,
     }
 
 
@@ -137,7 +154,13 @@ async def send_telemetry_heartbeat_once(router_count: int | None = None) -> dict
     }
 
     if not settings.ROSGRID_TELEMETRY_BEACON_ENABLED:
-        return {"enabled": False, "instance_id": instance_id, "last_status": "disabled"}
+        return {
+            "enabled": False,
+            "instance_id": instance_id,
+            "last_status": "disabled",
+            "fleet_bucket": payload["fleet_bucket"],
+            "router_count": router_count,
+        }
 
     status_str = "sent"
     try:
@@ -147,13 +170,21 @@ async def send_telemetry_heartbeat_once(router_count: int | None = None) -> dict
         logger.debug("Telemetry beacon fail-silent: %s", exc)
         status_str = "offline_skipped"
 
-    await _persist_beacon_state(instance_id, now_iso, status_str)
+    await _persist_beacon_state(
+        instance_id,
+        now_iso,
+        status_str,
+        fleet_bucket=payload["fleet_bucket"],
+        router_count=router_count,
+    )
     return {
         "enabled": True,
         "instance_id": instance_id,
         "last_sent_at": now_iso,
+        "last_heartbeat_at": now_iso,
         "last_status": status_str,
         "fleet_bucket": payload["fleet_bucket"],
+        "router_count": router_count,
     }
 
 

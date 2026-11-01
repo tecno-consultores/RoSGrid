@@ -85,7 +85,10 @@ async def test_get_telemetry_beacon_status_superadmin_success(
     assert data["enabled"] is True
     assert data["instance_id"] == "test_instance_hash_64"
     assert data["last_sent_at"] == "2026-11-01T10:00:00Z"
+    assert data["last_heartbeat_at"] == "2026-11-01T10:00:00Z"
     assert data["last_status"] == "http_202"
+    assert "fleet_bucket" in data
+    assert "router_count" in data
     assert "https://rosgrid.net" in data["beacon_url"]
 
 

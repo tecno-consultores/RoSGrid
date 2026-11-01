@@ -776,9 +776,10 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And waitFor("#tab-btn-bandwidth-profiles")
     When click("#tab-btn-bandwidth-profiles")
     Then waitFor("#btn-simulate-dhcp-subscribers")
-    # 2. Verificación de Telemetría Beacon en Administración de Empresas
+    # 2. Verificación de Telemetría Beacon en Administración de Empresas (Hito 28.10)
     Given driver baseUrl + '/admin/tenants'
     And waitFor(".tenants-management-view")
+    And waitFor(".beacon-card")
     And waitFor("#btn-trigger-beacon")
     # 3. Verificación de Acciones Rápidas en Live Dashboard
     Given driver baseUrl + '/routers/01928000-0000-7000-8000-000000000001/dashboard'

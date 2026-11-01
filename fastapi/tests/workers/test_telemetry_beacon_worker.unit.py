@@ -51,7 +51,7 @@ def test_resolve_fleet_bucket_ranges() -> None:
 
 @pytest.mark.asyncio
 async def test_count_active_routers_safe_success() -> None:
-    """Verifica el conteo de routers cuando la base de datos responde exitosamente."""
+    """Verifica el conteo de routers cuando la base de datos responde exitosamente activando RLS SuperAdmin."""
     mock_session = AsyncMock()
     mock_res = MagicMock()
     mock_res.scalar.return_value = 5
@@ -61,9 +61,13 @@ async def test_count_active_routers_safe_success() -> None:
     mock_cm.__aenter__ = AsyncMock(return_value=mock_session)
     mock_cm.__aexit__ = AsyncMock(return_value=None)
 
-    with patch("src.workers.telemetry_beacon_worker.async_session_maker", return_value=mock_cm):
+    with (
+        patch("src.workers.telemetry_beacon_worker.async_session_maker", return_value=mock_cm),
+        patch("src.workers.telemetry_beacon_worker.set_tenant_context", new_callable=AsyncMock) as mock_set_tenant,
+    ):
         count = await _count_active_routers_safe()
         assert count == 5
+        mock_set_tenant.assert_awaited_once_with(mock_session, None, is_superadmin=True)
 
 
 @pytest.mark.asyncio
@@ -79,38 +83,51 @@ async def test_persist_beacon_state_and_redis_error_resilience() -> None:
     """Verifica la persistencia en KeyDB y la tolerancia cuando KeyDB falla."""
     mock_redis = AsyncMock()
     with patch("src.workers.telemetry_beacon_worker.get_redis_client", return_value=mock_redis):
-        await _persist_beacon_state("hash64", "2026-11-01T00:00:00Z", "sent")
+        await _persist_beacon_state("hash64", "2026-11-01T00:00:00Z", "sent", fleet_bucket="1-10", router_count=5)
         mock_redis.hset.assert_awaited_once()
 
     # Si redis falla, debe ser fail-silent
     with patch("src.workers.telemetry_beacon_worker.get_redis_client", side_effect=Exception("Redis error")):
-        await _persist_beacon_state("hash64", "2026-11-01T00:00:00Z", "sent")
+        await _persist_beacon_state("hash64", "2026-11-01T00:00:00Z", "sent", fleet_bucket="1-10", router_count=5)
 
 
 @pytest.mark.asyncio
 async def test_get_telemetry_beacon_status_with_and_without_state() -> None:
-    """Verifica la obtención de estado con y sin datos previos en KeyDB."""
+    """Verifica la obtención de estado con y sin datos previos en KeyDB incluyendo fleet_bucket y router_count."""
     # Sin datos en KeyDB
     mock_redis = AsyncMock()
     mock_redis.hgetall.return_value = {}
-    with patch("src.workers.telemetry_beacon_worker.get_redis_client", return_value=mock_redis):
+    with (
+        patch("src.workers.telemetry_beacon_worker.get_redis_client", return_value=mock_redis),
+        patch("src.workers.telemetry_beacon_worker._count_active_routers_safe", return_value=7),
+    ):
         status = await get_telemetry_beacon_status()
         assert status["enabled"] is True
         assert len(status["instance_id"]) == 64
         assert status["last_sent_at"] is None
+        assert status["last_heartbeat_at"] is None
         assert status["last_status"] == "untriggered"
+        assert status["fleet_bucket"] == "1-10"
+        assert status["router_count"] == 7
 
     # Con datos previos
     mock_redis.hgetall.return_value = {
         "instance_id": "custom_instance_id",
         "last_sent_at": "2026-11-01T12:00:00Z",
         "last_status": "http_202",
+        "fleet_bucket": "11-50",
     }
-    with patch("src.workers.telemetry_beacon_worker.get_redis_client", return_value=mock_redis):
+    with (
+        patch("src.workers.telemetry_beacon_worker.get_redis_client", return_value=mock_redis),
+        patch("src.workers.telemetry_beacon_worker._count_active_routers_safe", return_value=15),
+    ):
         status = await get_telemetry_beacon_status()
         assert status["instance_id"] == "custom_instance_id"
         assert status["last_sent_at"] == "2026-11-01T12:00:00Z"
+        assert status["last_heartbeat_at"] == "2026-11-01T12:00:00Z"
         assert status["last_status"] == "http_202"
+        assert status["fleet_bucket"] == "11-50"
+        assert status["router_count"] == 15
 
 
 @pytest.mark.asyncio
@@ -137,6 +154,8 @@ async def test_send_telemetry_heartbeat_once_success_http_202() -> None:
         assert res["enabled"] is True
         assert res["last_status"] == "http_202"
         assert res["fleet_bucket"] == "11-50"
+        assert res["router_count"] == 15
+        assert res["last_heartbeat_at"] == res["last_sent_at"]
         mock_post.assert_awaited_once()
         mock_persist.assert_awaited_once()
 

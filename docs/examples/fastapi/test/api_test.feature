@@ -1098,6 +1098,20 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 143. Contrato de Telemetría Anónima de Flota: Esquema de Estado de Beacon y Conteo RLS (GET /system/telemetry-beacon/status) (Hito 28.10)
+    # Valida el contrato JSON del beacon en /system/telemetry-beacon/status rechazando accesos no autenticados
+    Given path '/api/v1/system/telemetry-beacon/status'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/system/telemetry-beacon/trigger'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000143'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
 
 
 

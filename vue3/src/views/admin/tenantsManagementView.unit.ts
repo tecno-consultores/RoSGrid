@@ -322,4 +322,69 @@ describe('TenantsManagementView.vue — Gestión de Empresas Multi-Tenant', () =
     expect(wrapper.text()).not.toContain('Suspender');
     expect(wrapper.find('.btn-action--features').exists()).toBe(true);
   });
+
+  it('muestra correctamente el estado de telemetría de beacon y actualiza tras disparar latido', async () => {
+    let currentBeaconData = {
+      enabled: true,
+      instance_id: '9ce21f55a851ed11a59d48b7c0ba02ad6fd2bdbe5ddf87bdaab637fb344c511f',
+      last_sent_at: '2026-11-01T23:08:40Z',
+      last_heartbeat_at: '2026-11-01T23:08:40Z',
+      last_status: 'http_202',
+      fleet_bucket: '1-10',
+      router_count: 7,
+    };
+
+    vi.spyOn(http, 'get').mockImplementation((url: string) => {
+      if (url.includes('/api/v1/system/telemetry-beacon/status')) {
+        return Promise.resolve({
+          status: 200,
+          data: currentBeaconData,
+          headers: new Headers(),
+        });
+      }
+      return Promise.resolve({
+        status: 200,
+        data: { items: [] },
+        headers: new Headers(),
+      });
+    });
+
+    const wrapper = mount(TenantsManagementView);
+    await flushPromises();
+
+    const beaconCard = wrapper.find('.beacon-card');
+    expect(beaconCard.exists()).toBe(true);
+    expect(beaconCard.text()).toContain('9ce21f55a851ed11a59d48b7c0ba02ad6fd2bdbe5ddf87bdaab637fb344c511f');
+    expect(beaconCard.text()).toContain('7 routers (1-10)');
+    expect(beaconCard.text()).toContain('2026-11-01T23:08:40Z');
+    expect(beaconCard.text()).toContain('[http_202]');
+
+    // Probar emisión manual de latido
+    vi.spyOn(http, 'post').mockImplementation((url: string) => {
+      if (url.includes('/api/v1/system/telemetry-beacon/trigger')) {
+        currentBeaconData = {
+          ...currentBeaconData,
+          last_sent_at: '2026-11-01T23:15:00Z',
+          last_heartbeat_at: '2026-11-01T23:15:00Z',
+        };
+        return Promise.resolve({
+          status: 200,
+          data: {
+            message: 'Latido de telemetría emitido con éxito.',
+            ...currentBeaconData,
+          },
+          headers: new Headers(),
+        });
+      }
+      return Promise.resolve({ status: 200, data: {}, headers: new Headers() });
+    });
+
+    const btnTrigger = wrapper.find('#btn-trigger-beacon');
+    expect(btnTrigger.exists()).toBe(true);
+    await btnTrigger.trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('.banner--success').text()).toContain('Latido de telemetría emitido con éxito.');
+    expect(beaconCard.text()).toContain('2026-11-01T23:15:00Z');
+  });
 });
