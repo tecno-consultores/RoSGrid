@@ -161,7 +161,7 @@ rosgrid/
 
 ---
 
-## 4. Índice Maestro de los 64 Archivos de Especificación (00 a 63) (Carpeta `docs/specs/`)
+## 4. Índice Maestro de los 65 Archivos de Especificación (00 a 64) (Carpeta `docs/specs/`)
 
 Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `docs/specs/` siguiendo rigurosamente el orden de los 5 Bloques listados a continuación:
 
@@ -249,6 +249,7 @@ Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `
 * `docs/specs/61_SLA_TELEMETRY_REAL_GATEWAY_DISCOVERY_QUAD9_PRESETS_AND_ROS7_PING_PARSER.md` — Telemetría de SLA Real: Eliminación de IPs Sintéticas Hardcodeadas (`190.202.10.1` y `1.1.1.1` en `sla.py`), Autodescubrimiento en Vivo de Gateways WAN (`0.0.0.0/0` en `/rest/ip/route`) y Servidores DNS (`/rest/ip/dns`) en `GET /api/v1/sla/targets/{router_id}`, Selector Desplegable (`<select>`) con Referencia Predeterminada Quad9 (`9.9.9.9`) + Opción Personalizada y Parser Nativo de RTT en RouterOS v7 (`4ms520us` / `650us` — Hito 28.6).
 * `docs/specs/62_SESSION_KILLSWITCH_TARGET_SCOPING_AND_WS_ISOLATION.md` — Aislamiento Estricto de Destinatario en Kill-Switch de Sesiones (`SESSION_KILLED`): Normalización del Payload Pub/Sub en `sessions.py`, Filtrado por `target_session_id`/`target_user_id` en el Multiplexor WebSocket (`websockets.py`) y Verificación de Sesión Propia en `useNocEventsStore.ts` para impedir que la expulsión de un operador cierre colateralmente la sesión del SuperAdmin en otro navegador (Hito 28.7).
 * `docs/specs/63_RESPONSIVE_AUTO_FIT_DATA_COLUMNS_AND_INVENTORY_TABLE_ERGONOMICS.md` — Columnas Auto-Ajustables al Contenido (*Content-Hugging* `width: 1%`) en `RgDataTable.vue`, Normalización Compacta de Modelos Virtuales `CHR QEMU (x86_64)` y Cabeceras Concisas en `RouterInventoryView.vue` (`es.json` / `en.json`) para Evitar Solapamiento con la Botonera Fija de Acciones (Hito 28.8).
+* `docs/specs/64_RBAC_UI_VISIBILITY_ENFORCEMENT_ZERO_403_DEAD_ENDS.md` — Aplicación Estricta de Visibilidad RBAC en Interfaz (*Zero 403 Dead-Ends*): Matriz `ROLE_POLICY_MATRIX` (11 Roles × 30 Acciones) integrada en `useAuthStore.canUseUserFeature`, Filtrado de Menú Lateral Global (`RgResponsiveShell.vue`), Ocultación de Pestañas y Acciones de Mutación Restringidas en `EnterpriseComplianceView.vue`, `DashboardHomeView.vue`, `RouterInventoryView.vue` y `RouterSidebarMenu.vue`, y Paridad de Roles `READ_ONLY` en `sdwan.py`, `switching.py`, `sla.py` y `wifi.py` (Hito 28.9).
 
 
 ---
