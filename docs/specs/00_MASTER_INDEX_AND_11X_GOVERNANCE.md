@@ -161,7 +161,7 @@ rosgrid/
 
 ---
 
-## 4. Índice Maestro de los 58 Archivos de Especificación (00 a 57) (Carpeta `docs/specs/`)
+## 4. Índice Maestro de los 59 Archivos de Especificación (00 a 58) (Carpeta `docs/specs/`)
 
 Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `docs/specs/` siguiendo rigurosamente el orden de los 5 Bloques listados a continuación:
 
@@ -243,6 +243,7 @@ Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `
 * `docs/specs/55_GRANULAR_USER_PROFILE_FLAGS_TELEMETRY_BEACON_AND_PROMETHEUS_GRAFANA_OBSERVABILITY.md` — Gobernanza Granular de Flags en Perfiles de Usuario (Matriz RBAC de 30 Acciones + 10 Permisos por Router + Overrides Individuales `feature_flags_override`), Telemetría Anónima de Instancias Activas (*Privacy-Preserving Heartbeat Beacon* hacia `rosgrid-web` en Cloudflare Pages Functions + KV con TTL 24h) y Arquitectura Dual de Observabilidad Prometheus (`GET /metrics` Plataforma FastAPI vs `GET /api/v1/metrics/fleet` Flota MikroTik) con Guía de Integración Grafana y Alertmanager (Hitos 27.17, 27.18 y 27.19).
 * `docs/specs/56_CVE_REMEDIATION_SMART_OS_FIRMWARE_UPDATE_TEMPLATE_AND_CHR_DETECTION.md` — Remediación Directa de CVEs, Plantilla Masiva Inteligente #15 (`ACTUALIZACION_ROUTEROS_Y_FIRMWARE`), Sondeo en Vivo de Canal (`POST /api/v1/operations/ros-updates/check` con `stable`, `long-term`, `testing`, `development`) mostrando la actualización disponible, y Auto-Detección de CHR vs. RouterBOARD Físico (actualizando RouterOS + Firmware RouterBOOT en hardware físico y solo RouterOS cuando se detecta CHR — Hito 28.1).
 * `docs/specs/57_FTTH_NAP_BOX_DETAIL_GREENLET_FIX_AND_SUBSCRIBER_REGISTRATION_CONTRACT.md` — Corrección de Serialización Asíncrona (`MissingGreenlet`) en `GET /api/v1/optical-boxes/{box_id}` y `SubscriberDevice.assigned_ipv4` para el Mapa de Clientes (`/subscribers/map`), Normalización de Alias FTTH (`FTTH_GPON`, `ROUTER_NAT`), Validación de Puerto Libre en Caja NAP (`HTTP 409 Conflict`) y Persistencia Integral de Planta Externa en `POST /api/v1/subscriber-devices` para el Panel del Técnico de Campo (`/field-ops` — Hito 28.2).
+* `docs/specs/58_BACKUP_EXPORT_FTP_POLICY_STALE_SESSION_BYPASS_AND_DOC_PARITY.md` — Bypass Automático de Caché de Sesión RouterOS v7 (10m) en Exportación de Respaldos `.rsc` (`fastapi/src/api/v1/backups.py`), Diagnóstico Exacto de Política `ftp` Faltante en `/user/group` y Paridad Documental de `policy=api,rest-api,read,write,ftp,test,reboot,policy,sensitive` en las 6 Guías de Preparación MikroTik y `helpCatalog.ts` (Hito 28.3).
 
 
 ---
