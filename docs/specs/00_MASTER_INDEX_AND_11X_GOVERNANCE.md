@@ -161,7 +161,7 @@ rosgrid/
 
 ---
 
-## 4. Índice Maestro de los 59 Archivos de Especificación (00 a 58) (Carpeta `docs/specs/`)
+## 4. Índice Maestro de los 62 Archivos de Especificación (00 a 61) (Carpeta `docs/specs/`)
 
 Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `docs/specs/` siguiendo rigurosamente el orden de los 5 Bloques listados a continuación:
 
@@ -246,6 +246,7 @@ Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `
 * `docs/specs/58_BACKUP_EXPORT_FTP_POLICY_STALE_SESSION_BYPASS_AND_DOC_PARITY.md` — Bypass Automático de Caché de Sesión RouterOS v7 (10m) en Exportación de Respaldos `.rsc` (`fastapi/src/api/v1/backups.py`), Diagnóstico Exacto de Política `ftp` Faltante en `/user/group` y Paridad Documental de `policy=api,rest-api,read,write,ftp,test,reboot,policy,sensitive` en las 6 Guías de Preparación MikroTik y `helpCatalog.ts` (Hito 28.3).
 * `docs/specs/59_DHCP_SNOOPING_INTERACTIVE_TOGGLE_TRUSTED_PORTS_AND_BULK_TEMPLATE.md` — Activación/Configuración Interactiva de DHCP Snooping, Option 82 y Puertos Trusted/Untrusted por Bridge bajo Safe Mode (60s) en `EnterpriseComplianceView.vue` (`tab=switching` + `POST /api/v1/switching/dhcp-snooping/enable`) y Plantilla Masiva #16 `SEGURIDAD_L2_DHCP_SNOOPING_Y_OPTION82` en `/bulk-ops` (Hito 28.4).
 * `docs/specs/60_ORPHAN_API_ENDPOINTS_AUDIT_AND_FRONTEND_PARITY.md` — Auditoría Integral Bidireccional de las 374 Operaciones OpenAPI frente a los 99 Archivos de `vue3/src/`, Corrección de los 5 Desajustes de Ruta Front ↔ Back (`VaultRevealModal.vue`, `EnterpriseComplianceView.vue` SD-WAN y `webfig_layer2.py`), Conexión en UI de los Endpoints Operativos Huérfanos (Bandwidth Profiles, Acciones de Servicio de Abonados, BGP Looking Glass, Anomalías de Tráfico, Diagnóstico 360°, Telemetría Beacon, Cable Test Ethernet, Conntrack, Queue Tree y OSPF/BFD/Filtros) y Guardrail `.agents/scripts/verify_no_orphan_api_endpoints.py` (Hito 28.5).
+* `docs/specs/61_SLA_TELEMETRY_REAL_GATEWAY_DISCOVERY_QUAD9_PRESETS_AND_ROS7_PING_PARSER.md` — Telemetría de SLA Real: Eliminación de IPs Sintéticas Hardcodeadas (`190.202.10.1` y `1.1.1.1` en `sla.py`), Autodescubrimiento en Vivo de Gateways WAN (`0.0.0.0/0` en `/rest/ip/route`) y Servidores DNS (`/rest/ip/dns`) en `GET /api/v1/sla/targets/{router_id}`, Selector Desplegable (`<select>`) con Referencia Predeterminada Quad9 (`9.9.9.9`) + Opción Personalizada y Parser Nativo de RTT en RouterOS v7 (`4ms520us` / `650us` — Hito 28.6).
 
 
 ---
