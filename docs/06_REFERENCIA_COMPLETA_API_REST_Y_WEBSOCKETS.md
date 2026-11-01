@@ -1657,5 +1657,28 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
   - **Autenticación:** Cabecera `Authorization: Bearer <ROSGRID_PROMETHEUS_SCRAPE_TOKEN>` y Feature Flag `prometheus_fleet_exporter_enabled`.
   - **Guía de configuración `prometheus.yml` y Grafana:** Consulta [`docs/specs/55_GRANULAR_USER_PROFILE_FLAGS_TELEMETRY_BEACON_AND_PROMETHEUS_GRAFANA_OBSERVABILITY.md`](./specs/55_GRANULAR_USER_PROFILE_FLAGS_TELEMETRY_BEACON_AND_PROMETHEUS_GRAFANA_OBSERVABILITY.md).
 
+### 8.3 Diagnóstico de Telemetría Anónima de Instancias Activas (Privacy-Preserving Heartbeat Beacon)
+
+- **`GET /api/v1/system/telemetry-beacon/status`:**
+  - **Propósito:** Permite a los administradores (`SUPERADMIN_GLOBAL` y `TENANT_ADMIN`) auditar el estado del worker de telemetría anónima hacia `rosgrid-web` (`https://rosgrid.net/api/telemetry/heartbeat`), verificando si está habilitado (`ROSGRID_TELEMETRY_BEACON_ENABLED`), el identificador irreversible `instance_id` (`HMAC-SHA256`), el intervalo de despacho (6 horas) y la marca temporal del último envío.
+  - **Autenticación:** Requiere sesión activa de `SUPERADMIN_GLOBAL` o `TENANT_ADMIN`.
+  - **Respuesta (200 OK):**
+    ```json
+    {
+      "enabled": true,
+      "instance_id": "a8f5f167f44f4964e6c998dee827110c0e5b9a2f7d8c1e3b4a5f6d7e8f9a0b1c",
+      "beacon_url": "https://rosgrid.net/api/telemetry/heartbeat",
+      "interval_seconds": 21600,
+      "last_sent_at": "2026-11-01T14:00:00Z",
+      "last_status": "http_202"
+    }
+    ```
+
+- **`POST /api/v1/system/telemetry-beacon/trigger`:**
+  - **Propósito:** Fuerza un latido anónimo inmediato fail-silent hacia el portal oficial `rosgrid-web`.
+  - **Autenticación:** Requiere sesión activa de `SUPERADMIN_GLOBAL` o `TENANT_ADMIN`, cabecera `Idempotency-Key` y `X-CSRF-Token`.
+  - **Respuesta (200 OK):** Detalle del latido despachado con `fleet_bucket` y estado devuelto por el receptor en el borde.
+
+
 
 

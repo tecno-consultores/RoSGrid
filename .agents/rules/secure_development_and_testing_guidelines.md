@@ -106,6 +106,12 @@ Apply these non-negotiable security directives before writing any code:
       ```
     - **NEVER execute `./scripts/build.sh` for intermediate local testing.** `scripts/build.sh` is reserved strictly for official milestone releases (Milestone 27) that publish `:latest` and `:1.0.0` tags to remote Docker Hub and trigger `docker builder prune -af`. Mixing these environments confuses workflows and burns unnecessary network and CPU resources.
 
+12. **Privacy-Preserving Telemetry Beacon & Dual Observability (Spec 55):**
+    - **Zero-PII Invariant:** Heartbeat payloads (`fastapi/src/workers/telemetry_beacon_worker.py`) must never transmit tenant names, router IPs, credentials, or sensitive topology. `instance_id` must be irreversibly hashed via `HMAC-SHA256`.
+    - **Fail-Silent & Air-Gapped Resilient:** All outbound requests to `https://rosgrid.net/api/telemetry/heartbeat` must catch network exceptions and timeout within 5.0s without blocking or crashing the application.
+    - **Pytest Lifespan Guard:** Never initiate an infinite worker loop during testing (`ROSGRID_ENV.startswith("qa") or ROSGRID_ENV == "test"`).
+    - **Dual Observability:** Maintain `GET /metrics` strictly for FastAPI platform telemetry and `GET /api/v1/metrics/fleet` strictly for MikroTik fleet metrics served from KeyDB in RAM.
+
 
 ---
 

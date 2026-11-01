@@ -984,6 +984,18 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 130. Telemetría Anónima de Instancias Activas: Inspección de Estado de Beacon (GET /system/telemetry-beacon/status) y Disparo Manual (POST /system/telemetry-beacon/trigger) sin autenticación devuelve 401 (Hito 27.18)
+    Given path '/api/v1/system/telemetry-beacon/status'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/system/telemetry-beacon/trigger'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
 
 
 

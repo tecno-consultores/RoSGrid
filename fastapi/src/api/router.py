@@ -28,6 +28,7 @@ from src.api.v1.sla import router as sla_router
 from src.api.v1.subscribers import bandwidth_router, subscribers_router
 from src.api.v1.switching import router as switching_router
 from src.api.v1.syslog import router as syslog_router
+from src.api.v1.system import router as system_router
 from src.api.v1.tenants import router as tenants_router
 from src.api.v1.topology_l2 import router as topology_l2_router
 from src.api.v1.traffic_flow import router as traffic_flow_router
@@ -92,3 +93,4 @@ api_v1_router.include_router(cve_router)
 api_v1_router.include_router(topology_l2_router)
 api_v1_router.include_router(syslog_router)
 api_v1_router.include_router(fleet_metrics_router)
+api_v1_router.include_router(system_router)

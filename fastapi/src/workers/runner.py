@@ -15,6 +15,7 @@ from src.workers.nightly_backup_worker import nightly_backup_worker_loop
 from src.workers.session_lifecycle_worker import session_lifecycle_worker_loop
 from src.workers.subscriber_status_poller import subscriber_status_poller_worker_loop
 from src.workers.syslog_collector import syslog_collector_worker_loop
+from src.workers.telemetry_beacon_worker import telemetry_beacon_worker_loop
 from src.workers.vault_rotation_worker import vault_rotation_worker_loop
 
 logging.basicConfig(
@@ -47,6 +48,7 @@ async def main_workers_runner() -> None:
         asyncio.create_task(syslog_collector_worker_loop(), name="SyslogCollectorWorker"),
         asyncio.create_task(subscriber_status_poller_worker_loop(), name="SubscriberStatusPollerWorker"),
         asyncio.create_task(session_lifecycle_worker_loop(), name="SessionLifecycleWorker"),
+        asyncio.create_task(telemetry_beacon_worker_loop(stop_event), name="TelemetryBeaconWorker"),
     ]
 
     try:

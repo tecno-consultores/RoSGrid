@@ -37,8 +37,26 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
-    yield
-    await close_redis_client()
+    beacon_task: asyncio.Task[None] | None = None
+    is_test_env = settings.ROSGRID_ENV.startswith("qa") or settings.ROSGRID_ENV == "test"
+    if not is_test_env and settings.ROSGRID_TELEMETRY_BEACON_ENABLED:
+        try:
+            from src.workers.telemetry_beacon_worker import telemetry_beacon_worker_loop
+
+            beacon_task = asyncio.create_task(telemetry_beacon_worker_loop(), name="TelemetryBeaconLifespan")
+        except Exception as exc:
+            logger.debug("Omitiendo inicio de beacon en lifespan: %s", exc)
+
+    try:
+        yield
+    finally:
+        if beacon_task is not None:
+            beacon_task.cancel()
+            try:
+                await beacon_task
+            except (asyncio.CancelledError, Exception):
+                pass
+        await close_redis_client()
 
 
 async def _check_database_health() -> str:

@@ -77,6 +77,11 @@ class Settings(BaseSettings):
     ROSGRID_CVE_RSS_SOURCE: str = "https://cdn.mikrotik.com/web-assets/supportsec/rss.xml"
     ROSGRID_CVE_NVD_SEARCH_SOURCE: str = "https://nvd.nist.gov/vuln/search?keyword=mikrotik&resultType=records"
 
+    # Telemetría Anónima de Instancias Activas (Spec 55 / Hito 27.18)
+    ROSGRID_TELEMETRY_BEACON_ENABLED: bool = True
+    ROSGRID_TELEMETRY_BEACON_URL: str = "https://rosgrid.net/api/telemetry/heartbeat"
+    ROSGRID_TELEMETRY_BEACON_INTERVAL_SECONDS: int = 21600
+
     # Configuración de Orígenes Cruzados (CORS) y Despliegue Separado
     ROSGRID_CORS_ORIGINS: str = "*"
     ROSGRID_CROSS_ORIGIN_COOKIES: bool = False

@@ -3,6 +3,11 @@
 
 # 55 — GOBERNANZA GRANULAR DE FLAGS EN PERFILES DE USUARIO (30 ACCIONES RBAC + OVERRIDES INDIVIDUALES), TELEMETRÍA ANÓNIMA DE INSTANCIAS ACTIVAS (`rosgrid-web` BEACON) Y ARQUITECTURA DUAL DE OBSERVABILIDAD PROMETHEUS + GRAFANA (RoSGrid)
 
+> **[ESTADO DE IMPLEMENTACIÓN Y CERTIFICACIÓN 11X]:**
+> - **Hito 27.17 (Gobernanza Granular de Flags en Perfiles de Usuario, Matriz 30×11 y 10 Flags por Router):** COMPLETADO Y CERTIFICADO AL 100% en Docker (605 tests unitarios Pytest, 507 tests Vitest en 79 suites, 0 errores en `ruff` y `vue-tsc`, Escenario 129 Karate API y Escenario 73 Karate UI).
+> - **Hito 27.18 (Telemetría Anónima de Instancias Activas hacia `rosgrid-web`):** COMPLETADO Y CERTIFICADO AL 100% en Docker (621 tests unitarios Pytest, worker `telemetry_beacon_worker.py` Grado A CC <= 5, endpoints `/system/telemetry-beacon/status` y `/trigger`, paridad en `rosgrid-web` con Cloudflare Pages Functions + KV, Escenario 130 Karate API).
+> - **Hito 27.19 (Arquitectura Dual Prometheus y Guía Grafana):** ESPECIFICADO Y PLANIFICADO (Pendiente de implementación de enriquecimiento de hardware).
+
 > **[DIRECTIVA DE SISTEMA PARA ANTIGRAVITY]:** Este documento especifica la arquitectura técnica detallada de los **Hitos 27.17, 27.18 y 27.19**, cubriendo tres pilares estratégicos de gobernanza y observabilidad en **RoSGrid**:
 >
 > 1. **Hito 27.17 — Validación y Expansión Exhaustiva de Flags en Perfiles de Usuario (`RBAC 30×11` + `UserRouterPermission 10 Flags` + Overrides por Operador Individual):** Garantiza que el **100% de las funciones y submódulos** de RoSGrid posean un interruptor explícito para activarse o desactivarse tanto a nivel de **Perfil/Rol (`SystemRoleEnum`)**, como a nivel de **Usuario Individual (`users.feature_flags_override`)** y **Permiso por Router (`user_router_permissions`)**.
