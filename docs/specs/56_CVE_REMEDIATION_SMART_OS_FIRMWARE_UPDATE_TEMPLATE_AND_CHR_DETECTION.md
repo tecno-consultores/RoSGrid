@@ -217,11 +217,16 @@ class RosUpdateExecuteRequest(StrictBaseModel):
     channel: str = Field(default="stable", pattern="^(stable|long-term|testing|development)$")
     auto_upgrade_firmware: bool = True
     poe_aware: bool = False
-    safety_stop_threshold_percent: float = Field(1.0, ge=0.1, le=100.0)
+    safety_stop_threshold_percent: float = Field(
+        1.0,
+        ge=0.1,
+        le=100.0,
+        validation_alias=AliasChoices("safety_stop_threshold_percent", "safety_stop_threshold_pct"),
+    )
     target_version: str | None = None
 ```
 
-*(Nota: añadir `target_version: str | None = None` en `RosUpdateExecuteRequest` evita errores 422 `extra_forbidden` cuando el frontend envía `target_version` o `safety_stop_threshold_pct`.)*
+*(Nota: importar `AliasChoices` desde `pydantic` en `fastapi/src/schemas/bulk_and_updates.py` y añadir `target_version: str | None = None` junto con `validation_alias=AliasChoices("safety_stop_threshold_percent", "safety_stop_threshold_pct")` en `RosUpdateExecuteRequest` evita errores HTTP 422 `extra_forbidden` cuando el frontend invoca `POST /api/v1/operations/ros-updates/execute`.)*
 
 ---
 
@@ -551,39 +556,498 @@ Y actualizar inmediatamente `vue3/src/views/fleetCveMatrix.unit.ts` (línea 191)
 
 ---
 
-### 4.4. Paso 4: Selector de Canal, Sondeo de Actualización Disponible y Detección CHR en `vue3/src/views/BulkOperationsAndUpdatesView.vue`
+### 4.4. Paso 4: Selector de Canal, Sondeo de Actualización Disponible, Detección CHR y Adaptación de la Pestaña `🚀 Actualizaciones RouterOS` en `vue3/src/views/BulkOperationsAndUpdatesView.vue`
 
 En `vue3/src/views/BulkOperationsAndUpdatesView.vue`:
 
-1. Importar `useRoute` desde `'vue-router'`:
+1. **Importar `useRoute` desde `'vue-router'` y extender `FleetRouter`:**
    ```typescript
    import { useRoute } from 'vue-router';
    const route = useRoute();
    ```
-2. En `FleetRouter`, añadir `board_name?: string;` e `is_chr?: boolean;`, calculando en `syncFleetFromInventory()`:
+   En `interface FleetRouter`, añadir:
    ```typescript
-   const boardName = r.board_name || r.model_name || '';
+     board_name?: string;
+     is_chr?: boolean;
+     latest_version?: string | null;
+     update_available?: boolean | null;
+     current_firmware?: string | null;
+     upgrade_firmware?: string | null;
+     action_plan?: string;
+     upgraded_in_session?: boolean;
+   ```
+   Y en `syncFleetFromInventory()`, poblar `board_name` e `is_chr`:
+   ```typescript
+   const boardName = (r as unknown as { board_name?: string; model_name?: string }).board_name || (r as unknown as { model_name?: string }).model_name || '';
    const isChr = boardName.toUpperCase().includes('CHR');
    ```
-3. Añadir en `getTemplateKey(name: string)` el mapeo:
+   incluyendo `board_name: boardName, is_chr: isChr` en el objeto retornado para cada router.
+
+2. **Añadir en `getTemplateKey(name: string)` el mapeo:**
    ```typescript
    ACTUALIZACION_ROUTEROS_Y_FIRMWARE: 'actualizacion_routeros_y_firmware',
    ```
-4. En el Paso 2 del Asistente de Plantillas (`wizardStep === 2`), cuando un campo de `selectedTemplate.variables_schema` tenga `key === 'update_channel'` o `key === 'upgrade_firmware'`, renderizar un `<select>` táctico en lugar de `<input type="text">`:
-   - Para `update_channel`: opciones `stable`, `long-term`, `testing`, `development`, que al cambiar invoca automáticamente `checkAvailableUpdatesForChannel(templateVars['update_channel'])`.
-   - Para `upgrade_firmware`: opciones `yes` (*"Sí — Actualizar OS + Firmware en RouterBOARD (Auto-omitido en CHR)"*) y `no` (*"No — Actualizar únicamente Sistema Operativo"*).
-5. Mostrar debajo de los parámetros de la plantilla `ACTUALIZACION_ROUTEROS_Y_FIRMWARE` (y también en la Pestaña 2 de Actualizaciones) el panel **`#channel-update-discovery-box`** con:
-   - Botón `#btn-check-channel-updates` (`🔍 Consultar Actualización Disponible en Canal`).
-   - Resumen de detección de hardware:
-     - Contador de equipos **☁️ CHR (Solo OS)** vs **🖧 RouterBOARD (OS + Firmware)**.
-   - Tabla en vivo con cada router seleccionado:
-     - **Equipo** (`display_name`)
-     - **Hardware / Modo** (`☁️ CHR — Solo OS` si `is_chr === true`, o `🖧 RouterBOARD — OS + Firmware`)
-     - **Canal** (`stable` / `long-term` / `testing` / `development`)
-     - **Versión Instalada** (`installed_version`)
-     - **Actualización Disponible** (`latest_version` resaltado en cyan)
-6. En `generatePreview()`, si la plantilla seleccionada es `ACTUALIZACION_ROUTEROS_Y_FIRMWARE` y **todos** los routers seleccionados son `is_chr === true`, filtrar los pasos `system/routerboard/*` de la previsualización JSON/CLI e incluir el metadato `"modo_hardware_detectado": "CHR_SOLO_SISTEMA_OPERATIVO"`.
-7. En `onMounted()`, si `route?.query?.template === 'ACTUALIZACION_ROUTEROS_Y_FIRMWARE'`, seleccionar automáticamente esa plantilla, saltar a `wizardStep = 2` y disparar `checkAvailableUpdatesForChannel(String(route.query.channel || 'stable'))`.
+
+3. **En el Paso 2 del Asistente de Plantillas (`wizardStep === 2`):**
+   - Cuando un campo de `selectedTemplate.variables_schema` tenga `key === 'update_channel'` o `key === 'upgrade_firmware'`, renderizar un `<select>` táctico en lugar de `<input type="text">`:
+     - Para `update_channel`: opciones `stable`, `long-term`, `testing`, `development`, que al cambiar sincroniza `selectedUpdateChannel.value = templateVars.value['update_channel']` e invoca automáticamente `checkAvailableUpdatesForChannel(templateVars['update_channel'])`.
+     - Para `upgrade_firmware`: opciones `yes` (*"Sí — Actualizar OS + Firmware en RouterBOARD (Auto-omitido en CHR)"*) y `no` (*"No — Actualizar únicamente Sistema Operativo"*).
+   - Mostrar debajo de los parámetros de la plantilla `ACTUALIZACION_ROUTEROS_Y_FIRMWARE` el panel **`#channel-update-discovery-box`** con el botón `#btn-check-channel-updates` (`🔍 Consultar Actualización Disponible en Canal`), el resumen de equipos **☁️ CHR (Solo OS)** vs **🖧 RouterBOARD (OS + Firmware)** y la tabla de versiones disponibles.
+   - En `generatePreview()`, si la plantilla seleccionada es `ACTUALIZACION_ROUTEROS_Y_FIRMWARE` y **todos** los routers seleccionados son `is_chr === true`, filtrar los pasos `system/routerboard/*` de la previsualización JSON/CLI e incluir el metadato `"modo_hardware_detectado": "CHR_SOLO_SISTEMA_OPERATIVO"`.
+   - En `onMounted()`, si `route?.query?.template === 'ACTUALIZACION_ROUTEROS_Y_FIRMWARE'`, seleccionar automáticamente esa plantilla, saltar a `wizardStep = 2` y disparar `checkAvailableUpdatesForChannel(String(route.query.channel || 'stable'))`. Si `route?.query?.tab === 'updates'`, activar `activeTab.value = 'updates'`.
+
+4. **Adaptación Completa de la Pestaña 2 (`🚀 Actualizaciones RouterOS`, `activeTab === 'updates'`):**
+   La pestaña `🚀 Actualizaciones RouterOS` tenía quemadas en duro las versiones `RouterOS 7.16.1 (Stable)` y `RouterOS 7.16.2 (Testing)` en `targetRosVersion`, marcando erróneamente routers en `v7.21.5 (long-term)` como `"Pendiente de Upgrade"` hacia `v7.16.1`, y enviaba `safety_stop_threshold_pct` (provocando error 422 `extra_forbidden` contra `RosUpdateExecuteRequest`). Se adapta para usar selección de canal en vivo (`stable`, `long-term`, `testing`, `development`), sondeo real contra `POST /api/v1/operations/ros-updates/check`, detección automática **☁️ CHR (Solo OS)** vs **🖧 RouterBOARD (OS + Firmware)** y preservación del ordenamiento **PoE-Aware + Safety Stop**.
+
+   - **Target (en `<script setup>`, líneas 454-517 de `vue3/src/views/BulkOperationsAndUpdatesView.vue`):**
+   ```typescript
+     // Pestaña Updates de RouterOS
+     const targetRosVersion = ref('7.16.1');
+     const poeAware = ref(true);
+     const safetyStopThreshold = ref(1.0);
+     const updatingFleet = ref(false);
+     const upgradingRouterId = ref<string | null>(null);
+     const updateSuccess = ref<string | null>(null);
+
+     async function triggerRosUpdate(router: FleetRouter) {
+       upgradingRouterId.value = router.id;
+       updateSuccess.value = null;
+       try {
+         await http.post('/api/v1/operations/ros-updates/execute', {
+           router_ids: [router.id],
+           auto_upgrade_firmware: true,
+           poe_aware: poeAware.value,
+           safety_stop_threshold_pct: safetyStopThreshold.value,
+           target_version: targetRosVersion.value,
+         });
+         updateSuccess.value = `Actualización de ${router.identity} iniciada. Se guardó respaldo obligatorio.`;
+         router.ros_version = targetRosVersion.value;
+       } catch (err: unknown) {
+         const errorObj = err as { response?: { data?: { detail?: string } }; message?: string };
+         updateSuccess.value = `Error al actualizar ${router.identity}: ${errorObj.response?.data?.detail || errorObj.message || 'Fallo de conexión'}`;
+       } finally {
+         upgradingRouterId.value = null;
+         setTimeout(() => {
+           updateSuccess.value = null;
+         }, 5000);
+       }
+     }
+
+     async function triggerFleetPoeUpdate() {
+       const pendingRouters = fleetRouters.value.filter(
+         (r) => r.ros_version !== targetRosVersion.value && r.selected,
+       );
+       if (pendingRouters.length === 0) {
+         alert('No hay routers pendientes de actualización seleccionados.');
+         return;
+       }
+       updatingFleet.value = true;
+       updateSuccess.value = null;
+       try {
+         await http.post('/api/v1/operations/ros-updates/execute', {
+           router_ids: pendingRouters.map((r) => r.id),
+           auto_upgrade_firmware: true,
+           poe_aware: poeAware.value,
+           safety_stop_threshold_pct: safetyStopThreshold.value,
+           target_version: targetRosVersion.value,
+         });
+         updateSuccess.value = `Actualización masiva iniciada para ${pendingRouters.length} equipos con ordenamiento PoE-Aware (Safety Stop: ${safetyStopThreshold.value}%).`;
+         pendingRouters.forEach((r) => {
+           r.ros_version = targetRosVersion.value;
+         });
+       } catch (err: unknown) {
+         const errorObj = err as { response?: { data?: { detail?: string } }; message?: string };
+         updateSuccess.value = `Error en actualización masiva: ${errorObj.response?.data?.detail || errorObj.message || 'Fallo de conexión'}`;
+       } finally {
+         updatingFleet.value = false;
+         setTimeout(() => {
+           updateSuccess.value = null;
+         }, 7000);
+       }
+     }
+   ```
+
+   - **Replacement (en `<script setup>`, líneas 454-517 de `vue3/src/views/BulkOperationsAndUpdatesView.vue`):**
+   ```typescript
+     // Pestaña Updates de RouterOS (Adaptada con Canal Dinámico, Sondeo en Vivo y Auto-Detección CHR)
+     const selectedUpdateChannel = ref<'stable' | 'long-term' | 'testing' | 'development'>('stable');
+     const autoUpgradeFirmware = ref(true);
+     const checkingChannelUpdates = ref(false);
+     const channelCheckItems = ref<
+       Array<{
+         router_id: string;
+         display_name: string;
+         board_name?: string | null;
+         is_chr: boolean;
+         channel: string;
+         installed_version?: string | null;
+         latest_version?: string | null;
+         update_available: boolean;
+         status_text: string;
+         current_firmware?: string | null;
+         upgrade_firmware?: string | null;
+         action_plan: string;
+       }>
+     >([]);
+     const poeAware = ref(true);
+     const safetyStopThreshold = ref(1.0);
+     const updatingFleet = ref(false);
+     const upgradingRouterId = ref<string | null>(null);
+     const updateSuccess = ref<string | null>(null);
+
+     function isRouterUpToDate(router: FleetRouter): boolean {
+       if (router.upgraded_in_session) return true;
+       if (typeof router.update_available === 'boolean') return !router.update_available;
+       if (router.latest_version) return router.ros_version === router.latest_version;
+       return false;
+     }
+
+     async function checkAvailableUpdatesForChannel(channelArg?: string) {
+       const ch = (channelArg || selectedUpdateChannel.value || 'stable') as
+         | 'stable'
+         | 'long-term'
+         | 'testing'
+         | 'development';
+       selectedUpdateChannel.value = ch;
+       checkingChannelUpdates.value = true;
+       try {
+         const selectedIds = fleetRouters.value.filter((r) => r.selected).map((r) => r.id);
+         const res = await http.post('/api/v1/operations/ros-updates/check', {
+           router_ids: selectedIds,
+           channel: ch,
+         });
+         const items = Array.isArray(res.data?.items) ? res.data.items : [];
+         channelCheckItems.value = items;
+         items.forEach((item: (typeof channelCheckItems.value)[number]) => {
+           const target = fleetRouters.value.find((r) => r.id === item.router_id);
+           if (target) {
+             if (item.installed_version) target.ros_version = item.installed_version;
+             target.latest_version = item.latest_version || item.installed_version || target.ros_version;
+             target.update_available = Boolean(item.update_available);
+             target.is_chr = Boolean(item.is_chr);
+             target.board_name = item.board_name || target.board_name;
+             target.current_firmware = item.current_firmware || null;
+             target.upgrade_firmware = item.upgrade_firmware || null;
+             target.action_plan = item.action_plan;
+             target.upgraded_in_session = false;
+           }
+         });
+       } catch {
+         // Silencioso en caso de entorno sin conectividad o mock básico
+       } finally {
+         checkingChannelUpdates.value = false;
+       }
+     }
+
+     async function triggerRosUpdate(router: FleetRouter) {
+       upgradingRouterId.value = router.id;
+       updateSuccess.value = null;
+       try {
+         await http.post('/api/v1/operations/ros-updates/execute', {
+           router_ids: [router.id],
+           channel: selectedUpdateChannel.value,
+           auto_upgrade_firmware: router.is_chr ? false : autoUpgradeFirmware.value,
+           poe_aware: poeAware.value,
+           safety_stop_threshold_percent: safetyStopThreshold.value,
+         });
+         const modeLabel = router.is_chr ? 'CHR — Solo Sistema Operativo' : 'RouterBOARD — OS + Firmware';
+         updateSuccess.value = `Actualización de ${router.identity} (${modeLabel}, canal ${selectedUpdateChannel.value}) iniciada. Se guardó respaldo obligatorio.`;
+         if (router.latest_version) {
+           router.ros_version = router.latest_version;
+         }
+         router.update_available = false;
+         router.upgraded_in_session = true;
+       } catch (err: unknown) {
+         const errorObj = err as { response?: { data?: { detail?: string } }; message?: string };
+         updateSuccess.value = `Error al actualizar ${router.identity}: ${errorObj.response?.data?.detail || errorObj.message || 'Fallo de conexión'}`;
+       } finally {
+         upgradingRouterId.value = null;
+         setTimeout(() => {
+           updateSuccess.value = null;
+         }, 5000);
+       }
+     }
+
+     async function triggerFleetPoeUpdate() {
+       const pendingRouters = fleetRouters.value.filter(
+         (r) => !isRouterUpToDate(r) && r.selected,
+       );
+       if (pendingRouters.length === 0) {
+         alert('No hay routers pendientes de actualización seleccionados.');
+         return;
+       }
+       updatingFleet.value = true;
+       updateSuccess.value = null;
+       try {
+         await http.post('/api/v1/operations/ros-updates/execute', {
+           router_ids: pendingRouters.map((r) => r.id),
+           channel: selectedUpdateChannel.value,
+           auto_upgrade_firmware: autoUpgradeFirmware.value,
+           poe_aware: poeAware.value,
+           safety_stop_threshold_percent: safetyStopThreshold.value,
+         });
+         updateSuccess.value = `Actualización masiva (${selectedUpdateChannel.value}) iniciada para ${pendingRouters.length} equipos con ordenamiento PoE-Aware (Safety Stop: ${safetyStopThreshold.value}%).`;
+         pendingRouters.forEach((r) => {
+           if (r.latest_version) {
+             r.ros_version = r.latest_version;
+           }
+           r.update_available = false;
+           r.upgraded_in_session = true;
+         });
+       } catch (err: unknown) {
+         const errorObj = err as { response?: { data?: { detail?: string } }; message?: string };
+         updateSuccess.value = `Error en actualización masiva: ${errorObj.response?.data?.detail || errorObj.message || 'Fallo de conexión'}`;
+       } finally {
+         updatingFleet.value = false;
+         setTimeout(() => {
+           updateSuccess.value = null;
+         }, 7000);
+       }
+     }
+   ```
+
+   - **Target (en `<template>`, líneas 917-1016 de `vue3/src/views/BulkOperationsAndUpdatesView.vue`):**
+   ```html
+       <!-- Pestaña 2: Actualizador de RouterOS v7 -->
+       <section v-else class="updates-container" :aria-label="t('bulk_ops.updates_center_aria', 'Centro de actualizaciones RouterOS')">
+         <div v-if="updateSuccess" class="alert alert--success">✅ {{ updateSuccess }}</div>
+
+         <div class="updates-header-card">
+           <div>
+             <h2 class="step-title">{{ t('bulk_ops.updates_title', 'Matriz de Versiones de RouterOS v7') }}</h2>
+             <p class="text-muted">
+               {{ t('bulk_ops.updates_desc', 'RoSGrid genera un respaldo encriptado .rsc + .backup antes de iniciar cualquier actualización.') }}
+             </p>
+           </div>
+
+           <div class="target-version-selector">
+             <label class="form-label">
+               {{ t('bulk_ops.target_version_label', 'Versión Objetivo Recomendada:') }}
+               <select v-model="targetRosVersion" class="form-select">
+                 <option value="7.16.1">RouterOS 7.16.1 (Stable)</option>
+                 <option value="7.16.2">RouterOS 7.16.2 (Testing)</option>
+               </select>
+             </label>
+           </div>
+         </div>
+
+         <!-- Tarjeta de Control PoE-Aware y Safety Stop -->
+         <div class="poe-safety-card">
+           <div class="poe-safety-options">
+             <label class="toggle-poe-label">
+               <input v-model="poeAware" type="checkbox" class="checkbox-poe" />
+               <span class="font-bold">
+                 {{ t('bulk_ops.poe_aware_label', '⚡ Ordenamiento PoE-Aware (Hojas PD primero, Switches PSE intermedios, Core final)') }}
+               </span>
+             </label>
+
+             <div class="safety-stop-selector">
+               <label class="form-label">
+                 {{ t('bulk_ops.safety_stop_label', 'Freno de Emergencia (Safety Stop):') }}
+                 <select v-model.number="safetyStopThreshold" class="form-select select-sm">
+                   <option :value="1.0">{{ t('bulk_ops.safety_1_strict', '1.0% de fallos (Estricto)') }}</option>
+                   <option :value="2.0">{{ t('bulk_ops.safety_2', '2.0% de fallos') }}</option>
+                   <option :value="5.0">{{ t('bulk_ops.safety_5_permissive', '5.0% de fallos (Permisivo)') }}</option>
+                 </select>
+               </label>
+             </div>
+           </div>
+
+           <button
+             type="button"
+             class="btn btn--primary btn-poe-upgrade"
+             :disabled="updatingFleet"
+             :aria-label="t('bulk_ops.btn_update_poe', 'Actualizar flota con ordenamiento PoE-Aware')"
+             @click="triggerFleetPoeUpdate"
+           >
+             <span v-if="updatingFleet">{{ t('bulk_ops.updating_poe_stages', '⏳ Procesando etapas PoE...') }}</span>
+             <span v-else>{{ t('bulk_ops.btn_update_poe', '⚡ Actualizar Flota Seleccionada con PoE-Aware') }}</span>
+           </button>
+         </div>
+
+         <div class="table-scroll-wrapper">
+           <table class="fleet-table">
+             <thead>
+               <tr>
+                 <th>{{ t('bulk_ops.th_device', 'Equipo') }}</th>
+                 <th>{{ t('bulk_ops.th_ip', 'IP Primaria') }}</th>
+                 <th>{{ t('bulk_ops.th_current_version', 'Versión Actual') }}</th>
+                 <th>{{ t('bulk_ops.th_target_version', 'Versión Objetivo') }}</th>
+                 <th>{{ t('bulk_ops.th_diff', 'Diferencia') }}</th>
+                 <th>{{ t('bulk_ops.th_action', 'Acción de Actualización') }}</th>
+               </tr>
+             </thead>
+             <tbody>
+               <tr v-for="r in fleetRouters" :key="r.id">
+                 <td class="font-bold">{{ r.identity }}</td>
+                 <td class="font-mono">{{ r.ip_address }}</td>
+                 <td class="font-mono">v{{ r.ros_version }}</td>
+                 <td class="font-mono">v{{ targetRosVersion }}</td>
+                 <td>
+                   <span v-if="r.ros_version === targetRosVersion" class="badge badge--success">
+                     {{ t('bulk_ops.status_updated', 'Actualizado') }}
+                   </span>
+                   <span v-else class="badge badge--warning">
+                     {{ t('bulk_ops.status_pending', 'Pendiente de Upgrade') }}
+                   </span>
+                 </td>
+                 <td>
+                   <button
+                     type="button"
+                     class="btn btn--sm"
+                     :class="r.ros_version === targetRosVersion ? 'btn--secondary' : 'btn--primary'"
+                     :disabled="r.ros_version === targetRosVersion || upgradingRouterId === r.id"
+                     @click="triggerRosUpdate(r)"
+                   >
+                     <span v-if="upgradingRouterId === r.id">{{ t('bulk_ops.upgrading', '⏳ Actualizando...') }}</span>
+                     <span v-else>{{ t('bulk_ops.btn_upgrade_single', 'Actualizar con Backup') }}</span>
+                   </button>
+                 </td>
+               </tr>
+             </tbody>
+           </table>
+         </div>
+       </section>
+   ```
+
+   - **Replacement (en `<template>`, líneas 917-1016 de `vue3/src/views/BulkOperationsAndUpdatesView.vue`):**
+   ```html
+       <!-- Pestaña 2: Actualizador de RouterOS v7 (Canal Dinámico + Auto-Detección CHR + PoE-Aware) -->
+       <section v-else class="updates-container" :aria-label="t('bulk_ops.updates_center_aria', 'Centro de actualizaciones RouterOS')">
+         <div v-if="updateSuccess" class="alert alert--success">✅ {{ updateSuccess }}</div>
+
+         <div class="updates-header-card">
+           <div>
+             <h2 class="step-title">{{ t('bulk_ops.updates_title', 'Matriz de Versiones de RouterOS v7') }}</h2>
+             <p class="text-muted">
+               {{ t('bulk_ops.updates_desc', 'RoSGrid genera un respaldo encriptado .rsc + .backup antes de iniciar cualquier actualización. En CHR actualiza solo el OS; en RouterBOARD actualiza OS + Firmware.') }}
+             </p>
+           </div>
+
+           <div class="target-version-selector" style="display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap;">
+             <label class="form-label">
+               {{ t('bulk_ops.update_channel_label', 'Canal de Actualización:') }}
+               <select
+                 id="select-fleet-update-channel"
+                 v-model="selectedUpdateChannel"
+                 class="form-select"
+                 @change="checkAvailableUpdatesForChannel(selectedUpdateChannel)"
+               >
+                 <option value="stable">stable (Recomendado Producción)</option>
+                 <option value="long-term">long-term (Soporte Extendido)</option>
+                 <option value="testing">testing (Pre-lanzamiento)</option>
+                 <option value="development">development (Laboratorio)</option>
+               </select>
+             </label>
+
+             <label class="toggle-poe-label" style="margin-bottom: 0.35rem;">
+               <input v-model="autoUpgradeFirmware" type="checkbox" class="checkbox-poe" />
+               <span>{{ t('bulk_ops.auto_firmware_label', 'Actualizar Firmware RouterBOOT (Auto-omitido en CHR)') }}</span>
+             </label>
+
+             <button
+               id="btn-check-fleet-updates"
+               type="button"
+               class="btn btn--secondary btn--sm"
+               :disabled="checkingChannelUpdates"
+               @click="checkAvailableUpdatesForChannel(selectedUpdateChannel)"
+             >
+               <span v-if="checkingChannelUpdates">⏳ Consultando canal...</span>
+               <span v-else>🔍 Consultar Actualizaciones Disponibles</span>
+             </button>
+           </div>
+         </div>
+
+         <!-- Tarjeta de Control PoE-Aware y Safety Stop -->
+         <div class="poe-safety-card">
+           <div class="poe-safety-options">
+             <label class="toggle-poe-label">
+               <input v-model="poeAware" type="checkbox" class="checkbox-poe" />
+               <span class="font-bold">
+                 {{ t('bulk_ops.poe_aware_label', '⚡ Ordenamiento PoE-Aware (Hojas PD primero, Switches PSE intermedios, Core final)') }}
+               </span>
+             </label>
+
+             <div class="safety-stop-selector">
+               <label class="form-label">
+                 {{ t('bulk_ops.safety_stop_label', 'Freno de Emergencia (Safety Stop):') }}
+                 <select v-model.number="safetyStopThreshold" class="form-select select-sm">
+                   <option :value="1.0">{{ t('bulk_ops.safety_1_strict', '1.0% de fallos (Estricto)') }}</option>
+                   <option :value="2.0">{{ t('bulk_ops.safety_2', '2.0% de fallos') }}</option>
+                   <option :value="5.0">{{ t('bulk_ops.safety_5_permissive', '5.0% de fallos (Permisivo)') }}</option>
+                 </select>
+               </label>
+             </div>
+           </div>
+
+           <button
+             type="button"
+             class="btn btn--primary btn-poe-upgrade"
+             :disabled="updatingFleet"
+             :aria-label="t('bulk_ops.btn_update_poe', 'Actualizar flota con ordenamiento PoE-Aware')"
+             @click="triggerFleetPoeUpdate"
+           >
+             <span v-if="updatingFleet">{{ t('bulk_ops.updating_poe_stages', '⏳ Procesando etapas PoE...') }}</span>
+             <span v-else>{{ t('bulk_ops.btn_update_poe', '⚡ Actualizar Flota Seleccionada con PoE-Aware') }}</span>
+           </button>
+         </div>
+
+         <div class="table-scroll-wrapper">
+           <table class="fleet-table">
+             <thead>
+               <tr>
+                 <th>{{ t('bulk_ops.th_device', 'Equipo') }}</th>
+                 <th>{{ t('bulk_ops.th_ip', 'IP Primaria') }}</th>
+                 <th>Hardware / Modo</th>
+                 <th>{{ t('bulk_ops.th_current_version', 'Versión Actual') }}</th>
+                 <th>{{ t('bulk_ops.th_target_version', 'Disponible en Canal') }}</th>
+                 <th>{{ t('bulk_ops.th_diff', 'Estado') }}</th>
+                 <th>{{ t('bulk_ops.th_action', 'Acción de Actualización') }}</th>
+               </tr>
+             </thead>
+             <tbody>
+               <tr v-for="r in fleetRouters" :key="r.id">
+                 <td class="font-bold">{{ r.identity }}</td>
+                 <td class="font-mono">{{ r.ip_address }}</td>
+                 <td>
+                   <span v-if="r.is_chr" class="badge badge--info" title="Cloud Hosted Router: Solo actualiza Sistema Operativo">
+                     ☁️ CHR (Solo OS)
+                   </span>
+                   <span v-else class="badge badge--secondary" title="Equipo físico RouterBOARD: Actualiza OS + Firmware RouterBOOT">
+                     🖧 RouterBOARD (OS + FW)
+                   </span>
+                 </td>
+                 <td class="font-mono">{{ r.ros_version.startsWith('v') ? r.ros_version : `v${r.ros_version}` }}</td>
+                 <td class="font-mono">
+                   <span v-if="r.latest_version">{{ r.latest_version.startsWith('v') ? r.latest_version : `v${r.latest_version}` }} ({{ selectedUpdateChannel }})</span>
+                   <span v-else class="text-muted">Canal {{ selectedUpdateChannel }}</span>
+                 </td>
+                 <td>
+                   <span v-if="isRouterUpToDate(r)" class="badge badge--success">
+                     {{ t('bulk_ops.status_updated', 'Actualizado') }}
+                   </span>
+                   <span v-else class="badge badge--warning">
+                     {{ t('bulk_ops.status_pending', 'Pendiente de Upgrade') }}
+                   </span>
+                 </td>
+                 <td>
+                   <button
+                     type="button"
+                     class="btn btn--sm"
+                     :class="isRouterUpToDate(r) ? 'btn--secondary' : 'btn--primary'"
+                     :disabled="isRouterUpToDate(r) || upgradingRouterId === r.id"
+                     @click="triggerRosUpdate(r)"
+                   >
+                     <span v-if="upgradingRouterId === r.id">{{ t('bulk_ops.upgrading', '⏳ Actualizando...') }}</span>
+                     <span v-else>{{ t('bulk_ops.btn_upgrade_single', 'Actualizar con Backup') }}</span>
+                   </button>
+                 </td>
+               </tr>
+             </tbody>
+           </table>
+         </div>
+       </section>
+   ```
 
 ---
 
