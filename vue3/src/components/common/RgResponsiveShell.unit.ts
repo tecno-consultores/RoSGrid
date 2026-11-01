@@ -682,6 +682,40 @@ describe('RgResponsiveShell.vue — Doble Contexto & Menú de Usuario 11X', () =
     await helpBtn.trigger('click');
     expect(wrapper.find('#rg-contextual-help-drawer').exists()).toBe(false);
   });
+
+  it('no duplica los elementos Maker-Checker (/approvals) ni IPAM (/ipam) en la barra lateral para SUPERADMIN_GLOBAL', () => {
+    const authStore = useAuthStore();
+    authStore.setAuth({
+      id: 'usr-sa',
+      username: 'sinfallas',
+      email: 'sinfallas@rosgrid.local',
+      role: 'SUPERADMIN_GLOBAL',
+      tenant_id: 't-1',
+      tenant_slug: 'sistemas',
+      totp_enabled: true,
+    });
+
+    const wrapper = mount(RgResponsiveShell, {
+      global: {
+        stubs: {
+          RouterLink: {
+            props: ['to'],
+            template: '<a :href="to"><slot /></a>',
+          },
+          RouterView: true,
+          RgCommandPalette: true,
+          RgSafeModeBanner: true,
+          ChangePasswordModal: true,
+          RgStepUp2FAModal: true,
+          RgMcpTokenModal: true,
+        },
+      },
+    });
+
+    const links = wrapper.findAll('nav.rg-rail a').map((a) => a.attributes('href'));
+    expect(links.filter((h) => h === '/approvals')).toHaveLength(1);
+    expect(links.filter((h) => h === '/ipam')).toHaveLength(1);
+  });
 });
 
 

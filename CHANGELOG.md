@@ -8,6 +8,10 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1
 
 ## [Unreleased]
 
+### Fixed
+
+- **Deduplicación de Enlaces `Maker-Checker` (`/approvals`) e `IPAM` (`/ipam`) en Barra Lateral Global (`vue3/src/components/common/RgResponsiveShell.vue`, `vue3/src/components/common/RgResponsiveShell.unit.ts`):** Eliminadas las entradas estáticas duplicadas en el arreglo base de `navItems` que coexistían con las inserciones condicionales RBAC del Hito 28.9, garantizando una única instancia por ruta en el menú lateral para todos los roles autorizados.
+
 ### Added
 
 - **Implementación y Certificación Integral del Hito 28.5 — Auditoría Integral Bidireccional de Endpoints Huérfanos, Corrección de Rutas Desalineadas (404/405) y Paridad Total Backend ↔ Frontend (`docs/specs/60_ORPHAN_API_ENDPOINTS_AUDIT_AND_FRONTEND_PARITY.md`, `fastapi/src/api/`, `vue3/src/`, `.agents/scripts/verify_no_orphan_api_endpoints.py`, `ROADMAP.md`):**

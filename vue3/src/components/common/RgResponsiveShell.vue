@@ -177,19 +177,6 @@
         icon: '📊',
         badge: nocStore.activeAlertsCount,
       },
-      {
-        name: 'ApprovalsInbox',
-        path: '/approvals',
-        label: t('nav.maker_checker', 'Maker-Checker'),
-        icon: '🛡️',
-        badge: nocStore.pendingApprovalsCount,
-      },
-      {
-        name: 'IpamManagement',
-        path: '/ipam',
-        label: t('nav.ipam', 'IPAM'),
-        icon: '🌐',
-      },
     ];
 
     if (
