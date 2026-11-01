@@ -6,7 +6,7 @@
 > **[ESTADO DE IMPLEMENTACIÓN Y CERTIFICACIÓN 11X]:**
 > - **Hito 27.17 (Gobernanza Granular de Flags en Perfiles de Usuario, Matriz 30×11 y 10 Flags por Router):** COMPLETADO Y CERTIFICADO AL 100% en Docker (605 tests unitarios Pytest, 507 tests Vitest en 79 suites, 0 errores en `ruff` y `vue-tsc`, Escenario 129 Karate API y Escenario 73 Karate UI).
 > - **Hito 27.18 (Telemetría Anónima de Instancias Activas hacia `rosgrid-web`):** COMPLETADO Y CERTIFICADO AL 100% en Docker (621 tests unitarios Pytest, worker `telemetry_beacon_worker.py` Grado A CC <= 5, endpoints `/system/telemetry-beacon/status` y `/trigger`, paridad en `rosgrid-web` con Cloudflare Pages Functions + KV, Escenario 130 Karate API).
-> - **Hito 27.19 (Arquitectura Dual Prometheus y Guía Grafana):** ESPECIFICADO Y PLANIFICADO (Pendiente de implementación de enriquecimiento de hardware).
+> - **Hito 27.19 (Arquitectura Dual Prometheus y Guía Grafana):** COMPLETADO Y CERTIFICADO AL 100% en Docker (630 tests unitarios Pytest, exportador `GET /api/v1/metrics/fleet` con 8 métricas canónicas, parser RouterOS v7 uptime `_parse_ros_uptime_to_seconds`, 100% cobertura en `fleet_metrics.py`, complejidad Radon Grado A, plantillas oficiales en `docs/examples/grafana/` y `docs/examples/prometheus/`, y Escenario 60 Karate API enriquecido).
 
 > **[DIRECTIVA DE SISTEMA PARA ANTIGRAVITY]:** Este documento especifica la arquitectura técnica detallada de los **Hitos 27.17, 27.18 y 27.19**, cubriendo tres pilares estratégicos de gobernanza y observabilidad en **RoSGrid**:
 >

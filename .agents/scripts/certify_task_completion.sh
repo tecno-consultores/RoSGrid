@@ -64,7 +64,7 @@ if [ -n "${CODE_CHANGES}" ]; then
     [ -n "${line}" ] && echo "  - ${line}"
   done <<< "${CODE_CHANGES}"
 
-  TEST_CHANGES=$(git diff --name-only HEAD 2>/dev/null | grep -E '^(fastapi/tests/|vue3/src/.*\.unit\.ts)' || true)
+  TEST_CHANGES=$({ git diff --name-only HEAD 2>/dev/null; git ls-files --others --exclude-standard; } | grep -E '^(fastapi/tests/|vue3/src/.*\.unit\.ts)' | sort -u || true)
   if [ -z "${TEST_CHANGES}" ]; then
     echo "⚠️ ADVERTENCIA: Se modificó código fuente pero NO se detectan pruebas unitarias nuevas o modificadas (fastapi/tests/ o vue3/src/)."
   else

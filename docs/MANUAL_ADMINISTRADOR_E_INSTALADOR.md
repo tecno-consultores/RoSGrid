@@ -310,37 +310,59 @@ RoSGrid mantiene el principio **Zero-Metrics Storage** en PostgreSQL, pero expon
 
 1. **`GET /metrics` (Métricas Internas de la Plataforma RoSGrid):** Expone latencia HTTP (`http_request_duration_seconds`), tasa de peticiones por código de estado (`http_requests_total`), peticiones en vuelo y uso de CPU/RAM del contenedor FastAPI.
 2. **`GET /api/v1/metrics/fleet` (Métricas de la Flota de Routers MikroTik):** Extrae en microsegundos desde la caché efímera en KeyDB el estado de cada router MikroTik en estado `PRODUCTION` (protegido por `ROSGRID_PROMETHEUS_SCRAPE_TOKEN` y el flag `prometheus_fleet_exporter_enabled`):
-   - `rosgrid_router_status{tenant_id, router_id, identity, model}` (`1` = `ONLINE`, `0` = `OFFLINE`)
-   - `rosgrid_router_cpu_percent{tenant_id, router_id, identity, model}` (`0` a `100%`)
-   - `rosgrid_router_memory_usage_ratio{tenant_id, router_id, identity, model}` (`0.0` a `1.0`)
-   - `rosgrid_router_active_cves_count{tenant_id, router_id, identity, model, severity="critical|high"}`
+   - `rosgrid_router_status{tenant_id, router_id, identity, model, ros_version}` (`1` = `ONLINE`, `0` = `OFFLINE`).
+   - `rosgrid_router_cpu_percent{tenant_id, router_id, identity, model, ros_version}` (`0` a `100%`).
+   - `rosgrid_router_memory_usage_ratio{tenant_id, router_id, identity, model, ros_version}` (`0.0` a `1.0`).
+   - `rosgrid_router_uptime_seconds{tenant_id, router_id, identity, model, ros_version}` (Tiempo de actividad continuo en segundos).
+   - `rosgrid_router_temperature_celsius{tenant_id, router_id, identity, model, ros_version}` (Temperatura de CPU o placa en °C desde `/rest/system/health`).
+   - `rosgrid_router_voltage_volts{tenant_id, router_id, identity, model, ros_version}` (Voltaje de alimentación DC en voltios desde `/rest/system/health`).
+   - `rosgrid_router_active_cves_count{tenant_id, router_id, identity, model, severity="critical|high"}` (Cantidad de CVEs pendientes).
+   - `rosgrid_router_syslog_critical_events_total{tenant_id, router_id, identity, model}` (Total acumulado de eventos críticos Syslog).
 
-### 9.1 Ejemplo de `prometheus.yml` y Consultas PromQL en Grafana
+### 9.1 Ejemplo de `prometheus.yml`, Reglas Alertmanager y Consultas PromQL en Grafana
+
+Plantillas canónicas listas para usar en:
+- Manifiesto Prometheus: [`docs/examples/prometheus/prometheus.yml`](file:///docs/examples/prometheus/prometheus.yml)
+- Reglas Alertmanager: [`docs/examples/prometheus/rosgrid-alerts.rules.yml`](file:///docs/examples/prometheus/rosgrid-alerts.rules.yml)
+- Plantilla JSON de Tablero Grafana: [`docs/examples/grafana/rosgrid_mikrotik_fleet_dashboard.json`](file:///docs/examples/grafana/rosgrid_mikrotik_fleet_dashboard.json)
 
 ```yaml
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - 'rosgrid-alerts.rules.yml'
+
 scrape_configs:
-  - job_name: 'rosgrid-platform'
-    scrape_interval: 15s
+  - job_name: 'rosgrid-platform-api'
     metrics_path: '/metrics'
     static_configs:
       - targets: ['rosgrid-backend:8000']
+        labels:
+          service: 'rosgrid-api'
 
   - job_name: 'rosgrid-mikrotik-fleet'
-    scrape_interval: 15s
     metrics_path: '/api/v1/metrics/fleet'
     authorization:
       type: Bearer
       credentials: '<ROSGRID_PROMETHEUS_SCRAPE_TOKEN>'
     static_configs:
       - targets: ['rosgrid-backend:8000']
+        labels:
+          collector: 'rosgrid-fleet-exporter'
 ```
 
 - **Consultas PromQL recomendadas para paneles de Grafana:**
   - **Disponibilidad Global (%):** `avg(rosgrid_router_status) * 100`
-  - **Routers Caídos:** `rosgrid_router_status == 0`
+  - **Routers Caídos (Offline):** `rosgrid_router_status == 0`
   - **Top 10 Routers por CPU:** `topk(10, rosgrid_router_cpu_percent)`
   - **RAM Utilizada (%):** `rosgrid_router_memory_usage_ratio * 100`
+  - **Temperatura de Hardware (°C):** `rosgrid_router_temperature_celsius > 0`
+  - **Voltaje DC (V):** `rosgrid_router_voltage_volts > 0`
   - **CVEs Críticos Pendientes:** `rosgrid_router_active_cves_count{severity="critical"} > 0`
+  - **Eventos Críticos Syslog:** `rosgrid_router_syslog_critical_events_total`
+  - **Latencia P95 Plataforma RoSGrid:** `histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, handler))`
 
 ---
 

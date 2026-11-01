@@ -1,0 +1,51 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright (C) 2026 RoSGrid Contributors
+# Reglas de Alerta para Prometheus Alertmanager (Hito 27.19 / Spec 55)
+
+groups:
+  - name: rosgrid_mikrotik_fleet_alerts
+    rules:
+      - alert: MikrotikRouterOffline
+        expr: rosgrid_router_status == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Router MikroTik {{ $labels.identity }} ({{ $labels.model }}) fuera de línea"
+          description: "El router {{ $labels.identity }} en el tenant {{ $labels.tenant_id }} lleva más de 2 minutos sin responder a la REST API HTTPS."
+
+      - alert: MikrotikHighCpuLoad
+        expr: rosgrid_router_cpu_percent > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU alta ({{ $value }}%) en {{ $labels.identity }}"
+          description: "El router {{ $labels.identity }} supera el 85% de carga sostenida durante más de 5 minutos."
+
+      - alert: MikrotikCriticalCveDetected
+        expr: rosgrid_router_active_cves_count{severity="critical"} > 0
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $value }} CVEs críticos detectados en {{ $labels.identity }}"
+          description: "Se han identificado vulnerabilidades críticas en la versión {{ $labels.ros_version }} del router {{ $labels.identity }}."
+
+      - alert: MikrotikHighTemperature
+        expr: rosgrid_router_temperature_celsius > 75
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Temperatura elevada ({{ $value }}°C) en {{ $labels.identity }}"
+          description: "El sensor de temperatura de {{ $labels.identity }} reporta más de 75°C de forma sostenida."
+
+      - alert: MikrotikAbnormalVoltage
+        expr: rosgrid_router_voltage_volts > 0 and (rosgrid_router_voltage_volts < 11 or rosgrid_router_voltage_volts > 56)
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Voltaje anómalo ({{ $value }}V) en {{ $labels.identity }}"
+          description: "El voltaje de alimentación DC de {{ $labels.identity }} se encuentra fuera del rango operativo nominal."

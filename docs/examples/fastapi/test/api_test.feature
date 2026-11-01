@@ -500,6 +500,13 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     When method get
     Then status 200
     And match response contains 'rosgrid_router_status'
+    And match response contains 'rosgrid_router_cpu_percent'
+    And match response contains 'rosgrid_router_memory_usage_ratio'
+    And match response contains 'rosgrid_router_uptime_seconds'
+    And match response contains 'rosgrid_router_temperature_celsius'
+    And match response contains 'rosgrid_router_voltage_volts'
+    And match response contains 'rosgrid_router_active_cves_count'
+    And match response contains 'rosgrid_router_syslog_critical_events_total'
 
   Scenario: 61. Ejecución de actualización masiva con orden PoE-aware sin autenticación devuelve 401
     Given path '/api/v1/operations/ros-updates/execute'

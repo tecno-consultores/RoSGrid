@@ -2,7 +2,7 @@
 
 **Licencia:** GPL-3.0-only  
 **Estándar Aplicado:** QA Testing Blueprints (Nivel 11X)  
-**Estado Actual:** Hitos 27.12, 27.13, 27.14, 27.15, 27.16, 27.17 y 27.18 Completados y Certificados al 100% en Contenedores Docker Efímeros — Telemetría Anónima de Instancias Activas hacia `rosgrid-web` (`telemetry_beacon_worker.py` con Radon Grado A promedio 2.91, guardia en lifespan de FastAPI, endpoints de diagnóstico `/system/telemetry-beacon/status` y disparo manual), Gobernanza Granular de Flags en Perfiles de Usuario (30 Acciones RBAC en `ACTIONS_METADATA` y `POLICY_MATRIX` 30×11, 10 Permisos por Router en `user_router_permissions`, Overrides Individuales en `users.feature_flags_override`, Endpoints `GET .../effective-permissions` y `PATCH .../feature-flags` con auditoría WORM, y modal interactivo `RgUserProfileFlagsModal.vue`), Motor Dinámico Universal WebFig Capa 2 Next-Gen (`webfig_layer2.py`, `DynamicLayer2ResourceView.vue`, `RgLayer2RpcActionModal.vue`, `RgLayer2QueryBuilder.vue`, `RgLayer2RscExportDiffModal.vue`, `useLayer2ColumnProfiles.ts`, `layer2PresetsCatalog.ts`), Cajón de Ayuda Contextual In-App (`RgContextualHelpDrawer.vue`, `useContextualHelp.ts`, `helpCatalog.ts`), Paridad de Sistema de Diseño Frontend (`rg_theme`, `rg_table_density`, `color-scheme`, `RgBrandLogo.vue`, contraste WCAG 2.1 AA en tema `light`), Blindaje Anti-Indexación (`X-Robots-Tag`), Título Dinámico de Pestaña por Router y Generador `llms.txt` para 6 Clientes MCP en `RgMcpTokenModal.vue`, Cobertura 100% de Componentes Vue (75/75 auditados con `verify_zero_orphan_vue_components.py`), 507 pruebas Vitest en 79 suites aprobadas al 100%, 621 pruebas unitarias backend Pytest (100%), Escenarios BDD 130 Karate API y 73 Karate UI.
+**Estado Actual:** Hitos 27.12, 27.13, 27.14, 27.15, 27.16, 27.17, 27.18 y 27.19 Completados y Certificados al 100% en Contenedores Docker Efímeros — Arquitectura Dual de Observabilidad Prometheus (`GET /metrics` Plataforma vs. `GET /api/v1/metrics/fleet` Flota MikroTik) e Integración con Grafana (8 métricas canónicas OpenMetrics, etiquetas `{tenant_id, router_id, identity, model, ros_version}`, parser de uptime RouterOS v7 `_parse_ros_uptime_to_seconds`, gobierno con flag de tenant `Tenant.prometheus_fleet_exporter_enabled`, 100% cobertura en `fleet_metrics.py` con 9/9 pruebas, plantillas oficiales en `docs/examples/grafana/` y `docs/examples/prometheus/`, Escenario 60 enriquecido en Karate Labs BDD), Telemetría Anónima de Instancias Activas hacia `rosgrid-web` (`telemetry_beacon_worker.py` con Radon Grado A promedio 2.91, guardia en lifespan de FastAPI, endpoints de diagnóstico `/system/telemetry-beacon/status` y disparo manual), Gobernanza Granular de Flags en Perfiles de Usuario (30 Acciones RBAC en `ACTIONS_METADATA` y `POLICY_MATRIX` 30×11, 10 Permisos por Router en `user_router_permissions`, Overrides Individuales en `users.feature_flags_override`, Endpoints `GET .../effective-permissions` y `PATCH .../feature-flags` con auditoría WORM, y modal interactivo `RgUserProfileFlagsModal.vue`), 507 pruebas Vitest en 79 suites aprobadas al 100%, 630 pruebas unitarias backend Pytest (100%), Escenarios BDD 130 Karate API y 73 Karate UI.
 
 ---
 
@@ -2080,13 +2080,42 @@ Conforme a la Especificación 43 v2.0.0 y la directiva `.agents/rules/ground_tru
    - **API REST (`fastapi/test/api_test.feature` & `docs/examples/fastapi/test/api_test.feature`):** **129 escenarios BDD** (incorporado Escenario 129: Gobernanza Granular de Flags en Perfil de Usuario — Consulta y Modificación de Overrides con Bitácora WORM).
    - **UI WebFig / NOC (`vue3/test/ui_business_flow.feature` & `docs/examples/vue3/test/ui_business_flow.feature`):** **73 escenarios BDD** (incorporado Escenario 73: Modal de Flags en Perfil de Usuario — Filtrado por Categoría, Indicador de Herencia y Persistencia).
 
-4. **Análisis Estático, Tipado Estricto y Paridad de Esquemas:**
-   - Backend: `ruff check` -> 0 errores.
-   - Frontend: `npx vue-tsc --noEmit` -> 0 errores de TypeScript.
-   - i18n Anti-Colisión: `verify_json_no_duplicate_keys.py` -> 0 claves duplicadas en `es.json` y `en.json`.
-   - Salud Topológica: `verify_topological_health.py` -> 0 violaciones de capas arquitectónicas.
-   - Auditoría de Seguridad: `auditar-infra.sh` (Trivy IaC/FS) -> 0 misconfiguraciones, 0 CVEs.
-   - Secretos: `verificar-secretos.sh` -> 0 secretos expuestos.
+### M. Hito 27.18: Telemetría Anónima de Instancias Activas hacia `rosgrid-web` (Privacy-Preserving Heartbeat Beacon — Completado y Certificado al 100%)
+
+1. **Backend Unitario (Pytest en Docker `sinfallas/rosgrid-backend:local-test`):**
+   - `fastapi/tests/workers/test_telemetry_beacon_worker.unit.py`: **10 de 10 pruebas PASADAS (100%)**, validando derivación de `instance_id` HMAC-SHA256, clasificación de buckets de tamaño de flota (`0`, `1-10`, `11-50`, `51-250`, `250+`), tolerancia a fallo de red (*fail-silent*), persistencia en KeyDB (`rg:system:telemetry_beacon_state`) y ciclo de despacho periódico.
+   - `fastapi/tests/api/test_system_telemetry_beacon.unit.py`: **6 de 6 pruebas PASADAS (100%)**, validando endpoints `GET /api/v1/system/telemetry-beacon/status` y `POST /api/v1/system/telemetry-beacon/trigger` con control de acceso RBAC (`SUPERADMIN_GLOBAL` y `TENANT_ADMIN`).
+   - Complejidad Ciclomática Radon (`radon cc -a -nc src/workers/telemetry_beacon_worker.py`): **100% Grado A (promedio 2.91, CC <= 5 en 100% de funciones)**.
+   - Total backend: **621 de 621 pruebas unitarias PASADAS al 100%**.
+
+2. **Escenarios BDD Karate Labs:**
+   - **API REST (`fastapi/test/api_test.feature` & `docs/examples/fastapi/test/api_test.feature`):** **130 escenarios BDD** (incorporado Escenario 130: Diagnóstico de Telemetría Anónima de Instancias Activas).
+
+### N. Hito 27.19: Arquitectura Dual de Observabilidad Prometheus (`GET /metrics` vs `GET /api/v1/metrics/fleet`) e Integración con Grafana (Completado y Certificado al 100%)
+
+1. **Backend Unitario (Pytest en Docker `sinfallas/rosgrid-backend:local-test`):**
+   - `fastapi/tests/api/test_fleet_metrics.unit.py`: **9 de 9 pruebas PASADAS (100%)**, certificando el **100% de cobertura de código (100 de 100 líneas)** sobre `src/api/v1/fleet_metrics.py`:
+     - Función `_parse_ros_uptime_to_seconds`: Conversión precisa de cadenas de actividad RouterOS v7 (`2w3d4h5m6s`, `1w`, `2d`, `3h`, `4m`, `5s`) y enteros numéricos a segundos (`CC = 3`).
+     - Función `_extract_raw_temp`: Detección en orden de prioridad de variantes de sensor (`temperature_celsius`, `temperature`, `cpu_temperature`).
+     - Función `_extract_raw_voltage`: Detección de claves de voltaje (`voltage_volts`, `voltage`).
+     - Función `_build_router_labels`: Construcción canónica de etiquetas con `ros_version` ({`tenant_id`, `router_id`, `identity`, `model`, `ros_version`}) y fallback seguro ante valores nulos.
+     - Función `_validate_scrape_auth`: Validación de token Bearer (`ROSGRID_PROMETHEUS_SCRAPE_TOKEN`) con 401 en token ausente, esquema inválido o token erróneo.
+     - Endpoint `GET /api/v1/metrics/fleet`: Exposición completa de las 8 métricas canónicas OpenMetrics, emisión de encabezados `# HELP` y `# TYPE`, evaluación de CVEs (`critical`/`high`) y filtrado de routers según `Tenant.prometheus_fleet_exporter_enabled`.
+   - `fastapi/tests/api/test_hito23_topology_and_fleet.unit.py`: **17 de 17 pruebas PASADAS (100%)**.
+   - Complejidad Ciclomática Radon (`radon cc -a -nc src/api/v1/fleet_metrics.py`): **100% Grado A (promedio 3.16, 12 de 12 bloques con CC <= 5)**.
+   - Total backend: **630 de 630 pruebas unitarias PASADAS al 100%**.
+
+2. **Plantillas Oficiales de Observabilidad:**
+   - Plantilla Oficial de Dashboard Grafana JSON: [`docs/examples/grafana/rosgrid_mikrotik_fleet_dashboard.json`](file:///docs/examples/grafana/rosgrid_mikrotik_fleet_dashboard.json) con 12 paneles interactivos, variable de plantilla `$router`, series de tiempo de CPU/RAM/Temperatura/Voltaje, gauges de disponibilidad, tabla de routers caídos y métricas P95 de la plataforma FastAPI.
+   - Manifiesto canónico de scraping: [`docs/examples/prometheus/prometheus.yml`](file:///docs/examples/prometheus/prometheus.yml) con jobs independientes para plataforma y flota de routers.
+   - Reglas de Alertmanager: [`docs/examples/prometheus/rosgrid-alerts.rules.yml`](file:///docs/examples/prometheus/rosgrid-alerts.rules.yml) para caídas de routers, sobrecarga de CPU, CVEs críticos y anomalías térmicas y de voltaje.
+
+3. **Escenarios BDD Karate Labs:**
+   - **API REST (`fastapi/test/api_test.feature` & `docs/examples/fastapi/test/api_test.feature`):** Escenario 60 enriquecido validando la presencia de las 8 métricas canónicas de flota OpenMetrics (`rosgrid_router_status`, `rosgrid_router_cpu_percent`, `rosgrid_router_memory_usage_ratio`, `rosgrid_router_uptime_seconds`, `rosgrid_router_temperature_celsius`, `rosgrid_router_voltage_volts`, `rosgrid_router_active_cves_count` y `rosgrid_router_syslog_critical_events_total`).
+
+4. **Sincronización Web (`rosgrid-web`):**
+   - Actualizada y verificada al 100% la guía de observabilidad en `rosgrid-web` (`src/pages/docs/QuickstartDoc.vue`, `public/docs/quickstart.md` y `public/llms-full.txt`) con 72 pruebas Vitest pasando al 100% y 0 errores en `vue-tsc`.
+
 
 
 

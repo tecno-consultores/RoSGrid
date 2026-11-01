@@ -263,11 +263,15 @@ flowchart LR
    * `http_requests_inprogress{handler, method}`: Peticiones en vuelo concurrentes.
    * `process_resident_memory_bytes` / `process_cpu_seconds_total`: Salud del proceso Python/FastAPI.
 2. **Endpoint 2 — Flota de Routers MikroTik (`GET /api/v1/metrics/fleet`):**
-   * `rosgrid_router_status{tenant_id, router_id, identity, model}`: Estado de alcanzabilidad (`1` = `ONLINE`, `0` = `OFFLINE`).
-   * `rosgrid_router_cpu_percent{tenant_id, router_id, identity, model}`: Uso actual de CPU del router (`0` a `100%`) obtenido de `/rest/system/resource`.
-   * `rosgrid_router_memory_usage_ratio{tenant_id, router_id, identity, model}`: Proporción de memoria RAM utilizada (`0.0` a `1.0`).
+   * `rosgrid_router_status{tenant_id, router_id, identity, model, ros_version}`: Estado de alcanzabilidad (`1` = `ONLINE`, `0` = `OFFLINE`).
+   * `rosgrid_router_cpu_percent{tenant_id, router_id, identity, model, ros_version}`: Uso actual de CPU del router (`0` a `100%`) obtenido de `/rest/system/resource`.
+   * `rosgrid_router_memory_usage_ratio{tenant_id, router_id, identity, model, ros_version}`: Proporción de memoria RAM utilizada (`0.0` a `1.0`).
+   * `rosgrid_router_uptime_seconds{tenant_id, router_id, identity, model, ros_version}`: Tiempo de actividad continuo en segundos (convertido desde formato RouterOS v7 `1w2d3h4m5s`).
+   * `rosgrid_router_temperature_celsius{tenant_id, router_id, identity, model, ros_version}`: Temperatura de CPU o placa en °C desde `/rest/system/health`.
+   * `rosgrid_router_voltage_volts{tenant_id, router_id, identity, model, ros_version}`: Voltaje DC de alimentación en voltios desde `/rest/system/health`.
    * `rosgrid_router_active_cves_count{tenant_id, router_id, identity, model, severity="critical|high"}`: Número de vulnerabilidades CVE detectadas según la versión de RouterOS instalada.
-   * *(Ampliación Hito 27.19 — `docs/specs/55`)*: `rosgrid_router_uptime_seconds`, `rosgrid_router_temperature_celsius`, `rosgrid_router_voltage_volts` (`/rest/system/health`) y `rosgrid_router_syslog_critical_events_total`.
+   * `rosgrid_router_syslog_critical_events_total{tenant_id, router_id, identity, model}`: Total acumulado de eventos críticos Syslog detectados en el RingBuffer.
+   * *(Plantilla de Grafana y Manifiestos)*: Tablero oficial JSON en [`docs/examples/grafana/rosgrid_mikrotik_fleet_dashboard.json`](file:///docs/examples/grafana/rosgrid_mikrotik_fleet_dashboard.json) y reglas de alerta en [`docs/examples/prometheus/rosgrid-alerts.rules.yml`](file:///docs/examples/prometheus/rosgrid-alerts.rules.yml).
 
 ### 7.3. Configuración de `prometheus.yml` y Consultas PromQL para Grafana
 

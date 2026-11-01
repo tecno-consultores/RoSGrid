@@ -1653,9 +1653,21 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
   - **Propósito:** Exportación de métricas internas del motor FastAPI/Python (`http_requests_total`, `http_request_duration_seconds`, `http_requests_inprogress`, `process_resident_memory_bytes`, `process_cpu_seconds_total`) vía `prometheus_fastapi_instrumentator`.
   - **Autenticación:** No requerida (restringida a red interna / reverse proxy).
 - **Endpoint 2 — Flota de Routers MikroTik (`GET /api/v1/metrics/fleet`):**
-  - **Propósito:** Exportación en formato OpenMetrics (`text/plain; version=0.0.4`) del estado operativo de todos los routers MikroTik en estado `PRODUCTION` desde la caché efímera en KeyDB (`rosgrid_router_status`, `rosgrid_router_cpu_percent`, `rosgrid_router_memory_usage_ratio`, `rosgrid_router_active_cves_count` y, bajo `Spec 55`, `rosgrid_router_uptime_seconds`, `rosgrid_router_temperature_celsius`, `rosgrid_router_voltage_volts` y `rosgrid_router_syslog_critical_events_total`).
-  - **Autenticación:** Cabecera `Authorization: Bearer <ROSGRID_PROMETHEUS_SCRAPE_TOKEN>` y Feature Flag `prometheus_fleet_exporter_enabled`.
-  - **Guía de configuración `prometheus.yml` y Grafana:** Consulta [`docs/specs/55_GRANULAR_USER_PROFILE_FLAGS_TELEMETRY_BEACON_AND_PROMETHEUS_GRAFANA_OBSERVABILITY.md`](./specs/55_GRANULAR_USER_PROFILE_FLAGS_TELEMETRY_BEACON_AND_PROMETHEUS_GRAFANA_OBSERVABILITY.md).
+  - **Propósito:** Exportación en formato OpenMetrics (`text/plain; version=0.0.4; charset=utf-8`) del estado operativo y salud de hardware de todos los routers MikroTik en estado `PRODUCTION` desde la memoria RAM de KeyDB (Zero-Metrics Storage):
+    - `rosgrid_router_status`: Estado de alcanzabilidad (`1` = ONLINE, `0` = OFFLINE).
+    - `rosgrid_router_cpu_percent`: Porcentaje de CPU en vivo (`0` a `100`).
+    - `rosgrid_router_memory_usage_ratio`: Proporción de RAM utilizada (`0.0` a `1.0`).
+    - `rosgrid_router_uptime_seconds`: Tiempo continuo de actividad en segundos.
+    - `rosgrid_router_temperature_celsius`: Temperatura de CPU o placa en °C (`/rest/system/health`).
+    - `rosgrid_router_voltage_volts`: Voltaje DC en voltios (`/rest/system/health`).
+    - `rosgrid_router_active_cves_count`: Conteo de vulnerabilidades por criticidad (`critical` y `high`).
+    - `rosgrid_router_syslog_critical_events_total`: Total acumulado de eventos críticos Syslog.
+  - **Autenticación:** Cabecera `Authorization: Bearer <ROSGRID_PROMETHEUS_SCRAPE_TOKEN>` y Feature Flag de Tenant `prometheus_fleet_exporter_enabled`.
+  - **Plantillas Oficiales de Observabilidad:**
+    - Tablero Grafana JSON: [`docs/examples/grafana/rosgrid_mikrotik_fleet_dashboard.json`](file:///docs/examples/grafana/rosgrid_mikrotik_fleet_dashboard.json)
+    - Manifiesto `prometheus.yml`: [`docs/examples/prometheus/prometheus.yml`](file:///docs/examples/prometheus/prometheus.yml)
+    - Reglas Alertmanager: [`docs/examples/prometheus/rosgrid-alerts.rules.yml`](file:///docs/examples/prometheus/rosgrid-alerts.rules.yml)
+  - **Especificación Completa:** Consulta [`docs/specs/55_GRANULAR_USER_PROFILE_FLAGS_TELEMETRY_BEACON_AND_PROMETHEUS_GRAFANA_OBSERVABILITY.md`](./specs/55_GRANULAR_USER_PROFILE_FLAGS_TELEMETRY_BEACON_AND_PROMETHEUS_GRAFANA_OBSERVABILITY.md).
 
 ### 8.3 Diagnóstico de Telemetría Anónima de Instancias Activas (Privacy-Preserving Heartbeat Beacon)
 

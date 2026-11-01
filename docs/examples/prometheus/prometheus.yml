@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright (C) 2026 RoSGrid Contributors
+# Configuración canónica de Prometheus para RoSGrid (Hito 27.19 / Spec 55)
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - 'rosgrid-alerts.rules.yml'
+
+scrape_configs:
+  # 1. Métricas de la Plataforma RoSGrid (FastAPI / Python 3.15)
+  - job_name: 'rosgrid-platform-api'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['rosgrid-backend:8000']
+        labels:
+          service: 'rosgrid-api'
+          environment: 'production'
+
+  # 2. Métricas de la Flota de Routers MikroTik (vía Caché Efímera KeyDB de RoSGrid)
+  - job_name: 'rosgrid-mikrotik-fleet'
+    metrics_path: '/api/v1/metrics/fleet'
+    authorization:
+      type: Bearer
+      credentials: 'rg_prom_scrape_9f8e7d6c5b4a3f2e1d0c'
+    static_configs:
+      - targets: ['rosgrid-backend:8000']
+        labels:
+          collector: 'rosgrid-fleet-exporter'
+          environment: 'production'
