@@ -80,9 +80,11 @@ Apply these non-negotiable security directives before writing any code:
    - Re-keying of active session in KeyDB must occur atomically, updating tenant claims in JWT without dropping the authenticated user identity, followed by an immediate WORM audit record `SUPERADMIN_TENANT_SWITCHED`.
    - **Pub/Sub Suppression (`notify_ws=False`):** Calling `kill_session` on the old tenant context MUST suppress websocket publication to avoid kicking out the active browser session (`forceKillSwitchLogout`). The frontend store MUST ignore `SUPERADMIN_TENANT_SWITCH` and seamlessly reconnect WebSockets upon `rosgrid:tenant-switched`.
 
-8. **Feature Flags Governance, DAG Hard Lock & Contingency Mode:**
-   - In B2B multi-tenancy, feature flags represent commercial licensing entitlements. Endpoints `PATCH` and `PUT` `/features` are strictly restricted to `SUPERADMIN_GLOBAL` (fail-closed HTTP 403 to local tenant admins).
+8. **Feature Flags Governance, DAG Hard Lock, Granular User Profile Flags & Contingency Mode:**
+   - In B2B multi-tenancy, tenant feature flags represent commercial licensing entitlements. Endpoints `PATCH` and `PUT` `/features` are strictly restricted to `SUPERADMIN_GLOBAL` (fail-closed HTTP 403 to local tenant admins).
    - **Active DAG (Hard Lock):** Dependent flags (e.g. `bgp_looking_glass_enabled`, `sla_tracker_enabled`) MUST be locked (`disabled`) with visual badge and tooltip when the parent module (`isp_module_enabled`) is off, and forced off in cascade.
+   - **Granular User Profile Flags (Spec 55 — 4-Tier Resolution):** Every platform capability and submodule MUST have a corresponding toggle flag across the 30-action `POLICY_MATRIX`, 10 router-scoped flags in `UserRouterPermission`, and per-user overrides (`users.feature_flags_override`), evaluated deterministically (`Tenant Flag` -> `User Override` -> `Role Matrix` -> `Router Permission`).
+   - **Privacy-Preserving Telemetry Beacon & Dual Prometheus Observability (Spec 55):** Anonymous active-instance heartbeats to `rosgrid-web` MUST be strictly Zero-PII (`HMAC-SHA256` `instance_id`), fail-silent in air-gapped networks, and respect `ROSGRID_TELEMETRY_BEACON_ENABLED`. Prometheus documentation and endpoints MUST clearly distinguish platform metrics (`GET /metrics`) from MikroTik fleet metrics (`GET /api/v1/metrics/fleet`).
    - **Contingency Mode NOC in 1-Click:** Provide a low-power preset that immediately suspends heavy telemetry collectors (Syslog, IPFIX, Prometheus, SFP, Drift, SD-WAN) during network congestion while preserving the core router control and governance.
    - UI mutators modifying critical governance flags MUST enforce a Blast Radius confirmation shield calculating dynamic impact on fleet and active operators.
 

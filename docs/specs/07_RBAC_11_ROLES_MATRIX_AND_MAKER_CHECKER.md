@@ -58,6 +58,8 @@ Leyenda de valores de política en fastapi/src/rbac/policy\_matrix.py:
 | **18. Aprobar / Rechazar Solicitudes *Maker-Checker*** | ALLOW | ALLOW | ALLOW | ALLOW | DENY | DENY | DENY | DENY | DENY | DENY | DENY |
 | **19. Consultar y Exportar Bitácora Inmutable (audit\_logs)** | ALLOW | ALLOW | ALLOW | DENY | DENY | DENY | DENY | DENY | ALLOW | DENY | DENY |
 
+> **Nota de Evolución Arquitectónica (Hito 27.17 — `docs/specs/55`):** El catálogo de acciones RBAC por perfil de usuario se amplía de **19 a 30 flags granulares** (incorporando `WEBFIG_L2_RPC_COMMANDS`, `WEBFIG_L2_BULK_OPS`, `WEBFIG_L2_EXPORT_RSC`, `IPAM_VRFS_PREFIXES_MGMT`, `SUBSCRIBERS_QOS_PROVISIONING`, `FIELD_OPS_OPTICAL_NAP_MGMT`, `BGP_LOOKING_GLASS_IPFIX`, `ENTERPRISE_CIS_DRIFT_COMPLIANCE`, `ENTERPRISE_SDWAN_SLA_ROGUEDHCP`, `WIFI_CAPSMAN_PROVISIONING` y `TOPOLOGY_L2_CVE_SYSLOG_MCP`), junto con **10 flags por router** en `user_router_permissions` (`can_execute_l2_rpc`, `can_bulk_edit_l2`, `can_export_l2_rsc`) y **overrides individuales por usuario** (`users.feature_flags_override` JSONB). Consulta [`docs/specs/55_GRANULAR_USER_PROFILE_FLAGS_TELEMETRY_BEACON_AND_PROMETHEUS_GRAFANA_OBSERVABILITY.md`](./55_GRANULAR_USER_PROFILE_FLAGS_TELEMETRY_BEACON_AND_PROMETHEUS_GRAFANA_OBSERVABILITY.md).
+
 
 
 

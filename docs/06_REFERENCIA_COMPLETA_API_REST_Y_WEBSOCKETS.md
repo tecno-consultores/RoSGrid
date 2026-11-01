@@ -1613,11 +1613,15 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
   }
   ```
 
-### 8.2 Métricas de Rendimiento en Formato Estándar Prometheus (`GET /metrics`)
+### 8.2 Arquitectura Dual de Métricas Prometheus (`GET /metrics` Plataforma y `GET /api/v1/metrics/fleet` Flota MikroTik)
 
-- **Propósito:** Exportación de métricas de tiempo de respuesta, recuento de peticiones HTTP, estado del colector y saturación del servidor vía `prometheus_fastapi_instrumentator`.
-- **Autenticación:** No requerida (restringida a nivel de red/reverse proxy).
-- **Respuesta (200 OK):** Texto plano en formato estándar OpenMetrics / Prometheus.
+- **Endpoint 1 — Plataforma RoSGrid (`GET /metrics`):**
+  - **Propósito:** Exportación de métricas internas del motor FastAPI/Python (`http_requests_total`, `http_request_duration_seconds`, `http_requests_inprogress`, `process_resident_memory_bytes`, `process_cpu_seconds_total`) vía `prometheus_fastapi_instrumentator`.
+  - **Autenticación:** No requerida (restringida a red interna / reverse proxy).
+- **Endpoint 2 — Flota de Routers MikroTik (`GET /api/v1/metrics/fleet`):**
+  - **Propósito:** Exportación en formato OpenMetrics (`text/plain; version=0.0.4`) del estado operativo de todos los routers MikroTik en estado `PRODUCTION` desde la caché efímera en KeyDB (`rosgrid_router_status`, `rosgrid_router_cpu_percent`, `rosgrid_router_memory_usage_ratio`, `rosgrid_router_active_cves_count` y, bajo `Spec 55`, `rosgrid_router_uptime_seconds`, `rosgrid_router_temperature_celsius`, `rosgrid_router_voltage_volts` y `rosgrid_router_syslog_critical_events_total`).
+  - **Autenticación:** Cabecera `Authorization: Bearer <ROSGRID_PROMETHEUS_SCRAPE_TOKEN>` y Feature Flag `prometheus_fleet_exporter_enabled`.
+  - **Guía de configuración `prometheus.yml` y Grafana:** Consulta [`docs/specs/55_GRANULAR_USER_PROFILE_FLAGS_TELEMETRY_BEACON_AND_PROMETHEUS_GRAFANA_OBSERVABILITY.md`](./specs/55_GRANULAR_USER_PROFILE_FLAGS_TELEMETRY_BEACON_AND_PROMETHEUS_GRAFANA_OBSERVABILITY.md).
 
 
 

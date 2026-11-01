@@ -207,6 +207,9 @@ rosgrid_router_syslog_critical_events_total{tenant_id="tenant-acme",router_id="u
 ```
 
 * **Seguridad del Scrape:** Requiere autenticación mediante Bearer Token específico para Prometheus (`ROSGRID_PROMETHEUS_SCRAPE_TOKEN`) o pertenencia a una red de monitoreo permitida, impidiendo enumeración no autorizada de la flota.
+* **Arquitectura Dual de Observabilidad (Plataforma vs. Routers — `docs/specs/55`):**
+  1. **`GET /metrics` (`prometheus-fastapi-instrumentator` en `fastapi/src/main.py`):** Expone las métricas internas del motor de la plataforma RoSGrid (latencia HTTP P50/P95/P99, `http_requests_total`, `http_requests_inprogress`, RAM y CPU del proceso Python).
+  2. **`GET /api/v1/metrics/fleet` (`fastapi/src/api/v1/fleet_metrics.py`):** Expone las métricas operativas y de salud de hardware de toda la flota de routers MikroTik (`rosgrid_router_status`, `rosgrid_router_cpu_percent`, `rosgrid_router_memory_usage_ratio`, `rosgrid_router_uptime_seconds`, `rosgrid_router_temperature_celsius`, `rosgrid_router_voltage_volts`, `rosgrid_router_active_cves_count` y `rosgrid_router_syslog_critical_events_total`). Consulta la guía completa de integración con `prometheus.yml`, Alertmanager y Grafana en [`docs/specs/55_GRANULAR_USER_PROFILE_FLAGS_TELEMETRY_BEACON_AND_PROMETHEUS_GRAFANA_OBSERVABILITY.md`](./55_GRANULAR_USER_PROFILE_FLAGS_TELEMETRY_BEACON_AND_PROMETHEUS_GRAFANA_OBSERVABILITY.md).
 
 ---
 

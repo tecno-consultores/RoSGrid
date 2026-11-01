@@ -241,27 +241,63 @@ flowchart LR
 
 ---
 
-## 7. Puente de Telemetría de Flota hacia Prometheus (`/api/v1/metrics/fleet`)
+## 7. Arquitectura Dual de Observabilidad hacia Prometheus (`/metrics` Plataforma y `/api/v1/metrics/fleet` Routers) e Integración con Grafana
 
-### 7.1. Integración con Grafana sin Almacenamiento en PostgreSQL
+### 7.1. Separación de Métricas: Plataforma (`GET /metrics`) vs. Flota de Routers MikroTik (`GET /api/v1/metrics/fleet`)
 
-Las organizaciones que requieren retención histórica de métricas por meses o años no deben cargar esa responsabilidad sobre RoSGrid. En su lugar, RoSGrid expone un endpoint formateado para que el servidor Prometheus corporativo extraiga la telemetría periódicamente (*pull scraping*):
+Las organizaciones que requieren retención histórica de métricas por meses o años no cargan esa responsabilidad sobre PostgreSQL en RoSGrid (*Zero-Metrics Storage*). En su lugar, RoSGrid expone **dos endpoints en formato OpenMetrics / Prometheus** para que un servidor Prometheus corporativo extraiga la telemetría periódicamente (*pull scraping*):
 
 ```mermaid
 flowchart LR
-    Prometheus["Servidor Prometheus Externo\n(Scrape cada 15s)"] -->|"GET /api/v1/metrics/fleet\n(Bearer Scrape Token)"| RoSGridAPI["RoSGrid FastAPI Endpoint"]
-    RoSGridAPI -->|"Lectura en Memoria"| KeyDBCache["KeyDB Telemetry Cache\n(Zero-Metrics Monitor)"]
-    RoSGridAPI -->|"Métricas Formateadas en RAM"| Prometheus
-    Prometheus --> Grafana["Dashboard Grafana / Zabbix\n(Histórico a Largo Plazo)"]
+    Prometheus["Servidor Prometheus Externo\n(Scrape cada 15s)"] -->|"Job 1: GET /metrics\n(Métricas Internas FastAPI)"| RoSGridPlatform["Motor Plataforma RoSGrid\n(prometheus-fastapi-instrumentator)"]
+    Prometheus -->|"Job 2: GET /api/v1/metrics/fleet\n(Bearer ROSGRID_PROMETHEUS_SCRAPE_TOKEN)"| RoSGridFleet["Exportador de Flota MikroTik\n(fastapi/src/api/v1/fleet_metrics.py)"]
+    RoSGridFleet -->|"Lectura en Memoria (<1ms)"| KeyDBCache["KeyDB Telemetry Cache\n(rg:{tid}:router:{rid}:state)"]
+    Prometheus --> Grafana["Dashboard Grafana / Alertmanager\n(Histórico a Largo Plazo)"]
 ```
 
-### 7.2. Métricas Expuestas
+### 7.2. Catálogo de Métricas Expuestas
 
-* `rosgrid_fleet_router_status`: Estado (1 = Online, 0 = Offline, 2 = Degraded).
-* `rosgrid_fleet_cpu_load_percent`: Uso actual de CPU (0 a 100%).
-* `rosgrid_fleet_memory_usage_ratio`: Proporción de memoria usada (0.0 a 1.0).
-* `rosgrid_fleet_active_cves_count`: Número de vulnerabilidades detectadas (clasificadas por severidad).
-* `rosgrid_fleet_syslog_critical_events_total`: Contador acumulativo de caídas de interfaz y eventos de advertencia.
+1. **Endpoint 1 — Plataforma RoSGrid (`GET /metrics`):**
+   * `http_requests_total{handler, method, status}`: Total de peticiones HTTP procesadas por la API.
+   * `http_request_duration_seconds_bucket{handler, method, le}`: Histograma de latencias HTTP (P50, P95, P99).
+   * `http_requests_inprogress{handler, method}`: Peticiones en vuelo concurrentes.
+   * `process_resident_memory_bytes` / `process_cpu_seconds_total`: Salud del proceso Python/FastAPI.
+2. **Endpoint 2 — Flota de Routers MikroTik (`GET /api/v1/metrics/fleet`):**
+   * `rosgrid_router_status{tenant_id, router_id, identity, model}`: Estado de alcanzabilidad (`1` = `ONLINE`, `0` = `OFFLINE`).
+   * `rosgrid_router_cpu_percent{tenant_id, router_id, identity, model}`: Uso actual de CPU del router (`0` a `100%`) obtenido de `/rest/system/resource`.
+   * `rosgrid_router_memory_usage_ratio{tenant_id, router_id, identity, model}`: Proporción de memoria RAM utilizada (`0.0` a `1.0`).
+   * `rosgrid_router_active_cves_count{tenant_id, router_id, identity, model, severity="critical|high"}`: Número de vulnerabilidades CVE detectadas según la versión de RouterOS instalada.
+   * *(Ampliación Hito 27.19 — `docs/specs/55`)*: `rosgrid_router_uptime_seconds`, `rosgrid_router_temperature_celsius`, `rosgrid_router_voltage_volts` (`/rest/system/health`) y `rosgrid_router_syslog_critical_events_total`.
+
+### 7.3. Configuración de `prometheus.yml` y Consultas PromQL para Grafana
+
+```yaml
+scrape_configs:
+  # 1. Salud y latencia de la Plataforma RoSGrid (FastAPI)
+  - job_name: 'rosgrid-platform'
+    scrape_interval: 15s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['rosgrid-backend:8000']
+
+  # 2. Telemetría de toda la Flota de Routers MikroTik
+  - job_name: 'rosgrid-mikrotik-fleet'
+    scrape_interval: 15s
+    metrics_path: '/api/v1/metrics/fleet'
+    authorization:
+      type: Bearer
+      credentials: '<ROSGRID_PROMETHEUS_SCRAPE_TOKEN>'
+    static_configs:
+      - targets: ['rosgrid-backend:8000']
+```
+
+* **Consultas PromQL recomendadas en Grafana:**
+  * Disponibilidad global (%): `avg(rosgrid_router_status) * 100`
+  * Routers fuera de línea: `rosgrid_router_status == 0`
+  * Top 10 routers por carga de CPU: `topk(10, rosgrid_router_cpu_percent)`
+  * Porcentaje de RAM utilizada por router: `rosgrid_router_memory_usage_ratio * 100`
+  * Equipos con CVEs críticos: `rosgrid_router_active_cves_count{severity="critical"} > 0`
+  * Latencia P95 de la API RoSGrid: `histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, handler))`
 
 ---
 

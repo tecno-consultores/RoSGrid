@@ -304,9 +304,49 @@ sequenceDiagram
 
 ---
 
-## 9. Mantenimiento de Plataforma, Respaldos, Escalamiento y Troubleshooting
+## 9. Observabilidad Externa con Prometheus y Grafana (Plataforma + Flota de Routers MikroTik)
 
-### 9.1 Comandos Operativos Frecuentes del Administrador
+RoSGrid mantiene el principio **Zero-Metrics Storage** en PostgreSQL, pero expone **dos endpoints nativos para Prometheus** que permiten almacenar y graficar series históricas de meses o años en **Prometheus + Grafana**:
+
+1. **`GET /metrics` (Métricas Internas de la Plataforma RoSGrid):** Expone latencia HTTP (`http_request_duration_seconds`), tasa de peticiones por código de estado (`http_requests_total`), peticiones en vuelo y uso de CPU/RAM del contenedor FastAPI.
+2. **`GET /api/v1/metrics/fleet` (Métricas de la Flota de Routers MikroTik):** Extrae en microsegundos desde la caché efímera en KeyDB el estado de cada router MikroTik en estado `PRODUCTION` (protegido por `ROSGRID_PROMETHEUS_SCRAPE_TOKEN` y el flag `prometheus_fleet_exporter_enabled`):
+   - `rosgrid_router_status{tenant_id, router_id, identity, model}` (`1` = `ONLINE`, `0` = `OFFLINE`)
+   - `rosgrid_router_cpu_percent{tenant_id, router_id, identity, model}` (`0` a `100%`)
+   - `rosgrid_router_memory_usage_ratio{tenant_id, router_id, identity, model}` (`0.0` a `1.0`)
+   - `rosgrid_router_active_cves_count{tenant_id, router_id, identity, model, severity="critical|high"}`
+
+### 9.1 Ejemplo de `prometheus.yml` y Consultas PromQL en Grafana
+
+```yaml
+scrape_configs:
+  - job_name: 'rosgrid-platform'
+    scrape_interval: 15s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['rosgrid-backend:8000']
+
+  - job_name: 'rosgrid-mikrotik-fleet'
+    scrape_interval: 15s
+    metrics_path: '/api/v1/metrics/fleet'
+    authorization:
+      type: Bearer
+      credentials: '<ROSGRID_PROMETHEUS_SCRAPE_TOKEN>'
+    static_configs:
+      - targets: ['rosgrid-backend:8000']
+```
+
+- **Consultas PromQL recomendadas para paneles de Grafana:**
+  - **Disponibilidad Global (%):** `avg(rosgrid_router_status) * 100`
+  - **Routers Caídos:** `rosgrid_router_status == 0`
+  - **Top 10 Routers por CPU:** `topk(10, rosgrid_router_cpu_percent)`
+  - **RAM Utilizada (%):** `rosgrid_router_memory_usage_ratio * 100`
+  - **CVEs Críticos Pendientes:** `rosgrid_router_active_cves_count{severity="critical"} > 0`
+
+---
+
+## 10. Mantenimiento de Plataforma, Respaldos, Escalamiento y Troubleshooting
+
+### 10.1 Comandos Operativos Frecuentes del Administrador
 
 Ejecute estos comandos dentro de `/opt/rosgrid` (o en la raíz del repositorio):
 
@@ -328,11 +368,11 @@ docker compose -f docker-compose.prod.yml pull
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-### 9.2 Activación Opcional del Perfil DragonflyDB (Flotas > 500 Routers)
+### 10.2 Activación Opcional del Perfil DragonflyDB (Flotas > 500 Routers)
 
 Por defecto, RoSGrid utiliza **KeyDB Multi-Hilo**, que consume solo ~35 MB de RAM. Si su flota supera los 500 routers concurrentes y su servidor cuenta con `>= 8 GB` de RAM, puede activar el perfil `dragonfly` en `docker-compose.prod.yml` manteniendo total compatibilidad con el protocolo RESP.
 
-### 9.3 Guía Rápida de Resolución de Problemas (Troubleshooting)
+### 10.3 Guía Rápida de Resolución de Problemas (Troubleshooting)
 
 | Síntoma Observado | Causa Probable | Solución Directa |
 | :--- | :--- | :--- |
