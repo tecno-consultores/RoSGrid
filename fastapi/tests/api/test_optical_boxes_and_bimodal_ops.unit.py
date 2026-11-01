@@ -253,13 +253,22 @@ async def test_optical_boxes_crud_lifecycle(
         assert len(items) == 1
         assert items[0]["box_code"] == "NAP-NORTE-01"
 
-        # 3. Obtener Detalle y Matriz de Puertos
-        res_detail = await async_client.get(f"/api/v1/optical-boxes/{box_id}", headers=headers)
-        assert res_detail.status_code == 200
-        detail_data = res_detail.json()
-        assert detail_data["capacity_ports"] == 16
-        assert len(detail_data["ports"]) == 16
-        assert detail_data["ports"][0]["is_occupied"] is False
+        # 3. Obtener Detalle y Matriz de Puertos (Simulando MissingGreenlet si se accede a box.subscribers)
+        original_subscribers = OpticalBox.subscribers
+
+        def _guarded_subscribers(self: Any) -> Any:
+            raise RuntimeError("MissingGreenlet simulated: greenlet_spawn has not been called")
+
+        setattr(OpticalBox, "subscribers", property(_guarded_subscribers))
+        try:
+            res_detail = await async_client.get(f"/api/v1/optical-boxes/{box_id}", headers=headers)
+            assert res_detail.status_code == 200
+            detail_data = res_detail.json()
+            assert detail_data["capacity_ports"] == 16
+            assert len(detail_data["ports"]) == 16
+            assert detail_data["ports"][0]["is_occupied"] is False
+        finally:
+            setattr(OpticalBox, "subscribers", original_subscribers)
 
         # 4. Actualizar Caja NAP
         res_patch = await async_client.patch(

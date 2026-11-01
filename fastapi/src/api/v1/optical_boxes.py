@@ -12,6 +12,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.api.deps import get_current_user_claims, require_feature, require_roles
 from src.core.audit import write_audit_log
@@ -169,9 +170,10 @@ async def get_optical_box_detail(
     if not box:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Caja NAP no encontrada")
 
-    # Obtener suscriptores conectados
+    # Obtener suscriptores conectados con relación IPv4 pre-cargada
     stmt_subs = (
         select(SubscriberDevice)
+        .options(selectinload(SubscriberDevice.ipv4_address))
         .where(
             SubscriberDevice.tenant_id == tenant_id,
             SubscriberDevice.optical_box_id == box_id,
@@ -214,12 +216,14 @@ async def get_optical_box_detail(
     occupied_count = len(port_map)
     available_count = max(0, box.capacity_ports - occupied_count)
 
-    detail = OpticalBoxDetailResponse.model_validate(box)
-    detail.occupied_ports_count = occupied_count
-    detail.available_ports_count = available_count
-    detail.ports = ports
-    detail.subscribers = sub_responses
-    return detail
+    base_data = OpticalBoxResponse.model_validate(box).model_dump()
+    base_data["occupied_ports_count"] = occupied_count
+    base_data["available_ports_count"] = available_count
+    return OpticalBoxDetailResponse(
+        **base_data,
+        ports=ports,
+        subscribers=sub_responses,
+    )
 
 
 @optical_boxes_router.patch("/{box_id}", response_model=OpticalBoxResponse)

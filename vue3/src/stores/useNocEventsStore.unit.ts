@@ -202,6 +202,43 @@ describe('useNocEventsStore — WebSocket Global & Alertas NOC', () => {
     window.removeEventListener('rosgrid:kill-switch', eventSpy);
   });
 
+  it('ignora SESSION_KILLED dirigido a otro usuario/sesión sin cerrar la sesión del SuperAdmin', async () => {
+    const { useAuthStore } = await import('./useAuthStore');
+    const authStore = useAuthStore();
+    authStore.setAuth(
+      {
+        id: 'uid-superadmin',
+        username: 'sinfallas',
+        email: 'admin@rosgrid.local',
+        role: 'SUPERADMIN_GLOBAL',
+        tenant_id: 'tid-1',
+        tenant_slug: 'sistemas',
+        totp_enabled: true,
+      },
+      'csrf-admin',
+      'sid-superadmin',
+    );
+
+    const store = useNocEventsStore();
+    const otherUserKillPayload = JSON.stringify({
+      event: 'SESSION_KILLED',
+      event_name: 'SESSION_KILLED',
+      target_session_id: 'sid-operador-2',
+      target_user_id: 'uid-operador-2',
+      reason: 'Revocación manual por el Administrador',
+    });
+
+    const eventSpy = vi.fn();
+    window.addEventListener('rosgrid:kill-switch', eventSpy);
+
+    store.handleIncomingEvent(otherUserKillPayload);
+
+    expect(eventSpy).not.toHaveBeenCalled();
+    expect(authStore.isAuthenticated).toBe(true);
+    expect(authStore.sessionId).toBe('sid-superadmin');
+    window.removeEventListener('rosgrid:kill-switch', eventSpy);
+  });
+
   it('reacciona al evento rosgrid:tenant-switched reconectando el WebSocket', () => {
     const store = useNocEventsStore();
     store.connectEventsWebSocket('ws://localhost:8000/ws/test');

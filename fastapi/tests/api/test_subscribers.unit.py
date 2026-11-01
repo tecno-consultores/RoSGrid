@@ -17,6 +17,7 @@ from src.models.core import SystemRoleEnum
 from src.models.inventory import Router, RouterAdminStateEnum, RouterNetworkRoleEnum
 from src.models.ipam import (
     BandwidthProfile,
+    OpticalBox,
     SubscriberDevice,
 )
 from tests.conftest import FakeAsyncRedis
@@ -72,6 +73,7 @@ class MockSubscribersDbSession:
                 physical_location="POP Centro",
             )
         ]
+        self.optical_boxes: list[OpticalBox] = []
         self.deleted: list[Any] = []
 
     def add(self, obj: Any) -> None:
@@ -89,6 +91,8 @@ class MockSubscribersDbSession:
             self.profiles.append(obj)
         elif isinstance(obj, SubscriberDevice):
             self.devices.append(obj)
+        elif isinstance(obj, OpticalBox):
+            self.optical_boxes.append(obj)
 
     async def commit(self) -> None:
         pass
@@ -102,6 +106,8 @@ class MockSubscribersDbSession:
             self.profiles.remove(obj)
         elif isinstance(obj, SubscriberDevice) and obj in self.devices:
             self.devices.remove(obj)
+        elif isinstance(obj, OpticalBox) and obj in self.optical_boxes:
+            self.optical_boxes.remove(obj)
 
     async def execute(self, stmt: Any, params: dict[str, Any] | None = None) -> MockSubscribersDbResult:
         stmt_str = str(stmt).lower()
@@ -110,11 +116,51 @@ class MockSubscribersDbSession:
         if "count(" in stmt_str and "subscriber_devices" in stmt_str:
             return MockSubscribersDbResult(scalar_val=len(self.devices))
 
+        if "from optical_boxes" in stmt_str:
+            target_box = None
+            try:
+                compiled_params = stmt.compile().params
+                for val in compiled_params.values():
+                    for b in self.optical_boxes:
+                        if b.id == val:
+                            target_box = b
+                            break
+            except Exception:
+                pass
+            if not target_box and self.optical_boxes:
+                target_box = self.optical_boxes[0]
+            return MockSubscribersDbResult(target_box, self.optical_boxes)
+
         if "from bandwidth_profiles" in stmt_str:
             item = self.profiles[0] if self.profiles else None
             return MockSubscribersDbResult(item, self.profiles)
 
         if "from subscriber_devices" in stmt_str:
+            try:
+                compiled_params = stmt.compile().params
+                p_box_id = None
+                p_port = None
+                has_ep_check = False
+                for k, v in compiled_params.items():
+                    if "optical_box_id" in k:
+                        p_box_id = v
+                    elif "optical_box_port" in k:
+                        p_port = v
+                    elif "endpoint_identifier" in k:
+                        has_ep_check = True
+                        for d in self.devices:
+                            if d.endpoint_identifier == v:
+                                return MockSubscribersDbResult(d, [d])
+                if has_ep_check:
+                    return MockSubscribersDbResult(None, [])
+
+                if p_box_id is not None and p_port is not None:
+                    for d in self.devices:
+                        if getattr(d, "optical_box_id", None) == p_box_id and getattr(d, "optical_box_port", None) == p_port:
+                            return MockSubscribersDbResult(d, [d])
+                    return MockSubscribersDbResult(None, [])
+            except Exception:
+                pass
             item = self.devices[0] if self.devices else None
             return MockSubscribersDbResult(item, self.devices)
 
@@ -366,5 +412,90 @@ async def test_subscribers_feature_flag_disabled_403(
         # subscriber-devices es bimodal: accesible para empresas no-ISP para ver clientes DHCP en el mapa
         res_devs = await async_client.get("/api/v1/subscriber-devices", headers=headers)
         assert res_devs.status_code == 200
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_subscriber_device_ftth_registration_and_port_conflict(
+    async_client: AsyncClient, subscriber_auth: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("src.api.v1.subscribers.write_audit_log", fake_audit)
+    tid = subscriber_auth["tenant_id"]
+    headers = subscriber_auth["headers"]
+    mock_db = MockSubscribersDbSession(tid)
+    app.dependency_overrides[get_tenant_db_session] = lambda: mock_db
+
+    try:
+        router_id = mock_db.routers[0].id
+        nap_box = OpticalBox(
+            id=uuid.uuid4(),
+            tenant_id=tid,
+            router_id=router_id,
+            box_code="NAP-TEST-01",
+            capacity_ports=16,
+            splitter_ratio="1:16",
+            installation_type="POSTE",
+            latitude=10.4850,
+            longitude=-66.9050,
+        )
+        mock_db.add(nap_box)
+
+        # 1. Registro exitoso de cliente FTTH con alias operativos FTTH_GPON y ROUTER_NAT
+        payload_1 = {
+            "router_id": str(router_id),
+            "endpoint_identifier": "CLI-FTTH-001",
+            "service_type": "FTTH_GPON",
+            "onu_mode": "ROUTER_NAT",
+            "optical_box_id": str(nap_box.id),
+            "optical_box_port": 3,
+            "rx_optical_power_dbm": -19.2,
+            "drop_cable_meters": 65,
+            "latitude": 10.4855,
+            "longitude": -66.9052,
+        }
+        res_1 = await async_client.post(
+            "/api/v1/subscriber-devices",
+            json=payload_1,
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res_1.status_code == 201
+        data_1 = res_1.json()
+        assert data_1["service_type"] == "PPPOE"  # Normalizado
+        assert data_1["onu_mode"] == "ROUTER"  # Normalizado
+        assert data_1["optical_box_port"] == 3
+        assert data_1["optical_box"] == "NAP-TEST-01"
+        assert float(data_1["rx_optical_power_dbm"]) == -19.2
+
+        # 2. Intento de registrar segundo cliente en el mismo puerto 3 -> HTTP 409 Conflict
+        payload_2 = {
+            "router_id": str(router_id),
+            "endpoint_identifier": "CLI-FTTH-002",
+            "service_type": "FTTH_GPON",
+            "optical_box_id": str(nap_box.id),
+            "optical_box_port": 3,
+        }
+        res_conflict = await async_client.post(
+            "/api/v1/subscriber-devices",
+            json=payload_2,
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res_conflict.status_code == 409
+        assert "ya se encuentra ocupado" in res_conflict.json()["detail"]
+
+        # 3. Intento de registrar cliente en puerto fuera de rango (ej. 99 > 16) -> HTTP 422
+        payload_invalid_port = {
+            "router_id": str(router_id),
+            "endpoint_identifier": "CLI-FTTH-003",
+            "optical_box_id": str(nap_box.id),
+            "optical_box_port": 99,
+        }
+        res_invalid = await async_client.post(
+            "/api/v1/subscriber-devices",
+            json=payload_invalid_port,
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res_invalid.status_code == 422
+        assert "excede la capacidad de la caja" in res_invalid.json()["detail"]
     finally:
         app.dependency_overrides.clear()

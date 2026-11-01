@@ -84,7 +84,7 @@ export const CONTEXTUAL_HELP_CATALOG: Record<string, ContextualHelpEntry> = {
       'Toda revelación de contraseña en la bóveda genera un registro inmutable WORM (VAULT_CREDENTIAL_REVEALED).',
     ],
     mikrotikV7Notes: [
-      'Requiere el servicio www-ssl activo en /ip/service y usuario con políticas rest-api,read,write,policy,test,sensitive.',
+      'Requiere el servicio www-ssl activo en /ip/service y usuario con políticas api,rest-api,read,write,ftp,test,reboot,policy,sensitive.',
     ],
     relatedRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'INVENTORY_MANAGER', 'SUPERVISOR', 'SUPPORT_L3'],
   },

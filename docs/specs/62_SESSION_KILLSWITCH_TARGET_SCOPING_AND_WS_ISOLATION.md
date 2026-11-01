@@ -3,8 +3,9 @@
 
 # Especificación 62: Aislamiento de Destinatario en Kill-Switch de Sesiones (`SESSION_KILLED`) — Prevención de Cierre Colateral de Sesión del SuperAdmin en WebSocket y Pinia (Hito 28.7)
 
-**Estado:** Aprobado para Ejecución Determinista (Gemini 3.8 Flash High)  
+**Estado:** ✅ Completado y Certificado al 100% en Hito 28  
 **Hito Asociado:** Hito 28.7 (`ROADMAP.md`)  
+**Fecha de Certificación:** Noviembre 2026  
 **Módulos Afectados:**
 - `fastapi/src/redis_layer/sessions.py`
 - `fastapi/src/api/v1/websockets.py`

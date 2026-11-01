@@ -208,7 +208,7 @@ Antes de registrar un router en el inventario de RoSGrid (individualmente o por 
 /ip service set www disabled=yes
 
 # 4. Crear grupo con política REST API (obligatorio en RouterOS v7.13+) y usuario dedicado
-/user group add name="rosgrid-api-group" policy=api,rest-api,read,write,test,reboot,policy,sensitive comment="Acceso REST para RoSGrid"
+/user group add name="rosgrid-api-group" policy=api,rest-api,read,write,ftp,test,reboot,policy,sensitive comment="Acceso REST para RoSGrid"
 /user add name="rosgrid_agent" password="CambiarPorClaveInicialFuerte2026!" group="rosgrid-api-group" comment="Managed by RoSGrid Vault"
 ```
 

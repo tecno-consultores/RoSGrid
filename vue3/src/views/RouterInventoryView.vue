@@ -105,9 +105,13 @@
       label: t('inventory.col_hardware'),
       formatter: (row: Record<string, unknown>) => {
         const r = row as unknown as RouterItem;
-        const model = r.model || (r as any).model_name || r.board_name || 'CHR';
+        const rawModel = String(r.model || (r as any).model_name || r.board_name || 'CHR').trim();
+        const compactModel = rawModel.replace(
+          /QEMU Standard PC\s*\([^)]*\)/i,
+          'QEMU',
+        );
         const arch = r.architecture_name ? ` (${r.architecture_name})` : '';
-        return `${model}${arch}`;
+        return `${compactModel}${arch}`;
       },
     },
     { key: 'serial_number', label: t('inventory.col_serial') },
@@ -815,17 +819,20 @@
 
   /* Refactoring UI: Severity is not rank — Neutral secondary actions at rest, semantic on hover */
   .table-row-actions {
-    display: flex;
-    gap: var(--rg-space-1, 4px);
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
   }
 
   .btn-row-action {
     background: transparent;
     border: 1px solid var(--rg-border-grid, #1e293b);
     color: var(--rg-text-secondary, #cbd5e1);
-    padding: 3px 8px;
+    padding: 2px 6px;
     border-radius: var(--rg-radius-sm, 4px);
     font-size: var(--rg-text-2xs, 0.6875rem);
+    white-space: nowrap;
     cursor: pointer;
     transition: all 0.15s ease;
   }

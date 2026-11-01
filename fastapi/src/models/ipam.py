@@ -365,8 +365,9 @@ class SubscriberDevice(Base):
     def assigned_ipv4(self) -> Optional[str]:
         if hasattr(self, "_assigned_ipv4_cache") and self._assigned_ipv4_cache:
             return self._assigned_ipv4_cache
-        if self.ipv4_address and hasattr(self.ipv4_address, "address") and self.ipv4_address.address:
-            return str(self.ipv4_address.address).split("/")[0]
+        ip_obj = self.__dict__.get("ipv4_address")
+        if ip_obj is not None and getattr(ip_obj, "address", None):
+            return str(ip_obj.address).split("/")[0]
         return None
 
     @assigned_ipv4.setter

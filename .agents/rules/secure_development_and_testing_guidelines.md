@@ -112,6 +112,10 @@ Apply these non-negotiable security directives before writing any code:
     - **Pytest Lifespan Guard:** Never initiate an infinite worker loop during testing (`ROSGRID_ENV.startswith("qa") or ROSGRID_ENV == "test"`).
     - **Dual Observability:** Maintain `GET /metrics` strictly for FastAPI platform telemetry and `GET /api/v1/metrics/fleet` strictly for MikroTik fleet metrics served from KeyDB in RAM.
 
+13. **Idempotency Key Anti-Replay in Test Suites, AsyncSession MissingGreenlet Prevention & Status 422:**
+    - **Test Suite Idempotency Isolation:** When writing Pytest suites that execute sequential mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`) within the same test function (e.g. testing duplicate detections or port collisions), NEVER reuse the exact same headers dictionary containing a static `Idempotency-Key`. The idempotency middleware will intercept subsequent calls with `HTTP 422 ("Conflicto de Idempotency-Key")`. Always generate a fresh UUID (`"Idempotency-Key": str(uuid.uuid4())`) per distinct mutation.
+    - **AsyncSession MissingGreenlet Invariant:** In async SQLAlchemy sessions (`AsyncSession`), accessing lazy-loaded relationships or model properties calling relationship attributes triggers `MissingGreenlet`. Never invoke `ChildResponse.model_validate(orm_obj)` if child relationships are not explicitly loaded via `selectinload()`. Always serialize via `BaseResponse.model_validate(orm_obj).model_dump()` or access attributes defensively via `self.__dict__.get("rel_attr")`.
+    - **Modern FastAPI HTTP Status Constants:** In FastAPI/Starlette, prefer `status.HTTP_422_UNPROCESSABLE_CONTENT` over deprecated `HTTP_422_UNPROCESSABLE_ENTITY` to avoid deprecation warnings.
 
 ---
 

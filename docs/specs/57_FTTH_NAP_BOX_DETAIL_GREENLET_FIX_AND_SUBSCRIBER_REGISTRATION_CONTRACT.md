@@ -3,6 +3,10 @@
 
 # Especificación 57: Corrección de Serialización Asíncrona (`MissingGreenlet`) en Detalle de Cajas NAP (`/subscribers/map`) y Contrato de Registro FTTH en Técnico de Campo (`/field-ops`) — Hito 28.2
 
+**Estado:** ✅ Completado y Certificado al 100% en Hito 28  
+**Hito Asociado:** Hito 28.2 (`ROADMAP.md`)  
+**Fecha de Certificación:** Noviembre 2026  
+
 > **🤖 DIRECTIVA DE EJECUCIÓN PARA GEMINI 3.8 FLASH HIGH (FLASH-READY SPEC):**
 > Esta especificación contiene **bloques de código literales (`Target` / `Replacement`)**, rutas exactas de archivos y contratos cerrados listos para ser aplicados sin ambigüedad cuando se ejecute el lote de implementación del **Hito 28**.
 > - **Cero Alucinaciones:** Respeta los nombres exactos de modelos SQLAlchemy (`OpticalBox`, `SubscriberDevice`), esquemas Pydantic (`OpticalBoxResponse`, `OpticalBoxDetailResponse`, `SubscriberDeviceCreate`, `CustomerServiceTypeEnum`, `ONUModeEnum`) y tiendas Pinia (`useFieldOpsStore`).

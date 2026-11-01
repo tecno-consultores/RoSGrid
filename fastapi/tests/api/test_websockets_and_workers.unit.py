@@ -163,6 +163,21 @@ async def test_handle_telemetry_msg() -> None:
     assert keep_kill is False
     ws_kill.close.assert_awaited_once()
 
+    # Kill switch event for ANOTHER user/session must NOT close SuperAdmin's WebSocket
+    other_kill_ev = json.dumps(
+        {
+            "event": "SESSION_KILLED",
+            "target_session_id": "sid-other-operator",
+            "target_user_id": "uid-other-operator",
+        }
+    )
+    ws_superadmin = AsyncMock()
+    keep_superadmin = await _handle_telemetry_msg(
+        ws_superadmin, "rg:pubsub:events:1", other_kill_ev, "sid-superadmin", "uid-superadmin"
+    )
+    assert keep_superadmin is True
+    ws_superadmin.close.assert_not_called()
+
 
 @pytest.mark.asyncio
 async def test_verify_ws_router_permission() -> None:

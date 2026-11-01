@@ -3,8 +3,9 @@
 
 # Especificación 63: Columnas Auto-Ajustables al Contenido (*Content-Hugging*) en `RgDataTable.vue` y Ergonomía Responsiva de la Tabla de Inventario (Hito 28.8)
 
-**Estado:** Aprobado para Ejecución Determinista (Gemini 3.8 Flash High)  
+**Estado:** ✅ Completado y Certificado al 100% en Hito 28  
 **Hito Asociado:** Hito 28.8 (`ROADMAP.md`)  
+**Fecha de Certificación:** Noviembre 2026  
 **Módulos Afectados:**
 - `vue3/src/components/common/RgDataTable.vue`
 - `vue3/src/views/RouterInventoryView.vue`

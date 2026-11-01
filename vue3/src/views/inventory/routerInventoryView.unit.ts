@@ -299,6 +299,15 @@ describe('RouterInventoryView.vue — Inventario y Modos Tabla, Mapa y Dividido'
 
     const formattedPinned = sslCol!.formatter!({ ssl_trust_status: 'TRUSTED_PINNED' });
     expect(formattedPinned).toBe('Certificado Válido (Pinned)');
+
+    const hwCol = cols.find((c) => c.key === 'hardware');
+    expect(hwCol?.formatter).toBeDefined();
+    expect(
+      hwCol!.formatter!({
+        model: 'CHR QEMU Standard PC (i440FX + PIIX, 1996)',
+        architecture_name: 'x86_64',
+      }),
+    ).toBe('CHR QEMU (x86_64)');
   });
 
   it('contiene el botón de Ventanas de Mantenimiento y navega a su ruta', async () => {

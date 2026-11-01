@@ -713,6 +713,28 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     When click(".btn-close")
     Then waitUntil("!document.querySelector('.rg-profile-flags-modal')")
 
+  Scenario: 74. Técnico de Campo FTTH: Registro de Abonado con Selección de Puerto en Caja NAP y Selector de Modo ONU (Hito 28.2)
+    Given driver baseUrl + '/field-ops'
+    And waitFor(".field-mobile-shell")
+    And waitFor("#tab-btn-customer")
+    When click("#tab-btn-customer")
+    Then waitFor("#cust-service-id")
+    And waitFor("#cust-nap-select")
+    And waitFor("#cust-port-select")
+    And waitFor("#cust-onu-serial")
+    And waitFor("#cust-onu-mode")
+    And waitFor(".ports-grid")
+    And waitFor(".submit-btn")
+
+  Scenario: 75. Ergonomía de Tabla de Inventario: Columnas Auto-Fit al Contenido (Content-Hugging) y Acciones en Línea (Hito 28.8)
+    Given driver baseUrl + '/inventory'
+    And waitFor(".inventory-view")
+    And waitFor(".rg-table")
+    And waitFor("thead th:not(.col-custom-actions)")
+    And waitFor(".col-flags")
+    And waitFor(".table-row-actions")
+    And waitFor(".btn-row-action")
+
 
 
 

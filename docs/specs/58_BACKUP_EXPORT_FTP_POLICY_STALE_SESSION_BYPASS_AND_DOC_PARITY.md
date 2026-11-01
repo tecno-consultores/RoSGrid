@@ -3,6 +3,10 @@
 
 # Especificación 58: Bypass Automático de Caché de Sesión RouterOS v7 (10m) en Respaldos `.rsc`, Diagnóstico Exacto de Política `ftp` y Paridad Documental de `/user/group` — Hito 28.3
 
+**Estado:** ✅ Completado y Certificado al 100% en Hito 28  
+**Hito Asociado:** Hito 28.3 (`ROADMAP.md`)  
+**Fecha de Certificación:** Noviembre 2026  
+
 > **🤖 DIRECTIVA DE EJECUCIÓN PARA GEMINI 3.8 FLASH HIGH (FLASH-READY SPEC):**
 > Esta especificación contiene **bloques de código literales (`Target` / `Replacement`)**, rutas exactas de archivos y contratos cerrados listos para ser aplicados sin ambigüedad cuando se ejecute el lote de implementación del **Hito 28**.
 > - **Cero Alucinaciones:** Respeta los nombres exactos de funciones y clases en `fastapi/src/api/v1/backups.py` (`export_router_rsc`, `MikrotikRestClient`, `clean_rsc_export_comments`), `vue3/src/data/helpCatalog.ts` y los 6 archivos de documentación.

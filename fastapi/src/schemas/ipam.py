@@ -187,6 +187,35 @@ class BandwidthProfileResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+def _normalize_service_type_input(val: Any) -> Any:
+    """Normaliza alias operativos FTTH hacia valores canónicos de CustomerServiceTypeEnum."""
+    if not isinstance(val, str):
+        return val
+    upper_val = val.strip().upper()
+    alias_map = {
+        "FTTH_GPON": CustomerServiceTypeEnum.PPPOE.value,
+        "FTTH_PPPOE": CustomerServiceTypeEnum.PPPOE.value,
+        "GPON": CustomerServiceTypeEnum.PPPOE.value,
+        "FTTH_DHCP": CustomerServiceTypeEnum.DHCP.value,
+        "IPOE": CustomerServiceTypeEnum.DHCP.value,
+    }
+    return alias_map.get(upper_val, upper_val)
+
+
+def _normalize_onu_mode_input(val: Any) -> Any:
+    """Normaliza alias operativos de modo ONU hacia valores canónicos de ONUModeEnum."""
+    if not isinstance(val, str):
+        return val
+    upper_val = val.strip().upper()
+    alias_map = {
+        "ROUTER_NAT": ONUModeEnum.ROUTER.value,
+        "NAT": ONUModeEnum.ROUTER.value,
+        "ONT_ROUTER": ONUModeEnum.ROUTER.value,
+        "ONU_BRIDGE": ONUModeEnum.BRIDGE.value,
+    }
+    return alias_map.get(upper_val, upper_val)
+
+
 class SubscriberDeviceCreate(BaseModel):
     router_id: uuid.UUID
     endpoint_identifier: Optional[str] = Field(None, max_length=64)
@@ -215,6 +244,16 @@ class SubscriberDeviceCreate(BaseModel):
     pppoe_username: Optional[str] = None
     onu_serial_number: Optional[str] = None
     physical_address: Optional[str] = None
+
+    @field_validator("service_type", mode="before")
+    @classmethod
+    def normalize_service_type(cls, v: Any) -> Any:
+        return _normalize_service_type_input(v)
+
+    @field_validator("onu_mode", mode="before")
+    @classmethod
+    def normalize_onu_mode(cls, v: Any) -> Any:
+        return _normalize_onu_mode_input(v)
 
 
 class SubscriberDeviceUpdate(BaseModel):
@@ -246,6 +285,16 @@ class SubscriberDeviceUpdate(BaseModel):
     pppoe_username: Optional[str] = None
     onu_serial_number: Optional[str] = None
     physical_address: Optional[str] = None
+
+    @field_validator("service_type", mode="before")
+    @classmethod
+    def normalize_service_type(cls, v: Any) -> Any:
+        return _normalize_service_type_input(v)
+
+    @field_validator("onu_mode", mode="before")
+    @classmethod
+    def normalize_onu_mode(cls, v: Any) -> Any:
+        return _normalize_onu_mode_input(v)
 
 
 class SubscriberDeviceResponse(BaseModel):

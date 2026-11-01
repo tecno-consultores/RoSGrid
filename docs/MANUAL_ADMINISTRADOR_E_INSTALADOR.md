@@ -208,7 +208,7 @@ Copie y pegue el siguiente bloque en la terminal de su MikroTik (vía WinBox):
 
 # 4. Crear grupo y usuario exclusivo para la Bóveda de RoSGrid
 /user group add name="rosgrid-api-group" \
-    policy=api,rest-api,read,write,test,reboot,policy,sensitive \
+    policy=api,rest-api,read,write,ftp,test,reboot,policy,sensitive \
     comment="Grupo REST API para RoSGrid"
 /user add name="rosgrid_agent" password="CambiarPorClaveSegura2026!" \
     group="rosgrid-api-group" comment="Gestionado por Boveda RoSGrid"

@@ -115,13 +115,18 @@ async def kill_session(
     pipe.zrem(f"rg:{tenant_id}:active_sessions", session_id)
 
     if notify_ws:
+        target_info = {
+            "target_session_id": session_id,
+            "target_user_id": user_id,
+            "reason": reason,
+            "killed_by": killed_by,
+        }
         event_payload = json.dumps(
             {
                 "event": "SESSION_KILLED",
-                "target_session_id": session_id,
-                "target_user_id": user_id,
-                "reason": reason,
-                "killed_by": killed_by,
+                "event_name": "SESSION_KILLED",
+                **target_info,
+                "payload": target_info,
             }
         )
         pipe.publish(f"rg:pubsub:events:{tenant_id}", event_payload)

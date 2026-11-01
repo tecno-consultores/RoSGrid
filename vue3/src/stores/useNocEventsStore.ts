@@ -39,13 +39,40 @@ export const useNocEventsStore = defineStore('nocEvents', () => {
         };
       }
 
-      // Intercepción del Kill-Switch en vivo
+      // Intercepción del Kill-Switch en vivo (solo si aplica a la sesión/usuario actual)
       if (eventName === 'SESSION_KILLED') {
-        if (payload?.killed_by === 'SUPERADMIN_TENANT_SWITCH') {
+        const p = payload?.payload && typeof payload.payload === 'object' ? payload.payload : payload;
+        if (p?.killed_by === 'SUPERADMIN_TENANT_SWITCH' || payload?.killed_by === 'SUPERADMIN_TENANT_SWITCH') {
           return;
         }
         const authStore = useAuthStore();
-        authStore.forceKillSwitchLogout(payload?.reason || 'Sesión finalizada por el Administrador');
+        const targetSid = p?.target_session_id || payload?.target_session_id;
+        const targetUid = p?.target_user_id || payload?.target_user_id;
+
+        if (targetSid && authStore.sessionId && String(targetSid) !== String(authStore.sessionId)) {
+          return;
+        }
+        if (
+          !targetSid &&
+          targetUid &&
+          authStore.user?.id &&
+          String(targetUid) !== String(authStore.user.id)
+        ) {
+          return;
+        }
+        if (
+          targetSid &&
+          !authStore.sessionId &&
+          targetUid &&
+          authStore.user?.id &&
+          String(targetUid) !== String(authStore.user.id)
+        ) {
+          return;
+        }
+
+        authStore.forceKillSwitchLogout(
+          p?.reason || payload?.reason || 'Sesión finalizada por el Administrador',
+        );
         return;
       }
 

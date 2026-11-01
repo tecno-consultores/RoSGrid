@@ -277,4 +277,89 @@ describe('FieldTechMobileView.vue — Panel Responsive del Técnico de Campo FTT
 
     expect(pingSpy).toHaveBeenLastCalledWith('dev-1', true, true);
   });
+
+  it('registra un nuevo cliente FTTH con caja NAP, puerto y modo ONU navegando a diagnósticos', async () => {
+    const authStore = useAuthStore();
+    authStore.updateTenantFeatures({ isp_module_enabled: true });
+
+    const fieldStore = useFieldOpsStore();
+    fieldStore.opticalBoxes = [
+      {
+        id: 'box-1',
+        tenant_id: 't-1',
+        router_id: 'r-01',
+        box_code: 'NAP-NORTE-01',
+        capacity_ports: 16,
+        splitter_ratio: '1:16',
+        installation_type: 'POSTE',
+        latitude: 10.4806,
+        longitude: -66.9036,
+        status: 'ACTIVE',
+        occupied_ports_count: 1,
+        available_ports_count: 15,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ];
+
+    vi.spyOn(fieldStore, 'fetchOpticalBoxDetail').mockResolvedValue({
+      id: 'box-1',
+      tenant_id: 't-1',
+      router_id: 'r-01',
+      box_code: 'NAP-NORTE-01',
+      capacity_ports: 16,
+      splitter_ratio: '1:16',
+      installation_type: 'POSTE',
+      latitude: 10.4806,
+      longitude: -66.9036,
+      status: 'ACTIVE',
+      occupied_ports_count: 1,
+      available_ports_count: 15,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      ports: [
+        { port_number: 1, is_occupied: true, subscriber_identifier: 'CLI-001', reachability_status: 'ONLINE' },
+        { port_number: 2, is_occupied: false, reachability_status: 'FREE' },
+      ],
+      subscribers: [],
+    });
+
+    const registerSpy = vi.spyOn(fieldStore, 'registerSubscriberDevice').mockResolvedValue({
+      id: 'sub-new-1',
+      router_id: 'r-01',
+      endpoint_identifier: 'CLI-FTTH-099',
+      service_type: 'PPPOE',
+      device_serial: 'HWTC99887766',
+      optical_box_id: 'box-1',
+      optical_box_port: 2,
+      rx_optical_power_dbm: -19.2,
+      last_reachability_status: 'ONLINE',
+    } as any);
+
+    const wrapper = mount(FieldTechMobileView);
+    await wrapper.find('#tab-btn-customer').trigger('click');
+
+    await wrapper.find('#cust-service-id').setValue('CLI-FTTH-099');
+    await wrapper.find('#cust-nap-select').setValue('box-1');
+    await flushPromises();
+
+    await wrapper.find('#cust-port-select').setValue(2);
+    await wrapper.find('#cust-onu-serial').setValue('HWTC99887766');
+    await wrapper.find('#cust-onu-mode').setValue('ROUTER');
+    await wrapper.find('#cust-rx-power').setValue(-19.2);
+
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+
+    expect(registerSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        optical_box_id: 'box-1',
+        optical_box_port: 2,
+        service_type: 'DHCP',
+        onu_mode: 'ROUTER',
+        rx_optical_power_dbm: -19.2,
+      }),
+    );
+    expect(wrapper.find('#tab-btn-diagnostics').classes()).toContain('active');
+  });
 });

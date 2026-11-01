@@ -106,15 +106,31 @@ async def _verify_ws_router_permission(claims: dict[str, Any], router_id: uuid.U
             raise PermissionError("Permiso insuficiente para monitorear este router")
 
 
+def _classify_session_kill_event(ev: dict[str, Any], sid: str, uid: str) -> tuple[bool, bool]:
+    """Determina si el evento es SESSION_KILLED y si aplica exactamente a la sesión/usuario actual."""
+    ev_name = ev.get("event_name") or ev.get("event")
+    if ev_name != "SESSION_KILLED":
+        return False, False
+    p = ev.get("payload") if isinstance(ev.get("payload"), dict) else ev
+    if p.get("killed_by") == "SUPERADMIN_TENANT_SWITCH":
+        return True, False
+    target_sid = p.get("target_session_id")
+    if target_sid:
+        return True, str(target_sid) == str(sid)
+    target_uid = p.get("target_user_id")
+    if target_uid:
+        return True, str(target_uid) == str(uid)
+    return True, False
+
+
 async def _handle_telemetry_msg(ws: WebSocket, channel: str, raw_data: str, sid: str, uid: str) -> bool:
     if "events" in channel:
         try:
             event = json.loads(raw_data)
-            if event.get("event_name") == "SESSION_KILLED":
-                p = event.get("payload", {})
-                if p.get("target_session_id") == sid or p.get("target_user_id") == uid:
-                    await ws.close(code=4401, reason="Sesión revocada por Kill-Switch")
-                    return False
+            is_kill, is_target = _classify_session_kill_event(event, sid, uid)
+            if is_kill and is_target:
+                await ws.close(code=4401, reason="Sesión revocada por Kill-Switch")
+                return False
         except Exception as exc:
             logger.debug("Error processing telemetry websocket event: %s", exc)
         return True
@@ -197,11 +213,13 @@ async def tenant_events_ws(ws: WebSocket) -> None:
                 raw_str = msg["data"] if isinstance(msg["data"], str) else msg["data"].decode("utf-8")
                 try:
                     ev = json.loads(raw_str)
-                    if ev.get("event_name") == "SESSION_KILLED":
-                        p = ev.get("payload", {})
-                        if p.get("target_session_id") == session_id or p.get("target_user_id") == user_id:
+                    is_kill, is_target = _classify_session_kill_event(ev, session_id, user_id)
+                    if is_kill:
+                        if is_target:
+                            await ws.send_text(raw_str)
                             await ws.close(code=4401, reason="Sesión revocada por Kill-Switch")
                             break
+                        continue
                 except Exception as exc:
                     logger.debug("Error checking kill switch event: %s", exc)
                 await ws.send_text(raw_str)

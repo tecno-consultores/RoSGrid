@@ -1002,6 +1002,31 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 131. Contrato FTTH y Validación de Cajas NAP: Detalle de Caja NAP (GET /optical-boxes/{id}) y Alta de Abonado FTTH (POST /subscriber-devices) sin autenticación devuelve 401 (Hito 28.2)
+    Given path '/api/v1/optical-boxes/00000000-0000-0000-0000-000000000001'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/subscriber-devices'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000131'
+    And request { router_id: '00000000-0000-0000-0000-000000000001', endpoint_identifier: 'CLI-FTTH-001', service_type: 'FTTH_GPON', onu_mode: 'ROUTER_NAT', optical_box_port: 1 }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 132. Disparo de Respaldos .rsc con Diagnóstico de Política FTP y Terminación de Sesión con Scoping Estricto (Hitos 28.3 y 28.7)
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/backups/trigger'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/sessions/active/sess-target-001'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000132'
+    When method delete
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
 
 
 

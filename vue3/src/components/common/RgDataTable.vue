@@ -497,8 +497,10 @@
     font-size: var(--rg-text-sm, 0.8125rem);
   }
 
+  thead th:not(.col-custom-actions),
   td.rg-data {
-    max-width: 240px;
+    width: 1%;
+    max-width: 210px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -512,7 +514,7 @@
   .rg-density-compact th,
   .rg-density-compact td {
     height: 32px;
-    padding: 2px 8px;
+    padding: 2px 6px;
     border-right: 1px solid var(--rg-border-grid);
     border-bottom: 1px solid var(--rg-border-grid);
   }
@@ -521,7 +523,7 @@
   .rg-density-comfortable th,
   .rg-density-comfortable td {
     height: 44px;
-    padding: 8px 12px;
+    padding: 6px 10px;
     border-bottom: 1px solid var(--rg-border-grid);
   }
 
@@ -548,8 +550,9 @@
   }
 
   .col-flags {
-    width: 65px;
-    min-width: 65px;
+    width: 1%;
+    min-width: 34px;
+    white-space: nowrap;
     text-align: center;
   }
 

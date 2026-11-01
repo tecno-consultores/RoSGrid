@@ -2,7 +2,7 @@
 
 **Licencia:** GPL-3.0-only  
 **Estándar Aplicado:** QA Testing Blueprints (Nivel 11X)  
-**Estado Actual:** Hitos 27.12, 27.13, 27.14, 27.15, 27.16, 27.17, 27.18 y 27.19 Completados y Certificados al 100% en Contenedores Docker Efímeros — Arquitectura Dual de Observabilidad Prometheus (`GET /metrics` Plataforma vs. `GET /api/v1/metrics/fleet` Flota MikroTik) e Integración con Grafana (8 métricas canónicas OpenMetrics, etiquetas `{tenant_id, router_id, identity, model, ros_version}`, parser de uptime RouterOS v7 `_parse_ros_uptime_to_seconds`, gobierno con flag de tenant `Tenant.prometheus_fleet_exporter_enabled`, 100% cobertura en `fleet_metrics.py` con 9/9 pruebas, plantillas oficiales en `docs/examples/grafana/` y `docs/examples/prometheus/`, Escenario 60 enriquecido en Karate Labs BDD), Telemetría Anónima de Instancias Activas hacia `rosgrid-web` (`telemetry_beacon_worker.py` con Radon Grado A promedio 2.91, guardia en lifespan de FastAPI, endpoints de diagnóstico `/system/telemetry-beacon/status` y disparo manual), Gobernanza Granular de Flags en Perfiles de Usuario (30 Acciones RBAC en `ACTIONS_METADATA` y `POLICY_MATRIX` 30×11, 10 Permisos por Router en `user_router_permissions`, Overrides Individuales en `users.feature_flags_override`, Endpoints `GET .../effective-permissions` y `PATCH .../feature-flags` con auditoría WORM, migración `0012_user_profile_flags_perms` certificada en PostgreSQL 17 con guardia `VARCHAR(32)` en `verify_alembic_orm_parity.py`, y modal interactivo `RgUserProfileFlagsModal.vue`), 507 pruebas Vitest en 79 suites aprobadas al 100%, 630 pruebas unitarias backend Pytest (100%), Escenarios BDD 130 Karate API y 73 Karate UI.
+**Estado Actual:** Hitos 27.12 a 27.19 e Hitos 28.2, 28.3, 28.7 y 28.8 Completados y Certificados al 100% en Contenedores Docker Efímeros — Resolución de Serialización Asíncrona `MissingGreenlet` en Detalle de Cajas NAP FTTH (`optical_boxes.py`) y Contrato de Registro en Técnico de Campo (`FieldTechMobileView.vue` y `subscribers.py`), Bypass Automático de Caché de Sesión RouterOS v7 (10m) en Respaldos `.rsc` y Diagnóstico Exacto de Política `ftp` (`backups.py`), Aislamiento Estricto de Destinatario en Kill-Switch de Sesiones Activas `SESSION_KILLED` (`sessions.py`, `websockets.py` y `useNocEventsStore.ts`), Columnas Auto-Ajustables *Content-Hugging* (`width: 1%; white-space: nowrap;`) en `RgDataTable.vue` y Ergonomía Responsiva de la Tabla de Inventario (`RouterInventoryView.vue`), 509 pruebas Vitest en 79 suites aprobadas al 100%, 633 pruebas unitarias backend Pytest (100%), 1,142 pruebas unitarias totales, Escenarios BDD 132 Karate API y 75 Karate UI.
 
 ---
 
@@ -191,6 +191,8 @@ docker compose -f docker-compose.qa.yml down --remove-orphans
 | **Hito 27** | WebFig v7 Táctico: Paridad Operativa Total, Modales de Creación (Firewall/Queues/PPPoE), Módulos IP & DHCPv4/v6, Pila Dual IPv6, Routing Dinámico y Asistentes NAT | **100%** (551 tests Pytest)<br>**100%** (431 tests Vitest en 59 suites)<br>**100%** (103 BDD API / 49 BDD UI) | N/A | Safe Mode 60s + DHCP Setup Wizard + SLAAC/PD IPv6 + BGP v7 + NAT Wizards | ✅ **Certificado** |
 | **Hito 27.11** | Expansión CIS Benchmark (28 Directivas: 12 Base + 8 ISP + 8 Empresa), Enlaces Canónicos RouterOS v7 (0 Errores 404), Soberanía Operativa, 10 Nuevas Plantillas Masivas Avanzadas, Corrección Integral Syslog, Internacionalización Integral, Ergonomía de Pestañas WebFig y Técnico de Campo (Anti-Falsos Negativos) | **100%** (561 tests Pytest)<br>**100%** (417 tests Vitest en 57 suites)<br>**100%** (112 BDD API / 56 BDD UI) | N/A | Safe Mode 60s + Catálogo 28 CIS + 10 Plantillas Bulk-Ops + Trivy IaC/FS (0 err) + 0 colisiones i18n | ✅ **Certificado** |
 | **Hito 27.12** | Auditoría Integral de Pruebas de Componentes Frontend (100% de los 65 Componentes Vue Testeados), Auto-Sincronización Syslog y Gobernanza Level-11X | **100%** (561 tests Pytest)<br>**100%** (453 tests Vitest en 67 suites)<br>**100%** (112 BDD API / 57 BDD UI) | N/A | 65 de 65 Componentes Vue con suite unitaria dedicada + vue-tsc (0 err) + ruff (0 err) | ✅ **Certificado** |
+| **Hito 27.19** | Arquitectura Dual de Observabilidad Prometheus (`GET /metrics` vs `GET /api/v1/metrics/fleet`), Plantillas Grafana/Prometheus y Beacon Anónimo | **100%** (630 tests Pytest)<br>**100%** (507 tests Vitest en 79 suites)<br>**100%** (130 BDD API / 73 BDD UI) | N/A | 8 Métricas OpenMetrics + Dashboard Grafana + Heartbeat Anónimo + Overrides RBAC | ✅ **Certificado** |
+| **Hito 28 (28.2, 28.3, 28.7, 28.8)** | Estabilidad UAT: Serialización Cajas NAP FTTH (`MissingGreenlet` Fix), Contrato Registro Técnico Campo, Bypass Stale Session en Respaldos `.rsc` (`ftp`), Aislamiento Kill-Switch WebSockets y Ergonomía *Content-Hugging* en Tablas | **100%** (633 tests Pytest)<br>**100%** (509 tests Vitest en 79 suites)<br>**100%** (132 BDD API / 75 BDD UI) | N/A | Zero Greenlet Leaks + Ephemeral Session RSC Bypass + Scoped KillSwitch + Auto-Fit Columns | ✅ **Certificado** |
 
 ---
 
@@ -2115,6 +2117,62 @@ Conforme a la Especificación 43 v2.0.0 y la directiva `.agents/rules/ground_tru
 
 4. **Sincronización Web (`rosgrid-web`):**
    - Actualizada y verificada al 100% la guía de observabilidad en `rosgrid-web` (`src/pages/docs/QuickstartDoc.vue`, `public/docs/quickstart.md` y `public/llms-full.txt`) con 72 pruebas Vitest pasando al 100% y 0 errores en `vue-tsc`.
+
+---
+
+### O. Hito 28: Pruebas de Aceptación Manual (UAT) y Estabilidad Operativa — Hitos 28.2, 28.3, 28.7 y 28.8 (Completados y Certificados al 100%)
+
+1. **Hito 28.2: Corrección de Serialización Asíncrona (`MissingGreenlet`) en Detalle de Cajas NAP y Contrato de Registro FTTH (`docs/specs/57`):**
+   - **Backend FastAPI (`optical_boxes.py`, `models/ipam.py`, `schemas/ipam.py`, `subscribers.py`):**
+     - Serialización directa de `OpticalBoxDetailResponse` desde `OpticalBoxResponse.model_validate(box).model_dump()` sin tocar `box.subscribers`, evitando `MissingGreenlet` en `AsyncSession`.
+     - Acceso seguro en `SubscriberDevice.assigned_ipv4` evaluando `self.__dict__.get("ipv4_address")` y carga explícita `selectinload(SubscriberDevice.ipv4_address)`.
+     - Validadores de entrada `@field_validator` normalizando alias `FTTH_GPON` $\rightarrow$ `PPPOE` y `ROUTER_NAT` $\rightarrow$ `ROUTER` (`CC <= 2`).
+     - Habilitación de `SystemRoleEnum.FIELD_TECH` en creación de abonados y validación de disponibilidad de puerto NAP (`_resolve_and_validate_nap_port`) con HTTP 422 si excede capacidad y HTTP 409 si el puerto está ocupado.
+     - Cobertura: `test_optical_boxes_and_bimodal_ops.unit.py` y `test_subscribers.unit.py` aprobados al 100%.
+   - **Frontend Vue 3 (`FieldTechMobileView.vue` y `FieldTechMobileView.unit.ts`):**
+     - Watcher reactivo sobre `optical_box_id` con cálculo de `isNapPortOccupied(p)`, pre-selección automática del primer puerto libre y bloqueo de puertos ocupados (`.occupied`) en la matriz interactiva.
+     - 4 de 4 pruebas unitarias aprobadas al 100% en `FieldTechMobileView.unit.ts`.
+
+2. **Hito 28.3: Bypass de Caché de Sesión RouterOS v7 (10m) en Respaldos `.rsc`, Diagnóstico de Política `ftp` y Paridad Documental (`docs/specs/58`):**
+   - **Backend FastAPI (`backups.py` y `test_backups_diff_and_bulk_ops.unit.py`):**
+     - Funciones desacopladas `_read_and_cleanup_rsc_file`, `_resolve_user_group_ftp_status`, `_export_via_fresh_ephemeral_session` y `_try_fallback_rsc_export` (Radon Grado A, `CC <= 4`).
+     - Ante error `not enough permissions (9)`, consulta en vivo `/rest/user` y `/rest/user/group`. Si el grupo ya tiene `ftp` configurado pero RouterOS v7 mantiene en caché la sesión de 10 minutos, realiza respaldo inmediato con usuario efímero `_rg_bk_<hex>`; si el grupo carece de `ftp`, retorna HTTP 502 explícito con el comando CLI de remediación.
+     - Cobertura: 2 tests nuevos en `test_backups_diff_and_bulk_ops.unit.py` aprobados al 100%.
+   - **Paridad Documental:** Permiso `ftp` añadido a `rosgrid-api-group` en `README.md`, `docs/INSTALL.md`, `docs/FAQ.md`, `docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md`, `docs/MANUAL_ADMINISTRADOR_E_INSTALADOR.md`, `docs/specs/08_MIKROTIK_REST_V7_CLIENT_TOFU_AND_SAFEMODE.md` y `helpCatalog.ts`.
+
+3. **Hito 28.7: Aislamiento de Destinatario en Kill-Switch de Sesiones y Prevención de Cierre Colateral del SuperAdmin (`docs/specs/62`):**
+   - **Backend FastAPI & Redis Layer (`sessions.py`, `websockets.py`):**
+     - Unificación de evento Pub/Sub en `kill_session` con claves raíz (`"event": "SESSION_KILLED"`, `"event_name": "SESSION_KILLED"`) y `"payload"`.
+     - Clasificador `_classify_session_kill_event` (`CC <= 4`) en `websockets.py` garantizando que el WebSocket se cierre (código 4401) únicamente si la conexión pertenece al `target_session_id` o `target_user_id`, suprimiendo la retransmisión de la trama de expulsión hacia otros navegadores del tenant.
+     - Cobertura: `test_websockets_and_workers.unit.py` aprobado al 100%.
+   - **Frontend Vue 3 (`useNocEventsStore.ts` y `useNocEventsStore.unit.ts`):**
+     - Comprobación estricta de `target_session_id === authStore.sessionId` y `target_user_id === authStore.user?.id` antes de invocar `forceKillSwitchLogout()`.
+     - 4 de 4 pruebas unitarias aprobadas al 100% en `useNocEventsStore.unit.ts`.
+
+4. **Hito 28.8: Columnas Auto-Ajustables *Content-Hugging* en `RgDataTable.vue` y Ergonomía Responsiva de la Tabla de Inventario (`docs/specs/63`):**
+   - **Componente Base `RgDataTable.vue`:**
+     - Regla CSS `width: 1%; max-width: 210px; white-space: nowrap;` en `thead th:not(.col-custom-actions)` y `td.rg-data`.
+     - Reducción de `.col-flags` a `width: 1%; min-width: 34px;` y padding horizontal compacto `2px 6px` en densidad de 32px.
+   - **Vista de Inventario `RouterInventoryView.vue` y Locales:**
+     - Normalización de modelos hardware: `"CHR QEMU Standard PC (i440FX + PIIX, 1996)"` $\rightarrow$ `"CHR QEMU (x86_64)"`.
+     - Cabeceras abreviadas en español e inglés (`Identity`, `Rol`/`Role`, `IP / Puerto`/`IP / Port`, `Modelo`/`Model`) liberando más de 280px horizontales.
+     - Cobertura: `routerInventoryView.unit.ts` aprobado al 100%.
+
+5. **Escenarios BDD Karate Labs:**
+   - **API REST (`fastapi/test/api_test.feature` y réplica en `docs/examples/fastapi/test/api_test.feature`):**
+     - Escenario 131: Detalle de Caja NAP FTTH sin regresión MissingGreenlet (`GET /api/v1/optical-boxes/{box_id}`).
+     - Escenario 132: Creación de Respaldo `.rsc` con Bypass de Caché de Sesión RouterOS v7.
+   - **UI WebFig / NOC (`vue3/test/ui_business_flow.feature` y réplica en `docs/examples/vue3/test/ui_business_flow.feature`):**
+     - Escenario 74: Aislamiento de Destinatario en Kill-Switch de Sesiones Activas.
+     - Escenario 75: Ergonomía Responsiva y Ceñido de Columnas en Tabla de Inventario de Routers.
+
+6. **Totales de Aseguramiento de Calidad:**
+   - **Pruebas Unitarias Backend:** 633 de 633 pruebas PASADAS (100% pass rate).
+   - **Pruebas Unitarias Frontend:** 509 de 509 pruebas PASADAS en 79 suites (100% pass rate).
+   - **Total Pruebas Unitarias:** 1,142 pruebas.
+   - **Escenarios BDD Karate Labs:** 132 en API REST y 75 en UI WebFig.
+   - **Linters y Tipado Estático:** 0 errores en `ruff check` y 0 errores en `vue-tsc`.
+
 
 
 

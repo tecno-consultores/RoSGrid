@@ -14,6 +14,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.api.deps import get_current_user_claims, require_feature, require_roles
 from src.api.v1.webfig_common import _create_client_from_vault
@@ -30,6 +31,7 @@ from src.models.ipam import (
     IPAddressStatusEnum,
     IPAMAddress,
     ONUModeEnum,
+    OpticalBox,
     SubscriberDevice,
 )
 from src.schemas.ipam import (
@@ -296,7 +298,11 @@ async def list_subscriber_devices(
     ),
 ) -> list[SubscriberDevice]:
     tenant_id = get_tenant_id(claims)
-    stmt = select(SubscriberDevice).where(SubscriberDevice.tenant_id == tenant_id)
+    stmt = (
+        select(SubscriberDevice)
+        .options(selectinload(SubscriberDevice.ipv4_address))
+        .where(SubscriberDevice.tenant_id == tenant_id)
+    )
 
     if router_id:
         stmt = stmt.where(SubscriberDevice.router_id == router_id)
@@ -652,6 +658,48 @@ async def simulate_subscribers_from_dhcp(
     )
 
 
+async def _check_nap_port_availability(
+    db: AsyncSession,
+    box: OpticalBox,
+    optical_box_port: int,
+) -> None:
+    if optical_box_port < 1 or optical_box_port > box.capacity_ports:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=f"El puerto {optical_box_port} excede la capacidad de la caja ({box.capacity_ports} puertos)",
+        )
+    stmt_occ = select(SubscriberDevice).where(
+        SubscriberDevice.optical_box_id == box.id,
+        SubscriberDevice.optical_box_port == optical_box_port,
+    )
+    if (await db.execute(stmt_occ)).scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"El Puerto {optical_box_port} de la Caja NAP {box.box_code} ya se encuentra ocupado",
+        )
+
+
+async def _resolve_and_validate_nap_port(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    optical_box_id: Optional[uuid.UUID],
+    optical_box_port: Optional[int],
+    fallback_box_code: Optional[str],
+) -> Optional[str]:
+    """Valida existencia de la Caja NAP, rango/disponibilidad del puerto y retorna el box_code."""
+    if not optical_box_id:
+        return fallback_box_code
+
+    stmt_box = select(OpticalBox).where(OpticalBox.id == optical_box_id, OpticalBox.tenant_id == tenant_id)
+    box = (await db.execute(stmt_box)).scalar_one_or_none()
+    if not box:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Caja NAP seleccionada no encontrada")
+
+    if optical_box_port is not None:
+        await _check_nap_port_availability(db, box, optical_box_port)
+    return fallback_box_code or box.box_code
+
+
 @subscribers_router.post("", response_model=SubscriberDeviceResponse, status_code=status.HTTP_201_CREATED)
 async def create_subscriber_device(
     payload: SubscriberDeviceCreate,
@@ -661,6 +709,7 @@ async def create_subscriber_device(
             SystemRoleEnum.SUPERADMIN_GLOBAL,
             SystemRoleEnum.TENANT_ADMIN,
             SystemRoleEnum.NOC_MONITOR,
+            SystemRoleEnum.FIELD_TECH,
         )
     ),
 ) -> SubscriberDevice:
@@ -686,6 +735,14 @@ async def create_subscriber_device(
             detail=f"El identificador de endpoint '{ep_id}' ya está registrado en este router",
         )
 
+    resolved_box_code = await _resolve_and_validate_nap_port(
+        db=db,
+        tenant_id=tenant_id,
+        optical_box_id=payload.optical_box_id,
+        optical_box_port=payload.optical_box_port,
+        fallback_box_code=payload.optical_box,
+    )
+
     device = SubscriberDevice(
         tenant_id=tenant_id,
         router_id=payload.router_id,
@@ -700,10 +757,15 @@ async def create_subscriber_device(
         device_serial=serial,
         cpe_wifi_mac_address=payload.cpe_wifi_mac_address,
         pon_port=payload.pon_port,
-        optical_box=payload.optical_box,
+        optical_box=resolved_box_code,
+        optical_box_id=payload.optical_box_id,
+        optical_box_port=payload.optical_box_port,
+        rx_optical_power_dbm=payload.rx_optical_power_dbm,
+        drop_cable_meters=payload.drop_cable_meters,
+        is_custom_coordinates=payload.is_custom_coordinates or (payload.latitude is not None and payload.longitude is not None),
         latitude=payload.latitude,
         longitude=payload.longitude,
-        status=CustomerServiceStatusEnum.PENDING_INSTALL,
+        status=CustomerServiceStatusEnum.ACTIVE if payload.optical_box_id else CustomerServiceStatusEnum.PENDING_INSTALL,
         last_reachability_status="ONLINE",
     )
     db.add(device)
@@ -719,7 +781,12 @@ async def create_subscriber_device(
         actor_ip="127.0.0.1",
         event_category="NETWORK",
         event_action="CREATE_SUBSCRIBER_DEVICE",
-        after_state={"endpoint_identifier": device.endpoint_identifier, "router_id": str(device.router_id)},
+        after_state={
+            "endpoint_identifier": device.endpoint_identifier,
+            "router_id": str(device.router_id),
+            "optical_box": device.optical_box,
+            "optical_box_port": device.optical_box_port,
+        },
     )
     return device
 
@@ -738,7 +805,11 @@ async def get_subscriber_device(
     ),
 ) -> SubscriberDevice:
     tenant_id = get_tenant_id(claims)
-    stmt = select(SubscriberDevice).where(SubscriberDevice.id == device_id, SubscriberDevice.tenant_id == tenant_id)
+    stmt = (
+        select(SubscriberDevice)
+        .options(selectinload(SubscriberDevice.ipv4_address))
+        .where(SubscriberDevice.id == device_id, SubscriberDevice.tenant_id == tenant_id)
+    )
     device = (await db.execute(stmt)).scalar_one_or_none()
     if not device:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dispositivo de abonado no encontrado")

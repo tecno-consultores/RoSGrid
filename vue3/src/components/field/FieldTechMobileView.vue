@@ -2,7 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { computed, onMounted, ref } from 'vue';
+  import { computed, onMounted, ref, watch } from 'vue';
   import { useRouter } from 'vue-router';
   import { useFieldOpsStore } from '@/stores/useFieldOpsStore';
   import { useInventoryStore } from '@/stores/useInventoryStore';
@@ -183,6 +183,28 @@
     return fieldStore.opticalBoxes.find((b) => b.id === customerForm.value.optical_box_id) || null;
   });
 
+  watch(
+    () => customerForm.value.optical_box_id,
+    async (boxId) => {
+      if (!boxId) return;
+      try {
+        const detail = await fieldStore.fetchOpticalBoxDetail(boxId);
+        const firstFree = detail.ports?.find((p) => !p.is_occupied);
+        if (firstFree) {
+          customerForm.value.optical_box_port = firstFree.port_number;
+        }
+      } catch {
+        // Fallback silencioso si la consulta de detalle falla en modo offline
+      }
+    },
+  );
+
+  function isNapPortOccupied(portNumber: number): boolean {
+    const detail = fieldStore.selectedOpticalBox;
+    if (!detail || detail.id !== customerForm.value.optical_box_id) return false;
+    return Boolean(detail.ports?.some((p) => p.port_number === portNumber && p.is_occupied));
+  }
+
   // Guardar Caja NAP
   async function handleCreateNap() {
     if (!napForm.value.box_code.trim()) {
@@ -243,10 +265,10 @@
       const dev = await fieldStore.registerSubscriberDevice({
         router_id: routerId,
         endpoint_identifier: customerForm.value.endpoint_identifier.trim(),
-        service_type: 'FTTH_GPON',
+        service_type: customerForm.value.onu_mode === 'BRIDGE' ? 'PPPOE' : 'DHCP',
         device_serial: customerForm.value.device_serial.trim().toUpperCase(),
         onu_mac_address: customerForm.value.onu_mac_address.trim() || undefined,
-        onu_mode: customerForm.value.onu_mode,
+        onu_mode: customerForm.value.onu_mode === 'BRIDGE' ? 'BRIDGE' : 'ROUTER',
         optical_box_id: customerForm.value.optical_box_id,
         optical_box_port: Number(customerForm.value.optical_box_port),
         rx_optical_power_dbm: Number(customerForm.value.rx_optical_power_dbm),
@@ -259,6 +281,12 @@
       selectedSubscriberForDiag.value = dev;
       diagTargetId.value = dev.id;
       activeTab.value = 'diagnostics';
+      if (customerForm.value.optical_box_id) {
+        await Promise.all([
+          fieldStore.fetchOpticalBoxes(),
+          fieldStore.fetchOpticalBoxDetail(customerForm.value.optical_box_id),
+        ]);
+      }
     } catch (err: unknown) {
       const msg = (err as Error)?.message || 'Error al registrar cliente FTTH';
       showMessage(msg, 'error');
@@ -723,8 +751,9 @@
                         v-for="p in (selectedNapBox ? selectedNapBox.capacity_ports : 16)"
                         :key="p"
                         :value="p"
+                        :disabled="isNapPortOccupied(p)"
                       >
-                        Puerto {{ p }}
+                        Puerto {{ p }}{{ isNapPortOccupied(p) ? ' (Ocupado)' : '' }}
                       </option>
                     </select>
                   </div>
@@ -767,7 +796,7 @@
                     <label for="cust-onu-mode">{{ t('field_tech.onu_mode') }}</label>
                     <select id="cust-onu-mode" v-model="customerForm.onu_mode" class="rg-input">
                       <option value="BRIDGE">{{ t('field_tech.onu_mode_bridge') }}</option>
-                      <option value="ROUTER_NAT">{{ t('field_tech.onu_mode_router') }}</option>
+                      <option value="ROUTER">{{ t('field_tech.onu_mode_router') }}</option>
                     </select>
                   </div>
                 </div>
@@ -881,10 +910,15 @@
                       v-for="p in selectedNapBox.capacity_ports"
                       :key="p"
                       type="button"
+                      :disabled="isNapPortOccupied(p)"
                       :class="[
                         'port-btn',
-                        { selected: customerForm.optical_box_port === p }
+                        {
+                          selected: customerForm.optical_box_port === p,
+                          occupied: isNapPortOccupied(p),
+                        },
                       ]"
+                      :title="isNapPortOccupied(p) ? `Puerto ${p} ocupado` : `Seleccionar Puerto ${p}`"
                       @click="customerForm.optical_box_port = p"
                     >
                       <span class="port-num">{{ p }}</span>
@@ -1566,6 +1600,14 @@
   .port-btn.selected {
     background: #00f3ff;
     color: #000;
+  }
+
+  .port-btn.occupied {
+    background: #1e293b;
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #ef4444;
+    cursor: not-allowed;
+    opacity: 0.6;
   }
 
   /* Diagnósticos */

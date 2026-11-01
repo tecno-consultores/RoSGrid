@@ -72,37 +72,131 @@ def _extract_raw_rsc_text(export_res: Any) -> str:
     return str(export_res)
 
 
+async def _read_and_cleanup_rsc_file(client: MikrotikRestClient, fname: str) -> str:
+    """Lee el contenido del archivo temporal .rsc en RouterOS y lo elimina de flash."""
+    files = await client.get("file")
+    if not isinstance(files, list):
+        return ""
+    target_files = [f for f in files if isinstance(f, dict) and f.get("name") in (f"{fname}.rsc", fname)]
+    if not target_files:
+        return ""
+    tf = target_files[0]
+    raw_text = str(tf.get("contents", ""))
+    file_id = tf.get(".id")
+    if file_id:
+        try:
+            await client.delete(f"file/{file_id}")
+        except Exception as del_err:
+            logger.debug("Error eliminando archivo temporal en router: %s", del_err)
+    return raw_text
+
+
+async def _resolve_user_group_ftp_status(client: MikrotikRestClient) -> tuple[str, bool]:
+    """Determina el grupo del usuario API actual y si el grupo ya posee la política 'ftp' activa."""
+    users = await client.get("user")
+    groups = await client.get("user/group")
+    if not isinstance(users, list) or not isinstance(groups, list):
+        return ("rosgrid-api-group", False)
+
+    group_name = "rosgrid-api-group"
+    for u in users:
+        if isinstance(u, dict) and u.get("name") == client.username:
+            group_name = str(u.get("group") or group_name)
+            break
+
+    for g in groups:
+        if isinstance(g, dict) and g.get("name") == group_name:
+            tokens = [t.strip() for t in str(g.get("policy", "")).split(",") if t.strip()]
+            has_ftp = "ftp" in tokens and "!ftp" not in tokens
+            return (group_name, has_ftp)
+    return (group_name, False)
+
+
+async def _export_via_fresh_ephemeral_session(
+    client: MikrotikRestClient,
+    group_name: str,
+    fname: str,
+) -> str:
+    """Ejecuta export abriendo una sesión efímera limpia cuando RouterOS retiene permisos viejos en caché (10m)."""
+    tmp_user = f"_rg_bk_{uuid.uuid4().hex[:6]}"
+    tmp_pass = f"RgBk!{uuid.uuid4().hex[:12]}9a"
+    uid: str | None = None
+    try:
+        created = await client.post(
+            "user/add",
+            json_data={"name": tmp_user, "password": tmp_pass, "group": group_name, "comment": "RoSGrid Ephemeral Backup"},
+        )
+        uid = created.get("ret") if isinstance(created, dict) else None
+        tmp_client = MikrotikRestClient(
+            host=client.host,
+            port=client.port,
+            username=tmp_user,
+            password=tmp_pass,
+            ssl_pinned_fingerprint=client.ssl_pinned_fingerprint,
+            timeout=client.timeout,
+        )
+        try:
+            await tmp_client.post("export", json_data={"file": fname, "show-sensitive": "false"})
+            await asyncio.sleep(1.0)
+            return await _read_and_cleanup_rsc_file(tmp_client, fname)
+        finally:
+            await tmp_client.close()
+    except Exception as eph_err:
+        logger.warning("No se pudo ejecutar bypass de sesión efímera para backup: %s", eph_err)
+        return ""
+    finally:
+        if uid:
+            try:
+                await client.delete(f"user/{uid}")
+            except Exception as cleanup_err:
+                logger.debug("Error limpiando usuario efímero de backup: %s", cleanup_err)
+
+
+async def _try_fallback_rsc_export(client: MikrotikRestClient, fname: str) -> tuple[str, str | None]:
+    """Intenta recuperar el export vía sesión fresca si el grupo ya tiene 'ftp' o devuelve detalle de diagnóstico."""
+    try:
+        group_name, has_ftp = await _resolve_user_group_ftp_status(client)
+    except Exception:
+        return ("", None)
+
+    if has_ftp:
+        raw_text = await _export_via_fresh_ephemeral_session(client, group_name, fname)
+        return (raw_text, None)
+
+    detail_msg = (
+        f"El grupo '{group_name}' del usuario '{client.username}' en MikroTik no tiene la política 'ftp'. "
+        f"Ejecute en el router: /user group set {group_name} policy=api,rest-api,read,write,ftp,test,reboot,policy,sensitive"
+    )
+    return ("", detail_msg)
+
+
 async def export_router_rsc(client: MikrotikRestClient) -> str:
     """Exporta configuración completa del router leyendo el archivo temporal .rsc y limpiándolo."""
     fname = f"rosgrid_bk_{uuid.uuid4().hex[:8]}"
     raw_text = ""
+    custom_error_detail: str | None = None
     try:
         await client.post("export", json_data={"file": fname, "show-sensitive": "false"})
         await asyncio.sleep(1.0)
-        files = await client.get("file")
-        if isinstance(files, list):
-            target_files = [f for f in files if f.get("name") in (f"{fname}.rsc", fname)]
-            if target_files:
-                tf = target_files[0]
-                raw_text = tf.get("contents", "")
-                file_id = tf.get(".id")
-                if file_id:
-                    try:
-                        await client.delete(f"file/{file_id}")
-                    except Exception as del_err:
-                        logger.debug("Error eliminando archivo temporal en router: %s", del_err)
+        raw_text = await _read_and_cleanup_rsc_file(client, fname)
     except Exception as exc:
         logger.warning("Fallo al exportar via archivo en router: %s", exc)
+        if "not enough permissions" in str(exc).lower():
+            raw_text, custom_error_detail = await _try_fallback_rsc_export(client, fname)
 
-    if not raw_text:
-        raw_res = await client.post("export", json_data={"terse": "false", "show-sensitive": "false"})
-        raw_text = _extract_raw_rsc_text(raw_res)
+    if not raw_text and not custom_error_detail:
+        try:
+            raw_res = await client.post("export", json_data={"terse": "false", "show-sensitive": "false"})
+            raw_text = _extract_raw_rsc_text(raw_res)
+        except Exception as fallback_exc:
+            logger.debug("Fallo en fallback directo de export: %s", fallback_exc)
 
     cleaned = clean_rsc_export_comments(raw_text)
     if not cleaned:
         raise HTTPException(
             status_code=502,
-            detail="El router no devolvió configuración o no tiene permisos de exportación (requiere política 'ftp' en MikroTik).",
+            detail=custom_error_detail
+            or "El router no devolvió configuración o no tiene permisos de exportación (requiere política 'ftp' en MikroTik).",
         )
     return cleaned
 

@@ -25,6 +25,7 @@ from src.api.v1.backups import (
     _decrypt_backup_rsc,
     _extract_raw_rsc_text,
     clean_rsc_export_comments,
+    export_router_rsc,
 )
 from src.api.v1.bulk_and_updates import (
     _perform_pre_upgrade_backup,
@@ -291,3 +292,76 @@ def test_channel_config_encryption_and_decryption() -> None:
     )
     decrypted = _decrypt_channel_config(tenant_id, ch)
     assert decrypted == config
+
+
+# ============================================================================
+# HITO 28.3: BACKUP EXPORT FTP POLICY STALE SESSION BYPASS AND 502 DIAGNOSTIC
+# ============================================================================
+
+
+@pytest.mark.asyncio
+async def test_export_router_rsc_bypass_stale_session_when_group_has_ftp() -> None:
+    client = AsyncMock()
+    client.host = "10.250.3.20"
+    client.port = 443
+    client.username = "rosgrid_agent"
+    client.ssl_pinned_fingerprint = "AA:BB"
+    client.timeout = 10.0
+
+    # 1. Primary post export fails with permission error (stale session cache in RouterOS)
+    client.post.side_effect = Exception("RouterOS REST API Error [500]: not enough permissions (9)")
+
+    async def fake_get(path: str) -> list[dict[str, Any]]:
+        if path == "user":
+            return [{"name": "rosgrid_agent", "group": "rosgrid-api-group"}]
+        if path == "user/group":
+            return [
+                {
+                    "name": "rosgrid-api-group",
+                    "policy": "api,rest-api,read,write,ftp,test,reboot,policy,sensitive",
+                }
+            ]
+        return []
+
+    client.get.side_effect = fake_get
+
+    with patch(
+        "src.api.v1.backups._export_via_fresh_ephemeral_session",
+        new=AsyncMock(return_value="/ip address add address=10.250.3.20/24 interface=ether1"),
+    ) as mock_fresh:
+        result = await export_router_rsc(client)
+        assert "/ip address add address=10.250.3.20/24" in result
+        mock_fresh.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_export_router_rsc_raises_detailed_502_when_group_lacks_ftp() -> None:
+    client = AsyncMock()
+    client.host = "10.250.3.20"
+    client.port = 443
+    client.username = "rosgrid_agent"
+    client.ssl_pinned_fingerprint = "AA:BB"
+    client.timeout = 10.0
+
+    client.post.side_effect = Exception("RouterOS REST API Error [500]: not enough permissions (9)")
+
+    async def fake_get(path: str) -> list[dict[str, Any]]:
+        if path == "user":
+            return [{"name": "rosgrid_agent", "group": "rosgrid-api-group"}]
+        if path == "user/group":
+            return [
+                {
+                    "name": "rosgrid-api-group",
+                    "policy": "api,rest-api,read,write,!ftp,test,reboot,policy,sensitive",
+                }
+            ]
+        return []
+
+    client.get.side_effect = fake_get
+
+    with pytest.raises(HTTPException) as exc_info:
+        await export_router_rsc(client)
+
+    assert exc_info.value.status_code == 502
+    assert "El grupo 'rosgrid-api-group' del usuario 'rosgrid_agent' en MikroTik no tiene la política 'ftp'" in exc_info.value.detail
+    assert "/user group set rosgrid-api-group policy=api,rest-api,read,write,ftp,test,reboot,policy,sensitive" in exc_info.value.detail
