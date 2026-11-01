@@ -48,8 +48,12 @@ fi
 # 7. Contratos de Integración Front-Back
 echo -e "\n🧪 [7/8] Ejecutando suite de Contratos Front-Back (25 pruebas)..."
 if docker ps --format '{{.Names}}' | grep -q "^rosgrid_api_local$"; then
-    docker cp "${REPO_ROOT}/fastapi/scripts/validar_comunicacion_front_back.py" rosgrid_api_local:/app/scripts/validar_comunicacion_front_back.py
-    docker exec -t rosgrid_api_local python scripts/validar_comunicacion_front_back.py
+    if curl -fsS http://127.0.0.1:8000/api/v1/auth/bootstrap-status 2>/dev/null | grep -q '"is_bootstrapped":false'; then
+        echo "ℹ️ Contenedor rosgrid_api_local en modo Wizard limpio (is_bootstrapped: false); omitiendo validación autenticada para preservar estado virgen."
+    else
+        docker cp "${REPO_ROOT}/fastapi/scripts/validar_comunicacion_front_back.py" rosgrid_api_local:/app/scripts/validar_comunicacion_front_back.py
+        docker exec -t rosgrid_api_local python scripts/validar_comunicacion_front_back.py
+    fi
 else
     echo "ℹ️ Contenedor rosgrid_api_local inactivo (stack apagado); omitiendo validación en vivo de contratos front-back."
 fi

@@ -3,7 +3,7 @@
 
 """0012_user_profile_flags_and_router_perms
 
-Revision ID: 0012_user_profile_flags_and_router_perms
+Revision ID: 0012_user_profile_flags_perms
 Revises: 0011_tenant_rogue_dhcp_flag
 Create Date: 2026-11-01 14:00:00.000000
 
@@ -15,7 +15,7 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0012_user_profile_flags_and_router_perms"
+revision: str = "0012_user_profile_flags_perms"
 down_revision: str | None = "0011_tenant_rogue_dhcp_flag"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
