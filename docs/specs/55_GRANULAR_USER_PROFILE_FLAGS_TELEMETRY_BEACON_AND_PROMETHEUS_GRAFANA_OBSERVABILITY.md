@@ -360,3 +360,328 @@ groups:
 3. **Escenarios BDD Karate Labs (`fastapi/test/api_test.feature` y `vue3/test/ui_business_flow.feature` + `docs/examples/`):**
    - **Escenario 129 (API) / Escenario 73 (UI):** Gestión de los 30 flags en perfiles de usuario y overrides individuales (`RgUserProfileFlagsModal.vue`).
    - **Escenario 130 (API):** Estado del latido anónimo de instancias (`/api/v1/system/telemetry-beacon/status`) y métricas extendidas de Prometheus (`/metrics` y `/api/v1/metrics/fleet`).
+
+---
+
+## 5. Blueprint de Implementación Literal "Flash-Ready" (Guía Paso a Paso Anti-Errores para Modelos Ligeros)
+
+> **[DIRECTIVA PARA MODELOS FLASH / HAiKU / EJECUCIÓN AUTÓNOMA]:** Sigue estrictamente este orden secuencial y utiliza los bloques de código literales de esta sección para evitar las **5 trampas de regresión** del repositorio (`test_rbac_11_roles_matrix.unit.py` línea 37, `down_revision` de Alembic `0011`, complejidad ciclomática `Radon CC <= 5` en `tox.ini`, guardia de `lifespan` en pytest y paridad de componentes `.vue`).
+
+### 5.1. Trampa #1 y Blueprint de `fastapi/migrations/versions/0012_user_profile_flags_and_router_perms.py`
+
+Crear el archivo `fastapi/migrations/versions/0012_user_profile_flags_and_router_perms.py` encadenado exactamente a `down_revision = "0011_tenant_rogue_dhcp_flag"`:
+
+```python
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright (C) 2026 RoSGrid Contributors
+
+"""0012_user_profile_flags_and_router_perms
+
+Revision ID: 0012_user_profile_flags_and_router_perms
+Revises: 0011_tenant_rogue_dhcp_flag
+Create Date: 2026-11-01 14:00:00.000000
+
+"""
+
+from collections.abc import Sequence
+
+import sqlalchemy as sa
+from alembic import op
+from sqlalchemy.dialects import postgresql
+
+revision: str = "0012_user_profile_flags_and_router_perms"
+down_revision: str | None = "0011_tenant_rogue_dhcp_flag"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
+
+
+def upgrade() -> None:
+    op.add_column(
+        "users",
+        sa.Column(
+            "feature_flags_override",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+            server_default=sa.text("'{}'::jsonb"),
+        ),
+    )
+    op.add_column(
+        "user_router_permissions",
+        sa.Column("can_execute_l2_rpc", sa.Boolean(), nullable=False, server_default=sa.text("false")),
+    )
+    op.add_column(
+        "user_router_permissions",
+        sa.Column("can_bulk_edit_l2", sa.Boolean(), nullable=False, server_default=sa.text("false")),
+    )
+    op.add_column(
+        "user_router_permissions",
+        sa.Column("can_export_l2_rsc", sa.Boolean(), nullable=False, server_default=sa.text("true")),
+    )
+
+
+def downgrade() -> None:
+    op.drop_column("user_router_permissions", "can_export_l2_rsc")
+    op.drop_column("user_router_permissions", "can_bulk_edit_l2")
+    op.drop_column("user_router_permissions", "can_execute_l2_rpc")
+    op.drop_column("users", "feature_flags_override")
+```
+
+### 5.2. Blueprint de Modelos ORM (`fastapi/src/models/core.py`) y Esquemas (`fastapi/src/schemas/users.py`)
+
+1. En `fastapi/src/models/core.py`:
+   - Dentro de `class User(Base)` (después de `has_all_routers_access` en la línea 127):
+     ```python
+     feature_flags_override: Mapped[dict[str, str]] = mapped_column(
+         JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+     )
+     ```
+   - Dentro de `class UserRouterPermission(Base)` (después de `can_write_layer2` en la línea 163):
+     ```python
+     can_execute_l2_rpc: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
+     can_bulk_edit_l2: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
+     can_export_l2_rsc: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("true"))
+     ```
+2. En `fastapi/src/schemas/users.py`:
+   - En `class RouterAssignmentItem(BaseModel)` (líneas 68-79), añadir:
+     ```python
+     can_execute_l2_rpc: bool = False
+     can_bulk_edit_l2: bool = False
+     can_export_l2_rsc: bool = True
+     ```
+   - En `class UserResponse(BaseModel)` (líneas 95-113), añadir:
+     ```python
+     feature_flags_override: dict[str, str] = Field(default_factory=dict)
+     ```
+   - Añadir al final de `fastapi/src/schemas/users.py`:
+     ```python
+     class UpdateUserFeatureFlagsRequest(BaseModel):
+         model_config = ConfigDict(extra="forbid")
+
+         feature_flags_override: dict[str, str | bool | None] = Field(
+             default_factory=dict,
+             description="Mapa de action_key -> ALLOW | MAKER_CHECKER | READ_ONLY | DENY | true | false | null (hereda del rol)",
+         )
+     ```
+
+### 5.3. Trampa #2 y Blueprint de `POLICY_MATRIX` (30 Acciones) y `test_rbac_11_roles_matrix.unit.py`
+
+> **⚠️ ATENCIÓN CRÍTICA:** Al expandir `POLICY_MATRIX` de 19 a 30 acciones en `fastapi/src/rbac/policy_matrix.py`, **DEBES** actualizar `fastapi/tests/rbac/test_rbac_11_roles_matrix.unit.py` en la **línea 37**:
+> - Cambiar `assert len(POLICY_MATRIX[role]) == 19` por `assert len(POLICY_MATRIX[role]) == 30`.
+> - Añadir las 11 nuevas claves a la lista `ALL_ACTIONS` en `fastapi/tests/rbac/test_rbac_11_roles_matrix.unit.py` (líneas 10-30).
+
+Las 11 nuevas claves exactas a agregar en `ACTIONS_METADATA` (`fastapi/src/api/v1/rbac.py`) son:
+
+```python
+    {
+        "key": "WEBFIG_L2_RPC_COMMANDS",
+        "label": "Comandos RPC Contextuales Capa 2",
+        "category": "Motor Universal Capa 2",
+        "description": "Ejecución de verbos POST dinámicos (add-acme, sign, export-certificate, make-static, run).",
+    },
+    {
+        "key": "WEBFIG_L2_BULK_OPS",
+        "label": "Operaciones Masivas por Lote en Capa 2",
+        "category": "Motor Universal Capa 2",
+        "description": "Habilitar, deshabilitar, comentar o eliminar múltiples registros de Capa 2 bajo Safe Mode.",
+    },
+    {
+        "key": "WEBFIG_L2_EXPORT_RSC",
+        "label": "Exportación e Importación Contextual .rsc",
+        "category": "Motor Universal Capa 2",
+        "description": "Exportación CLI (.rsc) por submenú de Capa 2 y comparador Diff contra respaldo Git.",
+    },
+    {
+        "key": "IPAM_VRFS_PREFIXES_MGMT",
+        "label": "Gestión de IPAM Dual-Stack, VRFs y Prefijos",
+        "category": "Módulos ISP & Telecom",
+        "description": "Administración de VRFs, bloques CIDR IPv4/IPv6 y grilla de asignación de direcciones IP.",
+    },
+    {
+        "key": "SUBSCRIBERS_QOS_PROVISIONING",
+        "label": "Aprovisionamiento de Suscriptores y Planes QoS",
+        "category": "Módulos ISP & Telecom",
+        "description": "Alta de abonados PPPoE/DHCP, corte/reconexión (isolate/restore) y perfiles de velocidad.",
+    },
+    {
+        "key": "FIELD_OPS_OPTICAL_NAP_MGMT",
+        "label": "Toolkit de Campo y Cajas Ópticas FTTH (NAP/CTO)",
+        "category": "Módulos ISP & Telecom",
+        "description": "Gestión de cajas de distribución óptica, puertos 1..16, presupuesto láser y cortes de fibra.",
+    },
+    {
+        "key": "BGP_LOOKING_GLASS_IPFIX",
+        "label": "BGP Looking Glass y Analítica IPFIX",
+        "category": "Telemetría y Diagnóstico",
+        "description": "Consultas de tablas BGP v7 en vivo y colector de flujos Traffic-Flow / IPFIX.",
+    },
+    {
+        "key": "ENTERPRISE_CIS_DRIFT_COMPLIANCE",
+        "label": "Auditoría CIS Benchmark y Config Drift",
+        "category": "Módulos Corporativos & Seguridad",
+        "description": "Evaluación de las 28 directivas CIS RouterOS v7, auto-hardening y reversión de desviaciones.",
+    },
+    {
+        "key": "ENTERPRISE_SDWAN_SLA_ROGUEDHCP",
+        "label": "Orquestador SD-WAN, Monitor SLA y Rogue DHCP",
+        "category": "Módulos Corporativos & Seguridad",
+        "description": "Mallas WireGuard Hub & Spoke, sondas de latencia/jitter SLA y alerta de servidores DHCP intrusos.",
+    },
+    {
+        "key": "WIFI_CAPSMAN_PROVISIONING",
+        "label": "Consola Interactiva WiFi CAPsMAN v7",
+        "category": "Módulos Corporativos & Seguridad",
+        "description": "Aprovisionamiento de radios WiFi/Wave2, SSIDs, seguridad WPA2/WPA3, canales y expulsión de clientes.",
+    },
+    {
+        "key": "TOPOLOGY_L2_CVE_SYSLOG_MCP",
+        "label": "Topología Física L2, Matriz CVE, Syslog Live y MCP",
+        "category": "Telemetría y Diagnóstico",
+        "description": "Descubrimiento de vecinos MNDP/LLDP, escáner de CVEs por versión, terminal Syslog y agentes IA MCP.",
+    },
+```
+
+### 5.4. Trampa #3 (Complejidad `Radon CC <= 5`) y Blueprint de Endpoints de Flags de Usuario (`fastapi/src/api/v1/users.py`)
+
+Para que `radon cc src -a -nc` mantenga el 100% de funciones en **Grado A (`CC <= 5`)**, divide la normalización y resolución de permisos en funciones pequeñas y deterministas dentro de `fastapi/src/api/v1/users.py`:
+
+```python
+def _normalize_flag_override_value(raw_val: str | bool | None) -> str | None:
+    """Convierte booleanos o niveles RBAC en nivel canónico (CC = 4)."""
+    if raw_val is None:
+        return None
+    if isinstance(raw_val, bool):
+        return "ALLOW" if raw_val else "DENY"
+    upper = str(raw_val).strip().upper()
+    return upper if upper in ("ALLOW", "MAKER_CHECKER", "READ_ONLY", "DENY") else None
+
+
+def _sanitize_user_flag_overrides(
+    existing: dict[str, str], incoming: dict[str, str | bool | None], valid_keys: set[str]
+) -> dict[str, str]:
+    """Aplica cambios de overrides eliminando claves con None y validando action_keys (CC = 4)."""
+    merged = dict(existing or {})
+    for key, raw_val in incoming.items():
+        if key not in valid_keys:
+            raise HTTPException(status_code=400, detail=f"Flag de función desconocido: '{key}'")
+        if raw_val is None:
+            merged.pop(key, None)
+            continue
+        norm = _normalize_flag_override_value(raw_val)
+        if norm is None:
+            raise HTTPException(status_code=400, detail=f"Valor de permiso inválido para '{key}'")
+        merged[key] = norm
+    return merged
+```
+
+Y añade los dos endpoints en `fastapi/src/api/v1/users.py`:
+- `GET /api/v1/users/{user_id}/effective-permissions`: Combina `POLICY_MATRIX[target_user.role]`, overrides del rol en KeyDB (`_get_tenant_role_overrides`) y `target_user.feature_flags_override`, devolviendo `{"user_id": ..., "role": ..., "role_defaults": ..., "overrides": ..., "effective_permissions": ..., "actions_catalog": ACTIONS_METADATA}`.
+- `PATCH /api/v1/users/{user_id}/feature-flags`: Actualiza `target_user.feature_flags_override`, borra la caché en KeyDB `rg:{target_user.tenant_id}:user_perms:{target_user.id}`, escribe el registro WORM `USER_PROFILE_FLAGS_UPDATED` con `write_audit_log` y retorna el mapa actualizado.
+
+### 5.5. Trampa #4 (Guardia `lifespan` en Pytest) y Blueprint de `telemetry_beacon_worker.py` + `fleet_metrics.py`
+
+1. **`fastapi/src/workers/telemetry_beacon_worker.py` (Complejidad `CC <= 4` por función):**
+   ```python
+   # SPDX-License-Identifier: GPL-3.0-only
+   # Copyright (C) 2026 RoSGrid Contributors
+
+   import asyncio
+   import hashlib
+   import hmac
+   import logging
+   import time
+   from typing import Any
+
+   import httpx
+
+   from src.core.config import settings
+   from src.redis_layer.client import get_redis_client
+
+   logger = logging.getLogger(__name__)
+
+   BEACON_STATE_KEY = "rg:system:telemetry_beacon_state"
+
+
+   def compute_anonymous_instance_id(seed: str) -> str:
+       """Genera un identificador anónimo irreversible SHA-256 de 64 caracteres hex (CC = 1)."""
+       return hmac.new(b"rosgrid-anonymous-beacon-v1", seed.encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+   def resolve_fleet_bucket(router_count: int) -> str:
+       """Clasifica el tamaño de la flota en un rango anónimo sin revelar el número exacto (CC = 4)."""
+       if router_count <= 0:
+           return "0"
+       if router_count <= 10:
+           return "1-10"
+       if router_count <= 50:
+           return "11-50"
+       return "51-250" if router_count <= 250 else "250+"
+
+
+   async def send_telemetry_heartbeat_once(router_count: int = 1) -> dict[str, Any]:
+       """Envía un único latido anónimo Zero-PII hacia rosgrid-web de forma fail-silent (CC = 4)."""
+       instance_id = compute_anonymous_instance_id(settings.ROSGRID_JWT_SECRET_KEY[:16])
+       now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+       payload = {
+           "schema_version": 1,
+           "instance_id": instance_id,
+           "version": "1.0.0",
+           "fleet_bucket": resolve_fleet_bucket(router_count),
+           "timestamp": now_iso,
+       }
+       if not settings.ROSGRID_TELEMETRY_BEACON_ENABLED:
+           return {"enabled": False, "instance_id": instance_id, "last_status": "disabled"}
+
+       status_str = "sent"
+       try:
+           async with httpx.AsyncClient(timeout=5.0) as client:
+               resp = await client.post(settings.ROSGRID_TELEMETRY_BEACON_URL, json=payload)
+               status_str = f"http_{resp.status_code}"
+       except Exception as exc:
+           logger.debug("Telemetry beacon fail-silent: %s", exc)
+           status_str = "offline_skipped"
+
+       await _persist_beacon_state(instance_id, now_iso, status_str)
+       return {"enabled": True, "instance_id": instance_id, "last_sent_at": now_iso, "last_status": status_str}
+
+
+   async def _persist_beacon_state(instance_id: str, now_iso: str, status_str: str) -> None:
+       """Guarda el último estado del latido en KeyDB sin fallar si KeyDB está mockeado (CC = 2)."""
+       try:
+           redis = get_redis_client()
+           await redis.hset(
+               BEACON_STATE_KEY,
+               mapping={"instance_id": instance_id, "last_sent_at": now_iso, "last_status": status_str},
+           )
+       except Exception:
+           pass
+   ```
+2. **Guardia obligatoria en `lifespan` de `fastapi/src/main.py`:**
+   - **NUNCA** dispares un bucle infinito en `lifespan` cuando `settings.ROSGRID_ENV.startswith("qa") or settings.ROSGRID_ENV == "test"`, para no colgar `pytest` ni `TestClient`.
+3. **Parser de Uptime RouterOS v7 (`CC = 2`) en `fastapi/src/api/v1/fleet_metrics.py`:**
+   ```python
+   import re
+
+   _UPTIME_MULTIPLIERS: dict[str, int] = {"w": 604800, "d": 86400, "h": 3600, "m": 60, "s": 1}
+
+
+   def _parse_ros_uptime_to_seconds(uptime_str: str) -> int:
+       """Convierte cadenas RouterOS v7 ('2w3d4h5m6s') a segundos enteros (CC = 2)."""
+       if not uptime_str:
+           return 0
+       matches = re.findall(r"(\d+)([wdhms])", str(uptime_str).strip().lower())
+       return sum(int(val) * _UPTIME_MULTIPLIERS[unit] for val, unit in matches)
+   ```
+   - En `_get_router_ephemeral_telemetry(tenant_id, router_id)` de `fastapi/src/api/v1/fleet_metrics.py`, leer también del hash `rg:{tenant_id}:router:{router_id}:state`:
+     - `uptime_seconds` (o convertir `uptime` con `_parse_ros_uptime_to_seconds`),
+     - `temperature_celsius` (`float(raw.get("temperature_celsius", 0.0))`),
+     - `voltage_volts` (`float(raw.get("voltage_volts", 0.0))`),
+     - `syslog_critical_events_total` (`int(raw.get("syslog_critical_events_total", 0))`).
+   - En `_build_router_labels(r: Router)`, añadir `"ros_version": r.ros_version or "unknown"`.
+
+### 5.6. Lista de Verificación de Cierre para el Modelo Ejecutor
+
+1. `docker compose -f docker-compose.qa.yml run --rm backend-test pytest -q` (`100%` pass, cobertura `>= 95%`, incluyendo `test_rbac_11_roles_matrix.unit.py` con `== 30`).
+2. `docker compose -f docker-compose.qa.yml run --rm backend-test radon cc src -a -nc` (`0` bloques con complejidad `C` o peor; toda función nueva `CC <= 5`).
+3. `docker compose -f docker-compose.qa.yml run --rm frontend-test pnpm test:unit --run` (`100%` pass en Vitest, incluyendo `RgUserProfileFlagsModal.unit.ts`).
+4. Sincronizar `fastapi/test/api_test.feature` con `docs/examples/fastapi/test/api_test.feature` y `vue3/test/ui_business_flow.feature` con `docs/examples/vue3/test/ui_business_flow.feature`.
+5. Ejecutar `./.agents/scripts/certify_task_completion.sh` y `./scripts/actualizar-grafos-graphify.sh`.
