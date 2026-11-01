@@ -293,6 +293,7 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
     await flushPromises();
 
     // Crear backup manual (éxito)
+    expect(wrapper.find('.diff-header-actions').exists()).toBe(true);
     const createBtn = wrapper.find('.diff-header-actions .btn--primary');
     await createBtn.trigger('click');
     await flushPromises();

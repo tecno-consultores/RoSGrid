@@ -531,6 +531,44 @@ tr.rg-row--active {
   font-size: var(--rg-text-base, 0.875rem);
 }
 
+/* Selectores e Inputs Tácticos Globales (.form-select, .rg-select, .rg-input) */
+.form-select,
+.rg-select,
+.rg-input {
+  background-color: var(--rg-bg-surface);
+  color: var(--rg-text-primary);
+  border: 1px solid var(--rg-border-panel);
+  border-radius: var(--rg-radius-md, 6px);
+  padding: 6px 12px;
+  font-size: var(--rg-text-sm, 0.8125rem);
+  font-family: var(--rg-font-ui);
+  line-height: 1.4;
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.form-select:hover:not(:disabled),
+.rg-select:hover:not(:disabled),
+.rg-input:hover:not(:disabled) {
+  border-color: var(--rg-accent-cyan);
+}
+
+.form-select:focus,
+.rg-select:focus,
+.rg-input:focus {
+  border-color: var(--rg-accent-cyan);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.15);
+}
+
+.form-select option,
+.rg-select option {
+  background-color: var(--rg-bg-surface);
+  color: var(--rg-text-primary);
+}
+
 /* Controles Segmentados con Radios Concéntricos (r_outer: 8px, pad: 3px -> r_inner: 5px) */
 .rg-segmented-control {
   display: inline-flex;
