@@ -179,5 +179,10 @@ Para que el mapa de red y el Wallboard NOC reflejen permanentemente el estado re
 * Las transiciones de estado se propagan al navegador mediante el canal de eventos WebSocket en tiempo real (`DEVICE_STATUS_CHANGED`).
 * El mapa unificado (`UnifiedNetworkMap.vue`) y el Wallboard reciben el evento y actualizan únicamente el color del marcador afectado (verde a rojo o rojo a verde) en memoria, sin recargar la página, sin peticiones HTTP y sin parpadeos visuales.
 
+### 7.5. Contrato de Serialización Asíncrona y Alta de Abonados FTTH (Hito 28.2 — Spec 57)
+* **Detalle de Caja NAP (`GET /api/v1/optical-boxes/{box_id}`):** Construye la respuesta `OpticalBoxDetailResponse` a partir de `OpticalBoxResponse` y carga anticipadamente (`selectinload`) la relación `SubscriberDevice.ipv4_address`, evitando cargas perezosas síncronas (`MissingGreenlet`) sobre sesiones asíncronas de SQLAlchemy 2.0.
+* **Alta de Cliente FTTH en Campo (`POST /api/v1/subscriber-devices`):** Normaliza automáticamente los alias operativos de campo (`FTTH_GPON` $\rightarrow$ `PPPOE`, `ROUTER_NAT` $\rightarrow$ `ROUTER`), habilita el rol `FIELD_TECH`, verifica que el puerto seleccionado de la Caja NAP (`1..capacity_ports`) no se encuentre ya ocupado (`HTTP 409 Conflict`) y persiste `optical_box_id`, `optical_box` (`box_code`), `optical_box_port`, `rx_optical_power_dbm` y `drop_cable_meters`.
+
+
 
 
