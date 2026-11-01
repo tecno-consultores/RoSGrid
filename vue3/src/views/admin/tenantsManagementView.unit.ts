@@ -381,6 +381,7 @@ describe('TenantsManagementView.vue — Gestión de Empresas Multi-Tenant', () =
 
     const btnTrigger = wrapper.find('#btn-trigger-beacon');
     expect(btnTrigger.exists()).toBe(true);
+    expect(btnTrigger.classes()).toContain('btn-beacon');
     await btnTrigger.trigger('click');
     await flushPromises();
 

@@ -184,25 +184,31 @@
     </header>
 
     <!-- Tarjeta Compacta: Telemetría Anónima de Instancia (Beacon) -->
-    <div class="beacon-card" style="background: rgba(14, 23, 42, 0.7); border: 1px solid rgba(0, 229, 255, 0.2); border-radius: 8px; padding: 1rem; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-      <div>
-        <div style="font-size: 0.95rem; font-weight: 600; color: #00e5ff; display: flex; align-items: center; gap: 6px;">
+    <div class="beacon-card">
+      <div class="beacon-card__info">
+        <div class="beacon-card__header">
           📡 Telemetría Anónima de Instancia (Heartbeat Beacon)
-          <span :style="{ background: beaconStatus?.enabled ? 'rgba(16, 185, 129, 0.2)' : 'rgba(100, 116, 139, 0.2)', color: beaconStatus?.enabled ? '#10b981' : '#94a3b8', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }">
+          <span
+            class="badge-status"
+            :class="beaconStatus?.enabled ? 'badge-status--active' : 'badge-status--silent'"
+          >
             {{ beaconStatus?.enabled ? 'ACTIVO' : 'FAIL-SILENT' }}
           </span>
         </div>
-        <p style="margin: 4px 0 0 0; font-size: 0.82rem; color: #94a3b8;">
-          Instance ID (HMAC-SHA256): <code class="font-mono" style="color: #cbd5e1;">{{ beaconStatus?.instance_id || 'anónimo' }}</code> |
-          Flota: <strong style="color: #38bdf8;">{{ beaconStatus?.router_count ?? beaconStatus?.fleet_bucket ?? '0' }} routers ({{ beaconStatus?.fleet_bucket || '0' }})</strong> |
-          Último Latido: <span style="color: #cbd5e1;">{{ beaconStatus?.last_sent_at || beaconStatus?.last_heartbeat_at || 'Nunca' }}</span>
-          <span v-if="beaconStatus?.last_status && beaconStatus.last_status !== 'untriggered'" class="font-mono" style="margin-left: 6px; color: #10b981;">[{{ beaconStatus.last_status }}]</span>
+        <p class="beacon-card__meta">
+          Instance ID (HMAC-SHA256): <code class="beacon-mono">{{ beaconStatus?.instance_id || 'anónimo' }}</code> |
+          Flota: <strong class="beacon-fleet">{{ beaconStatus?.router_count ?? beaconStatus?.fleet_bucket ?? '0' }} routers ({{ beaconStatus?.fleet_bucket || '0' }})</strong> |
+          Último Latido: <span class="beacon-timestamp">{{ beaconStatus?.last_sent_at || beaconStatus?.last_heartbeat_at || 'Nunca' }}</span>
+          <span
+            v-if="beaconStatus?.last_status && beaconStatus.last_status !== 'untriggered'"
+            class="beacon-status-code"
+          >[{{ beaconStatus.last_status }}]</span>
         </p>
       </div>
       <button
         id="btn-trigger-beacon"
         type="button"
-        class="btn-rg btn-rg--cyan btn-sm"
+        class="btn-beacon btn-rg btn-rg--cyan btn-sm"
         :disabled="isTriggeringBeacon"
         @click="handleTriggerBeacon"
       >
@@ -483,6 +489,118 @@
     padding: 10px 18px;
     font-weight: 700;
     cursor: pointer;
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .btn-create:hover {
+    background-color: var(--rg-cyan-300, #67e8f9);
+    box-shadow: var(--rg-cyan-glow, 0 0 12px rgba(6, 182, 212, 0.28));
+  }
+
+  .beacon-card {
+    background: var(--rg-bg-surface, #111827);
+    border: 1px solid var(--rg-border-grid, #1e293b);
+    border-left: 3px solid var(--rg-accent-cyan, #22d3ee);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    box-shadow: var(--rg-shadow-sm);
+  }
+
+  .beacon-card__info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .beacon-card__header {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--rg-accent-cyan, #22d3ee);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .beacon-card__meta {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--rg-text-muted, #94a3b8);
+    line-height: 1.5;
+  }
+
+  .beacon-mono {
+    font-family: var(--rg-font-mono, 'JetBrains Mono', monospace);
+    color: var(--rg-text-secondary, #cbd5e1);
+    background: rgba(34, 211, 238, 0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  .beacon-fleet {
+    color: #38bdf8;
+    font-weight: 600;
+  }
+
+  .beacon-timestamp {
+    font-family: var(--rg-font-mono, 'JetBrains Mono', monospace);
+    color: var(--rg-text-secondary, #cbd5e1);
+  }
+
+  .beacon-status-code {
+    margin-left: 6px;
+    font-family: var(--rg-font-mono, 'JetBrains Mono', monospace);
+    font-weight: 600;
+    color: #34d399;
+  }
+
+  .btn-beacon {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid #38bdf8;
+    color: #38bdf8;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      background-color 0.15s ease,
+      border-color 0.15s ease,
+      color 0.15s ease,
+      box-shadow 0.15s ease,
+      transform 0.1s ease;
+    white-space: nowrap;
+  }
+
+  .btn-beacon:hover:not(:disabled) {
+    background: rgba(56, 189, 248, 0.2);
+    border-color: var(--rg-accent-cyan, #22d3ee);
+    color: var(--rg-text-primary, #f8fafc);
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+  }
+
+  .btn-beacon:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  .btn-beacon:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .badge-status--silent {
+    background: rgba(100, 116, 139, 0.2);
+    color: var(--rg-text-muted, #94a3b8);
+    border: 1px solid var(--rg-border-panel, #334155);
   }
 
   .banner {

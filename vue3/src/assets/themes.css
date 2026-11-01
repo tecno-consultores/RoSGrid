@@ -414,6 +414,123 @@ tr.rg-row--active {
   color: var(--rg-text-primary);
 }
 
+/* Botonera Táctica .btn-rg (Compatibilidad Global Multi-Vista) */
+.btn-rg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--rg-space-2, 6px);
+  padding: 7px 14px;
+  border-radius: var(--rg-radius-md, 6px);
+  font-size: var(--rg-text-sm, 0.8125rem);
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  border: 1px solid var(--rg-border-panel);
+  background-color: var(--rg-bg-surface);
+  color: var(--rg-text-secondary);
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.1s ease;
+  white-space: nowrap;
+}
+
+.btn-rg:focus-visible {
+  outline: 2px solid var(--rg-accent-cyan);
+  outline-offset: 2px;
+}
+
+.btn-rg:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-rg--cyan {
+  background: rgba(34, 211, 238, 0.12);
+  border: 1px solid var(--rg-accent-cyan);
+  color: var(--rg-accent-cyan);
+}
+
+.btn-rg--cyan:hover:not(:disabled) {
+  background: rgba(34, 211, 238, 0.22);
+  border-color: var(--rg-cyan-300);
+  color: var(--rg-text-primary);
+  box-shadow: var(--rg-cyan-glow);
+}
+
+.btn-rg--purple {
+  background: rgba(168, 85, 247, 0.14);
+  border: 1px solid #a855f7;
+  color: #c084fc;
+}
+
+.btn-rg--purple:hover:not(:disabled) {
+  background: rgba(168, 85, 247, 0.24);
+  color: #f3e8ff;
+}
+
+.btn-rg--amber {
+  background: rgba(245, 158, 11, 0.14);
+  border: 1px solid var(--rg-status-warning);
+  color: var(--rg-status-warning-text);
+}
+
+.btn-rg--amber:hover:not(:disabled) {
+  background: rgba(245, 158, 11, 0.24);
+}
+
+.btn-rg--green {
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid var(--rg-status-online);
+  color: var(--rg-status-online-text);
+}
+
+.btn-rg--green:hover:not(:disabled) {
+  background: rgba(16, 185, 129, 0.24);
+}
+
+.btn-rg--red {
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid var(--rg-status-critical);
+  color: var(--rg-status-critical-text);
+}
+
+.btn-rg--red:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.24);
+}
+
+.btn-rg--secondary {
+  background: var(--rg-bg-surface);
+  border: 1px solid var(--rg-border-panel);
+  color: var(--rg-text-secondary);
+}
+
+.btn-rg--secondary:hover:not(:disabled) {
+  background: var(--rg-bg-elevated);
+  border-color: var(--rg-accent-cyan);
+  color: var(--rg-text-primary);
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: var(--rg-text-xs, 0.75rem);
+  border-radius: var(--rg-radius-sm, 4px);
+}
+
+.btn-xs {
+  padding: 3px 8px;
+  font-size: var(--rg-text-2xs, 0.6875rem);
+  border-radius: var(--rg-radius-sm, 4px);
+}
+
+.btn-lg {
+  padding: 10px 18px;
+  font-size: var(--rg-text-base, 0.875rem);
+}
+
 /* Controles Segmentados con Radios Concéntricos (r_outer: 8px, pad: 3px -> r_inner: 5px) */
 .rg-segmented-control {
   display: inline-flex;

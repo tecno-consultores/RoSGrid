@@ -189,13 +189,13 @@ En [`vue3/src/views/admin/TenantsManagementView.vue`](file:///home/sinfallas/Dro
      }
    }
    ```
-3. En el `<template>` de `.beacon-card` (líneas 187–192), mostrar tanto el conteo/rango de flota como la fecha real (`last_sent_at || last_heartbeat_at`) y el código de estado (`last_status`):
+3. En el `<template>` y `<style scoped>` de `.beacon-card`, mostrar tanto el conteo/rango de flota como la fecha real (`last_sent_at || last_heartbeat_at`) y el código de estado (`last_status`), estilizando el botón `#btn-trigger-beacon` (`.btn-beacon`) con el sistema de diseño táctico NOC (borde `#38bdf8`, fondo translúcido `rgba(56, 189, 248, 0.1)`, hover cian luminoso y jerarquía secundaria bajo `+ Registrar Empresa`) y declarando la familia `.btn-rg` globalmente en `vue3/src/assets/themes.css`:
    ```html
-   <p style="margin: 4px 0 0 0; font-size: 0.82rem; color: #94a3b8;">
-     Instance ID (HMAC-SHA256): <code class="font-mono" style="color: #cbd5e1;">{{ beaconStatus?.instance_id || 'anónimo' }}</code> |
-     Flota: <strong style="color: #38bdf8;">{{ beaconStatus?.router_count ?? beaconStatus?.fleet_bucket ?? '0' }} routers ({{ beaconStatus?.fleet_bucket || '0' }})</strong> |
-     Último Latido: <span style="color: #cbd5e1;">{{ beaconStatus?.last_sent_at || beaconStatus?.last_heartbeat_at || 'Nunca' }}</span>
-     <span v-if="beaconStatus?.last_status && beaconStatus.last_status !== 'untriggered'" class="font-mono" style="margin-left: 6px; color: #10b981;">[{{ beaconStatus.last_status }}]</span>
+   <p class="beacon-card__meta">
+     Instance ID (HMAC-SHA256): <code class="beacon-mono">{{ beaconStatus?.instance_id || 'anónimo' }}</code> |
+     Flota: <strong class="beacon-fleet">{{ beaconStatus?.router_count ?? beaconStatus?.fleet_bucket ?? '0' }} routers ({{ beaconStatus?.fleet_bucket || '0' }})</strong> |
+     Último Latido: <span class="beacon-timestamp">{{ beaconStatus?.last_sent_at || beaconStatus?.last_heartbeat_at || 'Nunca' }}</span>
+     <span v-if="beaconStatus?.last_status && beaconStatus.last_status !== 'untriggered'" class="beacon-status-code">[{{ beaconStatus.last_status }}]</span>
    </p>
    ```
 
