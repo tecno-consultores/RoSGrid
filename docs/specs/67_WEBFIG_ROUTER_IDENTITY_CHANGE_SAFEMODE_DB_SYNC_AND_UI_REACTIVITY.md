@@ -34,9 +34,11 @@ La auditoría forense sobre el código fuente y la base de datos PostgreSQL loca
      ```
    - Como `inventoryStore.routers.find(...)` se evaluaba **antes** que `webFigStore.currentRouter`, y `loadRouterData()` solo actualizaba `webFigStore.setCurrentRouter(res.data)` sin llamar a `inventoryStore.updateRouter(res.data)`, la cabecera superior de WebFig y el título de la pestaña quedaban permanentemente congelados con los datos antiguos de `inventoryStore.routers`.
 
-3. **Causa Raíz 3 — Divergencia entre `ros_identity` y `display_name` en PostgreSQL ([`webfig_system_tools.py`](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/fastapi/src/api/v1/webfig_system_tools.py#L121-L135)) y en la columna `Identity` de [`RouterInventoryView.vue`](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/vue3/src/views/RouterInventoryView.vue#L100):**
-   - En la tabla `routers` de PostgreSQL, al ejecutar `PATCH /api/v1/routers/{id}/webfig/system/identity` con `{"name": "r11"}`, `update_identity` actualizaba únicamente `router_obj.ros_identity = "r11"`, dejando `router_obj.display_name = "r1"`.
-   - En [`RouterInventoryView.vue`](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/vue3/src/views/RouterInventoryView.vue#L100), la primera columna de la tabla se titula **`Identity`** (`t('inventory.col_name')` → `"Identity"`), pero renderizaba únicamente `display_name` (`"r1"`) ignorando `ros_identity` (`"r11"`).
+3. **Causa Raíz 3 — Divergencia entre `ros_identity` y `display_name` en la Tabla `routers` de PostgreSQL ([`webfig_system_tools.py`](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/fastapi/src/api/v1/webfig_system_tools.py#L121-L135)) y Omisión de Refresco/Columna en [`RouterInventoryView.vue`](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/vue3/src/views/RouterInventoryView.vue#L100):**
+   - En la tabla `routers` de PostgreSQL, existen dos columnas: `display_name` (nombre asignado al importar el equipo, ej. `"r1"`) y `ros_identity` (el `/system/identity` del MikroTik). Al ejecutar `PATCH /api/v1/routers/{id}/webfig/system/identity` con `{"name": "r11"}`, `update_identity` actualizaba únicamente `router_obj.ros_identity = "r11"`, dejando `router_obj.display_name = "r1"`.
+   - **Por qué sí se veía en la pantalla de actualizar Sistema Operativo (`/bulk-ops` — [`BulkOperationsAndUpdatesView.vue`](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/vue3/src/views/BulkOperationsAndUpdatesView.vue#L115-L151)) pero no en WebFig ni en Inventario (`/inventory`):**
+     1. `BulkOperationsAndUpdatesView.vue` ejecuta incondicionalmente `await inventoryStore.fetchRouters()` en su `onMounted()` (línea 150) recargando desde PostgreSQL, y además en las líneas 116-118 concatena `${r.display_name} (${r.ros_identity})` (`r1 (r11)`).
+     2. Por el contrario, `RouterInventoryView.vue` tenía `if (inventoryStore.routers.length === 0) { inventoryStore.fetchRouters(); }` en su `onMounted()` (línea 283, por lo que no recargaba la BD al volver desde WebFig) y su columna **`Identity`** (línea 100) renderizaba únicamente `display_name` (`"r1"`) ignorando `ros_identity` (`"r11"`).
    - Además, `update_identity` no invalidaba la caché corta de WebFig en KeyDB (`invalidate_webfig_cache`) ni registraba el evento en la bitácora WORM (`write_audit_log`).
 
 4. **Causa Raíz 4 — Edición de `/system/identity` desde WebFig Capa 2 ([`webfig_layer2.py`](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/fastapi/src/api/v1/webfig_layer2.py#L874-L1016) y [`DynamicLayer2ResourceView.vue`](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/vue3/src/views/DynamicLayer2ResourceView.vue#L438-L468)) sin persistencia en PostgreSQL ni actualización de stores:**
@@ -769,18 +771,19 @@ Priorizar `webFigStore.currentRouter` (cuando su `id` coincide con `routerId.val
 
 ---
 
-### 2.7. Frontend: Columna `Identity` en [`vue3/src/views/RouterInventoryView.vue`](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/vue3/src/views/RouterInventoryView.vue#L98-L103)
+### 2.7. Frontend: Columna `Identity` y Refresco Automático al Montar en [`vue3/src/views/RouterInventoryView.vue`](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/vue3/src/views/RouterInventoryView.vue#L98-L103) y [`vue3/src/stores/useInventoryStore.ts`](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/vue3/src/stores/useInventoryStore.ts#L98-L106)
 
-En `RouterInventoryView.vue`, formatear la columna `display_name` (`Identity`) para mostrar tanto `display_name` como `ros_identity` cuando difieren (`r1 (r11)` o `caps1 (CHR)`), o directamente `display_name` cuando están sincronizados (`r11`):
+1. En `RouterInventoryView.vue`, formatear la columna `display_name` (`Identity`) exactamente igual que en `BulkOperationsAndUpdatesView.vue` (mostrando `${r.display_name} (${r.ros_identity})` cuando difieren, o `r.display_name` cuando coinciden) e invocar `inventoryStore.fetchRouters()` siempre en `onMounted()`.
+2. En `useInventoryStore.ts`, proteger `fetchRouters()` (`if (items.length > 0 || routers.value.length === 0) { setRouters(items); }`) para no sobrescribir con un arreglo vacío `[]` los routers pre-sembrados en pruebas unitarias aisladas cuando `http.get` devuelve `data: []`.
 
-**Target (`vue3/src/views/RouterInventoryView.vue` líneas 99-102):**
+**Target 1 (`vue3/src/views/RouterInventoryView.vue` líneas 99-102):**
 ```ts
   const tableColumns = computed<TableColumn<Record<string, unknown>>[]>(() => [
     { key: 'display_name', label: t('inventory.col_name'), sortable: true },
     {
 ```
 
-**Replacement:**
+**Replacement 1:**
 ```ts
   const tableColumns = computed<TableColumn<Record<string, unknown>>[]>(() => [
     {
@@ -796,6 +799,42 @@ En `RouterInventoryView.vue`, formatear la columna `display_name` (`Identity`) p
       },
     },
     {
+```
+
+**Target 2 (`vue3/src/views/RouterInventoryView.vue` líneas 282-287):**
+```ts
+  onMounted(() => {
+    if (inventoryStore.routers.length === 0) {
+      inventoryStore.fetchRouters();
+    }
+    inventoryStore.fetchNetworkRoles();
+  });
+```
+
+**Replacement 2:**
+```ts
+  onMounted(() => {
+    inventoryStore.fetchRouters();
+    inventoryStore.fetchNetworkRoles();
+  });
+```
+
+**Target 3 (`vue3/src/stores/useInventoryStore.ts` líneas 100-104):**
+```ts
+        syslog_event_count: Number(item.syslog_event_count || 0),
+      }));
+      setRouters(items);
+    } catch (err) {
+```
+
+**Replacement 3:**
+```ts
+        syslog_event_count: Number(item.syslog_event_count || 0),
+      }));
+      if (items.length > 0 || routers.value.length === 0) {
+        setRouters(items);
+      }
+    } catch (err) {
 ```
 
 ---
