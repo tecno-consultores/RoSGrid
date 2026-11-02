@@ -123,6 +123,14 @@ Apply these non-negotiable security directives before writing any code:
     - **Proactive Navigation & Control Guarding:** UI components and navigation shells MUST evaluate `canUseUserFeature(actionKey)` with `v-if` to conceal unauthorized views, tabs, and mutation controls before unauthorized API calls trigger HTTP 403 errors.
     - **Defensive Asynchronous Collection Access:** Nested view components (such as `FleetCveMatrix.vue`) MUST use optional chaining (`cveSummary.value?.vulnerable_routers?.length`) and safe fallbacks to prevent `TypeError: Cannot read properties of undefined` during initial render cycles before API responses resolve.
 
+15. **DISA ASD STIG V6R5 (XCCDF) & OWASP Developer Guide v4.2.0 Compliance Hardening (Spec 68):**
+    - **Account Lockout (`V-222432` CAT I / OWASP 4.3.7 A-15):** Enforce lockout after `ROSGRID_MAX_LOGIN_ATTEMPTS = 3` consecutive failed logon attempts within a 15-minute window (`ROSGRID_LOGIN_LOCKOUT_SECONDS = 900`).
+    - **Password Policy & No-Reuse (`V-222536..V-222545` CAT I/II / OWASP 4.3.7 P-4, SM-8):** Enforce 15-character minimum password length on Bootstrap/STIG profiles (`V-222536`), complexity (`validate_stig_password_complexity`), prohibit reusing the current password on `/users/change-password` (`V-222545`), update `password_changed_at` (`V-222543`), and revoke active sessions upon administrative password change (`OWASP 4.3.7 SM-8`).
+    - **Constant-Time Anti-Enumeration (`OWASP 4.3.7 A-20` / `V-222551`):** Always execute `verify_dummy_password(password)` against a precomputed Argon2id hash when a username/email is not found during login so valid vs. invalid accounts exhibit indistinguishable response times.
+    - **Role-Based Session Idle Timeouts (`V-222389`, `V-222390` / OWASP 4.3.7 SM-7):** Enforce 10-minute (`600s`) idle timeout for privileged roles (`SUPERADMIN_GLOBAL`, `TENANT_ADMIN`, `SUPERVISOR`) and 15-minute (`900s`) idle timeout for non-privileged operator roles (`get_role_idle_timeout_seconds`).
+    - **Session Lifecycle WORM Auditing, `Clear-Site-Data` & Log Injection Sanitization (`V-222441..V-222444`, `V-222388`, `V-222392`, `V-222437` / OWASP 4.3.10 SL-4):** Generate WORM audit records on login (`LOGIN_SUCCESSFUL` with `previous_login_at`/`previous_login_ip`), token rotation (`SESSION_TOKEN_RENEWED`), and logout (`USER_LOGOUT` with `Clear-Site-Data: "cache", "cookies", "storage"`), and sanitize all audit strings via `sanitize_log_string()` to strip CRLF/control characters.
+    - **OWASP OSHP Headers & CycloneDX SBOM (`V-222658` / OWASP 5.3.4 & 5.4.4):** Emit `X-Permitted-Cross-Domain-Policies: none` and `Cross-Origin-Opener-Policy: same-origin` in `SecurityHeadersMiddleware`, and generate CycloneDX SBOMs in ephemeral Docker (`scripts/generar-sbom-cyclonedx.sh`).
+
 ---
 
 ## 3. Pre-Commit 11X Checklist

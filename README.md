@@ -88,6 +88,7 @@ flowchart TB
   - **Protección contra Asignación Masiva (*Mass Assignment*):** Todos los esquemas de entrada de Pydantic v2 aplican `ConfigDict(extra="forbid")` para impedir la inyección arbitraria de roles o atributos no declarados.
   - **Defensa Anti-SSRF en Webhooks:** Validación estricta con resolución DNS y bloqueo incondicional de direcciones privadas (RFC 1918), loopback, link-local y rangos multicast en despachos de alertas externas.
   - **Aislamiento SQL y Límites de Carga:** Inyección de contexto de Tenant en MCP mediante sentencias parametrizadas seguras y límite estricto de 2 MB en cargas de inventario CSV para prevenir denegación de servicio por memoria.
+  - **Alineación Normativa DISA ASD STIG V6R5 y OWASP Developer Guide v4.2.0 (`docs/specs/68`):** Bloqueo automático a los 3 intentos fallidos (`V-222432`), defensa Argon2id en tiempo constante contra enumeración de cuentas (`OWASP 4.3.7 A-20`), política de contraseñas de 15 caracteres en Bootstrap (`V-222536`) sin reúso (`V-222545`), timeouts de inactividad diferenciados por rol (`10m` Admin / `15m` Operador), sanitización anti-Log Injection (`V-222444`), cabeceras OWASP OSHP y generación automatizada de SBOM CycloneDX (`V-222658`).
 
 ### 2. Bóveda de Credenciales AES-256-GCM, Rotación Automática y Pinning SSL (TOFU)
 
