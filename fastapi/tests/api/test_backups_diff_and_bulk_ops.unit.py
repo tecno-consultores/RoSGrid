@@ -365,3 +365,96 @@ async def test_export_router_rsc_raises_detailed_502_when_group_lacks_ftp() -> N
     assert exc_info.value.status_code == 502
     assert "El grupo 'rosgrid-api-group' del usuario 'rosgrid_agent' en MikroTik no tiene la política 'ftp'" in exc_info.value.detail
     assert "/user group set rosgrid-api-group policy=api,rest-api,read,write,ftp,test,reboot,policy,sensitive" in exc_info.value.detail
+
+
+@pytest.mark.asyncio
+async def test_export_router_rsc_large_file_over_4kb_via_file_get_and_read() -> None:
+    """Verifica lectura de archivos .rsc > 4 KB (ej. r1 con 4129 bytes donde GET /rest/file omite contents)."""
+    client = AsyncMock()
+
+    async def fake_get_file(path: str) -> list[dict[str, Any]]:
+        fname = client.post.call_args_list[0][1]["json_data"]["file"]
+        return [{"name": f"{fname}.rsc", "size": "4129", ".id": "*99"}]
+
+    client.get.side_effect = fake_get_file
+
+    # 1. Lectura mediante file/get (ret)
+    async def fake_post_file_get(ep: str, json_data: dict[str, Any] | None = None) -> Any:
+        if ep == "file/get":
+            return {"ret": "# 2026-11-01\n/interface bridge\nadd name=bridge-anillo vlan-filtering=yes\n"}
+        return []
+
+    client.post.side_effect = fake_post_file_get
+    res1 = await export_router_rsc(client)
+    assert "bridge-anillo" in res1
+
+    # 2. Fallback a file/read por bloques cuando file/get falla
+    client.post.reset_mock()
+
+    async def fake_post_file_read(ep: str, json_data: dict[str, Any] | None = None) -> Any:
+        if ep == "file/get":
+            raise RuntimeError("file/get unsupported")
+        if ep == "file/read":
+            return [{"data": "/ip address\nadd address=192.168.10.254/24 interface=bridge-anillo\n"}]
+        return []
+
+    client.post.side_effect = fake_post_file_read
+    res2 = await export_router_rsc(client)
+    assert "192.168.10.254/24" in res2
+
+
+@pytest.mark.asyncio
+async def test_export_router_rsc_self_heal_group_and_rest_synthesis_fallback() -> None:
+    """Verifica auto-reparación de política ftp (r6) y síntesis REST cuando faltan ftp y policy (r4)."""
+    client = AsyncMock()
+    client.host = "10.250.3.19"
+    client.port = 443
+    client.username = "rosgrid_agent"
+    client.ssl_pinned_fingerprint = "AA:BB"
+    client.timeout = 10.0
+    client.post.side_effect = Exception("RouterOS REST API Error [500]: not enough permissions (9)")
+
+    # Escenario r6: grupo tiene policy e .id -> auto-habilita ftp via PATCH y exporta en sesión efímera
+    async def fake_get_r6(path: str) -> list[dict[str, Any]]:
+        if path == "user":
+            return [{"name": "rosgrid_agent", "group": "rosgrid-api-group"}]
+        if path == "user/group":
+            return [
+                {
+                    ".id": "*4",
+                    "name": "rosgrid-api-group",
+                    "policy": "reboot,read,write,policy,test,sensitive,api,rest-api,!ftp",
+                }
+            ]
+        return []
+
+    client.get.side_effect = fake_get_r6
+    with patch(
+        "src.api.v1.backups._export_via_fresh_ephemeral_session",
+        new=AsyncMock(return_value="/system identity\nset name=r6"),
+    ):
+        res_r6 = await export_router_rsc(client)
+        assert "set name=r6" in res_r6
+        client.patch.assert_awaited_once()
+
+    # Escenario r4: grupo carece de ftp y policy -> sintetiza .rsc desde endpoints REST
+    async def fake_get_r4(path: str) -> list[dict[str, Any]]:
+        if path == "user":
+            return [{"name": "rosgrid_agent", "group": "rosgrid-api-group"}]
+        if path == "user/group":
+            return [
+                {
+                    ".id": "*4",
+                    "name": "rosgrid-api-group",
+                    "policy": "read,write,test,api,rest-api,!ftp,!policy",
+                }
+            ]
+        if path == "ip/address":
+            return [{"address": "10.250.3.15/24", "interface": "ether1", "comment": "wan r4"}]
+        return []
+
+    client.get.side_effect = fake_get_r4
+    res_r4 = await export_router_rsc(client)
+    assert "/ip address" in res_r4
+    assert 'address=10.250.3.15/24 interface=ether1 comment="wan r4"' in res_r4
+

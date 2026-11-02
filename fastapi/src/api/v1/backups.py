@@ -64,16 +64,59 @@ def clean_rsc_export_comments(raw_text: str) -> str:
 
 def _extract_raw_rsc_text(export_res: Any) -> str:
     if isinstance(export_res, str):
-        return export_res
+        return "" if export_res.strip() in ("[]", "{}") else export_res
     if isinstance(export_res, list):
-        return "\n".join(str(item) for item in export_res)
+        parts = [
+            str(item.get("data", item)) if isinstance(item, dict) else str(item)
+            for item in export_res
+            if item
+        ]
+        return "\n".join(p for p in parts if p.strip() not in ("[]", "{}"))
     if isinstance(export_res, dict):
-        return str(export_res.get("ret", export_res.get("detail", str(export_res))))
-    return str(export_res)
+        val = str(export_res.get("ret", export_res.get("detail", "")))
+        return "" if val.strip() in ("[]", "{}") else val
+    return ""
+
+
+async def _read_large_rsc_file(
+    client: MikrotikRestClient,
+    file_name: str,
+    file_id: str,
+    file_size: int,
+) -> str:
+    """Lee archivos .rsc mayores a 4 KB en RouterOS v7 mediante file/get o file/read por bloques."""
+    if file_id:
+        try:
+            get_res = await client.post("file/get", json_data={".id": file_id, "value-name": "contents"})
+            if isinstance(get_res, dict) and get_res.get("ret"):
+                return str(get_res["ret"])
+        except Exception as get_err:
+            logger.debug("file/get no devolvió contents para %s: %s", file_name, get_err)
+    chunks: list[str] = []
+    offset = 0
+    chunk_size = 32768
+    target_size = max(file_size, 1)
+    while offset < target_size:
+        try:
+            read_res = await client.post(
+                "file/read",
+                json_data={"file": file_name, "offset": offset, "chunk-size": chunk_size},
+            )
+        except Exception as read_err:
+            logger.debug("Fallo en file/read (%s offset=%d): %s", file_name, offset, read_err)
+            break
+        part = _extract_raw_rsc_text(read_res)
+        if not part:
+            break
+        chunks.append(part)
+        offset += chunk_size
+        if len(part.encode("utf-8")) < chunk_size:
+            break
+    return "".join(chunks)
 
 
 async def _read_and_cleanup_rsc_file(client: MikrotikRestClient, fname: str) -> str:
-    """Lee el contenido del archivo temporal .rsc en RouterOS y lo elimina de flash."""
+    """Lee el contenido del archivo temporal .rsc en RouterOS (incluyendo >4KB) y lo elimina de flash."""
     files = await client.get("file")
     if not isinstance(files, list):
         return ""
@@ -81,8 +124,12 @@ async def _read_and_cleanup_rsc_file(client: MikrotikRestClient, fname: str) -> 
     if not target_files:
         return ""
     tf = target_files[0]
-    raw_text = str(tf.get("contents", ""))
-    file_id = tf.get(".id")
+    raw_text = str(tf.get("contents", "") or "")
+    file_id = str(tf.get(".id", "") or "")
+    if not raw_text:
+        file_name = str(tf.get("name") or f"{fname}.rsc")
+        file_size = int(tf.get("size", 0) or 0)
+        raw_text = await _read_large_rsc_file(client, file_name, file_id, file_size)
     if file_id:
         try:
             await client.delete(f"file/{file_id}")
@@ -91,8 +138,23 @@ async def _read_and_cleanup_rsc_file(client: MikrotikRestClient, fname: str) -> 
     return raw_text
 
 
+async def _try_self_heal_group_ftp_policy(client: MikrotikRestClient, group_obj: dict[str, Any]) -> bool:
+    """Auto-habilita la política 'ftp' en el grupo API cuando el usuario posee permiso 'policy' e ID de grupo."""
+    gid = group_obj.get(".id")
+    tokens = [t.strip() for t in str(group_obj.get("policy", "")).split(",") if t.strip()]
+    if not gid or "policy" not in tokens or "!policy" in tokens:
+        return False
+    new_tokens = [t for t in tokens if t not in ("!ftp", "ftp")] + ["ftp"]
+    try:
+        await client.patch(f"user/group/{gid}", json_data={"policy": ",".join(new_tokens)})
+        return True
+    except Exception as heal_err:
+        logger.debug("No se pudo auto-habilitar política ftp en grupo %s: %s", group_obj.get("name"), heal_err)
+        return False
+
+
 async def _resolve_user_group_ftp_status(client: MikrotikRestClient) -> tuple[str, bool]:
-    """Determina el grupo del usuario API actual y si el grupo ya posee la política 'ftp' activa."""
+    """Determina el grupo del usuario API actual y si el grupo ya posee (o puede auto-reparar) la política 'ftp'."""
     users = await client.get("user")
     groups = await client.get("user/group")
     if not isinstance(users, list) or not isinstance(groups, list):
@@ -108,8 +170,63 @@ async def _resolve_user_group_ftp_status(client: MikrotikRestClient) -> tuple[st
         if isinstance(g, dict) and g.get("name") == group_name:
             tokens = [t.strip() for t in str(g.get("policy", "")).split(",") if t.strip()]
             has_ftp = "ftp" in tokens and "!ftp" not in tokens
+            if not has_ftp:
+                has_ftp = await _try_self_heal_group_ftp_policy(client, g)
             return (group_name, has_ftp)
     return (group_name, False)
+
+
+_REST_SYNTHESIS_SECTIONS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+    ("interface/bridge", "/interface bridge", ("name", "vlan-filtering", "protocol-mode", "comment")),
+    ("interface/vlan", "/interface vlan", ("name", "vlan-id", "interface", "comment")),
+    ("ip/pool", "/ip pool", ("name", "ranges", "comment")),
+    ("ip/address", "/ip address", ("address", "interface", "network", "disabled", "comment")),
+    ("ip/dhcp-server", "/ip dhcp-server", ("name", "interface", "address-pool", "disabled")),
+    ("ip/dhcp-server/network", "/ip dhcp-server network", ("address", "gateway", "dns-server", "comment")),
+    ("ip/route", "/ip route", ("dst-address", "gateway", "distance", "comment")),
+    (
+        "ip/firewall/filter",
+        "/ip firewall filter",
+        ("chain", "action", "protocol", "src-address", "dst-address", "dst-port", "in-interface", "out-interface", "comment", "disabled"),
+    ),
+    (
+        "ip/firewall/nat",
+        "/ip firewall nat",
+        ("chain", "action", "src-address", "dst-address", "out-interface", "to-addresses", "comment", "disabled"),
+    ),
+    ("system/logging", "/system logging", ("topics", "action", "prefix", "disabled")),
+)
+
+
+def _format_rsc_section_rows(header: str, rows: list[Any], keys: tuple[str, ...]) -> list[str]:
+    valid_rows = [r for r in rows if isinstance(r, dict) and r.get("dynamic") != "true"]
+    if not valid_rows:
+        return []
+    out = [header]
+    for row in valid_rows:
+        pairs = [
+            f'{k}="{row[k]}"' if " " in str(row[k]) else f"{k}={row[k]}"
+            for k in keys
+            if row.get(k) not in (None, "")
+        ]
+        if pairs:
+            out.append("add " + " ".join(pairs))
+    return out if len(out) > 1 else []
+
+
+async def _synthesize_rsc_from_rest(client: MikrotikRestClient) -> str:
+    """Reconstruye un respaldo .rsc determinista vía REST cuando el usuario carece de permisos 'ftp' y 'policy'."""
+    sections: list[str] = []
+    for endpoint, header, keys in _REST_SYNTHESIS_SECTIONS:
+        try:
+            rows = await client.get(endpoint)
+        except Exception:
+            continue
+        if isinstance(rows, list):
+            sec_lines = _format_rsc_section_rows(header, rows, keys)
+            if sec_lines:
+                sections.extend(sec_lines)
+    return "\n".join(sections)
 
 
 async def _export_via_fresh_ephemeral_session(
@@ -153,7 +270,7 @@ async def _export_via_fresh_ephemeral_session(
 
 
 async def _try_fallback_rsc_export(client: MikrotikRestClient, fname: str) -> tuple[str, str | None]:
-    """Intenta recuperar el export vía sesión fresca si el grupo ya tiene 'ftp' o devuelve detalle de diagnóstico."""
+    """Intenta recuperar el export vía sesión fresca o síntesis REST si el grupo carece de 'ftp'."""
     try:
         group_name, has_ftp = await _resolve_user_group_ftp_status(client)
     except Exception:
@@ -161,7 +278,12 @@ async def _try_fallback_rsc_export(client: MikrotikRestClient, fname: str) -> tu
 
     if has_ftp:
         raw_text = await _export_via_fresh_ephemeral_session(client, group_name, fname)
-        return (raw_text, None)
+        if raw_text:
+            return (raw_text, None)
+
+    synth_text = await _synthesize_rsc_from_rest(client)
+    if synth_text:
+        return (synth_text, None)
 
     detail_msg = (
         f"El grupo '{group_name}' del usuario '{client.username}' en MikroTik no tiene la política 'ftp'. "
@@ -385,6 +507,11 @@ async def get_backup_diff(
         _, client = await get_router_and_client(router_id, claims, db)
         live_res = await client.post("export", {"terse": "false", "show-sensitive": "false"})
         target_rsc = clean_rsc_export_comments(_extract_raw_rsc_text(live_res))
+        if not target_rsc:
+            try:
+                target_rsc = await export_router_rsc(client)
+            except Exception:
+                target_rsc = ""
         target_created_at = datetime.now(UTC).isoformat()
     else:
         try:

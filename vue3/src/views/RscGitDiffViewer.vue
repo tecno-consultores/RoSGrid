@@ -70,7 +70,9 @@
       backups.value = [];
     } finally {
       loading.value = false;
-      if (backups.value.length > 0 && !selectedBaseId.value) {
+      if (backups.value.length === 0) {
+        selectedBaseId.value = '';
+      } else if (!selectedBaseId.value || !backups.value.some((b) => b.id === selectedBaseId.value)) {
         selectedBaseId.value = backups.value[0].id;
       }
       compareDiff();
