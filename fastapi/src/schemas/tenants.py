@@ -54,13 +54,20 @@ class CreateTenantRequest(BaseModel):
     max_routers_quota: int = Field(100, gt=0)
     max_users_quota: int = Field(50, gt=0)
     require_2fa_all_users: bool = True
-    default_safemode_seconds: int = Field(60, ge=15, le=300)
+    default_safemode_seconds: int = Field(60, ge=10, le=300)
 
     # Administrador inicial del tenant
     admin_username: str = Field(..., min_length=3, max_length=64)
     admin_email: EmailStr
-    admin_full_name: str = Field(..., min_length=3, max_length=150)
+    admin_full_name: str | None = Field(None, max_length=150)
     admin_password: str = Field(..., min_length=8)
+
+    @model_validator(mode="after")
+    def _ensure_admin_full_name(self) -> "CreateTenantRequest":
+        if not self.admin_full_name or len(self.admin_full_name.strip()) < 3:
+            fallback = (self.admin_username or self.name or "Admin").strip()
+            self.admin_full_name = fallback if len(fallback) >= 3 else f"Admin {fallback}"
+        return self
 
 
 class UpdateTenantFeaturesRequest(BaseModel):

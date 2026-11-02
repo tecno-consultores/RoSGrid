@@ -780,6 +780,7 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     Given driver baseUrl + '/admin/tenants'
     And waitFor(".tenants-management-view")
     And waitFor(".beacon-card")
+    And waitFor(".beacon-timestamp")
     And waitFor("#btn-trigger-beacon.btn-beacon")
     Given driver baseUrl + '/backups'
     And waitFor(".diff-header-actions")

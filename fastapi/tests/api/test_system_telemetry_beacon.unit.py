@@ -135,3 +135,22 @@ async def test_trigger_telemetry_beacon_manual(
     assert data["last_status"] == "http_202"
     assert data["fleet_bucket"] == "1-10"
     mock_send.assert_awaited_once()
+
+
+def test_create_tenant_request_auto_populates_admin_full_name() -> None:
+    """Verifica que CreateTenantRequest no lance 422 si el modal de UI omite admin_full_name."""
+    from src.schemas.tenants import CreateTenantRequest
+
+    req = CreateTenantRequest(
+        slug="caja",
+        name="preso",
+        tax_id="123456789",
+        admin_username="pedro",
+        admin_email="pedro@gmail.com",
+        admin_password="123456789",
+        max_routers_quota=50,
+        max_users_quota=20,
+        default_safemode_seconds=60,
+    )
+    assert req.admin_full_name == "pedro"
+

@@ -24,6 +24,7 @@
     slug: '',
     name: '',
     tax_id: '',
+    admin_full_name: '',
     admin_email: '',
     admin_username: '',
     admin_password: '',
@@ -81,9 +82,21 @@
     isCreating.value = true;
     errorMessage.value = '';
     try {
+      const payload = {
+        ...newTenant.value,
+        slug: newTenant.value.slug.trim().toLowerCase(),
+        name: newTenant.value.name.trim(),
+        admin_username: newTenant.value.admin_username.trim(),
+        admin_email: newTenant.value.admin_email.trim(),
+        admin_full_name:
+          newTenant.value.admin_full_name.trim() ||
+          newTenant.value.admin_username.trim() ||
+          newTenant.value.name.trim() ||
+          'Administrador',
+      };
       const res = await http.post<TenantItem | { tenant: TenantItem }>(
         '/api/v1/tenants',
-        newTenant.value,
+        payload,
       );
       const created =
         res.data && 'tenant' in res.data && res.data.tenant
@@ -102,6 +115,7 @@
         slug: '',
         name: '',
         tax_id: '',
+        admin_full_name: '',
         admin_email: '',
         admin_username: '',
         admin_password: '',
@@ -133,6 +147,13 @@
     status?: string;
   } | null>(null);
   const isTriggeringBeacon = ref(false);
+
+  function formatBeaconTimestamp(raw?: string | null): string {
+    if (!raw) return 'Nunca';
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return raw;
+    return d.toLocaleString();
+  }
 
   async function loadBeaconStatus() {
     try {
@@ -198,11 +219,7 @@
         <p class="beacon-card__meta">
           Instance ID (HMAC-SHA256): <code class="beacon-mono">{{ beaconStatus?.instance_id || 'anónimo' }}</code> |
           Flota: <strong class="beacon-fleet">{{ beaconStatus?.router_count ?? beaconStatus?.fleet_bucket ?? '0' }} routers ({{ beaconStatus?.fleet_bucket || '0' }})</strong> |
-          Último Latido: <span class="beacon-timestamp">{{ beaconStatus?.last_sent_at || beaconStatus?.last_heartbeat_at || 'Nunca' }}</span>
-          <span
-            v-if="beaconStatus?.last_status && beaconStatus.last_status !== 'untriggered'"
-            class="beacon-status-code"
-          >[{{ beaconStatus.last_status }}]</span>
+          Último Latido: <span class="beacon-timestamp">{{ formatBeaconTimestamp(beaconStatus?.last_sent_at || beaconStatus?.last_heartbeat_at) }}</span>
         </p>
       </div>
       <button

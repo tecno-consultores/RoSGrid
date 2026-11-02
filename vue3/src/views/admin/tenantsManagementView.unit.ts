@@ -356,8 +356,8 @@ describe('TenantsManagementView.vue — Gestión de Empresas Multi-Tenant', () =
     expect(beaconCard.exists()).toBe(true);
     expect(beaconCard.text()).toContain('9ce21f55a851ed11a59d48b7c0ba02ad6fd2bdbe5ddf87bdaab637fb344c511f');
     expect(beaconCard.text()).toContain('7 routers (1-10)');
-    expect(beaconCard.text()).toContain('2026-11-01T23:08:40Z');
-    expect(beaconCard.text()).toContain('[http_202]');
+    expect(beaconCard.text()).toContain(new Date('2026-11-01T23:08:40Z').toLocaleString());
+    expect(beaconCard.text()).not.toContain('[http_202]');
 
     // Probar emisión manual de latido
     vi.spyOn(http, 'post').mockImplementation((url: string) => {
@@ -386,6 +386,6 @@ describe('TenantsManagementView.vue — Gestión de Empresas Multi-Tenant', () =
     await flushPromises();
 
     expect(wrapper.find('.banner--success').text()).toContain('Latido de telemetría emitido con éxito.');
-    expect(beaconCard.text()).toContain('2026-11-01T23:15:00Z');
+    expect(beaconCard.text()).toContain(new Date('2026-11-01T23:15:00Z').toLocaleString());
   });
 });

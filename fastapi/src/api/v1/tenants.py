@@ -295,7 +295,7 @@ async def create_tenant(
         tenant_id=new_tenant.id,
         username=body.admin_username,
         email=body.admin_email,
-        full_name=body.admin_full_name,
+        full_name=body.admin_full_name or body.admin_username,
         password_hash=hash_password(body.admin_password),
         role=SystemRoleEnum.TENANT_ADMIN,
         has_all_routers_access=True,
