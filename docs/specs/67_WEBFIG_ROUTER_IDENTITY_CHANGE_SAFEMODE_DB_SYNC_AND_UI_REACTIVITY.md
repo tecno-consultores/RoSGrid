@@ -839,6 +839,59 @@ Priorizar `webFigStore.currentRouter` (cuando su `id` coincide con `routerId.val
 
 ---
 
+### 2.8. Backend y Cabecera WebFig: Sincronización de `_discover_identity` en PostgreSQL ([`fastapi/src/api/v1/inventory_helpers.py`](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/fastapi/src/api/v1/inventory_helpers.py#L84-L91)), Estado de Actualización OS ([`fastapi/src/api/v1/bulk_and_updates.py`](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/fastapi/src/api/v1/bulk_and_updates.py#L1672-L1745)) y Selector Rápido ([`vue3/src/components/webfig/RouterContextHeader.vue`](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/vue3/src/components/webfig/RouterContextHeader.vue#L86-L90))
+
+1. En `_discover_identity` (`fastapi/src/api/v1/inventory_helpers.py`), cuando se consulta `/system/identity` en el router y el identity ha cambiado respecto al `r.ros_identity` previo (o cuando `r.display_name == old_ident`), sincronizar también `r.display_name = new_ident` en PostgreSQL para evitar que `display_name` quede congelado con el nombre antiguo tras un cambio de identity o un `sync-discovery`.
+2. En `get_fleet_updates_status` y `_probe_single_router_update` (`fastapi/src/api/v1/bulk_and_updates.py`), devolver `display_name` incluyendo `ros_identity` cuando difieran (`f"{r.display_name} ({r.ros_identity})"`), manteniendo coherencia total entre el Paso 1 y el Paso 2 de la pantalla de actualización de Sistema Operativo (`/bulk-ops`).
+3. En `RouterContextHeader.vue`, mostrar `${r.display_name} (${r.ros_identity})` en el selector rápido `#header-router-switcher` cuando difieran.
+
+**Target 1 (`fastapi/src/api/v1/inventory_helpers.py` líneas 84-91):**
+```python
+async def _discover_identity(client: MikrotikRestClient, r: Router) -> None:
+    try:
+        ident_res = await client.get("/system/identity")
+        if isinstance(ident_res, dict) and "name" in ident_res:
+            r.ros_identity = str(ident_res["name"])
+    except Exception as exc:
+        logger.debug("Discovery identity error: %s", exc)
+```
+
+**Replacement 1:**
+```python
+async def _discover_identity(client: MikrotikRestClient, r: Router) -> None:
+    try:
+        ident_res = await client.get("/system/identity")
+        if isinstance(ident_res, dict) and "name" in ident_res:
+            new_ident = str(ident_res["name"]).strip()
+            if new_ident:
+                old_ident = r.ros_identity
+                r.ros_identity = new_ident
+                if old_ident and old_ident != new_ident:
+                    r.display_name = new_ident
+    except Exception as exc:
+        logger.debug("Discovery identity error: %s", exc)
+```
+
+**Target 2 (`vue3/src/components/webfig/RouterContextHeader.vue` líneas 86-90):**
+```html
+          <option value="" disabled>{{ t('webfig.header_switch_router') }}</option>
+          <option v-for="r in inventoryStore.routers" :key="r.id" :value="r.id">
+            {{ r.display_name }} ({{ r.ip_address }})
+          </option>
+        </select>
+```
+
+**Replacement 2:**
+```html
+          <option value="" disabled>{{ t('webfig.header_switch_router') }}</option>
+          <option v-for="r in inventoryStore.routers" :key="r.id" :value="r.id">
+            {{ r.ros_identity && r.ros_identity !== r.display_name ? `${r.display_name} (${r.ros_identity})` : r.display_name }} ({{ r.ip_address }})
+          </option>
+        </select>
+```
+
+---
+
 ## 3. Pirámide de Pruebas 11X y Contratos Karate Labs BDD
 
 1. **Pruebas Unitarias Backend (`fastapi/tests/api/test_webfig_endpoints_full.unit.py`):**
