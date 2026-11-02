@@ -161,7 +161,7 @@ rosgrid/
 
 ---
 
-## 4. Índice Maestro de los 66 Archivos de Especificación (00 a 65) (Carpeta `docs/specs/`)
+## 4. Índice Maestro de los 68 Archivos de Especificación (00 a 67) (Carpeta `docs/specs/`)
 
 Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `docs/specs/` siguiendo rigurosamente el orden de los 5 Bloques listados a continuación:
 
@@ -252,6 +252,7 @@ Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `
 * `docs/specs/64_RBAC_UI_VISIBILITY_ENFORCEMENT_ZERO_403_DEAD_ENDS.md` — Aplicación Estricta de Visibilidad RBAC en Interfaz (*Zero 403 Dead-Ends*): Matriz `ROLE_POLICY_MATRIX` (11 Roles × 30 Acciones) integrada en `useAuthStore.canUseUserFeature`, Filtrado de Menú Lateral Global (`RgResponsiveShell.vue`), Ocultación de Pestañas y Acciones de Mutación Restringidas en `EnterpriseComplianceView.vue`, `DashboardHomeView.vue`, `RouterInventoryView.vue` y `RouterSidebarMenu.vue`, y Paridad de Roles `READ_ONLY` en `sdwan.py`, `switching.py`, `sla.py` y `wifi.py` (Hito 28.9).
 * `docs/specs/65_TELEMETRY_BEACON_RLS_FLEET_COUNT_AND_STATUS_UI_CONTRACT.md` — Corrección de Conteo de Flota con Contexto RLS SuperAdmin (`await set_tenant_context(session, None, is_superadmin=True)` en `_count_active_routers_safe`), Persistencia de `fleet_bucket` y `router_count` en KeyDB (`rg:system:telemetry_beacon_state`) y Alineación del Contrato UI de Telemetría Anónima (`last_heartbeat_at` / `last_sent_at`) en `/admin/tenants` (`TenantsManagementView.vue` — Hito 28.10).
 * `docs/specs/66_BOOTSTRAP_UI_STYLING_AND_TENANT_EDIT_MANAGEMENT.md` — Homologación de Estilo Táctico del Botón de Inicialización (*Bootstrap*) en `LoginView.vue` (`#btn-bootstrap-submit` con `.btn-submit.btn.btn-primary`) y Edición Integral de Empresas / Cuotas Multi-Tenant en `/admin/tenants` (`TenantsManagementView.vue` con botón `✏️ Editar`, modal `#modal-edit-tenant` y `PATCH /api/v1/tenants/{tenant_id}` enriquecido con validación de `slug`, conteos reales `active_routers_count`/`active_users_count` y bitácora WORM `TENANT_UPDATED` — Hito 28.11).
+* `docs/specs/67_WEBFIG_ROUTER_IDENTITY_CHANGE_SAFEMODE_DB_SYNC_AND_UI_REACTIVITY.md` — Sincronización Integral de Identidad del Router (`system/identity`), Reactividad Pinia en Tiempo Real (`useWebFigStore` + `useInventoryStore` en `RouterLiveDashboardView.vue`, `RouterWebFigLayout.vue` y `DynamicLayer2ResourceView.vue`), Sincronización de `ros_identity` y `display_name` en PostgreSQL (`webfig_system_tools.py` y `webfig_layer2.py`), Invalidación de Caché KeyDB, Auditoría WORM (`SYSTEM_IDENTITY_UPDATED`) y Coherencia en la Columna `Identity` de `RouterInventoryView.vue` (Hito 28.12).
 
 
 ---
