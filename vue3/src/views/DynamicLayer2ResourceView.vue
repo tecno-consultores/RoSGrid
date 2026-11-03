@@ -6,6 +6,7 @@
   import { useRoute } from 'vue-router';
   import { http } from '@/api/httpClient';
   import { useWebFigStore } from '@/stores/useWebFigStore';
+  import { useInventoryStore } from '@/stores/useInventoryStore';
   import { useLayer2ColumnProfiles } from '@/composables/useLayer2ColumnProfiles';
   import { getPresetsForRosPath, type Layer2TemplatePreset } from '@/data/layer2PresetsCatalog';
   import type {
@@ -60,6 +61,7 @@
   const routerId = computed(() => String(route.params.routerId || ''));
   const rosPath = computed(() => String(route.params.rosPath || 'mpls'));
   const webFigStore = useWebFigStore();
+  const inventoryStore = useInventoryStore();
   const columnProfiles = useLayer2ColumnProfiles();
 
   const isLoading = ref(false);
@@ -443,6 +445,27 @@
           `/api/v1/routers/${routerId.value}/webfig/layer2/resource/${rosPath.value}`,
           { attributes: resourceData.value.form_data, enable_safemode: true },
         );
+        if (
+          rosPath.value === 'system/identity' &&
+          resourceData.value.form_data &&
+          typeof resourceData.value.form_data.name === 'string' &&
+          resourceData.value.form_data.name.trim()
+        ) {
+          const newIdent = resourceData.value.form_data.name.trim();
+          const cur =
+            webFigStore.currentRouter ||
+            inventoryStore.routers.find((r) => r.id === routerId.value) ||
+            null;
+          if (cur) {
+            const updatedRouter = {
+              ...cur,
+              ros_identity: newIdent,
+              display_name: newIdent,
+            };
+            webFigStore.setCurrentRouter(updatedRouter);
+            inventoryStore.updateRouter(updatedRouter);
+          }
+        }
         showSuccessBanner('Configuración singleton actualizada con Safe Mode.');
       } else {
         const recId = getRecordId(activeRecord.value);

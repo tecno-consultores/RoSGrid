@@ -4,15 +4,19 @@
 <script setup lang="ts">
   import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
   import { useLiveTelemetryStore } from '@/stores/useLiveTelemetryStore';
+  import { useWebFigStore } from '@/stores/useWebFigStore';
+  import { useInventoryStore } from '@/stores/useInventoryStore';
   import {
     useTelemetryRingBuffer,
     type TelemetryWindowKey,
     WINDOW_POINTS_MAP,
   } from '@/composables/useTelemetryRingBuffer';
-  import type { TelemetryPoint } from '@/types';
+  import type { TelemetryPoint, RouterItem } from '@/types';
 
   const liveStore = useLiveTelemetryStore();
   const ringBuffer = useTelemetryRingBuffer();
+  const webFigStore = useWebFigStore();
+  const inventoryStore = useInventoryStore();
 
   const cpuCanvasRef = ref<HTMLCanvasElement | null>(null);
   const trafficCanvasRef = ref<HTMLCanvasElement | null>(null);
@@ -256,60 +260,128 @@
     }
   });
 
+  // Modales de Identidad y Reinicio (Spec 60 & Spec 67)
   const isChangingIdentity = ref(false);
-  const isSubmittingIdentity = computed(() => isChangingIdentity.value);
   const isSyncingDiscovery = ref(false);
   const isRebooting = ref(false);
   const isIdentityModalOpen = ref(false);
   const newIdentityName = ref('');
+  const syncDisplayName = ref(true);
   const actionBannerMsg = ref('');
+  const actionBannerError = ref('');
+  const isSubmittingIdentity = computed(() => isChangingIdentity.value);
 
-  function openIdentityModal() {
-    newIdentityName.value = '';
+  function getActiveRouterSnapshot(): RouterItem | null {
+    return (
+      (webFigStore.currentRouter && webFigStore.currentRouter.id === routerId.value
+        ? webFigStore.currentRouter
+        : null) ||
+      inventoryStore.routers.find((r) => r.id === routerId.value) ||
+      webFigStore.currentRouter ||
+      null
+    );
+  }
+
+  function openIdentityModal(): void {
+    const cur = getActiveRouterSnapshot();
+    newIdentityName.value = cur?.ros_identity || cur?.display_name || '';
+    syncDisplayName.value = true;
+    actionBannerError.value = '';
     isIdentityModalOpen.value = true;
   }
 
-  async function handleChangeIdentity() {
-    if (!newIdentityName.value.trim()) return;
+  async function handleChangeIdentity(): Promise<void> {
+    const trimmed = newIdentityName.value.trim();
+    if (!trimmed) return;
     isChangingIdentity.value = true;
+    actionBannerMsg.value = '';
+    actionBannerError.value = '';
     try {
-      await http.patch(`/api/v1/routers/${routerId.value}/webfig/system/identity`, {
-        name: newIdentityName.value.trim(),
+      const res = await http.patch<{
+        name?: string;
+        ros_identity?: string;
+        display_name?: string;
+      }>(`/api/v1/routers/${routerId.value}/webfig/system/identity`, {
+        name: trimmed,
+        sync_display_name: syncDisplayName.value,
       });
-      actionBannerMsg.value = `Identidad actualizada a '${newIdentityName.value.trim()}'`;
+      const updatedIdentity = res.data?.ros_identity || res.data?.name || trimmed;
+      const cur = getActiveRouterSnapshot();
+      const updatedDisplayName =
+        res.data?.display_name ||
+        (syncDisplayName.value ? updatedIdentity : cur?.display_name || updatedIdentity);
+
+      if (cur) {
+        const updatedRouter: RouterItem = {
+          ...cur,
+          ros_identity: updatedIdentity,
+          display_name: updatedDisplayName,
+        };
+        webFigStore.setCurrentRouter(updatedRouter);
+        inventoryStore.updateRouter(updatedRouter);
+      } else {
+        try {
+          const fresh = await http.get<RouterItem>(`/api/v1/inventory/routers/${routerId.value}`);
+          if (fresh.data) {
+            webFigStore.setCurrentRouter(fresh.data);
+            inventoryStore.updateRouter(fresh.data);
+          }
+        } catch {
+          // Ignorar fallo secundario de refresco
+        }
+      }
+
+      actionBannerMsg.value = `Identidad del router actualizada a "${updatedIdentity}".`;
       isIdentityModalOpen.value = false;
-    } catch {
-      actionBannerMsg.value = 'Error al actualizar identidad en RouterOS';
+    } catch (err: unknown) {
+      const e = err as { detail?: string; message?: string };
+      actionBannerError.value = e.detail || e.message || 'Error al actualizar identidad.';
     } finally {
       isChangingIdentity.value = false;
     }
   }
 
-  async function handleSyncDiscovery() {
+  async function handleSyncDiscovery(): Promise<void> {
     isSyncingDiscovery.value = true;
+    actionBannerMsg.value = '';
+    actionBannerError.value = '';
     try {
-      const res = await http.post<any>(`/api/v1/inventory/routers/${routerId.value}/sync-discovery`);
-      actionBannerMsg.value = res.data?.message || 'Sincronización de hardware y paquetes completada.';
-    } catch {
-      actionBannerMsg.value = 'Error al sincronizar datos del router';
+      const res = await http.post<RouterItem>(
+        `/api/v1/inventory/routers/${routerId.value}/sync-discovery`,
+      );
+      if (res.data && typeof res.data === 'object' && 'id' in res.data) {
+        webFigStore.setCurrentRouter(res.data);
+        inventoryStore.updateRouter(res.data);
+      }
+      actionBannerMsg.value = 'Sincronización de descubrimiento (Hardware/RouterOS) completada.';
+    } catch (err: unknown) {
+      const e = err as { detail?: string; message?: string };
+      actionBannerError.value = e.detail || e.message || 'Error al sincronizar hardware.';
     } finally {
       isSyncingDiscovery.value = false;
     }
   }
 
-  async function handleRebootRouter() {
-    if (!confirm('⚠️ ¿Confirmas el reinicio inmediato del router MikroTik? Se interrumpirá el tráfico de red durante el ciclo de booteo.')) {
+  async function handleRebootRouter(): Promise<void> {
+    if (
+      !confirm(
+        '⚠️ ¿Confirmas el reinicio inmediato del router MikroTik? Se interrumpirá el tráfico de red durante el ciclo de booteo.',
+      )
+    ) {
       return;
     }
     if (!confirm('⚠️ CONFIRMACIÓN FINAL: ¿Reiniciar ahora?')) {
       return;
     }
     isRebooting.value = true;
+    actionBannerMsg.value = '';
+    actionBannerError.value = '';
     try {
       await http.post(`/api/v1/routers/${routerId.value}/webfig/system/reboot`);
-      actionBannerMsg.value = 'Comando de reinicio enviado exitosamente al router.';
-    } catch {
-      actionBannerMsg.value = 'Error al enviar comando de reinicio';
+      actionBannerMsg.value = 'Orden de reinicio enviada al router MikroTik.';
+    } catch (err: unknown) {
+      const e = err as { detail?: string; message?: string };
+      actionBannerError.value = e.detail || e.message || 'Error al enviar comando de reinicio.';
     } finally {
       isRebooting.value = false;
     }
@@ -384,8 +456,11 @@
       </div>
     </header>
 
-    <div v-if="actionBannerMsg" class="banner banner--success" role="status" style="margin-bottom: 12px;">
+    <div v-if="actionBannerMsg" id="banner-identity-success" class="banner banner--success" role="status" style="margin-bottom: 12px;">
       {{ actionBannerMsg }}
+    </div>
+    <div v-if="actionBannerError" id="banner-identity-error" class="banner banner--error" role="alert" style="margin-bottom: 12px;">
+      {{ actionBannerError }}
     </div>
 
     <!-- Resumen de Tarjetas Métricas Rápidas -->
@@ -479,33 +554,46 @@
       </div>
     </div>
 
-    <!-- Modal Táctico: Cambio de Identidad del Router -->
+    <!-- Modal Táctico: Cambio de Identidad del Router (Spec 60 & Spec 67) -->
     <div
       v-if="isIdentityModalOpen"
       class="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="identity-modal-title"
       @click.self="isIdentityModalOpen = false"
     >
-      <div class="modal-card" role="dialog" aria-labelledby="modal-identity-title" aria-modal="true">
+      <div class="modal-card">
         <header class="modal-header">
-          <h2 id="modal-identity-title">Cambiar Identidad del Router (System Identity)</h2>
-          <button type="button" class="btn-close" @click="isIdentityModalOpen = false">
+          <h3 id="identity-modal-title" class="modal-title">🏷️ Cambiar Identidad del Router</h3>
+          <button type="button" class="btn-close" aria-label="Cerrar" @click="isIdentityModalOpen = false">
             ✕
           </button>
         </header>
         <form class="modal-form" @submit.prevent="handleChangeIdentity">
-          <div class="form-group">
-            <label for="identity-name">Nuevo Nombre de Identidad (Identity):</label>
-            <input
-              id="identity-name"
-              v-model="newIdentityName"
-              type="text"
-              required
-              class="form-control font-tabular"
-              placeholder="ej. Core-CCR2004-Edge"
-            />
-            <small class="form-hint">
-              Este cambio invocará <code>PATCH /api/v1/routers/{id}/webfig/system/identity</code> con Safe Mode de 60s activado.
-            </small>
+          <div class="modal-body">
+            <div class="form-group">
+              <label for="input-router-identity">Nuevo nombre de Identity (/system/identity):</label>
+              <input
+                id="input-router-identity"
+                v-model="newIdentityName"
+                type="text"
+                class="form-control font-tabular"
+                placeholder="Ej: CCR2004-Borde-Norte"
+                maxlength="128"
+                required
+              />
+            </div>
+            <div class="form-group checkbox-row">
+              <input
+                id="chk-sync-display-name"
+                v-model="syncDisplayName"
+                type="checkbox"
+              />
+              <label for="chk-sync-display-name">
+                Sincronizar también el nombre visible en el Inventario RoSGrid
+              </label>
+            </div>
           </div>
           <footer class="modal-footer">
             <button
@@ -516,11 +604,13 @@
               Cancelar
             </button>
             <button
+              id="btn-confirm-identity"
               type="submit"
               class="btn-primary"
-              :disabled="!newIdentityName.trim() || isSubmittingIdentity"
+              :disabled="isSubmittingIdentity || !newIdentityName.trim()"
+              @click="handleChangeIdentity"
             >
-              {{ isSubmittingIdentity ? 'Guardando...' : 'Aplicar Identidad' }}
+              {{ isSubmittingIdentity ? '⏳ Guardando...' : '💾 Guardar Identity' }}
             </button>
           </footer>
         </form>
@@ -842,5 +932,33 @@
   .btn-primary:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  .checkbox-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: var(--rg-text-secondary, #cbd5e1);
+  }
+
+  .banner {
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+
+  .banner--success {
+    background: rgba(16, 185, 129, 0.14);
+    border: 1px solid var(--status-online, #10b981);
+    color: var(--status-online, #10b981);
+  }
+
+  .banner--error {
+    background: rgba(239, 68, 68, 0.14);
+    border: 1px solid var(--status-offline, #ef4444);
+    color: var(--status-offline, #ef4444);
   }
 </style>

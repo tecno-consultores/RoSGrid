@@ -85,7 +85,12 @@ async def _discover_identity(client: MikrotikRestClient, r: Router) -> None:
     try:
         ident_res = await client.get("/system/identity")
         if isinstance(ident_res, dict) and "name" in ident_res:
-            r.ros_identity = str(ident_res["name"])
+            new_ident = str(ident_res["name"]).strip()
+            if new_ident:
+                old_ident = r.ros_identity
+                r.ros_identity = new_ident
+                if old_ident and old_ident != new_ident:
+                    r.display_name = new_ident
     except Exception as exc:
         logger.debug("Discovery identity error: %s", exc)
 

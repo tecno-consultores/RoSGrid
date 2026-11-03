@@ -892,6 +892,12 @@ async def update_resource(
         else:
             res = await _action_singleton()
 
+        if full_path == "system/identity" and isinstance(attributes, dict) and attributes.get("name"):
+            new_ident = str(attributes["name"]).strip()
+            if new_ident:
+                router_obj.ros_identity = new_ident
+                router_obj.display_name = new_ident
+
         await invalidate_webfig_cache(from_deps_redis(), uuid.UUID(claims["tid"]), router_id, full_path)
         await write_audit_log(
             session=db,
@@ -991,6 +997,12 @@ async def update_singleton_resource(
         )
     else:
         res = await _action_singleton()
+
+    if clean_path == "system/identity" and isinstance(attributes, dict) and attributes.get("name"):
+        new_ident = str(attributes["name"]).strip()
+        if new_ident:
+            router_obj.ros_identity = new_ident
+            router_obj.display_name = new_ident
 
     await invalidate_webfig_cache(from_deps_redis(), uuid.UUID(claims["tid"]), router_id, clean_path)
 

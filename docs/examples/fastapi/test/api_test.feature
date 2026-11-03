@@ -1131,6 +1131,15 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 145. Sincronización Integral de Identidad del Router: PATCH /api/v1/routers/{id}/webfig/system/identity sin autenticación devuelve 401 (Hito 28.12)
+    Given path '/api/v1/routers/01928000-0000-7000-8000-000000000001/webfig/system/identity'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000147'
+    And request { name: 'CCR2004-Core-North', sync_display_name: true }
+    When method patch
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
 
 
 

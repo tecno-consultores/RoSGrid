@@ -16,6 +16,7 @@ from src.api.v1.webfig_common import (
     execute_safe_mutation,
     get_router_and_client,
     intercept_maker_checker_if_needed,
+    invalidate_webfig_cache,
 )
 from src.core.audit import write_audit_log
 from src.db.session import get_tenant_db_session
@@ -122,17 +123,59 @@ async def get_live_status(
 async def update_identity(
     router_id: uuid.UUID,
     payload: SystemIdentityUpdateRequest,
+    request: Request,
     claims: dict[str, Any] = Depends(require_roles(*_SYSTEM_ADMIN_ROLES, SystemRoleEnum.SUPPORT_L2)),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
-    """Cambia el identity interno del MikroTik y sincroniza la DB de RoSGrid."""
+    """Cambia el identity interno del MikroTik y sincroniza ros_identity y display_name en la DB de RoSGrid."""
     router_obj, client = await get_router_and_client(router_id, claims, db)
     new_name = payload.name.strip()
+    previous_identity = getattr(router_obj, "ros_identity", None)
+    previous_display_name = getattr(router_obj, "display_name", None)
+
     async with client:
-        res = await client.post("/system/identity/set", json_data={"name": new_name})
+        try:
+            res = await client.post("/system/identity/set", json_data={"name": new_name})
+        except Exception:
+            res = await client.patch("/system/identity", json_data={"name": new_name})
+
     router_obj.ros_identity = new_name
+    if payload.sync_display_name:
+        router_obj.display_name = new_name
+
+    tenant_id = uuid.UUID(str(claims["tid"]))
+    try:
+        redis = get_redis_client()
+        await invalidate_webfig_cache(redis, tenant_id, router_id, "system/identity")
+    except Exception:
+        pass
+
+    actor_sub = claims.get("sub")
+    actor_uid = uuid.UUID(str(actor_sub)) if actor_sub else None
+    client_host = request.client.host if request and getattr(request, "client", None) else "127.0.0.1"
+    await write_audit_log(
+        session=db,
+        tenant_id=tenant_id,
+        actor_user_id=actor_uid,
+        actor_username=str(claims.get("preferred_username") or claims.get("username") or actor_sub or "unknown"),
+        actor_role=str(claims.get("rol", SystemRoleEnum.TENANT_ADMIN.value)),
+        actor_ip=client_host,
+        event_category="WEBFIG_SYSTEM",
+        event_action="SYSTEM_IDENTITY_UPDATED",
+        router_id=getattr(router_obj, "id", router_id),
+        router_display_name=getattr(router_obj, "display_name", new_name),
+        ros_rest_method="POST",
+        ros_rest_endpoint="/rest/system/identity/set",
+        before_state={"ros_identity": previous_identity, "display_name": previous_display_name},
+        after_state={"ros_identity": router_obj.ros_identity, "display_name": router_obj.display_name},
+        status_code=200,
+    )
     await db.commit()
-    return res or {"name": new_name}
+    return res or {
+        "name": new_name,
+        "ros_identity": router_obj.ros_identity,
+        "display_name": router_obj.display_name,
+    }
 
 
 @system_router.get("/users")

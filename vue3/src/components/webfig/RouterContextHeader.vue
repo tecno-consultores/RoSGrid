@@ -85,7 +85,7 @@
         >
           <option value="" disabled>{{ t('webfig.header_switch_router') }}</option>
           <option v-for="r in inventoryStore.routers" :key="r.id" :value="r.id">
-            {{ r.display_name }} ({{ r.ip_address }})
+            {{ r.ros_identity && r.ros_identity !== r.display_name ? `${r.display_name} (${r.ros_identity})` : r.display_name }} ({{ r.ip_address }})
           </option>
         </select>
       </div>

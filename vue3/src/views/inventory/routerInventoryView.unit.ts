@@ -294,6 +294,22 @@ describe('RouterInventoryView.vue — Inventario y Modos Tabla, Mapa y Dividido'
     expect(sslCol).toBeDefined();
     expect(sslCol?.formatter).toBeDefined();
 
+    const nameCol = cols.find((c) => c.key === 'display_name');
+    expect(nameCol).toBeDefined();
+    expect(nameCol?.formatter).toBeDefined();
+    expect(
+      nameCol!.formatter!({
+        display_name: 'Edge-01',
+        ros_identity: 'Edge1-Ident',
+      }),
+    ).toBe('Edge-01 (Edge1-Ident)');
+    expect(
+      nameCol!.formatter!({
+        display_name: 'Edge-02',
+        ros_identity: 'Edge-02',
+      }),
+    ).toBe('Edge-02');
+
     const formattedPending = sslCol!.formatter!({ ssl_trust_status: 'PENDING_TOFU' });
     expect(formattedPending).toBe('Pendiente TOFU');
 

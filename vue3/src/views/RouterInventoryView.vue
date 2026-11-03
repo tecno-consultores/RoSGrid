@@ -97,7 +97,18 @@
 
   // Columnas reactivas para RgDataTable
   const tableColumns = computed<TableColumn<Record<string, unknown>>[]>(() => [
-    { key: 'display_name', label: t('inventory.col_name'), sortable: true },
+    {
+      key: 'display_name',
+      label: t('inventory.col_name'),
+      sortable: true,
+      formatter: (row: Record<string, unknown>) => {
+        const r = row as unknown as RouterItem;
+        if (r.ros_identity && r.ros_identity !== r.display_name) {
+          return `${r.display_name} (${r.ros_identity})`;
+        }
+        return r.display_name;
+      },
+    },
     {
       key: 'network_role',
       label: t('inventory.col_role'),
@@ -280,9 +291,7 @@
   }
 
   onMounted(() => {
-    if (inventoryStore.routers.length === 0) {
-      inventoryStore.fetchRouters();
-    }
+    inventoryStore.fetchRouters();
     inventoryStore.fetchNetworkRoles();
   });
 </script>

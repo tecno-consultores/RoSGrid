@@ -375,6 +375,60 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
     wrapper.unmount();
   });
 
+  it('RouterWebFigLayout — RouterContextHeader refleja inmediatamente cambios reactivos de webFigStore.currentRouter (Spec 67)', async () => {
+    class MockWS {
+      close = vi.fn();
+    }
+    vi.stubGlobal('WebSocket', MockWS);
+
+    const { useWebFigStore } = await import('@/stores/useWebFigStore');
+    const { useInventoryStore } = await import('@/stores/useInventoryStore');
+    const webFigStore = useWebFigStore();
+    const inventoryStore = useInventoryStore();
+
+    const initialRouter: RouterItem = {
+      id: 'r-01',
+      tenant_id: 't-1',
+      display_name: 'Initial-Display',
+      ros_identity: 'Initial-Identity',
+      ip_address: '10.0.0.1',
+      api_port: 443,
+      ros_version: '7.16.1',
+      model: 'CCR2004',
+      is_reachable: true,
+      admin_state: 'PRODUCTION',
+      ssl_trust_status: 'TRUSTED_PINNED',
+    };
+
+    inventoryStore.setRouters([initialRouter]);
+    webFigStore.setCurrentRouter(initialRouter);
+
+    vi.spyOn(http, 'get').mockResolvedValue({
+      status: 200,
+      data: initialRouter,
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(RouterWebFigLayout, {
+      global: { stubs: { RouterView: true } },
+    });
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Initial-Display');
+
+    // Actualizar reactivamente webFigStore.currentRouter sin recargar
+    webFigStore.setCurrentRouter({
+      ...initialRouter,
+      display_name: 'Updated-Live-Display',
+      ros_identity: 'Updated-Live-Identity',
+    });
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Updated-Live-Display');
+
+    wrapper.unmount();
+  });
+
   it('RouterLiveDashboardView — renderiza canvas determinista y cambia ventanas de tiempo', async () => {
     const { useLiveTelemetryStore } = await import('@/stores/useLiveTelemetryStore');
     const telStore = useLiveTelemetryStore();
@@ -433,6 +487,140 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
       await ifaceSelect.setValue('ether2-LAN');
       await ifaceSelect.trigger('change');
     }
+
+    wrapper.unmount();
+  });
+
+  it('RouterLiveDashboardView — modal cambiar identidad precarga datos y sincroniza webFigStore e inventoryStore reactivamente (Spec 67)', async () => {
+    const { useWebFigStore } = await import('@/stores/useWebFigStore');
+    const { useInventoryStore } = await import('@/stores/useInventoryStore');
+    const webFigStore = useWebFigStore();
+    const inventoryStore = useInventoryStore();
+
+    const sampleRouter: RouterItem = {
+      id: 'r-01',
+      tenant_id: 't-1',
+      display_name: 'Edge-Router-01',
+      ros_identity: 'CCR2004-Old',
+      ip_address: '192.168.88.1',
+      api_port: 443,
+      ros_version: '7.16.1',
+      model: 'CCR2004',
+      is_reachable: true,
+      admin_state: 'PRODUCTION',
+      ssl_trust_status: 'TRUSTED_PINNED',
+    };
+
+    webFigStore.setCurrentRouter(sampleRouter);
+    inventoryStore.setRouters([sampleRouter]);
+
+    const patchSpy = vi.spyOn(http, 'patch').mockResolvedValue({
+      status: 200,
+      data: {
+        name: 'CCR2004-NewIdentity',
+        ros_identity: 'CCR2004-NewIdentity',
+        display_name: 'CCR2004-NewIdentity',
+      },
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(RouterLiveDashboardView);
+    await flushPromises();
+
+    // Abrir modal de identidad
+    const btnOpen = wrapper.find('#btn-change-identity');
+    expect(btnOpen.exists()).toBe(true);
+    await btnOpen.trigger('click');
+    await flushPromises();
+
+    // Verificar que el input precargó el identity vigente
+    const inputIdentity = wrapper.find<HTMLInputElement>('#input-router-identity');
+    expect(inputIdentity.exists()).toBe(true);
+    expect(inputIdentity.element.value).toBe('CCR2004-Old');
+
+    // Cambiar el valor del input
+    await inputIdentity.setValue('CCR2004-NewIdentity');
+
+    // Verificar presencia del checkbox de sincronización de display_name
+    const chkSync = wrapper.find<HTMLInputElement>('#chk-sync-display-name');
+    expect(chkSync.exists()).toBe(true);
+    expect(chkSync.element.checked).toBe(true);
+
+    // Enviar el formulario
+    const btnSubmit = wrapper.find('#btn-confirm-identity');
+    expect(btnSubmit.exists()).toBe(true);
+    await btnSubmit.trigger('click');
+    await flushPromises();
+
+    // Comprobar llamada HTTP PATCH
+    expect(patchSpy).toHaveBeenCalledWith(
+      '/api/v1/routers/r-01/webfig/system/identity',
+      {
+        name: 'CCR2004-NewIdentity',
+        sync_display_name: true,
+      },
+    );
+
+    // Comprobar actualización reactiva en stores
+    expect(webFigStore.currentRouter?.ros_identity).toBe('CCR2004-NewIdentity');
+    expect(webFigStore.currentRouter?.display_name).toBe('CCR2004-NewIdentity');
+
+    const invRouter = inventoryStore.routers.find((r) => r.id === 'r-01');
+    expect(invRouter?.ros_identity).toBe('CCR2004-NewIdentity');
+    expect(invRouter?.display_name).toBe('CCR2004-NewIdentity');
+
+    // Comprobar banner de éxito
+    const successBanner = wrapper.find('#banner-identity-success');
+    expect(successBanner.exists()).toBe(true);
+    expect(successBanner.text()).toContain('CCR2004-NewIdentity');
+
+    wrapper.unmount();
+  });
+
+  it('RouterLiveDashboardView — sincronizar hardware actualiza webFigStore e inventoryStore reactivamente (Spec 67)', async () => {
+    const { useWebFigStore } = await import('@/stores/useWebFigStore');
+    const { useInventoryStore } = await import('@/stores/useInventoryStore');
+    const webFigStore = useWebFigStore();
+    const inventoryStore = useInventoryStore();
+
+    const sampleRouter: RouterItem = {
+      id: 'r-01',
+      tenant_id: 't-1',
+      display_name: 'Edge-OldName',
+      ros_identity: 'Identity-Old',
+      ip_address: '192.168.88.1',
+      api_port: 443,
+      ros_version: '7.16.1',
+      model: 'CCR2004',
+      is_reachable: true,
+      admin_state: 'PRODUCTION',
+      ssl_trust_status: 'TRUSTED_PINNED',
+    };
+
+    webFigStore.setCurrentRouter(sampleRouter);
+    inventoryStore.setRouters([sampleRouter]);
+
+    vi.spyOn(http, 'post').mockResolvedValue({
+      status: 200,
+      data: {
+        ...sampleRouter,
+        display_name: 'Identity-Synced',
+        ros_identity: 'Identity-Synced',
+        ros_version: '7.16.2',
+      },
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(RouterLiveDashboardView);
+    await flushPromises();
+
+    const btnSync = wrapper.find('#btn-sync-discovery');
+    expect(btnSync.exists()).toBe(true);
+    await btnSync.trigger('click');
+    await flushPromises();
+
+    expect(webFigStore.currentRouter?.ros_identity).toBe('Identity-Synced');
+    expect(inventoryStore.routers.find((r) => r.id === 'r-01')?.ros_identity).toBe('Identity-Synced');
 
     wrapper.unmount();
   });

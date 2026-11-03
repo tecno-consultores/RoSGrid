@@ -99,7 +99,9 @@ export const useInventoryStore = defineStore('inventory', () => {
         syslog_active: Boolean(item.syslog_active),
         syslog_event_count: Number(item.syslog_event_count || 0),
       }));
-      setRouters(items);
+      if (items.length > 0 || routers.value.length === 0) {
+        setRouters(items);
+      }
     } catch (err) {
       // Directiva Anti-Degradación: Preservar estado previo si ya existían routers en memoria
       if (routers.value.length === 0) {

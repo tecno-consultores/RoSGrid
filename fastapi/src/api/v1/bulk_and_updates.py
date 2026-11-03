@@ -1668,10 +1668,15 @@ async def get_fleet_updates_status(
         else:
             up_to_date_count += 1
 
+        effective_display = (
+            f"{r.display_name} ({r.ros_identity})"
+            if r.ros_identity and r.ros_identity != r.display_name
+            else r.display_name
+        )
         statuses.append(
             RosUpdateRouterStatus(
                 router_id=r.id,
-                display_name=r.display_name,
+                display_name=effective_display,
                 board_name=r.board_name,
                 is_chr=_is_chr_router(r),
                 ros_version=r.ros_version,
@@ -1735,9 +1740,14 @@ async def _probe_single_router_update(
     clean_lat = (latest_ver or "").split()[0].strip()
     has_upd = bool(clean_lat and clean_lat != clean_inst)
     plan = "CHR_OS_ONLY" if is_chr else "ROUTERBOARD_OS_AND_FIRMWARE"
+    effective_display = (
+        f"{r_obj.display_name} ({r_obj.ros_identity})"
+        if r_obj.ros_identity and r_obj.ros_identity != r_obj.display_name
+        else r_obj.display_name
+    )
     return RosUpdateChannelCheckItem(
         router_id=r_obj.id,
-        display_name=r_obj.display_name,
+        display_name=effective_display,
         board_name=r_obj.board_name,
         is_chr=is_chr,
         channel=channel,

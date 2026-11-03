@@ -141,6 +141,10 @@ class QueueTreeUpdateRequest(StrictBaseModel):
 
 class SystemIdentityUpdateRequest(StrictBaseModel):
     name: str = Field(..., min_length=1, max_length=128)
+    sync_display_name: bool = Field(
+        default=True,
+        description="Sincroniza automáticamente display_name con el nuevo identity en el inventario de RoSGrid",
+    )
 
 
 class SystemUserCreateRequest(StrictBaseModel):

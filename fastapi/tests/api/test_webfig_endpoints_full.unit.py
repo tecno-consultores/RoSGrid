@@ -460,14 +460,43 @@ async def test_webfig_system_tools_and_l2(fake_client_and_router: tuple[Router, 
         patch("src.api.v1.webfig_system_tools.get_router_and_client", return_value=(r, client)),
         patch("src.api.v1.webfig_system_tools.cached_mikrotik_get", return_value=[{"name": "admin"}]),
         patch("src.api.v1.webfig_system_tools.execute_safe_mutation", return_value={"ret": "*1"}),
-        patch("src.api.v1.webfig_system_tools.write_audit_log", new_callable=AsyncMock),
+        patch("src.api.v1.webfig_system_tools.write_audit_log", new_callable=AsyncMock) as mock_sys_audit,
         patch("src.api.v1.webfig_system_tools.get_redis_client", return_value=AsyncMock()),
     ):
         client.get.return_value = {"cpu-load": 10, "free-memory": 500000}
         assert await api_wf_systools.get_live_status(r.id, claims=claims, db=db) is not None
-        assert await api_wf_systools.update_identity(
-            r.id, SystemIdentityUpdateRequest(name="Edge-New"), claims=claims, db=db
-        ) == {"ret": "*1"}
+
+        # Test Spec 67: update_identity con sync_display_name=True (default)
+        r.display_name = "Edge-Old"
+        r.ros_identity = "Edge-Old"
+        ident_res = await api_wf_systools.update_identity(
+            r.id, SystemIdentityUpdateRequest(name="Edge-New"), fake_req, claims=claims, db=db
+        )
+        assert ident_res == {"ret": "*1"}
+        assert r.ros_identity == "Edge-New"
+        assert r.display_name == "Edge-New"
+        assert mock_sys_audit.called
+        assert mock_sys_audit.call_args.kwargs["event_action"] == "SYSTEM_IDENTITY_UPDATED"
+
+        # Test Spec 67: update_identity con sync_display_name=False
+        ident_res2 = await api_wf_systools.update_identity(
+            r.id, SystemIdentityUpdateRequest(name="Edge-CustomIdentity", sync_display_name=False), fake_req, claims=claims, db=db
+        )
+        assert ident_res2 == {"ret": "*1"}
+        assert r.ros_identity == "Edge-CustomIdentity"
+        assert r.display_name == "Edge-New"
+
+        # Test Spec 67: fallback de retorno cuando client.post retorna None/{}
+        client.post.return_value = None
+        ident_res3 = await api_wf_systools.update_identity(
+            r.id, SystemIdentityUpdateRequest(name="Edge-DictRet"), fake_req, claims=claims, db=db
+        )
+        assert ident_res3 == {
+            "name": "Edge-DictRet",
+            "ros_identity": "Edge-DictRet",
+            "display_name": "Edge-DictRet",
+        }
+        client.post.return_value = {"ret": "*1"}
 
         client.get.return_value = [{"name": "admin", "group": "full"}]
         assert (await api_wf_systools.list_system_users(r.id, claims=claims, db=db))["users"] == [
@@ -534,6 +563,14 @@ async def test_webfig_system_tools_and_l2(fake_client_and_router: tuple[Router, 
         assert await api_wf_l2.delete_resource(r.id, "interface/vpls", "*1", fake_req, claims=claims, db=db) == {
             "ret": "*1"
         }
+
+        # Test Spec 67: update_singleton_resource para system/identity sincroniza ros_identity y display_name
+        ident_write_req = DynamicLayer2WriteRequest(attributes={"name": "L2-New-Ident"}, enable_safemode=False)
+        await api_wf_l2.update_singleton_resource(
+            r.id, "system/identity", ident_write_req, fake_req, claims=claims, db=db
+        )
+        assert r.ros_identity == "L2-New-Ident"
+        assert r.display_name == "L2-New-Ident"
 
 
 # ============================================================================

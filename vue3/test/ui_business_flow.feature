@@ -796,6 +796,17 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And waitFor(".tenants-management-view")
     And waitFor(".btn-action--edit")
 
+  Scenario: 82. Sincronización Integral de Identidad del Router y Reactividad en Tiempo Real (Hito 28.12)
+    Given driver baseUrl + '/routers/01928000-0000-7000-8000-000000000001/dashboard'
+    And waitFor(".live-dashboard")
+    And waitFor("#btn-change-identity")
+    When click("#btn-change-identity")
+    Then waitFor("#identity-modal-title")
+    And waitFor("#input-router-identity")
+    And waitFor("#chk-sync-display-name")
+    And waitFor("#btn-confirm-identity")
+
+
 
 
 

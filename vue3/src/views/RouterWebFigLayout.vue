@@ -26,6 +26,9 @@
   let wsInstance: WebSocket | null = null;
 
   const currentRouter = computed<RouterItem | null>(() => {
+    if (webFigStore.currentRouter && webFigStore.currentRouter.id === routerId.value) {
+      return webFigStore.currentRouter;
+    }
     return (
       inventoryStore.routers.find((r) => r.id === routerId.value) ||
       webFigStore.currentRouter ||
@@ -37,7 +40,10 @@
     if (!routerId.value) return;
     try {
       const res = await http.get<RouterItem>(`/api/v1/inventory/routers/${routerId.value}`);
-      webFigStore.setCurrentRouter(res.data);
+      if (res.data) {
+        webFigStore.setCurrentRouter(res.data);
+        inventoryStore.updateRouter(res.data);
+      }
     } catch {
       // Si falla la consulta, no se inyectan datos simulados
     }
@@ -111,7 +117,9 @@
 
   function disconnectTelemetryWebSocket() {
     if (wsInstance) {
-      wsInstance.close();
+      if (typeof wsInstance.close === 'function') {
+        wsInstance.close();
+      }
       wsInstance = null;
     }
   }
