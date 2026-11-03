@@ -123,3 +123,25 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
 > 7. **Immediate Remote Push:** Publish to remote repository via `git push origin <current_branch>`.
 >
 > **Under no circumstances** may the agent conclude a response with uncommitted changes or outdated documentation in the working tree.
+
+---
+
+<!-- QA_11X_MCP_CONNECTOR_START -->
+## 🤖 Central QA 11X Skill & MCP Server Connector (`@sinfallas/mcp-qa-11x`)
+
+> **OUTPUT LANGUAGE CONSTRAINT:**
+> Always interact with the user, provide status updates, explain reasoning, and write commit messages / user-facing documentation strictly in Spanish.
+
+This project (`RoSGrid`) enforces the **Level-11X Quality & DevSecOps Standard** via the centralized MCP Server and Global Skills. Before modifying code, running tests, or closing any task, you **MUST**:
+
+1. **Activate Global Skills:** Load `qa-11x-architect` (for all backend, testing, Docker, and DevSecOps tasks) and `refactoring-ui` (for any Vue 3 / React / CSS / UI task).
+2. **Enforce Rule Zero & Active Task Resilience:**
+   - **Rule Zero:** NEVER run `pytest`, `vitest`, `npm`, `pnpm`, `uv`, migrations, or linters directly on the host OS. Execute everything inside ephemeral Docker containers (`docker-compose.qa.yml` / `Makefile`).
+   - **Active Task Invariant:** Track progress in real time inside `.agents/ACTIVE_TASK.md` (`IN_PROGRESS` -> `COMPLETED (100%)`).
+3. **Execute Mandatory MCP Tools (`@sinfallas/mcp-qa-11x`):**
+   - `inspect_project_config` & `audit_test_pyramid_gaps`: Diagnose active stacks (`python`) and missing test layers across the 13-layer pyramid.
+   - `inspect_ast_blast_radius`: Audit incoming dependency edges before modifying shared modules.
+   - `audit_security_stig_owasp`: Certify 0 `CRITICAL`/`HIGH` findings against the 22 DISA ASD STIG V6R5 & OWASP v4.2 patterns.
+   - `run_ephemeral_qa`: Run linters (`--max-warnings 0`), unit tests (`>= 95%` coverage), and Karate Labs BDD scenarios in ephemeral Docker.
+   - `certify_11x_gate` & `clean_workspace_11x`: Certify all closure checks and sanitize root-owned container files before `git commit` and `git push`.
+<!-- QA_11X_MCP_CONNECTOR_END -->
