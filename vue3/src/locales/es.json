@@ -809,6 +809,8 @@
     "th_status": "Estado",
     "th_actions": "Acciones",
     "btn_modules_studio": "⚙️ Módulos Studio",
+    "btn_edit_tenant": "✏️ Editar",
+    "modal_edit_title": "Editar Organización y Cuotas",
     "btn_suspend_tenant": "🚫 Suspender",
     "btn_activate_tenant": "✓ Activar",
     "studio_back": "⬅ Volver a Empresas",

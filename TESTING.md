@@ -2,7 +2,7 @@
 
 **Licencia:** GPL-3.0-only  
 **Estándar Aplicado:** QA Testing Blueprints (Nivel 11X)  
-**Estado Actual:** Hitos 27.12 a 27.19 e Hitos 28.1 a 28.10 Completados y Certificados al 100% en Contenedores Docker Efímeros — Hito 28.10 (Corrección de Conteo de Flota RLS SuperAdmin en Telemetría Beacon, Persistencia de `fleet_bucket` y `router_count` en KeyDB, y Contrato JSON UI en `/admin/tenants`), Hito 28.5 (Paridad Total Backend-Frontend, Conexión de 10 Grupos de Endpoints Huérfanos, 5 Aliases Retrocompatibles, Guardrail `verify_no_orphan_api_endpoints.py`), Remediación CVE y Plantilla Masiva #15 con Auto-Detección CHR (`fastapi/src/api/v1/bulk_and_updates.py`, `FleetCveMatrix.vue`), Activación Interactiva de DHCP Snooping y Option 82 por Bridge con Plantilla #16 (`switching.py`), Telemetría de SLA Real con Autodescubrimiento WAN, Presets Quad9 y Parser Nativo RTT v7 (`sla.py`), Aplicación Estricta de Visibilidad RBAC Zero 403 Dead-Ends (`useAuthStore.ts`, `EnterpriseComplianceView.vue`), Resolución de Serialización Asíncrona `MissingGreenlet` en Detalle de Cajas NAP FTTH (`optical_boxes.py`), Bypass Automático de Caché de Sesión RouterOS v7 en Respaldos `.rsc` (`backups.py`), Aislamiento Estricto de Destinatario en Kill-Switch de Sesiones Activas `SESSION_KILLED` (`websockets.py`), Columnas Auto-Ajustables *Content-Hugging* en `RgDataTable.vue`, 518 pruebas Vitest en 79 suites aprobadas al 100%, 654 pruebas unitarias backend Pytest (100%), 1,172 pruebas unitarias totales, Escenarios BDD 143 Karate API y 80 Karate UI, 0 errores en ruff, mypy y vue-tsc.
+**Estado Actual:** Hitos 27.12 a 27.19 e Hitos 28.1 a 28.11 Completados y Certificados al 100% en Contenedores Docker Efímeros — Hito 28.11 (Homologación de Estilo Táctico del Botón de Bootstrap en `LoginView.vue`, Edición Integral de Empresas / Cuotas Multi-Tenant en `/admin/tenants` y Enriquecimiento de `PATCH /api/v1/tenants/{id}`), Hito 28.10 (Corrección de Conteo de Flota RLS SuperAdmin en Telemetría Beacon, Persistencia de `fleet_bucket` y `router_count` en KeyDB, y Contrato JSON UI en `/admin/tenants`), Hito 28.5 (Paridad Total Backend-Frontend, Conexión de 10 Grupos de Endpoints Huérfanos, 5 Aliases Retrocompatibles, Guardrail `verify_no_orphan_api_endpoints.py`), Remediación CVE y Plantilla Masiva #15 con Auto-Detección CHR (`fastapi/src/api/v1/bulk_and_updates.py`, `FleetCveMatrix.vue`), Activación Interactiva de DHCP Snooping y Option 82 por Bridge con Plantilla #16 (`switching.py`), Telemetría de SLA Real con Autodescubrimiento WAN, Presets Quad9 y Parser Nativo RTT v7 (`sla.py`), Aplicación Estricta de Visibilidad RBAC Zero 403 Dead-Ends (`useAuthStore.ts`, `EnterpriseComplianceView.vue`), Resolución de Serialización Asíncrona `MissingGreenlet` en Detalle de Cajas NAP FTTH (`optical_boxes.py`), Bypass Automático de Caché de Sesión RouterOS v7 en Respaldos `.rsc` (`backups.py`), Aislamiento Estricto de Destinatario en Kill-Switch de Sesiones Activas `SESSION_KILLED` (`websockets.py`), Columnas Auto-Ajustables *Content-Hugging* en `RgDataTable.vue`, 519 pruebas Vitest en 79 suites aprobadas al 100%, 656 pruebas unitarias backend Pytest (100%), 1,175 pruebas unitarias totales, Escenarios BDD 144 Karate API y 81 Karate UI, 0 errores en ruff, mypy y vue-tsc.
 
 ---
 
@@ -194,6 +194,8 @@ docker compose -f docker-compose.qa.yml down --remove-orphans
 | **Hito 27.19** | Arquitectura Dual de Observabilidad Prometheus (`GET /metrics` vs `GET /api/v1/metrics/fleet`), Plantillas Grafana/Prometheus y Beacon Anónimo | **100%** (630 tests Pytest)<br>**100%** (507 tests Vitest en 79 suites)<br>**100%** (130 BDD API / 73 BDD UI) | N/A | 8 Métricas OpenMetrics + Dashboard Grafana + Heartbeat Anónimo + Overrides RBAC | ✅ **Certificado** |
 | **Hito 28 (28.2, 28.3, 28.7, 28.8)** | Estabilidad UAT: Serialización Cajas NAP FTTH (`MissingGreenlet` Fix), Contrato Registro Técnico Campo, Bypass Stale Session en Respaldos `.rsc` (`ftp`), Aislamiento Kill-Switch WebSockets y Ergonomía *Content-Hugging* en Tablas | **100%** (633 tests Pytest)<br>**100%** (509 tests Vitest en 79 suites)<br>**100%** (132 BDD API / 75 BDD UI) | N/A | Zero Greenlet Leaks + Ephemeral Session RSC Bypass + Scoped KillSwitch + Auto-Fit Columns | ✅ **Certificado** |
 | **Hito 28.5** | Paridad Total Backend-Frontend, Conexión de 10 Grupos de Endpoints Huérfanos, 5 Aliases de Ruta Retrocompatibles, Form-Wrapping L2 Safe Mode y Guardrail Automático Anti-Huérfanos (`verify_no_orphan_api_endpoints.py`) | **100%** (651 tests Pytest)<br>**100%** (516 tests Vitest en 79 suites)<br>**100%** (142 BDD API / 80 BDD UI) | N/A | Zero Orphan Endpoints + 5 Backward Aliases + L2 Singleton Support + Auto Guardrail 11X | ✅ **Certificado** |
+| **Hito 28.10** | Corrección de Conteo de Flota RLS SuperAdmin en Telemetría Beacon, Persistencia de `fleet_bucket` / `router_count` en KeyDB y Contrato JSON UI en `/admin/tenants` (`telemetry_beacon_worker.py`, `TenantsManagementView.vue`) | **100%** (654 tests Pytest)<br>**100%** (518 tests Vitest en 79 suites)<br>**100%** (143 BDD API / 80 BDD UI) | N/A | RLS SuperAdmin Bypass + Redis Persistence + JSON Contract Alignment + Tactical NOC Styling | ✅ **Certificado** |
+| **Hito 28.11** | Homologación de Estilo Táctico Bootstrap (`LoginView.vue`), Edición Integral de Empresas y Cuotas Multi-Tenant (`TenantsManagementView.vue`), Exposición de Conteos y Validación de Slug (`PATCH /api/v1/tenants/{id}`) | **100%** (656 tests Pytest)<br>**100%** (519 tests Vitest en 79 suites)<br>**100%** (144 BDD API / 81 BDD UI) | N/A | Tactical Bootstrap Button + Full Tenant Edit Modal + Slug Uniqueness 409 Conflict + WORM Audit | ✅ **Certificado** |
 
 ---
 
@@ -2196,15 +2198,15 @@ Conforme a la Especificación 43 v2.0.0 y la directiva `.agents/rules/ground_tru
 
 9. **Escenarios BDD Karate Labs:**
    - **API REST (`fastapi/test/api_test.feature` y réplica en `docs/examples/fastapi/test/api_test.feature`):**
-     - Escenarios 131 al 136 cubriendo NAP detail, backup bypass, auto-detección CHR, DHCP snooping, SLA targets y paridad de permisos RBAC.
+     - Escenarios 131 al 144 cubriendo NAP detail, backup bypass, auto-detección CHR, DHCP snooping, SLA targets, paridad de permisos RBAC, endpoints huérfanos, telemetría anónima de beacon y edición integral de cuotas multi-tenant.
    - **UI WebFig / NOC (`vue3/test/ui_business_flow.feature` y réplica en `docs/examples/vue3/test/ui_business_flow.feature`):**
-     - Escenarios 74 al 79 cubriendo aislamiento de kill-switch, ergonomía de inventario, remediación CVE, DHCP snooping interactivo, SLA real y visibilidad estricta RBAC.
+     - Escenarios 74 al 81 cubriendo aislamiento de kill-switch, ergonomía de inventario, remediación CVE, DHCP snooping interactivo, SLA real, visibilidad estricta RBAC, telemetría beacon y botón de edición táctica de empresa.
 
 10. **Totales de Aseguramiento de Calidad:**
-    - **Pruebas Unitarias Backend:** 644 de 644 pruebas PASADAS (100% pass rate).
-    - **Pruebas Unitarias Frontend:** 516 de 516 pruebas PASADAS en 79 suites (100% pass rate).
-    - **Total Pruebas Unitarias:** 1,160 pruebas.
-    - **Escenarios BDD Karate Labs:** 136 en API REST y 79 en UI WebFig.
+    - **Pruebas Unitarias Backend:** 656 de 656 pruebas PASADAS (100% pass rate).
+    - **Pruebas Unitarias Frontend:** 519 de 519 pruebas PASADAS en 79 suites (100% pass rate).
+    - **Total Pruebas Unitarias:** 1,175 pruebas.
+    - **Escenarios BDD Karate Labs:** 144 en API REST y 81 en UI WebFig.
     - **Linters y Tipado Estático:** 0 errores en `ruff check`, 0 errores en `mypy` (121 archivos) y 0 errores en `vue-tsc`.
 
 

@@ -174,6 +174,7 @@ export interface TenantItem {
   active_routers_count: number;
   active_users_count: number;
   default_safemode_seconds: number;
+  require_2fa_all_users?: boolean;
   created_at?: string;
   features?: Partial<TenantFeatureFlags>;
 }

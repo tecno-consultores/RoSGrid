@@ -6,7 +6,7 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_current_user_claims, require_roles
@@ -14,6 +14,7 @@ from src.core.audit import audit_actor_from_claims, write_audit_log
 from src.core.crypto import hash_password
 from src.db.session import get_db_session, set_tenant_context
 from src.models.core import SystemRoleEnum, Tenant, TenantStatusEnum, User
+from src.models.inventory import Router
 from src.models.operations import AuditLog
 from src.redis_layer.client import get_redis_client
 from src.schemas.audit import AuditLogResponse
@@ -31,6 +32,31 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/tenants", tags=["Tenants"])
 
 
+async def _load_tenant_or_404(db: AsyncSession, tenant_id: uuid.UUID) -> Tenant:
+    await set_tenant_context(db, None, is_superadmin=True)
+    res = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
+    tenant = res.scalar_one_or_none()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant no encontrado")
+    return tenant
+
+
+async def _populate_tenant_counts(db: AsyncSession, tenants: list[Tenant]) -> None:
+    """Enriquece cada Tenant con el conteo real de routers y usuarios activos (CC = 4)."""
+    if not tenants or not isinstance(db, AsyncSession):
+        return
+    try:
+        r_res = await db.execute(select(Router.tenant_id, func.count(Router.id)).group_by(Router.tenant_id))
+        r_counts = {row[0]: int(row[1]) for row in r_res.all()}
+        u_res = await db.execute(select(User.tenant_id, func.count(User.id)).group_by(User.tenant_id))
+        u_counts = {row[0]: int(row[1]) for row in u_res.all()}
+        for t in tenants:
+            t.active_routers_count = r_counts.get(t.id, 0)  # type: ignore[attr-defined]
+            t.active_users_count = u_counts.get(t.id, 0)  # type: ignore[attr-defined]
+    except Exception as exc:
+        logger.debug("Conteo de cuotas de tenant omitido: %s", exc)
+
+
 @router.get("", response_model=list[TenantResponse])
 async def list_tenants(
     claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)),
@@ -40,16 +66,16 @@ async def list_tenants(
     if user_role == SystemRoleEnum.SUPERADMIN_GLOBAL.value:
         await set_tenant_context(db, None, is_superadmin=True)
         stmt = select(Tenant).order_by(Tenant.created_at.desc())
-        result = await db.execute(stmt)
-        return [TenantResponse.model_validate(t) for t in result.scalars().all()]
     else:
         user_tid = claims.get("tid")
         if not user_tid:
             raise HTTPException(status_code=403, detail="Contexto de empresa no disponible")
         await set_tenant_context(db, uuid.UUID(str(user_tid)), is_superadmin=False)
         stmt = select(Tenant).where(Tenant.id == uuid.UUID(str(user_tid)))
-        result = await db.execute(stmt)
-        return [TenantResponse.model_validate(t) for t in result.scalars().all()]
+    result = await db.execute(stmt)
+    items = list(result.scalars().all())
+    await _populate_tenant_counts(db, items)
+    return [TenantResponse.model_validate(t) for t in items]
 
 
 @router.get("/{tenant_id}", response_model=TenantResponse)
@@ -63,22 +89,9 @@ async def get_tenant(
     if user_role != SystemRoleEnum.SUPERADMIN_GLOBAL.value and str(user_tid) != str(tenant_id):
         raise HTTPException(status_code=403, detail="No autorizado para consultar esta empresa")
 
-    await set_tenant_context(db, None, is_superadmin=True)
-    stmt = select(Tenant).where(Tenant.id == tenant_id)
-    res = await db.execute(stmt)
-    tenant = res.scalar_one_or_none()
-    if not tenant:
-        raise HTTPException(status_code=404, detail="Tenant no encontrado")
+    tenant = await _load_tenant_or_404(db, tenant_id)
+    await _populate_tenant_counts(db, [tenant])
     return TenantResponse.model_validate(tenant)
-
-
-async def _load_tenant_or_404(db: AsyncSession, tenant_id: uuid.UUID) -> Tenant:
-    await set_tenant_context(db, None, is_superadmin=True)
-    res = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
-    tenant = res.scalar_one_or_none()
-    if not tenant:
-        raise HTTPException(status_code=404, detail="Tenant no encontrado")
-    return tenant
 
 
 async def invalidate_tenant_features_cache(tenant_id: uuid.UUID) -> None:
@@ -307,32 +320,57 @@ async def create_tenant(
     return TenantResponse.model_validate(new_tenant)
 
 
+async def _validate_unique_tenant_slug(db: AsyncSession, tenant: Tenant, new_slug: str) -> str:
+    """Verifica que el nuevo slug no esté asignado a otra organización (CC = 4)."""
+    clean_slug = new_slug.strip().lower()
+    if clean_slug == tenant.slug:
+        return clean_slug
+    res = await db.execute(select(Tenant).where(Tenant.slug == clean_slug, Tenant.id != tenant.id))
+    conflict = res.scalar_one_or_none()
+    if conflict and conflict.id != tenant.id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Ya existe una organización con el slug '{clean_slug}'",
+        )
+    return clean_slug
+
+
+async def _apply_tenant_updates(
+    db: AsyncSession, tenant: Tenant, update_data: dict[str, Any]
+) -> dict[str, Any]:
+    """Aplica las modificaciones de metadatos/cuotas sobre el Tenant y retorna before_state (CC = 3)."""
+    before_state = {field: getattr(tenant, field, None) for field in update_data}
+    if update_data.get("slug"):
+        update_data["slug"] = await _validate_unique_tenant_slug(db, tenant, str(update_data["slug"]))
+    for field, value in update_data.items():
+        setattr(tenant, field, value)
+    return before_state
+
+
 @router.patch("/{tenant_id}", response_model=TenantResponse)
 async def update_tenant(
     tenant_id: uuid.UUID,
     body: UpdateTenantRequest,
+    request: Request = None,  # type: ignore[assignment]
     claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL)),
     db: AsyncSession = Depends(get_db_session),
 ) -> TenantResponse:
-    await set_tenant_context(db, None, is_superadmin=True)
-    stmt = select(Tenant).where(Tenant.id == tenant_id)
-    res = await db.execute(stmt)
-    tenant = res.scalar_one_or_none()
-    if not tenant:
-        raise HTTPException(status_code=404, detail="Tenant no encontrado")
-
+    tenant = await _load_tenant_or_404(db, tenant_id)
     update_data = body.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(tenant, field, value)
+    before_state = await _apply_tenant_updates(db, tenant, update_data)
 
+    actor = audit_actor_from_claims(claims, request)
+    actor["tenant_id"] = tenant.id
+    await write_audit_log(
+        session=db,
+        **actor,
+        event_category="GOVERNANCE",
+        event_action="TENANT_UPDATED",
+        before_state=before_state,
+        after_state=update_data,
+    )
     await db.commit()
     await db.refresh(tenant)
-
-    # Invalidar caché de features en KeyDB
-    redis = get_redis_client()
-    try:
-        await redis.delete(f"rg:{tenant_id}:features")
-    except Exception as ex:
-        logger.warning(f"Error al invalidar caché de features en redis: {ex}")
-
+    await invalidate_tenant_features_cache(tenant_id)
+    await _populate_tenant_counts(db, [tenant])
     return TenantResponse.model_validate(tenant)

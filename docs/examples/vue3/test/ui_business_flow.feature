@@ -791,6 +791,11 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And waitFor("#btn-sync-discovery")
     And waitFor("#btn-reboot-router")
 
+  Scenario: 81. Homologación de Estilo Táctico Bootstrap y Edición de Empresas / Cuotas (Hito 28.11)
+    Given driver baseUrl + '/admin/tenants'
+    And waitFor(".tenants-management-view")
+    And waitFor(".btn-action--edit")
+
 
 
 

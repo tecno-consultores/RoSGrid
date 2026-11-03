@@ -649,7 +649,12 @@
           />
         </div>
 
-        <button type="submit" class="btn btn-primary" :disabled="isLoading">
+        <button
+          id="btn-bootstrap-submit"
+          type="submit"
+          class="btn-submit btn btn-primary"
+          :disabled="isLoading"
+        >
           <span v-if="isLoading" class="spinner" aria-hidden="true"></span>
           <span>{{
             isLoading ? 'Inicializando...' : 'Crear Super Administrador y Continuar'
@@ -1279,7 +1284,8 @@
     text-align: center;
   }
 
-  .btn-submit {
+  .btn-submit,
+  .btn-primary {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1295,14 +1301,18 @@
     cursor: pointer;
     transition:
       background-color 0.2s,
+      box-shadow 0.2s,
       opacity 0.2s;
   }
 
-  .btn-submit:hover:not(:disabled) {
+  .btn-submit:hover:not(:disabled),
+  .btn-primary:hover:not(:disabled) {
     background-color: #38bdf8;
+    box-shadow: var(--rg-cyan-glow, 0 0 12px rgba(6, 182, 212, 0.28));
   }
 
-  .btn-submit:disabled {
+  .btn-submit:disabled,
+  .btn-primary:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }

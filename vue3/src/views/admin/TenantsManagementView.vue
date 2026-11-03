@@ -33,6 +33,74 @@
     default_safemode_seconds: 60,
   });
 
+  // Modal de Editar Empresa
+  const isEditModalOpen = ref(false);
+  const isUpdating = ref(false);
+  const editingTenant = ref({
+    id: '',
+    slug: '',
+    name: '',
+    tax_id: '',
+    max_routers_quota: 50,
+    max_users_quota: 20,
+    default_safemode_seconds: 60,
+    require_2fa_all_users: true,
+  });
+
+  function openEditTenantModal(tenant: TenantItem): void {
+    errorMessage.value = '';
+    editingTenant.value = {
+      id: tenant.id,
+      slug: tenant.slug,
+      name: tenant.name,
+      tax_id: tenant.tax_id || '',
+      max_routers_quota: tenant.max_routers_quota ?? 50,
+      max_users_quota: tenant.max_users_quota ?? 20,
+      default_safemode_seconds: tenant.default_safemode_seconds ?? 60,
+      require_2fa_all_users: tenant.require_2fa_all_users ?? true,
+    };
+    isEditModalOpen.value = true;
+  }
+
+  async function handleUpdateTenant(): Promise<void> {
+    if (!editingTenant.value.id) return;
+    isUpdating.value = true;
+    errorMessage.value = '';
+    try {
+      const payload = {
+        name: editingTenant.value.name.trim(),
+        slug: editingTenant.value.slug.trim().toLowerCase(),
+        tax_id: editingTenant.value.tax_id.trim() || null,
+        max_routers_quota: Number(editingTenant.value.max_routers_quota),
+        max_users_quota: Number(editingTenant.value.max_users_quota),
+        default_safemode_seconds: Number(editingTenant.value.default_safemode_seconds),
+        require_2fa_all_users: Boolean(editingTenant.value.require_2fa_all_users),
+      };
+      const res = await http.patch<TenantItem>(
+        `/api/v1/tenants/${editingTenant.value.id}`,
+        payload,
+      );
+      const idx = tenants.value.findIndex((item) => item.id === editingTenant.value.id);
+      if (idx !== -1) {
+        tenants.value[idx] = {
+          ...tenants.value[idx],
+          ...payload,
+          ...(res.data || {}),
+          tax_id: res.data?.tax_id ?? (payload.tax_id || undefined),
+        };
+      }
+      await loadTenants();
+      isEditModalOpen.value = false;
+      successMessage.value = `Datos y cuotas de "${payload.name}" actualizados exitosamente.`;
+    } catch (err: unknown) {
+      const error = err as { message?: string; detail?: string };
+      errorMessage.value =
+        error.detail || error.message || 'Error al actualizar los datos de la empresa.';
+    } finally {
+      isUpdating.value = false;
+    }
+  }
+
   function goToTenantModules(tenant: TenantItem): void {
     router.push(`/admin/tenants/${tenant.id}/modules`);
   }
@@ -279,12 +347,12 @@
                 <div
                   class="quota-bar-fill"
                   :style="{
-                    width: `${Math.min(100, (tenant.active_routers_count / tenant.max_routers_quota) * 100)}%`,
+                    width: `${Math.min(100, ((tenant.active_routers_count ?? 0) / Math.max(1, tenant.max_routers_quota)) * 100)}%`,
                   }"
                 ></div>
               </div>
               <span class="quota-text"
-                >{{ tenant.active_routers_count }} / {{ tenant.max_routers_quota }}</span
+                >{{ tenant.active_routers_count ?? 0 }} / {{ tenant.max_routers_quota }}</span
               >
             </td>
             <td class="cell-quota">
@@ -292,14 +360,24 @@
                 <div
                   class="quota-bar-fill"
                   :style="{
-                    width: `${Math.min(100, (tenant.active_users_count / tenant.max_users_quota) * 100)}%`,
+                    width: `${Math.min(100, ((tenant.active_users_count ?? 0) / Math.max(1, tenant.max_users_quota)) * 100)}%`,
                   }"
                 ></div>
               </div>
-              <span class="quota-text">{{ tenant.active_users_count }} / {{ tenant.max_users_quota }}</span>
+              <span class="quota-text">{{ tenant.active_users_count ?? 0 }} / {{ tenant.max_users_quota }}</span>
             </td>
             <td class="cell-safemode">{{ tenant.default_safemode_seconds }}s</td>
             <td class="col-actions">
+              <button
+                v-if="authStore.currentRole === 'SUPERADMIN_GLOBAL'"
+                :id="`btn-edit-tenant-${tenant.slug}`"
+                type="button"
+                class="btn-action btn-action--edit"
+                :aria-label="`Editar datos y cuotas de ${tenant.name}`"
+                @click="openEditTenantModal(tenant)"
+              >
+                {{ t('tenants_mgmt.btn_edit_tenant', '✏️ Editar') }}
+              </button>
               <button
                 type="button"
                 class="btn-action btn-action--features"
@@ -460,6 +538,140 @@
             </button>
             <button type="submit" class="btn-submit" :disabled="isCreating">
               {{ isCreating ? 'Creando...' : 'Crear Organización' }}
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal de Edición de Empresa y Cuotas -->
+    <div
+      v-if="isEditModalOpen"
+      id="modal-edit-tenant"
+      class="rg-modal-backdrop"
+      @click.self="isEditModalOpen = false"
+    >
+      <div class="rg-modal" role="dialog" aria-modal="true" aria-labelledby="modal-edit-tenant-title">
+        <header class="modal-header">
+          <h2 id="modal-edit-tenant-title" class="modal-title">
+            {{ t('tenants_mgmt.modal_edit_title', 'Editar Organización y Cuotas') }}
+          </h2>
+          <button
+            type="button"
+            class="btn-close"
+            aria-label="Cerrar modal de edición"
+            @click="isEditModalOpen = false"
+          >
+            ✕
+          </button>
+        </header>
+
+        <form id="form-edit-tenant" class="modal-form" @submit.prevent="handleUpdateTenant">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="edit-tenant-name" class="form-label">Nombre Comercial *</label>
+              <input
+                id="edit-tenant-name"
+                v-model="editingTenant.name"
+                type="text"
+                required
+                minlength="2"
+                class="form-input"
+              />
+            </div>
+            <div class="form-group">
+              <label for="edit-tenant-slug" class="form-label">Slug de Subdominio *</label>
+              <input
+                id="edit-tenant-slug"
+                v-model="editingTenant.slug"
+                type="text"
+                required
+                pattern="[a-z0-9-]+"
+                class="form-input"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="edit-tenant-tax-id" class="form-label">RIF / Identificación Fiscal</label>
+              <input
+                id="edit-tenant-tax-id"
+                v-model="editingTenant.tax_id"
+                type="text"
+                placeholder="ej. J-12345678-9"
+                class="form-input"
+              />
+            </div>
+            <div class="form-group">
+              <label for="edit-tenant-safemode" class="form-label">
+                Safe Mode por Defecto (segundos)
+              </label>
+              <input
+                id="edit-tenant-safemode"
+                v-model.number="editingTenant.default_safemode_seconds"
+                type="number"
+                min="10"
+                max="300"
+                required
+                class="form-input"
+              />
+            </div>
+          </div>
+
+          <fieldset class="form-fieldset">
+            <legend class="fieldset-legend">Cuotas de Hardware y Operadores</legend>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="edit-max-routers" class="form-label">Límite de Routers *</label>
+                <input
+                  id="edit-max-routers"
+                  v-model.number="editingTenant.max_routers_quota"
+                  type="number"
+                  min="1"
+                  required
+                  class="form-input"
+                />
+              </div>
+              <div class="form-group">
+                <label for="edit-max-users" class="form-label">Límite de Usuarios *</label>
+                <input
+                  id="edit-max-users"
+                  v-model.number="editingTenant.max_users_quota"
+                  type="number"
+                  min="1"
+                  required
+                  class="form-input"
+                />
+              </div>
+            </div>
+            <label class="switch-row" for="edit-require-2fa">
+              <input
+                id="edit-require-2fa"
+                v-model="editingTenant.require_2fa_all_users"
+                type="checkbox"
+                class="switch-input"
+              />
+              <span>Exigir autenticación 2FA TOTP obligatoria para todos los usuarios</span>
+            </label>
+          </fieldset>
+
+          <footer class="modal-footer">
+            <button
+              id="btn-cancel-edit-tenant"
+              type="button"
+              class="btn-cancel"
+              @click="isEditModalOpen = false"
+            >
+              Cancelar
+            </button>
+            <button
+              id="btn-save-edit-tenant"
+              type="submit"
+              class="btn-submit"
+              :disabled="isUpdating"
+            >
+              {{ isUpdating ? 'Guardando...' : 'Guardar Cambios' }}
             </button>
           </footer>
         </form>
@@ -890,6 +1102,12 @@
     width: 16px;
     height: 16px;
     cursor: pointer;
+  }
+
+  .btn-action--edit {
+    border-color: var(--rg-accent-cyan, #22d3ee);
+    color: var(--rg-accent-cyan, #22d3ee);
+    margin-right: 6px;
   }
 
   .btn-action--features {

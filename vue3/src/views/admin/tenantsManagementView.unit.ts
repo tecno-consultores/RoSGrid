@@ -388,4 +388,71 @@ describe('TenantsManagementView.vue — Gestión de Empresas Multi-Tenant', () =
     expect(wrapper.find('.banner--success').text()).toContain('Latido de telemetría emitido con éxito.');
     expect(beaconCard.text()).toContain(new Date('2026-11-01T23:15:00Z').toLocaleString());
   });
+
+  it('permite editar los datos y cuotas de una organización existente vía PATCH /api/v1/tenants/:id (Hito 28.11)', async () => {
+    const mockTenants = [
+      {
+        id: 't-01',
+        slug: 'isp-norte',
+        name: 'ISP Norte',
+        tax_id: 'J-12345678-0',
+        status: 'ACTIVE',
+        max_routers_quota: 50,
+        max_users_quota: 20,
+        active_routers_count: 5,
+        active_users_count: 2,
+        default_safemode_seconds: 60,
+        require_2fa_all_users: true,
+      },
+    ];
+
+    vi.spyOn(http, 'get').mockResolvedValue({
+      status: 200,
+      data: { items: mockTenants },
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(TenantsManagementView);
+    await flushPromises();
+
+    const editBtn = wrapper.find('#btn-edit-tenant-isp-norte');
+    expect(editBtn.exists()).toBe(true);
+    await editBtn.trigger('click');
+
+    expect(wrapper.find('#modal-edit-tenant').exists()).toBe(true);
+    await wrapper.find('#edit-tenant-name').setValue('ISP Norte Renovado C.A.');
+    await wrapper.find('#edit-tenant-tax-id').setValue('J-99999999-9');
+    await wrapper.find('#edit-max-routers').setValue('150');
+    await wrapper.find('#edit-max-users').setValue('45');
+    await wrapper.find('#edit-tenant-safemode').setValue('45');
+
+    const patchSpy = vi.spyOn(http, 'patch').mockResolvedValueOnce({
+      status: 200,
+      data: {
+        ...mockTenants[0],
+        name: 'ISP Norte Renovado C.A.',
+        tax_id: 'J-99999999-9',
+        max_routers_quota: 150,
+        max_users_quota: 45,
+        default_safemode_seconds: 45,
+      },
+      headers: new Headers(),
+    });
+
+    await wrapper.find('#form-edit-tenant').trigger('submit');
+    await flushPromises();
+
+    expect(patchSpy).toHaveBeenCalledWith(
+      '/api/v1/tenants/t-01',
+      expect.objectContaining({
+        name: 'ISP Norte Renovado C.A.',
+        slug: 'isp-norte',
+        tax_id: 'J-99999999-9',
+        max_routers_quota: 150,
+        max_users_quota: 45,
+        default_safemode_seconds: 45,
+      }),
+    );
+    expect(wrapper.text()).toContain('Datos y cuotas de "ISP Norte Renovado C.A." actualizados exitosamente.');
+  });
 });

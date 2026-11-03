@@ -434,6 +434,9 @@ describe('LoginView.vue — Autenticación Multi-Tenant en 2 Etapas y 2FA TOTP',
 
     expect(wrapper.find('#bootstrap-tenant-name').exists()).toBe(true);
     expect(wrapper.find('h2').text()).toContain('Configuración Inicial de RoSGrid');
+    const submitBtn = wrapper.find('#btn-bootstrap-submit');
+    expect(submitBtn.exists()).toBe(true);
+    expect(submitBtn.classes()).toContain('btn-submit');
   });
 
   it('valida campos obligatorios y contraseñas en el formulario de bootstrap', async () => {

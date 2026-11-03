@@ -172,15 +172,73 @@ async def test_tenants_crud_endpoints(async_client: AsyncClient, superadmin_auth
         res_create = await async_client.post("/api/v1/tenants", json=body_create, headers=idemp_headers)
         assert res_create.status_code == 201
 
-        # 3. Modificar tenant
+        # 3. Modificar tenant (incluyendo cuotas, slug, tax_id y safemode de 10s)
         app.dependency_overrides[get_db_session] = lambda: db
         patch_headers = {**headers, "Idempotency-Key": str(uuid.uuid4())}
         res_patch = await async_client.patch(
             f"/api/v1/tenants/{t.id}",
-            json={"name": "Corp One Updated"},
+            json={
+                "name": "Corp One Updated",
+                "slug": "corp-1-updated",
+                "tax_id": "J-12345678-0",
+                "max_routers_quota": 120,
+                "max_users_quota": 40,
+                "default_safemode_seconds": 10,
+            },
             headers=patch_headers,
         )
         assert res_patch.status_code == 200
+        patched_json = res_patch.json()
+        assert patched_json["name"] == "Corp One Updated"
+        assert patched_json["slug"] == "corp-1-updated"
+        assert patched_json["tax_id"] == "J-12345678-0"
+        assert patched_json["max_routers_quota"] == 120
+        assert patched_json["max_users_quota"] == 40
+        assert patched_json["default_safemode_seconds"] == 10
+        assert "active_routers_count" in patched_json
+        assert "active_users_count" in patched_json
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)
+
+
+@pytest.mark.asyncio
+async def test_update_tenant_slug_conflict(async_client: AsyncClient, superadmin_auth: dict[str, str]) -> None:
+    headers = {"Authorization": superadmin_auth["Authorization"]}
+    t1 = Tenant()
+    t1.id = uuid.uuid4()
+    t1.slug = "corp-1"
+    t1.name = "Corp One"
+    t1.status = TenantStatusEnum.ACTIVE
+    t1.max_routers_quota = 50
+    t1.max_users_quota = 20
+    t1.require_2fa_all_users = True
+    t1.default_safemode_seconds = 60
+    now = datetime.now(UTC)
+    t1.created_at = now
+    t1.updated_at = now
+
+    t2 = Tenant()
+    t2.id = uuid.uuid4()
+    t2.slug = "corp-2"
+    t2.name = "Corp Two"
+
+    class ConflictMockDb(MockDbSession):
+        async def execute(self, stmt: Any, params: dict[str, Any] | None = None) -> MockDbResult:
+            stmt_str = str(stmt).lower()
+            if "tenants.slug ==" in stmt_str or "tenants.slug =" in stmt_str:
+                return MockDbResult(t2, [t2])
+            return await super().execute(stmt, params)
+
+    db = ConflictMockDb(tenants=[t1])
+    app.dependency_overrides[get_db_session] = lambda: db
+    try:
+        res = await async_client.patch(
+            f"/api/v1/tenants/{t1.id}",
+            json={"slug": "corp-2"},
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res.status_code == 409
+        assert "Ya existe una organización con el slug 'corp-2'" in res.json()["detail"]
     finally:
         app.dependency_overrides.pop(get_db_session, None)
 

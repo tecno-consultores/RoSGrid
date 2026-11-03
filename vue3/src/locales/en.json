@@ -809,6 +809,8 @@
     "th_status": "Status",
     "th_actions": "Actions",
     "btn_modules_studio": "⚙️ Modules Studio",
+    "btn_edit_tenant": "✏️ Edit",
+    "modal_edit_title": "Edit Organization & Quotas",
     "btn_suspend_tenant": "🚫 Suspend",
     "btn_activate_tenant": "✓ Activate",
     "studio_back": "⬅ Back to Enterprises",

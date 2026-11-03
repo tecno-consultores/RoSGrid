@@ -1123,6 +1123,14 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 144. Edición Integral de Empresa y Cuotas Multi-Tenant: PATCH /api/v1/tenants/{id} sin autenticación devuelve 401 (Hito 28.11)
+    Given path '/api/v1/tenants/01928000-0000-7000-8000-000000000001'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000146'
+    And request { name: 'Empresa Principal Editada', slug: 'master-hq', tax_id: 'J-12345678-9', max_routers_quota: 150, max_users_quota: 50, default_safemode_seconds: 30 }
+    When method patch
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
 
 
 

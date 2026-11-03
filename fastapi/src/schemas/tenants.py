@@ -100,13 +100,16 @@ class UpdateTenantFeaturesRequest(BaseModel):
 
 
 class UpdateTenantRequest(UpdateTenantFeaturesRequest):
+    slug: str | None = Field(
+        None, min_length=2, max_length=64, pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    )
     name: str | None = Field(None, min_length=2, max_length=150)
     tax_id: str | None = None
     status: TenantStatusEnum | None = None
     max_routers_quota: int | None = Field(None, gt=0)
     max_users_quota: int | None = Field(None, gt=0)
     require_2fa_all_users: bool | None = None
-    default_safemode_seconds: int | None = Field(None, ge=15, le=300)
+    default_safemode_seconds: int | None = Field(None, ge=10, le=300)
 
 
 class TenantFeatureFlagsMixin(BaseModel):
@@ -145,6 +148,9 @@ class TenantFeatureFlagsMixin(BaseModel):
         for key, default in TENANT_FEATURE_DEFAULTS.items():
             if merged.get(key) is None:
                 merged[key] = default
+        for count_key in ("active_routers_count", "active_users_count"):
+            if count_key in cls.model_fields and merged.get(count_key) is None:
+                merged[count_key] = 0
         return merged
 
 
@@ -160,6 +166,8 @@ class TenantResponse(TenantFeatureFlagsMixin):
     status: TenantStatusEnum
     max_routers_quota: int
     max_users_quota: int
+    active_routers_count: int = 0
+    active_users_count: int = 0
     require_2fa_all_users: bool
     default_safemode_seconds: int
     created_at: datetime
