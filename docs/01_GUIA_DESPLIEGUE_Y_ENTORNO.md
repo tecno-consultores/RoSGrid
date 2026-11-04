@@ -74,6 +74,15 @@ chmod 600 .env
 | `ROSGRID_MCP_RATE_LIMIT_PER_MIN` | Entero | `30` | Límite de peticiones MCP por minuto por cuenta `SERVICE_ACCOUNT`. |
 | `ROSGRID_CORS_ORIGINS` | String | `*` | Lista de orígenes permitidos separados por comas para despliegues con Backend y Frontend en servidores separados (ej. `https://app.tuempresa.com,http://localhost:8080`). |
 | `ROSGRID_CROSS_ORIGIN_COOKIES` | Booleano | `false` | Si es `true`, emite cookies de sesión sin prefijo `__Host-` con `SameSite=None; Secure` para permitir autenticación cross-domain. |
+| `ROSGRID_TELEMETRY_BEACON_ENABLED` | Booleano | `true` | Habilita el beacon anónimo de latido de instancia activa (Spec 55 / Hito 27.18) con tolerancia air-gapped y zero-PII. |
+| `ROSGRID_TELEMETRY_BEACON_URL` | String | `https://rosgrid.net/api/telemetry/heartbeat` | Endpoint remoto oficial para el latido anónimo de telemetría de versiones. |
+| `ROSGRID_TELEMETRY_BEACON_INTERVAL_SECONDS` | Entero | `21600` | Frecuencia en segundos entre latidos de telemetría anónima (por defecto cada 6 horas). |
+| `ROSGRID_CVE_NVD_API_URL` | String | `https://services.nvd.nist.gov/rest/json/cves/2.0` | URL base del conector oficial NIST NVD REST API v2.0 (Spec 71 / Hito 29.1). |
+| `ROSGRID_CVE_NVD_API_KEY` | String | `None` | API Key opcional de NIST NVD para elevar el rate limit de 5 req/30s a 50 req/30s. |
+| `ROSGRID_CVE_NVD_SYNC_ENABLED` | Booleano | `true` | Conmutador global para activar/desactivar la ingesta cruzada desde NIST NVD v2.0. |
+| `ROSGRID_CVE_NVD_RESULTS_PER_PAGE` | Entero | `200` | Cantidad de registros CVE consultados por página en peticiones REST a NIST NVD. |
+| `ROSGRID_DIAGNOSTIC_LOG_RING_SIZE` | Entero | `1000` | Tamaño máximo del búfer circular en memoria para bitácoras operativas de diagnóstico (Spec 72). |
+| `ROSGRID_SIEM_FORWARDER_TIMEOUT_SECONDS` | Entero | `5` | Tiempo límite en segundos para la transmisión y prueba de latencia hacia el SIEM del ISP. |
 | `VITE_API_BASE_URL` | String | `http://localhost:8080` | URL base del Backend API para compilación de la SPA Vue 3 si se despliega desacoplada del proxy Nginx. |
 | `TZDATA` | String | `America/Caracas` | Zona horaria inyectada en los contenedores (`TZ`) para bitácoras y reloj local. |
 | `restart` | String | `unless-stopped` | Política de reinicio de contenedores Docker Compose (`always`, `unless-stopped`, `no`, `on-failure`). |

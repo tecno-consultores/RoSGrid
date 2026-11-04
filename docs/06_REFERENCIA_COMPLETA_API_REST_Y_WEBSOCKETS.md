@@ -1413,7 +1413,9 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
 ##### `GET /api/v1/inventory/cves`
 
 - **Propósito:** Evalúa en tiempo real toda la flota adoptada del tenant contra el catálogo de firmas CVE de RouterOS v7.
-- **Auto-Sincronización Diaria y Caché de 24 Horas:** Al ingresar por primera vez en el día, si el catálogo no ha sido actualizado en las últimas 24 horas (`rg:cve:sync_meta` ausente o expirado en KeyDB), el endpoint ejecuta una sincronización automática y transparente contra los boletines remotos oficiales de MikroTik Security, marcando `auto_synced: true` e inicializando el TTL de 24 horas (`86400s`). Peticiones subsiguientes en ese periodo retornan `is_cache_fresh: true` y `auto_synced: false` sin descargas redundantes.
+- **Parámetros Query:**
+  - `source` *(opcional, string)*: Filtro por origen del boletín (`all`, `mikrotik`, `nist_nvd`). Por defecto evalúa ambas fuentes consolidadas.
+- **Auto-Sincronización Diaria y Caché de 24 Horas:** Al ingresar por primera vez en el día, si el catálogo no ha sido actualizado en las últimas 24 horas (`rg:cve:sync_meta` ausente o expirado en KeyDB), el endpoint ejecuta una sincronización automática y transparente contra los boletines remotos oficiales de MikroTik Security y NIST NVD v2.0 REST API, marcando `auto_synced: true` e inicializando el TTL de 24 horas (`86400s`). Peticiones subsiguientes en ese periodo retornan `is_cache_fresh: true` y `auto_synced: false` sin descargas redundantes.
 - **Feature Flag:** `cve_scanner_enabled`.
 - **Rol Mínimo:** `OPERATOR`.
 - **Respuesta (200 OK):**
@@ -1445,6 +1447,7 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
             "severity": "CRITICAL",
             "affected_versions_expr": ">=7.0.0,<7.9.2",
             "fixed_in_version": "7.9.2",
+            "source": "BOTH",
             "description_es": "Desbordamiento en el procesamiento de paquetes IPv6 Neighbor Discovery.",
             "remediation": "Actualizar a RouterOS 7.9.2 o superior, o deshabilitar IPv6 temporalmente.",
             "published_date": "2023-05-22"
@@ -1463,7 +1466,7 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
 
 ##### `POST /api/v1/inventory/cves/sync`
 
-- **Propósito:** Sincroniza y actualiza el catálogo local de firmas de vulnerabilidades desde los boletines oficiales de MikroTik Security (`https://mikrotik.com/supportsec`) y búsqueda autorizada de registros NIST NVD MikroTik (`https://nvd.nist.gov/vuln/search?keyword=mikrotik&resultType=records`).
+- **Propósito:** Sincroniza y actualiza el catálogo local de firmas de vulnerabilidades desde los boletines oficiales de MikroTik Security (`https://mikrotik.com/supportsec`) y el conector oficial de NIST NVD REST API v2.0 (`https://services.nvd.nist.gov/rest/json/cves/2.0`).
 - **Feature Flag:** `cve_scanner_enabled`.
 - **Rol Mínimo:** `TENANT_ADMIN`.
 - **Respuesta (200 OK):**
@@ -1471,10 +1474,15 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
   ```json
   {
     "success": true,
-    "source_url": "https://mikrotik.com/supportsec",
-    "total_cves": 23,
+    "source_url": "https://mikrotik.com/supportsec y https://services.nvd.nist.gov/rest/json/cves/2.0",
+    "total_cves": 25,
+    "sources_breakdown": {
+      "mikrotik_rss": 20,
+      "nist_nvd": 15,
+      "overlap_both": 10
+    },
     "updated_at": "2026-10-22T22:00:00Z",
-    "message": "Catálogo de CVEs actualizado exitosamente desde MikroTik Security (https://mikrotik.com/supportsec y https://nvd.nist.gov/vuln/search?keyword=mikrotik&resultType=records) con 23 boletines oficiales."
+    "message": "Catálogo de CVEs actualizado exitosamente desde MikroTik Security y NIST NVD v2.0."
   }
   ```
 

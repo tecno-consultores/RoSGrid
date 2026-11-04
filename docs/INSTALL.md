@@ -44,7 +44,15 @@ sed -i "s|ROSGRID_CSRF_HMAC_SECRET=.*|ROSGRID_CSRF_HMAC_SECRET=$(openssl rand -b
 # sed -i "s|ROSGRID_MCP_ENABLED=.*|ROSGRID_MCP_ENABLED=true|" .env
 # sed -i "s|ROSGRID_MCP_RATE_LIMIT_PER_MIN=.*|ROSGRID_MCP_RATE_LIMIT_PER_MIN=30|" .env
 
-# 4. Proteger los permisos del archivo .env (solo lectura para el propietario)
+# 4. Opcional: Configuración de NIST NVD v2.0 API Key (Mayor cuota de sincronización CVE)
+# Por defecto utiliza la API pública sin llave (5 req/30s). Con API Key sube a 50 req/30s:
+# sed -i "s|# ROSGRID_CVE_NVD_API_KEY=.*|ROSGRID_CVE_NVD_API_KEY=tu_api_key_nvd_registrada|" .env
+
+# 5. Opcional: Parámetros de Diagnóstico y SIEM del ISP
+# ROSGRID_DIAGNOSTIC_LOG_RING_SIZE=1000
+# ROSGRID_SIEM_FORWARDER_TIMEOUT_SECONDS=5
+
+# 6. Proteger los permisos del archivo .env (solo lectura para el propietario)
 chmod 600 .env
 ```
 
@@ -235,6 +243,8 @@ El contenedor `rosgrid_api` adquirirá automáticamente el bloqueo en PostgreSQL
 
 Para profundizar en la configuración y operación de cada subsistema:
 
+- [MANUAL_ADMINISTRADOR_E_INSTALADOR.md](./MANUAL_ADMINISTRADOR_E_INSTALADOR.md) — Manual integral para administradores de sistemas, DevOps e instaladores.
+- [MANUAL_USUARIO_Y_OPERADOR_NOC.md](./MANUAL_USUARIO_Y_OPERADOR_NOC.md) — Manual integral para operadores de NOC, ingenieros de red y mesa de ayuda.
 - [01_GUIA_DESPLIEGUE_Y_ENTORNO.md](./01_GUIA_DESPLIEGUE_Y_ENTORNO.md) — Infraestructura, variables y perfiles en memoria (KeyDB / DragonflyDB).
 - [02_PREPARACION_MIKROTIK_ROUTEROS_V7.md](./02_PREPARACION_MIKROTIK_ROUTEROS_V7.md) — Comandos CLI, política `rest-api`, TOFU y Safe Mode.
 - [03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md](./03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md) — RLS, 11 roles, Bóveda 2FA, Kill-Switch y Auto-Registro.

@@ -131,6 +131,11 @@ Apply these non-negotiable security directives before writing any code:
     - **Session Lifecycle WORM Auditing, `Clear-Site-Data` & Log Injection Sanitization (`V-222441..V-222444`, `V-222388`, `V-222392`, `V-222437` / OWASP 4.3.10 SL-4):** Generate WORM audit records on login (`LOGIN_SUCCESSFUL` with `previous_login_at`/`previous_login_ip`), token rotation (`SESSION_TOKEN_RENEWED`), and logout (`USER_LOGOUT` with `Clear-Site-Data: "cache", "cookies", "storage"`), and sanitize all audit strings via `sanitize_log_string()` to strip CRLF/control characters.
     - **OWASP OSHP Headers & CycloneDX SBOM (`V-222658` / OWASP 5.3.4 & 5.4.4):** Emit `X-Permitted-Cross-Domain-Policies: none` and `Cross-Origin-Opener-Policy: same-origin` in `SecurityHeadersMiddleware`, and generate CycloneDX SBOMs in ephemeral Docker (`scripts/generar-sbom-cyclonedx.sh`).
 
+16. **Container Ephemeral Coverage & Test Isolation Invariant (Rule Zero):**
+    - **Coverage File Redirection:** When executing `pytest` inside ephemeral Docker containers mounted read-only (`:ro`) or running with non-root service accounts (`rosgrid`), always redirect coverage output using `-e COVERAGE_FILE=/tmp/.coverage` and `-w /tmp`. This eliminates `PermissionError: [Errno 13] Permission denied: '/app/.coverage'`.
+    - **Python Module Dot-Notation for Coverage:** Always declare coverage targets as Python modules (`--cov=src.services.diagnostics_and_siem`) rather than filesystem paths (`--cov=/app/src/...`) when `PYTHONPATH=/app/src`.
+    - **Root-Owned Residue Cleanup Fallback:** Clean any container-generated residue files with Docker container fallback (via `scripts/limpieza.sh` or MCP `clean_workspace_11x`) to prevent host-level `Permission denied` errors.
+
 ---
 
 ## 3. Pre-Commit 11X Checklist

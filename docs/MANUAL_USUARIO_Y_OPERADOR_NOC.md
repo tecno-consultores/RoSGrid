@@ -23,6 +23,8 @@ license: "GPL-3.0-only"
 5. [Gestión de Direccionamiento IPAM, Mapa Bimodal y Técnico de Campo](#5-gestión-de-direccionamiento-ipam-mapa-bimodal-y-técnico-de-campo)
 6. [Respaldos Git Diff, Acciones Masivas y Ventanas de Mantenimiento](#6-respaldos-git-diff-acciones-masivas-y-ventanas-de-mantenimiento)
 7. [Cumplimiento Corporativo (CIS Benchmark, CVE, Drift, SLA, CAPsMAN) y Auditoría WORM](#7-cumplimiento-corporativo-cis-benchmark-cve-drift-sla-capsman-y-auditoría-worm)
+8. [Administración de Usuarios, Roles y Gobernanza de Flags Granulares](#8-administración-de-usuarios-roles-y-gobernanza-de-flags-granulares-adminusers)
+9. [Diagnóstico del Sistema, Paquete de Soporte 1-Click y Conector SIEM del ISP](#9-diagnóstico-del-sistema-paquete-de-soporte-1-click-y-conector-siem-del-isp)
 
 ---
 
@@ -238,7 +240,11 @@ Permite aplicar un catálogo de **24 plantillas estandarizadas** (NTP, DNS resil
 
 En el menú **`Flota & Seguridad`** (`/enterprise` y `/fleet-cves`):
 - **Auditoría CIS Benchmark Interactivo (28 Directivas):** Evalúa el nivel de endurecimiento de cada router (0 a 100%), permite filtrar por perfil recomendado (`Todos`, `ISP`, `Empresa`), consultar los enlaces oficiales de RFC/MikroTik y aplicar **`⚡ Auto-Remediar`** en 1 clic bajo Safe Mode.
-- **Matriz de Vulnerabilidades CVE:** Cruza la versión exacta de RouterOS v7 de cada equipo contra el catálogo de vulnerabilidades conocidas para priorizar actualizaciones.
+- **Matriz de Vulnerabilidades CVE Multi-Fuente (Spec 71):**
+  - **Sincronización Dual:** Cruza la versión exacta de RouterOS v7 de cada equipo contra dos fuentes oficiales sincronizadas: el boletín de seguridad MikroTik (`rss.xml`) y el conector oficial de **NIST NVD REST API v2.0**.
+  - **Filtro Táctico de Origen (`#cve-source-filter`):** Permite al operador alternar en pantalla entre `Todas las Fuentes`, `Solo MikroTik` y `Solo NIST NVD`.
+  - **Badges de Origen y Severidad CVSS:** Cada vulnerabilidad indica su procedencia mediante etiquetas (`AMBOS`, `MIKROTIK`, `NIST_NVD`), vector CVSS v3.1/v2, severidad cromática (`CRÍTICA`, `ALTA`, `MEDIA`, `BAJA`) y descripciones localizadas en español con rangos CPE exactos.
+  - **Cero Falsos Positivos:** El motor descarta automáticamente vulnerabilidades obsoletas exclusivas de RouterOS v2–v6, enfocándose estrictamente en las versiones v7 desplegadas en la flota.
 - **Config Drift (Desviación de Configuración):** Detecta si algún cambio manual desvió al router de su plantilla maestra (*Golden Baseline*) y permite revertirlo en 1 clic.
 - **Detección de Rogue DHCP y Monitor de SLA:** Detecta servidores DHCP piratas en la red LAN y mide latencia/jitter P95/P99 hacia proveedores upstream.
 - **Bitácora de Auditoría Forense WORM (`/audit-logs`):** Exclusiva para Auditores y Administradores; permite inspeccionar cada acción humana o de IA con su estado previo/posterior y verificar criptográficamente la cadena de bloques `HMAC-SHA256` que impide alterar o borrar cualquier registro histórico.
@@ -269,3 +275,26 @@ Permite personalizar cualquiera de las **30 funciones del sistema** para un usua
 3. El sistema muestra si el permiso actual está heredado de su rol base.
 4. Puede forzar `Permitir`, `Maker-Checker`, `Solo Lectura` o `Denegar`, o pulsar `↺ Heredar del Rol` para restablecer el comportamiento estándar.
 5. Los cambios se sincronizan en caliente e invalidan inmediatamente la sesión en caché.
+
+---
+
+## 9. Diagnóstico del Sistema, Paquete de Soporte 1-Click y Conector SIEM del ISP
+
+En **`Flota & Seguridad`** (`/enterprise/compliance`), la pestaña **`🩺 Diagnóstico & SIEM`** centraliza la observabilidad interna de la plataforma y el flujo de reporte de soporte:
+
+### 9.1 Descarga de Paquete de Soporte 1-Click (`1-Click Support Bundle`)
+Cuando se experimenta una anomalía técnica en la consola o se solicita soporte al fabricante:
+1. Diríjase a **Flota & Seguridad → Diagnóstico & SIEM**.
+2. Seleccione el formato deseado en el selector: **`.zip`** (recomendado para Windows/macOS) o **`.tar.gz`** (recomendado para Linux).
+3. Haga clic en **`📦 Descargar Paquete de Soporte`**.
+4. El navegador descargará un archivo compacto (`rosgrid_support_bundle_<timestamp>.zip`) que incluye:
+   - Metadatos del sistema y versiones activas (`metadata.json`).
+   - Registro de los últimos errores ocurridos en la interfaz web (`frontend/ui_errors.json`).
+   - Bitácora reciente de eventos del backend (`backend/application_logs.log`).
+   - Estado y métricas del conector SIEM (`backend/siem_forwarder_status.json`).
+5. **Privacidad Garantizada (Zero-Leak):** Todas las credenciales, tokens y llaves criptográficas son eliminadas automáticamente y sustituidas por `[REDACTED]`, por lo que el archivo es 100% seguro para enviar por correo electrónico o adjuntar en sistemas de tickets externos.
+
+### 9.2 Reenvío de Telemetría al SIEM del ISP
+Para los operadores de NOC que utilizan consolas unificadas de supervisión (como **Graylog**, **Grafana Loki** o servidores **Syslog RFC 5424** centralizados):
+- El conector de reenvío transmite en tiempo real las anomalías de conectividad con los routers, los intentos de acceso y los eventos críticos del sistema.
+- El botón **`🧪 Probar Conexión`** permite comprobar en menos de 2 segundos la conectividad hacia el colector, mostrando la latencia de red exacta en milisegundos (`latency_ms`) o indicando con precisión si el servidor remoto está inalcanzable.

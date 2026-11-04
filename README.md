@@ -143,6 +143,8 @@ Una sola instalación de RoSGrid se adapta instantáneamente a las necesidades d
   - **Detección de Rogue DHCP & Seguridad LAN:** Detección de servidores DHCP no autorizados mediante DHCP Snooping en switches/bridges y aislamiento de puertos comprometidos.
   - **Monitor de Cumplimiento de SLA:** Sondas continuas hacia gateways de carriers con generación de reportes mensuales de disponibilidad y latencia P95/P99 para reclamos contractuales.
   - **Gestión Centralizada WiFi (CAPsMAN / WiFiWave2):** Perfiles de radio para SSIDs Corporativo (WPA3-Enterprise 802.1X), Invitados (aislado) y dispositivos IoT.
+  - **Matriz de Vulnerabilidades CVE con NIST NVD v2.0 (Spec 71):** Sincronización oficial dual (MikroTik Security Advisories + NIST NVD REST API v2.0), vectores CVSS v3.1/v2, rangos CPE y filtro por origen (`#cve-source-filter`).
+  - **Paquete de Soporte 1-Click Zero-Leak & Conector SIEM del ISP (Spec 72):** Descarga de soporte `.zip`/`.tar.gz` con sanitización criptográfica irreversible de credenciales (`[REDACTED]`), y reenvío directo a Graylog (GELF), Grafana Loki y Syslog con cálculo de latencia de red.
 
 ---
 

@@ -146,12 +146,30 @@ El Superadmin simplemente desactiva el switch **"Módulo ISP & Operaciones de Ca
 - La interfaz oculta automáticamente el mapa de ONUs y el formulario de técnicos de calle.
 - Se activan las herramientas empresariales: **Detección de Desviación de Configuración (*Config Drift*)** contra la Plantilla Maestra homologada, **Orquestador SD-WAN WireGuard Hub & Spoke**, **Auditoría CIS Benchmark**, **Detección de Rogue DHCP en switches**, **Monitor de Cumplimiento de SLA de enlaces WAN** y **Gestión Centralizada WiFi (CAPsMAN)**.
 
+### ¿Cómo funciona la sincronización con NIST NVD v2.0 para la detección de vulnerabilidades CVE en MikroTik?
+
+RoSGrid implementa una sincronización híbrida dual:
+1. Descarga los boletines oficiales de MikroTik Security (`rss.xml`) para identificar parches y correcciones publicadas por el fabricante.
+2. Consulta el conector oficial de **NIST NVD REST API v2.0** para enriquecer cada vulnerabilidad con vectores de métrica CVSS v3.1/v2, rangos CPE auditados y descripciones en español.
+3. El motor de compatibilidad descarta automáticamente vulnerabilidades obsoletas pertenecientes en exclusiva a RouterOS v2–v6, evitando falsas alarmas sobre flotas RouterOS v7.
+4. En la interfaz (`/inventory/cves`), los operadores pueden filtrar por origen (`Todas las Fuentes`, `Solo MikroTik`, `Solo NIST NVD`).
+
+### ¿Cómo descargo el Paquete de Soporte 1-Click y cómo garantiza la política Zero-Leak que no se filtren contraseñas?
+
+Desde **Flota & Seguridad → Diagnóstico & SIEM** (`/enterprise/compliance`), los administradores pueden generar un paquete comprimido (`.zip` o `.tar.gz`) que reúne las trazas recientes del frontend, las últimas líneas de bitácora del backend y el estado del conector SIEM. Antes de empaquetar, el motor de diagnóstico ejecuta un filtro irreversible que reemplaza cualquier token, clave de acceso, contraseña o llave maestra por `[REDACTED]`, garantizando total seguridad al compartir el archivo con soporte técnico externo.
+
+### ¿Cómo reenvío los eventos de RoSGrid hacia el servidor Graylog, Grafana Loki o Syslog de mi empresa/ISP?
+
+En la misma pestaña de **Diagnóstico & SIEM**, configure el protocolo (`GELF_UDP`, `GELF_HTTP`, `LOKI_HTTP`, `SYSLOG_UDP`, `SYSLOG_TCP`), la dirección IP o dominio del colector y el nivel mínimo de severidad. RoSGrid incluye un botón interactivo **`🧪 Probar Conexión`** que envía un evento de prueba y mide la latencia de respuesta en milisegundos (`latency_ms`), confirmando la conectividad de forma inmediata.
+
 ---
 
 ## 6. Dónde Aprender Más
 
 Para consultar todos los manuales oficiales de producción de RoSGrid:
 
+- [MANUAL_ADMINISTRADOR_E_INSTALADOR.md](./MANUAL_ADMINISTRADOR_E_INSTALADOR.md) — Manual integral para administradores de sistemas, DevOps e instaladores.
+- [MANUAL_USUARIO_Y_OPERADOR_NOC.md](./MANUAL_USUARIO_Y_OPERADOR_NOC.md) — Manual integral para operadores de NOC, ingenieros de red y mesa de ayuda.
 - [01_GUIA_DESPLIEGUE_Y_ENTORNO.md](./01_GUIA_DESPLIEGUE_Y_ENTORNO.md) — Despliegue, `.env` y perfiles KeyDB / DragonflyDB.
 - [02_PREPARACION_MIKROTIK_ROUTEROS_V7.md](./02_PREPARACION_MIKROTIK_ROUTEROS_V7.md) — Configuración RouterOS v7, TOFU y Safe Mode.
 - [03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md](./03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md) — RLS, 11 roles RBAC, Bóveda 2FA, Kill-Switch y Auto-Registro.

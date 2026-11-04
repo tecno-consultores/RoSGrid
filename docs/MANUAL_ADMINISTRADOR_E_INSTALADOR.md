@@ -24,7 +24,8 @@ license: "GPL-3.0-only"
 6. [Gobierno Multi-Tenant, Feature Flags (19 Módulos) y Conmutación Rápida](#6-gobierno-multi-tenant-feature-flags-19-módulos-y-conmutación-rápida)
 7. [Matriz de los 11 Roles RBAC, Bóveda AES-256-GCM y Kill-Switch](#7-matriz-de-los-11-roles-rbac-bóveda-aes-256-gcm-y-kill-switch)
 8. [Servidor MCP Protegido para Agentes de Inteligencia Artificial](#8-servidor-mcp-protegido-para-agentes-de-inteligencia-artificial)
-9. [Mantenimiento de Plataforma, Respaldos, Escalamiento y Troubleshooting](#9-mantenimiento-de-plataforma-respaldos-escalamiento-y-troubleshooting)
+9. [Observabilidad Externa con Prometheus y Grafana (Plataforma + Flota de Routers MikroTik)](#9-observabilidad-externa-con-prometheus-y-grafana-plataforma--flota-de-routers-mikrotik)
+10. [Mantenimiento de Plataforma, Respaldos, Escalamiento y Troubleshooting](#10-mantenimiento-de-plataforma-respaldos-escalamiento-y-troubleshooting)
 
 ---
 
@@ -144,10 +145,14 @@ cd RoSGrid
 | Variable | Descripción | Requisito de Seguridad |
 | :--- | :--- | :--- |
 | `ROSGRID_ENV` | Modo de ejecución (`production`) | Oculta Swagger/OpenAPI y aplica cookies seguras. |
-| `ROSGRID_VAULT_MASTER_KEY` | Llave maestra AES-256-GCM (Base64 de 32 bytes) | **Crítica:** Respaldar fuera del servidor. Si se pierde, no podrá desencriptar claves guardadas. |
-| `ROSGRID_JWT_SECRET` | Secreto de firma para tokens de sesión | Cadena hexadecimal aleatoria de al menos 64 caracteres. |
-| `ROSGRID_CSRF_SECRET` | Secreto HMAC-SHA256 para tokens anti-CSRF | Cadena hexadecimal aleatoria de al menos 64 caracteres. |
+| `ROSGRID_MASTER_VAULT_KEY` | Llave maestra AES-256-GCM (Base64 de 32 bytes) | **Crítica:** Respaldar fuera del servidor. Si se pierde, no podrá desencriptar claves guardadas. |
+| `ROSGRID_JWT_SECRET_KEY` | Secreto de firma para tokens de sesión | Cadena de alta entropía para firma de tokens JWT HS256. |
+| `ROSGRID_CSRF_HMAC_SECRET` | Secreto HMAC-SHA256 para tokens anti-CSRF | Cadena de alta entropía para validación de tokens anti-CSRF. |
 | `POSTGRES_PASSWORD` | Contraseña del motor PostgreSQL 17 | Generada automáticamente por el instalador. |
+| `REDIS_PASSWORD` | Contraseña del motor KeyDB / Redis | Generada automáticamente por el instalador. |
+| `ROSGRID_CVE_NVD_API_KEY` | API Key opcional de NIST NVD v2.0 | Opcional: Eleva el límite de peticiones de 5 a 50 cada 30 segundos. |
+| `ROSGRID_DIAGNOSTIC_LOG_RING_SIZE` | Tamaño del búfer circular para paquete de diagnóstico | Opcional (predeterminado: 1000 entradas en memoria efímera). |
+| `ROSGRID_SIEM_FORWARDER_TIMEOUT_SECONDS` | Timeout de envío hacia el SIEM del ISP | Límite de tiempo en segundos para validaciones y envío (default 5s). |
 
 <div style="page-break-after: always;"></div>
 
@@ -412,9 +417,41 @@ Al pulsar **`🔄 Actualizar Datos`** en **Inventario → Matriz de CVEs (`/inve
 
 ### 10.5 Paquete de Diagnóstico 1-Click Sanitizado (`.zip` / `.tar.gz`) y Conector SIEM del ISP (`Spec 72`)
 
-Desde **Flota & Seguridad (`/enterprise/compliance`) → Pestaña `🩺 Diagnóstico & SIEM`** (exclusiva para `SUPERADMIN_GLOBAL` y `TENANT_ADMIN`), el administrador cuenta con dos herramientas de soporte y observabilidad:
-1. **Paquete de Soporte y Diagnóstico Unificado (`1-Click Support Bundle`):**
-   - Permite descargar en un solo clic un archivo `.zip` (por defecto) o `.tar.gz` con las trazas recientes del navegador (`frontend/ui_errors.json`), las últimas líneas de log de FastAPI (`backend/application_logs.log`), el estado del conector SIEM (`backend/siem_forwarder_status.json`) y los metadatos de la instalación (`metadata.json`).
-   - **Sanitización Zero-Leak:** Antes de empaquetar, RoSGrid expurga automáticamente cualquier contraseña, token `Bearer`, `api_key`, `secret` o llave criptográfica (`ROSGRID_MASTER_VAULT_KEY`, `ROSGRID_JWT_SECRET_KEY`, `ROSGRID_CSRF_HMAC_SECRET`), reemplazándolos por `[REDACTED]`.
-2. **Conector SIEM Multi-Protocolo Propio del ISP (Graylog / Grafana Loki / Syslog):**
-   - Permite reenviar en tiempo real los logs del sistema y errores de interfaz hacia el servidor colector interno de la empresa o ISP, soportando `GELF_UDP`, `GELF_HTTP`, `LOKI_HTTP` (`/loki/api/v1/push`), `SYSLOG_UDP` y `SYSLOG_TCP` (RFC 5424), con botón **`[ 🧪 Enviar Log de Prueba ]`** integrado.
+Desde **Flota & Seguridad (`/enterprise/compliance`) → Pestaña `🩺 Diagnóstico & SIEM`** (restringida exclusivamente a los roles `SUPERADMIN_GLOBAL` y `TENANT_ADMIN`), la plataforma ofrece dos capacidades críticas para el soporte de nivel empresarial y la observabilidad unificada del ISP:
+
+#### 1. Paquete de Soporte y Diagnóstico Unificado (`1-Click Support Bundle`)
+
+Cuando se requiere reportar una incidencia a soporte técnico o analizar una anomalía interna, el administrador puede generar y descargar un paquete consolidado en formato `.zip` o `.tar.gz`:
+
+```mermaid
+flowchart LR
+    UI[Consola Web /diagnostics] -->|GET /bundle?format=zip| API[FastAPI Diagnostics Engine]
+    API --> RingUI[RingBuffer UI Errors]
+    API --> RingBack[RingBuffer Logs Backend]
+    API --> SIEMState[Estado de Conexión SIEM]
+    API --> Sanitizer{Filtro Sanitizador Zero-Leak}
+    Sanitizer -->|Reemplaza secretos por [REDACTED]| ZipArch[(Support Bundle .zip / .tar.gz)]
+    ZipArch --> Browser[Descarga Segura en Navegador]
+```
+
+- **Contenido del Paquete:**
+  - `metadata.json`: Versión de RoSGrid, entorno (`production`), timestamp UTC, identificador anónimo de organización y hash de verificación.
+  - `frontend/ui_errors.json`: Últimos errores de interfaz capturados en el navegador del operador (excepciones Vue, fallas de red, códigos HTTP).
+  - `backend/application_logs.log`: Registros recientes del motor FastAPI Uvicorn almacenados en el búfer circular en memoria (`ROSGRID_DIAGNOSTIC_LOG_RING_SIZE`).
+  - `backend/siem_forwarder_status.json`: Configuración activa del conector de eventos, último estado de transmisión y métricas de latencia.
+- **Garantía Zero-Leak de Secretos:** Antes de la compresión, el motor pasa todo el contenido por un filtro de expresiones regulares que expurga de forma irreversible cualquier contraseña, token `Bearer`, llaves privadas, llaves maestras (`ROSGRID_MASTER_VAULT_KEY`, `ROSGRID_JWT_SECRET_KEY`) y credenciales de routers, sustituyéndolas por la marca inmutable `[REDACTED]`.
+
+#### 2. Conector SIEM Multi-Protocolo Propio del ISP
+
+Permite consolidar la telemetría operativa de RoSGrid y los eventos críticos de los routers en el sistema SIEM / colector central del proveedor:
+
+| Protocolo | Formato de Carga | Puerto / Endpoint Típico | Notas y Casos de Uso |
+| :--- | :--- | :--- | :--- |
+| **`GELF_UDP`** | JSON GELF v1.1 comprimido | UDP `12201` | Recomendado para Graylog en redes LAN o túneles WireGuard de baja latencia. |
+| **`GELF_HTTP`** | JSON GELF vía `POST /gelf` | TCP `12202` | Envío seguro sobre HTTPS con token en cabecera `Authorization`. |
+| **`LOKI_HTTP`** | JSON Push Stream (`streams: [{ stream, values }]`) | TCP `3100` (`/loki/api/v1/push`) | Integración nativa con Grafana Loki. Soporta cabecera multi-tenant `X-Scope-OrgID`. |
+| **`SYSLOG_UDP`** | Texto RFC 5424 estructurado | UDP `514` | Colectores tradicionales Syslog-ng / Rsyslog. |
+| **`SYSLOG_TCP`** | Texto RFC 5424 estructurado con conexión persistente | TCP `514` / `6514` (TLS) | Garantía de entrega con confirmación a nivel de transporte TCP. |
+
+- **Prueba de Latencia en 1 Clic (`🧪 Probar Conexión`):**
+  Al pulsar el botón de prueba, RoSGrid transmite un payload sintético de validación hacia el endpoint configurado, calculando con precisión de milisegundos (`latency_ms`) el tiempo de respuesta del colector. Si el SIEM responde satisfactoriamente, se despliega un mensaje verde con el tiempo registrado; en caso contrario, se muestra la causa exacta de la falla (timeout, rechazo de conexión o error de autenticación HTTP) sin romper la estabilidad del backend.

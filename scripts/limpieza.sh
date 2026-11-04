@@ -29,8 +29,7 @@ echo "[2/4] Eliminando artefactos temporales y residuos del Backend (fastapi)...
 rm -rf fastapi/.venv fastapi/venv .venv venv 2>/dev/null || docker run --rm -v "${REPO_ROOT}:/workspace" alpine rm -rf /workspace/fastapi/.venv /workspace/fastapi/venv /workspace/.venv /workspace/venv 2>/dev/null || true
 
 # Cachés de pruebas, cobertura y linters
-rm -f fastapi/.coverage 2>/dev/null || true
-rm -rf fastapi/.coverage.* 2>/dev/null || true
+rm -f fastapi/.coverage fastapi/.coverage.* 2>/dev/null || docker run --rm -v "${REPO_ROOT}:/workspace" alpine rm -rf /workspace/fastapi/.coverage /workspace/fastapi/.coverage.* 2>/dev/null || true
 rm -rf fastapi/.mypy_cache 2>/dev/null || docker run --rm -v "${REPO_ROOT}:/workspace" alpine rm -rf /workspace/fastapi/.mypy_cache 2>/dev/null || true
 rm -rf fastapi/.pytest_cache 2>/dev/null || docker run --rm -v "${REPO_ROOT}:/workspace" alpine rm -rf /workspace/fastapi/.pytest_cache 2>/dev/null || true
 rm -rf fastapi/.ruff_cache 2>/dev/null || docker run --rm -v "${REPO_ROOT}:/workspace" alpine rm -rf /workspace/fastapi/.ruff_cache 2>/dev/null || true
@@ -87,6 +86,7 @@ rm -f ./*.log 2>/dev/null || true
 rm -f ./trivy-results* 2>/dev/null || true
 rm -rf ./.trivycache 2>/dev/null || true
 rm -f ./mutmut-*.json 2>/dev/null || true
+rm -f ./rosgrid_support_bundle_* 2>/dev/null || true
 
 # Residuos y cachés en la raíz (incluyendo carpetas creadas por Docker como root)
 rm -rf ./.ruff_cache ./karate.jar 2>/dev/null || true
@@ -99,7 +99,9 @@ CURRENT_UID="$(id -u)"
 CURRENT_GID="$(id -g)"
 docker run --rm -v "${REPO_ROOT}:/workspace" alpine sh -c "chown -R ${CURRENT_UID}:${CURRENT_GID} /workspace/fastapi /workspace/vue3 /workspace/scripts 2>/dev/null || true; find /workspace -maxdepth 1 -user 0 -exec chown ${CURRENT_UID}:${CURRENT_GID} {} + 2>/dev/null || true" 2>/dev/null || true
 
-docker system prune -af
+docker container prune -f 2>/dev/null || true
+docker network prune -f 2>/dev/null || true
+docker builder prune -f --filter "until=24h" 2>/dev/null || true
 
 # Verificación de integridad: los reportes de Graphify AST se conservan intactos
 if [[ -f fastapi/graphify-out/GRAPH_REPORT.md ]] && [[ -f vue3/graphify-out/GRAPH_REPORT.md ]]; then

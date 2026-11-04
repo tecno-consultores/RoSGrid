@@ -130,6 +130,10 @@ prometheus_data/
 .trivycache/
 trivy-results*
 
+# Diagnóstico y Paquetes de Soporte (Spec 72)
+rosgrid_support_bundle_*
+**/rosgrid_support_bundle_*
+
 # IDEs, Editores y Agentes
 .vscode/
 .idea/
