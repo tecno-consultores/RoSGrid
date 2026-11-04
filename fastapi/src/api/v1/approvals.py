@@ -18,6 +18,7 @@ from src.api.v1.webfig_common import (
     execute_safe_mutation,
     get_router_and_client,
     invalidate_webfig_cache,
+    publish_maker_checker_event,
 )
 from src.core.audit import write_audit_log
 from src.db.session import get_tenant_db_session
@@ -251,6 +252,14 @@ async def _log_approval_audit(
         status_code=stat_code,
         error_message=err_msg,
     )
+    await publish_maker_checker_event(
+        tenant_id=tenant_id,
+        event_name="MAKER_CHECKER_RESOLVED",
+        approval_id=approval.id,
+        summary=approval.summary,
+        router_id=approval.router_id,
+        resolution_status=approval.status.value if hasattr(approval.status, "value") else str(approval.status),
+    )
 
 
 @router.post("/{approval_id}/approve", response_model=ApprovalRequestResponse)
@@ -404,6 +413,14 @@ async def reject_request(
         actor_user_id=checker_user_id,
         router_id=approval.router_id,
         status_code=200,
+    )
+    await publish_maker_checker_event(
+        tenant_id=tenant_id,
+        event_name="MAKER_CHECKER_RESOLVED",
+        approval_id=approval.id,
+        summary=approval.summary,
+        router_id=approval.router_id,
+        resolution_status="REJECTED",
     )
     if approval.action_type == CriticalActionTypeEnum.BULK_MULTI_ROUTER_EXECUTION:
         stmt_job = select(BulkJob).where(BulkJob.approval_request_id == approval.id)

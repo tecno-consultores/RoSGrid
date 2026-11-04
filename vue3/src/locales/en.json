@@ -601,6 +601,9 @@
     "review_comment_placeholder": "Write a technical note or backing ticket reference...",
     "btn_reject": "✕ Reject Request",
     "btn_approve": "✓ Approve & Execute Change",
+    "btn_refresh": "🔄 Refresh",
+    "btn_refreshing": "⏳ Refreshing...",
+    "refresh_aria": "Refresh approvals inbox",
     "execution_result_title": "⚡ Execution Result on MikroTik Fleet:",
     "status_executed": "✓ Successfully Executed",
     "status_failed": "✕ Execution Failed"

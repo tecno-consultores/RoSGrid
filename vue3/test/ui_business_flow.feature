@@ -961,6 +961,15 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * match maintenanceFlowContract.mapRefreshBtn == '#btn-subscribers-map-refresh'
     * match maintenanceFlowContract.mapFilterMaintenanceOption == 'option[value="MAINTENANCE"]'
 
+  Scenario: 96. Reactividad en Tiempo Real de la Bandeja Maker-Checker, Auto-Refresco y Botón de Refresco (Hito 30.3)
+    * def makerCheckerReactivityContract = { refreshBtn: '#btn-refresh-approvals', headerControls: '.header-controls', subtabsBar: '.subtabs-bar', wsEventName: 'rosgrid:maker-checker-updated', pollIntervalMs: 15000 }
+    * match makerCheckerReactivityContract.refreshBtn == '#btn-refresh-approvals'
+    * match makerCheckerReactivityContract.headerControls == '.header-controls'
+    * match makerCheckerReactivityContract.subtabsBar == '.subtabs-bar'
+    * match makerCheckerReactivityContract.wsEventName == 'rosgrid:maker-checker-updated'
+    * match makerCheckerReactivityContract.pollIntervalMs == 15000
+
+
 
 
 

@@ -295,6 +295,14 @@ async def intercept_maker_checker_if_needed(
     db.add(approval)
     await db.commit()
 
+    await publish_maker_checker_event(
+        tenant_id=tenant_id,
+        event_name="MAKER_CHECKER_REQUESTED",
+        approval_id=approval.id,
+        summary=approval.summary,
+        router_id=router_id,
+    )
+
     return JSONResponse(
         status_code=status.HTTP_202_ACCEPTED,
         content={
@@ -303,6 +311,36 @@ async def intercept_maker_checker_if_needed(
             "detail": "Operación enviada a Maker-Checker. En espera de aprobación humana por Nivel 3, Supervisor o Administrador.",
         },
     )
+
+
+async def publish_maker_checker_event(
+    tenant_id: uuid.UUID,
+    event_name: str,
+    approval_id: uuid.UUID,
+    summary: str,
+    router_id: uuid.UUID | None = None,
+    resolution_status: str | None = None,
+) -> None:
+    """Publica notificación en tiempo real en KeyDB Pub/Sub para actualizar bandejas Maker-Checker."""
+    try:
+        from src.redis_layer.client import get_redis_client
+
+        redis = get_redis_client()
+        if not redis:
+            return
+        payload = {
+            "id": str(uuid.uuid4()),
+            "event_name": event_name,
+            "approval_request_id": str(approval_id),
+            "router_id": str(router_id) if router_id else None,
+            "severity": "WARNING" if event_name == "MAKER_CHECKER_REQUESTED" else "INFO",
+            "message": summary,
+            "status": resolution_status or "PENDING",
+            "timestamp_iso": datetime.now(UTC).isoformat(),
+        }
+        await redis.publish(f"rg:{tenant_id}:events", json.dumps(payload))
+    except Exception as exc:
+        logger.debug("No se pudo publicar evento Maker-Checker en Pub/Sub: %s", exc)
 
 
 async def _store_active_safemode_job(

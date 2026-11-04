@@ -154,6 +154,7 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
     // Avanzar temporizador simulado para limpiar mensajes de acción
     vi.advanceTimersByTime(4500);
     await flushPromises();
+    wrapper.unmount();
     vi.useRealTimers();
   });
 
@@ -260,6 +261,107 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
     // Avanzar temporizador simulado para limpiar mensajes de acción en catch
     vi.advanceTimersByTime(4500);
     await flushPromises();
+    wrapper.unmount();
+    wrapperSelf.unmount();
+    vi.useRealTimers();
+  });
+
+  it('ApprovalsInboxView — reacciona a rosgrid:maker-checker-updated, auto-refresco 15s y botón #btn-refresh-approvals', async () => {
+    vi.useFakeTimers();
+
+    const { useAuthStore } = await import('@/stores/useAuthStore');
+    const { useNocEventsStore } = await import('@/stores/useNocEventsStore');
+    const authStore = useAuthStore();
+    const nocStore = useNocEventsStore();
+    authStore.setAuth({
+      id: 'usr-checker',
+      email: 'checker@example.com',
+      username: 'checker.user',
+      tenant_id: 't-1',
+      tenant_slug: 'corp',
+      role: 'SUPERVISOR',
+      totp_enabled: true,
+    });
+
+    const getSpy = vi.spyOn(http, 'get').mockResolvedValue({
+      status: 200,
+      data: {
+        items: [
+          {
+            id: 'appr-301',
+            requested_by: 'usr-maker',
+            requested_by_username: 'maker.user',
+            requested_by_role: 'SUPPORT_L2',
+            action_type: 'FIREWALL_DROP',
+            router_id: 'r-01',
+            router_name: 'Core-01',
+            justification: 'Bloqueo urgente',
+            previous_state_snapshot: {},
+            request_payload: {},
+            status: 'AWAITING_APPROVAL',
+            created_at: new Date().toISOString(),
+          },
+          {
+            id: 'appr-302',
+            requested_by: 'usr-maker',
+            requested_by_username: 'maker.user',
+            requested_by_role: 'SUPPORT_L2',
+            action_type: 'ROUTING_CHANGE',
+            router_id: 'r-01',
+            router_name: 'Core-01',
+            justification: 'Cambio ruta BGP',
+            previous_state_snapshot: {},
+            request_payload: {},
+            status: 'AWAITING_APPROVAL',
+            created_at: new Date().toISOString(),
+          },
+        ],
+      },
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(ApprovalsInboxView);
+    await flushPromises();
+
+    // 1. Verificar carga inicial y sincronización con nocStore.pendingApprovalsCount
+    expect(getSpy).toHaveBeenCalledTimes(1);
+    expect(nocStore.pendingApprovalsCount).toBe(2);
+
+    // 2. Verificar existencia del botón de refresco y hacer click
+    const refreshBtn = wrapper.find('#btn-refresh-approvals');
+    expect(refreshBtn.exists()).toBe(true);
+    await refreshBtn.trigger('click');
+    await flushPromises();
+    expect(getSpy).toHaveBeenCalledTimes(2);
+
+    // 3. Simular evento WebSocket 'rosgrid:maker-checker-updated'
+    window.dispatchEvent(
+      new CustomEvent('rosgrid:maker-checker-updated', {
+        detail: { event_name: 'MAKER_CHECKER_REQUESTED' },
+      }),
+    );
+    await flushPromises();
+    expect(getSpy).toHaveBeenCalledTimes(3);
+
+    // 4. Verificar auto-refresco periódico de 15 segundos
+    vi.advanceTimersByTime(15000);
+    await flushPromises();
+    expect(getSpy).toHaveBeenCalledTimes(4);
+
+    // 5. Desmontar y verificar que el temporizador y listener se limpian
+    wrapper.unmount();
+    vi.advanceTimersByTime(15000);
+    await flushPromises();
+    expect(getSpy).toHaveBeenCalledTimes(4);
+
+    window.dispatchEvent(
+      new CustomEvent('rosgrid:maker-checker-updated', {
+        detail: { event_name: 'MAKER_CHECKER_RESOLVED' },
+      }),
+    );
+    await flushPromises();
+    expect(getSpy).toHaveBeenCalledTimes(4);
+
     vi.useRealTimers();
   });
 

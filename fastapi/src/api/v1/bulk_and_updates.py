@@ -1576,6 +1576,16 @@ async def create_bulk_job(
     await db.commit()
     await db.refresh(bulk_job)
 
+    if is_l2 and approval_req_id is not None:
+        from src.api.v1.webfig_common import publish_maker_checker_event
+
+        await publish_maker_checker_event(
+            tenant_id=tenant_id,
+            event_name="MAKER_CHECKER_REQUESTED",
+            approval_id=approval_req_id,
+            summary=f"Acción masiva: {payload.title} sobre {len(target_ids)} routers",
+        )
+
     # Si no requiere aprobación Maker-Checker, despachar inmediatamente en la flota
     if not is_l2:
         bulk_job = await execute_bulk_job_on_fleet(bulk_job, db, claims)

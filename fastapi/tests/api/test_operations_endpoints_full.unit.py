@@ -3,6 +3,7 @@
 
 """Suite Completa de Pruebas Unitarias para Endpoints de Operaciones (Approvals, Backups, Bulk & Updates, Audit, Notification Channels)."""
 
+import json
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -935,4 +936,81 @@ async def test_approvals_bulk_job_execution(fake_op_context: dict[str, Any]) -> 
         assert app_res.status == ApprovalStatusEnum.APPROVED_AND_EXECUTED.value
         assert app.execution_result["succeeded_count"] == 1
         assert app.execution_result["job_status"] == BulkJobStatusEnum.COMPLETED.value
+
+
+@pytest.mark.asyncio
+async def test_publish_maker_checker_event_unit() -> None:
+    from src.api.v1.webfig_common import publish_maker_checker_event
+
+    tenant_id = uuid.uuid4()
+    approval_id = uuid.uuid4()
+    router_id = uuid.uuid4()
+
+    mock_redis = AsyncMock()
+
+    with patch("src.redis_layer.client.get_redis_client", return_value=mock_redis):
+        # 1. Probar evento MAKER_CHECKER_REQUESTED
+        await publish_maker_checker_event(
+            tenant_id=tenant_id,
+            event_name="MAKER_CHECKER_REQUESTED",
+            approval_id=approval_id,
+            summary="Bloqueo puerto SSH",
+            router_id=router_id,
+        )
+
+        assert mock_redis.publish.called
+        call_args = mock_redis.publish.call_args[0]
+        channel = call_args[0]
+        payload = json.loads(call_args[1])
+
+        assert channel == f"rg:{tenant_id}:events"
+        assert payload["event_name"] == "MAKER_CHECKER_REQUESTED"
+        assert payload["approval_request_id"] == str(approval_id)
+        assert payload["router_id"] == str(router_id)
+        assert payload["severity"] == "WARNING"
+        assert payload["message"] == "Bloqueo puerto SSH"
+        assert payload["status"] == "PENDING"
+        assert "timestamp_iso" in payload
+
+        # 2. Probar evento MAKER_CHECKER_RESOLVED
+        mock_redis.reset_mock()
+        await publish_maker_checker_event(
+            tenant_id=tenant_id,
+            event_name="MAKER_CHECKER_RESOLVED",
+            approval_id=approval_id,
+            summary="Bloqueo puerto SSH aprobado",
+            router_id=router_id,
+            resolution_status="APPROVED_AND_EXECUTED",
+        )
+
+        assert mock_redis.publish.called
+        call_args2 = mock_redis.publish.call_args[0]
+        channel2 = call_args2[0]
+        payload2 = json.loads(call_args2[1])
+
+        assert channel2 == f"rg:{tenant_id}:events"
+        assert payload2["event_name"] == "MAKER_CHECKER_RESOLVED"
+        assert payload2["severity"] == "INFO"
+        assert payload2["status"] == "APPROVED_AND_EXECUTED"
+
+    # 3. Probar tolerancia cuando get_redis_client devuelve None
+    with patch("src.redis_layer.client.get_redis_client", return_value=None):
+        await publish_maker_checker_event(
+            tenant_id=tenant_id,
+            event_name="MAKER_CHECKER_REQUESTED",
+            approval_id=approval_id,
+            summary="No redis client",
+        )
+
+    # 4. Probar tolerancia cuando redis.publish lanza excepción
+    broken_redis = AsyncMock()
+    broken_redis.publish.side_effect = RuntimeError("Redis connection broken")
+    with patch("src.redis_layer.client.get_redis_client", return_value=broken_redis):
+        await publish_maker_checker_event(
+            tenant_id=tenant_id,
+            event_name="MAKER_CHECKER_REQUESTED",
+            approval_id=approval_id,
+            summary="Falla de redis",
+        )
+
 

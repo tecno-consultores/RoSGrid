@@ -300,4 +300,50 @@ describe('useNocEventsStore — WebSocket Global & Alertas NOC', () => {
 
     window.removeEventListener('rosgrid:device-status-changed', eventSpy);
   });
+
+  it('procesa MAKER_CHECKER_REQUESTED y MAKER_CHECKER_RESOLVED despachando rosgrid:maker-checker-updated y actualizando contadores', () => {
+    const store = useNocEventsStore();
+    const eventSpy = vi.fn();
+    window.addEventListener('rosgrid:maker-checker-updated', eventSpy);
+
+    expect(store.pendingApprovalsCount).toBe(0);
+
+    // 1. Recibir MAKER_CHECKER_REQUESTED
+    store.handleIncomingEvent(
+      JSON.stringify({
+        id: 'ev-mc-1',
+        event_name: 'MAKER_CHECKER_REQUESTED',
+        approval_request_id: 'appr-123',
+        severity: 'WARNING',
+        message: 'Regla Firewall crítica',
+      }),
+    );
+
+    expect(store.pendingApprovalsCount).toBe(1);
+    expect(eventSpy).toHaveBeenCalledTimes(1);
+    expect((eventSpy.mock.calls[0][0] as CustomEvent).detail.approval_request_id).toBe('appr-123');
+
+    // 2. Recibir MAKER_CHECKER_RESOLVED
+    store.handleIncomingEvent(
+      JSON.stringify({
+        id: 'ev-mc-2',
+        event_name: 'MAKER_CHECKER_RESOLVED',
+        approval_request_id: 'appr-123',
+        severity: 'INFO',
+        message: 'Regla Firewall aprobada',
+      }),
+    );
+
+    expect(store.pendingApprovalsCount).toBe(0);
+    expect(eventSpy).toHaveBeenCalledTimes(2);
+
+    // 3. Probar setPendingApprovalsCount
+    store.setPendingApprovalsCount(5);
+    expect(store.pendingApprovalsCount).toBe(5);
+
+    store.setPendingApprovalsCount(-2);
+    expect(store.pendingApprovalsCount).toBe(0);
+
+    window.removeEventListener('rosgrid:maker-checker-updated', eventSpy);
+  });
 });

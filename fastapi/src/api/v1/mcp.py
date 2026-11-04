@@ -400,6 +400,15 @@ async def _handle_propose_network_change(
     )
     db.add(req)
     await db.flush()
+    from src.api.v1.webfig_common import publish_maker_checker_event
+
+    await publish_maker_checker_event(
+        tenant_id=tenant_id,
+        event_name="MAKER_CHECKER_REQUESTED",
+        approval_id=req.id,
+        summary=req.summary,
+        router_id=router_id,
+    )
     return {
         "status": "AWAITING_APPROVAL",
         "approval_request_id": str(req.id),

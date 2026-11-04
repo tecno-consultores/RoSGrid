@@ -132,6 +132,7 @@
 
   onMounted(() => {
     heartbeatStore.startMonitoring();
+    nocStore.connectEventsWebSocket();
     headerClockTimer = setInterval(updateHeaderClock, 1000);
     if (typeof document !== 'undefined') {
       document.addEventListener('click', onDocumentClick);

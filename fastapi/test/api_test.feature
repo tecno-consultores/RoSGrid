@@ -1359,6 +1359,20 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 158. Reactividad en Tiempo Real de la Bandeja Maker-Checker y Emisión WebSocket Push (Hito 30.3)
+    Given path '/api/v1/operations/approvals'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/operations/approvals/00000000-0000-0000-0000-000000000001/approve'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000159'
+    And request { review_comment: 'Aprobación verificada por Supervisor NOC' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
 
 
 

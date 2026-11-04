@@ -601,6 +601,9 @@
     "review_comment_placeholder": "Escribe un comentario técnico o ticket de respaldo...",
     "btn_reject": "✕ Rechazar Solicitud",
     "btn_approve": "✓ Aprobar y Ejecutar Cambio",
+    "btn_refresh": "🔄 Refrescar",
+    "btn_refreshing": "⏳ Refrescando...",
+    "refresh_aria": "Refrescar bandeja de aprobaciones",
     "execution_result_title": "⚡ Resultado de la Ejecución en Flota MikroTik:",
     "status_executed": "✓ Ejecutado Exitosamente",
     "status_failed": "✕ Fallo en la Ejecución"

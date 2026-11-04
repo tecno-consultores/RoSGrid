@@ -82,6 +82,14 @@ export const useNocEventsStore = defineStore('nocEvents', () => {
 
       if (eventName === 'APPROVAL_NEEDED' || eventName === 'MAKER_CHECKER_REQUESTED') {
         pendingApprovalsCount.value += 1;
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('rosgrid:maker-checker-updated', { detail: payload }));
+        }
+      } else if (eventName === 'MAKER_CHECKER_RESOLVED') {
+        pendingApprovalsCount.value = Math.max(0, pendingApprovalsCount.value - 1);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('rosgrid:maker-checker-updated', { detail: payload }));
+        }
       }
 
       const eventItem: NocEventItem = {
@@ -193,6 +201,10 @@ export const useNocEventsStore = defineStore('nocEvents', () => {
     }
   }
 
+  function setPendingApprovalsCount(count: number): void {
+    pendingApprovalsCount.value = Math.max(0, count);
+  }
+
   function clearEvents(): void {
     recentEvents.value = [];
     activeAlertsCount.value = 0;
@@ -214,6 +226,7 @@ export const useNocEventsStore = defineStore('nocEvents', () => {
   return {
     isConnected,
     pendingApprovalsCount,
+    setPendingApprovalsCount,
     activeAlertsCount,
     recentEvents,
     handleIncomingEvent,

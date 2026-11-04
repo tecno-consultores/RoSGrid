@@ -2,14 +2,17 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { ref, computed, onMounted } from 'vue';
+  import { ref, computed, onMounted, onUnmounted } from 'vue';
   import { http } from '@/api/httpClient';
   import { useAuthStore } from '@/stores/useAuthStore';
+  import { useNocEventsStore } from '@/stores/useNocEventsStore';
   import { useI18n } from '@/composables/useI18n';
   import type { ApprovalRequestItem } from '@/types';
 
   const authStore = useAuthStore();
+  const nocStore = useNocEventsStore();
   const { t } = useI18n();
+  let approvalsPollTimer: ReturnType<typeof setInterval> | null = null;
 
   const activeTab = ref<'pending' | 'approved' | 'rejected'>('pending');
   const isLoading = ref(false);
@@ -57,6 +60,10 @@
         justification: item.justification || item.requester_justification || item.summary || 'Operación técnica',
         status: item.status === 'PENDING' ? 'AWAITING_APPROVAL' : (item.status?.startsWith('APPROVED') ? 'APPROVED' : item.status),
       }));
+      const pendingCount = requests.value.filter((r) => r.status === 'AWAITING_APPROVAL').length;
+      if (typeof nocStore.setPendingApprovalsCount === 'function') {
+        nocStore.setPendingApprovalsCount(pendingCount);
+      }
     } catch {
       // Sin datos de demostración en producción
       requests.value = [];
@@ -130,8 +137,28 @@
     }
   }
 
+  function handleMakerCheckerWsUpdate(): void {
+    void loadApprovals();
+  }
+
   onMounted(() => {
-    loadApprovals();
+    void loadApprovals();
+    approvalsPollTimer = setInterval(() => {
+      void loadApprovals();
+    }, 15000);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('rosgrid:maker-checker-updated', handleMakerCheckerWsUpdate);
+    }
+  });
+
+  onUnmounted(() => {
+    if (approvalsPollTimer !== null) {
+      clearInterval(approvalsPollTimer);
+      approvalsPollTimer = null;
+    }
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('rosgrid:maker-checker-updated', handleMakerCheckerWsUpdate);
+    }
   });
 </script>
 
@@ -145,39 +172,52 @@
         </p>
       </div>
 
-      <!-- Pestañas de Aprobación -->
-      <nav class="subtabs-bar" role="tablist" :aria-label="t('approvals.subtabs_aria')">
+      <div class="header-controls">
+        <!-- Pestañas de Aprobación -->
+        <nav class="subtabs-bar" role="tablist" :aria-label="t('approvals.subtabs_aria')">
+          <button
+            type="button"
+            class="btn-subtab"
+            :class="{ 'btn-subtab--active': activeTab === 'pending' }"
+            role="tab"
+            :aria-selected="activeTab === 'pending'"
+            @click="activeTab = 'pending'"
+          >
+            {{ t('approvals.tab_pending') }}
+          </button>
+          <button
+            type="button"
+            class="btn-subtab"
+            :class="{ 'btn-subtab--active': activeTab === 'approved' }"
+            role="tab"
+            :aria-selected="activeTab === 'approved'"
+            @click="activeTab = 'approved'"
+          >
+            {{ t('approvals.tab_approved') }}
+          </button>
+          <button
+            type="button"
+            class="btn-subtab"
+            :class="{ 'btn-subtab--active': activeTab === 'rejected' }"
+            role="tab"
+            :aria-selected="activeTab === 'rejected'"
+            @click="activeTab = 'rejected'"
+          >
+            {{ t('approvals.tab_rejected') }}
+          </button>
+        </nav>
+
         <button
+          id="btn-refresh-approvals"
           type="button"
-          class="btn-subtab"
-          :class="{ 'btn-subtab--active': activeTab === 'pending' }"
-          role="tab"
-          :aria-selected="activeTab === 'pending'"
-          @click="activeTab = 'pending'"
+          class="btn-refresh-approvals"
+          :disabled="isLoading"
+          :aria-label="t('approvals.refresh_aria', 'Refrescar bandeja de aprobaciones')"
+          @click="loadApprovals"
         >
-          {{ t('approvals.tab_pending') }}
+          {{ isLoading ? t('approvals.btn_refreshing', '⏳ Refrescando...') : t('approvals.btn_refresh', '🔄 Refrescar') }}
         </button>
-        <button
-          type="button"
-          class="btn-subtab"
-          :class="{ 'btn-subtab--active': activeTab === 'approved' }"
-          role="tab"
-          :aria-selected="activeTab === 'approved'"
-          @click="activeTab = 'approved'"
-        >
-          {{ t('approvals.tab_approved') }}
-        </button>
-        <button
-          type="button"
-          class="btn-subtab"
-          :class="{ 'btn-subtab--active': activeTab === 'rejected' }"
-          role="tab"
-          :aria-selected="activeTab === 'rejected'"
-          @click="activeTab = 'rejected'"
-        >
-          {{ t('approvals.tab_rejected') }}
-        </button>
-      </nav>
+      </div>
     </header>
 
     <div v-if="actionMessage" class="banner banner--success font-tabular" role="status">
@@ -336,6 +376,35 @@
     margin: 2px 0 0 0;
     font-size: 0.8rem;
     color: var(--rg-text-muted);
+  }
+
+  .header-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .btn-refresh-approvals {
+    background: rgba(34, 211, 238, 0.12);
+    border: 1px solid var(--rg-accent-cyan, #22d3ee);
+    color: var(--rg-accent-cyan, #22d3ee);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .btn-refresh-approvals:hover:not(:disabled) {
+    background: rgba(34, 211, 238, 0.25);
+    color: #fff;
+  }
+
+  .btn-refresh-approvals:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 
   .subtabs-bar {
