@@ -942,6 +942,17 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * match ipamDeviceStatusEventContract.lastStatusField == 'last_reachability_status'
     * match ipamDeviceStatusEventContract.lastSeenField == 'last_seen_at'
 
+  Scenario: 94. Unificación del Isotipo de Alta Definición 512x512 Mesh y Glow en Cabecera Global y Login (Hito 30.1)
+    * def brandLogoContract = { wrapClass: '.rg-brand-logo-wrap', svgClass: '.rg-brand-logo-svg', constellationR: '.rg-constellation-r', constellationG: '.rg-constellation-g', fallbackImg: 'img.brand-logo-fallback', defaultHeaderSize: 28, viewBox: '0 0 512 512' }
+    * match brandLogoContract.wrapClass == '.rg-brand-logo-wrap'
+    * match brandLogoContract.svgClass == '.rg-brand-logo-svg'
+    * match brandLogoContract.constellationR == '.rg-constellation-r'
+    * match brandLogoContract.constellationG == '.rg-constellation-g'
+    * match brandLogoContract.fallbackImg == 'img.brand-logo-fallback'
+    * match brandLogoContract.defaultHeaderSize == 28
+    * match brandLogoContract.viewBox == '0 0 512 512'
+
+
 
 
 

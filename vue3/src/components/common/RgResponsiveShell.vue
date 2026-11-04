@@ -324,7 +324,7 @@
           ☰
         </button>
         <router-link to="/" class="brand" :aria-label="t('nav.dashboard', 'Ir al Centro de Mando')">
-          <RgBrandLogo :size="22" img-class="brand-logo" />
+          <RgBrandLogo :size="28" img-class="brand-logo" />
           <span class="brand-name">RoSGrid</span>
           <span class="brand-version">v1.0</span>
         </router-link>
