@@ -19,6 +19,7 @@ const successMessage = ref<string | null>(null);
 const cveSummary = ref<FleetCveSummary | null>(null);
 const searchQuery = ref('');
 const selectedSeverity = ref<string>('ALL');
+const selectedSource = ref<string>('ALL');
 const expandedCveId = ref<string | null>(null);
 
 const isCacheFresh = computed<boolean>(() => {
@@ -141,6 +142,13 @@ const uniqueCveRows = computed<FlattenedCveRow[]>(() => {
 
   if (selectedSeverity.value !== 'ALL') {
     list = list.filter((row) => row.cve.severity === selectedSeverity.value);
+  }
+
+  if (selectedSource.value !== 'ALL') {
+    list = list.filter((row) => {
+      const src = row.cve.source || 'BOTH';
+      return src === selectedSource.value || src === 'BOTH';
+    });
   }
 
   const query = searchQuery.value.trim().toLowerCase();
@@ -333,6 +341,15 @@ onMounted(() => {
         </select>
       </div>
 
+      <div class="filter-item">
+        <label for="cve-source-filter" class="filter-label">{{ t('cve_matrix.th_source', 'Fuente Oficial:') }}</label>
+        <select id="cve-source-filter" v-model="selectedSource" class="select-filter">
+          <option value="ALL">{{ t('cve_matrix.source_all', 'MikroTik + NIST NVD') }}</option>
+          <option value="MIKROTIK">{{ t('cve_matrix.source_mikrotik', 'MikroTik Security Advisories') }}</option>
+          <option value="NIST_NVD">{{ t('cve_matrix.source_nvd', 'NIST NVD REST API v2.0') }}</option>
+        </select>
+      </div>
+
       <button
         type="button"
         class="btn-refresh"
@@ -375,7 +392,16 @@ onMounted(() => {
           <template v-for="row in uniqueCveRows" :key="row.cve.cve_id">
             <tr class="cve-row" :class="{ 'cve-row--expanded': expandedCveId === row.cve.cve_id }">
               <td class="cell-id">
-                <span class="cve-id-badge tabular-nums">{{ row.cve.cve_id }}</span>
+                <div class="cve-id-cell-wrap">
+                  <span class="cve-id-badge tabular-nums">{{ row.cve.cve_id }}</span>
+                  <span
+                    v-if="row.cve.source"
+                    class="badge-source"
+                    :class="`badge-source--${row.cve.source.toLowerCase()}`"
+                  >
+                    {{ row.cve.source === 'BOTH' ? t('cve_matrix.source_badge_both', 'MikroTik + NIST') : row.cve.source === 'NIST_NVD' ? t('cve_matrix.source_badge_nvd', 'NIST NVD') : t('cve_matrix.source_badge_mikrotik', 'MikroTik') }}
+                  </span>
+                </div>
               </td>
               <td>
                 <span
@@ -415,7 +441,17 @@ onMounted(() => {
                 <div class="cve-card-detail">
                   <div class="cve-detail-header">
                     <h2 class="cve-detail-title">{{ row.cve.title }}</h2>
-                    <span class="cve-published">{{ t('cve_matrix.published', 'Publicado:') }} {{ row.cve.published_date }}</span>
+                    <div class="cve-detail-meta">
+                      <span class="cve-published">{{ t('cve_matrix.published', 'Publicado:') }} {{ row.cve.published_date }}</span>
+                      <a
+                        :href="`https://nvd.nist.gov/vuln/detail/${row.cve.cve_id}`"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="cve-nvd-link"
+                      >
+                        {{ t('cve_matrix.view_nvd', 'Ver Ficha Oficial en NIST NVD') }} ↗
+                      </a>
+                    </div>
                   </div>
 
                   <p class="cve-desc">{{ row.cve.description_es }}</p>
@@ -803,6 +839,40 @@ onMounted(() => {
   font-family: 'JetBrains Mono', monospace;
 }
 
+.cve-id-cell-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  align-items: flex-start;
+}
+
+.badge-source {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.125rem 0.375rem;
+  border-radius: var(--rg-radius-sm, 4px);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.badge-source--both {
+  background-color: rgba(34, 211, 238, 0.15);
+  color: var(--rg-accent-cyan, #22d3ee);
+  border: 1px solid rgba(34, 211, 238, 0.3);
+}
+
+.badge-source--mikrotik {
+  background-color: rgba(251, 146, 60, 0.15);
+  color: var(--rg-accent-orange, #fb923c);
+  border: 1px solid rgba(251, 146, 60, 0.3);
+}
+
+.badge-source--nist_nvd {
+  background-color: rgba(96, 165, 250, 0.15);
+  color: var(--rg-accent-blue, #60a5fa);
+  border: 1px solid rgba(96, 165, 250, 0.3);
+}
+
 .badge-severity {
   display: inline-block;
   font-size: 0.75rem;
@@ -909,6 +979,25 @@ onMounted(() => {
 .cve-published {
   font-size: 0.75rem;
   color: var(--rg-text-muted, #94a3b8);
+}
+
+.cve-detail-meta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.cve-nvd-link {
+  color: var(--rg-accent-cyan, #22d3ee);
+  text-decoration: underline;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.cve-nvd-link:hover {
+  color: var(--rg-cyan-300, #67e8f9);
 }
 
 .cve-desc {

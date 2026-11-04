@@ -250,14 +250,14 @@ async def test_cve_cache_fresh_does_not_call_remote_sync(sample_tenant, sample_c
 
 
 @pytest.mark.asyncio
-async def test_sync_cve_catalog_mikrotik_rss_success():
+async def test_sync_cve_catalog_mikrotik_rss_success(tmp_path):
     sample_rss = """<?xml version="1.0" encoding="utf-8"?>
     <rss version="2.0">
       <channel>
         <item>
-          <title>CVE-2026-99999</title>
+          <title>CVE-2025-10948</title>
           <pubDate>Tue, 20 Oct 2026 00:00:00 +0000</pubDate>
-          <description>Critical vulnerability in WebFig fixed in: 7.24.2</description>
+          <description>Critical vulnerability in WebFig fixed in RouterOS 7.24.2</description>
         </item>
       </channel>
     </rss>"""
@@ -266,13 +266,138 @@ async def test_sync_cve_catalog_mikrotik_rss_success():
     mock_resp.status_code = 200
     mock_resp.text = sample_rss
 
-    with patch("httpx.AsyncClient.get", AsyncMock(return_value=mock_resp)):
-        res = await sync_cve_catalog()
+    with patch("httpx.AsyncClient.get", AsyncMock(return_value=mock_resp)), \
+         patch("src.services.cve_matcher._CATALOG_PATH", tmp_path / "catalog.json"):
+        res = await sync_cve_catalog(sync_nvd=False)
         assert res.success is True
         assert res.source_url == "https://mikrotik.com/supportsec"
         assert "mikrotik.com/supportsec" in res.message
         assert "nvd.nist.gov" in res.message
-        assert res.total_cves >= 23
+        assert res.total_cves >= 20
+        assert res.mikrotik_cves_count >= 1
+
+
+@pytest.mark.asyncio
+async def test_parse_nvd_response_ros7_and_legacy_filtering():
+    from src.schemas.cve import CveItem
+    from src.services.cve_matcher import _is_exclusively_legacy_ros, _parse_nvd_response
+
+    # 1. Comprobar filtro legacy
+    assert _is_exclusively_legacy_ros("Vulnerability in RouterOS version 6.49.14", "CVE-2024-27686") is True
+    assert _is_exclusively_legacy_ros("Vulnerability in RouterOS v7.18.0", "CVE-2024-54772") is False
+    assert _is_exclusively_legacy_ros("Vulnerability in RouterOS v6 and v7", "CVE-2024-11111") is False
+
+    # 2. Payload sintético de NIST NVD v2.0
+    nvd_payload = {
+        "vulnerabilities": [
+            {
+                # CVE exclusivo de RouterOS v6 (debe ser descartado)
+                "cve": {
+                    "id": "CVE-2018-14847",
+                    "descriptions": [{"lang": "en", "value": "Directory traversal in RouterOS version 6 before 6.42.1."}],
+                    "metrics": {"cvssMetricV31": [{"cvssData": {"baseScore": 9.8, "baseSeverity": "CRITICAL"}}]},
+                    "configurations": [{"nodes": [{"cpeMatch": [{"criteria": "cpe:2.3:o:mikrotik:routeros:*:*:*:*:*:*:*:*", "versionEndExcluding": "6.42.1"}]}]}],
+                }
+            },
+            {
+                # CVE nuevo de RouterOS v7
+                "cve": {
+                    "id": "CVE-2025-99901",
+                    "descriptions": [
+                        {"lang": "es", "value": "Vulnerabilidad en módulo BGP de RouterOS v7 corregida en v7.18."},
+                        {"lang": "en", "value": "Vulnerability in RouterOS v7 BGP module fixed in 7.18."},
+                    ],
+                    "metrics": {"cvssMetricV31": [{"cvssData": {"baseScore": 8.1, "baseSeverity": "HIGH"}}]},
+                    "configurations": [{"nodes": [{"cpeMatch": [{"criteria": "cpe:2.3:o:mikrotik:routeros:*:*:*:*:*:*:*:*", "versionStartIncluding": "7.0", "versionEndExcluding": "7.18"}]}]}],
+                    "published": "2025-06-15T12:00:00.000",
+                }
+            },
+            {
+                # CVE preexistente en catálogo (debe fusionarse con source="BOTH")
+                "cve": {
+                    "id": "CVE-2024-54772",
+                    "descriptions": [{"lang": "es", "value": "Descripción enriquecida por NIST NVD"}],
+                    "metrics": {"cvssMetricV31": [{"cvssData": {"baseScore": 5.3, "baseSeverity": "MEDIUM"}}]},
+                    "configurations": [{"nodes": [{"cpeMatch": [{"criteria": "cpe:2.3:o:mikrotik:routeros:*:*:*:*:*:*:*:*", "versionStartIncluding": "7.1", "versionEndExcluding": "7.18.0"}]}]}],
+                    "published": "2025-05-06T00:00:00.000",
+                }
+            },
+        ]
+    }
+
+    base_catalog = [
+        CveItem(
+            cve_id="CVE-2024-54772",
+            title="Aviso de seguridad MikroTik (CVE-2024-54772)",
+            cvss_score=5.3,
+            severity="MEDIUM",
+            affected_versions_expr=">=7.0.0,<7.24.2",
+            fixed_in_version="7.24.2",
+            description_es="Desc base",
+            remediation="Remediation",
+            published_date="2025-01-01",
+            source="MIKROTIK",
+        )
+    ]
+
+    result = _parse_nvd_response(nvd_payload, base_catalog)
+    res_map = {x.cve_id: x for x in result}
+
+    # Descarte de v6
+    assert "CVE-2018-14847" not in res_map
+    # Incorporación de v7
+    assert "CVE-2025-99901" in res_map
+    assert res_map["CVE-2025-99901"].source == "NIST_NVD"
+    assert res_map["CVE-2025-99901"].severity == "HIGH"
+    # Fusión multi-fuente
+    assert "CVE-2024-54772" in res_map
+    assert res_map["CVE-2024-54772"].source == "BOTH"
+    assert res_map["CVE-2024-54772"].fixed_in_version == "7.18.0"
+
+
+@pytest.mark.asyncio
+async def test_sync_cve_catalog_multi_source_mikrotik_and_nvd(tmp_path):
+    sample_rss = """<?xml version="1.0" encoding="utf-8"?>
+    <rss version="2.0">
+      <channel>
+        <item>
+          <title>CVE-2026-88464</title>
+          <pubDate>Tue, 20 Oct 2026 00:00:00 +0000</pubDate>
+          <description>Desbordamiento SNMP fixed in RouterOS 7.23.3</description>
+        </item>
+      </channel>
+    </rss>"""
+
+    nvd_json = {
+        "vulnerabilities": [
+            {
+                "cve": {
+                    "id": "CVE-2025-99902",
+                    "descriptions": [{"lang": "es", "value": "Falla en RouterOS v7"}],
+                    "metrics": {"cvssMetricV31": [{"cvssData": {"baseScore": 7.5, "baseSeverity": "HIGH"}}]},
+                    "configurations": [{"nodes": [{"cpeMatch": [{"criteria": "cpe:2.3:o:mikrotik:routeros:*:*:*:*:*:*:*:*", "versionStartIncluding": "7.0", "versionEndExcluding": "7.16"}]}]}],
+                    "published": "2025-08-01T00:00:00.000",
+                }
+            }
+        ]
+    }
+
+    async def mock_get(url, *args, **kwargs):
+        resp = MagicMock()
+        resp.status_code = 200
+        if "rss.xml" in str(url):
+            resp.text = sample_rss
+        elif "services.nvd.nist.gov" in str(url):
+            resp.json.return_value = nvd_json
+        return resp
+
+    with patch("httpx.AsyncClient.get", side_effect=mock_get), \
+         patch("src.services.cve_matcher._CATALOG_PATH", tmp_path / "catalog.json"):
+        res = await sync_cve_catalog(sync_nvd=True)
+        assert res.success is True
+        assert res.mikrotik_cves_count > 0
+        assert res.nvd_cves_count > 0
+        assert res.total_cves >= 20
 
 
 @pytest.mark.asyncio

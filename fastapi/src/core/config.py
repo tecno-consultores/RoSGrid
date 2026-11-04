@@ -81,6 +81,10 @@ class Settings(BaseSettings):
     ROSGRID_CVE_PRIMARY_SOURCE: str = "https://mikrotik.com/supportsec"
     ROSGRID_CVE_RSS_SOURCE: str = "https://cdn.mikrotik.com/web-assets/supportsec/rss.xml"
     ROSGRID_CVE_NVD_SEARCH_SOURCE: str = "https://nvd.nist.gov/vuln/search?keyword=mikrotik&resultType=records"
+    ROSGRID_CVE_NVD_API_URL: str = "https://services.nvd.nist.gov/rest/json/cves/2.0"
+    ROSGRID_CVE_NVD_API_KEY: str | None = None
+    ROSGRID_CVE_NVD_SYNC_ENABLED: bool = True
+    ROSGRID_CVE_NVD_RESULTS_PER_PAGE: int = 200
 
     # Telemetría Anónima de Instancias Activas (Spec 55 / Hito 27.18)
     ROSGRID_TELEMETRY_BEACON_ENABLED: bool = True

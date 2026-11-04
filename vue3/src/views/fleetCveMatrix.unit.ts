@@ -47,6 +47,7 @@ const sampleCveSummary: FleetCveSummary = {
           description_es: 'Desbordamiento de búfer crítico en IPv6 Router Advertisement.',
           remediation: 'Actualizar a v7.9.2 o deshabilitar IPv6.',
           published_date: '2023-05-22',
+          source: 'NIST_NVD',
         },
         {
           cve_id: CVE_2024,
@@ -58,6 +59,7 @@ const sampleCveSummary: FleetCveSummary = {
           description_es: 'Desbordamiento en parsing JSON de la API REST.',
           remediation: 'Actualizar a v7.16.0 o desactivar REST.',
           published_date: '2024-06-18',
+          source: 'MIKROTIK',
         },
       ],
     },
@@ -148,6 +150,62 @@ describe('FleetCveMatrix.vue — Hito 23.5 Matriz de Vulnerabilidades CVE', () =
     expect(rows.length).toBe(1);
     expect(wrapper.text()).toContain(CVE_2023);
     expect(wrapper.text()).not.toContain(CVE_2024);
+  });
+
+  it('permite filtrar por fuente oficial de vulnerabilidad (MikroTik vs NIST NVD)', async () => {
+    const wrapper = mount(FleetCveMatrix);
+    await new Promise((r) => setTimeout(r, 20));
+    await wrapper.vm.$nextTick();
+
+    const sourceSelect = wrapper.find('#cve-source-filter');
+    expect(sourceSelect.exists()).toBe(true);
+
+    // Filtrar solo MIKROTIK
+    await sourceSelect.setValue('MIKROTIK');
+    await wrapper.vm.$nextTick();
+    let rows = wrapper.findAll('.cve-row');
+    expect(rows.length).toBe(1);
+    expect(wrapper.text()).toContain(CVE_2024);
+    expect(wrapper.text()).not.toContain(CVE_2023);
+
+    // Filtrar solo NIST_NVD
+    await sourceSelect.setValue('NIST_NVD');
+    await wrapper.vm.$nextTick();
+    rows = wrapper.findAll('.cve-row');
+    expect(rows.length).toBe(1);
+    expect(wrapper.text()).toContain(CVE_2023);
+    expect(wrapper.text()).not.toContain(CVE_2024);
+
+    // Restablecer a ALL
+    await sourceSelect.setValue('ALL');
+    await wrapper.vm.$nextTick();
+    rows = wrapper.findAll('.cve-row');
+    expect(rows.length).toBe(2);
+  });
+
+  it('muestra las insignias de fuente y el enlace oficial a NIST NVD en el detalle desplegado', async () => {
+    const wrapper = mount(FleetCveMatrix);
+    await new Promise((r) => setTimeout(r, 20));
+    await wrapper.vm.$nextTick();
+
+    // Insignias en tabla
+    const badgeNvd = wrapper.find('.badge-source--nist_nvd');
+    expect(badgeNvd.exists()).toBe(true);
+    expect(badgeNvd.text()).toBe('NIST NVD');
+
+    const badgeMk = wrapper.find('.badge-source--mikrotik');
+    expect(badgeMk.exists()).toBe(true);
+    expect(badgeMk.text()).toBe('MikroTik');
+
+    // Desplegar detalle y verificar enlace oficial a NIST NVD
+    const toggleBtn = wrapper.find('.btn-toggle-details');
+    await toggleBtn.trigger('click');
+    await wrapper.vm.$nextTick();
+
+    const nvdLink = wrapper.find('a.cve-nvd-link');
+    expect(nvdLink.exists()).toBe(true);
+    expect(nvdLink.attributes('href')).toBe(`https://nvd.nist.gov/vuln/detail/${CVE_2023}`);
+    expect(nvdLink.text()).toContain('Ver Ficha Oficial en NIST NVD');
   });
 
   it('expande detalles al hacer clic en botón de detalle', async () => {

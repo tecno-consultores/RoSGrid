@@ -8,6 +8,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 CveSeverity = Literal["CRITICAL", "HIGH", "MEDIUM", "LOW"]
+CveSource = Literal["MIKROTIK", "NIST_NVD", "BOTH"]
 
 
 class CveItem(BaseModel):
@@ -20,6 +21,7 @@ class CveItem(BaseModel):
     description_es: str = Field(..., description="Descripción técnica en español")
     remediation: str = Field(..., description="Recomendación técnica y acciones de mitigación")
     published_date: str = Field(..., description="Fecha de publicación del boletín")
+    source: CveSource = Field("BOTH", description="Fuente oficial del boletín: MIKROTIK, NIST_NVD o BOTH")
 
 
 class RouterCveEvaluation(BaseModel):
@@ -67,5 +69,7 @@ class CveSyncResponse(BaseModel):
     success: bool
     source_url: str
     total_cves: int
+    mikrotik_cves_count: int = 0
+    nvd_cves_count: int = 0
     updated_at: datetime
     message: str

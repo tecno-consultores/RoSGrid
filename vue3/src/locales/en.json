@@ -877,7 +877,15 @@
     "kpi_grid_aria": "Security metrics summary",
     "filters_aria": "Vulnerability search filters",
     "btn_refresh_aria": "Refresh vulnerability matrix",
-    "table_aria": "Detected CVE vulnerabilities table"
+    "table_aria": "Detected CVE vulnerabilities table",
+    "th_source": "Official Source:",
+    "source_all": "MikroTik + NIST NVD",
+    "source_mikrotik": "MikroTik Security Advisories",
+    "source_nvd": "NIST NVD REST API v2.0",
+    "source_badge_both": "MikroTik + NIST",
+    "source_badge_mikrotik": "MikroTik",
+    "source_badge_nvd": "NIST NVD",
+    "view_nvd": "View Official NIST NVD Record"
   },
   "audit_logs": {
     "title": "Immutable Audit Logs (WORM)",

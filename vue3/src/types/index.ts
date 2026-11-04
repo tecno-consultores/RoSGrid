@@ -1268,6 +1268,7 @@ export interface NotificationTestResponse {
 // ==============================================================================
 
 export type CveSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+export type CveSource = 'MIKROTIK' | 'NIST_NVD' | 'BOTH';
 
 export interface CveItem {
   cve_id: string;
@@ -1279,6 +1280,7 @@ export interface CveItem {
   description_es: string;
   remediation: string;
   published_date: string;
+  source?: CveSource;
 }
 
 export interface RouterCveEvaluation {
@@ -1314,6 +1316,8 @@ export interface CveSyncResponse {
   success: boolean;
   source_url: string;
   total_cves: number;
+  mikrotik_cves_count?: number;
+  nvd_cves_count?: number;
   updated_at: string;
   message: string;
 }

@@ -862,3 +862,19 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And input("#pair-assigned-ipv4", "10.250.3.55")
     And click("#btn-save-pair-subscriber")
     Then waitUntil("!document.querySelector('#modal-pair-subscriber')")
+
+
+
+  Scenario: 86. Matriz de Vulnerabilidades CVE: Filtrado por Fuente Oficial MikroTik y NIST NVD v2.0 (Hito 29.1)
+    Given driver baseUrl + '/inventory/cves'
+    And waitFor(".cve-matrix-view")
+    Then waitFor("#cve-matrix-title")
+    And match text("#cve-matrix-title") contains 'Matriz de Vulnerabilidades CVE'
+    And waitFor("#cve-source-filter")
+    When select("#cve-source-filter", "MIKROTIK")
+    Then waitFor(".cve-table")
+    When select("#cve-source-filter", "NIST_NVD")
+    Then waitFor(".cve-table")
+    When select("#cve-source-filter", "ALL")
+    Then waitFor(".cve-table")
+    And waitFor("[data-testid='btn-sync-cve']")
