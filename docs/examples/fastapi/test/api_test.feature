@@ -1345,6 +1345,21 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 157. Sincronización Automática de Ventanas de Mantenimiento con admin_state del Router y Resolución de WORM Audit (Hito 30.2)
+    Given path '/api/v1/maintenance/windows'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000158'
+    And request { title: 'Ventana UAT Test', reason: 'Reemplazo BGP', target_tag: 'global', starts_at: '2026-11-04T18:00:00Z', ends_at: '2026-11-04T19:00:00Z', suppress_alerts: true }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/inventory/routers'
+    And param admin_state = 'MAINTENANCE'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
 
 
 

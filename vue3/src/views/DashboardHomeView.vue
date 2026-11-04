@@ -17,9 +17,7 @@
   const { t } = useI18n();
 
   onMounted(() => {
-    if (inventoryStore.routers.length === 0) {
-      inventoryStore.fetchRouters(true);
-    }
+    inventoryStore.fetchRouters(inventoryStore.routers.length === 0);
     inventoryStore.fetchNetworkRoles();
     nocStore.connectEventsWebSocket();
     if (!authStore.user || authStore.canUseUserFeature('AUDIT_LOGS_QUERY', false)) {
@@ -29,21 +27,31 @@
 
   // Métricas calculadas
   const totalRouters = computed(() => inventoryStore.routers.length);
+  const maintenanceRouters = computed(
+    () => inventoryStore.routers.filter((r) => r.admin_state === 'MAINTENANCE').length,
+  );
   const onlineRouters = computed(
     () =>
       inventoryStore.routers.filter(
-        (r) => r.is_reachable || r.operational_status === 'ONLINE' || r.syslog_active,
+        (r) =>
+          r.admin_state !== 'MAINTENANCE' &&
+          (r.is_reachable || r.operational_status === 'ONLINE' || r.syslog_active),
       ).length,
   );
   const offlineRouters = computed(
     () =>
       inventoryStore.routers.filter(
-        (r) => !r.is_reachable && r.operational_status !== 'ONLINE' && !r.syslog_active,
+        (r) =>
+          r.admin_state !== 'MAINTENANCE' &&
+          !r.is_reachable &&
+          r.operational_status !== 'ONLINE' &&
+          !r.syslog_active,
       ).length,
   );
   const availabilityPct = computed(() => {
-    if (totalRouters.value === 0) return 100;
-    return Math.round((onlineRouters.value / totalRouters.value) * 100);
+    const activePool = totalRouters.value - maintenanceRouters.value;
+    if (activePool <= 0) return 100;
+    return Math.round((onlineRouters.value / activePool) * 100);
   });
 
   interface ToolCard {
@@ -299,6 +307,10 @@
           </div>
           <div class="kpi-micro-status">
             <span class="micro-online">● {{ onlineRouters }} {{ t('common.online').toLowerCase() }}</span>
+            <template v-if="maintenanceRouters > 0">
+              <span class="micro-sep">|</span>
+              <span class="micro-maintenance">🛠️ {{ maintenanceRouters }} mant.</span>
+            </template>
             <span class="micro-sep">|</span>
             <span class="micro-offline">● {{ offlineRouters }} {{ t('common.offline').toLowerCase() }}</span>
           </div>
@@ -453,10 +465,25 @@
               <div class="router-name-line">
                 <span
                   class="status-dot-sm"
-                  :class="r.is_reachable ? 'status-dot--online' : 'status-dot--offline'"
-                  :title="r.is_reachable ? 'Online' : 'Offline'"
+                  :class="
+                    r.admin_state === 'MAINTENANCE'
+                      ? 'status-dot--maintenance'
+                      : r.is_reachable
+                        ? 'status-dot--online'
+                        : 'status-dot--offline'
+                  "
+                  :title="
+                    r.admin_state === 'MAINTENANCE'
+                      ? 'En Mantenimiento'
+                      : r.is_reachable
+                        ? 'Online'
+                        : 'Offline'
+                  "
                 ></span>
                 <span class="router-name">{{ r.display_name }}</span>
+                <span v-if="r.admin_state === 'MAINTENANCE'" class="badge-maintenance-sm">
+                  🛠️ MANTENIMIENTO
+                </span>
                 <span v-if="r.network_role" class="badge-role-sm">{{ t(`enums.network_role.${r.network_role}`, r.network_role) }}</span>
               </div>
               <div class="router-sub-line">
@@ -724,6 +751,10 @@
 
   .micro-online {
     color: #6ee7b7;
+  }
+  .micro-maintenance {
+    color: #fbbf24;
+    font-weight: 700;
   }
   .micro-offline {
     color: #f87171;
@@ -1077,9 +1108,24 @@
     background: var(--rg-status-online, #10b981);
     box-shadow: 0 0 6px rgba(16, 185, 129, 0.35);
   }
+  .status-dot--maintenance {
+    background: #f59e0b;
+    box-shadow: 0 0 6px rgba(245, 158, 11, 0.45);
+  }
   .status-dot--offline {
     background: transparent;
     border: 2px solid var(--rg-status-critical, #ef4444);
+  }
+
+  .badge-maintenance-sm {
+    font-size: 0.62rem;
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-weight: 700;
+    font-family: var(--rg-font-mono, monospace);
   }
 
   .router-name {

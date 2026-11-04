@@ -106,10 +106,34 @@ async def write_audit_log(
     res = await session.execute(stmt)
     prev_hash = res.scalar_one_or_none() or GENESIS_AUDIT_HASH
 
-    safe_username = sanitize_log_string(actor_username, max_len=64) or "system"
+    resolved_username = actor_username
+    if actor_user_id and (not resolved_username or str(resolved_username).strip() == str(actor_user_id).strip()):
+        try:
+            from src.models.core import User
+
+            user_obj = await session.get(User, actor_user_id)
+            uname = getattr(user_obj, "username", None)
+            if isinstance(uname, str) and uname.strip():
+                resolved_username = uname.strip()
+        except Exception:
+            pass
+
+    resolved_router_name = router_display_name
+    if router_id and not resolved_router_name:
+        try:
+            from src.models.inventory import Router
+
+            router_obj = await session.get(Router, router_id)
+            rname = getattr(router_obj, "display_name", None)
+            if isinstance(rname, str) and rname.strip():
+                resolved_router_name = rname.strip()
+        except Exception:
+            pass
+
+    safe_username = sanitize_log_string(resolved_username, max_len=64) or "system"
     safe_ua = sanitize_log_string(actor_user_agent, max_len=256)
     safe_err = sanitize_log_string(error_message, max_len=512)
-    safe_router_name = sanitize_log_string(router_display_name, max_len=128)
+    safe_router_name = sanitize_log_string(resolved_router_name, max_len=128)
     clean_before = sanitize_sensitive_data(before_state) if before_state else None
     clean_after = sanitize_sensitive_data(after_state) if after_state else None
 

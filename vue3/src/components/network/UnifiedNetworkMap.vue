@@ -102,7 +102,7 @@
   const showSubscribers = ref<boolean>(props.mode === 'subscribers');
 
   // Filtro de estado
-  const statusFilter = ref<'ALL' | 'ONLINE' | 'OFFLINE'>('ALL');
+  const statusFilter = ref<'ALL' | 'ONLINE' | 'OFFLINE' | 'MAINTENANCE'>('ALL');
 
   // Interfaz para sitios o nodos con múltiples routers co-ubicados
   export interface LocationGroup {
@@ -123,7 +123,7 @@
 
   const downRouters = computed<RouterItem[]>(() => {
     return props.routers.filter(
-      (r) => !r.is_reachable || r.admin_state === 'DECOMMISSIONED' || r.admin_state === 'MAINTENANCE',
+      (r) => (!r.is_reachable && r.admin_state !== 'MAINTENANCE') || r.admin_state === 'DECOMMISSIONED',
     );
   });
 
@@ -397,7 +397,13 @@
     subscribersLayer?.clearLayers();
     linesLayer?.clearLayers();
 
-    const groups = buildLocationGroups(props.routers);
+    const filteredMapRouters = props.routers.filter((r) => {
+      if (statusFilter.value === 'MAINTENANCE') return r.admin_state === 'MAINTENANCE';
+      if (statusFilter.value === 'ONLINE') return r.is_reachable && r.admin_state !== 'MAINTENANCE';
+      if (statusFilter.value === 'OFFLINE') return !r.is_reachable && r.admin_state !== 'MAINTENANCE';
+      return true;
+    });
+    const groups = buildLocationGroups(filteredMapRouters);
 
     // 1. Capa de Routers de Red (● Círculos de color con soporte para Sitios Co-ubicados)
     if (showRouters.value && routersLayer) {
@@ -531,6 +537,7 @@
 
       props.subscribers.forEach((s) => {
         // Filtrado rápido por estado
+        if (statusFilter.value === 'MAINTENANCE') return;
         if (statusFilter.value === 'ONLINE' && s.last_reachability_status === 'OFFLINE') return;
         if (statusFilter.value === 'OFFLINE' && s.last_reachability_status !== 'OFFLINE') return;
 
@@ -722,6 +729,7 @@
         <select v-model="statusFilter" class="rg-select-filter" aria-label="Filtrar por estado">
           <option value="ALL">{{ t('network_map.filter_all') }}</option>
           <option value="ONLINE">{{ t('network_map.filter_online') }}</option>
+          <option value="MAINTENANCE">{{ t('enums.admin_state.MAINTENANCE', 'En Mantenimiento') }}</option>
           <option value="OFFLINE">{{ t('network_map.filter_offline') }}</option>
         </select>
       </div>

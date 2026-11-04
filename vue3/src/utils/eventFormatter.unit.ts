@@ -2,7 +2,7 @@
 // Copyright (C) 2026 RoSGrid Contributors
 
 import { describe, it, expect } from 'vitest';
-import { formatEventAction, formatEventMessage } from './eventFormatter';
+import { formatEventAction, formatEventMessage, isRawUuid } from './eventFormatter';
 
 describe('eventFormatter.ts — Transformación de códigos internos a texto descriptivo', () => {
   it('formatea LOGIN_FAILED_USER_INACTIVE a descripción en español amigable', () => {
@@ -64,6 +64,24 @@ describe('eventFormatter.ts — Transformación de códigos internos a texto des
 
     expect(formatEventMessage('ROUTER_DOWN', null)).toBe(
       'Router fuera de línea (sin respuesta)',
+    );
+  });
+
+  it('detecta UUIDs crudos y los omite del mensaje formateado para evitar fuga visual', () => {
+    const rawUuid = '5046a660-b1ba-423d-bf0b-a6f0fd80c40b';
+    expect(isRawUuid(rawUuid)).toBe(true);
+    expect(isRawUuid('operador_noc')).toBe(false);
+    expect(isRawUuid('')).toBe(false);
+    expect(isRawUuid(null)).toBe(false);
+
+    expect(formatEventMessage('SESSION_TOKEN_RENEWED', rawUuid)).toBe(
+      'Sesión de operador renovada',
+    );
+    expect(formatEventMessage('MAINTENANCE_WINDOW_EXPIRED_AUTO_DELETED', rawUuid)).toBe(
+      'Ventana de mantenimiento finalizada',
+    );
+    expect(formatEventMessage('MAINTENANCE_WINDOW_EXPIRED_AUTO_DELETED', 'admin')).toBe(
+      'Ventana de mantenimiento finalizada (por admin)',
     );
   });
 });

@@ -14,6 +14,7 @@ const EVENT_ACTION_DESCRIPTIONS: Record<string, string> = {
   LOGIN_FAILED_USER_NOT_FOUND: 'Acceso denegado: Usuario no registrado',
   LOGIN_FAILED_ACCOUNT_LOCKED: 'Acceso bloqueado: Cuenta suspendida preventivamente',
   LOGIN_SUCCESSFUL: 'Inicio de sesión exitoso',
+  SESSION_TOKEN_RENEWED: 'Sesión de operador renovada',
   '2FA_VERIFICATION_FAILED': 'Fallo en verificación de segundo factor (2FA)',
   SESSION_KILLED_DUPLICATE_LOGIN: 'Sesión finalizada por ingreso concurrente',
 
@@ -28,6 +29,7 @@ const EVENT_ACTION_DESCRIPTIONS: Record<string, string> = {
   MAINTENANCE: 'Ventana de mantenimiento programada',
   MAINTENANCE_WINDOW_CREATED: 'Ventana de mantenimiento creada',
   MAINTENANCE_WINDOW_CANCELLED: 'Ventana de mantenimiento cancelada',
+  MAINTENANCE_WINDOW_EXPIRED_AUTO_DELETED: 'Ventana de mantenimiento finalizada',
 
   // Bóveda de Credenciales y Criptografía
   CREDENTIAL_REVEALED: 'Credenciales de acceso reveladas en bóveda',
@@ -108,6 +110,13 @@ export function formatEventAction(action: string | null | undefined): string {
 /**
  * Genera el mensaje descriptivo completo combinando la acción formateada y el actor.
  */
+const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isRawUuid(val: string | null | undefined): boolean {
+  if (!val || typeof val !== 'string') return false;
+  return UUID_V4_REGEX.test(val.trim());
+}
+
 export function formatEventMessage(
   action: string | null | undefined,
   actor?: string | null,
@@ -115,7 +124,12 @@ export function formatEventMessage(
   const actionText = formatEventAction(action);
   const normalizedActor = (actor || '').trim();
 
-  if (!normalizedActor || normalizedActor.toLowerCase() === 'sistema' || normalizedActor.toLowerCase() === 'system') {
+  if (
+    !normalizedActor ||
+    normalizedActor.toLowerCase() === 'sistema' ||
+    normalizedActor.toLowerCase() === 'system' ||
+    isRawUuid(normalizedActor)
+  ) {
     return actionText;
   }
 

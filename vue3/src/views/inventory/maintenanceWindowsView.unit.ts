@@ -43,6 +43,7 @@ describe('MaintenanceWindowsView.vue — Ventanas de Mantenimiento Programadas',
 
     const inventoryStore = useInventoryStore();
     inventoryStore.setRouters([SAMPLE_ROUTER_1, SAMPLE_ROUTER_2]);
+    vi.spyOn(inventoryStore, 'fetchRouters').mockResolvedValue();
 
     vi.spyOn(http, 'get').mockImplementation(async (url: string) => {
       if (url.includes('/api/v1/maintenance/windows')) {
@@ -335,17 +336,18 @@ describe('MaintenanceWindowsView.vue — Ventanas de Mantenimiento Programadas',
     const wrapper = mount(MaintenanceWindowsView);
     await flushPromises();
 
-    // La ventana ya expirada no debe mostrarse, pero la próxima a expirar sí
+    // La ventana ya expirada no debe mostrarse, pero la próxima a expirar sí y en estado En Curso
     expect(wrapper.text()).toContain('Ventana Próxima a Expirar');
+    expect(wrapper.text()).toContain('En Curso');
     expect(wrapper.text()).not.toContain('Ventana Ya Expirada');
 
-    // Avanzar el tiempo 30 segundos (superando los 10s restantes de mw-soon-expiring)
+    // Avanzar el tiempo 15 segundos (superando los 10s restantes de mw-soon-expiring en el intervalo de 15s)
     getSpy.mockResolvedValueOnce({
       status: 200,
       data: [],
       headers: new Headers(),
     });
-    vi.advanceTimersByTime(30000);
+    vi.advanceTimersByTime(15000);
     await flushPromises();
 
     expect(getSpy).toHaveBeenCalledTimes(2);

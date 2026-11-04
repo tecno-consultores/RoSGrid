@@ -277,5 +277,47 @@ describe('DashboardHomeView.vue — Centro de Mando Táctico 11X', () => {
     expect(wrapper.text()).toContain('2 en línea');
     expect(wrapper.text()).toContain('2 desconectado');
   });
+
+  it('calcula y muestra routers en mantenimiento sin considerarlos caídas ni en línea en el pool activo', () => {
+    const inventoryStore = useInventoryStore();
+    inventoryStore.routers = [
+      {
+        id: 'r-1',
+        display_name: 'r1-core',
+        is_reachable: true,
+        operational_status: 'ONLINE',
+        admin_state: 'PRODUCTION',
+      } as unknown as RouterItem,
+      {
+        id: 'r-2',
+        display_name: 'r2-maint',
+        is_reachable: false,
+        operational_status: 'OFFLINE',
+        admin_state: 'MAINTENANCE',
+      } as unknown as RouterItem,
+      {
+        id: 'r-3',
+        display_name: 'r3-down',
+        is_reachable: false,
+        operational_status: 'OFFLINE',
+        admin_state: 'PRODUCTION',
+      } as unknown as RouterItem,
+    ];
+
+    const wrapper = mount(DashboardHomeView, {
+      global: {
+        stubs: { RouterView: true, RouterLink: true },
+      },
+    });
+
+    // 1 en línea, 1 en mantenimiento, 1 desconectado
+    expect(wrapper.text()).toContain('1 en línea');
+    expect(wrapper.text()).toContain('1 mant.');
+    expect(wrapper.text()).toContain('1 desconectado');
+    // Disponibilidad sobre el pool activo (3 - 1 mant = 2): 1 de 2 = 50%
+    expect(wrapper.text()).toContain('50%');
+    // Insignia visible
+    expect(wrapper.text()).toContain('🛠️ MANTENIMIENTO');
+  });
 });
 

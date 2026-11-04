@@ -457,5 +457,42 @@ describe('UnifiedNetworkMap.vue — Mapa de Red Unificado & Gobierno RCA (Hito 2
     const degradedSub: SubscriberDeviceItem = { ...mockSubscribers[1], ping_latency_ms: 55 };
     expect(vm.getSubscriberColor(degradedSub)).toBe('#F59E0B'); // Latencia >= 40ms -> Naranja
   });
+
+  it('excluye equipos con admin_state === MAINTENANCE de la alerta RCA e incluye opción MAINTENANCE en filtro', async () => {
+    const maintenanceRouter: RouterItem = {
+      id: 'r-maint-3',
+      tenant_id: 't-1',
+      display_name: 'CCR2004-Mantenimiento',
+      ros_identity: 'CCR-Maint',
+      ip_address: '10.0.0.3',
+      api_port: 8728,
+      ros_version: '7.18',
+      admin_state: 'MAINTENANCE',
+      is_reachable: false, // Inalcanzable temporalmente debido al trabajo
+      latitude: 10.4900,
+      longitude: -66.9200,
+      network_role: 'EDGE',
+    };
+
+    const wrapper = mount(UnifiedNetworkMap, {
+      props: {
+        routers: [mockRouters[0], maintenanceRouter], // mockRouters[0] is reachable, maintenanceRouter is in MAINTENANCE
+        opticalBoxes: [],
+        subscribers: [],
+      },
+      global: {
+        plugins: [pinia],
+        stubs: { RouterLink: true },
+      },
+    });
+
+    // La alerta RCA no debe activarse porque el router inalcanzable está bajo mantenimiento programado
+    expect(wrapper.find('.rca-alert-banner').exists()).toBe(false);
+
+    // Debe contener la opción MAINTENANCE en el selector
+    const options = wrapper.findAll('.rg-select-filter option');
+    const values = options.map((o) => o.attributes('value'));
+    expect(values).toContain('MAINTENANCE');
+  });
 });
 

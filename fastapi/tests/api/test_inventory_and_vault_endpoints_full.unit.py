@@ -622,3 +622,218 @@ async def test_build_router_response_reachability_consolidation() -> None:
     assert resp.is_reachable is True
     assert resp.operational_status == "ONLINE"
     assert resp.syslog_active is True
+
+
+@pytest.mark.asyncio
+async def test_resolve_active_maintenance_router_ids_3_temporal_phases():
+    """Hito 30.2: Certifica resolución de ventanas en curso a través de 3 fases temporales y tags."""
+    from src.api.v1.inventory_helpers import build_router_response, resolve_active_maintenance_router_ids
+    from src.models.inventory import MaintenanceWindow, Router, RouterAdminStateEnum, RouterTag
+
+    tenant_id = uuid.uuid4()
+    now = datetime.now(UTC)
+    r1 = Router(
+        id=uuid.uuid4(),
+        tenant_id=tenant_id,
+        display_name="r111-core",
+        api_base_url="https://10.250.3.8:443",
+        api_port=443,
+        network_role="CORE",
+        admin_state=RouterAdminStateEnum.PRODUCTION,
+        is_reachable=True,
+        physical_location="NOC Principal",
+        online_since_date=date(2026, 1, 1),
+        serial_number="SN-R111",
+        ssl_trust_status=SSLTrustStatusEnum.TRUSTED_PINNED,
+        created_at=now,
+        updated_at=now,
+    )
+    r1.tags = [RouterTag(tenant_id=tenant_id, router_id=r1.id, tag_name="bng-edge")]
+
+    r2 = Router(
+        id=uuid.uuid4(),
+        tenant_id=tenant_id,
+        display_name="r222-access",
+        api_base_url="https://10.250.3.9:443",
+        api_port=443,
+        network_role="ACCESS",
+        admin_state=RouterAdminStateEnum.PRODUCTION,
+        is_reachable=True,
+        physical_location="Pop Sur",
+        online_since_date=date(2026, 1, 1),
+        serial_number="SN-R222",
+        ssl_trust_status=SSLTrustStatusEnum.TRUSTED_PINNED,
+        created_at=now,
+        updated_at=now,
+    )
+    r2.tags = []
+
+    now = datetime.now(UTC)
+
+    # 1. Ventana activa directa para r1
+    active_mw = MaintenanceWindow(
+        id=uuid.uuid4(),
+        tenant_id=tenant_id,
+        router_id=r1.id,
+        title="Ventana Activa",
+        reason="Upgrade",
+        starts_at=now - timedelta(minutes=5),
+        ends_at=now + timedelta(minutes=10),
+        is_cancelled=False,
+    )
+
+    # Fase 1: Activa (starts_at <= now <= ends_at) -> r1 debe resolverse a MAINTENANCE
+    mock_db = AsyncMock()
+    mock_res = MagicMock()
+    mock_res.scalars.return_value.all.return_value = [active_mw]
+    mock_db.execute.return_value = mock_res
+
+    with patch("src.api.v1.maintenance.purge_expired_maintenance_windows", new=AsyncMock(return_value=0)):
+        active_ids = await resolve_active_maintenance_router_ids(mock_db, tenant_id, [r1, r2])
+        assert r1.id in active_ids
+        assert r2.id not in active_ids
+
+        resp_r1 = build_router_response(r1, {}, in_active_maintenance_window=True)
+        assert resp_r1.admin_state == RouterAdminStateEnum.MAINTENANCE
+
+        resp_r2 = build_router_response(r2, {}, in_active_maintenance_window=False)
+        assert resp_r2.admin_state == RouterAdminStateEnum.PRODUCTION
+
+        # Fase 2: Programada (Futura) -> DB query retorna vacío
+        mock_res_scheduled = MagicMock()
+        mock_res_scheduled.scalars.return_value.all.return_value = []
+        mock_db.execute.return_value = mock_res_scheduled
+
+        active_ids_sched = await resolve_active_maintenance_router_ids(mock_db, tenant_id, [r1, r2])
+        assert len(active_ids_sched) == 0
+
+        # Fase 3: Global tag -> aplica a todos los routers del tenant
+        global_mw = MaintenanceWindow(
+            id=uuid.uuid4(),
+            tenant_id=tenant_id,
+            router_id=None,
+            target_tag="global",
+            title="Ventana Global",
+            reason="Core BGP Switchover",
+            starts_at=now - timedelta(minutes=2),
+            ends_at=now + timedelta(minutes=15),
+            is_cancelled=False,
+        )
+        mock_res_global = MagicMock()
+        mock_res_global.scalars.return_value.all.return_value = [global_mw]
+        mock_db.execute.return_value = mock_res_global
+
+        active_ids_glob = await resolve_active_maintenance_router_ids(mock_db, tenant_id, [r1, r2])
+        assert r1.id in active_ids_glob
+        assert r2.id in active_ids_glob
+
+
+@pytest.mark.asyncio
+async def test_write_audit_log_resolves_usernames_and_router_names():
+    """Hito 30.2: Certifica que write_audit_log resuelva User.username y Router.display_name erradicando UUIDs."""
+    from src.core.audit import write_audit_log
+    from src.models.core import User
+    from src.models.inventory import Router
+
+    tenant_id = uuid.uuid4()
+    user_id = uuid.uuid4()
+    router_id = uuid.uuid4()
+
+    mock_user = User(id=user_id, username="operador_carlos", tenant_id=tenant_id)
+    mock_router = Router(id=router_id, display_name="CCR2004-Caracas-Core", tenant_id=tenant_id)
+
+    mock_session = AsyncMock()
+    mock_hash_res = MagicMock()
+    mock_hash_res.scalar_one_or_none.return_value = None
+    mock_session.execute.return_value = mock_hash_res
+
+    async def mock_get(model, pk):
+        if model is User and pk == user_id:
+            return mock_user
+        if model is Router and pk == router_id:
+            return mock_router
+        return None
+
+    mock_session.get.side_effect = mock_get
+
+    log_entry = await write_audit_log(
+        session=mock_session,
+        tenant_id=tenant_id,
+        actor_username=str(user_id),  # UUID crudo que debe ser resuelto
+        actor_role="TENANT_ADMIN",
+        actor_ip="127.0.0.1",
+        event_category="MAINTENANCE",
+        event_action="MAINTENANCE_WINDOW_CREATED",
+        actor_user_id=user_id,
+        router_id=router_id,
+        router_display_name=None,  # Nombre omitido que debe ser resuelto
+    )
+
+    assert log_entry.actor_username == "operador_carlos"
+    assert log_entry.router_display_name == "CCR2004-Caracas-Core"
+
+
+@pytest.mark.asyncio
+async def test_update_router_cancels_active_maintenance_windows_when_set_to_production():
+    """Hito 30.2: Certifica que cambiar admin_state a PRODUCTION cancele ventanas activas del router."""
+    from src.api.v1.inventory import update_router
+    from src.models.inventory import MaintenanceWindow, Router, RouterAdminStateEnum
+    from src.schemas.inventory import UpdateRouterRequest
+
+    tenant_id = uuid.uuid4()
+    router_id = uuid.uuid4()
+    claims = {"tid": str(tenant_id), "sub": str(uuid.uuid4()), "rol": "TENANT_ADMIN"}
+    now = datetime.now(UTC)
+
+    r = Router(
+        id=router_id,
+        tenant_id=tenant_id,
+        display_name="r111",
+        api_base_url="https://10.250.3.8:443",
+        api_port=443,
+        network_role="CORE",
+        admin_state=RouterAdminStateEnum.MAINTENANCE,
+        is_reachable=True,
+        physical_location="Datacenter",
+        online_since_date=date(2026, 1, 1),
+        serial_number="SN-TEST-R111",
+        ssl_trust_status=SSLTrustStatusEnum.TRUSTED_PINNED,
+        created_at=now,
+        updated_at=now,
+    )
+    r.tags = []
+
+    active_mw = MaintenanceWindow(
+        id=uuid.uuid4(),
+        tenant_id=tenant_id,
+        router_id=router_id,
+        title="Mantenimiento r111",
+        reason="Prueba",
+        starts_at=datetime.now(UTC) - timedelta(minutes=5),
+        ends_at=datetime.now(UTC) + timedelta(minutes=20),
+        is_cancelled=False,
+    )
+
+    mock_db = AsyncMock()
+    mock_router_res = MagicMock()
+    mock_router_res.scalar_one_or_none.return_value = r
+
+    mock_mw_res = MagicMock()
+    mock_mw_res.scalars.return_value.all.return_value = [active_mw]
+
+    def side_execute(stmt):
+        stmt_str = str(stmt).lower()
+        if "maintenance_windows" in stmt_str:
+            return mock_mw_res
+        return mock_router_res
+
+    mock_db.execute.side_effect = side_execute
+
+    with patch("src.api.v1.inventory.get_redis_client"), \
+         patch("src.api.v1.inventory.enrich_router_telemetry", new=AsyncMock(return_value={})), \
+         patch("src.api.v1.inventory.resolve_active_maintenance_router_ids", new=AsyncMock(return_value=set())):
+        payload = UpdateRouterRequest(admin_state=RouterAdminStateEnum.PRODUCTION)
+        resp = await update_router(router_id, payload, claims=claims, db=mock_db)
+
+        assert resp.admin_state == RouterAdminStateEnum.PRODUCTION
+        assert active_mw.is_cancelled is True

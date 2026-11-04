@@ -2,7 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { ref, computed, onMounted, watch } from 'vue';
+  import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
   import UnifiedNetworkMap from '@/components/network/UnifiedNetworkMap.vue';
   import { useI18n } from '@/composables/useI18n';
   import { useAuthStore } from '@/stores/useAuthStore';
@@ -322,12 +322,35 @@
     }
   }
 
+  const isRefreshingMap = ref<boolean>(false);
+  let mapAutoRefreshTimer: ReturnType<typeof setInterval> | null = null;
+
+  async function handleRefreshSubscribersMap(): Promise<void> {
+    if (isRefreshingMap.value) return;
+    isRefreshingMap.value = true;
+    try {
+      await Promise.allSettled([
+        loadSubscriberDevices(),
+        loadRouters(),
+        fieldStore.fetchOpticalBoxes(),
+      ]);
+    } finally {
+      isRefreshingMap.value = false;
+    }
+  }
+
   onMounted(async () => {
-    await Promise.allSettled([
-      loadSubscriberDevices(),
-      loadRouters(),
-      fieldStore.fetchOpticalBoxes(),
-    ]);
+    await handleRefreshSubscribersMap();
+    mapAutoRefreshTimer = setInterval(() => {
+      void handleRefreshSubscribersMap();
+    }, 30000);
+  });
+
+  onUnmounted(() => {
+    if (mapAutoRefreshTimer !== null) {
+      clearInterval(mapAutoRefreshTimer);
+      mapAutoRefreshTimer = null;
+    }
   });
 </script>
 
@@ -457,6 +480,18 @@
 
       <!-- Acciones de Sincronización Bimodal -->
       <div class="sync-actions">
+        <button
+          id="btn-subscribers-map-refresh"
+          type="button"
+          class="btn-refresh-map"
+          :disabled="isRefreshingMap"
+          aria-label="Refrescar datos del mapa"
+          @click="handleRefreshSubscribersMap"
+        >
+          <span v-if="isRefreshingMap">⏳</span>
+          <span v-else>🔄</span>
+          {{ isRefreshingMap ? 'Refrescando...' : 'Refrescar' }}
+        </button>
         <!-- Botón Modo Empresa / Común: Sincronizar leases DHCP reales desde MikroTik -->
         <button
           type="button"
@@ -861,7 +896,8 @@
     gap: 0.5rem;
   }
 
-  .btn-sync-dhcp {
+  .btn-sync-dhcp,
+  .btn-refresh-map {
     background: #002233;
     border: 1px solid #00f3ff;
     color: #00f3ff;

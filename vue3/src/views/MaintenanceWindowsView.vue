@@ -13,7 +13,22 @@
   const errorMessage = ref('');
   const successMessage = ref('');
   const windowsList = ref<MaintenanceWindowItem[]>([]);
+  const nowMsRef = ref<number>(Date.now());
   let expirationCheckTimer: ReturnType<typeof setInterval> | null = null;
+
+  function isWindowInProgress(w: MaintenanceWindowItem): boolean {
+    if (w.is_cancelled) return false;
+    const startMs = new Date(w.starts_at).getTime();
+    const endMs = new Date(w.ends_at).getTime();
+    if (Number.isNaN(startMs) || Number.isNaN(endMs)) return false;
+    return startMs <= nowMsRef.value && nowMsRef.value <= endMs;
+  }
+
+  function getWindowStatusLabel(w: MaintenanceWindowItem): string {
+    if (w.is_cancelled) return 'Cancelada';
+    if (isWindowInProgress(w)) return '🛠️ En Curso';
+    return '⏳ Programada';
+  }
 
   // Modal Crear Ventana
   const isCreateModalOpen = ref(false);
@@ -183,6 +198,7 @@
     try {
       await http.post(`/api/v1/maintenance/windows/${windowItem.id}/cancel`);
       windowItem.is_cancelled = true;
+      await inventoryStore.fetchRouters(true);
       successMessage.value = 'Ventana de mantenimiento cancelada exitosamente.';
       setTimeout(() => {
         successMessage.value = '';
@@ -243,12 +259,14 @@
         payload,
       );
 
+      nowMsRef.value = Date.now();
       // Si el backend devolvió el objeto creado, lo colocamos arriba
       if (res.data && res.data.id) {
         windowsList.value.unshift(res.data);
       } else {
         await loadMaintenanceWindows();
       }
+      await inventoryStore.fetchRouters(true);
 
       // Cerrar modal y limpiar
       isCreateModalOpen.value = false;
@@ -283,15 +301,24 @@
       await inventoryStore.fetchRouters();
     }
     expirationCheckTimer = setInterval(() => {
+      const prevNow = nowMsRef.value;
       const nowMs = Date.now();
+      nowMsRef.value = nowMs;
       const hasExpired = windowsList.value.some((w) => {
         const endMs = new Date(w.ends_at).getTime();
         return !Number.isNaN(endMs) && endMs <= nowMs;
       });
+      const hasJustStarted = windowsList.value.some((w) => {
+        const startMs = new Date(w.starts_at).getTime();
+        return !w.is_cancelled && !Number.isNaN(startMs) && startMs > prevNow && startMs <= nowMs;
+      });
       if (hasExpired) {
         void loadMaintenanceWindows();
+        void inventoryStore.fetchRouters(true);
+      } else if (hasJustStarted) {
+        void inventoryStore.fetchRouters(true);
       }
-    }, 30000);
+    }, 15000);
   });
 
   onUnmounted(() => {
@@ -379,10 +406,11 @@
                 class="badge-status"
                 :class="{
                   'badge-status--cancelled': w.is_cancelled,
-                  'badge-status--active': !w.is_cancelled,
+                  'badge-status--in-progress': isWindowInProgress(w),
+                  'badge-status--active': !w.is_cancelled && !isWindowInProgress(w),
                 }"
               >
-                {{ w.is_cancelled ? 'Cancelada' : 'Programada' }}
+                {{ getWindowStatusLabel(w) }}
               </span>
             </td>
             <td class="col-actions">
@@ -860,6 +888,14 @@
   .badge-status--active {
     background: rgba(56, 189, 248, 0.15);
     color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+  }
+
+  .badge-status--in-progress {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.45);
+    font-weight: 700;
   }
 
   .badge-status--cancelled {

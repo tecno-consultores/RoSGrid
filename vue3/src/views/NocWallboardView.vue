@@ -9,7 +9,7 @@
   import { http } from '@/api/httpClient';
   import { useNocEventsStore } from '@/stores/useNocEventsStore';
   import { useI18n } from '@/composables/useI18n';
-  import { formatEventAction, formatEventMessage } from '@/utils/eventFormatter';
+  import { formatEventAction, formatEventMessage, isRawUuid } from '@/utils/eventFormatter';
 
   const router = useRouter();
   const nocEventsStore = useNocEventsStore();
@@ -18,7 +18,7 @@
   interface NocEvent {
     id: string;
     timestamp: string;
-    type: 'ROUTER_DOWN' | 'ROUTER_UP' | 'HIGH_CPU' | 'SSL_MISMATCH' | 'MAINTENANCE';
+    type: 'ROUTER_DOWN' | 'ROUTER_UP' | 'HIGH_CPU' | 'SSL_MISMATCH' | 'MAINTENANCE' | 'BACKUP' | 'OPERATION';
     router_identity: string;
     message: string;
     severity: 'critical' | 'warning' | 'info';
@@ -138,20 +138,30 @@
   let autoRefreshTimer: ReturnType<typeof setInterval> | null = null;
   const isRefreshing = ref(false);
 
-  async function performAutoRefresh() {
+  async function performAutoRefresh(forceProbe = false) {
     if (isRefreshing.value) return;
     isRefreshing.value = true;
     try {
-      await Promise.allSettled([loadRouters(), loadOpticalBoxes(), loadSubscribers(), loadEvents()]);
+      await Promise.allSettled([
+        loadRouters(forceProbe),
+        loadOpticalBoxes(),
+        loadSubscribers(),
+        loadEvents(),
+      ]);
     } finally {
       isRefreshing.value = false;
     }
   }
 
-  function determineEventType(name: string): NocEvent['type'] {
-    if (name.includes('DOWN')) return 'ROUTER_DOWN';
-    if (name.includes('UP')) return 'ROUTER_UP';
-    return 'MAINTENANCE';
+  function determineEventType(name: string, category?: string): NocEvent['type'] {
+    const upper = (name || '').toUpperCase();
+    if (upper.includes('DOWN') || upper.includes('OUTAGE')) return 'ROUTER_DOWN';
+    if (upper.includes('MAINTENANCE')) return 'MAINTENANCE';
+    if (upper.includes('BACKUP')) return 'BACKUP';
+    if (upper.includes('SSL') || upper.includes('TOFU')) return 'SSL_MISMATCH';
+    if (upper.includes('CPU')) return 'HIGH_CPU';
+    if (upper.includes('UP') || category === 'AUTH') return 'ROUTER_UP';
+    return 'OPERATION';
   }
 
   function determineSeverity(sev: string): 'critical' | 'warning' | 'info' {
@@ -194,11 +204,10 @@
     { deep: true },
   );
 
-  async function loadRouters() {
+  async function loadRouters(forceProbe = false) {
     try {
-      const res = await http.get<RouterItem[] | { items: RouterItem[] }>(
-        '/api/v1/inventory/routers',
-      );
+      const url = forceProbe ? '/api/v1/inventory/routers?refresh=true' : '/api/v1/inventory/routers';
+      const res = await http.get<RouterItem[] | { items: RouterItem[] }>(url);
       const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
       if (raw.length > 0) {
         routers.value = (raw as unknown as Record<string, unknown>[]).map((item) => ({
@@ -274,28 +283,34 @@
         );
       }
 
-      liveEvents.value = items.slice(0, 20).map((log) => ({
-        id: String(log.id),
-        timestamp: log.created_at
-          ? new Date(log.created_at as string).toLocaleTimeString()
-          : new Date().toLocaleTimeString(),
-        type:
-          log.event_action === 'MASS_OUTAGE_TRIGGERED' ||
-          log.event_action === 'MASS_OUTAGE_DETECTED'
-            ? 'ROUTER_DOWN'
-            : log.event_category === 'AUTH'
-              ? 'ROUTER_UP'
-              : 'MAINTENANCE',
-        router_identity: (log.router_display_name as string) || (log.actor_username as string) || 'Sistema',
-        message: formatEventMessage(log.event_action as string, log.actor_username as string),
-        severity:
-          log.event_action === 'MASS_OUTAGE_TRIGGERED' ||
-          log.event_action === 'MASS_OUTAGE_DETECTED'
-            ? 'critical'
-            : Number(log.status_code || 0) >= 400
+      liveEvents.value = items.slice(0, 20).map((log) => {
+        const rawRouterName = (log.router_display_name as string) || '';
+        const rawActor = (log.actor_username as string) || '';
+        const cleanIdentity =
+          rawRouterName && !isRawUuid(rawRouterName)
+            ? rawRouterName
+            : rawActor && !isRawUuid(rawActor)
+              ? rawActor
+              : 'Sistema';
+        return {
+          id: String(log.id),
+          timestamp: log.created_at
+            ? new Date(log.created_at as string).toLocaleTimeString()
+            : new Date().toLocaleTimeString(),
+          type: determineEventType(log.event_action as string, log.event_category as string),
+          router_identity: cleanIdentity,
+          message: formatEventMessage(log.event_action as string, rawActor),
+          severity:
+            log.event_action === 'MASS_OUTAGE_TRIGGERED' ||
+            log.event_action === 'MASS_OUTAGE_DETECTED'
               ? 'critical'
-              : 'info',
-      }));
+              : Number(log.status_code || 0) >= 400
+                ? 'critical'
+                : String(log.event_action || '').includes('MAINTENANCE')
+                  ? 'warning'
+                  : 'info',
+        };
+      });
     } catch {
       liveEvents.value = [];
     }
@@ -335,6 +350,10 @@
         return 'ALERTA SSL';
       case 'MAINTENANCE':
         return 'MANTENIMIENTO';
+      case 'BACKUP':
+        return 'RESPALDO';
+      case 'OPERATION':
+        return 'OPERACIÓN';
       default:
         return formatEventAction(type);
     }
@@ -411,7 +430,7 @@
           <span class="kpi-value text-red">{{ offlineRouters }}</span>
         </div>
 
-        <div class="kpi-card">
+        <div class="kpi-card" :class="{ 'kpi-card--maintenance-active': maintenanceRouters > 0 }">
           <span class="kpi-label">{{ t('wallboard.kpi_maintenance') }}</span>
           <span class="kpi-value text-blue">{{ maintenanceRouters }}</span>
         </div>
@@ -422,14 +441,26 @@
         </div>
       </div>
 
-      <button
-        type="button"
-        class="btn-fullscreen"
-        :aria-label="isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa NOC'"
-        @click="toggleFullscreen"
-      >
-        {{ isFullscreen ? t('wallboard.exit_tv') : t('wallboard.mode_tv') }}
-      </button>
+      <div class="wallboard-header-actions">
+        <button
+          id="btn-wallboard-refresh"
+          type="button"
+          class="btn-wallboard-refresh"
+          :disabled="isRefreshing"
+          aria-label="Refrescar estado del Wallboard NOC"
+          @click="performAutoRefresh(true)"
+        >
+          {{ isRefreshing ? '⏳ Refrescando...' : '🔄 Refrescar' }}
+        </button>
+        <button
+          type="button"
+          class="btn-fullscreen"
+          :aria-label="isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa NOC'"
+          @click="toggleFullscreen"
+        >
+          {{ isFullscreen ? t('wallboard.exit_tv') : t('wallboard.mode_tv') }}
+        </button>
+      </div>
     </header>
 
     <!-- Banner de Alta Visibilidad de Caída Masiva (docs/specs/32 §5.3) -->
@@ -762,6 +793,11 @@
     }
   }
 
+  .kpi-card--maintenance-active {
+    border-color: #38bdf8;
+    background: rgba(56, 189, 248, 0.12);
+  }
+
   .kpi-label {
     font-size: 0.65rem;
     font-weight: 700;
@@ -790,6 +826,34 @@
   }
   .text-blue {
     color: #60a5fa;
+  }
+
+  .wallboard-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .btn-wallboard-refresh {
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid #38bdf8;
+    color: #38bdf8;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .btn-wallboard-refresh:hover:not(:disabled) {
+    background: rgba(56, 189, 248, 0.25);
+    color: #fff;
+  }
+
+  .btn-wallboard-refresh:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 
   .btn-fullscreen {

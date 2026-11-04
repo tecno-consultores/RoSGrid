@@ -245,8 +245,71 @@ async def perform_discovery(client: MikrotikRestClient, r: Router, redis: Any = 
         return False
 
 
-def build_router_response(r: Router, telemetry: dict[str, Any]) -> RouterResponse:
-    """Construye esquema de respuesta de Router combinando modelo y métricas en vivo."""
+async def resolve_active_maintenance_router_ids(
+    db: Any,
+    tenant_id: uuid.UUID,
+    routers: list[Router] | tuple[Router, ...],
+) -> set[uuid.UUID]:
+    """Purga ventanas vencidas y devuelve el conjunto de router_id cubiertos por ventanas de mantenimiento en curso."""
+    if not routers:
+        return set()
+    try:
+        from sqlalchemy import select
+
+        from src.api.v1.maintenance import purge_expired_maintenance_windows
+        from src.models.inventory import MaintenanceWindow
+
+        await purge_expired_maintenance_windows(db, tenant_id=tenant_id, commit=True)
+        now_utc = datetime.now(UTC)
+        stmt = select(MaintenanceWindow).where(
+            MaintenanceWindow.tenant_id == tenant_id,
+            MaintenanceWindow.is_cancelled.is_(False),
+            MaintenanceWindow.starts_at <= now_utc,
+            MaintenanceWindow.ends_at > now_utc,
+        )
+        res = await db.execute(stmt)
+        active_windows = list(res.scalars().all())
+    except Exception:
+        return set()
+
+    if not active_windows:
+        return set()
+
+    matched_ids: set[uuid.UUID] = set()
+    has_global = any(
+        (getattr(w, "target_tag", None) or "").strip().lower() == "global"
+        for w in active_windows
+        if hasattr(w, "starts_at")
+    )
+    direct_router_ids = {
+        w.router_id
+        for w in active_windows
+        if getattr(w, "router_id", None) is not None and hasattr(w, "starts_at")
+    }
+    active_tags = {
+        str(w.target_tag).strip().lower()
+        for w in active_windows
+        if getattr(w, "target_tag", None) and hasattr(w, "starts_at")
+    } - {"global"}
+
+    for r in routers:
+        if has_global or r.id in direct_router_ids:
+            matched_ids.add(r.id)
+            continue
+        if active_tags and r.tags:
+            router_tags = {str(t.tag_name).strip().lower() for t in r.tags if getattr(t, "tag_name", None)}
+            if router_tags & active_tags:
+                matched_ids.add(r.id)
+
+    return matched_ids
+
+
+def build_router_response(
+    r: Router,
+    telemetry: dict[str, Any],
+    in_active_maintenance_window: bool = False,
+) -> RouterResponse:
+    """Construye esquema de respuesta de Router combinando modelo, ventanas activas y métricas en vivo."""
     tag_names = [t.tag_name for t in r.tags] if r.tags else []
     is_effective_reachable = bool(
         r.is_reachable
@@ -257,6 +320,10 @@ def build_router_response(r: Router, telemetry: dict[str, Any]) -> RouterRespons
     if is_effective_reachable and operational_status == "OFFLINE":
         operational_status = "ONLINE"
 
+    effective_admin_state = r.admin_state
+    if in_active_maintenance_window and r.admin_state != RouterAdminStateEnum.RETIRED:
+        effective_admin_state = RouterAdminStateEnum.MAINTENANCE
+
     return RouterResponse(
         id=r.id,
         tenant_id=r.tenant_id,
@@ -264,7 +331,7 @@ def build_router_response(r: Router, telemetry: dict[str, Any]) -> RouterRespons
         api_base_url=r.api_base_url,
         api_port=r.api_port,
         network_role=r.network_role,
-        admin_state=r.admin_state,
+        admin_state=effective_admin_state,
         physical_location=r.physical_location,
         latitude=r.latitude,
         longitude=r.longitude,

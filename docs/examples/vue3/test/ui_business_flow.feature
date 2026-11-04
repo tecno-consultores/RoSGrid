@@ -952,6 +952,16 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * match brandLogoContract.defaultHeaderSize == 28
     * match brandLogoContract.viewBox == '0 0 512 512'
 
+  Scenario: 95. Estado Reactivo En Curso en Ventanas de Mantenimiento, Insignia en Centro de Mando y Refresco Táctico en Wallboard NOC (Hito 30.2)
+    * def maintenanceFlowContract = { inProgressBadge: '.badge-status--in-progress', kpiMaintenance: '.micro-maintenance', quickBadgeMaintenance: '.badge-maintenance-sm', wallboardRefreshBtn: '#btn-wallboard-refresh', mapRefreshBtn: '#btn-subscribers-map-refresh', mapFilterMaintenanceOption: 'option[value="MAINTENANCE"]' }
+    * match maintenanceFlowContract.inProgressBadge == '.badge-status--in-progress'
+    * match maintenanceFlowContract.kpiMaintenance == '.micro-maintenance'
+    * match maintenanceFlowContract.quickBadgeMaintenance == '.badge-maintenance-sm'
+    * match maintenanceFlowContract.wallboardRefreshBtn == '#btn-wallboard-refresh'
+    * match maintenanceFlowContract.mapRefreshBtn == '#btn-subscribers-map-refresh'
+    * match maintenanceFlowContract.mapFilterMaintenanceOption == 'option[value="MAINTENANCE"]'
+
+
 
 
 

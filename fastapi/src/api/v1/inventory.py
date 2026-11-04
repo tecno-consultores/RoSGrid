@@ -33,6 +33,7 @@ from src.api.v1.inventory_helpers import (
     build_router_response,
     enrich_router_telemetry,
     perform_discovery,
+    resolve_active_maintenance_router_ids,
     row_to_commit_item,
     validate_single_csv_row,
 )
@@ -363,11 +364,12 @@ async def list_routers(
 
     query = select(Router).options(selectinload(Router.tags), selectinload(Router.vault))
     query = _apply_role_filters(query, claims, tenant_id, user_id)
-    query = _apply_query_search_filters(query, network_role, admin_state, tag, search)
+    query = _apply_query_search_filters(query, network_role, None, tag, search)
     query = query.order_by(Router.display_name.asc())
 
     result = await db.execute(query)
-    routers = result.scalars().all()
+    routers = list(result.scalars().all())
+    active_mw_router_ids = await resolve_active_maintenance_router_ids(db, tenant_id, routers)
 
     if refresh and routers:
         async def _probe_router(r: Router) -> None:
@@ -390,7 +392,14 @@ async def list_routers(
     response_items = []
     for r in routers:
         telemetry = await enrich_router_telemetry(redis, tenant_id, r.id)
-        response_items.append(build_router_response(r, telemetry))
+        item_resp = build_router_response(
+            r,
+            telemetry,
+            in_active_maintenance_window=(r.id in active_mw_router_ids),
+        )
+        if admin_state is not None and item_resp.admin_state != admin_state:
+            continue
+        response_items.append(item_resp)
     return response_items
 
 
@@ -555,9 +564,14 @@ async def get_router(
     if not r:
         raise HTTPException(status_code=404, detail="Router no encontrado")
 
+    active_mw_router_ids = await resolve_active_maintenance_router_ids(db, tenant_id, [r])
     redis = get_redis_client()
     telemetry = await enrich_router_telemetry(redis, tenant_id, r.id)
-    return build_router_response(r, telemetry)
+    return build_router_response(
+        r,
+        telemetry,
+        in_active_maintenance_window=(r.id in active_mw_router_ids),
+    )
 
 
 @router.put("/routers/{router_id}", response_model=RouterResponse)
@@ -585,6 +599,23 @@ async def update_router(
         raise HTTPException(status_code=404, detail="Router no encontrado")
 
     apply_router_scalar_updates(r, payload)
+    if payload.admin_state == RouterAdminStateEnum.PRODUCTION:
+        try:
+            from src.models.inventory import MaintenanceWindow
+
+            now_utc = datetime.now(UTC)
+            mw_stmt = select(MaintenanceWindow).where(
+                MaintenanceWindow.tenant_id == tenant_id,
+                MaintenanceWindow.router_id == r.id,
+                MaintenanceWindow.is_cancelled.is_(False),
+                MaintenanceWindow.ends_at > now_utc,
+            )
+            mw_res = await db.execute(mw_stmt)
+            for active_mw in mw_res.scalars().all():
+                active_mw.is_cancelled = True
+        except Exception:
+            pass
+
     if payload.network_role:
         r.network_role = payload.network_role.strip().upper()
         await _ensure_custom_network_roles(
@@ -603,9 +634,14 @@ async def update_router(
 
     await db.commit()
     await db.refresh(r, ["tags"])
+    active_mw_router_ids = await resolve_active_maintenance_router_ids(db, tenant_id, [r])
     redis = get_redis_client()
     telemetry = await enrich_router_telemetry(redis, tenant_id, r.id)
-    return build_router_response(r, telemetry)
+    return build_router_response(
+        r,
+        telemetry,
+        in_active_maintenance_window=(r.id in active_mw_router_ids),
+    )
 
 
 @router.delete("/routers/{router_id}", status_code=status.HTTP_204_NO_CONTENT)
