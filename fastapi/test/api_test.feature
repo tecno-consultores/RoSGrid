@@ -1312,5 +1312,18 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 154. Precarga de Bóveda y Herencia de Coordenadas en Alta de Abonados FTTH (Hito 28.19)
+    Given path '/api/v1/subscriber-devices/00000000-0000-0000-0000-000000000001/live-candidates'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/subscriber-devices/00000000-0000-0000-0000-000000000001/ping'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000155'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
 
 

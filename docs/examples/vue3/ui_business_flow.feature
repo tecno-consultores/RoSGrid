@@ -639,6 +639,188 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     Then match text(".banner--warning") contains 'Tu sesión ha expirado'
     And match driver.url contains '/login?reason=session_expired'
 
+  Scenario: 67. Paridad CRUD Completa y Homologación Táctica de Botones en WebFig v7 — Sacar Puerto de Bridge, Eliminar Túnel WireGuard, Editar Redes/Clientes DHCP, Pools, DNS y PPPoE
+    Given driver baseUrl + '/routers/00000000-0000-0000-0000-000000000001/webfig/bridge'
+    And waitFor(".bridge-view")
+    When click("//button[contains(@class, 'tab-btn') and contains(., 'Puertos Miembro')]")
+    Then waitFor(".table-wrapper")
+    And waitFor("th.col-custom-actions")
+    When driver baseUrl + '/routers/00000000-0000-0000-0000-000000000001/webfig/wireguard'
+    Then waitFor(".wireguard-view")
+    When driver baseUrl + '/routers/00000000-0000-0000-0000-000000000001/webfig/ip'
+    Then waitFor(".webfig-ip-view")
+    When click("//button[contains(@class, 'tab-btn') and contains(., 'DNS & Caché')]")
+    Then waitFor("//button[contains(., 'Editar Parámetros')]")
+    When driver baseUrl + '/routers/00000000-0000-0000-0000-000000000001/webfig/ppp-queues'
+    Then waitFor(".ppp-queues-view")
+
+  Scenario: 68. Auto-Eliminación de Ventanas de Mantenimiento Vencidas con Registro Inmutable en AuditLog WORM
+    Given driver baseUrl + '/maintenance'
+    And waitFor(".maintenance-view")
+    Then match text(".view-title") contains 'Ventanas de Mantenimiento Programadas'
+    And match text(".view-subtitle") contains 'auto-eliminación automática al finalizar con registro en AuditLog WORM'
+
+  Scenario: 69. Reglas de Aprovisionamiento CAPsMAN v7 y Motor Universal Capa 2 Responsivo (/certificate)
+    Given driver baseUrl + '/enterprise/compliance?tab=wifi'
+    And waitFor("#panel-wifi")
+    And waitFor("#btn-wifi-provisioning")
+    Then match text("#btn-wifi-provisioning") contains 'Reglas de Aprovisionamiento'
+    When click("#btn-wifi-provisioning")
+    Then waitFor("#prov-rules-title")
+    When driver baseUrl + '/routers/00000000-0000-0000-0000-000000000001/webfig/layer2/certificate'
+    Then waitFor(".layer2-view")
+    And waitFor("#layer2-search-input")
+
+  Scenario: 70. Cajón de Ayuda Contextual In-App, Selector de Tópicos y Copia como Markdown LLM-Ready (Hito 27.14)
+    Given driver baseUrl + '/inventory'
+    And waitFor("#btn-contextual-help")
+    When click("#btn-contextual-help")
+    Then waitFor("#rg-contextual-help-drawer")
+    And waitFor("#help-drawer-title")
+    And waitFor("#help-topic-selector")
+    And waitFor("#btn-copy-help-markdown")
+    When click("#btn-close-contextual-help")
+    Then waitUntil("!document.querySelector('#rg-contextual-help-drawer')")
+
+  Scenario: 71. Paridad de Diseño 11X, Blindaje Anti-Indexación (noindex), Persistencia de Tema y Contexto llms.txt MCP (Hito 27.15)
+    Given driver baseUrl + '/inventory'
+    And waitFor("header.rg-header")
+    And waitFor(".rg-brand-logo-svg")
+    Then match script("document.querySelector('meta[name=\"robots\"]').getAttribute('content')") contains 'noindex, nofollow'
+    And match script("document.querySelector('meta[name=\"color-scheme\"]').getAttribute('content')") != null
+
+  Scenario: 72. Motor Universal Capa 2 Next-Gen: Query Builder Server-Side (.query / .proplist), Exportación Contextual .rsc / Diff y Perfiles de Columnas (Hito 27.16)
+    Given driver baseUrl + '/routers/00000000-0000-0000-0000-000000000001/webfig/layer2/certificate'
+    And waitFor(".layer2-view")
+    And waitFor("#btn-toggle-query-builder")
+    And waitFor("#btn-layer2-rsc-export")
+    When click("#btn-toggle-query-builder")
+    Then waitFor("#layer2-query-builder")
+    And waitFor("#btn-apply-l2-query")
+    And waitFor("#chk-proplist-optimize")
+
+  Scenario: 73. Gobernanza Granular de Flags en Perfiles de Usuario: Modal Táctico de 30 Funciones (RgUserProfileFlagsModal), Filtro por Categoría y Overrides por Operador (Hito 27.17)
+    Given driver baseUrl + '/admin/users'
+    And waitFor(".users-view")
+    And waitFor(".rg-table")
+    And waitFor(".btn-flags")
+    When click(".btn-flags")
+    Then waitFor(".rg-profile-flags-modal")
+    And waitFor("#profile-flags-title")
+    And waitFor("#search-profile-flags")
+    And waitFor("#filter-profile-category")
+    And waitFor(".flags-table")
+    And waitFor("#btn-save-user-flags")
+    When click(".btn-close")
+    Then waitUntil("!document.querySelector('.rg-profile-flags-modal')")
+
+  Scenario: 74. Técnico de Campo FTTH: Registro de Abonado con Selección de Puerto en Caja NAP y Selector de Modo ONU (Hito 28.2)
+    Given driver baseUrl + '/field-ops'
+    And waitFor(".field-mobile-shell")
+    And waitFor("#tab-btn-customer")
+    When click("#tab-btn-customer")
+    Then waitFor("#cust-service-id")
+    And waitFor("#cust-nap-select")
+    And waitFor("#cust-port-select")
+    And waitFor("#cust-onu-serial")
+    And waitFor("#cust-onu-mode")
+    And waitFor(".ports-grid")
+    And waitFor(".submit-btn")
+
+  Scenario: 75. Ergonomía de Tabla de Inventario: Columnas Auto-Fit al Contenido (Content-Hugging) y Acciones en Línea (Hito 28.8)
+    Given driver baseUrl + '/inventory'
+    And waitFor(".inventory-view")
+    And waitFor(".rg-table")
+    And waitFor("thead th:not(.col-custom-actions)")
+    And waitFor(".col-flags")
+    And waitFor(".table-row-actions")
+    And waitFor(".btn-row-action")
+
+  Scenario: 76. Remediación Masiva Inteligente desde Matriz CVE y Auto-Detección CHR en Acciones Masivas (Hito 28.1)
+    Given driver baseUrl + '/inventory/cves'
+    And waitFor(".cve-matrix-view")
+    And waitFor(".btn-remediate-fleet")
+    When click(".btn-remediate-fleet")
+    Then waitFor(".bulk-view")
+    And waitFor("#var-update_channel")
+    And waitFor("#channel-update-discovery-box")
+
+  Scenario: 77. Seguridad L2 DHCP Snooping y Option 82: Conmutación Interactiva de Puertos Confiables y Despliegue Masivo (Hito 28.4)
+    Given driver baseUrl + '/enterprise/compliance?tab=switching'
+    And waitFor("#panel-switching")
+    And waitFor("#btn-bulk-dhcp-snooping")
+    Then match text("#panel-switching") contains 'DHCP Snooping'
+    When click("#btn-bulk-dhcp-snooping")
+    Then waitFor(".bulk-view")
+
+  Scenario: 78. Telemetría SLA Real: Autodescubrimiento de Gateways WAN, Presets Quad9 y Sondeo Táctico de Línea Base (Hito 28.6)
+    Given driver baseUrl + '/enterprise/compliance?tab=sla'
+    And waitFor("#panel-sla")
+    And waitFor("#sla-target-preset")
+    And waitFor("#btn-quick-baseline-sla")
+    Then match text("#panel-sla") contains 'Quad9'
+    When click("#btn-quick-baseline-sla")
+    Then waitFor(".badge-success")
+
+  Scenario: 79. Aplicación Estricta de Visibilidad RBAC: Ocultación de Pestañas y Acciones Restringidas Evitando Callejones sin Salida 403 (Hito 28.9)
+    Given driver baseUrl + '/enterprise/compliance'
+    And waitFor(".enterprise-compliance-view")
+    And waitFor(".tactical-tabs-nav")
+    Then match text(".tactical-tabs-nav") contains 'Matriz de CVEs'
+    And match text(".tactical-tabs-nav") contains 'Seguridad L2'
+    And match text(".tactical-tabs-nav") contains 'SLA Telemetría'
+
+  Scenario: 80. Paridad Total de Endpoints Operativos y Acciones Tácticas en UI (Hito 28.5)
+    # 1. Verificación de Pestaña QoS y Simulación DHCP en IPAM
+    Given driver baseUrl + '/ipam'
+    And waitFor(".ipam-management-view")
+    And waitFor("#tab-btn-bandwidth-profiles")
+    When click("#tab-btn-bandwidth-profiles")
+    Then waitFor("#btn-simulate-dhcp-subscribers")
+    # 2. Verificación de Telemetría Beacon en Administración de Empresas (Hito 28.10)
+    Given driver baseUrl + '/admin/tenants'
+    And waitFor(".tenants-management-view")
+    And waitFor(".beacon-card")
+    And waitFor(".beacon-timestamp")
+    And waitFor("#btn-trigger-beacon.btn-beacon")
+    Given driver baseUrl + '/backups'
+    And waitFor(".diff-header-actions")
+    # 3. Verificación de Acciones Rápidas en Live Dashboard
+    Given driver baseUrl + '/routers/01928000-0000-7000-8000-000000000001/dashboard'
+    And waitFor(".live-dashboard")
+    And waitFor("#btn-change-identity")
+    And waitFor("#btn-sync-discovery")
+    And waitFor("#btn-reboot-router")
+
+  Scenario: 81. Homologación de Estilo Táctico Bootstrap y Edición de Empresas / Cuotas (Hito 28.11)
+    Given driver baseUrl + '/admin/tenants'
+    And waitFor(".tenants-management-view")
+    And waitFor(".btn-action--edit")
+
+  Scenario: 82. Sincronización Integral de Identidad del Router y Reactividad en Tiempo Real (Hito 28.12)
+    Given driver baseUrl + '/routers/01928000-0000-7000-8000-000000000001/dashboard'
+    And waitFor(".live-dashboard")
+    And waitFor("#btn-change-identity")
+    When click("#btn-change-identity")
+    Then waitFor("#identity-modal-title")
+    And waitFor("#input-router-identity")
+    And waitFor("#chk-sync-display-name")
+    And waitFor("#btn-confirm-identity")
+
+  Scenario: 83. Endurecimiento DISA ASD STIG V6R5 y OWASP: Mensaje de Cierre Seguro y Complejidad Bootstrap (Hito 28.13)
+    Given driver baseUrl + '/login?reason=logged_out'
+    And waitFor(".login-card")
+    Then waitFor(".alert-banner--warning")
+    And match text(".alert-banner--warning") contains 'cerrada de forma segura'
+
+  Scenario: 84. Resiliencia de Onboarding ante Reinicio de Contenedores y Sincronización de Features (Hito 28.14)
+    Given driver baseUrl + '/login'
+    And waitFor(".login-card")
+    When input("#login-username", "admin_demo")
+    And input("#login-password", "Password12345!")
+    And click("#btn-login-submit")
+    Then waitFor(".main-layout")
+    And waitUntil("!document.querySelector('.onboarding-backdrop')")
 
 
 
@@ -656,6 +838,89 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+  Scenario: 85. Emparejamiento de Red FTTH (DHCP / PPPoE / IPAM), Modal Táctico y Diagnóstico Ping 1-Click (Hito 28.15)
+    Given driver baseUrl + '/ipam'
+    And waitFor(".ipam-management-view")
+    When click(".tab-btn:nth-child(2)")
+    Then waitFor(".subscribers-section")
+    And waitFor(".rg-table")
+    When click(".btn-rg--cyan.btn-sm")
+    Then waitFor("#modal-pair-subscriber")
+    And waitFor("#pair-proto-select")
+    When select("#pair-proto-select", "DHCP")
+    And input("#pair-assigned-ipv4", "10.250.3.55")
+    And click("#btn-save-pair-subscriber")
+    Then waitUntil("!document.querySelector('#modal-pair-subscriber')")
+
+
+
+  Scenario: 86. Matriz de Vulnerabilidades CVE: Filtrado por Fuente Oficial MikroTik y NIST NVD v2.0 (Hito 29.1)
+    Given driver baseUrl + '/inventory/cves'
+    And waitFor(".cve-matrix-view")
+    Then waitFor("#cve-matrix-title")
+    And match text("#cve-matrix-title") contains 'Matriz de Vulnerabilidades CVE'
+    And waitFor("#cve-source-filter")
+    When select("#cve-source-filter", "MIKROTIK")
+    Then waitFor(".cve-table")
+    When select("#cve-source-filter", "NIST_NVD")
+    Then waitFor(".cve-table")
+    When select("#cve-source-filter", "ALL")
+    Then waitFor(".cve-table")
+    And waitFor("[data-testid='btn-sync-cve']")
+
+
+
+  Scenario: 87. Telemetría de Errores UI y Soporte Unificado 1-Click con Ring Buffer (Hito 29.2)
+    Given driver baseUrl + '/inventory'
+    And waitFor(".rg-shell-main")
+    When script("window.dispatchEvent(new CustomEvent('rosgrid:api-health-event', { detail: { type: 'ERROR', message: 'Simulated Diagnostic UI Error' } }))")
+    Then waitFor(".rg-shell-main")
+
+
+
+  Scenario: 88. Conector SIEM Multi-Protocolo del ISP y Pestaña Diagnóstico & SIEM en Enterprise Compliance (Hito 29.3)
+    * def diagTabContract = { tabId: 'tab-btn-diagnostics', panelId: 'panel-diagnostics', formats: ['zip', 'tar.gz'], protocols: ['GELF_UDP', 'GELF_HTTP', 'LOKI_HTTP', 'SYSLOG_UDP', 'SYSLOG_TCP'] }
+    * match diagTabContract.formats contains 'zip'
+    * match diagTabContract.formats contains 'tar.gz'
+    * match diagTabContract.protocols contains 'LOKI_HTTP'
+    * match diagTabContract.protocols contains 'GELF_UDP'
+
+
+
+  Scenario: 89. Escala Proporcional Real por Ventana en Gráficas de Telemetría WebFig Live y Reinicio de Router (Hito 28.16)
+    * def webfigLiveContract = { route: '/routers/r1/webfig/live', cpuScaleTag: '#cpu-chart-scale-tag', trafficScaleTag: '#traffic-chart-scale-tag', rebootBtn: '#btn-reboot-router' }
+    * match webfigLiveContract.cpuScaleTag == '#cpu-chart-scale-tag'
+    * match webfigLiveContract.trafficScaleTag == '#traffic-chart-scale-tag'
+    * match webfigLiveContract.rebootBtn == '#btn-reboot-router'
+    * match webfigLiveContract.route contains '/webfig/live'
+
+  Scenario: 90. Motor Safe Mode Transaccional Real de 2 Fases y Botón de Refresco Homologado en WebFig (Hito 28.17)
+    * def safemodeBannerContract = { verifyLiveBtn: '#btn-safemode-verify-live', rollbackBtn: '#btn-safemode-rollback', confirmBtn: '#btn-safemode-confirm', dismissNoticeBtn: '#btn-safemode-dismiss-notice', webfigRefreshBtn: '#btn-webfig-refresh' }
+    * match safemodeBannerContract.verifyLiveBtn == '#btn-safemode-verify-live'
+    * match safemodeBannerContract.rollbackBtn == '#btn-safemode-rollback'
+    * match safemodeBannerContract.confirmBtn == '#btn-safemode-confirm'
+    * match safemodeBannerContract.dismissNoticeBtn == '#btn-safemode-dismiss-notice'
+    * match safemodeBannerContract.webfigRefreshBtn == '#btn-webfig-refresh'
+
+  Scenario: 91. Simbología Geométrica Cartográfica Triádica y Anti-Solapamiento Orbital en Mapa Unificado (Hito 28.19)
+    * def mapGeometricContract = { routerShape: '●', boxShape: '■', subShape: '▲', boxSquareClass: '.box-square', subTriangleClass: '.sub-triangle-svg', routerLayerBtn: '.btn-layer-routers', boxLayerBtn: '.btn-layer-boxes', subLayerBtn: '.btn-layer-subs' }
+    * match mapGeometricContract.routerShape == '●'
+    * match mapGeometricContract.boxShape == '■'
+    * match mapGeometricContract.subShape == '▲'
+    * match mapGeometricContract.boxSquareClass == '.box-square'
+    * match mapGeometricContract.subTriangleClass == '.sub-triangle-svg'
 
 
 

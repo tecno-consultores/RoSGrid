@@ -53,7 +53,14 @@
       Boolean('webdriver' in navigator && (navigator as { webdriver?: boolean }).webdriver),
   );
 
-  const isIspMode = computed<boolean>(() => Boolean(authStore.tenantFeatures?.isp_module_enabled));
+  const isIspMode = computed<boolean>(() => {
+    if (authStore.tenantFeatures?.isp_module_enabled === false) return false;
+    return (
+      authStore.isFeatureEnabled('isp_module_enabled') ||
+      Boolean(authStore.tenantFeatures?.isp_module_enabled) ||
+      props.opticalBoxes.length > 0
+    );
+  });
 
   // Control RBAC: Si allowWebfig es false (modo técnico de campo), WebFig está terminantemente prohibido
   const canAccessWebFig = computed<boolean>(() => {
@@ -336,14 +343,49 @@
 
   function getSubscriberColor(sub: SubscriberDeviceItem): string {
     if (sub.last_reachability_status === 'OFFLINE' || sub.status === 'SUSPENDED') {
-      return '#EF4444'; // Rojo
+      return '#EF4444'; // Rojo (Caído / Aislado)
     }
     const lat = sub.ping_latency_ms;
     const loss = sub.packet_loss_pct;
-    if ((lat !== undefined && lat !== null && lat >= 40) || (loss !== undefined && loss !== null && loss >= 1)) {
-      return '#F97316'; // Naranja
+    if (
+      sub.status === 'PENDING_INSTALL' ||
+      (lat !== undefined && lat !== null && lat >= 40) ||
+      (loss !== undefined && loss !== null && loss >= 1)
+    ) {
+      return '#F59E0B'; // Naranja (Degradado / Pendiente)
     }
-    return '#00F0FF'; // Tactical Cyan / Verde
+    return '#10B981'; // Verde Esmeralda (Online Óptimo)
+  }
+
+  function resolveSubscriberBaseCoords(s: SubscriberDeviceItem): [number, number] | null {
+    const rawLat = Number(s.latitude);
+    const rawLng = Number(s.longitude);
+    if (!Number.isNaN(rawLat) && !Number.isNaN(rawLng) && !(rawLat === 0 && rawLng === 0)) {
+      return [rawLat, rawLng];
+    }
+    if (s.optical_box_id || s.optical_box) {
+      const parentBox = props.opticalBoxes.find(
+        (b) => b.id === s.optical_box_id || b.box_code === s.optical_box,
+      );
+      if (parentBox) {
+        const bLat = Number(parentBox.latitude);
+        const bLng = Number(parentBox.longitude);
+        if (!Number.isNaN(bLat) && !Number.isNaN(bLng) && !(bLat === 0 && bLng === 0)) {
+          return [bLat, bLng];
+        }
+      }
+    }
+    if (s.router_id) {
+      const parentRouter = props.routers.find((r) => r.id === s.router_id);
+      if (parentRouter) {
+        const rLat = Number(parentRouter.latitude);
+        const rLng = Number(parentRouter.longitude);
+        if (!Number.isNaN(rLat) && !Number.isNaN(rLng) && !(rLat === 0 && rLng === 0)) {
+          return [rLat, rLng];
+        }
+      }
+    }
+    return null;
   }
 
   function renderAllLayers(): void {
@@ -355,10 +397,10 @@
     subscribersLayer?.clearLayers();
     linesLayer?.clearLayers();
 
-    // 1. Capa de Routers de Red (con soporte para Sitios Compartidos / Co-ubicados)
-    if (showRouters.value && routersLayer) {
-      const groups = buildLocationGroups(props.routers);
+    const groups = buildLocationGroups(props.routers);
 
+    // 1. Capa de Routers de Red (● Círculos de color con soporte para Sitios Co-ubicados)
+    if (showRouters.value && routersLayer) {
       groups.forEach((grp) => {
         if (grp.routers.length === 1) {
           const r = grp.routers[0];
@@ -390,7 +432,6 @@
           });
           routersLayer?.addLayer(marker);
         } else {
-          // Múltiples routers co-ubicados (ej. 5 equipos en Guacara)
           const groupHealth = getGroupStatus(grp.routers);
           const count = grp.routers.length;
           const names = grp.routers.map((r) => r.display_name).join(', ');
@@ -426,34 +467,57 @@
       });
     }
 
-    // 2. Capa de Cajas NAP FTTH (Solo en modo ISP)
+    // 2. Capa de Cajas NAP FTTH (■ Pequeños cuadrados de colores según ocupación)
+    const renderedBoxCoords = new Map<string, [number, number]>();
     if (isIspMode.value && showBoxes.value && boxesLayer) {
-      props.opticalBoxes.forEach((b) => {
-        const lat = Number(b.latitude);
-        const lng = Number(b.longitude);
-        if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) return;
+      props.opticalBoxes.forEach((b, boxIdx) => {
+        const baseLat = Number(b.latitude);
+        const baseLng = Number(b.longitude);
+        if (Number.isNaN(baseLat) || Number.isNaN(baseLng) || (baseLat === 0 && baseLng === 0)) return;
+
+        let lat = baseLat;
+        let lng = baseLng;
+        const collidesWithRouter = groups.some((g) => getDistanceMeters(g.lat, g.lng, baseLat, baseLng) <= 18);
+        if (collidesWithRouter) {
+          const angle = Math.PI / 4 + boxIdx * (Math.PI / 3);
+          lat = baseLat + 0.00022 * Math.sin(angle);
+          lng = baseLng + 0.00022 * Math.cos(angle);
+          try {
+            const feederLine = L.polyline([[baseLat, baseLng], [lat, lng]], {
+              color: '#10B981',
+              weight: 1.5,
+              opacity: 0.65,
+              dashArray: '4, 4',
+            });
+            linesLayer?.addLayer(feederLine);
+          } catch {
+            // Ignorar en entorno JSDOM sin motor vectorial
+          }
+        }
+        renderedBoxCoords.set(b.id, [lat, lng]);
 
         const occ = b.occupied_ports_count || 0;
         const cap = b.capacity_ports || 16;
-        const isFull = occ >= cap;
-        const color = isFull ? '#EF4444' : '#10B981';
+        const ratio = cap > 0 ? occ / cap : 0;
+        const color = occ >= cap ? '#EF4444' : ratio >= 0.8 ? '#F59E0B' : '#10B981';
 
         const icon = L.divIcon({
           className: 'rg-box-marker-container',
           html: `
-            <div class="rg-box-marker" style="--box-color: ${color};" title="Caja NAP ${escapeHtml(b.box_code)}">
-              <span class="box-icon">📦</span>
-              <span class="box-badge">${occ}/${cap}</span>
+            <div class="rg-box-marker" style="--box-color: ${color};" role="button" tabindex="0" title="Caja NAP ${escapeHtml(b.box_code)} (${occ}/${cap} puertos)">
+              <div class="box-square"></div>
+              <span class="box-badge">${escapeHtml(b.box_code)} · ${occ}/${cap}</span>
             </div>
           `,
-          iconSize: [36, 36],
-          iconAnchor: [18, 18],
+          iconSize: [24, 24],
+          iconAnchor: [12, 12],
         });
 
         const marker = L.marker([lat, lng], { icon });
         marker.on('click', () => {
           activeBox.value = b;
           activeRouter.value = null;
+          activeLocationGroup.value = null;
           activeSubscriber.value = null;
           emit('select-box', b.id);
         });
@@ -461,38 +525,79 @@
       });
     }
 
-    // 3. Capa de Clientes / Dispositivos
+    // 3. Capa de Clientes / Dispositivos (▲ Pequeños triángulos de colores según estado)
     if (showSubscribers.value && subscribersLayer) {
-      props.subscribers.forEach((s) => {
-        const lat = Number(s.latitude);
-        const lng = Number(s.longitude);
-        if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) return;
+      const anchorBuckets = new Map<string, number>();
 
+      props.subscribers.forEach((s) => {
         // Filtrado rápido por estado
         if (statusFilter.value === 'ONLINE' && s.last_reachability_status === 'OFFLINE') return;
         if (statusFilter.value === 'OFFLINE' && s.last_reachability_status !== 'OFFLINE') return;
 
+        const baseCoords = resolveSubscriberBaseCoords(s);
+        if (!baseCoords) return;
+
+        let [lat, lng] = baseCoords;
+        const anchorKey = `${lat.toFixed(4)},${lng.toFixed(4)}`;
+        const subIndexAtAnchor = anchorBuckets.get(anchorKey) || 0;
+        anchorBuckets.set(anchorKey, subIndexAtAnchor + 1);
+
+        const collidesWithRouterOrBox =
+          subIndexAtAnchor > 0 ||
+          groups.some((g) => getDistanceMeters(g.lat, g.lng, lat, lng) <= 20) ||
+          props.opticalBoxes.some(
+            (b) => getDistanceMeters(Number(b.latitude), Number(b.longitude), lat, lng) <= 20,
+          );
+
+        const originLat = lat;
+        const originLng = lng;
+        if (collidesWithRouterOrBox) {
+          const angle = -Math.PI / 3 + subIndexAtAnchor * ((2 * Math.PI) / 8);
+          const radiusDeg = 0.00032 + Math.floor(subIndexAtAnchor / 8) * 0.00018;
+          lat = originLat + radiusDeg * Math.sin(angle);
+          lng = originLng + radiusDeg * Math.cos(angle);
+
+          const parentBoxRendered = s.optical_box_id ? renderedBoxCoords.get(s.optical_box_id) : undefined;
+          const lineStart: [number, number] = parentBoxRendered || [originLat, originLng];
+          try {
+            const dropLine = L.polyline([lineStart, [lat, lng]], {
+              color: '#38BDF8',
+              weight: 1.2,
+              opacity: 0.55,
+              dashArray: '2, 4',
+            });
+            linesLayer?.addLayer(dropLine);
+          } catch {
+            // Ignorar en entorno JSDOM
+          }
+        }
+
         const color = getSubscriberColor(s);
         const isDownByRouter = downRouters.value.some((r) => r.id === s.router_id);
+        const labelText = s.customer_name || s.endpoint_identifier;
 
         const icon = L.divIcon({
           className: 'rg-sub-marker-container',
           html: `
-            <div class="rg-sub-marker ${isDownByRouter ? 'sub-rca-pulse' : ''}" style="--sub-color: ${color};" title="${escapeHtml(s.endpoint_identifier)}">
+            <div class="rg-sub-marker ${isDownByRouter ? 'sub-rca-pulse' : ''}" style="--sub-color: ${color};" role="button" tabindex="0" title="Cliente: ${escapeHtml(labelText)} (${s.last_reachability_status || 'ONLINE'})">
+              <svg class="sub-triangle-svg" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+                <polygon points="10,2 19,18 1,18" fill="${color}" stroke="#0B0F19" stroke-width="2.2" stroke-linejoin="round" />
+              </svg>
               <span class="sub-dot"></span>
+              <span class="sub-label">${escapeHtml(labelText)}</span>
             </div>
           `,
-          iconSize: [20, 20],
-          iconAnchor: [10, 10],
+          iconSize: [22, 22],
+          iconAnchor: [11, 11],
         });
 
         const marker = L.marker([lat, lng], { icon });
         marker.on('click', async () => {
           activeSubscriber.value = s;
           activeRouter.value = null;
+          activeLocationGroup.value = null;
           activeBox.value = null;
           emit('select-subscriber', s.id);
-          // Consultar lock operativo y causa raíz en vivo
           operationalLock.value = await fieldOpsStore.fetchOperationalStatus(s.id);
         });
         subscribersLayer?.addLayer(marker);
@@ -551,6 +656,8 @@
     renderAllLayers,
     spiderfyGroup,
     clearSpiderLayer,
+    resolveSubscriberBaseCoords,
+    getSubscriberColor,
   });
 
   onMounted(() => {
@@ -580,7 +687,7 @@
           :aria-pressed="showRouters ? 'true' : 'false'"
           @click="showRouters = !showRouters"
         >
-          <span class="icon">🏢</span>
+          <span class="icon shape-legend shape-legend--circle" aria-hidden="true">●</span>
           <span class="label">{{ t('network_map.layer_routers') }}</span>
           <span class="counter">({{ routers.length }})</span>
         </button>
@@ -593,7 +700,7 @@
           :aria-pressed="showBoxes ? 'true' : 'false'"
           @click="showBoxes = !showBoxes"
         >
-          <span class="icon">📦</span>
+          <span class="icon shape-legend shape-legend--square" aria-hidden="true">■</span>
           <span class="label">{{ t('network_map.layer_boxes') }}</span>
           <span class="counter">({{ opticalBoxes.length }})</span>
         </button>
@@ -605,7 +712,7 @@
           :aria-pressed="showSubscribers ? 'true' : 'false'"
           @click="showSubscribers = !showSubscribers"
         >
-          <span class="icon">💻</span>
+          <span class="icon shape-legend shape-legend--triangle" aria-hidden="true">▲</span>
           <span class="label">{{ t('network_map.layer_subs') }}</span>
           <span class="counter">({{ subscribers.length }})</span>
         </button>
@@ -1341,6 +1448,129 @@
 .pin-router-label--multi {
   border-color: rgba(0, 240, 255, 0.4);
   color: #00F0FF;
+}
+
+/* Marcadores Geométricos de Cajas NAP (■ Cuadrados de Colores) */
+.rg-box-marker-container {
+  background: transparent !important;
+  border: none !important;
+}
+
+.rg-box-marker {
+  width: 24px;
+  height: 24px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.box-square {
+  width: 15px;
+  height: 15px;
+  background-color: var(--box-color, #10B981);
+  border: 2px solid #0B0F19;
+  border-radius: 3px;
+  box-shadow: 0 0 10px var(--box-color, #10B981);
+  z-index: 2;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rg-box-marker:hover .box-square {
+  transform: scale(1.25);
+  box-shadow: 0 0 15px var(--box-color, #10B981);
+}
+
+.box-badge {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 3px;
+  background: rgba(11, 15, 25, 0.92);
+  color: #E2E8F0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+  border: 1px solid var(--box-color, #10B981);
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Marcadores Geométricos de Clientes / ONUs (▲ Triángulos de Colores) */
+.rg-sub-marker-container {
+  background: transparent !important;
+  border: none !important;
+}
+
+.rg-sub-marker {
+  width: 22px;
+  height: 22px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.sub-triangle-svg {
+  filter: drop-shadow(0 0 6px var(--sub-color, #10B981));
+  z-index: 2;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.rg-sub-marker:hover .sub-triangle-svg {
+  transform: scale(1.28);
+  filter: drop-shadow(0 0 12px var(--sub-color, #10B981));
+}
+
+.sub-dot {
+  display: none;
+}
+
+.sub-label {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 2px;
+  background: rgba(11, 15, 25, 0.9);
+  color: #F8FAFC;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.64rem;
+  padding: 1px 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.sub-rca-pulse .sub-triangle-svg {
+  animation: pin-pulsate-danger 1.2s infinite ease-out;
+}
+
+.shape-legend {
+  font-size: 0.95rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+}
+
+.shape-legend--circle {
+  color: var(--rg-primary, #00F0FF);
+}
+
+.shape-legend--square {
+  color: #10B981;
+}
+
+.shape-legend--triangle {
+  color: #38BDF8;
 }
 
 @keyframes pin-pulsate {

@@ -332,7 +332,8 @@ async def list_subscriber_devices(
 
 def _get_router_client(r: Router, tenant_id: uuid.UUID) -> MikrotikRestClient:
     """Obtiene un cliente REST configurado con credenciales descifradas de la bóveda o valores por defecto."""
-    if r.vault:
+    vault_loaded = r.__dict__.get("vault")
+    if vault_loaded is not None:
         try:
             return _create_client_from_vault(r, tenant_id)
         except Exception as e:
@@ -377,6 +378,7 @@ async def sync_dhcp_clients(
 
     stmt_r = (
         select(Router)
+        .options(selectinload(Router.vault))
         .where(Router.tenant_id == tenant_id, Router.admin_state != RouterAdminStateEnum.RETIRED)
         .order_by(Router.display_name.asc())
     )
@@ -811,7 +813,8 @@ async def create_subscriber_device(
 
     # Validar que el router pertenezca al tenant
     stmt_r = select(Router).where(Router.id == payload.router_id, Router.tenant_id == tenant_id)
-    if not (await db.execute(stmt_r)).scalar_one_or_none():
+    router_obj = (await db.execute(stmt_r)).scalar_one_or_none()
+    if not router_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Router no encontrado")
 
     # Identificador de endpoint técnico
@@ -848,6 +851,18 @@ async def create_subscriber_device(
             description=f"Abonado FTTH {ep_id}",
         )
 
+    resolved_lat = payload.latitude if payload.latitude is not None else router_obj.latitude
+    resolved_lng = payload.longitude if payload.longitude is not None else router_obj.longitude
+    if payload.latitude is None and payload.optical_box_id:
+        stmt_box_coords = select(OpticalBox).where(
+            OpticalBox.id == payload.optical_box_id,
+            OpticalBox.tenant_id == tenant_id,
+        )
+        box_coords_obj = (await db.execute(stmt_box_coords)).scalar_one_or_none()
+        if box_coords_obj and box_coords_obj.latitude is not None and box_coords_obj.longitude is not None:
+            resolved_lat = box_coords_obj.latitude
+            resolved_lng = box_coords_obj.longitude
+
     device = SubscriberDevice(
         tenant_id=tenant_id,
         router_id=payload.router_id,
@@ -868,8 +883,8 @@ async def create_subscriber_device(
         rx_optical_power_dbm=payload.rx_optical_power_dbm,
         drop_cable_meters=payload.drop_cable_meters,
         is_custom_coordinates=payload.is_custom_coordinates or (payload.latitude is not None and payload.longitude is not None),
-        latitude=payload.latitude,
-        longitude=payload.longitude,
+        latitude=resolved_lat,
+        longitude=resolved_lng,
         status=CustomerServiceStatusEnum.ACTIVE if payload.optical_box_id else CustomerServiceStatusEnum.PENDING_INSTALL,
         last_reachability_status="ONLINE",
     )
@@ -933,7 +948,11 @@ async def get_subscriber_live_pairing_candidates(
     if not dev:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dispositivo de abonado no encontrado")
 
-    stmt_r = select(Router).where(Router.id == dev.router_id, Router.tenant_id == tenant_id)
+    stmt_r = (
+        select(Router)
+        .options(selectinload(Router.vault))
+        .where(Router.id == dev.router_id, Router.tenant_id == tenant_id)
+    )
     r = (await db.execute(stmt_r)).scalar_one_or_none()
     if not r:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Router asignador no encontrado")
@@ -1274,7 +1293,11 @@ async def ping_subscriber_device_live(
     if not dev:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dispositivo de red no encontrado")
 
-    stmt_r = select(Router).where(Router.id == dev.router_id, Router.tenant_id == tenant_id)
+    stmt_r = (
+        select(Router)
+        .options(selectinload(Router.vault))
+        .where(Router.id == dev.router_id, Router.tenant_id == tenant_id)
+    )
     r = (await db.execute(stmt_r)).scalar_one_or_none()
     if not r:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Router asignador no encontrado")

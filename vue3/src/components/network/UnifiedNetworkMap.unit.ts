@@ -380,5 +380,82 @@ describe('UnifiedNetworkMap.vue — Mapa de Red Unificado & Gobierno RCA (Hito 2
     expect(wrapper.emitted('select-router')?.[0]).toEqual(['r4']);
     expect(vm.activeLocationGroup).toBeNull();
   });
+
+  it('renderiza la leyenda de simbología geométrica (● Routers, ■ Cajas NAP, ▲ Clientes) en los botones de capa (Hito 28.19)', () => {
+    const authStore = useAuthStore();
+    authStore.tenantFeatures = { isp_module_enabled: true };
+
+    const wrapper = mount(UnifiedNetworkMap, {
+      props: {
+        routers: mockRouters,
+        opticalBoxes: mockBoxes,
+        subscribers: mockSubscribers,
+      },
+      global: {
+        plugins: [pinia],
+        stubs: { RouterLink: true },
+      },
+    });
+
+    const routerBtn = wrapper.find('.btn-layer-routers');
+    expect(routerBtn.find('.shape-legend--circle').text()).toBe('●');
+
+    const boxBtn = wrapper.find('.btn-layer-boxes');
+    expect(boxBtn.find('.shape-legend--square').text()).toBe('■');
+
+    const subBtn = wrapper.find('.btn-layer-subs');
+    expect(subBtn.find('.shape-legend--triangle').text()).toBe('▲');
+  });
+
+  it('resuelve coordenadas de respaldo desde la Caja NAP o Router para abonados sin GPS (Hito 28.19)', () => {
+    const wrapper = mount(UnifiedNetworkMap, {
+      props: {
+        routers: mockRouters,
+        opticalBoxes: mockBoxes,
+        subscribers: mockSubscribers,
+      },
+      global: {
+        plugins: [pinia],
+        stubs: { RouterLink: true },
+      },
+    });
+
+    const vm = wrapper.vm as unknown as {
+      resolveSubscriberBaseCoords: (s: SubscriberDeviceItem) => [number, number] | null;
+      getSubscriberColor: (s: SubscriberDeviceItem) => string;
+    };
+
+    // Caso 1: Abonado con coordenadas explícitas
+    const coords1 = vm.resolveSubscriberBaseCoords(mockSubscribers[0]);
+    expect(coords1).toEqual([10.4715, -66.9115]);
+
+    // Caso 2: Abonado sin coordenadas, hereda de su optical_box_id
+    const subWithoutGps: SubscriberDeviceItem = {
+      ...mockSubscribers[0],
+      latitude: undefined,
+      longitude: undefined,
+      optical_box_id: 'box-1',
+    };
+    const coords2 = vm.resolveSubscriberBaseCoords(subWithoutGps);
+    expect(coords2).toEqual([10.471, -66.911]); // Coordenadas de mockBoxes[0]
+
+    // Caso 3: Abonado sin coordenadas ni caja, hereda de su router_id
+    const subWithRouterOnly: SubscriberDeviceItem = {
+      ...mockSubscribers[0],
+      latitude: undefined,
+      longitude: undefined,
+      optical_box_id: undefined,
+      optical_box: undefined,
+      router_id: 'r-core-1',
+    };
+    const coords3 = vm.resolveSubscriberBaseCoords(subWithRouterOnly);
+    expect(coords3).toEqual([10.4806, -66.9036]); // Coordenadas de mockRouters[0]
+
+    // Colores según estado operativo:
+    expect(vm.getSubscriberColor(mockSubscribers[0])).toBe('#EF4444'); // OFFLINE -> Rojo
+    expect(vm.getSubscriberColor(mockSubscribers[1])).toBe('#10B981'); // ONLINE -> Verde Esmeralda
+    const degradedSub: SubscriberDeviceItem = { ...mockSubscribers[1], ping_latency_ms: 55 };
+    expect(vm.getSubscriberColor(degradedSub)).toBe('#F59E0B'); // Latencia >= 40ms -> Naranja
+  });
 });
 

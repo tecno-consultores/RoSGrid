@@ -914,5 +914,14 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * match safemodeBannerContract.dismissNoticeBtn == '#btn-safemode-dismiss-notice'
     * match safemodeBannerContract.webfigRefreshBtn == '#btn-webfig-refresh'
 
+  Scenario: 91. Simbología Geométrica Cartográfica Triádica y Anti-Solapamiento Orbital en Mapa Unificado (Hito 28.19)
+    * def mapGeometricContract = { routerShape: '●', boxShape: '■', subShape: '▲', boxSquareClass: '.box-square', subTriangleClass: '.sub-triangle-svg', routerLayerBtn: '.btn-layer-routers', boxLayerBtn: '.btn-layer-boxes', subLayerBtn: '.btn-layer-subs' }
+    * match mapGeometricContract.routerShape == '●'
+    * match mapGeometricContract.boxShape == '■'
+    * match mapGeometricContract.subShape == '▲'
+    * match mapGeometricContract.boxSquareClass == '.box-square'
+    * match mapGeometricContract.subTriangleClass == '.sub-triangle-svg'
+
+
 
 

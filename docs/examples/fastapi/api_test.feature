@@ -500,6 +500,13 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     When method get
     Then status 200
     And match response contains 'rosgrid_router_status'
+    And match response contains 'rosgrid_router_cpu_percent'
+    And match response contains 'rosgrid_router_memory_usage_ratio'
+    And match response contains 'rosgrid_router_uptime_seconds'
+    And match response contains 'rosgrid_router_temperature_celsius'
+    And match response contains 'rosgrid_router_voltage_volts'
+    And match response contains 'rosgrid_router_active_cves_count'
+    And match response contains 'rosgrid_router_syslog_critical_events_total'
 
   Scenario: 61. Ejecución de actualización masiva con orden PoE-aware sin autenticación devuelve 401
     Given path '/api/v1/operations/ros-updates/execute'
@@ -926,6 +933,235 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 400
     And match response.detail contains 'session_id'
 
+  Scenario: 123. Liberar puerto miembro de un Bridge (DELETE /bridge/ports/{id}) en WebFig Interfaces sin autenticación devuelve 401
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/interfaces/bridge/ports/*BP1'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000123'
+    When method delete
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 124. Eliminar interfaz de túnel WireGuard (DELETE /wireguard/{id}) en WebFig Interfaces sin autenticación devuelve 401
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/interfaces/wireguard/*WG1'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000124'
+    When method delete
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 125. Editar parámetros de red DHCP, Pool IP y configuración DNS Singleton (PATCH /dns) en WebFig IP sin autenticación devuelve 401
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/ip/dns'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000125'
+    And request { servers: '1.1.1.1,8.8.8.8', allow_remote_requests: true, cache_size: 4096 }
+    When method patch
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 126. Eliminar Pool de conexiones IP (DELETE /pools/{id}) y editar servidor PPPoE (PATCH /pppoe-servers/{id}) sin autenticación devuelve 401
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/ip/pools/*P1'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000126'
+    When method delete
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 127. Creación de Regla de Aprovisionamiento de Radios CAPsMAN v7 (/provisioning) y Reprovisión de Flota sin autenticación devuelve 401
+    Given path '/api/v1/wifi/capsman/00000000-0000-0000-0000-000000000001/provisioning'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000127'
+    And request { name: 'prov-all-bands', action: 'create-dynamic-enabled', master_configuration: 'cfg-corporate', slave_configurations: ['cfg-guest'], supported_bands: ['2ghz-ax', '5ghz-ax', '6ghz-ax'], identity_regex: '.*' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 128. Motor Universal Capa 2 Next-Gen: Operaciones por Lote Bulk (POST /webfig/layer2/bulk/certificate) y Exportación Contextual .rsc sin autenticación devuelve 401 (Hito 27.16)
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/layer2/bulk/certificate'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000128'
+    And request { action: 'comment', ids: ['*1', '*2'], comment: 'Auditado NOC 27.16' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 129. Gobernanza Granular de Flags en Perfiles de Usuario: Consulta de Permisos Efectivos (GET /users/{id}/effective-permissions) y Overrides Individuales (PATCH /users/{id}/feature-flags) sin autenticación devuelve 401 (Hito 27.17)
+    Given path '/api/v1/users/00000000-0000-0000-0000-000000000001/effective-permissions'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/users/00000000-0000-0000-0000-000000000001/feature-flags'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000129'
+    And request { feature_flags_override: { WEBFIG_L2_RPC_COMMANDS: 'ALLOW', LIVE_DIAGNOSTICS: 'DENY' } }
+    When method patch
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 130. Telemetría Anónima de Instancias Activas: Inspección de Estado de Beacon (GET /system/telemetry-beacon/status) y Disparo Manual (POST /system/telemetry-beacon/trigger) sin autenticación devuelve 401 (Hito 27.18)
+    Given path '/api/v1/system/telemetry-beacon/status'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/system/telemetry-beacon/trigger'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 131. Contrato FTTH y Validación de Cajas NAP: Detalle de Caja NAP (GET /optical-boxes/{id}) y Alta de Abonado FTTH (POST /subscriber-devices) sin autenticación devuelve 401 (Hito 28.2)
+    Given path '/api/v1/optical-boxes/00000000-0000-0000-0000-000000000001'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/subscriber-devices'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000131'
+    And request { router_id: '00000000-0000-0000-0000-000000000001', endpoint_identifier: 'CLI-FTTH-001', service_type: 'FTTH_GPON', onu_mode: 'ROUTER_NAT', optical_box_port: 1 }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 132. Disparo de Respaldos .rsc con Diagnóstico de Política FTP y Terminación de Sesión con Scoping Estricto (Hitos 28.3 y 28.7)
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/backups/trigger'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/sessions/active/sess-target-001'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000132'
+    When method delete
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 133. Actualización Inteligente RouterOS y Firmware con Auto-Detección CHR: Sondeo de Canal (POST /operations/ros-updates/check) sin autenticación devuelve 401 (Hito 28.1)
+    Given path '/api/v1/operations/ros-updates/check'
+    And request { channel: 'stable', router_ids: [] }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 134. Activación/Configuración de DHCP Snooping en Bridge (POST /switching/dhcp-snooping/enable) sin autenticación devuelve 401 (Hito 28.4)
+    Given path '/api/v1/switching/dhcp-snooping/enable'
+    And request { router_id: '01928000-0000-7000-8000-000000000001', bridge_name: 'bridge1', enabled: true, trusted_ports: ['ether1'] }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 135. Telemetría SLA Real: Autodescubrimiento de Gateways WAN y Presets Quad9 (GET /sla/targets/{router_id}) sin autenticación devuelve 401 (Hito 28.6)
+    Given path '/api/v1/sla/targets/01928000-0000-7000-8000-000000000001'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 136. Paridad de Roles RBAC y Visibilidad Estricta: Endpoints de Monitoreo de Cumplimiento sin autenticación devuelven 401 (Hito 28.9)
+    Given path '/api/v1/compliance/config-drift/01928000-0000-7000-8000-000000000001'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 137. Paridad de Endpoints Operativos: Alias de Rotación de Credenciales de Bóveda (POST /vault/routers/{id}/rotate) sin autenticación devuelve 401 (Hito 28.5)
+    Given path '/api/v1/vault/routers/01928000-0000-7000-8000-000000000001/rotate'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000137'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 138. Paridad de Endpoints Operativos: Alias de Re-Pinning SSL TOFU (POST /vault/routers/{id}/repin-ssl) sin autenticación devuelve 401 (Hito 28.5)
+    Given path '/api/v1/vault/routers/01928000-0000-7000-8000-000000000001/repin-ssl'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000138'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 139. Paridad de Endpoints Operativos: Alias de Aprovisionamiento SD-WAN Spoke (POST /sdwan/spokes) sin autenticación devuelve 401 (Hito 28.5)
+    Given path '/api/v1/sdwan/spokes'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000139'
+    And request { spoke_router_id: '01928000-0000-7000-8000-000000000001', hub_router_id: '01928000-0000-7000-8000-000000000002', tunnel_subnet: '10.255.0.0/30', endpoint_address: '198.51.100.1' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 140. Paridad de Endpoints Operativos: Alias de Failover Multi-WAN (POST /sdwan/multi-wan/failover) sin autenticación devuelve 401 (Hito 28.5)
+    Given path '/api/v1/sdwan/multi-wan/failover'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000140'
+    And request { router_id: '01928000-0000-7000-8000-000000000001', primary_interface: 'ether1', primary_gateway: '192.168.1.1', secondary_interface: 'ether2', secondary_gateway: '192.168.2.1' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 141. Paridad de Endpoints Operativos: Mutación de Recurso Singleton WebFig Capa 2 (PATCH /webfig/layer2/singleton/{ros_path}) sin autenticación devuelve 401 (Hito 28.5)
+    Given path '/api/v1/routers/01928000-0000-7000-8000-000000000001/webfig/layer2/singleton/system/ntp/client'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000141'
+    And request { attributes: { enabled: true }, enable_safemode: true }
+    When method patch
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 142. Paridad de Endpoints Operativos: Terminación de Conexión Activa Firewall Conntrack (DELETE /webfig/firewall/{proto}/connections/{conn_id}) sin autenticación devuelve 401 (Hito 28.5)
+    Given path '/api/v1/routers/01928000-0000-7000-8000-000000000001/webfig/firewall/ipv4/connections/*4A'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000142'
+    When method delete
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 143. Contrato de Telemetría Anónima de Flota: Esquema de Estado de Beacon y Conteo RLS (GET /system/telemetry-beacon/status) (Hito 28.10)
+    # Valida el contrato JSON del beacon en /system/telemetry-beacon/status rechazando accesos no autenticados
+    Given path '/api/v1/system/telemetry-beacon/status'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/system/telemetry-beacon/trigger'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000143'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/routers/01928000-0000-7000-8000-000000000001/backups/trigger'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000144'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/tenants'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000145'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 144. Edición Integral de Empresa y Cuotas Multi-Tenant: PATCH /api/v1/tenants/{id} sin autenticación devuelve 401 (Hito 28.11)
+    Given path '/api/v1/tenants/01928000-0000-7000-8000-000000000001'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000146'
+    And request { name: 'Empresa Principal Editada', slug: 'master-hq', tax_id: 'J-12345678-9', max_routers_quota: 150, max_users_quota: 50, default_safemode_seconds: 30 }
+    When method patch
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 145. Sincronización Integral de Identidad del Router: PATCH /api/v1/routers/{id}/webfig/system/identity sin autenticación devuelve 401 (Hito 28.12)
+    Given path '/api/v1/routers/01928000-0000-7000-8000-000000000001/webfig/system/identity'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000147'
+    And request { name: 'CCR2004-Core-North', sync_display_name: true }
+    When method patch
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 146. Endurecimiento Normativo DISA ASD STIG V6R5 y OWASP OSHP: Cabeceras de seguridad estrictas y validación de 15 caracteres en Bootstrap (Hito 28.13)
+    Given path '/api/v1/auth/bootstrap'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000148'
+    And request { tenant_name: 'Test Tenant', tenant_slug: 'test-stig', admin_username: 'stigadmin', admin_email: 'stig@test.com', admin_password: 'short', admin_full_name: 'STIG Admin' }
+    When method post
+    Then status 422
+    And match header X-Permitted-Cross-Domain-Policies == 'none'
+    And match header Cross-Origin-Opener-Policy == 'same-origin'
+    And match header X-Content-Type-Options == 'nosniff'
+    And match header X-Frame-Options == 'DENY'
+
+  Scenario: 147. Persistencia Relacional de onboarding_completed en PostgreSQL y Resiliencia ante Reinicio (Hito 28.14)
+    Given path '/api/v1/tenants/00000000-0000-0000-0000-000000000001/features'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/tenants/00000000-0000-0000-0000-000000000001/features'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000149'
+    And request { onboarding_completed: true }
+    When method patch
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
 
 
@@ -939,6 +1175,154 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  Scenario: 148. Emparejamiento de Red FTTH (DHCP, PPPoE e IPAM), Candidatos en Vivo y Ping 1-Click (Hito 28.15)
+    Given path '/api/v1/subscriber-devices/00000000-0000-0000-0000-000000000001/live-candidates'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/subscriber-devices/00000000-0000-0000-0000-000000000001'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000148'
+    And request { service_type: 'DHCP', assigned_ipv4: '10.250.3.55', onu_mac_address: 'AA:BB:CC:11:22:33' }
+    When method patch
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/subscriber-devices/00000000-0000-0000-0000-000000000001/ping'
+    And param force = true
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
+
+  Scenario: 149. Conector Oficial a la API REST v2.0 de NIST NVD, Fusión Multi-Fuente y Filtrado RouterOS v7 (Hito 29.1)
+    Given path '/api/v1/inventory/cves/sync'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/inventory/cves'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/inventory/cves/routers/00000000-0000-0000-0000-000000000001'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
+
+  Scenario: 150. Paquete de Soporte y Diagnóstico Unificado 1-Click con Sanitización Zero-Leak y Telemetría UI (Hito 29.2)
+    Given path '/api/v1/system/diagnostics/ui-error'
+    And request { error_message: 'Uncaught TypeError: test', source_url: '/inventory', stack_trace: 'Error at test:1:1' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/system/diagnostics/bundle'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000150'
+    And request { format: 'zip', include_ui_logs: true, include_backend_logs: true, include_siem_status: true }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/system/siem-config'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/system/siem-config'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000151'
+    And request { enabled: true, destination_type: 'SYSLOG_UDP', host: '127.0.0.1', port: 514 }
+    When method put
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/system/siem-config/test'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000152'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
+
+  Scenario: 151. Conector SIEM Multi-Protocolo del ISP y Paquete de Soporte Sanitizado (Hito 29.3)
+    Given path '/api/v1/system/siem-config'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/system/diagnostics/bundle'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000153'
+    And request { format: 'zip', log_lines_limit: 500, operator_notes: 'Prueba BDD Hito 29.3', include_frontend_buffer: [] }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
+
+  Scenario: 152. Resiliencia en Reinicio de Router MikroTik y Esquema Tolerante (Hito 28.16)
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/system/reboot'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/system/reboot'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000154'
+    And request { reason: 'Reinicio programado por ventana de mantenimiento' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 153. Motor Safe Mode Transaccional Real de 2 Fases y Verificación en Vivo (Hito 28.17)
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/system/safemode/status'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/system/safemode/verify'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/system/safemode/confirm'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/system/safemode/rollback'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 154. Precarga de Bóveda y Herencia de Coordenadas en Alta de Abonados FTTH (Hito 28.19)
+    Given path '/api/v1/subscriber-devices/00000000-0000-0000-0000-000000000001/live-candidates'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/subscriber-devices/00000000-0000-0000-0000-000000000001/ping'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000155'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
 
 

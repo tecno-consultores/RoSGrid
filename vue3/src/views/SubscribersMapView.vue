@@ -323,10 +323,10 @@
   }
 
   onMounted(async () => {
-    await Promise.all([
+    await Promise.allSettled([
       loadSubscriberDevices(),
       loadRouters(),
-      isIspMode.value ? fieldStore.fetchOpticalBoxes() : Promise.resolve(),
+      fieldStore.fetchOpticalBoxes(),
     ]);
   });
 </script>

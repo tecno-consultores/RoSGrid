@@ -7,6 +7,7 @@ descubrimiento de candidatos en vivo y resolución automática de IP en Ping (Hi
 
 import uuid
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Any
 
 import pytest
@@ -77,6 +78,8 @@ class MockFtthDbSession:
                 api_port=443,
                 network_role=RouterNetworkRoleEnum.BRAS_PPPOE,
                 admin_state=RouterAdminStateEnum.PRODUCTION,
+                latitude=Decimal("10.480600"),
+                longitude=Decimal("-66.903600"),
             )
         ]
         self.optical_boxes: list[OpticalBox] = []
@@ -576,3 +579,112 @@ async def test_subscriber_device_ping_without_ip_fails_gracefully(
         assert "🔗 Emparejar Red" in res.json()["detail"]
     finally:
         app.dependency_overrides.clear()
+
+
+def test_get_router_client_vault_defensive_access_no_greenlet_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verifica que _get_router_client inspecciona r.__dict__.get('vault') sin provocar
+    sqlalchemy.exc.MissingGreenlet ni fallar si la relación no ha sido precargada.
+    """
+    from src.api.v1.subscribers import _get_router_client
+
+    tid = uuid.uuid4()
+
+    # Caso 1: Router sin atributo 'vault' en __dict__ (simula lazy relationship no precargada)
+    r_unloaded = Router(
+        id=uuid.uuid4(),
+        tenant_id=tid,
+        display_name="ROUTER-UNLOADED-VAULT",
+        api_base_url="https://10.0.0.1:443",
+        api_port=443,
+    )
+    # Asegurar que 'vault' no esté en __dict__
+    r_unloaded.__dict__.pop("vault", None)
+
+    client1 = _get_router_client(r_unloaded, tid)
+    assert client1.host == "10.0.0.1"
+    assert client1.port == 443
+
+    # Caso 2: Router con 'vault' precargado y válido
+    class MockVault:
+        encrypted_credentials = "fake-encrypted-token"
+        credentials_format = "TOKEN"
+
+    r_loaded = Router(
+        id=uuid.uuid4(),
+        tenant_id=tid,
+        display_name="ROUTER-LOADED-VAULT",
+        api_base_url="https://10.0.0.2:443",
+        api_port=443,
+    )
+    r_loaded.__dict__["vault"] = MockVault()
+
+    monkeypatch.setattr(
+        "src.api.v1.subscribers._create_client_from_vault",
+        lambda r, t: MockMikrotikClient(),
+    )
+    client2 = _get_router_client(r_loaded, tid)
+    assert isinstance(client2, MockMikrotikClient)
+
+
+@pytest.mark.asyncio
+async def test_create_subscriber_inherits_coordinates_from_box_or_router(
+    async_client: AsyncClient, ftth_auth: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verifica que al crear un abonado sin latitud/longitud explícita, hereda
+    las coordenadas de la Caja NAP o del Router asignador.
+    """
+    tid = ftth_auth["tenant_id"]
+    headers = ftth_auth["headers"]
+    mock_db = MockFtthDbSession(tid)
+    app.dependency_overrides[get_tenant_db_session] = lambda: mock_db
+    monkeypatch.setattr("src.api.v1.subscribers.write_audit_log", fake_audit)
+
+    router_id = mock_db.routers[0].id
+
+    # Caso 1: Hereda de la Caja NAP cuando se especifica optical_box_id
+    box = OpticalBox(
+        id=uuid.uuid4(),
+        tenant_id=tid,
+        router_id=router_id,
+        box_code="NAP-TEST-COORD-01",
+        capacity_ports=16,
+        latitude=Decimal("10.123450"),
+        longitude=Decimal("-66.543210"),
+    )
+    mock_db.add(box)
+
+    payload_with_box = {
+        "router_id": str(router_id),
+        "endpoint_identifier": "CLI-COORD-BOX-01",
+        "service_type": "DHCP",
+        "onu_mode": "ROUTER",
+        "optical_box_id": str(box.id),
+        "optical_box_port": 1,
+    }
+
+    try:
+        headers1 = {**headers, "Idempotency-Key": str(uuid.uuid4())}
+        res1 = await async_client.post("/api/v1/subscriber-devices", json=payload_with_box, headers=headers1)
+        assert res1.status_code == 201, f"res1 failed: {res1.status_code} {res1.text}"
+        data1 = res1.json()
+        assert float(data1["latitude"]) == pytest.approx(10.123450, rel=1e-4)
+        assert float(data1["longitude"]) == pytest.approx(-66.543210, rel=1e-4)
+
+        # Caso 2: Hereda del Router cuando NO hay optical_box_id ni coordenadas
+        payload_no_box = {
+            "router_id": str(router_id),
+            "endpoint_identifier": "CLI-COORD-ROUTER-01",
+            "service_type": "DHCP",
+            "onu_mode": "ROUTER",
+        }
+        headers2 = {**headers, "Idempotency-Key": str(uuid.uuid4())}
+        res2 = await async_client.post("/api/v1/subscriber-devices", json=payload_no_box, headers=headers2)
+        assert res2.status_code == 201, f"res2 failed: {res2.status_code} {res2.text}"
+        data2 = res2.json()
+        assert float(data2["latitude"]) == pytest.approx(10.480600, rel=1e-4)
+        assert float(data2["longitude"]) == pytest.approx(-66.903600, rel=1e-4)
+    finally:
+        app.dependency_overrides.clear()
+
