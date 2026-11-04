@@ -30,13 +30,17 @@ export const useNocEventsStore = defineStore('nocEvents', () => {
       // Captura reactiva de cambio de estado de abonados/clientes en tiempo real
       if (eventName === 'DEVICE_STATUS_CHANGED') {
         const p = payload.payload || payload;
-        lastDeviceStatusEvent.value = {
+        const statusDetail = {
           deviceId: p.device_id,
           status: p.status,
           routerId: p.router_id,
           endpointIdentifier: p.endpoint_identifier,
           lastSeenAt: p.last_seen_at,
         };
+        lastDeviceStatusEvent.value = statusDetail;
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('rosgrid:device-status-changed', { detail: statusDetail }));
+        }
       }
 
       // Intercepción del Kill-Switch en vivo (solo si aplica a la sesión/usuario actual)

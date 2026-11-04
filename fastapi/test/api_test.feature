@@ -1338,6 +1338,14 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 156. Monitoreo Periódico Híbrido de Abonados FTTH y Sonda ICMP Ligera (Hito 28.21)
+    Given path '/api/v1/subscriber-devices/00000000-0000-0000-0000-000000000001/ping'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000157'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
 
 
 

@@ -167,6 +167,59 @@ describe('useIpamStore — Gestor IPAM Dual-Stack Universal', () => {
     expect(result.synced_ips).toBe(13);
     expect(store.prefixes).toHaveLength(3);
   });
+
+  it('actualiza customerServices reactivamente ante evento rosgrid:device-status-changed', () => {
+    const store = useIpamStore();
+    store.customerServices = [
+      {
+        id: 'dev-42',
+        tenant_id: 't-1',
+        router_id: 'r-1',
+        endpoint_identifier: 'CLI-042',
+        onu_mode: 'ROUTER',
+        last_reachability_status: 'OFFLINE',
+        last_seen_at: '2026-11-04T12:00:00Z',
+        status: 'ACTIVE',
+        created_at: '2026-11-04T10:00:00Z',
+        updated_at: '2026-11-04T12:00:00Z',
+      },
+      {
+        id: 'dev-43',
+        tenant_id: 't-1',
+        router_id: 'r-1',
+        endpoint_identifier: 'CLI-043',
+        onu_mode: 'ROUTER',
+        last_reachability_status: 'OFFLINE',
+        last_seen_at: '2026-11-04T12:00:00Z',
+        status: 'ACTIVE',
+        created_at: '2026-11-04T10:00:00Z',
+        updated_at: '2026-11-04T12:00:00Z',
+      },
+    ];
+
+    window.dispatchEvent(
+      new CustomEvent('rosgrid:device-status-changed', {
+        detail: {
+          deviceId: 'dev-42',
+          status: 'ONLINE',
+          lastSeenAt: '2026-11-04T21:00:00Z',
+        },
+      }),
+    );
+
+    expect(store.customerServices[0].last_reachability_status).toBe('ONLINE');
+    expect(store.customerServices[0].last_seen_at).toBe('2026-11-04T21:00:00Z');
+    // dev-43 permanece inalterado
+    expect(store.customerServices[1].last_reachability_status).toBe('OFFLINE');
+
+    // Evento sin deviceId no altera el estado
+    window.dispatchEvent(
+      new CustomEvent('rosgrid:device-status-changed', {
+        detail: {},
+      }),
+    );
+    expect(store.customerServices[0].last_reachability_status).toBe('ONLINE');
+  });
 });
 
 

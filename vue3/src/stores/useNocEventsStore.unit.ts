@@ -267,4 +267,37 @@ describe('useNocEventsStore — WebSocket Global & Alertas NOC', () => {
     expect(store.recentEvents).toEqual([]);
     expect(store.activeAlertsCount).toBe(0);
   });
+
+  it('procesa DEVICE_STATUS_CHANGED actualizando lastDeviceStatusEvent y despachando rosgrid:device-status-changed', () => {
+    const store = useNocEventsStore();
+    const eventSpy = vi.fn();
+    window.addEventListener('rosgrid:device-status-changed', eventSpy);
+
+    const devPayload = JSON.stringify({
+      event_name: 'DEVICE_STATUS_CHANGED',
+      payload: {
+        device_id: 'dev-100',
+        status: 'ONLINE',
+        router_id: 'r-01',
+        endpoint_identifier: 'CLI-001',
+        last_seen_at: '2026-11-04T20:00:00Z',
+      },
+    });
+
+    store.handleIncomingEvent(devPayload);
+
+    expect(store.lastDeviceStatusEvent).toEqual({
+      deviceId: 'dev-100',
+      status: 'ONLINE',
+      routerId: 'r-01',
+      endpointIdentifier: 'CLI-001',
+      lastSeenAt: '2026-11-04T20:00:00Z',
+    });
+    expect(eventSpy).toHaveBeenCalledOnce();
+    const customEv = eventSpy.mock.calls[0][0] as CustomEvent;
+    expect(customEv.detail.deviceId).toBe('dev-100');
+    expect(customEv.detail.status).toBe('ONLINE');
+
+    window.removeEventListener('rosgrid:device-status-changed', eventSpy);
+  });
 });

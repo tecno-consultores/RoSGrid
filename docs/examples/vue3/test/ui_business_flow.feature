@@ -936,6 +936,13 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * match ipamPairingBngContract.chkProvision == '#chk-provision-mikrotik'
     * match ipamPairingBngContract.saveBtn == '#btn-save-pair-subscriber'
 
+  Scenario: 93. Sincronización Reactiva de Estado de Abonados WebSocket y Sonda ICMP en IPAM y Mapa (Hito 28.21)
+    * def ipamDeviceStatusEventContract = { eventName: 'rosgrid:device-status-changed', lastStatusField: 'last_reachability_status', lastSeenField: 'last_seen_at' }
+    * match ipamDeviceStatusEventContract.eventName == 'rosgrid:device-status-changed'
+    * match ipamDeviceStatusEventContract.lastStatusField == 'last_reachability_status'
+    * match ipamDeviceStatusEventContract.lastSeenField == 'last_seen_at'
+
+
 
 
 

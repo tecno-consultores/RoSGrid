@@ -226,6 +226,23 @@ export const useIpamStore = defineStore('ipam', () => {
     return res.data;
   }
 
+  if (typeof window !== 'undefined') {
+    window.addEventListener('rosgrid:device-status-changed', ((ev: CustomEvent) => {
+      const detail = ev.detail;
+      if (!detail?.deviceId) return;
+      customerServices.value = customerServices.value.map((s) =>
+        s.id === detail.deviceId
+          ? {
+              ...s,
+              last_reachability_status: detail.status || s.last_reachability_status,
+              last_seen_at: detail.lastSeenAt || s.last_seen_at,
+            }
+          : s,
+      );
+      triggerRef(customerServices);
+    }) as EventListener);
+  }
+
   return {
     vrfs,
     prefixes,
