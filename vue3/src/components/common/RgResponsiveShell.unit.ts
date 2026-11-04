@@ -716,6 +716,27 @@ describe('RgResponsiveShell.vue — Doble Contexto & Menú de Usuario 11X', () =
     expect(links.filter((h) => h === '/approvals')).toHaveLength(1);
     expect(links.filter((h) => h === '/ipam')).toHaveLength(1);
   });
+
+  it('incluye el Centro Táctico de Notificaciones In-App (RgNotificationCenterBell) en la barra superior (Hito 30.4)', () => {
+    const wrapper = mount(RgResponsiveShell, {
+      global: {
+        stubs: {
+          RouterView: true,
+          RgCommandPalette: true,
+          RgSafeModeBanner: true,
+          ChangePasswordModal: true,
+          RgStepUp2FAModal: true,
+          RgMcpTokenModal: true,
+          RgNotificationCenterBell: {
+            template: '<div id="mock-notif-bell" class="rg-notification-center">BELL</div>',
+          },
+        },
+      },
+    });
+
+    expect(wrapper.find('#mock-notif-bell').exists()).toBe(true);
+  });
 });
+
 
 

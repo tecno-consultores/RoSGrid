@@ -17,6 +17,7 @@
   import RgApiHealthBadge from './RgApiHealthBadge.vue';
   import RgBrandLogo from './RgBrandLogo.vue';
   import RgContextualHelpDrawer from './RgContextualHelpDrawer.vue';
+  import RgNotificationCenterBell from './RgNotificationCenterBell.vue';
   import ChangePasswordModal from '@/components/common/ChangePasswordModal.vue';
   import RgStepUp2FAModal from '@/components/common/RgStepUp2FAModal.vue';
   import RgMcpTokenModal from '@/components/admin/RgMcpTokenModal.vue';
@@ -383,6 +384,9 @@
           <span aria-hidden="true">❓</span>
           <span class="help-btn-label">{{ t('shell.help_label', 'Ayuda') }}</span>
         </button>
+
+        <!-- Centro Táctico de Notificaciones In-App (Hito 30.4) -->
+        <RgNotificationCenterBell v-if="authStore.user" />
 
         <!-- Menú Desplegable Táctico de Usuario -->
         <div v-if="authStore.user" ref="userMenuRef" class="user-menu-container">

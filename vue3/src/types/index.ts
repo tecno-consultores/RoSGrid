@@ -100,6 +100,7 @@ export interface RouterItem {
   last_seen_at?: string;
   ssl_trust_status?: 'PENDING_TOFU' | 'TRUSTED_PINNED' | 'FINGERPRINT_MISMATCH';
   operational_status?: 'ONLINE' | 'OFFLINE' | 'DEGRADED' | string;
+  last_reachability_status?: 'ONLINE' | 'OFFLINE' | 'DEGRADED' | 'TOFU_ALERT' | string;
   syslog_active?: boolean;
   syslog_event_count?: number;
 }
@@ -144,6 +145,12 @@ export interface NocEventItem {
   severity: 'INFO' | 'WARNING' | 'CRITICAL';
   message: string;
   timestampIso: string;
+  // Compatibilidad telemetría y eventos de notificación
+  type?: string;
+  summary?: string;
+  router_name?: string;
+  router_id?: string;
+  timestamp?: string;
 }
 
 export interface TableColumn<T = Record<string, unknown>> {

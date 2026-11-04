@@ -969,6 +969,20 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * match makerCheckerReactivityContract.wsEventName == 'rosgrid:maker-checker-updated'
     * match makerCheckerReactivityContract.pollIntervalMs == 15000
 
+  Scenario: 97. Centro Táctico de Notificaciones In-App en Barra Superior, Triaje Rápido y Reactividad Maker-Checker (Hito 30.4)
+    * def notificationCenterContract = { bellBtn: '#btn-notification-bell', badge: '#notification-bell-badge', popover: '#rg-notification-popover', tabAll: '#notif-tab-all', tabAction: '#notif-tab-action', tabNetwork: '#notif-tab-network', tabOps: '#notif-tab-ops', snoozeBtn: '#btn-notif-snooze-30m', soundBtn: '#btn-notif-toggle-sound', markReadBtn: '#btn-notif-mark-all-read' }
+    * match notificationCenterContract.bellBtn == '#btn-notification-bell'
+    * match notificationCenterContract.badge == '#notification-bell-badge'
+    * match notificationCenterContract.popover == '#rg-notification-popover'
+    * match notificationCenterContract.tabAll == '#notif-tab-all'
+    * match notificationCenterContract.tabAction == '#notif-tab-action'
+    * match notificationCenterContract.tabNetwork == '#notif-tab-network'
+    * match notificationCenterContract.tabOps == '#notif-tab-ops'
+    * match notificationCenterContract.snoozeBtn == '#btn-notif-snooze-30m'
+    * match notificationCenterContract.soundBtn == '#btn-notif-toggle-sound'
+    * match notificationCenterContract.markReadBtn == '#btn-notif-mark-all-read'
+
+
 
 
 
