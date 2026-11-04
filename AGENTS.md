@@ -89,7 +89,8 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
 - `inspect_blast_radius.py`: Automated pre-refactoring blast radius inspector calculating incoming dependency edges across the codebase.
 - `verify_zero_orphan_vue_components.py`: Automated parity validator ensuring 100% of Vue components and views have dedicated or active unit test suites.
 - `verify_no_orphan_api_endpoints.py`: Automated bidirectional static validator ensuring 100% parity between backend FastAPI endpoints and frontend Vue 3 HTTP calls.
-- `certify_task_completion.sh`: End-to-end certification gate enforcing secret scanning, ORM parity, front-back contracts, i18n integrity, topological health, zero orphan Vue components, zero orphan API endpoints, and documentation sync.
+- `verify_anti_silo_test_quality.py`: Automated static validator prohibiting blind `write_audit_log` mocks (`patch("...write_audit_log", AsyncMock())` without semantic payload assertions) and enforcing anti-UUID audit verification across backend test suites (Spec 83).
+- `certify_task_completion.sh`: End-to-end certification gate enforcing secret scanning, ORM parity, front-back contracts, i18n integrity, topological health, zero orphan Vue components, zero orphan API endpoints, anti-silo test quality, and documentation sync.
 
 ---
 

@@ -161,7 +161,7 @@ rosgrid/
 
 ---
 
-## 4. Índice Maestro de los 83 Archivos de Especificación (00 a 82) (Carpeta `docs/specs/`)
+## 4. Índice Maestro de los 84 Archivos de Especificación (00 a 83) (Carpeta `docs/specs/`)
 
 Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `docs/specs/` siguiendo rigurosamente el orden de los 5 Bloques listados a continuación:
 
@@ -268,6 +268,7 @@ Antigravity DEBE leer y ejecutar los documentos de especificación ubicados en `
 * `docs/specs/80_MAINTENANCE_WINDOW_TIMEZONE_ADMIN_STATE_SYNC_AND_NOC_DASHBOARD_VISIBILITY.md` — Sincronización Automática de Ventanas de Mantenimiento con `admin_state` del Router (`resolve_active_maintenance_router_ids` en `inventory_helpers.py` e `inventory.py`), Estado Reactivo `🛠️ En Curso` vs `⏳ Programada` en `MaintenanceWindowsView.vue`, Contador e Insignia `🛠️ MANTENIMIENTO` en `DashboardHomeView.vue` (`Centro de Mando`), Filtro de Mapa `En Mantenimiento` en `UnifiedNetworkMap.vue` y Resolución Humana de Usuarios/Routers + Clasificación Exacta de Eventos en la Cinta de Eventos Críticos de `NocWallboardView.vue` (`audit.py` + `eventFormatter.ts` — Hito 30.2).
 * `docs/specs/81_MAKER_CHECKER_REALTIME_WS_PUSH_AUTO_REFRESH_AND_INBOX_REACTIVITY.md` — Reactividad en Tiempo Real de la Bandeja Maker-Checker (`/approvals`): Emisión WebSocket Push (`MAKER_CHECKER_REQUESTED` y `MAKER_CHECKER_RESOLVED` hacia KeyDB Pub/Sub `rg:{tenant_id}:events` en `webfig_common.py`, `bulk_and_updates.py` y `mcp.py`), Conexión Automática del WebSocket Global en `RgResponsiveShell.vue`, Bus Reactivo `rosgrid:maker-checker-updated` en `useNocEventsStore.ts`, Auto-Refresco Silencioso cada 15 Segundos (`15000 ms`) y Botón Táctico `[ 🔄 Refrescar ]` (`#btn-refresh-approvals`) en `ApprovalsInboxView.vue` (Hito 30.3).
 * `docs/specs/82_TACTICAL_IN_APP_NOTIFICATION_CENTER_BELL_INLINE_TRIAGE_AND_ALERT_DEDUPLICATION.md` — Centro Táctico de Notificaciones In-App en Barra Superior (`RgNotificationCenterBell.vue` en `RgResponsiveShell.vue`): Separación entre Estado de Lectura (*Seen*) y Resolución de Tarea (*Action Required*), Triaje en Línea en 1 Clic (`✓ Aprobar 1-Clic` para Maker-Checker y `👁️ Reconocer (Ack)` para caídas de red), Deduplicación Anti-Fatiga (`[×N]`) y Filtrado de Ruido de Sesión (`SESSION_REFRESHED`), Semáforo de Prioridades (`P1`/`P2`/`P3`), Indicador en Pestaña (`document.title`), Audio Sintetizado `Web Audio API` + Modo `🔕 30m` (*Snooze*), Sincronización Multi-Pestaña (`BroadcastChannel`) y Accesibilidad WCAG 2.1 AA (`Alt+N`, `aria-live="polite"` — Hito 30.4).
+* `docs/specs/83_ANTI_SILO_EXISTING_TEST_SUITES_REFACTORING_3_PHASE_TEMPORAL_AND_AUDIT_GUARDRAIL.md` — Refactorización Integral de las Suites de Pruebas Existentes bajo el Criterio Anti-Silo: Helper Canónico `make_asserting_audit_mock` en `conftest.py`, Erradicación de los 49 Mocks Ciegos de `write_audit_log` en 12 Archivos de `fastapi/tests/`, Pruebas de Propagación Transversal sin Mocks Intermedios y Ciclo de Vida de 3 Fases Temporales en Ventanas de Mantenimiento, Safe Mode (60s) y Bóveda Step-Up (30s), y Guardrail Estático `.agents/scripts/verify_anti_silo_test_quality.py` Integrado en `certify_task_completion.sh` (Hito 30.5).
 
 
 ---
