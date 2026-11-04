@@ -46,6 +46,7 @@ flowchart LR
 ```
 
 - **Buscador Global Rápido (`Ctrl + K`):** Pulse `Ctrl + K` desde cualquier lugar para buscar un router por nombre, IP o serial, o saltar directamente a un submódulo (ej. escribir `"r1 bridge"` o `"firewall"`).
+- **Centro Táctico de Notificaciones In-App (`🔔` en Barra Superior / `Alt + N`):** Icono de campana permanente junto al botón de ayuda (`❓ Ayuda`) con insignia semafórica inteligente (`P1` rojo para caídas/alertas TOFU sin reconocer, `P2` ámbar para aprobaciones Maker-Checker pendientes y punto cian `•` para avisos informativos), triaje en 1 clic (`✓ Aprobar 1-Clic` y `👁️ Reconocer (Ack)`), deduplicación anti-fatiga (`[×N]`), modo No Molestar (`🔕 30m`) y alerta en el título de la pestaña del navegador (`(N) 🔔`).
 - **Densidad de Tablas (`Compacta 32px` vs `Cómoda 44px`):** En el encabezado de cada tabla técnica puede alternar entre el modo compacto de alta densidad estilo WinBox (`32px`) para escritorio y el modo táctil cómodo (`44px`) para tablets y teléfonos.
 - **Tres Temas Visuales:** Conmute desde la barra superior entre **Oscuro Táctico NOC** (predeterminado), **Alto Contraste Wallboard** y **Claro de Oficina/Campo**.
 - **Insignias Nativas de RouterOS v7:** Todas las tablas muestran las banderas oficiales al inicio de cada fila:
@@ -79,11 +80,11 @@ stateDiagram-v2
 
 - Mientras la verificación está activa, verá un banner superior con cuenta regresiva de **60 segundos**. Si el router responde con normalidad, el cambio queda confirmado automáticamente.
 
-### 2.2 Flujo de Aprobación *Maker-Checker* (`HTTP 202`)
+### 2.2 Flujo de Aprobación *Maker-Checker* (`HTTP 202`) y Reactividad en Tiempo Real
 
 Cuando un operador con rol intermedio (como `SUPPORT_L2`) o un agente IA ejecuta una acción crítica (ej. eliminar un Bridge, borrar una interfaz o insertar una regla de Firewall de bloqueo), el sistema no la aplica a ciegas:
-1. La operación se intercepta con estado **`202 Accepted`**, mostrando un aviso informativo en pantalla.
-2. Un **`SUPERVISOR`**, **`SUPPORT_L3`** o **`TENANT_ADMIN`** ingresa al menú **`Maker-Checker`**, revisa los parámetros exactos propuestos y pulsa **`✅ Aprobar y Ejecutar`** (o **`❌ Rechazar`**).
+1. La operación se intercepta con estado **`202 Accepted`**, mostrando un aviso informativo en pantalla y despachando un evento en tiempo real (`MAKER_CHECKER_REQUESTED`) por WebSocket hacia todos los supervisores conectados.
+2. El **`SUPERVISOR`**, **`SUPPORT_L3`** o **`TENANT_ADMIN`** ve de inmediato la alerta en la campana superior (`🔔`) o en la bandeja **`Maker-Checker`** (`/approvals`, que cuenta además con auto-refresco cada 15 segundos y botón manual **`[ 🔄 Refrescar ]`**), revisa los parámetros exactos propuestos y pulsa **`✅ Aprobar y Ejecutar`** (o aprueba en 1 clic desde la campana).
 3. Por regla de seguridad, quien solicita el cambio (*Maker*) no puede auto-aprobarlo (*Checker*).
 
 ---

@@ -59,6 +59,21 @@ When interacting with RouterOS v7 telemetry or Syslog:
 - The system must verify and auto-provision all 9 canonical logging topics (`system,info`, `account`, `firewall,info`, etc.) to prevent administrative changes in WinBox/WebFig from going undetected.
 - The UDP Syslog collector must parse legacy BSD datagrams, strip duplicate identities, and dynamically infer topics if missing in the payload body.
 
+### 1.5 Anti-Silo Cross-Module State Propagation, 3-Phase Temporal Lifecycle & Semantic Audit Invariant
+
+High code coverage (`>= 95%`) alone does NOT prevent cross-module disconnects if unit tests rely on isolated mocks at module boundaries (*Silo Mock Blindness*) or tautological assertions. Every test suite across Backend (`pytest`) and Frontend (`Vitest` / `Playwright` / `Karate Labs`) MUST strictly enforce the following three invariants:
+
+1. **Cross-Module State Propagation Invariant (Zero Boundary Mocks for State Consumers):**
+   - Never consider a mutation test complete by asserting only the mutating endpoint's `HTTP 200/201` response while mocking or ignoring downstream consumers.
+   - Whenever an action in Module A modifies operational state (e.g., creating/cancelling a `MaintenanceWindow`, updating a router's `system/identity`, triggering a 60s `Safe Mode` window, or pairing an FTTH subscriber in IPAM), the test MUST immediately invoke the read endpoints and UI stores of Module B (`GET /api/v1/inventory/routers`, `DashboardHomeView`, `NocWallboardView`, `UnifiedNetworkMap`, `GET /api/v1/audit/logs`) **without intermediate mocks** and assert that the effective state (`admin_state`, counters, badges, map pins) reflects the mutation across all views.
+2. **3-Phase Temporal Lifecycle Invariant:**
+   - Any entity governed by time windows or TTLs (`starts_at` / `ends_at` in Maintenance Windows, 60s Safe Mode `/system/scheduler`, 30s Vault Step-Up Auth, DHCP Lease expiration) MUST be tested across all **three temporal phases**:
+     - **Phase 1 (`t < starts_at`):** Scheduled / Pending state (`⏳ Programada`).
+     - **Phase 2 (`starts_at <= t <= ends_at`):** Active / In-Progress state (`🛠️ En Curso`, projecting effective `admin_state = MAINTENANCE` to all consumers).
+     - **Phase 3 (`t > ends_at` or Cancelled):** Expired / Purged / Rolled-back state (restoring nominal `PRODUCTION` state and writing WORM audit trail).
+3. **Anti-Raw-UUID & Semantic Badge Audit Invariant:**
+   - Do NOT blindly replace `write_audit_log` with an uninspected `AsyncMock` in endpoint tests. Tests MUST verify that `actor_username` and `router_display_name` resolve to human-readable identifiers (never raw UUID v4 strings like `claims["sub"]`) and that UI event tickers (`NocWallboardView.vue`, `DashboardHomeView.vue`) classify event badges (`CAÍDA`, `MANTENIMIENTO`, `RESPALDO`, `OPERATIVO`, `OPERACIÓN`) by their true semantic action rather than falling back to a single misleading default label.
+
 ---
 
 ## 2. Mandatory Test Execution Upon Task Completion
