@@ -1324,6 +1324,21 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 155. Alta FTTH por MAC WAN, Auto-Conmutación L2 Bridge -> BNG y Aprovisionamiento MikroTik (Hito 28.20)
+    Given path '/api/v1/subscriber-devices/00000000-0000-0000-0000-000000000001/live-candidates'
+    And param bng_router_id = '00000000-0000-0000-0000-000000000111'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/subscriber-devices/00000000-0000-0000-0000-000000000001'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000156'
+    And request { service_type: 'DHCP', assigned_ipv4: '10.250.3.55', onu_mac_address: 'AA:BB:CC:11:22:33', provision_on_router: true, bng_router_id: '00000000-0000-0000-0000-000000000111' }
+    When method patch
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
 
 
 

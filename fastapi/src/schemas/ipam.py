@@ -258,6 +258,9 @@ class SubscriberDeviceCreate(BaseModel):
 
 
 class SubscriberDeviceUpdate(BaseModel):
+    router_id: Optional[uuid.UUID] = None
+    bng_router_id: Optional[uuid.UUID] = None
+    provision_on_router: bool = True
     endpoint_identifier: Optional[str] = None
     service_type: Optional[CustomerServiceTypeEnum] = None
     auth_backend: Optional[AuthBackendEnum] = None
@@ -321,6 +324,11 @@ class SubscriberLiveCandidatesResponse(BaseModel):
     device_id: uuid.UUID
     router_id: uuid.UUID
     router_name: str
+    access_router_id: Optional[uuid.UUID] = None
+    access_router_name: Optional[str] = None
+    auto_switched_bng: bool = False
+    matched_mac_address: Optional[str] = None
+    matched_ipv4: Optional[str] = None
     dhcp_leases: list[SubscriberLiveCandidateDhcpLease] = Field(default_factory=list)
     pppoe_sessions: list[SubscriberLiveCandidatePppoe] = Field(default_factory=list)
     ipam_addresses: list[IPAMAddressResponse] = Field(default_factory=list)

@@ -159,6 +159,20 @@
     showMessage(`Serial GPON normalizado: ${customerForm.value.device_serial}`, 'success');
   }
 
+  function formatNormalizedMac(raw: string): string {
+    const hex = raw.trim().toUpperCase().replace(/[^0-9A-F]/g, '');
+    if (hex.length === 12) {
+      return hex.match(/.{1,2}/g)?.join(':') || raw.trim().toUpperCase();
+    }
+    return raw.trim().toUpperCase();
+  }
+
+  function handleNormalizeMac() {
+    if (!customerForm.value.onu_mac_address.trim()) return;
+    customerForm.value.onu_mac_address = formatNormalizedMac(customerForm.value.onu_mac_address);
+    showMessage(`MAC WAN normalizada: ${customerForm.value.onu_mac_address}`, 'success');
+  }
+
   // Copiar coordenadas de la caja NAP al formulario de cliente
   function handleCopyCoordsFromNap() {
     if (!customerForm.value.optical_box_id) {
@@ -246,14 +260,18 @@
     }
   }
 
-  // Registrar Nuevo Cliente FTTH
+  // Registrar Nuevo Cliente FTTH (Enfoque Planta Física + MAC WAN; el NOC aprovisiona L3 en IPAM)
   async function handleRegisterCustomer() {
     if (!customerForm.value.endpoint_identifier.trim()) {
       showMessage('Ingrese el identificador de servicio del abonado', 'error');
       return;
     }
-    if (!customerForm.value.device_serial.trim()) {
-      showMessage('Ingrese o escanee el serial de la ONU', 'error');
+    const normalizedMac = customerForm.value.onu_mac_address.trim()
+      ? formatNormalizedMac(customerForm.value.onu_mac_address)
+      : '';
+    const rawSerial = customerForm.value.device_serial.trim().toUpperCase();
+    if (!normalizedMac && !rawSerial) {
+      showMessage('Ingrese la dirección MAC WAN de la ONU (ej. AA:BB:CC:11:22:33)', 'error');
       return;
     }
     if (!customerForm.value.optical_box_id) {
@@ -263,15 +281,17 @@
 
     const box = selectedNapBox.value;
     const routerId = box ? box.router_id : napForm.value.router_id;
+    const effectiveSerial =
+      rawSerial || `MAC-${normalizedMac.replace(/[^0-9A-F]/g, '').slice(-8) || 'ONU'}`;
 
     try {
       const dev = await fieldStore.registerSubscriberDevice({
         router_id: routerId,
         endpoint_identifier: customerForm.value.endpoint_identifier.trim(),
-        service_type: customerForm.value.service_type,
+        service_type: customerForm.value.service_type || 'DHCP',
         assigned_ipv4: customerForm.value.assigned_ipv4.trim() || undefined,
-        device_serial: customerForm.value.device_serial.trim().toUpperCase(),
-        onu_mac_address: customerForm.value.onu_mac_address.trim() || undefined,
+        device_serial: effectiveSerial,
+        onu_mac_address: normalizedMac || undefined,
         onu_mode: customerForm.value.onu_mode === 'BRIDGE' ? 'BRIDGE' : 'ROUTER',
         optical_box_id: customerForm.value.optical_box_id,
         optical_box_port: Number(customerForm.value.optical_box_port),
@@ -800,44 +820,26 @@
                   </div>
 
                   <div class="form-group flex-1">
-                    <label for="cust-onu-serial">{{ t('field_tech.serial_onu_label') }} *</label>
+                    <label for="cust-onu-mac">MAC WAN de la ONU (Para Reserva DHCP / PPPoE en NOC) *</label>
                     <div class="input-with-btn">
                       <input
-                        id="cust-onu-serial"
-                        v-model="customerForm.device_serial"
+                        id="cust-onu-mac"
+                        v-model="customerForm.onu_mac_address"
                         type="text"
                         class="rg-input font-mono flex-1"
-                        placeholder="Ej: HWTC1234ABCD"
+                        placeholder="Ej: AA:BB:CC:11:22:33"
                         required
                       />
                       <button
+                        id="btn-normalize-mac"
                         type="button"
                         class="btn-touch-sm btn-touch--cyan"
-                        title="Normalizar prefijos GPON"
-                        @click="handleNormalizeSerial"
+                        title="Normalizar formato MAC (AA:BB:CC:DD:EE:FF)"
+                        @click="handleNormalizeMac"
                       >
                         🔤
                       </button>
                     </div>
-                  </div>
-                </div>
-
-                <div class="form-row">
-                  <div class="form-group flex-1">
-                    <label for="cust-service-proto">Protocolo de Acceso WAN *</label>
-                    <select id="cust-service-proto" v-model="customerForm.service_type" class="rg-input">
-                      <option value="DHCP">DHCP (Asignación Dinámica / Option 82)</option>
-                      <option value="PPPOE">PPPoE (Túnel BRAS Autenticado)</option>
-                      <option value="STATIC_IP">IP Estática (Pool IPAM)</option>
-                    </select>
-                  </div>
-
-                  <div class="form-group flex-1">
-                    <label for="cust-onu-mode">{{ t('field_tech.onu_mode') }}</label>
-                    <select id="cust-onu-mode" v-model="customerForm.onu_mode" class="rg-input">
-                      <option value="ROUTER">{{ t('field_tech.onu_mode_router') }}</option>
-                      <option value="BRIDGE">{{ t('field_tech.onu_mode_bridge') }}</option>
-                    </select>
                   </div>
                 </div>
 
@@ -853,27 +855,25 @@
                   </div>
 
                   <div class="form-group flex-1">
-                    <label for="cust-onu-mac">MAC WAN / ONU (Opcional — o emparejar en IPAM)</label>
-                    <input
-                      id="cust-onu-mac"
-                      v-model="customerForm.onu_mac_address"
-                      type="text"
-                      class="rg-input font-mono"
-                      placeholder="Ej: AA:BB:CC:11:22:33"
-                    />
-                  </div>
-                </div>
-
-                <div class="form-row">
-                  <div class="form-group flex-1">
-                    <label for="cust-assigned-ipv4">IPv4 Asignada (Opcional — si ya conoce la IP o Lease)</label>
-                    <input
-                      id="cust-assigned-ipv4"
-                      v-model="customerForm.assigned_ipv4"
-                      type="text"
-                      class="rg-input font-mono"
-                      placeholder="Ej: 10.250.3.55 (Dejar vacío para emparejar luego en IPAM)"
-                    />
+                    <label for="cust-onu-serial">{{ t('field_tech.serial_onu_label') }} (Opcional — Inventario)</label>
+                    <div class="input-with-btn">
+                      <input
+                        id="cust-onu-serial"
+                        v-model="customerForm.device_serial"
+                        type="text"
+                        class="rg-input font-mono flex-1"
+                        placeholder="Ej: HWTC1234ABCD (Opcional)"
+                      />
+                      <button
+                        id="btn-normalize-serial"
+                        type="button"
+                        class="btn-touch-sm btn-touch--cyan"
+                        title="Normalizar prefijos GPON"
+                        @click="handleNormalizeSerial"
+                      >
+                        🔤
+                      </button>
+                    </div>
                   </div>
                 </div>
 

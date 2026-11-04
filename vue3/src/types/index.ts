@@ -568,6 +568,11 @@ export interface SubscriberLiveCandidatesResponse {
   device_id: string;
   router_id: string;
   router_name: string;
+  access_router_id?: string | null;
+  access_router_name?: string | null;
+  auto_switched_bng?: boolean;
+  matched_mac_address?: string | null;
+  matched_ipv4?: string | null;
   dhcp_leases: SubscriberLiveCandidateDhcpLease[];
   pppoe_sessions: SubscriberLiveCandidatePppoe[];
   ipam_addresses: IPAMAddress[];

@@ -163,7 +163,7 @@ describe('IpamSubscriberPairing — Emparejamiento de Red FTTH (DHCP / PPPoE / I
     expect(modal.exists()).toBe(true);
     expect(modal.text()).toContain('Emparejar Red de Abonado FTTH');
     expect(modal.text()).toContain('BRAS-Caracas-01');
-    expect(modal.text()).toContain('Leases DHCP Activos en el Router (1 detectados)');
+    expect(modal.text()).toContain('Leases DHCP Activos en BRAS-Caracas-01 (1 detectados)');
   });
 
   it('permite seleccionar un Lease DHCP y guardar el emparejamiento con PATCH', async () => {
@@ -209,6 +209,117 @@ describe('IpamSubscriberPairing — Emparejamiento de Red FTTH (DHCP / PPPoE / I
         service_type: 'DHCP',
         assigned_ipv4: '10.250.3.55',
         onu_mac_address: 'AA:BB:CC:11:22:33',
+        provision_on_router: true,
+      }),
+    );
+  });
+
+  it('soporta arquitectura desacoplada L2 Bridge -> BNG mostrando badge Auto-detectado y selector de BNG', async () => {
+    const ipamStore = useIpamStore();
+    const invStore = useInventoryStore();
+
+    invStore.routers = [
+      { id: 'r-bridge', display_name: 'r3-Bridge', ip_address: '10.0.0.3' } as any,
+      { id: 'r-bng', display_name: 'r111-BNG', ip_address: '10.0.0.111' } as any,
+    ];
+
+    vi.spyOn(ipamStore, 'fetchVrfs').mockResolvedValue();
+    vi.spyOn(ipamStore, 'fetchPrefixes').mockResolvedValue();
+    vi.spyOn(ipamStore, 'fetchCustomerServices').mockImplementation(async () => {
+      ipamStore.customerServices = [mockSubUnpaired];
+    });
+    vi.spyOn(invStore, 'fetchRouters').mockResolvedValue();
+
+    const splitCandidates: SubscriberLiveCandidatesResponse = {
+      ...mockCandidates,
+      router_id: 'r-bng',
+      router_name: 'r111-BNG',
+      access_router_id: 'r-bridge',
+      access_router_name: 'r3-Bridge',
+      auto_switched_bng: true,
+      matched_mac_address: 'AA:BB:CC:11:22:33',
+      matched_ipv4: '10.250.3.55',
+    };
+
+    const fetchCandidatesSpy = vi
+      .spyOn(ipamStore, 'fetchSubscriberLiveCandidates')
+      .mockResolvedValue(splitCandidates);
+
+    const wrapper = mount(IpamManagementView);
+    await flushPromises();
+
+    const tabs = wrapper.findAll('.tab-btn');
+    await tabs[1].trigger('click');
+    await flushPromises();
+
+    await wrapper.find('#btn-pair-subscriber-sub-unpaired-01').trigger('click');
+    await flushPromises();
+
+    const modal = wrapper.find('#modal-pair-subscriber');
+    expect(modal.text()).toContain('Nodo Físico L2: r3-Bridge');
+    expect(modal.text()).toContain('Cabecera BNG/DHCP: r111-BNG');
+    expect(modal.text()).toContain('Auto-detectado');
+
+    const bngSelect = wrapper.find('#pair-bng-router-select');
+    expect(bngSelect.exists()).toBe(true);
+
+    // Cambiar manualmente el router BNG
+    await bngSelect.setValue('r-bridge');
+    await bngSelect.trigger('change');
+    await flushPromises();
+
+    expect(fetchCandidatesSpy).toHaveBeenCalledWith('sub-unpaired-01', 'r-bridge');
+  });
+
+  it('permite aprovisionar en MikroTik con PPPoE, contraseña y caller-id MAC', async () => {
+    const ipamStore = useIpamStore();
+    const invStore = useInventoryStore();
+
+    vi.spyOn(ipamStore, 'fetchVrfs').mockResolvedValue();
+    vi.spyOn(ipamStore, 'fetchPrefixes').mockResolvedValue();
+    vi.spyOn(ipamStore, 'fetchCustomerServices').mockImplementation(async () => {
+      ipamStore.customerServices = [mockSubUnpaired];
+    });
+    vi.spyOn(invStore, 'fetchRouters').mockResolvedValue();
+    vi.spyOn(ipamStore, 'fetchSubscriberLiveCandidates').mockResolvedValue(mockCandidates);
+
+    const pairSpy = vi
+      .spyOn(ipamStore, 'pairSubscriberNetwork')
+      .mockResolvedValue({ ...mockSubUnpaired, service_type: 'PPPOE' });
+
+    const wrapper = mount(IpamManagementView);
+    await flushPromises();
+
+    const tabs = wrapper.findAll('.tab-btn');
+    await tabs[1].trigger('click');
+    await flushPromises();
+
+    await wrapper.find('#btn-pair-subscriber-sub-unpaired-01').trigger('click');
+    await flushPromises();
+
+    // Cambiar a PPPOE
+    await wrapper.find('#pair-proto-select').setValue('PPPOE');
+    await flushPromises();
+
+    await wrapper.find('#pair-pppoe-user').setValue('cliente_ftth_99');
+    await wrapper.find('#pair-pppoe-password').setValue('MySecretPass');
+    await wrapper.find('#pair-assigned-ipv4').setValue('10.250.3.70');
+    await wrapper.find('#pair-onu-mac').setValue('AA:BB:CC:33:44:55');
+
+    // Submit
+    const form = wrapper.find('#modal-pair-subscriber form');
+    await form.trigger('submit.prevent');
+    await flushPromises();
+
+    expect(pairSpy).toHaveBeenCalledWith(
+      'sub-unpaired-01',
+      expect.objectContaining({
+        service_type: 'PPPOE',
+        endpoint_identifier: 'cliente_ftth_99',
+        pppoe_password: 'MySecretPass',
+        assigned_ipv4: '10.250.3.70',
+        onu_mac_address: 'AA:BB:CC:33:44:55',
+        provision_on_router: true,
       }),
     );
   });

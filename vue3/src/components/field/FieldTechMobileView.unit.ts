@@ -103,10 +103,25 @@ describe('FieldTechMobileView.vue — Panel Responsive del Técnico de Campo FTT
 
     const serialInput = wrapper.find('#cust-onu-serial');
     await serialInput.setValue('4857544312345678'); // 'HWTC' en ASCII HEX
-    const btnNormalize = wrapper.find('.input-with-btn button');
+    const btnNormalize = wrapper.find('#btn-normalize-serial');
     await btnNormalize.trigger('click');
 
     expect((serialInput.element as HTMLInputElement).value).toBe('HWTC12345678');
+  });
+
+  it('normaliza direcciones MAC WAN en el formulario de alta de cliente', async () => {
+    const authStore = useAuthStore();
+    authStore.updateTenantFeatures({ isp_module_enabled: true });
+
+    const wrapper = mount(FieldTechMobileView);
+    await wrapper.find('#tab-btn-customer').trigger('click');
+
+    const macInput = wrapper.find('#cust-onu-mac');
+    await macInput.setValue('aabb.ccdd.eeff');
+    const btnNormalize = wrapper.find('#btn-normalize-mac');
+    await btnNormalize.trigger('click');
+
+    expect((macInput.element as HTMLInputElement).value).toBe('AA:BB:CC:DD:EE:FF');
   });
 
   it('ejecuta captura de coordenadas GPS con feedback reactivo', async () => {
@@ -344,8 +359,7 @@ describe('FieldTechMobileView.vue — Panel Responsive del Técnico de Campo FTT
     await flushPromises();
 
     await wrapper.find('#cust-port-select').setValue(2);
-    await wrapper.find('#cust-onu-serial').setValue('HWTC99887766');
-    await wrapper.find('#cust-onu-mode').setValue('ROUTER');
+    await wrapper.find('#cust-onu-mac').setValue('AA:BB:CC:11:22:33');
     await wrapper.find('#cust-rx-power').setValue(-19.2);
 
     await wrapper.find('form').trigger('submit');
@@ -356,7 +370,7 @@ describe('FieldTechMobileView.vue — Panel Responsive del Técnico de Campo FTT
         optical_box_id: 'box-1',
         optical_box_port: 2,
         service_type: 'DHCP',
-        onu_mode: 'ROUTER',
+        onu_mac_address: 'AA:BB:CC:11:22:33',
         rx_optical_power_dbm: -19.2,
       }),
     );

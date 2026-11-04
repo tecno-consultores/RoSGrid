@@ -3,7 +3,7 @@
 
 # Especificación 77: Alta de Campo FTTH Centrada en MAC WAN, Aprovisionamiento Automático MikroTik desde IPAM (Reserva DHCP / Secreto PPPoE) y Arquitectura Desacoplada Nodo Físico L2 Bridge (`r3`) vs. Router Cabecera BNG (`r111`) (Hito 28.20)
 
-> **Estado:** Aprobado para Ejecución (*Flash-Ready Specification*)  
+> **Estado:** COMPLETADO y Certificado al 100% en Docker (Hito 28.20)  
 > **Motor de Ejecución Objetivo:** Gemini 3.8 Flash (High)  
 > **Hito Asociado:** Hito 28 — Subhito `28.20` (`ROADMAP.md`)  
 > **Archivos Afectados:**

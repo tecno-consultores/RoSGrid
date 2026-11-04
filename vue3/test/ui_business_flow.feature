@@ -922,6 +922,21 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * match mapGeometricContract.boxSquareClass == '.box-square'
     * match mapGeometricContract.subTriangleClass == '.sub-triangle-svg'
 
+  Scenario: 92. Alta Móvil de Campo por MAC WAN y Aprovisionamiento MikroTik BNG desde IPAM (Hito 28.20)
+    * def fieldOpsMacContract = { onuMacInput: '#cust-onu-mac', normalizeMacBtn: '#btn-normalize-mac', onuSerialInput: '#cust-onu-serial', normalizeSerialBtn: '#btn-normalize-serial' }
+    * match fieldOpsMacContract.onuMacInput == '#cust-onu-mac'
+    * match fieldOpsMacContract.normalizeMacBtn == '#btn-normalize-mac'
+    * match fieldOpsMacContract.onuSerialInput == '#cust-onu-serial'
+    * match fieldOpsMacContract.normalizeSerialBtn == '#btn-normalize-serial'
+
+    * def ipamPairingBngContract = { bngSelect: '#pair-bng-router-select', pppoeUser: '#pair-pppoe-user', pppoePass: '#pair-pppoe-password', chkProvision: '#chk-provision-mikrotik', saveBtn: '#btn-save-pair-subscriber' }
+    * match ipamPairingBngContract.bngSelect == '#pair-bng-router-select'
+    * match ipamPairingBngContract.pppoeUser == '#pair-pppoe-user'
+    * match ipamPairingBngContract.pppoePass == '#pair-pppoe-password'
+    * match ipamPairingBngContract.chkProvision == '#chk-provision-mikrotik'
+    * match ipamPairingBngContract.saveBtn == '#btn-save-pair-subscriber'
+
+
 
 
 

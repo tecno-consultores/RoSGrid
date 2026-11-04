@@ -157,10 +157,12 @@ export const useIpamStore = defineStore('ipam', () => {
 
   async function fetchSubscriberLiveCandidates(
     deviceId: string,
+    bngRouterId?: string,
   ): Promise<import('@/types').SubscriberLiveCandidatesResponse> {
     const { http } = await import('@/api/httpClient');
+    const query = bngRouterId ? `?bng_router_id=${encodeURIComponent(bngRouterId)}` : '';
     const res = await http.get<import('@/types').SubscriberLiveCandidatesResponse>(
-      `/api/v1/subscriber-devices/${deviceId}/live-candidates`,
+      `/api/v1/subscriber-devices/${deviceId}/live-candidates${query}`,
     );
     return res.data;
   }
@@ -168,9 +170,12 @@ export const useIpamStore = defineStore('ipam', () => {
   async function pairSubscriberNetwork(
     deviceId: string,
     payload: {
+      bng_router_id?: string;
+      provision_on_router?: boolean;
       service_type: string;
       endpoint_identifier?: string;
       pppoe_username?: string;
+      pppoe_password?: string;
       onu_mac_address?: string;
       onu_mode?: string;
       assigned_ipv4?: string;

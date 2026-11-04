@@ -923,40 +923,21 @@ async def create_subscriber_device(
     return device
 
 
-@subscribers_router.get("/{device_id}/live-candidates", response_model=SubscriberLiveCandidatesResponse)
-async def get_subscriber_live_pairing_candidates(
-    device_id: uuid.UUID,
-    db: AsyncSession = Depends(get_tenant_db_session),
-    claims: dict[str, Any] = Depends(
-        require_roles(
-            SystemRoleEnum.SUPERADMIN_GLOBAL,
-            SystemRoleEnum.TENANT_ADMIN,
-            SystemRoleEnum.NOC_MONITOR,
-            SystemRoleEnum.FIELD_TECH,
-        )
-    ),
-) -> SubscriberLiveCandidatesResponse:
-    """Consulta en vivo en el router MikroTik del abonado los Leases DHCP activos, Sesiones/Secretos PPPoE
-    y direcciones IPAM disponibles para emparejar una ONU recién registrada en 1 clic.
-    """
-    tenant_id = get_tenant_id(claims)
-    stmt_dev = select(SubscriberDevice).where(
-        SubscriberDevice.id == device_id,
-        SubscriberDevice.tenant_id == tenant_id,
-    )
-    dev = (await db.execute(stmt_dev)).scalar_one_or_none()
-    if not dev:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dispositivo de abonado no encontrado")
+def _normalize_mac_address(raw_mac: Optional[str]) -> Optional[str]:
+    """Normaliza una dirección MAC (AA-BB-CC-DD-EE-FF, aabb.ccdd.eeff, aabbccddeeff) a AA:BB:CC:DD:EE:FF."""
+    if not raw_mac:
+        return None
+    hex_only = "".join(ch for ch in raw_mac.strip().upper() if ch in "0123456789ABCDEF")
+    if len(hex_only) == 12:
+        return ":".join(hex_only[i : i + 2] for i in range(0, 12, 2))
+    return raw_mac.strip().upper()
 
-    stmt_r = (
-        select(Router)
-        .options(selectinload(Router.vault))
-        .where(Router.id == dev.router_id, Router.tenant_id == tenant_id)
-    )
-    r = (await db.execute(stmt_r)).scalar_one_or_none()
-    if not r:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Router asignador no encontrado")
 
+async def _collect_router_live_candidates(
+    r: Router,
+    tenant_id: uuid.UUID,
+) -> tuple[list[SubscriberLiveCandidateDhcpLease], list[SubscriberLiveCandidatePppoe]]:
+    """Extrae en vivo los Leases DHCP y Sesiones/Secretos PPPoE de un router MikroTik."""
     dhcp_candidates: list[SubscriberLiveCandidateDhcpLease] = []
     pppoe_candidates: list[SubscriberLiveCandidatePppoe] = []
     seen_pppoe_names: set[str] = set()
@@ -975,7 +956,9 @@ async def get_subscriber_live_pairing_candidates(
                     dhcp_candidates.append(
                         SubscriberLiveCandidateDhcpLease(
                             address=addr,
-                            mac_address=str(item.get("mac-address") or item.get("active-mac-address") or "").strip() or None,
+                            mac_address=_normalize_mac_address(
+                                str(item.get("mac-address") or item.get("active-mac-address") or "").strip() or None
+                            ),
                             host_name=str(item.get("host-name") or "").strip() or None,
                             server=str(item.get("server") or "").strip() or None,
                             status=str(item.get("status") or "bound").strip(),
@@ -996,7 +979,7 @@ async def get_subscriber_live_pairing_candidates(
                         SubscriberLiveCandidatePppoe(
                             name=name,
                             address=str(item.get("address") or "").strip() or None,
-                            caller_id=str(item.get("caller-id") or "").strip() or None,
+                            caller_id=_normalize_mac_address(str(item.get("caller-id") or "").strip() or None),
                             service=str(item.get("service") or "pppoe").strip(),
                             uptime=str(item.get("uptime") or "").strip() or None,
                             source="active",
@@ -1015,7 +998,7 @@ async def get_subscriber_live_pairing_candidates(
                         SubscriberLiveCandidatePppoe(
                             name=name,
                             address=str(item.get("remote-address") or "").strip() or None,
-                            caller_id=str(item.get("caller-id") or "").strip() or None,
+                            caller_id=_normalize_mac_address(str(item.get("caller-id") or "").strip() or None),
                             service=str(item.get("service") or "pppoe").strip(),
                             uptime=None,
                             source="secret",
@@ -1023,6 +1006,186 @@ async def get_subscriber_live_pairing_candidates(
                     )
     except Exception as e:
         logger.warning(f"Sondeo de candidatos en vivo en router {r.display_name} retornó aviso: {e}")
+
+    return dhcp_candidates, pppoe_candidates
+
+
+def _find_mac_match_in_candidates(
+    target_mac: Optional[str],
+    dhcp_leases: list[SubscriberLiveCandidateDhcpLease],
+    pppoe_sessions: list[SubscriberLiveCandidatePppoe],
+) -> Optional[str]:
+    """Busca si la MAC WAN del abonado ya tiene IP en los leases DHCP o sesiones PPPoE."""
+    norm_target = _normalize_mac_address(target_mac)
+    if not norm_target:
+        return None
+    for lease in dhcp_leases:
+        if _normalize_mac_address(lease.mac_address) == norm_target and lease.address:
+            return lease.address
+    for ppp in pppoe_sessions:
+        if _normalize_mac_address(ppp.caller_id) == norm_target and ppp.address:
+            return ppp.address
+    return None
+
+
+async def _provision_subscriber_on_mikrotik(
+    r: Router,
+    tenant_id: uuid.UUID,
+    service_type: CustomerServiceTypeEnum,
+    endpoint_identifier: str,
+    assigned_ipv4: Optional[str],
+    onu_mac_address: Optional[str],
+    pppoe_password: Optional[str] = None,
+) -> None:
+    """Aprovisiona en el router cabecera MikroTik BNG la reserva estática DHCP o el secreto PPPoE."""
+    clean_ip = (assigned_ipv4 or "").strip().split("/")[0].strip()
+    norm_mac = _normalize_mac_address(onu_mac_address)
+    comment_tag = f"FTTH: {endpoint_identifier}"
+    client = _get_router_client(r, tenant_id)
+
+    try:
+        async with client:
+            if service_type == CustomerServiceTypeEnum.DHCP and clean_ip and norm_mac:
+                leases = await client.get("/ip/dhcp-server/lease")
+                existing_lease = None
+                if isinstance(leases, list):
+                    for item in leases:
+                        if not isinstance(item, dict):
+                            continue
+                        item_mac = _normalize_mac_address(
+                            str(item.get("mac-address") or item.get("active-mac-address") or "")
+                        )
+                        item_addr = str(item.get("address") or "").strip()
+                        if item_mac == norm_mac or item_addr == clean_ip:
+                            existing_lease = item
+                            break
+
+                if existing_lease and existing_lease.get(".id"):
+                    lease_id = str(existing_lease[".id"])
+                    if str(existing_lease.get("dynamic", "false")).lower() == "true":
+                        await client.post("/ip/dhcp-server/lease/make-static", {".id": lease_id})
+                    await client.patch(
+                        f"/ip/dhcp-server/lease/{lease_id}",
+                        {"address": clean_ip, "mac-address": norm_mac, "comment": comment_tag},
+                    )
+                else:
+                    await client.post(
+                        "/ip/dhcp-server/lease",
+                        {"address": clean_ip, "mac-address": norm_mac, "comment": comment_tag},
+                    )
+
+            elif service_type == CustomerServiceTypeEnum.PPPOE and endpoint_identifier:
+                secrets = await client.get("/ppp/secret")
+                existing_secret = None
+                if isinstance(secrets, list):
+                    for item in secrets:
+                        if isinstance(item, dict) and str(item.get("name") or "").strip() == endpoint_identifier:
+                            existing_secret = item
+                            break
+
+                secret_payload: dict[str, Any] = {
+                    "name": endpoint_identifier,
+                    "service": "pppoe",
+                    "comment": comment_tag,
+                }
+                if clean_ip:
+                    secret_payload["remote-address"] = clean_ip
+                if norm_mac:
+                    secret_payload["caller-id"] = norm_mac
+                if pppoe_password:
+                    secret_payload["password"] = pppoe_password
+
+                if existing_secret and existing_secret.get(".id"):
+                    await client.patch(f"/ppp/secret/{existing_secret['.id']}", secret_payload)
+                else:
+                    if "password" not in secret_payload:
+                        secret_payload["password"] = endpoint_identifier
+                    await client.post("/ppp/secret", secret_payload)
+    except Exception as exc:
+        logger.warning(f"Aprovisionamiento MikroTik en {r.display_name} para {endpoint_identifier} omitido/aviso: {exc}")
+
+
+@subscribers_router.get("/{device_id}/live-candidates", response_model=SubscriberLiveCandidatesResponse)
+async def get_subscriber_live_pairing_candidates(
+    device_id: uuid.UUID,
+    bng_router_id: Optional[uuid.UUID] = Query(default=None),
+    db: AsyncSession = Depends(get_tenant_db_session),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.NOC_MONITOR,
+            SystemRoleEnum.FIELD_TECH,
+        )
+    ),
+) -> SubscriberLiveCandidatesResponse:
+    """Consulta en vivo los Leases DHCP activos, Sesiones/Secretos PPPoE y direcciones IPAM.
+    Soporta arquitecturas desacopladas donde la Caja NAP cuelga de un nodo L2 Bridge (ej. r3)
+    mientras el servidor DHCP / BRAS PPPoE vive en un router cabecera BNG (ej. r111).
+    """
+    tenant_id = get_tenant_id(claims)
+    stmt_dev = select(SubscriberDevice).where(
+        SubscriberDevice.id == device_id,
+        SubscriberDevice.tenant_id == tenant_id,
+    )
+    dev = (await db.execute(stmt_dev)).scalar_one_or_none()
+    if not dev:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dispositivo de abonado no encontrado")
+
+    # Identificar el nodo físico de acceso (de la Caja NAP si existe, o dev.router_id)
+    access_router_id = dev.router_id
+    if dev.optical_box_id:
+        stmt_box = select(OpticalBox).where(OpticalBox.id == dev.optical_box_id, OpticalBox.tenant_id == tenant_id)
+        box_obj = (await db.execute(stmt_box)).scalar_one_or_none()
+        if box_obj:
+            access_router_id = box_obj.router_id
+
+    stmt_access = select(Router).where(Router.id == access_router_id, Router.tenant_id == tenant_id)
+    access_router = (await db.execute(stmt_access)).scalar_one_or_none()
+
+    target_router_id = bng_router_id or dev.router_id
+    stmt_r = (
+        select(Router)
+        .options(selectinload(Router.vault))
+        .where(Router.id == target_router_id, Router.tenant_id == tenant_id)
+    )
+    r = (await db.execute(stmt_r)).scalar_one_or_none()
+    if not r:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Router asignador no encontrado")
+
+    dhcp_candidates, pppoe_candidates = await _collect_router_live_candidates(r, tenant_id)
+    matched_ip = _find_mac_match_in_candidates(dev.onu_mac_address, dhcp_candidates, pppoe_candidates)
+    auto_switched_bng = False
+
+    # Si no se forzó bng_router_id y el router actual (ej. r3 en modo Bridge L2) no tiene leases/PPPoE
+    # o no tiene la MAC del abonado, buscar automáticamente en los demás routers del tenant (ej. r111)
+    if bng_router_id is None and (not matched_ip and len(dhcp_candidates) == 0 and len(pppoe_candidates) == 0):
+        stmt_others = (
+            select(Router)
+            .options(selectinload(Router.vault))
+            .where(Router.tenant_id == tenant_id, Router.id != r.id)
+            .order_by(Router.created_at.asc())
+        )
+        other_routers = list((await db.execute(stmt_others)).scalars().all())
+        fallback_bng: Optional[tuple[Router, list[SubscriberLiveCandidateDhcpLease], list[SubscriberLiveCandidatePppoe]]] = None
+
+        for candidate_r in other_routers:
+            cand_dhcp, cand_pppoe = await _collect_router_live_candidates(candidate_r, tenant_id)
+            cand_match = _find_mac_match_in_candidates(dev.onu_mac_address, cand_dhcp, cand_pppoe)
+            if cand_match:
+                r = candidate_r
+                dhcp_candidates = cand_dhcp
+                pppoe_candidates = cand_pppoe
+                matched_ip = cand_match
+                auto_switched_bng = True
+                break
+            if fallback_bng is None and (len(cand_dhcp) > 0 or len(cand_pppoe) > 0):
+                fallback_bng = (candidate_r, cand_dhcp, cand_pppoe)
+
+        if not auto_switched_bng and fallback_bng is not None:
+            r, dhcp_candidates, pppoe_candidates = fallback_bng
+            matched_ip = _find_mac_match_in_candidates(dev.onu_mac_address, dhcp_candidates, pppoe_candidates)
+            auto_switched_bng = True
 
     stmt_ips = (
         select(IPAMAddress)
@@ -1036,6 +1199,11 @@ async def get_subscriber_live_pairing_candidates(
         device_id=dev.id,
         router_id=r.id,
         router_name=r.display_name,
+        access_router_id=access_router.id if access_router else r.id,
+        access_router_name=access_router.display_name if access_router else r.display_name,
+        auto_switched_bng=auto_switched_bng,
+        matched_mac_address=_normalize_mac_address(dev.onu_mac_address),
+        matched_ipv4=matched_ip,
         dhcp_leases=dhcp_candidates,
         pppoe_sessions=pppoe_candidates,
         ipam_addresses=[IPAMAddressResponse.model_validate(ip) for ip in ipam_rows],
@@ -1092,6 +1260,18 @@ async def update_subscriber_device(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dispositivo de abonado no encontrado")
 
     update_dict = payload.model_dump(exclude_unset=True)
+    provision_on_router = bool(update_dict.pop("provision_on_router", True))
+    pppoe_password = update_dict.pop("pppoe_password", None)
+    bng_router_id = update_dict.pop("bng_router_id", None) or update_dict.pop("router_id", None)
+
+    if bng_router_id:
+        stmt_bng = select(Router).where(Router.id == bng_router_id, Router.tenant_id == tenant_id)
+        if (await db.execute(stmt_bng)).scalar_one_or_none():
+            device.router_id = bng_router_id
+
+    if "onu_mac_address" in update_dict and update_dict["onu_mac_address"]:
+        update_dict["onu_mac_address"] = _normalize_mac_address(update_dict["onu_mac_address"])
+
     if "onu_serial_number" in update_dict and "device_serial" not in update_dict:
         update_dict["device_serial"] = update_dict.pop("onu_serial_number")
     if "pppoe_username" in update_dict and "endpoint_identifier" not in update_dict and update_dict["pppoe_username"]:
@@ -1125,6 +1305,27 @@ async def update_subscriber_device(
     for field, val in update_dict.items():
         if hasattr(device, field):
             setattr(device, field, val)
+
+    if provision_on_router and (raw_assigned_ipv4 or update_dict.get("onu_mac_address") or pppoe_password):
+        stmt_target_r = (
+            select(Router)
+            .options(selectinload(Router.vault))
+            .where(Router.id == device.router_id, Router.tenant_id == tenant_id)
+        )
+        target_r = (await db.execute(stmt_target_r)).scalar_one_or_none()
+        if target_r:
+            eff_service_type = update_dict.get("service_type") or device.service_type
+            eff_ep_id = str(update_dict.get("endpoint_identifier") or device.endpoint_identifier)
+            eff_mac = update_dict.get("onu_mac_address") or device.onu_mac_address
+            await _provision_subscriber_on_mikrotik(
+                r=target_r,
+                tenant_id=tenant_id,
+                service_type=eff_service_type,
+                endpoint_identifier=eff_ep_id,
+                assigned_ipv4=raw_assigned_ipv4 or device.assigned_ipv4,
+                onu_mac_address=eff_mac,
+                pppoe_password=pppoe_password,
+            )
 
     await db.commit()
     await DiagnosticGovernor.invalidate_cached_ping(tenant_id, device.id)
@@ -1218,11 +1419,28 @@ async def _discover_and_pair_live_ip_from_router(
     except Exception as e:
         logger.warning(f"Auto-descubrimiento en vivo para abonado {dev.endpoint_identifier} falló: {e}")
 
+    effective_router_id = r.id
+    if not discovered_ip and mac_upper:
+        stmt_bngs = (
+            select(Router)
+            .options(selectinload(Router.vault))
+            .where(Router.tenant_id == tenant_id, Router.id != r.id)
+            .order_by(Router.created_at.asc())
+        )
+        for cand_r in list((await db.execute(stmt_bngs)).scalars().all()):
+            cand_dhcp, cand_pppoe = await _collect_router_live_candidates(cand_r, tenant_id)
+            cand_ip = _find_mac_match_in_candidates(mac_upper, cand_dhcp, cand_pppoe)
+            if cand_ip:
+                discovered_ip = cand_ip
+                effective_router_id = cand_r.id
+                dev.router_id = cand_r.id
+                break
+
     if discovered_ip:
         ip_id = await _resolve_or_create_subscriber_ipv4(
             db=db,
             tenant_id=tenant_id,
-            router_id=r.id,
+            router_id=effective_router_id,
             raw_ipv4=discovered_ip,
             mac_address=discovered_mac,
             description=f"Auto-emparejado en vivo ({dev.endpoint_identifier})",

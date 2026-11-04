@@ -105,12 +105,37 @@
   const selectedDhcpLeaseIp = ref('');
   const selectedPppoeSessionName = ref('');
   const pairForm = ref({
+    bng_router_id: '',
+    provision_on_router: true,
     service_type: 'DHCP' as 'DHCP' | 'PPPOE' | 'STATIC',
     onu_mode: 'ROUTER' as 'ROUTER' | 'BRIDGE',
     pppoe_username: '',
+    pppoe_password: '',
     onu_mac_address: '',
     assigned_ipv4: '',
   });
+
+  async function loadLiveCandidatesForPair(subId: string, bngRouterId?: string) {
+    isLoadingCandidates.value = true;
+    pairErrorMsg.value = '';
+    try {
+      const candidates = bngRouterId
+        ? await ipamStore.fetchSubscriberLiveCandidates(subId, bngRouterId)
+        : await ipamStore.fetchSubscriberLiveCandidates(subId);
+      liveCandidates.value = candidates;
+      if (candidates.router_id) {
+        pairForm.value.bng_router_id = candidates.router_id;
+      }
+      if (candidates.matched_ipv4 && !pairForm.value.assigned_ipv4) {
+        pairForm.value.assigned_ipv4 = candidates.matched_ipv4;
+        selectedDhcpLeaseIp.value = candidates.matched_ipv4;
+      }
+    } catch (err: unknown) {
+      pairErrorMsg.value = getErrorMessage(err, 'No se pudieron consultar sesiones en vivo del router.');
+    } finally {
+      isLoadingCandidates.value = false;
+    }
+  }
 
   async function openPairSubscriberModal(sub: CustomerService) {
     selectedSubForPair.value = sub;
@@ -119,21 +144,22 @@
     selectedDhcpLeaseIp.value = '';
     selectedPppoeSessionName.value = '';
     pairForm.value = {
+      bng_router_id: sub.router_id || '',
+      provision_on_router: true,
       service_type: (sub.service_type as 'DHCP' | 'PPPOE' | 'STATIC') || 'DHCP',
       onu_mode: (sub.onu_mode === 'BRIDGE' ? 'BRIDGE' : 'ROUTER'),
       pppoe_username: sub.pppoe_username || sub.endpoint_identifier || '',
+      pppoe_password: '',
       onu_mac_address: sub.onu_mac_address || '',
       assigned_ipv4: sub.assigned_ipv4 || '',
     };
     pairModalOpen.value = true;
-    isLoadingCandidates.value = true;
-    try {
-      liveCandidates.value = await ipamStore.fetchSubscriberLiveCandidates(sub.id);
-    } catch (err: unknown) {
-      pairErrorMsg.value = getErrorMessage(err, 'No se pudieron consultar sesiones en vivo del router.');
-    } finally {
-      isLoadingCandidates.value = false;
-    }
+    await loadLiveCandidatesForPair(sub.id);
+  }
+
+  async function handleChangeBngRouter() {
+    if (!selectedSubForPair.value || !pairForm.value.bng_router_id) return;
+    await loadLiveCandidatesForPair(selectedSubForPair.value.id, pairForm.value.bng_router_id);
   }
 
   function handleSelectDhcpCandidate(address: string) {
@@ -168,16 +194,24 @@
     pairSuccessMsg.value = '';
     try {
       await ipamStore.pairSubscriberNetwork(selectedSubForPair.value.id, {
+        bng_router_id: pairForm.value.bng_router_id || undefined,
+        provision_on_router: pairForm.value.provision_on_router,
         service_type: pairForm.value.service_type,
         onu_mode: pairForm.value.onu_mode,
         endpoint_identifier:
           pairForm.value.service_type === 'PPPOE' && pairForm.value.pppoe_username.trim()
             ? pairForm.value.pppoe_username.trim()
             : selectedSubForPair.value.endpoint_identifier || selectedSubForPair.value.customer_name,
+        pppoe_password:
+          pairForm.value.service_type === 'PPPOE' && pairForm.value.pppoe_password.trim()
+            ? pairForm.value.pppoe_password.trim()
+            : undefined,
         onu_mac_address: pairForm.value.onu_mac_address.trim() || undefined,
         assigned_ipv4: pairForm.value.assigned_ipv4.trim() || undefined,
       });
-      pairSuccessMsg.value = 'Abonado emparejado exitosamente. Diagnóstico Ping listo.';
+      pairSuccessMsg.value = pairForm.value.provision_on_router
+        ? 'Abonado emparejado y aprovisionado en MikroTik exitosamente. Diagnóstico Ping listo.'
+        : 'Abonado emparejado en IPAM exitosamente.';
       await ipamStore.fetchCustomerServices();
       setTimeout(() => {
         pairModalOpen.value = false;
@@ -876,26 +910,48 @@
 
         <form class="modal-body" @submit.prevent="handleSavePairSubscriber">
           <p class="sub-target-info">
-            ONU Serial:
+            MAC WAN ONU:
             <strong class="font-mono text-cyan">
-              {{ selectedSubForPair?.onu_serial_number || selectedSubForPair?.device_serial || 'S/N' }}
+              {{ selectedSubForPair?.onu_mac_address || pairForm.onu_mac_address || 'S/M' }}
             </strong>
             • Caja NAP:
             <strong class="font-mono">{{ selectedSubForPair?.optical_box || 'S/N' }}</strong>
+            <span v-if="liveCandidates?.access_router_name">
+              • Nodo Físico L2: <strong>{{ liveCandidates.access_router_name }}</strong>
+            </span>
             <span v-if="liveCandidates?.router_name">
-              • Router: <strong>{{ liveCandidates.router_name }}</strong>
+              • Cabecera BNG/DHCP:
+              <strong class="text-green">{{ liveCandidates.router_name }}</strong>
+              <span v-if="liveCandidates.auto_switched_bng" class="badge-type">Auto-detectado</span>
             </span>
           </p>
 
           <div v-if="pairSuccessMsg" class="banner banner--success mb-3">{{ pairSuccessMsg }}</div>
           <div v-if="pairErrorMsg" class="banner banner--error mb-3">{{ pairErrorMsg }}</div>
 
+          <!-- Selector de Router Cabecera BNG / Servidor DHCP-PPPoE (Soporte Bridge L2 r3 -> BNG r111) -->
+          <div class="form-group mb-3">
+            <label for="pair-bng-router-select">
+              🏢 Router Cabecera BNG / Servidor DHCP-PPPoE (Donde vive el Lease DHCP o Secreto PPPoE)
+            </label>
+            <select
+              id="pair-bng-router-select"
+              v-model="pairForm.bng_router_id"
+              class="rg-input"
+              @change="handleChangeBngRouter"
+            >
+              <option v-for="r in inventoryStore.routers" :key="r.id" :value="r.id">
+                {{ r.display_name }} ({{ r.ip_address }})
+              </option>
+            </select>
+          </div>
+
           <div class="form-row">
             <div class="form-group flex-1">
               <label for="pair-proto-select">Protocolo de Servicio del ISP *</label>
               <select id="pair-proto-select" v-model="pairForm.service_type" class="rg-input">
-                <option value="DHCP">DHCP (Asignación por Lease DHCP / Option 82)</option>
-                <option value="PPPOE">PPPoE (Sesión / Secreto PPPoE en BRAS)</option>
+                <option value="DHCP">DHCP (Reserva Estática por MAC en Servidor DHCP)</option>
+                <option value="PPPOE">PPPoE (Secreto PPPoE en BRAS + Caller-ID MAC)</option>
                 <option value="STATIC">IP Estática (Asignación Manual / Pool IPAM)</option>
               </select>
             </div>
@@ -911,7 +967,7 @@
           <!-- Selector en vivo para ISPs con DHCP -->
           <div v-if="pairForm.service_type === 'DHCP'" class="form-group mb-3">
             <label for="pair-dhcp-lease-select">
-              🔍 Leases DHCP Activos en el Router ({{ liveCandidates?.dhcp_leases.length || 0 }} detectados)
+              🔍 Leases DHCP Activos en {{ liveCandidates?.router_name || 'Router BNG' }} ({{ liveCandidates?.dhcp_leases.length || 0 }} detectados)
             </label>
             <select
               id="pair-dhcp-lease-select"
@@ -919,7 +975,7 @@
               class="rg-input font-mono"
               @change="handleSelectDhcpCandidate(($event.target as HTMLSelectElement).value)"
             >
-              <option value="">-- Seleccione un Lease DHCP activo o ingrese IP abajo --</option>
+              <option value="">-- Seleccione un Lease DHCP activo o elija/escriba IP abajo para crear reserva --</option>
               <option
                 v-for="lease in liveCandidates?.dhcp_leases || []"
                 :key="`${lease.address}-${lease.mac_address}`"
@@ -933,7 +989,7 @@
           <!-- Selector en vivo para ISPs con PPPoE -->
           <div v-if="pairForm.service_type === 'PPPOE'" class="form-group mb-3">
             <label for="pair-pppoe-session-select">
-              🔍 Sesiones / Secretos PPPoE en el Router ({{ liveCandidates?.pppoe_sessions.length || 0 }} detectados)
+              🔍 Sesiones / Secretos PPPoE en {{ liveCandidates?.router_name || 'Router BNG' }} ({{ liveCandidates?.pppoe_sessions.length || 0 }} detectados)
             </label>
             <select
               id="pair-pppoe-session-select"
@@ -941,7 +997,7 @@
               class="rg-input font-mono"
               @change="handleSelectPppoeCandidate(($event.target as HTMLSelectElement).value)"
             >
-              <option value="">-- Seleccione una Sesión/Secreto PPPoE o ingrese abajo --</option>
+              <option value="">-- Seleccione una Sesión/Secreto PPPoE existente o cree uno nuevo abajo --</option>
               <option
                 v-for="ppp in liveCandidates?.pppoe_sessions || []"
                 :key="`${ppp.source}-${ppp.name}`"
@@ -952,19 +1008,19 @@
             </select>
           </div>
 
-          <!-- Selector de Pool IPAM para IP Estática -->
-          <div v-if="pairForm.service_type === 'STATIC'" class="form-group mb-3">
+          <!-- Selector de Pool IPAM (Disponible para DHCP con reserva nueva, PPPoE con IP fija o IP Estática) -->
+          <div v-if="liveCandidates?.ipam_addresses?.length" class="form-group mb-3">
             <label for="pair-ipam-address-select">
-              🔍 Direcciones IPv4 Registradas en Pool IPAM ({{ liveCandidates?.ipam_addresses.length || 0 }})
+              🔍 Seleccionar IPv4 del Pool IPAM ({{ liveCandidates.ipam_addresses.length }} registradas)
             </label>
             <select
               id="pair-ipam-address-select"
               v-model="pairForm.assigned_ipv4"
               class="rg-input font-mono"
             >
-              <option value="">-- Seleccione del Pool IPAM o escriba la IP abajo --</option>
+              <option value="">-- Seleccione una IP del Pool IPAM o escríbala manualmente abajo --</option>
               <option
-                v-for="ipItem in liveCandidates?.ipam_addresses || []"
+                v-for="ipItem in liveCandidates.ipam_addresses"
                 :key="ipItem.id"
                 :value="ipItem.address.split('/')[0]"
               >
@@ -973,18 +1029,32 @@
             </select>
           </div>
 
-          <div class="form-row">
-            <div v-if="pairForm.service_type === 'PPPOE'" class="form-group flex-1">
-              <label for="pair-pppoe-user">Usuario PPPoE</label>
+          <div v-if="pairForm.service_type === 'PPPOE'" class="form-row">
+            <div class="form-group flex-1">
+              <label for="pair-pppoe-user">Usuario PPPoE (Pre-configurado en ONU) *</label>
               <input
                 id="pair-pppoe-user"
                 v-model="pairForm.pppoe_username"
                 class="rg-input font-mono"
                 placeholder="Ej: cliente_ftth_01"
+                required
               />
             </div>
             <div class="form-group flex-1">
-              <label for="pair-assigned-ipv4">Dirección IPv4 Emparejada (Para Ping y Diagnóstico) *</label>
+              <label for="pair-pppoe-password">Contraseña PPPoE (Para crear/actualizar `/ppp/secret`)</label>
+              <input
+                id="pair-pppoe-password"
+                v-model="pairForm.pppoe_password"
+                type="password"
+                class="rg-input font-mono"
+                placeholder="Dejar vacío si el secret ya existe"
+              />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="pair-assigned-ipv4">Dirección IPv4 Asignada / Reservada *</label>
               <input
                 id="pair-assigned-ipv4"
                 v-model="pairForm.assigned_ipv4"
@@ -994,14 +1064,28 @@
               />
             </div>
             <div class="form-group flex-1">
-              <label for="pair-onu-mac">MAC WAN / ONU</label>
+              <label for="pair-onu-mac">MAC WAN de la ONU (Reserva DHCP / Caller-ID PPPoE) *</label>
               <input
                 id="pair-onu-mac"
                 v-model="pairForm.onu_mac_address"
                 class="rg-input font-mono"
                 placeholder="AA:BB:CC:11:22:33"
+                required
               />
             </div>
+          </div>
+
+          <div class="form-group mt-2 mb-2">
+            <label class="checkbox-inline" for="chk-provision-mikrotik">
+              <input
+                id="chk-provision-mikrotik"
+                v-model="pairForm.provision_on_router"
+                type="checkbox"
+              />
+              <span>
+                ⚡ Aprovisionar automáticamente en MikroTik (Crear Reserva Estática DHCP o `/ppp/secret` con `caller-id` MAC)
+              </span>
+            </label>
           </div>
 
           <footer class="modal-footer">

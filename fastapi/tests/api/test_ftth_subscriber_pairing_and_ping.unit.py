@@ -135,8 +135,28 @@ class MockFtthDbSession:
 
         # Routers
         if "from routers" in s:
-            target_r = self.routers[0] if self.routers else None
-            return MockResult(target_r, self.routers)
+            compiled_params = {}
+            try:
+                compiled_params = stmt.compile().params
+            except Exception:
+                pass
+            target_r = None
+            for k, val in compiled_params.items():
+                if "id" in k and isinstance(val, uuid.UUID):
+                    for r_cand in self.routers:
+                        if r_cand.id == val:
+                            target_r = r_cand
+                            break
+                    if target_r:
+                        break
+            if not target_r and self.routers:
+                target_r = self.routers[0]
+
+            res_routers = self.routers
+            for k, val in compiled_params.items():
+                if "id_1" in k and isinstance(val, uuid.UUID):
+                    res_routers = [r for r in self.routers if r.id != val]
+            return MockResult(target_r, res_routers)
 
         # Optical boxes
         if "from optical_boxes" in s:
@@ -222,7 +242,7 @@ class MockMikrotikClient:
         ppp_secrets: list[dict[str, Any]] | None = None,
         ping_res: list[dict[str, Any]] | None = None,
     ):
-        self.dhcp_leases = dhcp_leases or [
+        self.dhcp_leases = dhcp_leases if dhcp_leases is not None else [
             {
                 "address": "10.250.3.55",
                 "mac-address": "AA:BB:CC:11:22:33",
@@ -231,7 +251,7 @@ class MockMikrotikClient:
                 "status": "bound",
             }
         ]
-        self.ppp_active = ppp_active or [
+        self.ppp_active = ppp_active if ppp_active is not None else [
             {
                 "name": "cliente_pppoe_15",
                 "address": "10.250.3.77",
@@ -240,7 +260,7 @@ class MockMikrotikClient:
                 "uptime": "2d14h",
             }
         ]
-        self.ppp_secrets = ppp_secrets or [
+        self.ppp_secrets = ppp_secrets if ppp_secrets is not None else [
             {
                 "name": "cliente_secret_99",
                 "remote-address": "10.250.3.99",
@@ -252,6 +272,8 @@ class MockMikrotikClient:
             {"host": "10.250.3.55", "status": "ok", "time": "2ms", "packet-loss": 0},
             {"host": "10.250.3.55", "status": "ok", "time": "3ms", "packet-loss": 0},
         ]
+        self.posted: list[tuple[str, Any]] = []
+        self.patched: list[tuple[str, Any]] = []
 
     async def __aenter__(self) -> "MockMikrotikClient":
         return self
@@ -269,9 +291,14 @@ class MockMikrotikClient:
         return []
 
     async def post(self, endpoint: str, json: Any = None) -> Any:
+        self.posted.append((endpoint, json))
         if "/ping" in endpoint:
             return self.ping_res
-        return []
+        return {".id": "*NEW_LEASE_OR_SECRET*"}
+
+    async def patch(self, endpoint: str, json: Any = None) -> Any:
+        self.patched.append((endpoint, json))
+        return {".id": "*PATCHED*"}
 
 
 @pytest.fixture
@@ -685,6 +712,289 @@ async def test_create_subscriber_inherits_coordinates_from_box_or_router(
         data2 = res2.json()
         assert float(data2["latitude"]) == pytest.approx(10.480600, rel=1e-4)
         assert float(data2["longitude"]) == pytest.approx(-66.903600, rel=1e-4)
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_subscriber_live_candidates_auto_switches_from_l2_bridge_to_bng(
+    async_client: AsyncClient, ftth_auth: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verifica que cuando un abonado cuelga de un nodo L2 Bridge (r3) sin leases DHCP ni sesiones PPPoE,
+    el endpoint auto-conmuta hacia el router cabecera BNG (r111) donde aparece la MAC de la ONU.
+    """
+    tid = ftth_auth["tenant_id"]
+    headers = ftth_auth["headers"]
+    mock_db = MockFtthDbSession(tid)
+    app.dependency_overrides[get_tenant_db_session] = lambda: mock_db
+
+    r3_bridge = Router(
+        id=uuid.uuid4(),
+        tenant_id=tid,
+        display_name="r3-Distribution-Bridge",
+        api_base_url="https://10.250.3.3:443",
+        api_port=443,
+        network_role=RouterNetworkRoleEnum.DISTRIBUTION_SWITCH,
+        admin_state=RouterAdminStateEnum.PRODUCTION,
+    )
+    r111_bng = Router(
+        id=uuid.uuid4(),
+        tenant_id=tid,
+        display_name="r111-Core-BNG",
+        api_base_url="https://10.250.3.111:443",
+        api_port=443,
+        network_role=RouterNetworkRoleEnum.BRAS_PPPOE,
+        admin_state=RouterAdminStateEnum.PRODUCTION,
+    )
+    mock_db.routers = [r3_bridge, r111_bng]
+
+    client_r3 = MockMikrotikClient(dhcp_leases=[], ppp_active=[], ppp_secrets=[])
+    client_r111 = MockMikrotikClient(
+        dhcp_leases=[
+            {
+                "address": "10.250.3.55",
+                "mac-address": "AA:BB:CC:11:22:33",
+                "host-name": "FTTH-CLI-151515",
+                "server": "dhcp-wan",
+                "status": "bound",
+            }
+        ],
+        ppp_active=[],
+        ppp_secrets=[],
+    )
+
+    def fake_client(r: Router, t: uuid.UUID) -> MockMikrotikClient:
+        return client_r111 if r.id == r111_bng.id else client_r3
+
+    monkeypatch.setattr("src.api.v1.subscribers._get_router_client", fake_client)
+
+    box = OpticalBox(
+        id=uuid.uuid4(),
+        tenant_id=tid,
+        router_id=r3_bridge.id,
+        box_code="NAP-R3-BRIDGE-01",
+        capacity_ports=16,
+    )
+    mock_db.add(box)
+
+    dev = SubscriberDevice(
+        id=uuid.uuid4(),
+        tenant_id=tid,
+        router_id=r3_bridge.id,
+        optical_box_id=box.id,
+        endpoint_identifier="CLI-BRIDGE-TO-BNG",
+        onu_mac_address="aabb.cc11.2233",
+        service_type=CustomerServiceTypeEnum.DHCP,
+        onu_mode=ONUModeEnum.ROUTER,
+        status=CustomerServiceStatusEnum.ACTIVE,
+    )
+    mock_db.add(dev)
+
+    try:
+        res = await async_client.get(
+            f"/api/v1/subscriber-devices/{dev.id}/live-candidates",
+            headers=headers,
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["auto_switched_bng"] is True
+        assert data["access_router_id"] == str(r3_bridge.id)
+        assert data["access_router_name"] == "r3-Distribution-Bridge"
+        assert data["router_id"] == str(r111_bng.id)
+        assert data["router_name"] == "r111-Core-BNG"
+        assert data["matched_ipv4"] == "10.250.3.55"
+        assert data["matched_mac_address"] == "AA:BB:CC:11:22:33"
+        assert len(data["dhcp_leases"]) == 1
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_subscriber_device_patch_provisions_dhcp_lease_on_mikrotik(
+    async_client: AsyncClient, ftth_auth: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verifica que al guardar emparejamiento con provision_on_router=True en modo DHCP,
+    se aprovisiona la reserva estática en /ip/dhcp-server/lease del router MikroTik.
+    """
+    monkeypatch.setattr("src.api.v1.subscribers.write_audit_log", fake_audit)
+    tid = ftth_auth["tenant_id"]
+    headers = ftth_auth["headers"]
+    mock_db = MockFtthDbSession(tid)
+    app.dependency_overrides[get_tenant_db_session] = lambda: mock_db
+
+    mock_client = MockMikrotikClient(dhcp_leases=[])
+    monkeypatch.setattr("src.api.v1.subscribers._get_router_client", lambda r, t: mock_client)
+
+    router_id = mock_db.routers[0].id
+    dev = SubscriberDevice(
+        id=uuid.uuid4(),
+        tenant_id=tid,
+        router_id=router_id,
+        endpoint_identifier="CLI-PROVISION-DHCP",
+        service_type=CustomerServiceTypeEnum.DHCP,
+        onu_mode=ONUModeEnum.ROUTER,
+        status=CustomerServiceStatusEnum.ACTIVE,
+    )
+    mock_db.add(dev)
+
+    try:
+        patch_payload = {
+            "service_type": "DHCP",
+            "assigned_ipv4": "10.250.3.60",
+            "onu_mac_address": "AA-BB-CC-22-33-44",
+            "provision_on_router": True,
+        }
+        res = await async_client.patch(
+            f"/api/v1/subscriber-devices/{dev.id}",
+            json=patch_payload,
+            headers=headers,
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["assigned_ipv4"] == "10.250.3.60"
+        assert data["onu_mac_address"] == "AA:BB:CC:22:33:44"
+
+        # Verificar que se invocó POST a /ip/dhcp-server/lease con datos normalizados
+        assert any(
+            ep == "/ip/dhcp-server/lease" and payload.get("address") == "10.250.3.60" and payload.get("mac-address") == "AA:BB:CC:22:33:44"
+            for ep, payload in mock_client.posted
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_subscriber_device_patch_provisions_pppoe_secret_on_mikrotik(
+    async_client: AsyncClient, ftth_auth: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verifica que al guardar emparejamiento con provision_on_router=True en modo PPPoE,
+    se aprovisiona el secreto PPPoE en /ppp/secret con caller-id igual a la MAC de la ONU.
+    """
+    monkeypatch.setattr("src.api.v1.subscribers.write_audit_log", fake_audit)
+    tid = ftth_auth["tenant_id"]
+    headers = ftth_auth["headers"]
+    mock_db = MockFtthDbSession(tid)
+    app.dependency_overrides[get_tenant_db_session] = lambda: mock_db
+
+    mock_client = MockMikrotikClient(ppp_secrets=[])
+    monkeypatch.setattr("src.api.v1.subscribers._get_router_client", lambda r, t: mock_client)
+
+    router_id = mock_db.routers[0].id
+    dev = SubscriberDevice(
+        id=uuid.uuid4(),
+        tenant_id=tid,
+        router_id=router_id,
+        endpoint_identifier="CLI-PPPOE-SECRET-01",
+        service_type=CustomerServiceTypeEnum.PPPOE,
+        onu_mode=ONUModeEnum.BRIDGE,
+        status=CustomerServiceStatusEnum.ACTIVE,
+    )
+    mock_db.add(dev)
+
+    try:
+        patch_payload = {
+            "service_type": "PPPOE",
+            "endpoint_identifier": "CLI-PPPOE-SECRET-01",
+            "pppoe_password": "SuperSecretPassword456",
+            "onu_mac_address": "aabbcc334455",
+            "assigned_ipv4": "10.250.3.70",
+            "provision_on_router": True,
+        }
+        res = await async_client.patch(
+            f"/api/v1/subscriber-devices/{dev.id}",
+            json=patch_payload,
+            headers=headers,
+        )
+        assert res.status_code == 200
+
+        # Verificar que se invocó POST a /ppp/secret con remote-address, password y caller-id normalizado
+        assert any(
+            ep == "/ppp/secret"
+            and payload.get("name") == "CLI-PPPOE-SECRET-01"
+            and payload.get("password") == "SuperSecretPassword456"
+            and payload.get("caller-id") == "AA:BB:CC:33:44:55"
+            and payload.get("remote-address") == "10.250.3.70"
+            for ep, payload in mock_client.posted
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_subscriber_device_ping_auto_discovers_on_bng_when_initial_is_l2_bridge(
+    async_client: AsyncClient, ftth_auth: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verifica que el diagnóstico Ping 1-Click auto-descubra la IP del abonado en el BNG
+    cuando el router asignado inicialmente (r3) sea un Bridge L2 sin leases propios.
+    """
+    tid = ftth_auth["tenant_id"]
+    headers = ftth_auth["headers"]
+    mock_db = MockFtthDbSession(tid)
+    app.dependency_overrides[get_tenant_db_session] = lambda: mock_db
+
+    r3_bridge = Router(
+        id=uuid.uuid4(),
+        tenant_id=tid,
+        display_name="r3-Bridge-Node",
+        api_base_url="https://10.250.3.3:443",
+        api_port=443,
+        network_role=RouterNetworkRoleEnum.DISTRIBUTION_SWITCH,
+        admin_state=RouterAdminStateEnum.PRODUCTION,
+    )
+    r111_bng = Router(
+        id=uuid.uuid4(),
+        tenant_id=tid,
+        display_name="r111-BNG-Node",
+        api_base_url="https://10.250.3.111:443",
+        api_port=443,
+        network_role=RouterNetworkRoleEnum.BRAS_PPPOE,
+        admin_state=RouterAdminStateEnum.PRODUCTION,
+    )
+    mock_db.routers = [r3_bridge, r111_bng]
+
+    client_r3 = MockMikrotikClient(dhcp_leases=[], ppp_active=[], ppp_secrets=[])
+    client_r111 = MockMikrotikClient(
+        dhcp_leases=[
+            {
+                "address": "10.250.3.88",
+                "mac-address": "AA:BB:CC:88:99:00",
+                "host-name": "FTTH-CLI-888",
+                "server": "dhcp-wan",
+                "status": "bound",
+            }
+        ],
+        ppp_active=[],
+        ppp_secrets=[],
+    )
+
+    def fake_client(r: Router, t: uuid.UUID) -> MockMikrotikClient:
+        return client_r111 if r.id == r111_bng.id else client_r3
+
+    monkeypatch.setattr("src.api.v1.subscribers._get_router_client", fake_client)
+
+    dev = SubscriberDevice(
+        id=uuid.uuid4(),
+        tenant_id=tid,
+        router_id=r3_bridge.id,
+        endpoint_identifier="CLI-AUTO-DISCOVER-BNG",
+        onu_mac_address="AA:BB:CC:88:99:00",
+        service_type=CustomerServiceTypeEnum.DHCP,
+        onu_mode=ONUModeEnum.ROUTER,
+        status=CustomerServiceStatusEnum.ACTIVE,
+    )
+    mock_db.add(dev)
+
+    try:
+        res = await async_client.post(
+            f"/api/v1/subscriber-devices/{dev.id}/ping?force=true",
+            headers=headers,
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["assigned_ipv4"] == "10.250.3.88"
+        assert data["last_reachability_status"] == "ONLINE"
+        # Verificar que el router asignador del dispositivo se actualizó al BNG
+        assert dev.router_id == r111_bng.id
     finally:
         app.dependency_overrides.clear()
 
