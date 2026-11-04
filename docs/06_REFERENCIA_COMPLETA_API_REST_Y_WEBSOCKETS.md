@@ -1699,8 +1699,8 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
 ### 8.4 Paquete de Soporte y Diagnóstico 1-Click y Conector SIEM Multi-Protocolo del ISP (`Spec 72`)
 
 - **`POST /api/v1/system/diagnostics/ui-error`:**
-  - **Propósito:** Registra un evento del Ring Buffer de diagnóstico del navegador (`HTTP_ERROR`, `VUE_EXCEPTION`, `UNHANDLED_REJECTION`, `API_LATENCY`, `MANUAL_NOTE`) en KeyDB (`rg:diagnostics:ui_errors:{tenant_id}`) y lo reenvía de forma fail-silent al SIEM del ISP si está habilitado.
-  - **Autenticación:** Requiere sesión activa de `SUPERADMIN_GLOBAL` o `TENANT_ADMIN`.
+  - **Propósito:** Registra un evento del Ring Buffer de diagnóstico del navegador (`HTTP_ERROR`, `VUE_EXCEPTION`, `UNHANDLED_REJECTION`, `API_LATENCY`, `MANUAL_NOTE`) en la cola compartida del tenant en KeyDB (`rg:diagnostics:ui_errors:{tenant_id}`) adjuntando `reported_by_username` y `reported_by_role`, y lo reenvía de forma fail-silent al SIEM del ISP si está habilitado.
+  - **Autenticación:** Abierto a cualquier operador autenticado del tenant (`SUPPORT_L1`, `SUPPORT_L2`, `SUPPORT_L3`, `FIELD_TECH`, `NOC_ENGINEER`, `SUPERVISOR`, `TENANT_ADMIN`, `SUPERADMIN_GLOBAL`), permitiendo capturar fallas ocurridas en las pantallas de los técnicos cuando el Admin descarga el paquete 1-Click.
 - **`POST /api/v1/system/diagnostics/bundle`:**
   - **Propósito:** Genera en memoria un paquete de soporte comprimido (`.zip` por defecto o `.tar.gz`) codificado en Base64 (`bundle_base64`) con sanitización automática de secretos (`redacted_secrets_count`), conteniendo `metadata.json`, `frontend/ui_errors.json`, `backend/application_logs.log` y `backend/siem_forwarder_status.json`.
   - **Autenticación:** Requiere sesión activa de `SUPERADMIN_GLOBAL` o `TENANT_ADMIN`.

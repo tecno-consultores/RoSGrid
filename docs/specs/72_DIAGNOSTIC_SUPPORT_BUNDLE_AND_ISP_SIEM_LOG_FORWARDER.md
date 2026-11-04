@@ -69,7 +69,9 @@ sequenceDiagram
 
 ## 2. Invariantes de Gobernanza y Seguridad (Reglas Inquebrantables)
 
-1. **RBAC Estricto:** Todos los endpoints de diagnóstico y SIEM (`/api/v1/system/diagnostics/*` y `/api/v1/system/siem-config*`) y la pestaña `"Diagnóstico & SIEM"` en `EnterpriseComplianceView.vue` están restringidos exclusivamente a roles administrativos (`SUPERADMIN_GLOBAL`, `SUPER_ADMIN`, `TENANT_ADMIN`).
+1. **RBAC Diferenciado (Ingesta Multi-Operador L1/L2/L3 vs. Descarga/Configuración Admin):**
+   - **Ingesta de Fallos de UI (`POST /api/v1/system/diagnostics/ui-error`):** Abierta a **cualquier usuario autenticado del tenant** (`Depends(get_current_user)`), permitiendo que cuando un **Técnico L2 (`SUPPORT_L2`)**, **L1 (`SUPPORT_L1`)**, **Técnico de Campo (`FIELD_TECH`)** o **Ingeniero NOC (`NOC_ENGINEER`)** sufra una falla en su pantalla, su navegador (`RgResponsiveShell.vue` + `useDiagnosticsCollector.ts`) la deposite automáticamente en la cola compartida de KeyDB (`rg:diagnostics:ui_errors:{tenant_id}`) con su `reported_by_username` y `reported_by_role`. Así, cuando el Administrador descargue el paquete con 1 clic desde su propia sesión, capturará las fallas ocurridas en las pantallas de sus técnicos.
+   - **Descarga del Paquete y Configuración SIEM (`POST /api/v1/system/diagnostics/bundle` y `GET/PUT/POST /api/v1/system/siem-config*`):** Restringidos exclusivamente a roles administrativos (`SUPERADMIN_GLOBAL`, `SUPER_ADMIN`, `TENANT_ADMIN`), al igual que la pestaña `"Diagnóstico & SIEM"` en `EnterpriseComplianceView.vue`.
 2. **Cero Exfiltración de Secretos:** Todo texto exportado en el bundle o transmitido al SIEM del ISP debe pasar por `redact_sensitive_diagnostic_text(text)`. El token de autenticación del SIEM (`auth_token`) se almacena en KeyDB y **jamás** se devuelve en texto plano en `GET /api/v1/system/siem-config` (solo se expone `has_auth_token: bool`).
 3. **Paridad 100% Bidireccional de Endpoints (`verify_no_orphan_api_endpoints.py`):** Los 5 endpoints registrados en `fastapi/src/api/v1/system.py` deben ser invocados explícitamente mediante `http.get`, `http.post` y `http.put` en `vue3/src/composables/useDiagnosticsCollector.ts` y `vue3/src/components/operations/DiagnosticsAndSiemPanel.vue`.
 4. **Cero Componentes Vue Huérfanos (`verify_zero_orphan_vue_components.py`):** El componente `vue3/src/components/operations/DiagnosticsAndSiemPanel.vue` debe contar obligatoriamente con su suite unitaria co-localizada `vue3/src/components/operations/DiagnosticsAndSiemPanel.unit.ts`.
@@ -490,11 +492,15 @@ async def update_siem_forwarder_config(
 async def record_ui_error_telemetry(
     tenant_id: str,
     item: UiErrorTelemetryItem,
+    reported_by_username: str = "anonymous",
+    reported_by_role: str = "UNKNOWN",
 ) -> UiErrorTelemetryRecordResponse:
-    """Almacena un error de UI en el Ring Buffer de KeyDB y lo reenvía al SIEM si aplica (CC = 3)."""
+    """Almacena un error de UI (de cualquier operador L1/L2/Admin) en el Ring Buffer de KeyDB y lo reenvía al SIEM si aplica (CC = 3)."""
     sanitized_msg, _ = redact_sensitive_diagnostic_text(item.message)
     record_dict = item.model_dump()
     record_dict["message"] = sanitized_msg
+    record_dict["reported_by_username"] = reported_by_username
+    record_dict["reported_by_role"] = reported_by_role
     buffered_count = 1
     try:
         r = aioredis.from_url(settings.ROSGRID_REDIS_URL, decode_responses=True)
@@ -513,8 +519,14 @@ async def record_ui_error_telemetry(
         tenant_id=tenant_id,
         level="ERROR",
         source_layer="frontend",
-        short_message=f"[{item.category}] {sanitized_msg}",
-        extra_fields={"route": item.route, "status_code": item.status_code, "url": item.url},
+        short_message=f"[{item.category}] ({reported_by_username}/{reported_by_role}) {sanitized_msg}",
+        extra_fields={
+            "route": item.route,
+            "status_code": item.status_code,
+            "url": item.url,
+            "reported_by_username": reported_by_username,
+            "reported_by_role": reported_by_role,
+        },
     )
     return UiErrorTelemetryRecordResponse(
         recorded=True,
@@ -908,16 +920,21 @@ async def trigger_beacon_now() -> dict[str, Any]:
 @router.post(
     "/diagnostics/ui-error",
     response_model=UiErrorTelemetryRecordResponse,
-    summary="Registrar Evento de Telemetría de Error de UI",
-    description="Almacena un error de UI/HTTP en el Ring Buffer de KeyDB y lo reenvía al SIEM del ISP si está habilitado.",
-    dependencies=[Depends(require_roles(*_SYSTEM_ADMIN_ROLES))],
+    summary="Registrar Evento de Telemetría de Error de UI (Multi-Operador L1/L2/L3/Admin)",
+    description="Permite a cualquier operador autenticado del tenant reportar fallas de UI/HTTP al Ring Buffer compartido en KeyDB y al SIEM del ISP.",
 )
 async def report_ui_error_telemetry(
     payload: UiErrorTelemetryItem,
     current_user: User = Depends(get_current_user),
 ) -> UiErrorTelemetryRecordResponse:
-    """Registra un evento del Ring Buffer del navegador en KeyDB (CC = 1)."""
-    return await record_ui_error_telemetry(_resolve_tenant_key(current_user), payload)
+    """Registra un evento del Ring Buffer del navegador en KeyDB con trazabilidad de usuario y rol (CC = 1)."""
+    role_val = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
+    return await record_ui_error_telemetry(
+        _resolve_tenant_key(current_user),
+        payload,
+        reported_by_username=str(getattr(current_user, "username", "operator")),
+        reported_by_role=role_val,
+    )
 
 
 @router.post(
@@ -1049,24 +1066,30 @@ function attachGlobalDiagnosticListeners() {
       url?: string;
     }>;
     const detail = custom.detail;
-    if (detail && !detail.ok) {
-      pushDiagnosticEvent({
+    if (
+      detail &&
+      !detail.ok &&
+      !String(detail.url || '').includes('/api/v1/system/diagnostics/ui-error')
+    ) {
+      const entry = pushDiagnosticEvent({
         category: 'HTTP_ERROR',
         message: `HTTP ${detail.status ?? 0} en ${detail.url ?? '/api'}`,
         status_code: detail.status ?? 0,
         url: detail.url ?? null,
         latency_ms: detail.latencyMs ?? null,
       });
+      http.post('/api/v1/system/diagnostics/ui-error', entry).catch(() => {});
     }
   });
 
   window.addEventListener('error', (evt: ErrorEvent) => {
     if (evt?.message) {
-      pushDiagnosticEvent({
+      const entry = pushDiagnosticEvent({
         category: 'VUE_EXCEPTION',
         message: evt.message,
         url: evt.filename || null,
       });
+      http.post('/api/v1/system/diagnostics/ui-error', entry).catch(() => {});
     }
   });
 }
@@ -1095,6 +1118,38 @@ export function useDiagnosticsCollector() {
 }
 ```
 
+#### Paso 5.1: Activar Globalmente `useDiagnosticsCollector()` en `vue3/src/components/common/RgResponsiveShell.vue` (Captura Automática en Pantallas de Técnicos L1/L2/Campo)
+
+Editar [`vue3/src/components/common/RgResponsiveShell.vue`](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/vue3/src/components/common/RgResponsiveShell.vue) para que cualquier operador autenticado (incluyendo Técnicos L2, L1 y de Campo) tenga activo el colector en todas las pantallas y reporte automáticamente cualquier falla al buffer compartido del tenant en KeyDB:
+
+**Target:**
+```typescript
+  import { useI18n } from '@/composables/useI18n';
+  import { useContextualHelp } from '@/composables/useContextualHelp';
+  import { http } from '@/api/httpClient';
+```
+
+**Replacement:**
+```typescript
+  import { useI18n } from '@/composables/useI18n';
+  import { useContextualHelp } from '@/composables/useContextualHelp';
+  import { useDiagnosticsCollector } from '@/composables/useDiagnosticsCollector';
+  import { http } from '@/api/httpClient';
+```
+
+**Target:**
+```typescript
+  const { t, locale, toggleLocale } = useI18n();
+  const { isHelpOpen, toggleHelp } = useContextualHelp();
+```
+
+**Replacement:**
+```typescript
+  const { t, locale, toggleLocale } = useI18n();
+  const { isHelpOpen, toggleHelp } = useContextualHelp();
+  useDiagnosticsCollector();
+```
+
 Crear [`vue3/src/composables/useDiagnosticsCollector.unit.ts`](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/vue3/src/composables/useDiagnosticsCollector.unit.ts):
 
 ```typescript
@@ -1115,6 +1170,9 @@ vi.mock('@/api/httpClient', () => ({
 describe('useDiagnosticsCollector — Ring Buffer de Diagnóstico UI (Spec 72)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockPost.mockResolvedValue({
+      data: { recorded: true, buffered_count: 1, forwarded_to_siem: false },
+    });
     const { clearDiagnosticBuffer } = useDiagnosticsCollector();
     clearDiagnosticBuffer();
   });
