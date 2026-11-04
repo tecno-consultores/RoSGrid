@@ -64,6 +64,9 @@
       return '';
     }
     const reason = route.query.reason;
+    if (reason === 'logged_out') {
+      return 'Tu sesión autenticada ha sido cerrada de forma segura y el almacenamiento temporal fue limpiado.';
+    }
     if (reason === 'session_revoked' || reason === 'killed_by_admin') {
       return 'Tu sesión fue revocada por un Administrador o por la activación del Kill-Switch.';
     }
@@ -309,8 +312,8 @@
       errorMessage.value = 'Todos los campos marcados con asterisco son obligatorios.';
       return;
     }
-    if (bootstrapAdminPassword.value.length < 12) {
-      errorMessage.value = 'La contraseña debe tener al menos 12 caracteres.';
+    if (bootstrapAdminPassword.value.length < 15) {
+      errorMessage.value = 'La contraseña debe tener al menos 15 caracteres.';
       return;
     }
     if (bootstrapAdminPassword.value !== bootstrapAdminPasswordConfirm.value) {
@@ -618,7 +621,7 @@
 
         <div class="form-group">
           <label for="bootstrap-admin-pass" class="form-label">
-            Contraseña Segura (Mínimo 12 caracteres)
+            Contraseña Segura (Mínimo 15 caracteres)
             <span class="required" aria-hidden="true">*</span>
           </label>
           <input

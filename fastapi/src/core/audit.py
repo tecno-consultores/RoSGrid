@@ -24,6 +24,14 @@ def _is_sensitive_key(key: str) -> bool:
     return any(sub in lower_k for sub in _SENSITIVE_FIELD_SUBSTRINGS)
 
 
+def sanitize_log_string(value: str | None, max_len: int = 512) -> str | None:
+    """Elimina secuencias CRLF y caracteres de control para prevenir Log Injection (DISA STIG V-222444 / OWASP 4.3.10)."""
+    if value is None:
+        return None
+    cleaned = value.replace("\r", " ").replace("\n", " ").replace("\x00", "").replace("\x1b", "")
+    return cleaned[:max_len]
+
+
 def sanitize_sensitive_data(data: Any) -> Any:
     if isinstance(data, dict):
         cleaned: dict[str, Any] = {}
@@ -35,6 +43,8 @@ def sanitize_sensitive_data(data: Any) -> Any:
         return cleaned
     elif isinstance(data, list):
         return [sanitize_sensitive_data(item) for item in data]
+    elif isinstance(data, str):
+        return sanitize_log_string(data)
     return data
 
 
@@ -96,13 +106,17 @@ async def write_audit_log(
     res = await session.execute(stmt)
     prev_hash = res.scalar_one_or_none() or GENESIS_AUDIT_HASH
 
+    safe_username = sanitize_log_string(actor_username, max_len=64) or "system"
+    safe_ua = sanitize_log_string(actor_user_agent, max_len=256)
+    safe_err = sanitize_log_string(error_message, max_len=512)
+    safe_router_name = sanitize_log_string(router_display_name, max_len=128)
     clean_before = sanitize_sensitive_data(before_state) if before_state else None
     clean_after = sanitize_sensitive_data(after_state) if after_state else None
 
     record_payload = {
         "tenant_id": str(tenant_id),
         "actor_user_id": str(actor_user_id) if actor_user_id else None,
-        "actor_username": actor_username,
+        "actor_username": safe_username,
         "event_category": event_category,
         "event_action": event_action,
         "router_id": str(router_id) if router_id else None,
@@ -115,21 +129,21 @@ async def write_audit_log(
     log_entry = AuditLog(
         tenant_id=tenant_id,
         actor_user_id=actor_user_id,
-        actor_username=actor_username,
+        actor_username=safe_username,
         actor_role=actor_role,
         actor_ip=actor_ip,
-        actor_user_agent=actor_user_agent,
+        actor_user_agent=safe_ua,
         event_category=event_category,
         event_action=event_action,
         router_id=router_id,
-        router_display_name=router_display_name,
+        router_display_name=safe_router_name,
         ros_rest_method=ros_rest_method,
         ros_rest_endpoint=ros_rest_endpoint,
         idempotency_key=idempotency_key,
         before_state=clean_before,
         after_state=clean_after,
         status_code=status_code,
-        error_message=error_message,
+        error_message=safe_err,
         prev_record_hash=prev_hash,
         record_sha256_hash=rec_hash,
     )

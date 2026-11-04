@@ -55,6 +55,8 @@ class UserProfileResponse(BaseModel):
     tenant_name: str
     has_all_routers_access: bool
     features: dict[str, Any] = Field(default_factory=dict)
+    last_login_at: str | None = None
+    last_login_ip: str | None = None
 
 
 class AuthSessionResponse(BaseModel):
@@ -80,7 +82,7 @@ class BootstrapInitRequest(BaseModel):
     tenant_slug: str = Field(..., min_length=2, max_length=64, pattern=r"^[a-z0-9-]+$")
     admin_username: str = Field(..., min_length=3, max_length=64, pattern=r"^[a-zA-Z0-9_-]+$")
     admin_email: EmailStr
-    admin_password: str = Field(..., min_length=12)
+    admin_password: str = Field(..., min_length=15)
     admin_full_name: str = Field(..., min_length=3, max_length=128)
 
 

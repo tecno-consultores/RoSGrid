@@ -23,6 +23,7 @@ from src.core.crypto import (
     decrypt_aes_gcm,
     encrypt_aes_gcm,
     hash_password,
+    verify_dummy_password,
     verify_password,
 )
 from src.core.csrf import generate_csrf_token
@@ -222,9 +223,11 @@ async def _verify_user_credentials(
 
     if not verify_password(password, user.password_hash):
         user.failed_login_attempts += 1
-        if user.failed_login_attempts >= 5:
+        if user.failed_login_attempts >= settings.ROSGRID_MAX_LOGIN_ATTEMPTS:
             user.is_locked = True
-            user.locked_until = datetime.fromtimestamp(time.time() + 900, UTC)
+            user.locked_until = datetime.fromtimestamp(
+                time.time() + settings.ROSGRID_LOGIN_LOCKOUT_SECONDS, UTC
+            )
         await db.commit()
         await _log_login_event(
             db=db,
@@ -322,6 +325,7 @@ async def login_step1(
     res_user = await db.execute(stmt_user)
     user = res_user.scalar_one_or_none()
     if not user:
+        verify_dummy_password(body.password)
         await _log_login_event(
             db=db,
             tenant_id=tenant.id,
@@ -472,6 +476,12 @@ async def _build_auth_session_response(
     csrf_token = generate_csrf_token(session_id, str(tenant_id))
     set_auth_cookies(response, access_token, initial_rt, csrf_token, is_secure=(request.url.scheme == "https"))
 
+    last_login_dt = user.last_login_at
+    prev_login_iso = last_login_dt.isoformat() if last_login_dt is not None else None
+    prev_login_ip = str(user.last_login_ip) if user.last_login_ip is not None else None
+    user.last_login_at = datetime.now(UTC)
+    user.last_login_ip = ip_addr
+
     if db is not None:
         await _log_login_event(
             db=db,
@@ -481,7 +491,11 @@ async def _build_auth_session_response(
             actor_user_id=user.id,
             event_action="LOGIN_SUCCESSFUL",
             status_code=200,
-            extra_details={"session_id": session_id},
+            extra_details={
+                "session_id": session_id,
+                "previous_login_at": prev_login_iso,
+                "previous_login_ip": prev_login_ip,
+            },
             request=request,
         )
 
@@ -498,6 +512,8 @@ async def _build_auth_session_response(
             tenant_name=tenant_name,
             has_all_routers_access=user.has_all_routers_access,
             features=features or {},
+            last_login_at=prev_login_iso,
+            last_login_ip=prev_login_ip,
         ),
         csrf_token=csrf_token,
     )
@@ -523,6 +539,12 @@ async def verify_2fa(
     if not user:
         raise HTTPException(status_code=401, detail="Usuario no encontrado")
 
+    if user.is_locked and user.locked_until and user.locked_until > datetime.now(UTC):
+        raise HTTPException(
+            status_code=423,
+            detail="Cuenta bloqueada temporalmente por múltiples intentos fallidos. Intenta en 15 minutos.",
+        )
+
     aad = f"{tenant_id}:{user.id}".encode()
     try:
         if preauth_data.get("status") == "ENROLL_2FA_REQUIRED":
@@ -530,7 +552,18 @@ async def verify_2fa(
             await _execute_2fa_enrollment(db, user, body.totp_code, secret, aad)
         else:
             await _execute_2fa_verification(db, user, body.totp_code, aad)
+        user.failed_login_attempts = 0
+        user.is_locked = False
+        await db.commit()
     except HTTPException as exc:
+        if exc.status_code == 401:
+            user.failed_login_attempts += 1
+            if user.failed_login_attempts >= settings.ROSGRID_MAX_LOGIN_ATTEMPTS:
+                user.is_locked = True
+                user.locked_until = datetime.fromtimestamp(
+                    time.time() + settings.ROSGRID_LOGIN_LOCKOUT_SECONDS, UTC
+                )
+            await db.commit()
         await _log_login_event(
             db=db,
             tenant_id=tenant_id,
@@ -616,18 +649,51 @@ async def refresh_access_token(
     new_at = create_jwt_access_token(user_id, tenant_id, tslug, session_id, role, all_r)
     new_csrf = generate_csrf_token(session_id, tenant_id)
     set_auth_cookies(response, new_at, new_rt, new_csrf, is_secure=(request.url.scheme == "https"))
+    await _log_login_event(
+        db=db,
+        tenant_id=uuid.UUID(str(tenant_id)),
+        actor_username=str(sess_data.get("username") or user_id),
+        actor_role=SystemRoleEnum(str(role)),
+        actor_user_id=uuid.UUID(str(user_id)),
+        event_action="SESSION_TOKEN_RENEWED",
+        status_code=200,
+        extra_details={"session_id": session_id},
+        request=request,
+    )
     return {"status": "refreshed", "csrf_token": new_csrf}
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(
+    request: Request,
     response: Response,
     claims: dict[str, Any] = Depends(get_current_user_claims),
+    db: AsyncSession = Depends(get_db_session),
 ) -> None:
     tenant_id = claims["tid"]
     session_id = claims["sid"]
+    user_id = claims.get("sub")
+    role_str = str(claims.get("rol") or SystemRoleEnum.AUDITOR.value)
     await kill_session(tenant_id, session_id, killed_by="USER_LOGOUT", reason="Cierre voluntario")
 
+    try:
+        role_enum = SystemRoleEnum(role_str)
+    except ValueError:
+        role_enum = SystemRoleEnum.AUDITOR
+
+    await _log_login_event(
+        db=db,
+        tenant_id=uuid.UUID(str(tenant_id)),
+        actor_username=str(claims.get("preferred_username") or user_id or "user"),
+        actor_role=role_enum,
+        actor_user_id=uuid.UUID(str(user_id)) if user_id else None,
+        event_action="USER_LOGOUT",
+        status_code=204,
+        extra_details={"session_id": session_id},
+        request=request,
+    )
+
+    response.headers["Clear-Site-Data"] = '"cache", "cookies", "storage"'
     response.delete_cookie("__Host-rg_at", path="/")
     response.delete_cookie("rg_at", path="/")
     response.delete_cookie("__Host-rg_rt", path="/api/v1/auth/refresh")

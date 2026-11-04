@@ -61,6 +61,10 @@ def hash_password(password: str) -> str:
     return _PASSWORD_HASHER.hash(password)
 
 
+# Hash Argon2id precalculado para igualar el tiempo de cómputo ante usuarios inexistentes (OWASP 4.3.7 A-20)
+_DUMMY_ARGON2_HASH: str = _PASSWORD_HASHER.hash("RoSGrid_Dummy_Timing_Shield_2026!#")
+
+
 def verify_password(password: str, hashed: str) -> bool:
     if not password or not hashed:
         return False
@@ -68,3 +72,24 @@ def verify_password(password: str, hashed: str) -> bool:
         return _PASSWORD_HASHER.verify(hashed, password)
     except (VerifyMismatchError, VerificationError):
         return False
+
+
+def verify_dummy_password(password: str) -> bool:
+    """Ejecuta verificación Argon2id en tiempo constante cuando el usuario no existe (OWASP 4.3.7 A-20)."""
+    return verify_password(password or "dummy", _DUMMY_ARGON2_HASH)
+
+
+def validate_stig_password_complexity(password: str, min_length: int = 15) -> tuple[bool, str | None]:
+    """Valida longitud y complejidad según DISA ASD STIG V6R5 (V-222536..V-222540) y OWASP 4.3.7."""
+    if len(password) < min_length:
+        return False, f"La contraseña debe tener al menos {min_length} caracteres (DISA STIG V-222536)."
+    has_upper = any(c.isupper() for c in password)
+    has_lower = any(c.islower() for c in password)
+    has_digit = any(c.isdigit() for c in password)
+    has_special = any(not c.isalnum() for c in password)
+    if not (has_upper and has_lower and has_digit and has_special):
+        return (
+            False,
+            "La contraseña debe incluir mayúsculas, minúsculas, números y caracteres especiales (DISA STIG V-222537..V-222540).",
+        )
+    return True, None

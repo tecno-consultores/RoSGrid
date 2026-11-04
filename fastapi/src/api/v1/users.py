@@ -372,15 +372,33 @@ async def change_password(
                 detail="La contraseña actual ingresada es incorrecta.",
             )
 
-    if len(body.new_password.strip()) < 8:
+    clean_new_pwd = body.new_password.strip()
+    if len(clean_new_pwd) < 8:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="La nueva contraseña debe tener al menos 8 caracteres.",
         )
 
-    user.password_hash = hash_password(body.new_password.strip())
+    if user.password_hash and verify_password(clean_new_pwd, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La nueva contraseña no puede ser idéntica a la contraseña actual (DISA STIG V-222545).",
+        )
+
+    from datetime import UTC, datetime
+
+    user.password_hash = hash_password(clean_new_pwd)
+    user.password_changed_at = datetime.now(UTC)
     user.failed_login_attempts = 0
     user.is_locked = False
+
+    if not is_self:
+        await kill_all_user_sessions(
+            str(user.tenant_id),
+            str(user.id),
+            killed_by=str(caller_id),
+            reason="Cambio administrativo de contraseña (OWASP 4.3.7 SM-8)",
+        )
 
     await write_audit_log(
         session=db,

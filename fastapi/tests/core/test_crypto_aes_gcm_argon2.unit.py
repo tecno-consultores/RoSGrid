@@ -8,6 +8,8 @@ from src.core.crypto import (
     encrypt_aes_gcm,
     get_master_vault_key,
     hash_password,
+    validate_stig_password_complexity,
+    verify_dummy_password,
     verify_password,
 )
 
@@ -96,3 +98,36 @@ def test_argon2id_hash_and_verify() -> None:
 def test_argon2id_empty_password_raises() -> None:
     with pytest.raises(ValueError, match="no puede estar vacía"):
         hash_password("")
+
+
+def test_verify_dummy_password_timing_defense() -> None:
+    # Retorna False consistentemente pero ejecuta la computación completa de Argon2id
+    assert verify_dummy_password("any_attempted_password") is False
+    assert verify_dummy_password("") is False
+
+
+def test_validate_stig_password_complexity() -> None:
+    # 1. Menos de 15 caracteres
+    ok, err = validate_stig_password_complexity("Short1!a")
+    assert ok is False
+    assert "al menos 15 caracteres" in str(err)
+
+    # 2. Sin mayúsculas
+    ok, err = validate_stig_password_complexity("passwordlong123!@#")
+    assert ok is False
+    assert "caracteres especiales" in str(err)
+
+    # 3. Sin números
+    ok, err = validate_stig_password_complexity("PasswordLongWithoutDigit!@#")
+    assert ok is False
+    assert "caracteres especiales" in str(err)
+
+    # 4. Sin caracteres especiales
+    ok, err = validate_stig_password_complexity("PasswordLong12345678")
+    assert ok is False
+    assert "caracteres especiales" in str(err)
+
+    # 5. Cumple plenamente DISA ASD STIG V6R5
+    ok, err = validate_stig_password_complexity("StigCompliantPassword2026!#")
+    assert ok is True
+    assert err is None

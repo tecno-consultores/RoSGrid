@@ -7,6 +7,7 @@ import pytest
 
 from src.redis_layer.sessions import (
     create_session,
+    get_role_idle_timeout_seconds,
     get_session,
     kill_all_user_sessions,
     kill_session,
@@ -38,6 +39,18 @@ async def test_create_and_get_session(fake_redis: FakeAsyncRedis) -> None:
         assert sess_data["username"] == "admin"
         assert sess_data["role"] == "SUPERADMIN_GLOBAL"
         assert sess_data["refresh_family_id"] == family_id
+        assert sess_data["idle_timeout_seconds"] == "600"
+
+
+def test_role_idle_timeout_stig_and_operator() -> None:
+    # DISA STIG V-222390: 600s (10 min) para administradores
+    assert get_role_idle_timeout_seconds("SUPERADMIN_GLOBAL") == 600
+    assert get_role_idle_timeout_seconds("TENANT_ADMIN") == 600
+    assert get_role_idle_timeout_seconds("SUPERVISOR") == 600
+    # DISA STIG V-222389: 900s (15 min) para roles estándar y operadores
+    assert get_role_idle_timeout_seconds("OPERATOR") == 900
+    assert get_role_idle_timeout_seconds("AUDITOR") == 900
+    assert get_role_idle_timeout_seconds("HELPDESK") == 900
 
 
 @pytest.mark.asyncio

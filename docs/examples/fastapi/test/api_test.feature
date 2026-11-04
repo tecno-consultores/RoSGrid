@@ -1139,6 +1139,17 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 146. Endurecimiento Normativo DISA ASD STIG V6R5 y OWASP OSHP: Cabeceras de seguridad estrictas y validación de 15 caracteres en Bootstrap (Hito 28.13)
+    Given path '/api/v1/auth/bootstrap'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000148'
+    And request { tenant_name: 'Test Tenant', tenant_slug: 'test-stig', admin_username: 'stigadmin', admin_email: 'stig@test.com', admin_password: 'short', admin_full_name: 'STIG Admin' }
+    When method post
+    Then status 422
+    And match header X-Permitted-Cross-Domain-Policies == 'none'
+    And match header Cross-Origin-Opener-Policy == 'same-origin'
+    And match header X-Content-Type-Options == 'nosniff'
+    And match header X-Frame-Options == 'DENY'
+
 
 
 

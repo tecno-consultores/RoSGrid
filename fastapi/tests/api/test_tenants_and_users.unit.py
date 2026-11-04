@@ -923,6 +923,18 @@ async def test_change_password_self_success_and_failures(
         )
         assert res_admin_reset.status_code == 200
         assert "actualizada exitosamente" in res_admin_reset.json()["message"]
+
+        # 5. Error: Intento de reutilizar la contraseña idéntica a la actual (DISA STIG V-222545)
+        res_reused = await async_client.post(
+            "/api/v1/users/change-password",
+            json={
+                "user_id": str(user_id),
+                "new_password": "AdminSetPassword456!",
+            },
+            headers={**superadmin_auth, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res_reused.status_code == 400
+        assert "no puede ser idéntica" in res_reused.json()["detail"]
     finally:
         app.dependency_overrides.pop(get_db_session, None)
 

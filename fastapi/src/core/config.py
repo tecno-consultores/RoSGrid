@@ -53,11 +53,16 @@ class Settings(BaseSettings):
             auth = f":{self.REDIS_PASSWORD}@" if self.REDIS_PASSWORD else ""
             self.ROSGRID_REDIS_URL = f"redis://{auth}rosgrid_redis:6379/0"
 
-    # Criptografía
+    # Criptografía y Políticas DISA ASD STIG V6R5 / OWASP DevGuide (Spec 68)
     ROSGRID_MASTER_VAULT_KEY: str = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
     ROSGRID_JWT_SECRET_KEY: str = "qa_jwt_secret_key_for_ephemeral_testing_only"
     ROSGRID_CSRF_HMAC_SECRET: str = "qa_csrf_hmac_secret_for_ephemeral_testing_only"
     ROSGRID_REFRESH_TOKEN_GRACE_PERIOD_SECONDS: int = 5
+    ROSGRID_MAX_LOGIN_ATTEMPTS: int = 3
+    ROSGRID_LOGIN_LOCKOUT_SECONDS: int = 900
+    ROSGRID_ADMIN_IDLE_TIMEOUT_SECONDS: int = 600
+    ROSGRID_USER_IDLE_TIMEOUT_SECONDS: int = 900
+    ROSGRID_PASSWORD_HISTORY_GENERATIONS: int = 5
 
     # MikroTik & Operaciones
     ROSGRID_MIKROTIK_TIMEOUT_SECONDS: int = 10

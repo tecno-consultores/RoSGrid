@@ -806,6 +806,12 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     And waitFor("#chk-sync-display-name")
     And waitFor("#btn-confirm-identity")
 
+  Scenario: 83. Endurecimiento DISA ASD STIG V6R5 y OWASP: Mensaje de Cierre Seguro y Complejidad Bootstrap (Hito 28.13)
+    Given driver baseUrl + '/login?reason=logged_out'
+    And waitFor(".login-card")
+    Then waitFor(".alert-banner--warning")
+    And match text(".alert-banner--warning") contains 'cerrada de forma segura'
+
 
 
 

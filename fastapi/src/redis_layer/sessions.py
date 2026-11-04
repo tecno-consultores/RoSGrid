@@ -12,6 +12,14 @@ from src.core.config import settings
 from src.redis_layer.client import get_redis_client
 
 SESSION_TTL_SECONDS = 28800  # 8 horas
+_PRIVILEGED_ROLES = {"SUPERADMIN_GLOBAL", "TENANT_ADMIN", "SUPERVISOR"}
+
+
+def get_role_idle_timeout_seconds(role: str) -> int:
+    """Devuelve 600s (10 min) para roles administrativos (V-222390) y 900s (15 min) para operadores (V-222389)."""
+    if str(role).upper() in _PRIVILEGED_ROLES:
+        return settings.ROSGRID_ADMIN_IDLE_TIMEOUT_SECONDS
+    return settings.ROSGRID_USER_IDLE_TIMEOUT_SECONDS
 
 
 def compute_token_hash(token: str) -> str:
@@ -49,6 +57,7 @@ async def create_session(
         "current_view_path": "/dashboard",
         "created_at": now_iso,
         "last_activity_at": now_iso,
+        "idle_timeout_seconds": str(get_role_idle_timeout_seconds(role)),
         "refresh_family_id": family_id,
     }
 

@@ -25,6 +25,8 @@ async def test_security_headers_injected_on_api_path() -> None:
 
     assert res.headers["X-Content-Type-Options"] == "nosniff"
     assert res.headers["X-Frame-Options"] == "DENY"
+    assert res.headers["X-Permitted-Cross-Domain-Policies"] == "none"
+    assert res.headers["Cross-Origin-Opener-Policy"] == "same-origin"
     assert res.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
     assert res.headers["Permissions-Policy"] == "geolocation=(), camera=(), microphone=()"
     assert "default-src 'none'" in res.headers["Content-Security-Policy"]

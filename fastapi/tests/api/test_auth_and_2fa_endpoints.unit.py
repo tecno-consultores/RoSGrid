@@ -186,8 +186,8 @@ async def test_login_account_locked(async_client: AsyncClient, sample_tenant: Te
 async def test_login_failed_attempts_boundary_4_and_5(
     async_client: AsyncClient, sample_tenant: Tenant, sample_user: User
 ) -> None:
-    # Intento 4: no se debe bloquear aún
-    sample_user.failed_login_attempts = 3
+    # DISA STIG V-222432: Límite de 3 intentos fallidos consecutivos en 15 minutos
+    sample_user.failed_login_attempts = 1
     session = MockAsyncSession(tenant=sample_tenant, user=sample_user)
     app.dependency_overrides[get_db_session] = lambda: session
     try:
@@ -196,16 +196,16 @@ async def test_login_failed_attempts_boundary_4_and_5(
             json={"tenant_slug": sample_tenant.slug, "email": sample_user.email, "password": "BadPassword!"},
         )
         assert res.status_code == 401
-        assert sample_user.failed_login_attempts == 4
+        assert sample_user.failed_login_attempts == 2
         assert not sample_user.is_locked
 
-        # Intento 5 (Límite exacto de bloqueo: >= 5)
+        # Intento 3 (Límite exacto de bloqueo DISA STIG V-222432: >= 3)
         res2 = await async_client.post(
             "/api/v1/auth/login",
             json={"tenant_slug": sample_tenant.slug, "email": sample_user.email, "password": "BadPassword!"},
         )
         assert res2.status_code == 401
-        assert sample_user.failed_login_attempts == 5
+        assert sample_user.failed_login_attempts == 3
         assert bool(sample_user.is_locked) is True
         assert sample_user.locked_until is not None
     finally:
@@ -470,6 +470,7 @@ async def test_auth_logout(
     headers = {"Authorization": f"Bearer {token}"}
     res = await async_client.post("/api/v1/auth/logout", headers=headers)
     assert res.status_code == 204
+    assert res.headers.get("Clear-Site-Data") == '"cache", "cookies", "storage"'
 
     # Sesión eliminada de Redis
     assert await fake_redis.hgetall(sess_key) == {}

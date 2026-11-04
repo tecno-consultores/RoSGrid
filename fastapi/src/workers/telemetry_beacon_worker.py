@@ -174,7 +174,7 @@ async def send_telemetry_heartbeat_once(router_count: int | None = None) -> dict
         instance_id,
         now_iso,
         status_str,
-        fleet_bucket=payload["fleet_bucket"],
+        fleet_bucket=str(payload["fleet_bucket"]),
         router_count=router_count,
     )
     return {

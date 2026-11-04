@@ -152,7 +152,7 @@ async def update_identity(
 
     actor_sub = claims.get("sub")
     actor_uid = uuid.UUID(str(actor_sub)) if actor_sub else None
-    client_host = request.client.host if request and getattr(request, "client", None) else "127.0.0.1"
+    client_host = request.client.host if (request and request.client) else "127.0.0.1"
     await write_audit_log(
         session=db,
         tenant_id=tenant_id,

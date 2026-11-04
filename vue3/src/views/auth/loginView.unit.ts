@@ -71,6 +71,10 @@ describe('LoginView.vue — Autenticación Multi-Tenant en 2 Etapas y 2FA TOTP',
     mockQuery = { reason: 'unauthorized' };
     wrapper = mount(LoginView);
     expect(wrapper.find('.alert-banner--warning').text()).toContain('Debes iniciar sesión');
+
+    mockQuery = { reason: 'logged_out' };
+    wrapper = mount(LoginView);
+    expect(wrapper.find('.alert-banner--warning').text()).toContain('Tu sesión autenticada ha sido cerrada de forma segura');
   });
 
   it('normaliza tenant slug en minúsculas y caracteres válidos', async () => {
@@ -456,7 +460,7 @@ describe('LoginView.vue — Autenticación Multi-Tenant en 2 Etapas y 2FA TOTP',
       'Todos los campos marcados con asterisco son obligatorios.',
     );
 
-    // 2. Contraseña corta (<12)
+    // 2. Contraseña corta (<15)
     await wrapper.find('#bootstrap-tenant-name').setValue('Empresa Master');
     await wrapper.find('#bootstrap-tenant-slug').setValue('master');
     await wrapper.find('#bootstrap-admin-user').setValue('superadmin');
@@ -467,7 +471,7 @@ describe('LoginView.vue — Autenticación Multi-Tenant en 2 Etapas y 2FA TOTP',
     await wrapper.find('form').trigger('submit');
     await flushPromises();
     expect(wrapper.find('.alert-banner--danger').text()).toContain(
-      'La contraseña debe tener al menos 12 caracteres.',
+      'La contraseña debe tener al menos 15 caracteres.',
     );
 
     // 3. Contraseñas no coinciden

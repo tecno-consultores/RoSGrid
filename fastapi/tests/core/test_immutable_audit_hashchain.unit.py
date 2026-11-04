@@ -4,6 +4,7 @@
 from src.core.audit import (
     GENESIS_AUDIT_HASH,
     compute_audit_record_hash,
+    sanitize_log_string,
     sanitize_sensitive_data,
 )
 
@@ -86,3 +87,19 @@ def test_compute_audit_record_hash_tampering() -> None:
     # Different prev_hash
     h3 = compute_audit_record_hash("a" * 64, record1)
     assert h1 != h3
+
+
+def test_sanitize_log_string_crlf_and_control_chars() -> None:
+    # DISA STIG V-222444 / OWASP 4.3.10 SL-4
+    assert sanitize_log_string(None) is None
+    malicious = "admin\r\nCRLF_INJECTION: true\x00\x1b[31mRedText"
+    cleaned = sanitize_log_string(malicious)
+    assert "\r" not in cleaned
+    assert "\n" not in cleaned
+    assert "\x00" not in cleaned
+    assert "\x1b" not in cleaned
+    assert "admin  CRLF_INJECTION: true[31mRedText" in cleaned
+
+    long_str = "A" * 600
+    truncated = sanitize_log_string(long_str, max_len=100)
+    assert len(truncated) == 100
