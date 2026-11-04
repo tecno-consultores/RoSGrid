@@ -441,3 +441,17 @@ Un pie de página fijo (`position: fixed` o elemento estático al fondo del flex
 ### 11.2 Directiva In-Flow Layout
 1. **Cero Barras Fijas en el Fondo:** La interfaz de RoSGrid prohíbe terminantemente barras inferiores flotantes fijas. El 100% de la altura de la ventana del navegador se reserva para el contenido operativo.
 2. **Ubicación In-Flow con `margin-top: auto`:** Los créditos institucionales de *Tecno Consultores 2023 C.A.* y la licencia *GNU GPLv3* se ubican como último elemento dentro de `<main class="rg-main">`, mostrándose de forma natural únicamente cuando el usuario navega hasta el fondo del scroll.
+
+---
+
+## 12. Sincronización Multi-Fuente de Vulnerabilidades (MikroTik + NIST NVD v2.0) y Diagnóstico / SIEM del ISP (`Specs 71 y 72`)
+
+### 12.1 Conector Oficial a la API REST v2.0 de NIST NVD con Filtrado Determinista RouterOS v7
+La matriz de vulnerabilidades (`/inventory/cves`) combina los boletines oficiales de **MikroTik Security Advisories (`rss.xml`)** con el endpoint oficial **NIST NVD REST API v2.0 (`https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=mikrotik`)**:
+- **Enriquecimiento Oficial:** Extrae descripciones en español (`lang == "es"`), métricas CVSS v3.1/v3.0/v2 y cotas CPE (`versionStartIncluding`, `versionEndExcluding`).
+- **Filtro Estricto RouterOS v7:** Descarta automáticamente vulnerabilidades históricas exclusivas de RouterOS v2–v6 (como `CVE-2018-14847`, `CVE-2023-30800` o `CVE-2024-27686`) para evitar falsas alarmas sobre flotas RouterOS v7.
+
+### 12.2 Paquete de Diagnóstico 1-Click Sanitizado y Conector SIEM Propio del ISP
+En **Flota & Seguridad (`/enterprise/compliance`) → Pestaña `🩺 Diagnóstico & SIEM`** (restringida a `SUPERADMIN_GLOBAL` y `TENANT_ADMIN`):
+1. **Descarga de Paquete de Soporte (`.zip` / `.tar.gz`):** Genera en memoria un archivo comprimido que unifica el Ring Buffer de errores del navegador (`frontend/ui_errors.json`), los logs recientes de FastAPI (`backend/application_logs.log`), el estado del conector SIEM (`backend/siem_forwarder_status.json`) y metadatos del sistema (`metadata.json`), aplicando sanitización automática (`[REDACTED]`) sobre contraseñas, tokens `Bearer` y llaves criptográficas.
+2. **Reenvío Opcional hacia el SIEM del ISP:** Permite a cada operador enviar sus eventos sanitizados hacia su propio servidor interno **Graylog (`GELF_UDP` / `GELF_HTTP`)**, **Grafana Loki (`LOKI_HTTP`)** o **Syslog RFC 5424 (`SYSLOG_UDP` / `SYSLOG_TCP`)**, incluyendo prueba de entrega en vivo (`[ 🧪 Enviar Log de Prueba ]`).

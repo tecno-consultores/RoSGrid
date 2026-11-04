@@ -1696,6 +1696,21 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
   - **Autenticación:** Requiere sesión activa de `SUPERADMIN_GLOBAL` o `TENANT_ADMIN`, cabecera `Idempotency-Key` y `X-CSRF-Token`.
   - **Respuesta (200 OK):** Detalle del latido despachado con `fleet_bucket` y estado devuelto por el receptor en el borde.
 
+### 8.4 Paquete de Soporte y Diagnóstico 1-Click y Conector SIEM Multi-Protocolo del ISP (`Spec 72`)
+
+- **`POST /api/v1/system/diagnostics/ui-error`:**
+  - **Propósito:** Registra un evento del Ring Buffer de diagnóstico del navegador (`HTTP_ERROR`, `VUE_EXCEPTION`, `UNHANDLED_REJECTION`, `API_LATENCY`, `MANUAL_NOTE`) en KeyDB (`rg:diagnostics:ui_errors:{tenant_id}`) y lo reenvía de forma fail-silent al SIEM del ISP si está habilitado.
+  - **Autenticación:** Requiere sesión activa de `SUPERADMIN_GLOBAL` o `TENANT_ADMIN`.
+- **`POST /api/v1/system/diagnostics/bundle`:**
+  - **Propósito:** Genera en memoria un paquete de soporte comprimido (`.zip` por defecto o `.tar.gz`) codificado en Base64 (`bundle_base64`) con sanitización automática de secretos (`redacted_secrets_count`), conteniendo `metadata.json`, `frontend/ui_errors.json`, `backend/application_logs.log` y `backend/siem_forwarder_status.json`.
+  - **Autenticación:** Requiere sesión activa de `SUPERADMIN_GLOBAL` o `TENANT_ADMIN`.
+- **`GET /api/v1/system/siem-config`:**
+  - **Propósito:** Consulta la configuración actual del conector SIEM del ISP (`GELF_UDP`, `GELF_HTTP`, `LOKI_HTTP`, `SYSLOG_UDP`, `SYSLOG_TCP`) para el tenant activo sin exponer el token secreto en texto plano (`has_auth_token: bool`).
+- **`PUT /api/v1/system/siem-config`:**
+  - **Propósito:** Actualiza en KeyDB (`rg:siem:config:{tenant_id}`) el protocolo, host, puerto, ruta HTTP, nivel mínimo de severidad y etiqueta de stream del colector SIEM del ISP.
+- **`POST /api/v1/system/siem-config/test`:**
+  - **Propósito:** Dispara un evento de prueba hacia el colector Graylog, Grafana Loki o Syslog configurado por el ISP y retorna el estado de entrega y la latencia medida en milisegundos (`latency_ms`).
+
 
 
 

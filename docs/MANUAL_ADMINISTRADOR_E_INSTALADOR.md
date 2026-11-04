@@ -402,3 +402,19 @@ Por defecto, RoSGrid utiliza **KeyDB Multi-Hilo**, que consume solo ~35 MB de RA
 | Alerta roja **`FINGERPRINT_MISMATCH`** | Se regeneró el certificado TLS en el MikroTik. | En **Inventario**, pulse el botón **`🛡️ Re-Pin TOFU`** en la fila del router y confirme con su código 2FA. |
 | Indicador Syslog muestra **`⚪ Sin Syslog`** | El router aún no tiene las reglas de envío hacia el puerto UDP `5514`. | Pulse el botón **`🔄 Sincronizar Syslog`** en la fila del router dentro de **Inventario** para inyectar las 9 directivas automáticamente. |
 | Al reabrir el navegador pide iniciar sesión nuevamente | Por seguridad, al cerrar todas las pestañas se activa el período de gracia de 35s que revoca la sesión efímera en KeyDB. | Ingrese sus credenciales nuevamente; el sistema limpia automáticamente el estado previo evitando redirecciones en bucle. |
+
+### 10.4 Conector Oficial NIST NVD REST API v2.0 para Matriz de Vulnerabilidades RouterOS v7 (`Spec 71`)
+
+Al pulsar **`🔄 Actualizar Datos`** en **Inventario → Matriz de CVEs (`/inventory/cves`)**, RoSGrid ejecuta una sincronización dual híbrida:
+1. **MikroTik Security Advisories (`rss.xml`):** Boletines oficiales publicados por MikroTik para RouterOS v7.
+2. **NIST NVD REST API v2.0 (`https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=mikrotik`):** Descarga automática de los registros CVE oficiales del NIST, extrayendo descripciones en español (`lang == "es"`), vectores CVSS v3.1/v2 y rangos CPE exactos (`versionStartIncluding` / `versionEndExcluding`), descartando automáticamente vulnerabilidades históricas exclusivas de RouterOS v2–v6 para garantizar cero falsos positivos sobre flotas RouterOS v7.
+3. **API Key Opcional de NIST NVD:** Si su organización desea ampliar el límite de tasa de consulta del NIST (de 5 req/30s a 50 req/30s), puede definir `ROSGRID_CVE_NVD_API_KEY=<su_api_key>` en su archivo `.env`.
+
+### 10.5 Paquete de Diagnóstico 1-Click Sanitizado (`.zip` / `.tar.gz`) y Conector SIEM del ISP (`Spec 72`)
+
+Desde **Flota & Seguridad (`/enterprise/compliance`) → Pestaña `🩺 Diagnóstico & SIEM`** (exclusiva para `SUPERADMIN_GLOBAL` y `TENANT_ADMIN`), el administrador cuenta con dos herramientas de soporte y observabilidad:
+1. **Paquete de Soporte y Diagnóstico Unificado (`1-Click Support Bundle`):**
+   - Permite descargar en un solo clic un archivo `.zip` (por defecto) o `.tar.gz` con las trazas recientes del navegador (`frontend/ui_errors.json`), las últimas líneas de log de FastAPI (`backend/application_logs.log`), el estado del conector SIEM (`backend/siem_forwarder_status.json`) y los metadatos de la instalación (`metadata.json`).
+   - **Sanitización Zero-Leak:** Antes de empaquetar, RoSGrid expurga automáticamente cualquier contraseña, token `Bearer`, `api_key`, `secret` o llave criptográfica (`ROSGRID_MASTER_VAULT_KEY`, `ROSGRID_JWT_SECRET_KEY`, `ROSGRID_CSRF_HMAC_SECRET`), reemplazándolos por `[REDACTED]`.
+2. **Conector SIEM Multi-Protocolo Propio del ISP (Graylog / Grafana Loki / Syslog):**
+   - Permite reenviar en tiempo real los logs del sistema y errores de interfaz hacia el servidor colector interno de la empresa o ISP, soportando `GELF_UDP`, `GELF_HTTP`, `LOKI_HTTP` (`/loki/api/v1/push`), `SYSLOG_UDP` y `SYSLOG_TCP` (RFC 5424), con botón **`[ 🧪 Enviar Log de Prueba ]`** integrado.

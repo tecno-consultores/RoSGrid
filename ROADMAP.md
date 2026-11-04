@@ -932,12 +932,36 @@
 
 ---
 
-## 📦 HITO 29: Cierre de `CHANGELOG.md`, Auditoría Trivy y Publicación en Docker Hub (`scripts/build.sh`)
+## 🛡️ HITO 29: Conector Oficial a la API REST v2.0 de NIST NVD para RouterOS v7, Paquete de Diagnóstico 1-Click Sanitizado (`.zip` / `.tar.gz`) y Conector SIEM Multi-Protocolo del ISP (Graylog / Grafana Loki / Syslog) (`Specs 71 y 72`)
+
+> **Archivos Guía:** `docs/specs/71_NIST_NVD_REST_API_V2_CONNECTOR_AND_ROS7_CVE_ENRICHMENT.md` y `docs/specs/72_DIAGNOSTIC_SUPPORT_BUNDLE_AND_ISP_SIEM_LOG_FORWARDER.md`  
+> **Motor de Ejecución Asignado:** Gemini 3.8 Flash (High)
+
+- [ ] **29.1** **Conector Oficial a la API REST v2.0 de NIST NVD, Filtrado Determinista para RouterOS v7 y Depuración del Catálogo Base (`docs/specs/71_NIST_NVD_REST_API_V2_CONNECTOR_AND_ROS7_CVE_ENRICHMENT.md`):**
+  - [ ] **29.1.1 Configuración de Sincronización NIST NVD y Limpieza de `cve_catalog_ros.json` (`fastapi/src/core/config.py`, `fastapi/src/schemas/cve.py`, `fastapi/src/api/v1/cve.py` y `fastapi/src/data/cve_catalog_ros.json`):** Añadir `ROSGRID_CVE_NVD_API_URL`, `ROSGRID_CVE_NVD_API_KEY`, `ROSGRID_CVE_NVD_RESULTS_PER_PAGE` y `ROSGRID_CVE_NVD_SYNC_ENABLED` en `config.py`; ampliar `CveSyncResponse` con `mikrotik_rss_synced`, `nvd_api_synced` y `discarded_legacy_v6_count`; y depurar `cve_catalog_ros.json` eliminando el registro sintético `CVE-2026-99999` y los 25 falsos positivos de RouterOS v6 mal etiquetados como `>=7.0.0,<7.24.2`.
+  - [ ] **29.1.2 Motor de Fusión Multi-Fuente (`MikroTik Security RSS` + `NIST NVD REST API v2.0`) y Filtro Estricto RouterOS v7 en `cve_matcher.py` (`fastapi/src/services/cve_matcher.py`):** Implementar `_is_legacy_pre_v7_only`, `_extract_nvd_description`, `_extract_nvd_cvss`, `_parse_nvd_version_bounds`, `_parse_nvd_item`, `_merge_nvd_vulnerabilities` y `_fetch_nvd_payload` (manteniendo Radon Grado A `CC <= 4`), enriqueciendo los boletines de RouterOS v7 con descripciones oficiales en español (`lang == "es"`), vectores CVSS v3.1/v2 y rangos CPE exactos.
+  - [ ] **29.1.3 Visibilidad de Sincronización Multi-Fuente (MikroTik + NIST NVD v2.0) en la Matriz de CVEs (`vue3/src/types/index.ts`, `vue3/src/views/FleetCveMatrix.vue`, `vue3/src/locales/es.json` y `vue3/src/locales/en.json`):** Mostrar el desglose de fuentes sincronizadas (`MikroTik RSS` + `NIST NVD`) y CVEs legacy v6 descartados en el banner de sincronización de `/inventory/cves`.
+
+- [ ] **29.2** **Paquete de Soporte y Diagnóstico Unificado (`1-Click Support Bundle` en `.zip` / `.tar.gz`) con Sanitización Automática Zero-Leak (`docs/specs/72_DIAGNOSTIC_SUPPORT_BUNDLE_AND_ISP_SIEM_LOG_FORWARDER.md`):**
+  - [ ] **29.2.1 Esquemas Pydantic y Motor de Sanitización + Empaquetado en Memoria (`fastapi/src/schemas/diagnostics_siem.py` y `fastapi/src/services/diagnostics_and_siem.py`):** Implementar `redact_sensitive_diagnostic_text` (expurgando `ROSGRID_MASTER_VAULT_KEY`, `ROSGRID_JWT_SECRET_KEY`, `ROSGRID_CSRF_HMAC_SECRET`, tokens `Bearer`, `password`, `secret`, `api_key` y `private_key` por `[REDACTED]`), el colector circular `_InMemoryDiagnosticLogHandler`, el buffer de errores de UI en KeyDB (`rg:diagnostics:ui_errors:{tenant_id}`) y `build_support_bundle_archive` generando archivos `.zip` y `.tar.gz` con `metadata.json`, `frontend/ui_errors.json`, `backend/application_logs.log` y `backend/siem_forwarder_status.json`.
+  - [ ] **29.2.2 Composable `useDiagnosticsCollector.ts` en Frontend (`vue3/src/composables/useDiagnosticsCollector.ts` y `useDiagnosticsCollector.unit.ts`):** Capturar automáticamente en un Ring Buffer en memoria (hasta 100 eventos) errores HTTP (`rosgrid:api-health-event`), excepciones JS/Vue (`window.onerror`) y notas del operador, reportándolos a `POST /api/v1/system/diagnostics/ui-error`.
+
+- [ ] **29.3** **Conector SIEM Multi-Protocolo Propio del ISP (`Graylog GELF` / `Grafana Loki` / `Syslog RFC 5424`) y Pestaña Táctica `Diagnóstico & SIEM` (`docs/specs/72_DIAGNOSTIC_SUPPORT_BUNDLE_AND_ISP_SIEM_LOG_FORWARDER.md`):**
+  - [ ] **29.3.1 Despachador Multi-Protocolo (`GELF_UDP`, `GELF_HTTP`, `LOKI_HTTP`, `SYSLOG_UDP`, `SYSLOG_TCP`) y Endpoints en `system.py` (`fastapi/src/services/diagnostics_and_siem.py` y `fastapi/src/api/v1/system.py`):** Implementar `_dispatch_siem_protocol`, `forward_event_to_isp_siem_if_enabled` y `send_siem_test_event`, exponiendo los 5 endpoints administrativos (`POST /api/v1/system/diagnostics/ui-error`, `POST /api/v1/system/diagnostics/bundle`, `GET /api/v1/system/siem-config`, `PUT /api/v1/system/siem-config` y `POST /api/v1/system/siem-config/test`) protegidos para `SUPERADMIN_GLOBAL` y `TENANT_ADMIN`.
+  - [ ] **29.3.2 Componente `DiagnosticsAndSiemPanel.vue` e Integración en `EnterpriseComplianceView.vue` (`vue3/src/components/operations/DiagnosticsAndSiemPanel.vue`, `DiagnosticsAndSiemPanel.unit.ts`, `vue3/src/views/EnterpriseComplianceView.vue`, `es.json` y `en.json`):** Incorporar la pestaña `"Diagnóstico & SIEM"` (`#tab-btn-diagnostics` / `#panel-diagnostics`) en `/enterprise/compliance` con selector `.zip` / `.tar.gz`, descarga en 1 clic, formulario de configuración SIEM del ISP y botón `[ 🧪 Enviar Log de Prueba ]`.
+
+- [ ] **29.4** **Aseguramiento de Calidad Level-11X, Contratos Karate Labs BDD y Certificación de Compuertas (`certify_task_completion.sh`):**
+  - [ ] **29.4.1 Pruebas Unitarias Backend y Frontend (`test_hito23_cve_and_syslog.unit.py`, `test_diagnostics_and_siem.unit.py`, `useDiagnosticsCollector.unit.ts` y `DiagnosticsAndSiemPanel.unit.ts`):** Aislar `_CATALOG_PATH` en los tests de sincronización CVE para evitar contaminación del archivo versionado, certificar el conector NIST NVD v2.0 con filtrado RouterOS v7 y validar el paquete `.zip`/`.tar.gz` sanitizado y los 5 protocolos SIEM con cobertura `>= 95%`.
+  - [ ] **29.4.2 Escenarios Karate Labs BDD (`Scenario: 149` y `Scenario: 150` en `api_test.feature`; `Scenario: 86` y `Scenario: 87` en `ui_business_flow.feature` + réplicas en `docs/examples/`):** Validar en contenedores Docker efímeros (`Regla Cero`) la paridad 100% de endpoints (`verify_no_orphan_api_endpoints.py`), cero componentes Vue huérfanos (`verify_zero_orphan_vue_components.py`), salud topológica AST y actualización de `CHANGELOG.md` y `TESTING.md`.
+
+---
+
+## 📦 HITO 30: Cierre de `CHANGELOG.md`, Auditoría Trivy y Publicación en Docker Hub (`scripts/build.sh`)
 
 > **Archivo Guía:** `docs/specs/01_DOCKER_INFRASTRUCTURE_AND_IMMUTABLE_IMAGES.md`
 
-- [ ] **29.1** Actualizar `CHANGELOG.md` consolidando los cambios de `[Unreleased]` dentro del lanzamiento oficial `[1.0.0]` con las métricas certificadas en `TESTING.md`.
-- [ ] **29.2** Ejecutar `./scripts/build.sh` (como usuario no-root) con `docker buildx` (`container-builder` + `tonistiigi/binfmt`) para construir y publicar `sinfallas/rosgrid-backend:latest` (`:1.0.0`) y `sinfallas/rosgrid-frontend:latest` (`:1.0.0`) en Docker Hub y limpiar cachés con `prune -af`.
+- [ ] **30.1** Actualizar `CHANGELOG.md` consolidando los cambios de `[Unreleased]` dentro del lanzamiento oficial `[1.0.0]` con las métricas certificadas en `TESTING.md`.
+- [ ] **30.2** Ejecutar `./scripts/build.sh` (como usuario no-root) con `docker buildx` (`container-builder` + `tonistiigi/binfmt`) para construir y publicar `sinfallas/rosgrid-backend:latest` (`:1.0.0`) y `sinfallas/rosgrid-frontend:latest` (`:1.0.0`) en Docker Hub y limpiar cachés con `prune -af`.
 
 
 
