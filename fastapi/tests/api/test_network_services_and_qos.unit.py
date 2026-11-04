@@ -31,6 +31,7 @@ from src.services.network_events import (
     publish_network_service_event,
     send_signed_webhook_payload,
 )
+from tests.conftest import make_asserting_audit_mock
 
 
 class MockDbScalars:
@@ -188,7 +189,7 @@ async def test_isolate_network_service_flow() -> None:
 
     with (
         patch("src.api.v1.network_services.get_router_and_client", AsyncMock(return_value=(MagicMock(), mock_client))),
-        patch("src.api.v1.network_services.write_audit_log", AsyncMock()),
+        patch("src.api.v1.network_services.write_audit_log", make_asserting_audit_mock()) as mock_ns_audit1,
         patch("src.api.v1.network_services.publish_network_service_event", AsyncMock()) as mock_pub,
     ):
         res_iso = await isolate_network_service(s_id, idempotency_key=valid_idem, db=db, claims=claims)
@@ -201,17 +202,19 @@ async def test_isolate_network_service_flow() -> None:
         )
         mock_pub.assert_awaited_once()
         assert mock_pub.await_args.kwargs["event_name"] == "DEVICE_ISOLATED"
+        mock_ns_audit1.assert_awaited_once()
 
     # 4. Router failure fallback (does not crash DB update)
     dev_active.status = CustomerServiceStatusEnum.ACTIVE
     with (
         patch("src.api.v1.network_services.get_router_and_client", side_effect=Exception("Router offline")),
-        patch("src.api.v1.network_services.write_audit_log", AsyncMock()),
+        patch("src.api.v1.network_services.write_audit_log", make_asserting_audit_mock()) as mock_ns_audit2,
         patch("src.api.v1.network_services.publish_network_service_event", AsyncMock()),
     ):
         res_fallback = await isolate_network_service(s_id, idempotency_key=valid_idem, db=db, claims=claims)
         assert res_fallback.status == "ISOLATED"
         assert dev_active.status == CustomerServiceStatusEnum.SUSPENDED
+        mock_ns_audit2.assert_awaited_once()
 
 
 # ============================================================================
@@ -282,7 +285,7 @@ async def test_restore_network_service_flow() -> None:
 
     with (
         patch("src.api.v1.network_services.get_router_and_client", AsyncMock(return_value=(MagicMock(), mock_client))),
-        patch("src.api.v1.network_services.write_audit_log", AsyncMock()),
+        patch("src.api.v1.network_services.write_audit_log", make_asserting_audit_mock()) as mock_ns_audit3,
         patch("src.api.v1.network_services.publish_network_service_event", AsyncMock()) as mock_pub,
     ):
         res_restored = await restore_network_service(s_id, idempotency_key=valid_idem, db=db, claims=claims)
@@ -302,6 +305,7 @@ async def test_restore_network_service_flow() -> None:
         )
         mock_pub.assert_awaited_once()
         assert mock_pub.await_args.kwargs["event_name"] == "DEVICE_RESTORED"
+        mock_ns_audit3.assert_awaited_once()
 
     # 4. Router failure fallback
     dev_isolated.status = "ISOLATED_ADMINISTRATIVE"
@@ -309,12 +313,13 @@ async def test_restore_network_service_flow() -> None:
         patch(
             "src.api.v1.network_services.get_router_and_client", side_effect=Exception("Router communication failed")
         ),
-        patch("src.api.v1.network_services.write_audit_log", AsyncMock()),
+        patch("src.api.v1.network_services.write_audit_log", make_asserting_audit_mock()) as mock_ns_audit4,
         patch("src.api.v1.network_services.publish_network_service_event", AsyncMock()),
     ):
         res_fb = await restore_network_service(s_id, idempotency_key=valid_idem, db=db, claims=claims)
         assert res_fb.status == "RESTORED"
         assert dev_isolated.status == "ACTIVE"
+        mock_ns_audit4.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -374,12 +379,13 @@ async def test_change_network_service_rate_limit_flow() -> None:
 
     with (
         patch("src.api.v1.network_services.get_router_and_client", AsyncMock(return_value=(MagicMock(), mock_client))),
-        patch("src.api.v1.network_services.write_audit_log", AsyncMock()),
+        patch("src.api.v1.network_services.write_audit_log", make_asserting_audit_mock()) as mock_ns_audit5,
     ):
         res = await change_network_service_rate_limit(
             s_id, req_payload, idempotency_key=valid_idem, db=db, claims=claims
         )
         assert res.status == "RATE_LIMIT_UPDATED"
+        mock_ns_audit5.assert_awaited_once()
         assert res.bandwidth_profile_name == "200M-Dedicated"
         assert res.rate_down_kbps == 200000
         assert res.rate_up_kbps == 100000

@@ -69,6 +69,7 @@ from src.schemas.notifications import (
     NotificationChannelUpdateRequest,
     NotificationTestRequest,
 )
+from tests.conftest import make_asserting_audit_mock
 
 
 class MockDbScalars:
@@ -248,7 +249,7 @@ async def test_create_and_update_and_delete_router(test_router_full: Router, fak
 
     with (
         patch("src.api.v1.inventory.get_redis_client", return_value=fake_redis),
-        patch("src.api.v1.inventory.write_audit_log", new_callable=AsyncMock),
+        patch("src.api.v1.inventory.write_audit_log", make_asserting_audit_mock()) as mock_inv_audit,
     ):
         # 1. Create router
         created = await create_router(create_payload, fake_request, claims, db)
@@ -267,6 +268,7 @@ async def test_create_and_update_and_delete_router(test_router_full: Router, fak
         db.get.return_value = test_router_full
         await delete_router(test_router_full.id, claims, db)
         db.delete.assert_awaited_once_with(test_router_full)
+        mock_inv_audit.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -286,7 +288,6 @@ async def test_sync_discovery_and_repin_ssl(test_router_full: Router, fake_reque
     with (
         patch("src.api.v1.inventory.get_redis_client", return_value=fake_redis),
         patch("src.api.v1.inventory.perform_discovery", new_callable=AsyncMock),
-        patch("src.api.v1.inventory.write_audit_log", new_callable=AsyncMock),
     ):
         synced = await sync_discovery(test_router_full.id, claims, db)
         assert synced.id == test_router_full.id
@@ -313,10 +314,11 @@ async def test_sync_discovery_and_repin_ssl(test_router_full: Router, fake_reque
         expected_new_sha256_fingerprint="b" * 64,
     )
 
-    with patch("src.api.v1.inventory.write_audit_log", new_callable=AsyncMock):
+    with patch("src.api.v1.inventory.write_audit_log", make_asserting_audit_mock()) as mock_repin_audit:
         repin_res = await repin_ssl(test_router_full.id, repin_payload, fake_request, claims, db)
         assert repin_res["status"] == "SUCCESS"
         assert repin_res["fingerprint"] == "b" * 64
+        mock_repin_audit.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -359,14 +361,15 @@ async def test_csv_dry_run_and_commit(fake_request: MagicMock) -> None:
     fake_request.headers.get.return_value = "application/json"
     fake_request.json = AsyncMock(return_value=commit_payload.model_dump(mode="json"))
 
-    with patch("src.api.v1.inventory.write_audit_log", new_callable=AsyncMock):
+    with patch("src.api.v1.inventory.write_audit_log", make_asserting_audit_mock()) as mock_csv_audit:
         commit_res = await import_csv_commit(fake_request, claims, db)
         assert commit_res.imported_count == 1
         assert len(commit_res.created_router_ids) == 1
+        mock_csv_audit.assert_awaited_once()
 
 
 # ============================================================================
-# VAULT ENDPOINTS
+# VAULT ENDPOINTS (3 Fases Temporales Step-Up 30s + Propagación Criptográfica)
 # ============================================================================
 
 
@@ -393,43 +396,83 @@ async def test_reveal_and_rotate_credentials(test_router_full: Router, fake_requ
     claims = {
         "tid": str(test_router_full.tenant_id),
         "sub": str(u.id),
+        "preferred_username": "admin",
         "rol": SystemRoleEnum.TENANT_ADMIN.value,
     }
+
+    # Fase 1 (Bloqueado / Pre-Step-Up): Código TOTP inválido o expirado rechaza con 401
+    invalid_reveal = VaultRevealRequest(totp_code="000000", reason="Intento fallido")
+    with pytest.raises(HTTPException) as exc_totp:
+        await reveal_credentials(test_router_full.id, invalid_reveal, fake_request, MagicMock(), claims, db)
+    assert exc_totp.value.status_code == 401
 
     valid_code = pyotp.TOTP(totp_secret).now()
     reveal_payload = VaultRevealRequest(totp_code=valid_code, reason="Emergency audit inspection")
 
-    with patch("src.api.v1.vault.write_audit_log", new_callable=AsyncMock):
-        # 1. Reveal
+    with patch("src.api.v1.vault.write_audit_log", make_asserting_audit_mock()) as mock_vault_audit:
+        # Fase 2 (Ventana Activa 30s): Revelación autorizada con cabeceras no-store y TTL de 30s
         fake_response = MagicMock()
+        fake_response.headers = {}
         rev = await reveal_credentials(test_router_full.id, reveal_payload, fake_request, fake_response, claims, db)
         assert rev.api_username == "admin"
         assert rev.current_password == "admin_password"
+        assert rev.display_ttl_seconds == 30
+        mock_vault_audit.assert_awaited()
 
-        # 2. Rotate Now
+        # Fase 3 (Rotación y Propagación Criptográfica): Rotar clave desplaza current -> previous_password
         with patch("src.api.v1.vault._rotate_on_device", new_callable=AsyncMock):
             rot = await rotate_now(test_router_full.id, fake_request, claims, db)
             assert rot.status == "SUCCESS"
             assert rot.router_id == test_router_full.id
             assert rot.last_rotated_at is not None
+            rev_after = await reveal_credentials(
+                test_router_full.id, reveal_payload, fake_request, fake_response, claims, db
+            )
+            assert rev_after.previous_password == "admin_password"
+            assert rev_after.current_password != "admin_password"
 
 
 # ============================================================================
-# MAINTENANCE WINDOW ENDPOINTS
+# MAINTENANCE WINDOW ENDPOINTS (Propagación Transversal -> Router.admin_state)
 # ============================================================================
 
 
 @pytest.mark.asyncio
 async def test_maintenance_window_endpoints(fake_request: MagicMock) -> None:
+    from src.api.v1.inventory_helpers import build_router_response, resolve_active_maintenance_router_ids
+
     db = AsyncMock()
     db.refresh.side_effect = _fake_refresh
     db.add = MagicMock(side_effect=_fake_add)
     t_id = uuid.uuid4()
     u_id = uuid.uuid4()
     r_id = uuid.uuid4()
-    claims = {"tid": str(t_id), "sub": str(u_id), "rol": SystemRoleEnum.TENANT_ADMIN.value}
+    claims = {
+        "tid": str(t_id),
+        "sub": str(u_id),
+        "preferred_username": "operador_noc",
+        "rol": SystemRoleEnum.TENANT_ADMIN.value,
+    }
 
     now = datetime.now(UTC)
+    target_router = Router(
+        id=r_id,
+        tenant_id=t_id,
+        display_name="r111-edge",
+        api_base_url="https://10.250.3.8:443",
+        api_port=443,
+        network_role=RouterNetworkRoleEnum.CORE,
+        admin_state=RouterAdminStateEnum.PRODUCTION,
+        is_reachable=True,
+        physical_location="NOC",
+        online_since_date=date(2026, 1, 1),
+        serial_number="SN-MAINT-1",
+        ssl_trust_status=SSLTrustStatusEnum.TRUSTED_PINNED,
+        created_at=now,
+        updated_at=now,
+    )
+    target_router.tags = []
+
     mw = MaintenanceWindow(
         id=uuid.uuid4(),
         tenant_id=t_id,
@@ -450,24 +493,43 @@ async def test_maintenance_window_endpoints(fake_request: MagicMock) -> None:
     assert len(windows) == 1
     assert windows[0].title == "Nightly Upgrade"
 
-    # 2. Create
+    # 2. Create + Propagación Transversal hacia Router.admin_state == MAINTENANCE
     create_mw_req = CreateMaintenanceWindowRequest(
         title="Emergency Fix",
         reason="Fix route loop",
         router_id=r_id,
-        starts_at=now,
+        starts_at=now - timedelta(minutes=1),
         ends_at=now + timedelta(hours=1),
         suppress_alerts=True,
     )
-    with patch("src.api.v1.maintenance.write_audit_log", new_callable=AsyncMock):
+    with patch("src.api.v1.maintenance.write_audit_log", make_asserting_audit_mock()) as mock_mw_create_audit:
         created_mw = await create_maintenance_window(create_mw_req, fake_request, claims, db)
         assert created_mw.title == "Emergency Fix"
+        mock_mw_create_audit.assert_awaited_once()
 
-    # 3. Cancel
+    with patch("src.api.v1.maintenance.purge_expired_maintenance_windows", new=AsyncMock(return_value=0)):
+        active_ids = await resolve_active_maintenance_router_ids(db, t_id, [target_router])
+        assert r_id in active_ids
+        router_view_during_mw = build_router_response(
+            target_router, {}, in_active_maintenance_window=(r_id in active_ids)
+        )
+        assert router_view_during_mw.admin_state == RouterAdminStateEnum.MAINTENANCE
+
+    # 3. Cancel + Propagación Transversal restaurando Router.admin_state == PRODUCTION
     db.get.return_value = mw
-    with patch("src.api.v1.maintenance.write_audit_log", new_callable=AsyncMock):
+    with patch("src.api.v1.maintenance.write_audit_log", make_asserting_audit_mock()) as mock_mw_cancel_audit:
         cancelled = await cancel_maintenance_window(mw.id, fake_request, claims, db)
         assert cancelled.is_cancelled is True
+        mock_mw_cancel_audit.assert_awaited_once()
+
+    db.execute.return_value = MockDbResult([])
+    with patch("src.api.v1.maintenance.purge_expired_maintenance_windows", new=AsyncMock(return_value=0)):
+        active_ids_after_cancel = await resolve_active_maintenance_router_ids(db, t_id, [target_router])
+        assert r_id not in active_ids_after_cancel
+        router_view_after_cancel = build_router_response(
+            target_router, {}, in_active_maintenance_window=(r_id in active_ids_after_cancel)
+        )
+        assert router_view_after_cancel.admin_state == RouterAdminStateEnum.PRODUCTION
 
     # 4. Validation error: ends_at <= starts_at
     bad_dates_mw = CreateMaintenanceWindowRequest(
@@ -512,9 +574,10 @@ async def test_maintenance_window_endpoints(fake_request: MagicMock) -> None:
         ends_at=now + timedelta(hours=3),
         suppress_alerts=True,
     )
-    with patch("src.api.v1.maintenance.write_audit_log", new_callable=AsyncMock):
+    with patch("src.api.v1.maintenance.write_audit_log", make_asserting_audit_mock()) as mock_multi_audit:
         multi_mw = await create_maintenance_window(multi_mw_req, fake_request, claims, db)
         assert multi_mw.title == "Multi Router Patch"
+        assert mock_multi_audit.await_count == 2
 
 
 # ============================================================================
@@ -829,9 +892,11 @@ async def test_update_router_cancels_active_maintenance_windows_when_set_to_prod
 
     mock_db.execute.side_effect = side_execute
 
-    with patch("src.api.v1.inventory.get_redis_client"), \
-         patch("src.api.v1.inventory.enrich_router_telemetry", new=AsyncMock(return_value={})), \
-         patch("src.api.v1.inventory.resolve_active_maintenance_router_ids", new=AsyncMock(return_value=set())):
+    with (
+        patch("src.api.v1.inventory.get_redis_client"),
+        patch("src.api.v1.inventory.enrich_router_telemetry", new=AsyncMock(return_value={})),
+        patch("src.api.v1.inventory.resolve_active_maintenance_router_ids", new=AsyncMock(return_value=set())),
+    ):
         payload = UpdateRouterRequest(admin_state=RouterAdminStateEnum.PRODUCTION)
         resp = await update_router(router_id, payload, claims=claims, db=mock_db)
 

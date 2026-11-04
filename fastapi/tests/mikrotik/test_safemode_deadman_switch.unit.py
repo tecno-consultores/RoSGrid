@@ -221,7 +221,7 @@ async def test_execute_with_safemode_success() -> None:
 
     result = await execute_with_safemode(
         client=client,
-        rollback_cli='/interface/set ether1 disabled=no',
+        rollback_cli="/interface/set ether1 disabled=no",
         operation_fn=sample_mutation,
         job_name="rosgrid-safemode-1",
         keep_alive_for_confirmation=False,
@@ -241,7 +241,7 @@ async def test_execute_with_safemode_keep_alive() -> None:
 
     result = await execute_with_safemode(
         client=client,
-        rollback_cli='/interface/set ether1 disabled=no',
+        rollback_cli="/interface/set ether1 disabled=no",
         operation_fn=sample_mutation,
         job_name="rosgrid-safemode-keep",
         keep_alive_for_confirmation=True,
@@ -263,9 +263,47 @@ async def test_execute_with_safemode_loss_of_connectivity() -> None:
     with pytest.raises(SafeModeRollbackTriggeredError) as exc_info:
         await execute_with_safemode(
             client=client,
-            rollback_cli='/interface/set ether1 disabled=no',
+            rollback_cli="/interface/set ether1 disabled=no",
             operation_fn=suicidal_mutation,
             interval_seconds=60,
             job_name="rosgrid-safemode-loss",
         )
     assert "rosgrid-safemode-loss" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_safemode_three_phase_temporal_lifecycle_and_rollback() -> None:
+    """Certifica las 3 fases temporales de Safe Mode (60s): (1) Inyección, (2) Ventana Activa en Espera, (3) Confirmación o Reversión."""
+    client = AsyncMock()
+    client.get.return_value = {"name": "Core-BNG"}
+    client.put.return_value = {".id": "*sched99"}
+
+    # Fase 1 y Fase 2: Se inyecta el Dead Man's Switch y se mantiene activo durante la ventana de 60s
+    res = await execute_with_safemode(
+        client=client,
+        rollback_cli='/ip/address/set [find address="10.250.3.8/24"] disabled=no',
+        operation_fn=AsyncMock(return_value={"status": "APPLIED_IN_SAFEMODE"}),
+        interval_seconds=60,
+        job_name="rosgrid-sm-3phase",
+        keep_alive_for_confirmation=True,
+    )
+    assert res == {"status": "APPLIED_IN_SAFEMODE"}
+    client.delete.assert_not_awaited()
+
+    # Fase 3a (Reversión explícita dentro o al vencer la ventana): restaura el estado previo y limpia scheduler
+    client.get.side_effect = [
+        [{".id": "*sched99", "name": "rosgrid-sm-3phase"}],
+        [{".id": "*script99", "name": "rosgrid-sm-3phase"}],
+    ]
+    reverted = await execute_rollback_on_router(
+        client=client,
+        job_name="rosgrid-sm-3phase",
+        menu="/ip/address",
+        action="patch",
+        item_id="*addr1",
+        before_state={"disabled": False},
+        mutated_keys=["disabled"],
+    )
+    assert reverted is True
+    client.patch.assert_awaited_once_with("/ip/address/*addr1", json_data={"disabled": False})
+    assert client.delete.await_count == 2

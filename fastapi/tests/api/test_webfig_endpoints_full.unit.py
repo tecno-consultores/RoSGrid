@@ -72,6 +72,7 @@ from src.schemas.webfig_ops import (
     SystemUserCreateRequest,
     SystemUserUpdateRequest,
 )
+from tests.conftest import make_asserting_audit_mock
 
 
 @pytest.fixture
@@ -480,7 +481,11 @@ async def test_webfig_system_tools_and_l2(fake_client_and_router: tuple[Router, 
 
         # Test Spec 67: update_identity con sync_display_name=False
         ident_res2 = await api_wf_systools.update_identity(
-            r.id, SystemIdentityUpdateRequest(name="Edge-CustomIdentity", sync_display_name=False), fake_req, claims=claims, db=db
+            r.id,
+            SystemIdentityUpdateRequest(name="Edge-CustomIdentity", sync_display_name=False),
+            fake_req,
+            claims=claims,
+            db=db,
         )
         assert ident_res2 == {"ret": "*1"}
         assert r.ros_identity == "Edge-CustomIdentity"
@@ -526,9 +531,7 @@ async def test_webfig_system_tools_and_l2(fake_client_and_router: tuple[Router, 
         assert reboot_res == {"status": "REBOOT_INITIATED", "reason": "Planned reboot"}
 
         # Hito 28.16: Reinicio con payload=None (body ausente) y valor por defecto
-        reboot_none = await api_wf_systools.reboot_router(
-            r.id, fake_req, payload=None, claims=claims, db=db
-        )
+        reboot_none = await api_wf_systools.reboot_router(r.id, fake_req, payload=None, claims=claims, db=db)
         assert reboot_none == {"status": "REBOOT_INITIATED", "reason": "Reinicio manual desde consola WebFig Live"}
 
         reboot_default = await api_wf_systools.reboot_router(
@@ -538,6 +541,7 @@ async def test_webfig_system_tools_and_l2(fake_client_and_router: tuple[Router, 
 
         # Hito 28.16: Tolerancia a desconexión abrupta TCP (MikrotikConnectionError y MikrotikTimeoutError)
         from src.mikrotik.client import MikrotikConnectionError, MikrotikTimeoutError
+
         client.post.side_effect = MikrotikConnectionError("Server disconnected without response")
         reboot_conn_err = await api_wf_systools.reboot_router(
             r.id, fake_req, SystemRebootRequest(reason="Reboot under disconnect"), claims=claims, db=db
@@ -545,10 +549,11 @@ async def test_webfig_system_tools_and_l2(fake_client_and_router: tuple[Router, 
         assert reboot_conn_err == {"status": "REBOOT_INITIATED", "reason": "Reboot under disconnect"}
 
         client.post.side_effect = MikrotikTimeoutError("Timeout on reboot")
-        reboot_timeout_err = await api_wf_systools.reboot_router(
-            r.id, fake_req, payload=None, claims=claims, db=db
-        )
-        assert reboot_timeout_err == {"status": "REBOOT_INITIATED", "reason": "Reinicio manual desde consola WebFig Live"}
+        reboot_timeout_err = await api_wf_systools.reboot_router(r.id, fake_req, payload=None, claims=claims, db=db)
+        assert reboot_timeout_err == {
+            "status": "REBOOT_INITIATED",
+            "reason": "Reinicio manual desde consola WebFig Live",
+        }
         client.post.side_effect = None
 
         client.post.return_value = [{"received": 5}]
@@ -569,7 +574,7 @@ async def test_webfig_system_tools_and_l2(fake_client_and_router: tuple[Router, 
         patch("src.api.v1.webfig_layer2.get_router_and_client", return_value=(r, client)),
         patch("src.api.v1.webfig_layer2.cached_mikrotik_get", return_value=[{"name": "mpls1"}]),
         patch("src.api.v1.webfig_layer2.execute_safe_mutation", return_value={"ret": "*1"}),
-        patch("src.api.v1.webfig_layer2.write_audit_log", new_callable=AsyncMock),
+        patch("src.api.v1.webfig_layer2.write_audit_log", make_asserting_audit_mock()),
         patch("src.api.v1.webfig_layer2.from_deps_redis", return_value=AsyncMock()),
     ):
         catalog = await api_wf_l2.get_catalog(r.id, False, claims=claims, db=db)
@@ -696,7 +701,7 @@ async def test_webfig_safemode_lifecycle(fake_client_and_router: tuple[Router, A
             "action": "patch",
             "item_id": "*1",
             "summary": "Modificación de mtu",
-            "rollback_cli": '/interface/set ether1 mtu=1500',
+            "rollback_cli": "/interface/set ether1 mtu=1500",
             "expires_at": 1700000000.0,
             "mutated_keys": ["mtu"],
             "before_state": {"mtu": "1500"},
@@ -733,4 +738,3 @@ async def test_webfig_safemode_lifecycle(fake_client_and_router: tuple[Router, A
         rollback_res = await api_wf_systools.rollback_safemode_changes(r.id, claims, db)
         assert rollback_res["status"] == "REVERTED"
         assert rollback_res["job_name"] == "rosgrid-safemode-test"
-

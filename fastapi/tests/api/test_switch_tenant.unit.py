@@ -15,6 +15,7 @@ from starlette.responses import Response
 from src.api.v1.auth import switch_tenant
 from src.models.core import SystemRoleEnum, Tenant, TenantStatusEnum, User
 from src.schemas.auth import SwitchTenantRequest
+from tests.conftest import make_asserting_audit_mock
 
 
 class MockDbResult:
@@ -150,6 +151,7 @@ async def test_switch_tenant_inactive(
 def test_switch_tenant_missing_target_payload_validation() -> None:
     """Verifica que SwitchTenantRequest rechaza la creación si ambos campos están vacíos."""
     import pydantic
+
     with pytest.raises(pydantic.ValidationError) as exc_info:
         SwitchTenantRequest()
     assert "target_tenant_id" in str(exc_info.value)
@@ -224,7 +226,7 @@ async def test_switch_tenant_success_by_slug(
         patch("src.api.v1.auth.kill_session", new_callable=AsyncMock) as mock_kill,
         patch("src.api.v1.auth.create_session", new_callable=AsyncMock) as mock_create_sess,
         patch("src.api.v1.auth.kill_all_user_sessions", new_callable=AsyncMock) as mock_kill_dup,
-        patch("src.api.v1.auth.write_audit_log", new_callable=AsyncMock),
+        patch("src.api.v1.auth.write_audit_log", make_asserting_audit_mock()) as mock_audit,
     ):
         mock_kill.return_value = True
         mock_kill_dup.return_value = 0
@@ -240,3 +242,4 @@ async def test_switch_tenant_success_by_slug(
 
         assert res.session_id == "new_sess_xyz"
         assert res.user.tenant_slug == "isp-destino"
+        assert mock_audit.await_count >= 1

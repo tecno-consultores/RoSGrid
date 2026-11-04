@@ -104,6 +104,7 @@ from src.schemas.users import (
     RouterAssignmentItem,
 )
 from src.workers.runner import main as runner_main
+from tests.conftest import make_asserting_audit_mock
 
 
 class MockDbScalars:
@@ -284,12 +285,13 @@ async def test_inventory_csv_commit_multipart_form(fake_request: MagicMock) -> N
     fake_request.form = AsyncMock(return_value=fake_form)
 
     with (
-        patch("src.api.v1.inventory.write_audit_log", AsyncMock()),
+        patch("src.api.v1.inventory.write_audit_log", make_asserting_audit_mock()) as mock_inv_audit,
         patch("src.api.v1.inventory.perform_discovery", AsyncMock()),
     ):
         res = await import_csv_commit(fake_request, claims=claims, db=db)
         assert res.imported_count == 1
         assert len(res.created_router_ids) == 1
+        mock_inv_audit.assert_awaited_once()
 
 
 # ============================================================================
@@ -584,10 +586,7 @@ async def test_field_ops_live_verification_and_fiber_cut(fake_request: MagicMock
     mock_client = AsyncMock()
     mock_client.get.return_value = [{"address": "100.64.1.20", "caller-id": "AA:BB:CC:11:22:33"}]
 
-    with (
-        patch("src.api.v1.field_ops.MikrotikRestClient") as mock_rc,
-        patch("src.api.v1.field_ops.write_audit_log", AsyncMock()),
-    ):
+    with patch("src.api.v1.field_ops.MikrotikRestClient") as mock_rc:
         mock_rc.return_value.__aenter__.return_value = mock_client
         payload = FieldVerifySubscriberRequest(customer_service_id=subscriber.id, onu_scanned_mac="AA:BB:CC:11:22:33")
         res_v = await verify_subscriber_live(subscriber.id, payload, db=db, claims=claims)
@@ -598,10 +597,7 @@ async def test_field_ops_live_verification_and_fiber_cut(fake_request: MagicMock
     subscriber.service_type = "DHCP"
     subscriber.pppoe_username = None
     mock_client.get.return_value = [{"mac-address": "AA:BB:CC:11:22:33", "address": "100.64.1.50", "status": "bound"}]
-    with (
-        patch("src.api.v1.field_ops.MikrotikRestClient") as mock_rc,
-        patch("src.api.v1.field_ops.write_audit_log", AsyncMock()),
-    ):
+    with patch("src.api.v1.field_ops.MikrotikRestClient") as mock_rc:
         mock_rc.return_value.__aenter__.return_value = mock_client
         res_dhcp = await verify_subscriber_live(subscriber.id, payload, db=db, claims=claims)
         assert res_dhcp.session_active is True
@@ -640,12 +636,13 @@ async def test_field_ops_live_verification_and_fiber_cut(fake_request: MagicMock
         ),  # existing incident
     ]
     with (
-        patch("src.api.v1.field_ops.write_audit_log", AsyncMock()),
+        patch("src.api.v1.field_ops.write_audit_log", make_asserting_audit_mock()) as mock_fo_audit3,
         patch("src.redis_layer.client.get_redis_client", MagicMock()),
     ):
         incidents = await detect_fiber_cuts_engine(threshold_onus=5, db=db, claims=claims)
         assert len(incidents) == 1
         assert incidents[0].affected_onus_count == 15
+        mock_fo_audit3.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -746,7 +743,7 @@ async def test_subscribers_alias_and_delete() -> None:
     db.execute.return_value = MockDbResult([subscriber])
 
     # 1. Update with onu_serial_number alias
-    with patch("src.api.v1.subscribers.write_audit_log", AsyncMock()):
+    with patch("src.api.v1.subscribers.write_audit_log", make_asserting_audit_mock()) as mock_sub_audit:
         update_res = await update_subscriber_device(
             subscriber.id,
             SubscriberDeviceUpdate(onu_serial_number="NEW-SERIAL-99"),
@@ -754,6 +751,7 @@ async def test_subscribers_alias_and_delete() -> None:
             claims=claims,
         )
         assert update_res.device_serial == "NEW-SERIAL-99"
+        mock_sub_audit.assert_awaited_once()
 
     # 2. Delete subscriber device 404
     db.execute.return_value = MockDbResult([])

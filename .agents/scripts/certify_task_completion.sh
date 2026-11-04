@@ -26,10 +26,11 @@ echo -e "\n🌐 [3/9] Verificando integridad de diccionarios i18n (anti-colisió
 python3 "${REPO_ROOT}/.agents/scripts/verify_json_no_duplicate_keys.py"
 echo "✔ Diccionarios i18n validados sin claves duplicadas."
 
-# 4. Invariante de Cero Componentes Vue Huérfanos
-echo -e "\n🧩 [4/9] Verificando cobertura de componentes Vue (invariante cero componentes huérfanos)..."
+# 4. Invariante de Cero Componentes Vue Huérfanos y Calidad Anti-Silo (3 Fases + 0 Mocks Ciegos)
+echo -e "\n🧩 [4/9] Verificando cobertura de componentes Vue y calidad Anti-Silo de pruebas..."
 python3 "${REPO_ROOT}/.agents/scripts/verify_zero_orphan_vue_components.py"
-echo "✔ Todos los componentes Vue cuentan con suite de prueba activa."
+python3 "${REPO_ROOT}/.agents/scripts/verify_anti_silo_test_quality.py"
+echo "✔ Todos los componentes Vue y suites Anti-Silo (0 mocks ciegos / 3 fases temporales) verificados."
 
 # 5. Salud Topológica y Límites de Capas (Graphify AST)
 echo -e "\n🧠 [5/9] Auditando salud topológica y límites de capas arquitectónicas (Graphify AST)..."

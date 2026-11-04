@@ -5,7 +5,6 @@
 
 import uuid
 from typing import Any
-from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import HTTPException
@@ -21,7 +20,7 @@ from src.db.session import get_db_session
 from src.main import app
 from src.models.core import SystemRoleEnum, User, UserRouterPermission
 from src.rbac.policy_matrix import POLICY_MATRIX
-from tests.conftest import FakeAsyncRedis
+from tests.conftest import FakeAsyncRedis, make_asserting_audit_mock
 
 
 def test_actions_metadata_and_policy_matrix_count() -> None:
@@ -191,8 +190,9 @@ async def test_patch_user_feature_flags_endpoint(
     target_user_id = uuid.uuid4()
     session_id = "sess-patch-flags-01"
 
+    fake_audit = make_asserting_audit_mock()
     monkeypatch.setattr("src.api.v1.users.get_redis_client", lambda: fake_redis)
-    monkeypatch.setattr("src.core.audit.write_audit_log", AsyncMock())
+    monkeypatch.setattr("src.core.audit.write_audit_log", fake_audit)
 
     sess_key = f"rg:{tenant_id}:sess:{session_id}"
     await fake_redis.hset(

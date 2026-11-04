@@ -45,6 +45,7 @@ from src.schemas.notifications import (
     NotificationChannelUpdateRequest,
     NotificationTestRequest,
 )
+from tests.conftest import make_asserting_audit_mock
 
 
 @pytest.fixture
@@ -238,11 +239,12 @@ async def test_approvals_approve_and_reject(fake_op_context: dict[str, Any]) -> 
     with (
         patch("src.api.v1.approvals.get_router_and_client", return_value=(ctx["router"], ctx["client"])),
         patch("src.api.v1.approvals.execute_safe_mutation", return_value={"ret": "*1"}),
-        patch("src.api.v1.approvals.write_audit_log", new_callable=AsyncMock),
+        patch("src.api.v1.approvals.write_audit_log", make_asserting_audit_mock()) as mock_app_audit,
     ):
         approve_payload = ApproveRequestPayload(review_comment="Approved for maintenance")
         app_res = await api_approvals.approve_request(app.id, approve_payload, fake_req, claims=claims, db=db)
         assert app_res.status == ApprovalStatusEnum.APPROVED_AND_EXECUTED.value
+        mock_app_audit.assert_awaited()
 
         # Test SoD violation (checker == requester)
         app.status = ApprovalStatusEnum.PENDING
@@ -409,10 +411,11 @@ async def test_backups_trigger_deduplication(fake_op_context: dict[str, Any]) ->
 
     with (
         patch("src.api.v1.backups.get_router_and_client", return_value=(ctx["router"], ctx["client"])),
-        patch("src.api.v1.backups.write_audit_log", new_callable=AsyncMock),
+        patch("src.api.v1.backups.write_audit_log", make_asserting_audit_mock()) as mock_bkp_audit,
     ):
         res_create = await api_backups.trigger_backup(ctx["router_id"], fake_req, claims=claims, db=db)
         assert res_create.status == "CREATED"
+        mock_bkp_audit.assert_awaited()
 
         # 2. Second trigger with identical content deduplicates
         existing_backup = RouterBackup(
@@ -672,6 +675,7 @@ async def test_bulk_templates_and_jobs(fake_op_context: dict[str, Any]) -> None:
 
     # Test _execute_single_step: idempotencia en system/logging/action ante 'already exists'
     from src.mikrotik.client import MikrotikApiError
+
     ctx["client"].put.side_effect = MikrotikApiError(400, "failure: action already exists with such a name")
     ctx["client"].get.return_value = [{"name": "rosgridsyslog", ".id": "*A"}]
     ctx["client"].patch.reset_mock()
@@ -681,7 +685,9 @@ async def test_bulk_templates_and_jobs(fake_op_context: dict[str, Any]) -> None:
         "payload": {"name": "rosgridsyslog", "remote": "10.0.0.99"},
     }
     await api_bulk._execute_single_step(ctx["client"], step_syslog_act)
-    ctx["client"].patch.assert_awaited_once_with("system/logging/action/*A", {"name": "rosgridsyslog", "remote": "10.0.0.99"})
+    ctx["client"].patch.assert_awaited_once_with(
+        "system/logging/action/*A", {"name": "rosgridsyslog", "remote": "10.0.0.99"}
+    )
 
     # Test _execute_single_step: tolerancia ante 'duplicate address' en servidores NTP
     ctx["client"].put.side_effect = MikrotikApiError(400, "failure: duplicate address")
@@ -929,13 +935,14 @@ async def test_approvals_bulk_job_execution(fake_op_context: dict[str, Any]) -> 
 
     with (
         patch("src.api.v1.approvals.execute_bulk_job_on_fleet", return_value=completed_job),
-        patch("src.api.v1.approvals.write_audit_log", new_callable=AsyncMock),
+        patch("src.api.v1.approvals.write_audit_log", make_asserting_audit_mock()) as mock_bulk_app_audit,
     ):
         approve_payload = ApproveRequestPayload(review_comment="Aprobado por Checker NOC")
         app_res = await api_approvals.approve_request(app.id, approve_payload, fake_req, claims=claims, db=db)
         assert app_res.status == ApprovalStatusEnum.APPROVED_AND_EXECUTED.value
         assert app.execution_result["succeeded_count"] == 1
         assert app.execution_result["job_status"] == BulkJobStatusEnum.COMPLETED.value
+        mock_bulk_app_audit.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -1012,5 +1019,3 @@ async def test_publish_maker_checker_event_unit() -> None:
             approval_id=approval_id,
             summary="Falla de redis",
         )
-
-

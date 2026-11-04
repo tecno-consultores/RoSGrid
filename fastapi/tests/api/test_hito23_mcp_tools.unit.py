@@ -17,6 +17,7 @@ from src.main import app
 from src.models.core import SystemRoleEnum
 from src.models.inventory import Router
 from src.schemas.topology_l2 import L2TopologyResponse, TopologyNode
+from tests.conftest import make_asserting_audit_mock
 
 
 @pytest.fixture
@@ -248,7 +249,7 @@ async def test_handle_execute_poe_aware_upgrade_missing_ids(mcp_context):
 @pytest.mark.asyncio
 async def test_record_mcp_audit_invalid_uuid(mcp_context):
     db = AsyncMock()
-    with patch("src.api.v1.mcp.write_audit_log", AsyncMock()):
+    with patch("src.api.v1.mcp.write_audit_log", make_asserting_audit_mock()) as mock_audit:
         await api_mcp._record_mcp_audit(
             db,
             mcp_context["tenant_id"],
@@ -259,6 +260,7 @@ async def test_record_mcp_audit_invalid_uuid(mcp_context):
             {"router_id": "not-a-valid-uuid"},
         )
         assert db.commit.called
+        mock_audit.assert_awaited_once()
 
 
 def test_matches_status_filter_none():

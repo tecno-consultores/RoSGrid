@@ -48,6 +48,7 @@ from src.schemas.webfig_layer2 import (
     DynamicLayer2WriteRequest,
     Layer2QueryFilterItem,
 )
+from tests.conftest import make_asserting_audit_mock
 
 
 def test_validate_l2_path_valid() -> None:
@@ -309,7 +310,7 @@ async def test_layer2_nextgen_endpoints_integration() -> None:
         patch("src.api.v1.webfig_layer2.get_router_and_client", AsyncMock(return_value=(router_obj, client))),
         patch("src.api.v1.webfig_layer2.from_deps_redis", return_value=AsyncMock(get=AsyncMock(return_value=None))),
         patch("src.api.v1.webfig_layer2.cached_mikrotik_get", AsyncMock(return_value=[])),
-        patch("src.api.v1.webfig_layer2.write_audit_log", AsyncMock()),
+        patch("src.api.v1.webfig_layer2.write_audit_log", make_asserting_audit_mock()),
         patch(
             "src.api.v1.webfig_layer2.execute_safe_mutation",
             AsyncMock(side_effect=_fake_safe_mutation),
@@ -387,4 +388,3 @@ async def test_layer2_nextgen_endpoints_integration() -> None:
         )
         cmd_res = await execute_command(router_id, "certificate", cmd_payload, req, claims=claims, db=db)
         assert cmd_res == {"ret": "done"}
-

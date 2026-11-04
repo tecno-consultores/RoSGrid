@@ -31,6 +31,7 @@ from src.schemas.enterprise import (
     SdwanMultiWanFailoverRequest,
     SdwanProvisionSpokeRequest,
 )
+from tests.conftest import make_asserting_audit_mock
 
 
 @pytest.fixture
@@ -131,10 +132,12 @@ async def test_update_resource_singleton_dedicated_endpoint(superadmin_claims, m
     mock_req.headers = {}
     mock_req.client = SimpleNamespace(host="127.0.0.1")
 
-    with patch("src.api.v1.webfig_layer2.get_router_and_client", new_callable=AsyncMock) as mock_get_rc, \
-         patch("src.api.v1.webfig_layer2._get_user_perm", new_callable=AsyncMock) as mock_perm, \
-         patch("src.api.v1.webfig_layer2.invalidate_webfig_cache", new_callable=AsyncMock), \
-         patch("src.api.v1.webfig_layer2.write_audit_log", new_callable=AsyncMock):
+    with (
+        patch("src.api.v1.webfig_layer2.get_router_and_client", new_callable=AsyncMock) as mock_get_rc,
+        patch("src.api.v1.webfig_layer2._get_user_perm", new_callable=AsyncMock) as mock_perm,
+        patch("src.api.v1.webfig_layer2.invalidate_webfig_cache", new_callable=AsyncMock),
+        patch("src.api.v1.webfig_layer2.write_audit_log", make_asserting_audit_mock()) as mock_l2_audit1,
+    ):
         mock_client = AsyncMock()
         mock_client.post.return_value = {"ret": "ok"}
         mock_get_rc.return_value = (SimpleNamespace(id=router_id, display_name="Test-Router"), mock_client)
@@ -150,6 +153,7 @@ async def test_update_resource_singleton_dedicated_endpoint(superadmin_claims, m
         )
         assert res["ret"] == "ok"
         mock_client.post.assert_awaited_once_with("system/ntp/client/set", {"enabled": True})
+        mock_l2_audit1.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -161,10 +165,12 @@ async def test_update_resource_singleton_fallback(superadmin_claims, mock_db):
     mock_req.headers = {}
     mock_req.client = SimpleNamespace(host="127.0.0.1")
 
-    with patch("src.api.v1.webfig_layer2.get_router_and_client", new_callable=AsyncMock) as mock_get_rc, \
-         patch("src.api.v1.webfig_layer2._get_user_perm", new_callable=AsyncMock) as mock_perm, \
-         patch("src.api.v1.webfig_layer2.invalidate_webfig_cache", new_callable=AsyncMock), \
-         patch("src.api.v1.webfig_layer2.write_audit_log", new_callable=AsyncMock):
+    with (
+        patch("src.api.v1.webfig_layer2.get_router_and_client", new_callable=AsyncMock) as mock_get_rc,
+        patch("src.api.v1.webfig_layer2._get_user_perm", new_callable=AsyncMock) as mock_perm,
+        patch("src.api.v1.webfig_layer2.invalidate_webfig_cache", new_callable=AsyncMock),
+        patch("src.api.v1.webfig_layer2.write_audit_log", make_asserting_audit_mock()) as mock_l2_audit2,
+    ):
         mock_client = AsyncMock()
         mock_client.post.return_value = {"ret": "ok"}
         mock_get_rc.return_value = (SimpleNamespace(id=router_id, display_name="Test-Router"), mock_client)
@@ -182,6 +188,7 @@ async def test_update_resource_singleton_fallback(superadmin_claims, mock_db):
         )
         assert res["ret"] == "ok"
         mock_client.post.assert_awaited_once_with("ip/settings/set", {"ip-forward": True})
+        mock_l2_audit2.assert_awaited_once()
 
 
 # ==============================================================================

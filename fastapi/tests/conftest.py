@@ -388,3 +388,42 @@ async def async_client() -> AsyncGenerator[AsyncClient]:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
         yield client
+
+
+def make_asserting_audit_mock(return_value: Any = None) -> Any:
+    """Crea un AsyncMock para write_audit_log que valida invariantes Anti-Silo y Anti-UUID en cada invocación."""
+    import re
+    import uuid
+    from unittest.mock import AsyncMock, MagicMock
+
+    uuid_re = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.IGNORECASE)
+
+    async def _side_effect(*args: Any, **kwargs: Any) -> Any:
+        event_category = kwargs.get("event_category") or (args[5] if len(args) > 5 else None)
+        event_action = kwargs.get("event_action") or (args[6] if len(args) > 6 else None)
+        actor_username = kwargs.get("actor_username") or (args[2] if len(args) > 2 else None)
+        actor_user_id = kwargs.get("actor_user_id")
+
+        assert event_category and str(event_category).strip(), "write_audit_log invocado sin event_category"
+        assert event_action and str(event_action).strip(), "write_audit_log invocado sin event_action"
+        assert actor_username and str(actor_username).strip(), "write_audit_log invocado sin actor_username"
+
+        # Si actor_username parece un UUID crudo, exigir que se haya provisto session o actor_user_id para resolución
+        if uuid_re.match(str(actor_username).strip()):
+            session_arg = kwargs.get("session") or (args[0] if len(args) > 0 else None)
+            assert session_arg is not None or actor_user_id is not None, (
+                f"UUID crudo en actor_username ({actor_username}) sin session ni actor_user_id para resolución"
+            )
+
+        if return_value is not None:
+            return return_value
+        entry = MagicMock()
+        entry.id = uuid.uuid4()
+        entry.event_category = str(event_category)
+        entry.event_action = str(event_action)
+        entry.actor_username = (
+            "resolved_operator" if uuid_re.match(str(actor_username).strip()) else str(actor_username)
+        )
+        return entry
+
+    return AsyncMock(side_effect=_side_effect)

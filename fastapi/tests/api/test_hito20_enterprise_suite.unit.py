@@ -64,6 +64,7 @@ from src.schemas.enterprise import (
     SlaProbeRunRequest,
     WifiSsidProfile,
 )
+from tests.conftest import make_asserting_audit_mock
 
 
 class MockDbResult:
@@ -298,7 +299,9 @@ async def test_provision_sdwan_spoke_and_topology(
     mock_audit_entry = MagicMock()
     mock_audit_entry.id = uuid.uuid4()
 
-    with patch("src.api.v1.sdwan.write_audit_log", AsyncMock(return_value=mock_audit_entry)):
+    with patch(
+        "src.api.v1.sdwan.write_audit_log", make_asserting_audit_mock(return_value=mock_audit_entry)
+    ) as mock_sdwan_audit1:
         req = SdwanProvisionSpokeRequest(
             hub_router_id=hub_id,
             spoke_router_id=spoke_id,
@@ -311,6 +314,7 @@ async def test_provision_sdwan_spoke_and_topology(
         assert tunnel_res.status == "ACTIVE"
         assert tunnel_res.routing_protocol == "BGP"
         db.add.assert_called_once()
+        mock_sdwan_audit1.assert_awaited_once()
 
     # Topology query
     tunnel_obj = SdwanSpokeTunnel(
@@ -357,7 +361,7 @@ async def test_deploy_multi_wan_failover_policy(
     with (
         patch("src.api.v1.sdwan.get_router_and_client", return_value=(mock_router, mock_client)),
         patch("src.api.v1.sdwan.execute_safe_mutation", AsyncMock(return_value={"status": "deployed"})),
-        patch("src.api.v1.sdwan.write_audit_log", AsyncMock()),
+        patch("src.api.v1.sdwan.write_audit_log", make_asserting_audit_mock()) as mock_sdwan_audit2,
     ):
         failover_req = SdwanMultiWanFailoverRequest(
             router_id=router_id,
@@ -371,6 +375,7 @@ async def test_deploy_multi_wan_failover_policy(
         )
         assert res.failover_policy_deployed is True
         assert res.deployed_under_safemode is True
+        mock_sdwan_audit2.assert_awaited_once()
 
 
 # ============================================================================
@@ -410,7 +415,7 @@ async def test_dhcp_snooping_state_and_enable(
     with (
         patch("src.api.v1.switching.get_router_and_client", return_value=(mock_router, mock_client)),
         patch("src.api.v1.switching.execute_safe_mutation", AsyncMock(return_value={"status": "ok"})),
-        patch("src.api.v1.switching.write_audit_log", AsyncMock()),
+        patch("src.api.v1.switching.write_audit_log", make_asserting_audit_mock()) as mock_sw_audit1,
     ):
         enable_req = DhcpSnoopingEnableRequest(
             router_id=router_id,
@@ -435,6 +440,7 @@ async def test_dhcp_snooping_state_and_enable(
         )
         dis_res = await enable_dhcp_snooping(payload=disable_req, request=mock_request, db=db, claims=sample_claims)
         assert dis_res.dhcp_snooping_enabled is False
+        assert mock_sw_audit1.await_count == 2
 
 
 @pytest.mark.asyncio
@@ -479,7 +485,9 @@ async def test_rogue_dhcp_detection_and_port_isolation(
     with (
         patch("src.api.v1.switching.get_router_and_client", return_value=(mock_router, mock_client)),
         patch("src.api.v1.switching.execute_safe_mutation", AsyncMock(return_value={"isolated": True})),
-        patch("src.api.v1.switching.write_audit_log", AsyncMock(return_value=mock_audit)),
+        patch(
+            "src.api.v1.switching.write_audit_log", make_asserting_audit_mock(return_value=mock_audit)
+        ) as mock_sw_audit2,
     ):
         iso_req = RogueDhcpIsolatePortRequest(
             router_id=router_id,
@@ -490,6 +498,7 @@ async def test_rogue_dhcp_detection_and_port_isolation(
         assert iso_res.isolated is True
         assert iso_res.interface_name == "ether4"
         assert iso_res.executed_under_safemode is True
+        mock_sw_audit2.assert_awaited_once()
 
 
 # ============================================================================
@@ -823,7 +832,9 @@ async def test_cis_1_8_bruteforce_remediation_and_audit_reactivity(
     with (
         patch("src.api.v1.compliance.get_router_and_client", return_value=(mock_router, mock_client)),
         patch("src.api.v1.compliance.execute_safe_mutation", AsyncMock(return_value={"status": "ok"})) as mock_safe,
-        patch("src.api.v1.compliance.write_audit_log", AsyncMock(return_value=mock_audit_entry)),
+        patch(
+            "src.api.v1.compliance.write_audit_log", make_asserting_audit_mock(return_value=mock_audit_entry)
+        ) as mock_cis_audit,
         patch("src.api.v1.compliance.get_redis_client", return_value=mock_redis),
     ):
         harden_payload = CisAutoHardenRequest(router_id=router_id, directive_codes_to_apply=["CIS-1.8"])
@@ -835,6 +846,7 @@ async def test_cis_1_8_bruteforce_remediation_and_audit_reactivity(
         assert harden_res.executed_under_safemode is True
         mock_safe.assert_called_once()
         mock_redis.sadd.assert_called_once()
+        mock_cis_audit.assert_awaited_once()
 
     # Re-auditoría reactiva: con reglas presentes en el router o en KeyDB
     mock_redis.smembers.return_value = {b"CIS-1.8"}
@@ -859,4 +871,3 @@ def test_starter_templates_includes_dhcp_snooping_template() -> None:
     assert len(tpl["rest_steps_template"]) == 2
     assert tpl["rest_steps_template"][0]["endpoint"] == "interface/bridge/port/set"
     assert tpl["rest_steps_template"][1]["endpoint"] == "interface/bridge/set"
-

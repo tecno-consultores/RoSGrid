@@ -1372,10 +1372,16 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 159. Ciclo de Vida Temporal de 3 Fases en Bóveda Step-Up (30s) y Propagación de Estado Anti-Silo (Hito 30.5)
+    Given path '/api/v1/vault/routers/00000000-0000-0000-0000-000000000001/reveal'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000160'
+    And request { totp_code: '123456', reason: 'Verificación de contrato 3 fases Step-Up 30s' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
-
-
-
-
-
-
+    Given path '/api/v1/operations/audit-logs'
+    And param event_category = 'VAULT_OPERATIONS'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }

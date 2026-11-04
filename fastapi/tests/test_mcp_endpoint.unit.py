@@ -17,6 +17,7 @@ from src.models.core import SystemRoleEnum, User
 from src.models.inventory import Router
 from src.models.operations import CriticalActionTypeEnum, RouterBackup
 from src.schemas.mcp import McpJsonRpcRequest
+from tests.conftest import make_asserting_audit_mock
 
 
 @pytest.fixture
@@ -331,7 +332,7 @@ async def test_tool_rosgrid_get_router_health(mcp_context: dict[str, Any]) -> No
         patch.object(settings, "ROSGRID_MCP_ENABLED", True),
         patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
         patch("src.api.v1.mcp.get_router_and_client", return_value=(mcp_context["router"], client)),
-        patch("src.api.v1.mcp.write_audit_log", new_callable=AsyncMock),
+        patch("src.api.v1.mcp.write_audit_log", make_asserting_audit_mock()),
     ):
         resp = await api_mcp.mcp_endpoint(mcp_context["request"], body, mcp_context["claims"], db)
         assert resp.result is not None
@@ -367,7 +368,7 @@ async def test_tool_rosgrid_check_sfp_optical_ddm(mcp_context: dict[str, Any]) -
         patch.object(settings, "ROSGRID_MCP_ENABLED", True),
         patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
         patch("src.api.v1.mcp.get_router_and_client", return_value=(mcp_context["router"], client)),
-        patch("src.api.v1.mcp.write_audit_log", new_callable=AsyncMock),
+        patch("src.api.v1.mcp.write_audit_log", make_asserting_audit_mock()),
     ):
         resp = await api_mcp.mcp_endpoint(mcp_context["request"], body, mcp_context["claims"], db)
         assert resp.result is not None
@@ -405,7 +406,7 @@ async def test_tool_rosgrid_inspect_routing_bgp_ospf(mcp_context: dict[str, Any]
         patch.object(settings, "ROSGRID_MCP_ENABLED", True),
         patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
         patch("src.api.v1.mcp.get_router_and_client", return_value=(mcp_context["router"], client)),
-        patch("src.api.v1.mcp.write_audit_log", new_callable=AsyncMock),
+        patch("src.api.v1.mcp.write_audit_log", make_asserting_audit_mock()),
     ):
         resp = await api_mcp.mcp_endpoint(mcp_context["request"], body, mcp_context["claims"], db)
         assert resp.result is not None
@@ -445,7 +446,7 @@ async def test_tool_rosgrid_run_live_diagnostic(mcp_context: dict[str, Any]) -> 
         patch.object(settings, "ROSGRID_MCP_ENABLED", True),
         patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
         patch("src.api.v1.mcp.get_router_and_client", return_value=(mcp_context["router"], client)),
-        patch("src.api.v1.mcp.write_audit_log", new_callable=AsyncMock),
+        patch("src.api.v1.mcp.write_audit_log", make_asserting_audit_mock()),
     ):
         resp = await api_mcp.mcp_endpoint(mcp_context["request"], body, mcp_context["claims"], db)
         assert resp.result is not None
@@ -502,7 +503,7 @@ async def test_tool_rosgrid_compare_config_diff(mcp_context: dict[str, Any]) -> 
         patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
         patch("src.api.v1.mcp.get_router_and_client", return_value=(mcp_context["router"], client)),
         patch("src.api.v1.mcp._decrypt_backup_rsc", return_value="/ip firewall filter add chain=input action=drop"),
-        patch("src.api.v1.mcp.write_audit_log", new_callable=AsyncMock),
+        patch("src.api.v1.mcp.write_audit_log", make_asserting_audit_mock()),
     ):
         resp = await api_mcp.mcp_endpoint(mcp_context["request"], body, mcp_context["claims"], db)
         assert resp.result is not None
@@ -543,7 +544,7 @@ async def test_tool_rosgrid_reconnect_pppoe_client(mcp_context: dict[str, Any]) 
         patch.object(settings, "ROSGRID_MCP_ENABLED", True),
         patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
         patch("src.api.v1.mcp.get_router_and_client", return_value=(mcp_context["router"], client)),
-        patch("src.api.v1.mcp.write_audit_log", new_callable=AsyncMock),
+        patch("src.api.v1.mcp.write_audit_log", make_asserting_audit_mock()),
     ):
         resp = await api_mcp.mcp_endpoint(mcp_context["request"], body, mcp_context["claims"], db)
         assert resp.result is not None
@@ -580,7 +581,7 @@ async def test_tool_rosgrid_propose_network_change_maker_checker(mcp_context: di
     with (
         patch.object(settings, "ROSGRID_MCP_ENABLED", True),
         patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
-        patch("src.api.v1.mcp.write_audit_log", new_callable=AsyncMock),
+        patch("src.api.v1.mcp.write_audit_log", make_asserting_audit_mock()),
     ):
         resp = await api_mcp.mcp_endpoint(mcp_context["request"], body, mcp_context["claims"], db)
         assert resp.result is not None
@@ -870,7 +871,7 @@ async def test_tool_rosgrid_isolate_subscriber(mcp_context: dict[str, Any]) -> N
         patch.object(settings, "ROSGRID_MCP_ENABLED", True),
         patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
         patch("src.api.v1.mcp.isolate_network_service", new_callable=AsyncMock, return_value=mock_resp),
-        patch("src.api.v1.mcp.write_audit_log", new_callable=AsyncMock),
+        patch("src.api.v1.mcp.write_audit_log", make_asserting_audit_mock()),
     ):
         resp = await api_mcp.mcp_endpoint(mcp_context["request"], body, mcp_context["claims"], db)
         assert resp.result is not None
@@ -909,7 +910,7 @@ async def test_tool_rosgrid_restore_subscriber(mcp_context: dict[str, Any]) -> N
         patch.object(settings, "ROSGRID_MCP_ENABLED", True),
         patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
         patch("src.api.v1.mcp.restore_network_service", new_callable=AsyncMock, return_value=mock_resp),
-        patch("src.api.v1.mcp.write_audit_log", new_callable=AsyncMock),
+        patch("src.api.v1.mcp.write_audit_log", make_asserting_audit_mock()),
     ):
         resp = await api_mcp.mcp_endpoint(mcp_context["request"], body, mcp_context["claims"], db)
         assert resp.result is not None
@@ -953,7 +954,7 @@ async def test_tool_rosgrid_change_rate_limit(mcp_context: dict[str, Any]) -> No
         patch.object(settings, "ROSGRID_MCP_ENABLED", True),
         patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
         patch("src.api.v1.mcp.change_network_service_rate_limit", new_callable=AsyncMock, return_value=mock_resp),
-        patch("src.api.v1.mcp.write_audit_log", new_callable=AsyncMock),
+        patch("src.api.v1.mcp.write_audit_log", make_asserting_audit_mock()),
     ):
         resp = await api_mcp.mcp_endpoint(mcp_context["request"], body, mcp_context["claims"], db)
         assert resp.result is not None
@@ -977,7 +978,7 @@ async def test_tool_rosgrid_change_rate_limit(mcp_context: dict[str, Any]) -> No
         patch.object(settings, "ROSGRID_MCP_ENABLED", True),
         patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
         patch("src.api.v1.mcp.change_network_service_rate_limit", new_callable=AsyncMock, return_value=mock_resp),
-        patch("src.api.v1.mcp.write_audit_log", new_callable=AsyncMock),
+        patch("src.api.v1.mcp.write_audit_log", make_asserting_audit_mock()),
     ):
         resp_alias = await api_mcp.mcp_endpoint(mcp_context["request"], body_alias, mcp_context["claims"], db)
         assert resp_alias.result is not None
@@ -1025,7 +1026,7 @@ async def test_tool_rosgrid_query_bgp_looking_glass(mcp_context: dict[str, Any])
         patch.object(settings, "ROSGRID_MCP_ENABLED", True),
         patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
         patch("src.api.v1.mcp.get_looking_glass_route", new_callable=AsyncMock, return_value=mock_route),
-        patch("src.api.v1.mcp.write_audit_log", new_callable=AsyncMock),
+        patch("src.api.v1.mcp.write_audit_log", make_asserting_audit_mock()),
     ):
         resp = await api_mcp.mcp_endpoint(mcp_context["request"], body_route, mcp_context["claims"], db)
         assert resp.result is not None
@@ -1050,7 +1051,7 @@ async def test_tool_rosgrid_query_bgp_looking_glass(mcp_context: dict[str, Any])
         patch.object(settings, "ROSGRID_MCP_ENABLED", True),
         patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
         patch("src.api.v1.mcp.get_looking_glass_advertised", new_callable=AsyncMock, return_value=mock_adv),
-        patch("src.api.v1.mcp.write_audit_log", new_callable=AsyncMock),
+        patch("src.api.v1.mcp.write_audit_log", make_asserting_audit_mock()),
     ):
         resp_adv = await api_mcp.mcp_endpoint(mcp_context["request"], body_adv, mcp_context["claims"], db)
         assert resp_adv.result is not None
@@ -1088,7 +1089,7 @@ async def test_tool_rosgrid_check_config_drift(mcp_context: dict[str, Any]) -> N
         patch.object(settings, "ROSGRID_MCP_ENABLED", True),
         patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
         patch("src.api.v1.mcp.check_config_drift", new_callable=AsyncMock, return_value=mock_drift),
-        patch("src.api.v1.mcp.write_audit_log", new_callable=AsyncMock),
+        patch("src.api.v1.mcp.write_audit_log", make_asserting_audit_mock()),
     ):
         resp = await api_mcp.mcp_endpoint(mcp_context["request"], body, mcp_context["claims"], db)
         assert resp.result is not None
@@ -1126,7 +1127,7 @@ async def test_tool_rosgrid_run_cis_audit(mcp_context: dict[str, Any]) -> None:
         patch.object(settings, "ROSGRID_MCP_ENABLED", True),
         patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
         patch("src.api.v1.mcp.run_cis_audit", new_callable=AsyncMock, return_value=mock_cis),
-        patch("src.api.v1.mcp.write_audit_log", new_callable=AsyncMock),
+        patch("src.api.v1.mcp.write_audit_log", make_asserting_audit_mock()),
     ):
         resp = await api_mcp.mcp_endpoint(mcp_context["request"], body, mcp_context["claims"], db)
         assert resp.result is not None
@@ -1168,7 +1169,7 @@ async def test_tool_rosgrid_detect_mass_outage(mcp_context: dict[str, Any]) -> N
         patch.object(settings, "ROSGRID_MCP_ENABLED", True),
         patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
         patch("src.api.v1.mcp.detect_fiber_cuts_engine", new_callable=AsyncMock, return_value=[mock_incident]),
-        patch("src.api.v1.mcp.write_audit_log", new_callable=AsyncMock),
+        patch("src.api.v1.mcp.write_audit_log", make_asserting_audit_mock()),
     ):
         resp = await api_mcp.mcp_endpoint(mcp_context["request"], body, mcp_context["claims"], db)
         assert resp.result is not None
