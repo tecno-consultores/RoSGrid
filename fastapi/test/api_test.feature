@@ -1226,3 +1226,38 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     When method get
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
+
+  Scenario: 150. Paquete de Soporte y Diagnóstico Unificado 1-Click con Sanitización Zero-Leak y Telemetría UI (Hito 29.2)
+    Given path '/api/v1/system/diagnostics/ui-error'
+    And request { error_message: 'Uncaught TypeError: test', source_url: '/inventory', stack_trace: 'Error at test:1:1' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/system/diagnostics/bundle'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000150'
+    And request { format: 'zip', include_ui_logs: true, include_backend_logs: true, include_siem_status: true }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/system/siem-config'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/system/siem-config'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000151'
+    And request { enabled: true, destination_type: 'SYSLOG_UDP', host: '127.0.0.1', port: 514 }
+    When method put
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/system/siem-config/test'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000152'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+

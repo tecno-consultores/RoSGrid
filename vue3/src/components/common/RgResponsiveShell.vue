@@ -10,6 +10,7 @@
   import { useApiHeartbeatStore } from '@/stores/useApiHeartbeatStore';
   import { useI18n } from '@/composables/useI18n';
   import { useContextualHelp } from '@/composables/useContextualHelp';
+  import { useDiagnosticsCollector } from '@/composables/useDiagnosticsCollector';
   import { http } from '@/api/httpClient';
   import RgCommandPalette from './RgCommandPalette.vue';
   import RgSafeModeBanner from './RgSafeModeBanner.vue';
@@ -29,6 +30,7 @@
   const heartbeatStore = useApiHeartbeatStore();
   const { t, locale, toggleLocale } = useI18n();
   const { isHelpOpen, toggleHelp } = useContextualHelp();
+  useDiagnosticsCollector();
 
   const isRouterContext = computed(() => route.path.includes('/routers/'));
   const currentRouterId = computed(() => String(route.params.routerId || ''));

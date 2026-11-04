@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     )
 
     ROSGRID_ENV: str = "production"
+    ENVIRONMENT: str = "production"
+    PROJECT_NAME: str = "RoSGrid"
+    VERSION: str = "1.0.0"
     ROSGRID_HTTP_PORT: int = 8080
 
     # PostgreSQL
@@ -90,6 +93,10 @@ class Settings(BaseSettings):
     ROSGRID_TELEMETRY_BEACON_ENABLED: bool = True
     ROSGRID_TELEMETRY_BEACON_URL: str = "https://rosgrid.net/api/telemetry/heartbeat"
     ROSGRID_TELEMETRY_BEACON_INTERVAL_SECONDS: int = 21600
+
+    # Diagnóstico Unificado y Conector SIEM Multi-Protocolo del ISP (Spec 72 / Hito 29)
+    ROSGRID_DIAGNOSTIC_LOG_RING_SIZE: int = 1000
+    ROSGRID_SIEM_FORWARDER_TIMEOUT_SECONDS: int = 5
 
     # Configuración de Orígenes Cruzados (CORS) y Despliegue Separado
     ROSGRID_CORS_ORIGINS: str = "*"

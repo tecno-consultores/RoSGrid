@@ -878,3 +878,12 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     When select("#cve-source-filter", "ALL")
     Then waitFor(".cve-table")
     And waitFor("[data-testid='btn-sync-cve']")
+
+
+
+  Scenario: 87. Telemetría de Errores UI y Soporte Unificado 1-Click con Ring Buffer (Hito 29.2)
+    Given driver baseUrl + '/inventory'
+    And waitFor(".rg-shell-main")
+    When script("window.dispatchEvent(new CustomEvent('rosgrid:api-health-event', { detail: { type: 'ERROR', message: 'Simulated Diagnostic UI Error' } }))")
+    Then waitFor(".rg-shell-main")
+
