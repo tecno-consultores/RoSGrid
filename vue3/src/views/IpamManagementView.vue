@@ -83,15 +83,111 @@
     router_id: '',
     customer_name: '',
     customer_code: '',
-    service_type: 'PPPOE',
+    service_type: 'DHCP',
     auth_backend: 'LOCAL_SECRET',
     pppoe_username: '',
+    assigned_ipv4: '',
     onu_mode: 'ROUTER',
     onu_mac_address: '',
     onu_serial_number: '',
     pon_port: 'gpon-olt1/1/1',
     optical_box: 'NAP-01',
   });
+
+  // Modal Emparejar Red de Abonado (DHCP / PPPoE / IPAM)
+  const pairModalOpen = ref(false);
+  const selectedSubForPair = ref<CustomerService | null>(null);
+  const isLoadingCandidates = ref(false);
+  const isSavingPair = ref(false);
+  const pairErrorMsg = ref('');
+  const pairSuccessMsg = ref('');
+  const liveCandidates = ref<import('@/types').SubscriberLiveCandidatesResponse | null>(null);
+  const selectedDhcpLeaseIp = ref('');
+  const selectedPppoeSessionName = ref('');
+  const pairForm = ref({
+    service_type: 'DHCP' as 'DHCP' | 'PPPOE' | 'STATIC',
+    onu_mode: 'ROUTER' as 'ROUTER' | 'BRIDGE',
+    pppoe_username: '',
+    onu_mac_address: '',
+    assigned_ipv4: '',
+  });
+
+  async function openPairSubscriberModal(sub: CustomerService) {
+    selectedSubForPair.value = sub;
+    pairErrorMsg.value = '';
+    pairSuccessMsg.value = '';
+    selectedDhcpLeaseIp.value = '';
+    selectedPppoeSessionName.value = '';
+    pairForm.value = {
+      service_type: (sub.service_type as 'DHCP' | 'PPPOE' | 'STATIC') || 'DHCP',
+      onu_mode: (sub.onu_mode === 'BRIDGE' ? 'BRIDGE' : 'ROUTER'),
+      pppoe_username: sub.pppoe_username || sub.endpoint_identifier || '',
+      onu_mac_address: sub.onu_mac_address || '',
+      assigned_ipv4: sub.assigned_ipv4 || '',
+    };
+    pairModalOpen.value = true;
+    isLoadingCandidates.value = true;
+    try {
+      liveCandidates.value = await ipamStore.fetchSubscriberLiveCandidates(sub.id);
+    } catch (err: unknown) {
+      pairErrorMsg.value = getErrorMessage(err, 'No se pudieron consultar sesiones en vivo del router.');
+    } finally {
+      isLoadingCandidates.value = false;
+    }
+  }
+
+  function handleSelectDhcpCandidate(address: string) {
+    selectedDhcpLeaseIp.value = address;
+    const found = liveCandidates.value?.dhcp_leases.find((l) => l.address === address);
+    if (found) {
+      pairForm.value.assigned_ipv4 = found.address;
+      if (found.mac_address) {
+        pairForm.value.onu_mac_address = found.mac_address;
+      }
+    }
+  }
+
+  function handleSelectPppoeCandidate(name: string) {
+    selectedPppoeSessionName.value = name;
+    const found = liveCandidates.value?.pppoe_sessions.find((p) => p.name === name);
+    if (found) {
+      pairForm.value.pppoe_username = found.name;
+      if (found.address) {
+        pairForm.value.assigned_ipv4 = found.address;
+      }
+      if (found.caller_id) {
+        pairForm.value.onu_mac_address = found.caller_id;
+      }
+    }
+  }
+
+  async function handleSavePairSubscriber() {
+    if (!selectedSubForPair.value) return;
+    isSavingPair.value = true;
+    pairErrorMsg.value = '';
+    pairSuccessMsg.value = '';
+    try {
+      await ipamStore.pairSubscriberNetwork(selectedSubForPair.value.id, {
+        service_type: pairForm.value.service_type,
+        onu_mode: pairForm.value.onu_mode,
+        endpoint_identifier:
+          pairForm.value.service_type === 'PPPOE' && pairForm.value.pppoe_username.trim()
+            ? pairForm.value.pppoe_username.trim()
+            : selectedSubForPair.value.endpoint_identifier || selectedSubForPair.value.customer_name,
+        onu_mac_address: pairForm.value.onu_mac_address.trim() || undefined,
+        assigned_ipv4: pairForm.value.assigned_ipv4.trim() || undefined,
+      });
+      pairSuccessMsg.value = 'Abonado emparejado exitosamente. Diagnóstico Ping listo.';
+      await ipamStore.fetchCustomerServices();
+      setTimeout(() => {
+        pairModalOpen.value = false;
+      }, 900);
+    } catch (err: unknown) {
+      pairErrorMsg.value = getErrorMessage(err, 'Error al emparejar red del abonado.');
+    } finally {
+      isSavingPair.value = false;
+    }
+  }
 
   onMounted(async () => {
     await ipamStore.fetchVrfs();
@@ -497,9 +593,9 @@
         <table class="rg-table">
           <thead>
             <tr>
-              <th scope="col">{{ t('ipam.th_customer') }}</th>
+              <th scope="col">{{ t('ipam.th_customer') }} / Serial ONU</th>
               <th scope="col">{{ t('ipam.th_type_proto') }}</th>
-              <th scope="col">{{ t('ipam.th_pppoe_user') }}</th>
+              <th scope="col">IPv4 / Sesión Emparejada</th>
               <th scope="col">{{ t('ipam.th_pon_box') }}</th>
               <th scope="col">{{ t('ipam.th_onu_mode') }}</th>
               <th scope="col">{{ t('ipam.th_reachability') }}</th>
@@ -514,11 +610,26 @@
               </td>
             </tr>
             <tr v-for="sub in ipamStore.customerServices" :key="sub.id" class="table-row">
-              <td class="font-bold">{{ sub.customer_name }}</td>
+              <td>
+                <div class="font-bold">{{ sub.customer_name || sub.endpoint_identifier }}</div>
+                <div v-if="sub.onu_serial_number || sub.device_serial" class="font-mono text-xs text-cyan">
+                  ONU: {{ sub.onu_serial_number || sub.device_serial }}
+                </div>
+              </td>
               <td>
                 <span class="badge-type">{{ sub.service_type }}</span>
               </td>
-              <td class="font-mono text-cyan">{{ sub.pppoe_username || '—' }}</td>
+              <td class="font-mono">
+                <div v-if="sub.assigned_ipv4" class="pair-badge pair-badge--ok">
+                  🌐 {{ sub.assigned_ipv4 }}
+                </div>
+                <div v-else class="pair-badge pair-badge--unpaired">
+                  ⚠️ Sin IP emparejada
+                </div>
+                <div v-if="sub.onu_mac_address" class="text-xs text-muted">
+                  MAC: {{ sub.onu_mac_address }}
+                </div>
+              </td>
               <td>{{ sub.pon_port || 'S/N' }} / {{ sub.optical_box || 'S/N' }}</td>
               <td>
                 <span
@@ -554,6 +665,15 @@
               </td>
               <td>
                 <div style="display: flex; gap: 4px; align-items: center;">
+                  <button
+                    :id="`btn-pair-subscriber-${sub.id}`"
+                    type="button"
+                    class="btn-rg btn-rg--cyan btn-sm"
+                    title="Emparejar ONU con Lease DHCP, Sesión PPPoE o IP IPAM"
+                    @click="openPairSubscriberModal(sub)"
+                  >
+                    🔗 Emparejar
+                  </button>
                   <button
                     type="button"
                     class="btn-row-geo"
@@ -737,6 +857,174 @@
 
     <CorporateIpv6ManagerModal v-if="corporateModalOpen" @close="corporateModalOpen = false" />
 
+    <!-- Modal Emparejar Red de Abonado (DHCP / PPPoE / IPAM) -->
+    <div
+      v-if="pairModalOpen"
+      id="modal-pair-subscriber"
+      class="rg-modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-pair-subscriber-title"
+    >
+      <div class="rg-modal">
+        <header class="modal-header">
+          <h3 id="modal-pair-subscriber-title">
+            🔗 Emparejar Red de Abonado FTTH ({{ selectedSubForPair?.customer_name || selectedSubForPair?.endpoint_identifier }})
+          </h3>
+          <button type="button" class="btn-close" @click="pairModalOpen = false">✕</button>
+        </header>
+
+        <form class="modal-body" @submit.prevent="handleSavePairSubscriber">
+          <p class="sub-target-info">
+            ONU Serial:
+            <strong class="font-mono text-cyan">
+              {{ selectedSubForPair?.onu_serial_number || selectedSubForPair?.device_serial || 'S/N' }}
+            </strong>
+            • Caja NAP:
+            <strong class="font-mono">{{ selectedSubForPair?.optical_box || 'S/N' }}</strong>
+            <span v-if="liveCandidates?.router_name">
+              • Router: <strong>{{ liveCandidates.router_name }}</strong>
+            </span>
+          </p>
+
+          <div v-if="pairSuccessMsg" class="banner banner--success mb-3">{{ pairSuccessMsg }}</div>
+          <div v-if="pairErrorMsg" class="banner banner--error mb-3">{{ pairErrorMsg }}</div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="pair-proto-select">Protocolo de Servicio del ISP *</label>
+              <select id="pair-proto-select" v-model="pairForm.service_type" class="rg-input">
+                <option value="DHCP">DHCP (Asignación por Lease DHCP / Option 82)</option>
+                <option value="PPPOE">PPPoE (Sesión / Secreto PPPoE en BRAS)</option>
+                <option value="STATIC">IP Estática (Asignación Manual / Pool IPAM)</option>
+              </select>
+            </div>
+            <div class="form-group w-30">
+              <label for="pair-onu-mode">Modo ONU</label>
+              <select id="pair-onu-mode" v-model="pairForm.onu_mode" class="rg-input">
+                <option value="ROUTER">ROUTER (NAT)</option>
+                <option value="BRIDGE">BRIDGE</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Selector en vivo para ISPs con DHCP -->
+          <div v-if="pairForm.service_type === 'DHCP'" class="form-group mb-3">
+            <label for="pair-dhcp-lease-select">
+              🔍 Leases DHCP Activos en el Router ({{ liveCandidates?.dhcp_leases.length || 0 }} detectados)
+            </label>
+            <select
+              id="pair-dhcp-lease-select"
+              :value="selectedDhcpLeaseIp"
+              class="rg-input font-mono"
+              @change="handleSelectDhcpCandidate(($event.target as HTMLSelectElement).value)"
+            >
+              <option value="">-- Seleccione un Lease DHCP activo o ingrese IP abajo --</option>
+              <option
+                v-for="lease in liveCandidates?.dhcp_leases || []"
+                :key="`${lease.address}-${lease.mac_address}`"
+                :value="lease.address"
+              >
+                {{ lease.address }} — MAC: {{ lease.mac_address || 'S/M' }} — {{ lease.host_name || lease.comment || lease.status || 'bound' }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Selector en vivo para ISPs con PPPoE -->
+          <div v-if="pairForm.service_type === 'PPPOE'" class="form-group mb-3">
+            <label for="pair-pppoe-session-select">
+              🔍 Sesiones / Secretos PPPoE en el Router ({{ liveCandidates?.pppoe_sessions.length || 0 }} detectados)
+            </label>
+            <select
+              id="pair-pppoe-session-select"
+              :value="selectedPppoeSessionName"
+              class="rg-input font-mono"
+              @change="handleSelectPppoeCandidate(($event.target as HTMLSelectElement).value)"
+            >
+              <option value="">-- Seleccione una Sesión/Secreto PPPoE o ingrese abajo --</option>
+              <option
+                v-for="ppp in liveCandidates?.pppoe_sessions || []"
+                :key="`${ppp.source}-${ppp.name}`"
+                :value="ppp.name"
+              >
+                [{{ ppp.source === 'active' ? 'ACTIVA' : 'SECRET' }}] {{ ppp.name }} — IP: {{ ppp.address || 'Dinámica' }} — Caller: {{ ppp.caller_id || '—' }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Selector de Pool IPAM para IP Estática -->
+          <div v-if="pairForm.service_type === 'STATIC'" class="form-group mb-3">
+            <label for="pair-ipam-address-select">
+              🔍 Direcciones IPv4 Registradas en Pool IPAM ({{ liveCandidates?.ipam_addresses.length || 0 }})
+            </label>
+            <select
+              id="pair-ipam-address-select"
+              v-model="pairForm.assigned_ipv4"
+              class="rg-input font-mono"
+            >
+              <option value="">-- Seleccione del Pool IPAM o escriba la IP abajo --</option>
+              <option
+                v-for="ipItem in liveCandidates?.ipam_addresses || []"
+                :key="ipItem.id"
+                :value="ipItem.address.split('/')[0]"
+              >
+                {{ ipItem.address }} ({{ ipItem.status }}) — {{ ipItem.description || 'IPAM' }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div v-if="pairForm.service_type === 'PPPOE'" class="form-group flex-1">
+              <label for="pair-pppoe-user">Usuario PPPoE</label>
+              <input
+                id="pair-pppoe-user"
+                v-model="pairForm.pppoe_username"
+                class="rg-input font-mono"
+                placeholder="Ej: cliente_ftth_01"
+              />
+            </div>
+            <div class="form-group flex-1">
+              <label for="pair-assigned-ipv4">Dirección IPv4 Emparejada (Para Ping y Diagnóstico) *</label>
+              <input
+                id="pair-assigned-ipv4"
+                v-model="pairForm.assigned_ipv4"
+                class="rg-input font-mono"
+                placeholder="Ej: 10.250.3.55"
+                required
+              />
+            </div>
+            <div class="form-group flex-1">
+              <label for="pair-onu-mac">MAC WAN / ONU</label>
+              <input
+                id="pair-onu-mac"
+                v-model="pairForm.onu_mac_address"
+                class="rg-input font-mono"
+                placeholder="AA:BB:CC:11:22:33"
+              />
+            </div>
+          </div>
+
+          <footer class="modal-footer">
+            <button
+              type="button"
+              class="btn-rg btn-rg--secondary"
+              @click="pairModalOpen = false"
+            >
+              Cancelar
+            </button>
+            <button
+              id="btn-save-pair-subscriber"
+              type="submit"
+              class="btn-rg btn-rg--cyan"
+              :disabled="isSavingPair"
+            >
+              {{ isSavingPair ? '⏳ Emparejando...' : '🔗 Guardar Emparejamiento' }}
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
     <!-- Modal Registrar Abonado -->
     <div v-if="newSubscriberModalOpen" class="rg-modal-backdrop" role="dialog" aria-modal="true">
       <div class="rg-modal">
@@ -745,8 +1033,7 @@
           <button type="button" class="btn-close" @click="newSubscriberModalOpen = false">✕</button>
         </header>
         <form class="modal-body" @submit.prevent="handleCreateSubscriber">
-          <div class="form-group">
-
+          <div class="form-group mb-3">
             <label for="sub-r">Router de Acceso / BRAS</label>
             <select id="sub-r" v-model="newSubscriber.router_id" class="rg-input" required>
               <option v-for="r in inventoryStore.routers" :key="r.id" :value="r.id">
@@ -756,27 +1043,42 @@
           </div>
           <div class="form-row">
             <div class="form-group flex-1">
-              <label for="sub-name">Nombre del Cliente</label>
+              <label for="sub-name">Identificador / Nombre del Cliente *</label>
               <input
                 id="sub-name"
                 v-model="newSubscriber.customer_name"
                 class="rg-input"
+                placeholder="Ej: CLI-008492"
                 required
               />
             </div>
             <div class="form-group w-30">
-              <label for="sub-type">Protocolo</label>
+              <label for="sub-type">Protocolo WAN</label>
               <select id="sub-type" v-model="newSubscriber.service_type" class="rg-input">
-                <option value="PPPOE">PPPoE</option>
                 <option value="DHCP">DHCP</option>
-                <option value="STATIC">Estático</option>
+                <option value="PPPOE">PPPoE</option>
+                <option value="STATIC">Estático (IPAM)</option>
               </select>
             </div>
           </div>
           <div class="form-row">
-            <div class="form-group flex-1">
+            <div v-if="newSubscriber.service_type === 'PPPOE'" class="form-group flex-1">
               <label for="sub-user">Usuario PPPoE</label>
-              <input id="sub-user" v-model="newSubscriber.pppoe_username" class="rg-input" />
+              <input
+                id="sub-user"
+                v-model="newSubscriber.pppoe_username"
+                class="rg-input font-mono"
+                placeholder="Ej: user_pppoe_01"
+              />
+            </div>
+            <div class="form-group flex-1">
+              <label for="sub-ipv4">IPv4 Asignada (DHCP Lease / IP Estática / PPPoE)</label>
+              <input
+                id="sub-ipv4"
+                v-model="newSubscriber.assigned_ipv4"
+                class="rg-input font-mono"
+                placeholder="Ej: 10.250.3.55"
+              />
             </div>
             <div class="form-group w-30">
               <label for="sub-mode">Modo ONU</label>
@@ -784,6 +1086,26 @@
                 <option value="ROUTER">ROUTER (NAT)</option>
                 <option value="BRIDGE">BRIDGE</option>
               </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="sub-serial">Serial GPON de la ONU</label>
+              <input
+                id="sub-serial"
+                v-model="newSubscriber.onu_serial_number"
+                class="rg-input font-mono"
+                placeholder="Ej: HWTC1234ABCD"
+              />
+            </div>
+            <div class="form-group flex-1">
+              <label for="sub-mac">MAC WAN / ONU</label>
+              <input
+                id="sub-mac"
+                v-model="newSubscriber.onu_mac_address"
+                class="rg-input font-mono"
+                placeholder="AA:BB:CC:11:22:33"
+              />
             </div>
           </div>
           <div class="form-row">
@@ -1360,9 +1682,106 @@
     background: rgba(56, 189, 248, 0.15);
     color: #fff;
   }
+  .pair-badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 0.74rem;
+    font-weight: 700;
+  }
+  .pair-badge--ok {
+    background: rgba(0, 255, 136, 0.14);
+    border: 1px solid rgba(0, 255, 136, 0.35);
+    color: #00ff88;
+  }
+  .pair-badge--unpaired {
+    background: rgba(255, 170, 0, 0.14);
+    border: 1px dashed rgba(255, 170, 0, 0.45);
+    color: #ffaa00;
+  }
+  .rg-modal-backdrop,
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    background: rgba(4, 8, 18, 0.82);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .rg-modal,
+  .modal-card {
+    background: #0d1527;
+    border: 1px solid rgba(0, 243, 255, 0.28);
+    border-radius: 10px;
+    width: 100%;
+    max-width: 640px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65);
+    color: #f1f5f9;
+  }
   .rg-modal--sm {
     max-width: 480px;
     width: 95%;
+  }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .modal-header h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    color: #00f3ff;
+  }
+  .btn-close {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #94a3b8;
+    border-radius: 6px;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+  }
+  .modal-body {
+    padding: 1.25rem;
+  }
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.65rem;
+    padding: 0.9rem 1.25rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  .form-group label {
+    font-size: 0.78rem;
+    color: #94a3b8;
+    font-weight: 600;
+  }
+  .rg-input,
+  .rg-select {
+    background: #060b16;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 6px;
+    color: #f8fafc;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.85rem;
+    width: 100%;
+  }
+  .rg-input:focus,
+  .rg-select:focus {
+    outline: none;
+    border-color: #00f3ff;
   }
   .sub-target-info {
     font-size: 0.85rem;

@@ -93,6 +93,7 @@ export const useFieldOpsStore = defineStore('fieldOps', () => {
     router_id: string;
     endpoint_identifier: string;
     service_type: string;
+    assigned_ipv4?: string;
     device_serial?: string;
     onu_mac_address?: string;
     onu_mode?: string;

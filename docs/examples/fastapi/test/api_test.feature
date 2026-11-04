@@ -1189,3 +1189,22 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
 
 
 
+
+  Scenario: 148. Emparejamiento de Red FTTH (DHCP, PPPoE e IPAM), Candidatos en Vivo y Ping 1-Click (Hito 28.15)
+    Given path '/api/v1/subscriber-devices/00000000-0000-0000-0000-000000000001/live-candidates'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/subscriber-devices/00000000-0000-0000-0000-000000000001'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000148'
+    And request { service_type: 'DHCP', assigned_ipv4: '10.250.3.55', onu_mac_address: 'AA:BB:CC:11:22:33' }
+    When method patch
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/subscriber-devices/00000000-0000-0000-0000-000000000001/ping'
+    And param force = true
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }

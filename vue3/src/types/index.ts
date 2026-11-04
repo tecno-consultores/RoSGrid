@@ -546,19 +546,49 @@ export interface IPAMAddress {
   updated_at: string;
 }
 
+export interface SubscriberLiveCandidateDhcpLease {
+  address: string;
+  mac_address?: string | null;
+  host_name?: string | null;
+  server?: string | null;
+  status?: string | null;
+  comment?: string | null;
+}
+
+export interface SubscriberLiveCandidatePppoe {
+  name: string;
+  address?: string | null;
+  caller_id?: string | null;
+  service?: string | null;
+  uptime?: string | null;
+  source: 'active' | 'secret' | string;
+}
+
+export interface SubscriberLiveCandidatesResponse {
+  device_id: string;
+  router_id: string;
+  router_name: string;
+  dhcp_leases: SubscriberLiveCandidateDhcpLease[];
+  pppoe_sessions: SubscriberLiveCandidatePppoe[];
+  ipam_addresses: IPAMAddress[];
+}
+
 export interface CustomerService {
   id: string;
   tenant_id: string;
   router_id: string;
   customer_name: string;
   customer_code?: string;
+  endpoint_identifier?: string;
   service_type: CustomerServiceType;
   auth_backend: AuthBackend;
   pppoe_username?: string;
   ipv4_address_id?: string;
+  assigned_ipv4?: string | null;
   ipv6_delegated_prefix?: string;
   onu_mode: ONUMode;
   onu_mac_address?: string;
+  device_serial?: string;
   onu_serial_number?: string;
   cpe_wifi_mac_address?: string;
   pon_port?: string;

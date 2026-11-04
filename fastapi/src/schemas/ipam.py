@@ -223,6 +223,7 @@ class SubscriberDeviceCreate(BaseModel):
     auth_backend: AuthBackendEnum = AuthBackendEnum.LOCAL_SECRET
     pppoe_password: Optional[str] = Field(None, min_length=4, max_length=64)
     ipv4_address_id: Optional[uuid.UUID] = None
+    assigned_ipv4: Optional[str] = Field(None, max_length=45)
     ipv6_delegated_prefix: Optional[str] = None
     bandwidth_profile_id: Optional[uuid.UUID] = None
     onu_mode: ONUModeEnum = ONUModeEnum.ROUTER
@@ -262,6 +263,7 @@ class SubscriberDeviceUpdate(BaseModel):
     auth_backend: Optional[AuthBackendEnum] = None
     pppoe_password: Optional[str] = None
     ipv4_address_id: Optional[uuid.UUID] = None
+    assigned_ipv4: Optional[str] = Field(None, max_length=45)
     ipv6_delegated_prefix: Optional[str] = None
     bandwidth_profile_id: Optional[uuid.UUID] = None
     onu_mode: Optional[ONUModeEnum] = None
@@ -297,6 +299,33 @@ class SubscriberDeviceUpdate(BaseModel):
         return _normalize_onu_mode_input(v)
 
 
+class SubscriberLiveCandidateDhcpLease(BaseModel):
+    address: str
+    mac_address: Optional[str] = None
+    host_name: Optional[str] = None
+    server: Optional[str] = None
+    status: Optional[str] = None
+    comment: Optional[str] = None
+
+
+class SubscriberLiveCandidatePppoe(BaseModel):
+    name: str
+    address: Optional[str] = None
+    caller_id: Optional[str] = None
+    service: Optional[str] = None
+    uptime: Optional[str] = None
+    source: str = "active"
+
+
+class SubscriberLiveCandidatesResponse(BaseModel):
+    device_id: uuid.UUID
+    router_id: uuid.UUID
+    router_name: str
+    dhcp_leases: list[SubscriberLiveCandidateDhcpLease] = Field(default_factory=list)
+    pppoe_sessions: list[SubscriberLiveCandidatePppoe] = Field(default_factory=list)
+    ipam_addresses: list[IPAMAddressResponse] = Field(default_factory=list)
+
+
 class SubscriberDeviceResponse(BaseModel):
     id: uuid.UUID
     tenant_id: uuid.UUID
@@ -306,6 +335,7 @@ class SubscriberDeviceResponse(BaseModel):
     endpoint_identifier: Optional[str] = None
     pppoe_username: Optional[str] = None
     ipv4_address_id: Optional[uuid.UUID] = None
+    assigned_ipv4: Optional[str] = None
     ipv6_delegated_prefix: Optional[str] = None
     bandwidth_profile_id: Optional[uuid.UUID] = None
     onu_mode: ONUModeEnum

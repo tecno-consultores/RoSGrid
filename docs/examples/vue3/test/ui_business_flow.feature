@@ -848,3 +848,17 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
 
 
 
+
+  Scenario: 85. Emparejamiento de Red FTTH (DHCP / PPPoE / IPAM), Modal Táctico y Diagnóstico Ping 1-Click (Hito 28.15)
+    Given driver baseUrl + '/ipam'
+    And waitFor(".ipam-management-view")
+    When click(".tab-btn:nth-child(2)")
+    Then waitFor(".subscribers-section")
+    And waitFor(".rg-table")
+    When click(".btn-rg--cyan.btn-sm")
+    Then waitFor("#modal-pair-subscriber")
+    And waitFor("#pair-proto-select")
+    When select("#pair-proto-select", "DHCP")
+    And input("#pair-assigned-ipv4", "10.250.3.55")
+    And click("#btn-save-pair-subscriber")
+    Then waitUntil("!document.querySelector('#modal-pair-subscriber')")

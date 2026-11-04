@@ -46,12 +46,14 @@
   // Formulario 2: Registrar Nuevo Cliente FTTH
   const customerForm = ref({
     endpoint_identifier: '',
+    service_type: 'DHCP' as 'DHCP' | 'PPPOE' | 'STATIC_IP',
+    assigned_ipv4: '',
     optical_box_id: '',
     optical_box_port: 1,
     device_serial: '',
     onu_mac_address: '',
     model: 'HG8310M Bridge',
-    onu_mode: 'BRIDGE',
+    onu_mode: 'ROUTER',
     rx_optical_power_dbm: -19.2,
     drop_cable_meters: 65,
     latitude: 10.4806,
@@ -266,7 +268,8 @@
       const dev = await fieldStore.registerSubscriberDevice({
         router_id: routerId,
         endpoint_identifier: customerForm.value.endpoint_identifier.trim(),
-        service_type: customerForm.value.onu_mode === 'BRIDGE' ? 'PPPOE' : 'DHCP',
+        service_type: customerForm.value.service_type,
+        assigned_ipv4: customerForm.value.assigned_ipv4.trim() || undefined,
         device_serial: customerForm.value.device_serial.trim().toUpperCase(),
         onu_mac_address: customerForm.value.onu_mac_address.trim() || undefined,
         onu_mode: customerForm.value.onu_mode === 'BRIDGE' ? 'BRIDGE' : 'ROUTER',
@@ -821,6 +824,25 @@
 
                 <div class="form-row">
                   <div class="form-group flex-1">
+                    <label for="cust-service-proto">Protocolo de Acceso WAN *</label>
+                    <select id="cust-service-proto" v-model="customerForm.service_type" class="rg-input">
+                      <option value="DHCP">DHCP (Asignación Dinámica / Option 82)</option>
+                      <option value="PPPOE">PPPoE (Túnel BRAS Autenticado)</option>
+                      <option value="STATIC_IP">IP Estática (Pool IPAM)</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group flex-1">
+                    <label for="cust-onu-mode">{{ t('field_tech.onu_mode') }}</label>
+                    <select id="cust-onu-mode" v-model="customerForm.onu_mode" class="rg-input">
+                      <option value="ROUTER">{{ t('field_tech.onu_mode_router') }}</option>
+                      <option value="BRIDGE">{{ t('field_tech.onu_mode_bridge') }}</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group flex-1">
                     <label for="cust-onu-model">{{ t('field_tech.onu_model') }}</label>
                     <select id="cust-onu-model" v-model="customerForm.model" class="rg-input">
                       <option value="HG8310M Bridge">Huawei HG8310M (Bridge 1GE)</option>
@@ -831,11 +853,27 @@
                   </div>
 
                   <div class="form-group flex-1">
-                    <label for="cust-onu-mode">{{ t('field_tech.onu_mode') }}</label>
-                    <select id="cust-onu-mode" v-model="customerForm.onu_mode" class="rg-input">
-                      <option value="BRIDGE">{{ t('field_tech.onu_mode_bridge') }}</option>
-                      <option value="ROUTER">{{ t('field_tech.onu_mode_router') }}</option>
-                    </select>
+                    <label for="cust-onu-mac">MAC WAN / ONU (Opcional — o emparejar en IPAM)</label>
+                    <input
+                      id="cust-onu-mac"
+                      v-model="customerForm.onu_mac_address"
+                      type="text"
+                      class="rg-input font-mono"
+                      placeholder="Ej: AA:BB:CC:11:22:33"
+                    />
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group flex-1">
+                    <label for="cust-assigned-ipv4">IPv4 Asignada (Opcional — si ya conoce la IP o Lease)</label>
+                    <input
+                      id="cust-assigned-ipv4"
+                      v-model="customerForm.assigned_ipv4"
+                      type="text"
+                      class="rg-input font-mono"
+                      placeholder="Ej: 10.250.3.55 (Dejar vacío para emparejar luego en IPAM)"
+                    />
                   </div>
                 </div>
 

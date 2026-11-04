@@ -155,6 +155,40 @@ export const useIpamStore = defineStore('ipam', () => {
     return res.data;
   }
 
+  async function fetchSubscriberLiveCandidates(
+    deviceId: string,
+  ): Promise<import('@/types').SubscriberLiveCandidatesResponse> {
+    const { http } = await import('@/api/httpClient');
+    const res = await http.get<import('@/types').SubscriberLiveCandidatesResponse>(
+      `/api/v1/subscriber-devices/${deviceId}/live-candidates`,
+    );
+    return res.data;
+  }
+
+  async function pairSubscriberNetwork(
+    deviceId: string,
+    payload: {
+      service_type: string;
+      endpoint_identifier?: string;
+      pppoe_username?: string;
+      onu_mac_address?: string;
+      onu_mode?: string;
+      assigned_ipv4?: string;
+      ipv4_address_id?: string | null;
+    },
+  ): Promise<CustomerService> {
+    const { http } = await import('@/api/httpClient');
+    const res = await http.patch<CustomerService>(
+      `/api/v1/subscriber-devices/${deviceId}`,
+      payload,
+    );
+    customerServices.value = customerServices.value.map((s) =>
+      s.id === deviceId ? { ...s, ...res.data } : s,
+    );
+    triggerRef(customerServices);
+    return res.data;
+  }
+
   // Sync from MikroTik
   async function syncMikrotikIpam(
     routerId: string,
@@ -209,6 +243,8 @@ export const useIpamStore = defineStore('ipam', () => {
     fetchAddresses,
     fetchCustomerServices,
     createCustomerService,
+    fetchSubscriberLiveCandidates,
+    pairSubscriberNetwork,
     syncMikrotikIpam,
     syncAllMikrotikIpam,
   };
