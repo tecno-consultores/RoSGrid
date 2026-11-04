@@ -676,11 +676,33 @@ describe('EnterpriseComplianceView.vue — Hito 20 Suite Corporativa', () => {
     expect(wrapper.find('#tab-btn-cis').exists()).toBe(false);
     expect(wrapper.find('#tab-btn-audit').exists()).toBe(false);
     expect(wrapper.find('#tab-btn-notifications').exists()).toBe(false);
+    expect(wrapper.find('#tab-btn-diagnostics').exists()).toBe(false);
     expect(wrapper.find('#tab-btn-cves').exists()).toBe(true);
     expect(wrapper.find('#tab-btn-sdwan').exists()).toBe(true);
     expect(wrapper.find('#tab-btn-switching').exists()).toBe(true);
     expect(wrapper.find('#tab-btn-sla').exists()).toBe(true);
     expect(wrapper.find('#tab-btn-wifi').exists()).toBe(true);
     expect(wrapper.find('.alert-error').exists()).toBe(false);
+  });
+
+  it('muestra la pestaña Diagnóstico & SIEM para roles administrativos y renderiza DiagnosticsAndSiemPanel (Hito 29.3)', async () => {
+    const wrapper = mount(EnterpriseComplianceView, {
+      global: {
+        stubs: {
+          DiagnosticsAndSiemPanel: { template: '<div id="diagnostics-panel-stub">Panel Diagnóstico Stub</div>' },
+          FleetCveMatrix: true,
+          ImmutableAuditLogsView: true,
+        },
+      },
+    });
+
+    const diagTabBtn = wrapper.find('#tab-btn-diagnostics');
+    expect(diagTabBtn.exists()).toBe(true);
+
+    await diagTabBtn.trigger('click');
+    await vi.waitFor(() => {
+      expect(wrapper.find('#panel-diagnostics').exists()).toBe(true);
+    });
+    expect(wrapper.find('#diagnostics-panel-stub').exists()).toBe(true);
   });
 });

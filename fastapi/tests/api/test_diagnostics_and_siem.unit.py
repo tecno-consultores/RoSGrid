@@ -10,9 +10,9 @@ import base64
 import io
 import json
 import tarfile
-from unittest.mock import AsyncMock, patch
 import uuid
 import zipfile
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import AsyncClient
@@ -26,8 +26,8 @@ from src.schemas.diagnostics_siem import (
     UiErrorTelemetryItem,
 )
 from src.services.diagnostics_and_siem import (
-    _InMemoryDiagnosticLogHandler,
     _dispatch_siem_protocol,
+    _InMemoryDiagnosticLogHandler,
     append_diagnostic_log_line,
     build_support_bundle_archive,
     ensure_diagnostic_log_handler,

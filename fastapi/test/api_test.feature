@@ -1261,3 +1261,18 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+
+
+  Scenario: 151. Conector SIEM Multi-Protocolo del ISP y Paquete de Soporte Sanitizado (Hito 29.3)
+    Given path '/api/v1/system/siem-config'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/system/diagnostics/bundle'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000153'
+    And request { format: 'zip', log_lines_limit: 500, operator_notes: 'Prueba BDD Hito 29.3', include_frontend_buffer: [] }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+

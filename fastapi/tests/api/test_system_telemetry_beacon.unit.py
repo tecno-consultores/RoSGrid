@@ -4,7 +4,7 @@
 """Pruebas de endpoints de diagnóstico y telemetría anónima de instancias activas (Spec 55 / Hito 27.18)."""
 
 import uuid
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 from httpx import AsyncClient

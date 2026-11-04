@@ -5,7 +5,7 @@
 
 import uuid
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import HTTPException
@@ -20,13 +20,7 @@ from src.api.v1.users import (
 from src.db.session import get_db_session
 from src.main import app
 from src.models.core import SystemRoleEnum, User, UserRouterPermission
-from src.rbac.policy_matrix import (
-    ALLOW,
-    DENY,
-    MAKER_CHECKER,
-    POLICY_MATRIX,
-    READ_ONLY,
-)
+from src.rbac.policy_matrix import POLICY_MATRIX
 from tests.conftest import FakeAsyncRedis
 
 

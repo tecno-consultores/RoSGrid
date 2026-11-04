@@ -32,6 +32,7 @@
     TenantFeatureFlags,
   } from '@/types';
 
+  import DiagnosticsAndSiemPanel from '@/components/operations/DiagnosticsAndSiemPanel.vue';
   import NotificationChannelsPanel from '@/components/operations/NotificationChannelsPanel.vue';
   import CapsmanProvisioningModal from '@/components/wifi/CapsmanProvisioningModal.vue';
   import CapsmanQuickSetupModal from '@/components/wifi/CapsmanQuickSetupModal.vue';
@@ -58,7 +59,8 @@
     | 'switching'
     | 'sla'
     | 'wifi'
-    | 'notifications';
+    | 'notifications'
+    | 'diagnostics';
 
   interface TabDef {
     id: TabType;
@@ -100,6 +102,10 @@
       id: 'notifications',
       flag: 'outbound_webhooks_enabled',
       allowedRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'SUPERVISOR'],
+    },
+    {
+      id: 'diagnostics',
+      allowedRoles: ['SUPERADMIN_GLOBAL', 'SUPER_ADMIN', 'TENANT_ADMIN'],
     },
   ];
 
@@ -728,8 +734,10 @@
     if (
       activeTab.value === 'notifications' ||
       activeTab.value === 'cves' ||
-      activeTab.value === 'audit'
+      activeTab.value === 'audit' ||
+      activeTab.value === 'diagnostics'
     ) {
+      isLoading.value = false;
       return;
     }
     if (!selectedRouterId.value) return;
@@ -1217,6 +1225,21 @@
       >
         <span class="tab-icon">🔔</span>
         <span>{{ t('enterprise.tab_notifications', 'Canales de Alerta & Notificación') }}</span>
+      </button>
+
+      <button
+        v-if="isTabAllowed('diagnostics')"
+        id="tab-btn-diagnostics"
+        type="button"
+        class="tab-btn"
+        :class="{ active: activeTab === 'diagnostics' }"
+        :aria-selected="activeTab === 'diagnostics'"
+        role="tab"
+        aria-controls="panel-diagnostics"
+        @click="activeTab = 'diagnostics'"
+      >
+        <span class="tab-icon">🩺</span>
+        <span>{{ t('enterprise.tab_diagnostics', 'Diagnóstico & SIEM') }}</span>
       </button>
     </nav>
 
@@ -2630,6 +2653,19 @@
         class="tab-pane"
       >
         <NotificationChannelsPanel />
+      </section>
+
+      <!-- ================================================================= -->
+      <!-- TAB 8: Paquete de Diagnóstico 1-Click y Conector SIEM del ISP     -->
+      <!-- ================================================================= -->
+      <section
+        v-else-if="activeTab === 'diagnostics'"
+        id="panel-diagnostics"
+        role="tabpanel"
+        aria-labelledby="tab-btn-diagnostics"
+        class="tab-pane"
+      >
+        <DiagnosticsAndSiemPanel />
       </section>
     </div>
 

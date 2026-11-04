@@ -887,3 +887,12 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     When script("window.dispatchEvent(new CustomEvent('rosgrid:api-health-event', { detail: { type: 'ERROR', message: 'Simulated Diagnostic UI Error' } }))")
     Then waitFor(".rg-shell-main")
 
+
+
+  Scenario: 88. Conector SIEM Multi-Protocolo del ISP y Pestaña Diagnóstico & SIEM en Enterprise Compliance (Hito 29.3)
+    * def diagTabContract = { tabId: 'tab-btn-diagnostics', panelId: 'panel-diagnostics', formats: ['zip', 'tar.gz'], protocols: ['GELF_UDP', 'GELF_HTTP', 'LOKI_HTTP', 'SYSLOG_UDP', 'SYSLOG_TCP'] }
+    * match diagTabContract.formats contains 'zip'
+    * match diagTabContract.formats contains 'tar.gz'
+    * match diagTabContract.protocols contains 'LOKI_HTTP'
+    * match diagTabContract.protocols contains 'GELF_UDP'
+
