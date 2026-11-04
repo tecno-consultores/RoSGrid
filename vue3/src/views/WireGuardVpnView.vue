@@ -2,7 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { ref, computed, onMounted } from 'vue';
+  import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
   import { useRoute } from 'vue-router';
   import { http } from '@/api/httpClient';
   import { useWebFigStore } from '@/stores/useWebFigStore';
@@ -116,13 +116,14 @@
     { key: 'actions', label: 'Acciones', align: 'center' },
   ];
 
-  async function loadData() {
+  async function loadData(forceRefresh = false) {
     isLoading.value = true;
     errorMessage.value = '';
     try {
+      const query = forceRefresh ? '?refresh=true' : '';
       if (activeTab.value === 'interfaces') {
         const res = await http.get<any>(
-          `/api/v1/routers/${routerId.value}/webfig/interfaces/wireguard`,
+          `/api/v1/routers/${routerId.value}/webfig/interfaces/wireguard${query}`,
         );
         const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
         ifacesList.value = items.map((i: any) => ({
@@ -135,7 +136,7 @@
         }));
       } else {
         const res = await http.get<any>(
-          `/api/v1/routers/${routerId.value}/webfig/interfaces/wireguard/peers`,
+          `/api/v1/routers/${routerId.value}/webfig/interfaces/wireguard/peers${query}`,
         );
         const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
         peersList.value = items.map((p: any) => ({
@@ -178,7 +179,7 @@
         mtu: 1420,
         comment: '',
       };
-      loadData();
+      loadData(true);
     } catch (err: unknown) {
       webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string };
@@ -210,7 +211,7 @@
         persistent_keepalive: 25,
         comment: '',
       };
-      loadData();
+      loadData(true);
     } catch (err: unknown) {
       webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string };
@@ -246,7 +247,7 @@
         ? (res.data as any)?.detail || 'Modificación de interfaz WireGuard en espera de aprobación en Maker-Checker.'
         : `Interfaz WireGuard "${editIfaceForm.value.name}" actualizada exitosamente bajo Safe Mode.`;
       isEditIfaceModalOpen.value = false;
-      loadData();
+      loadData(true);
     } catch (err: unknown) {
       webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string };
@@ -270,7 +271,7 @@
       statusMessage.value = intercepted
         ? (res.data as any)?.detail || 'Eliminación de interfaz WireGuard en espera de aprobación en Maker-Checker.'
         : `Interfaz de túnel WireGuard "${iface.name}" eliminada exitosamente.`;
-      loadData();
+      loadData(true);
     } catch (err: unknown) {
       webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string };
@@ -309,7 +310,7 @@
         ? (res.data as any)?.detail || 'Modificación de Peer WireGuard en espera de aprobación en Maker-Checker.'
         : `Peer WireGuard actualizado exitosamente bajo Safe Mode.`;
       isEditPeerModalOpen.value = false;
-      loadData();
+      loadData(true);
     } catch (err: unknown) {
       webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string };
@@ -333,7 +334,7 @@
       statusMessage.value = intercepted
         ? (res.data as any)?.detail || 'Eliminación de Peer WireGuard en espera de aprobación en Maker-Checker.'
         : `Peer WireGuard eliminado exitosamente.`;
-      loadData();
+      loadData(true);
     } catch (err: unknown) {
       webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string };
@@ -348,8 +349,18 @@
     loadData();
   }
 
+  const handleWebFigRefresh = (ev: Event) => {
+    const detail = (ev as CustomEvent)?.detail;
+    loadData(Boolean(detail?.forceRefresh ?? true));
+  };
+
   onMounted(() => {
     loadData();
+    window.addEventListener('rosgrid:webfig-refresh', handleWebFigRefresh);
+  });
+
+  onBeforeUnmount(() => {
+    window.removeEventListener('rosgrid:webfig-refresh', handleWebFigRefresh);
   });
 </script>
 
@@ -382,13 +393,14 @@
           + Agregar Peer WireGuard
         </button>
         <button
+          id="btn-webfig-refresh"
           type="button"
-          class="btn-refresh"
+          class="btn-refresh font-tabular"
           :disabled="isLoading"
-          aria-label="Refrescar datos WireGuard"
-          @click="loadData"
+          aria-label="Refrescar datos directamente desde el router MikroTik"
+          @click="loadData(true)"
         >
-          🔄 Refrescar
+          {{ isLoading ? '🔄 Refrescando...' : '🔄 Refrescar' }}
         </button>
       </div>
     </header>

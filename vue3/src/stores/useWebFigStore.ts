@@ -25,6 +25,13 @@ export const useWebFigStore = defineStore('webfig', () => {
   // Estado Safe Mode (Dead Man's Switch a 60s) & Gobernanza Maker-Checker (En Espera)
   const isSafeModeActive = ref<boolean>(false);
   const safeModeCountdownSeconds = ref<number>(60);
+  const safeModeJobName = ref<string | null>(null);
+  const safeModeSummary = ref<string>('');
+  const safeModeRollbackCli = ref<string>('');
+  const safeModeLiveVerified = ref<boolean>(false);
+  const safeModeVerifyLatencyMs = ref<number | null>(null);
+  const isSafeModeBusy = ref<boolean>(false);
+  const safeModeRevertedNotice = ref<string>('');
   const isMakerCheckerPending = ref<boolean>(false);
   const makerCheckerMessage = ref<string>('');
   const makerCheckerApprovalId = ref<string | null>(null);
@@ -74,10 +81,27 @@ export const useWebFigStore = defineStore('webfig', () => {
     }
   }
 
-  function startSafeModeCountdown(initialSeconds = 60): void {
+  function emitWebFigForceRefresh(): void {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('rosgrid:webfig-refresh', { detail: { forceRefresh: true } }),
+      );
+    }
+  }
+
+  function startSafeModeCountdown(
+    initialSeconds = 60,
+    meta?: { job_name?: string; summary?: string; rollback_cli?: string },
+  ): void {
     isMakerCheckerPending.value = false;
     makerCheckerMessage.value = '';
     makerCheckerApprovalId.value = null;
+    safeModeRevertedNotice.value = '';
+    safeModeLiveVerified.value = false;
+    safeModeVerifyLatencyMs.value = null;
+    safeModeJobName.value = meta?.job_name || null;
+    safeModeSummary.value = meta?.summary || '';
+    safeModeRollbackCli.value = meta?.rollback_cli || '';
     isSafeModeActive.value = true;
     safeModeCountdownSeconds.value = initialSeconds;
 
@@ -86,10 +110,11 @@ export const useWebFigStore = defineStore('webfig', () => {
     }
 
     safeModeTimer = setInterval(() => {
-      if (safeModeCountdownSeconds.value > 0) {
+      if (safeModeCountdownSeconds.value > 1) {
         safeModeCountdownSeconds.value -= 1;
       } else {
-        stopSafeMode();
+        safeModeCountdownSeconds.value = 0;
+        void rollbackSafeModeChanges(true);
       }
     }, 1000);
   }
@@ -97,10 +122,87 @@ export const useWebFigStore = defineStore('webfig', () => {
   function stopSafeMode(): void {
     isSafeModeActive.value = false;
     safeModeCountdownSeconds.value = 60;
+    safeModeJobName.value = null;
+    safeModeSummary.value = '';
+    safeModeRollbackCli.value = '';
+    safeModeLiveVerified.value = false;
+    safeModeVerifyLatencyMs.value = null;
     if (safeModeTimer) {
       clearInterval(safeModeTimer);
       safeModeTimer = null;
     }
+  }
+
+  async function confirmSafeModeChanges(): Promise<void> {
+    const rid = currentRouter.value?.id;
+    isSafeModeBusy.value = true;
+    try {
+      if (rid) {
+        const { http } = await import('@/api/httpClient');
+        await http.post(`/api/v1/routers/${rid}/webfig/system/safemode/confirm`);
+      }
+    } catch {
+      // Cierre resiliente local
+    } finally {
+      isSafeModeBusy.value = false;
+      stopSafeMode();
+      emitWebFigForceRefresh();
+    }
+  }
+
+  async function rollbackSafeModeChanges(expiredAutomatically = false): Promise<void> {
+    const rid = currentRouter.value?.id;
+    const prevSummary = safeModeSummary.value;
+    if (safeModeTimer) {
+      clearInterval(safeModeTimer);
+      safeModeTimer = null;
+    }
+    isSafeModeBusy.value = true;
+    try {
+      if (rid) {
+        const { http } = await import('@/api/httpClient');
+        await http.post(`/api/v1/routers/${rid}/webfig/system/safemode/rollback`);
+      }
+    } catch {
+      // El scheduler en RouterOS ejecuta el rollback de forma autónoma
+    } finally {
+      isSafeModeBusy.value = false;
+      stopSafeMode();
+      safeModeRevertedNotice.value = expiredAutomatically
+        ? `⏱️ Tiempo de Safe Mode (60s) agotado sin confirmación: Se revirtió automáticamente en el router${prevSummary ? ` (${prevSummary})` : ''}.`
+        : `↩️ Cambio revertido manualmente en el router MikroTik${prevSummary ? ` (${prevSummary})` : ''}.`;
+      emitWebFigForceRefresh();
+    }
+  }
+
+  async function verifySafeModeOnRouter(): Promise<void> {
+    const rid = currentRouter.value?.id;
+    if (!rid) return;
+    isSafeModeBusy.value = true;
+    try {
+      const { http } = await import('@/api/httpClient');
+      const res = await http.post<{
+        verified?: boolean;
+        latency_ms?: number;
+        job_name?: string;
+        summary?: string;
+        rollback_cli?: string;
+      }>(`/api/v1/routers/${rid}/webfig/system/safemode/verify`);
+      safeModeLiveVerified.value = Boolean(res.data?.verified ?? true);
+      safeModeVerifyLatencyMs.value = res.data?.latency_ms ?? null;
+      if (res.data?.job_name) safeModeJobName.value = res.data.job_name;
+      if (res.data?.summary) safeModeSummary.value = res.data.summary;
+      if (res.data?.rollback_cli) safeModeRollbackCli.value = res.data.rollback_cli;
+      emitWebFigForceRefresh();
+    } catch {
+      safeModeLiveVerified.value = false;
+    } finally {
+      isSafeModeBusy.value = false;
+    }
+  }
+
+  function dismissSafeModeRevertedNotice(): void {
+    safeModeRevertedNotice.value = '';
   }
 
   function notifyMakerCheckerPending(message?: string, approvalId?: string | null): void {
@@ -122,7 +224,17 @@ export const useWebFigStore = defineStore('webfig', () => {
     const r = res as {
       status?: number;
       isMakerCheckerIntercepted?: boolean;
-      data?: { status?: string; detail?: string; approval_request_id?: string };
+      data?: {
+        status?: string;
+        detail?: string;
+        approval_request_id?: string;
+        _safemode?: {
+          job_name?: string;
+          expires_in?: number;
+          summary?: string;
+          rollback_cli?: string;
+        };
+      };
     } | null;
     const isIntercepted =
       r?.status === 202 ||
@@ -135,7 +247,8 @@ export const useWebFigStore = defineStore('webfig', () => {
     }
 
     dismissMakerCheckerPending();
-    startSafeModeCountdown(fallbackSeconds);
+    const smMeta = r?.data?._safemode;
+    startSafeModeCountdown(smMeta?.expires_in || fallbackSeconds, smMeta);
     return false;
   }
 
@@ -155,6 +268,7 @@ export const useWebFigStore = defineStore('webfig', () => {
     triggerRef(currentRouter);
     openRouterTabs.value = [DEFAULT_DASHBOARD_TAB];
     activeTabId.value = DEFAULT_DASHBOARD_TAB.tabId;
+    safeModeRevertedNotice.value = '';
     stopSafeMode();
     dismissMakerCheckerPending();
   }
@@ -165,6 +279,13 @@ export const useWebFigStore = defineStore('webfig', () => {
     activeTabId,
     isSafeModeActive,
     safeModeCountdownSeconds,
+    safeModeJobName,
+    safeModeSummary,
+    safeModeRollbackCli,
+    safeModeLiveVerified,
+    safeModeVerifyLatencyMs,
+    isSafeModeBusy,
+    safeModeRevertedNotice,
     isMakerCheckerPending,
     makerCheckerMessage,
     makerCheckerApprovalId,
@@ -173,6 +294,10 @@ export const useWebFigStore = defineStore('webfig', () => {
     closeTab,
     startSafeModeCountdown,
     stopSafeMode,
+    confirmSafeModeChanges,
+    rollbackSafeModeChanges,
+    verifySafeModeOnRouter,
+    dismissSafeModeRevertedNotice,
     notifyMakerCheckerPending,
     dismissMakerCheckerPending,
     handleMutationResponse,

@@ -44,7 +44,7 @@
     </div>
   </aside>
 
-  <!-- Banner Safe Mode Activo (60s Rollback — Solo para cambios aplicados directamente en el router) -->
+  <!-- Banner Safe Mode Activo (60s Rollback con Verificación en Vivo y Confirmación Humana) -->
   <aside
     v-else-if="webFigStore.isSafeModeActive"
     class="rg-safemode-banner"
@@ -56,21 +56,94 @@
     <div class="banner-content">
       <span class="banner-icon" aria-hidden="true">⚠️</span>
       <div class="banner-text">
-        <strong class="banner-title">SAFE MODE ACTIVO (Dead Man's Switch)</strong>
+        <div class="banner-title-row">
+          <strong class="banner-title">SAFE MODE ACTIVO (Dead Man's Switch)</strong>
+          <span v-if="webFigStore.safeModeJobName" class="badge-job-name font-mono">
+            Job: {{ webFigStore.safeModeJobName }}
+          </span>
+          <span
+            v-if="webFigStore.safeModeLiveVerified"
+            class="badge-verified safemode-badge--live font-tabular"
+            id="badge-safemode-verified"
+          >
+            ✔ Verificado en RouterOS
+            {{
+              webFigStore.safeModeVerifyLatencyMs != null
+                ? `(${webFigStore.safeModeVerifyLatencyMs} ms)`
+                : ''
+            }}
+          </span>
+        </div>
         <span class="banner-desc">
-          Verificando conectividad con el router. Los cambios se revertirán automáticamente en:
+          {{
+            webFigStore.safeModeSummary
+              ? `Cambio en evaluación: ${webFigStore.safeModeSummary}. Reversión automática si expira el contador.`
+              : 'Verificando conectividad con el router. Los cambios se revertirán automáticamente en:'
+          }}
         </span>
       </div>
+
       <div class="banner-countdown" :class="{ 'pulse-anim': isLowTime }">
         <span class="countdown-val">{{ webFigStore.safeModeCountdownSeconds }}s</span>
       </div>
+
+      <div class="banner-actions">
+        <button
+          id="btn-safemode-verify-live"
+          type="button"
+          class="banner-btn banner-btn--verify font-tabular"
+          :disabled="webFigStore.isSafeModeBusy"
+          aria-label="Verificar en vivo directamente en el router MikroTik sin usar WinBox"
+          @click="webFigStore.verifySafeModeOnRouter()"
+        >
+          {{ webFigStore.isSafeModeBusy ? '🔍 Verificando...' : '🔍 Verificar en Equipo' }}
+        </button>
+        <button
+          id="btn-safemode-rollback"
+          type="button"
+          class="banner-btn banner-btn--rollback font-tabular"
+          :disabled="webFigStore.isSafeModeBusy"
+          aria-label="Revertir el cambio inmediatamente en el router MikroTik"
+          @click="webFigStore.rollbackSafeModeChanges(false)"
+        >
+          ↩️ Revertir Ahora
+        </button>
+        <button
+          id="btn-safemode-confirm"
+          type="button"
+          class="banner-btn banner-btn--confirm font-tabular"
+          :disabled="webFigStore.isSafeModeBusy"
+          aria-label="Confirmar cambios y desactivar Safe Mode en el router"
+          @click="webFigStore.confirmSafeModeChanges()"
+        >
+          ✅ Confirmar Cambios
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Banner Informativo de Reversión Completada (Expiración o Rollback Manual) -->
+  <aside
+    v-else-if="webFigStore.safeModeRevertedNotice"
+    class="rg-safemode-banner rg-safemode-banner--notice rg-safemode-reverted-notice"
+    role="status"
+    aria-live="polite"
+    aria-label="Aviso de Reversión Safe Mode"
+  >
+    <div class="banner-content">
+      <span class="banner-icon" aria-hidden="true">ℹ️</span>
+      <div class="banner-text">
+        <strong class="banner-title">REVERSIÓN EJECUTADA EN ROUTEROS</strong>
+        <span class="banner-desc">{{ webFigStore.safeModeRevertedNotice }}</span>
+      </div>
       <button
+        id="btn-safemode-dismiss-notice"
         type="button"
         class="banner-btn"
-        aria-label="Confirmar cambios y desactivar Safe Mode"
-        @click="webFigStore.stopSafeMode()"
+        aria-label="Cerrar notificación de reversión"
+        @click="webFigStore.dismissSafeModeRevertedNotice()"
       >
-        Confirmar Cambios
+        Entendido
       </button>
     </div>
   </aside>
@@ -125,8 +198,14 @@
     color: var(--rg-status-critical-text);
   }
 
+  .rg-safemode-banner--notice {
+    background: var(--rg-accent-subtle, rgba(6, 182, 212, 0.14));
+    border-bottom-color: var(--rg-accent-primary, #06b6d4);
+    color: var(--rg-text-primary);
+  }
+
   .banner-content {
-    max-width: 1200px;
+    max-width: 1300px;
     margin: 0 auto;
     display: flex;
     align-items: center;
@@ -142,6 +221,15 @@
     flex: 1;
     display: flex;
     flex-direction: column;
+    min-width: 260px;
+    gap: 2px;
+  }
+
+  .banner-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
   }
 
   .banner-title {
@@ -149,9 +237,28 @@
     letter-spacing: 0.5px;
   }
 
+  .badge-job-name {
+    font-size: 10px;
+    background: rgba(0, 0, 0, 0.25);
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid currentColor;
+    opacity: 0.85;
+  }
+
+  .badge-verified {
+    font-size: 11px;
+    background: var(--rg-status-success-bg, rgba(16, 185, 129, 0.2));
+    color: var(--rg-status-success, #10b981);
+    border: 1px solid currentColor;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: 700;
+  }
+
   .banner-desc {
     font-size: 12px;
-    opacity: 0.9;
+    opacity: 0.92;
   }
 
   .banner-countdown {
@@ -167,6 +274,13 @@
     font-size: 16px;
   }
 
+  .banner-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
   .banner-btn {
     background: var(--rg-bg-surface);
     border: 1px solid currentColor;
@@ -176,10 +290,31 @@
     font-weight: 600;
     font-size: 12px;
     cursor: pointer;
+    transition: background 0.15s ease, opacity 0.15s ease;
   }
 
-  .banner-btn:hover {
+  .banner-btn:hover:not(:disabled) {
     background: var(--rg-bg-elevated);
+  }
+
+  .banner-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .banner-btn--verify {
+    border-color: currentColor;
+  }
+
+  .banner-btn--rollback {
+    border-color: var(--rg-status-critical, #ef4444);
+    color: var(--rg-status-critical-text, #ef4444);
+  }
+
+  .banner-btn--confirm {
+    border-color: var(--rg-status-success, #10b981);
+    color: var(--rg-status-success, #10b981);
+    font-weight: 700;
   }
 
   @keyframes pulse {

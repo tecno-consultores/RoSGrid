@@ -2,7 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { ref, computed, onMounted } from 'vue';
+  import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
   import { useRoute } from 'vue-router';
   import { http } from '@/api/httpClient';
   import { useWebFigStore } from '@/stores/useWebFigStore';
@@ -110,14 +110,16 @@
     });
   });
 
-  async function loadFirewallRules() {
+  async function loadFirewallRules(forceRefresh = false) {
     isLoading.value = true;
     errorMessage.value = '';
     try {
-      const endpoint =
+      const baseEndpoint =
         activeTab.value === 'connections'
           ? `/api/v1/routers/${routerId.value}/webfig/firewall/connections`
           : `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}`;
+      const query = forceRefresh ? '?refresh=true' : '';
+      const endpoint = `${baseEndpoint}${query}`;
       const res = await http.get<FirewallRuleItem[] | { items: FirewallRuleItem[] }>(endpoint);
       const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
       rulesList.value = raw.map((item: any) => ({
@@ -231,7 +233,7 @@
           : 'Entrada agregada a Address-List exitosamente.';
       }
       isAddressListModalOpen.value = false;
-      await loadFirewallRules();
+      await loadFirewallRules(true);
     } catch (e: any) {
       webFigStore.stopSafeMode?.();
       errorMessage.value =
@@ -271,7 +273,7 @@
           : 'Nueva regla creada exitosamente bajo Safe Mode.';
       }
       isRuleModalOpen.value = false;
-      await loadFirewallRules();
+      await loadFirewallRules(true);
     } catch (e: any) {
       webFigStore.stopSafeMode?.();
       errorMessage.value =
@@ -290,7 +292,7 @@
         actionMessage.value =
           (res.data as any)?.detail || 'Solicitud en espera de aprobación humana en la bandeja Maker-Checker.';
       }
-      await loadFirewallRules();
+      await loadFirewallRules(true);
     } catch (e: any) {
       webFigStore.stopSafeMode?.();
       errorMessage.value =
@@ -315,7 +317,7 @@
       } else {
         actionMessage.value = 'Regla eliminada exitosamente.';
       }
-      await loadFirewallRules();
+      await loadFirewallRules(true);
     } catch (e: any) {
       webFigStore.stopSafeMode?.();
       errorMessage.value =
@@ -333,7 +335,7 @@
         `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}/reset-counters`,
       );
       actionMessage.value = 'Contadores de tráfico reiniciados a cero.';
-      await loadFirewallRules();
+      await loadFirewallRules(true);
     } catch (e: any) {
       errorMessage.value =
         e?.detail || e?.response?.data?.detail || e?.message || 'Error al reiniciar contadores.';
@@ -388,7 +390,7 @@
         actionMessage.value = `Regla Masquerade creada para salida WAN en ${masqueradeWan.value}.`;
       }
       isMasqueradeWizardOpen.value = false;
-      await loadFirewallRules();
+      await loadFirewallRules(true);
     } catch (err: any) {
       webFigStore.stopSafeMode?.();
       errorMessage.value =
@@ -443,7 +445,7 @@
         actionMessage.value = `Redirección de puertos :${portForward.value.dst_port} -> ${portForward.value.to_addresses}:${portForward.value.to_ports} completada con éxito.`;
       }
       isPortForwardWizardOpen.value = false;
-      await loadFirewallRules();
+      await loadFirewallRules(true);
     } catch (err: any) {
       webFigStore.stopSafeMode?.();
       errorMessage.value =
@@ -454,8 +456,18 @@
     }
   }
 
+  const handleWebFigRefresh = (ev: Event) => {
+    const detail = (ev as CustomEvent)?.detail;
+    loadFirewallRules(Boolean(detail?.forceRefresh ?? true));
+  };
+
   onMounted(() => {
     loadFirewallRules();
+    window.addEventListener('rosgrid:webfig-refresh', handleWebFigRefresh);
+  });
+
+  onBeforeUnmount(() => {
+    window.removeEventListener('rosgrid:webfig-refresh', handleWebFigRefresh);
   });
 </script>
 
@@ -480,6 +492,16 @@
       </div>
 
       <div class="header-actions">
+        <button
+          id="btn-webfig-refresh"
+          type="button"
+          class="btn-secondary-action font-tabular"
+          :disabled="isLoading"
+          aria-label="Refrescar datos directamente desde el router MikroTik"
+          @click="loadFirewallRules(true)"
+        >
+          {{ isLoading ? '🔄 Refrescando...' : '🔄 Refrescar' }}
+        </button>
         <button
           v-if="activeTab === 'nat'"
           type="button"

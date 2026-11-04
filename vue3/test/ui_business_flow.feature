@@ -905,4 +905,13 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * match webfigLiveContract.rebootBtn == '#btn-reboot-router'
     * match webfigLiveContract.route contains '/webfig/live'
 
+  Scenario: 90. Motor Safe Mode Transaccional Real de 2 Fases y Botón de Refresco Homologado en WebFig (Hito 28.17)
+    * def safemodeBannerContract = { verifyLiveBtn: '#btn-safemode-verify-live', rollbackBtn: '#btn-safemode-rollback', confirmBtn: '#btn-safemode-confirm', dismissNoticeBtn: '#btn-safemode-dismiss-notice', webfigRefreshBtn: '#btn-webfig-refresh' }
+    * match safemodeBannerContract.verifyLiveBtn == '#btn-safemode-verify-live'
+    * match safemodeBannerContract.rollbackBtn == '#btn-safemode-rollback'
+    * match safemodeBannerContract.confirmBtn == '#btn-safemode-confirm'
+    * match safemodeBannerContract.dismissNoticeBtn == '#btn-safemode-dismiss-notice'
+    * match safemodeBannerContract.webfigRefreshBtn == '#btn-webfig-refresh'
+
+
 

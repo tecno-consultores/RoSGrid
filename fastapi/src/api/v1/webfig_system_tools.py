@@ -3,7 +3,9 @@
 
 """Endpoints WebFig Capa 1: System (Live-Status, Identity, Users, Scheduler) y Tools de Diagnóstico en Vivo."""
 
+import json
 import logging
+import time
 import uuid
 from typing import Any
 
@@ -428,6 +430,191 @@ async def reboot_router(
                 exc,
             )
     return {"status": "REBOOT_INITIATED", "reason": effective_reason}
+
+
+# ============================================================================
+# CICLO DE VIDA SAFE MODE 2 FASES (STATUS, VERIFY, CONFIRM, ROLLBACK)
+# ============================================================================
+
+
+async def _load_active_safemode_job(redis: Any, router_id: uuid.UUID, host: str) -> dict[str, Any] | None:
+    if not redis:
+        return None
+    for key in (f"rg:safemode:router:{router_id}", f"rg:safemode:host:{host}"):
+        raw = await redis.get(key)
+        if raw:
+            try:
+                return json.loads(raw)
+            except Exception:
+                continue
+    return None
+
+
+async def _clear_active_safemode_job(redis: Any, router_id: uuid.UUID, host: str) -> None:
+    if not redis:
+        return
+    for key in (f"rg:safemode:router:{router_id}", f"rg:safemode:host:{host}"):
+        try:
+            await redis.delete(key)
+        except Exception:
+            pass
+
+
+async def _check_safemode_job_live(client: MikrotikRestClient, job: dict[str, Any]) -> tuple[bool, Any]:
+    job_name = job.get("job_name")
+    menu = job.get("menu")
+    item_id = job.get("item_id")
+    scheduler_armed = False
+    live_item: Any = None
+    if job_name:
+        scheds = await client.get("/system/scheduler", params={"name": job_name})
+        scheduler_armed = bool(isinstance(scheds, list) and len(scheds) > 0)
+    if menu and item_id:
+        try:
+            live_item = await client.get(f"/{menu}/{item_id}")
+        except Exception:
+            live_item = None
+    return scheduler_armed, live_item
+
+
+async def _cleanup_active_schedulers(client: MikrotikRestClient, job_name: str | None) -> None:
+    from src.mikrotik.safemode import remove_deadmans_switch
+
+    if job_name:
+        await remove_deadmans_switch(client, job_name)
+        return
+    scheds = await client.get("/system/scheduler")
+    if isinstance(scheds, list):
+        for s in scheds:
+            if isinstance(s, dict) and str(s.get("name", "")).startswith("rosgrid-safemode-"):
+                await remove_deadmans_switch(client, str(s["name"]))
+
+
+@system_router.get("/safemode/status")
+async def get_safemode_status(
+    router_id: uuid.UUID,
+    claims: dict[str, Any] = Depends(get_current_user_claims),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> dict[str, Any]:
+    """Consulta el estado real del Safe Mode activo en KeyDB y en el router MikroTik."""
+    redis = get_redis_client()
+    _, client = await get_router_and_client(router_id, claims, db)
+    job = await _load_active_safemode_job(redis, router_id, client.host)
+    if not job:
+        return {"active": False, "job_name": None, "remaining_seconds": 0}
+    return {
+        "active": True,
+        "job_name": job.get("job_name"),
+        "menu": job.get("menu"),
+        "action": job.get("action"),
+        "item_id": job.get("item_id"),
+        "summary": job.get("summary"),
+        "rollback_cli": job.get("rollback_cli"),
+        "expires_at": job.get("expires_at"),
+    }
+
+
+@system_router.post("/safemode/verify")
+async def verify_safemode_live_on_router(
+    router_id: uuid.UUID,
+    claims: dict[str, Any] = Depends(get_current_user_claims),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> dict[str, Any]:
+    """Verifica en vivo en el MikroTik (sin caché) que el cambio se aplicó y que el script/scheduler de rollback está armado."""
+    tenant_id = uuid.UUID(claims["tid"])
+    redis = get_redis_client()
+    _, client = await get_router_and_client(router_id, claims, db)
+    job = await _load_active_safemode_job(redis, router_id, client.host)
+    t0 = time.perf_counter()
+    async with client:
+        identity = await client.get("/system/identity")
+        latency_ms = round((time.perf_counter() - t0) * 1000.0, 1)
+        live_item: Any = None
+        scheduler_armed = False
+        if job:
+            scheduler_armed, live_item = await _check_safemode_job_live(client, job)
+            menu = job.get("menu")
+            if menu:
+                await invalidate_webfig_cache(redis, tenant_id, router_id, f"/{menu}")
+
+    return {
+        "verified": True,
+        "latency_ms": latency_ms,
+        "router_identity": identity.get("name") if isinstance(identity, dict) else None,
+        "scheduler_armed": scheduler_armed,
+        "job_name": job.get("job_name") if job else None,
+        "summary": job.get("summary") if job else None,
+        "rollback_cli": job.get("rollback_cli") if job else None,
+        "live_item": live_item,
+    }
+
+
+@system_router.post("/safemode/confirm")
+async def confirm_safemode_changes(
+    router_id: uuid.UUID,
+    claims: dict[str, Any] = Depends(get_current_user_claims),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> dict[str, Any]:
+    """Confirma los cambios en curso eliminando el script y scheduler de rollback en el router MikroTik."""
+    tenant_id = uuid.UUID(claims["tid"])
+    redis = get_redis_client()
+    _, client = await get_router_and_client(router_id, claims, db)
+    job = await _load_active_safemode_job(redis, router_id, client.host)
+    job_name = job.get("job_name") if job else None
+    menu = job.get("menu") if job else None
+
+    async with client:
+        await _cleanup_active_schedulers(client, job_name)
+
+    await _clear_active_safemode_job(redis, router_id, client.host)
+    if menu:
+        await invalidate_webfig_cache(redis, tenant_id, router_id, f"/{menu}")
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface")
+    return {"status": "CONFIRMED", "job_name": job_name}
+
+
+@system_router.post("/safemode/rollback")
+async def rollback_safemode_changes(
+    router_id: uuid.UUID,
+    claims: dict[str, Any] = Depends(get_current_user_claims),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> dict[str, Any]:
+    """Ejecuta el rollback inmediato del cambio en el router MikroTik (al expirar los 60s o pulsar Revertir Ahora)."""
+    from src.mikrotik.safemode import execute_rollback_on_router, remove_deadmans_switch
+
+    tenant_id = uuid.UUID(claims["tid"])
+    redis = get_redis_client()
+    _, client = await get_router_and_client(router_id, claims, db)
+    job = await _load_active_safemode_job(redis, router_id, client.host)
+    job_name = job.get("job_name") if job else None
+    menu = job.get("menu") if job else None
+
+    reverted = False
+    async with client:
+        if job and job_name and menu:
+            reverted = await execute_rollback_on_router(
+                client=client,
+                job_name=str(job_name),
+                menu=str(menu),
+                action=str(job.get("action", "set")),
+                item_id=job.get("item_id"),
+                before_state=job.get("before_state"),
+                mutated_keys=job.get("mutated_keys"),
+            )
+        elif job_name:
+            await remove_deadmans_switch(client, str(job_name))
+
+    await _clear_active_safemode_job(redis, router_id, client.host)
+    if menu:
+        await invalidate_webfig_cache(redis, tenant_id, router_id, f"/{menu}")
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface")
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/ethernet")
+    return {
+        "status": "REVERTED",
+        "reverted": reverted,
+        "job_name": job_name,
+        "rollback_cli": job.get("rollback_cli") if job else None,
+    }
 
 
 # ============================================================================

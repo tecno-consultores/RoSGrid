@@ -2,7 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { ref, computed, onMounted } from 'vue';
+  import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
   import { useRoute } from 'vue-router';
   import { http } from '@/api/httpClient';
   import type { TableColumn, SfpOpticalDdmInfo } from '@/types';
@@ -69,11 +69,12 @@
     });
   });
 
-  async function loadInterfaces() {
+  async function loadInterfaces(forceRefresh = false) {
     isLoading.value = true;
     try {
+      const query = forceRefresh ? '?refresh=true' : '';
       const res = await http.get<InterfaceRow[] | { items: InterfaceRow[] }>(
-        `/api/v1/routers/${routerId.value}/webfig/interfaces`,
+        `/api/v1/routers/${routerId.value}/webfig/interfaces${query}`,
       );
       const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
       interfacesList.value = raw.map((item: any) => ({
@@ -213,7 +214,7 @@
         ? (res.data as any)?.detail || 'Modificación de interfaz en espera de aprobación en Maker-Checker.'
         : `Interfaz "${editIfaceForm.value.name}" actualizada exitosamente bajo Safe Mode.`;
       isEditIfaceModalOpen.value = false;
-      loadInterfaces();
+      loadInterfaces(true);
     } catch (err: unknown) {
       webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string; response?: { data?: { detail?: string } } };
@@ -233,7 +234,7 @@
         { disabled: !iface.disabled },
       );
       webFigStore.handleMutationResponse(res, 60);
-      loadInterfaces();
+      loadInterfaces(true);
     } catch (err: unknown) {
       webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string };
@@ -277,7 +278,7 @@
         mtu: 1500,
         comment: '',
       };
-      loadInterfaces();
+      loadInterfaces(true);
     } catch (err: unknown) {
       webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string; response?: { data?: { detail?: string } } };
@@ -302,7 +303,7 @@
       statusMessage.value = intercepted
         ? (res.data as any)?.detail || 'Solicitud de eliminación en espera de aprobación humana en Maker-Checker.'
         : `Interfaz VLAN "${iface.name}" eliminada exitosamente.`;
-      loadInterfaces();
+      loadInterfaces(true);
     } catch (err: unknown) {
       webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string; response?: { data?: { detail?: string } } };
@@ -313,8 +314,18 @@
     }
   }
 
+  const handleWebFigRefresh = (ev: Event) => {
+    const detail = (ev as CustomEvent)?.detail;
+    loadInterfaces(Boolean(detail?.forceRefresh ?? true));
+  };
+
   onMounted(() => {
     loadInterfaces();
+    window.addEventListener('rosgrid:webfig-refresh', handleWebFigRefresh);
+  });
+
+  onBeforeUnmount(() => {
+    window.removeEventListener('rosgrid:webfig-refresh', handleWebFigRefresh);
   });
 </script>
 
@@ -326,6 +337,19 @@
         <p class="view-subtitle">
           Supervisión en vivo de puertos Ethernet, SFP/SFP+ DDM, VLANs y Bridges
         </p>
+      </div>
+
+      <div class="view-header-actions">
+        <button
+          id="btn-webfig-refresh"
+          type="button"
+          class="btn-refresh font-tabular"
+          :disabled="isLoading"
+          aria-label="Refrescar datos directamente desde el router MikroTik"
+          @click="loadInterfaces(true)"
+        >
+          {{ isLoading ? '🔄 Refrescando...' : '🔄 Refrescar' }}
+        </button>
       </div>
 
       <!-- Sub-pestañas de interfaces -->
@@ -1022,6 +1046,34 @@
   .font-tabular {
     font-family: 'JetBrains Mono', 'Ubuntu Mono', ui-monospace, monospace;
     font-variant-numeric: tabular-nums;
+  }
+
+  .view-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-refresh {
+    background: var(--rg-bg-surface);
+    color: var(--rg-text-primary);
+    border: 1px solid var(--rg-border-grid);
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+
+  .btn-refresh:hover:not(:disabled) {
+    border-color: var(--rg-accent-cyan, #22d3ee);
+    color: var(--rg-accent-cyan, #22d3ee);
+  }
+
+  .btn-refresh:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 
   @media (max-width: 640px) {

@@ -2,7 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { ref, computed, onMounted } from 'vue';
+  import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
   import { useRoute } from 'vue-router';
   import { http } from '@/api/httpClient';
   import { useWebFigStore } from '@/stores/useWebFigStore';
@@ -113,36 +113,37 @@
     leaseTime: '12h',
   });
 
-  async function loadData() {
+  async function loadData(forceRefresh = false) {
     isLoading.value = true;
     errorMessage.value = '';
     try {
+      const query = forceRefresh ? '?refresh=true' : '';
       if (activeTab.value === 'addresses') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/addresses`);
+        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/addresses${query}`);
         ipAddresses.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
       } else if (activeTab.value === 'dhcp-server') {
         if (activeDhcpSubtab.value === 'leases') {
-          const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-server/leases`);
+          const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-server/leases${query}`);
           dhcpLeases.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
         } else if (activeDhcpSubtab.value === 'servers') {
-          const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-servers`);
+          const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-servers${query}`);
           dhcpServers.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
         } else {
-          const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-server/networks`);
+          const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-server/networks${query}`);
           dhcpNetworks.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
         }
       } else if (activeTab.value === 'dhcp-client') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-clients`);
+        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-clients${query}`);
         dhcpClients.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
       } else if (activeTab.value === 'pools') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/pools`);
+        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/pools${query}`);
         ipPools.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
       } else if (activeTab.value === 'dns') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/dns`);
+        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/dns${query}`);
         dnsConfig.value = res.data?.config || {};
         dnsStatics.value = res.data?.static_records || [];
       } else if (activeTab.value === 'arp') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/arp`);
+        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/arp${query}`);
         arpEntries.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
       }
     } catch (err: any) {
@@ -689,8 +690,18 @@
     }
   }
 
+  const handleWebFigRefresh = (ev: Event) => {
+    const detail = (ev as CustomEvent)?.detail;
+    loadData(Boolean(detail?.forceRefresh ?? true));
+  };
+
   onMounted(() => {
     loadData();
+    window.addEventListener('rosgrid:webfig-refresh', handleWebFigRefresh);
+  });
+
+  onBeforeUnmount(() => {
+    window.removeEventListener('rosgrid:webfig-refresh', handleWebFigRefresh);
   });
 </script>
 
@@ -792,12 +803,14 @@
         </button>
 
         <button
+          id="btn-webfig-refresh"
           type="button"
-          class="btn-tactical btn-outline"
+          class="btn-tactical btn-outline font-tabular"
           :disabled="isLoading"
-          @click="loadData"
+          aria-label="Refrescar datos directamente desde el router MikroTik"
+          @click="loadData(true)"
         >
-          🔄 Actualizar
+          {{ isLoading ? '🔄 Refrescando...' : '🔄 Refrescar' }}
         </button>
       </div>
     </header>

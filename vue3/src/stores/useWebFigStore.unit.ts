@@ -6,7 +6,21 @@ import { setActivePinia, createPinia } from 'pinia';
 import { useWebFigStore, MAX_OPEN_TABS } from './useWebFigStore';
 import type { RouterTabItem } from '@/types';
 
-describe('useWebFigStore — Pestañas en RAM (Cola máx 5) y Safe Mode 60s', () => {
+// Mock del cliente HTTP para interceptar confirm, rollback y verify
+vi.mock('@/api/httpClient', () => ({
+  http: {
+    post: vi.fn().mockResolvedValue({
+      data: {
+        verified: true,
+        latency_ms: 15.4,
+        job_name: 'rosgrid-safemode-abc',
+        summary: 'Ajuste de MTU',
+      },
+    }),
+  },
+}));
+
+describe('useWebFigStore — Pestañas en RAM (Cola máx 5) y Safe Mode 60s 2 Fases', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.useFakeTimers();
@@ -14,6 +28,7 @@ describe('useWebFigStore — Pestañas en RAM (Cola máx 5) y Safe Mode 60s', ()
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.clearAllMocks();
   });
 
   it('inicia con pestaña Dashboard por defecto y Safe Mode inactivo', () => {
@@ -91,19 +106,33 @@ describe('useWebFigStore — Pestañas en RAM (Cola máx 5) y Safe Mode 60s', ()
     expect(store.openRouterTabs.some((t) => t.tabId === 'RouterLiveDashboard')).toBe(true);
   });
 
-  it('activa Safe Mode con Dead Man Switch de 60s y cuenta regresiva', () => {
+  it('activa Safe Mode con Dead Man Switch de 60s y cuenta regresiva con auto-rollback', async () => {
     const store = useWebFigStore();
-    store.startSafeModeCountdown(60);
+    store.setCurrentRouter({
+      id: 'r-test-1',
+      tenant_id: 't-1',
+      display_name: 'CHR-Test',
+      ip_address: '10.0.0.1',
+      api_port: 8728,
+      ros_version: '7.15',
+      admin_state: 'PRODUCTION',
+      is_reachable: true,
+    });
+
+    store.startSafeModeCountdown(2, {
+      job_name: 'rosgrid-safemode-auto',
+      summary: 'Cambio de prueba',
+    });
 
     expect(store.isSafeModeActive).toBe(true);
-    expect(store.safeModeCountdownSeconds).toBe(60);
-
-    // Reiniciar temporizador para cubrir rama if (safeModeTimer)
-    store.startSafeModeCountdown(2);
     expect(store.safeModeCountdownSeconds).toBe(2);
+    expect(store.safeModeJobName).toBe('rosgrid-safemode-auto');
 
-    vi.advanceTimersByTime(3000);
+    // Avanzar el reloj hasta expirar la cuenta regresiva
+    await vi.advanceTimersByTimeAsync(3000);
+
     expect(store.isSafeModeActive).toBe(false);
+    expect(store.safeModeRevertedNotice).toContain('Tiempo de Safe Mode (60s) agotado');
   });
 
   it('asigna y limpia el router actual y limpia el espacio de trabajo', () => {
@@ -124,5 +153,97 @@ describe('useWebFigStore — Pestañas en RAM (Cola máx 5) y Safe Mode 60s', ()
     expect(store.currentRouter).toBeNull();
     expect(store.openRouterTabs.length).toBe(1);
     expect(store.activeTabId).toBe('RouterLiveDashboard');
+  });
+
+  it('confirma cambios llamando al endpoint /safemode/confirm y emite refresco', async () => {
+    const store = useWebFigStore();
+    store.setCurrentRouter({
+      id: 'r-confirm-1',
+      tenant_id: 't-1',
+      display_name: 'CCR-1',
+      ip_address: '10.0.0.1',
+      api_port: 8728,
+      ros_version: '7.15',
+      admin_state: 'PRODUCTION',
+      is_reachable: true,
+    });
+
+    store.startSafeModeCountdown(60, { job_name: 'job-to-confirm' });
+    expect(store.isSafeModeActive).toBe(true);
+
+    const refreshSpy = vi.fn();
+    window.addEventListener('rosgrid:webfig-refresh', refreshSpy);
+
+    await store.confirmSafeModeChanges();
+
+    expect(store.isSafeModeActive).toBe(false);
+    expect(refreshSpy).toHaveBeenCalled();
+    window.removeEventListener('rosgrid:webfig-refresh', refreshSpy);
+  });
+
+  it('revierte cambios manualmente llamando a /safemode/rollback y muestra aviso', async () => {
+    const store = useWebFigStore();
+    store.setCurrentRouter({
+      id: 'r-rollback-1',
+      tenant_id: 't-1',
+      display_name: 'CCR-1',
+      ip_address: '10.0.0.1',
+      api_port: 8728,
+      ros_version: '7.15',
+      admin_state: 'PRODUCTION',
+      is_reachable: true,
+    });
+
+    store.startSafeModeCountdown(60, { summary: 'VLAN 100 eliminada' });
+    await store.rollbackSafeModeChanges(false);
+
+    expect(store.isSafeModeActive).toBe(false);
+    expect(store.safeModeRevertedNotice).toContain('Cambio revertido manualmente');
+    expect(store.safeModeRevertedNotice).toContain('VLAN 100 eliminada');
+
+    store.dismissSafeModeRevertedNotice();
+    expect(store.safeModeRevertedNotice).toBe('');
+  });
+
+  it('verifica cambios en vivo en el router llamando a /safemode/verify', async () => {
+    const store = useWebFigStore();
+    store.setCurrentRouter({
+      id: 'r-verify-1',
+      tenant_id: 't-1',
+      display_name: 'CCR-1',
+      ip_address: '10.0.0.1',
+      api_port: 8728,
+      ros_version: '7.15',
+      admin_state: 'PRODUCTION',
+      is_reachable: true,
+    });
+
+    store.startSafeModeCountdown(60);
+    await store.verifySafeModeOnRouter();
+
+    expect(store.safeModeLiveVerified).toBe(true);
+    expect(store.safeModeVerifyLatencyMs).toBe(15.4);
+    expect(store.safeModeJobName).toBe('rosgrid-safemode-abc');
+  });
+
+  it('handleMutationResponse captura metadatos de _safemode de la respuesta del backend', () => {
+    const store = useWebFigStore();
+    store.handleMutationResponse({
+      status: 200,
+      data: {
+        success: true,
+        _safemode: {
+          job_name: 'rosgrid-safemode-meta',
+          expires_in: 60,
+          summary: 'Cambio de comentario en interfaz',
+          rollback_cli: '/interface/set ether1 comment="antiguo"',
+        },
+      },
+    });
+
+    expect(store.isSafeModeActive).toBe(true);
+    expect(store.safeModeJobName).toBe('rosgrid-safemode-meta');
+    expect(store.safeModeSummary).toBe('Cambio de comentario en interfaz');
+    expect(store.safeModeRollbackCli).toBe('/interface/set ether1 comment="antiguo"');
   });
 });

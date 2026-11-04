@@ -305,6 +305,25 @@ async def intercept_maker_checker_if_needed(
     )
 
 
+async def _store_active_safemode_job(
+    host: str,
+    router_id: uuid.UUID | None,
+    job_data: dict[str, Any],
+) -> None:
+    try:
+        from src.redis_layer.client import get_redis_client
+
+        redis = get_redis_client()
+        if not redis:
+            return
+        raw_json = json.dumps(job_data)
+        await redis.setex(f"rg:safemode:host:{host}", 90, raw_json)
+        if router_id is not None:
+            await redis.setex(f"rg:safemode:router:{router_id}", 90, raw_json)
+    except Exception as exc:
+        logger.debug("No se pudo persistir metadatos de Safe Mode en KeyDB: %s", exc)
+
+
 async def execute_safe_mutation(
     client: MikrotikRestClient,
     menu: str,
@@ -312,20 +331,43 @@ async def execute_safe_mutation(
     coro_fn: Callable[[], Awaitable[Any]],
     item_id: str | None = None,
     before_state: dict[str, Any] | None = None,
+    mutated_keys: list[str] | set[str] | None = None,
+    router_id: uuid.UUID | None = None,
+    summary: str | None = None,
 ) -> Any:
-    """Envuelve una mutación sensible en el motor Dead Man's Switch (Safe Mode a 60s)."""
+    """Envuelve una mutación sensible en el motor Dead Man's Switch de 2 fases (Safe Mode a 60s)."""
+    from src.mikrotik.safemode import generate_safemode_job_name, remove_deadmans_switch
+
+    # Si ya existía un job previo pendiente en el mismo router, eliminar su scheduler antes de encadenar
+    try:
+        from src.redis_layer.client import get_redis_client
+
+        redis = get_redis_client()
+        prev_raw = await redis.get(f"rg:safemode:host:{client.host}") if redis else None
+        if prev_raw:
+            prev_job = json.loads(prev_raw)
+            prev_name = prev_job.get("job_name")
+            if prev_name:
+                await remove_deadmans_switch(client, prev_name)
+    except Exception as exc:
+        logger.debug("Omitiendo limpieza de Safe Mode previo: %s", exc)
+
+    job_name = generate_safemode_job_name()
     rollback_cmd = build_rollback_command(
         menu_path=menu,
         action=action,
         item_id=item_id,
         before_state=before_state,
+        mutated_keys=mutated_keys,
     )
     try:
-        return await execute_with_safemode(
+        result = await execute_with_safemode(
             client=client,
             rollback_cli=rollback_cmd,
             operation_fn=coro_fn,
             interval_seconds=60,
+            job_name=job_name,
+            keep_alive_for_confirmation=True,
         )
     except HTTPException:
         raise
@@ -334,3 +376,41 @@ async def execute_safe_mutation(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"No se pudo ejecutar mutación en el router MikroTik ({menu}): {exc}",
         ) from exc
+
+    effective_item_id = item_id
+    if action.lower() in {"create", "put", "add"} and isinstance(result, dict):
+        effective_item_id = str(result.get(".id") or result.get("ret") or item_id or "") or None
+        if effective_item_id:
+            rollback_cmd = build_rollback_command(
+                menu_path=menu,
+                action="create",
+                item_id=effective_item_id,
+                before_state=before_state,
+            )
+
+    now_utc = datetime.now(UTC)
+    job_metadata = {
+        "job_name": job_name,
+        "menu": menu.strip("/"),
+        "action": action.lower(),
+        "item_id": effective_item_id,
+        "before_state": before_state or {},
+        "mutated_keys": list(mutated_keys) if mutated_keys else [],
+        "rollback_cli": rollback_cmd,
+        "summary": summary or f"{action.upper()} /{menu.strip('/')}" + (f" ({effective_item_id})" if effective_item_id else ""),
+        "created_at": now_utc.isoformat(),
+        "expires_at": (now_utc + timedelta(seconds=60)).isoformat(),
+    }
+    await _store_active_safemode_job(client.host, router_id, job_metadata)
+
+    if isinstance(result, dict):
+        return {
+            **result,
+            "_safemode": {
+                "job_name": job_name,
+                "expires_in": 60,
+                "rollback_cli": rollback_cmd,
+                "summary": job_metadata["summary"],
+            },
+        }
+    return result

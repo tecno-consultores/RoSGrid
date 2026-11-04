@@ -16,6 +16,7 @@ from src.api.v1.webfig_common import (
     execute_safe_mutation,
     get_router_and_client,
     intercept_maker_checker_if_needed,
+    invalidate_webfig_cache,
 )
 from src.db.session import get_tenant_db_session
 from src.models.core import SystemRoleEnum
@@ -156,17 +157,25 @@ async def update_interface(
     )
     if intercepted is not None:
         return intercepted
+    tenant_id = uuid.UUID(claims["tid"])
+    redis = get_redis_client()
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         before = await client.get(f"/interface/{item_id}")
-        return await execute_safe_mutation(
+        res = await execute_safe_mutation(
             client=client,
             menu="interface",
             action="set",
             item_id=item_id,
             before_state=before if isinstance(before, dict) else {},
+            mutated_keys=list(patch_data.keys()),
+            router_id=router_id,
+            summary=f"Modificar interfaz {item_id} ({', '.join(patch_data.keys())})",
             coro_fn=lambda: client.patch(f"/interface/{item_id}", json_data=patch_data),
         )
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface")
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/ethernet")
+    return res
 
 
 @router.get("/ethernet")
@@ -266,15 +275,22 @@ async def create_vlan(
     if intercepted is not None:
         return intercepted
 
+    tenant_id = uuid.UUID(claims["tid"])
+    redis = get_redis_client()
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
-        return await execute_safe_mutation(
+        res = await execute_safe_mutation(
             client=client,
             menu="interface/vlan",
             action="create",
             before_state=body,
+            router_id=router_id,
+            summary=f"Crear VLAN {payload.name} (ID {payload.vlan_id})",
             coro_fn=lambda: client.put("/interface/vlan", json_data=body),
         )
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/vlan")
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface")
+    return res
 
 
 @router.patch("/vlan/{item_id}")
@@ -323,17 +339,25 @@ async def update_vlan(
     if intercepted is not None:
         return intercepted
 
+    tenant_id = uuid.UUID(claims["tid"])
+    redis = get_redis_client()
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         before = await client.get(f"/interface/vlan/{item_id}")
-        return await execute_safe_mutation(
+        res = await execute_safe_mutation(
             client=client,
             menu="interface/vlan",
             action="set",
             item_id=item_id,
             before_state=before if isinstance(before, dict) else {},
+            mutated_keys=list(patch_data.keys()),
+            router_id=router_id,
+            summary=f"Modificar VLAN ({item_id})",
             coro_fn=lambda: client.patch(f"/interface/vlan/{item_id}", json_data=patch_data),
         )
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/vlan")
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface")
+    return res
 
 
 @router.delete("/vlan/{item_id}")
@@ -366,17 +390,24 @@ async def delete_vlan(
     if intercepted is not None:
         return intercepted
 
+    tenant_id = uuid.UUID(claims["tid"])
+    redis = get_redis_client()
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         before = await client.get(f"/interface/vlan/{item_id}")
-        return await execute_safe_mutation(
+        res = await execute_safe_mutation(
             client=client,
             menu="interface/vlan",
             action="delete",
             item_id=item_id,
             before_state=before if isinstance(before, dict) else {},
+            router_id=router_id,
+            summary=f"Eliminar VLAN ({item_id})",
             coro_fn=lambda: client.delete(f"/interface/vlan/{item_id}"),
         )
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/vlan")
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface")
+    return res
 
 
 @router.get("/bridge")
@@ -436,15 +467,22 @@ async def create_bridge(
     if intercepted is not None:
         return intercepted
 
+    tenant_id = uuid.UUID(claims["tid"])
+    redis = get_redis_client()
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
-        return await execute_safe_mutation(
+        res = await execute_safe_mutation(
             client=client,
             menu="interface/bridge",
             action="create",
             before_state=body,
+            router_id=router_id,
+            summary=f"Crear Bridge {payload.name}",
             coro_fn=lambda: client.put("/interface/bridge", json_data=body),
         )
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/bridge")
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface")
+    return res
 
 
 @router.patch("/bridge/{item_id}")
@@ -493,17 +531,25 @@ async def update_bridge(
     if intercepted is not None:
         return intercepted
 
+    tenant_id = uuid.UUID(claims["tid"])
+    redis = get_redis_client()
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         before = await client.get(f"/interface/bridge/{item_id}")
-        return await execute_safe_mutation(
+        res = await execute_safe_mutation(
             client=client,
             menu="interface/bridge",
             action="set",
             item_id=item_id,
             before_state=before if isinstance(before, dict) else {},
+            mutated_keys=list(patch_data.keys()),
+            router_id=router_id,
+            summary=f"Modificar Bridge ({item_id})",
             coro_fn=lambda: client.patch(f"/interface/bridge/{item_id}", json_data=patch_data),
         )
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/bridge")
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface")
+    return res
 
 
 @router.delete("/bridge/{item_id}")
@@ -536,17 +582,24 @@ async def delete_bridge(
     if intercepted is not None:
         return intercepted
 
+    tenant_id = uuid.UUID(claims["tid"])
+    redis = get_redis_client()
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         before = await client.get(f"/interface/bridge/{item_id}")
-        return await execute_safe_mutation(
+        res = await execute_safe_mutation(
             client=client,
             menu="interface/bridge",
             action="delete",
             item_id=item_id,
             before_state=before if isinstance(before, dict) else {},
+            router_id=router_id,
+            summary=f"Eliminar Bridge ({item_id})",
             coro_fn=lambda: client.delete(f"/interface/bridge/{item_id}"),
         )
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/bridge")
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface")
+    return res
 
 
 @router.get("/bridge/ports")
@@ -605,15 +658,22 @@ async def create_bridge_port(
     if intercepted is not None:
         return intercepted
 
+    tenant_id = uuid.UUID(claims["tid"])
+    redis = get_redis_client()
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
-        return await execute_safe_mutation(
+        res = await execute_safe_mutation(
             client=client,
             menu="interface/bridge/port",
             action="create",
             before_state=body,
+            router_id=router_id,
+            summary=f"Agregar puerto {payload.interface} al bridge {payload.bridge}",
             coro_fn=lambda: client.put("/interface/bridge/port", json_data=body),
         )
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/bridge/port")
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/bridge")
+    return res
 
 
 @router.patch("/bridge/ports/{item_id}")
@@ -668,17 +728,25 @@ async def update_bridge_port(
     if intercepted is not None:
         return intercepted
 
+    tenant_id = uuid.UUID(claims["tid"])
+    redis = get_redis_client()
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         before = await client.get(f"/interface/bridge/port/{item_id}")
-        return await execute_safe_mutation(
+        res = await execute_safe_mutation(
             client=client,
             menu="interface/bridge/port",
             action="set",
             item_id=item_id,
             before_state=before if isinstance(before, dict) else {},
+            mutated_keys=list(patch_data.keys()),
+            router_id=router_id,
+            summary=f"Modificar puerto de Bridge ({item_id})",
             coro_fn=lambda: client.patch(f"/interface/bridge/port/{item_id}", json_data=patch_data),
         )
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/bridge/port")
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/bridge")
+    return res
 
 
 @router.delete("/bridge/ports/{item_id}")
@@ -711,17 +779,24 @@ async def delete_bridge_port(
     if intercepted is not None:
         return intercepted
 
+    tenant_id = uuid.UUID(claims["tid"])
+    redis = get_redis_client()
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         before = await client.get(f"/interface/bridge/port/{item_id}")
-        return await execute_safe_mutation(
+        res = await execute_safe_mutation(
             client=client,
             menu="interface/bridge/port",
             action="delete",
             item_id=item_id,
             before_state=before if isinstance(before, dict) else {},
+            router_id=router_id,
+            summary=f"Sacar puerto del Bridge ({item_id})",
             coro_fn=lambda: client.delete(f"/interface/bridge/port/{item_id}"),
         )
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/bridge/port")
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/bridge")
+    return res
 
 
 @router.get("/bridge/vlans")
@@ -782,15 +857,22 @@ async def create_bridge_vlan(
     if intercepted is not None:
         return intercepted
 
+    tenant_id = uuid.UUID(claims["tid"])
+    redis = get_redis_client()
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
-        return await execute_safe_mutation(
+        res = await execute_safe_mutation(
             client=client,
             menu="interface/bridge/vlan",
             action="create",
             before_state=body,
+            router_id=router_id,
+            summary=f"Crear Bridge VLAN {payload.vlan_ids} en {payload.bridge}",
             coro_fn=lambda: client.put("/interface/bridge/vlan", json_data=body),
         )
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/bridge/vlan")
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/bridge")
+    return res
 
 
 @router.patch("/bridge/vlans/{item_id}")
@@ -839,17 +921,25 @@ async def update_bridge_vlan(
     if intercepted is not None:
         return intercepted
 
+    tenant_id = uuid.UUID(claims["tid"])
+    redis = get_redis_client()
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         before = await client.get(f"/interface/bridge/vlan/{item_id}")
-        return await execute_safe_mutation(
+        res = await execute_safe_mutation(
             client=client,
             menu="interface/bridge/vlan",
             action="set",
             item_id=item_id,
             before_state=before if isinstance(before, dict) else {},
+            mutated_keys=list(patch_data.keys()),
+            router_id=router_id,
+            summary=f"Modificar Bridge VLAN ({item_id})",
             coro_fn=lambda: client.patch(f"/interface/bridge/vlan/{item_id}", json_data=patch_data),
         )
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/bridge/vlan")
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/bridge")
+    return res
 
 
 @router.delete("/bridge/vlans/{item_id}")
@@ -882,17 +972,24 @@ async def delete_bridge_vlan(
     if intercepted is not None:
         return intercepted
 
+    tenant_id = uuid.UUID(claims["tid"])
+    redis = get_redis_client()
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         before = await client.get(f"/interface/bridge/vlan/{item_id}")
-        return await execute_safe_mutation(
+        res = await execute_safe_mutation(
             client=client,
             menu="interface/bridge/vlan",
             action="delete",
             item_id=item_id,
             before_state=before if isinstance(before, dict) else {},
+            router_id=router_id,
+            summary=f"Eliminar Bridge VLAN ({item_id})",
             coro_fn=lambda: client.delete(f"/interface/bridge/vlan/{item_id}"),
         )
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/bridge/vlan")
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/bridge")
+    return res
 
 
 @router.get("/bridge/hosts")
@@ -962,15 +1059,22 @@ async def create_wireguard(
     if intercepted is not None:
         return intercepted
 
+    tenant_id = uuid.UUID(claims["tid"])
+    redis = get_redis_client()
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
-        return await execute_safe_mutation(
+        res = await execute_safe_mutation(
             client=client,
             menu="interface/wireguard",
             action="create",
             before_state=body,
+            router_id=router_id,
+            summary=f"Crear interfaz WireGuard {payload.name} (puerto {payload.listen_port})",
             coro_fn=lambda: client.put("/interface/wireguard", json_data=body),
         )
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/wireguard")
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface")
+    return res
 
 
 @router.patch("/wireguard/{item_id}")
@@ -1017,17 +1121,25 @@ async def update_wireguard(
     if intercepted is not None:
         return intercepted
 
+    tenant_id = uuid.UUID(claims["tid"])
+    redis = get_redis_client()
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         before = await client.get(f"/interface/wireguard/{item_id}")
-        return await execute_safe_mutation(
+        res = await execute_safe_mutation(
             client=client,
             menu="interface/wireguard",
             action="set",
             item_id=item_id,
             before_state=before if isinstance(before, dict) else {},
+            mutated_keys=list(patch_data.keys()),
+            router_id=router_id,
+            summary=f"Modificar interfaz WireGuard ({item_id})",
             coro_fn=lambda: client.patch(f"/interface/wireguard/{item_id}", json_data=patch_data),
         )
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/wireguard")
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface")
+    return res
 
 
 @router.delete("/wireguard/{item_id}")
@@ -1060,17 +1172,24 @@ async def delete_wireguard(
     if intercepted is not None:
         return intercepted
 
+    tenant_id = uuid.UUID(claims["tid"])
+    redis = get_redis_client()
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         before = await client.get(f"/interface/wireguard/{item_id}")
-        return await execute_safe_mutation(
+        res = await execute_safe_mutation(
             client=client,
             menu="interface/wireguard",
             action="delete",
             item_id=item_id,
             before_state=before if isinstance(before, dict) else {},
+            router_id=router_id,
+            summary=f"Eliminar interfaz túnel WireGuard ({item_id})",
             coro_fn=lambda: client.delete(f"/interface/wireguard/{item_id}"),
         )
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/wireguard")
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface")
+    return res
 
 
 @router.get("/wireguard/peers")
@@ -1134,15 +1253,22 @@ async def create_wireguard_peer(
     if intercepted is not None:
         return intercepted
 
+    tenant_id = uuid.UUID(claims["tid"])
+    redis = get_redis_client()
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
-        return await execute_safe_mutation(
+        res = await execute_safe_mutation(
             client=client,
             menu="interface/wireguard/peers",
             action="create",
             before_state=body,
+            router_id=router_id,
+            summary=f"Crear Peer WireGuard en {payload.interface} ({payload.allowed_address})",
             coro_fn=lambda: client.put("/interface/wireguard/peers", json_data=body),
         )
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/wireguard/peers")
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/wireguard")
+    return res
 
 
 @router.patch("/wireguard/peers/{item_id}")
@@ -1196,17 +1322,25 @@ async def update_wireguard_peer(
     if intercepted is not None:
         return intercepted
 
+    tenant_id = uuid.UUID(claims["tid"])
+    redis = get_redis_client()
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         before = await client.get(f"/interface/wireguard/peers/{item_id}")
-        return await execute_safe_mutation(
+        res = await execute_safe_mutation(
             client=client,
             menu="interface/wireguard/peers",
             action="set",
             item_id=item_id,
             before_state=before if isinstance(before, dict) else {},
+            mutated_keys=list(patch_data.keys()),
+            router_id=router_id,
+            summary=f"Modificar Peer WireGuard ({item_id})",
             coro_fn=lambda: client.patch(f"/interface/wireguard/peers/{item_id}", json_data=patch_data),
         )
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/wireguard/peers")
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/wireguard")
+    return res
 
 
 @router.delete("/wireguard/peers/{item_id}")
@@ -1239,17 +1373,24 @@ async def delete_wireguard_peer(
     if intercepted is not None:
         return intercepted
 
+    tenant_id = uuid.UUID(claims["tid"])
+    redis = get_redis_client()
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         before = await client.get(f"/interface/wireguard/peers/{item_id}")
-        return await execute_safe_mutation(
+        res = await execute_safe_mutation(
             client=client,
             menu="interface/wireguard/peers",
             action="delete",
             item_id=item_id,
             before_state=before if isinstance(before, dict) else {},
+            router_id=router_id,
+            summary=f"Eliminar Peer WireGuard ({item_id})",
             coro_fn=lambda: client.delete(f"/interface/wireguard/peers/{item_id}"),
         )
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/wireguard/peers")
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/wireguard")
+    return res
 
 
 @router.get("/wifi/registration-table")

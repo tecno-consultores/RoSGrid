@@ -1,33 +1,38 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { setActivePinia, createPinia } from 'pinia';
 import RgSafeModeBanner from './RgSafeModeBanner.vue';
 import { useWebFigStore } from '@/stores/useWebFigStore';
 
-describe('RgSafeModeBanner.vue — Dead Man Switch 60s Banner', () => {
+describe('RgSafeModeBanner.vue — Dead Man Switch 60s Banner & Verificación en Vivo', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
   });
 
-  it('no se renderiza si isSafeModeActive es false', () => {
+  it('no se renderiza si isSafeModeActive es false y no hay notificación de reversión', () => {
     const webFigStore = useWebFigStore();
     webFigStore.isSafeModeActive = false;
+    webFigStore.safeModeRevertedNotice = '';
 
     const wrapper = mount(RgSafeModeBanner);
     expect(wrapper.find('.rg-safemode-banner').exists()).toBe(false);
+    expect(wrapper.find('.rg-safemode-reverted-notice').exists()).toBe(false);
   });
 
   it('se renderiza con cuenta regresiva cuando Safe Mode está activo', () => {
     const webFigStore = useWebFigStore();
     webFigStore.isSafeModeActive = true;
     webFigStore.safeModeCountdownSeconds = 45;
+    webFigStore.safeModeSummary = 'Cambio de IP en ether1';
+    webFigStore.safeModeJobName = 'rosgrid-safemode-xyz';
 
     const wrapper = mount(RgSafeModeBanner);
     expect(wrapper.find('.rg-safemode-banner').exists()).toBe(true);
     expect(wrapper.find('.countdown-val').text()).toBe('45s');
+    expect(wrapper.text()).toContain('Cambio de IP en ether1');
     expect(wrapper.find('aside').attributes('aria-live')).toBe('polite');
   });
 
@@ -41,17 +46,61 @@ describe('RgSafeModeBanner.vue — Dead Man Switch 60s Banner', () => {
     expect(wrapper.find('.pulse-anim').exists()).toBe(true);
   });
 
-  it('llama a stopSafeMode al hacer click en Confirmar Cambios', async () => {
+  it('muestra badge de verificación en vivo cuando safeModeLiveVerified es true', () => {
     const webFigStore = useWebFigStore();
     webFigStore.isSafeModeActive = true;
+    webFigStore.safeModeLiveVerified = true;
+    webFigStore.safeModeVerifyLatencyMs = 28.5;
 
     const wrapper = mount(RgSafeModeBanner);
-    await wrapper.find('.banner-btn').trigger('click');
-
-    expect(webFigStore.isSafeModeActive).toBe(false);
+    expect(wrapper.find('.safemode-badge--live').exists()).toBe(true);
+    expect(wrapper.text()).toContain('28.5 ms');
   });
 
-  it('muestra banner de espera de aprobación Maker-Checker (sin cuenta regresiva de 60s) ante HTTP 202', async () => {
+  it('ejecuta verifySafeModeOnRouter al pulsar #btn-safemode-verify-live', async () => {
+    const webFigStore = useWebFigStore();
+    webFigStore.isSafeModeActive = true;
+    const verifySpy = vi.spyOn(webFigStore, 'verifySafeModeOnRouter').mockResolvedValue(undefined);
+
+    const wrapper = mount(RgSafeModeBanner);
+    await wrapper.find('#btn-safemode-verify-live').trigger('click');
+    expect(verifySpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('ejecuta rollbackSafeModeChanges al pulsar #btn-safemode-rollback', async () => {
+    const webFigStore = useWebFigStore();
+    webFigStore.isSafeModeActive = true;
+    const rollbackSpy = vi.spyOn(webFigStore, 'rollbackSafeModeChanges').mockResolvedValue(undefined);
+
+    const wrapper = mount(RgSafeModeBanner);
+    await wrapper.find('#btn-safemode-rollback').trigger('click');
+    expect(rollbackSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('ejecuta confirmSafeModeChanges al pulsar #btn-safemode-confirm', async () => {
+    const webFigStore = useWebFigStore();
+    webFigStore.isSafeModeActive = true;
+    const confirmSpy = vi.spyOn(webFigStore, 'confirmSafeModeChanges').mockResolvedValue(undefined);
+
+    const wrapper = mount(RgSafeModeBanner);
+    await wrapper.find('#btn-safemode-confirm').trigger('click');
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('muestra banner informativo de reversión completada y permite descartarlo', async () => {
+    const webFigStore = useWebFigStore();
+    webFigStore.isSafeModeActive = false;
+    webFigStore.safeModeRevertedNotice = 'Reversión completada: se restauró el estado previo.';
+
+    const wrapper = mount(RgSafeModeBanner);
+    expect(wrapper.find('.rg-safemode-reverted-notice').exists()).toBe(true);
+    expect(wrapper.text()).toContain('Reversión completada');
+
+    await wrapper.find('#btn-safemode-dismiss-notice').trigger('click');
+    expect(webFigStore.safeModeRevertedNotice).toBe('');
+  });
+
+  it('muestra banner de espera de aprobación Maker-Checker ante HTTP 202', async () => {
     const webFigStore = useWebFigStore();
     webFigStore.startSafeModeCountdown(60);
     expect(webFigStore.isSafeModeActive).toBe(true);

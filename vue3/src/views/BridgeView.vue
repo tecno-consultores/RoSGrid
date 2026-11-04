@@ -2,7 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { ref, computed, onMounted } from 'vue';
+  import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
   import { useRoute } from 'vue-router';
   import { http } from '@/api/httpClient';
   import { useWebFigStore } from '@/stores/useWebFigStore';
@@ -188,13 +188,14 @@
     { key: 'age', label: 'Age', align: 'right' },
   ];
 
-  async function loadData() {
+  async function loadData(forceRefresh = false) {
     isLoading.value = true;
     errorMessage.value = '';
     try {
+      const query = forceRefresh ? '?refresh=true' : '';
       if (activeTab.value === 'bridges') {
         const res = await http.get<any>(
-          `/api/v1/routers/${routerId.value}/webfig/interfaces/bridge`,
+          `/api/v1/routers/${routerId.value}/webfig/interfaces/bridge${query}`,
         );
         const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
         bridgesList.value = items.map((b: any) => ({
@@ -208,7 +209,7 @@
         }));
       } else if (activeTab.value === 'ports') {
         const res = await http.get<any>(
-          `/api/v1/routers/${routerId.value}/webfig/interfaces/bridge/ports`,
+          `/api/v1/routers/${routerId.value}/webfig/interfaces/bridge/ports${query}`,
         );
         const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
         portsList.value = items.map((p: any) => ({
@@ -221,7 +222,7 @@
         }));
       } else if (activeTab.value === 'vlans') {
         const res = await http.get<any>(
-          `/api/v1/routers/${routerId.value}/webfig/interfaces/bridge/vlans`,
+          `/api/v1/routers/${routerId.value}/webfig/interfaces/bridge/vlans${query}`,
         );
         const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
         vlansList.value = items.map((v: any) => ({
@@ -233,7 +234,7 @@
         }));
       } else if (activeTab.value === 'hosts') {
         const res = await http.get<any>(
-          `/api/v1/routers/${routerId.value}/webfig/interfaces/bridge/hosts`,
+          `/api/v1/routers/${routerId.value}/webfig/interfaces/bridge/hosts${query}`,
         );
         const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
         hostsList.value = items.map((h: any) => ({
@@ -273,7 +274,7 @@
         protocol_mode: 'rstp',
         comment: '',
       };
-      loadData();
+      loadData(true);
     } catch (err: unknown) {
       webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string };
@@ -296,7 +297,7 @@
         ? (res.data as any)?.detail || 'Solicitud de puerto Bridge en espera de aprobación humana en Maker-Checker.'
         : `Puerto agregado al Bridge "${newPort.value.bridge}" exitosamente.`;
       isCreatePortModalOpen.value = false;
-      loadData();
+      loadData(true);
     } catch (err: unknown) {
       webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string };
@@ -333,7 +334,7 @@
         ? (res.data as any)?.detail || 'Modificación de Bridge en espera de aprobación en Maker-Checker.'
         : `Bridge "${editBridgeForm.value.name}" actualizado exitosamente bajo Safe Mode.`;
       isEditBridgeModalOpen.value = false;
-      loadData();
+      loadData(true);
     } catch (err: unknown) {
       webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string };
@@ -357,7 +358,7 @@
       statusMessage.value = intercepted
         ? (res.data as any)?.detail || 'Eliminación de Bridge en espera de aprobación en Maker-Checker.'
         : `Bridge "${bridge.name}" eliminado exitosamente bajo Safe Mode.`;
-      loadData();
+      loadData(true);
     } catch (err: unknown) {
       webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string };
@@ -396,7 +397,7 @@
         ? (res.data as any)?.detail || 'Modificación de puerto Bridge en espera de aprobación en Maker-Checker.'
         : `Puerto "${editPortForm.value.interface}" actualizado en Bridge "${editPortForm.value.bridge}".`;
       isEditPortModalOpen.value = false;
-      loadData();
+      loadData(true);
     } catch (err: unknown) {
       webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string };
@@ -420,7 +421,7 @@
       statusMessage.value = intercepted
         ? (res.data as any)?.detail || 'Solicitud para sacar puerto del Bridge en espera de aprobación en Maker-Checker.'
         : `Puerto "${port.interface}" liberado del Bridge "${port.bridge}" exitosamente.`;
-      loadData();
+      loadData(true);
     } catch (err: unknown) {
       webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string };
@@ -457,7 +458,7 @@
         ? (res.data as any)?.detail || 'Modificación de VLAN Bridge en espera de aprobación en Maker-Checker.'
         : `VLAN "${editVlanForm.value.vlan_ids}" actualizada exitosamente.`;
       isEditVlanModalOpen.value = false;
-      loadData();
+      loadData(true);
     } catch (err: unknown) {
       webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string };
@@ -502,7 +503,7 @@
         comment: '',
         disabled: false,
       };
-      loadData();
+      loadData(true);
     } catch (err: unknown) {
       webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string; response?: { data?: { detail?: string } } };
@@ -527,7 +528,7 @@
       statusMessage.value = intercepted
         ? (res.data as any)?.detail || 'Solicitud de eliminación en espera de aprobación humana en Maker-Checker.'
         : `VLAN "${vlan.vlan_ids}" eliminada del Bridge con éxito.`;
-      loadData();
+      loadData(true);
     } catch (err: unknown) {
       webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string; response?: { data?: { detail?: string } } };
@@ -558,7 +559,7 @@
         mtu: 1500,
         comment: '',
       };
-      loadData();
+      loadData(true);
     } catch (err: unknown) {
       webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string; response?: { data?: { detail?: string } } };
@@ -574,8 +575,18 @@
     loadData();
   }
 
+  const handleWebFigRefresh = (ev: Event) => {
+    const detail = (ev as CustomEvent)?.detail;
+    loadData(Boolean(detail?.forceRefresh ?? true));
+  };
+
   onMounted(() => {
     loadData();
+    window.addEventListener('rosgrid:webfig-refresh', handleWebFigRefresh);
+  });
+
+  onBeforeUnmount(() => {
+    window.removeEventListener('rosgrid:webfig-refresh', handleWebFigRefresh);
   });
 </script>
 
@@ -624,13 +635,14 @@
           + Subinterfaz 802.1Q
         </button>
         <button
+          id="btn-webfig-refresh"
           type="button"
-          class="btn-refresh"
+          class="btn-refresh font-tabular"
           :disabled="isLoading"
-          aria-label="Refrescar datos"
-          @click="loadData"
+          aria-label="Refrescar datos directamente desde el router MikroTik"
+          @click="loadData(true)"
         >
-          🔄 Refrescar
+          {{ isLoading ? '🔄 Refrescando...' : '🔄 Refrescar' }}
         </button>
       </div>
     </header>

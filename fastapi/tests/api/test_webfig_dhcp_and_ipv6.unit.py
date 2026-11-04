@@ -76,7 +76,8 @@ async def test_webfig_dhcp_servers_crud(fake_client_and_router: tuple[Router, As
             disabled=False,
         )
         res_create = await api_wf_ip.create_dhcp_server(r.id, create_payload, claims=claims, db=db)
-        assert res_create == {"ret": "*1"}
+        assert res_create.get("ret") == "*1"
+        assert "_safemode" in res_create
 
         # 3. Update DHCP Server
         update_payload = DhcpServerUpdateRequest(
@@ -84,11 +85,12 @@ async def test_webfig_dhcp_servers_crud(fake_client_and_router: tuple[Router, As
             disabled=True,
         )
         res_update = await api_wf_ip.update_dhcp_server(r.id, "*1", update_payload, claims=claims, db=db)
-        assert res_update == {"ret": "*1"}
+        assert res_update.get("ret") == "*1"
+        assert "_safemode" in res_update
 
         # 4. Delete DHCP Server
         res_del = await api_wf_ip.delete_dhcp_server(r.id, "*1", claims=claims, db=db)
-        assert res_del == {}
+        assert "_safemode" in res_del
 
 
 @pytest.mark.asyncio
@@ -114,7 +116,8 @@ async def test_webfig_dhcp_networks_crud(fake_client_and_router: tuple[Router, A
             comment="LAN Corporativa",
         )
         res_create = await api_wf_ip.create_dhcp_network(r.id, create_payload, claims=claims, db=db)
-        assert res_create == {"ret": "*1"}
+        assert res_create.get("ret") == "*1"
+        assert "_safemode" in res_create
 
         # 3. Update DHCP Network
         update_payload = DhcpNetworkUpdateRequest(
@@ -122,11 +125,12 @@ async def test_webfig_dhcp_networks_crud(fake_client_and_router: tuple[Router, A
             comment="Actualizado",
         )
         res_update = await api_wf_ip.update_dhcp_network(r.id, "*net1", update_payload, claims=claims, db=db)
-        assert res_update == {"ret": "*1"}
+        assert res_update.get("ret") == "*1"
+        assert "_safemode" in res_update
 
         # 4. Delete DHCP Network
         res_del = await api_wf_ip.delete_dhcp_network(r.id, "*net1", claims=claims, db=db)
-        assert res_del == {}
+        assert "_safemode" in res_del
 
 
 @pytest.mark.asyncio
@@ -153,7 +157,8 @@ async def test_webfig_dhcp_clients_crud_and_actions(fake_client_and_router: tupl
             comment="WAN DHCP",
         )
         res_create = await api_wf_ip.create_dhcp_client(r.id, create_payload, claims=claims, db=db)
-        assert res_create == {"ret": "*1"}
+        assert res_create.get("ret") == "*1"
+        assert "_safemode" in res_create
 
         # 3. Update DHCP Client
         update_payload = DhcpClientUpdateRequest(
@@ -161,19 +166,20 @@ async def test_webfig_dhcp_clients_crud_and_actions(fake_client_and_router: tupl
             disabled=True,
         )
         res_update = await api_wf_ip.update_dhcp_client(r.id, "*c1", update_payload, claims=claims, db=db)
-        assert res_update == {"ret": "*1"}
+        assert res_update.get("ret") == "*1"
+        assert "_safemode" in res_update
 
         # 4. Renew DHCP Client
         res_renew = await api_wf_ip.renew_dhcp_client(r.id, "*c1", claims=claims, db=db)
-        assert res_renew == {"ret": "*1"}
+        assert res_renew.get("ret") == "*1"
 
         # 5. Release DHCP Client
         res_rel = await api_wf_ip.release_dhcp_client(r.id, "*c1", claims=claims, db=db)
-        assert res_rel == {"ret": "*1"}
+        assert res_rel.get("ret") == "*1"
 
         # 6. Delete DHCP Client
         res_del = await api_wf_ip.delete_dhcp_client(r.id, "*c1", claims=claims, db=db)
-        assert res_del == {}
+        assert "_safemode" in res_del
 
 
 # ============================================================================
@@ -205,11 +211,12 @@ async def test_webfig_ipv6_addresses_crud(fake_client_and_router: tuple[Router, 
             comment="NOC IPv6",
         )
         res_create = await api_wf_ipv6.create_ipv6_address(r.id, create_payload, claims=claims, db=db)
-        assert res_create == {"ret": "*1"}
+        assert res_create.get("ret") == "*1"
+        assert "_safemode" in res_create
 
         # 3. Delete IPv6 Address
         res_del = await api_wf_ipv6.delete_ipv6_address(r.id, "*v6_1", claims=claims, db=db)
-        assert res_del == {}
+        assert "_safemode" in res_del
 
 
 @pytest.mark.asyncio
@@ -237,11 +244,12 @@ async def test_webfig_ipv6_dhcp_client_crud(fake_client_and_router: tuple[Router
             comment="ISP PD",
         )
         res_create = await api_wf_ipv6.create_ipv6_dhcp_client(r.id, create_payload, claims=claims, db=db)
-        assert res_create == {"ret": "*1"}
+        assert res_create.get("ret") == "*1"
+        assert "_safemode" in res_create
 
         # 3. Delete DHCPv6 Client
         res_del = await api_wf_ipv6.delete_ipv6_dhcp_client(r.id, "*v6_c1", claims=claims, db=db)
-        assert res_del == {}
+        assert "_safemode" in res_del
 
 
 @pytest.mark.asyncio
@@ -267,11 +275,12 @@ async def test_webfig_ipv6_dhcp_server_crud(fake_client_and_router: tuple[Router
             disabled=False,
         )
         res_create = await api_wf_ipv6.create_ipv6_dhcp_server(r.id, create_payload, claims=claims, db=db)
-        assert res_create == {"ret": "*1"}
+        assert res_create.get("ret") == "*1"
+        assert "_safemode" in res_create
 
         # 3. Delete DHCPv6 Server
         res_del = await api_wf_ipv6.delete_ipv6_dhcp_server(r.id, "*v6_s1", claims=claims, db=db)
-        assert res_del == {}
+        assert "_safemode" in res_del
 
 
 @pytest.mark.asyncio
@@ -295,11 +304,12 @@ async def test_webfig_ipv6_pools_and_ndp(fake_client_and_router: tuple[Router, A
             prefix_length=64,
         )
         res_create = await api_wf_ipv6.create_ipv6_pool(r.id, create_payload, claims=claims, db=db)
-        assert res_create == {"ret": "*1"}
+        assert res_create.get("ret") == "*1"
+        assert "_safemode" in res_create
 
         # 3. Delete IPv6 Pool
         res_del = await api_wf_ipv6.delete_ipv6_pool(r.id, "*v6_p1", claims=claims, db=db)
-        assert res_del == {}
+        assert "_safemode" in res_del
 
         # 4. List IPv6 Neighbors (NDP)
         res_neigh = await api_wf_ipv6.list_ipv6_neighbors(r.id, refresh=True, claims=claims, db=db)
@@ -347,7 +357,7 @@ async def test_webfig_dhcp_idempotent_creation_on_duplicate(
             claims=claims,
             db=db,
         )
-        assert res_pool == {"ret": "*existing1"}
+        assert res_pool.get("ret") == "*existing1"
 
         res_net = await api_wf_ip.create_dhcp_network(
             r.id,
@@ -357,7 +367,7 @@ async def test_webfig_dhcp_idempotent_creation_on_duplicate(
             claims=claims,
             db=db,
         )
-        assert res_net == {"ret": "*existing1"}
+        assert res_net.get("ret") == "*existing1"
 
         res_srv = await api_wf_ip.create_dhcp_server(
             r.id,
@@ -371,4 +381,4 @@ async def test_webfig_dhcp_idempotent_creation_on_duplicate(
             claims=claims,
             db=db,
         )
-        assert res_srv == {"ret": "*existing1"}
+        assert res_srv.get("ret") == "*existing1"

@@ -2,7 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { ref, computed, onMounted } from 'vue';
+  import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
   import { useRoute } from 'vue-router';
   import { http } from '@/api/httpClient';
   import { useWebFigStore } from '@/stores/useWebFigStore';
@@ -223,12 +223,13 @@
     );
   });
 
-  async function loadPppData() {
+  async function loadPppData(forceRefresh = false) {
     isLoading.value = true;
     errorMessage.value = '';
     try {
+      const query = forceRefresh ? '?refresh=true' : '';
       if (activeTab.value === 'pppoe-active') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ppp/active`);
+        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ppp/active${query}`);
         const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
         pppSessions.value = items.map((s: any) => ({
           ...s,
@@ -236,7 +237,7 @@
           caller_id: s.caller_id || s['caller-id'] || '',
         }));
       } else if (activeTab.value === 'ppp-secrets') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ppp/secrets`);
+        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ppp/secrets${query}`);
         const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
         pppSecrets.value = items.map((sec: any) => ({
           ...sec,
@@ -246,7 +247,7 @@
           disabled: sec.disabled === 'true' || sec.disabled === true,
         }));
       } else if (activeTab.value === 'ppp-profiles') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ppp/profiles`);
+        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ppp/profiles${query}`);
         const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
         pppProfiles.value = items.map((prof: any) => ({
           ...prof,
@@ -259,7 +260,7 @@
         }));
       } else if (activeTab.value === 'pppoe-servers') {
         const res = await http.get<any>(
-          `/api/v1/routers/${routerId.value}/webfig/ppp/pppoe-servers`,
+          `/api/v1/routers/${routerId.value}/webfig/ppp/pppoe-servers${query}`,
         );
         const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
         pppoeServers.value = items.map((srv: any) => ({
@@ -272,13 +273,13 @@
         }));
       } else if (activeTab.value === 'queue-tree') {
         const [treesRes, typesRes] = await Promise.all([
-          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/queues/tree`).catch(() => ({ data: [] })),
-          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/queues/types`).catch(() => ({ data: [] })),
+          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/queues/tree${query}`).catch(() => ({ data: [] })),
+          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/queues/types${query}`).catch(() => ({ data: [] })),
         ]);
         queueTrees.value = Array.isArray(treesRes.data) ? treesRes.data : treesRes.data?.items || [];
         queueTypes.value = Array.isArray(typesRes.data) ? typesRes.data : typesRes.data?.items || [];
       } else {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/queues/simple`);
+        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/queues/simple${query}`);
         const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
         simpleQueues.value = items.map((q: any) => ({
           ...q,
@@ -309,7 +310,7 @@
       };
       await http.post(`/api/v1/routers/${routerId.value}/webfig/queues/simple/move`, body);
       actionMessage.value = 'Cola reordenada exitosamente en RouterOS.';
-      await loadPppData();
+      await loadPppData(true);
     } catch {
       errorMessage.value = 'Error al reordenar cola simple';
     }
@@ -320,7 +321,7 @@
       await http.post(`/api/v1/routers/${routerId.value}/webfig/queues/tree`, newTreeForm.value);
       isCreateTreeModalOpen.value = false;
       actionMessage.value = 'Cola Tree creada exitosamente.';
-      await loadPppData();
+      await loadPppData(true);
     } catch (err: unknown) {
       errorMessage.value = 'Error al crear cola Tree';
     }
@@ -331,7 +332,7 @@
     try {
       await http.delete(`/api/v1/routers/${routerId.value}/webfig/queues/tree/${tree.id || tree['.id'] || tree.name}`);
       actionMessage.value = 'Cola Tree eliminada exitosamente.';
-      await loadPppData();
+      await loadPppData(true);
     } catch {
       errorMessage.value = 'Error al eliminar cola Tree';
     }
@@ -345,7 +346,7 @@
       setTimeout(() => {
         actionMessage.value = '';
       }, 4000);
-      loadPppData();
+      loadPppData(true);
     } catch (err: any) {
       actionMessage.value = err?.detail || err?.message || 'Error al reiniciar sesión';
       setTimeout(() => {
@@ -371,7 +372,7 @@
         remote_address: '',
         comment: '',
       };
-      loadPppData();
+      loadPppData(true);
     } catch (err: unknown) {
       const error = err as { message?: string; detail?: string };
       errorMessage.value = error.detail || error.message || 'Error al crear el secreto PPP.';
@@ -396,7 +397,7 @@
         dns_server: '8.8.8.8,1.1.1.1',
         only_one: 'yes',
       };
-      loadPppData();
+      loadPppData(true);
     } catch (err: unknown) {
       const error = err as { message?: string; detail?: string };
       errorMessage.value = error.detail || error.message || 'Error al crear el perfil PPP.';
@@ -416,7 +417,7 @@
       );
       actionMessage.value = `Servidor PPPoE "${newServer.value.service_name}" activado en ${newServer.value.interface}.`;
       isCreateServerModalOpen.value = false;
-      loadPppData();
+      loadPppData(true);
     } catch (err: unknown) {
       const error = err as { message?: string; detail?: string };
       errorMessage.value = error.detail || error.message || 'Error al crear el servidor PPPoE.';
@@ -452,7 +453,7 @@
         actionMessage.value = 'Nueva cola simple creada bajo Safe Mode.';
       }
       isCreateQueueModalOpen.value = false;
-      loadPppData();
+      loadPppData(true);
     } catch (err: any) {
       errorMessage.value =
         err?.response?.data?.detail || err?.message || 'Error al persistir cola simple.';
@@ -466,7 +467,7 @@
         `/api/v1/routers/${routerId.value}/webfig/queues/simple/${queue.id}`,
         { disabled: !queue.disabled },
       );
-      loadPppData();
+      loadPppData(true);
     } catch (err: any) {
       errorMessage.value = err?.response?.data?.detail || 'Error al conmutar cola.';
     }
@@ -478,7 +479,7 @@
     try {
       await http.delete(`/api/v1/routers/${routerId.value}/webfig/queues/simple/${queue.id}`);
       actionMessage.value = `Cola "${queue.name}" eliminada.`;
-      loadPppData();
+      loadPppData(true);
     } catch (err: any) {
       errorMessage.value = err?.response?.data?.detail || 'Error al eliminar cola simple.';
     }
@@ -491,7 +492,7 @@
         `/api/v1/routers/${routerId.value}/webfig/ppp/secrets/${secret.id}`,
         { disabled: !secret.disabled },
       );
-      loadPppData();
+      loadPppData(true);
     } catch (err: any) {
       errorMessage.value = err?.response?.data?.detail || 'Error al conmutar usuario PPP.';
     }
@@ -503,7 +504,7 @@
     try {
       await http.delete(`/api/v1/routers/${routerId.value}/webfig/ppp/secrets/${secret.id}`);
       actionMessage.value = `Usuario "${secret.name}" eliminado.`;
-      loadPppData();
+      loadPppData(true);
     } catch (err: any) {
       errorMessage.value = err?.response?.data?.detail || 'Error al eliminar usuario PPP.';
     }
@@ -548,7 +549,7 @@
       );
       actionMessage.value = `Usuario PPP "${editSecretForm.value.name}" actualizado exitosamente.`;
       isEditSecretModalOpen.value = false;
-      loadPppData();
+      loadPppData(true);
     } catch (err: any) {
       errorMessage.value = err?.response?.data?.detail || err?.detail || 'Error al actualizar usuario PPP.';
     } finally {
@@ -581,7 +582,7 @@
       );
       actionMessage.value = `Perfil PPP "${editProfileForm.value.name}" actualizado exitosamente.`;
       isEditProfileModalOpen.value = false;
-      loadPppData();
+      loadPppData(true);
     } catch (err: any) {
       errorMessage.value = err?.response?.data?.detail || err?.detail || 'Error al actualizar perfil PPP.';
     } finally {
@@ -615,7 +616,7 @@
       );
       actionMessage.value = `Servidor PPPoE "${editServerForm.value.service_name}" actualizado exitosamente.`;
       isEditServerModalOpen.value = false;
-      loadPppData();
+      loadPppData(true);
     } catch (err: any) {
       errorMessage.value = err?.response?.data?.detail || err?.detail || 'Error al actualizar servidor PPPoE.';
     } finally {
@@ -630,7 +631,7 @@
         `/api/v1/routers/${routerId.value}/webfig/ppp/pppoe-servers/${encodeURIComponent(srv.id)}`,
         { disabled: !srv.disabled },
       );
-      loadPppData();
+      loadPppData(true);
     } catch (err: any) {
       errorMessage.value = err?.response?.data?.detail || 'Error al conmutar servidor PPPoE.';
     }
@@ -642,7 +643,7 @@
     try {
       await http.delete(`/api/v1/routers/${routerId.value}/webfig/ppp/pppoe-servers/${encodeURIComponent(srv.id)}`);
       actionMessage.value = `Servidor PPPoE "${srv.service_name}" eliminado.`;
-      loadPppData();
+      loadPppData(true);
     } catch (err: any) {
       errorMessage.value = err?.response?.data?.detail || 'Error al eliminar servidor PPPoE.';
     }
@@ -654,7 +655,7 @@
     try {
       await http.delete(`/api/v1/routers/${routerId.value}/webfig/ppp/profiles/${profile.id}`);
       actionMessage.value = `Perfil "${profile.name}" eliminado.`;
-      loadPppData();
+      loadPppData(true);
     } catch (err: any) {
       errorMessage.value = err?.response?.data?.detail || 'Error al eliminar perfil PPP.';
     }
@@ -665,8 +666,17 @@
     loadPppData();
   }
 
+  function handleWebFigRefresh() {
+    loadPppData(true);
+  }
+
   onMounted(() => {
     loadPppData();
+    window.addEventListener('rosgrid:webfig-refresh', handleWebFigRefresh);
+  });
+
+  onBeforeUnmount(() => {
+    window.removeEventListener('rosgrid:webfig-refresh', handleWebFigRefresh);
   });
 </script>
 
@@ -723,11 +733,12 @@
           + Nueva Cola Tree (HTB)
         </button>
         <button
+          id="btn-webfig-refresh"
           type="button"
-          class="btn-refresh"
+          class="btn-refresh font-tabular"
           :disabled="isLoading"
           aria-label="Refrescar datos PPP"
-          @click="loadPppData"
+          @click="loadPppData(true)"
         >
           🔄 Refrescar
         </button>

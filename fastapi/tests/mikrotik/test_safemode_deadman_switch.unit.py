@@ -11,6 +11,8 @@ from src.mikrotik.safemode import (
     SafeModeRollbackTriggeredError,
     build_rollback_command,
     build_scheduler_payload,
+    build_script_payload,
+    execute_rollback_on_router,
     execute_with_safemode,
     generate_safemode_job_name,
     inject_deadmans_switch,
@@ -27,26 +29,26 @@ def test_generate_safemode_job_name() -> None:
 
 
 def test_build_rollback_command() -> None:
-    # Set/patch
+    # Set/patch con selector entrecomillado y filtrado de llaves
     cmd_set = build_rollback_command(
         menu_path="/ip/firewall/filter",
         action="set",
         item_id="*1",
         before_state={".id": "*1", "disabled": True, "comment": "blocked"},
     )
-    assert "/ip/firewall/filter/set [find .id=*1]" in cmd_set
+    assert '/ip/firewall/filter/set [find .id="*1"]' in cmd_set
     assert "disabled=yes" in cmd_set
     assert 'comment="blocked"' in cmd_set
 
-    # Create/put with item_id
+    # Create/put con item_id
     cmd_create_id = build_rollback_command(
         menu_path="/interface/vlan",
         action="create",
         item_id="*2",
     )
-    assert cmd_create_id == "/interface/vlan/remove [find .id=*2]"
+    assert cmd_create_id == '/interface/vlan/remove [find .id="*2"]'
 
-    # Create/put with comment in before_state
+    # Create/put con comment en before_state
     cmd_create_comment = build_rollback_command(
         menu_path="/interface/vlan",
         action="create",
@@ -54,7 +56,7 @@ def test_build_rollback_command() -> None:
     )
     assert cmd_create_comment == '/interface/vlan/remove [find comment="my-vlan"]'
 
-    # Create/put without item_id or comment
+    # Create/put sin item_id ni comment
     cmd_create_none = build_rollback_command(
         menu_path="/interface/vlan",
         action="create",
@@ -67,21 +69,34 @@ def test_build_rollback_command() -> None:
         action="delete",
         item_id="*3",
     )
-    assert cmd_delete == "/ip/address/set [find .id=*3] disabled=no"
+    assert cmd_delete == '/ip/address/set [find .id="*3"] disabled=no'
 
     # Unknown
     assert build_rollback_command("/menu", "unknown") == ":nothing"
 
 
+def test_build_script_payload() -> None:
+    payload = build_script_payload(
+        job_name="rosgrid-safemode-test",
+        rollback_cli='/ip/address/remove [find .id="*1"]',
+    )
+    assert payload["name"] == "rosgrid-safemode-test"
+    assert payload["comment"] == "ROSGRID_DEADMAN_SWITCH_AUTO_ROLLBACK"
+    assert "/ip/address/remove" in payload["source"]
+    assert 'scheduler/remove [find name="rosgrid-safemode-test"]' in payload["source"]
+    assert 'script/remove [find name="rosgrid-safemode-test"]' in payload["source"]
+
+
 def test_build_scheduler_payload() -> None:
     payload = build_scheduler_payload(
         job_name="rosgrid-safemode-test",
-        rollback_cli="/ip/address/remove [find .id=*1]",
+        rollback_cli='/ip/address/remove [find .id="*1"]',
         interval_seconds=60,
     )
     assert payload["name"] == "rosgrid-safemode-test"
     assert payload["interval"] == "00:01:00"
     assert "on-event" in payload
+    assert "/system/script/run" in payload["on-event"]
     assert "/ip/address/remove" in payload["on-event"]
     assert "rosgrid-safemode-test" in payload["on-event"]
 
@@ -91,15 +106,18 @@ async def test_inject_deadmans_switch() -> None:
     client = AsyncMock()
     job_name = await inject_deadmans_switch(
         client=client,
-        rollback_cli="/ip/address/remove [find]",
+        rollback_cli='/ip/address/remove [find .id="*1"]',
         interval_seconds=30,
         job_name="my-job",
     )
     assert job_name == "my-job"
-    client.put.assert_awaited_once()
-    args, kwargs = client.put.await_args
-    assert args[0] == "/system/scheduler"
-    assert kwargs["json_data"]["name"] == "my-job"
+    # Debe haber inyectado script y scheduler
+    assert client.put.await_count == 2
+    call_args_list = client.put.await_args_list
+    assert call_args_list[0][0][0] == "/system/script"
+    assert call_args_list[0][1]["json_data"]["name"] == "my-job"
+    assert call_args_list[1][0][0] == "/system/scheduler"
+    assert call_args_list[1][1]["json_data"]["name"] == "my-job"
 
 
 @pytest.mark.asyncio
@@ -117,13 +135,75 @@ async def test_verify_connectivity_success_and_failure() -> None:
 @pytest.mark.asyncio
 async def test_remove_deadmans_switch() -> None:
     client = AsyncMock()
-    client.get.return_value = [{".id": "*sched1", "name": "my-job"}]
+    # Para /system/scheduler y luego /system/script
+    client.get.side_effect = [
+        [{".id": "*sched1", "name": "my-job"}],
+        [{".id": "*script1", "name": "my-job"}],
+    ]
     assert await remove_deadmans_switch(client, "my-job") is True
-    client.delete.assert_awaited_once_with("/system/scheduler/*sched1")
+    assert client.delete.await_count == 2
+    client.delete.assert_any_await("/system/scheduler/*sched1")
+    client.delete.assert_any_await("/system/script/*script1")
 
     # Not found case
-    client.get.return_value = []
+    client.get.side_effect = [[], []]
     assert await remove_deadmans_switch(client, "not-found") is False
+
+
+@pytest.mark.asyncio
+async def test_execute_rollback_on_router_patch() -> None:
+    client = AsyncMock()
+    client.get.side_effect = [[], []]  # Para remove_deadmans_switch
+    result = await execute_rollback_on_router(
+        client=client,
+        job_name="test-rollback",
+        menu="/ip/firewall/filter",
+        action="patch",
+        item_id="*rule1",
+        before_state={"disabled": False, "comment": "old rule"},
+        mutated_keys=["disabled"],
+    )
+    assert result is True
+    client.patch.assert_awaited_once_with(
+        "/ip/firewall/filter/*rule1",
+        json_data={"disabled": False},
+    )
+
+
+@pytest.mark.asyncio
+async def test_execute_rollback_on_router_delete() -> None:
+    client = AsyncMock()
+    client.get.side_effect = [[], []]
+    result = await execute_rollback_on_router(
+        client=client,
+        job_name="test-rollback-del",
+        menu="/interface/vlan",
+        action="create",
+        item_id="*vlan1",
+        before_state=None,
+    )
+    assert result is True
+    client.delete.assert_any_await("/interface/vlan/*vlan1")
+
+
+@pytest.mark.asyncio
+async def test_execute_rollback_on_router_fallback_script() -> None:
+    client = AsyncMock()
+    client.patch.side_effect = Exception("Patch failed")
+    client.get.side_effect = [[], []]
+    result = await execute_rollback_on_router(
+        client=client,
+        job_name="test-rollback-fallback",
+        menu="/ip/firewall/filter",
+        action="patch",
+        item_id="*rule1",
+        before_state={"disabled": False},
+    )
+    assert result is True
+    client.post.assert_awaited_once_with(
+        "/system/script/run",
+        json_data={".id": "test-rollback-fallback"},
+    )
 
 
 @pytest.mark.asyncio
@@ -131,21 +211,44 @@ async def test_execute_with_safemode_success() -> None:
     client = AsyncMock()
     client.get.side_effect = [
         {"name": "AliveRouter"},  # verify_connectivity
-        [{".id": "*sched1", "name": "rosgrid-safemode-1"}],  # remove_deadmans_switch
+        [{".id": "*sched1", "name": "rosgrid-safemode-1"}],  # scheduler
+        [{".id": "*script1", "name": "rosgrid-safemode-1"}],  # script
     ]
-    client.put.return_value = {".id": "*sched1"}
+    client.put.return_value = {".id": "*item1"}
 
     async def sample_mutation() -> str:
         return "MUTATION_DONE"
 
     result = await execute_with_safemode(
         client=client,
-        rollback_cli="/interface/set ether1 disabled=no",
+        rollback_cli='/interface/set ether1 disabled=no',
         operation_fn=sample_mutation,
         job_name="rosgrid-safemode-1",
+        keep_alive_for_confirmation=False,
     )
     assert result == "MUTATION_DONE"
-    client.delete.assert_awaited_once()
+    assert client.delete.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_execute_with_safemode_keep_alive() -> None:
+    client = AsyncMock()
+    client.get.return_value = {"name": "AliveRouter"}  # verify_connectivity
+    client.put.return_value = {".id": "*item1"}
+
+    async def sample_mutation() -> str:
+        return "MUTATION_HELD"
+
+    result = await execute_with_safemode(
+        client=client,
+        rollback_cli='/interface/set ether1 disabled=no',
+        operation_fn=sample_mutation,
+        job_name="rosgrid-safemode-keep",
+        keep_alive_for_confirmation=True,
+    )
+    assert result == "MUTATION_HELD"
+    # Al mantener vivo para confirmación, client.delete NO debe ser llamado
+    client.delete.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -160,7 +263,7 @@ async def test_execute_with_safemode_loss_of_connectivity() -> None:
     with pytest.raises(SafeModeRollbackTriggeredError) as exc_info:
         await execute_with_safemode(
             client=client,
-            rollback_cli="/interface/set ether1 disabled=no",
+            rollback_cli='/interface/set ether1 disabled=no',
             operation_fn=suicidal_mutation,
             interval_seconds=60,
             job_name="rosgrid-safemode-loss",

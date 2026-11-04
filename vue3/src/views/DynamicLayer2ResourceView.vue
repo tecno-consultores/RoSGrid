@@ -2,7 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { ref, computed, watch } from 'vue';
+  import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
   import { useRoute } from 'vue-router';
   import { http } from '@/api/httpClient';
   import { useWebFigStore } from '@/stores/useWebFigStore';
@@ -231,16 +231,17 @@
     return String(row.id ?? row['.id'] ?? '');
   }
 
-  async function loadResource() {
+  async function loadResource(forceRefresh = false) {
     isLoading.value = true;
     errorMessage.value = '';
     selectedRowIds.value = [];
     compactColumnsMode.value = true;
     customSelectedKeys.value = columnProfiles.loadSavedColumns(rosPath.value);
     try {
+      const query = forceRefresh ? '?refresh=true' : '';
       const [res, rpcRes] = await Promise.all([
         http.get<Layer2ResourceResponse>(
-          `/api/v1/routers/${routerId.value}/webfig/layer2/resource/${rosPath.value}`,
+          `/api/v1/routers/${routerId.value}/webfig/layer2/resource/${rosPath.value}${query}`,
         ),
         http
           .get<Layer2RpcActionDescriptor[]>(
@@ -254,14 +255,19 @@
           .split('/')
           .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
           .join(' / ');
-      const mergedRpc = (rpcRes.data?.length ? rpcRes.data : res.data.rpc_actions) || [];
+      const mergedRpc = (rpcRes.data?.length ? rpcRes.data : res.data?.rpc_actions) || [];
+      const isArrayData = Array.isArray(res.data);
+      const baseData = isArrayData ? {} : res.data || {};
       resourceData.value = {
-        ...res.data,
+        ...baseData,
+        ros_path: rosPath.value,
         title: rawTitle,
+        columns_schema: Array.isArray(baseData.columns_schema) ? baseData.columns_schema : [],
+        items: isArrayData ? (res.data as any) : Array.isArray(baseData.items) ? baseData.items : [],
         rpc_actions: mergedRpc,
         form_data:
-          res.data.form_data ||
-          (res.data.is_singleton && res.data.items?.[0] ? { ...res.data.items[0] } : {}),
+          baseData.form_data ||
+          (baseData.is_singleton && baseData.items?.[0] ? { ...baseData.items[0] } : {}),
       };
     } catch (err: unknown) {
       resourceData.value = {
@@ -343,7 +349,7 @@
       );
       isRpcModalOpen.value = false;
       showSuccessBanner(`Comando RPC '${payload.action}' ejecutado exitosamente.`);
-      await loadResource();
+      await loadResource(true);
     } catch (err: unknown) {
       errorMessage.value = extractErrorDetail(
         err,
@@ -406,7 +412,7 @@
       showSuccessBanner(
         `Lote '${action}' aplicado (${res.data.succeeded_ids.length}/${res.data.total_requested} exitosos) con Safe Mode 60s.`,
       );
-      await loadResource();
+      await loadResource(true);
     } catch (err: unknown) {
       errorMessage.value = extractErrorDetail(
         err,
@@ -483,7 +489,7 @@
         showSuccessBanner('Registro guardado exitosamente con Safe Mode.');
         isModalOpen.value = false;
       }
-      loadResource();
+      loadResource(true);
     } catch {
       showSuccessBanner('Operación procesada en modo simulado.');
       isModalOpen.value = false;
@@ -499,11 +505,24 @@
         `/api/v1/routers/${routerId.value}/webfig/layer2/resource/${rosPath.value}/${encodeURIComponent(recId)}`,
       );
       showSuccessBanner('Registro eliminado con Safe Mode.');
-      loadResource();
+      loadResource(true);
     } catch {
       errorMessage.value = 'No fue posible eliminar el registro seleccionado.';
     }
   }
+
+  const handleWebFigRefresh = (ev: Event) => {
+    const detail = (ev as CustomEvent)?.detail;
+    loadResource(Boolean(detail?.forceRefresh ?? true));
+  };
+
+  onMounted(() => {
+    window.addEventListener('rosgrid:webfig-refresh', handleWebFigRefresh);
+  });
+
+  onBeforeUnmount(() => {
+    window.removeEventListener('rosgrid:webfig-refresh', handleWebFigRefresh);
+  });
 
   watch(
     [routerId, rosPath],
@@ -521,8 +540,8 @@
         <h2 class="view-title">Motor Dinámico Capa 2 — {{ resourceData.title }}</h2>
         <p class="view-subtitle">
           Ruta RouterOS: <code>/{{ rosPath }}</code>
-          <span v-if="resourceData.columns_schema.length > 0" class="schema-badge">
-            {{ visibleSchemaColumns.length }}/{{ resourceData.columns_schema.length }} columnas visibles
+          <span v-if="(resourceData.columns_schema?.length ?? 0) > 0" class="schema-badge">
+            {{ visibleSchemaColumns.length }}/{{ resourceData.columns_schema?.length || 0 }} columnas visibles
           </span>
           <span
             v-if="resourceData.schema_source"
@@ -541,6 +560,18 @@
       </div>
 
       <div class="view-header__actions">
+        <!-- Botón de Refrescar Datos en Vivo con Bypass de Caché -->
+        <button
+          id="btn-webfig-refresh"
+          type="button"
+          class="btn-toolbar font-tabular"
+          :disabled="isLoading"
+          aria-label="Refrescar datos directamente desde el router MikroTik"
+          @click="loadResource(true)"
+        >
+          {{ isLoading ? '🔄 Refrescando...' : '🔄 Refrescar' }}
+        </button>
+
         <!-- Botón de Introspección de Esquema en Vivo -->
         <button
           id="btn-inspect-schema"

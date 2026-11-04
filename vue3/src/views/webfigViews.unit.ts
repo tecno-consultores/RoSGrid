@@ -1889,4 +1889,40 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
     await pppVm.handleUpdateServer();
     await flushPromises();
   });
+
+  it('Hito 28.17 — las vistas WebFig montan #btn-webfig-refresh y responden a rosgrid:webfig-refresh', async () => {
+    const getSpy = vi.spyOn(http, 'get').mockResolvedValue({ data: [], status: 200, headers: new Headers() });
+
+    // 1. InterfacesAndSfpView
+    const wInterfaces = mount(InterfacesAndSfpView);
+    expect(wInterfaces.find('#btn-webfig-refresh').exists()).toBe(true);
+    await wInterfaces.find('#btn-webfig-refresh').trigger('click');
+    expect(getSpy).toHaveBeenCalledWith(expect.stringContaining('refresh=true'));
+
+    // 2. FirewallRulesView
+    const wFirewall = mount(FirewallRulesView);
+    expect(wFirewall.find('#btn-webfig-refresh').exists()).toBe(true);
+
+    // 3. DynamicLayer2ResourceView
+    const wL2 = mount(DynamicLayer2ResourceView);
+    expect(wL2.find('#btn-webfig-refresh').exists()).toBe(true);
+
+    // 4. BridgeView
+    const wBridge = mount(BridgeView);
+    expect(wBridge.find('#btn-webfig-refresh').exists()).toBe(true);
+
+    // 5. WireGuardVpnView
+    const wWg = mount(WireGuardVpnView);
+    expect(wWg.find('#btn-webfig-refresh').exists()).toBe(true);
+
+    // 6. PppAndQueuesView
+    const wPpp = mount(PppAndQueuesView);
+    expect(wPpp.find('#btn-webfig-refresh').exists()).toBe(true);
+
+    // 7. Evento rosgrid:webfig-refresh
+    getSpy.mockClear();
+    window.dispatchEvent(new CustomEvent('rosgrid:webfig-refresh'));
+    await flushPromises();
+    expect(getSpy).toHaveBeenCalledWith(expect.stringContaining('refresh=true'));
+  });
 });

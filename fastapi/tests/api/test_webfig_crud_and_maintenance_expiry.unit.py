@@ -213,10 +213,11 @@ async def test_ip_pools_dns_arp_and_dhcp_full_edit_delete_parity(
             comment="Pool FTTH VIP",
         )
         res_upd_pool = await api_wf_ip.update_pool(r.id, "*P1", pool_patch, claims=mock_claims, db=db)
-        assert res_upd_pool == {"ret": "*1"}
+        assert res_upd_pool.get("ret") == "*1"
+        assert "_safemode" in res_upd_pool
 
         res_del_pool = await api_wf_ip.delete_pool(r.id, "*P1", claims=mock_claims, db=db)
-        assert res_del_pool == {}
+        assert "_safemode" in res_del_pool
 
         # 2. Editar parámetros globales de DNS (Singleton /ip/dns/set)
         dns_patch = DnsSettingsUpdateRequest(
@@ -228,7 +229,8 @@ async def test_ip_pools_dns_arp_and_dhcp_full_edit_delete_parity(
             verify_doh_cert=True,
         )
         res_dns = await api_wf_ip.update_dns_settings(r.id, dns_patch, claims=mock_claims, db=db)
-        assert res_dns == {"ret": "*1"}
+        assert res_dns.get("ret") == "*1"
+        assert "_safemode" in res_dns
 
         # 3. Crear, editar y eliminar registro DNS estático
         dns_static_create = DnsStaticCreateRequest(
@@ -239,7 +241,8 @@ async def test_ip_pools_dns_arp_and_dhcp_full_edit_delete_parity(
             comment="Gateway Local",
         )
         res_dns_create = await api_wf_ip.create_dns_static(r.id, dns_static_create, claims=mock_claims, db=db)
-        assert res_dns_create == {"ret": "*1"}
+        assert res_dns_create.get("ret") == "*1"
+        assert "_safemode" in res_dns_create
 
         dns_static_upd = DnsStaticUpdateRequest(
             name="core-nuevo.rosgrid.lan",
@@ -249,10 +252,11 @@ async def test_ip_pools_dns_arp_and_dhcp_full_edit_delete_parity(
             comment="Actualizado",
         )
         res_dns_upd = await api_wf_ip.update_dns_static(r.id, "*DNS1", dns_static_upd, claims=mock_claims, db=db)
-        assert res_dns_upd == {"ret": "*1"}
+        assert res_dns_upd.get("ret") == "*1"
+        assert "_safemode" in res_dns_upd
 
         res_dns_del = await api_wf_ip.delete_dns_static(r.id, "*DNS1", claims=mock_claims, db=db)
-        assert res_dns_del == {}
+        assert "_safemode" in res_dns_del
 
         # 4. Editar entrada ARP estática
         arp_upd = IpArpUpdateRequest(
@@ -275,7 +279,8 @@ async def test_ip_pools_dns_arp_and_dhcp_full_edit_delete_parity(
             comment="Red DHCP Editada",
         )
         res_net_upd = await api_wf_ip.update_dhcp_network(r.id, "*NET1", net_upd, claims=mock_claims, db=db)
-        assert res_net_upd == {"ret": "*1"}
+        assert res_net_upd.get("ret") == "*1"
+        assert "_safemode" in res_net_upd
 
         # 6. Editar cliente DHCP con todos sus campos
         cli_upd = DhcpClientUpdateRequest(
@@ -288,7 +293,8 @@ async def test_ip_pools_dns_arp_and_dhcp_full_edit_delete_parity(
             comment="WAN Secundaria",
         )
         res_cli_upd = await api_wf_ip.update_dhcp_client(r.id, "*CLI1", cli_upd, claims=mock_claims, db=db)
-        assert res_cli_upd == {"ret": "*1"}
+        assert res_cli_upd.get("ret") == "*1"
+        assert "_safemode" in res_cli_upd
 
 
 @pytest.mark.asyncio
@@ -346,10 +352,11 @@ async def test_ppp_ipv6_routing_and_firewall_edit_delete_parity(
             disabled=False,
         )
         res_srv_upd = await api_wf_ppp.update_pppoe_server(r.id, "*SRV1", srv_upd, claims=mock_claims, db=db)
-        assert res_srv_upd == {"ret": "*1"}
+        assert res_srv_upd.get("ret") == "*1"
+        assert "_safemode" in res_srv_upd
 
         res_srv_del = await api_wf_ppp.delete_pppoe_server(r.id, "*SRV1", claims=mock_claims, db=db)
-        assert res_srv_del == {}
+        assert "_safemode" in res_srv_del
 
     # 2. IPv6 Addresses, DHCPv6 Clients, DHCPv6 Servers y Pools IPv6
     with (
@@ -364,9 +371,9 @@ async def test_ppp_ipv6_routing_and_firewall_edit_delete_parity(
             disabled=False,
             comment="Gateway LAN v6",
         )
-        assert await api_wf_ipv6.update_ipv6_address(r.id, "*V6A1", v6_addr_upd, claims=mock_claims, db=db) == {
-            "ret": "*1"
-        }
+        res_v6a = await api_wf_ipv6.update_ipv6_address(r.id, "*V6A1", v6_addr_upd, claims=mock_claims, db=db)
+        assert res_v6a.get("ret") == "*1"
+        assert "_safemode" in res_v6a
 
         v6_cli_upd = Ipv6DhcpClientUpdateRequest(
             interface="ether1",
@@ -378,9 +385,9 @@ async def test_ppp_ipv6_routing_and_firewall_edit_delete_parity(
             disabled=False,
             comment="PD WAN1",
         )
-        assert await api_wf_ipv6.update_ipv6_dhcp_client(r.id, "*V6C1", v6_cli_upd, claims=mock_claims, db=db) == {
-            "ret": "*1"
-        }
+        res_v6c = await api_wf_ipv6.update_ipv6_dhcp_client(r.id, "*V6C1", v6_cli_upd, claims=mock_claims, db=db)
+        assert res_v6c.get("ret") == "*1"
+        assert "_safemode" in res_v6c
 
         v6_srv_upd = Ipv6DhcpServerUpdateRequest(
             name="dhcpv6-lan",
@@ -390,9 +397,9 @@ async def test_ppp_ipv6_routing_and_firewall_edit_delete_parity(
             disabled=False,
             comment="Servidor DHCPv6",
         )
-        assert await api_wf_ipv6.update_ipv6_dhcp_server(r.id, "*V6S1", v6_srv_upd, claims=mock_claims, db=db) == {
-            "ret": "*1"
-        }
+        res_v6s = await api_wf_ipv6.update_ipv6_dhcp_server(r.id, "*V6S1", v6_srv_upd, claims=mock_claims, db=db)
+        assert res_v6s.get("ret") == "*1"
+        assert "_safemode" in res_v6s
 
         v6_pool_upd = Ipv6PoolUpdateRequest(
             name="pool-v6-corp",
@@ -400,9 +407,9 @@ async def test_ppp_ipv6_routing_and_firewall_edit_delete_parity(
             prefix_length=64,
             comment="Pool Delegado",
         )
-        assert await api_wf_ipv6.update_ipv6_pool(r.id, "*V6P1", v6_pool_upd, claims=mock_claims, db=db) == {
-            "ret": "*1"
-        }
+        res_v6p = await api_wf_ipv6.update_ipv6_pool(r.id, "*V6P1", v6_pool_upd, claims=mock_claims, db=db)
+        assert res_v6p.get("ret") == "*1"
+        assert "_safemode" in res_v6p
 
     # 3. Routing Tables, PBR Rules y Filter Rules
     with (

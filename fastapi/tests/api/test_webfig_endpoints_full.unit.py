@@ -658,3 +658,79 @@ async def test_webfig_common_helpers(fake_client_and_router: tuple[Router, Async
     )
     cl = api_wf_common._create_client_from_vault(r_prev, t_id)
     assert cl.previous_password == "prev123"
+
+
+# ============================================================================
+# WEBFIG SAFEMODE TWO-PHASE LIFECYCLE ENDPOINTS
+# ============================================================================
+
+
+@pytest.mark.asyncio
+async def test_webfig_safemode_lifecycle(fake_client_and_router: tuple[Router, AsyncMock]) -> None:
+    r, client = fake_client_and_router
+    db = AsyncMock()
+    t_id = r.tenant_id
+    u_id = uuid.uuid4()
+    claims = {"tid": str(t_id), "sub": str(u_id), "rol": SystemRoleEnum.TENANT_ADMIN.value}
+
+    fake_redis = AsyncMock()
+    fake_redis.get.return_value = None
+    fake_redis.delete.return_value = 1
+
+    with (
+        patch("src.api.v1.webfig_system_tools.get_router_and_client", return_value=(r, client)),
+        patch("src.api.v1.webfig_system_tools.get_redis_client", return_value=fake_redis),
+        patch("src.api.v1.webfig_system_tools.invalidate_webfig_cache", new_callable=AsyncMock),
+    ):
+        # 1. Status sin job activo
+        status_none = await api_wf_systools.get_safemode_status(r.id, claims, db)
+        assert status_none["active"] is False
+        assert status_none["job_name"] is None
+
+        # 2. Status con job activo
+        import json
+
+        active_job = {
+            "job_name": "rosgrid-safemode-test",
+            "menu": "interface/ethernet",
+            "action": "patch",
+            "item_id": "*1",
+            "summary": "Modificación de mtu",
+            "rollback_cli": '/interface/set ether1 mtu=1500',
+            "expires_at": 1700000000.0,
+            "mutated_keys": ["mtu"],
+            "before_state": {"mtu": "1500"},
+        }
+        fake_redis.get.return_value = json.dumps(active_job)
+        status_active = await api_wf_systools.get_safemode_status(r.id, claims, db)
+        assert status_active["active"] is True
+        assert status_active["job_name"] == "rosgrid-safemode-test"
+        assert status_active["summary"] == "Modificación de mtu"
+
+        # 3. Verify en vivo
+        client.get.side_effect = [
+            {"name": "MikroTik-Test"},  # /system/identity
+            [{".id": "*sched1", "name": "rosgrid-safemode-test"}],  # /system/scheduler
+            {".id": "*1", "name": "ether1", "mtu": "1400"},  # /interface/ethernet/*1
+        ]
+        verify_res = await api_wf_systools.verify_safemode_live_on_router(r.id, claims, db)
+        assert verify_res["verified"] is True
+        assert verify_res["router_identity"] == "MikroTik-Test"
+        assert verify_res["scheduler_armed"] is True
+        assert verify_res["job_name"] == "rosgrid-safemode-test"
+
+        # 4. Confirm cambios
+        client.get.side_effect = [
+            [{".id": "*sched1", "name": "rosgrid-safemode-test"}],  # sched
+            [{".id": "*script1", "name": "rosgrid-safemode-test"}],  # script
+        ]
+        confirm_res = await api_wf_systools.confirm_safemode_changes(r.id, claims, db)
+        assert confirm_res["status"] == "CONFIRMED"
+        assert confirm_res["job_name"] == "rosgrid-safemode-test"
+
+        # 5. Rollback cambios
+        client.get.side_effect = [[], []]
+        rollback_res = await api_wf_systools.rollback_safemode_changes(r.id, claims, db)
+        assert rollback_res["status"] == "REVERTED"
+        assert rollback_res["job_name"] == "rosgrid-safemode-test"
+

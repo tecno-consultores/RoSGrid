@@ -2,7 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { ref, computed, onMounted } from 'vue';
+  import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
   import { http } from '@/api/httpClient';
   import { useWebFigStore } from '@/stores/useWebFigStore';
@@ -53,26 +53,27 @@
   const editingPoolId = ref('');
   const editPoolForm = ref({ name: '', prefix: '', prefix_length: 64 });
 
-  async function loadData() {
+  async function loadData(forceRefresh = false) {
     isLoading.value = true;
     errorMessage.value = '';
     try {
+      const query = forceRefresh ? '?refresh=true' : '';
       if (activeTab.value === 'addresses') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ipv6/addresses`);
+        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ipv6/addresses${query}`);
         ipv6Addresses.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
       } else if (activeTab.value === 'dhcp-client') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ipv6/dhcp-clients`);
+        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ipv6/dhcp-clients${query}`);
         dhcpv6Clients.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
       } else if (activeTab.value === 'dhcp-server') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ipv6/dhcp-servers`);
+        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ipv6/dhcp-servers${query}`);
         dhcpv6Servers.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
       } else if (activeTab.value === 'pools') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ipv6/pools`);
+        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ipv6/pools${query}`);
         ipv6Pools.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
       } else if (activeTab.value === 'ndp') {
-        const resNeigh = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ipv6/neighbors`);
+        const resNeigh = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ipv6/neighbors${query}`);
         ipv6Neighbors.value = Array.isArray(resNeigh.data) ? resNeigh.data : resNeigh.data?.items || [];
-        const resNd = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ipv6/nd`);
+        const resNd = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ipv6/nd${query}`);
         ndSettings.value = Array.isArray(resNd.data) ? resNd.data : resNd.data?.items || [];
       }
     } catch (err: any) {
@@ -306,8 +307,18 @@
     }
   }
 
+  const handleWebFigRefresh = (ev: Event) => {
+    const detail = (ev as CustomEvent)?.detail;
+    loadData(Boolean(detail?.forceRefresh ?? true));
+  };
+
   onMounted(() => {
     loadData();
+    window.addEventListener('rosgrid:webfig-refresh', handleWebFigRefresh);
+  });
+
+  onBeforeUnmount(() => {
+    window.removeEventListener('rosgrid:webfig-refresh', handleWebFigRefresh);
   });
 </script>
 
@@ -367,12 +378,14 @@
         </button>
 
         <button
+          id="btn-webfig-refresh"
           type="button"
-          class="btn-tactical btn-outline"
+          class="btn-tactical btn-outline font-tabular"
           :disabled="isLoading"
-          @click="loadData"
+          aria-label="Refrescar datos directamente desde el router MikroTik"
+          @click="loadData(true)"
         >
-          🔄 Actualizar
+          {{ isLoading ? '🔄 Refrescando...' : '🔄 Refrescar' }}
         </button>
       </div>
     </header>

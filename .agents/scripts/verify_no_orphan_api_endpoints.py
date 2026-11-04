@@ -192,7 +192,9 @@ def extract_frontend_calls(repo_root: str) -> List[Tuple[str, str, str, int]]:
                 if not raw_url.startswith("/"):
                     raw_url = "/" + raw_url
                     
-                # Quitar query parameters si los hay
+                # Quitar sufijos de query string dinámicos en template strings (${query}, ${params}, ${qs})
+                raw_url = re.sub(r"\$\{[^}]*(?:query|params|qs|search)[^}]*\}\s*$", "", raw_url)
+                # Quitar query parameters literales si los hay
                 clean_url = raw_url.split("?")[0]
                 
                 # Calcular número de línea aproximado

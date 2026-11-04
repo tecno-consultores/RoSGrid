@@ -2,7 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { ref, computed, onMounted } from 'vue';
+  import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
   import { useRoute } from 'vue-router';
   import { http } from '@/api/httpClient';
   import { useWebFigStore } from '@/stores/useWebFigStore';
@@ -155,15 +155,16 @@
     { key: 'priority', label: 'Prioridad', align: 'center' },
   ];
 
-  async function loadRoutingData() {
+  async function loadRoutingData(forceRefresh = false) {
     isLoading.value = true;
     errorMessage.value = '';
     try {
+      const query = forceRefresh ? '?refresh=true' : '';
       if (activeTab.value === 'bgp') {
         const [res, tplRes, advRes] = await Promise.all([
-          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/bgp/sessions`),
-          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/bgp/templates`).catch(() => ({ data: [] })),
-          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/bgp/advertisements`).catch(() => ({ data: [] })),
+          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/bgp/sessions${query}`),
+          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/bgp/templates${query}`).catch(() => ({ data: [] })),
+          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/bgp/advertisements${query}`).catch(() => ({ data: [] })),
         ]);
         const data: any = res.data;
         bgpSessions.value = Array.isArray(data) ? data : data?.sessions || data?.peers || data?.items || [];
@@ -171,17 +172,17 @@
         bgpAdvertisements.value = Array.isArray(advRes.data) ? advRes.data : [];
       } else if (activeTab.value === 'ospf') {
         const [res, instRes, areasRes, ifTplRes] = await Promise.all([
-          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/ospf/neighbors`),
-          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/ospf/instances`).catch(() => ({ data: [] })),
-          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/ospf/areas`).catch(() => ({ data: [] })),
-          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/ospf/interface-templates`).catch(() => ({ data: [] })),
+          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/ospf/neighbors${query}`),
+          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/ospf/instances${query}`).catch(() => ({ data: [] })),
+          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/ospf/areas${query}`).catch(() => ({ data: [] })),
+          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/ospf/interface-templates${query}`).catch(() => ({ data: [] })),
         ]);
         ospfNeighbors.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
         ospfInstances.value = Array.isArray(instRes.data) ? instRes.data : [];
         ospfAreas.value = Array.isArray(areasRes.data) ? areasRes.data : [];
         ospfInterfaceTemplates.value = Array.isArray(ifTplRes.data) ? ifTplRes.data : [];
       } else if (activeTab.value === 'routes') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/routes`);
+        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/routes${query}`);
         const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
         staticRoutes.value = items.map((r: any) => ({
           ...r,
@@ -196,15 +197,15 @@
           dynamic: r.dynamic === 'true' || r.dynamic === true,
         }));
       } else if (activeTab.value === 'policy-routing') {
-        const resT = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/tables`);
+        const resT = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/tables${query}`);
         routingTables.value = Array.isArray(resT.data) ? resT.data : resT.data?.items || [];
-        const resR = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/rules`);
+        const resR = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/rules${query}`);
         routingRules.value = Array.isArray(resR.data) ? resR.data : resR.data?.items || [];
       } else if (activeTab.value === 'filters') {
-        const resF = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/filters/rules`);
+        const resF = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/filters/rules${query}`);
         routingFilters.value = Array.isArray(resF.data) ? resF.data : [];
       } else if (activeTab.value === 'bfd') {
-        const resBfd = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/bfd/sessions`);
+        const resBfd = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/bfd/sessions${query}`);
         bfdSessions.value = Array.isArray(resBfd.data) ? resBfd.data : [];
       }
     } catch (err: any) {
@@ -559,8 +560,18 @@
     }
   }
 
+  const handleWebFigRefresh = (ev: Event) => {
+    const detail = (ev as CustomEvent)?.detail;
+    loadRoutingData(Boolean(detail?.forceRefresh ?? true));
+  };
+
   onMounted(() => {
     loadRoutingData();
+    window.addEventListener('rosgrid:webfig-refresh', handleWebFigRefresh);
+  });
+
+  onBeforeUnmount(() => {
+    window.removeEventListener('rosgrid:webfig-refresh', handleWebFigRefresh);
   });
 </script>
 
@@ -621,12 +632,14 @@
         </button>
 
         <button
+          id="btn-webfig-refresh"
           type="button"
-          class="btn-tactical btn-outline"
+          class="btn-tactical btn-outline font-tabular"
           :disabled="isLoading"
-          @click="loadRoutingData"
+          aria-label="Refrescar datos directamente desde el router MikroTik"
+          @click="loadRoutingData(true)"
         >
-          🔄 Actualizar
+          {{ isLoading ? '🔄 Refrescando...' : '🔄 Refrescar' }}
         </button>
       </div>
 
