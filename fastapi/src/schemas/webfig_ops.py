@@ -170,7 +170,11 @@ class SystemScriptCreateRequest(StrictBaseModel):
 
 
 class SystemRebootRequest(StrictBaseModel):
-    reason: str = Field(..., min_length=3, max_length=255)
+    reason: str = Field(
+        default="Reinicio manual desde consola WebFig Live",
+        min_length=3,
+        max_length=255,
+    )
 
 
 # ============================================================================

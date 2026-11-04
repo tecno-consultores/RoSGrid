@@ -521,9 +521,35 @@ async def test_webfig_system_tools_and_l2(fake_client_and_router: tuple[Router, 
         client.get.return_value = [{"name": "routeros"}]
         assert (await api_wf_systools.list_packages(r.id, claims=claims, db=db))["packages"] == [{"name": "routeros"}]
         reboot_res = await api_wf_systools.reboot_router(
-            r.id, SystemRebootRequest(reason="Planned reboot"), fake_req, claims=claims, db=db
+            r.id, fake_req, SystemRebootRequest(reason="Planned reboot"), claims=claims, db=db
         )
         assert reboot_res == {"status": "REBOOT_INITIATED", "reason": "Planned reboot"}
+
+        # Hito 28.16: Reinicio con payload=None (body ausente) y valor por defecto
+        reboot_none = await api_wf_systools.reboot_router(
+            r.id, fake_req, payload=None, claims=claims, db=db
+        )
+        assert reboot_none == {"status": "REBOOT_INITIATED", "reason": "Reinicio manual desde consola WebFig Live"}
+
+        reboot_default = await api_wf_systools.reboot_router(
+            r.id, fake_req, SystemRebootRequest(), claims=claims, db=db
+        )
+        assert reboot_default == {"status": "REBOOT_INITIATED", "reason": "Reinicio manual desde consola WebFig Live"}
+
+        # Hito 28.16: Tolerancia a desconexión abrupta TCP (MikrotikConnectionError y MikrotikTimeoutError)
+        from src.mikrotik.client import MikrotikConnectionError, MikrotikTimeoutError
+        client.post.side_effect = MikrotikConnectionError("Server disconnected without response")
+        reboot_conn_err = await api_wf_systools.reboot_router(
+            r.id, fake_req, SystemRebootRequest(reason="Reboot under disconnect"), claims=claims, db=db
+        )
+        assert reboot_conn_err == {"status": "REBOOT_INITIATED", "reason": "Reboot under disconnect"}
+
+        client.post.side_effect = MikrotikTimeoutError("Timeout on reboot")
+        reboot_timeout_err = await api_wf_systools.reboot_router(
+            r.id, fake_req, payload=None, claims=claims, db=db
+        )
+        assert reboot_timeout_err == {"status": "REBOOT_INITIATED", "reason": "Reinicio manual desde consola WebFig Live"}
+        client.post.side_effect = None
 
         client.post.return_value = [{"received": 5}]
         ping_res = await api_wf_systools.run_ping(

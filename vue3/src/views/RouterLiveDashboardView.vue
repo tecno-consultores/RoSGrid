@@ -65,17 +65,32 @@
     { immediate: true },
   );
 
+  const WINDOW_AXIS_LABELS: Record<TelemetryWindowKey, [string, string, string]> = {
+    '2m': ['-2m', '-1m', 'Ahora'],
+    '15m': ['-15m', '-7m 30s', 'Ahora'],
+    '1h': ['-1h', '-30m', 'Ahora'],
+    '3h': ['-3h', '-1h 30m', 'Ahora'],
+  };
+
   const currentWindow = computed(() => ringBuffer.selectedWindow.value);
+  const currentWindowCapacity = computed(
+    () => WINDOW_POINTS_MAP[currentWindow.value] || 450,
+  );
+  const currentTrafficScaleLabel = ref('1.00 kbps');
 
   function handleSelectWindow(w: TelemetryWindowKey) {
     ringBuffer.setWindow(w);
-    if (isDeterministic) {
-      drawCanvasCharts();
+    if (animationFrameId !== null) {
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = null;
     }
+    drawCanvasCharts();
   }
 
   function drawCanvasCharts() {
     const pts = ringBuffer.windowPoints.value;
+    const windowKey = currentWindow.value;
+    const windowCapacity = WINDOW_POINTS_MAP[windowKey] || 450;
 
     // 1. Gráfica de CPU
     if (cpuCanvasRef.value) {
@@ -91,6 +106,8 @@
           '#22D3EE',
           'rgba(34, 211, 238, 0.18)',
           100,
+          windowCapacity,
+          windowKey,
         );
       }
     }
@@ -100,7 +117,7 @@
       const canvas = trafficCanvasRef.value;
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        drawTrafficChart(ctx, canvas.width, canvas.height, pts);
+        drawTrafficChart(ctx, canvas.width, canvas.height, pts, windowCapacity, windowKey);
       }
     }
 
@@ -117,6 +134,42 @@
     return val || fallback;
   }
 
+  function drawChartGridAndAxes(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    windowKey: TelemetryWindowKey,
+    topYLabel: string,
+    midYLabel: string,
+    bottomYLabel: string,
+  ) {
+    ctx.strokeStyle = getThemeToken('--rg-border-grid', '#1E293B');
+    ctx.lineWidth = 1;
+    for (let y = 0; y <= height; y += height / 4) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+      ctx.stroke();
+    }
+    for (let x = 0; x <= width; x += width / 4) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = getThemeToken('--rg-text-muted', '#64748B');
+    ctx.font = '10px monospace';
+    ctx.fillText(topYLabel, 6, 12);
+    ctx.fillText(midYLabel, 6, Math.round(height / 2) - 4);
+    ctx.fillText(bottomYLabel, 6, height - 18);
+
+    const [startLbl, midLbl, endLbl] = WINDOW_AXIS_LABELS[windowKey] || ['-15m', '-7m 30s', 'Ahora'];
+    ctx.fillText(startLbl, 6, height - 4);
+    ctx.fillText(midLbl, Math.max(6, Math.round(width / 2) - 20), height - 4);
+    ctx.fillText(endLbl, Math.max(6, width - 38), height - 4);
+  }
+
   function drawAreaChart(
     ctx: CanvasRenderingContext2D,
     width: number,
@@ -126,18 +179,11 @@
     strokeColor: string,
     fillColor: string,
     maxY: number,
+    windowCapacity = 450,
+    windowKey: TelemetryWindowKey = '15m',
   ) {
     ctx.clearRect(0, 0, width, height);
-
-    // Cuadrícula táctica estilo WinBox adaptativa al tema activo
-    ctx.strokeStyle = getThemeToken('--rg-border-grid', '#1E293B');
-    ctx.lineWidth = 1;
-    for (let y = 0; y <= height; y += height / 4) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(width, y);
-      ctx.stroke();
-    }
+    drawChartGridAndAxes(ctx, width, height, windowKey, `${maxY}%`, `${Math.round(maxY / 2)}%`, '0%');
 
     if (points.length < 2) {
       ctx.fillStyle = getThemeToken('--rg-text-muted', '#64748B');
@@ -146,16 +192,20 @@
       return;
     }
 
+    const effectiveCapacity = Math.max(2, windowCapacity, points.length);
+    const stepX = width / (effectiveCapacity - 1);
+    const startSlot = Math.max(0, effectiveCapacity - points.length);
+    const firstX = startSlot * stepX;
+    const lastX = (startSlot + points.length - 1) * stepX;
+
     ctx.beginPath();
     ctx.strokeStyle = strokeColor;
     ctx.lineWidth = 2;
     ctx.lineJoin = 'round';
 
-    const stepX = width / Math.max(1, points.length - 1);
-
     points.forEach((pt, index) => {
       const val = pt[key] || 0;
-      const x = index * stepX;
+      const x = (startSlot + index) * stepX;
       const y = height - (val / maxY) * height;
 
       if (index === 0) {
@@ -167,9 +217,9 @@
 
     ctx.stroke();
 
-    // Relleno translúcido inferior
-    ctx.lineTo((points.length - 1) * stepX, height);
-    ctx.lineTo(0, height);
+    // Relleno translúcido inferior acotado a la porción temporal ocupada en la ventana
+    ctx.lineTo(lastX, height);
+    ctx.lineTo(firstX, height);
     ctx.closePath();
     ctx.fillStyle = fillColor;
     ctx.fill();
@@ -180,33 +230,38 @@
     width: number,
     height: number,
     points: TelemetryPoint[],
+    windowCapacity = 450,
+    windowKey: TelemetryWindowKey = '15m',
   ) {
     ctx.clearRect(0, 0, width, height);
 
-    // Cuadrícula de fondo adaptativa al tema activo
-    ctx.strokeStyle = getThemeToken('--rg-border-grid', '#1E293B');
-    ctx.lineWidth = 1;
-    for (let y = 0; y <= height; y += height / 4) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(width, y);
-      ctx.stroke();
-    }
+    const peakRx = points.length > 0 ? Math.max(...points.map((p) => p.rxBps || 0), 0) : 0;
+    const peakTx = points.length > 0 ? Math.max(...points.map((p) => p.txBps || 0), 0) : 0;
+    const maxVal = Math.max(peakRx, peakTx, 1000);
+    currentTrafficScaleLabel.value = formatBps(maxVal);
+
+    drawChartGridAndAxes(
+      ctx,
+      width,
+      height,
+      windowKey,
+      formatBps(maxVal),
+      formatBps(Math.round(maxVal / 2)),
+      '0 bps',
+    );
 
     if (points.length < 2) return;
 
-    const maxRx = Math.max(...points.map((p) => p.rxBps || 0), 1000000);
-    const maxTx = Math.max(...points.map((p) => p.txBps || 0), 1000000);
-    const maxVal = Math.max(maxRx, maxTx, 1);
-
-    const stepX = width / Math.max(1, points.length - 1);
+    const effectiveCapacity = Math.max(2, windowCapacity, points.length);
+    const stepX = width / (effectiveCapacity - 1);
+    const startSlot = Math.max(0, effectiveCapacity - points.length);
 
     // RX (Cian #06B6D4)
     ctx.beginPath();
     ctx.strokeStyle = '#06B6D4';
     ctx.lineWidth = 2;
     points.forEach((pt, i) => {
-      const x = i * stepX;
+      const x = (startSlot + i) * stepX;
       const y = height - ((pt.rxBps || 0) / maxVal) * height;
       if (i === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
@@ -218,7 +273,7 @@
     ctx.strokeStyle = '#10B981';
     ctx.lineWidth = 2;
     points.forEach((pt, i) => {
-      const x = i * stepX;
+      const x = (startSlot + i) * stepX;
       const y = height - ((pt.txBps || 0) / maxVal) * height;
       if (i === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
@@ -377,8 +432,17 @@
     actionBannerMsg.value = '';
     actionBannerError.value = '';
     try {
-      await http.post(`/api/v1/routers/${routerId.value}/webfig/system/reboot`);
-      actionBannerMsg.value = 'Orden de reinicio enviada al router MikroTik.';
+      const res = await http.post(`/api/v1/routers/${routerId.value}/webfig/system/reboot`, {
+        reason: 'Reinicio manual desde Dashboard WebFig Live',
+      });
+      if (res.status === 202 || (res.data as { status?: string })?.status === 'INTERCEPTED_FOR_APPROVAL') {
+        webFigStore.handleMutationResponse(res, 60);
+        actionBannerMsg.value =
+          (res.data as { detail?: string })?.detail ||
+          'Solicitud de reinicio enviada a la bandeja de aprobación Maker-Checker.';
+      } else {
+        actionBannerMsg.value = 'Orden de reinicio enviada exitosamente al router MikroTik.';
+      }
     } catch (err: unknown) {
       const e = err as { detail?: string; message?: string };
       actionBannerError.value = e.detail || e.message || 'Error al enviar comando de reinicio.';
@@ -510,7 +574,9 @@
       <div class="chart-panel">
         <div class="panel-header">
           <h3 class="panel-title">{{ t('webfig.chart_cpu_history') }}</h3>
-          <span class="panel-tag font-tabular">{{ t('webfig.chart_window_tag', { w: currentWindow }) }}</span>
+          <span id="cpu-chart-scale-tag" class="panel-tag font-tabular">
+            {{ t('webfig.chart_window_tag', { w: currentWindow }) }} · {{ ringBuffer.windowPoints.value.length }}/{{ currentWindowCapacity }} pts · 0–100%
+          </span>
         </div>
         <div class="canvas-container">
           <canvas
@@ -530,6 +596,9 @@
             <div class="traffic-legend font-tabular">
               <span class="legend-rx">■ RX</span>
               <span class="legend-tx">■ TX</span>
+              <span id="traffic-chart-scale-tag" class="panel-tag">
+                Escala: {{ currentWindow }} ({{ currentTrafficScaleLabel }})
+              </span>
             </div>
           </div>
 

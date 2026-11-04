@@ -477,9 +477,17 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
     });
     await flushPromises();
 
+    const cpuTag = wrapper.find('#cpu-chart-scale-tag');
+    const trafficTag = wrapper.find('#traffic-chart-scale-tag');
+    expect(cpuTag.exists()).toBe(true);
+    expect(trafficTag.exists()).toBe(true);
+
     const windowBtns = wrapper.findAll('.btn-window');
     for (const btn of windowBtns) {
       await btn.trigger('click');
+      await flushPromises();
+      expect(wrapper.find('#cpu-chart-scale-tag').text()).toContain('pts');
+      expect(wrapper.find('#traffic-chart-scale-tag').text()).toContain('Escala:');
     }
 
     const ifaceSelect = wrapper.find('select');
@@ -488,6 +496,64 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
       await ifaceSelect.trigger('change');
     }
 
+    wrapper.unmount();
+  });
+
+  it('RouterLiveDashboardView — reinicio de router envía { reason } y gestiona diálogo de confirmación (Spec 73)', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const postSpy = vi.spyOn(http, 'post').mockResolvedValue({
+      status: 200,
+      data: { status: 'REBOOT_INITIATED', reason: 'Reinicio manual desde Dashboard WebFig Live' },
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(RouterLiveDashboardView);
+    await flushPromises();
+
+    const btnReboot = wrapper.find('#btn-reboot-router');
+    expect(btnReboot.exists()).toBe(true);
+    await btnReboot.trigger('click');
+    await flushPromises();
+
+    expect(confirmSpy).toHaveBeenCalledTimes(2);
+    expect(postSpy).toHaveBeenCalledWith(
+      expect.stringContaining('/webfig/system/reboot'),
+      { reason: 'Reinicio manual desde Dashboard WebFig Live' },
+    );
+
+    const banner = wrapper.find('.banner--success');
+    expect(banner.exists()).toBe(true);
+    expect(banner.text()).toContain('Orden de reinicio enviada exitosamente');
+
+    confirmSpy.mockRestore();
+    postSpy.mockRestore();
+    wrapper.unmount();
+  });
+
+  it('RouterLiveDashboardView — reinicio de router interceptado por Maker-Checker maneja HTTP 202 (Spec 73)', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const postSpy = vi.spyOn(http, 'post').mockResolvedValue({
+      status: 202,
+      data: {
+        status: 'INTERCEPTED_FOR_APPROVAL',
+        detail: 'Solicitud de reinicio enviada a la bandeja de aprobación Maker-Checker.',
+      },
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(RouterLiveDashboardView);
+    await flushPromises();
+
+    const btnReboot = wrapper.find('#btn-reboot-router');
+    await btnReboot.trigger('click');
+    await flushPromises();
+
+    const banner = wrapper.find('.banner--success');
+    expect(banner.exists()).toBe(true);
+    expect(banner.text()).toContain('Maker-Checker');
+
+    confirmSpy.mockRestore();
+    postSpy.mockRestore();
     wrapper.unmount();
   });
 

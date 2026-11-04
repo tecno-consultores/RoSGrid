@@ -1276,3 +1276,19 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+
+
+  Scenario: 152. Resiliencia en Reinicio de Router MikroTik y Esquema Tolerante (Hito 28.16)
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/system/reboot'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/system/reboot'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000154'
+    And request { reason: 'Reinicio programado por ventana de mantenimiento' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+

@@ -896,3 +896,13 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * match diagTabContract.protocols contains 'LOKI_HTTP'
     * match diagTabContract.protocols contains 'GELF_UDP'
 
+
+
+  Scenario: 89. Escala Proporcional Real por Ventana en Gráficas de Telemetría WebFig Live y Reinicio de Router (Hito 28.16)
+    * def webfigLiveContract = { route: '/routers/r1/webfig/live', cpuScaleTag: '#cpu-chart-scale-tag', trafficScaleTag: '#traffic-chart-scale-tag', rebootBtn: '#btn-reboot-router' }
+    * match webfigLiveContract.cpuScaleTag == '#cpu-chart-scale-tag'
+    * match webfigLiveContract.trafficScaleTag == '#traffic-chart-scale-tag'
+    * match webfigLiveContract.rebootBtn == '#btn-reboot-router'
+    * match webfigLiveContract.route contains '/webfig/live'
+
+

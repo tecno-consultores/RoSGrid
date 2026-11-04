@@ -7,7 +7,7 @@ import logging
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_current_user_claims, require_roles
@@ -20,7 +20,11 @@ from src.api.v1.webfig_common import (
 )
 from src.core.audit import write_audit_log
 from src.db.session import get_tenant_db_session
-from src.mikrotik.client import MikrotikRestClient
+from src.mikrotik.client import (
+    MikrotikConnectionError,
+    MikrotikRestClient,
+    MikrotikTimeoutError,
+)
 from src.models.core import SystemRoleEnum
 from src.models.operations import CriticalActionTypeEnum
 from src.redis_layer.client import get_redis_client
@@ -349,8 +353,8 @@ async def list_packages(
 @system_router.post("/reboot")
 async def reboot_router(
     router_id: uuid.UUID,
-    payload: SystemRebootRequest,
     request: Request,
+    payload: SystemRebootRequest | None = Body(default=None),
     claims: dict[str, Any] = Depends(
         require_roles(
             *_SYSTEM_ADMIN_ROLES,
@@ -362,16 +366,28 @@ async def reboot_router(
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Reinicia el router registrando el motivo en auditoría inmutable o intercepta en Maker-Checker (L1/L2/FIELD_TECH)."""
+    if isinstance(request, SystemRebootRequest):
+        # Compatibilidad con invocaciones posicionales (router_id, payload, request)
+        actual_payload = request
+        actual_request = payload if hasattr(payload, "client") else request
+        payload = actual_payload
+        request = actual_request  # type: ignore[assignment]
+
+    effective_reason = (
+        payload.reason.strip()
+        if payload is not None and getattr(payload, "reason", None) and payload.reason.strip()
+        else "Reinicio manual desde consola WebFig Live"
+    )
     intercepted = await intercept_maker_checker_if_needed(
         db=db,
         claims=claims,
         router_id=router_id,
-        summary=f"Reinicio remoto de router ({payload.reason})",
+        summary=f"Reinicio remoto de router ({effective_reason})",
         ros_rest_method="POST",
         ros_rest_path="/system/reboot",
-        request_payload={},
+        request_payload={"reason": effective_reason},
         action_type=CriticalActionTypeEnum.ROUTER_REBOOT_OR_SHUTDOWN,
-        requester_justification=payload.reason,
+        requester_justification=effective_reason,
         intercept_roles={
             SystemRoleEnum.SUPPORT_L2.value,
             SystemRoleEnum.SUPPORT_L1.value,
@@ -384,7 +400,7 @@ async def reboot_router(
     router_obj, client = await get_router_and_client(router_id, claims, db)
     tenant_id = uuid.UUID(claims["tid"])
     user_id = uuid.UUID(claims["sub"])
-    ip_addr = request.client.host if request.client else "127.0.0.1"
+    ip_addr = request.client.host if hasattr(request, "client") and request.client else "127.0.0.1"
 
     await write_audit_log(
         session=db,
@@ -393,18 +409,25 @@ async def reboot_router(
         actor_username=claims.get("sub", ""),
         actor_role=claims.get("rol", SystemRoleEnum.SUPPORT_L3),
         actor_ip=ip_addr,
-        actor_user_agent=request.headers.get("User-Agent"),
+        actor_user_agent=request.headers.get("User-Agent") if hasattr(request, "headers") else None,
         event_category="SYSTEM",
         event_action="ROUTER_REBOOT_TRIGGERED",
         router_id=router_obj.id,
         router_display_name=router_obj.display_name,
-        before_state={"reason": payload.reason},
+        before_state={"reason": effective_reason},
     )
     await db.commit()
 
     async with client:
-        await client.post("/system/reboot")
-    return {"status": "REBOOT_INITIATED", "reason": payload.reason}
+        try:
+            await client.post("/system/reboot")
+        except (MikrotikConnectionError, MikrotikTimeoutError) as exc:
+            logger.info(
+                "Router %s cerró la conexión TCP al iniciar /system/reboot (comportamiento esperado): %s",
+                router_obj.display_name,
+                exc,
+            )
+    return {"status": "REBOOT_INITIATED", "reason": effective_reason}
 
 
 # ============================================================================

@@ -154,7 +154,7 @@ class MikrotikRestClient:
             )
         except httpx.TimeoutException as exc:
             raise MikrotikTimeoutError(f"Timeout en {method} {url} tras {self.timeout}s") from exc
-        except httpx.NetworkError as exc:
+        except (httpx.NetworkError, httpx.TransportError, httpx.HTTPError) as exc:
             raise MikrotikConnectionError(f"Error de red al conectar a {self.host}:{self.port}: {exc}") from exc
 
     async def _execute_with_auth_fallback(
