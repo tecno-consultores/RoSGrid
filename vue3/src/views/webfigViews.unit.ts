@@ -1846,9 +1846,11 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
       profile: 'default',
       local_address: '10.0.0.1',
       remote_address: '10.0.0.2',
+      caller_id: 'AA:BB:CC:11:22:33',
       disabled: false,
       comment: 'Cliente 1',
     });
+    expect(pppVm.editSecretForm.caller_id).toBe('AA:BB:CC:11:22:33');
     await pppVm.handleUpdateSecret();
     await flushPromises();
 
@@ -1872,8 +1874,11 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
       max_mtu: 1480,
       max_mru: 1480,
       one_session_per_host: true,
+      keepalive_timeout: 10,
       disabled: false,
     });
+    expect(pppVm.editServerForm.keepalive_timeout).toBe(10);
+    expect(pppVm.editServerForm.one_session_per_host).toBe(true);
     await pppVm.handleUpdateServer();
     await flushPromises();
   });

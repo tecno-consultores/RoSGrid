@@ -180,6 +180,7 @@ def test_starter_templates_catalog_and_syslog() -> None:
     assert "topics=system,info" in syslog_cli
     assert "topics=account" in syslog_cli
     assert "topics=firewall,info" in syslog_cli
+    assert "topics=pppoe,ppp,info,warning,error" in syslog_cli
 
     # 2. Verificar las 10 nuevas plantillas masivas
     advanced_templates = [

@@ -236,6 +236,44 @@ async def test_poller_icmp_probe_marks_powered_off_dhcp_device_offline(
             mock_redis.publish.assert_called_once()
 
 
+@pytest.mark.asyncio
+async def test_poller_icmp_probe_marks_phantom_pppoe_session_offline(
+    mock_tenant_id: uuid.UUID, mock_router: Router, mock_device: SubscriberDevice
+) -> None:
+    """Spec 84: Si existe una sesión PPPoE fantasma en /ppp/active pero el ping ICMP falla, descarta pppoe_username y pasa a OFFLINE."""
+    mock_redis = AsyncMock()
+    mock_redis.get.return_value = None
+    mock_session = AsyncMock()
+
+    mock_device.last_reachability_status = "ONLINE"
+    mock_device.pppoe_username = "user001"
+    mock_device.endpoint_identifier = "user001"
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = [mock_device]
+    mock_session.execute.return_value = mock_result
+
+    mock_client = AsyncMock()
+    mock_client.__aenter__.return_value = mock_client
+    mock_client.__aexit__.return_value = None
+    mock_client.get.return_value = [
+        {"name": "user001", "address": "192.168.10.50", "caller-id": "48:8F:5A:11:22:33", "uptime": "2m16s"}
+    ]
+    mock_client.post.return_value = [{"sent": 1, "received": 0, "status": "timeout"}]
+
+    with patch("src.workers.subscriber_status_poller.get_redis_client", return_value=mock_redis):
+        with patch("src.workers.subscriber_status_poller._create_client_from_vault", return_value=mock_client):
+            changed = await _poll_single_router_sessions(
+                mock_session,
+                mock_tenant_id,
+                mock_router,
+                is_isp_mode=True,
+                verify_icmp=True,
+            )
+            assert changed == 1
+            assert mock_device.last_reachability_status == "OFFLINE"
+            mock_redis.publish.assert_called_once()
+
+
 def test_clean_mac_hex_helpers() -> None:
     assert _clean_mac_hex(None) == ""
     assert _clean_mac_hex("") == ""

@@ -17,6 +17,7 @@
     profile?: string;
     local_address?: string;
     remote_address?: string;
+    caller_id?: string;
     disabled?: boolean;
     comment?: string;
   }
@@ -37,7 +38,11 @@
     interface: string;
     default_profile?: string;
     max_mtu?: number;
+    max_mru?: number;
     max_sessions?: number;
+    one_session_per_host?: boolean;
+    'one-session-per-host'?: string;
+    keepalive_timeout?: number;
     disabled?: boolean;
   }
 
@@ -83,6 +88,7 @@
     profile: 'default',
     local_address: '',
     remote_address: '',
+    caller_id: '',
     comment: '',
     disabled: false,
   });
@@ -109,6 +115,7 @@
     max_mtu: 1492,
     max_mru: 1492,
     one_session_per_host: true,
+    keepalive_timeout: 10,
     disabled: false,
   });
 
@@ -123,6 +130,7 @@
     profile: 'default',
     local_address: '',
     remote_address: '',
+    caller_id: '',
     comment: '',
   });
 
@@ -142,6 +150,7 @@
     max_mtu: 1492,
     max_mru: 1492,
     one_session_per_host: true,
+    keepalive_timeout: 10,
   });
 
   const pppColumns: TableColumn<PppActiveSessionItem>[] = [
@@ -159,6 +168,7 @@
     { key: 'profile', label: 'Perfil Asignado', sortable: true },
     { key: 'local_address', label: 'IP Local (Gateway)' },
     { key: 'remote_address', label: 'IP Remota (Cliente)' },
+    { key: 'caller_id', label: 'Candado MAC (Caller-ID)', align: 'center' },
     {
       key: 'disabled',
       label: 'Estado',
@@ -184,6 +194,21 @@
     { key: 'interface', label: 'Interfaz Escucha', sortable: true },
     { key: 'default_profile', label: 'Perfil Predeterminado' },
     { key: 'max_mtu', label: 'Max MTU', align: 'center' },
+    {
+      key: 'one_session_per_host',
+      label: '1 Sesión/MAC',
+      align: 'center',
+      formatter: (row) => (row.one_session_per_host !== false ? '🟢 Sí' : '⚠️ No'),
+    },
+    {
+      key: 'keepalive_timeout',
+      label: 'Keepalive (s)',
+      align: 'center',
+      formatter: (row) =>
+        row.keepalive_timeout && row.keepalive_timeout > 0
+          ? `${row.keepalive_timeout}s`
+          : '⚠️ Deshabilitado',
+    },
     {
       key: 'disabled',
       label: 'Estado',
@@ -244,6 +269,7 @@
           id: sec.id || sec['.id'] || sec.name,
           local_address: sec.local_address || sec['local-address'] || '',
           remote_address: sec.remote_address || sec['remote-address'] || '',
+          caller_id: sec.caller_id || sec['caller-id'] || '',
           disabled: sec.disabled === 'true' || sec.disabled === true,
         }));
       } else if (activeTab.value === 'ppp-profiles') {
@@ -263,14 +289,28 @@
           `/api/v1/routers/${routerId.value}/webfig/ppp/pppoe-servers${query}`,
         );
         const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
-        pppoeServers.value = items.map((srv: any) => ({
-          ...srv,
-          id: srv.id || srv['.id'] || `${srv.interface}-${srv.service_name || srv['service-name']}`,
-          service_name: srv.service_name || srv['service-name'] || '',
-          default_profile: srv.default_profile || srv['default-profile'] || '',
-          max_mtu: srv.max_mtu ? Number(srv.max_mtu) : Number(srv['max-mtu'] || 1492),
-          disabled: srv.disabled === 'true' || srv.disabled === true,
-        }));
+        pppoeServers.value = items.map((srv: any) => {
+          const rawKa = srv.keepalive_timeout ?? srv['keepalive-timeout'];
+          const parsedKa =
+            rawKa === 'disabled' || rawKa === 0 || rawKa === '0'
+              ? 0
+              : rawKa !== undefined && rawKa !== null && rawKa !== ''
+                ? Number(rawKa) || 10
+                : 10;
+          return {
+            ...srv,
+            id: srv.id || srv['.id'] || `${srv.interface}-${srv.service_name || srv['service-name']}`,
+            service_name: srv.service_name || srv['service-name'] || '',
+            default_profile: srv.default_profile || srv['default-profile'] || '',
+            max_mtu: srv.max_mtu ? Number(srv.max_mtu) : Number(srv['max-mtu'] || 1492),
+            one_session_per_host:
+              srv.one_session_per_host !== false &&
+              srv['one-session-per-host'] !== 'no' &&
+              srv['one-session-per-host'] !== 'false',
+            keepalive_timeout: parsedKa,
+            disabled: srv.disabled === 'true' || srv.disabled === true,
+          };
+        });
       } else if (activeTab.value === 'queue-tree') {
         const [treesRes, typesRes] = await Promise.all([
           http.get<any>(`/api/v1/routers/${routerId.value}/webfig/queues/tree${query}`).catch(() => ({ data: [] })),
@@ -370,6 +410,7 @@
         profile: 'default',
         local_address: '',
         remote_address: '',
+        caller_id: '',
         comment: '',
       };
       loadPppData(true);
@@ -519,6 +560,7 @@
       profile: String(secret.profile || 'default'),
       local_address: String(secret.local_address || ''),
       remote_address: String(secret.remote_address || ''),
+      caller_id: String(secret.caller_id || ''),
       comment: String(secret.comment || ''),
       disabled: Boolean(secret.disabled),
     };
@@ -537,6 +579,7 @@
         profile: editSecretForm.value.profile,
         local_address: editSecretForm.value.local_address,
         remote_address: editSecretForm.value.remote_address,
+        caller_id: editSecretForm.value.caller_id,
         comment: editSecretForm.value.comment,
         disabled: editSecretForm.value.disabled,
       };
@@ -597,8 +640,13 @@
       interface: srv.interface,
       default_profile: String(srv.default_profile || 'default'),
       max_mtu: Number(srv.max_mtu || 1492),
-      max_mru: Number((srv as any).max_mru || srv.max_mtu || 1492),
-      one_session_per_host: (srv as any)['one-session-per-host'] !== 'no' && (srv as any).one_session_per_host !== false,
+      max_mru: Number(srv.max_mru || srv.max_mtu || 1492),
+      one_session_per_host:
+        srv['one-session-per-host'] !== 'no' && srv.one_session_per_host !== false,
+      keepalive_timeout:
+        srv.keepalive_timeout !== undefined && srv.keepalive_timeout !== null
+          ? Number(srv.keepalive_timeout)
+          : 10,
       disabled: Boolean(srv.disabled),
     };
     isEditServerModalOpen.value = true;
@@ -1130,6 +1178,14 @@
               placeholder="ej. 10.10.10.50"
             />
           </div>
+          <div class="form-group">
+            <label for="sec-caller-id">Candado MAC / Caller-ID (Opcional):</label>
+            <input
+              id="sec-caller-id"
+              v-model="newSecret.caller_id"
+              placeholder="ej. AA:BB:CC:11:22:33"
+            />
+          </div>
           <footer class="modal-footer">
             <button type="button" class="btn-secondary" @click="isCreateSecretModalOpen = false">
               Cancelar
@@ -1171,6 +1227,14 @@
               v-model="newProfile.dns_server"
               placeholder="ej. 1.1.1.1,8.8.8.8"
             />
+          </div>
+          <div class="form-group">
+            <label for="prof-only-one">Sesión Única (Only One — Anti-Duplicidad):</label>
+            <select id="prof-only-one" v-model="newProfile.only_one">
+              <option value="yes">yes (Recomendado ISP)</option>
+              <option value="default">default</option>
+              <option value="no">no</option>
+            </select>
           </div>
           <footer class="modal-footer">
             <button type="button" class="btn-secondary" @click="isCreateProfileModalOpen = false">
@@ -1228,6 +1292,26 @@
               max="1500"
             />
           </div>
+          <div class="form-group">
+            <label for="srv-keepalive">Keepalive Timeout (s) — Anti-Sesión Fantasma:</label>
+            <input
+              id="srv-keepalive"
+              v-model.number="newServer.keepalive_timeout"
+              type="number"
+              min="1"
+              max="3600"
+            />
+          </div>
+          <div class="form-group">
+            <label for="srv-one-session" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input
+                id="srv-one-session"
+                v-model="newServer.one_session_per_host"
+                type="checkbox"
+              />
+              Una sesión por MAC (one-session-per-host = yes)
+            </label>
+          </div>
           <footer class="modal-footer">
             <button type="button" class="btn-secondary" @click="isCreateServerModalOpen = false">
               Cancelar
@@ -1281,6 +1365,10 @@
           <div class="form-group">
             <label for="edit-sec-remote">IP Remota (Cliente):</label>
             <input id="edit-sec-remote" v-model="editSecretForm.remote_address" />
+          </div>
+          <div class="form-group">
+            <label for="edit-sec-caller-id">Candado MAC / Caller-ID (dejar vacío para liberar):</label>
+            <input id="edit-sec-caller-id" v-model="editSecretForm.caller_id" placeholder="ej. AA:BB:CC:11:22:33" />
           </div>
           <div class="form-group">
             <label for="edit-sec-comment">Comentario:</label>
@@ -1377,6 +1465,26 @@
           <div class="form-group">
             <label for="edit-srv-mtu">Max MTU:</label>
             <input id="edit-srv-mtu" v-model.number="editServerForm.max_mtu" type="number" min="1280" max="1500" />
+          </div>
+          <div class="form-group">
+            <label for="edit-srv-keepalive">Keepalive Timeout (s) — Anti-Sesión Fantasma:</label>
+            <input
+              id="edit-srv-keepalive"
+              v-model.number="editServerForm.keepalive_timeout"
+              type="number"
+              min="1"
+              max="3600"
+            />
+          </div>
+          <div class="form-group">
+            <label for="edit-srv-one-session" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input
+                id="edit-srv-one-session"
+                v-model="editServerForm.one_session_per_host"
+                type="checkbox"
+              />
+              Una sesión por MAC (one-session-per-host = yes)
+            </label>
           </div>
           <footer class="modal-footer">
             <button type="button" class="btn-secondary" @click="isEditServerModalOpen = false">

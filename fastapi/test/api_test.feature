@@ -1385,3 +1385,18 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     When method get
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 160. Seguridad de Sesiones PPPoE: Keepalive Timeout (10s), One-Session-Per-Host, Only-One y Candado MAC Caller-ID (Hito 30.6)
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/ppp/pppoe-servers'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000161'
+    And request { service_name: 'pppoe-isp-core', interface: 'vlan200', default_profile: 'plan-10M', one_session_per_host: true, keepalive_timeout: 10 }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/ppp/secrets'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000162'
+    And request { name: 'cliente01', password: 'ClaveSegura123', service: 'pppoe', profile: 'plan-10M', caller_id: 'AA:BB:CC:11:22:33' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }

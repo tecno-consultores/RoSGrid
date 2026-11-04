@@ -128,6 +128,18 @@ async def _probe_device_icmp_alive(client: Any, target_ip: str) -> bool | None:
     return None
 
 
+def _discard_device_identifiers(dev: SubscriberDevice, ip: str, active_identifiers: set[str]) -> None:
+    """Purga todos los identificadores de sesión de un abonado (IP, MAC y usuario PPPoE) cuando falla ICMP."""
+    active_identifiers.discard(ip)
+    mac = _clean_mac_hex(getattr(dev, "onu_mac_address", ""))
+    if mac:
+        active_identifiers.discard(mac)
+    for attr in ("pppoe_username", "endpoint_identifier"):
+        val = str(getattr(dev, attr, "") or "").strip().lower()
+        if val:
+            active_identifiers.discard(val)
+
+
 async def _probe_devices_icmp(
     client: Any,
     devices: list[SubscriberDevice],
@@ -141,10 +153,7 @@ async def _probe_devices_icmp(
         if icmp_alive is True:
             active_identifiers.add(ip)
         elif icmp_alive is False:
-            active_identifiers.discard(ip)
-            mac = _clean_mac_hex(getattr(dev, "onu_mac_address", ""))
-            if mac:
-                active_identifiers.discard(mac)
+            _discard_device_identifiers(dev, ip, active_identifiers)
 
 
 async def _collect_router_active_identifiers(

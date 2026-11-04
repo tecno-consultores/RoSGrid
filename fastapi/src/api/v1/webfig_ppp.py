@@ -113,6 +113,68 @@ async def list_secrets(
         return _sanitize_secrets(raw, claims.get("rol", ""))
 
 
+def _build_secret_create_body(payload: PppSecretCreateRequest) -> dict[str, Any]:
+    body: dict[str, Any] = {
+        "name": payload.name,
+        "password": payload.password,
+        "service": payload.service,
+        "profile": payload.profile,
+        "disabled": payload.disabled,
+    }
+    optional_fields = {
+        "local-address": payload.local_address,
+        "remote-address": payload.remote_address,
+        "caller-id": payload.caller_id,
+        "comment": payload.comment,
+    }
+    body.update({k: v for k, v in optional_fields.items() if v})
+    return body
+
+
+def _build_secret_patch_data(payload: PppSecretUpdateRequest) -> dict[str, Any]:
+    truthy_fields = {
+        "name": payload.name,
+        "password": payload.password,
+        "service": payload.service,
+        "profile": payload.profile,
+        "local-address": payload.local_address,
+        "remote-address": payload.remote_address,
+    }
+    patch_data: dict[str, Any] = {k: v for k, v in truthy_fields.items() if v}
+    nullable_fields = {
+        "caller-id": payload.caller_id,
+        "routes": payload.routes,
+        "comment": payload.comment,
+        "disabled": payload.disabled,
+    }
+    patch_data.update({k: v for k, v in nullable_fields.items() if v is not None})
+    return patch_data
+
+
+def _format_keepalive_timeout(val: int | None) -> str | None:
+    if val is None:
+        return None
+    return str(val) if val > 0 else "disabled"
+
+
+def _build_pppoe_server_patch_data(payload: PppoeServerUpdateRequest) -> dict[str, Any]:
+    direct_fields = {
+        "service-name": payload.service_name,
+        "interface": payload.interface,
+        "default-profile": payload.default_profile,
+        "authentication": payload.authentication,
+        "max-mtu": payload.max_mtu,
+        "max-mru": payload.max_mru,
+        "disabled": payload.disabled,
+    }
+    patch_data: dict[str, Any] = {k: v for k, v in direct_fields.items() if v is not None}
+    if payload.one_session_per_host is not None:
+        patch_data["one-session-per-host"] = "yes" if payload.one_session_per_host else "no"
+    if payload.keepalive_timeout is not None:
+        patch_data["keepalive-timeout"] = _format_keepalive_timeout(payload.keepalive_timeout)
+    return patch_data
+
+
 @router.post("/secrets", status_code=status.HTTP_201_CREATED)
 async def create_secret(
     router_id: uuid.UUID,
@@ -122,19 +184,7 @@ async def create_secret(
 ) -> Any:
     """Crea una nueva cuenta de usuario PPP/VPN."""
     _, client = await get_router_and_client(router_id, claims, db)
-    body: dict[str, Any] = {
-        "name": payload.name,
-        "password": payload.password,
-        "service": payload.service,
-        "profile": payload.profile,
-        "disabled": payload.disabled,
-    }
-    if payload.local_address:
-        body["local-address"] = payload.local_address
-    if payload.remote_address:
-        body["remote-address"] = payload.remote_address
-    if payload.comment:
-        body["comment"] = payload.comment
+    body = _build_secret_create_body(payload)
     async with client:
         return await client.put("/ppp/secret", json_data=body)
 
@@ -147,27 +197,9 @@ async def update_secret(
     claims: dict[str, Any] = Depends(require_roles(*_PPP_WRITE_ROLES)),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
-    """Modifica perfil de velocidad, IP o estado de un secret PPP."""
+    """Modifica perfil de velocidad, IP, caller-id o estado de un secret PPP."""
     _, client = await get_router_and_client(router_id, claims, db)
-    patch_data: dict[str, Any] = {}
-    if payload.name:
-        patch_data["name"] = payload.name
-    if payload.password:
-        patch_data["password"] = payload.password
-    if payload.service:
-        patch_data["service"] = payload.service
-    if payload.profile:
-        patch_data["profile"] = payload.profile
-    if payload.local_address:
-        patch_data["local-address"] = payload.local_address
-    if payload.remote_address:
-        patch_data["remote-address"] = payload.remote_address
-    if payload.routes is not None:
-        patch_data["routes"] = payload.routes
-    if payload.comment is not None:
-        patch_data["comment"] = payload.comment
-    if payload.disabled is not None:
-        patch_data["disabled"] = payload.disabled
+    patch_data = _build_secret_patch_data(payload)
     async with client:
         return await client.patch(f"/ppp/secret/{item_id}", json_data=patch_data)
 
@@ -310,6 +342,8 @@ async def create_pppoe_server(
         body["max-mru"] = payload.max_mru
     if payload.one_session_per_host is not None:
         body["one-session-per-host"] = "yes" if payload.one_session_per_host else "no"
+    if payload.keepalive_timeout is not None:
+        body["keepalive-timeout"] = _format_keepalive_timeout(payload.keepalive_timeout)
     menu = "interface/pppoe-server/server"
     async with client:
         return await execute_safe_mutation(
@@ -331,23 +365,7 @@ async def update_pppoe_server(
 ) -> Any:
     """Modifica un servidor concentrador PPPoE existente bajo Safe Mode."""
     _, client = await get_router_and_client(router_id, claims, db)
-    patch_data: dict[str, Any] = {}
-    if payload.service_name is not None:
-        patch_data["service-name"] = payload.service_name
-    if payload.interface is not None:
-        patch_data["interface"] = payload.interface
-    if payload.default_profile is not None:
-        patch_data["default-profile"] = payload.default_profile
-    if payload.authentication is not None:
-        patch_data["authentication"] = payload.authentication
-    if payload.max_mtu is not None:
-        patch_data["max-mtu"] = payload.max_mtu
-    if payload.max_mru is not None:
-        patch_data["max-mru"] = payload.max_mru
-    if payload.one_session_per_host is not None:
-        patch_data["one-session-per-host"] = "yes" if payload.one_session_per_host else "no"
-    if payload.disabled is not None:
-        patch_data["disabled"] = payload.disabled
+    patch_data = _build_pppoe_server_patch_data(payload)
 
     menu = "interface/pppoe-server/server"
     async with client:

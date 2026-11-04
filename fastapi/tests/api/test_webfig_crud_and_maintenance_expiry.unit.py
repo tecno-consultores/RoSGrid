@@ -319,12 +319,16 @@ async def test_ppp_ipv6_routing_and_firewall_edit_delete_parity(
             service="pppoe",
             local_address="10.10.0.1",
             remote_address="10.10.0.50",
+            caller_id="AA:BB:CC:11:22:33",
             routes="192.168.200.0/24 10.10.0.50 1",
             disabled=False,
             comment="Suscriptor Empresarial",
         )
         res_sec = await api_wf_ppp.update_secret(r.id, "*SEC1", sec_upd, claims=mock_claims, db=db)
         assert res_sec == {"ret": "*1"}
+        assert api_wf_ppp._format_keepalive_timeout(None) is None
+        assert api_wf_ppp._format_keepalive_timeout(0) == "disabled"
+        assert api_wf_ppp._format_keepalive_timeout(10) == "10"
 
         prof_upd = PppProfileUpdateRequest(
             name="plan-500m",
@@ -347,6 +351,7 @@ async def test_ppp_ipv6_routing_and_firewall_edit_delete_parity(
             default_profile="plan-500m",
             authentication="chap,mschap2",
             one_session_per_host=True,
+            keepalive_timeout=10,
             max_mtu=1492,
             max_mru=1492,
             disabled=False,

@@ -344,7 +344,8 @@ _DEFAULT_STARTER_TEMPLATES = [
             '/system logging add topics=firewall,warning action="rosgridsyslog"\n'
             '/system logging add topics=system,info action="rosgridsyslog"\n'
             '/system logging add topics=account action="rosgridsyslog"\n'
-            '/system logging add topics=firewall,info action="rosgridsyslog"'
+            '/system logging add topics=firewall,info action="rosgridsyslog"\n'
+            '/system logging add topics=pppoe,ppp,info,warning,error action="rosgridsyslog"'
         ),
         "variables_schema": [
             {
@@ -431,6 +432,12 @@ _DEFAULT_STARTER_TEMPLATES = [
                 "endpoint": "system/logging",
                 "payload": {"topics": "firewall,info", "action": "rosgridsyslog"},
                 "cli_command": '/system logging add topics=firewall,info action="rosgridsyslog"',
+            },
+            {
+                "method": "PUT",
+                "endpoint": "system/logging",
+                "payload": {"topics": "pppoe,ppp,info,warning,error", "action": "rosgridsyslog"},
+                "cli_command": '/system logging add topics=pppoe,ppp,info,warning,error action="rosgridsyslog"',
             },
         ],
         "requires_safemode": True,

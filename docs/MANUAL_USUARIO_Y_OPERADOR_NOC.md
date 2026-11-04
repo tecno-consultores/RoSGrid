@@ -189,7 +189,7 @@ Permite operar redes IPv6 de última generación en 5 pestañas:
 
 ### 4.9 PPPoE & Colas de Ancho de Banda (`PppAndQueuesView`)
 - **`Sesiones Activas`:** Permite desconectar (`⏏ Kick`) sesiones PPPoE colgadas para forzar su reconexión limpia.
-- **`Secretos PPP`, `Perfiles PPP` y `Servidores PPPoE`:** Cuentan con botones para crear, **`✏️ Editar`** (contraseña, servicio, perfil, IP local/remota, `Rate Limit`, servidores DNS, `Max MTU`), habilitar/deshabilitar y **`🗑️ Eliminar`**.
+- **`Secretos PPP`, `Perfiles PPP` y `Servidores PPPoE`:** Cuentan con botones para crear, **`✏️ Editar`** (contraseña, servicio, perfil, IP local/remota, candado MAC **`caller-id`**, sesión única **`only-one=yes`**, `Rate Limit`, servidores DNS, `Max MTU`, **`one-session-per-host=yes`** y **`keepalive-timeout=10`** para prevención de sesiones fantasma), habilitar/deshabilitar y **`🗑️ Eliminar`**.
 - **`Simple Queues`:** Creación y edición (`✏️`) de colas de ancho de banda con barra de **Presets en 1 Clic** (`10M`, `25M/50M`, `50M/100M`, `100M/300M`, `200M/600M`, `1G`) y semáforo de saturación en tiempo real.
 
 ### 4.10 Motor Dinámico Universal de Capa 2 (`DynamicLayer2ResourceView` — Hito 27.16)

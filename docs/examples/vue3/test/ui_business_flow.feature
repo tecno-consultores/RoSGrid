@@ -982,6 +982,18 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * match notificationCenterContract.soundBtn == '#btn-notif-toggle-sound'
     * match notificationCenterContract.markReadBtn == '#btn-notif-mark-all-read'
 
+  Scenario: 98. Seguridad de Sesiones PPPoE y Prevención de Sesiones Fantasma en Consola WebFig PPP (Hito 30.6)
+    * def pppoeSecurityContract = { secCallerId: '#sec-caller-id', editSecCallerId: '#edit-sec-caller-id', profOnlyOne: '#prof-only-one', srvKeepalive: '#srv-keepalive', editSrvKeepalive: '#edit-srv-keepalive', srvOneSession: '#srv-one-session', editSrvOneSession: '#edit-srv-one-session', defaultKeepaliveSeconds: 10, defaultOnlyOne: 'yes' }
+    * match pppoeSecurityContract.secCallerId == '#sec-caller-id'
+    * match pppoeSecurityContract.editSecCallerId == '#edit-sec-caller-id'
+    * match pppoeSecurityContract.profOnlyOne == '#prof-only-one'
+    * match pppoeSecurityContract.srvKeepalive == '#srv-keepalive'
+    * match pppoeSecurityContract.editSrvKeepalive == '#edit-srv-keepalive'
+    * match pppoeSecurityContract.srvOneSession == '#srv-one-session'
+    * match pppoeSecurityContract.editSrvOneSession == '#edit-srv-one-session'
+    * match pppoeSecurityContract.defaultKeepaliveSeconds == 10
+    * match pppoeSecurityContract.defaultOnlyOne == 'yes'
+
 
 
 
