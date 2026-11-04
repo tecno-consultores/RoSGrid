@@ -812,6 +812,15 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     Then waitFor(".alert-banner--warning")
     And match text(".alert-banner--warning") contains 'cerrada de forma segura'
 
+  Scenario: 84. Resiliencia de Onboarding ante Reinicio de Contenedores y Sincronización de Features (Hito 28.14)
+    Given driver baseUrl + '/login'
+    And waitFor(".login-card")
+    When input("#login-username", "admin_demo")
+    And input("#login-password", "Password12345!")
+    And click("#btn-login-submit")
+    Then waitFor(".main-layout")
+    And waitUntil("!document.querySelector('.onboarding-backdrop')")
+
 
 
 

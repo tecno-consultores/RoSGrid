@@ -80,12 +80,15 @@ class Tenant(Base):
     mass_outage_threshold: Mapped[int] = mapped_column(Integer, nullable=False, default=10)
     default_locale: Mapped[str] = mapped_column(String(5), nullable=False, default="es")
 
-    # Capacidades Tácticas Avanzadas (Spec 35)
+    # Capacidades Tácticas Avanzadas (Spec 35) y Estado Persistente de Onboarding (Spec 69)
     l2_topology_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     syslog_collector_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     cve_scanner_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     prometheus_fleet_exporter_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     rogue_dhcp_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    onboarding_completed: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))

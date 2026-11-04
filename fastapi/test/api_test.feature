@@ -1150,6 +1150,19 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     And match header X-Content-Type-Options == 'nosniff'
     And match header X-Frame-Options == 'DENY'
 
+  Scenario: 147. Persistencia Relacional de onboarding_completed en PostgreSQL y Resiliencia ante Reinicio (Hito 28.14)
+    Given path '/api/v1/tenants/00000000-0000-0000-0000-000000000001/features'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/tenants/00000000-0000-0000-0000-000000000001/features'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000149'
+    And request { onboarding_completed: true }
+    When method patch
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
 
 
 

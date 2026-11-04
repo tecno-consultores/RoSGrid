@@ -435,3 +435,23 @@ En [`fastapi/tests/api/test_cis_policies_and_onboarding.unit.py`](file:///home/s
         )
         assert after_restart.onboarding_completed is True
 ```
+
+---
+
+## 4. Certificación y Resultados de Validación Level-11X
+
+La implementación del Hito 28.14 ha sido ejecutada y certificada en contenedores Docker efímeros bajo la Regla Cero:
+
+1. **Paridad ORM y Migración Alembic:**
+   - Columna `onboarding_completed: Mapped[bool]` añadida en `Tenant` (`models/core.py`).
+   - Migración `0013_tenant_onboarding_flag.py` ejecutada y validada en PostgreSQL (`\d tenants` confirma `onboarding_completed | boolean | not null | default false`).
+   - Backfill automático aplicado sobre inquilinos con historial en `audit_logs` o routers asociados.
+2. **Resiliencia ante Reinicio Verificada en Vivo:**
+   - `PATCH /api/v1/tenants/{id}/features` persiste `onboarding_completed = True` en PostgreSQL.
+   - Vaciado completo de KeyDB (`redis-cli flushall`) y posterior reinicio de contenedores (`rosgrid-redis`, `rosgrid-api`).
+   - `GET /api/v1/tenants/{id}/features` lee de PostgreSQL y devuelve `onboarding_completed: true` sin reabrir el modal de onboarding.
+3. **Pruebas y Calidad QA 11X:**
+   - 660 pruebas unitarias backend Pytest aprobadas al 100%.
+   - 522 pruebas unitarias frontend Vitest en 79 suites aprobadas al 100%.
+   - Escenario 147 de Karate Labs BDD en `api_test.feature` y Escenario 84 en `ui_business_flow.feature`.
+   - 29/29 verificaciones de infraestructura y 26/26 contratos front-back aprobados en `certify_task_completion.sh` y `probar-prod-local.sh`.

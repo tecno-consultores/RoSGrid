@@ -87,8 +87,8 @@
         onboarding_completed: true,
       };
 
-      await http.patch(`/api/v1/tenants/${tid}/features`, payload);
-      authStore.updateTenantFeatures(payload);
+      const res = await http.patch<TenantFeatureFlags>(`/api/v1/tenants/${tid}/features`, payload);
+      authStore.updateTenantFeatures(res.data || payload);
       emit('completed');
     } catch (err: any) {
       console.error('Error completando onboarding:', err);

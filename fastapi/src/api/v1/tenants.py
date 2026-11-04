@@ -115,15 +115,18 @@ async def get_tenant_features(
 
     tenant = await _load_tenant_or_404(db, tenant_id)
     features_dict = extract_tenant_features(tenant)
-    try:
-        redis = get_redis_client()
-        onb_val = await redis.get(f"rg:{tenant_id}:onboarding_completed")
-        if onb_val:
-            features_dict["onboarding_completed"] = (
-                onb_val.decode() if isinstance(onb_val, bytes) else str(onb_val)
-            ).lower() == "true"
-    except Exception as exc:
-        logger.debug("Error leyendo onboarding_completed de KeyDB: %s", exc)
+    if not features_dict.get("onboarding_completed"):
+        try:
+            redis = get_redis_client()
+            onb_val = await redis.get(f"rg:{tenant_id}:onboarding_completed")
+            if onb_val:
+                is_done = (onb_val.decode() if isinstance(onb_val, bytes) else str(onb_val)).lower() == "true"
+                features_dict["onboarding_completed"] = is_done
+                if is_done and not getattr(tenant, "onboarding_completed", False):
+                    tenant.onboarding_completed = True
+                    await db.commit()
+        except Exception as exc:
+            logger.debug("Error leyendo onboarding_completed de KeyDB: %s", exc)
     return TenantFeaturesResponse.model_validate(features_dict)
 
 
@@ -148,15 +151,14 @@ async def update_tenant_features(
 
     update_data = body.model_dump(exclude_unset=True, exclude_none=True)
 
-    # Manejo de flag efímero de onboarding_completed en KeyDB
-    onboarding_completed_val: bool | None = None
-    if "onboarding_completed" in update_data:
-        onboarding_completed_val = bool(update_data.pop("onboarding_completed"))
-        try:
-            redis = get_redis_client()
-            await redis.set(f"rg:{tenant_id}:onboarding_completed", "true" if onboarding_completed_val else "false")
-        except Exception as exc:
-            logger.debug("Error guardando onboarding_completed en KeyDB: %s", exc)
+    # Persistencia duradera de onboarding_completed en PostgreSQL (Spec 69) + espejo en KeyDB
+    onboarding_completed_val: bool = bool(update_data.get("onboarding_completed", True))
+    update_data["onboarding_completed"] = onboarding_completed_val
+    try:
+        redis = get_redis_client()
+        await redis.set(f"rg:{tenant_id}:onboarding_completed", "true" if onboarding_completed_val else "false")
+    except Exception as exc:
+        logger.debug("Error guardando onboarding_completed en KeyDB: %s", exc)
 
     for field, value in update_data.items():
         if hasattr(tenant, field):
@@ -177,18 +179,7 @@ async def update_tenant_features(
     await invalidate_tenant_features_cache(tenant_id)
 
     response_dict = extract_tenant_features(tenant)
-    if onboarding_completed_val is not None:
-        response_dict["onboarding_completed"] = onboarding_completed_val
-    else:
-        try:
-            redis = get_redis_client()
-            onb_check = await redis.get(f"rg:{tenant_id}:onboarding_completed")
-            if onb_check:
-                response_dict["onboarding_completed"] = (
-                    onb_check.decode() if isinstance(onb_check, bytes) else str(onb_check)
-                ).lower() == "true"
-        except Exception:
-            pass
+    response_dict["onboarding_completed"] = bool(getattr(tenant, "onboarding_completed", onboarding_completed_val))
     return TenantFeaturesResponse.model_validate(response_dict)
 
 
@@ -261,6 +252,9 @@ async def complete_tenant_onboarding(
         raise HTTPException(status_code=403, detail="No autorizado para configurar esta empresa")
 
     tenant = await _load_tenant_or_404(db, tenant_id)
+    tenant.onboarding_completed = True
+    await db.commit()
+    await db.refresh(tenant)
     try:
         redis = get_redis_client()
         await redis.set(f"rg:{tenant_id}:onboarding_completed", "true")

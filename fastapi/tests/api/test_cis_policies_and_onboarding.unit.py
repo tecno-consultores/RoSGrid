@@ -256,3 +256,11 @@ async def test_tenant_onboarding_lifecycle(
         assert updated.isp_module_enabled is True
         assert updated.bgp_looking_glass_enabled is True
         assert updated.onboarding_completed is True
+        assert mock_tenant.onboarding_completed is True
+
+        # 4. Simular reinicio de contenedores Docker (KeyDB vacío, PostgreSQL preserva mock_tenant.onboarding_completed=True)
+        mock_redis.get.return_value = None
+        after_restart = await get_tenant_features(
+            tenant_id=sample_tenant_id, db=db, claims=sample_claims
+        )
+        assert after_restart.onboarding_completed is True
