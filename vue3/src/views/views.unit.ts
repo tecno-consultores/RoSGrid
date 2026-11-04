@@ -89,29 +89,18 @@ describe('Views Base — Montaje y Accesibilidad WCAG', () => {
     });
   }
 
-  it('permite hacer click en pestañas y cerrarlas en RouterWebFigLayout', async () => {
-    const { useWebFigStore } = await import('@/stores/useWebFigStore');
-    const store = useWebFigStore();
-    store.openOrFocusTab({
-      tabId: 'test-closable-tab',
-      routeName: 'InterfacesAndSfp',
-      label: 'Interfaces',
-      closable: true,
-    });
-
+  it('renderiza RouterWebFigLayout sin barra de pestañas redundante y permite alternar el menú móvil inline', async () => {
     const wrapper = mount(RouterWebFigLayout, {
       global: {
         stubs: { RouterView: true },
       },
     });
 
-    const tabs = wrapper.findAll('.webfig-tab');
-    expect(tabs.length).toBeGreaterThan(1);
-    await tabs[1].trigger('click');
+    expect(wrapper.find('.webfig-tabs-bar').exists()).toBe(false);
+    expect(wrapper.findAll('.webfig-tab').length).toBe(0);
 
-    const closeBtn = wrapper.find('.btn-close-tab');
-    if (closeBtn.exists()) {
-      await closeBtn.trigger('click');
-    }
+    const inlineMenuBtn = wrapper.find('.btn-webfig-menu-inline');
+    expect(inlineMenuBtn.exists()).toBe(true);
+    await inlineMenuBtn.trigger('click');
   });
 });

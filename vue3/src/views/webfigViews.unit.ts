@@ -8,7 +8,6 @@ import { http } from '@/api/httpClient';
 import { useI18n } from '@/composables/useI18n';
 
 import RouterContextHeader from '@/components/webfig/RouterContextHeader.vue';
-import RouterWorkspaceTabsBar from '@/components/webfig/RouterWorkspaceTabsBar.vue';
 import RouterSidebarMenu from '@/components/webfig/RouterSidebarMenu.vue';
 import RouterWebFigLayout from './RouterWebFigLayout.vue';
 import RouterLiveDashboardView from './RouterLiveDashboardView.vue';
@@ -140,49 +139,38 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
     expect(wrapper.text()).toContain('00:00:00');
   });
 
-  it('RouterWorkspaceTabsBar — cambia, cierra y navega pestañas móviles', async () => {
-    const { useWebFigStore } = await import('@/stores/useWebFigStore');
-    const store = useWebFigStore();
-    store.openOrFocusTab({
-      tabId: 'tab-1',
-      routeName: 'InterfacesAndSfp',
-      label: 'Interfaces & SFP',
-      closable: true,
-    });
-    store.openOrFocusTab({
-      tabId: 'tab-2',
-      routeName: 'FirewallRules',
-      label: 'Firewall Rules',
-      closable: true,
+  it('RouterWebFigLayout — omite barra de pestañas redundante y expone toggle .btn-webfig-menu-inline en cabecera de módulo', async () => {
+    vi.spyOn(http, 'get').mockResolvedValue({
+      status: 200,
+      data: { id: 'r-01', display_name: 'r111', ros_identity: 'r111' },
+      headers: new Headers(),
     });
 
-    const wrapper = mount(RouterWorkspaceTabsBar, {
-      props: { routerId: 'r-01' },
+    const wrapper = mount(RouterWebFigLayout, {
+      global: {
+        stubs: { RouterView: true },
+      },
     });
+    await flushPromises();
 
-    const tabs = wrapper.findAll('.webfig-tab');
-    expect(tabs.length).toBeGreaterThan(0);
-    await tabs[0].trigger('click');
-    await tabs[0].trigger('keydown.enter');
+    // Verifica que la barra de pestañas redundante fue eliminada
+    expect(wrapper.find('.webfig-tabs-bar').exists()).toBe(false);
+    expect(wrapper.find('.webfig-tab').exists()).toBe(false);
 
-    // Cerrar pestaña
-    const closeBtns = wrapper.findAll('.btn-close-tab');
-    if (closeBtns.length > 0) {
-      await closeBtns[0].trigger('click');
-    }
-
-    // Botones rápidos de móvil
-    const mobileBtns = wrapper.findAll('.bottom-bar-btn');
-    expect(mobileBtns.length).toBeGreaterThan(0);
-    for (const btn of mobileBtns) {
-      await btn.trigger('click');
-    }
-
-    // Botón inline de módulos WebFig para tablet/móvil (<= 1024px)
+    // Verifica que el botón inline de menú móvil/tablet (<= 1024px) está integrado en la barra del módulo
     const inlineMenuBtn = wrapper.find('.btn-webfig-menu-inline');
     expect(inlineMenuBtn.exists()).toBe(true);
+
+    const sidebar = wrapper.findComponent(RouterSidebarMenu);
+    expect(sidebar.props('isOpenMobile')).toBe(false);
+
     await inlineMenuBtn.trigger('click');
-    expect(wrapper.emitted('toggle-sidebar')).toBeTruthy();
+    expect(sidebar.props('isOpenMobile')).toBe(true);
+
+    // Verifica botón de guía contextual del módulo
+    const helpBtn = wrapper.find('#btn-webfig-module-help');
+    expect(helpBtn.exists()).toBe(true);
+    await helpBtn.trigger('click');
   });
 
   it('RouterSidebarMenu — navega por todos los módulos nativos y de capa 2', async () => {

@@ -613,6 +613,7 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     When driver baseUrl + '/routers/r-01/webfig/live'
     And waitFor(".webfig-layout")
     And waitFor(".btn-webfig-menu-inline")
+    And waitUntil("!document.querySelector('.webfig-tabs-bar')")
 
   Scenario: 64. WebFig Firewall RouterOS v7 — Sin Duplicación de Safe Mode, Asistente NAT Masquerade e Intercepción Maker-Checker
     Given driver baseUrl + '/routers/r-01/webfig/firewall'

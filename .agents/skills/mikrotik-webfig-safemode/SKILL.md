@@ -34,9 +34,9 @@ This skill guides the integration between Vue 3 (`vue3/`) and FastAPI endpoints 
 
 ## 2. Workspace Tabs (`KeepAlive`) & Ephemeral Telemetry (`TelemetryRingBuffer`)
 
-1. **WinBox/IDE Tab Bar (`RouterWorkspaceTabsBar.vue`):**
-   - Backed by `useWebFigStore.openRouterTabs` with a strict limit of **5 active tabs in FIFO/LRU order (`MAX_OPEN_TABS = 5`)** wrapped in `<KeepAlive :max="5">`.
-   - Preserves filter strings (e.g. `chain=forward`), sorting, and diagnostic tools (`Ping`, `Traceroute`, `Torch`) in RAM when switching between submenus on the same router.
+1. **Caché en Memoria (`KeepAlive`) y Navegación Limpia (Hito 28.18):**
+   - La barra visual de pestañas (`RouterWorkspaceTabsBar.vue`) fue retirada para recuperar ~50px de espacio vertical y eliminar la redundancia frente a `RouterSidebarMenu.vue`.
+   - La persistencia en memoria RAM se mantiene al 100% mediante `<keep-alive :max="5">` en `RouterWebFigLayout.vue` y `useWebFigStore.openRouterTabs`, conservando filtros (ej. `chain=forward`), ordenamiento y herramientas diagnósticas (`Ping`, `Traceroute`, `Torch`) al alternar entre submódulos del mismo router.
 2. **Strict Telemetry Lifecycle (`TelemetryRingBuffer`):**
    - Exact memory capacity: `MAX_POINTS = 5400` points in RAM (3 hours at 1 tick every 2 seconds, $O(1)$ ring buffer insertion) with zoom buttons (`2m`, `15m`, `1h`, `3h`).
    - The `/ws/v1/routers/{router_id}/live-telemetry` WebSocket lives in parent `RouterWebFigLayout.vue` so it remains uninterrupted when switching internal tabs.

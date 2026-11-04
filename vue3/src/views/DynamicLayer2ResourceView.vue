@@ -257,11 +257,12 @@
           .join(' / ');
       const mergedRpc = (rpcRes.data?.length ? rpcRes.data : res.data?.rpc_actions) || [];
       const isArrayData = Array.isArray(res.data);
-      const baseData = isArrayData ? {} : res.data || {};
+      const baseData = (isArrayData ? {} : res.data || {}) as Partial<Layer2ResourceResponse>;
       resourceData.value = {
         ...baseData,
         ros_path: rosPath.value,
         title: rawTitle,
+        is_singleton: Boolean(baseData.is_singleton),
         columns_schema: Array.isArray(baseData.columns_schema) ? baseData.columns_schema : [],
         items: isArrayData ? (res.data as any) : Array.isArray(baseData.items) ? baseData.items : [],
         rpc_actions: mergedRpc,

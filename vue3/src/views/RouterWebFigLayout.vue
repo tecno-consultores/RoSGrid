@@ -10,15 +10,16 @@
   import { http } from '@/api/httpClient';
   import type { RouterItem, TelemetryPoint } from '@/types';
   import RouterContextHeader from '@/components/webfig/RouterContextHeader.vue';
-  import RouterWorkspaceTabsBar from '@/components/webfig/RouterWorkspaceTabsBar.vue';
   import RouterSidebarMenu from '@/components/webfig/RouterSidebarMenu.vue';
   import { useContextualHelp } from '@/composables/useContextualHelp';
+  import { useI18n } from '@/composables/useI18n';
 
   const route = useRoute();
   const webFigStore = useWebFigStore();
   const liveTelemetryStore = useLiveTelemetryStore();
   const inventoryStore = useInventoryStore();
   const { openHelp, currentHelpEntry } = useContextualHelp();
+  const { t } = useI18n();
 
   const isMobileSidebarOpen = ref(false);
   const routerId = computed(() => String(route.params.routerId || ''));
@@ -157,7 +158,7 @@
 </script>
 
 <template>
-  <div class="webfig-console-layout">
+  <div class="webfig-console-layout webfig-layout">
     <!-- Cabecera de contexto del router -->
     <RouterContextHeader
       :router="currentRouter"
@@ -165,13 +166,7 @@
       @toggle-safemode="handleToggleSafeMode"
     />
 
-    <!-- Barra de pestañas con persistencia en RAM (KeepAlive) -->
-    <RouterWorkspaceTabsBar
-      :router-id="routerId"
-      @toggle-sidebar="isMobileSidebarOpen = !isMobileSidebarOpen"
-    />
-
-    <!-- Contenido principal: Menú lateral + Router View con KeepAlive -->
+    <!-- Contenido principal: Menú lateral siempre visible en Desktop + Router View con KeepAlive -->
     <div class="console-body">
       <RouterSidebarMenu
         :router-id="routerId"
@@ -186,7 +181,19 @@
         aria-label="Módulo WebFig activo"
       >
         <div class="webfig-module-help-bar">
-          <span class="webfig-module-help-title">{{ currentHelpEntry.title }}</span>
+          <div class="webfig-module-help-left">
+            <button
+              id="btn-webfig-menu-inline"
+              type="button"
+              class="btn-webfig-menu-inline"
+              :aria-label="t('webfig.sidebar_title', 'Menú RouterOS')"
+              @click="isMobileSidebarOpen = !isMobileSidebarOpen"
+            >
+              <span aria-hidden="true">☰</span>
+              <span class="menu-inline-label">{{ t('webfig.tab_menu_short', 'Menú') }}</span>
+            </button>
+            <span class="webfig-module-help-title">{{ currentHelpEntry.title }}</span>
+          </div>
           <button
             id="btn-webfig-module-help"
             type="button"
@@ -247,6 +254,34 @@
     margin-bottom: 10px;
     padding-bottom: 8px;
     border-bottom: 1px dashed var(--rg-border-grid);
+  }
+
+  .webfig-module-help-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .btn-webfig-menu-inline {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: var(--rg-bg-elevated);
+    border: 1px solid var(--rg-border-panel);
+    border-radius: 5px;
+    color: var(--rg-accent-cyan);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 1024px) {
+    .btn-webfig-menu-inline {
+      display: inline-flex;
+    }
   }
 
   .webfig-module-help-title {
