@@ -12,7 +12,7 @@ import json
 import tarfile
 import uuid
 import zipfile
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from httpx import AsyncClient
@@ -107,6 +107,22 @@ def test_in_memory_log_handler_emit() -> None:
     import logging
     record = logging.LogRecord("test", logging.INFO, "path", 10, "Mensaje de log record", (), None)
     handler.emit(record)
+    with patch.object(handler, "format", side_effect=Exception("Format error")):
+        handler.emit(record)
+
+
+@pytest.mark.asyncio
+async def test_build_support_bundle_empty_logs() -> None:
+    """Verifica el comportamiento de fallback cuando el buffer de logs en memoria está vacío."""
+    from src.services.diagnostics_and_siem import _BACKEND_LOG_RING_BUFFER
+    req = DiagnosticBundleRequest(format="zip", log_lines_limit=50)
+    saved_logs = list(_BACKEND_LOG_RING_BUFFER)
+    try:
+        _BACKEND_LOG_RING_BUFFER.clear()
+        resp = await build_support_bundle_archive("tenant-empty", "SUPERADMIN_GLOBAL", req)
+        assert resp.filename.endswith(".zip")
+    finally:
+        _BACKEND_LOG_RING_BUFFER.extend(saved_logs)
 
 
 @pytest.mark.asyncio
@@ -264,6 +280,28 @@ async def test_dispatch_siem_protocol_variants() -> None:
 
 
 @pytest.mark.asyncio
+async def test_send_tcp_and_http_siem_helpers() -> None:
+    """Verifica directamente los helpers de bajo nivel para envío TCP Syslog y HTTP con autenticación."""
+    from src.services.diagnostics_and_siem import (
+        _send_http_siem_payload,
+        _send_tcp_syslog_frame,
+    )
+    with patch("socket.create_connection") as mock_conn:
+        mock_sock = MagicMock()
+        mock_conn.return_value.__enter__.return_value = mock_sock
+        _send_tcp_syslog_frame("127.0.0.1", 514, b"<134>test")
+        mock_sock.sendall.assert_called_once_with(b"<134>test\n")
+
+    with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status = MagicMock()
+        mock_post.return_value = mock_resp
+        await _send_http_siem_payload("http://siem.local/gelf", {"short_message": "test"}, "secret-token")
+        mock_post.assert_awaited_once()
+        assert mock_post.await_args.kwargs["headers"]["Authorization"] == "Bearer secret-token"
+
+
+@pytest.mark.asyncio
 async def test_forward_event_to_isp_siem_if_enabled_filters() -> None:
     """Verifica los filtros de severidad y habilitación en el reenvío SIEM."""
     with patch("src.services.diagnostics_and_siem._load_raw_siem_config") as mock_cfg:
@@ -278,6 +316,22 @@ async def test_forward_event_to_isp_siem_if_enabled_filters() -> None:
         # 3. Exclusión de errores de frontend
         mock_cfg.return_value = {"enabled": True, "min_level": "WARNING", "include_frontend_errors": False}
         assert await forward_event_to_isp_siem_if_enabled("t1", "ERROR", "frontend", "test") is False
+
+        # 4. Reenvío exitoso
+        mock_cfg.return_value = {
+            "enabled": True,
+            "min_level": "INFO",
+            "include_frontend_errors": True,
+            "protocol": "GELF_UDP",
+            "host": "127.0.0.1",
+            "port": 12201,
+        }
+        with patch("src.services.diagnostics_and_siem._dispatch_siem_protocol", new_callable=AsyncMock):
+            assert await forward_event_to_isp_siem_if_enabled("t1", "INFO", "backend", "test") is True
+
+        # 5. Reenvío con excepción fail-silent
+        with patch("src.services.diagnostics_and_siem._dispatch_siem_protocol", side_effect=Exception("Network error")):
+            assert await forward_event_to_isp_siem_if_enabled("t1", "INFO", "backend", "test") is False
 
 
 # =============================================================================
