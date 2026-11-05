@@ -969,8 +969,8 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * match makerCheckerReactivityContract.wsEventName == 'rosgrid:maker-checker-updated'
     * match makerCheckerReactivityContract.pollIntervalMs == 15000
 
-  Scenario: 97. Centro Táctico de Notificaciones In-App en Barra Superior, Triaje Rápido y Reactividad Maker-Checker (Hito 30.4)
-    * def notificationCenterContract = { bellBtn: '#btn-notification-bell', badge: '#notification-bell-badge', popover: '#rg-notification-popover', tabAll: '#notif-tab-all', tabAction: '#notif-tab-action', tabNetwork: '#notif-tab-network', tabOps: '#notif-tab-ops', snoozeBtn: '#btn-notif-snooze-30m', soundBtn: '#btn-notif-toggle-sound', markReadBtn: '#btn-notif-mark-all-read' }
+  Scenario: 97. Centro Táctico de Notificaciones In-App en Barra Superior, Triaje Rápido, Opacidad Multi-Tema y Formateo Bilingüe (Hito 30.4)
+    * def notificationCenterContract = { bellBtn: '#btn-notification-bell', badge: '#notification-bell-badge', popover: '#rg-notification-popover', tabAll: '#notif-tab-all', tabAction: '#notif-tab-action', tabNetwork: '#notif-tab-network', tabOps: '#notif-tab-ops', snoozeBtn: '#btn-notif-snooze-30m', soundBtn: '#btn-notif-toggle-sound', markReadBtn: '#btn-notif-mark-all-read', surfaceToken: '--rg-bg-surface', bilingualFormatter: true }
     * match notificationCenterContract.bellBtn == '#btn-notification-bell'
     * match notificationCenterContract.badge == '#notification-bell-badge'
     * match notificationCenterContract.popover == '#rg-notification-popover'
@@ -981,6 +981,8 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * match notificationCenterContract.snoozeBtn == '#btn-notif-snooze-30m'
     * match notificationCenterContract.soundBtn == '#btn-notif-toggle-sound'
     * match notificationCenterContract.markReadBtn == '#btn-notif-mark-all-read'
+    * match notificationCenterContract.surfaceToken == '--rg-bg-surface'
+    * match notificationCenterContract.bilingualFormatter == true
 
   Scenario: 98. Seguridad de Sesiones PPPoE y Prevención de Sesiones Fantasma en Consola WebFig PPP (Hito 30.6)
     * def pppoeSecurityContract = { secCallerId: '#sec-caller-id', editSecCallerId: '#edit-sec-caller-id', profOnlyOne: '#prof-only-one', srvKeepalive: '#srv-keepalive', editSrvKeepalive: '#edit-srv-keepalive', srvOneSession: '#srv-one-session', editSrvOneSession: '#edit-srv-one-session', defaultKeepaliveSeconds: 10, defaultOnlyOne: 'yes' }

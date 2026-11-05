@@ -4,6 +4,7 @@
 import { defineStore } from 'pinia';
 import { ref, shallowRef, triggerRef } from 'vue';
 import type { NocEventItem } from '@/types';
+import { formatEventMessage } from '@/utils/eventFormatter';
 import { useAuthStore } from './useAuthStore';
 
 export const useNocEventsStore = defineStore('nocEvents', () => {
@@ -185,12 +186,15 @@ export const useNocEventsStore = defineStore('nocEvents', () => {
           id: String(log.id),
           eventName: log.event_action || log.event_category || 'AUDIT_LOG',
           routerId: log.router_id,
-          routerDisplayName: log.router_display_name || log.actor_username || 'Sistema',
+          routerDisplayName: log.router_display_name || undefined,
           severity:
             log.status_code >= 400 || log.event_action?.includes('OUTAGE') || log.event_action?.includes('FAILED')
               ? 'WARNING'
               : 'INFO',
-          message: `${log.event_action || 'Operación'} (${log.event_category || 'SISTEMA'}): ${log.actor_username || 'usuario'}`,
+          message: formatEventMessage(
+            log.event_action || log.event_category || 'AUDIT_LOG',
+            log.actor_username,
+          ),
           timestampIso: log.created_at || new Date().toISOString(),
         }));
         recentEvents.value = mapped;

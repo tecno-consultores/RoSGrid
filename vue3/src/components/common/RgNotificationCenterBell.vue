@@ -9,6 +9,7 @@
   import { useInventoryStore } from '@/stores/useInventoryStore';
   import { useNocEventsStore } from '@/stores/useNocEventsStore';
   import { useI18n } from '@/composables/useI18n';
+  import { formatEventMessage, parseRawAuditString } from '@/utils/eventFormatter';
 
   export interface TacticalNotificationItem {
     id: string;
@@ -31,7 +32,7 @@
   const authStore = useAuthStore();
   const inventoryStore = useInventoryStore();
   const nocStore = useNocEventsStore();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   const isOpen = ref(false);
   const activeTab = ref<'all' | 'action' | 'network' | 'ops'>('all');
@@ -73,9 +74,12 @@
 
   const NOISE_ACTIONS = new Set([
     'SESSION_REFRESHED',
+    'SESSION_TOKEN_RENEWED',
     'TOKEN_RENEWED',
     'USER_LOGIN',
     'USER_LOGOUT',
+    'LOGIN_SUCCESSFUL',
+    'LOGOUT_SUCCESSFUL',
     'AUTH_LOGIN_SUCCESS',
     'AUTH_LOGOUT',
   ]);
@@ -284,17 +288,47 @@
   }
 
   function isNocNoise(rawAction: string, rawSummary: string): boolean {
-    return NOISE_ACTIONS.has(rawAction) || rawSummary.toLowerCase().includes('session token renewed');
+    if (NOISE_ACTIONS.has(rawAction)) return true;
+    const parsed = parseRawAuditString(rawSummary);
+    if (parsed && NOISE_ACTIONS.has(parsed.actionCode)) return true;
+    const lower = rawSummary.toLowerCase();
+    return (
+      lower.includes('session token renewed') ||
+      lower.includes('sesión de operador renovada') ||
+      lower.includes('operator session renewed') ||
+      lower.includes('inicio de sesión exitoso') ||
+      lower.includes('successful login')
+    );
   }
 
   function resolveNocRouterLabel(ev: (typeof nocStore.recentEvents)[number]): string {
-    if (ev.routerDisplayName && !isUuidLike(ev.routerDisplayName)) {
-      return ev.routerDisplayName;
+    const candidate = ev.routerDisplayName || ev.router_name || '';
+    if (
+      candidate &&
+      !isUuidLike(candidate) &&
+      candidate.toLowerCase() !== 'sistema' &&
+      candidate.toLowerCase() !== 'system'
+    ) {
+      return candidate;
     }
-    if (ev.router_name && !isUuidLike(ev.router_name)) {
-      return ev.router_name;
+    return t('notifications.system_label', 'Sistema RoSGrid');
+  }
+
+  function formatNocSubtitle(rawAction: string, rawSummary: string): string {
+    const parsedSummary = parseRawAuditString(rawSummary);
+    if (parsedSummary) {
+      return formatEventMessage(rawSummary, undefined, locale.value);
     }
-    return 'Sistema RoSGrid';
+    const trimmedSummary = rawSummary.trim();
+    if (
+      !trimmedSummary ||
+      trimmedSummary === rawAction ||
+      /^[A-Z0-9_]+$/.test(trimmedSummary) ||
+      trimmedSummary.startsWith('Evento de red:')
+    ) {
+      return formatEventMessage(rawAction, undefined, locale.value);
+    }
+    return trimmedSummary;
   }
 
   function isNocCritical(ev: (typeof nocStore.recentEvents)[number], rawAction: string): boolean {
@@ -312,6 +346,7 @@
     const isMaintenance = ev.type === 'MAINTENANCE' || rawAction.includes('MAINTENANCE');
     const isAcked = ackedKeys.value.has(dedupKey);
     const routerLabel = resolveNocRouterLabel(ev);
+    const subtitleText = formatNocSubtitle(rawAction, rawSummary);
     const eventTimestamp = ev.timestampIso || ev.timestamp || new Date().toISOString();
 
     let category: 'network' | 'ops' = 'ops';
@@ -337,7 +372,7 @@
       priority,
       icon,
       title: routerLabel,
-      subtitle: rawSummary,
+      subtitle: subtitleText,
       timestamp: eventTimestamp,
       repeatCount: 1,
       targetPath,
@@ -913,27 +948,27 @@
     width: 34px;
     height: 32px;
     border-radius: var(--rg-radius-md, 6px);
-    background: var(--rg-bg-panel);
-    border: 1px solid var(--rg-border-subtle);
-    color: var(--rg-text-secondary);
+    background-color: var(--rg-bg-surface, #111827);
+    border: 1px solid var(--rg-border-panel, #334155);
+    color: var(--rg-text-secondary, #cbd5e1);
     cursor: pointer;
     transition: all 0.15s ease;
   }
 
   .btn-notification-bell:hover,
   .btn-notification-bell--open {
-    color: var(--rg-text-primary);
-    border-color: var(--rg-accent-cyan);
-    background: rgba(0, 229, 255, 0.08);
+    color: var(--rg-text-primary, #f8fafc);
+    border-color: var(--rg-accent-cyan, #22d3ee);
+    background-color: var(--rg-bg-elevated, #1e293b);
   }
 
   .btn-notification-bell--p1 {
-    border-color: var(--rg-status-offline);
-    box-shadow: 0 0 10px rgba(255, 23, 68, 0.35);
+    border-color: var(--rg-status-critical, #ef4444);
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.35);
   }
 
   .btn-notification-bell--p2 {
-    border-color: var(--rg-status-warning);
+    border-color: var(--rg-status-warning, #f59e0b);
   }
 
   .bell-icon {
@@ -956,15 +991,15 @@
     align-items: center;
     justify-content: center;
     color: #ffffff;
-    border: 1.5px solid var(--rg-bg-canvas);
+    border: 1.5px solid var(--rg-bg-canvas, #0b0f19);
   }
 
   .bell-badge--p1 {
-    background: var(--rg-status-offline, #ff1744);
+    background-color: var(--rg-status-critical, #ef4444);
   }
 
   .bell-badge--p2 {
-    background: #d97706;
+    background-color: var(--rg-status-warning, #d97706);
   }
 
   .bell-unread-dot {
@@ -974,21 +1009,22 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: var(--rg-accent-cyan, #00e5ff);
-    box-shadow: 0 0 6px rgba(0, 229, 255, 0.8);
+    background-color: var(--rg-accent-cyan, #22d3ee);
+    box-shadow: 0 0 6px rgba(34, 211, 238, 0.8);
   }
 
   .rg-notification-popover {
     position: absolute;
     top: calc(100% + 8px);
     right: 0;
-    width: 400px;
+    width: 410px;
     max-width: calc(100vw - 24px);
-    background: var(--rg-bg-panel);
-    border: 1px solid var(--rg-border-strong, var(--rg-border-subtle));
-    border-radius: var(--rg-radius-lg, 10px);
-    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.55);
-    z-index: 1200;
+    background-color: var(--rg-bg-surface, #111827);
+    color: var(--rg-text-primary, #f8fafc);
+    border: 1px solid var(--rg-border-panel, #334155);
+    border-radius: var(--rg-radius-lg, 8px);
+    box-shadow: var(--rg-shadow-lg, 0 16px 36px rgba(0, 0, 0, 0.72));
+    z-index: 1500;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -1000,8 +1036,8 @@
     justify-content: space-between;
     gap: 8px;
     padding: 10px 12px;
-    border-bottom: 1px solid var(--rg-border-subtle);
-    background: rgba(0, 0, 0, 0.18);
+    border-bottom: 1px solid var(--rg-border-panel, #334155);
+    background-color: var(--rg-bg-elevated, #1e293b);
   }
 
   .notif-header-title-wrap {
@@ -1015,7 +1051,7 @@
     margin: 0;
     font-size: 0.85rem;
     font-weight: 700;
-    color: var(--rg-text-primary);
+    color: var(--rg-text-primary, #f8fafc);
   }
 
   .notif-pending-pill {
@@ -1023,9 +1059,9 @@
     font-weight: 700;
     padding: 2px 6px;
     border-radius: 999px;
-    background: rgba(245, 158, 11, 0.16);
-    color: var(--rg-status-warning);
-    border: 1px solid rgba(245, 158, 11, 0.35);
+    background-color: var(--rg-status-warning-bg, #78350f);
+    color: var(--rg-status-warning-text, #fde68a);
+    border: 1px solid var(--rg-status-warning, #f59e0b);
   }
 
   .notif-header-controls {
@@ -1036,20 +1072,20 @@
 
   .btn-notif-ctrl {
     padding: 3px 7px;
-    border-radius: 5px;
+    border-radius: var(--rg-radius-concentric, 5px);
     font-size: 0.72rem;
     font-weight: 600;
-    background: transparent;
-    border: 1px solid var(--rg-border-subtle);
-    color: var(--rg-text-secondary);
+    background-color: var(--rg-bg-surface, #111827);
+    border: 1px solid var(--rg-border-panel, #334155);
+    color: var(--rg-text-secondary, #cbd5e1);
     cursor: pointer;
   }
 
   .btn-notif-ctrl:hover,
   .btn-notif-ctrl--active {
-    color: var(--rg-accent-cyan);
-    border-color: var(--rg-accent-cyan);
-    background: rgba(0, 229, 255, 0.08);
+    color: var(--rg-accent-cyan, #22d3ee);
+    border-color: var(--rg-accent-cyan, #22d3ee);
+    background-color: var(--rg-bg-canvas, #0b0f19);
   }
 
   .notif-tabs-bar {
@@ -1057,18 +1093,18 @@
     grid-template-columns: repeat(4, 1fr);
     gap: 4px;
     padding: 6px 10px;
-    border-bottom: 1px solid var(--rg-border-subtle);
-    background: rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid var(--rg-border-grid, #1e293b);
+    background-color: var(--rg-bg-canvas, #0b0f19);
   }
 
   .notif-tab-btn {
     padding: 5px 4px;
-    border-radius: 5px;
+    border-radius: var(--rg-radius-concentric, 5px);
     font-size: 0.72rem;
     font-weight: 600;
-    background: transparent;
+    background-color: transparent;
     border: 1px solid transparent;
-    color: var(--rg-text-secondary);
+    color: var(--rg-text-secondary, #cbd5e1);
     cursor: pointer;
     text-align: center;
     white-space: nowrap;
@@ -1076,10 +1112,15 @@
     text-overflow: ellipsis;
   }
 
+  .notif-tab-btn:hover {
+    color: var(--rg-text-primary, #f8fafc);
+    background-color: var(--rg-bg-surface, #111827);
+  }
+
   .notif-tab-btn--active {
-    background: rgba(0, 229, 255, 0.12);
-    color: var(--rg-accent-cyan);
-    border-color: rgba(0, 229, 255, 0.3);
+    background-color: var(--rg-bg-elevated, #1e293b);
+    color: var(--rg-accent-cyan, #22d3ee);
+    border-color: var(--rg-accent-cyan-border, #06b6d4);
   }
 
   .notif-list {
@@ -1088,6 +1129,7 @@
     padding: 0;
     max-height: 360px;
     overflow-y: auto;
+    background-color: var(--rg-bg-surface, #111827);
   }
 
   .notif-row {
@@ -1095,23 +1137,22 @@
     align-items: flex-start;
     gap: 10px;
     padding: 10px 12px;
-    border-bottom: 1px solid var(--rg-border-subtle);
+    background-color: var(--rg-bg-surface, #111827);
+    border-bottom: 1px solid var(--rg-border-grid, #1e293b);
     cursor: pointer;
-    transition: background 0.12s ease;
+    transition: background-color 0.12s ease;
   }
 
   .notif-row:hover {
-    background: rgba(0, 229, 255, 0.05);
+    background-color: var(--rg-bg-elevated, #1e293b);
   }
 
   .notif-row--action-p1 {
-    border-left: 3px solid var(--rg-status-offline);
-    background: rgba(255, 23, 68, 0.06);
+    border-left: 3px solid var(--rg-status-critical, #ef4444);
   }
 
   .notif-row--action-p2 {
-    border-left: 3px solid var(--rg-status-warning);
-    background: rgba(245, 158, 11, 0.06);
+    border-left: 3px solid var(--rg-status-warning, #f59e0b);
   }
 
   .notif-row-icon {
@@ -1134,7 +1175,7 @@
   .notif-row-title {
     font-size: 0.8rem;
     font-weight: 700;
-    color: var(--rg-text-primary);
+    color: var(--rg-text-primary, #f8fafc);
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1145,22 +1186,23 @@
     font-size: 0.68rem;
     font-weight: 700;
     padding: 1px 5px;
-    border-radius: 4px;
-    background: rgba(0, 229, 255, 0.14);
-    color: var(--rg-accent-cyan);
+    border-radius: var(--rg-radius-sm, 4px);
+    background-color: var(--rg-status-info-bg, #0c4a6e);
+    color: var(--rg-status-info-text, #bae6fd);
+    border: 1px solid var(--rg-status-info, #38bdf8);
   }
 
   .notif-row-time {
     font-size: 0.7rem;
-    color: var(--rg-text-muted);
+    color: var(--rg-text-muted, #94a3b8);
     flex-shrink: 0;
   }
 
   .notif-row-subtitle {
     margin: 3px 0 0;
-    font-size: 0.75rem;
-    color: var(--rg-text-secondary);
-    line-height: 1.35;
+    font-size: 0.76rem;
+    color: var(--rg-text-secondary, #cbd5e1);
+    line-height: 1.4;
   }
 
   .notif-inline-actions {
@@ -1172,34 +1214,36 @@
 
   .btn-inline-action {
     padding: 3px 8px;
-    border-radius: 4px;
+    border-radius: var(--rg-radius-sm, 4px);
     font-size: 0.72rem;
     font-weight: 700;
     cursor: pointer;
-    border: 1px solid var(--rg-border-subtle);
-    background: var(--rg-bg-canvas);
-    color: var(--rg-text-primary);
+    border: 1px solid var(--rg-border-panel, #334155);
+    background-color: var(--rg-bg-canvas, #0b0f19);
+    color: var(--rg-text-primary, #f8fafc);
   }
 
   .btn-inline-action--approve {
-    border-color: rgba(16, 185, 129, 0.5);
-    color: var(--rg-status-online);
-    background: rgba(16, 185, 129, 0.12);
+    border-color: var(--rg-status-online, #10b981);
+    color: var(--rg-status-online-text, #6ee7b7);
+    background-color: var(--rg-status-online-bg, #064e3b);
   }
 
   .btn-inline-action--inspect {
-    border-color: rgba(0, 229, 255, 0.4);
-    color: var(--rg-accent-cyan);
+    border-color: var(--rg-accent-cyan-border, #06b6d4);
+    color: var(--rg-accent-cyan, #22d3ee);
   }
 
   .btn-inline-action--ack {
-    border-color: rgba(245, 158, 11, 0.45);
-    color: var(--rg-status-warning);
+    border-color: var(--rg-status-warning, #f59e0b);
+    color: var(--rg-status-warning-text, #fde68a);
+    background-color: var(--rg-status-warning-bg, #78350f);
   }
 
   .notif-empty-state {
     padding: 28px 16px;
     text-align: center;
+    background-color: var(--rg-bg-surface, #111827);
   }
 
   .notif-empty-icon {
@@ -1211,13 +1255,13 @@
     margin: 0;
     font-size: 0.84rem;
     font-weight: 700;
-    color: var(--rg-text-primary);
+    color: var(--rg-text-primary, #f8fafc);
   }
 
   .notif-empty-sub {
     margin: 4px 0 0;
     font-size: 0.75rem;
-    color: var(--rg-text-secondary);
+    color: var(--rg-text-secondary, #cbd5e1);
   }
 
   .notif-popover-footer {
@@ -1225,14 +1269,14 @@
     align-items: center;
     justify-content: space-between;
     padding: 8px 12px;
-    border-top: 1px solid var(--rg-border-subtle);
-    background: rgba(0, 0, 0, 0.15);
+    border-top: 1px solid var(--rg-border-panel, #334155);
+    background-color: var(--rg-bg-elevated, #1e293b);
   }
 
   .btn-notif-footer-link {
     background: transparent;
     border: none;
-    color: var(--rg-accent-cyan);
+    color: var(--rg-accent-cyan, #22d3ee);
     font-size: 0.74rem;
     font-weight: 600;
     cursor: pointer;

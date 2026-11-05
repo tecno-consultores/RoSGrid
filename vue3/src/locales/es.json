@@ -68,7 +68,8 @@
     "ack_alert": "Reconocer (Ack)",
     "approved_inline_sr": "Solicitud aprobada correctamente",
     "go_approvals": "Ir a Maker-Checker",
-    "go_wallboard": "Abrir Wallboard NOC"
+    "go_wallboard": "Abrir Wallboard NOC",
+    "system_label": "Sistema RoSGrid"
   },
   "nav": {
     "open_nav": "Abrir menú de navegación",

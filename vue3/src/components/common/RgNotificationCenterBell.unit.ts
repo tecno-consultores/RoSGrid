@@ -8,10 +8,12 @@ import RgNotificationCenterBell from './RgNotificationCenterBell.vue';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useNocEventsStore } from '@/stores/useNocEventsStore';
+import { useI18n } from '@/composables/useI18n';
 import { http } from '@/api/httpClient';
 
 const BELL_BADGE_ID = '#notification-bell-badge';
 const BELL_BTN_ID = '#btn-notification-bell';
+const POPOVER_ID = '#rg-notification-popover';
 const BORDE_CARACAS_NAME = 'Borde-Caracas';
 const R111_NAME = 'r111';
 const OFFLINE_STATUS = 'OFFLINE';
@@ -168,7 +170,7 @@ describe('RgNotificationCenterBell.vue — Centro Táctico de Notificaciones In-
     await wrapper.find(BELL_BTN_ID).trigger('click');
     await flushPromises();
 
-    const text = wrapper.find('#rg-notification-popover').text();
+    const text = wrapper.find(POPOVER_ID).text();
     expect(text).toContain(BORDE_CARACAS_NAME);
     expect(text).toContain('Core-Valencia');
     // El ruido de "Session token renewed" jamás debe aparecer
@@ -261,5 +263,49 @@ describe('RgNotificationCenterBell.vue — Centro Táctico de Notificaciones In-
     const firstRow = wrapper.find('.notif-row');
     await firstRow.trigger('click');
     expect(pushMock).toHaveBeenCalledWith(MAINT_WINDOWS_PATH);
+  });
+
+  it('formatea códigos crudos de auditoría en texto legible bilingüe (ES/EN) y filtra LOGIN_SUCCESSFUL', async () => {
+    vi.mocked(http.get).mockResolvedValue({ data: { items: [] } } as never);
+    const { setLocale } = useI18n();
+    setLocale('es');
+
+    const nocStore = useNocEventsStore();
+    nocStore.recentEvents = [
+      {
+        id: 'ev-login-noise',
+        eventName: 'LOGIN_SUCCESSFUL',
+        severity: 'INFO',
+        message: 'LOGIN_SUCCESSFUL (AUTHENTICATION): sinfallas',
+        timestampIso: '2026-11-04T19:50:00Z',
+      },
+      {
+        id: 'ev-gov-1',
+        eventName: 'TENANT_FEATURE_FLAGS_UPDATED',
+        severity: 'INFO',
+        message: 'TENANT_FEATURE_FLAGS_UPDATED (GOVERNANCE): sinfallas',
+        timestampIso: '2026-11-04T19:51:00Z',
+      },
+    ];
+
+    const wrapper = mount(RgNotificationCenterBell);
+    await flushPromises();
+
+    await wrapper.find(BELL_BTN_ID).trigger('click');
+    await flushPromises();
+
+    const textEs = wrapper.find(POPOVER_ID).text();
+    expect(textEs).not.toContain('LOGIN_SUCCESSFUL');
+    expect(textEs).not.toContain('TENANT_FEATURE_FLAGS_UPDATED');
+    expect(textEs).toContain('Sistema RoSGrid');
+    expect(textEs).toContain('Parámetros del tenant actualizados (por sinfallas)');
+
+    // Conmutar a inglés y verificar traducción reactiva
+    setLocale('en');
+    await flushPromises();
+    const textEn = wrapper.find(POPOVER_ID).text();
+    expect(textEn).toContain('RoSGrid System');
+    expect(textEn).toContain('Tenant parameters updated (by sinfallas)');
+    setLocale('es');
   });
 });

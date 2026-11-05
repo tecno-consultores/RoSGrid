@@ -1694,3 +1694,13 @@ python3 .agents/scripts/verify_no_orphan_api_endpoints.py
 docker compose -f vue3/docker-compose.qa.yml run --rm --entrypoint sh vue3-qa -c \
   "pnpm exec vitest run src/components/common/RgNotificationCenterBell.unit.ts src/components/common/RgResponsiveShell.unit.ts && pnpm exec vue-tsc --noEmit"
 ```
+
+---
+
+## 4. Opacidad Sólida Multi-Tema (`dark`, `light`, `noc-high-contrast`) y Formateo Bilingüe (`es` / `en`)
+
+1. **Erradicación de Tokens CSS Huérfanos (`themes.css` Parity):**
+   - El popover `.rg-notification-popover` y sus filas `.notif-row` emplean estrictamente `background-color: var(--rg-bg-surface, #111827)`, mientras que `.notif-popover-header` y `.notif-popover-footer` usan `background-color: var(--rg-bg-elevated, #1e293b)` y bordes `var(--rg-border-panel)` / `var(--rg-border-grid)`, garantizando opacidad 100% sólida (cero transparencia accidental sobre botones del Dashboard) y contraste WCAG 2.1 AA en los 3 temas (`dark`, `light`, `noc-high-contrast`).
+2. **Formateo Bilingüe de Eventos (`eventFormatter.ts` y `useNocEventsStore.ts`):**
+   - `formatEventAction(action, locale)` y `formatEventMessage(action, actor, locale)` soportan catálogos completos en Español (`EVENT_ACTION_DESCRIPTIONS_ES`) e Inglés (`EVENT_ACTION_DESCRIPTIONS_EN`) y desempaquetan cadenas crudas de auditoría (`parseRawAuditString`, ej. `TENANT_FEATURE_FLAGS_UPDATED (GOVERNANCE): sinfallas` -> `Parámetros del tenant actualizados (por sinfallas)` / `Tenant parameters updated (by sinfallas)`).
+   - `NOISE_ACTIONS` incluye `LOGIN_SUCCESSFUL` y `LOGOUT_SUCCESSFUL` para evitar que los inicios/cierres de sesión propios contaminen la campana operativa.

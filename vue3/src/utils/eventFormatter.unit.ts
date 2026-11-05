@@ -2,7 +2,9 @@
 // Copyright (C) 2026 RoSGrid Contributors
 
 import { describe, it, expect } from 'vitest';
-import { formatEventAction, formatEventMessage, isRawUuid } from './eventFormatter';
+import { formatEventAction, formatEventMessage, isRawUuid, parseRawAuditString } from './eventFormatter';
+
+const ROUTER_DOWN_ES = 'Router fuera de línea (sin respuesta)';
 
 describe('eventFormatter.ts — Transformación de códigos internos a texto descriptivo', () => {
   it('formatea LOGIN_FAILED_USER_INACTIVE a descripción en español amigable', () => {
@@ -34,9 +36,7 @@ describe('eventFormatter.ts — Transformación de códigos internos a texto des
     expect(formatEventAction('MASS_OUTAGE_TRIGGERED')).toBe(
       'Alerta de caída masiva activada',
     );
-    expect(formatEventAction('ROUTER_DOWN')).toBe(
-      'Router fuera de línea (sin respuesta)',
-    );
+    expect(formatEventAction('ROUTER_DOWN')).toBe(ROUTER_DOWN_ES);
     expect(formatEventAction('CREDENTIAL_REVEALED')).toBe(
       'Credenciales de acceso reveladas en bóveda',
     );
@@ -58,13 +58,9 @@ describe('eventFormatter.ts — Transformación de códigos internos a texto des
       'Acceso denegado: Usuario inactivo o deshabilitado (por juan_operador)',
     );
 
-    expect(formatEventMessage('ROUTER_DOWN', 'sistema')).toBe(
-      'Router fuera de línea (sin respuesta)',
-    );
+    expect(formatEventMessage('ROUTER_DOWN', 'sistema')).toBe(ROUTER_DOWN_ES);
 
-    expect(formatEventMessage('ROUTER_DOWN', null)).toBe(
-      'Router fuera de línea (sin respuesta)',
-    );
+    expect(formatEventMessage('ROUTER_DOWN', null)).toBe(ROUTER_DOWN_ES);
   });
 
   it('detecta UUIDs crudos y los omite del mensaje formateado para evitar fuga visual', () => {
@@ -83,5 +79,22 @@ describe('eventFormatter.ts — Transformación de códigos internos a texto des
     expect(formatEventMessage('MAINTENANCE_WINDOW_EXPIRED_AUTO_DELETED', 'admin')).toBe(
       'Ventana de mantenimiento finalizada (por admin)',
     );
+  });
+
+  it('soporta traducción bilingüe (es/en) y desempaqueta cadenas crudas de auditoría ACTION (CATEGORY): actor', () => {
+    const rawAudit = 'TENANT_FEATURE_FLAGS_UPDATED (GOVERNANCE): sinfallas';
+    const parsed = parseRawAuditString(rawAudit);
+    expect(parsed).toEqual({
+      actionCode: 'TENANT_FEATURE_FLAGS_UPDATED',
+      extractedActor: 'sinfallas',
+    });
+
+    expect(formatEventMessage(rawAudit, undefined, 'es')).toBe(
+      'Parámetros del tenant actualizados (por sinfallas)',
+    );
+    expect(formatEventMessage(rawAudit, undefined, 'en')).toBe(
+      'Tenant parameters updated (by sinfallas)',
+    );
+    expect(formatEventAction('ROUTER_DOWN', 'en')).toBe('Router offline (unreachable)');
   });
 });
