@@ -3,6 +3,7 @@
 
 """Suite Completa de Pruebas Unitarias para Endpoints de Operaciones (Approvals, Backups, Bulk & Updates, Audit, Notification Channels)."""
 
+import hashlib
 import json
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -1019,3 +1020,69 @@ async def test_publish_maker_checker_event_unit() -> None:
             approval_id=approval_id,
             summary="Falla de redis",
         )
+
+
+@pytest.mark.asyncio
+async def test_backups_filtered_file_query_with_pcap_and_corrupt_purge(fake_op_context: dict[str, Any]) -> None:
+    """Verifica que _read_and_cleanup_rsc_file usa file?name= evitando corrupción por .pcap y list_backups purga '[]'."""
+    ctx = fake_op_context
+    claims = ctx["claims"]
+    db = AsyncMock()
+    client = AsyncMock()
+
+    # Simular que GET 'file' sin filtro devuelve un str corrupto por culpa de chk.pcap,
+    # mientras que GET 'file?name=rosgrid_bk_test.rsc' devuelve la lista JSON válida.
+    async def mock_get(ep: str) -> Any:
+        if ep == "file":
+            return '[{".id":"*1","name":"chk.pcap","contents":"\\x00\\xffBINARY"}]'
+        if ep.startswith("file?name="):
+            return [
+                {
+                    ".id": "*99",
+                    "name": "rosgrid_bk_test.rsc",
+                    "size": "120",
+                    "contents": "# 2026-11-05 by RouterOS 7.25.1\n/system identity\nset name=caps\n",
+                }
+            ]
+        return []
+
+    client.get = AsyncMock(side_effect=mock_get)
+    client.post = AsyncMock(return_value=[])
+    client.delete = AsyncMock(return_value=None)
+
+    rsc_text = await api_backups._read_and_cleanup_rsc_file(client, "rosgrid_bk_test")
+    assert "/system identity" in rsc_text
+    assert "set name=caps" in rsc_text
+    client.delete.assert_awaited_with("file/*99")
+
+    # Verificar que clean_rsc_export_comments rechaza '[]'
+    assert api_backups.clean_rsc_export_comments("[]") == ""
+    assert api_backups.clean_rsc_export_comments("# comment\n[]") == ""
+
+    # Verificar que list_backups purga automáticamente respaldos corruptos con hash de '[]' (4f53cda18c2baa...)
+    empty_hash = hashlib.sha256(b"[]").hexdigest()
+    corrupt_bk = RouterBackup(
+        id=uuid.uuid4(),
+        tenant_id=ctx["tenant_id"],
+        router_id=ctx["router_id"],
+        backup_type="PRE_UPGRADE",
+        ros_version_at_backup="7.25",
+        rsc_sha256_hash=empty_hash,
+        rsc_size_bytes=2,
+        rsc_ciphertext=b"x",
+        rsc_iv=b"x",
+        rsc_tag=b"x",
+        diff_lines_added=0,
+        diff_lines_removed=0,
+        created_at=datetime.now(UTC),
+        last_verified_identical_at=datetime.now(UTC),
+        expires_at=datetime.now(UTC) + timedelta(days=30),
+    )
+    mock_list = MagicMock()
+    mock_list.scalars.return_value.all.return_value = [corrupt_bk]
+    db.execute.return_value = mock_list
+
+    res_list = await api_backups.list_backups(ctx["router_id"], claims=claims, db=db)
+    assert len(res_list.items) == 0
+    db.delete.assert_awaited_once_with(corrupt_bk)
+    db.commit.assert_awaited()

@@ -123,16 +123,45 @@ async def _perform_pre_upgrade_backup(
     user_id: uuid.UUID,
     db: AsyncSession,
 ) -> bool:
+    from sqlalchemy import desc
+
+    from src.api.v1.backups import (
+        _compute_diff_stats,
+        _decrypt_backup_rsc,
+        clean_rsc_export_comments,
+        export_router_rsc,
+    )
+
     try:
-        raw_res = await client.post("export", {"terse": "false", "show-sensitive": "false"})
-        raw_text = str(raw_res) if not isinstance(raw_res, str) else raw_res
-        lines = [ln for ln in raw_text.splitlines() if not ln.strip().startswith("#")]
-        cleaned = "\n".join(lines).strip()
+        cleaned = await export_router_rsc(client)
+        if not cleaned or cleaned.strip() in ("[]", "{}"):
+            raise ValueError("El router devolvió una exportación .rsc vacía")
+
         rsc_hash = hashlib.sha256(cleaned.encode("utf-8")).hexdigest()
+        now_utc = datetime.now(UTC)
+
+        latest_stmt = (
+            select(RouterBackup)
+            .where(RouterBackup.tenant_id == tenant_id, RouterBackup.router_id == router_obj.id)
+            .order_by(desc(RouterBackup.created_at))
+            .limit(1)
+        )
+        latest_backup = (await db.execute(latest_stmt)).scalar_one_or_none()
+        if latest_backup and latest_backup.rsc_sha256_hash == rsc_hash:
+            latest_backup.last_verified_identical_at = now_utc
+            await db.flush()
+            return True
+
+        lines_added, lines_removed = 0, 0
+        if latest_backup:
+            try:
+                old_text = clean_rsc_export_comments(_decrypt_backup_rsc(latest_backup, tenant_id))
+                lines_added, lines_removed, _ = _compute_diff_stats(old_text.splitlines(), cleaned.splitlines())
+            except Exception:
+                lines_added, lines_removed = 0, 0
 
         aad = f"{tenant_id}:{router_obj.id}".encode()
         ct, iv, tag = encrypt_aes_gcm(cleaned.encode("utf-8"), aad)
-        now_utc = datetime.now(UTC)
 
         backup = RouterBackup(
             tenant_id=tenant_id,
@@ -144,8 +173,9 @@ async def _perform_pre_upgrade_backup(
             rsc_ciphertext=ct,
             rsc_iv=iv,
             rsc_tag=tag,
-            diff_lines_added=0,
-            diff_lines_removed=0,
+            diff_lines_added=lines_added,
+            diff_lines_removed=lines_removed,
+            parent_backup_id=latest_backup.id if latest_backup else None,
             triggered_by=user_id,
             created_at=now_utc,
             last_verified_identical_at=now_utc,
@@ -214,7 +244,9 @@ async def _cleanup_corrupted_npk_downloads(client: MikrotikRestClient) -> int:
     """Elimina archivos .npk truncados (size == 0) en el router para evitar bloqueos de descarga."""
     removed = 0
     try:
-        files = await client.get("file")
+        files = await client.post("file/print", {".proplist": ".id,name,size"})
+        if not isinstance(files, list):
+            files = await client.get("file")
         if not isinstance(files, list):
             return 0
         for item in files:

@@ -114,8 +114,10 @@ async def test_run_router_template_steps_skips_routerboard_on_chr() -> None:
     assert summary["executed_steps"] == 3
     assert summary["skipped_steps"] == 2
     assert "CHR detectado" in summary["message"]
-    # Se llamaron 3 endpoints
-    assert client.post.call_count == 3
+    # Se llamaron 3 endpoints de plantilla + 1 file/print de limpieza preventiva .npk
+    post_endpoints = [call.args[0] for call in client.post.call_args_list if call.args]
+    assert "file/print" in post_endpoints
+    assert len([ep for ep in post_endpoints if ep != "file/print"]) == 3
 
 
 @pytest.mark.asyncio
@@ -144,7 +146,10 @@ async def test_run_router_template_steps_executes_all_on_routerboard() -> None:
     assert summary["executed_steps"] == 5
     assert summary["skipped_steps"] == 0
     assert "CHR detectado" not in summary["message"]
-    assert client.post.call_count == 5
+    # Se llamaron 5 endpoints de plantilla + 1 file/print de limpieza preventiva .npk
+    post_endpoints = [call.args[0] for call in client.post.call_args_list if call.args]
+    assert "file/print" in post_endpoints
+    assert len([ep for ep in post_endpoints if ep != "file/print"]) == 5
 
 
 @pytest.mark.asyncio
@@ -473,4 +478,32 @@ async def test_starter_template_17_system_clock_timezone_schema_and_execution() 
         {"time-zone-name": "UTC"},
     )
     client.post.assert_awaited_once_with("system/clock/set", {"time-zone-name": "UTC"})
+
+
+@pytest.mark.asyncio
+async def test_perform_pre_upgrade_backup_uses_export_router_rsc_and_rejects_empty_brackets() -> None:
+    """Verifica que _perform_pre_upgrade_backup usa export_router_rsc, deduplica y nunca guarda '[]'."""
+    from unittest.mock import MagicMock
+
+    from src.api.v1.bulk_and_updates import _perform_pre_upgrade_backup
+
+    client = AsyncMock()
+    r_chr = Router(id=uuid.uuid4(), display_name="caps1", ros_version="7.25.1")
+    t_id = uuid.uuid4()
+    u_id = uuid.uuid4()
+    db = AsyncMock()
+    mock_exec = MagicMock()
+    mock_exec.scalar_one_or_none.return_value = None
+    db.execute.return_value = mock_exec
+
+    with patch(
+        "src.api.v1.backups.export_router_rsc",
+        AsyncMock(return_value="/system identity\nset name=caps"),
+    ):
+        ok = await _perform_pre_upgrade_backup(client, r_chr, t_id, u_id, db)
+        assert ok is True
+        db.add.assert_called_once()
+        saved_bk = db.add.call_args[0][0]
+        assert saved_bk.rsc_size_bytes > 2
+        assert not saved_bk.rsc_sha256_hash.startswith("4f53cda18c2baa")
 

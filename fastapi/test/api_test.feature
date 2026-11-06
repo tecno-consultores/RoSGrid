@@ -1420,3 +1420,16 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     When method get
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 163. Respaldo .rsc Libre de Corrupción por Binarios .pcap y Purga Automática de Exportaciones Vacías '[]' (Hito 30.10)
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/backups'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/backups/diff'
+    And param base_backup_id = '00000000-0000-0000-0000-000000000002'
+    And param target_backup_id = 'LIVE'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }

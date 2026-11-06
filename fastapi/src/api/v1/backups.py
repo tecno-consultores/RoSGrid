@@ -56,10 +56,18 @@ _TRIGGER_ROLES = (
 )
 
 
+_EMPTY_EXPORT_HASHES = frozenset({
+    hashlib.sha256(b"[]").hexdigest(),
+    hashlib.sha256(b"{}").hexdigest(),
+    hashlib.sha256(b"").hexdigest(),
+})
+
+
 def clean_rsc_export_comments(raw_text: str) -> str:
-    """Elimina comentarios de cabecera con timestamps volátiles de RouterOS."""
+    """Elimina comentarios de cabecera con timestamps volátiles de RouterOS y descarta salidas vacías ('[]')."""
     lines = [line for line in raw_text.splitlines() if not line.strip().startswith("#")]
-    return "\n".join(lines).strip()
+    cleaned = "\n".join(lines).strip()
+    return "" if cleaned in ("[]", "{}") else cleaned
 
 
 def _extract_raw_rsc_text(export_res: Any) -> str:
@@ -115,19 +123,69 @@ async def _read_large_rsc_file(
     return "".join(chunks)
 
 
+async def _list_router_files_metadata_safe(client: MikrotikRestClient, target_name: str | None = None) -> list[dict[str, Any]]:
+    """Obtiene metadatos de archivos en RouterOS evitando corromper el JSON con 'contents' binarios (.pcap)."""
+    if target_name:
+        try:
+            res = await client.get(f"file?name={target_name}")
+            if isinstance(res, list):
+                return [f for f in res if isinstance(f, dict)]
+        except Exception as err:
+            logger.debug("Consulta filtrada file?name=%s falló: %s", target_name, err)
+
+    try:
+        payload: dict[str, Any] = {".proplist": ".id,name,size,type,contents"}
+        if target_name:
+            payload["?name"] = target_name
+        res_print = await client.post("file/print", json_data=payload)
+        if isinstance(res_print, list):
+            return [f for f in res_print if isinstance(f, dict)]
+    except Exception as err:
+        logger.debug("Consulta file/print con .proplist falló: %s", err)
+
+    try:
+        raw_files = await client.get("file")
+        if isinstance(raw_files, list):
+            files_list = [f for f in raw_files if isinstance(f, dict)]
+            if target_name:
+                return [f for f in files_list if f.get("name") in (target_name, f"{target_name}.rsc")]
+            return files_list
+    except Exception as err:
+        logger.debug("Consulta general file falló: %s", err)
+    return []
+
+
+async def _cleanup_stale_rosgrid_bk_files(client: MikrotikRestClient, exclude_name: str | None = None) -> None:
+    """Elimina archivos temporales rosgrid_bk_*.rsc huérfanos en flash usando solo metadatos sin 'contents'."""
+    try:
+        res = await client.post("file/print", json_data={".proplist": ".id,name"})
+        if not isinstance(res, list):
+            return
+        for item in res:
+            if not isinstance(item, dict):
+                continue
+            name = str(item.get("name") or "")
+            fid = str(item.get(".id") or "")
+            if fid and name.startswith("rosgrid_bk_") and name.endswith(".rsc") and name != exclude_name:
+                await client.delete(f"file/{fid}")
+    except Exception as err:
+        logger.debug("Omitida limpieza de rosgrid_bk_*.rsc residuales: %s", err)
+
+
 async def _read_and_cleanup_rsc_file(client: MikrotikRestClient, fname: str) -> str:
-    """Lee el contenido del archivo temporal .rsc en RouterOS (incluyendo >4KB) y lo elimina de flash."""
-    files = await client.get("file")
-    if not isinstance(files, list):
-        return ""
-    target_files = [f for f in files if isinstance(f, dict) and f.get("name") in (f"{fname}.rsc", fname)]
+    """Lee el contenido del archivo temporal .rsc en RouterOS (filtrando por nombre para evitar binarios .pcap) y lo elimina."""
+    expected_name = fname if fname.endswith(".rsc") else f"{fname}.rsc"
+    target_files = await _list_router_files_metadata_safe(client, expected_name)
+    if not target_files and expected_name != fname:
+        target_files = await _list_router_files_metadata_safe(client, fname)
     if not target_files:
         return ""
+
     tf = target_files[0]
     raw_text = str(tf.get("contents", "") or "")
     file_id = str(tf.get(".id", "") or "")
     if not raw_text:
-        file_name = str(tf.get("name") or f"{fname}.rsc")
+        file_name = str(tf.get("name") or expected_name)
         file_size = int(tf.get("size", 0) or 0)
         raw_text = await _read_large_rsc_file(client, file_name, file_id, file_size)
     if file_id:
@@ -135,6 +193,7 @@ async def _read_and_cleanup_rsc_file(client: MikrotikRestClient, fname: str) -> 
             await client.delete(f"file/{file_id}")
         except Exception as del_err:
             logger.debug("Error eliminando archivo temporal en router: %s", del_err)
+    await _cleanup_stale_rosgrid_bk_files(client, exclude_name=expected_name)
     return raw_text
 
 
@@ -379,6 +438,17 @@ async def list_backups(
     )
     records = (await db.execute(stmt)).scalars().all()
 
+    valid_records: list[RouterBackup] = []
+    purged_corrupt = False
+    for r in records:
+        if r.rsc_sha256_hash in _EMPTY_EXPORT_HASHES or r.rsc_size_bytes <= 2:
+            await db.delete(r)
+            purged_corrupt = True
+        else:
+            valid_records.append(r)
+    if purged_corrupt:
+        await db.commit()
+
     items = [
         BackupItemResponse(
             id=r.id,
@@ -394,7 +464,7 @@ async def list_backups(
             last_verified_identical_at=r.last_verified_identical_at,
             expires_at=r.expires_at,
         )
-        for r in records
+        for r in valid_records
     ]
     return BackupListResponse(router_id=router_id, retention_days=30, items=items)
 
@@ -505,13 +575,10 @@ async def get_backup_diff(
 
     if target_backup_id.upper() == "LIVE":
         _, client = await get_router_and_client(router_id, claims, db)
-        live_res = await client.post("export", {"terse": "false", "show-sensitive": "false"})
-        target_rsc = clean_rsc_export_comments(_extract_raw_rsc_text(live_res))
-        if not target_rsc:
-            try:
-                target_rsc = await export_router_rsc(client)
-            except Exception:
-                target_rsc = ""
+        try:
+            target_rsc = await export_router_rsc(client)
+        except Exception:
+            target_rsc = ""
         target_created_at = datetime.now(UTC).isoformat()
     else:
         try:

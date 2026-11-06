@@ -1015,6 +1015,12 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * match systemClockTemplateContract.defaultTz == 'America/Caracas'
     * match systemClockTemplateContract.defaultAutodetect == 'no'
 
+  Scenario: 101. Comparador de Respaldos Git Diff sin Falsos Respaldos '[]' y Lectura Filtrada file?name= ante Archivos .pcap (Hito 30.10)
+    * def backupIntegrityContract = { filteredFileQuery: 'file?name=', metadataProplist: '.id,name,size,type,contents', rejectEmptyBracketsHash: '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945', deduplicatePreUpgrade: true }
+    * match backupIntegrityContract.filteredFileQuery == 'file?name='
+    * match backupIntegrityContract.rejectEmptyBracketsHash == '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945'
+    * match backupIntegrityContract.deduplicatePreUpgrade == true
+
 
 
 
