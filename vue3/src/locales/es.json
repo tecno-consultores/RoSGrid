@@ -1192,6 +1192,10 @@
     "seguridad_l2_dhcp_snooping_y_option82": {
       "name": "Seguridad L2 DHCP Snooping y Option 82",
       "description": "Activa DHCP Snooping y Option 82 en el bridge especificado y configura el puerto troncal como Trusted para prevenir servidores Rogue DHCP."
+    },
+    "huso_horario_sistema": {
+      "name": "Huso Horario del Sistema (/system/clock)",
+      "description": "Configura el huso horario oficial IANA del sistema (/system/clock) en toda la flota MikroTik RouterOS v7 y ajusta la autodetección por IP Cloud para garantizar marcas de tiempo exactas en Syslog y auditoría WORM."
     }
   }
 }

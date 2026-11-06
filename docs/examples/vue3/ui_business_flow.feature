@@ -922,6 +922,105 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * match mapGeometricContract.boxSquareClass == '.box-square'
     * match mapGeometricContract.subTriangleClass == '.sub-triangle-svg'
 
+  Scenario: 92. Alta Móvil de Campo por MAC WAN y Aprovisionamiento MikroTik BNG desde IPAM (Hito 28.20)
+    * def fieldOpsMacContract = { onuMacInput: '#cust-onu-mac', normalizeMacBtn: '#btn-normalize-mac', onuSerialInput: '#cust-onu-serial', normalizeSerialBtn: '#btn-normalize-serial' }
+    * match fieldOpsMacContract.onuMacInput == '#cust-onu-mac'
+    * match fieldOpsMacContract.normalizeMacBtn == '#btn-normalize-mac'
+    * match fieldOpsMacContract.onuSerialInput == '#cust-onu-serial'
+    * match fieldOpsMacContract.normalizeSerialBtn == '#btn-normalize-serial'
+
+    * def ipamPairingBngContract = { bngSelect: '#pair-bng-router-select', pppoeUser: '#pair-pppoe-user', pppoePass: '#pair-pppoe-password', chkProvision: '#chk-provision-mikrotik', saveBtn: '#btn-save-pair-subscriber' }
+    * match ipamPairingBngContract.bngSelect == '#pair-bng-router-select'
+    * match ipamPairingBngContract.pppoeUser == '#pair-pppoe-user'
+    * match ipamPairingBngContract.pppoePass == '#pair-pppoe-password'
+    * match ipamPairingBngContract.chkProvision == '#chk-provision-mikrotik'
+    * match ipamPairingBngContract.saveBtn == '#btn-save-pair-subscriber'
+
+  Scenario: 93. Sincronización Reactiva de Estado de Abonados WebSocket y Sonda ICMP en IPAM y Mapa (Hito 28.21)
+    * def ipamDeviceStatusEventContract = { eventName: 'rosgrid:device-status-changed', lastStatusField: 'last_reachability_status', lastSeenField: 'last_seen_at' }
+    * match ipamDeviceStatusEventContract.eventName == 'rosgrid:device-status-changed'
+    * match ipamDeviceStatusEventContract.lastStatusField == 'last_reachability_status'
+    * match ipamDeviceStatusEventContract.lastSeenField == 'last_seen_at'
+
+  Scenario: 94. Unificación del Isotipo de Alta Definición 512x512 Mesh y Glow en Cabecera Global y Login (Hito 30.1)
+    * def brandLogoContract = { wrapClass: '.rg-brand-logo-wrap', svgClass: '.rg-brand-logo-svg', constellationR: '.rg-constellation-r', constellationG: '.rg-constellation-g', fallbackImg: 'img.brand-logo-fallback', defaultHeaderSize: 28, viewBox: '0 0 512 512' }
+    * match brandLogoContract.wrapClass == '.rg-brand-logo-wrap'
+    * match brandLogoContract.svgClass == '.rg-brand-logo-svg'
+    * match brandLogoContract.constellationR == '.rg-constellation-r'
+    * match brandLogoContract.constellationG == '.rg-constellation-g'
+    * match brandLogoContract.fallbackImg == 'img.brand-logo-fallback'
+    * match brandLogoContract.defaultHeaderSize == 28
+    * match brandLogoContract.viewBox == '0 0 512 512'
+
+  Scenario: 95. Estado Reactivo En Curso en Ventanas de Mantenimiento, Insignia en Centro de Mando y Refresco Táctico en Wallboard NOC (Hito 30.2)
+    * def maintenanceFlowContract = { inProgressBadge: '.badge-status--in-progress', kpiMaintenance: '.micro-maintenance', quickBadgeMaintenance: '.badge-maintenance-sm', wallboardRefreshBtn: '#btn-wallboard-refresh', mapRefreshBtn: '#btn-subscribers-map-refresh', mapFilterMaintenanceOption: 'option[value="MAINTENANCE"]' }
+    * match maintenanceFlowContract.inProgressBadge == '.badge-status--in-progress'
+    * match maintenanceFlowContract.kpiMaintenance == '.micro-maintenance'
+    * match maintenanceFlowContract.quickBadgeMaintenance == '.badge-maintenance-sm'
+    * match maintenanceFlowContract.wallboardRefreshBtn == '#btn-wallboard-refresh'
+    * match maintenanceFlowContract.mapRefreshBtn == '#btn-subscribers-map-refresh'
+    * match maintenanceFlowContract.mapFilterMaintenanceOption == 'option[value="MAINTENANCE"]'
+
+  Scenario: 96. Reactividad en Tiempo Real de la Bandeja Maker-Checker, Auto-Refresco y Botón de Refresco (Hito 30.3)
+    * def makerCheckerReactivityContract = { refreshBtn: '#btn-refresh-approvals', headerControls: '.header-controls', subtabsBar: '.subtabs-bar', wsEventName: 'rosgrid:maker-checker-updated', pollIntervalMs: 15000 }
+    * match makerCheckerReactivityContract.refreshBtn == '#btn-refresh-approvals'
+    * match makerCheckerReactivityContract.headerControls == '.header-controls'
+    * match makerCheckerReactivityContract.subtabsBar == '.subtabs-bar'
+    * match makerCheckerReactivityContract.wsEventName == 'rosgrid:maker-checker-updated'
+    * match makerCheckerReactivityContract.pollIntervalMs == 15000
+
+  Scenario: 97. Centro Táctico de Notificaciones In-App en Barra Superior, Triaje Rápido, Opacidad Multi-Tema y Formateo Bilingüe (Hito 30.4)
+    * def notificationCenterContract = { bellBtn: '#btn-notification-bell', badge: '#notification-bell-badge', popover: '#rg-notification-popover', tabAll: '#notif-tab-all', tabAction: '#notif-tab-action', tabNetwork: '#notif-tab-network', tabOps: '#notif-tab-ops', snoozeBtn: '#btn-notif-snooze-30m', soundBtn: '#btn-notif-toggle-sound', markReadBtn: '#btn-notif-mark-all-read', surfaceToken: '--rg-bg-surface', bilingualFormatter: true }
+    * match notificationCenterContract.bellBtn == '#btn-notification-bell'
+    * match notificationCenterContract.badge == '#notification-bell-badge'
+    * match notificationCenterContract.popover == '#rg-notification-popover'
+    * match notificationCenterContract.tabAll == '#notif-tab-all'
+    * match notificationCenterContract.tabAction == '#notif-tab-action'
+    * match notificationCenterContract.tabNetwork == '#notif-tab-network'
+    * match notificationCenterContract.tabOps == '#notif-tab-ops'
+    * match notificationCenterContract.snoozeBtn == '#btn-notif-snooze-30m'
+    * match notificationCenterContract.soundBtn == '#btn-notif-toggle-sound'
+    * match notificationCenterContract.markReadBtn == '#btn-notif-mark-all-read'
+    * match notificationCenterContract.surfaceToken == '--rg-bg-surface'
+    * match notificationCenterContract.bilingualFormatter == true
+
+  Scenario: 98. Seguridad de Sesiones PPPoE y Prevención de Sesiones Fantasma en Consola WebFig PPP (Hito 30.6)
+    * def pppoeSecurityContract = { secCallerId: '#sec-caller-id', editSecCallerId: '#edit-sec-caller-id', profOnlyOne: '#prof-only-one', srvKeepalive: '#srv-keepalive', editSrvKeepalive: '#edit-srv-keepalive', srvOneSession: '#srv-one-session', editSrvOneSession: '#edit-srv-one-session', defaultKeepaliveSeconds: 10, defaultOnlyOne: 'yes' }
+    * match pppoeSecurityContract.secCallerId == '#sec-caller-id'
+    * match pppoeSecurityContract.editSecCallerId == '#edit-sec-caller-id'
+    * match pppoeSecurityContract.profOnlyOne == '#prof-only-one'
+    * match pppoeSecurityContract.srvKeepalive == '#srv-keepalive'
+    * match pppoeSecurityContract.editSrvKeepalive == '#edit-srv-keepalive'
+    * match pppoeSecurityContract.srvOneSession == '#srv-one-session'
+    * match pppoeSecurityContract.editSrvOneSession == '#edit-srv-one-session'
+    * match pppoeSecurityContract.defaultKeepaliveSeconds == 10
+    * match pppoeSecurityContract.defaultOnlyOne == 'yes'
+
+  Scenario: 99. Resiliencia de Actualización RouterOS v7 en CHR: Timeout Extendido 180s, Fallback Fetch NPK y Verificación por Router en UI (Hito 30.8)
+    * def rosUpdateResilienceContract = { checkBtn: '#btn-check-fleet-updates', channelSelect: '#select-fleet-update-channel', alertSuccess: '.alert--success', alertError: '.alert--error', installTimeoutSeconds: 180, checkTimeoutSeconds: 30, fallbackMethod: 'tool_fetch_npk_reboot' }
+    * match rosUpdateResilienceContract.checkBtn == '#btn-check-fleet-updates'
+    * match rosUpdateResilienceContract.channelSelect == '#select-fleet-update-channel'
+    * match rosUpdateResilienceContract.alertError == '.alert--error'
+    * match rosUpdateResilienceContract.installTimeoutSeconds == 180
+    * match rosUpdateResilienceContract.checkTimeoutSeconds == 30
+    * match rosUpdateResilienceContract.fallbackMethod == 'tool_fetch_npk_reboot'
+
+  Scenario: 100. Plantilla Golden Config de Huso Horario del Sistema (/system/clock) y Selectores Dinámicos var_type=select en Acciones Masivas (Hito 30.9)
+    * def systemClockTemplateContract = { templateName: 'HUSO_HORARIO_SISTEMA', category: 'SYSTEM', endpoint: 'system/clock/set', method: 'POST', tzSelectId: '#tpl-var-time_zone_name', autodetectSelectId: '#tpl-var-time_zone_autodetect', defaultTz: 'America/Caracas', defaultAutodetect: 'no' }
+    * match systemClockTemplateContract.templateName == 'HUSO_HORARIO_SISTEMA'
+    * match systemClockTemplateContract.endpoint == 'system/clock/set'
+    * match systemClockTemplateContract.method == 'POST'
+    * match systemClockTemplateContract.tzSelectId == '#tpl-var-time_zone_name'
+    * match systemClockTemplateContract.autodetectSelectId == '#tpl-var-time_zone_autodetect'
+    * match systemClockTemplateContract.defaultTz == 'America/Caracas'
+    * match systemClockTemplateContract.defaultAutodetect == 'no'
+
+
+
+
+
+
+
 
 
 

@@ -1005,6 +1005,16 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * match rosUpdateResilienceContract.checkTimeoutSeconds == 30
     * match rosUpdateResilienceContract.fallbackMethod == 'tool_fetch_npk_reboot'
 
+  Scenario: 100. Plantilla Golden Config de Huso Horario del Sistema (/system/clock) y Selectores Dinámicos var_type=select en Acciones Masivas (Hito 30.9)
+    * def systemClockTemplateContract = { templateName: 'HUSO_HORARIO_SISTEMA', category: 'SYSTEM', endpoint: 'system/clock/set', method: 'POST', tzSelectId: '#tpl-var-time_zone_name', autodetectSelectId: '#tpl-var-time_zone_autodetect', defaultTz: 'America/Caracas', defaultAutodetect: 'no' }
+    * match systemClockTemplateContract.templateName == 'HUSO_HORARIO_SISTEMA'
+    * match systemClockTemplateContract.endpoint == 'system/clock/set'
+    * match systemClockTemplateContract.method == 'POST'
+    * match systemClockTemplateContract.tzSelectId == '#tpl-var-time_zone_name'
+    * match systemClockTemplateContract.autodetectSelectId == '#tpl-var-time_zone_autodetect'
+    * match systemClockTemplateContract.defaultTz == 'America/Caracas'
+    * match systemClockTemplateContract.defaultAutodetect == 'no'
+
 
 
 

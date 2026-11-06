@@ -1192,6 +1192,10 @@
     "seguridad_l2_dhcp_snooping_y_option82": {
       "name": "L2 Security DHCP Snooping & Option 82",
       "description": "Enables DHCP Snooping and Option 82 on the specified bridge and configures the uplink trunk port as Trusted to prevent Rogue DHCP servers."
+    },
+    "huso_horario_sistema": {
+      "name": "System Clock & IANA Timezone (/system/clock)",
+      "description": "Configures the official IANA system timezone (/system/clock) across the MikroTik RouterOS v7 fleet and controls IP Cloud time-zone-autodetect for accurate Syslog and WORM audit timestamps."
     }
   }
 }

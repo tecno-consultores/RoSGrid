@@ -38,7 +38,14 @@
     name: string;
     category: string;
     description: string;
-    variables_schema: { key: string; label: string; default_val?: string }[];
+    variables_schema: {
+      key: string;
+      label: string;
+      default_val?: string;
+      required?: boolean;
+      var_type?: string;
+      options?: string[];
+    }[];
     ros_command_template?: string;
     rest_steps_template?: TemplateStep[];
     requires_safemode?: boolean;
@@ -292,6 +299,7 @@
       NIGHTLY_ENCRYPTED_BACKUP_SFTP: 'encrypted_sftp_backup',
       ACTUALIZACION_ROUTEROS_Y_FIRMWARE: 'actualizacion_routeros_y_firmware',
       SEGURIDAD_L2_DHCP_SNOOPING_Y_OPTION82: 'seguridad_l2_dhcp_snooping_y_option82',
+      HUSO_HORARIO_SISTEMA: 'huso_horario_sistema',
     };
     if (mapping[normalized]) return mapping[normalized];
     return name.toLowerCase().replace(/[^a-z0-9_]/g, '_');
@@ -352,6 +360,8 @@
 
   const FALLBACK_COMMAND_MAP = new Map<string, (params: string) => string>([
     ['system/ntp/client:PATCH', (p) => `/system ntp client set ${p}`],
+    ['system/clock:PATCH', (p) => `/system clock set ${p}`],
+    ['system/clock/set:POST', (p) => `/system clock set ${p}`],
     ['system/ntp/client/servers:PUT', (p) => `/system ntp client servers add ${p}`],
     ['system/ntp/client/servers:POST', (p) => `/system ntp client servers add ${p}`],
     ['ip/dns:PATCH', (p) => `/ip dns set ${p}`],
@@ -989,7 +999,7 @@
               :key="v.key"
               class="form-group"
             >
-              <label :for="`var-${v.key}`" class="form-label font-bold">
+              <label :for="v.var_type === 'select' ? 'tpl-var-' + v.key : `var-${v.key}`" class="form-label font-bold">
                 {{ v.label }}:
               </label>
               <select
@@ -1013,6 +1023,17 @@
               >
                 <option value="yes">Sí — Actualizar OS + Firmware en RouterBOARD (Auto-omitido en CHR)</option>
                 <option value="no">No — Actualizar únicamente Sistema Operativo</option>
+              </select>
+              <select
+                v-else-if="v.var_type === 'select' && Array.isArray(v.options) && v.options.length > 0"
+                :id="'tpl-var-' + v.key"
+                v-model="templateVars[v.key]"
+                class="form-select font-mono"
+                @change="generatePreview"
+              >
+                <option v-for="opt in v.options" :key="opt" :value="opt">
+                  {{ opt }}
+                </option>
               </select>
               <input
                 v-else

@@ -1175,4 +1175,79 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
     expect(secondRouter.ros_version).toBe('7.25.1');
     expect(firstRouter.upgraded_in_session).toBeFalsy();
   });
+
+  it('BulkOperationsAndUpdatesView — plantilla HUSO_HORARIO_SISTEMA renderiza selectores dinámicos var_type=select y previsualización CLI (Hito 30.9)', async () => {
+    vi.spyOn(http, 'get').mockImplementation(async (url: string) => {
+      if (url.includes('/operations/templates')) {
+        return {
+          status: 200,
+          data: [
+            {
+              id: 'tpl-tz',
+              name: 'HUSO_HORARIO_SISTEMA',
+              category: 'SYSTEM',
+              description: 'Configura el huso horario oficial IANA del sistema (/system/clock)',
+              requires_safemode: true,
+              variables_schema: [
+                {
+                  key: 'time_zone_name',
+                  label: 'Huso Horario IANA (time-zone-name)',
+                  default_val: 'America/Caracas',
+                  required: true,
+                  var_type: 'select',
+                  options: ['America/Caracas', 'America/Bogota', 'UTC'],
+                },
+                {
+                  key: 'time_zone_autodetect',
+                  label: 'Autodetección de Zona Horaria por Cloud (yes / no)',
+                  default_val: 'no',
+                  required: true,
+                  var_type: 'select',
+                  options: ['no', 'yes'],
+                },
+              ],
+              rest_steps_template: [
+                {
+                  method: 'POST',
+                  endpoint: 'system/clock/set',
+                  payload: {
+                    'time-zone-autodetect': '{{ time_zone_autodetect }}',
+                    'time-zone-name': '{{ time_zone_name }}',
+                  },
+                  cli_command:
+                    '/system clock set time-zone-autodetect={{ time_zone_autodetect }} time-zone-name={{ time_zone_name }}',
+                },
+              ],
+            },
+          ],
+          headers: new Headers(),
+        };
+      }
+      return { status: 200, data: [], headers: new Headers() };
+    });
+
+    const wrapper = mount(BulkOperationsAndUpdatesView);
+    await flushPromises();
+
+    // Ir al Paso 2 y seleccionar la plantilla HUSO_HORARIO_SISTEMA
+    (wrapper.vm as any).wizardStep = 2;
+    (wrapper.vm as any).onSelectTemplate('tpl-tz');
+    await flushPromises();
+
+    const tzSelect = wrapper.find('select#tpl-var-time_zone_name');
+    const autoSelect = wrapper.find('select#tpl-var-time_zone_autodetect');
+    expect(tzSelect.exists()).toBe(true);
+    expect(autoSelect.exists()).toBe(true);
+    expect((wrapper.vm as any).previewPayload).toContain(
+      '/system clock set time-zone-autodetect=no time-zone-name=America/Caracas',
+    );
+
+    // Cambiar zona horaria a UTC y verificar reactividad del preview CLI
+    await tzSelect.setValue('UTC');
+    await tzSelect.trigger('change');
+    await flushPromises();
+    expect((wrapper.vm as any).previewPayload).toContain(
+      '/system clock set time-zone-autodetect=no time-zone-name=UTC',
+    );
+  });
 });

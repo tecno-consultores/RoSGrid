@@ -1324,6 +1324,99 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 155. Alta FTTH por MAC WAN, Auto-Conmutación L2 Bridge -> BNG y Aprovisionamiento MikroTik (Hito 28.20)
+    Given path '/api/v1/subscriber-devices/00000000-0000-0000-0000-000000000001/live-candidates'
+    And param bng_router_id = '00000000-0000-0000-0000-000000000111'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+    Given path '/api/v1/subscriber-devices/00000000-0000-0000-0000-000000000001'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000156'
+    And request { service_type: 'DHCP', assigned_ipv4: '10.250.3.55', onu_mac_address: 'AA:BB:CC:11:22:33', provision_on_router: true, bng_router_id: '00000000-0000-0000-0000-000000000111' }
+    When method patch
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 156. Monitoreo Periódico Híbrido de Abonados FTTH y Sonda ICMP Ligera (Hito 28.21)
+    Given path '/api/v1/subscriber-devices/00000000-0000-0000-0000-000000000001/ping'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000157'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 157. Sincronización Automática de Ventanas de Mantenimiento con admin_state del Router y Resolución de WORM Audit (Hito 30.2)
+    Given path '/api/v1/maintenance/windows'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000158'
+    And request { title: 'Ventana UAT Test', reason: 'Reemplazo BGP', target_tag: 'global', starts_at: '2026-11-04T18:00:00Z', ends_at: '2026-11-04T19:00:00Z', suppress_alerts: true }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/inventory/routers'
+    And param admin_state = 'MAINTENANCE'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 158. Reactividad en Tiempo Real de la Bandeja Maker-Checker y Emisión WebSocket Push (Hito 30.3)
+    Given path '/api/v1/operations/approvals'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/operations/approvals/00000000-0000-0000-0000-000000000001/approve'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000159'
+    And request { review_comment: 'Aprobación verificada por Supervisor NOC' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 159. Ciclo de Vida Temporal de 3 Fases en Bóveda Step-Up (30s) y Propagación de Estado Anti-Silo (Hito 30.5)
+    Given path '/api/v1/vault/routers/00000000-0000-0000-0000-000000000001/reveal'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000160'
+    And request { totp_code: '123456', reason: 'Verificación de contrato 3 fases Step-Up 30s' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/operations/audit-logs'
+    And param event_category = 'VAULT_OPERATIONS'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 160. Seguridad de Sesiones PPPoE: Keepalive Timeout (10s), One-Session-Per-Host, Only-One y Candado MAC Caller-ID (Hito 30.6)
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/ppp/pppoe-servers'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000161'
+    And request { service_name: 'pppoe-isp-core', interface: 'vlan200', default_profile: 'plan-10M', one_session_per_host: true, keepalive_timeout: 10 }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/ppp/secrets'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000162'
+    And request { name: 'cliente01', password: 'ClaveSegura123', service: 'pppoe', profile: 'plan-10M', caller_id: 'AA:BB:CC:11:22:33' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 161. Resiliencia de Actualización RouterOS v7 en CHR y RouterBOARD: Sondeo de Canal y Ejecución con Timeout Extendido (Hito 30.8)
+    Given path '/api/v1/operations/ros-updates/check'
+    And request { channel: 'stable', router_ids: ['00000000-0000-0000-0000-000000000001'] }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/operations/ros-updates/execute'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000163'
+    And request { router_ids: ['00000000-0000-0000-0000-000000000001'], channel: 'stable', auto_upgrade_firmware: false, poe_aware: true, safety_stop_threshold_percent: 2.0 }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 162. Catálogo de Presets Golden Config e Inclusión de HUSO_HORARIO_SISTEMA (/system/clock/set) (Hito 30.9)
+    Given path '/api/v1/operations/templates/presets'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }

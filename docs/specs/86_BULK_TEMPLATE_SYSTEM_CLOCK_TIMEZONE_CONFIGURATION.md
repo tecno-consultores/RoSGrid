@@ -3,7 +3,7 @@
 
 # Especificación 86: Plantilla Golden Config para Configuración Masiva de Huso Horario del Sistema (`HUSO_HORARIO_SISTEMA` — `/system/clock`) y Soporte Dinámico de Variables `select` en Acciones Masivas
 
-**Estado:** Pendiente de Implementación (Lista para Ejecución Determinista)  
+**Estado:** Completado y Certificado en Docker (Hito 30.9)  
 **Hito Asociado:** Hito 30.9  
 **Motor de Ejecución Objetivo:** Gemini 3.8 Flash (High)  
 **Archivos Afectados:**

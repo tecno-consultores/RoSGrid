@@ -1414,3 +1414,9 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     When method post
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 162. Catálogo de Presets Golden Config e Inclusión de HUSO_HORARIO_SISTEMA (/system/clock/set) (Hito 30.9)
+    Given path '/api/v1/operations/templates/presets'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }

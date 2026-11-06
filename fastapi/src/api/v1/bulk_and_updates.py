@@ -1049,6 +1049,74 @@ _DEFAULT_STARTER_TEMPLATES = [
         ],
         "requires_safemode": True,
     },
+    # 17. Huso Horario del Sistema (/system/clock)
+    {
+        "name": "HUSO_HORARIO_SISTEMA",
+        "category": "SYSTEM",
+        "description": (
+            "Configura el huso horario oficial IANA del sistema (/system/clock) en toda la flota "
+            "MikroTik RouterOS v7 y ajusta la autodetección por IP Cloud (time-zone-autodetect) "
+            "para garantizar marcas de tiempo exactas en Syslog y auditoría WORM."
+        ),
+        "ros_command_template": (
+            "/system clock set time-zone-autodetect={{ time_zone_autodetect }} "
+            "time-zone-name={{ time_zone_name }}"
+        ),
+        "variables_schema": [
+            {
+                "key": "time_zone_name",
+                "label": "Huso Horario IANA (time-zone-name)",
+                "default_val": "America/Caracas",
+                "required": True,
+                "var_type": "select",
+                "options": [
+                    "America/Caracas",
+                    "America/Bogota",
+                    "America/Lima",
+                    "America/Guayaquil",
+                    "America/La_Paz",
+                    "America/Santiago",
+                    "America/Argentina/Buenos_Aires",
+                    "America/Asuncion",
+                    "America/Montevideo",
+                    "America/Sao_Paulo",
+                    "America/Panama",
+                    "America/Costa_Rica",
+                    "America/Guatemala",
+                    "America/Santo_Domingo",
+                    "America/Mexico_City",
+                    "America/New_York",
+                    "America/Chicago",
+                    "America/Los_Angeles",
+                    "Europe/Madrid",
+                    "UTC",
+                ],
+            },
+            {
+                "key": "time_zone_autodetect",
+                "label": "Autodetección de Zona Horaria por Cloud (yes / no)",
+                "default_val": "no",
+                "required": True,
+                "var_type": "select",
+                "options": ["no", "yes"],
+            },
+        ],
+        "rest_steps_template": [
+            {
+                "method": "POST",
+                "endpoint": "system/clock/set",
+                "payload": {
+                    "time-zone-autodetect": "{{ time_zone_autodetect }}",
+                    "time-zone-name": "{{ time_zone_name }}",
+                },
+                "cli_command": (
+                    "/system clock set time-zone-autodetect={{ time_zone_autodetect }} "
+                    "time-zone-name={{ time_zone_name }}"
+                ),
+            },
+        ],
+        "requires_safemode": True,
+    },
 ]
 
 
@@ -1379,15 +1447,29 @@ async def preview_template(
 # ============================================================================
 
 
-async def _execute_single_step(client: MikrotikRestClient, step: dict[str, Any]) -> Any:
+async def _execute_single_step(
+    client: MikrotikRestClient,
+    step: dict[str, Any] | str,
+    endpoint: str | None = None,
+    payload: dict[str, Any] | None = None,
+) -> Any:
     """Ejecuta un paso individual REST tolerando endpoints singulares e idempotencia en RouterOS v7."""
-    method = step.get("method", "PATCH").upper()
-    endpoint = step.get("endpoint", "").strip("/")
-    payload = step.get("payload", {})
+    if isinstance(step, dict):
+        method = step.get("method", "PATCH").upper()
+        target_endpoint = step.get("endpoint", "").strip("/")
+        body_payload = step.get("payload", {})
+    else:
+        method = str(step).upper()
+        target_endpoint = str(endpoint or "").strip("/")
+        body_payload = payload or {}
+
+    endpoint = target_endpoint
+    payload = body_payload
 
     # Auto-redirección de endpoints singulares que no admiten PATCH en RouterOS v7
     singleton_menus = (
         "snmp",
+        "system/clock",
         "system/ntp/client",
         "system/package/update",
         "system/routerboard/settings",
@@ -1508,6 +1590,7 @@ async def _run_router_template_steps(
     executed = 0
     skipped_chr = 0
     channel = str(vars_dict.get("update_channel") or "stable").strip()
+    step_log_keys: dict[str, Any] = {}
     for step in rendered_steps:
         if _should_skip_step_for_router(step, is_chr, vars_dict):
             skipped_chr += 1
@@ -1517,10 +1600,20 @@ async def _run_router_template_steps(
         if ep == "system/package/update/install" and "error" in _extract_update_status_text(res).lower():
             await _install_routeros_via_fetch_fallback(client, router_obj, channel)
         executed += 1
+        m = str(step.get("method", "POST")).upper()
+        step_ep = str(step.get("endpoint", "")).strip("/")
+        step_log_keys[f"{m} /rest/{step_ep} -> OK"] = True
     msg = f"Aplicados {executed} pasos con éxito"
     if is_chr and skipped_chr > 0:
         msg += f" (CHR detectado: omitidos {skipped_chr} pasos de firmware RouterBOOT; actualizado solo OS)"
-    return {"message": msg, "is_chr": is_chr, "executed_steps": executed, "skipped_steps": skipped_chr}
+    ret: dict[str, Any] = {
+        "message": msg,
+        "is_chr": is_chr,
+        "executed_steps": executed,
+        "skipped_steps": skipped_chr,
+        **step_log_keys,
+    }
+    return ret
 
 
 async def execute_bulk_job_on_fleet(

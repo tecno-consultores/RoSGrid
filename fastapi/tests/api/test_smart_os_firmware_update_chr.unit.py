@@ -408,3 +408,69 @@ async def test_routeros_725_bad_http_response_fallback_check_and_install() -> No
         assert res_upg["status"] == "UPGRADE_TRIGGERED"
         assert res_upg["installed_version"] == "7.25"
         assert res_upg["target_version"] == "7.25.1"
+
+
+@pytest.mark.asyncio
+async def test_starter_template_17_system_clock_timezone_schema_and_execution() -> None:
+    """Verifica la plantilla #17 HUSO_HORARIO_SISTEMA (/system/clock/set) y su ejecución REST."""
+    from src.api.v1.bulk_and_updates import _execute_single_step, _render_template_steps
+
+    tpl = next((t for t in _DEFAULT_STARTER_TEMPLATES if t["name"] == "HUSO_HORARIO_SISTEMA"), None)
+    assert tpl is not None, "Plantilla HUSO_HORARIO_SISTEMA debe existir en _DEFAULT_STARTER_TEMPLATES"
+    assert tpl["category"] == "SYSTEM"
+    assert tpl["requires_safemode"] is True
+
+    vars_by_key = {v["key"]: v for v in tpl["variables_schema"]}
+    assert "time_zone_name" in vars_by_key
+    assert vars_by_key["time_zone_name"]["default_val"] == "America/Caracas"
+    assert vars_by_key["time_zone_name"]["var_type"] == "select"
+    assert "America/Caracas" in vars_by_key["time_zone_name"]["options"]
+    assert "UTC" in vars_by_key["time_zone_name"]["options"]
+
+    assert "time_zone_autodetect" in vars_by_key
+    assert vars_by_key["time_zone_autodetect"]["default_val"] == "no"
+    assert vars_by_key["time_zone_autodetect"]["var_type"] == "select"
+    assert vars_by_key["time_zone_autodetect"]["options"] == ["no", "yes"]
+
+    rendered = _render_template_steps(
+        tpl["rest_steps_template"],
+        {"time_zone_name": "America/Caracas", "time_zone_autodetect": "no"},
+    )
+    assert len(rendered) == 1
+    assert rendered[0]["method"] == "POST"
+    assert rendered[0]["endpoint"] == "system/clock/set"
+    assert rendered[0]["payload"] == {
+        "time-zone-autodetect": "no",
+        "time-zone-name": "America/Caracas",
+    }
+
+    client = AsyncMock()
+    client.post = AsyncMock(return_value={"status": "ok"})
+    router_chr = Router(
+        id=uuid.uuid4(),
+        display_name="caps1",
+        board_name="CHR VMware",
+    )
+
+    summary = await _run_router_template_steps(
+        client=client,
+        router_obj=router_chr,
+        rendered_steps=rendered,
+        vars_dict={"time_zone_name": "America/Caracas", "time_zone_autodetect": "no"},
+    )
+    assert "POST /rest/system/clock/set -> OK" in summary
+    client.post.assert_awaited_once_with(
+        "system/clock/set",
+        {"time-zone-autodetect": "no", "time-zone-name": "America/Caracas"},
+    )
+
+    # Verificar que PATCH sobre el menú singleton 'system/clock' también se convierte a POST 'system/clock/set'
+    client.post.reset_mock()
+    await _execute_single_step(
+        client,
+        "PATCH",
+        "system/clock",
+        {"time-zone-name": "UTC"},
+    )
+    client.post.assert_awaited_once_with("system/clock/set", {"time-zone-name": "UTC"})
+
