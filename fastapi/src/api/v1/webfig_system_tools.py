@@ -99,6 +99,14 @@ async def _fetch_system_clock(client: MikrotikRestClient) -> dict[str, Any]:
         return {}
 
 
+async def _fetch_system_routerboard(client: MikrotikRestClient) -> dict[str, Any]:
+    try:
+        routerboard = await client.get("/system/routerboard")
+        return routerboard if isinstance(routerboard, dict) else {}
+    except Exception:
+        return {}
+
+
 # ============================================================================
 # SYSTEM ENDPOINTS (LIVE-STATUS, IDENTITY, USERS, SCRIPTS, SCHEDULER, REBOOT)
 # ============================================================================
@@ -114,12 +122,12 @@ async def get_live_status(
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
         resource = await client.get("/system/resource")
-        routerboard = await client.get("/system/routerboard")
+        routerboard = await _fetch_system_routerboard(client)
         health = await _fetch_system_health(client)
         clock = await _fetch_system_clock(client)
         return {
             "resource": resource if isinstance(resource, dict) else {},
-            "routerboard": routerboard if isinstance(routerboard, dict) else {},
+            "routerboard": routerboard,
             "health": health,
             "clock": clock,
         }
@@ -371,9 +379,9 @@ async def reboot_router(
     if isinstance(request, SystemRebootRequest):
         # Compatibilidad con invocaciones posicionales (router_id, payload, request)
         actual_payload = request
-        actual_request = payload if hasattr(payload, "client") else request
+        actual_request: Any = payload if hasattr(payload, "client") else request
         payload = actual_payload
-        request = actual_request  # type: ignore[assignment]
+        request = actual_request
 
     effective_reason = (
         payload.reason.strip()
@@ -444,7 +452,9 @@ async def _load_active_safemode_job(redis: Any, router_id: uuid.UUID, host: str)
         raw = await redis.get(key)
         if raw:
             try:
-                return json.loads(raw)
+                loaded = json.loads(raw)
+                if isinstance(loaded, dict):
+                    return loaded
             except Exception:
                 continue
     return None

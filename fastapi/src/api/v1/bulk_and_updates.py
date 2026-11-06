@@ -20,7 +20,12 @@ from src.api.v1.webfig_common import _create_client_from_vault, get_router_and_c
 from src.core.audit import write_audit_log
 from src.core.crypto import encrypt_aes_gcm
 from src.db.session import get_tenant_db_session
-from src.mikrotik.client import MikrotikApiError, MikrotikRestClient
+from src.mikrotik.client import (
+    MikrotikApiError,
+    MikrotikConnectionError,
+    MikrotikRestClient,
+    MikrotikTimeoutError,
+)
 from src.models.core import SystemRoleEnum
 from src.models.inventory import Router, RouterTag
 from src.models.operations import (
@@ -176,6 +181,110 @@ def _should_skip_step_for_router(step: dict[str, Any], is_chr: bool, vars_dict: 
         return True
     upg_fw = str(vars_dict.get("upgrade_firmware", "yes")).strip().lower()
     return upg_fw in ("no", "false", "0")
+
+
+def _extract_update_status_text(res: Any) -> str:
+    """Extrae el texto de estado desde la respuesta de check-for-updates, install o package/update."""
+    if isinstance(res, dict):
+        return str(res.get("status") or "")
+    if isinstance(res, list) and res:
+        last = res[-1]
+        if isinstance(last, dict):
+            return str(last.get("status") or "")
+    return ""
+
+
+def _clean_version_token(ver: str | None) -> str:
+    """Extrae de forma segura el token de versión (ej. '7.25.1 (stable)' -> '7.25.1') sin lanzar IndexError."""
+    parts = (ver or "").split()
+    return parts[0].strip() if parts else ""
+
+
+def _resolve_npk_package_filename(version: str, architecture_name: str | None) -> str:
+    """Determina el nombre oficial del paquete .npk de MikroTik según la arquitectura."""
+    raw_arch = (architecture_name or "x86_64").strip().lower()
+    arch_parts = raw_arch.split()
+    arch = arch_parts[0] if arch_parts else "x86_64"
+    if arch in ("x86_64", "x86", "chr", ""):
+        return f"routeros-{version}.npk"
+    return f"routeros-{version}-{arch}.npk"
+
+
+async def _cleanup_corrupted_npk_downloads(client: MikrotikRestClient) -> int:
+    """Elimina archivos .npk truncados (size == 0) en el router para evitar bloqueos de descarga."""
+    removed = 0
+    try:
+        files = await client.get("file")
+        if not isinstance(files, list):
+            return 0
+        for item in files:
+            if not isinstance(item, dict):
+                continue
+            name = str(item.get("name", ""))
+            size = str(item.get("size", ""))
+            fid = item.get(".id")
+            if name.endswith(".npk") and size == "0" and fid:
+                await client.delete(f"file/{fid}")
+                removed += 1
+    except Exception as exc:
+        logger.debug("Omitida limpieza de .npk residuales: %s", exc)
+    return removed
+
+
+async def _fetch_latest_version_via_http_fallback(
+    client: MikrotikRestClient,
+    channel: str,
+) -> str | None:
+    """Consulta la versión más reciente vía /tool/fetch cuando RouterOS 7.25 cae en el bug 'bad HTTP response'."""
+    try:
+        res = await client.post(
+            "tool/fetch",
+            {
+                "url": f"http://upgrade.mikrotik.com/routeros/NEWESTa7.{channel}",
+                "output": "user",
+            },
+            timeout=20.0,
+        )
+        items = res if isinstance(res, list) else ([res] if isinstance(res, dict) else [])
+        for entry in reversed(items):
+            if isinstance(entry, dict) and entry.get("data"):
+                parts = str(entry["data"]).strip().split()
+                if parts:
+                    return parts[0].strip()
+    except Exception as exc:
+        logger.debug("Fallback /tool/fetch de versión falló: %s", exc)
+    return None
+
+
+async def _install_routeros_via_fetch_fallback(
+    client: MikrotikRestClient,
+    r_obj: Router,
+    channel: str,
+    target_version: str | None = None,
+) -> dict[str, Any]:
+    """Descarga el paquete .npk oficial vía /tool/fetch y reinicia el router cuando package/update está bloqueado."""
+    ver = _clean_version_token(target_version)
+    if not ver:
+        ver = (await _fetch_latest_version_via_http_fallback(client, channel)) or ""
+    if not ver:
+        raise RuntimeError("No se pudo resolver la versión objetivo de RouterOS desde upgrade.mikrotik.com")
+
+    clean_inst = _clean_version_token(r_obj.ros_version)
+    if ver == clean_inst:
+        return {"status": "UP_TO_DATE", "installed_version": clean_inst, "latest_version": ver}
+
+    pkg_name = _resolve_npk_package_filename(ver, getattr(r_obj, "architecture_name", None))
+    pkg_url = f"http://upgrade.mikrotik.com/routeros/{ver}/{pkg_name}"
+    await client.post("tool/fetch", {"url": pkg_url, "dst-path": pkg_name}, timeout=180.0)
+
+    try:
+        await client.post("system/reboot", {})
+    except (MikrotikConnectionError, MikrotikTimeoutError):
+        logger.info("Router %s reiniciando tras descarga NPK directa (%s)", r_obj.display_name, pkg_name)
+
+    r_obj.ros_version = ver
+    r_obj.update_available_version = ver
+    return {"status": "INSTALLED_VIA_FETCH_FALLBACK", "package": pkg_name, "target_version": ver}
 
 
 # ============================================================================
@@ -1343,6 +1452,14 @@ async def _execute_single_step(client: MikrotikRestClient, step: dict[str, Any])
                 return []
             raise
     elif method == "POST":
+        if endpoint == "system/package/update/install":
+            try:
+                return await client.post(endpoint, payload, timeout=180.0)
+            except (MikrotikConnectionError, MikrotikTimeoutError):
+                return {"status": "REBOOTING_FOR_UPGRADE"}
+        if endpoint == "system/package/update/check-for-updates":
+            await _cleanup_corrupted_npk_downloads(client)
+            return await client.post(endpoint, payload, timeout=30.0)
         return await client.post(endpoint, payload)
     elif method == "DELETE":
         return await client.delete(endpoint)
@@ -1390,11 +1507,15 @@ async def _run_router_template_steps(
     is_chr = _is_chr_router(router_obj)
     executed = 0
     skipped_chr = 0
+    channel = str(vars_dict.get("update_channel") or "stable").strip()
     for step in rendered_steps:
         if _should_skip_step_for_router(step, is_chr, vars_dict):
             skipped_chr += 1
             continue
-        await _execute_single_step(client, step)
+        res = await _execute_single_step(client, step)
+        ep = str(step.get("endpoint", "")).strip("/").lower()
+        if ep == "system/package/update/install" and "error" in _extract_update_status_text(res).lower():
+            await _install_routeros_via_fetch_fallback(client, router_obj, channel)
         executed += 1
     msg = f"Aplicados {executed} pasos con éxito"
     if is_chr and skipped_chr > 0:
@@ -1712,6 +1833,66 @@ async def get_fleet_updates_status(
     )
 
 
+async def _probe_routerboard_safe(
+    client: MikrotikRestClient,
+    r_obj: Router,
+    is_chr: bool,
+    cur_fw: str | None,
+    upg_fw: str | None,
+) -> tuple[bool, str | None, str | None]:
+    """Consulta /system/routerboard solo si no es CHR, aislando errores HTTP 400 en equipos virtuales."""
+    if is_chr:
+        return True, None, None
+    try:
+        rb_data = await client.get("system/routerboard")
+        if isinstance(rb_data, dict):
+            detected_chr = _is_chr_router(r_obj, rb_data)
+            if not detected_chr:
+                cur_fw = rb_data.get("current-firmware", cur_fw)
+                upg_fw = rb_data.get("upgrade-firmware", upg_fw)
+                r_obj.firmware_version = cur_fw
+                r_obj.upgrade_firmware_version = upg_fw
+            return detected_chr, (None if detected_chr else cur_fw), (None if detected_chr else upg_fw)
+    except Exception as exc:
+        if "routerboard" in str(exc).lower():
+            return True, None, None
+    return is_chr, cur_fw, upg_fw
+
+
+async def _resolve_package_update_versions(
+    client: MikrotikRestClient,
+    r_obj: Router,
+    channel: str,
+    installed_ver: str | None,
+    latest_ver: str | None,
+) -> tuple[str | None, str | None, str]:
+    """Obtiene installed-version, latest-version y status aplicando fallback ante bug HTTP de RouterOS 7.25."""
+    await _cleanup_corrupted_npk_downloads(client)
+    await client.post("system/package/update/set", {"channel": channel})
+    chk_res = await client.post("system/package/update/check-for-updates", {}, timeout=30.0)
+    pkg_data = await client.get("system/package/update")
+    status_text = _extract_update_status_text(pkg_data) or _extract_update_status_text(chk_res) or "Checked"
+    if isinstance(pkg_data, dict):
+        installed_ver = str(pkg_data.get("installed-version") or installed_ver or "")
+        latest_ver = str(pkg_data.get("latest-version") or latest_ver or installed_ver or "")
+
+    if "error" in status_text.lower():
+        fb_ver = await _fetch_latest_version_via_http_fallback(client, channel)
+        if fb_ver:
+            latest_ver = fb_ver
+            clean_inst = _clean_version_token(installed_ver)
+            status_text = (
+                "New version is available (HTTP fallback)"
+                if fb_ver != clean_inst
+                else "System is already up to date"
+            )
+    if installed_ver:
+        r_obj.ros_version = installed_ver
+    if latest_ver:
+        r_obj.update_available_version = latest_ver
+    return installed_ver, latest_ver, status_text
+
+
 async def _probe_single_router_update(
     r_obj: Router,
     channel: str,
@@ -1728,33 +1909,20 @@ async def _probe_single_router_update(
     if r_obj.vault:
         client = _create_client_from_vault(r_obj, tenant_id)
         try:
-            await client.post("system/package/update/set", {"channel": channel})
-            await client.post("system/package/update/check-for-updates", {})
-            pkg_data = await client.get("system/package/update")
-            if isinstance(pkg_data, dict):
-                installed_ver = str(pkg_data.get("installed-version") or installed_ver or "")
-                latest_ver = str(pkg_data.get("latest-version") or installed_ver or "")
-                status_text = str(pkg_data.get("status") or "Checked")
-                if installed_ver:
-                    r_obj.ros_version = installed_ver
-                if latest_ver:
-                    r_obj.update_available_version = latest_ver
-            rb_data = await client.get("system/routerboard")
-            if isinstance(rb_data, dict):
-                is_chr = _is_chr_router(r_obj, rb_data)
-                if not is_chr:
-                    cur_fw = rb_data.get("current-firmware", cur_fw)
-                    upg_fw = rb_data.get("upgrade-firmware", upg_fw)
-                    r_obj.firmware_version = cur_fw
-                    r_obj.upgrade_firmware_version = upg_fw
+            installed_ver, latest_ver, status_text = await _resolve_package_update_versions(
+                client, r_obj, channel, installed_ver, latest_ver
+            )
+            is_chr, cur_fw, upg_fw = await _probe_routerboard_safe(
+                client, r_obj, is_chr, cur_fw, upg_fw
+            )
         except Exception as exc:
             logger.warning("Fallo al sondear canal %s en %s: %s", channel, r_obj.display_name, exc)
             status_text = f"Offline / Cache ({installed_ver or 'v7'})"
         finally:
             await client.close()
 
-    clean_inst = (installed_ver or "").split()[0].strip()
-    clean_lat = (latest_ver or "").split()[0].strip()
+    clean_inst = _clean_version_token(installed_ver)
+    clean_lat = _clean_version_token(latest_ver)
     has_upd = bool(clean_lat and clean_lat != clean_inst)
     plan = "CHR_OS_ONLY" if is_chr else "ROUTERBOARD_OS_AND_FIRMWARE"
     effective_display = (
@@ -1824,6 +1992,32 @@ async def _resolve_upgrade_stages(
     return order_routers_by_poe_stages(router_ids, edges)
 
 
+async def _trigger_router_package_install(
+    client: MikrotikRestClient,
+    r_obj: Router,
+    channel: str,
+    chk_res: Any,
+) -> Any:
+    """Dispara system/package/update/install con timeout extendido o aplica fallback /tool/fetch si hay error HTTP."""
+    chk_status = _extract_update_status_text(chk_res)
+    if "error" in chk_status.lower():
+        return await _install_routeros_via_fetch_fallback(client, r_obj, channel)
+
+    try:
+        update_res = await client.post("system/package/update/install", {}, timeout=180.0)
+    except (MikrotikConnectionError, MikrotikTimeoutError) as exc:
+        logger.info("Router %s cerró conexión durante install/reboot: %s", r_obj.display_name, exc)
+        return {"status": "REBOOTING_FOR_UPGRADE"}
+
+    inst_status = _extract_update_status_text(update_res)
+    if "error" in inst_status.lower():
+        return await _install_routeros_via_fetch_fallback(client, r_obj, channel)
+
+    if r_obj.update_available_version:
+        r_obj.ros_version = r_obj.update_available_version
+    return update_res
+
+
 async def _execute_single_router_upgrade(
     rid: uuid.UUID,
     payload: RosUpdateExecuteRequest,
@@ -1841,21 +2035,37 @@ async def _execute_single_router_upgrade(
             return {"router_id": str(rid), "status": "ABORTED_PRE_BACKUP_FAILED", "stage": stage_idx}, False
 
         is_chr = _is_chr_router(r_obj)
+        await _cleanup_corrupted_npk_downloads(client)
         await client.post("system/package/update/set", {"channel": payload.channel})
-        await client.post("system/package/update/check-for-updates", {})
+        chk_res = await client.post("system/package/update/check-for-updates", {}, timeout=30.0)
 
         if payload.auto_upgrade_firmware and not is_chr:
-            await client.post("system/routerboard/settings/set", {"auto-upgrade": "yes"})
-            await client.post("system/routerboard/upgrade", {})
+            try:
+                await client.post("system/routerboard/settings/set", {"auto-upgrade": "yes"})
+                await client.post("system/routerboard/upgrade", {})
+            except MikrotikApiError as rb_exc:
+                if "routerboard" in str(rb_exc).lower():
+                    is_chr = True
+                else:
+                    raise
 
-        update_res = await client.post("system/package/update/install", {})
+        prev_version = _clean_version_token(r_obj.ros_version) or None
+        update_res = await _trigger_router_package_install(client, r_obj, payload.channel, chk_res)
+        target_ver = (
+            update_res.get("target_version")
+            if isinstance(update_res, dict) and update_res.get("target_version")
+            else (r_obj.update_available_version or r_obj.ros_version)
+        )
         mode = "CHR_OS_ONLY" if is_chr else "ROUTERBOARD_OS_AND_FIRMWARE"
         return {
             "router_id": str(rid),
+            "display_name": r_obj.display_name,
             "status": "UPGRADE_TRIGGERED",
             "mode": mode,
             "is_chr": is_chr,
             "channel": payload.channel,
+            "installed_version": prev_version,
+            "target_version": target_ver,
             "detail": update_res,
             "stage": stage_idx,
         }, True

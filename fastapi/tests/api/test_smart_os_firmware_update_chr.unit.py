@@ -11,12 +11,19 @@ import pytest
 
 from src.api.v1.bulk_and_updates import (
     _DEFAULT_STARTER_TEMPLATES,
+    _cleanup_corrupted_npk_downloads,
     _execute_single_router_upgrade,
+    _fetch_latest_version_via_http_fallback,
+    _install_routeros_via_fetch_fallback,
     _is_chr_router,
+    _probe_routerboard_safe,
     _probe_single_router_update,
+    _resolve_npk_package_filename,
     _run_router_template_steps,
     _should_skip_step_for_router,
 )
+from src.api.v1.webfig_system_tools import _fetch_system_routerboard
+from src.mikrotik.client import MikrotikApiError
 from src.models.inventory import Router, RouterCredentialsVault
 from src.schemas.bulk_and_updates import (
     RosUpdateExecuteRequest,
@@ -273,3 +280,131 @@ async def test_execute_single_router_upgrade_chr_vs_routerboard() -> None:
         assert "system/routerboard/settings/set" in called_endpoints_rb
         assert "system/routerboard/upgrade" in called_endpoints_rb
         assert "system/package/update/install" in called_endpoints_rb
+
+
+@pytest.mark.asyncio
+async def test_chr_routerboard_400_tolerance_and_corrupted_npk_cleanup() -> None:
+    """Verifica tolerancia a HTTP 400 en system/routerboard en CHR y limpieza de .npk corruptos de 0 bytes."""
+    r_chr = Router(display_name="caps1", board_name="CHR VMware")
+    r_unknown = Router(display_name="vm-x86", board_name="x86_64")
+
+    client = AsyncMock()
+    client.get = AsyncMock(
+        side_effect=lambda ep: (
+            (_ for _ in ()).throw(MikrotikApiError(400, "no such command or directory (routerboard)"))
+            if ep == "system/routerboard"
+            else [
+                {".id": "*10", "name": "downloads/routeros-7.25.1.npk", "size": "0"},
+                {".id": "*11", "name": "routeros-7.25.1.npk", "size": "20892689"},
+            ]
+        )
+    )
+    client.delete = AsyncMock(return_value=None)
+
+    # Si is_chr=True, ni siquiera invoca system/routerboard
+    rb_chr = await _probe_routerboard_safe(client, r_chr, is_chr=True, cur_fw=None, upg_fw=None)
+    assert rb_chr == (True, None, None)
+
+    # Si is_chr=False pero el equipo lanza 400 (ej. CHR sin board_name previo), devuelve (True, None, None)
+    rb_unknown_chr = await _probe_routerboard_safe(client, r_unknown, is_chr=False, cur_fw="7.21", upg_fw="7.25")
+    assert rb_unknown_chr == (True, None, None)
+
+    # También en webfig_system_tools._fetch_system_routerboard
+    rb_sys = await _fetch_system_routerboard(client)
+    assert rb_sys == {}
+
+    # Limpieza de .npk corruptos (0 bytes)
+    removed_count = await _cleanup_corrupted_npk_downloads(client)
+    assert removed_count == 1
+    client.delete.assert_called_once_with("file/*10")
+
+
+def test_resolve_npk_package_filename_architectures() -> None:
+    """Verifica el nombre de paquete .npk según arquitectura (x86_64/CHR vs arm64 vs mmips)."""
+    assert _resolve_npk_package_filename("7.25.1", "x86_64") == "routeros-7.25.1.npk"
+    assert _resolve_npk_package_filename("7.25.1", None) == "routeros-7.25.1.npk"
+    assert _resolve_npk_package_filename("7.25.1", "arm64") == "routeros-7.25.1-arm64.npk"
+    assert _resolve_npk_package_filename("7.25.1", "mmips (MIPS)") == "routeros-7.25.1-mmips.npk"
+
+
+@pytest.mark.asyncio
+async def test_routeros_725_bad_http_response_fallback_check_and_install() -> None:
+    """Verifica el fallback mediante /tool/fetch cuando RouterOS 7.25 devuelve 'ERROR: bad HTTP response'."""
+    t_id = uuid.uuid4()
+    u_id = uuid.uuid4()
+    rid_chr = uuid.uuid4()
+
+    r_chr = Router(
+        id=rid_chr,
+        tenant_id=t_id,
+        display_name="caps1",
+        board_name="CHR VMware",
+        architecture_name="x86_64",
+        ros_version="7.25 (stable)",
+    )
+
+    client = AsyncMock()
+
+    async def mock_get(ep: str, timeout: float | None = None) -> Any:
+        if ep == "system/package/update":
+            return {
+                "channel": "stable",
+                "installed-version": "7.25",
+                "status": "ERROR: bad HTTP response",
+            }
+        if ep == "file":
+            return [{".id": "*5", "name": "routeros-7.25.1.npk", "size": "20892689"}]
+        return {}
+
+    async def mock_post(
+        ep: str,
+        json_data: dict[str, Any] | None = None,
+        timeout: float | None = None,
+    ) -> Any:
+        if ep in ("system/package/update/check-for-updates", "system/package/update/install"):
+            return [
+                {
+                    "channel": "stable",
+                    "installed-version": "7.25",
+                    "status": "ERROR: bad HTTP response",
+                }
+            ]
+        if ep == "tool/fetch":
+            url = (json_data or {}).get("url", "")
+            if "NEWESTa7" in url:
+                return [{"status": "finished", "data": "7.25.1 1793623193\n"}]
+            return [{"status": "finished", "downloaded": "20403"}]
+        return {"status": "ok"}
+
+    client.get = AsyncMock(side_effect=mock_get)
+    client.post = AsyncMock(side_effect=mock_post)
+    client.delete = AsyncMock(return_value=None)
+
+    # 1. Prueba directa de _fetch_latest_version_via_http_fallback
+    ver = await _fetch_latest_version_via_http_fallback(client, "stable")
+    assert ver == "7.25.1"
+
+    # 2. Prueba directa de _install_routeros_via_fetch_fallback
+    inst_res = await _install_routeros_via_fetch_fallback(client, r_chr, "stable", "7.25.1")
+    assert inst_res["status"] == "INSTALLED_VIA_FETCH_FALLBACK"
+    assert inst_res["target_version"] == "7.25.1"
+
+    # Restaurar versión pre-upgrade para prueba integrada
+    r_chr.ros_version = "7.25 (stable)"
+
+    # 3. Prueba integrada en _execute_single_router_upgrade con RouterOS 7.25 afectado por bug de fetch
+    payload = RosUpdateExecuteRequest(
+        router_ids=[rid_chr],
+        channel="stable",
+        auto_upgrade_firmware=True,
+    )
+    claims: dict[str, Any] = {"tid": str(t_id), "sub": str(u_id), "role": "SUPERADMIN_GLOBAL"}
+    db = AsyncMock()
+
+    with patch("src.api.v1.bulk_and_updates.get_router_and_client", return_value=(r_chr, client)), \
+         patch("src.api.v1.bulk_and_updates._perform_pre_upgrade_backup", return_value=True):
+        res_upg, ok_upg = await _execute_single_router_upgrade(rid_chr, payload, claims, db, t_id, u_id, 0)
+        assert ok_upg is True
+        assert res_upg["status"] == "UPGRADE_TRIGGERED"
+        assert res_upg["installed_version"] == "7.25"
+        assert res_upg["target_version"] == "7.25.1"

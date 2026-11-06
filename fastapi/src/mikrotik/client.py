@@ -141,19 +141,24 @@ class MikrotikRestClient:
         password: str,
         params: dict[str, Any] | None = None,
         json_data: Any = None,
+        timeout: float | None = None,
     ) -> httpx.Response:
         client = await self._get_client()
         auth = httpx.BasicAuth(username=self.username, password=password)
+        effective_timeout = timeout if timeout is not None else self.timeout
         try:
-            return await client.request(
-                method=method,
-                url=url,
-                auth=auth,
-                params=params,
-                json=json_data,
-            )
+            req_kwargs: dict[str, Any] = {
+                "method": method,
+                "url": url,
+                "auth": auth,
+                "params": params,
+                "json": json_data,
+            }
+            if timeout is not None:
+                req_kwargs["timeout"] = effective_timeout
+            return await client.request(**req_kwargs)
         except httpx.TimeoutException as exc:
-            raise MikrotikTimeoutError(f"Timeout en {method} {url} tras {self.timeout}s") from exc
+            raise MikrotikTimeoutError(f"Timeout en {method} {url} tras {effective_timeout}s") from exc
         except (httpx.NetworkError, httpx.TransportError, httpx.HTTPError) as exc:
             raise MikrotikConnectionError(f"Error de red al conectar a {self.host}:{self.port}: {exc}") from exc
 
@@ -163,14 +168,18 @@ class MikrotikRestClient:
         url: str,
         params: dict[str, Any] | None = None,
         json_data: Any = None,
+        timeout: float | None = None,
     ) -> httpx.Response:
-        response = await self._raw_send(
-            method=method,
-            url=url,
-            password=self.password,
-            params=params,
-            json_data=json_data,
-        )
+        raw_kwargs: dict[str, Any] = {
+            "method": method,
+            "url": url,
+            "password": self.password,
+            "params": params,
+            "json_data": json_data,
+        }
+        if timeout is not None:
+            raw_kwargs["timeout"] = timeout
+        response = await self._raw_send(**raw_kwargs)
         if response.status_code != 401 or not self.previous_password:
             return response
 
@@ -179,13 +188,8 @@ class MikrotikRestClient:
             self.username,
             self.host,
         )
-        fallback_res = await self._raw_send(
-            method=method,
-            url=url,
-            password=self.previous_password,
-            params=params,
-            json_data=json_data,
-        )
+        raw_kwargs["password"] = self.previous_password
+        fallback_res = await self._raw_send(**raw_kwargs)
         return fallback_res
 
     async def request(
@@ -194,38 +198,81 @@ class MikrotikRestClient:
         endpoint: str,
         params: dict[str, Any] | None = None,
         json_data: Any = None,
+        timeout: float | None = None,
     ) -> Any:
         """Ejecuta una petición HTTP a la REST API garantizando TOFU SSL y manejo de errores."""
         await self.ensure_ssl_verified()
         url = self._build_url(endpoint)
-        response = await self._execute_with_auth_fallback(
-            method=method,
-            url=url,
-            params=params,
-            json_data=json_data,
-        )
+        fb_kwargs: dict[str, Any] = {
+            "method": method,
+            "url": url,
+            "params": params,
+            "json_data": json_data,
+        }
+        if timeout is not None:
+            fb_kwargs["timeout"] = timeout
+        response = await self._execute_with_auth_fallback(**fb_kwargs)
         if response.is_error:
             self._handle_error_status(response)
         return self._parse_response_body(response)
 
-    async def get(self, endpoint: str, params: dict[str, Any] | None = None) -> Any:
+    async def get(
+        self,
+        endpoint: str,
+        params: dict[str, Any] | None = None,
+        *,
+        timeout: float | None = None,
+    ) -> Any:
         """Obtiene un recurso o lista de recursos (GET)."""
+        if timeout is not None:
+            return await self.request("GET", endpoint, params=params, timeout=timeout)
         return await self.request("GET", endpoint, params=params)
 
-    async def put(self, endpoint: str, json_data: Any = None) -> Any:
+    async def put(
+        self,
+        endpoint: str,
+        json_data: Any = None,
+        *,
+        timeout: float | None = None,
+    ) -> Any:
         """Crea un nuevo recurso en RouterOS v7 (PUT)."""
+        if timeout is not None:
+            return await self.request("PUT", endpoint, json_data=json_data, timeout=timeout)
         return await self.request("PUT", endpoint, json_data=json_data)
 
-    async def patch(self, endpoint: str, json_data: Any = None) -> Any:
+    async def patch(
+        self,
+        endpoint: str,
+        json_data: Any = None,
+        *,
+        timeout: float | None = None,
+    ) -> Any:
         """Modifica un recurso existente por su .id (PATCH)."""
+        if timeout is not None:
+            return await self.request("PATCH", endpoint, json_data=json_data, timeout=timeout)
         return await self.request("PATCH", endpoint, json_data=json_data)
 
-    async def delete(self, endpoint: str) -> Any:
+    async def delete(
+        self,
+        endpoint: str,
+        *,
+        timeout: float | None = None,
+    ) -> Any:
         """Elimina un recurso existente por su .id (DELETE)."""
+        if timeout is not None:
+            return await self.request("DELETE", endpoint, timeout=timeout)
         return await self.request("DELETE", endpoint)
 
-    async def post(self, endpoint: str, json_data: Any = None) -> Any:
+    async def post(
+        self,
+        endpoint: str,
+        json_data: Any = None,
+        *,
+        timeout: float | None = None,
+    ) -> Any:
         """Ejecuta comandos o acciones CLI en RouterOS v7 (POST)."""
+        if timeout is not None:
+            return await self.request("POST", endpoint, json_data=json_data, timeout=timeout)
         return await self.request("POST", endpoint, json_data=json_data)
 
     async def close(self) -> None:

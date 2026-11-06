@@ -1062,4 +1062,117 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
     expect(wrapper.find('#channel-update-discovery-box').text()).toContain('RouterBOARD (OS + Firmware)');
     expect(wrapper.find('#channel-update-discovery-box').text()).toContain('CHR_OS_ONLY');
   });
+
+  it('BulkOperationsAndUpdatesView — verifica estado real por router en results[] al ejecutar actualización individual y masiva (Hito 30.8)', async () => {
+    vi.spyOn(http, 'get').mockResolvedValue({
+      status: 200,
+      data: [],
+      headers: new Headers(),
+    });
+
+    const { useInventoryStore } = await import('@/stores/useInventoryStore');
+    const invStore = useInventoryStore();
+    invStore.setRouters([
+      {
+        id: 'r-chr-fail',
+        tenant_id: 't-1',
+        display_name: 'caps1',
+        ros_identity: 'caps',
+        ip_address: '10.250.3.20',
+        api_port: 443,
+        ros_version: '7.25',
+        board_name: 'CHR VMware',
+        network_role: 'CORE_ROUTER',
+        admin_state: 'PRODUCTION',
+        is_reachable: true,
+      },
+      {
+        id: 'r-chr-ok',
+        tenant_id: 't-1',
+        display_name: 'r1',
+        ros_identity: 'r1',
+        ip_address: '10.250.3.8',
+        api_port: 443,
+        ros_version: '7.21.5',
+        board_name: 'CHR VMware',
+        network_role: 'BORDER_BGP',
+        admin_state: 'PRODUCTION',
+        is_reachable: true,
+      },
+    ]);
+
+    const wrapper = mount(BulkOperationsAndUpdatesView);
+    await flushPromises();
+
+    // Cambiar a pestaña de Updates RouterOS
+    const tabBtns = wrapper.findAll('.tab-btn');
+    await tabBtns[1].trigger('click');
+    await flushPromises();
+
+    // 1. Simular fallo individual en results[0].status = 'FAILED'
+    vi.spyOn(http, 'post').mockResolvedValueOnce({
+      status: 200,
+      data: {
+        status: 'COMPLETED',
+        results: [
+          {
+            router_id: 'r-chr-fail',
+            display_name: 'caps1',
+            status: 'FAILED',
+            error: 'Timeout descargando NPK',
+          },
+        ],
+      },
+      headers: new Headers(),
+    });
+
+    const firstRouter = (wrapper.vm as any).fleetRouters.find((r: any) => r.id === 'r-chr-fail');
+    firstRouter.latest_version = '7.25.1';
+    firstRouter.update_available = true;
+
+    await (wrapper.vm as any).triggerRosUpdate(firstRouter);
+    await flushPromises();
+
+    expect((wrapper.vm as any).updateSuccess).toContain('Error al actualizar caps1 (caps): Timeout descargando NPK');
+    expect(firstRouter.upgraded_in_session).toBeFalsy();
+    expect(firstRouter.ros_version).toBe('7.25');
+    expect(wrapper.find('.alert--error').exists()).toBe(true);
+
+    // 2. Simular actualización masiva mixta (1 éxito, 1 fallo)
+    const secondRouter = (wrapper.vm as any).fleetRouters.find((r: any) => r.id === 'r-chr-ok');
+    secondRouter.latest_version = '7.25.1';
+    secondRouter.update_available = true;
+    firstRouter.selected = true;
+    secondRouter.selected = true;
+
+    vi.spyOn(http, 'post').mockResolvedValueOnce({
+      status: 200,
+      data: {
+        status: 'SAFETY_STOP_TRIGGERED',
+        results: [
+          {
+            router_id: 'r-chr-ok',
+            display_name: 'r1',
+            status: 'UPGRADE_TRIGGERED',
+            target_version: '7.25.1',
+          },
+          {
+            router_id: 'r-chr-fail',
+            display_name: 'caps1',
+            status: 'FAILED',
+            error: 'Safety Stop o fallo de red',
+          },
+        ],
+      },
+      headers: new Headers(),
+    });
+
+    await (wrapper.vm as any).triggerFleetPoeUpdate();
+    await flushPromises();
+
+    expect((wrapper.vm as any).updateSuccess).toContain('Error en actualización masiva (1/2 iniciados)');
+    expect(secondRouter.upgraded_in_session).toBe(true);
+    expect(secondRouter.ros_version).toBe('7.25.1');
+    expect(firstRouter.upgraded_in_session).toBeFalsy();
+  });
 });

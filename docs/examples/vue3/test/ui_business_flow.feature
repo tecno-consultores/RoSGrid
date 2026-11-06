@@ -996,6 +996,15 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * match pppoeSecurityContract.defaultKeepaliveSeconds == 10
     * match pppoeSecurityContract.defaultOnlyOne == 'yes'
 
+  Scenario: 99. Resiliencia de Actualización RouterOS v7 en CHR: Timeout Extendido 180s, Fallback Fetch NPK y Verificación por Router en UI (Hito 30.8)
+    * def rosUpdateResilienceContract = { checkBtn: '#btn-check-fleet-updates', channelSelect: '#select-fleet-update-channel', alertSuccess: '.alert--success', alertError: '.alert--error', installTimeoutSeconds: 180, checkTimeoutSeconds: 30, fallbackMethod: 'tool_fetch_npk_reboot' }
+    * match rosUpdateResilienceContract.checkBtn == '#btn-check-fleet-updates'
+    * match rosUpdateResilienceContract.channelSelect == '#select-fleet-update-channel'
+    * match rosUpdateResilienceContract.alertError == '.alert--error'
+    * match rosUpdateResilienceContract.installTimeoutSeconds == 180
+    * match rosUpdateResilienceContract.checkTimeoutSeconds == 30
+    * match rosUpdateResilienceContract.fallbackMethod == 'tool_fetch_npk_reboot'
+
 
 
 

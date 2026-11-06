@@ -231,6 +231,51 @@ def validate_ipam_prefixes(client: httpx.Client, headers: dict[str, str]) -> boo
     return True
 
 
+def validate_chr_ros_updates_check(
+    client: httpx.Client,
+    headers: dict[str, str],
+    router_id_map: dict[str, str],
+) -> bool:
+    print(f"\n=======================================================")
+    print(f"🔍 [SMOKE TEST 5/5] Actualizador RouterOS v7 & Detección CHR (Hito 30.8)")
+    print(f"=======================================================")
+
+    target_id = router_id_map.get("caps1") or router_id_map.get("r1")
+    if not target_id:
+        print("⚠️ No se encontró caps1 ni r1 en inventario para validar ros-updates/check.")
+        return True
+
+    url = f"{API_BASE_URL}/api/v1/operations/ros-updates/check"
+    resp = client.post(
+        url,
+        headers=headers,
+        json={"channel": "stable", "router_ids": [target_id]},
+        timeout=45.0,
+    )
+    if resp.status_code != 200:
+        print(f"❌ Error consultando /api/v1/operations/ros-updates/check: HTTP {resp.status_code} - {resp.text}")
+        return False
+
+    body = resp.json()
+    items = body.get("items", [])
+    if not items:
+        print("❌ Error: ros-updates/check devolvió lista items vacía.")
+        return False
+
+    item = items[0]
+    print(
+        f"📦 Router {item.get('display_name')}: is_chr={item.get('is_chr')}, "
+        f"installed={item.get('installed_version')}, latest={item.get('latest_version')}, "
+        f"plan={item.get('action_plan')}, status='{item.get('status_text')}'"
+    )
+    if item.get("status_text") == "Offline / Cache":
+        print("❌ Error: El sondeo de actualizaciones en CHR cayó en 'Offline / Cache' (posible error 400 en system/routerboard).")
+        return False
+
+    print("🎉 Actualizador RouterOS v7 CHR: Sondeo en vivo verificado sin errores de RouterBOARD.")
+    return True
+
+
 def main() -> int:
     try:
         token = generate_direct_token()
@@ -258,6 +303,10 @@ def main() -> int:
 
             # 4. IPAM
             if not validate_ipam_prefixes(client, headers):
+                return 1
+
+            # 5. Actualizador RouterOS v7 en CHR
+            if not validate_chr_ros_updates_check(client, headers, router_id_map):
                 return 1
 
             print("\n=======================================================")

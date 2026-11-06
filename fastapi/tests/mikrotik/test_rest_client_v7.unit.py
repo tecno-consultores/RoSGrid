@@ -174,3 +174,34 @@ async def test_rest_client_ssl_verification() -> None:
         # Calling again should immediately return cached
         fp2 = await client.ensure_ssl_verified()
         assert fp2 == fake_fp
+
+
+@pytest.mark.asyncio
+async def test_rest_client_per_request_timeout_override() -> None:
+    captured_timeouts: list[Any] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured_timeouts.append(request.extensions.get("timeout"))
+        return httpx.Response(200, json={"status": "ok"})
+
+    transport = httpx.MockTransport(handler)
+    mock_http_client = httpx.AsyncClient(transport=transport)
+
+    client = MikrotikRestClient("10.0.0.1", port=80, use_ssl=False, timeout=10.0)
+    client._client = mock_http_client
+
+    async with client:
+        res_post = await client.post("/system/package/update/install", json_data={}, timeout=180.0)
+        assert res_post == {"status": "ok"}
+        res_get = await client.get("/system/package/update", timeout=30.0)
+        assert res_get == {"status": "ok"}
+        res_put = await client.put("/interface/bridge", json_data={"name": "br1"}, timeout=25.0)
+        assert res_put == {"status": "ok"}
+        res_patch = await client.patch("/interface/bridge/*1", json_data={"comment": "c"}, timeout=25.0)
+        assert res_patch == {"status": "ok"}
+        res_del = await client.delete("/interface/bridge/*1", timeout=25.0)
+        assert res_del == {"status": "ok"}
+
+    assert len(captured_timeouts) == 5
+    assert captured_timeouts[0]["read"] == pytest.approx(180.0)
+    assert captured_timeouts[1]["read"] == pytest.approx(30.0)

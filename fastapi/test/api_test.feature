@@ -1400,3 +1400,17 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     When method post
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 161. Resiliencia de Actualización RouterOS v7 en CHR y RouterBOARD: Sondeo de Canal y Ejecución con Timeout Extendido (Hito 30.8)
+    Given path '/api/v1/operations/ros-updates/check'
+    And request { channel: 'stable', router_ids: ['00000000-0000-0000-0000-000000000001'] }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/operations/ros-updates/execute'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000163'
+    And request { router_ids: ['00000000-0000-0000-0000-000000000001'], channel: 'stable', auto_upgrade_firmware: false, poe_aware: true, safety_stop_threshold_percent: 2.0 }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }

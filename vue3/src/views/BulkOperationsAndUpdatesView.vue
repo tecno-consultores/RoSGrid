@@ -576,20 +576,41 @@
     }
   }
 
+  interface RosUpdateExecutionItemResult {
+    router_id: string;
+    display_name?: string;
+    status: string;
+    error?: string;
+    installed_version?: string;
+    target_version?: string;
+  }
+
   async function triggerRosUpdate(router: FleetRouter) {
     upgradingRouterId.value = router.id;
     updateSuccess.value = null;
     try {
-      await http.post('/api/v1/operations/ros-updates/execute', {
-        router_ids: [router.id],
-        channel: selectedUpdateChannel.value,
-        auto_upgrade_firmware: router.is_chr ? false : autoUpgradeFirmware.value,
-        poe_aware: poeAware.value,
-        safety_stop_threshold_percent: safetyStopThreshold.value,
-      });
+      const res = await http.post<{ results?: RosUpdateExecutionItemResult[] }>(
+        '/api/v1/operations/ros-updates/execute',
+        {
+          router_ids: [router.id],
+          channel: selectedUpdateChannel.value,
+          auto_upgrade_firmware: router.is_chr ? false : autoUpgradeFirmware.value,
+          poe_aware: poeAware.value,
+          safety_stop_threshold_percent: safetyStopThreshold.value,
+        },
+      );
+      const itemResult = Array.isArray(res.data?.results)
+        ? res.data.results.find((item) => item.router_id === router.id) ?? res.data.results[0]
+        : undefined;
+      if (itemResult && itemResult.status !== 'UPGRADE_TRIGGERED') {
+        updateSuccess.value = `Error al actualizar ${router.identity}: ${itemResult.error || itemResult.status}`;
+        return;
+      }
       const modeLabel = router.is_chr ? 'CHR — Solo Sistema Operativo' : 'RouterBOARD — OS + Firmware';
       updateSuccess.value = `Actualización de ${router.identity} (${modeLabel}, canal ${selectedUpdateChannel.value}) iniciada. Se guardó respaldo obligatorio.`;
-      if (router.latest_version) {
+      if (itemResult?.target_version) {
+        router.ros_version = itemResult.target_version;
+      } else if (router.latest_version) {
         router.ros_version = router.latest_version;
       }
       router.update_available = false;
@@ -616,21 +637,44 @@
     updatingFleet.value = true;
     updateSuccess.value = null;
     try {
-      await http.post('/api/v1/operations/ros-updates/execute', {
-        router_ids: pendingRouters.map((r) => r.id),
-        channel: selectedUpdateChannel.value,
-        auto_upgrade_firmware: autoUpgradeFirmware.value,
-        poe_aware: poeAware.value,
-        safety_stop_threshold_percent: safetyStopThreshold.value,
-      });
-      updateSuccess.value = `Actualización masiva (${selectedUpdateChannel.value}) iniciada para ${pendingRouters.length} equipos con ordenamiento PoE-Aware (Safety Stop: ${safetyStopThreshold.value}%).`;
+      const res = await http.post<{ results?: RosUpdateExecutionItemResult[] }>(
+        '/api/v1/operations/ros-updates/execute',
+        {
+          router_ids: pendingRouters.map((r) => r.id),
+          channel: selectedUpdateChannel.value,
+          auto_upgrade_firmware: autoUpgradeFirmware.value,
+          poe_aware: poeAware.value,
+          safety_stop_threshold_percent: safetyStopThreshold.value,
+        },
+      );
+      const resultsById = new Map<string, RosUpdateExecutionItemResult>();
+      if (Array.isArray(res.data?.results)) {
+        res.data.results.forEach((item) => {
+          resultsById.set(item.router_id, item);
+        });
+      }
+      let succeededCount = 0;
+      const failedDescriptions: string[] = [];
       pendingRouters.forEach((r) => {
-        if (r.latest_version) {
-          r.ros_version = r.latest_version;
+        const itemResult = resultsById.get(r.id);
+        if (!itemResult || itemResult.status === 'UPGRADE_TRIGGERED') {
+          if (itemResult?.target_version) {
+            r.ros_version = itemResult.target_version;
+          } else if (r.latest_version) {
+            r.ros_version = r.latest_version;
+          }
+          r.update_available = false;
+          r.upgraded_in_session = true;
+          succeededCount += 1;
+        } else {
+          failedDescriptions.push(`${r.identity} (${itemResult.error || itemResult.status})`);
         }
-        r.update_available = false;
-        r.upgraded_in_session = true;
       });
+      if (failedDescriptions.length > 0) {
+        updateSuccess.value = `Error en actualización masiva (${succeededCount}/${pendingRouters.length} iniciados): ${failedDescriptions.join('; ')}`;
+      } else {
+        updateSuccess.value = `Actualización masiva (${selectedUpdateChannel.value}) iniciada para ${pendingRouters.length} equipos con ordenamiento PoE-Aware (Safety Stop: ${safetyStopThreshold.value}%).`;
+      }
     } catch (err: unknown) {
       const errorObj = err as { response?: { data?: { detail?: string } }; message?: string };
       updateSuccess.value = `Error en actualización masiva: ${errorObj.response?.data?.detail || errorObj.message || 'Fallo de conexión'}`;
@@ -1138,7 +1182,13 @@
 
     <!-- Pestaña 2: Actualizador de RouterOS v7 (Canal Dinámico + Auto-Detección CHR + PoE-Aware) -->
     <section v-else class="updates-container" :aria-label="t('bulk_ops.updates_center_aria', 'Centro de actualizaciones RouterOS')">
-      <div v-if="updateSuccess" class="alert alert--success">✅ {{ updateSuccess }}</div>
+      <div
+        v-if="updateSuccess"
+        class="alert"
+        :class="updateSuccess.startsWith('Error') ? 'alert--error' : 'alert--success'"
+      >
+        {{ updateSuccess.startsWith('Error') ? '⚠️' : '✅' }} {{ updateSuccess }}
+      </div>
 
       <div class="updates-header-card">
         <div>
@@ -1875,6 +1925,12 @@
     background-color: #052e16;
     border: 1px solid #16a34a;
     color: #4ade80;
+  }
+
+  .alert--error {
+    background-color: #450a0a;
+    border: 1px solid #dc2626;
+    color: #fca5a5;
   }
 
   .header-nav-wrap {
