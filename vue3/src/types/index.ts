@@ -188,6 +188,9 @@ export interface TenantItem {
 
 export interface UserManagementItem {
   id: string;
+  tenant_id?: string;
+  tenant_slug?: string | null;
+  tenant_name?: string | null;
   username: string;
   email: string;
   full_name?: string;

@@ -6,7 +6,7 @@
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import HTTPException
@@ -189,8 +189,10 @@ async def test_resolve_target_router_ids() -> None:
 @pytest.mark.asyncio
 async def test_perform_pre_upgrade_backup() -> None:
     db = AsyncMock()
+    mock_exec = MagicMock()
+    mock_exec.scalar_one_or_none.return_value = None
+    db.execute.return_value = mock_exec
     client = AsyncMock()
-    client.post.return_value = "/interface ethernet set ether1 comment=test"
 
     t_id = uuid.uuid4()
     u_id = uuid.uuid4()
@@ -200,9 +202,13 @@ async def test_perform_pre_upgrade_backup() -> None:
         display_name="Router-To-Upgrade",
     )
 
-    success = await _perform_pre_upgrade_backup(client, r, t_id, u_id, db)
-    assert success is True
-    db.add.assert_called_once()
+    with patch(
+        "src.api.v1.backups.export_router_rsc",
+        AsyncMock(return_value="/interface ethernet set ether1 comment=test"),
+    ):
+        success = await _perform_pre_upgrade_backup(client, r, t_id, u_id, db)
+        assert success is True
+        db.add.assert_called_once()
 
 
 # ============================================================================

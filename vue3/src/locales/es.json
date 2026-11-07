@@ -833,6 +833,7 @@
     "btn_mcp_token": "🤖 Token MCP",
     "btn_change_pass": "🔑 Cambiar Clave",
     "btn_reset_2fa": "🔄 Reset 2FA",
+    "btn_assign_tenant": "🏢 Empresa",
     "btn_suspend": "🚫 Suspender",
     "btn_activate": "✓ Activar"
   },

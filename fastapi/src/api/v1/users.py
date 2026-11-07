@@ -26,6 +26,7 @@ from src.redis_layer.client import get_redis_client
 from src.redis_layer.sessions import kill_all_user_sessions
 from src.schemas.users import (
     AssignUserRoutersRequest,
+    AssignUserTenantRequest,
     ChangePasswordRequest,
     CreateUserRequest,
     GenerateMcpTokenRequest,
@@ -65,6 +66,7 @@ async def list_users(
     is_active: bool | None = None,
     pending_only: bool = False,
     search: str | None = None,
+    all_tenants: bool = False,
     claims: dict[str, Any] = Depends(
         require_roles(
             SystemRoleEnum.SUPERADMIN_GLOBAL,
@@ -79,7 +81,9 @@ async def list_users(
     is_sa = claims["rol"] == SystemRoleEnum.SUPERADMIN_GLOBAL.value
     await set_tenant_context(db, tenant_id, is_superadmin=is_sa)
 
-    stmt = select(User).where(User.tenant_id == tenant_id)
+    stmt = select(User)
+    if not (is_sa and all_tenants):
+        stmt = stmt.where(User.tenant_id == tenant_id)
     if role is not None:
         stmt = stmt.where(User.role == role)
     if pending_only:
@@ -90,8 +94,27 @@ async def list_users(
         pattern = f"%{search}%"
         stmt = stmt.where(User.username.ilike(pattern) | User.email.ilike(pattern))
 
-    result = await db.execute(stmt)
-    return [UserResponse.model_validate(u) for u in result.scalars().all()]
+    users = list((await db.execute(stmt)).scalars().all())
+    tenant_map: dict[uuid.UUID, tuple[str, str]] = {}
+    try:
+        t_ids = {u.tenant_id for u in users if getattr(u, "tenant_id", None)}
+        if t_ids:
+            t_rows = (await db.execute(select(Tenant).where(Tenant.id.in_(t_ids)))).scalars().all()
+            tenant_map = {
+                t.id: (t.slug, t.name)
+                for t in t_rows
+                if getattr(t, "id", None) and getattr(t, "slug", None) and getattr(t, "name", None)
+            }
+    except Exception:
+        tenant_map = {}
+
+    items: list[UserResponse] = []
+    for u in users:
+        resp = UserResponse.model_validate(u)
+        if u.tenant_id in tenant_map:
+            resp.tenant_slug, resp.tenant_name = tenant_map[u.tenant_id]
+        items.append(resp)
+    return items
 
 
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -100,9 +123,15 @@ async def create_user(
     claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)),
     db: AsyncSession = Depends(get_db_session),
 ) -> UserResponse:
-    tenant_id = uuid.UUID(claims["tid"])
+    caller_tenant_id = uuid.UUID(claims["tid"])
     is_sa = claims["rol"] == SystemRoleEnum.SUPERADMIN_GLOBAL.value
-    await set_tenant_context(db, tenant_id, is_superadmin=is_sa)
+    target_tenant_id = body.tenant_id if (is_sa and body.tenant_id) else caller_tenant_id
+    if not is_sa and body.tenant_id and body.tenant_id != caller_tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo SUPERADMIN_GLOBAL puede crear usuarios en otra organización.",
+        )
+    await set_tenant_context(db, target_tenant_id, is_superadmin=is_sa)
 
     if not is_sa and body.role == SystemRoleEnum.SUPERADMIN_GLOBAL:
         raise HTTPException(
@@ -110,9 +139,16 @@ async def create_user(
             detail="Un Administrador de Organización no puede asignar el rol SUPERADMIN_GLOBAL.",
         )
 
+    target_tenant: Tenant | None = None
+    if is_sa and body.tenant_id:
+        t_res = await db.execute(select(Tenant).where(Tenant.id == target_tenant_id))
+        target_tenant = t_res.scalar_one_or_none()
+        if not target_tenant:
+            raise HTTPException(status_code=404, detail="La organización destino especificada no existe")
+
     # Comprobar unicidad
     stmt_check = select(User).where(
-        User.tenant_id == tenant_id,
+        User.tenant_id == target_tenant_id,
         (User.username == body.username) | (User.email == body.email),
     )
     existing = await db.execute(stmt_check)
@@ -123,7 +159,7 @@ async def create_user(
         )
 
     new_user = User(
-        tenant_id=tenant_id,
+        tenant_id=target_tenant_id,
         username=body.username.strip(),
         email=body.email.strip().lower(),
         full_name=body.full_name.strip(),
@@ -139,7 +175,19 @@ async def create_user(
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
-    return UserResponse.model_validate(new_user)
+    resp = UserResponse.model_validate(new_user)
+    if target_tenant:
+        resp.tenant_slug = target_tenant.slug
+        resp.tenant_name = target_tenant.name
+    else:
+        try:
+            t_row = (await db.execute(select(Tenant).where(Tenant.id == target_tenant_id))).scalar_one_or_none()
+            if t_row:
+                resp.tenant_slug = t_row.slug
+                resp.tenant_name = t_row.name
+        except Exception:
+            pass
+    return resp
 
 
 @router.get("/{user_id}/router-permissions")
@@ -778,3 +826,93 @@ async def update_user_feature_flags(
         "user_id": str(target_user.id),
         "feature_flags_override": target_user.feature_flags_override,
     }
+
+
+@router.patch("/{user_id}/tenant", response_model=UserResponse)
+async def reassign_user_tenant(
+    user_id: uuid.UUID,
+    body: AssignUserTenantRequest,
+    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL)),
+    db: AsyncSession = Depends(get_db_session),
+) -> UserResponse:
+    """Reasigna un usuario a otra empresa (exclusivo SUPERADMIN_GLOBAL), limpiando permisos de routers previos."""
+    caller_id = uuid.UUID(claims["sub"])
+    await set_tenant_context(db, None, is_superadmin=True)
+
+    u_res = await db.execute(select(User).where(User.id == user_id))
+    target_user = u_res.scalar_one_or_none()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    t_res = await db.execute(select(Tenant).where(Tenant.id == body.tenant_id))
+    target_tenant = t_res.scalar_one_or_none()
+    if not target_tenant:
+        raise HTTPException(status_code=404, detail="Empresa destino no encontrada")
+
+    old_tenant_id = target_user.tenant_id
+    old_role = target_user.role.value if hasattr(target_user.role, "value") else str(target_user.role)
+
+    if old_tenant_id != target_tenant.id:
+        conflict_stmt = select(User).where(
+            User.tenant_id == target_tenant.id,
+            User.id != target_user.id,
+            (User.username == target_user.username) | (User.email == target_user.email),
+        )
+        conflict_user = (await db.execute(conflict_stmt)).scalar_one_or_none()
+        if (
+            conflict_user is not None
+            and conflict_user.id != target_user.id
+            and conflict_user.tenant_id == target_tenant.id
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Ya existe un usuario con ese username o email en la empresa destino",
+            )
+
+        await db.execute(
+            delete(UserRouterPermission).where(
+                UserRouterPermission.user_id == target_user.id,
+                UserRouterPermission.tenant_id == old_tenant_id,
+            )
+        )
+        try:
+            await kill_all_user_sessions(
+                str(old_tenant_id),
+                str(target_user.id),
+                killed_by=str(caller_id),
+                reason=f"Transferencia de empresa hacia {target_tenant.slug}",
+            )
+        except Exception as exc:
+            logger.warning("Fallo al revocar sesiones en KeyDB para usuario transferido %s: %s", target_user.id, exc)
+
+        target_user.tenant_id = target_tenant.id
+
+    if body.role is not None:
+        target_user.role = body.role
+
+    await write_audit_log(
+        session=db,
+        tenant_id=target_tenant.id,
+        actor_username=str(claims.get("preferred_username") or "superadmin"),
+        actor_role=str(claims.get("rol") or SystemRoleEnum.SUPERADMIN_GLOBAL.value),
+        actor_ip=str(claims.get("ip_address") or "127.0.0.1"),
+        event_category="USER_MANAGEMENT",
+        event_action="USER_TENANT_REASSIGNED",
+        actor_user_id=caller_id,
+        before_state={"tenant_id": str(old_tenant_id), "role": old_role},
+        after_state={
+            "user_id": str(target_user.id),
+            "username": target_user.username,
+            "tenant_id": str(target_tenant.id),
+            "tenant_slug": target_tenant.slug,
+            "role": target_user.role.value if hasattr(target_user.role, "value") else str(target_user.role),
+        },
+        status_code=200,
+    )
+    await db.commit()
+    await db.refresh(target_user)
+
+    resp = UserResponse.model_validate(target_user)
+    resp.tenant_slug = target_tenant.slug
+    resp.tenant_name = target_tenant.name
+    return resp

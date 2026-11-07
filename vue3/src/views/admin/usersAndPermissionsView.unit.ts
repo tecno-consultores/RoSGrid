@@ -342,4 +342,88 @@ describe('UsersAndPermissionsView.vue — Gestión de 11 Roles y Matriz RBAC', (
     await flushPromises();
     expect(flagsModal.props('isOpen')).toBe(false);
   });
+
+  it('permite a SUPERADMIN_GLOBAL elegir empresa al crear usuario y reasignar empresa desde la tabla', async () => {
+    vi.spyOn(http, 'get').mockImplementation(async (url: string) => {
+      if (url.includes('/api/v1/tenants')) {
+        return {
+          status: 200,
+          data: [
+            { id: 't-corp', name: 'Corporación Central', slug: 'corp' },
+            { id: 't-caja', name: 'Caja Telecom', slug: 'caja' },
+          ],
+          headers: new Headers(),
+        };
+      }
+      return {
+        status: 200,
+        data: [
+          {
+            id: 'u-01',
+            tenant_id: 't-corp',
+            tenant_slug: 'corp',
+            username: 'admin.norte',
+            email: 'admin@isp-norte.net',
+            full_name: 'Carlos Mendoza',
+            role: 'TENANT_ADMIN',
+            totp_enabled: true,
+            is_active: true,
+            has_all_routers_access: true,
+          },
+        ],
+        headers: new Headers(),
+      };
+    });
+
+    const wrapper = mount(UsersAndPermissionsView, {
+      global: {
+        stubs: {
+          RgStepUp2FAModal: true,
+          UserRouterMatrixModal: true,
+          RbacRoleMatrixPanel: true,
+          RgUserProfileFlagsModal: true,
+        },
+      },
+    });
+    await flushPromises();
+
+    // 1. Verificar selector #u-tenant-id en el modal de creación
+    await wrapper.find('.btn-create').trigger('click');
+    const tenantSelect = wrapper.find('#u-tenant-id');
+    expect(tenantSelect.exists()).toBe(true);
+    await tenantSelect.setValue('t-caja');
+    await wrapper.find('.btn-close').trigger('click');
+
+    // 2. Abrir modal de reasignación de empresa desde la fila del usuario
+    const assignBtn = wrapper.find('#btn-assign-tenant-admin\\.norte');
+    expect(assignBtn.exists()).toBe(true);
+    await assignBtn.trigger('click');
+
+    const patchSpy = vi.spyOn(http, 'patch').mockResolvedValueOnce({
+      status: 200,
+      data: {
+        id: 'u-01',
+        tenant_id: 't-caja',
+        tenant_slug: 'caja',
+        tenant_name: 'Caja Telecom',
+        username: 'admin.norte',
+        email: 'admin@isp-norte.net',
+        role: 'TENANT_ADMIN',
+        totp_enabled: true,
+        is_active: true,
+        has_all_routers_access: true,
+      },
+      headers: new Headers(),
+    });
+
+    await wrapper.find('#assign-user-tenant-select').setValue('t-caja');
+    await wrapper.find('#btn-confirm-assign-tenant').trigger('submit');
+    await flushPromises();
+
+    expect(patchSpy).toHaveBeenCalledWith('/api/v1/users/u-01/tenant', {
+      tenant_id: 't-caja',
+      role: 'TENANT_ADMIN',
+    });
+    expect(wrapper.find('.banner--success').text()).toContain('Empresa actualizada exitosamente');
+  });
 });

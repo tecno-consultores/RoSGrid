@@ -1008,3 +1008,80 @@ async def test_reset_2fa_self_user_allowed(
     finally:
         app.dependency_overrides.pop(get_db_session, None)
 
+
+@pytest.mark.asyncio
+async def test_superadmin_create_user_with_explicit_tenant_and_reassign_tenant(
+    async_client: AsyncClient,
+    superadmin_auth: dict[str, str],
+    fake_redis: FakeAsyncRedis,
+) -> None:
+    """Verifica que SUPERADMIN_GLOBAL puede crear un usuario asignándolo directamente a otra
+    empresa (tenant_id) y transferir un usuario existente mediante PATCH /api/v1/users/{id}/tenant."""
+    target_tid = uuid.uuid4()
+    target_tenant = Tenant(
+        id=target_tid,
+        name="Caja ISP",
+        slug="caja",
+        status=TenantStatusEnum.ACTIVE,
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+
+    db_create = MockDbSession(tenants=[target_tenant], users=[])
+    app.dependency_overrides[get_db_session] = lambda: db_create
+    try:
+        res_create = await async_client.post(
+            "/api/v1/users",
+            json={
+                "username": "operador_caja",
+                "email": "op@caja.net",
+                "full_name": "Operador Caja",
+                "password": "PasswordCaja123!",
+                "role": SystemRoleEnum.TENANT_ADMIN.value,
+                "tenant_id": str(target_tid),
+                "has_all_routers_access": True,
+                "allowed_cidr_list": [],
+            },
+            headers={**superadmin_auth, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res_create.status_code == 201, res_create.text
+        created_data = res_create.json()
+        assert created_data["tenant_id"] == str(target_tid)
+        assert created_data["tenant_slug"] == "caja"
+
+        existing_user = User(
+            id=uuid.uuid4(),
+            tenant_id=uuid.UUID(superadmin_auth["tid"]),
+            username="transfer_op",
+            email="transfer@rosgrid.local",
+            full_name="Operador Transferible",
+            password_hash=hash_password("SecretPass123!"),
+            role=SystemRoleEnum.SUPPORT_L2,
+            is_active=True,
+            is_locked=False,
+            failed_login_attempts=0,
+            totp_enabled=False,
+            has_all_routers_access=False,
+            allowed_cidr_list=[],
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+        )
+        db_reassign = MockDbSession(tenants=[target_tenant], users=[existing_user])
+        app.dependency_overrides[get_db_session] = lambda: db_reassign
+
+        res_patch = await async_client.patch(
+            f"/api/v1/users/{existing_user.id}/tenant",
+            json={
+                "tenant_id": str(target_tid),
+                "role": SystemRoleEnum.TENANT_ADMIN.value,
+            },
+            headers={**superadmin_auth, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res_patch.status_code == 200, res_patch.text
+        patched_data = res_patch.json()
+        assert patched_data["tenant_id"] == str(target_tid)
+        assert patched_data["tenant_slug"] == "caja"
+        assert patched_data["role"] == SystemRoleEnum.TENANT_ADMIN.value
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)
+

@@ -136,17 +136,28 @@ async def update_tenant_features(
     tenant_id: uuid.UUID,
     body: UpdateTenantFeaturesRequest,
     request: Request,
-    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL)),
+    claims: dict[str, Any] = Depends(
+        require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)
+    ),
     db: AsyncSession = Depends(get_db_session),
 ) -> TenantFeaturesResponse:
     user_role = claims.get("rol")
-    if user_role != SystemRoleEnum.SUPERADMIN_GLOBAL.value:
+    user_tid = claims.get("tid")
+    tenant = await _load_tenant_or_404(db, tenant_id)
+
+    is_superadmin = user_role == SystemRoleEnum.SUPERADMIN_GLOBAL.value
+    is_initial_tenant_onboarding = (
+        user_role == SystemRoleEnum.TENANT_ADMIN.value
+        and str(user_tid) == str(tenant_id)
+        and not bool(getattr(tenant, "onboarding_completed", False))
+        and body.onboarding_completed is True
+    )
+    if not is_superadmin and not is_initial_tenant_onboarding:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Solo los usuarios con rol SUPERADMIN_GLOBAL pueden modificar los módulos y licencias de las empresas.",
         )
 
-    tenant = await _load_tenant_or_404(db, tenant_id)
     before_state = extract_tenant_features(tenant)
 
     update_data = body.model_dump(exclude_unset=True, exclude_none=True)

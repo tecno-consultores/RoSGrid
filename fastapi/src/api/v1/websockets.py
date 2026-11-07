@@ -223,9 +223,12 @@ async def tenant_events_ws(ws: WebSocket) -> None:
                         continue
                 except Exception as exc:
                     logger.debug("Error checking kill switch event: %s", exc)
-                await ws.send_text(raw_str)
+                try:
+                    await ws.send_text(raw_str)
+                except Exception:
+                    break
             await asyncio.sleep(0.01)
-    except WebSocketDisconnect:
+    except (WebSocketDisconnect, RuntimeError):
         logger.debug("WebSocket tenant_events disconnected: session=%s", session_id)
     finally:
         await pubsub.unsubscribe(event_ch)

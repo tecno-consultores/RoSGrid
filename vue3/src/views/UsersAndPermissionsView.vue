@@ -51,6 +51,18 @@
     return r === 'SUPERADMIN_GLOBAL' || r === 'TENANT_ADMIN';
   });
 
+  const isSuperAdmin = computed(() => authStore.currentRole === 'SUPERADMIN_GLOBAL');
+  const availableTenants = ref<Array<{ id: string; name: string; slug: string }>>([]);
+
+  // Modal Reasignar Empresa (exclusivo SUPERADMIN_GLOBAL)
+  const isAssignTenantModalOpen = ref(false);
+  const isAssigningTenant = ref(false);
+  const targetUserForTenant = ref<UserManagementItem | null>(null);
+  const reassignTenantForm = ref({
+    tenant_id: '',
+    role: 'SUPPORT_L2' as SystemRole,
+  });
+
   const isLoading = ref(false);
   const errorMessage = ref('');
   const successMessage = ref('');
@@ -70,6 +82,7 @@
     password: '',
     full_name: '',
     role: 'SUPPORT_L2' as SystemRole,
+    tenant_id: authStore.user?.tenant_id || '',
     allowed_cidr_list: '',
     has_all_routers_access: false,
   });
@@ -121,6 +134,67 @@
     setTimeout(() => {
       successMessage.value = '';
     }, 4000);
+  }
+
+  async function loadAvailableTenants() {
+    if (!isSuperAdmin.value) return;
+    try {
+      const res = await http.get<
+        | Array<{ id: string; name?: string; slug?: string }>
+        | { items: Array<{ id: string; name?: string; slug?: string }> }
+      >('/api/v1/tenants');
+      const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
+      availableTenants.value = raw
+        .filter((tItem) => tItem && typeof tItem.id === 'string' && (tItem.slug || tItem.name))
+        .map((tItem) => ({
+          id: tItem.id,
+          name: tItem.name || tItem.slug || tItem.id,
+          slug: tItem.slug || tItem.id,
+        }));
+    } catch {
+      availableTenants.value = [];
+    }
+  }
+
+  function openAssignTenantModal(user: UserManagementItem) {
+    targetUserForTenant.value = user;
+    reassignTenantForm.value = {
+      tenant_id: user.tenant_id || authStore.user?.tenant_id || availableTenants.value[0]?.id || '',
+      role: user.role,
+    };
+    if (isSuperAdmin.value && availableTenants.value.length === 0) {
+      loadAvailableTenants();
+    }
+    isAssignTenantModalOpen.value = true;
+  }
+
+  async function handleReassignTenant() {
+    if (!targetUserForTenant.value || !reassignTenantForm.value.tenant_id) return;
+    isAssigningTenant.value = true;
+    errorMessage.value = '';
+    try {
+      const res = await http.patch<UserManagementItem>(
+        `/api/v1/users/${targetUserForTenant.value.id}/tenant`,
+        {
+          tenant_id: reassignTenantForm.value.tenant_id,
+          role: reassignTenantForm.value.role,
+        },
+      );
+      if (res.data) {
+        targetUserForTenant.value.tenant_id = res.data.tenant_id;
+        targetUserForTenant.value.tenant_slug = res.data.tenant_slug;
+        targetUserForTenant.value.tenant_name = res.data.tenant_name;
+        targetUserForTenant.value.role = res.data.role;
+      }
+      isAssignTenantModalOpen.value = false;
+      successMessage.value = `Empresa actualizada exitosamente para @${targetUserForTenant.value.username}.`;
+      await loadUsers();
+    } catch (err: unknown) {
+      const error = err as { detail?: string; message?: string };
+      errorMessage.value = error.detail || error.message || 'Error al reasignar empresa del usuario.';
+    } finally {
+      isAssigningTenant.value = false;
+    }
   }
 
   // 11 Roles Oficiales del Sistema RoSGrid
@@ -420,6 +494,9 @@
         password: newUser.value.password,
         full_name: newUser.value.full_name.trim() || newUser.value.username.trim(),
         role: newUser.value.role,
+        ...(isSuperAdmin.value && newUser.value.tenant_id
+          ? { tenant_id: newUser.value.tenant_id }
+          : {}),
         allowed_cidr_list: cidrList,
         has_all_routers_access: Boolean(newUser.value.has_all_routers_access),
       };
@@ -445,6 +522,7 @@
         password: '',
         full_name: '',
         role: 'SUPPORT_L2',
+        tenant_id: authStore.user?.tenant_id || '',
         allowed_cidr_list: '',
         has_all_routers_access: false,
       };
@@ -474,6 +552,7 @@
   onMounted(() => {
     loadUsers();
     loadRegistrationStatus();
+    loadAvailableTenants();
   });
 </script>
 
@@ -622,6 +701,13 @@
               <td class="cell-user">
                 <strong>{{ u.full_name || u.username }}</strong>
                 <code class="user-handle">@{{ u.username }}</code>
+                <span
+                  v-if="u.tenant_slug || u.tenant_name"
+                  class="badge-tenant"
+                  :title="u.tenant_name || u.tenant_slug || ''"
+                >
+                  🏢 {{ u.tenant_slug || u.tenant_name }}
+                </span>
               </td>
               <td>{{ u.email }}</td>
               <td>
@@ -720,6 +806,17 @@
                     @click="openReset2FAModal(u)"
                   >
                     {{ t('users_mgmt.btn_reset_2fa', '↺ Reset 2FA') }}
+                  </button>
+
+                  <button
+                    v-if="isSuperAdmin"
+                    :id="`btn-assign-tenant-${u.username}`"
+                    type="button"
+                    class="btn-assign-tenant"
+                    aria-label="Asignar o transferir empresa a este operador"
+                    @click="openAssignTenantModal(u)"
+                  >
+                    {{ t('users_mgmt.btn_assign_tenant', '🏢 Empresa') }}
                   </button>
 
                   <button
@@ -836,6 +933,26 @@
                 placeholder="••••••••"
                 class="form-input"
               />
+            </div>
+          </div>
+
+          <div v-if="isSuperAdmin" class="form-row">
+            <div class="form-group">
+              <label for="u-tenant-id" class="form-label">Empresa / Organización Destino *</label>
+              <select id="u-tenant-id" v-model="newUser.tenant_id" class="form-select">
+                <option
+                  v-if="
+                    authStore.user?.tenant_id &&
+                    !availableTenants.some((tItem) => tItem.id === authStore.user?.tenant_id)
+                  "
+                  :value="authStore.user.tenant_id"
+                >
+                  {{ authStore.user.tenant_slug || 'Empresa Actual' }}
+                </option>
+                <option v-for="tItem in availableTenants" :key="tItem.id" :value="tItem.id">
+                  {{ tItem.name }} ({{ tItem.slug }})
+                </option>
+              </select>
             </div>
           </div>
 
@@ -1017,6 +1134,91 @@
       @close="isMcpTokenModalOpen = false"
       @token-generated="handleMcpTokenGenerated"
     />
+
+    <!-- Modal para Asignar o Transferir Empresa a un Usuario (SUPERADMIN_GLOBAL) -->
+    <div
+      v-if="isAssignTenantModalOpen && targetUserForTenant"
+      class="rg-modal-backdrop"
+      @click.self="isAssignTenantModalOpen = false"
+    >
+      <div
+        class="rg-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-assign-tenant-title"
+      >
+        <header class="modal-header">
+          <h2 id="modal-assign-tenant-title" class="modal-title">
+            Asignar Empresa: @{{ targetUserForTenant.username }}
+          </h2>
+          <button
+            type="button"
+            class="btn-close"
+            aria-label="Cerrar modal"
+            @click="isAssignTenantModalOpen = false"
+          >
+            ✕
+          </button>
+        </header>
+
+        <form class="modal-form" @submit.prevent="handleReassignTenant">
+          <p class="modal-desc">
+            Selecciona la empresa (Tenant) a la que pertenecerá el operador
+            <strong>{{ targetUserForTenant.full_name || targetUserForTenant.username }}</strong>.
+            Al transferir un usuario a otra empresa, sus permisos sobre routers de la empresa anterior se revocan automáticamente.
+          </p>
+
+          <div class="form-group">
+            <label for="assign-user-tenant-select" class="form-label">Empresa Destino *</label>
+            <select
+              id="assign-user-tenant-select"
+              v-model="reassignTenantForm.tenant_id"
+              class="form-select"
+              required
+            >
+              <option
+                v-if="
+                  authStore.user?.tenant_id &&
+                  !availableTenants.some((tItem) => tItem.id === authStore.user?.tenant_id)
+                "
+                :value="authStore.user.tenant_id"
+              >
+                {{ authStore.user.tenant_slug || 'Empresa Actual' }}
+              </option>
+              <option v-for="tItem in availableTenants" :key="tItem.id" :value="tItem.id">
+                {{ tItem.name }} ({{ tItem.slug }})
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="assign-user-role-select" class="form-label">Rol en la Empresa Destino *</label>
+            <select
+              id="assign-user-role-select"
+              v-model="reassignTenantForm.role"
+              class="form-select"
+            >
+              <option v-for="r in availableRoles" :key="r" :value="r">{{ r }}</option>
+            </select>
+          </div>
+
+          <footer class="modal-footer">
+            <button type="button" class="btn-cancel" @click="isAssignTenantModalOpen = false">
+              Cancelar
+            </button>
+            <button
+              id="btn-confirm-assign-tenant"
+              type="submit"
+              class="btn-submit"
+              :disabled="isAssigningTenant"
+              @submit.prevent="handleReassignTenant"
+            >
+              {{ isAssigningTenant ? 'Guardando...' : '🏢 Guardar Empresa' }}
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>
 
     <!-- Modal para Cambio de Contraseña -->
     <ChangePasswordModal
@@ -1620,6 +1822,40 @@
 
   .btn-mcp:hover {
     background-color: #0284c7;
+    color: #ffffff;
+  }
+
+  .badge-tenant {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(168, 85, 247, 0.15);
+    color: #c084fc;
+    border: 1px solid rgba(168, 85, 247, 0.4);
+    margin-top: 3px;
+  }
+
+  .btn-assign-tenant {
+    background: rgba(168, 85, 247, 0.12);
+    color: #c084fc;
+    border: 1px solid rgba(168, 85, 247, 0.4);
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      background-color 0.15s,
+      color 0.15s;
+    white-space: nowrap;
+  }
+
+  .btn-assign-tenant:hover {
+    background-color: #9333ea;
     color: #ffffff;
   }
 </style>

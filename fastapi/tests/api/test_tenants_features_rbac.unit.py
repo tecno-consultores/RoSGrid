@@ -298,3 +298,92 @@ async def test_tenant_features_rbac_superadmin_only_and_audit(
         assert res_audit_forbidden.status_code == 403
     finally:
         app.dependency_overrides.pop(get_db_session, None)
+
+
+@pytest.mark.asyncio
+async def test_tenant_admin_can_complete_initial_onboarding_once(
+    async_client: AsyncClient,
+    fake_redis: FakeAsyncRedis,
+) -> None:
+    """Certifica que el TENANT_ADMIN de una empresa recién creada (onboarding_completed=False)
+    puede persistir la configuración inicial del wizard (onboarding_completed=True), pero
+    queda bloqueado (403) para modificaciones posteriores de licencias."""
+    tenant_id = uuid.uuid4()
+    t = Tenant()
+    t.id = tenant_id
+    t.slug = "caja"
+    t.name = "Caja Telecom"
+    t.status = TenantStatusEnum.ACTIVE
+    t.isp_module_enabled = True
+    t.bgp_looking_glass_enabled = False
+    t.sfp_ddm_telemetry_enabled = True
+    t.ipfix_analytics_enabled = False
+    t.enforce_maker_checker = True
+    t.auto_safemode_enforced = True
+    t.ai_mcp_integration_enabled = True
+    t.nightly_backups_enabled = True
+    t.outbound_webhooks_enabled = True
+    t.config_drift_monitoring_enabled = True
+    t.cis_audit_enabled = True
+    t.sdwan_orchestrator_enabled = False
+    t.capsman_wifi_enabled = False
+    t.sla_tracker_enabled = False
+    t.rogue_dhcp_enabled = False
+    t.mass_outage_threshold = 5
+    t.default_locale = "es"
+    t.onboarding_completed = False
+
+    db = MockDbSession(tenants=[t])
+    app.dependency_overrides[get_db_session] = lambda: db
+
+    try:
+        tadmin_id = str(uuid.uuid4())
+        tadmin_sess = "sess-caja-tadmin-01"
+        await fake_redis.hset(
+            f"rg:{tenant_id}:sess:{tadmin_sess}",
+            mapping={
+                "session_id": tadmin_sess,
+                "user_id": tadmin_id,
+                "username": "admin_caja",
+                "role": SystemRoleEnum.TENANT_ADMIN.value,
+            },
+        )
+        token_tadmin = create_jwt_access_token(
+            tadmin_id,
+            str(tenant_id),
+            "caja",
+            tadmin_sess,
+            SystemRoleEnum.TENANT_ADMIN.value,
+            True,
+        )
+
+        # 1. Onboarding inicial con onboarding_completed=True -> HTTP 200 OK
+        res_onboard = await async_client.patch(
+            f"/api/v1/tenants/{tenant_id}/features",
+            json={
+                "isp_module_enabled": True,
+                "bgp_looking_glass_enabled": True,
+                "onboarding_completed": True,
+            },
+            headers={
+                "Authorization": f"Bearer {token_tadmin}",
+                "Idempotency-Key": str(uuid.uuid4()),
+            },
+        )
+        assert res_onboard.status_code == 200, res_onboard.text
+        data_onboard = res_onboard.json()
+        assert data_onboard["onboarding_completed"] is True
+        assert t.onboarding_completed is True
+
+        # 2. Intento ulterior una vez onboarding_completed=True -> HTTP 403 Forbidden
+        res_second = await async_client.patch(
+            f"/api/v1/tenants/{tenant_id}/features",
+            json={"sla_tracker_enabled": True, "onboarding_completed": True},
+            headers={
+                "Authorization": f"Bearer {token_tadmin}",
+                "Idempotency-Key": str(uuid.uuid4()),
+            },
+        )
+        assert res_second.status_code == 403
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)

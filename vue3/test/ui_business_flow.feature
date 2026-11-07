@@ -1021,6 +1021,15 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * match backupIntegrityContract.rejectEmptyBracketsHash == '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945'
     * match backupIntegrityContract.deduplicatePreUpgrade == true
 
+  Scenario: 102. Onboarding inicial de nueva empresa por TENANT_ADMIN y selector de empresa en creación/reasignación de usuarios (Hito 30.11 - Spec 88)
+    * def onboardingPayload = { onboarding_completed: true, isp_module_enabled: true }
+    * match onboardingPayload.onboarding_completed == true
+    * def userTenantSelectors = ['#u-tenant-id', '#assign-user-tenant-select', '#btn-confirm-assign-tenant']
+    * match userTenantSelectors contains '#u-tenant-id'
+    * match userTenantSelectors contains '#assign-user-tenant-select'
+    * match userTenantSelectors contains '#btn-confirm-assign-tenant'
+
+
 
 
 

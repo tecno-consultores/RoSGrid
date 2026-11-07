@@ -1433,3 +1433,12 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     When method get
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 164. Reasignación directa de empresa (tenant_id) a un usuario y onboarding inicial de TENANT_ADMIN (Hito 30.11 - Spec 88)
+    Given path '/api/v1/users/00000000-0000-0000-0000-000000000001/tenant'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000164'
+    And request { tenant_id: '00000000-0000-0000-0000-000000000002', role: 'TENANT_ADMIN' }
+    When method patch
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+

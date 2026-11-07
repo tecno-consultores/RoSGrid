@@ -93,7 +93,10 @@
     } catch (err: any) {
       console.error('Error completando onboarding:', err);
       errorMessage.value =
-        err?.response?.data?.detail || 'Error al persistir la configuración inicial del tenant.';
+        err?.detail ||
+        err?.response?.data?.detail ||
+        err?.message ||
+        'Error al persistir la configuración inicial del tenant.';
     } finally {
       saving.value = false;
     }

@@ -19,6 +19,10 @@ class CreateUserRequest(BaseModel):
     temporary_password: str | None = Field(None, min_length=8)
     password: str | None = Field(None, min_length=8)
     role: SystemRoleEnum
+    tenant_id: uuid.UUID | None = Field(
+        default=None,
+        description="ID de la empresa destino (opcional, exclusivo para SUPERADMIN_GLOBAL)",
+    )
     has_all_routers_access: bool = False
     allowed_cidr_list: list[str] = Field(default_factory=list)
 
@@ -55,6 +59,13 @@ class UpdateUserRequest(BaseModel):
     is_locked: bool | None = None
     has_all_routers_access: bool | None = None
     allowed_cidr_list: list[str] | None = None
+
+
+class AssignUserTenantRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    tenant_id: uuid.UUID = Field(..., description="ID de la empresa a la que se asignará el usuario")
+    role: SystemRoleEnum | None = Field(default=None, description="Rol opcional en la empresa destino")
 
 
 class ChangePasswordRequest(BaseModel):
@@ -100,6 +111,8 @@ class UserResponse(BaseModel):
 
     id: uuid.UUID
     tenant_id: uuid.UUID
+    tenant_slug: str | None = None
+    tenant_name: str | None = None
     username: str
     email: str
     full_name: str
