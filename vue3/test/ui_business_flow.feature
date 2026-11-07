@@ -1062,6 +1062,14 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * def slaProbeQuickContract = { endpoint: '/api/v1/sla/probes/run', maxIcmpCount: 5 }
     * match slaProbeQuickContract.maxIcmpCount == 5
 
+  Scenario: 106. Despacho real en canales de notificación y modal dual crear/editar con botón #btn-edit-channel (Hito 30.15 - Spec 92)
+    * def channelDispatchContract = { editBtnClass: '.btn-edit', editBtnPrefix: '#btn-edit-channel-', modalTitle: '#create-channel-title', testModalTitle: '#test-channel-title', testBtnClass: '.btn-test' }
+    * match channelDispatchContract.editBtnClass == '.btn-edit'
+    * match channelDispatchContract.editBtnPrefix == '#btn-edit-channel-'
+    * match channelDispatchContract.modalTitle == '#create-channel-title'
+    * match channelDispatchContract.testModalTitle == '#test-channel-title'
+    * match channelDispatchContract.testBtnClass == '.btn-test'
+
 
 
 

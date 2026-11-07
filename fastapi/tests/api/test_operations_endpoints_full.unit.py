@@ -817,6 +817,8 @@ async def test_notification_channels_crud(fake_op_context: dict[str, Any]) -> No
 
     ch_list = await api_channels.list_channels(claims=claims, db=db)
     assert len(ch_list) == 1
+    assert ch_list[0].config_summary.get("chat_id") == "123456"
+    assert ch_list[0].config_summary.get("has_bot_token") is True
 
     create_payload = NotificationChannelCreateRequest(
         name="Webhook NOC",
@@ -827,18 +829,83 @@ async def test_notification_channels_crud(fake_op_context: dict[str, Any]) -> No
     )
     new_ch = await api_channels.create_channel(create_payload, claims=claims, db=db)
     assert new_ch.name == "Webhook NOC"
+    assert new_ch.config_summary.get("webhook_url") == "https://hooks.example.com/alerts"
 
     db.get.return_value = channel
     up_payload = NotificationChannelUpdateRequest(name="Telegram NOC Updated", is_enabled=False)
     up_ch = await api_channels.update_channel(ch_id, up_payload, claims=claims, db=db)
     assert up_ch.name == "Telegram NOC Updated"
-    # Update config
+    # Update config with new token and chat_id
     up_cfg_payload = NotificationChannelUpdateRequest(config={"bot_token": "updated_token", "chat_id": "999"})
     up_cfg_ch = await api_channels.update_channel(ch_id, up_cfg_payload, claims=claims, db=db)
     assert up_cfg_ch is not None
+    # Update config preserving existing secret (secret omitted or empty)
+    up_preserve_payload = NotificationChannelUpdateRequest(config={"chat_id": "888", "bot_token": ""})
+    up_preserve_ch = await api_channels.update_channel(ch_id, up_preserve_payload, claims=claims, db=db)
+    assert up_preserve_ch is not None
+    # Verify the preserved token by decrypting
+    decrypted_merged = api_channels._decrypt_channel_config(ctx["tenant_id"], channel)
+    assert decrypted_merged["chat_id"] == "888"
+    assert decrypted_merged["bot_token"] == "updated_token"
 
-    test_res = await api_channels.test_channel(ch_id, NotificationTestRequest(), claims=claims, db=db)
-    assert test_res.status == "SUCCESS"
+    # Test Telegram channel dispatch
+    with patch("src.api.v1.notification_channels._dispatch_telegram", new_callable=AsyncMock) as mock_tg:
+        test_res = await api_channels.test_channel(ch_id, NotificationTestRequest(), claims=claims, db=db)
+        assert test_res.status == "SUCCESS"
+        assert "Telegram" in test_res.detail
+        mock_tg.assert_awaited_once()
+
+    # Test SMTP channel dispatch (Success and Failure)
+    smtp_ch_id = uuid.uuid4()
+    smtp_channel = NotificationChannel(
+        id=smtp_ch_id,
+        tenant_id=ctx["tenant_id"],
+        name="SMTP NOC",
+        channel_type=AlertChannelTypeEnum.SMTP_EMAIL,
+        is_enabled=True,
+        config_ciphertext=ct,
+        config_iv=iv,
+        config_tag=tag,
+        subscribed_events=["ALL"],
+        created_at=now_utc,
+        updated_at=now_utc,
+    )
+    db.get.return_value = smtp_channel
+    with patch("src.api.v1.notification_channels._decrypt_channel_config", return_value={"smtp_host": "smtp.mail.com", "to_emails": ["admin@mail.com"]}):
+        with patch("src.api.v1.notification_channels._dispatch_smtp_sync") as mock_smtp_sync:
+            test_smtp_ok = await api_channels.test_channel(smtp_ch_id, NotificationTestRequest(), claims=claims, db=db)
+            assert test_smtp_ok.status == "SUCCESS"
+            assert "Correo de prueba enviado con éxito" in test_smtp_ok.detail
+            mock_smtp_sync.assert_called_once()
+
+        # SMTP dispatch failure
+        with patch("src.api.v1.notification_channels._dispatch_smtp_sync", side_effect=Exception("SMTP Auth Failed")):
+            test_smtp_fail = await api_channels.test_channel(smtp_ch_id, NotificationTestRequest(), claims=claims, db=db)
+            assert test_smtp_fail.status == "FAILED"
+            assert "SMTP Auth Failed" in test_smtp_fail.detail
+
+    # Test Webhook dispatch
+    webhook_ch_id = uuid.uuid4()
+    webhook_channel = NotificationChannel(
+        id=webhook_ch_id,
+        tenant_id=ctx["tenant_id"],
+        name="Webhook NOC",
+        channel_type=AlertChannelTypeEnum.GENERIC_WEBHOOK,
+        is_enabled=True,
+        config_ciphertext=ct,
+        config_iv=iv,
+        config_tag=tag,
+        subscribed_events=["ALL"],
+        created_at=now_utc,
+        updated_at=now_utc,
+    )
+    db.get.return_value = webhook_channel
+    with patch("src.api.v1.notification_channels._decrypt_channel_config", return_value={"webhook_url": "https://hooks.example.com"}):
+        with patch("src.api.v1.notification_channels._dispatch_webhook", new_callable=AsyncMock) as mock_wh:
+            test_wh_ok = await api_channels.test_channel(webhook_ch_id, NotificationTestRequest(), claims=claims, db=db)
+            assert test_wh_ok.status == "SUCCESS"
+            assert "Webhook de prueba despachado con éxito" in test_wh_ok.detail
+            mock_wh.assert_awaited_once()
 
     # test_channel missing config fields
     bad_channel = NotificationChannel(
@@ -862,6 +929,17 @@ async def test_notification_channels_crud(fake_op_context: dict[str, Any]) -> No
         bad_channel.channel_type = AlertChannelTypeEnum.GENERIC_WEBHOOK
         fail_webhook = await api_channels.test_channel(bad_channel.id, NotificationTestRequest(), claims=claims, db=db)
         assert fail_webhook.status == "FAILED"
+
+        bad_channel.channel_type = AlertChannelTypeEnum.SMTP_EMAIL
+        fail_smtp_no_host = await api_channels.test_channel(bad_channel.id, NotificationTestRequest(), claims=claims, db=db)
+        assert fail_smtp_no_host.status == "FAILED"
+
+    # SMTP channel with host but no recipients
+    with patch("src.api.v1.notification_channels._decrypt_channel_config", return_value={"smtp_host": "smtp.test.com"}):
+        db.get.return_value = bad_channel
+        bad_channel.channel_type = AlertChannelTypeEnum.SMTP_EMAIL
+        fail_smtp_no_recip = await api_channels.test_channel(bad_channel.id, NotificationTestRequest(), claims=claims, db=db)
+        assert fail_smtp_no_recip.status == "FAILED"
 
     db.get.return_value = channel
     await api_channels.delete_channel(ch_id, claims=claims, db=db)

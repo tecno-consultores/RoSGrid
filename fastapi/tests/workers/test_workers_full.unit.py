@@ -24,6 +24,7 @@ from src.workers.alert_dispatcher_worker import (
     _dispatch_to_channel,
     _dispatch_webhook,
     _process_alert_payload,
+    _resolve_smtp_recipients,
     alert_dispatcher_worker_loop,
     is_safe_webhook_url,
 )
@@ -290,16 +291,25 @@ async def test_alert_dispatcher_decryption_and_dispatchers() -> None:
     # Telegram dispatch with missing config
     await _dispatch_telegram({"bot_token": ""}, alert)
 
-    # SMTP dispatch sync with missing to_addresses
-    _dispatch_smtp_sync({"to_addresses": []}, alert)
+    # Resolution of SMTP recipients (to_emails, to_addresses, fallback)
+    assert _resolve_smtp_recipients({"to_emails": ["a@corp.com", "b@corp.com"]}) == ["a@corp.com", "b@corp.com"]
+    assert _resolve_smtp_recipients({"to_emails": "a@corp.com, b@corp.com"}) == ["a@corp.com", "b@corp.com"]
+    assert _resolve_smtp_recipients({"to_addresses": ["legacy@corp.com"]}) == ["legacy@corp.com"]
+    assert _resolve_smtp_recipients({"from_email": "sender@corp.com"}) == ["sender@corp.com"]
+    assert _resolve_smtp_recipients({"smtp_user": "user@corp.com"}) == ["user@corp.com"]
+    assert _resolve_smtp_recipients({}) == []
 
-    # SMTP dispatch sync
+    # SMTP dispatch sync with missing recipients raises ValueError
+    with pytest.raises(ValueError, match="No se especificaron destinatarios"):
+        _dispatch_smtp_sync({"to_addresses": []}, alert)
+
+    # SMTP dispatch sync with STARTTLS (port 587)
     smtp_conf = {
         "smtp_host": "smtp.example.com",
         "smtp_port": 587,
         "smtp_user": "alert@example.com",
         "smtp_password": "pwd",
-        "to_addresses": ["noc@example.com"],
+        "to_emails": ["noc@example.com"],
         "use_tls": True,
     }
     mock_smtp_inst = MagicMock()
@@ -307,6 +317,39 @@ async def test_alert_dispatcher_decryption_and_dispatchers() -> None:
         mock_smtp_inst.__enter__.return_value = mock_smtp_inst
         _dispatch_smtp_sync(smtp_conf, alert)
         mock_smtp_inst.send_message.assert_called_once()
+        mock_smtp_inst.starttls.assert_called_once()
+        mock_smtp_inst.login.assert_called_once_with("alert@example.com", "pwd")
+
+    # SMTP dispatch sync with SSL (port 465) and Gmail App Password with spaces
+    smtp_ssl_conf = {
+        "smtp_host": "smtp.gmail.com",
+        "smtp_port": 465,
+        "smtp_user": "noc@gmail.com",
+        "smtp_password": "abcd efgh ijkl mnop",
+        "to_emails": "admin@gmail.com",
+    }
+    test_alert_custom = {
+        **alert,
+        "custom_message": "Verificación manual de alerta de canal",
+        "channel_name": "Gmail NOC",
+    }
+    mock_ssl_inst = MagicMock()
+    with patch("smtplib.SMTP_SSL", return_value=mock_ssl_inst):
+        mock_ssl_inst.__enter__.return_value = mock_ssl_inst
+        _dispatch_smtp_sync(smtp_ssl_conf, test_alert_custom)
+        mock_ssl_inst.send_message.assert_called_once()
+        # Verify app password spaces were stripped
+        mock_ssl_inst.login.assert_called_once_with("noc@gmail.com", "abcdefghijklmnop")
+
+    # Webhook with Authorization header
+    webhook_auth_conf = {
+        "webhook_url": "https://webhook.site/secure",
+        "auth_header": "Bearer my_secret_token",
+    }
+    with patch("httpx.AsyncClient.post", new_callable=AsyncMock) as mock_post:
+        await _dispatch_webhook(webhook_auth_conf, alert)
+        mock_post.assert_awaited_once()
+        assert mock_post.call_args.kwargs["headers"]["Authorization"] == "Bearer my_secret_token"
 
 
 @pytest.mark.asyncio

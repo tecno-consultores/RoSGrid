@@ -1255,6 +1255,7 @@ export interface NotificationChannelItem {
   channel_type: AlertChannelType;
   is_enabled: boolean;
   subscribed_events: string[];
+  config_summary?: Record<string, any>;
   created_at: string;
   updated_at: string;
 }

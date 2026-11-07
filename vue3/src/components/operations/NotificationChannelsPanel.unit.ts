@@ -18,6 +18,10 @@ const mockChannels: NotificationChannelItem[] = [
     channel_type: 'TELEGRAM_BOT',
     is_enabled: true,
     subscribed_events: ['ROUTER_OFFLINE', 'ROUTER_ONLINE', 'DEGRADED_HIGH_LOAD'],
+    config_summary: {
+      chat_id: 'chat-noc-999',
+      has_bot_token: true,
+    },
     created_at: '2026-02-15T10:00:00Z',
     updated_at: '2026-02-15T10:00:00Z',
   },
@@ -28,6 +32,14 @@ const mockChannels: NotificationChannelItem[] = [
     channel_type: 'SMTP_EMAIL',
     is_enabled: false,
     subscribed_events: ['SSL_MISMATCH', 'CONFIG_DRIFT_DETECTED'],
+    config_summary: {
+      smtp_host: 'smtp.empresa.com',
+      smtp_port: 587,
+      smtp_user: 'noc@empresa.com',
+      from_email: 'noc@empresa.com',
+      to_emails: ['guardia@empresa.com'],
+      has_password: true,
+    },
     created_at: '2026-03-01T12:00:00Z',
     updated_at: '2026-03-01T12:00:00Z',
   },
@@ -187,6 +199,56 @@ describe('NotificationChannelsPanel.vue — Gestión de Canales de Alerta', () =
         channel_type: 'GENERIC_WEBHOOK',
         config: expect.objectContaining({
           webhook_url: 'https://discord.com/api/webhooks/123/xyz',
+        }),
+      }),
+    );
+  });
+
+  it('permite abrir el modal de edición mediante el botón ✏️ Editar y despachar PATCH con config actualizada', async () => {
+    vi.spyOn(http, 'get').mockResolvedValue({
+      data: [mockChannels[0]],
+      status: 200,
+      headers: new Headers(),
+    } as unknown as ApiResponse);
+    const patchSpy = vi.spyOn(http, 'patch').mockResolvedValueOnce({
+      data: {
+        ...mockChannels[0],
+        name: 'Canal Telegram NOC Modificado',
+      },
+      status: 200,
+      headers: new Headers(),
+    } as unknown as ApiResponse);
+
+    const wrapper = mount(NotificationChannelsPanel);
+    await flushPromises();
+
+    // El botón de editar existe
+    const editBtn = wrapper.find(`#btn-edit-channel-${CH_TELEGRAM_ID}`);
+    expect(editBtn.exists()).toBe(true);
+    expect(editBtn.text()).toContain('Editar');
+
+    // Clic en editar
+    await editBtn.trigger('click');
+    await flushPromises();
+
+    // Modal abierto con título de edición y campos precargados
+    expect(wrapper.find('#create-channel-title').text()).toContain('Editar Canal de Notificación');
+    const nameInput = wrapper.find('#ch-name');
+    expect((nameInput.element as HTMLInputElement).value).toBe('Canal Alertas Telegram NOC');
+    const chatIdInput = wrapper.find('#tg-chat-id');
+    expect((chatIdInput.element as HTMLInputElement).value).toBe('chat-noc-999');
+
+    // Modificar datos y enviar
+    await nameInput.setValue('Canal Telegram NOC Modificado');
+    await wrapper.find('form').trigger('submit.prevent');
+    await flushPromises();
+
+    expect(patchSpy).toHaveBeenCalledWith(
+      `/api/v1/operations/notification-channels/${CH_TELEGRAM_ID}`,
+      expect.objectContaining({
+        name: 'Canal Telegram NOC Modificado',
+        config: expect.objectContaining({
+          chat_id: 'chat-noc-999',
         }),
       }),
     );

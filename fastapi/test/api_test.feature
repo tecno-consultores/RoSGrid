@@ -1491,5 +1491,25 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 168. Despacho real de prueba en canales de notificación y edición de canal con preservación de secretos (Hito 30.15 - Spec 92)
+    Given path '/api/v1/operations/notification-channels'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/operations/notification-channels/00000000-0000-0000-0000-000000000001/test'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000170'
+    And request { message: 'Prueba Karate Alerta de Canal' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/operations/notification-channels/00000000-0000-0000-0000-000000000001'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000171'
+    And request { name: 'Canal Renovado', config: { chat_id: '123456789' } }
+    When method patch
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
 
 

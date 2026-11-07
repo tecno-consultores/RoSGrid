@@ -3,9 +3,11 @@
 
 """Endpoints CRUD para Canales de Notificación y Pruebas de Despacho de Alertas."""
 
+import asyncio
 import json
 import logging
 import uuid
+from datetime import UTC, datetime
 from typing import Any, cast
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -23,6 +25,12 @@ from src.schemas.notifications import (
     NotificationChannelUpdateRequest,
     NotificationTestRequest,
     NotificationTestResponse,
+)
+from src.workers.alert_dispatcher_worker import (
+    _dispatch_smtp_sync,
+    _dispatch_telegram,
+    _dispatch_webhook,
+    _resolve_smtp_recipients,
 )
 
 logger = logging.getLogger(__name__)
@@ -52,6 +60,42 @@ def _decrypt_channel_config(tenant_id: uuid.UUID, ch: NotificationChannel) -> di
     return cast(dict[str, Any], json.loads(decrypted.decode("utf-8")))
 
 
+def _build_safe_config_summary(tenant_id: uuid.UUID, ch: NotificationChannel) -> dict[str, Any]:
+    try:
+        conf = _decrypt_channel_config(tenant_id, ch)
+    except Exception:
+        return {}
+
+    ch_type = ch.channel_type.value if hasattr(ch.channel_type, "value") else str(ch.channel_type)
+    if ch_type == "TELEGRAM_BOT":
+        return {
+            "chat_id": conf.get("chat_id", ""),
+            "has_bot_token": bool(conf.get("bot_token")),
+        }
+    if ch_type == "SMTP_EMAIL":
+        raw_to = conf.get("to_emails") or conf.get("to_addresses") or []
+        if isinstance(raw_to, str):
+            to_list = [s.strip() for s in raw_to.split(",") if s.strip()]
+        elif isinstance(raw_to, list):
+            to_list = [str(s).strip() for s in raw_to if str(s).strip()]
+        else:
+            to_list = []
+        return {
+            "smtp_host": conf.get("smtp_host", ""),
+            "smtp_port": int(conf.get("smtp_port", 587)),
+            "smtp_user": conf.get("smtp_user", ""),
+            "from_email": conf.get("from_email", ""),
+            "to_emails": to_list,
+            "has_password": bool(conf.get("smtp_password")),
+        }
+    if ch_type == "GENERIC_WEBHOOK":
+        return {
+            "webhook_url": conf.get("webhook_url", ""),
+            "has_auth_header": bool(conf.get("auth_header") or conf.get("secret")),
+        }
+    return {}
+
+
 # ============================================================================
 # ENDPOINTS
 # ============================================================================
@@ -76,6 +120,7 @@ async def list_channels(
             channel_type=r.channel_type.value,
             is_enabled=r.is_enabled,
             subscribed_events=r.subscribed_events,
+            config_summary=_build_safe_config_summary(tenant_id, r),
             created_at=r.created_at,
             updated_at=r.updated_at,
         )
@@ -116,6 +161,7 @@ async def create_channel(
         channel_type=channel.channel_type.value,
         is_enabled=channel.is_enabled,
         subscribed_events=channel.subscribed_events,
+        config_summary=_build_safe_config_summary(tenant_id, channel),
         created_at=channel.created_at,
         updated_at=channel.updated_at,
     )
@@ -141,7 +187,24 @@ async def update_channel(
     if payload.subscribed_events is not None:
         channel.subscribed_events = payload.subscribed_events
     if payload.config is not None:
-        ct, iv, tag = _encrypt_channel_config(tenant_id, channel.id, payload.config)
+        try:
+            existing_conf = _decrypt_channel_config(tenant_id, channel)
+        except Exception:
+            existing_conf = {}
+
+        new_conf = dict(payload.config)
+        # Preservar secretos existentes si en payload vienen vacíos o None
+        if not new_conf.get("smtp_password") and existing_conf.get("smtp_password"):
+            new_conf["smtp_password"] = existing_conf["smtp_password"]
+        if not new_conf.get("bot_token") and existing_conf.get("bot_token"):
+            new_conf["bot_token"] = existing_conf["bot_token"]
+        if not new_conf.get("auth_header") and existing_conf.get("auth_header"):
+            new_conf["auth_header"] = existing_conf["auth_header"]
+        if not new_conf.get("secret") and existing_conf.get("secret"):
+            new_conf["secret"] = existing_conf["secret"]
+
+        merged_conf = {**existing_conf, **new_conf}
+        ct, iv, tag = _encrypt_channel_config(tenant_id, channel.id, merged_conf)
         channel.config_ciphertext = ct
         channel.config_iv = iv
         channel.config_tag = tag
@@ -156,6 +219,7 @@ async def update_channel(
         channel_type=channel.channel_type.value,
         is_enabled=channel.is_enabled,
         subscribed_events=channel.subscribed_events,
+        config_summary=_build_safe_config_summary(tenant_id, channel),
         created_at=channel.created_at,
         updated_at=channel.updated_at,
     )
@@ -191,15 +255,49 @@ async def test_channel(
         raise HTTPException(status_code=404, detail="Canal de notificación no encontrado")
 
     conf = _decrypt_channel_config(tenant_id, channel)
-    ch_type = channel.channel_type.value
+    ch_type = channel.channel_type.value if hasattr(channel.channel_type, "value") else str(channel.channel_type)
 
     # Verificación de sintaxis de configuración según canal
     if ch_type == "TELEGRAM_BOT" and ("bot_token" not in conf or "chat_id" not in conf):
         return NotificationTestResponse(status="FAILED", detail="Faltan 'bot_token' o 'chat_id'")
     if ch_type == "GENERIC_WEBHOOK" and "webhook_url" not in conf:
         return NotificationTestResponse(status="FAILED", detail="Falta 'webhook_url'")
+    if ch_type == "SMTP_EMAIL":
+        if "smtp_host" not in conf or not str(conf.get("smtp_host", "")).strip():
+            return NotificationTestResponse(status="FAILED", detail="Falta 'smtp_host'")
+        recipients = _resolve_smtp_recipients(conf)
+        if not recipients:
+            return NotificationTestResponse(
+                status="FAILED", detail="Falta indicar al menos un destinatario ('to_emails')"
+            )
 
-    return NotificationTestResponse(
-        status="SUCCESS",
-        detail=f"Configuración de canal {ch_type} validada con éxito",
-    )
+    alert_payload = {
+        "event_name": "CHANNEL_TEST",
+        "channel_name": channel.name,
+        "router_display_name": "RoSGrid Control Plane",
+        "operational_status": "ONLINE",
+        "timestamp_iso": datetime.now(UTC).isoformat(),
+        "custom_message": payload.message or f"Prueba de alerta desde el canal {channel.name}",
+    }
+
+    try:
+        if ch_type == "SMTP_EMAIL":
+            await asyncio.to_thread(_dispatch_smtp_sync, conf, alert_payload)
+            to_repr = ", ".join(_resolve_smtp_recipients(conf))
+            detail_msg = f"Correo de prueba enviado con éxito a {to_repr} vía {conf.get('smtp_host')}:{conf.get('smtp_port', 587)}"
+        elif ch_type == "TELEGRAM_BOT":
+            await _dispatch_telegram(conf, alert_payload)
+            detail_msg = f"Mensaje de prueba enviado con éxito a Telegram (chat {conf.get('chat_id')})"
+        elif ch_type == "GENERIC_WEBHOOK":
+            await _dispatch_webhook(conf, alert_payload)
+            detail_msg = f"Webhook de prueba despachado con éxito a {conf.get('webhook_url')}"
+        else:
+            detail_msg = f"Configuración de canal {ch_type} validada con éxito"
+
+        return NotificationTestResponse(status="SUCCESS", detail=detail_msg)
+    except Exception as exc:
+        logger.warning("Fallo al enviar prueba en canal %s (%s): %s", channel.name, ch_type, exc)
+        return NotificationTestResponse(
+            status="FAILED",
+            detail=f"Fallo al enviar prueba ({ch_type}): {exc}",
+        )

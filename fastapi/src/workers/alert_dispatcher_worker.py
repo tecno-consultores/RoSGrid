@@ -38,41 +38,86 @@ async def _dispatch_telegram(config: dict[str, Any], alert: dict[str, Any]) -> N
     if not bot_token or not chat_id:
         return
 
-    text = (
-        f"🚨 *Alerta RoSGrid*\n"
-        f"• *Evento:* `{alert.get('event_name')}`\n"
-        f"• *Router:* {alert.get('router_display_name')}\n"
-        f"• *Estado:* {alert.get('operational_status')}\n"
-        f"• *Hora:* {alert.get('timestamp_iso')}"
-    )
+    custom_msg = alert.get("custom_message")
+    if custom_msg:
+        text = (
+            f"🚨 *Prueba de Alerta RoSGrid*\n"
+            f"• *Mensaje:* {custom_msg}\n"
+            f"• *Canal:* {alert.get('channel_name', 'Telegram')}\n"
+            f"• *Hora:* {alert.get('timestamp_iso')}"
+        )
+    else:
+        text = (
+            f"🚨 *Alerta RoSGrid*\n"
+            f"• *Evento:* `{alert.get('event_name')}`\n"
+            f"• *Router:* {alert.get('router_display_name')}\n"
+            f"• *Estado:* {alert.get('operational_status')}\n"
+            f"• *Hora:* {alert.get('timestamp_iso')}"
+        )
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     async with httpx.AsyncClient(timeout=10.0) as client:
-        await client.post(url, json={"chat_id": chat_id, "text": text, "parse_mode": "Markdown"})
+        resp = await client.post(url, json={"chat_id": chat_id, "text": text, "parse_mode": "Markdown"})
+        if hasattr(resp, "raise_for_status") and callable(resp.raise_for_status):
+            status_res = resp.raise_for_status()
+            if asyncio.iscoroutine(status_res):
+                await status_res
+
+
+def _resolve_smtp_recipients(config: dict[str, Any]) -> list[str]:
+    """Extrae la lista de destinatarios desde 'to_emails', 'to_addresses' o fallback a 'from_email'/'smtp_user'."""
+    raw_to = config.get("to_emails") or config.get("to_addresses") or []
+    if isinstance(raw_to, str):
+        recipients = [addr.strip() for addr in raw_to.split(",") if addr.strip()]
+    elif isinstance(raw_to, list):
+        recipients = [str(addr).strip() for addr in raw_to if str(addr).strip()]
+    else:
+        recipients = []
+    if not recipients:
+        fallback = str(config.get("from_email") or config.get("smtp_user") or "").strip()
+        if "@" in fallback:
+            recipients = [fallback]
+    return recipients
 
 
 def _dispatch_smtp_sync(config: dict[str, Any], alert: dict[str, Any]) -> None:
-    host = config.get("smtp_host", "localhost")
-    port = int(config.get("smtp_port", 587))
-    user = config.get("smtp_user")
-    pwd = config.get("smtp_password")
-    to_addrs = config.get("to_addresses", [])
+    host = str(config.get("smtp_host") or "localhost").strip()
+    port = int(config.get("smtp_port") or 587)
+    user = str(config.get("smtp_user") or "").strip()
+    pwd = str(config.get("smtp_password") or "")
+    from_addr = str(config.get("from_email") or user or "noreply@rosgrid.local").strip()
+    to_addrs = _resolve_smtp_recipients(config)
 
     if not to_addrs:
-        return
+        raise ValueError("No se especificaron destinatarios de correo ('to_emails').")
+
+    if "gmail.com" in host.lower() or "googlemail.com" in host.lower():
+        pwd_no_spaces = pwd.replace(" ", "")
+        if len(pwd_no_spaces) == 16:
+            pwd = pwd_no_spaces
 
     msg = EmailMessage()
-    msg["Subject"] = f"[RoSGrid] Alerta: {alert.get('event_name')} - {alert.get('router_display_name')}"
-    msg["From"] = user or "noreply@rosgrid.local"
-    msg["To"] = ", ".join(to_addrs)
-    msg.set_content(
-        f"Evento: {alert.get('event_name')}\n"
-        f"Router: {alert.get('router_display_name')}\n"
-        f"Estado: {alert.get('operational_status')}\n"
-        f"Timestamp: {alert.get('timestamp_iso')}\n"
+    custom_msg = alert.get("custom_message")
+    msg["Subject"] = (
+        f"[RoSGrid] Prueba de Canal SMTP: {alert.get('channel_name', 'NOC')}"
+        if custom_msg
+        else f"[RoSGrid] Alerta: {alert.get('event_name')} - {alert.get('router_display_name')}"
     )
-    with smtplib.SMTP(host, port, timeout=10) as server:
-        if config.get("use_tls", True):
+    msg["From"] = from_addr
+    msg["To"] = ", ".join(to_addrs)
+    body_lines = [
+        f"Mensaje: {custom_msg}" if custom_msg else f"Evento: {alert.get('event_name')}",
+        f"Router: {alert.get('router_display_name', 'N/A')}",
+        f"Estado: {alert.get('operational_status', 'TEST')}",
+        f"Timestamp: {alert.get('timestamp_iso', '')}",
+    ]
+    msg.set_content("\n".join(body_lines) + "\n")
+
+    smtp_cls = smtplib.SMTP_SSL if port == 465 else smtplib.SMTP
+    with smtp_cls(host, port, timeout=12) as server:
+        server.ehlo()
+        if port != 465 and config.get("use_tls", True):
             server.starttls()
+            server.ehlo()
         if user and pwd:
             server.login(user, pwd)
         server.send_message(msg)
@@ -114,8 +159,16 @@ async def _dispatch_webhook(config: dict[str, Any], alert: dict[str, Any]) -> No
         "X-RoSGrid-Signature": f"sha256={sig}",
         "X-RoSGrid-Signature-256": sig,
     }
+    auth_header = str(config.get("auth_header") or "").strip()
+    if auth_header:
+        headers["Authorization"] = auth_header
+
     async with httpx.AsyncClient(timeout=10.0) as client:
-        await client.post(webhook_url, content=body, headers=headers)
+        resp = await client.post(webhook_url, content=body, headers=headers)
+        if hasattr(resp, "raise_for_status") and callable(resp.raise_for_status):
+            status_res = resp.raise_for_status()
+            if asyncio.iscoroutine(status_res):
+                await status_res
 
 
 async def _dispatch_to_channel(tenant_id: uuid.UUID, ch: NotificationChannel, alert: dict[str, Any]) -> None:

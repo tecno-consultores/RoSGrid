@@ -23,8 +23,9 @@
   const isCreateModalOpen = ref<boolean>(false);
   const isTestModalOpen = ref<boolean>(false);
   const activeChannelForTest = ref<NotificationChannelItem | null>(null);
+  const editingChannelId = ref<string | null>(null);
 
-  // Formulario de creación
+  // Formulario de creación / edición
   const formName = ref('');
   const formType = ref<AlertChannelType>('TELEGRAM_BOT');
   const formIsEnabled = ref(true);
@@ -79,6 +80,7 @@
   }
 
   function openCreateModal() {
+    editingChannelId.value = null;
     formName.value = '';
     formType.value = 'TELEGRAM_BOT';
     formIsEnabled.value = true;
@@ -103,33 +105,73 @@
     isCreateModalOpen.value = true;
   }
 
+  function openEditModal(ch: NotificationChannelItem) {
+    editingChannelId.value = ch.id;
+    formName.value = ch.name;
+    formType.value = ch.channel_type;
+    formIsEnabled.value = ch.is_enabled;
+    formSubscribedEvents.value = [...ch.subscribed_events];
+
+    const summary = (ch.config_summary || {}) as Record<string, any>;
+    if (ch.channel_type === 'TELEGRAM_BOT') {
+      telegramChatId.value = String(summary.chat_id || '');
+      telegramBotToken.value = '';
+    } else if (ch.channel_type === 'SMTP_EMAIL') {
+      smtpHost.value = String(summary.smtp_host || '');
+      smtpPort.value = Number(summary.smtp_port || 587);
+      smtpUser.value = String(summary.smtp_user || '');
+      smtpPassword.value = '';
+      smtpFrom.value = String(summary.from_email || '');
+      smtpTo.value = Array.isArray(summary.to_emails)
+        ? summary.to_emails.join(', ')
+        : String(summary.to_emails || '');
+    } else if (ch.channel_type === 'GENERIC_WEBHOOK') {
+      webhookUrl.value = String(summary.webhook_url || '');
+      webhookAuthHeader.value = '';
+    }
+
+    errorMessage.value = '';
+    successMessage.value = '';
+    isCreateModalOpen.value = true;
+  }
+
   function closeCreateModal() {
     isCreateModalOpen.value = false;
+    editingChannelId.value = null;
   }
 
   function buildConfigPayload(): Record<string, unknown> {
     if (formType.value === 'TELEGRAM_BOT') {
-      return {
-        bot_token: telegramBotToken.value.trim(),
+      const payload: Record<string, unknown> = {
         chat_id: telegramChatId.value.trim(),
       };
+      if (telegramBotToken.value.trim()) {
+        payload.bot_token = telegramBotToken.value.trim();
+      }
+      return payload;
     } else if (formType.value === 'SMTP_EMAIL') {
-      return {
+      const payload: Record<string, unknown> = {
         smtp_host: smtpHost.value.trim(),
         smtp_port: Number(smtpPort.value),
         smtp_user: smtpUser.value.trim(),
-        smtp_password: smtpPassword.value,
         from_email: smtpFrom.value.trim(),
         to_emails: smtpTo.value
           .split(',')
           .map((s) => s.trim())
           .filter(Boolean),
       };
+      if (smtpPassword.value) {
+        payload.smtp_password = smtpPassword.value;
+      }
+      return payload;
     } else {
-      return {
+      const payload: Record<string, unknown> = {
         webhook_url: webhookUrl.value.trim(),
-        auth_header: webhookAuthHeader.value.trim() || undefined,
       };
+      if (webhookAuthHeader.value.trim()) {
+        payload.auth_header = webhookAuthHeader.value.trim();
+      }
+      return payload;
     }
   }
 
@@ -140,26 +182,41 @@
     }
 
     const config = buildConfigPayload();
-    if (formType.value === 'TELEGRAM_BOT' && (!config.bot_token || !config.chat_id)) {
-      errorMessage.value = 'El Bot Token y el Chat ID de Telegram son requeridos.';
-      return;
-    }
-    if (formType.value === 'GENERIC_WEBHOOK' && !config.webhook_url) {
-      errorMessage.value = 'La URL de destino del Webhook es requerida.';
-      return;
+    if (!editingChannelId.value) {
+      if (formType.value === 'TELEGRAM_BOT' && (!config.bot_token || !config.chat_id)) {
+        errorMessage.value = 'El Bot Token y el Chat ID de Telegram son requeridos.';
+        return;
+      }
+      if (formType.value === 'GENERIC_WEBHOOK' && !config.webhook_url) {
+        errorMessage.value = 'La URL de destino del Webhook es requerida.';
+        return;
+      }
+      if (formType.value === 'SMTP_EMAIL' && !config.smtp_host) {
+        errorMessage.value = 'El Host SMTP es requerido.';
+        return;
+      }
     }
 
     try {
-      const payload: NotificationChannelCreateRequest = {
-        name: formName.value.trim(),
-        channel_type: formType.value,
-        is_enabled: formIsEnabled.value,
-        subscribed_events: formSubscribedEvents.value,
-        config,
-      };
-
-      await http.post('/api/v1/operations/notification-channels', payload);
-      successMessage.value = `Canal "${formName.value}" creado y cifrado con éxito.`;
+      if (editingChannelId.value) {
+        await http.patch(`/api/v1/operations/notification-channels/${editingChannelId.value}`, {
+          name: formName.value.trim(),
+          is_enabled: formIsEnabled.value,
+          subscribed_events: formSubscribedEvents.value,
+          config,
+        });
+        successMessage.value = `Canal "${formName.value}" actualizado con éxito.`;
+      } else {
+        const payload: NotificationChannelCreateRequest = {
+          name: formName.value.trim(),
+          channel_type: formType.value,
+          is_enabled: formIsEnabled.value,
+          subscribed_events: formSubscribedEvents.value,
+          config,
+        };
+        await http.post('/api/v1/operations/notification-channels', payload);
+        successMessage.value = `Canal "${formName.value}" creado y cifrado con éxito.`;
+      }
       closeCreateModal();
       await fetchChannels();
     } catch (err: unknown) {
@@ -340,6 +397,15 @@
 
         <div class="card-actions">
           <button
+            :id="'btn-edit-channel-' + ch.id"
+            type="button"
+            class="btn-card-action btn-edit"
+            title="Editar configuración del canal"
+            @click="openEditModal(ch)"
+          >
+            ✏️ {{ t('common.edit', 'Editar') }}
+          </button>
+          <button
             type="button"
             class="btn-card-action btn-test"
             title="Despachar mensaje de prueba a este canal"
@@ -381,7 +447,7 @@
       <div class="modal-card">
         <header class="modal-header">
           <h3 id="create-channel-title" class="modal-title">
-            ➕ Configurar Nuevo Canal de Notificación
+            {{ editingChannelId ? '✏️ ' + t('common.edit', 'Editar') + ' Canal de Notificación' : '➕ Configurar Nuevo Canal de Notificación' }}
           </h3>
           <button
             type="button"
@@ -408,7 +474,7 @@
 
           <div class="form-group">
             <label for="ch-type" class="form-label">Tipo de Notificación *</label>
-            <select id="ch-type" v-model="formType" class="tactical-select">
+            <select id="ch-type" v-model="formType" class="tactical-select" :disabled="!!editingChannelId">
               <option value="TELEGRAM_BOT">📱 Bot de Telegram</option>
               <option value="SMTP_EMAIL">✉️ Servidor de Correo SMTP</option>
               <option value="GENERIC_WEBHOOK">🔗 Webhook HTTP (JSON Post)</option>
@@ -425,9 +491,12 @@
                 type="password"
                 class="tactical-input"
                 placeholder="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"
-                required
+                :required="!editingChannelId"
               />
-              <span class="input-hint"
+              <span v-if="editingChannelId" class="input-hint"
+                >Dejar en blanco para conservar el token previamente cifrado.</span
+              >
+              <span v-else class="input-hint"
                 >Token proporcionado por @BotFather. Se cifra con AES-256-GCM.</span
               >
             </div>
@@ -487,8 +556,11 @@
                   v-model="smtpPassword"
                   type="password"
                   class="tactical-input"
-                  placeholder="••••••••••••"
+                  :placeholder="editingChannelId ? '•••••••••••• (Conservar contraseña)' : '••••••••••••'"
                 />
+                <span v-if="editingChannelId" class="input-hint"
+                  >Dejar en blanco para conservar la contraseña previamente cifrada.</span
+                >
               </div>
             </div>
             <div class="form-group">
@@ -537,6 +609,9 @@
                 class="tactical-input"
                 placeholder="Bearer eyJhbGci..."
               />
+              <span v-if="editingChannelId" class="input-hint"
+                >Dejar en blanco para conservar la cabecera previa.</span
+              >
             </div>
           </div>
 
@@ -568,7 +643,7 @@
               Cancelar
             </button>
             <button type="submit" class="btn-tactical btn-primary">
-              🔒 Guardar y Cifrar Canal
+              {{ editingChannelId ? '💾 ' + t('common.save', 'Guardar Cambios') : '🔒 Guardar y Cifrar Canal' }}
             </button>
           </footer>
         </form>
@@ -966,6 +1041,10 @@
   .btn-card-action:hover {
     background: #1e293b;
     color: #f1f5f9;
+  }
+
+  .btn-card-action.btn-edit:hover {
+    color: #38bdf8;
   }
 
   .btn-card-action.btn-test:hover {

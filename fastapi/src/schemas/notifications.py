@@ -40,6 +40,7 @@ class NotificationChannelResponse(StrictBaseModel):
     channel_type: str
     is_enabled: bool
     subscribed_events: list[str]
+    config_summary: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
     updated_at: datetime
 

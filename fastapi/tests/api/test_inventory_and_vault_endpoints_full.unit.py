@@ -614,6 +614,7 @@ async def test_notification_channel_endpoints() -> None:
             return_value={"bot_token": "token", "chat_id": "123"},
         ),
         patch("src.api.v1.notification_channels._encrypt_channel_config", return_value=(b"c", b"i", b"t")),
+        patch("src.api.v1.notification_channels._dispatch_telegram", new_callable=AsyncMock),
     ):
         # 1. List
         ch_list = await list_channels(claims=claims, db=db)
