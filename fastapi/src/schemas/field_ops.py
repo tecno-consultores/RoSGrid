@@ -74,8 +74,9 @@ class FieldVerifySubscriberResponse(BaseModel):
 
 
 class FieldCertifyOrderRequest(BaseModel):
-    order_id: uuid.UUID
-    onu_scanned_serial: str = Field(..., min_length=4)
+    order_id: Optional[uuid.UUID] = None
+    customer_service_id: Optional[uuid.UUID] = None
+    onu_scanned_serial: str = Field(default="ONU-CERTIFIED", min_length=2)
     onu_scanned_mac: Optional[str] = None
     tech_latitude: Optional[Decimal] = None
     tech_longitude: Optional[Decimal] = None

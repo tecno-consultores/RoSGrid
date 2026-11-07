@@ -441,6 +441,51 @@ async def test_dhcp_snooping_state_and_enable(
         dis_res = await enable_dhcp_snooping(payload=disable_req, request=mock_request, db=db, claims=sample_claims)
         assert dis_res.dhcp_snooping_enabled is False
         assert mock_sw_audit1.await_count == 2
+        assert db.commit.await_count >= 2
+
+
+@pytest.mark.asyncio
+async def test_mutate_bridge_snooping_on_ros_tolerant_to_option82_error() -> None:
+    """Verifica que _mutate_bridge_snooping_on_ros ejecuta dhcp-snooping de forma aislada
+
+    y no se aborta si RouterOS v7 arroja error ante 'add-dhcp-option82' (Spec 90 / Hito 30.13).
+    """
+    from src.api.v1.switching import _mutate_bridge_snooping_on_ros
+
+    mock_client = AsyncMock()
+
+    async def _mock_post(endpoint: str, json_data: dict[str, Any] | None = None) -> dict[str, Any]:
+        if endpoint == "/interface/bridge/set" and "add-dhcp-option82" in (json_data or {}):
+            raise RuntimeError("RouterOS REST API Error [400]: unknown parameter add-dhcp-option82")
+        return {"status": "ok"}
+
+    mock_client.post.side_effect = _mock_post
+
+    req = DhcpSnoopingEnableRequest(
+        router_id=uuid.uuid4(),
+        bridge_name="bridge11",
+        enabled=True,
+        add_dhcp_option82=True,
+        trusted_ports=["ether1"],
+        untrusted_ports=["ether2"],
+    )
+
+    # Debe ejecutarse sin elevar excepción a pesar del fallo tolerante en add-dhcp-option82
+    await _mutate_bridge_snooping_on_ros(mock_client, req, ["ether1"])
+
+    # Se debió llamar /interface/bridge/set primero con solo dhcp-snooping
+    assert mock_client.post.await_count >= 3
+    first_call = mock_client.post.call_args_list[0]
+    assert first_call.args[0] == "/interface/bridge/set"
+    assert first_call.kwargs["json_data"] == {"numbers": "bridge11", "dhcp-snooping": "yes"}
+    # La segunda llamada intentó add-dhcp-option82
+    second_call = mock_client.post.call_args_list[1]
+    assert second_call.args[0] == "/interface/bridge/set"
+    assert second_call.kwargs["json_data"] == {"numbers": "bridge11", "add-dhcp-option82": "yes"}
+    # La tercera llamada configuró puertos trusted
+    third_call = mock_client.post.call_args_list[2]
+    assert third_call.args[0] == "/interface/bridge/port/set"
+    assert third_call.kwargs["json_data"] == {"numbers": "ether1", "trusted": "yes"}
 
 
 @pytest.mark.asyncio

@@ -1074,9 +1074,8 @@ _DEFAULT_STARTER_TEMPLATES = [
                 "payload": {
                     "numbers": "{{ bridge_name }}",
                     "dhcp-snooping": "yes",
-                    "add-dhcp-option82": "{{ add_option82 }}",
                 },
-                "cli_command": "/interface bridge set {{ bridge_name }} dhcp-snooping=yes add-dhcp-option82={{ add_option82 }}",
+                "cli_command": "/interface bridge set {{ bridge_name }} dhcp-snooping=yes",
             },
         ],
         "requires_safemode": True,
@@ -1574,6 +1573,15 @@ async def _execute_single_step(
         if endpoint == "system/package/update/check-for-updates":
             await _cleanup_corrupted_npk_downloads(client)
             return await client.post(endpoint, payload, timeout=30.0)
+        if endpoint == "interface/bridge/set" and "add-dhcp-option82" in payload:
+            try:
+                return await client.post(endpoint, payload)
+            except MikrotikApiError as err:
+                if "unknown parameter add-dhcp-option82" in str(err).lower():
+                    clean_p = {k: v for k, v in payload.items() if k != "add-dhcp-option82"}
+                    logger.warning("RouterOS v7 no reconoció 'add-dhcp-option82', reintentando sin él: %s", clean_p)
+                    return await client.post(endpoint, clean_p)
+                raise
         return await client.post(endpoint, payload)
     elif method == "DELETE":
         return await client.delete(endpoint)

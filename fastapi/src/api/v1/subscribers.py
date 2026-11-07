@@ -141,13 +141,14 @@ async def create_bandwidth_profile(
         session=db,
         tenant_id=tenant_id,
         actor_user_id=uuid.UUID(str(claims["sub"])),
-        actor_username=str(claims.get("username", "system")),
+        actor_username=str(claims.get("preferred_username") or claims.get("username") or "system"),
         actor_role=claims.get("rol"),
         actor_ip="127.0.0.1",
         event_category="NETWORK",
         event_action="CREATE_BANDWIDTH_PROFILE",
         after_state={"name": profile.name, "rate_down": profile.rate_down_kbps, "rate_up": profile.rate_up_kbps},
     )
+    await db.commit()
     return profile
 
 
@@ -196,13 +197,14 @@ async def update_bandwidth_profile(
         session=db,
         tenant_id=tenant_id,
         actor_user_id=uuid.UUID(str(claims["sub"])),
-        actor_username=str(claims.get("username", "system")),
+        actor_username=str(claims.get("preferred_username") or claims.get("username") or "system"),
         actor_role=claims.get("rol"),
         actor_ip="127.0.0.1",
         event_category="NETWORK",
         event_action="UPDATE_BANDWIDTH_PROFILE",
         after_state={"name": profile.name, "updated_fields": list(update_dict.keys())},
     )
+    await db.commit()
     return profile
 
 
@@ -907,11 +909,12 @@ async def create_subscriber_device(
         session=db,
         tenant_id=tenant_id,
         actor_user_id=uuid.UUID(str(claims["sub"])),
-        actor_username=str(claims.get("username", "system")),
+        actor_username=str(claims.get("preferred_username") or claims.get("username") or "system"),
         actor_role=claims.get("rol"),
         actor_ip="127.0.0.1",
         event_category="NETWORK",
         event_action="CREATE_SUBSCRIBER_DEVICE",
+        router_id=device.router_id,
         after_state={
             "endpoint_identifier": device.endpoint_identifier,
             "router_id": str(device.router_id),
@@ -925,6 +928,7 @@ async def create_subscriber_device(
             "optical_box_port": device.optical_box_port,
         },
     )
+    await db.commit()
     return device
 
 
@@ -1353,11 +1357,12 @@ async def update_subscriber_device(
         session=db,
         tenant_id=tenant_id,
         actor_user_id=uuid.UUID(str(claims["sub"])),
-        actor_username=str(claims.get("username", "system")),
+        actor_username=str(claims.get("preferred_username") or claims.get("username") or "system"),
         actor_role=claims.get("rol"),
         actor_ip="127.0.0.1",
         event_category="NETWORK",
         event_action="UPDATE_SUBSCRIBER_DEVICE",
+        router_id=device.router_id,
         after_state={
             "endpoint_identifier": device.endpoint_identifier,
             "service_type": (
@@ -1369,6 +1374,7 @@ async def update_subscriber_device(
             "updated_fields": list(update_dict.keys()),
         },
     )
+    await db.commit()
     return device
 
 

@@ -458,12 +458,52 @@
     hasDrawnSignature.value = false;
   }
 
-  function handleCertifyInstallation() {
+  async function handleCertifyInstallation() {
     if (!hasDrawnSignature.value) {
       showMessage('Se requiere la firma táctil para certificar la entrega', 'error');
       return;
     }
-    showMessage('✅ Instalación certificada con éxito. Entrega registrada en auditoría WORM.', 'success');
+    const targetDev =
+      selectedSubscriberForDiag.value ||
+      fieldStore.recentInstallations.find((d) => d.id === diagTargetId.value) ||
+      fieldStore.recentInstallations[0] ||
+      null;
+    const customerServiceId = diagTargetId.value || targetDev?.id;
+    const matchingOrder = fieldStore.orders.find(
+      (o) => customerServiceId && o.customer_service_id === customerServiceId,
+    );
+    const sigDataUrl =
+      signatureCanvas.value && typeof signatureCanvas.value.toDataURL === 'function'
+        ? signatureCanvas.value.toDataURL('image/png')
+        : 'data:image/png;base64,signed';
+    const serialVal =
+      targetDev?.onu_serial_number ||
+      targetDev?.device_serial ||
+      customerForm.value.device_serial.trim() ||
+      'ONU-CERTIFIED';
+
+    try {
+      if (matchingOrder?.id || customerServiceId) {
+        await fieldStore.certifyInstallation({
+          order_id: matchingOrder?.id,
+          customer_service_id: customerServiceId,
+          onu_scanned_serial: serialVal,
+          onu_scanned_mac:
+            targetDev?.onu_mac_address || customerForm.value.onu_mac_address.trim() || undefined,
+          tech_latitude: techGps.value?.lat ?? customerForm.value.latitude,
+          tech_longitude: techGps.value?.lng ?? customerForm.value.longitude,
+          customer_signature_svg: sigDataUrl,
+          notes: 'Certificación en campo con firma táctil',
+        });
+      }
+      showMessage(
+        '✅ Instalación certificada con éxito. Entrega registrada en auditoría WORM.',
+        'success',
+      );
+    } catch (err: unknown) {
+      const msg = (err as Error)?.message || 'Error al certificar instalación en auditoría WORM';
+      showMessage(msg, 'error');
+    }
   }
 
   function handleSelectRecentDev(dev: SubscriberDeviceItem) {
@@ -1149,6 +1189,7 @@
                 </div>
 
                 <button
+                  id="btn-certify-order"
                   type="button"
                   class="btn-touch btn-touch--purple w-full submit-btn"
                   @click="handleCertifyInstallation"

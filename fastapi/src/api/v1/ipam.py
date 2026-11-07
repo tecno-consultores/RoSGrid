@@ -102,7 +102,7 @@ async def create_vrf(
         session=db,
         tenant_id=tenant_id,
         actor_user_id=uuid.UUID(str(claims["sub"])),
-        actor_username=str(claims.get("username", "system")),
+        actor_username=str(claims.get("preferred_username") or claims.get("username") or "system"),
         actor_role=claims.get("rol"),
         actor_ip="127.0.0.1",
         event_category="INVENTORY",
@@ -110,6 +110,7 @@ async def create_vrf(
         status_code=201,
         after_state={"vrf_id": str(vrf.id), "name": vrf.name},
     )
+    await db.commit()
     return vrf
 
 
@@ -213,7 +214,7 @@ async def create_prefix(
         session=db,
         tenant_id=tenant_id,
         actor_user_id=uuid.UUID(str(claims["sub"])),
-        actor_username=str(claims.get("username", "system")),
+        actor_username=str(claims.get("preferred_username") or claims.get("username") or "system"),
         actor_role=claims.get("rol"),
         actor_ip="127.0.0.1",
         event_category="INVENTORY",
@@ -221,6 +222,7 @@ async def create_prefix(
         status_code=201,
         after_state={"prefix_id": str(prefix.id), "prefix": prefix.prefix, "role": prefix.role},
     )
+    await db.commit()
     return prefix
 
 
@@ -484,14 +486,16 @@ async def create_customer_service(
         session=db,
         tenant_id=tenant_id,
         actor_user_id=uuid.UUID(str(claims["sub"])),
-        actor_username=str(claims.get("username", "system")),
+        actor_username=str(claims.get("preferred_username") or claims.get("username") or "system"),
         actor_role=claims.get("rol"),
         actor_ip="127.0.0.1",
         event_category="INVENTORY",
         event_action="CUSTOMER_SERVICE_CREATED",
+        router_id=svc.router_id,
         status_code=201,
         after_state={"customer_service_id": str(svc.id), "endpoint": svc.endpoint_identifier, "type": svc.service_type},
     )
+    await db.commit()
     return svc
 
 

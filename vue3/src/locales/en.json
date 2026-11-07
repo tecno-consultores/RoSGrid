@@ -930,6 +930,7 @@
     "title": "Immutable Audit Logs (WORM)",
     "subtitle": "Cryptographic forensic traceability chained by SHA-256 hashes (Write-Once-Read-Many)",
     "btn_verify_integrity": "Verify WORM Integrity",
+    "btn_refresh": "Refresh",
     "verifying": "Verifying signatures...",
     "btn_export_json": "Export JSON",
     "btn_export_csv": "Export CSV",

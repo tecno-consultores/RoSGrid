@@ -141,14 +141,16 @@ async def create_optical_box(
         session=db,
         tenant_id=tenant_id,
         actor_user_id=uuid.UUID(str(claims["sub"])),
-        actor_username=str(claims.get("username", "system")),
+        actor_username=str(claims.get("preferred_username") or claims.get("username") or "system"),
         actor_role=claims.get("rol"),
         actor_ip="127.0.0.1",
         event_category="INVENTORY",
         event_action="OPTICAL_BOX_CREATED",
+        router_id=box.router_id,
         status_code=201,
         after_state={"box_id": str(box.id), "code": box.box_code, "capacity": box.capacity_ports},
     )
+    await db.commit()
 
     res = OpticalBoxResponse.model_validate(box)
     res.occupied_ports_count = 0
@@ -295,11 +297,13 @@ async def delete_optical_box(
         session=db,
         tenant_id=tenant_id,
         actor_user_id=uuid.UUID(str(claims["sub"])),
-        actor_username=str(claims.get("username", "system")),
+        actor_username=str(claims.get("preferred_username") or claims.get("username") or "system"),
         actor_role=claims.get("rol"),
         actor_ip="127.0.0.1",
         event_category="INVENTORY",
         event_action="OPTICAL_BOX_DELETED",
+        router_id=box.router_id,
         status_code=204,
         after_state={"box_id": str(box_id), "code": box.box_code},
     )
+    await db.commit()

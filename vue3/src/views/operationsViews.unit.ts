@@ -928,11 +928,18 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
     const wrapper = mount(ImmutableAuditLogsView);
     await flushPromises();
 
+    // Botón refrescar y filtros de auditoría (Spec 90 / Hito 30.13)
+    const btnRefresh = wrapper.find('#btn-refresh-audit-logs');
+    expect(btnRefresh.exists()).toBe(true);
+    await btnRefresh.trigger('click');
+    await flushPromises();
+
     // Filtros de búsqueda
     const actorInput = wrapper.find('#filter-actor');
     await actorInput.setValue('auditor');
 
     const catSelect = wrapper.find('#filter-cat');
+    expect(catSelect.html()).toContain('SWITCHING_SECURITY');
     await catSelect.setValue('AUTH');
 
     const routerInput = wrapper.find('#filter-router');

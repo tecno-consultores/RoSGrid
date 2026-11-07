@@ -376,4 +376,62 @@ describe('FieldTechMobileView.vue — Panel Responsive del Técnico de Campo FTT
     );
     expect(wrapper.find('#tab-btn-diagnostics').classes()).toContain('active');
   });
+
+  it('certifica la instalación con firma táctil invocando certifyInstallation en fieldStore (Spec 90 / Hito 30.13)', async () => {
+    const authStore = useAuthStore();
+    authStore.updateTenantFeatures({ isp_module_enabled: true });
+
+    const fieldStore = useFieldOpsStore();
+    fieldStore.recentInstallations = [
+      {
+        id: 'sub-dev-999',
+        tenant_id: 't-1',
+        router_id: 'r-1',
+        service_type: 'PPPOE',
+        auth_backend: 'ROUTEROS_LOCAL',
+        endpoint_identifier: 'CLI-FTTH-099',
+        onu_mode: 'BRIDGE',
+        status: 'PENDING_INSTALL',
+        onu_serial_number: 'HWTC-9999-CERT',
+        created_at: '2026-01-01',
+        updated_at: '2026-01-01',
+      } as any,
+    ];
+
+    const certifySpy = vi.spyOn(fieldStore, 'certifyInstallation').mockResolvedValueOnce({
+      id: 'ord-123',
+      tenant_id: 't-1',
+      customer_service_id: 'sub-dev-999',
+      assigned_tech_id: 'tech-1',
+      status: 'CERTIFIED',
+      onu_scanned_serial: 'HWTC-9999-CERT',
+      customer_signature_svg: 'data:image/png;base64,mock',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    } as any);
+
+    const wrapper = mount(FieldTechMobileView);
+    await wrapper.find('#tab-btn-diagnostics').trigger('click');
+    await wrapper.find('#diag-target-select').setValue('sub-dev-999');
+
+    // Simular firma táctil en el canvas
+    const canvas = wrapper.find('.signature-pad');
+    await canvas.trigger('mousedown', { clientX: 20, clientY: 20 });
+    await canvas.trigger('mousemove', { clientX: 60, clientY: 60 });
+    await canvas.trigger('mouseup');
+
+    const btnCertify = wrapper.find('#btn-certify-order');
+    expect(btnCertify.exists()).toBe(true);
+    await btnCertify.trigger('click');
+    await flushPromises();
+
+    expect(certifySpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customer_service_id: 'sub-dev-999',
+        onu_scanned_serial: 'HWTC-9999-CERT',
+        customer_signature_svg: 'data:image/png;base64,mock',
+      }),
+    );
+    expect(wrapper.text()).toContain('Instalación certificada con éxito');
+  });
 });

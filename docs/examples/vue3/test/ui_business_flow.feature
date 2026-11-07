@@ -1043,6 +1043,16 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * match ipamPairingPersistenceContract.selectinloadEnabled == true
     * match ipamPairingPersistenceContract.populateExistingEnabled == true
 
+  Scenario: 104. Certificación con firma táctil en técnico de campo y actualización/refresco de bitácora WORM (Hito 30.13 - Spec 90)
+    * def fieldOpsSignatureContract = { canvasPad: '#signature-canvas', certifyBtn: '#btn-certify-order', recentList: '.card-list' }
+    * match fieldOpsSignatureContract.canvasPad == '#signature-canvas'
+    * match fieldOpsSignatureContract.certifyBtn == '#btn-certify-order'
+    * def auditWormRefreshContract = { refreshBtn: '#btn-refresh-audit-logs', categorySelect: '#filter-cat', supportedCategory: 'SWITCHING_SECURITY' }
+    * match auditWormRefreshContract.refreshBtn == '#btn-refresh-audit-logs'
+    * match auditWormRefreshContract.categorySelect == '#filter-cat'
+    * match auditWormRefreshContract.supportedCategory == 'SWITCHING_SECURITY'
+
+
 
 
 

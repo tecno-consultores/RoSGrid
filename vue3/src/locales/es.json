@@ -930,6 +930,7 @@
     "title": "Registro de Auditoría Inmutable (WORM)",
     "subtitle": "Trazabilidad forense criptográfica encadenada por hash SHA-256 (Write-Once-Read-Many)",
     "btn_verify_integrity": "Verificar Integridad WORM",
+    "btn_refresh": "Actualizar",
     "verifying": "Verificando firmas...",
     "btn_export_json": "Exportar JSON",
     "btn_export_csv": "Exportar CSV",

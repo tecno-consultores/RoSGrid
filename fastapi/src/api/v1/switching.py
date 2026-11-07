@@ -124,28 +124,51 @@ async def _mutate_bridge_snooping_on_ros(
     payload: DhcpSnoopingEnableRequest,
     trusted_list: list[str],
 ) -> None:
-    """Aplica dhcp-snooping, add-dhcp-option82 y puertos trusted/untrusted en RouterOS v7."""
+    """Aplica dhcp-snooping, add-dhcp-option82 (tolerante a RouterOS 7.25+) y puertos trusted/untrusted."""
     snoop_str = "yes" if payload.enabled else "no"
     opt82_str = "yes" if (payload.enabled and payload.add_dhcp_option82) else "no"
+
+    # 1. Aplicar primero dhcp-snooping de forma aislada para que nunca sea abortado por add-dhcp-option82
     await client.post(
         "/interface/bridge/set",
         json_data={
             "numbers": payload.bridge_name,
             "dhcp-snooping": snoop_str,
-            "add-dhcp-option82": opt82_str,
         },
     )
+
+    # 2. Aplicar add-dhcp-option82 en un segundo paso tolerante (en RouterOS v7 solo existe si dhcp-snooping=yes)
+    if payload.enabled and payload.add_dhcp_option82:
+        try:
+            await client.post(
+                "/interface/bridge/set",
+                json_data={
+                    "numbers": payload.bridge_name,
+                    "add-dhcp-option82": opt82_str,
+                },
+            )
+        except Exception as exc:
+            logger.debug("RouterOS omitió add-dhcp-option82 en bridge %s: %s", payload.bridge_name, exc)
+
+    # 3. Configurar puertos trusted / untrusted
     for p_trusted in trusted_list:
-        await client.post(
-            "/interface/bridge/port/set",
-            json_data={"numbers": p_trusted, "trusted": "yes"},
-        )
-    for p_untrusted in payload.untrusted_ports:
-        if p_untrusted not in trusted_list:
+        try:
             await client.post(
                 "/interface/bridge/port/set",
-                json_data={"numbers": p_untrusted, "trusted": "no"},
+                json_data={"numbers": p_trusted, "trusted": "yes"},
             )
+        except Exception as exc:
+            logger.debug("No se pudo marcar puerto %s como trusted: %s", p_trusted, exc)
+
+    for p_untrusted in payload.untrusted_ports:
+        if p_untrusted not in trusted_list:
+            try:
+                await client.post(
+                    "/interface/bridge/port/set",
+                    json_data={"numbers": p_untrusted, "trusted": "no"},
+                )
+            except Exception as exc:
+                logger.debug("No se pudo marcar puerto %s como untrusted: %s", p_untrusted, exc)
 
 
 @router.post(
@@ -208,6 +231,7 @@ async def enable_dhcp_snooping(
         },
         status_code=200,
     )
+    await db.commit()
 
     remaining_untrusted = [p for p in payload.untrusted_ports if p not in trusted_list]
     return DhcpSnoopingState(
@@ -317,6 +341,7 @@ async def isolate_rogue_port(
         after_state={"interface": payload.interface_name, "state": "ADMIN_DISABLED", "reason": payload.reason},
         status_code=200,
     )
+    await db.commit()
 
     return RogueDhcpIsolatePortResponse(
         router_id=router_obj.id,

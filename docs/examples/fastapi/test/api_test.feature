@@ -1455,3 +1455,19 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 166. Persistencia de firma táctil en operaciones de campo y separación tolerante en mutación DHCP Snooping (Hito 30.13 - Spec 90)
+    Given path '/api/v1/field-ops/certify'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000166'
+    And request { customer_service_id: '00000000-0000-0000-0000-000000000001', onu_scanned_serial: 'SN-FIELD-3013', customer_signature_svg: 'data:image/png;base64,mockSignature' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/switching/dhcp-snooping/enable'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000167'
+    And request { router_id: '00000000-0000-0000-0000-000000000001', bridge_name: 'bridge11', enabled: true, add_dhcp_option82: true, trusted_ports: ['ether1'], untrusted_ports: ['ether2'] }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+

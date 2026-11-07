@@ -122,14 +122,16 @@ async def create_field_order(
         session=db,
         tenant_id=tenant_id,
         actor_user_id=uuid.UUID(str(claims["sub"])),
-        actor_username=str(claims.get("username", "system")),
+        actor_username=str(claims.get("preferred_username") or claims.get("username") or "system"),
         actor_role=claims.get("rol"),
         actor_ip="127.0.0.1",
         event_category="OPERATIONS",
         event_action="FIELD_ORDER_CREATED",
+        router_id=svc.router_id,
         status_code=201,
         after_state={"order_id": str(order.id), "customer_service_id": str(svc.id)},
     )
+    await db.commit()
     return order
 
 
@@ -245,15 +247,47 @@ async def certify_installation(
     db: AsyncSession = Depends(get_tenant_db_session),
     claims: dict[str, Any] = Depends(get_current_user_claims),
 ) -> Any:
-    """Cierra y certifica digitalmente la orden de instalación con GPS y firma del cliente."""
+    """Cierra y certifica digitalmente la orden o alta de instalación con GPS, firma del cliente y registro WORM."""
     tenant_id = get_tenant_id(claims)
-    stmt_ord = select(FieldInstallationOrder).where(
-        FieldInstallationOrder.id == payload.order_id,
-        FieldInstallationOrder.tenant_id == tenant_id,
-    )
-    order = (await db.execute(stmt_ord)).scalar_one_or_none()
+    order: Optional[FieldInstallationOrder] = None
+
+    if payload.order_id:
+        stmt_ord = select(FieldInstallationOrder).where(
+            FieldInstallationOrder.id == payload.order_id,
+            FieldInstallationOrder.tenant_id == tenant_id,
+        )
+        order = (await db.execute(stmt_ord)).scalar_one_or_none()
+
+    if not order and payload.customer_service_id:
+        stmt_ord_by_svc = (
+            select(FieldInstallationOrder)
+            .where(
+                FieldInstallationOrder.customer_service_id == payload.customer_service_id,
+                FieldInstallationOrder.tenant_id == tenant_id,
+            )
+            .order_by(FieldInstallationOrder.created_at.desc())
+        )
+        ord_scalars = (await db.execute(stmt_ord_by_svc)).scalars()
+        orders_matched = ord_scalars.all() if hasattr(ord_scalars, "all") else list(ord_scalars)
+        order = orders_matched[0] if orders_matched else None
+        if not order:
+            order = FieldInstallationOrder(
+                tenant_id=tenant_id,
+                customer_service_id=payload.customer_service_id,
+                assigned_tech_id=uuid.UUID(str(claims["sub"])),
+                status=FieldOrderStatusEnum.CERTIFIED,
+                onu_scanned_serial=payload.onu_scanned_serial,
+                onu_scanned_mac=payload.onu_scanned_mac,
+                tech_latitude=payload.tech_latitude,
+                tech_longitude=payload.tech_longitude,
+                customer_signature_svg=payload.customer_signature_svg,
+                notes=payload.notes,
+                certified_at=datetime.now(UTC),
+            )
+            db.add(order)
+
     if not order:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Orden no encontrada")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Orden o abonado de campo no encontrado")
 
     # Actualizar datos de certificación
     order.status = FieldOrderStatusEnum.CERTIFIED
@@ -261,6 +295,8 @@ async def certify_installation(
     order.onu_scanned_mac = payload.onu_scanned_mac
     order.tech_latitude = payload.tech_latitude
     order.tech_longitude = payload.tech_longitude
+    if payload.customer_signature_svg:
+        order.customer_signature_svg = payload.customer_signature_svg
     order.notes = payload.notes
     order.certified_at = datetime.now(UTC)
 
@@ -279,18 +315,27 @@ async def certify_installation(
     await db.commit()
     await db.refresh(order)
 
+    actor_name = str(claims.get("preferred_username") or claims.get("username") or "system")
     await write_audit_log(
         session=db,
         tenant_id=tenant_id,
         actor_user_id=uuid.UUID(str(claims["sub"])),
-        actor_username=str(claims.get("username", "system")),
+        actor_username=actor_name,
         actor_role=claims.get("rol"),
         actor_ip="127.0.0.1",
         event_category="OPERATIONS",
         event_action="FIELD_INSTALLATION_CERTIFIED",
+        router_id=svc.router_id if svc else None,
         status_code=200,
-        after_state={"order_id": str(order.id), "serial": payload.onu_scanned_serial},
+        after_state={
+            "order_id": str(order.id),
+            "customer_service_id": str(order.customer_service_id),
+            "endpoint_identifier": svc.endpoint_identifier if svc else None,
+            "serial": payload.onu_scanned_serial,
+            "signature_captured": bool(payload.customer_signature_svg),
+        },
     )
+    await db.commit()
 
     if payload.tech_latitude is not None and payload.tech_longitude is not None:
         await publish_network_service_event(

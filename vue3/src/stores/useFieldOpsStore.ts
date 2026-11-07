@@ -175,7 +175,8 @@ export const useFieldOpsStore = defineStore('fieldOps', () => {
   }
 
   async function certifyInstallation(payload: {
-    order_id: string;
+    order_id?: string;
+    customer_service_id?: string;
     onu_scanned_serial: string;
     onu_scanned_mac?: string;
     tech_latitude?: number;
@@ -185,9 +186,16 @@ export const useFieldOpsStore = defineStore('fieldOps', () => {
   }): Promise<FieldOrder> {
     const { http } = await import('@/api/httpClient');
     const res = await http.post<FieldOrder>('/api/v1/field-ops/certify', payload);
-    const idx = orders.value.findIndex((o) => o.id === payload.order_id);
+    const idx = orders.value.findIndex(
+      (o) =>
+        (payload.order_id && o.id === payload.order_id) ||
+        (payload.customer_service_id && o.customer_service_id === payload.customer_service_id),
+    );
     if (idx !== -1) {
       orders.value[idx] = res.data;
+      triggerRef(orders);
+    } else {
+      orders.value = [res.data, ...orders.value];
       triggerRef(orders);
     }
     return res.data;

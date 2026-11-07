@@ -110,6 +110,9 @@ class MockIpamDbSession:
                     def all(self):
                         return items
 
+                    def first(self):
+                        return items[0] if items else None
+
                 return MockScalars()
 
             def all(self):
@@ -658,6 +661,24 @@ async def test_field_ops_orders_and_certification(
         )
         assert resp_cert.status_code == 200
         assert resp_cert.json()["status"] == "CERTIFIED"
+
+        # 4. Certificación directa por customer_service_id con firma táctil (Spec 90 / Hito 30.13)
+        mock_sig = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        resp_cert_direct = await async_client.post(
+            "/api/v1/field-ops/certify",
+            headers=make_headers(token_tech),
+            json={
+                "customer_service_id": str(svc.id),
+                "onu_scanned_serial": "SN-TOUCH-SIGNED-999",
+                "customer_signature_svg": mock_sig,
+                "notes": "Certificación táctil directa sin orden previa",
+            },
+        )
+        assert resp_cert_direct.status_code == 200
+        data_direct = resp_cert_direct.json()
+        assert data_direct["status"] == "CERTIFIED"
+        assert data_direct["onu_scanned_serial"] == "SN-TOUCH-SIGNED-999"
+        assert data_direct["customer_signature_svg"] == mock_sig
     finally:
         app.dependency_overrides.clear()
 

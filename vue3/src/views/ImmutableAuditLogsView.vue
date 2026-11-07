@@ -233,6 +233,15 @@
 
       <div class="audit-header-actions">
         <button
+          id="btn-refresh-audit-logs"
+          type="button"
+          class="btn btn--refresh"
+          :disabled="loading"
+          @click="loadAuditLogs"
+        >
+          <span>🔄 {{ t('audit_logs.btn_refresh', 'Actualizar') }}</span>
+        </button>
+        <button
           type="button"
           class="btn btn--verify"
           :disabled="verifying"
@@ -291,6 +300,14 @@
         <select id="filter-cat" v-model="filterCategory" class="form-select">
           <option value="ALL">{{ t('audit_logs.all_categories', 'Todas las Categorías') }}</option>
           <option value="AUTH">AUTH (Inicio / 2FA)</option>
+          <option value="AUTHENTICATION">AUTHENTICATION</option>
+          <option value="OPERATIONS">OPERATIONS</option>
+          <option value="NETWORK">NETWORK</option>
+          <option value="INVENTORY">INVENTORY</option>
+          <option value="BACKUPS">BACKUPS</option>
+          <option value="SWITCHING_SECURITY">SWITCHING_SECURITY</option>
+          <option value="ROGUE_DHCP_MITIGATION">ROGUE_DHCP_MITIGATION</option>
+          <option value="GOVERNANCE">GOVERNANCE</option>
           <option value="VAULT">VAULT (Bóveda Step-Up)</option>
           <option value="WEBFIG_L1">WEBFIG_L1 (Capa 1)</option>
           <option value="WEBFIG_L2">WEBFIG_L2 (Capa 2)</option>
@@ -478,7 +495,8 @@
     border-color: #38bdf8;
   }
 
-  .btn--secondary {
+  .btn--secondary,
+  .btn--refresh {
     background: #1e293b;
     color: #cbd5e1;
     border-color: #475569;

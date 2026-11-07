@@ -413,6 +413,7 @@ class FieldInstallationOrder(Base):
     traffic_tx_kbps: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True)
     tech_latitude: Mapped[Optional[Decimal]] = mapped_column(Numeric(9, 6), nullable=True)
     tech_longitude: Mapped[Optional[Decimal]] = mapped_column(Numeric(9, 6), nullable=True)
+    customer_signature_svg: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     certified_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
