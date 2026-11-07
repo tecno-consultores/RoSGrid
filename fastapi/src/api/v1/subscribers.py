@@ -888,6 +888,8 @@ async def create_subscriber_device(
         status=CustomerServiceStatusEnum.ACTIVE if payload.optical_box_id else CustomerServiceStatusEnum.PENDING_INSTALL,
         last_reachability_status="ONLINE",
     )
+    if payload.assigned_ipv4:
+        device.assigned_ipv4 = payload.assigned_ipv4.strip().split("/")[0].strip()
     db.add(device)
     await db.commit()
 
@@ -895,8 +897,11 @@ async def create_subscriber_device(
         select(SubscriberDevice)
         .options(selectinload(SubscriberDevice.ipv4_address))
         .where(SubscriberDevice.id == device.id)
+        .execution_options(populate_existing=True)
     )
     device = (await db.execute(stmt_reload)).scalar_one()
+    if payload.assigned_ipv4 and not device.assigned_ipv4:
+        device.assigned_ipv4 = payload.assigned_ipv4.strip().split("/")[0].strip()
 
     await write_audit_log(
         session=db,
@@ -1278,7 +1283,9 @@ async def update_subscriber_device(
         update_dict["endpoint_identifier"] = update_dict.pop("pppoe_username")
 
     raw_assigned_ipv4 = update_dict.pop("assigned_ipv4", None)
+    clean_paired_ip: Optional[str] = None
     if raw_assigned_ipv4:
+        clean_paired_ip = raw_assigned_ipv4.strip().split("/")[0].strip()
         resolved_ip_id = await _resolve_or_create_subscriber_ipv4(
             db=db,
             tenant_id=tenant_id,
@@ -1289,6 +1296,8 @@ async def update_subscriber_device(
         )
         if resolved_ip_id:
             device.ipv4_address_id = resolved_ip_id
+        if clean_paired_ip:
+            device.assigned_ipv4 = clean_paired_ip
 
     reset_coords = update_dict.pop("reset_to_router_coordinates", False)
     if reset_coords:
@@ -1334,8 +1343,11 @@ async def update_subscriber_device(
         select(SubscriberDevice)
         .options(selectinload(SubscriberDevice.ipv4_address))
         .where(SubscriberDevice.id == device.id)
+        .execution_options(populate_existing=True)
     )
     device = (await db.execute(stmt_reload)).scalar_one()
+    if clean_paired_ip and not device.assigned_ipv4:
+        device.assigned_ipv4 = clean_paired_ip
 
     await write_audit_log(
         session=db,

@@ -5,6 +5,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { setActivePinia, createPinia } from 'pinia';
 import { http } from '@/api/httpClient';
+import { useInventoryStore } from '@/stores/useInventoryStore';
 
 import ApprovalsInboxView from './ApprovalsInboxView.vue';
 import RscGitDiffViewer from './RscGitDiffViewer.vue';
@@ -12,9 +13,11 @@ import BulkOperationsAndUpdatesView from './BulkOperationsAndUpdatesView.vue';
 import NocWallboardView from './NocWallboardView.vue';
 import ImmutableAuditLogsView from './ImmutableAuditLogsView.vue';
 
+let mockRouteParams: Record<string, any> = { routerId: 'r-01' };
+
 vi.mock('vue-router', () => ({
   useRoute: () => ({
-    params: { routerId: 'r-01' },
+    params: mockRouteParams,
     path: '/operations/approvals',
     query: {},
   }),
@@ -28,6 +31,7 @@ vi.mock('vue-router', () => ({
 describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
+    mockRouteParams = { routerId: 'r-01' };
     vi.restoreAllMocks();
   });
 
@@ -462,6 +466,107 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
     const wrapper = mount(RscGitDiffViewer);
     await flushPromises();
     expect(wrapper.exists()).toBe(true);
+  });
+
+  it('RscGitDiffViewer — modal de respaldo múltiple por lote y ejecución batch', async () => {
+    mockRouteParams = {};
+    const inventoryStore = useInventoryStore();
+    inventoryStore.routers = [
+      {
+        id: 'r-01',
+        display_name: 'Core-01',
+        ip_address: '10.250.3.1',
+        is_online: true,
+        network_role: 'CORE',
+        admin_state: 'PRODUCTION',
+      } as any,
+      {
+        id: 'r-02',
+        display_name: 'Edge-02',
+        ip_address: '10.250.3.2',
+        is_online: false,
+        network_role: 'EDGE',
+        admin_state: 'PRODUCTION',
+      } as any,
+    ];
+
+    vi.spyOn(http, 'get').mockResolvedValue({
+      status: 200,
+      data: { items: [] },
+      headers: new Headers(),
+    });
+
+    const postSpy = vi.spyOn(http, 'post').mockResolvedValue({
+      status: 200,
+      data: {
+        total_requested: 2,
+        created_count: 1,
+        deduplicated_count: 1,
+        failed_count: 0,
+        results: [
+          {
+            router_id: 'r-01',
+            display_name: 'Core-01',
+            ip_address: '10.250.3.1',
+            status: 'CREATED',
+            backup_id: 'bk-new-1',
+            rsc_sha256_hash: 'hash-abc',
+            message: 'Respaldo creado',
+          },
+          {
+            router_id: 'r-02',
+            display_name: 'Edge-02',
+            ip_address: '10.250.3.2',
+            status: 'IDENTICAL_SKIPPED_DEDUPLICATED',
+            backup_id: 'bk-old-2',
+            rsc_sha256_hash: 'hash-def',
+            message: 'Sin cambios',
+          },
+        ],
+      },
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(RscGitDiffViewer);
+    await flushPromises();
+
+    // 1. Abrir modal con botón #btn-open-batch-backup
+    const openBtn = wrapper.find('#btn-open-batch-backup');
+    expect(openBtn.exists()).toBe(true);
+    await openBtn.trigger('click');
+    expect(wrapper.find('#modal-batch-backup').exists()).toBe(true);
+
+    // 2. Probar botones rápidos del modal (Todos, Online, Limpiar)
+    const selectAllBtn = wrapper.find('#btn-batch-select-all');
+    const selectOnlineBtn = wrapper.find('#btn-batch-select-online');
+    const clearBtn = wrapper.find('#btn-batch-clear-all');
+
+    await selectAllBtn.trigger('click');
+    await selectOnlineBtn.trigger('click');
+    await clearBtn.trigger('click');
+    await selectAllBtn.trigger('click');
+
+    // 3. Ejecutar respaldo batch con #btn-execute-batch-backup
+    const execBtn = wrapper.find('#btn-execute-batch-backup');
+    expect(execBtn.exists()).toBe(true);
+    await execBtn.trigger('click');
+    await flushPromises();
+
+    expect(postSpy).toHaveBeenCalledWith('/api/v1/backups/batch-trigger', {
+      router_ids: ['r-01', 'r-02'],
+    });
+
+    // 4. Verificar renderizado de resultados
+    expect(wrapper.find('.batch-results-box').exists()).toBe(true);
+    expect(wrapper.text()).toContain('Core-01');
+    expect(wrapper.text()).toContain('Edge-02');
+
+    // 5. Cerrar modal con botón de cierre
+    const closeBtn = wrapper.find('.btn-close-batch');
+    await closeBtn.trigger('click');
+    expect(wrapper.find('#modal-batch-backup').exists()).toBe(false);
+
+    wrapper.unmount();
   });
 
   it('BulkOperationsAndUpdatesView — completa asistente de 3 pasos y matriz de updates', async () => {

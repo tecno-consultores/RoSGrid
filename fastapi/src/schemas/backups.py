@@ -64,3 +64,30 @@ class BackupGitDiffResponse(StrictBaseModel):
     side_by_side_hunks: list[BackupDiffHunk] = Field(default_factory=list)
     base_content: str | None = None
     target_content: str | None = None
+
+
+class BatchBackupTriggerRequest(StrictBaseModel):
+    router_ids: list[uuid.UUID] = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="Lista de UUIDs de routers a respaldar simultáneamente",
+    )
+
+
+class BatchBackupRouterResult(StrictBaseModel):
+    router_id: uuid.UUID
+    display_name: str
+    ip_address: str | None = None
+    status: str  # CREATED | IDENTICAL_SKIPPED_DEDUPLICATED | FAILED
+    backup_id: uuid.UUID | None = None
+    rsc_sha256_hash: str | None = None
+    message: str
+
+
+class BatchBackupTriggerResponse(StrictBaseModel):
+    total_requested: int
+    created_count: int
+    deduplicated_count: int
+    failed_count: int
+    results: list[BatchBackupRouterResult] = Field(default_factory=list)

@@ -41,6 +41,95 @@
   const creatingBackup = ref(false);
   const backupSuccessMsg = ref<string | null>(null);
 
+  interface BatchBackupRouterResultItem {
+    router_id: string;
+    display_name: string;
+    ip_address?: string | null;
+    status: 'CREATED' | 'IDENTICAL_SKIPPED_DEDUPLICATED' | 'FAILED' | string;
+    backup_id?: string | null;
+    rsc_sha256_hash?: string | null;
+    message: string;
+  }
+
+  interface BatchBackupTriggerResponseData {
+    total_requested: number;
+    created_count: number;
+    deduplicated_count: number;
+    failed_count: number;
+    results: BatchBackupRouterResultItem[];
+  }
+
+  const isBatchModalOpen = ref(false);
+  const isBatchRunning = ref(false);
+  const batchSearchQuery = ref('');
+  const selectedBatchRouterIds = ref<string[]>([]);
+  const batchResults = ref<BatchBackupTriggerResponseData | null>(null);
+
+  const filteredBatchRouters = computed(() => {
+    const q = batchSearchQuery.value.trim().toLowerCase();
+    if (!q) return inventoryStore.routers;
+    return inventoryStore.routers.filter(
+      (r) =>
+        r.display_name.toLowerCase().includes(q) ||
+        (r.ip_address && r.ip_address.toLowerCase().includes(q)),
+    );
+  });
+
+  function isRouterOnline(r: { is_reachable?: boolean; operational_status?: string; is_online?: boolean }): boolean {
+    if (r.is_online !== undefined) return r.is_online;
+    if (r.operational_status) return r.operational_status === 'ONLINE';
+    return r.is_reachable !== false;
+  }
+
+  function openBatchBackupModal() {
+    batchResults.value = null;
+    batchSearchQuery.value = '';
+    const onlineIds = inventoryStore.routers
+      .filter((r) => isRouterOnline(r))
+      .map((r) => r.id);
+    selectedBatchRouterIds.value =
+      onlineIds.length > 0 ? onlineIds : inventoryStore.routers.map((r) => r.id);
+    isBatchModalOpen.value = true;
+  }
+
+  function selectAllBatchRouters() {
+    selectedBatchRouterIds.value = filteredBatchRouters.value.map((r) => r.id);
+  }
+
+  function selectOnlineBatchRouters() {
+    selectedBatchRouterIds.value = filteredBatchRouters.value
+      .filter((r) => isRouterOnline(r))
+      .map((r) => r.id);
+  }
+
+  function clearBatchRouters() {
+    selectedBatchRouterIds.value = [];
+  }
+
+  async function executeBatchBackup() {
+    if (selectedBatchRouterIds.value.length === 0) return;
+    isBatchRunning.value = true;
+    error.value = null;
+    try {
+      const res = await http.post<BatchBackupTriggerResponseData>(
+        '/api/v1/backups/batch-trigger',
+        {
+          router_ids: selectedBatchRouterIds.value,
+        },
+      );
+      batchResults.value = res.data;
+      backupSuccessMsg.value = `Respaldo múltiple completado: ${res.data.created_count} nuevos, ${res.data.deduplicated_count} sin cambios (deduplicados), ${res.data.failed_count} fallidos.`;
+      if (routerId.value && selectedBatchRouterIds.value.includes(routerId.value)) {
+        await loadBackups();
+      }
+    } catch (err: unknown) {
+      const e = err as { detail?: string; message?: string };
+      error.value = e.detail || e.message || 'Error al ejecutar el respaldo múltiple de equipos.';
+    } finally {
+      isBatchRunning.value = false;
+    }
+  }
+
   // Contenido de los scripts para el comparador
   const baseContent = ref<string>('');
   const targetContent = ref<string>('');
@@ -350,6 +439,16 @@
           </select>
         </label>
         <button
+          v-if="!route.params.routerId"
+          id="btn-open-batch-backup"
+          type="button"
+          class="btn btn--secondary"
+          :disabled="creatingBackup || isBatchRunning"
+          @click="openBatchBackupModal"
+        >
+          📦 Respaldo Múltiple ({{ inventoryStore.routers.length }})
+        </button>
+        <button
           type="button"
           class="btn btn--primary"
           :disabled="creatingBackup || !routerId"
@@ -651,6 +750,147 @@
           </table>
         </div>
       </section>
+    </div>
+
+    <!-- Modal de Respaldo Simultáneo Multi-Equipo -->
+    <div
+      v-if="isBatchModalOpen"
+      id="modal-batch-backup"
+      class="batch-modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-batch-backup-title"
+      @click.self="isBatchModalOpen = false"
+    >
+      <div class="batch-modal">
+        <header class="batch-modal-header">
+          <div>
+            <h2 id="modal-batch-backup-title" class="batch-modal-title">
+              📦 Respaldo Simultáneo de Múltiples Equipos (.rsc)
+            </h2>
+            <p class="batch-modal-subtitle">
+              Selecciona los routers a respaldar. Los equipos sin cambios aplicarán deduplicación inteligente SHA-256.
+            </p>
+          </div>
+          <button
+            type="button"
+            class="btn-close-batch"
+            aria-label="Cerrar modal de respaldo múltiple"
+            @click="isBatchModalOpen = false"
+          >
+            ✕
+          </button>
+        </header>
+
+        <div class="batch-toolbar">
+          <input
+            id="batch-backup-search"
+            v-model="batchSearchQuery"
+            type="search"
+            class="form-select batch-search-input"
+            placeholder="Buscar equipo por nombre o IP..."
+          />
+          <div class="batch-quick-actions">
+            <button
+              id="btn-batch-select-all"
+              type="button"
+              class="btn-text"
+              @click="selectAllBatchRouters"
+            >
+              ☑ Todos ({{ filteredBatchRouters.length }})
+            </button>
+            <button
+              id="btn-batch-select-online"
+              type="button"
+              class="btn-text"
+              @click="selectOnlineBatchRouters"
+            >
+              🟢 Solo Online
+            </button>
+            <button
+              id="btn-batch-clear-all"
+              type="button"
+              class="btn-text"
+              @click="clearBatchRouters"
+            >
+              ✕ Limpiar
+            </button>
+          </div>
+        </div>
+
+        <div class="batch-routers-list" role="group" aria-label="Lista de equipos para respaldo">
+          <label
+            v-for="r in filteredBatchRouters"
+            :key="r.id"
+            class="batch-router-item"
+            :class="{
+              'batch-router-item--selected': selectedBatchRouterIds.includes(r.id),
+            }"
+          >
+            <input
+              :id="`chk-batch-router-${r.id}`"
+              v-model="selectedBatchRouterIds"
+              type="checkbox"
+              :value="r.id"
+            />
+            <div class="batch-router-info">
+              <strong>{{ r.display_name }}</strong>
+              <span class="batch-router-ip">{{ r.ip_address || r.api_base_url || '—' }}</span>
+            </div>
+            <span
+              class="badge-pill"
+              :class="isRouterOnline(r) ? 'badge-pill--base' : 'badge-pill--target'"
+            >
+              {{ isRouterOnline(r) ? '● ONLINE' : '▲ OFFLINE' }}
+            </span>
+          </label>
+        </div>
+
+        <div v-if="batchResults" class="batch-results-box" role="region" aria-label="Resultados del respaldo por lote">
+          <div class="batch-results-summary">
+            <span class="badge badge--added">✅ {{ batchResults.created_count }} Nuevos</span>
+            <span class="badge badge--bin-available">
+              ℹ️ {{ batchResults.deduplicated_count }} Deduplicados
+            </span>
+            <span v-if="batchResults.failed_count > 0" class="badge badge--removed">
+              ⚠️ {{ batchResults.failed_count }} Fallidos
+            </span>
+          </div>
+          <ul class="batch-results-list">
+            <li v-for="resItem in batchResults.results" :key="resItem.router_id" class="batch-result-row">
+              <strong>{{ resItem.display_name }}</strong>
+              <span>
+                {{
+                  resItem.status === 'CREATED'
+                    ? '✅ Creado'
+                    : resItem.status === 'IDENTICAL_SKIPPED_DEDUPLICATED'
+                      ? 'ℹ️ Sin cambios (Deduplicado)'
+                      : `⚠️ ${resItem.message}`
+                }}
+              </span>
+            </li>
+          </ul>
+        </div>
+
+        <footer class="batch-modal-footer">
+          <button type="button" class="btn-text" @click="isBatchModalOpen = false">
+            Cerrar
+          </button>
+          <button
+            id="btn-execute-batch-backup"
+            type="button"
+            class="btn btn--primary"
+            :disabled="isBatchRunning || selectedBatchRouterIds.length === 0"
+            @click="executeBatchBackup"
+          >
+            {{
+              isBatchRunning
+                ? '⏳ Respaldando equipos...'
+                : `🚀 Respaldar Equipos Seleccionados (${selectedBatchRouterIds.length})`
+            }}
+          </button>
+        </footer>
+      </div>
     </div>
   </main>
 </template>
@@ -1165,5 +1405,193 @@
     text-align: center;
     color: #94a3b8;
     font-size: 0.85rem;
+  }
+
+  /* Modal de Respaldo por Lote */
+  .batch-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+  }
+
+  .batch-modal {
+    background: var(--rg-surface, #1e293b);
+    border: 1px solid var(--rg-border, #334155);
+    border-radius: 12px;
+    width: 100%;
+    max-width: 640px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+  }
+
+  .batch-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--rg-border, #334155);
+    gap: 1rem;
+  }
+
+  .batch-modal-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #38bdf8;
+    margin: 0;
+  }
+
+  .batch-modal-subtitle {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin: 0.25rem 0 0;
+  }
+
+  .btn-close-batch {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    line-height: 1;
+    transition: color 0.15s;
+  }
+
+  .btn-close-batch:hover {
+    color: #f87171;
+  }
+
+  .batch-toolbar {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--rg-border, #334155);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    background: rgba(15, 23, 42, 0.3);
+  }
+
+  .batch-search-input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    background: var(--rg-bg, #0f172a);
+    border: 1px solid var(--rg-border, #334155);
+    border-radius: 6px;
+    color: #f8fafc;
+    font-size: 0.85rem;
+  }
+
+  .batch-quick-actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .batch-routers-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 320px;
+  }
+
+  .batch-router-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.85rem;
+    border: 1px solid var(--rg-border, #334155);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    background: rgba(30, 41, 59, 0.4);
+  }
+
+  .batch-router-item:hover {
+    border-color: #38bdf8;
+    background: rgba(56, 189, 248, 0.05);
+  }
+
+  .batch-router-item--selected {
+    border-color: #0284c7;
+    background: rgba(14, 165, 233, 0.12);
+  }
+
+  .batch-router-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .batch-router-info strong {
+    font-size: 0.88rem;
+    color: #f1f5f9;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .batch-router-ip {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-family: monospace;
+  }
+
+  .batch-results-box {
+    margin: 0.75rem 1.5rem;
+    padding: 0.85rem;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--rg-border, #334155);
+    border-radius: 8px;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+
+  .batch-results-summary {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .batch-results-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+  }
+
+  .batch-result-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.2rem 0;
+    border-bottom: 1px dashed rgba(51, 65, 85, 0.5);
+  }
+
+  .batch-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--rg-border, #334155);
+    background: rgba(15, 23, 42, 0.4);
   }
 </style>

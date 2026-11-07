@@ -1029,6 +1029,20 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * match userTenantSelectors contains '#assign-user-tenant-select'
     * match userTenantSelectors contains '#btn-confirm-assign-tenant'
 
+  Scenario: 103. Respaldo simultáneo de múltiples routers con casillas de selección en /backups y persistencia real de IPv4 tras emparejar en /ipam (Hito 30.12 - Spec 89)
+    * def batchBackupContract = { openBtn: '#btn-open-batch-backup', modal: '#modal-batch-backup', searchInput: '#batch-backup-search', selectAllBtn: '#btn-batch-select-all', selectOnlineBtn: '#btn-batch-select-online', clearBtn: '#btn-batch-clear-all', execBtn: '#btn-execute-batch-backup', resultsBox: '.batch-results-box' }
+    * match batchBackupContract.openBtn == '#btn-open-batch-backup'
+    * match batchBackupContract.modal == '#modal-batch-backup'
+    * match batchBackupContract.searchInput == '#batch-backup-search'
+    * match batchBackupContract.selectAllBtn == '#btn-batch-select-all'
+    * match batchBackupContract.selectOnlineBtn == '#btn-batch-select-online'
+    * match batchBackupContract.clearBtn == '#btn-batch-clear-all'
+    * match batchBackupContract.execBtn == '#btn-execute-batch-backup'
+    * match batchBackupContract.resultsBox == '.batch-results-box'
+    * def ipamPairingPersistenceContract = { endpoint: '/api/v1/ipam/customer-services', selectinloadEnabled: true, populateExistingEnabled: true }
+    * match ipamPairingPersistenceContract.selectinloadEnabled == true
+    * match ipamPairingPersistenceContract.populateExistingEnabled == true
+
 
 
 

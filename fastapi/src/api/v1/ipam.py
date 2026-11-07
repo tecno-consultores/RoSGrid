@@ -389,9 +389,13 @@ async def list_customer_services(
     db: AsyncSession = Depends(get_tenant_db_session),
     claims: dict[str, Any] = Depends(get_current_user_claims),
 ) -> Any:
-    """Lista todos los abonados (PPPoE, DHCP o Estáticos) del ISP."""
+    """Lista todos los abonados (PPPoE, DHCP o Estáticos) del ISP precargando su IPv4 emparejada."""
     tenant_id = get_tenant_id(claims)
-    stmt = select(CustomerService).where(CustomerService.tenant_id == tenant_id)
+    stmt = (
+        select(CustomerService)
+        .options(selectinload(CustomerService.ipv4_address))
+        .where(CustomerService.tenant_id == tenant_id)
+    )
     if router_id:
         stmt = stmt.where(CustomerService.router_id == router_id)
     if status_filter:
@@ -426,13 +430,26 @@ async def create_customer_service(
                 detail=f"El identificador de abonado '{endpoint_val}' ya existe en el router seleccionado",
             )
 
+    resolved_ipv4_id = payload.ipv4_address_id
+    if not resolved_ipv4_id and payload.assigned_ipv4:
+        from src.api.v1.subscribers import _resolve_or_create_subscriber_ipv4
+
+        resolved_ipv4_id = await _resolve_or_create_subscriber_ipv4(
+            db=db,
+            tenant_id=tenant_id,
+            router_id=payload.router_id,
+            raw_ipv4=payload.assigned_ipv4,
+            mac_address=payload.onu_mac_address,
+            description=f"Abonado FTTH {endpoint_val}",
+        )
+
     svc = CustomerService(
         tenant_id=tenant_id,
         router_id=payload.router_id,
         service_type=payload.service_type,
         auth_backend=payload.auth_backend,
         endpoint_identifier=endpoint_val,
-        ipv4_address_id=payload.ipv4_address_id,
+        ipv4_address_id=resolved_ipv4_id,
         ipv6_delegated_prefix=payload.ipv6_delegated_prefix,
         bandwidth_profile_id=payload.bandwidth_profile_id,
         onu_mode=payload.onu_mode,
@@ -446,9 +463,22 @@ async def create_customer_service(
         status=CustomerServiceStatusEnum.PENDING_INSTALL,
         last_reachability_status="ONLINE",
     )
+    if payload.assigned_ipv4:
+        svc.assigned_ipv4 = payload.assigned_ipv4.strip().split("/")[0].strip()
     db.add(svc)
     await db.commit()
-    await db.refresh(svc)
+
+    stmt_reload = (
+        select(CustomerService)
+        .options(selectinload(CustomerService.ipv4_address))
+        .where(CustomerService.id == svc.id)
+        .execution_options(populate_existing=True)
+    )
+    reloaded = (await db.execute(stmt_reload)).scalar_one_or_none()
+    if reloaded is not None:
+        svc = reloaded
+    if payload.assigned_ipv4 and not svc.assigned_ipv4:
+        svc.assigned_ipv4 = payload.assigned_ipv4.strip().split("/")[0].strip()
 
     await write_audit_log(
         session=db,

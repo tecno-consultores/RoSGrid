@@ -103,6 +103,7 @@ export interface RouterItem {
   last_reachability_status?: 'ONLINE' | 'OFFLINE' | 'DEGRADED' | 'TOFU_ALERT' | string;
   syslog_active?: boolean;
   syslog_event_count?: number;
+  is_online?: boolean;
 }
 
 export interface MaintenanceWindowItem {

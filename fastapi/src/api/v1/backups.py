@@ -30,11 +30,15 @@ from src.schemas.backups import (
     BackupItemResponse,
     BackupListResponse,
     BackupTriggerResponse,
+    BatchBackupRouterResult,
+    BatchBackupTriggerRequest,
+    BatchBackupTriggerResponse,
 )
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/routers/{router_id}/backups", tags=["Backups & Diff"])
+batch_backups_router = APIRouter(prefix="/backups", tags=["Backups & Diff"])
 
 _ALLOWED_BACKUP_ROLES = (
     SystemRoleEnum.SUPERADMIN_GLOBAL,
@@ -469,20 +473,19 @@ async def list_backups(
     return BackupListResponse(router_id=router_id, retention_days=30, items=items)
 
 
-@router.post("/trigger", response_model=BackupTriggerResponse)
-async def trigger_backup(
+async def _execute_router_backup_core(
     router_id: uuid.UUID,
-    request: Request,
-    claims: dict[str, Any] = Depends(require_roles(*_TRIGGER_ROLES)),
-    db: AsyncSession = Depends(get_tenant_db_session),
-) -> BackupTriggerResponse:
-    """Dispara un respaldo manual inmediato (.rsc) con deduplicación por SHA-256."""
-    tenant_id = uuid.UUID(claims["tid"])
-    user_id = uuid.UUID(claims["sub"])
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    actor_username: str,
+    actor_role: str,
+    actor_ip: str,
+    claims: dict[str, Any],
+    db: AsyncSession,
+) -> tuple[Any, BackupTriggerResponse]:
+    """Ejecuta la exportación .rsc, deduplicación SHA-256, cifrado AES-GCM y registro WORM para un router."""
     router_obj, client = await get_router_and_client(router_id, claims, db)
-
     cleaned_rsc = await export_router_rsc(client)
-
     rsc_hash = hashlib.sha256(cleaned_rsc.encode("utf-8")).hexdigest()
     now_utc = datetime.now(UTC)
 
@@ -497,7 +500,7 @@ async def trigger_backup(
     if latest_backup and latest_backup.rsc_sha256_hash == rsc_hash:
         latest_backup.last_verified_identical_at = now_utc
         await db.commit()
-        return BackupTriggerResponse(
+        return router_obj, BackupTriggerResponse(
             status="IDENTICAL_SKIPPED_DEDUPLICATED",
             backup_id=latest_backup.id,
             rsc_sha256_hash=rsc_hash,
@@ -535,9 +538,9 @@ async def trigger_backup(
     await write_audit_log(
         session=db,
         tenant_id=tenant_id,
-        actor_username=claims.get("preferred_username", "operator"),
-        actor_role=claims.get("rol", SystemRoleEnum.SUPPORT_L3.value),
-        actor_ip=request.client.host if request.client else "127.0.0.1",
+        actor_username=actor_username,
+        actor_role=actor_role,
+        actor_ip=actor_ip,
         event_category="BACKUPS",
         event_action="ROUTER_BACKUP_CREATED",
         actor_user_id=user_id,
@@ -549,11 +552,115 @@ async def trigger_backup(
     await db.commit()
     await db.refresh(new_backup)
 
-    return BackupTriggerResponse(
+    return router_obj, BackupTriggerResponse(
         status="CREATED",
         backup_id=new_backup.id,
         rsc_sha256_hash=rsc_hash,
         message="Respaldo cifrado generado y guardado exitosamente.",
+    )
+
+
+@router.post("/trigger", response_model=BackupTriggerResponse)
+async def trigger_backup(
+    router_id: uuid.UUID,
+    request: Request,
+    claims: dict[str, Any] = Depends(require_roles(*_TRIGGER_ROLES)),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> BackupTriggerResponse:
+    """Dispara un respaldo manual inmediato (.rsc) con deduplicación por SHA-256."""
+    tenant_id = uuid.UUID(claims["tid"])
+    user_id = uuid.UUID(claims["sub"])
+    actor_username = str(claims.get("preferred_username", "operator"))
+    actor_role = str(claims.get("rol", SystemRoleEnum.SUPPORT_L3.value))
+    actor_ip = request.client.host if request.client else "127.0.0.1"
+
+    _, trigger_resp = await _execute_router_backup_core(
+        router_id=router_id,
+        tenant_id=tenant_id,
+        user_id=user_id,
+        actor_username=actor_username,
+        actor_role=actor_role,
+        actor_ip=actor_ip,
+        claims=claims,
+        db=db,
+    )
+    return trigger_resp
+
+
+@batch_backups_router.post("/batch-trigger", response_model=BatchBackupTriggerResponse)
+async def trigger_batch_backups(
+    body: BatchBackupTriggerRequest,
+    request: Request,
+    claims: dict[str, Any] = Depends(require_roles(*_TRIGGER_ROLES)),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> BatchBackupTriggerResponse:
+    """Dispara respaldos .rsc simultáneos sobre una selección de múltiples routers con deduplicación SHA-256."""
+    tenant_id = uuid.UUID(claims["tid"])
+    user_id = uuid.UUID(claims["sub"])
+    actor_username = str(claims.get("preferred_username", "operator"))
+    actor_role = str(claims.get("rol", SystemRoleEnum.SUPPORT_L3.value))
+    actor_ip = request.client.host if request.client else "127.0.0.1"
+
+    unique_ids = list(dict.fromkeys(body.router_ids))
+    results: list[BatchBackupRouterResult] = []
+    created_count = 0
+    deduplicated_count = 0
+    failed_count = 0
+
+    for r_id in unique_ids:
+        try:
+            r_obj, trig_res = await _execute_router_backup_core(
+                router_id=r_id,
+                tenant_id=tenant_id,
+                user_id=user_id,
+                actor_username=actor_username,
+                actor_role=actor_role,
+                actor_ip=actor_ip,
+                claims=claims,
+                db=db,
+            )
+            if trig_res.status == "CREATED":
+                created_count += 1
+            else:
+                deduplicated_count += 1
+            results.append(
+                BatchBackupRouterResult(
+                    router_id=r_id,
+                    display_name=getattr(r_obj, "display_name", str(r_id)),
+                    ip_address=getattr(r_obj, "ip_address", None),
+                    status=trig_res.status,
+                    backup_id=trig_res.backup_id,
+                    rsc_sha256_hash=trig_res.rsc_sha256_hash,
+                    message=trig_res.message,
+                )
+            )
+        except HTTPException as http_exc:
+            failed_count += 1
+            results.append(
+                BatchBackupRouterResult(
+                    router_id=r_id,
+                    display_name=str(r_id)[:8],
+                    status="FAILED",
+                    message=str(http_exc.detail),
+                )
+            )
+        except Exception as exc:
+            failed_count += 1
+            results.append(
+                BatchBackupRouterResult(
+                    router_id=r_id,
+                    display_name=str(r_id)[:8],
+                    status="FAILED",
+                    message=str(exc) or "Error de conexión al exportar respaldo.",
+                )
+            )
+
+    return BatchBackupTriggerResponse(
+        total_requested=len(unique_ids),
+        created_count=created_count,
+        deduplicated_count=deduplicated_count,
+        failed_count=failed_count,
+        results=results,
     )
 
 

@@ -1086,3 +1086,66 @@ async def test_backups_filtered_file_query_with_pcap_and_corrupt_purge(fake_op_c
     assert len(res_list.items) == 0
     db.delete.assert_awaited_once_with(corrupt_bk)
     db.commit.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_batch_backups_trigger_flow(fake_op_context: dict[str, Any]) -> None:
+    """Verifica la ejecución por lote de respaldos simultáneos con deduplicación y resumen de fallos."""
+    from fastapi import Request
+    import src.api.v1.backups as api_backups
+    from src.schemas.backups import BackupTriggerResponse, BatchBackupTriggerRequest
+
+    ctx = fake_op_context
+    claims = ctx["claims"]
+    db = AsyncMock()
+
+    mock_request = MagicMock(spec=Request)
+    mock_request.client.host = "10.0.0.99"
+
+    r_id_1 = uuid.uuid4()
+    r_id_2 = uuid.uuid4()
+    r_id_3 = uuid.uuid4()
+
+    router_1 = MagicMock(display_name="Core-MikroTik-01", ip_address="10.250.3.1")
+    router_2 = MagicMock(display_name="Edge-MikroTik-02", ip_address="10.250.3.2")
+
+    async def mock_execute_core(router_id: uuid.UUID, *args: Any, **kwargs: Any) -> tuple[Any, BackupTriggerResponse]:
+        if router_id == r_id_1:
+            return router_1, BackupTriggerResponse(
+                status="CREATED",
+                backup_id=uuid.uuid4(),
+                rsc_sha256_hash="hash111",
+                message="Respaldo creado con éxito",
+            )
+        elif router_id == r_id_2:
+            return router_2, BackupTriggerResponse(
+                status="IDENTICAL_SKIPPED_DEDUPLICATED",
+                backup_id=uuid.uuid4(),
+                rsc_sha256_hash="hash222",
+                message="Configuración idéntica deduplicada",
+            )
+        else:
+            raise HTTPException(status_code=502, detail="Conexión rechazada por el router")
+
+    with patch("src.api.v1.backups._execute_router_backup_core", side_effect=mock_execute_core):
+        req_body = BatchBackupTriggerRequest(router_ids=[r_id_1, r_id_2, r_id_3])
+        response = await api_backups.trigger_batch_backups(
+            body=req_body,
+            request=mock_request,
+            claims=claims,
+            db=db,
+        )
+
+        assert response.total_requested == 3
+        assert response.created_count == 1
+        assert response.deduplicated_count == 1
+        assert response.failed_count == 1
+        assert len(response.results) == 3
+
+        res_map = {str(r.router_id): r for r in response.results}
+        assert res_map[str(r_id_1)].status == "CREATED"
+        assert res_map[str(r_id_1)].display_name == "Core-MikroTik-01"
+        assert res_map[str(r_id_2)].status == "IDENTICAL_SKIPPED_DEDUPLICATED"
+        assert res_map[str(r_id_2)].display_name == "Edge-MikroTik-02"
+        assert res_map[str(r_id_3)].status == "FAILED"
+        assert "Conexión rechazada" in res_map[str(r_id_3)].message

@@ -6,6 +6,7 @@ from fastapi import APIRouter
 from src.api.v1.approvals import router as approvals_router
 from src.api.v1.audit import router as audit_router
 from src.api.v1.auth import router as auth_router
+from src.api.v1.backups import batch_backups_router
 from src.api.v1.backups import router as backups_router
 from src.api.v1.bgp_looking_glass import router as bgp_looking_glass_router
 from src.api.v1.bulk_and_updates import router as bulk_updates_router
@@ -80,6 +81,7 @@ api_v1_router.include_router(webfig_tools_router)
 api_v1_router.include_router(webfig_layer2_router)
 api_v1_router.include_router(approvals_router)
 api_v1_router.include_router(backups_router)
+api_v1_router.include_router(batch_backups_router)
 api_v1_router.include_router(bulk_updates_router)
 api_v1_router.include_router(notification_channels_router)
 api_v1_router.include_router(audit_router)

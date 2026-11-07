@@ -97,6 +97,9 @@ class MockSubscribersDbSession:
     async def commit(self) -> None:
         pass
 
+    async def flush(self) -> None:
+        pass
+
     async def refresh(self, obj: Any) -> None:
         pass
 
@@ -159,6 +162,12 @@ class MockSubscribersDbSession:
                         if getattr(d, "optical_box_id", None) == p_box_id and getattr(d, "optical_box_port", None) == p_port:
                             return MockSubscribersDbResult(d, [d])
                     return MockSubscribersDbResult(None, [])
+
+                for k, v in compiled_params.items():
+                    if isinstance(v, uuid.UUID):
+                        for d in self.devices:
+                            if d.id == v:
+                                return MockSubscribersDbResult(d, [d])
             except Exception:
                 pass
             item = self.devices[0] if self.devices else None
@@ -497,5 +506,83 @@ async def test_subscriber_device_ftth_registration_and_port_conflict(
         )
         assert res_invalid.status_code == 422
         assert "excede la capacidad de la caja" in res_invalid.json()["detail"]
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_subscriber_ipv4_pairing_persistence_and_ipam_list_sync(
+    async_client: AsyncClient, subscriber_auth: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verifica la persistencia real de IPv4 asignada tanto en PATCH subscriber-devices como en GET /ipam/customer-services."""
+    monkeypatch.setattr("src.api.v1.subscribers.write_audit_log", fake_audit)
+    monkeypatch.setattr("src.api.v1.ipam.write_audit_log", fake_audit)
+
+    mock_ip_id = uuid.uuid4()
+
+    async def mock_resolve(*args: Any, **kwargs: Any) -> uuid.UUID:
+        return mock_ip_id
+
+    monkeypatch.setattr("src.api.v1.subscribers._resolve_or_create_subscriber_ipv4", mock_resolve)
+
+    tid = subscriber_auth["tenant_id"]
+    headers = subscriber_auth["headers"]
+    mock_db = MockSubscribersDbSession(tid)
+    app.dependency_overrides[get_tenant_db_session] = lambda: mock_db
+
+    router_id = mock_db.routers[0].id
+    now = datetime.now(UTC)
+    sub_device = SubscriberDevice(
+        id=uuid.uuid4(),
+        tenant_id=tid,
+        router_id=router_id,
+        endpoint_identifier="CLI-PERSIST-001",
+        service_type="PPPOE",
+        auth_backend="LOCAL_SECRET",
+        onu_mode="ROUTER",
+        status="ACTIVE",
+        last_reachability_status="ONLINE",
+        created_at=now,
+        updated_at=now,
+    )
+    mock_db.add(sub_device)
+
+    try:
+        # 1. Emparejar abonado con IPv4 mediante PATCH
+        patch_res = await async_client.patch(
+            f"/api/v1/subscriber-devices/{sub_device.id}",
+            json={"assigned_ipv4": "10.250.3.55"},
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert patch_res.status_code == 200
+        patch_data = patch_res.json()
+        assert patch_data["assigned_ipv4"] == "10.250.3.55"
+
+        # 2. Consultar /api/v1/ipam/customer-services y verificar persistencia
+        list_res = await async_client.get(
+            "/api/v1/ipam/customer-services",
+            headers=headers,
+        )
+        assert list_res.status_code == 200
+        list_data = list_res.json()
+        assert len(list_data) >= 1
+        matched = next((item for item in list_data if item["id"] == str(sub_device.id)), None)
+        assert matched is not None
+        assert matched["assigned_ipv4"] == "10.250.3.55"
+
+        # 3. Crear nuevo servicio en /api/v1/ipam/customer-services con assigned_ipv4
+        create_res = await async_client.post(
+            "/api/v1/ipam/customer-services",
+            json={
+                "router_id": str(router_id),
+                "endpoint_identifier": "CLI-IPAM-NEW-002",
+                "service_type": "PPPOE",
+                "assigned_ipv4": "10.250.3.56",
+            },
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert create_res.status_code == 201
+        create_data = create_res.json()
+        assert create_data["assigned_ipv4"] == "10.250.3.56"
     finally:
         app.dependency_overrides.clear()

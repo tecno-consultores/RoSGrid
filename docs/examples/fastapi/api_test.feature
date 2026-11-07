@@ -1442,3 +1442,16 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 165. Respaldo Simultáneo Multi-Equipo por Lote y Persistencia Real de IPv4 en IPAM (Hito 30.12 - Spec 89)
+    Given path '/api/v1/backups/batch-trigger'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000165'
+    And request { router_ids: ['00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002'] }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/ipam/customer-services'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
