@@ -311,18 +311,25 @@ async def run_sla_probe(
     jitter = 2.1
     loss_pct = 0.0
 
+    # Acotar a 5 paquetes máximo en sondeos interactivos para prevenir timeout HTTP en RouterOS v7
+    actual_count = min(count, 5)
+
     try:
         _, client = await get_router_and_client(router_obj.id, claims, db)
         ping_res = await client.post(
             "/ping",
-            json_data={"address": payload.target_host, "count": count},
+            json_data={"address": payload.target_host, "count": actual_count},
         )
-        if isinstance(ping_res, list) and ping_res:
-            rtts = [
-                parsed
-                for p in ping_res
-                if isinstance(p, dict) and (parsed := _parse_ros7_ping_time_ms(p.get("time"))) is not None
-            ]
+        if isinstance(ping_res, list):
+            rtts = []
+            for p in ping_res:
+                if not isinstance(p, dict):
+                    continue
+                parsed = _parse_ros7_ping_time_ms(p.get("time"))
+                if parsed is not None:
+                    rtts.append(parsed)
+                elif (avg_r := _parse_ros7_ping_time_ms(p.get("avg-rtt"))) is not None:
+                    rtts.append(avg_r)
             if rtts:
                 diffs = [abs(rtts[i] - rtts[i - 1]) for i in range(1, len(rtts))]
                 jitter = (sum(diffs) / len(diffs)) if diffs else 0.1
@@ -332,7 +339,7 @@ async def run_sla_probe(
                 p99_idx = int(len(rtts) * 0.99)
                 p95_ms = rtts[min(p95_idx, len(rtts) - 1)]
                 p99_ms = rtts[min(p99_idx, len(rtts) - 1)]
-                loss_pct = max(0.0, ((count - len(rtts)) / count) * 100.0)
+                loss_pct = max(0.0, ((actual_count - len(rtts)) / actual_count) * 100.0)
             else:
                 avg_ms = 0.0
                 p95_ms = 999.0

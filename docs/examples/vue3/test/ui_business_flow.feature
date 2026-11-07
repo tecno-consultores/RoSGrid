@@ -1052,6 +1052,17 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * match auditWormRefreshContract.categorySelect == '#filter-cat'
     * match auditWormRefreshContract.supportedCategory == 'SWITCHING_SECURITY'
 
+  Scenario: 105. Paridad de columnas connection_count/estimated_pps en anomalías y control de mitigación FastDrop (Hito 30.14 - Spec 91)
+    * def anomalyParityContract = { tableWrapper: '.tactical-table-wrapper', mitigateTopBtn: '#btn-mitigate-traffic-anomaly', connCountCol: 'connection_count', ppsCol: 'estimated_pps', defaultFastDropDuration: 300 }
+    * match anomalyParityContract.tableWrapper == '.tactical-table-wrapper'
+    * match anomalyParityContract.mitigateTopBtn == '#btn-mitigate-traffic-anomaly'
+    * match anomalyParityContract.connCountCol == 'connection_count'
+    * match anomalyParityContract.ppsCol == 'estimated_pps'
+    * match anomalyParityContract.defaultFastDropDuration == 300
+    * def slaProbeQuickContract = { endpoint: '/api/v1/sla/probes/run', maxIcmpCount: 5 }
+    * match slaProbeQuickContract.maxIcmpCount == 5
+
+
 
 
 

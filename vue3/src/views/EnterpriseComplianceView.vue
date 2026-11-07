@@ -691,9 +691,13 @@
 
   async function handleMitigateAnomaly(targetIp?: string) {
     if (!selectedRouterId.value) return;
+    const ip = targetIp || trafficAnomalies.value[0]?.ip_address || trafficAnomalies.value[0]?.ip;
+    if (!ip || ip === '0.0.0.0') {
+      errorMessage.value = 'No hay ninguna IP anómala válida seleccionada para mitigar.';
+      return;
+    }
     isMitigatingTraffic.value = true;
     try {
-      const ip = targetIp || (trafficAnomalies.value[0]?.ip_address || '198.51.100.99');
       await http.post('/api/v1/traffic-flow/mitigate', {
         router_id: selectedRouterId.value,
         target_ip: ip,
@@ -2369,7 +2373,7 @@
               id="btn-mitigate-traffic-anomaly"
               type="button"
               class="tactical-btn btn-secondary"
-              :disabled="isMitigatingTraffic"
+              :disabled="isMitigatingTraffic || trafficAnomalies.length === 0"
               @click="handleMitigateAnomaly()"
             >
               <span>🛡️</span>
@@ -2394,13 +2398,19 @@
               <tbody>
                 <tr v-for="a in trafficAnomalies" :key="a.ip_address || a.ip">
                   <td class="font-mono text-cyan">{{ a.ip_address || a.ip }}</td>
-                  <td>{{ a.conns_count || a.conns || '—' }}</td>
-                  <td>{{ a.rate_mbps ? `${a.rate_mbps} Mbps` : '—' }}</td>
-                  <td><span class="badge badge-danger">ANOMALÍA</span></td>
+                  <td class="font-mono">{{ a.connection_count ?? a.conns_count ?? a.conns ?? '—' }}</td>
+                  <td class="font-mono">
+                    {{ a.rate_mbps ? `${a.rate_mbps} Mbps` : (a.estimated_pps != null ? `${a.estimated_pps} pps` : '—') }}
+                  </td>
+                  <td>
+                    <span class="badge badge-danger">{{ a.severity || 'ANOMALÍA' }}</span>
+                    <span v-if="a.anomaly_type" class="text-xs text-muted" style="margin-left: 0.35rem;">({{ a.anomaly_type }})</span>
+                  </td>
                   <td>
                     <button
                       type="button"
                       class="btn-rg btn-rg--amber btn-sm"
+                      :disabled="isMitigatingTraffic"
                       @click="handleMitigateAnomaly(a.ip_address || a.ip)"
                     >
                       🛡️ FastDrop

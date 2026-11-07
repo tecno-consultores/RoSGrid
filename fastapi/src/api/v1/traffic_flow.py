@@ -4,11 +4,12 @@
 """Endpoints de Detección de Tráfico Anómalo y Mitigación Rápida con Safe Mode (Hito 18.3)."""
 
 import collections
+import ipaddress
 import logging
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import require_feature, require_roles
@@ -58,6 +59,34 @@ def _extract_ip_from_address(addr_str: str) -> str:
     return clean
 
 
+def _is_valid_anomaly_source_ip(
+    ip_str: str,
+    local_router_ips: set[str] | None = None,
+) -> bool:
+    """Descarta 0.0.0.0, broadcast, loopback, link-local, multicast, reservadas e IPs propias del router."""
+    if not ip_str:
+        return False
+    clean_ip = ip_str.split("%")[0].strip()
+    if clean_ip in {"0.0.0.0", "255.255.255.255", "::", "::1"}:
+        return False
+    if local_router_ips and clean_ip in local_router_ips:
+        return False
+    try:
+        ip_obj = ipaddress.ip_address(clean_ip)
+    except ValueError:
+        return False
+    is_invalid = any(
+        (
+            ip_obj.is_unspecified,
+            ip_obj.is_loopback,
+            ip_obj.is_multicast,
+            ip_obj.is_link_local,
+            ip_obj.is_reserved,
+        )
+    )
+    return not is_invalid
+
+
 def _evaluate_anomaly_severity(cnt: int, pps: int, threshold_pps: int, protocols: list[str]) -> tuple[str, str]:
     """Determina tipo y severidad del patrón anómalo detectado."""
     if cnt > 1000 or pps > (threshold_pps * 2):
@@ -68,27 +97,46 @@ def _evaluate_anomaly_severity(cnt: int, pps: int, threshold_pps: int, protocols
     return "HIGH_CONNECTION_COUNT", "HIGH"
 
 
-def _aggregate_connection_stats(conns_list: list[Any]) -> dict[str, dict[str, Any]]:
-    """Agrupa conexiones por dirección IP de origen."""
-    ip_stats: dict[str, dict[str, Any]] = collections.defaultdict(lambda: {"count": 0, "pps": 0, "protocols": set()})
+def _extract_item_pps(item: dict[str, Any]) -> tuple[int, bool]:
+    """Extrae paquetes o tasa instantánea de una conexión individual."""
+    raw_rate = item.get("orig-rate") or item.get("rate")
+    if raw_rate is not None:
+        try:
+            rate_val = int(raw_rate)
+            if rate_val > 0:
+                return max(1, rate_val // (8 * 512)), True
+        except (ValueError, TypeError):
+            pass
+    try:
+        orig_packets = int(item.get("orig-packets") or item.get("packets") or 1)
+    except (ValueError, TypeError):
+        orig_packets = 1
+    return max(1, orig_packets // 10), False
+
+
+def _aggregate_connection_stats(
+    conns_list: list[Any],
+    local_router_ips: set[str] | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Agrupa conexiones por dirección IP de origen descartando direcciones RFC no enrutables."""
+    ip_stats: dict[str, dict[str, Any]] = collections.defaultdict(
+        lambda: {"count": 0, "pps": 0, "protocols": set(), "has_rate": False}
+    )
     for item in conns_list:
         if not isinstance(item, dict):
             continue
         src = str(item.get("src-address", ""))
-        if not src:
-            continue
         ip = _extract_ip_from_address(src)
-        proto = str(item.get("protocol", "tcp")).lower()
-        raw_pkts = item.get("orig-packets") or item.get("packets") or 1
-        try:
-            orig_packets = int(raw_pkts)
-        except (ValueError, TypeError):
-            orig_packets = 1
+        if not _is_valid_anomaly_source_ip(ip, local_router_ips):
+            continue
 
         stats = ip_stats[ip]
         stats["count"] += 1
-        stats["pps"] += max(1, orig_packets // 10)
-        stats["protocols"].add(proto)
+        stats["protocols"].add(str(item.get("protocol", "tcp")).lower())
+        pps_val, has_rate = _extract_item_pps(item)
+        stats["pps"] += pps_val
+        if has_rate:
+            stats["has_rate"] = True
     return ip_stats
 
 
@@ -96,24 +144,27 @@ def _analyze_connections(
     raw_conns: Any,
     threshold_pps: int,
     threshold_conns: int,
+    local_router_ips: set[str] | None = None,
 ) -> list[TrafficAnomalyItem]:
     """Agrupa conexiones de Firewall / IPFIX y detecta patrones de abuso o DDoS."""
     conns_list = raw_conns if isinstance(raw_conns, list) else []
-    ip_stats = _aggregate_connection_stats(conns_list)
+    ip_stats = _aggregate_connection_stats(conns_list, local_router_ips=local_router_ips)
 
     anomalies: list[TrafficAnomalyItem] = []
     for ip, data in ip_stats.items():
         cnt = data["count"]
-        pps = data["pps"]
-        if cnt < threshold_conns and pps < threshold_pps:
+        has_rate = data.get("has_rate", False)
+        effective_pps = 0 if (cnt < 3 and not has_rate) else data["pps"]
+        if cnt < threshold_conns and effective_pps < threshold_pps:
             continue
+
         protocols = sorted(data["protocols"])
-        atype, severity = _evaluate_anomaly_severity(cnt, pps, threshold_pps, protocols)
+        atype, severity = _evaluate_anomaly_severity(cnt, effective_pps, threshold_pps, protocols)
         anomalies.append(
             TrafficAnomalyItem(
                 ip_address=ip,
                 connection_count=cnt,
-                estimated_pps=pps,
+                estimated_pps=effective_pps or data["pps"],
                 protocols=protocols,
                 anomaly_type=atype,
                 severity=severity,
@@ -135,10 +186,21 @@ async def detect_traffic_anomalies(
     """Escanea la tabla de conexiones de RouterOS para identificar hosts maliciosos o saturación."""
     _, client = await get_router_and_client(router_id, claims, db)
 
+    local_ips: set[str] = set()
     async with client:
         raw_conns = await client.get("/ip/firewall/connection")
+        try:
+            raw_addrs = await client.get("/ip/address")
+            if isinstance(raw_addrs, list):
+                for addr_item in raw_addrs:
+                    if isinstance(addr_item, dict) and "address" in addr_item:
+                        ip_str = str(addr_item["address"]).split("/")[0].strip()
+                        if ip_str:
+                            local_ips.add(ip_str)
+        except Exception:
+            pass
 
-    items = _analyze_connections(raw_conns, threshold_pps, threshold_conns)
+    items = _analyze_connections(raw_conns, threshold_pps, threshold_conns, local_router_ips=local_ips)
     return TrafficAnomaliesResponse(
         router_id=router_id,
         threshold_pps=threshold_pps,
@@ -156,6 +218,13 @@ async def mitigate_traffic_anomaly(
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> TrafficMitigationResponse:
     """Aplica mitigación FastDrop o Blackhole en el MikroTik bajo Safe Mode con auditoría inmutable."""
+    target_ip_clean = payload.target_ip.split("/")[0].split(":")[0].strip()
+    if not _is_valid_anomaly_source_ip(target_ip_clean):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Dirección IP reservada o inválida para mitigación FastDrop/Blackhole.",
+        )
+
     router_obj, client = await get_router_and_client(payload.router_id, claims, db)
     tenant_id = uuid.UUID(claims["tid"])
     user_id = uuid.UUID(claims["sub"])

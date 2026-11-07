@@ -705,4 +705,93 @@ describe('EnterpriseComplianceView.vue — Hito 20 Suite Corporativa', () => {
     });
     expect(wrapper.find('#diagnostics-panel-stub').exists()).toBe(true);
   });
+
+  it('renderiza connection_count y estimated_pps (pps) en la tabla de anomalías de SLA y controla el botón superior FastDrop (Hito 30.14 - Spec 91)', async () => {
+    vi.spyOn(http, 'get').mockImplementation(async (url: string) => {
+      if (url.includes('/traffic-flow/anomalies')) {
+        return {
+          data: {
+            items: [
+              {
+                ip_address: '198.51.100.50',
+                connection_count: 650,
+                estimated_pps: 1200,
+                protocols: ['tcp'],
+                anomaly_type: 'HIGH_CONNECTION_COUNT',
+                severity: 'CRITICAL',
+              },
+            ],
+          },
+          status: 200,
+          headers: new Headers(),
+        } as unknown as ApiResponse;
+      }
+      return { data: {}, status: 200, headers: new Headers() } as unknown as ApiResponse;
+    });
+
+    const wrapper = mount(EnterpriseComplianceView);
+    const slaTabBtn = wrapper.find('#tab-btn-sla');
+    await slaTabBtn.trigger('click');
+
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain('198.51.100.50');
+    });
+
+    // Validar paridad de columnas sin guiones "—"
+    expect(wrapper.text()).toContain('650');
+    expect(wrapper.text()).toContain('1200 pps');
+    expect(wrapper.text()).toContain('CRITICAL');
+    expect(wrapper.text()).toContain('(HIGH_CONNECTION_COUNT)');
+
+    // El botón superior no debe estar deshabilitado porque hay 1 anomalía
+    const topMitigateBtn = wrapper.find<HTMLButtonElement>('#btn-mitigate-traffic-anomaly');
+    expect(topMitigateBtn.element.disabled).toBe(false);
+
+    // Ejecutar mitigación en 1 clic
+    const postSpy = vi.spyOn(http, 'post').mockResolvedValue({
+      data: { status: 'MITIGATED', target_ip: '198.51.100.50' },
+      status: 200,
+      headers: new Headers(),
+    } as unknown as ApiResponse);
+
+    await topMitigateBtn.trigger('click');
+    expect(postSpy).toHaveBeenCalledWith(
+      '/api/v1/traffic-flow/mitigate',
+      expect.objectContaining({
+        target_ip: '198.51.100.50',
+        action: 'fast_drop',
+        duration_seconds: 300,
+      }),
+    );
+  });
+
+  it('deshabilita el botón superior de mitigación y rechaza mitigar si no hay anomalías o IP es 0.0.0.0 (Hito 30.14 - Spec 91)', async () => {
+    vi.spyOn(http, 'get').mockImplementation(async (url: string) => {
+      if (url.includes('/traffic-flow/anomalies')) {
+        return {
+          data: { items: [] },
+          status: 200,
+          headers: new Headers(),
+        } as unknown as ApiResponse;
+      }
+      return { data: {}, status: 200, headers: new Headers() } as unknown as ApiResponse;
+    });
+
+    const wrapper = mount(EnterpriseComplianceView);
+    const slaTabBtn = wrapper.find('#tab-btn-sla');
+    await slaTabBtn.trigger('click');
+
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain('Cero anomalías volumétricas detectadas');
+    });
+
+    const topMitigateBtn = wrapper.find<HTMLButtonElement>('#btn-mitigate-traffic-anomaly');
+    expect(topMitigateBtn.element.disabled).toBe(true);
+
+    const postSpy = vi.spyOn(http, 'post');
+    // Intento forzado de llamada a la función interna no debe llamar a la API
+    await (wrapper.vm as any).handleMitigateAnomaly('0.0.0.0');
+    expect(postSpy).not.toHaveBeenCalled();
+    expect(wrapper.text()).toContain('No hay ninguna IP anómala válida seleccionada para mitigar.');
+  });
 });
