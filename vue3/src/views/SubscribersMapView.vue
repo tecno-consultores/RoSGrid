@@ -1224,8 +1224,8 @@
     flex-direction: column;
     height: calc(100vh - 64px);
     height: calc(100dvh - 64px);
-    background: #060b13;
-    color: #fff;
+    background: var(--rg-bg-canvas);
+    color: var(--rg-text-primary);
     padding: 1rem 1.5rem;
     box-sizing: border-box;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -1249,13 +1249,13 @@
     margin: 0;
     font-size: 1.35rem;
     font-weight: 800;
-    color: #00f3ff;
+    color: var(--rg-accent-cyan);
   }
 
   .view-subtitle {
     margin: 0.2rem 0 0;
     font-size: 0.8rem;
-    color: #94a3b8;
+    color: var(--rg-text-muted);
   }
 
   .kpi-ribbon {
@@ -1265,8 +1265,8 @@
   }
 
   .kpi-card {
-    background: #0d1628;
-    border: 1px solid rgba(0, 243, 255, 0.2);
+    background: var(--rg-bg-surface);
+    border: 1px solid var(--rg-border-panel);
     border-radius: 8px;
     padding: 0.5rem 1rem;
     display: flex;
@@ -1277,13 +1277,13 @@
   }
 
   .kpi-card.active {
-    border-color: #00f3ff;
-    background: #002233;
+    border-color: var(--rg-accent-cyan);
+    background: var(--rg-bg-elevated);
   }
 
   .kpi-label {
     font-size: 0.7rem;
-    color: #94a3b8;
+    color: var(--rg-text-muted);
   }
 
   .kpi-value {
@@ -1337,11 +1337,11 @@
 
   .rg-search-input {
     width: 100%;
-    background: #0d1628;
-    border: 1px solid rgba(0, 243, 255, 0.3);
+    background: var(--rg-bg-input);
+    border: 1px solid var(--rg-border-panel);
     border-radius: 6px;
     padding: 0.5rem 2rem 0.5rem 0.75rem;
-    color: #fff;
+    color: var(--rg-text-primary);
     font-size: 0.85rem;
   }
 
@@ -1352,7 +1352,7 @@
     transform: translateY(-50%);
     background: none;
     border: none;
-    color: #94a3b8;
+    color: var(--rg-text-muted);
     cursor: pointer;
   }
 
@@ -1363,9 +1363,9 @@
   }
 
   .chip-btn {
-    background: #0d1628;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: #94a3b8;
+    background: var(--rg-bg-surface);
+    border: 1px solid var(--rg-border-panel);
+    color: var(--rg-text-secondary);
     border-radius: 20px;
     padding: 0.35rem 0.75rem;
     font-size: 0.75rem;
@@ -1373,9 +1373,9 @@
   }
 
   .chip-btn.active {
-    background: #002233;
-    border-color: #00f3ff;
-    color: #00f3ff;
+    background: var(--rg-bg-elevated);
+    border-color: var(--rg-accent-cyan);
+    color: var(--rg-accent-cyan);
   }
 
   .sync-actions {
@@ -1385,9 +1385,9 @@
 
   .btn-sync-dhcp,
   .btn-refresh-map {
-    background: #002233;
-    border: 1px solid #00f3ff;
-    color: #00f3ff;
+    background: var(--rg-btn-action-bg);
+    border: 1px solid var(--rg-accent-cyan-border);
+    color: var(--rg-accent-cyan);
     border-radius: 6px;
     padding: 0.45rem 0.85rem;
     font-size: 0.8rem;
@@ -1410,7 +1410,7 @@
     flex: 1;
     border-radius: 8px;
     overflow: hidden;
-    border: 1px solid rgba(0, 243, 255, 0.2);
+    border: 1px solid var(--rg-border-panel);
   }
 
   /* Drawer Lateral */
@@ -1421,9 +1421,10 @@
     width: 320px;
     max-width: calc(100% - 20px);
     max-height: calc(100% - 20px);
-    background: rgba(13, 22, 40, 0.95);
+    background: color-mix(in srgb, var(--rg-bg-surface) 94%, transparent);
     backdrop-filter: blur(8px);
-    border: 1px solid #00f3ff;
+    border: 1px solid var(--rg-border-panel);
+    color: var(--rg-text-primary);
     border-radius: 8px;
     z-index: 1000;
     overflow-y: auto;
@@ -1586,10 +1587,10 @@
 
   .rg-coord-input {
     width: 100%;
-    background: #060b13;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: var(--rg-bg-input);
+    border: 1px solid var(--rg-border-panel);
     border-radius: 4px;
-    color: #fff;
+    color: var(--rg-text-primary);
     padding: 0.25rem 0.4rem;
     font-size: 0.75rem;
   }
@@ -1760,20 +1761,20 @@
     align-items: center;
     gap: 0.75rem;
     flex-wrap: wrap;
-    background: #060b13;
+    background: var(--rg-bg-canvas);
     padding: 0.75rem 1rem;
-    border: 1px dashed rgba(0, 243, 255, 0.25);
+    border: 1px dashed var(--rg-border-panel);
     border-radius: 6px;
   }
 
   .file-picker-wrapper input[type='file'] {
     font-size: 0.8rem;
-    color: #94a3b8;
+    color: var(--rg-text-muted);
   }
 
   .btn-primary {
-    background: #00f3ff;
-    color: #060b13;
+    background: var(--rg-accent-cyan);
+    color: var(--rg-bg-canvas);
     border: none;
     border-radius: 6px;
     padding: 0.5rem 1rem;
@@ -1843,9 +1844,9 @@
   .csv-table-wrapper {
     max-height: 280px;
     overflow-y: auto;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--rg-border-grid);
     border-radius: 6px;
-    background: #060b13;
+    background: var(--rg-bg-canvas);
   }
 
   .csv-preview-table {
@@ -1856,17 +1857,18 @@
   }
 
   .csv-preview-table th {
-    background: #0d1522;
+    background: var(--rg-bg-elevated);
     padding: 0.5rem 0.65rem;
-    color: #94a3b8;
+    color: var(--rg-text-primary);
     position: sticky;
     top: 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid var(--rg-border-grid);
   }
 
   .csv-preview-table td {
     padding: 0.45rem 0.65rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid var(--rg-border-grid);
+    color: var(--rg-text-secondary);
   }
 
   .row--invalid {

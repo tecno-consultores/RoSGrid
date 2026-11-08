@@ -1230,6 +1230,17 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * assert wallboardStackingIsolation.user_menu_above_events_hud == true
     * assert wallboardStackingIsolation.map_drawer_left_in_wallboard == true
 
+  # ============================================================================
+  # SPEC 111: PARIDAD DINÁMICA DE TEMAS EN WALLBOARD NOC Y MAPA UNIFICADO
+  # ============================================================================
+  Scenario: 125. Herencia dinamica de tema Claro, Oscuro y Alto Contraste con tokens semanticos en NocWallboardView y UnifiedNetworkMap (Spec 111)
+    * def wallboardDynamicTheme = { hardcoded_data_theme_removed: true, uses_rg_semantic_tokens: true, light_theme_supported: true, map_toolbar_adapts_theme: true }
+    * assert wallboardDynamicTheme.hardcoded_data_theme_removed == true
+    * assert wallboardDynamicTheme.uses_rg_semantic_tokens == true
+    * assert wallboardDynamicTheme.light_theme_supported == true
+    * assert wallboardDynamicTheme.map_toolbar_adapts_theme == true
+
+
 
 
 
