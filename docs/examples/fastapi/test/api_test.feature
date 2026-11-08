@@ -1546,6 +1546,21 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  # ============================================================================
+  # SPEC 99: FILTRADO DE PAQUETES ACTIVOS EN CAPA 2 Y DEGRADACIÓN ELEGANTE
+  # ============================================================================
+  Scenario: 173. Catalogo WebFig Capa 2 (/webfig/layer2/catalog) filtra paquetes opcionales deshabilitados y degrada paquetes no instalados (Spec 99)
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/layer2/catalog'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/layer2/resource/container'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
 
 
 

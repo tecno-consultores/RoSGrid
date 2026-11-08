@@ -110,6 +110,10 @@
   const successMessage = ref('');
   const errorMessage = ref('');
 
+  const isPackageNotInstalled = computed(
+    () => resourceData.value.schema_source === 'package_not_installed',
+  );
+
   const availablePresets = computed<Layer2TemplatePreset[]>(() =>
     getPresetsForRosPath(rosPath.value),
   );
@@ -554,7 +558,9 @@
                 ? '🔍 /console/inspect'
                 : resourceData.schema_source === 'catalog_fallback'
                   ? '📚 Esquema Catálogo'
-                  : '📊 Esquema Inferido'
+                  : resourceData.schema_source === 'package_not_installed'
+                    ? '📦 Paquete No Instalado'
+                    : '📊 Esquema Inferido'
             }}
           </span>
         </p>
@@ -610,6 +616,7 @@
           v-if="!resourceData.is_singleton"
           type="button"
           class="btn-primary"
+          :disabled="isPackageNotInstalled"
           @click="openCreateModal"
         >
           + Nuevo Registro
@@ -801,6 +808,15 @@
 
     <div v-if="errorMessage" class="banner banner--error font-tabular" role="alert">
       {{ errorMessage }}
+    </div>
+
+    <div
+      v-if="isPackageNotInstalled"
+      id="layer2-package-not-installed-banner"
+      class="banner banner--warning alert-warning font-tabular"
+      role="status"
+    >
+      📦 El paquete opcional de RouterOS v7 requerido para <code>/{{ rosPath }}</code> no está instalado o habilitado en este router (verifique <code>/system/package</code>).
     </div>
 
     <!-- Caso 1: Colección Tabular (is_singleton === false) -->
@@ -1276,6 +1292,16 @@
     border: 1px solid #ef4444;
     border-radius: 6px;
     color: #fca5a5;
+    font-size: 0.85rem;
+  }
+
+  .banner--warning,
+  .alert-warning {
+    padding: 10px 14px;
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid #f59e0b;
+    border-radius: 6px;
+    color: #fbbf24;
     font-size: 0.85rem;
   }
 

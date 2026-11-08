@@ -31,20 +31,15 @@
   );
 
   const layer2Catalog = ref<Layer2CatalogItem[]>([
-    { ros_path: 'mpls', title: 'MPLS & VPLS', category: 'Transport', is_singleton: false },
-    { ros_path: 'zerotier', title: 'ZeroTier SDN', category: 'VPN', is_singleton: false },
-    { ros_path: 'capsman', title: 'CAPsMAN WiFi', category: 'Wireless', is_singleton: false },
-    {
-      ros_path: 'container',
-      title: 'Docker Containers',
-      category: 'Virtualization',
-      is_singleton: false,
-    },
-    { ros_path: 'snmp', title: 'SNMP Settings', category: 'Management', is_singleton: true },
+    { ros_path: 'mpls/interface', title: 'MPLS Interfaces', category: 'MPLS & VPLS', is_singleton: false },
+    { ros_path: 'mpls/ldp', title: 'LDP Instance', category: 'MPLS & VPLS', is_singleton: false },
+    { ros_path: 'interface/vpls', title: 'VPLS Tunnels', category: 'MPLS & VPLS', is_singleton: false },
+    { ros_path: 'certificate', title: 'Certificates', category: 'Certificates & Security', is_singleton: false },
+    { ros_path: 'snmp', title: 'SNMP Settings', category: 'SNMP & Management', is_singleton: true },
     {
       ros_path: 'snmp/community',
       title: 'SNMP Communities',
-      category: 'Management',
+      category: 'SNMP & Management',
       is_singleton: false,
     },
   ]);

@@ -2101,4 +2101,26 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
     await flushPromises();
     expect(getSpy).toHaveBeenCalledWith(expect.stringContaining('refresh=true'));
   });
+
+  it('DynamicLayer2ResourceView — muestra banner informativo cuando schema_source es package_not_installed (Spec 99)', async () => {
+    vi.spyOn(http, 'get').mockResolvedValueOnce({
+      status: 200,
+      data: {
+        ros_path: 'container',
+        title: 'Container',
+        is_singleton: false,
+        columns_schema: [{ key: 'name', label: 'Nombre', type: 'string' }],
+        items: [],
+        schema_source: 'package_not_installed',
+      },
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(DynamicLayer2ResourceView);
+    await flushPromises();
+
+    const banner = wrapper.find('#layer2-package-not-installed-banner');
+    expect(banner.exists()).toBe(true);
+    expect(banner.text()).toContain('/system/package');
+  });
 });

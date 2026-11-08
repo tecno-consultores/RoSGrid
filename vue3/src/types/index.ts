@@ -474,7 +474,7 @@ export interface Layer2ResourceResponse {
   is_singleton: boolean;
   columns_schema: Layer2ColumnSchemaItem[];
   rpc_actions?: Layer2RpcActionDescriptor[];
-  schema_source?: 'inspect' | 'inferred' | 'catalog_fallback';
+  schema_source?: 'inspect' | 'inferred' | 'catalog_fallback' | 'package_not_installed';
   active_proplist?: string[] | null;
   active_query?: string[] | null;
   items: Array<Record<string, unknown>>;

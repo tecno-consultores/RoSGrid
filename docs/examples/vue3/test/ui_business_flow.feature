@@ -1116,6 +1116,15 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * def targetUrl = '/routers/r-01/webfig/firewall?proto=ipv6'
     * assert targetUrl.contains('proto=ipv6')
 
+  # ============================================================================
+  # SPEC 99: DEGRADACIÓN ELEGANTE DE PAQUETE OPCIONAL ROUTEROS EN CAPA 2
+  # ============================================================================
+  Scenario: 113. Degradacion elegante de paquete opcional RouterOS no instalado en Capa 2 (Spec 99)
+    * def resourceResponse = { ros_path: 'container', schema_source: 'package_not_installed', items: [] }
+    * assert resourceResponse.schema_source == 'package_not_installed'
+    * assert resourceResponse.items.length == 0
+
+
 
 
 

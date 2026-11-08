@@ -571,6 +571,20 @@ def _synthesize_rsc_from_items(clean_path: str, items: list[dict[str, Any]]) -> 
     return "\n".join(lines) + "\n"
 
 
+def _is_ros_package_active(pkg: dict[str, Any]) -> bool:
+    """Verifica que un paquete devuelto por /rest/system/package esté realmente instalado y habilitado en RouterOS v7."""
+    name = str(pkg.get("name", "")).strip()
+    if not name:
+        return False
+    if str(pkg.get("disabled", "false")).lower() in ("true", "yes", "1"):
+        return False
+    if str(pkg.get("available", "false")).lower() in ("true", "yes", "1"):
+        return False
+    if "version" in pkg and not str(pkg.get("version", "")).strip():
+        return False
+    return True
+
+
 def _build_catalog_groups(packages: list[str]) -> list[CatalogMenuGroup]:
     groups = [
         CatalogMenuGroup(
@@ -650,7 +664,11 @@ async def get_catalog(
         refresh=refresh,
         ttl_seconds=300,
     )
-    installed_pkgs = [p.get("name", "") for p in raw_pkgs if isinstance(p, dict)] if isinstance(raw_pkgs, list) else []
+    installed_pkgs = (
+        [str(p.get("name", "")).strip() for p in raw_pkgs if isinstance(p, dict) and _is_ros_package_active(p)]
+        if isinstance(raw_pkgs, list)
+        else []
+    )
     ros_ver = router_obj.ros_version or "7.16"
     tree = _build_catalog_groups(installed_pkgs)
 
@@ -718,15 +736,32 @@ async def get_resource(
     router_obj, client = await get_router_and_client(router_id, claims, db)
 
     endpoint_query = f"{clean_path}?.proplist={','.join(normalized_props)}" if normalized_props else clean_path
-    raw_data = await cached_mikrotik_get(
-        redis=redis,
-        tenant_id=tenant_id,
-        router_id=router_id,
-        endpoint=endpoint_query,
-        client=client,
-        refresh=refresh,
-        ttl_seconds=5,
-    )
+    try:
+        raw_data = await cached_mikrotik_get(
+            redis=redis,
+            tenant_id=tenant_id,
+            router_id=router_id,
+            endpoint=endpoint_query,
+            client=client,
+            refresh=refresh,
+            ttl_seconds=5,
+        )
+    except HTTPException as exc:
+        detail_lower = str(exc.detail).lower()
+        if "no such command or directory" in detail_lower or "bad command name" in detail_lower:
+            fallback_cols = _parse_console_inspect_syntax(clean_path, [])
+            return DynamicLayer2CollectionResponse(
+                ros_path=clean_path,
+                is_singleton=False,
+                supports_safe_mode=False,
+                columns_schema=fallback_cols,
+                items=[],
+                form_data=None,
+                available_rpc_actions=[],
+                schema_source="package_not_installed",
+                is_server_filtered=False,
+            )
+        raise
     is_singleton = isinstance(raw_data, dict)
     items = [raw_data] if is_singleton else (raw_data if isinstance(raw_data, list) else [])
     columns = _infer_columns(items)

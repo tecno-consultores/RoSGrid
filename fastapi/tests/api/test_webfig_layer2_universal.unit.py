@@ -20,6 +20,7 @@ from src.api.v1.webfig_layer2 import (
     _filter_items_locally,
     _infer_columns,
     _infer_type_from_val,
+    _is_ros_package_active,
     _normalize_proplist,
     _parse_console_inspect_syntax,
     _resolve_rpc_target_and_args,
@@ -388,3 +389,58 @@ async def test_layer2_nextgen_endpoints_integration() -> None:
         )
         cmd_res = await execute_command(router_id, "certificate", cmd_payload, req, claims=claims, db=db)
         assert cmd_res == {"ret": "done"}
+
+
+@pytest.mark.asyncio
+async def test_layer2_catalog_filters_disabled_packages_and_graceful_missing_package() -> None:
+    """Spec 99: Filtra paquetes deshabilitados/no instalados en /system/package y degrada 'no such command or directory'."""
+    assert (
+        _is_ros_package_active(
+            {"name": "routeros", "disabled": "false", "available": "false", "version": "7.21.5"}
+        )
+        is True
+    )
+    assert _is_ros_package_active({"name": "container", "disabled": "true", "available": "true", "version": ""}) is False
+    assert _is_ros_package_active({"name": "zerotier", "disabled": "false", "available": "true", "version": ""}) is False
+    assert _is_ros_package_active({"name": ""}) is False
+
+    router_id = uuid.uuid4()
+    tenant_id = uuid.uuid4()
+    claims = {
+        "tid": str(tenant_id),
+        "sub": str(uuid.uuid4()),
+        "rol": SystemRoleEnum.TENANT_ADMIN.value,
+        "preferred_username": "admin_noc",
+    }
+    db = AsyncMock()
+    router_obj = SimpleNamespace(id=router_id, display_name="r1", ros_version="7.21.5")
+    client = AsyncMock()
+
+    raw_ros721_pkgs = [
+        {".id": "*1", "name": "routeros", "disabled": "false", "available": "false", "version": "7.21.5"},
+        {".id": "*3", "name": "container", "disabled": "true", "available": "true", "version": ""},
+    ]
+
+    with (
+        patch("src.api.v1.webfig_layer2.get_router_and_client", AsyncMock(return_value=(router_obj, client))),
+        patch("src.api.v1.webfig_layer2.from_deps_redis", return_value=AsyncMock()),
+        patch("src.api.v1.webfig_layer2.cached_mikrotik_get", AsyncMock(return_value=raw_ros721_pkgs)),
+    ):
+        cat = await get_catalog(router_id, refresh=False, claims=claims, db=db)
+        assert cat.installed_packages == ["routeros"]
+        group_names = [g.group for g in cat.menu_tree]
+        assert "Containers" not in group_names
+
+    # Degradación elegante cuando el paquete container no está instalado (400 no such command or directory)
+    missing_pkg_exc = HTTPException(
+        status_code=502,
+        detail="No se pudo conectar al router MikroTik en container: RouterOS REST API Error [400]: no such command or directory (container)",
+    )
+    with (
+        patch("src.api.v1.webfig_layer2.get_router_and_client", AsyncMock(return_value=(router_obj, client))),
+        patch("src.api.v1.webfig_layer2.from_deps_redis", return_value=AsyncMock()),
+        patch("src.api.v1.webfig_layer2.cached_mikrotik_get", AsyncMock(side_effect=missing_pkg_exc)),
+    ):
+        res_missing = await get_resource(router_id, "container", refresh=False, proplist=None, claims=claims, db=db)
+        assert res_missing.schema_source == "package_not_installed"
+        assert res_missing.items == []
