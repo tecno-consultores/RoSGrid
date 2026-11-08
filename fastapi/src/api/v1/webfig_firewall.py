@@ -558,16 +558,18 @@ async def delete_address_list(
 @router.get("/{proto}/connection")
 async def list_connections(
     router_id: uuid.UUID,
+    proto: str = "ip",
     refresh: bool = Query(default=False),
     claims: dict[str, Any] = Depends(get_current_user_claims),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
-    """Consulta la tabla de Connection Tracking (limitada a top 500)."""
+    """Consulta la tabla de Connection Tracking (IPv4 /ip/firewall/connection o IPv6 /ipv6/firewall/connection)."""
     tenant_id = uuid.UUID(claims["tid"])
     redis = get_redis_client()
     _, client = await get_router_and_client(router_id, claims, db)
+    ros_proto = "ipv6" if proto == "ipv6" else "ip"
     async with client:
-        return await cached_mikrotik_get(redis, tenant_id, router_id, "/ip/firewall/connection", client, refresh)
+        return await cached_mikrotik_get(redis, tenant_id, router_id, f"/{ros_proto}/firewall/connection", client, refresh)
 
 
 @router.delete("/connections/{conn_id}")
@@ -575,14 +577,15 @@ async def list_connections(
 async def delete_connection(
     router_id: uuid.UUID,
     conn_id: str,
-    proto: str = "ipv4",
+    proto: str = "ip",
     claims: dict[str, Any] = Depends(get_current_user_claims),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
-    """Elimina/cierra una conexión activa de la tabla de Connection Tracking."""
+    """Elimina/cierra una conexión activa de la tabla de Connection Tracking (IPv4 o IPv6)."""
     _, client = await get_router_and_client(router_id, claims, db)
+    ros_proto = "ipv6" if proto == "ipv6" else "ip"
     async with client:
-        return await client.delete(f"/ip/firewall/connection/{conn_id}")
+        return await client.delete(f"/{ros_proto}/firewall/connection/{conn_id}")
 
 
 delete_firewall_connection = delete_connection

@@ -3,7 +3,7 @@
 
 # Especificación 98: Paridad Dual-Stack IPv4 / IPv6 en `FirewallRulesView.vue` (`/ip/firewall` y `/ipv6/firewall`), Selector de Protocolo con Sincronización de Ruta (`?proto=ipv6`) y Soporte CRUD Completo de Reglas IPv6
 
-> **Estado:** Pendiente de Implementación (`[ ]`) — **Optimizado para Ejecución Directa por Gemini 3.8 Flash (High)**
+> **Estado:** Implementado (`[x]`) — **Certificado Level-11X por Gemini 3.8 Flash (High)**
 > **Hito Asociado:** Hito 30.21 (`ROADMAP.md`)
 > **Prioridad:** Alta (Permite ver, crear, modificar, reordenar, conmutar y eliminar reglas de Firewall IPv6 `/ipv6/firewall/*` y Address-Lists IPv6 al navegar desde `🛡️ Firewall IPv6` en `Ipv6DualStackView.vue` o directamente en `FirewallRulesView.vue`)
 > **Archivos Afectados:**

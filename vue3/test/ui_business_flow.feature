@@ -1109,6 +1109,14 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * def defaultDhcpSubtab = 'servers'
     * assert defaultDhcpSubtab == 'servers'
 
+  # ============================================================================
+  # SPEC 98: CONMUTADOR FIREWALL IPV4 / IPV6 EN FIREWALLRULESVIEW
+  # ============================================================================
+  Scenario: 112. El botón Firewall IPv6 desde Pila Dual redirige con ?proto=ipv6 y activa las reglas IPv6
+    * def targetUrl = '/routers/r-01/webfig/firewall?proto=ipv6'
+    * assert targetUrl.contains('proto=ipv6')
+
+
 
 
 

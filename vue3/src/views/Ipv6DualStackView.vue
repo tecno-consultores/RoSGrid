@@ -89,7 +89,7 @@
   }
 
   function goToFirewall() {
-    router.push(`/routers/${routerId.value}/webfig/firewall`);
+    router.push(`/routers/${routerId.value}/webfig/firewall?proto=ipv6`);
   }
 
   // --- Operaciones Direcciones IPv6 ---

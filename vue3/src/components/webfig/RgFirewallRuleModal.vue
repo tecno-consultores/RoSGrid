@@ -10,6 +10,7 @@
     isOpen: boolean;
     isEditing: boolean;
     tableType: 'filter' | 'nat' | 'mangle' | 'raw';
+    proto?: 'ip' | 'ipv6';
     initialRule?: FirewallRuleItem | null;
     existingRules: FirewallRuleItem[];
   }>();
@@ -211,7 +212,7 @@
         <div>
           <h3 id="rule-modal-title" class="modal-title">
             {{ isEditing ? 'Editar Regla de Firewall' : 'Nueva Regla de Firewall' }}
-            <span class="table-badge">[{{ tableType.toUpperCase() }}]</span>
+            <span class="table-badge">[{{ proto === 'ipv6' ? 'IPv6' : 'IPv4' }} / {{ tableType.toUpperCase() }}]</span>
           </h3>
           <p class="modal-subtitle">
             {{
@@ -270,6 +271,7 @@
               <option value="tcp">tcp (6)</option>
               <option value="udp">udp (17)</option>
               <option value="icmp">icmp (1)</option>
+              <option value="icmpv6">icmpv6 (58)</option>
               <option value="gre">gre (47)</option>
               <option value="esp">esp (50)</option>
             </select>
@@ -283,7 +285,7 @@
               v-model="srcAddress"
               type="text"
               class="form-input font-tabular"
-              placeholder="Ej: 192.168.88.0/24 o 10.0.0.5"
+              :placeholder="proto === 'ipv6' ? 'Ej: 2001:db8::/32 o fe80::/10' : 'Ej: 192.168.88.0/24 o 10.0.0.5'"
             />
           </div>
 
@@ -295,7 +297,7 @@
               v-model="dstAddress"
               type="text"
               class="form-input font-tabular"
-              placeholder="Ej: 0.0.0.0/0 o 8.8.8.8"
+              :placeholder="proto === 'ipv6' ? 'Ej: ::/0 o 2606:4700:4700::1111' : 'Ej: 0.0.0.0/0 o 8.8.8.8'"
             />
           </div>
 

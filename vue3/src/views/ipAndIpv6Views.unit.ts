@@ -362,9 +362,9 @@ describe('WebFig Layer 3: IpAddressesAndDhcpView & Ipv6DualStackView', () => {
     await flushPromises();
     expect(vm.ipv6Neighbors.length).toBe(1);
 
-    // 7. Redirección a Firewall
+    // 7. Redirección a Firewall IPv6 (Spec 98)
     vm.goToFirewall();
-    expect(mockPush).toHaveBeenCalledWith('/routers/r-01/webfig/firewall');
+    expect(mockPush).toHaveBeenCalledWith('/routers/r-01/webfig/firewall?proto=ipv6');
   });
 
   it('IpAddressesAndDhcpView — abre Servidores DHCP por defecto con carga paralela y permite añadir concesión estática (Spec 97)', async () => {

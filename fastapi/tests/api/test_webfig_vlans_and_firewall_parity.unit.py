@@ -391,3 +391,73 @@ async def test_update_interface_invalidates_wireguard_vlan_and_bridge_caches(moc
         assert "/interface/vlan" in invalidated_paths
         assert "/interface/bridge" in invalidated_paths
 
+
+@pytest.mark.asyncio
+async def test_ipv6_firewall_rules_and_connections_crud(mock_claims: dict) -> None:
+    """Certifica que webfig_firewall soporta proto='ipv6' para listar, crear, editar, eliminar y consultar conexiones en /ipv6/firewall/* (Spec 98)."""
+    from src.api.v1.webfig_firewall import (
+        create_rule,
+        delete_rule,
+        list_connections,
+        list_rules,
+        update_rule,
+    )
+    from src.schemas.webfig_firewall import (
+        FirewallRuleCreateRequest,
+        FirewallRuleUpdateRequest,
+    )
+
+    router_id = uuid.uuid4()
+    mock_db = AsyncMock()
+    mock_client = AsyncMock()
+    mock_client.get.return_value = {".id": "*v6_1", "chain": "forward", "action": "accept"}
+
+    with (
+        patch("src.api.v1.webfig_firewall.get_router_and_client", return_value=(AsyncMock(), mock_client)),
+        patch("src.api.v1.webfig_firewall.cached_mikrotik_get", new_callable=AsyncMock) as mock_cached,
+        patch("src.api.v1.webfig_firewall.execute_safe_mutation", new_callable=AsyncMock) as mock_safe,
+        patch("src.api.v1.webfig_firewall.invalidate_webfig_cache", new_callable=AsyncMock),
+    ):
+        mock_cached.return_value = [{".id": "*v6_1", "chain": "input", "protocol": "icmpv6", "action": "accept"}]
+        rules = await list_rules(router_id=router_id, proto="ipv6", table_type="filter", refresh=True, claims=mock_claims, db=mock_db)
+        assert len(rules) == 1
+        assert mock_cached.await_args.args[3] == "/ipv6/firewall/filter"
+
+        mock_safe.return_value = {"ret": "*v6_2"}
+        res_create = await create_rule(
+            router_id=router_id,
+            proto="ipv6",
+            table_type="filter",
+            payload=FirewallRuleCreateRequest(chain="input", action="accept", protocol="icmpv6", comment="Allow ICMPv6"),
+            claims=mock_claims,
+            db=mock_db,
+        )
+        assert res_create["ret"] == "*v6_2"
+
+        mock_safe.return_value = {"status": "updated"}
+        res_upd = await update_rule(
+            router_id=router_id,
+            proto="ipv6",
+            table_type="filter",
+            rule_id="*v6_1",
+            payload=FirewallRuleUpdateRequest(comment="Updated IPv6 rule"),
+            claims=mock_claims,
+            db=mock_db,
+        )
+        assert res_upd["status"] == "updated"
+
+        mock_safe.return_value = {"status": "deleted"}
+        res_del = await delete_rule(
+            router_id=router_id,
+            proto="ipv6",
+            table_type="filter",
+            rule_id="*v6_1",
+            claims=mock_claims,
+            db=mock_db,
+        )
+        assert res_del["status"] == "deleted"
+
+        await list_connections(router_id=router_id, proto="ipv6", refresh=True, claims=mock_claims, db=mock_db)
+        assert mock_cached.await_args.args[3] == "/ipv6/firewall/connection"
+
+

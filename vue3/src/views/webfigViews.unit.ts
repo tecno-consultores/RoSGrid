@@ -1057,6 +1057,106 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
     expect(vmFw.actionMessage).toContain('Maker-Checker');
   });
 
+  it('FirewallRulesView — conmuta a IPv6 (#btn-fw-proto-ipv6) y permite ver, crear, editar y eliminar reglas en /webfig/firewall/ipv6/* (Spec 98)', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const getSpy = vi.spyOn(http, 'get').mockResolvedValue({
+      status: 200,
+      data: [
+        {
+          '.id': '*v6_1',
+          chain: 'input',
+          action: 'accept',
+          protocol: 'icmpv6',
+          'src-address': '2001:db8::/32',
+          bytes: 1024,
+          packets: 12,
+          comment: 'Permitir ICMPv6 NDP',
+          disabled: 'false',
+        },
+      ],
+      headers: new Headers(),
+    });
+    const postSpy = vi.spyOn(http, 'post').mockResolvedValue({
+      status: 201,
+      data: { ret: '*v6_2' },
+      headers: new Headers(),
+    });
+    const patchSpy = vi.spyOn(http, 'patch').mockResolvedValue({
+      status: 200,
+      data: { status: 'OK' },
+      headers: new Headers(),
+    });
+    const deleteSpy = vi.spyOn(http, 'delete').mockResolvedValue({
+      status: 200,
+      data: { status: 'OK' },
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(FirewallRulesView);
+    await flushPromises();
+
+    // Conmutar a protocolo IPv6
+    const btnIpv6 = wrapper.find('#btn-fw-proto-ipv6');
+    expect(btnIpv6.exists()).toBe(true);
+    await btnIpv6.trigger('click');
+    await flushPromises();
+
+    expect(getSpy).toHaveBeenCalledWith('/api/v1/routers/r-01/webfig/firewall/ipv6/filter');
+    expect(wrapper.text()).toContain('Permitir ICMPv6 NDP');
+
+    // Crear nueva regla IPv6
+    const vm = wrapper.vm as any;
+    vm.isEditingRule = false;
+    await vm.handleSaveRule({
+      chain: 'forward',
+      action: 'drop',
+      protocol: 'icmpv6',
+      src_address: '2001:db8:bad::/48',
+      comment: 'Bloquear prefijo IPv6',
+      disabled: false,
+    });
+    await flushPromises();
+
+    expect(postSpy).toHaveBeenCalledWith(
+      '/api/v1/routers/r-01/webfig/firewall/ipv6/filter',
+      expect.objectContaining({
+        chain: 'forward',
+        action: 'drop',
+        protocol: 'icmpv6',
+      }),
+    );
+
+    // Editar regla IPv6 existente
+    const ruleRow = vm.rulesList[0];
+    vm.openEditRuleModal(ruleRow);
+    await vm.handleSaveRule({
+      chain: 'input',
+      action: 'accept',
+      comment: 'ICMPv6 Actualizado',
+    });
+    await flushPromises();
+
+    expect(patchSpy).toHaveBeenCalledWith(
+      '/api/v1/routers/r-01/webfig/firewall/ipv6/filter/*v6_1',
+      expect.objectContaining({ comment: 'ICMPv6 Actualizado' }),
+    );
+
+    // Eliminar regla IPv6
+    await vm.handleDeleteRule(ruleRow);
+    await flushPromises();
+
+    expect(deleteSpy).toHaveBeenCalledWith(
+      '/api/v1/routers/r-01/webfig/firewall/ipv6/filter/*v6_1',
+    );
+
+    confirmSpy.mockRestore();
+    getSpy.mockRestore();
+    postSpy.mockRestore();
+    patchSpy.mockRestore();
+    deleteSpy.mockRestore();
+    wrapper.unmount();
+  });
+
   it('RoutingBgpOspfView — cambia entre pestañas BGP, OSPF y formatea estado', async () => {
     vi.spyOn(http, 'get').mockImplementation(async (url: string) => {
       if (url.includes('routing/ospf')) {

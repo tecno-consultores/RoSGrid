@@ -2,7 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+  import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
   import { useRoute } from 'vue-router';
   import { http } from '@/api/httpClient';
   import { useWebFigStore } from '@/stores/useWebFigStore';
@@ -14,8 +14,28 @@
   const routerId = computed(() => String(route.params.routerId || ''));
   const webFigStore = useWebFigStore();
 
+  const activeProto = ref<'ip' | 'ipv6'>(
+    String((route as any)?.query?.proto || '').toLowerCase() === 'ipv6' ? 'ipv6' : 'ip',
+  );
   const activeTab = ref<'filter' | 'nat' | 'mangle' | 'raw' | 'address-list' | 'connections'>(
     'filter',
+  );
+
+  function setProto(proto: 'ip' | 'ipv6') {
+    if (activeProto.value === proto) return;
+    activeProto.value = proto;
+    loadFirewallRules();
+  }
+
+  watch(
+    () => (route as any)?.query?.proto,
+    (newProto) => {
+      const normalized = String(newProto || '').toLowerCase() === 'ipv6' ? 'ipv6' : 'ip';
+      if (activeProto.value !== normalized) {
+        activeProto.value = normalized;
+        loadFirewallRules();
+      }
+    },
   );
   const chainFilter = ref<string>('all');
   const isLoading = ref(false);
@@ -116,8 +136,10 @@
     try {
       const baseEndpoint =
         activeTab.value === 'connections'
-          ? `/api/v1/routers/${routerId.value}/webfig/firewall/connections`
-          : `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}`;
+          ? activeProto.value === 'ipv6'
+            ? `/api/v1/routers/${routerId.value}/webfig/firewall/ipv6/connections`
+            : `/api/v1/routers/${routerId.value}/webfig/firewall/connections`
+          : `/api/v1/routers/${routerId.value}/webfig/firewall/${activeProto.value}/${activeTab.value}`;
       const query = forceRefresh ? '?refresh=true' : '';
       const endpoint = `${baseEndpoint}${query}`;
       const res = await http.get<FirewallRuleItem[] | { items: FirewallRuleItem[] }>(endpoint);
@@ -205,7 +227,7 @@
       let res;
       if (isEditingAddressList.value && editingAddressListId.value) {
         res = await http.patch(
-          `/api/v1/routers/${routerId.value}/webfig/firewall/ip/address-lists/${encodeURIComponent(editingAddressListId.value)}`,
+          `/api/v1/routers/${routerId.value}/webfig/firewall/${activeProto.value}/address-lists/${encodeURIComponent(editingAddressListId.value)}`,
           {
             list: addressListForm.value.list,
             address: addressListForm.value.address,
@@ -219,7 +241,7 @@
           : 'Entrada de Address-List actualizada exitosamente.';
       } else {
         res = await http.post(
-          `/api/v1/routers/${routerId.value}/webfig/firewall/ip/address-lists`,
+          `/api/v1/routers/${routerId.value}/webfig/firewall/${activeProto.value}/address-lists`,
           {
             list: addressListForm.value.list,
             address: addressListForm.value.address,
@@ -255,7 +277,7 @@
       let res;
       if (isEditingRule.value && selectedRule.value?.id) {
         res = await http.patch(
-          `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}/${selectedRule.value.id}`,
+          `/api/v1/routers/${routerId.value}/webfig/firewall/${activeProto.value}/${activeTab.value}/${selectedRule.value.id}`,
           payload,
         );
         const intercepted = webFigStore.handleMutationResponse(res, 60);
@@ -264,7 +286,7 @@
           : 'Regla modificada exitosamente con Safe Mode activo.';
       } else {
         res = await http.post(
-          `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}`,
+          `/api/v1/routers/${routerId.value}/webfig/firewall/${activeProto.value}/${activeTab.value}`,
           payload,
         );
         const intercepted = webFigStore.handleMutationResponse(res, 60);
@@ -284,7 +306,7 @@
   async function handleToggleRule(rule: FirewallRuleItem) {
     try {
       const res = await http.patch(
-        `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}/${rule.id}`,
+        `/api/v1/routers/${routerId.value}/webfig/firewall/${activeProto.value}/${activeTab.value}/${rule.id}`,
         { disabled: !rule.disabled },
       );
       const intercepted = webFigStore.handleMutationResponse(res, 60);
@@ -307,8 +329,10 @@
     try {
       const deleteUrl =
         activeTab.value === 'connections'
-          ? `/api/v1/routers/${routerId.value}/webfig/firewall/connections/${encodeURIComponent(rule.id)}`
-          : `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}/${rule.id}`;
+          ? activeProto.value === 'ipv6'
+            ? `/api/v1/routers/${routerId.value}/webfig/firewall/ipv6/connections/${encodeURIComponent(rule.id)}`
+            : `/api/v1/routers/${routerId.value}/webfig/firewall/connections/${encodeURIComponent(rule.id)}`
+          : `/api/v1/routers/${routerId.value}/webfig/firewall/${activeProto.value}/${activeTab.value}/${rule.id}`;
       const res = await http.delete(deleteUrl);
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       if (intercepted) {
@@ -332,7 +356,7 @@
     isResetting.value = true;
     try {
       await http.post(
-        `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}/reset-counters`,
+        `/api/v1/routers/${routerId.value}/webfig/firewall/${activeProto.value}/${activeTab.value}/reset-counters`,
       );
       actionMessage.value = 'Contadores de tráfico reiniciados a cero.';
       await loadFirewallRules(true);
@@ -356,7 +380,7 @@
 
     try {
       const res = await http.post(
-        `/api/v1/routers/${routerId.value}/webfig/firewall/ip/${activeTab.value}/move`,
+        `/api/v1/routers/${routerId.value}/webfig/firewall/${activeProto.value}/${activeTab.value}/move`,
         {
           numbers: event.row.id,
           destination: String(event.toIndex),
@@ -485,10 +509,36 @@
 
     <header class="view-header">
       <div>
-        <h2 class="view-title">Firewall RouterOS v7 & Filtrado de Paquetes</h2>
+        <h2 class="view-title">
+          Firewall RouterOS v7 & Filtrado de Paquetes ({{ activeProto === 'ipv6' ? 'IPv6' : 'IPv4' }})
+        </h2>
         <p class="view-subtitle">
           Reglas ordenadas con protección Safe Mode (60s Rollback) y barras de tráfico en vivo
         </p>
+      </div>
+
+      <!-- Conmutador de Pila IPv4 / IPv6 -->
+      <div class="proto-switcher" role="group" aria-label="Pila de protocolo de Firewall">
+        <button
+          id="btn-fw-proto-ip"
+          type="button"
+          class="btn-proto font-tabular"
+          :class="{ 'btn-proto--active': activeProto === 'ip' }"
+          :aria-pressed="activeProto === 'ip'"
+          @click="setProto('ip')"
+        >
+          🌐 IPv4 (/ip/firewall)
+        </button>
+        <button
+          id="btn-fw-proto-ipv6"
+          type="button"
+          class="btn-proto font-tabular"
+          :class="{ 'btn-proto--active': activeProto === 'ipv6' }"
+          :aria-pressed="activeProto === 'ipv6'"
+          @click="setProto('ipv6')"
+        >
+          🌐 IPv6 (/ipv6/firewall)
+        </button>
       </div>
 
       <div class="header-actions">
@@ -503,7 +553,7 @@
           {{ isLoading ? '🔄 Refrescando...' : '🔄 Refrescar' }}
         </button>
         <button
-          v-if="activeTab === 'nat'"
+          v-if="activeTab === 'nat' && activeProto === 'ip'"
           type="button"
           class="btn-wizard-action"
           @click="isMasqueradeWizardOpen = true"
@@ -511,7 +561,7 @@
           🧙‍♂️ Masquerade
         </button>
         <button
-          v-if="activeTab === 'nat'"
+          v-if="activeTab === 'nat' && activeProto === 'ip'"
           type="button"
           class="btn-wizard-action"
           @click="isPortForwardWizardOpen = true"
@@ -647,6 +697,7 @@
       :is-open="isRuleModalOpen"
       :is-editing="isEditingRule"
       :table-type="activeTab"
+      :proto="activeProto"
       :initial-rule="selectedRule"
       :existing-rules="rulesList"
       @close="isRuleModalOpen = false"
@@ -781,6 +832,32 @@
     margin: 2px 0 0 0;
     font-size: 0.8rem;
     color: var(--rg-text-muted);
+  }
+
+  .proto-switcher {
+    display: inline-flex;
+    gap: 4px;
+    background: var(--rg-bg-canvas);
+    padding: 3px;
+    border: 1px solid var(--rg-border-grid);
+    border-radius: 8px;
+  }
+
+  .btn-proto {
+    background: transparent;
+    border: none;
+    color: var(--rg-text-secondary);
+    padding: 5px 12px;
+    font-size: 0.78rem;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .btn-proto--active {
+    background: rgba(6, 182, 212, 0.16);
+    color: var(--rg-accent-cyan);
+    font-weight: 700;
   }
 
   .header-actions {
