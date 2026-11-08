@@ -190,14 +190,51 @@ En `handleUpdateTenant()` dentro de `vue3/src/views/admin/TenantsManagementView.
 
 ---
 
-## 4. Pruebas Obligatorias Nivel 11X (Unitarias + Integración JSONB + Karate Labs BDD)
+## 4. Blindaje Estructural del Arnés de Pruebas (`conftest.py` y `MockDbSession`) y Pruebas Nivel 11X
 
-### 4.1. Prueba Unitaria y de Serialización JSONB Estricta en Backend (`fastapi/tests/api/test_tenants_and_users.unit.py`)
+### 4.1. Por Qué Escapó de las Pruebas Anteriores y Cómo Blindar el Arnés Globalmente
+
+El fallo no fue detectado en el Hito 30.27 por tres puntos ciegos del arnés de pruebas en memoria:
+1. **`MockDbSession.commit()` (`test_tenants_and_users.unit.py`) solo hacía `self.committed = True`:** A diferencia del compilador `JSONB` real de SQLAlchemy + PostgreSQL (que ejecuta `json.dumps(value)` estricto sin `default=str` durante el `flush`/`commit`), `MockDbSession` guardaba el objeto `AuditLog` en una lista de Python (`self.added`) sin serializar jamás `before_state` ni `after_state` a JSON.
+2. **`make_asserting_audit_mock` (`fastapi/tests/conftest.py`) no validaba serialización JSONB:** Validaba `event_category`, `event_action`, `actor_username` y la ausencia de UUIDs crudos, pero no ejecutaba `json.dumps(before_state)` ni `json.dumps(after_state)`.
+3. **Hidratación `float` vs `Decimal` en fixtures ORM:** En PostgreSQL, las columnas `NUMERIC(9, 6)` se hidratan como `decimal.Decimal`, mientras que en el test unitario se asignaron como `float`.
+
+#### Cambios Obligatorios en `fastapi/tests/conftest.py`:
+En `make_asserting_audit_mock` (`fastapi/tests/conftest.py`), añadir validación estricta `json.dumps()` (sin `default=str`) sobre `before_state` y `after_state` tras pasarlos por `sanitize_sensitive_data`:
+
+```python
+        import json
+        from src.core.audit import sanitize_sensitive_data
+
+        before_st = kwargs.get("before_state")
+        after_st = kwargs.get("after_state")
+        if before_st is not None:
+            json.dumps(sanitize_sensitive_data(before_st))
+        if after_st is not None:
+            json.dumps(sanitize_sensitive_data(after_st))
+```
+
+#### Cambios Obligatorios en `MockDbSession` (`fastapi/tests/api/test_tenants_and_users.unit.py`):
+En `MockDbSession.add()` y `MockDbSession.commit()`, emular el compilador `JSONB` de SQLAlchemy ejecutando `json.dumps()` sobre `before_state` y `after_state` de cualquier `AuditLog` agregado a la sesión:
+
+```python
+    async def commit(self) -> None:
+        import json
+
+        for item in self.added:
+            for jsonb_attr in ("before_state", "after_state"):
+                val = getattr(item, jsonb_attr, None)
+                if val is not None:
+                    json.dumps(val)
+        self.committed = True
+```
+
+### 4.2. Prueba Unitaria y de Serialización JSONB Estricta en Backend (`fastapi/tests/api/test_tenants_and_users.unit.py`)
 
 En `fastapi/tests/api/test_tenants_and_users.unit.py`, actualizar/añadir la prueba `test_tenant_hq_coordinates_create_update_and_decimal_audit_jsonb_serialization`:
 1. Instanciar el `Tenant` existente con valores `Decimal("10.480600")` y `Decimal("-66.903600")` (idéntico a como PostgreSQL `NUMERIC(9, 6)` hidrata el modelo ORM).
 2. Ejecutar `PATCH /api/v1/tenants/{t1.id}` con `{"name": "Tecno Carabobo", "hq_latitude": 10.232345, "hq_longitude": -67.879812}`.
-3. Verificar que responde `HTTP 200`, que el registro `AuditLog` creado en `db.added` tiene `before_state["hq_latitude"] == 10.4806` (`isinstance(..., float)`), y que `json.dumps(audit_entry.before_state)` y `json.dumps(audit_entry.after_state)` se ejecutan **sin lanzar `TypeError: Object of type Decimal is not JSON serializable`**.
+3. Verificar que responde `HTTP 200`, que el registro `AuditLog` creado en `db.added` tiene `before_state["hq_latitude"] == 10.4806` (`isinstance(..., float)`), y que `json.dumps(audit_entry.before_state)` y `json.dumps(audit_entry.after_state)` se ejecutan en `MockDbSession.commit()` **sin lanzar `TypeError: Object of type Decimal is not JSON serializable`**.
 
 ### 4.2. Prueba Unitaria Frontend (`vue3/src/views/admin/tenantsManagementView.unit.ts` y `vue3/src/components/network/UnifiedNetworkMap.unit.ts`)
 

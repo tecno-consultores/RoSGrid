@@ -13,10 +13,11 @@
 
 Unit isolation with mocks measures quick logical coverage but creates blind spots if disconnected from real infrastructure:
 
-1. **ORM vs PostgreSQL Schema Invariant:**
+1. **ORM vs PostgreSQL Schema & JSONB Serialization Invariant:**
    - **Zero Schema Drift:** Modifying `src/models/*.py` or column types never alters the database automatically.
    - **Mandatory Alembic Migration:** Any new model, table, constraint (`UniqueConstraint`), or column type change requires an immediate versioned migration in `fastapi/migrations/versions/`.
    - **Real PostgreSQL Verification:** Always verify tables, column types, and indices via `\d <table>` in real PostgreSQL (`rosgrid_db_local`). Never assume `AsyncMock` passing guarantees SQL execution.
+   - **Strict JSONB & `Decimal` Serialization in `MockDbSession` and Audit Mocks (Spec 105):** PostgreSQL `NUMERIC(p, s)` columns hydrate as `decimal.Decimal` in SQLAlchemy, and `JSONB` columns (`AuditLog.before_state`, `AuditLog.after_state`) execute strict `json.dumps(val)` (without `default=str`) on `flush`/`commit`. Every `MockDbSession.commit()` and `make_asserting_audit_mock` MUST execute `json.dumps()` on `JSONB` fields, and test fixtures for `Numeric` columns MUST use `Decimal("...")` to prevent `TypeError: Object of type Decimal is not JSON serializable` from escaping unit tests.
 
 2. **3-Layer Endpoint & Component Verification Pyramid:**
    - **Layer 1: Isolated Unit Tests:**
