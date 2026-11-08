@@ -3,7 +3,7 @@
 
 <script setup lang="ts">
   import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
-  import { useRoute } from 'vue-router';
+  import { useRoute, useRouter } from 'vue-router';
   import { http } from '@/api/httpClient';
   import { useWebFigStore } from '@/stores/useWebFigStore';
   import type { TableColumn, FirewallRuleItem } from '@/types';
@@ -11,6 +11,7 @@
   import RgFirewallRuleModal from '@/components/webfig/RgFirewallRuleModal.vue';
 
   const route = useRoute();
+  const router = useRouter();
   const routerId = computed(() => String(route.params.routerId || ''));
   const webFigStore = useWebFigStore();
 
@@ -24,6 +25,17 @@
   function setProto(proto: 'ip' | 'ipv6') {
     if (activeProto.value === proto) return;
     activeProto.value = proto;
+    try {
+      const nextQuery = { ...((route as any)?.query || {}) };
+      if (proto === 'ipv6') {
+        nextQuery.proto = 'ipv6';
+      } else {
+        delete nextQuery.proto;
+      }
+      router?.replace?.({ query: nextQuery });
+    } catch {
+      // Ignorar en entornos de prueba sin router completo
+    }
     loadFirewallRules();
   }
 
@@ -508,109 +520,113 @@
     </div>
 
     <header class="view-header">
-      <div>
-        <h2 class="view-title">
-          Firewall RouterOS v7 & Filtrado de Paquetes ({{ activeProto === 'ipv6' ? 'IPv6' : 'IPv4' }})
-        </h2>
-        <p class="view-subtitle">
-          Reglas ordenadas con protección Safe Mode (60s Rollback) y barras de tráfico en vivo
-        </p>
+      <div class="header-top-row">
+        <div>
+          <h2 class="view-title">
+            Firewall RouterOS v7 & Filtrado de Paquetes ({{ activeProto === 'ipv6' ? 'IPv6' : 'IPv4' }})
+          </h2>
+          <p class="view-subtitle">
+            Reglas ordenadas con protección Safe Mode (60s Rollback) y barras de tráfico en vivo
+          </p>
+        </div>
+
+        <!-- Conmutador de Pila IPv4 / IPv6 -->
+        <div class="proto-switcher" role="group" aria-label="Pila de protocolo de Firewall">
+          <button
+            id="btn-fw-proto-ip"
+            type="button"
+            class="btn-proto font-tabular"
+            :class="{ 'btn-proto--active': activeProto === 'ip' }"
+            :aria-pressed="activeProto === 'ip'"
+            @click="setProto('ip')"
+          >
+            🌐 IPv4 (/ip/firewall)
+          </button>
+          <button
+            id="btn-fw-proto-ipv6"
+            type="button"
+            class="btn-proto font-tabular"
+            :class="{ 'btn-proto--active': activeProto === 'ipv6' }"
+            :aria-pressed="activeProto === 'ipv6'"
+            @click="setProto('ipv6')"
+          >
+            🌐 IPv6 (/ipv6/firewall)
+          </button>
+        </div>
       </div>
 
-      <!-- Conmutador de Pila IPv4 / IPv6 -->
-      <div class="proto-switcher" role="group" aria-label="Pila de protocolo de Firewall">
-        <button
-          id="btn-fw-proto-ip"
-          type="button"
-          class="btn-proto font-tabular"
-          :class="{ 'btn-proto--active': activeProto === 'ip' }"
-          :aria-pressed="activeProto === 'ip'"
-          @click="setProto('ip')"
-        >
-          🌐 IPv4 (/ip/firewall)
-        </button>
-        <button
-          id="btn-fw-proto-ipv6"
-          type="button"
-          class="btn-proto font-tabular"
-          :class="{ 'btn-proto--active': activeProto === 'ipv6' }"
-          :aria-pressed="activeProto === 'ipv6'"
-          @click="setProto('ipv6')"
-        >
-          🌐 IPv6 (/ipv6/firewall)
-        </button>
-      </div>
+      <div class="header-controls-row">
+        <!-- Pestañas de Tablas de Firewall (Fijas a la izquierda — Zero CLS) -->
+        <nav class="subtabs-bar" role="tablist" aria-label="Tablas de Firewall">
+          <button
+            v-for="tab in [
+              { id: 'filter', label: 'Filter Rules' },
+              { id: 'nat', label: 'NAT' },
+              { id: 'mangle', label: 'Mangle' },
+              { id: 'raw', label: 'RAW' },
+              { id: 'address-list', label: 'Address Lists' },
+              { id: 'connections', label: 'Connections' },
+            ]"
+            :key="tab.id"
+            type="button"
+            class="btn-subtab"
+            :class="{ 'btn-subtab--active': activeTab === tab.id }"
+            role="tab"
+            :aria-selected="activeTab === tab.id"
+            @click="
+              activeTab = tab.id as any;
+              loadFirewallRules();
+            "
+          >
+            {{ tab.label }}
+          </button>
+        </nav>
 
-      <div class="header-actions">
-        <button
-          id="btn-webfig-refresh"
-          type="button"
-          class="btn-secondary-action font-tabular"
-          :disabled="isLoading"
-          aria-label="Refrescar datos directamente desde el router MikroTik"
-          @click="loadFirewallRules(true)"
-        >
-          {{ isLoading ? '🔄 Refrescando...' : '🔄 Refrescar' }}
-        </button>
-        <button
-          v-if="activeTab === 'nat' && activeProto === 'ip'"
-          type="button"
-          class="btn-wizard-action"
-          @click="isMasqueradeWizardOpen = true"
-        >
-          🧙‍♂️ Masquerade
-        </button>
-        <button
-          v-if="activeTab === 'nat' && activeProto === 'ip'"
-          type="button"
-          class="btn-wizard-action"
-          @click="isPortForwardWizardOpen = true"
-        >
-          🧙‍♂️ Port Forwarding
-        </button>
-        <button
-          v-if="activeTab === 'filter' || activeTab === 'nat' || activeTab === 'mangle' || activeTab === 'raw' || activeTab === 'address-list'"
-          type="button"
-          class="btn-primary-action"
-          @click="openCreateRuleModal"
-        >
-          {{ activeTab === 'address-list' ? '+ Agregar a Address-List' : '+ Nueva Regla' }}
-        </button>
-        <button
-          type="button"
-          class="btn-secondary-action"
-          :disabled="isResetting"
-          @click="handleResetCounters"
-        >
-          🔄 Reset Contadores
-        </button>
+        <div class="header-actions">
+          <button
+            v-if="activeTab === 'nat' && activeProto === 'ip'"
+            type="button"
+            class="btn-wizard-action"
+            @click="isMasqueradeWizardOpen = true"
+          >
+            🧙‍♂️ Masquerade
+          </button>
+          <button
+            v-if="activeTab === 'nat' && activeProto === 'ip'"
+            type="button"
+            class="btn-wizard-action"
+            @click="isPortForwardWizardOpen = true"
+          >
+            🧙‍♂️ Port Forwarding
+          </button>
+          <button
+            id="btn-webfig-refresh"
+            type="button"
+            class="btn-secondary-action font-tabular"
+            :disabled="isLoading"
+            aria-label="Refrescar datos directamente desde el router MikroTik"
+            @click="loadFirewallRules(true)"
+          >
+            {{ isLoading ? '🔄 Refrescando...' : '🔄 Refrescar' }}
+          </button>
+          <button
+            type="button"
+            class="btn-secondary-action"
+            :disabled="isResetting"
+            @click="handleResetCounters"
+          >
+            🔄 Reset Contadores
+          </button>
+          <button
+            v-if="activeTab === 'filter' || activeTab === 'nat' || activeTab === 'mangle' || activeTab === 'raw' || activeTab === 'address-list'"
+            type="button"
+            class="btn-primary-action"
+            @click="openCreateRuleModal"
+          >
+            {{ activeTab === 'address-list' ? '+ Agregar a Address-List' : '+ Nueva Regla' }}
+          </button>
+        </div>
       </div>
-
-      <!-- Pestañas de Tablas de Firewall -->
-      <nav class="subtabs-bar" role="tablist" aria-label="Tablas de Firewall">
-        <button
-          v-for="tab in [
-            { id: 'filter', label: 'Filter Rules' },
-            { id: 'nat', label: 'NAT' },
-            { id: 'mangle', label: 'Mangle' },
-            { id: 'raw', label: 'RAW' },
-            { id: 'address-list', label: 'Address Lists' },
-            { id: 'connections', label: 'Connections' },
-          ]"
-          :key="tab.id"
-          type="button"
-          class="btn-subtab"
-          :class="{ 'btn-subtab--active': activeTab === tab.id }"
-          role="tab"
-          :aria-selected="activeTab === tab.id"
-          @click="
-            activeTab = tab.id as any;
-            loadFirewallRules();
-          "
-        >
-          {{ tab.label }}
-        </button>
-      </nav>
     </header>
 
     <!-- Filtro rápido por Cadena (Chain) -->
@@ -815,10 +831,24 @@
 
   .view-header {
     display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .header-top-row {
+    display: flex;
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 12px;
+  }
+
+  .header-controls-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
   }
 
   .view-title {
@@ -862,8 +892,10 @@
 
   .header-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     align-items: center;
+    margin-left: auto;
   }
 
   .btn-primary-action {

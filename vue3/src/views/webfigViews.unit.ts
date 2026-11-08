@@ -22,16 +22,19 @@ import WireGuardVpnView from './WireGuardVpnView.vue';
 import type { RouterItem, TelemetryPoint } from '@/types';
 
 const mockPush = vi.fn();
+const mockReplace = vi.fn();
 let mockRouteParam: Record<string, string> = { routerId: 'r-01', rosPath: 'mpls' };
+let mockRouteQuery: Record<string, string> = {};
 
 vi.mock('vue-router', () => ({
   useRoute: () => ({
     params: mockRouteParam,
     path: `/routers/${mockRouteParam.routerId || 'r-01'}/webfig/live`,
-    query: {},
+    query: mockRouteQuery,
   }),
   useRouter: () => ({
     push: mockPush,
+    replace: mockReplace,
   }),
   RouterView: { template: '<div class="router-view-stub">ROUTER_VIEW</div>' },
   RouterLink: { template: '<a><slot /></a>' },
@@ -42,7 +45,9 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
     setActivePinia(createPinia());
     vi.restoreAllMocks();
     mockPush.mockClear();
+    mockReplace.mockClear();
     mockRouteParam = { routerId: 'r-01', rosPath: 'mpls' };
+    mockRouteQuery = {};
 
     // Canvas mock
     HTMLCanvasElement.prototype.getContext = vi.fn().mockReturnValue({
@@ -1154,6 +1159,68 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
     postSpy.mockRestore();
     patchSpy.mockRestore();
     deleteSpy.mockRestore();
+    wrapper.unmount();
+  });
+
+  it('FirewallRulesView — estructura fija de 2 filas (.header-top-row y .header-controls-row), Zero CLS con .subtabs-bar a la izquierda y sincronización de ?proto= en la URL (Spec 107 / Hito 30.30)', async () => {
+    mockRouteQuery = { proto: 'ipv6' };
+    const getSpy = vi.spyOn(http, 'get').mockResolvedValue({
+      status: 200,
+      data: [],
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(FirewallRulesView);
+    await flushPromises();
+
+    // 1. Verificar estructura fija de 2 filas
+    const viewHeader = wrapper.find('.view-header');
+    expect(viewHeader.exists()).toBe(true);
+    const topRow = viewHeader.find('.header-top-row');
+    expect(topRow.exists()).toBe(true);
+    const controlsRow = viewHeader.find('.header-controls-row');
+    expect(controlsRow.exists()).toBe(true);
+
+    // .proto-switcher está dentro de .header-top-row
+    expect(topRow.find('.proto-switcher').exists()).toBe(true);
+
+    // 2. .subtabs-bar está anclada a la izquierda dentro de .header-controls-row y precede a .header-actions
+    const subtabsBar = controlsRow.find('.subtabs-bar');
+    expect(subtabsBar.exists()).toBe(true);
+    const headerActions = controlsRow.find('.header-actions');
+    expect(headerActions.exists()).toBe(true);
+
+    // Comprobar orden en el DOM: subtabs-bar precede a header-actions dentro de .header-controls-row
+    const controlsChildren = controlsRow.element.children;
+    expect(controlsChildren[0].classList.contains('subtabs-bar')).toBe(true);
+    expect(controlsChildren[1].classList.contains('header-actions')).toBe(true);
+
+    // 3. Conmutar a la pestaña NAT en IPv4 no altera el orden ni posición de .subtabs-bar
+    const btnIp = wrapper.find('#btn-fw-proto-ip');
+    await btnIp.trigger('click');
+    await flushPromises();
+
+    expect(mockReplace).toHaveBeenCalledWith({ query: {} });
+
+    // Clic en pestaña NAT
+    const natTabBtn = wrapper.findAll('.btn-subtab').find((btn) => btn.text().includes('NAT'));
+    expect(natTabBtn).toBeDefined();
+    await natTabBtn!.trigger('click');
+    await flushPromises();
+
+    // Los botones de wizard aparecen dentro de .header-actions sin desplazar .subtabs-bar
+    expect(headerActions.text()).toContain('Masquerade');
+    expect(headerActions.text()).toContain('Port Forwarding');
+    expect(controlsRow.element.children[0].classList.contains('subtabs-bar')).toBe(true);
+
+    // Conmutar a IPv6 sincroniza ?proto=ipv6
+    const btnIpv6 = wrapper.find('#btn-fw-proto-ipv6');
+    await btnIpv6.trigger('click');
+    await flushPromises();
+
+    expect(mockReplace).toHaveBeenCalledWith({ query: { proto: 'ipv6' } });
+
+    getSpy.mockRestore();
     wrapper.unmount();
   });
 

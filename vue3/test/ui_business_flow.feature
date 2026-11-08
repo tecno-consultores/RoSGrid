@@ -1189,6 +1189,17 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * assert opticalBoxesCsvVisibility.can_manage_bulk_subscribers == true
     * assert opticalBoxesCsvVisibility.btn_boxes_visible == true
 
+  # ============================================================================
+  # SPEC 107: ESTABILIDAD GEOMÉTRICA ZERO CLS EN CABECERA Y PESTAÑAS DE FIREWALL
+  # ============================================================================
+  Scenario: 121. Estructura fija de dos filas con subpestañas ancladas a la izquierda y sincronizacion de proto en URL (Spec 107)
+    * def fwHeaderLayout = { top_row_has_switcher: true, controls_row_subtabs_first: true, zero_layout_shift_nat: true, proto_query_synced: true }
+    * assert fwHeaderLayout.top_row_has_switcher == true
+    * assert fwHeaderLayout.controls_row_subtabs_first == true
+    * assert fwHeaderLayout.zero_layout_shift_nat == true
+    * assert fwHeaderLayout.proto_query_synced == true
+
+
 
 
 

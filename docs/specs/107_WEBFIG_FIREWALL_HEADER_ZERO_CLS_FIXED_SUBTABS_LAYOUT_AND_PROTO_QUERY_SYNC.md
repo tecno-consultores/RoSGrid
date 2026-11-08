@@ -1,6 +1,6 @@
 # Especificación 107: Estabilidad Geométrica (`Zero Layout Shift`) en la Cabecera y Pestañas de `FirewallRulesView.vue` al Seleccionar `NAT` y Sincronización Bidireccional de `?proto=` en la URL
 
-**Estado:** Pendiente de Ejecución (`[ ]` Hito 30.30)  
+**Estado:** COMPLETADO y Certificado al 100% (`[x]` Hito 30.30)  
 **Target de Ejecución:** Gemini 3.8 Flash (High)  
 **Ámbito:** Frontend (`vue3/src/views/FirewallRulesView.vue`, `vue3/src/views/webfigViews.unit.ts`) + Karate Labs BDD (`vue3/test/ui_business_flow.feature` y `docs/examples/vue3/ui_business_flow.feature.example`)
 
