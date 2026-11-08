@@ -17,17 +17,43 @@
    - En `vue3/src/components/network/UnifiedNetworkMap.vue` (líneas 446, 574 y 868), el botón de capa `■ Cajas NAP` y el renderizado de `boxesLayer` dependían exclusivamente de `isIspMode`. Si un administrador importa Cajas NAP por CSV o desde clientes CSV en un tenant con `isp_module_enabled = false`, las cajas creadas en PostgreSQL no se dibujaban en el mapa.
 3. **Omisión de `hq_latitude` y `hq_longitude` en `_extract_tenant_features` dentro de `fastapi/src/api/v1/auth.py`:**
    - En `fastapi/src/api/v1/auth.py` (líneas 390–424), la función local `_extract_tenant_features(tenant)` mantenía una lista propia de flags que no incluía `"hq_latitude"` ni `"hq_longitude"` (a diferencia de `extract_tenant_features(tenant)` en `fastapi/src/schemas/tenants.py`). Por ello, al iniciar sesión o cambiar de tenant (`/auth/switch-tenant`), `user.tenant_feature_flags` no traía las coordenadas de la Sede Principal hasta llamar manualmente a `/api/v1/tenants/{id}/features`.
+4. **Doble ícono `🔄 🔄` en el botón «Sincronizar Dispositivos DHCP» de `SubscribersMapView.vue`:**
+   - En `vue3/src/locales/es.json` y `en.json` (línea 154), la clave `subscribers_map.btn_sync_dhcp` ya incluye el emoji `🔄` (`"🔄 Sincronizar Dispositivos DHCP"` / `"🔄 Sync DHCP Devices"`), pero en `SubscribersMapView.vue` (líneas 701–703) además se renderizaba `<span v-else>🔄</span>` antes de `t('subscribers_map.btn_sync_dhcp')`, produciendo el texto duplicado `🔄 🔄 Sincronizar Dispositivos DHCP`.
 
 ---
 
 ## 2. Cambios Exactos Requeridos en Frontend (`vue3/`)
 
-### 2.1. Paridad de Visibilidad RBAC en `#btn-import-optical-boxes-csv` (`vue3/src/views/SubscribersMapView.vue`)
+### 2.1. Eliminación del Doble Ícono `🔄 🔄` en Sincronizar DHCP y Paridad de Visibilidad RBAC en `#btn-import-optical-boxes-csv` (`vue3/src/views/SubscribersMapView.vue`)
 
-En `vue3/src/views/SubscribersMapView.vue` (línea 718):
-- Cambiar `v-if="canManageBulkSubscribers && isIspMode"` por **`v-if="canManageBulkSubscribers"`** en `#btn-import-optical-boxes-csv`, de modo que siempre que el administrador (`SUPERADMIN_GLOBAL` o `TENANT_ADMIN`) vea `📂 Importar Clientes CSV`, vea inmediatamente a su lado `📦 Importar Cajas NAP CSV`:
+En `vue3/src/views/SubscribersMapView.vue` (líneas 694–726):
+1. En el botón de sincronizar DHCP, eliminar el `<span v-else>🔄</span>` redundante (o usar `t('subscribers_map.btn_sync_dhcp').replace(/^🔄\s*/, '')` junto al `<span>`) para que renderice un único ícono `🔄 Sincronizar Dispositivos DHCP`.
+2. Cambiar `v-if="canManageBulkSubscribers && isIspMode"` por **`v-if="canManageBulkSubscribers"`** en `#btn-import-optical-boxes-csv`, de modo que siempre que el administrador (`SUPERADMIN_GLOBAL` o `TENANT_ADMIN`) vea `📂 Importar Clientes CSV`, vea inmediatamente a su lado `📦 Importar Cajas NAP CSV`:
 
 ```html
+        <!-- Botón Modo Empresa / Común: Sincronizar leases DHCP reales desde MikroTik -->
+        <button
+          id="btn-sync-dhcp-clients"
+          type="button"
+          class="btn-sync-dhcp"
+          :disabled="isSyncingDhcp"
+          aria-label="Sincronizar Dispositivos DHCP"
+          @click="handleSyncDhcpClients"
+        >
+          <span v-if="isSyncingDhcp">⏳ {{ t('subscribers_map.syncing_dhcp') }}</span>
+          <span v-else>{{ t('subscribers_map.btn_sync_dhcp') }}</span>
+        </button>
+        <!-- Botón Carga Masiva CSV Clientes (Solo SUPERADMIN_GLOBAL y TENANT_ADMIN) -->
+        <button
+          v-if="canManageBulkSubscribers"
+          id="btn-import-subscribers-csv"
+          type="button"
+          class="btn-sync-dhcp"
+          aria-label="Importar Clientes CSV"
+          @click="isCsvModalOpen = true"
+        >
+          {{ t('subscribers_map.btn_import_csv', '📂 Importar Clientes CSV') }}
+        </button>
         <!-- Botón Carga Masiva CSV Cajas NAP (Hito 30.26 / Spec 103 & Spec 106) -->
         <button
           v-if="canManageBulkSubscribers"
