@@ -1528,6 +1528,15 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  # ============================================================================
+  # SPEC 97: SERVIDORES DHCP, REDES NTP Y CREACIÓN DE CONCESIÓN ESTÁTICA DHCP
+  # ============================================================================
+  Scenario: 171. Listado de servidores DHCP (/webfig/ip/dhcp-servers) y redes DHCP (/webfig/ip/dhcp-server/networks)
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/ip/dhcp-servers'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
 
 
 

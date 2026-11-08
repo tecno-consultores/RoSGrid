@@ -366,4 +366,85 @@ describe('WebFig Layer 3: IpAddressesAndDhcpView & Ipv6DualStackView', () => {
     vm.goToFirewall();
     expect(mockPush).toHaveBeenCalledWith('/routers/r-01/webfig/firewall');
   });
+
+  it('IpAddressesAndDhcpView — abre Servidores DHCP por defecto con carga paralela y permite añadir concesión estática (Spec 97)', async () => {
+    vi.spyOn(http, 'get').mockImplementation(async (url: string) => {
+      if (url.includes('/dhcp-servers')) {
+        return {
+          status: 200,
+          data: [
+            { '.id': '*1', name: 'dhcp-anillo', interface: 'bridge-anillo', 'address-pool': 'pool-pcs', 'lease-time': '30m', disabled: 'false' },
+            { '.id': '*2', name: 'dhcp-aps', interface: 'vlan20-aps', 'address-pool': 'pool-aps', 'lease-time': '30m', disabled: 'false' },
+            { '.id': '*3', name: 'dhcp-cctv', interface: 'vlan30-cctv', 'address-pool': 'dhcp_pool2', 'lease-time': '30m', comment: 'cctv', disabled: 'false' },
+          ],
+          headers: new Headers(),
+        };
+      }
+      if (url.includes('/dhcp-server/networks')) {
+        return {
+          status: 200,
+          data: [
+            { '.id': '*1', address: '192.168.10.0/24', gateway: '192.168.10.254', 'dns-server': '192.168.10.254', 'ntp-server': '192.168.10.254', comment: 'pc' },
+          ],
+          headers: new Headers(),
+        };
+      }
+      if (url.includes('/dhcp-server/leases')) {
+        return { status: 200, data: [], headers: new Headers() };
+      }
+      return { status: 200, data: [], headers: new Headers() };
+    });
+
+    const postSpy = vi.spyOn(http, 'post').mockResolvedValue({
+      status: 201,
+      data: { ret: '*9' },
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(IpAddressesAndDhcpView);
+    await flushPromises();
+
+    const vm = wrapper.vm as any;
+    vm.setTab('dhcp-server');
+    await flushPromises();
+
+    // Por defecto debe abrir la subpestaña 'servers' y mostrar los 3 servidores DHCP de r1
+    expect(vm.activeDhcpSubtab).toBe('servers');
+    expect(wrapper.text()).toContain('dhcp-anillo');
+    expect(wrapper.text()).toContain('dhcp-aps');
+    expect(wrapper.text()).toContain('dhcp-cctv');
+    expect(wrapper.text()).toContain('Servidores DHCP (3)');
+    expect(wrapper.text()).toContain('Redes & Opciones (1)');
+
+    // Cambiar a Concesiones Activas (Leases) y verificar que existe el botón '+ Añadir Concesión Estática'
+    vm.setDhcpSubtab('leases');
+    await flushPromises();
+
+    const addLeaseBtn = wrapper.find('#btn-create-dhcp-lease');
+    expect(addLeaseBtn.exists()).toBe(true);
+    await addLeaseBtn.trigger('click');
+    await flushPromises();
+
+    vm.newLease = {
+      address: '192.168.10.50',
+      mac_address: 'AA:BB:CC:11:22:33',
+      server: 'dhcp-anillo',
+      rate_limit: '10M/10M',
+      comment: 'Cliente Estático',
+      disabled: false,
+    };
+    await vm.handleCreateLease();
+    await flushPromises();
+
+    expect(postSpy).toHaveBeenCalledWith(
+      '/api/v1/routers/r-01/webfig/ip/dhcp-server/leases',
+      expect.objectContaining({
+        address: '192.168.10.50',
+        mac_address: 'AA:BB:CC:11:22:33',
+        server: 'dhcp-anillo',
+      }),
+    );
+
+    wrapper.unmount();
+  });
 });

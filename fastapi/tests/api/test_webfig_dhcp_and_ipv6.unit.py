@@ -382,3 +382,40 @@ async def test_webfig_dhcp_idempotent_creation_on_duplicate(
             db=db,
         )
         assert res_srv.get("ret") == "*existing1"
+
+
+@pytest.mark.asyncio
+async def test_webfig_dhcp_lease_create_static_and_ntp_network(
+    fake_client_and_router: tuple[Router, AsyncMock],
+) -> None:
+    """Certifica la creación de reservaciones estáticas DHCP (POST /dhcp-server/leases) y soporte de comment/ntp_server (Spec 97)."""
+    from src.schemas.webfig_l1_net import DhcpLeaseCreateRequest
+
+    r, client = fake_client_and_router
+    db = AsyncMock()
+    claims = {"tid": str(r.tenant_id), "sub": str(uuid.uuid4()), "rol": "tenant_admin"}
+
+    with (
+        patch("src.api.v1.webfig_ip.get_router_and_client", return_value=(r, client)),
+        patch("src.api.v1.webfig_ip.get_redis_client", return_value=AsyncMock(get=AsyncMock(return_value=None))),
+    ):
+        lease_payload = DhcpLeaseCreateRequest(
+            address="192.168.10.50",
+            mac_address="AA:BB:CC:11:22:33",
+            server="dhcp-anillo",
+            rate_limit="20M/20M",
+            comment="PC Contabilidad",
+        )
+        res_lease = await api_wf_ip.create_dhcp_lease(r.id, lease_payload, claims=claims, db=db)
+        assert res_lease.get("ret") == "*1"
+        assert "_safemode" in res_lease
+
+        net_payload = DhcpNetworkCreateRequest(
+            address="192.168.10.0/24",
+            gateway="192.168.10.254",
+            dns_server="192.168.10.254",
+            ntp_server="192.168.10.254",
+            comment="pc",
+        )
+        res_net = await api_wf_ip.create_dhcp_network(r.id, net_payload, claims=claims, db=db)
+        assert res_net.get("ret") == "*1"

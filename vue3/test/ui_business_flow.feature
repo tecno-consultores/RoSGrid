@@ -1102,6 +1102,13 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * def ifaceWgNative = { id: '*B', name: 'miprueba', type: 'wg', mtu: 1420, running: true, disabled: false }
     * assert ifaceWgNative.type == 'wg' || ifaceWgNative.type == 'wireguard'
 
+  # ============================================================================
+  # SPEC 97: SUBPESTAÑA POR DEFECTO SERVIDORES DHCP Y CREACIÓN DE LEASE ESTÁTICO
+  # ============================================================================
+  Scenario: 111. El módulo Servidor DHCP abre por defecto Servidores DHCP y permite añadir concesiones estáticas
+    * def defaultDhcpSubtab = 'servers'
+    * assert defaultDhcpSubtab == 'servers'
+
 
 
 

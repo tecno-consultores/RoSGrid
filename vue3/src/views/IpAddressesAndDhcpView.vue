@@ -16,9 +16,9 @@
   type MainTab = 'addresses' | 'dhcp-server' | 'dhcp-client' | 'pools' | 'dns' | 'arp';
   const activeTab = ref<MainTab>('addresses');
 
-  // Subpestaña de DHCP Server
-  type DhcpServerSubtab = 'leases' | 'servers' | 'networks';
-  const activeDhcpSubtab = ref<DhcpServerSubtab>('leases');
+  // Subpestaña de DHCP Server (Orden canónico WinBox: Servidores -> Redes -> Concesiones)
+  type DhcpServerSubtab = 'servers' | 'networks' | 'leases';
+  const activeDhcpSubtab = ref<DhcpServerSubtab>('servers');
 
   // Estados de datos
   const isLoading = ref(false);
@@ -43,18 +43,27 @@
   const editingAddressId = ref('');
   const editAddressForm = ref({ address: '', interface: 'ether1', comment: '', disabled: false });
 
+  const isCreateLeaseModalOpen = ref(false);
+  const newLease = ref({
+    address: '',
+    mac_address: '',
+    server: 'all',
+    rate_limit: '',
+    comment: '',
+    disabled: false,
+  });
   const isEditLeaseModalOpen = ref(false);
   const editingLeaseId = ref('');
-  const editLeaseForm = ref({ address: '', rate_limit: '', comment: '' });
+  const editLeaseForm = ref({ address: '', mac_address: '', server: 'all', rate_limit: '', comment: '' });
 
   const isServerModalOpen = ref(false);
-  const newServer = ref({ name: 'dhcp-lan', interface: 'ether1', address_pool: 'pool-ether1', lease_time: '12h', disabled: false });
+  const newServer = ref({ name: 'dhcp-lan', interface: 'ether1', address_pool: 'pool-ether1', lease_time: '12h', comment: '', disabled: false });
   const isEditServerModalOpen = ref(false);
   const editingServerId = ref('');
-  const editServerForm = ref({ name: '', interface: '', address_pool: '', lease_time: '12h', disabled: false });
+  const editServerForm = ref({ name: '', interface: '', address_pool: '', lease_time: '12h', comment: '', disabled: false });
 
   const isNetworkModalOpen = ref(false);
-  const newNetwork = ref({ address: '192.168.88.0/24', gateway: '192.168.88.1', dns_server: '8.8.8.8,1.1.1.1', domain: '', comment: '' });
+  const newNetwork = ref({ address: '192.168.88.0/24', gateway: '192.168.88.1', dns_server: '8.8.8.8,1.1.1.1', ntp_server: '', domain: '', comment: '' });
   const isEditNetworkModalOpen = ref(false);
   const editingNetworkId = ref('');
   const editNetworkForm = ref({ address: '', gateway: '', dns_server: '', domain: '', ntp_server: '', comment: '' });
@@ -122,16 +131,14 @@
         const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/addresses${query}`);
         ipAddresses.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
       } else if (activeTab.value === 'dhcp-server') {
-        if (activeDhcpSubtab.value === 'leases') {
-          const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-server/leases${query}`);
-          dhcpLeases.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
-        } else if (activeDhcpSubtab.value === 'servers') {
-          const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-servers${query}`);
-          dhcpServers.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
-        } else {
-          const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-server/networks${query}`);
-          dhcpNetworks.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
-        }
+        const [srvRes, netRes, leaseRes] = await Promise.all([
+          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-servers${query}`),
+          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-server/networks${query}`),
+          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-server/leases${query}`),
+        ]);
+        dhcpServers.value = Array.isArray(srvRes.data) ? srvRes.data : srvRes.data?.items || [];
+        dhcpNetworks.value = Array.isArray(netRes.data) ? netRes.data : netRes.data?.items || [];
+        dhcpLeases.value = Array.isArray(leaseRes.data) ? leaseRes.data : leaseRes.data?.items || [];
       } else if (activeTab.value === 'dhcp-client') {
         const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-clients${query}`);
         dhcpClients.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
@@ -221,10 +228,25 @@
     editingLeaseId.value = String(lease.id || lease['.id'] || '');
     editLeaseForm.value = {
       address: String(lease.address || ''),
+      mac_address: String(lease['mac-address'] || lease.mac_address || ''),
+      server: String(lease.server || 'all'),
       rate_limit: String(lease['rate-limit'] || lease.rate_limit || ''),
       comment: String(lease.comment || ''),
     };
     isEditLeaseModalOpen.value = true;
+  }
+
+  async function handleCreateLease() {
+    webFigStore.startSafeModeCountdown(60);
+    try {
+      await http.post(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-server/leases`, newLease.value);
+      actionMessage.value = `Concesión estática ${newLease.value.address} (${newLease.value.mac_address}) creada.`;
+      isCreateLeaseModalOpen.value = false;
+      newLease.value = { address: '', mac_address: '', server: 'all', rate_limit: '', comment: '', disabled: false };
+      loadData(true);
+    } catch (err: any) {
+      errorMessage.value = err?.detail || err?.message || 'Error al crear concesión estática DHCP.';
+    }
   }
 
   async function handleUpdateLease() {
@@ -321,6 +343,7 @@
       interface: String(srv.interface || ''),
       address_pool: String(srv['address-pool'] || srv.address_pool || ''),
       lease_time: String(srv['lease-time'] || srv.lease_time || '12h'),
+      comment: String(srv.comment || ''),
       disabled: srv.disabled === 'true' || srv.disabled === true,
     };
     isEditServerModalOpen.value = true;
@@ -725,8 +748,10 @@
           + Asignar Dirección IP
         </button>
 
-        <template v-else-if="activeTab === 'dhcp-server' && activeDhcpSubtab === 'servers'">
+        <template v-else-if="activeTab === 'dhcp-server'">
           <button
+            v-if="activeDhcpSubtab === 'servers'"
+            id="btn-create-dhcp-server"
             type="button"
             class="btn-tactical btn-outline"
             @click="isServerModalOpen = true"
@@ -734,6 +759,25 @@
             + Crear Servidor DHCP
           </button>
           <button
+            v-if="activeDhcpSubtab === 'networks'"
+            id="btn-create-dhcp-network"
+            type="button"
+            class="btn-tactical btn-cyan"
+            @click="isNetworkModalOpen = true"
+          >
+            + Crear Red DHCP
+          </button>
+          <button
+            v-if="activeDhcpSubtab === 'leases'"
+            id="btn-create-dhcp-lease"
+            type="button"
+            class="btn-tactical btn-cyan"
+            @click="isCreateLeaseModalOpen = true"
+          >
+            + Añadir Concesión Estática
+          </button>
+          <button
+            id="btn-dhcp-wizard"
             type="button"
             class="btn-tactical btn-cyan"
             @click="isDhcpWizardOpen = true"
@@ -741,15 +785,6 @@
             ⚡ Asistente DHCP Setup
           </button>
         </template>
-
-        <button
-          v-else-if="activeTab === 'dhcp-server' && activeDhcpSubtab === 'networks'"
-          type="button"
-          class="btn-tactical btn-cyan"
-          @click="isNetworkModalOpen = true"
-        >
-          + Crear Red DHCP
-        </button>
 
         <button
           v-else-if="activeTab === 'dhcp-client'"
@@ -875,31 +910,34 @@
       </button>
     </nav>
 
-    <!-- Subpestañas para DHCP Server -->
+    <!-- Subpestañas para DHCP Server (Orden WinBox: Servidores -> Redes -> Concesiones) -->
     <div v-if="activeTab === 'dhcp-server'" class="subtabs-bar">
       <button
-        type="button"
-        class="subtab-btn"
-        :class="{ 'subtab-btn--active': activeDhcpSubtab === 'leases' }"
-        @click="setDhcpSubtab('leases')"
-      >
-        Concesiones Activas (Leases)
-      </button>
-      <button
+        id="subtab-dhcp-servers"
         type="button"
         class="subtab-btn"
         :class="{ 'subtab-btn--active': activeDhcpSubtab === 'servers' }"
         @click="setDhcpSubtab('servers')"
       >
-        Servidores DHCP
+        Servidores DHCP ({{ dhcpServers.length }})
       </button>
       <button
+        id="subtab-dhcp-networks"
         type="button"
         class="subtab-btn"
         :class="{ 'subtab-btn--active': activeDhcpSubtab === 'networks' }"
         @click="setDhcpSubtab('networks')"
       >
-        Redes & Opciones
+        Redes & Opciones ({{ dhcpNetworks.length }})
+      </button>
+      <button
+        id="subtab-dhcp-leases"
+        type="button"
+        class="subtab-btn"
+        :class="{ 'subtab-btn--active': activeDhcpSubtab === 'leases' }"
+        @click="setDhcpSubtab('leases')"
+      >
+        Concesiones Activas (Leases) ({{ dhcpLeases.length }})
       </button>
     </div>
 
@@ -1025,19 +1063,21 @@
               <th>Interfaz</th>
               <th>Pool de Direcciones</th>
               <th>Tiempo de Concesión</th>
+              <th>Comentario</th>
               <th>Estado</th>
               <th class="actions-col">Acciones</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="dhcpServers.length === 0">
-              <td colspan="6" class="empty-cell">No hay instancias de Servidor DHCP configuradas.</td>
+              <td colspan="7" class="empty-cell">No hay instancias de Servidor DHCP configuradas.</td>
             </tr>
             <tr v-for="srv in dhcpServers" :key="srv.id || srv['.id']">
               <td class="font-bold text-cyan">{{ srv.name }}</td>
               <td><span class="badge-interface">{{ srv.interface }}</span></td>
               <td class="font-mono">{{ srv['address-pool'] || srv.address_pool }}</td>
               <td class="font-mono">{{ srv['lease-time'] || srv.lease_time }}</td>
+              <td class="text-muted">{{ srv.comment || '—' }}</td>
               <td>
                 <span :class="srv.disabled === 'true' || srv.disabled === true ? 'status-down' : 'status-up'">
                   {{ srv.disabled === 'true' || srv.disabled === true ? 'Deshabilitado' : 'Activo' }}
@@ -1074,6 +1114,7 @@
               <th>Subred / CIDR</th>
               <th>Puerta de Enlace (Gateway)</th>
               <th>Servidores DNS</th>
+              <th>Servidor NTP</th>
               <th>Dominio</th>
               <th>Comentario</th>
               <th class="actions-col">Acciones</th>
@@ -1081,12 +1122,13 @@
           </thead>
           <tbody>
             <tr v-if="dhcpNetworks.length === 0">
-              <td colspan="6" class="empty-cell">No hay redes DHCP configuradas.</td>
+              <td colspan="7" class="empty-cell">No hay redes DHCP configuradas.</td>
             </tr>
             <tr v-for="net in dhcpNetworks" :key="net.id || net['.id']">
               <td class="font-mono font-bold text-cyan">{{ net.address }}</td>
               <td class="font-mono">{{ net.gateway || '—' }}</td>
               <td class="font-mono text-muted">{{ net['dns-server'] || net.dns_server || '—' }}</td>
+              <td class="font-mono text-muted">{{ net['ntp-server'] || net.ntp_server || '—' }}</td>
               <td>{{ net.domain || '—' }}</td>
               <td class="text-muted">{{ net.comment || '—' }}</td>
               <td class="actions-col">
@@ -1260,7 +1302,17 @@
         </div>
 
         <div class="table-container">
-          <h2 class="card-title">Registros DNS Estáticos</h2>
+          <div class="dns-card-header">
+            <h2 class="card-title">Registros DNS Estáticos</h2>
+            <button
+              id="btn-add-dns-static-inline"
+              type="button"
+              class="btn-tactical btn-cyan"
+              @click="isCreateDnsStaticModalOpen = true"
+            >
+              + Añadir Registro DNS
+            </button>
+          </div>
           <table class="tactical-table">
             <thead>
               <tr>
@@ -1464,6 +1516,10 @@
             <label for="srv-lease">Tiempo de Concesión</label>
             <input id="srv-lease" v-model="newServer.lease_time" type="text" class="form-input font-mono" placeholder="12h" required />
           </div>
+          <div class="form-group">
+            <label for="srv-comment">Comentario</label>
+            <input id="srv-comment" v-model="newServer.comment" type="text" class="form-input" placeholder="cctv" />
+          </div>
           <div class="modal-actions">
             <button type="button" class="btn-tactical btn-outline" @click="isServerModalOpen = false">Cancelar</button>
             <button type="submit" class="btn-tactical btn-cyan">Crear Servidor</button>
@@ -1509,6 +1565,14 @@
           <div class="form-group">
             <label for="net-dns">Servidores DNS</label>
             <input id="net-dns" v-model="newNetwork.dns_server" type="text" class="form-input font-mono" placeholder="8.8.8.8,1.1.1.1" />
+          </div>
+          <div class="form-group">
+            <label for="net-ntp">Servidor NTP</label>
+            <input id="net-ntp" v-model="newNetwork.ntp_server" type="text" class="form-input font-mono" placeholder="192.168.10.254" />
+          </div>
+          <div class="form-group">
+            <label for="net-comment">Comentario</label>
+            <input id="net-comment" v-model="newNetwork.comment" type="text" class="form-input" placeholder="LAN Clientes" />
           </div>
           <div class="modal-actions">
             <button type="button" class="btn-tactical btn-outline" @click="isNetworkModalOpen = false">Cancelar</button>
@@ -1578,6 +1642,75 @@
       </div>
     </div>
 
+    <!-- MODAL: CREAR CONCESIÓN ESTÁTICA DHCP -->
+    <div v-if="isCreateLeaseModalOpen" class="modal-backdrop" @click.self="isCreateLeaseModalOpen = false">
+      <div class="modal-window modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-create-lease-title">
+        <h2 id="modal-create-lease-title" class="modal-title">+ Añadir Concesión DHCP Estática (/ip/dhcp-server/lease)</h2>
+        <form @submit.prevent="handleCreateLease">
+          <div class="form-group">
+            <label for="new-lease-ip">Dirección IPv4 a Reservar</label>
+            <input
+              id="new-lease-ip"
+              v-model="newLease.address"
+              type="text"
+              class="form-input font-mono"
+              placeholder="192.168.10.50"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="new-lease-mac">Dirección MAC del Cliente</label>
+            <input
+              id="new-lease-mac"
+              v-model="newLease.mac_address"
+              type="text"
+              class="form-input font-mono"
+              placeholder="AA:BB:CC:DD:EE:FF"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="new-lease-server">Servidor DHCP</label>
+            <input
+              id="new-lease-server"
+              v-model="newLease.server"
+              type="text"
+              class="form-input font-mono"
+              placeholder="all o dhcp-anillo"
+            />
+          </div>
+          <div class="form-group">
+            <label for="new-lease-rate">Límite de Velocidad (Rate Limit Rx/Tx)</label>
+            <input
+              id="new-lease-rate"
+              v-model="newLease.rate_limit"
+              type="text"
+              class="form-input font-mono"
+              placeholder="10M/50M (Opcional)"
+            />
+          </div>
+          <div class="form-group">
+            <label for="new-lease-comment">Comentario / Suscriptor</label>
+            <input
+              id="new-lease-comment"
+              v-model="newLease.comment"
+              type="text"
+              class="form-input"
+              placeholder="Ej: Cámara IP / Impresora"
+            />
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-tactical btn-outline" @click="isCreateLeaseModalOpen = false">
+              Cancelar
+            </button>
+            <button id="btn-submit-create-lease" type="submit" class="btn-tactical btn-cyan">
+              Crear Concesión Estática
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- MODAL: EDITAR LEASE DHCP -->
     <div v-if="isEditLeaseModalOpen" class="modal-backdrop">
       <div class="modal-window">
@@ -1586,6 +1719,14 @@
           <div class="form-group">
             <label for="edit-lease-addr">Dirección IP</label>
             <input id="edit-lease-addr" v-model="editLeaseForm.address" type="text" class="form-input font-mono" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-lease-mac">Dirección MAC</label>
+            <input id="edit-lease-mac" v-model="editLeaseForm.mac_address" type="text" class="form-input font-mono" />
+          </div>
+          <div class="form-group">
+            <label for="edit-lease-server">Servidor DHCP</label>
+            <input id="edit-lease-server" v-model="editLeaseForm.server" type="text" class="form-input font-mono" />
           </div>
           <div class="form-group">
             <label for="edit-lease-rate">Rate Limit (Opcional)</label>
@@ -1623,6 +1764,10 @@
           <div class="form-group">
             <label for="edit-srv-lease">Tiempo de Concesión</label>
             <input id="edit-srv-lease" v-model="editServerForm.lease_time" type="text" class="form-input font-mono" required />
+          </div>
+          <div class="form-group">
+            <label for="edit-srv-comment">Comentario</label>
+            <input id="edit-srv-comment" v-model="editServerForm.comment" type="text" class="form-input" />
           </div>
           <div class="form-group">
             <label class="checkbox-label">

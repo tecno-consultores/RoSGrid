@@ -238,10 +238,22 @@ class IpPoolUpdateRequest(StrictBaseModel):
     comment: str | None = None
 
 
-class DhcpLeaseUpdateRequest(StrictBaseModel):
-    address: str | None = Field(default=None, min_length=3, max_length=64)
+class DhcpLeaseCreateRequest(StrictBaseModel):
+    address: str = Field(..., min_length=3, max_length=64)
+    mac_address: str = Field(..., min_length=11, max_length=17)
+    server: str = Field(default="all", min_length=1, max_length=64)
     rate_limit: str | None = None
     comment: str | None = None
+    disabled: bool = False
+
+
+class DhcpLeaseUpdateRequest(StrictBaseModel):
+    address: str | None = Field(default=None, min_length=3, max_length=64)
+    mac_address: str | None = Field(default=None, min_length=11, max_length=17)
+    server: str | None = Field(default=None, min_length=1, max_length=64)
+    rate_limit: str | None = None
+    comment: str | None = None
+    disabled: bool | None = None
 
 
 class IpServiceUpdateRequest(StrictBaseModel):
@@ -260,6 +272,7 @@ class DhcpServerCreateRequest(StrictBaseModel):
     interface: str = Field(..., min_length=1, max_length=64)
     address_pool: str = Field(..., min_length=1, max_length=64)
     lease_time: str = Field(default="10m", max_length=16)
+    comment: str | None = None
     disabled: bool = False
 
 
@@ -268,6 +281,7 @@ class DhcpServerUpdateRequest(StrictBaseModel):
     interface: str | None = Field(default=None, min_length=1, max_length=64)
     address_pool: str | None = Field(default=None, min_length=1, max_length=64)
     lease_time: str | None = Field(default=None, max_length=16)
+    comment: str | None = None
     disabled: bool | None = None
 
 
@@ -276,6 +290,7 @@ class DhcpNetworkCreateRequest(StrictBaseModel):
     gateway: str | None = None
     dns_server: str | None = None
     domain: str | None = None
+    ntp_server: str | None = None
     comment: str | None = None
 
 

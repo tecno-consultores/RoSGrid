@@ -3,7 +3,7 @@
 
 # Especificación 97: Visibilidad Inmediata de Servidores y Redes DHCP en `IpAddressesAndDhcpView.vue` (Orden Canónico WinBox + Carga Paralela con Contadores) y Creación de Concesiones Estáticas DHCP (`POST /dhcp-server/leases`)
 
-> **Estado:** Pendiente de Implementación (`[ ]`) — **Optimizado para Ejecución Directa por Gemini 3.8 Flash (High)**
+> **Estado:** Completado (`[x]`) — **Implementado y Certificado bajo Nivel-11X**
 > **Hito Asociado:** Hito 30.20 (`ROADMAP.md`)
 > **Prioridad:** Alta (Visibilidad inmediata de los servidores y redes DHCP de `r1` y paridad CRUD completa para crear concesiones estáticas, servidores y redes desde `/routers/{id}/webfig/ip`)
 > **Archivos Afectados:**

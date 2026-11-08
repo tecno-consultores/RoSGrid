@@ -24,6 +24,7 @@ from src.redis_layer.client import get_redis_client
 from src.schemas.webfig_l1_net import (
     DhcpClientCreateRequest,
     DhcpClientUpdateRequest,
+    DhcpLeaseCreateRequest,
     DhcpLeaseUpdateRequest,
     DhcpNetworkCreateRequest,
     DhcpNetworkUpdateRequest,
@@ -582,6 +583,46 @@ async def list_dhcp_leases(
         return await cached_mikrotik_get(redis, tenant_id, router_id, "/ip/dhcp-server/lease", client, refresh)
 
 
+@router.post("/dhcp-server/leases", status_code=status.HTTP_201_CREATED)
+async def create_dhcp_lease(
+    router_id: uuid.UUID,
+    payload: DhcpLeaseCreateRequest,
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
+    db: AsyncSession = Depends(get_tenant_db_session),
+) -> Any:
+    """Crea una reservación DHCP estática en el router bajo Safe Mode."""
+    _, client = await get_router_and_client(router_id, claims, db)
+    body: dict[str, Any] = {
+        "address": payload.address,
+        "mac-address": payload.mac_address,
+        "server": payload.server or "all",
+        "disabled": payload.disabled,
+    }
+    if payload.rate_limit:
+        body["rate-limit"] = payload.rate_limit
+    if payload.comment:
+        body["comment"] = payload.comment
+
+    async with client:
+        res = await execute_safe_mutation(
+            client=client,
+            menu="ip/dhcp-server/lease",
+            action="create",
+            before_state=body,
+            coro_fn=lambda: client.put("/ip/dhcp-server/lease", json_data=body),
+        )
+    await invalidate_webfig_cache(get_redis_client(), uuid.UUID(claims["tid"]), router_id, "/ip/dhcp-server/lease")
+    return res
+
+
 @router.post("/dhcp-server/leases/{item_id}/make-static")
 async def make_dhcp_lease_static(
     router_id: uuid.UUID,
@@ -592,7 +633,9 @@ async def make_dhcp_lease_static(
     """Convierte un lease DHCP dinámico en reservación estática."""
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
-        return await client.post("/ip/dhcp-server/lease/make-static", json_data={"numbers": item_id})
+        res = await client.post("/ip/dhcp-server/lease/make-static", json_data={"numbers": item_id})
+    await invalidate_webfig_cache(get_redis_client(), uuid.UUID(claims["tid"]), router_id, "/ip/dhcp-server/lease")
+    return res
 
 
 @router.patch("/dhcp-server/leases/{item_id}")
@@ -616,12 +659,20 @@ async def update_dhcp_lease(
     patch_data: dict[str, Any] = {}
     if payload.address:
         patch_data["address"] = payload.address
-    if payload.rate_limit:
+    if payload.mac_address:
+        patch_data["mac-address"] = payload.mac_address
+    if payload.server:
+        patch_data["server"] = payload.server
+    if payload.rate_limit is not None:
         patch_data["rate-limit"] = payload.rate_limit
     if payload.comment is not None:
         patch_data["comment"] = payload.comment
+    if payload.disabled is not None:
+        patch_data["disabled"] = payload.disabled
     async with client:
-        return await client.patch(f"/ip/dhcp-server/lease/{item_id}", json_data=patch_data)
+        res = await client.patch(f"/ip/dhcp-server/lease/{item_id}", json_data=patch_data)
+    await invalidate_webfig_cache(get_redis_client(), uuid.UUID(claims["tid"]), router_id, "/ip/dhcp-server/lease")
+    return res
 
 
 @router.delete("/dhcp-server/leases/{item_id}")
@@ -634,7 +685,9 @@ async def delete_dhcp_lease(
     """Libera o elimina una concesión DHCP."""
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
-        return await client.delete(f"/ip/dhcp-server/lease/{item_id}")
+        res = await client.delete(f"/ip/dhcp-server/lease/{item_id}")
+    await invalidate_webfig_cache(get_redis_client(), uuid.UUID(claims["tid"]), router_id, "/ip/dhcp-server/lease")
+    return res
 
 
 # ============================================================================
@@ -681,6 +734,8 @@ async def create_dhcp_server(
         "lease-time": payload.lease_time,
         "disabled": payload.disabled,
     }
+    if payload.comment:
+        body["comment"] = payload.comment
 
     async def _upsert_server() -> Any:
         try:
@@ -744,6 +799,8 @@ async def update_dhcp_server(
         patch_data["address-pool"] = payload.address_pool
     if payload.lease_time is not None:
         patch_data["lease-time"] = payload.lease_time
+    if payload.comment is not None:
+        patch_data["comment"] = payload.comment
     if payload.disabled is not None:
         patch_data["disabled"] = payload.disabled
 
@@ -831,6 +888,8 @@ async def create_dhcp_network(
         body["dns-server"] = payload.dns_server
     if payload.domain:
         body["domain"] = payload.domain
+    if payload.ntp_server:
+        body["ntp-server"] = payload.ntp_server
     if payload.comment:
         body["comment"] = payload.comment
 
