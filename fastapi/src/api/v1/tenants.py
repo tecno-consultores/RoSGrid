@@ -295,6 +295,8 @@ async def create_tenant(
         )
 
     # 2. Crear Tenant
+    hq_lat = body.hq_latitude if body.hq_latitude is not None else 10.480600
+    hq_lng = body.hq_longitude if body.hq_longitude is not None else -66.903600
     new_tenant = Tenant(
         slug=body.slug,
         name=body.name,
@@ -304,6 +306,8 @@ async def create_tenant(
         max_users_quota=body.max_users_quota,
         require_2fa_all_users=body.require_2fa_all_users,
         default_safemode_seconds=body.default_safemode_seconds,
+        hq_latitude=hq_lat,
+        hq_longitude=hq_lng,
     )
     db.add(new_tenant)
     await db.flush()

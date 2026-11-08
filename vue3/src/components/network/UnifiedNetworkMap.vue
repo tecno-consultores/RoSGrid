@@ -335,10 +335,16 @@
     }
 
     try {
+      const initialCenter =
+        props.centerCoordinates &&
+        (props.centerCoordinates[0] !== 10.4806 || props.centerCoordinates[1] !== -66.9036)
+          ? props.centerCoordinates
+          : authStore.tenantHqCoordinates;
+
       mapInstance = L.map(mapContainer.value, {
         zoomControl: false,
         attributionControl: false,
-      }).setView(props.centerCoordinates, props.zoomLevel);
+      }).setView(initialCenter, props.zoomLevel);
 
       L.control.zoom({ position: 'bottomright' }).addTo(mapInstance);
 

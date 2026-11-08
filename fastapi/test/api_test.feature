@@ -1598,6 +1598,27 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  # ============================================================================
+  # SPEC 104: COORDENADAS GPS DE SEDE PRINCIPAL Y CENTRADO CARTOGRÁFICO (HITO 30.27)
+  # ============================================================================
+  Scenario: 176. Persistencia y exposicion de coordenadas GPS de Sede Principal (hq_latitude, hq_longitude) en Tenant y Features (Spec 104)
+    Given path '/api/v1/tenants'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/tenants'
+    And request { slug: 'isp-karate', name: 'ISP Karate Test', admin_username: 'karateadmin', admin_email: 'karate@isp.test', admin_password: 'Password123!', hq_latitude: 10.2123, hq_longitude: -67.9876 }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/tenants/00000000-0000-0000-0000-000000000000/features'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
 
 
 

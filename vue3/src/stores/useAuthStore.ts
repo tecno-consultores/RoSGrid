@@ -59,6 +59,16 @@ function getStoredUser(): UserInfo | null {
   }
 }
 
+function saveSafeStorageItem(key: string, value: string): void {
+  const activeStorage = getSafeLocalStorage();
+  if (!activeStorage) return;
+  try {
+    activeStorage.setItem(key, value);
+  } catch {
+    // Ignora fallos de storage cuota
+  }
+}
+
 export const useAuthStore = defineStore('auth', () => {
   const storage = getSafeLocalStorage();
   const initialUser = getStoredUser();
@@ -99,8 +109,16 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed<boolean>(() => user.value !== null);
 
+  const tenantHqCoordinates = computed<[number, number]>(() => {
+    const lat = Number(tenantFeatures.value?.hq_latitude);
+    const lng = Number(tenantFeatures.value?.hq_longitude);
+    if (!Number.isNaN(lat) && !Number.isNaN(lng) && !(lat === 0 && lng === 0)) {
+      return [lat, lng];
+    }
+    return [10.4806, -66.9036];
+  });
+
   function setAuth(userInfo: UserInfo, token?: string | null, sid?: string | null): void {
-    const activeStorage = getSafeLocalStorage();
     user.value = userInfo;
     currentRole.value = userInfo.role;
     tenantSlug.value = userInfo.tenant_slug;
@@ -109,45 +127,20 @@ export const useAuthStore = defineStore('auth', () => {
         userInfo.features ||
         {}),
     };
-    if (activeStorage) {
-      try {
-        activeStorage.setItem('rosgrid_user', JSON.stringify(userInfo));
-      } catch {
-        // Ignora fallos de storage cuota
-      }
-    }
+    saveSafeStorageItem('rosgrid_user', JSON.stringify(userInfo));
     if (token) {
       csrfToken.value = token;
-      if (activeStorage) {
-        try {
-          activeStorage.setItem('rosgrid_csrf', token);
-        } catch {
-          // Ignora fallos de storage cuota
-        }
-      }
+      saveSafeStorageItem('rosgrid_csrf', token);
     }
     if (sid) {
       sessionId.value = sid;
-      if (activeStorage) {
-        try {
-          activeStorage.setItem('rosgrid_session_id', sid);
-        } catch {
-          // Ignora fallos de storage cuota
-        }
-      }
+      saveSafeStorageItem('rosgrid_session_id', sid);
     }
   }
 
   function setCsrfToken(token: string): void {
-    const activeStorage = getSafeLocalStorage();
     csrfToken.value = token;
-    if (activeStorage) {
-      try {
-        activeStorage.setItem('rosgrid_csrf', token);
-      } catch {
-        // Ignora fallos de storage cuota
-      }
-    }
+    saveSafeStorageItem('rosgrid_csrf', token);
   }
 
   function clearAuth(): void {
@@ -516,6 +509,7 @@ export const useAuthStore = defineStore('auth', () => {
     csrfToken,
     sessionId,
     tenantFeatures,
+    tenantHqCoordinates,
     isAuthenticated,
     setAuth,
     setCsrfToken,

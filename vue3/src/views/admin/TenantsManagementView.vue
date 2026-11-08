@@ -31,11 +31,14 @@
     max_routers_quota: 50,
     max_users_quota: 20,
     default_safemode_seconds: 60,
+    hq_latitude: 10.4806,
+    hq_longitude: -66.9036,
   });
 
   // Modal de Editar Empresa
   const isEditModalOpen = ref(false);
   const isUpdating = ref(false);
+  const isCapturingGps = ref(false);
   const editingTenant = ref({
     id: '',
     slug: '',
@@ -45,7 +48,36 @@
     max_users_quota: 20,
     default_safemode_seconds: 60,
     require_2fa_all_users: true,
+    hq_latitude: 10.4806,
+    hq_longitude: -66.9036,
   });
+
+  function captureBrowserGps(target: 'create' | 'edit'): void {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      errorMessage.value = 'Geolocalización no soportada en este navegador.';
+      return;
+    }
+    isCapturingGps.value = true;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        isCapturingGps.value = false;
+        const lat = Number(pos.coords.latitude.toFixed(6));
+        const lng = Number(pos.coords.longitude.toFixed(6));
+        if (target === 'create') {
+          newTenant.value.hq_latitude = lat;
+          newTenant.value.hq_longitude = lng;
+        } else {
+          editingTenant.value.hq_latitude = lat;
+          editingTenant.value.hq_longitude = lng;
+        }
+      },
+      (err) => {
+        isCapturingGps.value = false;
+        errorMessage.value = `No se pudo obtener la ubicación GPS: ${err.message}`;
+      },
+      { timeout: 10000, enableHighAccuracy: true },
+    );
+  }
 
   function openEditTenantModal(tenant: TenantItem): void {
     errorMessage.value = '';
@@ -58,6 +90,14 @@
       max_users_quota: tenant.max_users_quota ?? 20,
       default_safemode_seconds: tenant.default_safemode_seconds ?? 60,
       require_2fa_all_users: tenant.require_2fa_all_users ?? true,
+      hq_latitude:
+        tenant.hq_latitude !== undefined && tenant.hq_latitude !== null
+          ? Number(tenant.hq_latitude)
+          : 10.4806,
+      hq_longitude:
+        tenant.hq_longitude !== undefined && tenant.hq_longitude !== null
+          ? Number(tenant.hq_longitude)
+          : -66.9036,
     };
     isEditModalOpen.value = true;
   }
@@ -75,6 +115,8 @@
         max_users_quota: Number(editingTenant.value.max_users_quota),
         default_safemode_seconds: Number(editingTenant.value.default_safemode_seconds),
         require_2fa_all_users: Boolean(editingTenant.value.require_2fa_all_users),
+        hq_latitude: Number(editingTenant.value.hq_latitude),
+        hq_longitude: Number(editingTenant.value.hq_longitude),
       };
       const res = await http.patch<TenantItem>(
         `/api/v1/tenants/${editingTenant.value.id}`,
@@ -90,6 +132,9 @@
         };
       }
       await loadTenants();
+      if (authStore.user?.tenant_id === editingTenant.value.id) {
+        await authStore.fetchTenantFeatures();
+      }
       isEditModalOpen.value = false;
       successMessage.value = `Datos y cuotas de "${payload.name}" actualizados exitosamente.`;
     } catch (err: unknown) {
@@ -161,6 +206,8 @@
           newTenant.value.admin_username.trim() ||
           newTenant.value.name.trim() ||
           'Administrador',
+        hq_latitude: Number(newTenant.value.hq_latitude) || 10.4806,
+        hq_longitude: Number(newTenant.value.hq_longitude) || -66.9036,
       };
       const res = await http.post<TenantItem | { tenant: TenantItem }>(
         '/api/v1/tenants',
@@ -190,6 +237,8 @@
         max_routers_quota: 50,
         max_users_quota: 20,
         default_safemode_seconds: 60,
+        hq_latitude: 10.4806,
+        hq_longitude: -66.9036,
       };
     } catch (err: unknown) {
       const error = err as { message?: string; detail?: string };
@@ -408,7 +457,12 @@
     </div>
 
     <!-- Modal de Creación de Empresa -->
-    <div v-if="isCreateModalOpen" class="rg-modal-backdrop" @click.self="isCreateModalOpen = false">
+    <div
+      v-if="isCreateModalOpen"
+      id="modal-create-tenant"
+      class="rg-modal-backdrop"
+      @click.self="isCreateModalOpen = false"
+    >
       <div class="rg-modal" role="dialog" aria-modal="true" aria-labelledby="modal-tenant-title">
         <header class="modal-header">
           <h2 id="modal-tenant-title" class="modal-title">Registrar Nueva Organización</h2>
@@ -530,6 +584,48 @@
                 class="form-input"
               />
             </div>
+          </fieldset>
+
+          <fieldset class="form-fieldset">
+            <legend class="fieldset-legend">Geolocalización Sede Principal (Spec 104)</legend>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="input-tenant-hq-lat" class="form-label">Latitud Sede Principal</label>
+                <input
+                  id="input-tenant-hq-lat"
+                  v-model.number="newTenant.hq_latitude"
+                  type="number"
+                  step="0.000001"
+                  min="-90"
+                  max="90"
+                  class="form-input"
+                  placeholder="ej. 10.480600"
+                />
+              </div>
+              <div class="form-group">
+                <label for="input-tenant-hq-lng" class="form-label">Longitud Sede Principal</label>
+                <input
+                  id="input-tenant-hq-lng"
+                  v-model.number="newTenant.hq_longitude"
+                  type="number"
+                  step="0.000001"
+                  min="-180"
+                  max="180"
+                  class="form-input"
+                  placeholder="ej. -66.903600"
+                />
+              </div>
+            </div>
+            <button
+              id="btn-tenant-capture-gps"
+              type="button"
+              class="btn-gps"
+              style="margin-top: var(--rg-space-2);"
+              :disabled="isCapturingGps"
+              @click="captureBrowserGps('create')"
+            >
+              📍 {{ isCapturingGps ? 'Capturando...' : 'Capturar GPS Sede' }}
+            </button>
           </fieldset>
 
           <footer class="modal-footer">
@@ -654,6 +750,48 @@
               />
               <span>Exigir autenticación 2FA TOTP obligatoria para todos los usuarios</span>
             </label>
+          </fieldset>
+
+          <fieldset class="form-fieldset">
+            <legend class="fieldset-legend">Geolocalización Sede Principal (Spec 104)</legend>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="edit-tenant-hq-lat" class="form-label">Latitud Sede Principal</label>
+                <input
+                  id="edit-tenant-hq-lat"
+                  v-model.number="editingTenant.hq_latitude"
+                  type="number"
+                  step="0.000001"
+                  min="-90"
+                  max="90"
+                  class="form-input"
+                  placeholder="ej. 10.480600"
+                />
+              </div>
+              <div class="form-group">
+                <label for="edit-tenant-hq-lng" class="form-label">Longitud Sede Principal</label>
+                <input
+                  id="edit-tenant-hq-lng"
+                  v-model.number="editingTenant.hq_longitude"
+                  type="number"
+                  step="0.000001"
+                  min="-180"
+                  max="180"
+                  class="form-input"
+                  placeholder="ej. -66.903600"
+                />
+              </div>
+            </div>
+            <button
+              id="btn-tenant-capture-gps-edit"
+              type="button"
+              class="btn-gps"
+              style="margin-top: var(--rg-space-2);"
+              :disabled="isCapturingGps"
+              @click="captureBrowserGps('edit')"
+            >
+              📍 {{ isCapturingGps ? 'Capturando...' : 'Capturar GPS Sede' }}
+            </button>
           </fieldset>
 
           <footer class="modal-footer">
@@ -1130,5 +1268,31 @@
     border-radius: 4px;
     font-weight: 700;
     margin-left: 3px;
+  }
+
+  .btn-gps {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--rg-space-2, 8px);
+    padding: var(--rg-space-2, 8px) var(--rg-space-3, 12px);
+    background: var(--rg-surface-hover, rgba(255, 255, 255, 0.05));
+    border: 1px solid var(--rg-border, #334155);
+    border-radius: var(--rg-radius-md, 6px);
+    color: var(--rg-text, #f8fafc);
+    font-size: var(--rg-font-sm, 0.875rem);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+
+  .btn-gps:hover:not(:disabled) {
+    background: rgba(6, 182, 212, 0.15);
+    border-color: var(--rg-accent-cyan, #22d3ee);
+    color: var(--rg-accent-cyan, #22d3ee);
+  }
+
+  .btn-gps:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 </style>

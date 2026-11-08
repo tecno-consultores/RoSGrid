@@ -455,4 +455,151 @@ describe('TenantsManagementView.vue — Gestión de Empresas Multi-Tenant', () =
     );
     expect(wrapper.text()).toContain('Datos y cuotas de "ISP Norte Renovado C.A." actualizados exitosamente.');
   });
+
+  it('permite registrar coordenadas GPS de sede principal y capturar ubicación al crear empresa (Spec 104)', async () => {
+    vi.spyOn(http, 'get').mockResolvedValue({
+      status: 200,
+      data: { items: [] },
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(TenantsManagementView);
+    await flushPromises();
+
+    await wrapper.find('.btn-create').trigger('click');
+    expect(wrapper.find('#modal-create-tenant').exists()).toBe(true);
+
+    const latInput = wrapper.find('#input-tenant-hq-lat');
+    const lngInput = wrapper.find('#input-tenant-hq-lng');
+    const gpsBtn = wrapper.find('#btn-tenant-capture-gps');
+
+    expect(latInput.exists()).toBe(true);
+    expect(lngInput.exists()).toBe(true);
+    expect(gpsBtn.exists()).toBe(true);
+
+    // Probar captura GPS con mock de navigator.geolocation
+    const originalGeolocation = navigator.geolocation;
+    const mockGeolocation = {
+      getCurrentPosition: vi.fn().mockImplementation((success) => {
+        success({
+          coords: {
+            latitude: 10.254321,
+            longitude: -67.587654,
+          },
+        });
+      }),
+    };
+    Object.defineProperty(navigator, 'geolocation', {
+      value: mockGeolocation,
+      writable: true,
+      configurable: true,
+    });
+
+    await gpsBtn.trigger('click');
+    expect(mockGeolocation.getCurrentPosition).toHaveBeenCalled();
+
+    // Rellenar datos obligatorios
+    await wrapper.find('#tenant-name').setValue('ISP Geoubicado S.A.');
+    await wrapper.find('#tenant-slug-new').setValue('isp-geoubicado');
+    await wrapper.find('#admin-user').setValue('geoadmin');
+    await wrapper.find('#admin-email').setValue('geoadmin@isp.test');
+    await wrapper.find('#admin-pass').setValue('Password123!');
+
+    const postSpy = vi.spyOn(http, 'post').mockResolvedValueOnce({
+      status: 201,
+      data: {
+        id: 't-geo',
+        name: 'ISP Geoubicado S.A.',
+        slug: 'isp-geoubicado',
+        hq_latitude: 10.254321,
+        hq_longitude: -67.587654,
+      },
+      headers: new Headers(),
+    });
+
+    await wrapper.find('.modal-form').trigger('submit');
+    await flushPromises();
+
+    expect(postSpy).toHaveBeenCalledWith(
+      '/api/v1/tenants',
+      expect.objectContaining({
+        name: 'ISP Geoubicado S.A.',
+        slug: 'isp-geoubicado',
+        hq_latitude: 10.254321,
+        hq_longitude: -67.587654,
+      }),
+    );
+
+    // Restaurar geolocation
+    Object.defineProperty(navigator, 'geolocation', {
+      value: originalGeolocation,
+      writable: true,
+      configurable: true,
+    });
+  });
+
+  it('permite editar coordenadas GPS de sede principal en modal de edición (Spec 104)', async () => {
+    const mockTenants = [
+      {
+        id: 't-02',
+        slug: 'isp-sur',
+        name: 'ISP Sur',
+        tax_id: 'J-22222222-2',
+        status: 'ACTIVE',
+        max_routers_quota: 30,
+        max_users_quota: 10,
+        active_routers_count: 2,
+        active_users_count: 1,
+        default_safemode_seconds: 60,
+        require_2fa_all_users: true,
+        hq_latitude: 10.200000,
+        hq_longitude: -67.800000,
+      },
+    ];
+
+    vi.spyOn(http, 'get').mockResolvedValue({
+      status: 200,
+      data: { items: mockTenants },
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(TenantsManagementView);
+    await flushPromises();
+
+    const editBtn = wrapper.find('#btn-edit-tenant-isp-sur');
+    expect(editBtn.exists()).toBe(true);
+    await editBtn.trigger('click');
+
+    const latEdit = wrapper.find('#edit-tenant-hq-lat');
+    const lngEdit = wrapper.find('#edit-tenant-hq-lng');
+    const gpsBtnEdit = wrapper.find('#btn-tenant-capture-gps-edit');
+
+    expect(latEdit.exists()).toBe(true);
+    expect(lngEdit.exists()).toBe(true);
+    expect(gpsBtnEdit.exists()).toBe(true);
+
+    await latEdit.setValue('10.450000');
+    await lngEdit.setValue('-66.850000');
+
+    const patchSpy = vi.spyOn(http, 'patch').mockResolvedValueOnce({
+      status: 200,
+      data: {
+        ...mockTenants[0],
+        hq_latitude: 10.45,
+        hq_longitude: -66.85,
+      },
+      headers: new Headers(),
+    });
+
+    await wrapper.find('#form-edit-tenant').trigger('submit');
+    await flushPromises();
+
+    expect(patchSpy).toHaveBeenCalledWith(
+      '/api/v1/tenants/t-02',
+      expect.objectContaining({
+        hq_latitude: 10.45,
+        hq_longitude: -66.85,
+      }),
+    );
+  });
 });

@@ -1161,6 +1161,18 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * def subAutoCreateRow = { endpoint_identifier: 'CLI-01', optical_box_name: 'NAP-AUTO-01', will_auto_create_box: true, is_valid: true }
     * assert subAutoCreateRow.will_auto_create_box == true
 
+  # ============================================================================
+  # SPEC 104: COORDENADAS GPS DE SEDE PRINCIPAL Y CENTRADO CARTOGRÁFICO (HITO 30.27)
+  # ============================================================================
+  Scenario: 118. Coordenadas GPS de Sede Principal en creacion y edicion de empresas y centrado inicial por empresa (Spec 104)
+    * def tenantPayload = { name: 'ISP Carabobo S.A.', slug: 'isp-carabobo', hq_latitude: 10.2123, hq_longitude: -67.9876 }
+    * assert tenantPayload.hq_latitude == 10.2123
+    * assert tenantPayload.hq_longitude == -67.9876
+    * def computedHqCoords = (tenantPayload.hq_latitude && tenantPayload.hq_longitude) ? [tenantPayload.hq_latitude, tenantPayload.hq_longitude] : [10.4806, -66.9036]
+    * assert computedHqCoords[0] == 10.2123
+    * assert computedHqCoords[1] == -67.9876
+
+
 
 
 

@@ -12,6 +12,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     LargeBinary,
+    Numeric,
     SmallInteger,
     String,
     Text,
@@ -89,6 +90,10 @@ class Tenant(Base):
     onboarding_completed: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
+
+    # Coordenadas GPS Sede Principal (Spec 104)
+    hq_latitude: Mapped[float | None] = mapped_column(Numeric(9, 6), nullable=True, default=10.480600)
+    hq_longitude: Mapped[float | None] = mapped_column(Numeric(9, 6), nullable=True, default=-66.903600)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("NOW()"))

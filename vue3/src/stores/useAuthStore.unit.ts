@@ -184,4 +184,24 @@ describe('useAuthStore — Autenticación Zero-Trust & RBAC', () => {
     expect(auth.canUseUserFeature('ENTERPRISE_CIS_DRIFT_COMPLIANCE', false)).toBe(true);
     expect(auth.canUseUserFeature('ENTERPRISE_CIS_DRIFT_COMPLIANCE', true)).toBe(false);
   });
+
+  it('calcula tenantHqCoordinates con fallback a Caracas y soporte de coordenadas personalizadas (Spec 104)', () => {
+    const auth = useAuthStore();
+    // 1. Por defecto sin features configuradas
+    expect(auth.tenantHqCoordinates).toEqual([10.4806, -66.9036]);
+
+    // 2. Con coordenadas configuradas en tenantFeatures
+    auth.updateTenantFeatures({
+      hq_latitude: 10.2123,
+      hq_longitude: -67.9876,
+    });
+    expect(auth.tenantHqCoordinates).toEqual([10.2123, -67.9876]);
+
+    // 3. Con coordenadas inválidas o [0, 0]
+    auth.updateTenantFeatures({
+      hq_latitude: 0,
+      hq_longitude: 0,
+    });
+    expect(auth.tenantHqCoordinates).toEqual([10.4806, -66.9036]);
+  });
 });

@@ -57,6 +57,8 @@ export interface TenantFeatureFlags {
   prometheus_fleet_exporter_enabled?: boolean;
   rogue_dhcp_enabled?: boolean;
   onboarding_completed?: boolean;
+  hq_latitude?: number | null;
+  hq_longitude?: number | null;
 }
 
 export interface UserInfo {
@@ -183,6 +185,8 @@ export interface TenantItem {
   active_users_count: number;
   default_safemode_seconds: number;
   require_2fa_all_users?: boolean;
+  hq_latitude?: number | null;
+  hq_longitude?: number | null;
   created_at?: string;
   features?: Partial<TenantFeatureFlags>;
 }

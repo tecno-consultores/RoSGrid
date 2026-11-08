@@ -33,6 +33,8 @@ TENANT_FEATURE_DEFAULTS: dict[str, Any] = {
     "prometheus_fleet_exporter_enabled": True,
     "rogue_dhcp_enabled": True,
     "onboarding_completed": False,
+    "hq_latitude": 10.4806,
+    "hq_longitude": -66.9036,
 }
 
 SUPPORTED_LOCALES_PATTERN = r"^(es|en)$"
@@ -43,6 +45,8 @@ def extract_tenant_features(tenant: Any) -> dict[str, Any]:
     features: dict[str, Any] = {}
     for key, default in TENANT_FEATURE_DEFAULTS.items():
         value = getattr(tenant, key, None)
+        if key in ("hq_latitude", "hq_longitude") and value is not None:
+            value = float(value)
         features[key] = default if value is None else value
     return features
 
@@ -55,6 +59,8 @@ class CreateTenantRequest(BaseModel):
     max_users_quota: int = Field(50, gt=0)
     require_2fa_all_users: bool = True
     default_safemode_seconds: int = Field(60, ge=10, le=300)
+    hq_latitude: float | None = Field(default=None, ge=-90.0, le=90.0)
+    hq_longitude: float | None = Field(default=None, ge=-180.0, le=180.0)
 
     # Administrador inicial del tenant
     admin_username: str = Field(..., min_length=3, max_length=64)
@@ -97,6 +103,8 @@ class UpdateTenantFeaturesRequest(BaseModel):
     prometheus_fleet_exporter_enabled: bool | None = None
     rogue_dhcp_enabled: bool | None = None
     onboarding_completed: bool | None = None
+    hq_latitude: float | None = Field(None, ge=-90.0, le=90.0)
+    hq_longitude: float | None = Field(None, ge=-180.0, le=180.0)
 
 
 class UpdateTenantRequest(UpdateTenantFeaturesRequest):
@@ -139,6 +147,8 @@ class TenantFeatureFlagsMixin(BaseModel):
     prometheus_fleet_exporter_enabled: bool = True
     rogue_dhcp_enabled: bool = True
     onboarding_completed: bool = False
+    hq_latitude: float | None = Field(default=10.4806, ge=-90.0, le=90.0)
+    hq_longitude: float | None = Field(default=-66.9036, ge=-180.0, le=180.0)
 
     @model_validator(mode="before")
     @classmethod
@@ -148,6 +158,8 @@ class TenantFeatureFlagsMixin(BaseModel):
         for key, default in TENANT_FEATURE_DEFAULTS.items():
             if merged.get(key) is None:
                 merged[key] = default
+            elif key in ("hq_latitude", "hq_longitude") and merged.get(key) is not None:
+                merged[key] = float(merged[key])
         for count_key in ("active_routers_count", "active_users_count"):
             if count_key in cls.model_fields and merged.get(count_key) is None:
                 merged[count_key] = 0

@@ -1,6 +1,6 @@
 # Especificación 104: Coordenadas GPS de Sede Principal (`hq_latitude`, `hq_longitude`) al Crear / Editar Empresa (`Tenant`) y Centrado Cartográfico Predeterminado por Empresa
 
-**Estado:** Pendiente de Implementación (`[ ]` Hito 30.27)  
+**Estado:** Implementado (`[x]` Hito 30.27)  
 **Target de Ejecución:** Gemini 3.8 Flash (High)  
 **Ámbito:** Base de Datos y Backend (`fastapi/migrations/versions/0015_tenant_hq_coordinates.py`, `fastapi/src/models/core.py`, `fastapi/src/schemas/tenants.py`, `fastapi/src/api/v1/tenants.py`) + Frontend (`vue3/src/types/index.ts`, `vue3/src/stores/useAuthStore.ts`, `vue3/src/views/admin/TenantsManagementView.vue`, `vue3/src/components/network/UnifiedNetworkMap.vue`, `vue3/src/components/inventory/OsmRouterMap.vue`) + Suite de Pruebas 11X
 

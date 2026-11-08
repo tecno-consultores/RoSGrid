@@ -3,6 +3,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
+import { setActivePinia, createPinia } from 'pinia';
 import OsmRouterMap from './OsmRouterMap.vue';
 import type { RouterItem } from '@/types';
 import L from 'leaflet';
@@ -40,6 +41,7 @@ const sampleRouters: RouterItem[] = [
 
 describe('OsmRouterMap.vue — Mapa Interactivo Leaflet & OpenStreetMap', () => {
   beforeEach(() => {
+    setActivePinia(createPinia());
     vi.restoreAllMocks();
     Object.defineProperty(navigator, 'webdriver', {
       value: false,

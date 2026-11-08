@@ -3,6 +3,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
+import { setActivePinia, createPinia } from 'pinia';
 import OsmOnuMap from './OsmOnuMap.vue';
 import type { SubscriberDeviceItem } from '@/types';
 
@@ -74,6 +75,7 @@ const sampleOnus: SubscriberDeviceItem[] = [
 
 describe('OsmOnuMap.vue — Mapa Exclusivo de ONUs y Telemetría Efímera', () => {
   beforeEach(() => {
+    setActivePinia(createPinia());
     vi.restoreAllMocks();
   });
 

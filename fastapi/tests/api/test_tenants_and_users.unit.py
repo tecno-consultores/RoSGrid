@@ -171,8 +171,30 @@ async def test_tenants_crud_endpoints(async_client: AsyncClient, superadmin_auth
         idemp_headers = {**headers, "Idempotency-Key": str(uuid.uuid4())}
         res_create = await async_client.post("/api/v1/tenants", json=body_create, headers=idemp_headers)
         assert res_create.status_code == 201
+        created_json = res_create.json()
+        assert created_json["hq_latitude"] == 10.4806
+        assert created_json["hq_longitude"] == -66.9036
 
-        # 3. Modificar tenant (incluyendo cuotas, slug, tax_id y safemode de 10s)
+        # Crear tenant con coordenadas explícitas de sede principal (Spec 104)
+        body_create_explicit = {
+            "slug": "custom-geo-tenant",
+            "name": "Custom Geo Tenant",
+            "max_routers_quota": 10,
+            "max_users_quota": 5,
+            "admin_username": "geoadmin",
+            "admin_email": "geo@customtenant.com",
+            "admin_password": "InitialSecurePass2026!",
+            "hq_latitude": 10.212300,
+            "hq_longitude": -67.987600,
+        }
+        res_create_explicit = await async_client.post(
+            "/api/v1/tenants", json=body_create_explicit, headers={**headers, "Idempotency-Key": str(uuid.uuid4())}
+        )
+        assert res_create_explicit.status_code == 201
+        assert res_create_explicit.json()["hq_latitude"] == 10.2123
+        assert res_create_explicit.json()["hq_longitude"] == -67.9876
+
+        # 3. Modificar tenant (incluyendo cuotas, slug, tax_id, safemode de 10s y coordenadas sede)
         app.dependency_overrides[get_db_session] = lambda: db
         patch_headers = {**headers, "Idempotency-Key": str(uuid.uuid4())}
         res_patch = await async_client.patch(
@@ -184,6 +206,8 @@ async def test_tenants_crud_endpoints(async_client: AsyncClient, superadmin_auth
                 "max_routers_quota": 120,
                 "max_users_quota": 40,
                 "default_safemode_seconds": 10,
+                "hq_latitude": 10.123456,
+                "hq_longitude": -67.654321,
             },
             headers=patch_headers,
         )
@@ -195,6 +219,8 @@ async def test_tenants_crud_endpoints(async_client: AsyncClient, superadmin_auth
         assert patched_json["max_routers_quota"] == 120
         assert patched_json["max_users_quota"] == 40
         assert patched_json["default_safemode_seconds"] == 10
+        assert patched_json["hq_latitude"] == 10.123456
+        assert patched_json["hq_longitude"] == -67.654321
         assert "active_routers_count" in patched_json
         assert "active_users_count" in patched_json
     finally:
@@ -491,6 +517,8 @@ async def test_tenant_features_endpoints(
         assert data_get["rogue_dhcp_enabled"] is True
         assert data_get["mass_outage_threshold"] == 10
         assert data_get["default_locale"] == "es"
+        assert data_get["hq_latitude"] == 10.4806
+        assert data_get["hq_longitude"] == -66.9036
 
         # 2. Superadmin PATCH features -> 200
         patch_body = {
@@ -499,6 +527,8 @@ async def test_tenant_features_endpoints(
             "rogue_dhcp_enabled": False,
             "mass_outage_threshold": 25,
             "default_locale": "en",
+            "hq_latitude": 10.250000,
+            "hq_longitude": -67.600000,
         }
         res_patch = await async_client.patch(
             f"/api/v1/tenants/{tenant_id}/features",
@@ -512,6 +542,8 @@ async def test_tenant_features_endpoints(
         assert data_patch["rogue_dhcp_enabled"] is False
         assert data_patch["mass_outage_threshold"] == 25
         assert data_patch["default_locale"] == "en"
+        assert data_patch["hq_latitude"] == 10.250000
+        assert data_patch["hq_longitude"] == -67.600000
 
         # 3. GET / PATCH 404 si tenant no existe
         db_empty = MockDbSession(tenants=[])

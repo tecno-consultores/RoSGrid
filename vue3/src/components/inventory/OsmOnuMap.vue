@@ -3,9 +3,11 @@
 
 <script setup lang="ts">
   import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
+  import { getActivePinia } from 'pinia';
   import L from 'leaflet';
   import type { OpticalBoxItem, SubscriberDeviceItem } from '@/types';
   import { escapeHtml } from '@/utils/security';
+  import { useAuthStore } from '@/stores/useAuthStore';
 
   interface LocationGroup {
     lat: number;
@@ -44,6 +46,19 @@
       typeof navigator !== 'undefined' &&
       Boolean('webdriver' in navigator && (navigator as { webdriver?: boolean }).webdriver),
   );
+
+  function getTenantHqCoords(): [number, number] {
+    try {
+      const pinia = getActivePinia();
+      if (pinia) {
+        return useAuthStore(pinia).tenantHqCoordinates;
+      }
+    } catch {
+      // Fallback
+    }
+    return [10.4806, -66.9036];
+  }
+
   const mapContainer = ref<HTMLDivElement | null>(null);
   let mapInstance: L.Map | null = null;
   let markersLayer: L.LayerGroup | null = null;
@@ -505,8 +520,14 @@
   function initMap(): void {
     if (!mapContainer.value) return;
 
+    const initialCenter =
+      props.centerCoordinates &&
+      (props.centerCoordinates[0] !== 10.4806 || props.centerCoordinates[1] !== -66.9036)
+        ? props.centerCoordinates
+        : getTenantHqCoords();
+
     mapInstance = L.map(mapContainer.value, {
-      center: props.centerCoordinates,
+      center: initialCenter,
       zoom: props.zoomLevel,
       zoomControl: true,
       attributionControl: false,
@@ -541,7 +562,12 @@
       if (mapInstance) {
         mapInstance.invalidateSize();
         if (props.onus.length === 0 && (!props.opticalBoxes || props.opticalBoxes.length === 0)) {
-          mapInstance.setView(props.centerCoordinates, props.zoomLevel);
+          const fallbackCenter =
+            props.centerCoordinates &&
+            (props.centerCoordinates[0] !== 10.4806 || props.centerCoordinates[1] !== -66.9036)
+              ? props.centerCoordinates
+              : getTenantHqCoords();
+          mapInstance.setView(fallbackCenter, props.zoomLevel);
         }
       }
     }, 150);

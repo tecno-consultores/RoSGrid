@@ -38,7 +38,7 @@
         return [lat, lng];
       }
     }
-    return [10.4806, -66.9036];
+    return authStore.tenantHqCoordinates;
   });
 
   // Coordenadas en edición
