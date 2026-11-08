@@ -31,6 +31,8 @@ describe('RgResponsiveShell.vue — Doble Contexto & Menú de Usuario 11X', () =
   beforeEach(() => {
     setActivePinia(createPinia());
     pushMock.mockClear();
+    const { setLocale } = useI18n();
+    setLocale('es');
 
     // Configurar usuario por defecto autenticado en el authStore
     const authStore = useAuthStore();
@@ -553,7 +555,7 @@ describe('RgResponsiveShell.vue — Doble Contexto & Menú de Usuario 11X', () =
     });
 
     // Enlaces de navegación en inglés
-    expect(wrapper.text()).toContain('L2 Topology');
+    expect(wrapper.text()).toContain('NOC Wallboard');
     expect(wrapper.text()).toContain('Fleet & Compliance');
 
     // Desplegar menú de usuario en inglés

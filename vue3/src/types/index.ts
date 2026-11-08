@@ -1362,6 +1362,8 @@ export interface TopologyEdge {
   link_speed?: string | null;
   is_poe_delivering: boolean;
   poe_power_watts?: number | null;
+  poe_watts?: number | null;
+  poe_status?: string | null;
   protocol: string;
 }
 

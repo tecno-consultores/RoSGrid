@@ -1,6 +1,6 @@
 # Especificación 101: Integración de Topología Física Layer 2 (`━ Enlaces L2`) como Capa en `UnifiedNetworkMap.vue` y Vista Esquemática en `NocWallboardView.vue`
 
-**Estado:** Pendiente de Implementación (`[ ]` Hito 30.24)  
+**Estado:** Implementado (`[x]` Hito 30.24)  
 **Target de Ejecución:** Gemini 3.8 Flash (High)  
 **Ámbito:** Frontend (`vue3/src/components/network/UnifiedNetworkMap.vue`, `vue3/src/views/NocWallboardView.vue`, `vue3/src/components/common/RgResponsiveShell.vue`, `vue3/src/locales/es.json`, `vue3/src/locales/en.json`) + Suite de Pruebas 11X (`vue3/src/components/network/UnifiedNetworkMap.unit.ts`, `vue3/src/views/nocWallboardView.unit.ts`, Karate Labs BDD)
 
@@ -176,7 +176,7 @@ En `vue3/test/ui_business_flow.feature` y `docs/examples/vue3/test/ui_business_f
 
 ## 4. Criterios de Aceptación y Certificación 11X
 
-- [ ] `UnifiedNetworkMap.vue` expone el cuarto botón de capa `#btn-layer-l2-links` (`━ Enlaces L2 (N)`), traza las polilíneas L2/PoE entre routers y abre el detalle del enlace al hacer clic.
-- [ ] `NocWallboardView.vue` activa la capa L2 por defecto y permite conmutar con `#btn-wallboard-toggle-l2-view` hacia el grafo esquemático L2/PoE sin salir del Wallboard.
-- [ ] El menú lateral principal (`RgResponsiveShell.vue`) ya no muestra `Topología L2` como sección separada.
-- [ ] 100% de suites Vitest y Pytest en verde y 9/9 compuertas en `.agents/scripts/certify_task_completion.sh`.
+- [x] `UnifiedNetworkMap.vue` expone el cuarto botón de capa `#btn-layer-l2-links` (`━ Enlaces L2 (N)`), traza las polilíneas L2/PoE entre routers y abre el detalle del enlace al hacer clic.
+- [x] `NocWallboardView.vue` activa la capa L2 por defecto y permite conmutar con `#btn-wallboard-toggle-l2-view` hacia el grafo esquemático L2/PoE sin salir del Wallboard.
+- [x] El menú lateral principal (`RgResponsiveShell.vue`) ya no muestra `Topología L2` como sección separada.
+- [x] 100% de suites Vitest y Pytest en verde y 9/9 compuertas en `.agents/scripts/certify_task_completion.sh`.

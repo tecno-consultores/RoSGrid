@@ -7,6 +7,7 @@ import { createPinia, setActivePinia } from 'pinia';
 import UnifiedNetworkMap from './UnifiedNetworkMap.vue';
 import type { RouterItem, OpticalBoxItem, SubscriberDeviceItem } from '@/types';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { http } from '@/api/httpClient';
 import L from 'leaflet';
 
 const mockRouters: RouterItem[] = [
@@ -131,6 +132,35 @@ describe('UnifiedNetworkMap.vue — Mapa de Red Unificado & Gobierno RCA (Hito 2
     vi.spyOn(L.control, 'zoom').mockReturnValue({
       addTo: vi.fn(),
     } as unknown as L.Control.Zoom);
+
+    vi.spyOn(http, 'get').mockImplementation(async (url: string) => {
+      if (url === '/api/v1/topology/l2') {
+        return {
+          status: 200,
+          headers: new Headers(),
+          data: {
+            nodes: [],
+            edges: [
+              {
+                id: 'edge-1',
+                source_router_id: 'r-core-1',
+                source_interface: 'ether1',
+                target_router_id: 'r-pop-2',
+                target_interface: 'ether1',
+                link_speed: '1Gbps',
+                is_poe_delivering: true,
+                poe_power_watts: 18.5,
+                protocol: 'LLDP',
+              },
+            ],
+            total_nodes: 2,
+            total_edges: 1,
+            timestamp: '2026-01-01T00:00:00Z',
+          },
+        };
+      }
+      return { status: 200, headers: new Headers(), data: {} };
+    });
   });
 
   it('renderiza la barra táctica con los 3 botones de capa cuando isp_module_enabled está activo', () => {
@@ -493,6 +523,99 @@ describe('UnifiedNetworkMap.vue — Mapa de Red Unificado & Gobierno RCA (Hito 2
     const options = wrapper.findAll('.rg-select-filter option');
     const values = options.map((o) => o.attributes('value'));
     expect(values).toContain('MAINTENANCE');
+  });
+
+  it('renderiza el cuarto botón de capa #btn-layer-l2-links y conmuta polilíneas L2 (Spec 101 / Hito 30.24)', async () => {
+    const wrapper = mount(UnifiedNetworkMap, {
+      props: {
+        mode: 'inventory',
+        routers: mockRouters,
+        opticalBoxes: [],
+        subscribers: [],
+      },
+      global: {
+        plugins: [pinia],
+        stubs: { RouterLink: true },
+      },
+    });
+
+    const l2Btn = wrapper.find('#btn-layer-l2-links');
+    expect(l2Btn.exists()).toBe(true);
+    expect(l2Btn.text()).toContain('Enlaces L2');
+
+    // Por defecto en mode 'inventory' showL2Links es false
+    expect(l2Btn.classes()).not.toContain('btn-layer-toggle--active');
+
+    // Al hacer clic conmuta a true y consulta /api/v1/topology/l2
+    await l2Btn.trigger('click');
+    expect(l2Btn.classes()).toContain('btn-layer-toggle--active');
+    expect(http.get).toHaveBeenCalledWith('/api/v1/topology/l2');
+
+    // Comprobar contador actualizado tras carga
+    await wrapper.vm.$nextTick();
+    expect(wrapper.text()).toContain('(1)');
+  });
+
+  it('activa la capa de enlaces L2 por defecto en mode="wallboard"', async () => {
+    const wrapper = mount(UnifiedNetworkMap, {
+      props: {
+        mode: 'wallboard',
+        routers: mockRouters,
+        opticalBoxes: [],
+        subscribers: [],
+      },
+      global: {
+        plugins: [pinia],
+        stubs: { RouterLink: true },
+      },
+    });
+
+    const l2Btn = wrapper.find('#btn-layer-l2-links');
+    expect(l2Btn.exists()).toBe(true);
+    expect(l2Btn.classes()).toContain('btn-layer-toggle--active');
+    expect(http.get).toHaveBeenCalledWith('/api/v1/topology/l2');
+  });
+
+  it('despliega la tarjeta de detalle l2-edge-detail-card al seleccionar un enlace L2', async () => {
+    const wrapper = mount(UnifiedNetworkMap, {
+      props: {
+        mode: 'wallboard',
+        routers: mockRouters,
+        opticalBoxes: [],
+        subscribers: [],
+      },
+      global: {
+        plugins: [pinia],
+        stubs: { RouterLink: true },
+      },
+    });
+
+    const vm = wrapper.vm as unknown as { activeL2Edge: unknown };
+    vm.activeL2Edge = {
+      id: 'edge-1',
+      source_router_id: 'r-core-1',
+      source_interface: 'ether1',
+      target_router_id: 'r-pop-2',
+      target_interface: 'ether1',
+      link_speed: '1Gbps',
+      is_poe_delivering: true,
+      poe_power_watts: 18.5,
+      protocol: 'LLDP',
+    };
+
+    await wrapper.vm.$nextTick();
+
+    const edgeCard = wrapper.find('.l2-edge-detail-card');
+    expect(edgeCard.exists()).toBe(true);
+    expect(edgeCard.text()).toContain('Enlace Físico Capa 2 (LLDP)');
+    expect(edgeCard.text()).toContain('ether1');
+    expect(edgeCard.text()).toContain('18.5W');
+
+    // Botón de cierre
+    const btnClose = edgeCard.find('.btn-close-card');
+    expect(btnClose.exists()).toBe(true);
+    await btnClose.trigger('click');
+    expect(vm.activeL2Edge).toBeNull();
   });
 });
 

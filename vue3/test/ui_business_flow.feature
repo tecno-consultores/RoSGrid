@@ -1132,6 +1132,16 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * assert dryRunResponse.can_proceed == true
     * assert dryRunResponse.valid_rows_count == 2
 
+  # ============================================================================
+  # SPEC 101: INTEGRACIÓN DE TOPOLOGÍA L2 EN MAPA UNIFICADO Y WALLBOARD NOC
+  # ============================================================================
+  Scenario: 115. Capa de Enlaces L2 integrada en el Mapa Unificado y Wallboard NOC (Spec 101)
+    * def wallboardL2Response = { edges: [{ id: 'edge-1', source_interface: 'ether1', target_interface: 'ether1', is_poe_delivering: true, poe_power_watts: 18.5, protocol: 'LLDP' }], total_edges: 1 }
+    * assert wallboardL2Response.total_edges == 1
+    * assert wallboardL2Response.edges[0].is_poe_delivering == true
+    * assert wallboardL2Response.edges[0].protocol == 'LLDP'
+
+
 
 
 

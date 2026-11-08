@@ -228,15 +228,6 @@
       });
     }
 
-    if (!authStore.user || authStore.canUseUserFeature('TOPOLOGY_L2_CVE_SYSLOG_MCP', false)) {
-      items.push({
-        name: 'L2Topology',
-        path: '/topology/l2',
-        label: t('nav.l2_topology', 'Topología L2'),
-        icon: '🗺️',
-      });
-    }
-
     if (
       authStore.isFeatureEnabled('nightly_backups_enabled') &&
       (!authStore.user || authStore.canUseUserFeature('MANUAL_BACKUP_DIFF_GIT', false))

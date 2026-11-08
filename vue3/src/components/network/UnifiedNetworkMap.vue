@@ -4,7 +4,15 @@
 <script setup lang="ts">
   import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
   import L from 'leaflet';
-  import type { OpticalBoxItem, RouterItem, SubscriberDeviceItem, OperationalStatusResponse } from '@/types';
+  import type {
+    OpticalBoxItem,
+    RouterItem,
+    SubscriberDeviceItem,
+    OperationalStatusResponse,
+    TopologyEdge,
+    L2TopologyResponse,
+  } from '@/types';
+  import { http } from '@/api/httpClient';
   import { useAuthStore } from '@/stores/useAuthStore';
   import { useFieldOpsStore } from '@/stores/useFieldOpsStore';
   import { useNocEventsStore } from '@/stores/useNocEventsStore';
@@ -96,10 +104,13 @@
     };
   }
 
-  // Estado de los 3 Toggles de Capa Independientes
+  // Estado de los 4 Toggles de Capa Independientes
   const showRouters = ref<boolean>(props.mode === 'inventory' || props.mode === 'wallboard');
   const showBoxes = ref<boolean>(isIspMode.value && props.mode === 'subscribers');
   const showSubscribers = ref<boolean>(props.mode === 'subscribers');
+  const showL2Links = ref<boolean>(props.mode === 'wallboard');
+  const l2Edges = ref<TopologyEdge[]>([]);
+  const activeL2Edge = ref<TopologyEdge | null>(null);
 
   // Filtro de estado
   const statusFilter = ref<'ALL' | 'ONLINE' | 'OFFLINE' | 'MAINTENANCE'>('ALL');
@@ -141,7 +152,27 @@
   let boxesLayer: L.LayerGroup | null = null;
   let subscribersLayer: L.LayerGroup | null = null;
   let linesLayer: L.LayerGroup | null = null;
+  let l2LinksLayer: L.LayerGroup | null = null;
   let resizeObserver: ResizeObserver | null = null;
+
+  async function loadL2TopologyEdges(): Promise<void> {
+    try {
+      const res = await http.get<L2TopologyResponse>('/api/v1/topology/l2');
+      l2Edges.value = Array.isArray(res.data?.edges) ? res.data.edges : [];
+      renderAllLayers();
+    } catch {
+      l2Edges.value = [];
+    }
+  }
+
+  async function toggleL2Links(): Promise<void> {
+    showL2Links.value = !showL2Links.value;
+    if (showL2Links.value && l2Edges.value.length === 0) {
+      await loadL2TopologyEdges();
+    } else {
+      renderAllLayers();
+    }
+  }
 
   function clearSpiderLayer(): void {
     if (spiderLayer) {
@@ -320,6 +351,11 @@
       boxesLayer = L.layerGroup().addTo(mapInstance);
       subscribersLayer = L.layerGroup().addTo(mapInstance);
       linesLayer = L.layerGroup().addTo(mapInstance);
+      l2LinksLayer = L.layerGroup().addTo(mapInstance);
+
+      if (showL2Links.value) {
+        loadL2TopologyEdges();
+      }
 
       renderAllLayers();
 
@@ -396,6 +432,7 @@
     boxesLayer?.clearLayers();
     subscribersLayer?.clearLayers();
     linesLayer?.clearLayers();
+    l2LinksLayer?.clearLayers();
 
     const filteredMapRouters = props.routers.filter((r) => {
       if (statusFilter.value === 'MAINTENANCE') return r.admin_state === 'MAINTENANCE';
@@ -610,6 +647,42 @@
         subscribersLayer?.addLayer(marker);
       });
     }
+
+    // 4. Capa de Enlaces Físicos L2 / PoE (Polilíneas Leaflet)
+    if (showL2Links.value && l2LinksLayer) {
+      for (const edge of l2Edges.value) {
+        const srcRouter = props.routers.find((r) => r.id === edge.source_router_id);
+        const dstRouter = props.routers.find((r) => r.id === edge.target_router_id);
+        if (!srcRouter || !dstRouter) continue;
+        const lat1 = Number(srcRouter.latitude);
+        const lng1 = Number(srcRouter.longitude);
+        const lat2 = Number(dstRouter.latitude);
+        const lng2 = Number(dstRouter.longitude);
+        if (isNaN(lat1) || isNaN(lng1) || isNaN(lat2) || isNaN(lng2)) continue;
+
+        const lineColor = edge.is_poe_delivering ? '#FACC15' : '#06B6D4';
+        const poly = L.polyline(
+          [
+            [lat1, lng1],
+            [lat2, lng2],
+          ],
+          {
+            color: lineColor,
+            weight: edge.is_poe_delivering ? 4 : 3,
+            opacity: 0.9,
+            dashArray: edge.is_poe_delivering ? undefined : '6, 6',
+          },
+        );
+        poly.on('click', () => {
+          activeL2Edge.value = edge;
+          activeRouter.value = null;
+          activeLocationGroup.value = null;
+          activeBox.value = null;
+          activeSubscriber.value = null;
+        });
+        l2LinksLayer.addLayer(poly);
+      }
+    }
   }
 
   function focusAffectedZone(): void {
@@ -623,7 +696,7 @@
     }
   }
 
-  watch([showRouters, showBoxes, showSubscribers, statusFilter, () => props.routers, () => props.opticalBoxes, () => props.subscribers], () => {
+  watch([showRouters, showBoxes, showSubscribers, showL2Links, statusFilter, () => props.routers, () => props.opticalBoxes, () => props.subscribers], () => {
     renderAllLayers();
   }, { deep: true });
 
@@ -657,6 +730,11 @@
   defineExpose({
     activeRouter,
     activeLocationGroup,
+    activeL2Edge,
+    showL2Links,
+    l2Edges,
+    toggleL2Links,
+    loadL2TopologyEdges,
     buildLocationGroups,
     getDistanceMeters,
     getGroupStatus,
@@ -684,7 +762,7 @@
 
 <template>
   <div class="unified-network-map-wrapper">
-    <!-- Barra Táctica Superior: 3 Toggles de Capa Independientes con Feature Flags -->
+    <!-- Barra Táctica Superior: 4 Toggles de Capa Independientes con Feature Flags -->
     <header class="unified-map-toolbar">
       <div class="layers-toggles-group" role="toolbar" aria-label="Controles de Capa del Mapa">
         <button
@@ -722,6 +800,19 @@
           <span class="icon shape-legend shape-legend--triangle" aria-hidden="true">▲</span>
           <span class="label">{{ t('network_map.layer_subs') }}</span>
           <span class="counter">({{ subscribers.length }})</span>
+        </button>
+
+        <button
+          id="btn-layer-l2-links"
+          type="button"
+          class="btn-layer-toggle btn-layer-l2"
+          :class="{ 'btn-layer-toggle--active': showL2Links }"
+          :aria-pressed="showL2Links ? 'true' : 'false'"
+          @click="toggleL2Links"
+        >
+          <span class="icon shape-legend shape-legend--line" aria-hidden="true">━</span>
+          <span class="label">{{ t('network_map.layer_l2_links', 'Enlaces L2') }}</span>
+          <span class="counter">({{ l2Edges.length }})</span>
         </button>
       </div>
 
@@ -770,7 +861,25 @@
       <div ref="mapContainer" class="unified-leaflet-container" tabindex="0" aria-label="Mapa de Red Unificado"></div>
 
       <!-- Drawer Lateral de Detalle con Gobernanza RBAC y Prevención de Colisiones -->
-      <aside v-if="activeRouter || activeLocationGroup || activeBox || activeSubscriber" class="unified-detail-drawer" aria-label="Panel de Información">
+      <aside v-if="activeRouter || activeLocationGroup || activeBox || activeSubscriber || activeL2Edge" class="unified-detail-drawer" aria-label="Panel de Información">
+        <!-- Detalle de Enlace Físico L2 / PoE -->
+        <div v-if="activeL2Edge" class="drawer-card l2-edge-detail-card">
+          <div class="card-header">
+            <h3>🔗 Enlace Físico Capa 2 ({{ activeL2Edge.protocol }})</h3>
+            <button type="button" class="btn-close-card" @click="activeL2Edge = null">✖</button>
+          </div>
+          <div class="card-body">
+            <p><strong>Interfaz Origen:</strong> <code>{{ activeL2Edge.source_interface }}</code></p>
+            <p><strong>Interfaz Destino:</strong> <code>{{ activeL2Edge.target_interface }}</code></p>
+            <p v-if="activeL2Edge.link_speed"><strong>Velocidad:</strong> {{ activeL2Edge.link_speed }}</p>
+            <p>
+              <strong>Alimentación PoE:</strong>
+              <span v-if="activeL2Edge.is_poe_delivering">⚡ {{ activeL2Edge.poe_power_watts ?? activeL2Edge.poe_watts ?? 0 }}W <template v-if="activeL2Edge.poe_status">({{ activeL2Edge.poe_status }})</template></span>
+              <span v-else>Solo Datos</span>
+            </p>
+          </div>
+        </div>
+
         <!-- Detalle de Sitio / Nodo Co-ubicado con Múltiples Equipos -->
         <div v-if="activeLocationGroup" class="drawer-card location-group-card">
           <div class="card-header">
@@ -1579,6 +1688,22 @@
 
 .shape-legend--triangle {
   color: #38BDF8;
+}
+
+.shape-legend--line {
+  color: #06B6D4;
+  font-weight: 900;
+}
+
+.btn-layer-l2.btn-layer-toggle--active {
+  background: rgba(6, 182, 212, 0.18);
+  border-color: #06B6D4;
+  color: #06B6D4;
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.3);
+}
+
+.l2-edge-detail-card {
+  border-left: 3px solid #06B6D4;
 }
 
 @keyframes pin-pulsate {

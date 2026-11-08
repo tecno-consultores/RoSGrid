@@ -5,6 +5,7 @@
   import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
   import { useRouter } from 'vue-router';
   import UnifiedNetworkMap from '@/components/network/UnifiedNetworkMap.vue';
+  import L2TopologyView from '@/views/L2TopologyView.vue';
   import type { RouterItem, OpticalBoxItem, SubscriberDeviceItem } from '@/types';
   import { http } from '@/api/httpClient';
   import { useNocEventsStore } from '@/stores/useNocEventsStore';
@@ -25,6 +26,7 @@
   }
 
   const isFullscreen = ref(false);
+  const showLogicalL2Graph = ref(false);
   const wallboardContainer = ref<HTMLElement | null>(null);
 
   // Infraestructura real obtenida de la API
@@ -443,6 +445,14 @@
 
       <div class="wallboard-header-actions">
         <button
+          id="btn-wallboard-toggle-l2-view"
+          type="button"
+          class="btn-wallboard-refresh"
+          @click="showLogicalL2Graph = !showLogicalL2Graph"
+        >
+          {{ showLogicalL2Graph ? t('wallboard.btn_geo_map', '🗺️ Mapa Geográfico') : t('wallboard.btn_l2_graph', '🕸️ Grafo L2 / PoE') }}
+        </button>
+        <button
           id="btn-wallboard-refresh"
           type="button"
           class="btn-wallboard-refresh"
@@ -495,9 +505,9 @@
             {{ isAudioSilenced ? '🔔 Activar Sonido' : '🔇 Silenciar' }}
           </button>
           <button
+            id="btn-ack-mass-outage"
             type="button"
             class="btn-outage-ack"
-            id="btn-ack-mass-outage"
             @click="acknowledgeOutage"
           >
             {{ t('mass_outage.acknowledge') }}
@@ -508,9 +518,11 @@
 
     <!-- Cuerpo Dividido: Mitad Izquierda (Mapa OSM) + Mitad Derecha (Ticker de Eventos) -->
     <div class="wallboard-body">
-      <!-- Mitad Izquierda: Mapa Interactivo -->
+      <!-- Mitad Izquierda: Mapa Interactivo o Grafo Esquemático L2 -->
       <section class="wallboard-map-panel" aria-label="Mapa de routers de la flota">
+        <L2TopologyView v-if="showLogicalL2Graph" />
         <UnifiedNetworkMap
+          v-else
           :mode="'wallboard'"
           :allow-webfig="true"
           :routers="routers"
@@ -545,9 +557,9 @@
             </div>
             <div class="hud-actions">
               <button
+                id="btn-wallboard-open-webfig"
                 type="button"
                 class="btn-hud-webfig"
-                id="btn-wallboard-open-webfig"
                 @click="handleOpenWebFig(selectedRouter.id)"
               >
                 📊 Abrir WebFig →
