@@ -602,4 +602,65 @@ describe('TenantsManagementView.vue — Gestión de Empresas Multi-Tenant', () =
       }),
     );
   });
+
+  it('actualiza inmediatamente authStore.tenantFeatures cuando se edita la empresa activa (Spec 105)', async () => {
+    const authStore = useAuthStore();
+    authStore.tenantSlug = 'isp-sur';
+    const updateSpy = vi.spyOn(authStore, 'updateTenantFeatures');
+    const fetchSpy = vi.spyOn(authStore, 'fetchTenantFeatures').mockResolvedValue();
+
+    const mockTenants = [
+      {
+        id: 't-02',
+        slug: 'isp-sur',
+        name: 'ISP Sur',
+        tax_id: 'J-87654321-0',
+        status: 'ACTIVE',
+        max_routers_quota: 30,
+        max_users_quota: 15,
+        active_routers_count: 3,
+        active_users_count: 1,
+        default_safemode_seconds: 60,
+        require_2fa_all_users: true,
+        hq_latitude: 10.2123,
+        hq_longitude: -67.9876,
+      },
+    ];
+
+    vi.spyOn(http, 'get').mockResolvedValue({
+      status: 200,
+      data: { items: mockTenants },
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(TenantsManagementView);
+    await flushPromises();
+
+    const editBtn = wrapper.find('#btn-edit-tenant-isp-sur');
+    await editBtn.trigger('click');
+
+    await wrapper.find('#edit-tenant-hq-lat').setValue('10.450000');
+    await wrapper.find('#edit-tenant-hq-lng').setValue('-66.850000');
+
+    vi.spyOn(http, 'patch').mockResolvedValueOnce({
+      status: 200,
+      data: {
+        ...mockTenants[0],
+        hq_latitude: 10.45,
+        hq_longitude: -66.85,
+      },
+      headers: new Headers(),
+    });
+
+    await wrapper.find('#form-edit-tenant').trigger('submit');
+    await flushPromises();
+
+    expect(updateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        hq_latitude: 10.45,
+        hq_longitude: -66.85,
+      }),
+    );
+    expect(fetchSpy).toHaveBeenCalled();
+  });
 });

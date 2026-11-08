@@ -468,7 +468,14 @@
     if (hasInitialAutoCentered.value && !force) return;
 
     const coords = collectAllValidCoordinates();
-    if (coords.length === 0) return;
+    if (coords.length === 0) {
+      try {
+        mapInstance.setView(authStore.tenantHqCoordinates, props.zoomLevel);
+      } catch {
+        // Ignorar en entornos JSDOM sin layout
+      }
+      return;
+    }
 
     try {
       hasInitialAutoCentered.value = true;
@@ -788,6 +795,20 @@
       }
     },
     { immediate: true },
+  );
+
+  watch(
+    () => authStore.tenantHqCoordinates,
+    (newHq) => {
+      if (!mapInstance || isHeadlessTest.value) return;
+      if (collectAllValidCoordinates().length === 0) {
+        try {
+          mapInstance.setView(newHq, props.zoomLevel);
+        } catch {
+          // Ignorar en entornos JSDOM
+        }
+      }
+    },
   );
 
   defineExpose({

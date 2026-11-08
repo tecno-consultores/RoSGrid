@@ -1,6 +1,6 @@
 # Especificación 105: Remediación de Error `HTTP 500` (`Object of type Decimal is not JSON serializable`) al Actualizar Coordenadas GPS de Sede Principal (`PATCH /api/v1/tenants/{id}`) y Re-Centrado Reactivo de Mapas sobre la Sede Principal
 
-**Estado:** Pendiente de Ejecución (`[ ]` Hito 30.28)  
+**Estado:** Implementado y Certificado (`[x]` Hito 30.28)  
 **Target de Ejecución:** Gemini 3.8 Flash (High)  
 **Ámbito:** Backend (`fastapi/src/core/audit.py`, `fastapi/src/api/v1/tenants.py`) + Frontend (`vue3/src/views/admin/TenantsManagementView.vue`, `vue3/src/components/network/UnifiedNetworkMap.vue`, `vue3/src/components/inventory/OsmRouterMap.vue`) + Pruebas Unitarias y Karate Labs BDD
 

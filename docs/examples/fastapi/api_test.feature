@@ -1546,6 +1546,93 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  # ============================================================================
+  # SPEC 99: FILTRADO DE PAQUETES ACTIVOS EN CAPA 2 Y DEGRADACIÓN ELEGANTE
+  # ============================================================================
+  Scenario: 173. Catalogo WebFig Capa 2 (/webfig/layer2/catalog) filtra paquetes opcionales deshabilitados y degrada paquetes no instalados (Spec 99)
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/layer2/catalog'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/layer2/resource/container'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  # ============================================================================
+  # SPEC 100: CARGA MASIVA CSV DE CLIENTES / ABONADOS CON VALIDACIÓN Y DRY-RUN
+  # ============================================================================
+  Scenario: 174. Descarga de plantilla CSV y validacion Dry-Run para carga masiva de clientes (Spec 100)
+    Given path '/api/v1/subscriber-devices/template-csv'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/subscriber-devices/import-csv/dry-run'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/subscriber-devices/import-csv/commit'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  # ============================================================================
+  # SPEC 103: CARGA MASIVA CSV DE CAJAS NAP CON UPSERT Y AUTO-CREACIÓN (HITO 30.26)
+  # ============================================================================
+  Scenario: 175. Descarga de plantilla CSV y validacion Dry-Run para carga masiva de Cajas NAP con soporte Upsert (Spec 103)
+    Given path '/api/v1/optical-boxes/template-csv'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/optical-boxes/import-csv/dry-run'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/optical-boxes/import-csv/commit'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  # ============================================================================
+  # SPEC 104: COORDENADAS GPS DE SEDE PRINCIPAL Y CENTRADO CARTOGRÁFICO (HITO 30.27)
+  # ============================================================================
+  Scenario: 176. Persistencia y exposicion de coordenadas GPS de Sede Principal (hq_latitude, hq_longitude) en Tenant y Features (Spec 104)
+    Given path '/api/v1/tenants'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/tenants'
+    And request { slug: 'isp-karate', name: 'ISP Karate Test', admin_username: 'karateadmin', admin_email: 'karate@isp.test', admin_password: 'Password123!', hq_latitude: 10.2123, hq_longitude: -67.9876 }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/tenants/00000000-0000-0000-0000-000000000000/features'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  # ============================================================================
+  # SPEC 105: SERIALIZACIÓN JSONB DE DECIMAL EN AUDITORÍA WORM AL EDITAR TENANT
+  # ============================================================================
+  Scenario: 177. Actualizacion PATCH de coordenadas GPS de Sede Principal sin error Decimal en AuditLog JSONB (Spec 105)
+    Given path '/api/v1/tenants/00000000-0000-0000-0000-000000000000'
+    And request { name: 'Tecno Sede Carabobo', hq_latitude: 10.232345, hq_longitude: -67.879812 }
+    When method patch
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
+
+
+
+
 
 
 

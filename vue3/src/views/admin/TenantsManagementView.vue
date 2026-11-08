@@ -132,7 +132,15 @@
         };
       }
       await loadTenants();
-      if (authStore.user?.tenant_id === editingTenant.value.id) {
+      if (
+        String(authStore.user?.tenant_id) === String(editingTenant.value.id) ||
+        authStore.tenantSlug === editingTenant.value.slug ||
+        authStore.tenantSlug === payload.slug
+      ) {
+        authStore.updateTenantFeatures({
+          hq_latitude: payload.hq_latitude,
+          hq_longitude: payload.hq_longitude,
+        });
         await authStore.fetchTenantFeatures();
       }
       isEditModalOpen.value = false;

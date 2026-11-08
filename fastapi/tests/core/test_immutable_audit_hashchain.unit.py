@@ -59,6 +59,49 @@ def test_sanitize_primitive_passthrough() -> None:
     assert sanitize_sensitive_data(None) is None
 
 
+def test_sanitize_complex_types_jsonb_normalization() -> None:
+    from datetime import date, datetime, timezone
+    from decimal import Decimal
+    from enum import Enum
+    import json
+    import uuid
+
+    class SampleEnum(str, Enum):
+        ACTIVE = "active"
+        INACTIVE = "inactive"
+
+    u = uuid.uuid4()
+    now = datetime(2026, 11, 8, 12, 0, 0, tzinfo=timezone.utc)
+    d = date(2026, 11, 8)
+    dec = Decimal("10.480600")
+
+    payload = {
+        "uuid": u,
+        "created_at": now,
+        "entry_date": d,
+        "hq_latitude": dec,
+        "status": SampleEnum.ACTIVE,
+        "tags": {"admin", "audit"},
+        "tuple_items": (1, Decimal("2.5")),
+    }
+
+    sanitized = sanitize_sensitive_data(payload)
+    assert sanitized["uuid"] == str(u)
+    assert sanitized["created_at"] == str(now)
+    assert sanitized["entry_date"] == str(d)
+    assert isinstance(sanitized["hq_latitude"], float)
+    assert sanitized["hq_latitude"] == 10.4806
+    assert sanitized["status"] == "active"
+    assert isinstance(sanitized["tags"], list)
+    assert isinstance(sanitized["tuple_items"], list)
+    assert sanitized["tuple_items"][1] == 2.5
+
+    # Certificar serialización JSONB sin TypeError (Spec 105)
+    dumped = json.dumps(sanitized)
+    assert "10.4806" in dumped
+    assert "active" in dumped
+
+
 def test_compute_audit_record_hash_deterministic() -> None:
     prev_hash = GENESIS_AUDIT_HASH
     record = {

@@ -356,7 +356,9 @@
 
     // Auto-encuadre sobre los nodos reales del tenant (1 o múltiples sitios)
     try {
-      if (mapInstance && groups.length === 1) {
+      if (mapInstance && groups.length === 0) {
+        mapInstance.setView(getTenantHqCoords(), props.zoomLevel);
+      } else if (mapInstance && groups.length === 1) {
         mapInstance.setView([groups[0].lat, groups[0].lng], Math.max(props.zoomLevel, 14));
       } else if (mapInstance && groups.length > 1) {
         const bounds = L.latLngBounds(groups.map((g) => [g.lat, g.lng]));
@@ -477,6 +479,28 @@
         mapInstance.flyTo([target.latitude, target.longitude], 15, { duration: 1 });
       }
     },
+  );
+
+  watch(
+    () => {
+      try {
+        const pinia = getActivePinia();
+        return pinia ? useAuthStore(pinia).tenantHqCoordinates : null;
+      } catch {
+        return null;
+      }
+    },
+    (newHq) => {
+      if (!mapInstance || isHeadlessTest.value || !newHq) return;
+      if (props.routers.length === 0) {
+        try {
+          mapInstance.setView(newHq, props.zoomLevel);
+        } catch {
+          // Ignorar en entorno JSDOM
+        }
+      }
+    },
+    { deep: true },
   );
 
   onMounted(() => {

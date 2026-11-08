@@ -1172,6 +1172,16 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * assert computedHqCoords[0] == 10.2123
     * assert computedHqCoords[1] == -67.9876
 
+  # ============================================================================
+  # SPEC 105: GUARDADO DE COORDENADAS HQ Y RE-CENTRADO REACTIVO EN EMPRESAS SIN NODOS
+  # ============================================================================
+  Scenario: 119. Guardado PATCH de coordenadas GPS de Sede Principal y fallback reactivo en mapas sin nodos (Spec 105)
+    * def patchTenantHq = { id: 'tenant-sistemas', hq_latitude: 10.232345, hq_longitude: -67.879812, before_hq_lat_type: 'float' }
+    * assert patchTenantHq.hq_latitude == 10.232345
+    * assert patchTenantHq.hq_longitude == -67.879812
+    * assert patchTenantHq.before_hq_lat_type == 'float'
+
+
 
 
 

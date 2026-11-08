@@ -1116,6 +1116,78 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * def targetUrl = '/routers/r-01/webfig/firewall?proto=ipv6'
     * assert targetUrl.contains('proto=ipv6')
 
+  # ============================================================================
+  # SPEC 99: DEGRADACIÓN ELEGANTE DE PAQUETE OPCIONAL ROUTEROS EN CAPA 2
+  # ============================================================================
+  Scenario: 113. Degradacion elegante de paquete opcional RouterOS no instalado en Capa 2 (Spec 99)
+    * def resourceResponse = { ros_path: 'container', schema_source: 'package_not_installed', items: [] }
+    * assert resourceResponse.schema_source == 'package_not_installed'
+    * assert resourceResponse.items.length == 0
+
+  # ============================================================================
+  # SPEC 100: ASISTENTE DE CARGA MASIVA CSV DE CLIENTES EN MAPA DE RED
+  # ============================================================================
+  Scenario: 114. Asistente de carga masiva CSV de clientes en Mapa de Clientes con RBAC Admin (Spec 100)
+    * def dryRunResponse = { total_rows: 2, valid_rows_count: 2, invalid_rows_count: 0, can_proceed: true, rows: [] }
+    * assert dryRunResponse.can_proceed == true
+    * assert dryRunResponse.valid_rows_count == 2
+
+  # ============================================================================
+  # SPEC 101: INTEGRACIÓN DE TOPOLOGÍA L2 EN MAPA UNIFICADO Y WALLBOARD NOC
+  # ============================================================================
+  Scenario: 115. Capa de Enlaces L2 integrada en el Mapa Unificado y Wallboard NOC (Spec 101)
+    * def wallboardL2Response = { edges: [{ id: 'edge-1', source_interface: 'ether1', target_interface: 'ether1', is_poe_delivering: true, poe_power_watts: 18.5, protocol: 'LLDP' }], total_edges: 1 }
+    * assert wallboardL2Response.total_edges == 1
+    * assert wallboardL2Response.edges[0].is_poe_delivering == true
+    * assert wallboardL2Response.edges[0].protocol == 'LLDP'
+
+  # ============================================================================
+  # SPEC 102: AUTO-ENCUADRE CARTOGRÁFICO DINÁMICO SOBRE COORDENADAS DE LA FLOTA
+  # ============================================================================
+  Scenario: 116. Auto-encuadre dinamico de mapas sobre coordenadas reales de la flota (Spec 102)
+    * def mapFleetCoords = [ [10.2323, -67.8798], [10.2450, -67.8900] ]
+    * assert mapFleetCoords.length == 2
+    * assert mapFleetCoords[0][0] == 10.2323
+    * assert mapFleetCoords[0][1] == -67.8798
+
+  # ============================================================================
+  # SPEC 103: CARGA MASIVA CSV DE CAJAS NAP CON UPSERT Y AUTO-CREACIÓN (HITO 30.26)
+  # ============================================================================
+  Scenario: 117. Asistente de carga masiva CSV de Cajas NAP con soporte Upsert y auto-creacion de cajas en Mapa de Clientes (Spec 103)
+    * def boxesCsvPreview = { total_rows: 2, valid_rows_count: 2, invalid_rows_count: 0, can_proceed: true, rows: [ { box_code: 'NAP-01', is_update: true, is_valid: true }, { box_code: 'NAP-02', is_update: false, is_valid: true } ] }
+    * assert boxesCsvPreview.total_rows == 2
+    * assert boxesCsvPreview.rows[0].is_update == true
+    * assert boxesCsvPreview.rows[1].is_update == false
+    * def subAutoCreateRow = { endpoint_identifier: 'CLI-01', optical_box_name: 'NAP-AUTO-01', will_auto_create_box: true, is_valid: true }
+    * assert subAutoCreateRow.will_auto_create_box == true
+
+  # ============================================================================
+  # SPEC 104: COORDENADAS GPS DE SEDE PRINCIPAL Y CENTRADO CARTOGRÁFICO (HITO 30.27)
+  # ============================================================================
+  Scenario: 118. Coordenadas GPS de Sede Principal en creacion y edicion de empresas y centrado inicial por empresa (Spec 104)
+    * def tenantPayload = { name: 'ISP Carabobo S.A.', slug: 'isp-carabobo', hq_latitude: 10.2123, hq_longitude: -67.9876 }
+    * assert tenantPayload.hq_latitude == 10.2123
+    * assert tenantPayload.hq_longitude == -67.9876
+    * def computedHqCoords = (tenantPayload.hq_latitude && tenantPayload.hq_longitude) ? [tenantPayload.hq_latitude, tenantPayload.hq_longitude] : [10.4806, -66.9036]
+    * assert computedHqCoords[0] == 10.2123
+    * assert computedHqCoords[1] == -67.9876
+
+  # ============================================================================
+  # SPEC 105: GUARDADO DE COORDENADAS HQ Y RE-CENTRADO REACTIVO EN EMPRESAS SIN NODOS
+  # ============================================================================
+  Scenario: 119. Guardado PATCH de coordenadas GPS de Sede Principal y fallback reactivo en mapas sin nodos (Spec 105)
+    * def patchTenantHq = { id: 'tenant-sistemas', hq_latitude: 10.232345, hq_longitude: -67.879812, before_hq_lat_type: 'float' }
+    * assert patchTenantHq.hq_latitude == 10.232345
+    * assert patchTenantHq.hq_longitude == -67.879812
+    * assert patchTenantHq.before_hq_lat_type == 'float'
+
+
+
+
+
+
+
+
 
 
 

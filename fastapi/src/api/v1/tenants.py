@@ -3,6 +3,8 @@
 
 import logging
 import uuid
+from decimal import Decimal
+from enum import Enum
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -344,11 +346,22 @@ async def _validate_unique_tenant_slug(db: AsyncSession, tenant: Tenant, new_slu
     return clean_slug
 
 
+def _normalize_tenant_audit_value(val: Any) -> Any:
+    if isinstance(val, Decimal):
+        return float(val)
+    if isinstance(val, Enum):
+        return val.value
+    return val
+
+
 async def _apply_tenant_updates(
     db: AsyncSession, tenant: Tenant, update_data: dict[str, Any]
 ) -> dict[str, Any]:
     """Aplica las modificaciones de metadatos/cuotas sobre el Tenant y retorna before_state (CC = 3)."""
-    before_state = {field: getattr(tenant, field, None) for field in update_data}
+    before_state = {
+        field: _normalize_tenant_audit_value(getattr(tenant, field, None))
+        for field in update_data
+    }
     if update_data.get("slug"):
         update_data["slug"] = await _validate_unique_tenant_slug(db, tenant, str(update_data["slug"]))
     for field, value in update_data.items():

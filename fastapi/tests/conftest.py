@@ -415,6 +415,16 @@ def make_asserting_audit_mock(return_value: Any = None) -> Any:
                 f"UUID crudo en actor_username ({actor_username}) sin session ni actor_user_id para resolución"
             )
 
+        import json
+        from src.core.audit import sanitize_sensitive_data
+
+        before_st = kwargs.get("before_state")
+        after_st = kwargs.get("after_state")
+        if before_st is not None:
+            json.dumps(sanitize_sensitive_data(before_st))
+        if after_st is not None:
+            json.dumps(sanitize_sensitive_data(after_st))
+
         if return_value is not None:
             return return_value
         entry = MagicMock()

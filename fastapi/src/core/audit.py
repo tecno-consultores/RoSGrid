@@ -4,6 +4,9 @@
 import hashlib
 import json
 import uuid
+from datetime import date, datetime
+from decimal import Decimal
+from enum import Enum
 from typing import Any
 
 GENESIS_AUDIT_HASH = "0" * 64
@@ -41,10 +44,16 @@ def sanitize_sensitive_data(data: Any) -> Any:
             else:
                 cleaned[k] = sanitize_sensitive_data(v)
         return cleaned
-    elif isinstance(data, list):
+    if isinstance(data, (list, tuple, set)):
         return [sanitize_sensitive_data(item) for item in data]
-    elif isinstance(data, str):
+    if isinstance(data, str):
         return sanitize_log_string(data)
+    if isinstance(data, Decimal):
+        return float(data)
+    if isinstance(data, Enum):
+        return data.value
+    if isinstance(data, (uuid.UUID, datetime, date)):
+        return str(data)
     return data
 
 

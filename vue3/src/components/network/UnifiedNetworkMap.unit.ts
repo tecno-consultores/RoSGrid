@@ -766,5 +766,54 @@ describe('UnifiedNetworkMap.vue — Mapa de Red Unificado & Gobierno RCA (Hito 2
     await wrapper.vm.$nextTick();
     expect(mockMapInstance.fitBounds).toHaveBeenCalled();
   });
+
+  it('centra el mapa en authStore.tenantHqCoordinates cuando la empresa no tiene nodos geolocalizados y re-centra reactivamente (Spec 105)', async () => {
+    const authStore = useAuthStore();
+    authStore.tenantFeatures = {
+      hq_latitude: 10.25,
+      hq_longitude: -67.6,
+    };
+
+    const mockMapInstance = {
+      setView: vi.fn().mockReturnThis(),
+      fitBounds: vi.fn().mockReturnThis(),
+      invalidateSize: vi.fn(),
+      flyTo: vi.fn(),
+      remove: vi.fn(),
+      on: vi.fn(),
+    };
+    vi.spyOn(L, 'map').mockReturnValue(mockMapInstance as unknown as L.Map);
+
+    const wrapper = mount(UnifiedNetworkMap, {
+      props: {
+        routers: [],
+        opticalBoxes: [],
+        subscribers: [],
+      },
+      global: {
+        plugins: [pinia],
+        stubs: { RouterLink: true },
+      },
+    });
+
+    await wrapper.vm.$nextTick();
+
+    (wrapper.vm as any).fitMapToActiveNodes(true);
+    expect(mockMapInstance.setView).toHaveBeenCalledWith(
+      [10.25, -67.6],
+      expect.any(Number),
+    );
+
+    authStore.tenantFeatures = {
+      hq_latitude: 10.4806,
+      hq_longitude: -66.9036,
+    };
+    await wrapper.vm.$nextTick();
+
+    expect(mockMapInstance.setView).toHaveBeenCalledWith(
+      [10.4806, -66.9036],
+      expect.any(Number),
+    );
+  });
 });
 

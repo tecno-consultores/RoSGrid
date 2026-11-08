@@ -4,6 +4,7 @@
 import time
 import uuid
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Any
 
 import pytest
@@ -88,6 +89,13 @@ class MockDbSession:
                 item.status = TenantStatusEnum.ACTIVE
 
     async def commit(self) -> None:
+        import json
+
+        for item in self.added:
+            for jsonb_attr in ("before_state", "after_state"):
+                val = getattr(item, jsonb_attr, None)
+                if val is not None:
+                    json.dumps(val)
         self.committed = True
 
     async def rollback(self) -> None:
@@ -141,6 +149,8 @@ async def test_tenants_crud_endpoints(async_client: AsyncClient, superadmin_auth
     t.max_users_quota = 20
     t.require_2fa_all_users = True
     t.default_safemode_seconds = 60
+    t.hq_latitude = Decimal("10.480600")
+    t.hq_longitude = Decimal("-66.903600")
     now = datetime.now(UTC)
     t.created_at = now
     t.updated_at = now
@@ -223,6 +233,56 @@ async def test_tenants_crud_endpoints(async_client: AsyncClient, superadmin_auth
         assert patched_json["hq_longitude"] == -67.654321
         assert "active_routers_count" in patched_json
         assert "active_users_count" in patched_json
+    finally:
+        app.dependency_overrides.pop(get_db_session, None)
+
+
+@pytest.mark.asyncio
+async def test_tenant_hq_coordinates_decimal_audit_jsonb_serialization(
+    async_client: AsyncClient, superadmin_auth: dict[str, str]
+) -> None:
+    """Verifica que un Tenant con Decimal en PostgreSQL se actualiza vía PATCH sin TypeError en JSONB (Spec 105)."""
+    headers = {"Authorization": superadmin_auth["Authorization"]}
+    t = Tenant()
+    t.id = uuid.uuid4()
+    t.slug = "corp-geo"
+    t.name = "Corp Geo S.A."
+    t.status = TenantStatusEnum.ACTIVE
+    t.max_routers_quota = 50
+    t.max_users_quota = 20
+    t.require_2fa_all_users = True
+    t.default_safemode_seconds = 60
+    t.hq_latitude = Decimal("10.480600")
+    t.hq_longitude = Decimal("-66.903600")
+    now = datetime.now(UTC)
+    t.created_at = now
+    t.updated_at = now
+
+    db = MockDbSession(tenants=[t])
+    app.dependency_overrides[get_db_session] = lambda: db
+    try:
+        patch_headers = {**headers, "Idempotency-Key": str(uuid.uuid4())}
+        res_patch = await async_client.patch(
+            f"/api/v1/tenants/{t.id}",
+            json={
+                "name": "Corp Geo Updated",
+                "hq_latitude": 10.232345,
+                "hq_longitude": -67.879812,
+            },
+            headers=patch_headers,
+        )
+        assert res_patch.status_code == 200
+        data = res_patch.json()
+        assert data["hq_latitude"] == 10.232345
+        assert data["hq_longitude"] == -67.879812
+
+        # Validar que se creó el AuditLog y que before_state contiene float serializable en JSONB
+        audit_logs = [item for item in db.added if hasattr(item, "event_action")]
+        assert len(audit_logs) >= 1
+        audit_entry = audit_logs[0]
+        assert audit_entry.event_action == "TENANT_UPDATED"
+        assert isinstance(audit_entry.before_state["hq_latitude"], float)
+        assert audit_entry.before_state["hq_latitude"] == 10.4806
     finally:
         app.dependency_overrides.pop(get_db_session, None)
 
