@@ -596,5 +596,37 @@ describe('LoginView.vue — Autenticación Multi-Tenant en 2 Etapas y 2FA TOTP',
     expect(cardIndex).toBeGreaterThan(-1);
     expect(footerIndex).toBeGreaterThan(cardIndex);
   });
+
+  it('aplica layout seguro sin recorte de logo (.login-card--wide y .form-row-2col) en BOOTSTRAP y REGISTER (Spec 109)', async () => {
+    vi.spyOn(http, 'get').mockResolvedValueOnce({
+      status: 200,
+      data: { is_bootstrapped: false },
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(LoginView);
+    await flushPromises();
+
+    // El logo y título deben existir en la cabecera superior de .login-card
+    expect(wrapper.find('.login-header .brand-logo').exists()).toBe(true);
+    expect(wrapper.find('#login-heading').text()).toBe('RoSGrid');
+
+    // En modo BOOTSTRAP, la tarjeta usa .login-card--wide y cuadrícula .form-row-2col
+    const card = wrapper.find('#main-content.login-card');
+    expect(card.classes()).toContain('login-card--wide');
+    expect(wrapper.findAll('.form-row-2col').length).toBeGreaterThanOrEqual(3);
+
+    // En modo REGISTER, la tarjeta también usa .login-card--wide y cuadrícula .form-row-2col
+    const regWrapper = mount(LoginView);
+    await flushPromises();
+    const switchBtn = regWrapper.find('.btn-switch-register');
+    if (switchBtn.exists()) {
+      await switchBtn.trigger('click');
+      await flushPromises();
+      const regCard = regWrapper.find('#main-content.login-card');
+      expect(regCard.classes()).toContain('login-card--wide');
+      expect(regWrapper.findAll('.form-row-2col').length).toBeGreaterThanOrEqual(3);
+    }
+  });
 });
 

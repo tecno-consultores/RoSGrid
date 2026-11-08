@@ -473,7 +473,13 @@
 
 <template>
   <div class="login-wrapper">
-    <main id="main-content" class="login-card" role="main" aria-labelledby="login-heading">
+    <main
+      id="main-content"
+      class="login-card"
+      :class="{ 'login-card--wide': currentStep === 'BOOTSTRAP' || currentStep === 'REGISTER' }"
+      role="main"
+      aria-labelledby="login-heading"
+    >
       <header class="login-header">
         <a
           href="https://www.rosgrid.net/"
@@ -538,55 +544,74 @@
           </p>
         </div>
 
-        <div class="form-group">
-          <label for="bootstrap-tenant-name" class="form-label">
-            Organización Principal <span class="required" aria-hidden="true">*</span>
-          </label>
-          <input
-            id="bootstrap-tenant-name"
-            v-model="bootstrapTenantName"
-            type="text"
-            required
-            placeholder="ej. Empresa Principal"
-            class="form-input"
-            :disabled="isLoading"
-          />
+        <div class="form-row-2col">
+          <div class="form-group">
+            <label for="bootstrap-tenant-name" class="form-label">
+              Organización Principal <span class="required" aria-hidden="true">*</span>
+            </label>
+            <input
+              id="bootstrap-tenant-name"
+              v-model="bootstrapTenantName"
+              type="text"
+              required
+              placeholder="ej. Empresa Principal"
+              class="form-input"
+              :disabled="isLoading"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="bootstrap-tenant-slug" class="form-label">
+              Slug de Organización <span class="required" aria-hidden="true">*</span>
+            </label>
+            <input
+              id="bootstrap-tenant-slug"
+              v-model="bootstrapTenantSlug"
+              type="text"
+              required
+              placeholder="ej. master"
+              class="form-input"
+              :disabled="isLoading"
+              @input="
+                (e) =>
+                  (bootstrapTenantSlug = (e.target as HTMLInputElement).value
+                    .toLowerCase()
+                    .replace(/[^a-z0-9-]/g, ''))
+              "
+            />
+          </div>
         </div>
 
-        <div class="form-group">
-          <label for="bootstrap-tenant-slug" class="form-label">
-            Slug de Organización <span class="required" aria-hidden="true">*</span>
-          </label>
-          <input
-            id="bootstrap-tenant-slug"
-            v-model="bootstrapTenantSlug"
-            type="text"
-            required
-            placeholder="ej. master"
-            class="form-input"
-            :disabled="isLoading"
-            @input="
-              (e) =>
-                (bootstrapTenantSlug = (e.target as HTMLInputElement).value
-                  .toLowerCase()
-                  .replace(/[^a-z0-9-]/g, ''))
-            "
-          />
-        </div>
+        <div class="form-row-2col">
+          <div class="form-group">
+            <label for="bootstrap-admin-user" class="form-label">
+              Usuario Super Administrador <span class="required" aria-hidden="true">*</span>
+            </label>
+            <input
+              id="bootstrap-admin-user"
+              v-model="bootstrapAdminUsername"
+              type="text"
+              required
+              placeholder="ej. superadmin"
+              class="form-input"
+              :disabled="isLoading"
+            />
+          </div>
 
-        <div class="form-group">
-          <label for="bootstrap-admin-user" class="form-label">
-            Usuario Super Administrador <span class="required" aria-hidden="true">*</span>
-          </label>
-          <input
-            id="bootstrap-admin-user"
-            v-model="bootstrapAdminUsername"
-            type="text"
-            required
-            placeholder="ej. superadmin"
-            class="form-input"
-            :disabled="isLoading"
-          />
+          <div class="form-group">
+            <label for="bootstrap-admin-name" class="form-label">
+              Nombre Completo <span class="required" aria-hidden="true">*</span>
+            </label>
+            <input
+              id="bootstrap-admin-name"
+              v-model="bootstrapAdminFullName"
+              type="text"
+              required
+              placeholder="ej. Administrador Global"
+              class="form-input"
+              :disabled="isLoading"
+            />
+          </div>
         </div>
 
         <div class="form-group">
@@ -604,52 +629,39 @@
           />
         </div>
 
-        <div class="form-group">
-          <label for="bootstrap-admin-name" class="form-label">
-            Nombre Completo <span class="required" aria-hidden="true">*</span>
-          </label>
-          <input
-            id="bootstrap-admin-name"
-            v-model="bootstrapAdminFullName"
-            type="text"
-            required
-            placeholder="ej. Administrador Global"
-            class="form-input"
-            :disabled="isLoading"
-          />
-        </div>
+        <div class="form-row-2col">
+          <div class="form-group">
+            <label for="bootstrap-admin-pass" class="form-label">
+              Contraseña Segura (Mínimo 15 caracteres)
+              <span class="required" aria-hidden="true">*</span>
+            </label>
+            <input
+              id="bootstrap-admin-pass"
+              v-model="bootstrapAdminPassword"
+              type="password"
+              required
+              autocomplete="new-password"
+              placeholder="••••••••••••"
+              class="form-input"
+              :disabled="isLoading"
+            />
+          </div>
 
-        <div class="form-group">
-          <label for="bootstrap-admin-pass" class="form-label">
-            Contraseña Segura (Mínimo 15 caracteres)
-            <span class="required" aria-hidden="true">*</span>
-          </label>
-          <input
-            id="bootstrap-admin-pass"
-            v-model="bootstrapAdminPassword"
-            type="password"
-            required
-            autocomplete="new-password"
-            placeholder="••••••••••••"
-            class="form-input"
-            :disabled="isLoading"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="bootstrap-admin-pass-confirm" class="form-label">
-            Confirmar Contraseña <span class="required" aria-hidden="true">*</span>
-          </label>
-          <input
-            id="bootstrap-admin-pass-confirm"
-            v-model="bootstrapAdminPasswordConfirm"
-            type="password"
-            required
-            autocomplete="new-password"
-            placeholder="••••••••••••"
-            class="form-input"
-            :disabled="isLoading"
-          />
+          <div class="form-group">
+            <label for="bootstrap-admin-pass-confirm" class="form-label">
+              Confirmar Contraseña <span class="required" aria-hidden="true">*</span>
+            </label>
+            <input
+              id="bootstrap-admin-pass-confirm"
+              v-model="bootstrapAdminPasswordConfirm"
+              type="password"
+              required
+              autocomplete="new-password"
+              placeholder="••••••••••••"
+              class="form-input"
+              :disabled="isLoading"
+            />
+          </div>
         </div>
 
         <button
@@ -768,114 +780,120 @@
           </p>
         </div>
 
-        <div class="form-group">
-          <label for="reg-tenant-slug" class="form-label">
-            Organización / Empresa <span class="required" aria-hidden="true">*</span>
-          </label>
-          <input
-            id="reg-tenant-slug"
-            v-model="registerTenantSlug"
-            type="text"
-            required
-            placeholder="ej. sistemas"
-            class="form-input"
-            :disabled="isLoading"
-            @input="
-              (e) =>
-                (registerTenantSlug = (e.target as HTMLInputElement).value
-                  .toLowerCase()
-                  .replace(/[^a-z0-9-]/g, ''))
-            "
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="reg-username" class="form-label">
-            Nombre de Usuario <span class="required" aria-hidden="true">*</span>
-          </label>
-          <input
-            id="reg-username"
-            v-model="registerUsername"
-            type="text"
-            required
-            autocomplete="username"
-            placeholder="ej. operador1"
-            class="form-input"
-            :disabled="isLoading"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="reg-email" class="form-label">
-            Correo Electrónico <span class="required" aria-hidden="true">*</span>
-          </label>
-          <input
-            id="reg-email"
-            v-model="registerEmail"
-            type="email"
-            required
-            autocomplete="email"
-            placeholder="ej. operador@empresa.com"
-            class="form-input"
-            :disabled="isLoading"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="reg-fullname" class="form-label">
-            Nombre y Apellido <span class="required" aria-hidden="true">*</span>
-          </label>
-          <input
-            id="reg-fullname"
-            v-model="registerFullName"
-            type="text"
-            required
-            placeholder="ej. Carlos Rodríguez"
-            class="form-input"
-            :disabled="isLoading"
-          />
-        </div>
-
-        <div class="form-group">
-          <div class="label-row">
-            <label for="reg-password" class="form-label">
-              Contraseña (Mínimo 8 caracteres) <span class="required" aria-hidden="true">*</span>
+        <div class="form-row-2col">
+          <div class="form-group">
+            <label for="reg-tenant-slug" class="form-label">
+              Organización / Empresa <span class="required" aria-hidden="true">*</span>
             </label>
-            <button
-              type="button"
-              class="btn-toggle-visibility"
-              :aria-label="showRegisterPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
-              @click="showRegisterPassword = !showRegisterPassword"
-            >
-              {{ showRegisterPassword ? 'Ocultar' : 'Mostrar' }}
-            </button>
+            <input
+              id="reg-tenant-slug"
+              v-model="registerTenantSlug"
+              type="text"
+              required
+              placeholder="ej. sistemas"
+              class="form-input"
+              :disabled="isLoading"
+              @input="
+                (e) =>
+                  (registerTenantSlug = (e.target as HTMLInputElement).value
+                    .toLowerCase()
+                    .replace(/[^a-z0-9-]/g, ''))
+              "
+            />
           </div>
-          <input
-            id="reg-password"
-            v-model="registerPassword"
-            :type="showRegisterPassword ? 'text' : 'password'"
-            required
-            autocomplete="new-password"
-            placeholder="••••••••••••"
-            class="form-input"
-            :disabled="isLoading"
-          />
+
+          <div class="form-group">
+            <label for="reg-username" class="form-label">
+              Nombre de Usuario <span class="required" aria-hidden="true">*</span>
+            </label>
+            <input
+              id="reg-username"
+              v-model="registerUsername"
+              type="text"
+              required
+              autocomplete="username"
+              placeholder="ej. operador1"
+              class="form-input"
+              :disabled="isLoading"
+            />
+          </div>
         </div>
 
-        <div class="form-group">
-          <label for="reg-password-confirm" class="form-label">
-            Confirmar Contraseña <span class="required" aria-hidden="true">*</span>
-          </label>
-          <input
-            id="reg-password-confirm"
-            v-model="registerPasswordConfirm"
-            :type="showRegisterPassword ? 'text' : 'password'"
-            required
-            autocomplete="new-password"
-            placeholder="••••••••••••"
-            class="form-input"
-            :disabled="isLoading"
-          />
+        <div class="form-row-2col">
+          <div class="form-group">
+            <label for="reg-email" class="form-label">
+              Correo Electrónico <span class="required" aria-hidden="true">*</span>
+            </label>
+            <input
+              id="reg-email"
+              v-model="registerEmail"
+              type="email"
+              required
+              autocomplete="email"
+              placeholder="ej. operador@empresa.com"
+              class="form-input"
+              :disabled="isLoading"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="reg-fullname" class="form-label">
+              Nombre y Apellido <span class="required" aria-hidden="true">*</span>
+            </label>
+            <input
+              id="reg-fullname"
+              v-model="registerFullName"
+              type="text"
+              required
+              placeholder="ej. Carlos Rodríguez"
+              class="form-input"
+              :disabled="isLoading"
+            />
+          </div>
+        </div>
+
+        <div class="form-row-2col">
+          <div class="form-group">
+            <div class="label-row">
+              <label for="reg-password" class="form-label">
+                Contraseña (Mínimo 8 caracteres) <span class="required" aria-hidden="true">*</span>
+              </label>
+              <button
+                type="button"
+                class="btn-toggle-visibility"
+                :aria-label="showRegisterPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                @click="showRegisterPassword = !showRegisterPassword"
+              >
+                {{ showRegisterPassword ? 'Ocultar' : 'Mostrar' }}
+              </button>
+            </div>
+            <input
+              id="reg-password"
+              v-model="registerPassword"
+              :type="showRegisterPassword ? 'text' : 'password'"
+              required
+              autocomplete="new-password"
+              placeholder="••••••••••••"
+              class="form-input"
+              :disabled="isLoading"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="reg-password-confirm" class="form-label">
+              Confirmar Contraseña <span class="required" aria-hidden="true">*</span>
+            </label>
+            <input
+              id="reg-password-confirm"
+              v-model="registerPasswordConfirm"
+              :type="showRegisterPassword ? 'text' : 'password'"
+              required
+              autocomplete="new-password"
+              placeholder="••••••••••••"
+              class="form-input"
+              :disabled="isLoading"
+            />
+          </div>
         </div>
 
         <button type="submit" class="btn-submit" :disabled="isLoading">
@@ -1092,10 +1110,13 @@
 <style scoped>
   .login-wrapper {
     min-height: 100vh;
+    min-height: 100dvh;
+    height: auto;
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     padding: var(--rg-space-6, 24px) var(--rg-space-4, 16px);
     background-color: var(--rg-bg-canvas, #0b0f19);
     box-sizing: border-box;
@@ -1109,7 +1130,24 @@
     border-radius: var(--rg-radius-lg, 8px);
     padding: var(--rg-space-6, 24px);
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
-    margin: auto 0;
+    margin-top: auto;
+    margin-bottom: 0;
+  }
+
+  .login-card--wide {
+    max-width: 540px;
+  }
+
+  .form-row-2col {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--rg-space-3, 12px);
+  }
+
+  @media (max-width: 520px) {
+    .form-row-2col {
+      grid-template-columns: 1fr;
+    }
   }
 
   .login-header {
@@ -1457,6 +1495,8 @@
   .login-footer {
     width: 100%;
     margin-top: var(--rg-space-6, 24px);
+    margin-bottom: auto;
+    padding-bottom: var(--rg-space-2, 8px);
     text-align: center;
     font-size: 0.75rem;
     color: var(--rg-text-muted, #94a3b8);

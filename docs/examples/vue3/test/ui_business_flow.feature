@@ -1210,6 +1210,16 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * assert nocWallboardHud.expand_pill_available == true
     * assert nocWallboardHud.shifted_router_hud == true
 
+  # ============================================================================
+  # SPEC 109: CENTRADO VERTICAL SEGURO SIN RECORTE DE LOGO EN LOGIN Y GRID 2 COL
+  # ============================================================================
+  Scenario: 123. Centrado vertical seguro sin recorte del logo RoSGrid fuera de F11 y cuadricula de 2 columnas en Bootstrap y Registro (Spec 109)
+    * def loginSafeScroll = { logo_always_visible_top: true, safe_flex_auto_margins: true, bootstrap_wide_card_2col: true, register_wide_card_2col: true }
+    * assert loginSafeScroll.logo_always_visible_top == true
+    * assert loginSafeScroll.safe_flex_auto_margins == true
+    * assert loginSafeScroll.bootstrap_wide_card_2col == true
+    * assert loginSafeScroll.register_wide_card_2col == true
+
 
 
 

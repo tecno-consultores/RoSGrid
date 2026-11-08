@@ -81,10 +81,13 @@
   }
 
   .app-root--login {
-    height: auto;
-    min-height: 100vh;
-    min-height: 100dvh;
+    display: block;
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100vh;
+    max-height: 100dvh;
     overflow-y: auto;
+    overflow-x: hidden;
   }
 
   /* Transición táctica de cambio de pantalla */
