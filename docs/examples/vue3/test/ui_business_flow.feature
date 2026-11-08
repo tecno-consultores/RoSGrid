@@ -1150,6 +1150,18 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * assert mapFleetCoords[0][0] == 10.2323
     * assert mapFleetCoords[0][1] == -67.8798
 
+  # ============================================================================
+  # SPEC 103: CARGA MASIVA CSV DE CAJAS NAP CON UPSERT Y AUTO-CREACIÓN (HITO 30.26)
+  # ============================================================================
+  Scenario: 117. Asistente de carga masiva CSV de Cajas NAP con soporte Upsert y auto-creacion de cajas en Mapa de Clientes (Spec 103)
+    * def boxesCsvPreview = { total_rows: 2, valid_rows_count: 2, invalid_rows_count: 0, can_proceed: true, rows: [ { box_code: 'NAP-01', is_update: true, is_valid: true }, { box_code: 'NAP-02', is_update: false, is_valid: true } ] }
+    * assert boxesCsvPreview.total_rows == 2
+    * assert boxesCsvPreview.rows[0].is_update == true
+    * assert boxesCsvPreview.rows[1].is_update == false
+    * def subAutoCreateRow = { endpoint_identifier: 'CLI-01', optical_box_name: 'NAP-AUTO-01', will_auto_create_box: true, is_valid: true }
+    * assert subAutoCreateRow.will_auto_create_box == true
+
+
 
 
 

@@ -5,6 +5,7 @@
 
 import uuid
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Any
 
 import pytest
@@ -55,6 +56,9 @@ class MockSubscribersDbResult:
 
     def scalars(self) -> MockSubscribersDbScalars:
         return MockSubscribersDbScalars(self._items)
+
+    def all(self) -> list[Any]:
+        return self._items
 
 
 class MockSubscribersDbSession:
@@ -788,6 +792,247 @@ async def test_subscribers_bulk_csv_template_dry_run_and_commit(
         res_commit_noc = await async_client.post(
             "/api/v1/subscriber-devices/import-csv/commit",
             json={"rows": [valid_row]},
+            headers={**noc_headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res_commit_noc.status_code == 403
+    finally:
+        app.dependency_overrides.clear()
+
+
+async def test_subscribers_csv_auto_create_missing_optical_box(
+    async_client: AsyncClient,
+    subscriber_auth: dict[str, Any],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Spec 103 / Hito 30.26: Verifica auto-creación automática de Cajas NAP inexistentes durante importación CSV de clientes."""
+    audit_calls: list[dict[str, Any]] = []
+
+    async def fake_audit_capture(**kwargs: Any) -> None:
+        audit_calls.append(kwargs)
+
+    monkeypatch.setattr("src.api.v1.subscribers.write_audit_log", fake_audit_capture)
+
+    tid = subscriber_auth["tenant_id"]
+    headers = subscriber_auth["headers"]
+    mock_db = MockSubscribersDbSession(tid)
+    app.dependency_overrides[get_tenant_db_session] = lambda: mock_db
+
+    try:
+        router_name = mock_db.routers[0].display_name
+        # CSV con 2 clientes asignados a una caja NAP que NO existe en PostgreSQL ("NAP-AUTO-99")
+        csv_content = (
+            "endpoint_identifier,onu_serial_number,onu_mac_address,assigned_ipv4,"
+            "router_name,optical_box_name,box_port_number,latitude,longitude,service_status\r\n"
+            f"CLI-AUTO-001,HWTC11112222,AA:BB:CC:11:11:11,100.64.20.10,{router_name},NAP-AUTO-99,1,10.2323,-67.8798,ACTIVE\r\n"
+            f"CLI-AUTO-002,HWTC33334444,AA:BB:CC:22:22:22,100.64.20.11,{router_name},NAP-AUTO-99,2,10.2330,-67.8805,ACTIVE\r\n"
+        )
+        files = {"file": ("clients_with_missing_box.csv", csv_content.encode("utf-8-sig"), "text/csv")}
+
+        # 1. Dry-Run: debe ser válido y marcar will_auto_create_box = True
+        dry_res = await async_client.post(
+            "/api/v1/subscriber-devices/import-csv/dry-run",
+            files=files,
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert dry_res.status_code == 200, f"Error {dry_res.status_code}: {dry_res.text}"
+        dry_body = dry_res.json()
+        assert dry_body["total_rows"] == 2
+        assert dry_body["valid_rows_count"] == 2
+        assert dry_body["invalid_rows_count"] == 0
+        assert dry_body["can_proceed"] is True
+        assert dry_body["rows"][0]["will_auto_create_box"] is True
+        assert dry_body["rows"][1]["will_auto_create_box"] is True
+        assert dry_body["rows"][0]["optical_box_name"] == "NAP-AUTO-99"
+
+        # 2. Commit: debe auto-crear la Caja NAP y vincular optical_box_id en los clientes
+        commit_res = await async_client.post(
+            "/api/v1/subscriber-devices/import-csv/commit",
+            json={"rows": dry_body["rows"]},
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert commit_res.status_code == 200
+        commit_body = commit_res.json()
+        assert commit_body["imported_count"] == 2
+
+        # Verificar que se auto-creó la Caja NAP en mock_db
+        auto_boxes = [b for b in mock_db.optical_boxes if b.box_code == "NAP-AUTO-99"]
+        assert len(auto_boxes) == 1
+        created_box = auto_boxes[0]
+        assert created_box.router_id == mock_db.routers[0].id
+        assert created_box.capacity_ports == 16
+        assert created_box.splitter_ratio == "1:16"
+        assert created_box.installation_type == "POLE"
+        assert "Auto-creada" in (created_box.notes or "")
+
+        # Verificar que ambos clientes tienen vinculado el optical_box_id de la nueva caja
+        created_subs = [s for s in mock_db.devices if s.endpoint_identifier in {"CLI-AUTO-001", "CLI-AUTO-002"}]
+        assert len(created_subs) == 2
+        for s in created_subs:
+            assert s.optical_box_id == created_box.id
+
+        # Verificar auditoría WORM
+        assert len(audit_calls) == 1
+        assert audit_calls[0]["event_action"] == "SUBSCRIBERS_CSV_BULK_IMPORTED"
+    finally:
+        app.dependency_overrides.clear()
+
+
+async def test_optical_boxes_bulk_csv_template_dry_run_and_upsert_commit(
+    async_client: AsyncClient,
+    subscriber_auth: dict[str, Any],
+    fake_redis: FakeAsyncRedis,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Spec 103 / Hito 30.26: Verifica descarga de plantilla CSV de Cajas NAP, validación Dry-Run y Commit con soporte Upsert."""
+    audit_calls: list[dict[str, Any]] = []
+
+    async def fake_audit_capture(**kwargs: Any) -> None:
+        audit_calls.append(kwargs)
+
+    monkeypatch.setattr("src.api.v1.optical_boxes.write_audit_log", fake_audit_capture)
+
+    tid = subscriber_auth["tenant_id"]
+    headers = subscriber_auth["headers"]
+    mock_db = MockSubscribersDbSession(tid)
+    app.dependency_overrides[get_tenant_db_session] = lambda: mock_db
+
+    # Pre-crear una caja NAP existente para verificar Upsert
+    existing_box = OpticalBox(
+        id=uuid.uuid4(),
+        tenant_id=tid,
+        router_id=mock_db.routers[0].id,
+        box_code="NAP-NORTE-01",
+        capacity_ports=16,
+        splitter_ratio="1:16",
+        installation_type="POLE",
+        latitude=Decimal("10.000000"),
+        longitude=Decimal("-66.000000"),
+        status="ACTIVE",
+    )
+    mock_db.optical_boxes.append(existing_box)
+
+    try:
+        # 1. Descarga de Plantilla CSV
+        tpl_res = await async_client.get(
+            "/api/v1/optical-boxes/template-csv",
+            headers=headers,
+        )
+        assert tpl_res.status_code == 200
+        assert tpl_res.headers["content-type"].startswith("text/csv")
+        assert "rosgrid-cajas-nap-plantilla.csv" in tpl_res.headers.get("content-disposition", "")
+        assert b"box_code,router_name,capacity_ports" in tpl_res.content
+
+        # 2. Validación Dry-Run (1 actualización, 1 nueva, 1 inválida)
+        router_name = mock_db.routers[0].display_name
+        csv_content = (
+            "box_code,router_name,capacity_ports,splitter_ratio,installation_type,input_power_dbm,latitude,longitude,physical_location\r\n"
+            f"NAP-NORTE-01,{router_name},32,1:32,FACADE,-17.50,10.232347,-67.879893,Poste P-14 Av. Principal\r\n"
+            f"NAP-SUR-02,{router_name},8,1:8,POLE,-18.20,10.235000,-67.881000,Poste Sur 10\r\n"
+            ",UNKNOWN-ROUTER,99,invalid_splitter,INVALID_TYPE,,999.0,999.0,\r\n"
+        )
+        files = {"file": ("boxes_test.csv", csv_content.encode("utf-8-sig"), "text/csv")}
+        dry_res = await async_client.post(
+            "/api/v1/optical-boxes/import-csv/dry-run",
+            files=files,
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert dry_res.status_code == 200, f"Error {dry_res.status_code}: {dry_res.text}"
+        dry_body = dry_res.json()
+        assert dry_body["total_rows"] == 3
+        assert dry_body["valid_rows_count"] == 2
+        assert dry_body["invalid_rows_count"] == 1
+        assert dry_body["can_proceed"] is False
+        assert dry_body["rows"][0]["is_valid"] is True
+        assert dry_body["rows"][0]["is_update"] is True
+        assert dry_body["rows"][0]["capacity_ports"] == 32
+        assert dry_body["rows"][1]["is_valid"] is True
+        assert dry_body["rows"][1]["is_update"] is False
+        assert dry_body["rows"][1]["capacity_ports"] == 8
+        assert dry_body["rows"][2]["is_valid"] is False
+
+        # 3. Commit transaccional con JSON payload (solo filas válidas)
+        valid_rows = [r for r in dry_body["rows"] if r["is_valid"]]
+        commit_res = await async_client.post(
+            "/api/v1/optical-boxes/import-csv/commit",
+            json={"rows": valid_rows},
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert commit_res.status_code == 200, f"Error {commit_res.status_code}: {commit_res.text}"
+        commit_body = commit_res.json()
+        assert commit_body["imported_count"] == 1
+        assert commit_body["updated_count"] == 1
+        assert len(commit_body["box_ids"]) == 2
+
+        # Verificar Upsert en la caja existente
+        assert existing_box.capacity_ports == 32
+        assert existing_box.splitter_ratio == "1:32"
+        assert existing_box.installation_type == "FACADE"
+        assert existing_box.physical_location == "Poste P-14 Av. Principal"
+
+        # Verificar inserción de la nueva caja
+        new_boxes = [b for b in mock_db.optical_boxes if b.box_code == "NAP-SUR-02"]
+        assert len(new_boxes) == 1
+        assert new_boxes[0].capacity_ports == 8
+
+        # Verificar auditoría WORM
+        assert len(audit_calls) == 1
+        assert audit_calls[0]["event_category"] == "INVENTORY"
+        assert audit_calls[0]["event_action"] == "OPTICAL_BOXES_CSV_BULK_IMPORTED"
+        assert audit_calls[0]["after_state"]["imported_count"] == 1
+        assert audit_calls[0]["after_state"]["updated_count"] == 1
+
+        # 4. Commit transaccional vía multipart/form-data
+        csv_single = (
+            "box_code,router_name,capacity_ports,splitter_ratio,installation_type,input_power_dbm,latitude,longitude,physical_location\r\n"
+            f"NAP-OESTE-03,{router_name},16,1:16,POLE,-19.00,10.2400,-67.8850,Poste 33\r\n"
+        )
+        files_commit = {"file": ("commit_boxes.csv", csv_single.encode("utf-8-sig"), "text/csv")}
+        commit_file_res = await async_client.post(
+            "/api/v1/optical-boxes/import-csv/commit",
+            files=files_commit,
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert commit_file_res.status_code == 200
+        assert commit_file_res.json()["imported_count"] == 1
+
+        # 5. Commit vacío -> HTTP 400
+        commit_empty = await async_client.post(
+            "/api/v1/optical-boxes/import-csv/commit",
+            json={"rows": []},
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert commit_empty.status_code == 400
+
+        # 6. Gobernanza RBAC: Rol NOC_MONITOR es denegado (HTTP 403)
+        noc_uid = uuid.uuid4()
+        noc_sid = "sess-noc-box-01"
+        noc_sess_key = f"rg:{tid}:sess:{noc_sid}"
+        await fake_redis.hset(
+            noc_sess_key,
+            mapping={
+                "session_id": noc_sid,
+                "user_id": str(noc_uid),
+                "username": "noc_operator",
+                "role": SystemRoleEnum.NOC_MONITOR.value,
+            },
+        )
+        noc_token = create_jwt_access_token(
+            str(noc_uid), str(tid), "tenant-sub", noc_sid, SystemRoleEnum.NOC_MONITOR.value, True
+        )
+        noc_headers = {"Authorization": f"Bearer {noc_token}", "Idempotency-Key": str(uuid.uuid4())}
+        res_tpl_noc = await async_client.get("/api/v1/optical-boxes/template-csv", headers=noc_headers)
+        assert res_tpl_noc.status_code == 403
+
+        res_dry_noc = await async_client.post(
+            "/api/v1/optical-boxes/import-csv/dry-run",
+            files=files,
+            headers={**noc_headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res_dry_noc.status_code == 403
+
+        res_commit_noc = await async_client.post(
+            "/api/v1/optical-boxes/import-csv/commit",
+            json={"rows": valid_rows},
             headers={**noc_headers, "Idempotency-Key": str(uuid.uuid4())},
         )
         assert res_commit_noc.status_code == 403

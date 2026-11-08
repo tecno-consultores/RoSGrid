@@ -286,8 +286,10 @@ describe('SubscribersMapView.vue — Vista Bimodal de Mapa de Red y Clientes', (
       expect(wrapperNoc.find(MOCK_MAP_SELECTOR).exists()).toBe(true);
     });
     expect(wrapperNoc.find('#btn-import-subscribers-csv').exists()).toBe(false);
+    expect(wrapperNoc.find('#btn-import-optical-boxes-csv').exists()).toBe(false);
 
     authStore.currentRole = 'TENANT_ADMIN';
+    authStore.tenantFeatures = { isp_module_enabled: true };
     const wrapperAdmin = mount(SubscribersMapView, {
       global: {
         stubs: { RouterLink: true },
@@ -298,6 +300,7 @@ describe('SubscribersMapView.vue — Vista Bimodal de Mapa de Red y Clientes', (
     });
     const importBtn = wrapperAdmin.find('#btn-import-subscribers-csv');
     expect(importBtn.exists()).toBe(true);
+    expect(wrapperAdmin.find('#btn-import-optical-boxes-csv').exists()).toBe(true);
 
     // Abrir modal
     await importBtn.trigger('click');
@@ -331,6 +334,7 @@ describe('SubscribersMapView.vue — Vista Bimodal de Mapa de Red y Clientes', (
           assigned_ipv4: '100.64.10.15',
           router_name: 'ROUTER-CORE-01',
           optical_box_name: 'NAP-NORTE-01',
+          will_auto_create_box: true,
           box_port_number: 1,
           latitude: 10.4812,
           longitude: -66.9041,
@@ -370,6 +374,7 @@ describe('SubscribersMapView.vue — Vista Bimodal de Mapa de Red y Clientes', (
     await vi.waitFor(() => {
       expect(wrapperAdmin.find('.csv-preview-table').exists()).toBe(true);
       expect(wrapperAdmin.text()).toContain('CLI-FTTH-001');
+      expect(wrapperAdmin.find('.badge-auto-create-box').exists()).toBe(true);
       expect(wrapperAdmin.find('#btn-commit-subscribers-csv').exists()).toBe(true);
     });
 
@@ -383,6 +388,133 @@ describe('SubscribersMapView.vue — Vista Bimodal de Mapa de Red y Clientes', (
         expect.objectContaining({ rows: dryRunPayload.rows }),
       );
       expect(wrapperAdmin.find('#modal-import-subscribers-csv').exists()).toBe(false);
+    });
+  });
+
+  it('asistente de carga masiva CSV de Cajas NAP con soporte Upsert (Hito 30.26 / Spec 103)', async () => {
+    const authStore = useAuthStore();
+    authStore.currentRole = 'TENANT_ADMIN';
+    authStore.tenantFeatures = { isp_module_enabled: true };
+    const wrapperAdmin = mount(SubscribersMapView, {
+      global: {
+        stubs: { RouterLink: true },
+      },
+    });
+    await vi.waitFor(() => {
+      expect(wrapperAdmin.find(MOCK_MAP_SELECTOR).exists()).toBe(true);
+    });
+
+    const btnBoxes = wrapperAdmin.find('#btn-import-optical-boxes-csv');
+    expect(btnBoxes.exists()).toBe(true);
+
+    // Abrir modal Cajas NAP CSV
+    await btnBoxes.trigger('click');
+    expect(wrapperAdmin.find('#modal-import-optical-boxes-csv').exists()).toBe(true);
+    expect(wrapperAdmin.find('#btn-download-optical-boxes-csv-template').exists()).toBe(true);
+    expect(wrapperAdmin.find('#input-optical-boxes-csv-file').exists()).toBe(true);
+    expect(wrapperAdmin.find('#btn-run-optical-boxes-dry-run').exists()).toBe(true);
+
+    // Mock de descarga de plantilla CSV de Cajas NAP
+    const spyGet = vi.spyOn(http, 'get').mockResolvedValueOnce({
+      status: 200,
+      headers: new Headers(),
+      data: 'box_code,router_name,capacity_ports',
+    } as any);
+
+    await wrapperAdmin.find('#btn-download-optical-boxes-csv-template').trigger('click');
+    expect(spyGet).toHaveBeenCalledWith('/api/v1/optical-boxes/template-csv');
+
+    // Mock de Dry-Run con Upsert (1 actualización y 1 nueva)
+    const boxesDryRunPayload = {
+      total_rows: 2,
+      valid_rows_count: 2,
+      invalid_rows_count: 0,
+      can_proceed: true,
+      rows: [
+        {
+          row_number: 2,
+          box_code: 'NAP-NORTE-01',
+          router_name: 'ROUTER-CORE-01',
+          capacity_ports: 32,
+          splitter_ratio: '1:32',
+          installation_type: 'FACADE',
+          input_power_dbm: -17.5,
+          latitude: 10.2323,
+          longitude: -67.8798,
+          physical_location: 'Poste P-14',
+          is_update: true,
+          is_valid: true,
+          errors: [],
+        },
+        {
+          row_number: 3,
+          box_code: 'NAP-SUR-02',
+          router_name: 'ROUTER-CORE-01',
+          capacity_ports: 8,
+          splitter_ratio: '1:8',
+          installation_type: 'POLE',
+          input_power_dbm: -18.2,
+          latitude: 10.235,
+          longitude: -67.881,
+          physical_location: 'Poste Sur 10',
+          is_update: false,
+          is_valid: true,
+          errors: [],
+        },
+      ],
+    };
+
+    const spyPost = vi.spyOn(http, 'post').mockImplementation(async (url: string) => {
+      if (url.includes('/optical-boxes/import-csv/dry-run')) {
+        return { status: 200, headers: new Headers(), data: boxesDryRunPayload } as any;
+      }
+      if (url.includes('/optical-boxes/import-csv/commit')) {
+        return {
+          status: 200,
+          headers: new Headers(),
+          data: {
+            imported_count: 1,
+            updated_count: 1,
+            box_ids: ['box-uuid-01', 'box-uuid-02'],
+            message: 'Se procesaron 2 Cajas NAP exitosamente (1 nuevas, 1 actualizadas).',
+          },
+        } as any;
+      }
+      return { status: 200, headers: new Headers(), data: {} } as any;
+    });
+
+    // Simular archivo seleccionado
+    const fakeFile = new File(['csv content'], 'cajas.csv', { type: 'text/csv' });
+    const fileInput = wrapperAdmin.find('#input-optical-boxes-csv-file');
+    Object.defineProperty(fileInput.element, 'files', {
+      value: [fakeFile],
+      writable: false,
+    });
+    await fileInput.trigger('change');
+
+    // Ejecutar Dry-Run
+    await wrapperAdmin.find('#btn-run-optical-boxes-dry-run').trigger('click');
+    await wrapperAdmin.vm.$nextTick();
+
+    await vi.waitFor(() => {
+      expect(wrapperAdmin.find('#modal-import-optical-boxes-csv .csv-preview-table').exists()).toBe(true);
+      expect(wrapperAdmin.text()).toContain('NAP-NORTE-01');
+      expect(wrapperAdmin.text()).toContain('NAP-SUR-02');
+      expect(wrapperAdmin.find('.badge-upsert').exists()).toBe(true);
+      expect(wrapperAdmin.find('.badge-create').exists()).toBe(true);
+      expect(wrapperAdmin.find('#btn-commit-optical-boxes-csv').exists()).toBe(true);
+    });
+
+    // Ejecutar Commit
+    await wrapperAdmin.find('#btn-commit-optical-boxes-csv').trigger('click');
+    await wrapperAdmin.vm.$nextTick();
+
+    await vi.waitFor(() => {
+      expect(spyPost).toHaveBeenCalledWith(
+        '/api/v1/optical-boxes/import-csv/commit',
+        expect.objectContaining({ rows: boxesDryRunPayload.rows }),
+      );
+      expect(wrapperAdmin.find('#modal-import-optical-boxes-csv').exists()).toBe(false);
     });
   });
 });

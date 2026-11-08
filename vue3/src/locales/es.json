@@ -176,7 +176,18 @@
     "modal_csv_subtitle": "Migre su cartera de clientes FTTH/DHCP validando formato, router y coordenadas GPS en seco antes de guardar.",
     "btn_download_template": "⬇️ Descargar Plantilla CSV",
     "btn_validate_dry_run": "🔍 Validar Archivo (Dry-Run)",
-    "btn_commit_import": "✅ Confirmar e Importar ({count} clientes)"
+    "btn_commit_import": "✅ Confirmar e Importar ({count} clientes)",
+    "btn_import_boxes_csv": "📦 Importar Cajas NAP CSV",
+    "modal_boxes_csv_title": "📦 Carga Masiva de Cajas NAP (CSV Upsert)",
+    "modal_boxes_csv_subtitle": "Cargue o actualice masivamente cajas de distribución óptica NAP validando router, splitter y coordenadas GPS con soporte Upsert.",
+    "btn_download_boxes_template": "⬇️ Descargar Plantilla Cajas NAP CSV",
+    "btn_validate_boxes_dry_run": "🔍 Validar Cajas (Dry-Run)",
+    "btn_commit_boxes_import": "✅ Confirmar e Importar ({count} cajas)",
+    "badge_auto_create_box": "Auto-creará Caja NAP",
+    "badge_auto_create_box_hint": "Esta Caja NAP no existe aún y se auto-creará automáticamente en PostgreSQL",
+    "badge_box_update": "Actualizará",
+    "badge_box_create": "Nueva",
+    "summary_updates": "Actualizaciones: {count}"
   },
   "mass_outage": {
     "alert_title": "ALERTA DE CAÍDA MASIVA DETECTADA",

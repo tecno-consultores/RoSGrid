@@ -372,6 +372,33 @@
       assigned_ipv4?: string | null;
       router_name: string;
       optical_box_name?: string | null;
+      will_auto_create_box?: boolean;
+      is_valid: boolean;
+      errors: string[];
+    }>;
+  } | null>(null);
+
+  const isBoxesCsvModalOpen = ref(false);
+  const selectedBoxesCsvFile = ref<File | null>(null);
+  const isBoxesCsvDryRunLoading = ref(false);
+  const isBoxesCsvCommitLoading = ref(false);
+  const boxesCsvDryRunResult = ref<{
+    total_rows: number;
+    valid_rows_count: number;
+    invalid_rows_count: number;
+    can_proceed: boolean;
+    rows: Array<{
+      row_number: number;
+      box_code: string;
+      router_name: string;
+      capacity_ports: number;
+      splitter_ratio: string;
+      installation_type: string;
+      input_power_dbm?: number | null;
+      latitude: number;
+      longitude: number;
+      physical_location?: string | null;
+      is_update: boolean;
       is_valid: boolean;
       errors: string[];
     }>;
@@ -439,6 +466,74 @@
         err instanceof Error ? err.message : 'Error al importar clientes por CSV.';
     } finally {
       isCsvCommitLoading.value = false;
+    }
+  }
+
+  async function handleDownloadBoxesTemplate() {
+    try {
+      const res = await http.get<string>('/api/v1/optical-boxes/template-csv');
+      const blob = new Blob([String(res.data)], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'rosgrid-cajas-nap-plantilla.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      feedbackType.value = 'error';
+      feedbackMessage.value = 'Error al descargar la plantilla CSV de Cajas NAP.';
+    }
+  }
+
+  function handleBoxesCsvFileSelected(ev: Event) {
+    const input = ev.target as HTMLInputElement;
+    selectedBoxesCsvFile.value = input.files?.[0] || null;
+    boxesCsvDryRunResult.value = null;
+  }
+
+  async function handleRunBoxesDryRun() {
+    if (!selectedBoxesCsvFile.value) return;
+    isBoxesCsvDryRunLoading.value = true;
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedBoxesCsvFile.value);
+      const res = await http.post<NonNullable<typeof boxesCsvDryRunResult.value>>(
+        '/api/v1/optical-boxes/import-csv/dry-run',
+        formData,
+      );
+      boxesCsvDryRunResult.value = res.data;
+    } catch (err: unknown) {
+      feedbackType.value = 'error';
+      feedbackMessage.value =
+        err instanceof Error ? err.message : 'Error al validar el archivo CSV de Cajas NAP.';
+    } finally {
+      isBoxesCsvDryRunLoading.value = false;
+    }
+  }
+
+  async function handleCommitBoxesCsv() {
+    if (!boxesCsvDryRunResult.value || !boxesCsvDryRunResult.value.can_proceed) return;
+    isBoxesCsvCommitLoading.value = true;
+    try {
+      const res = await http.post<{ imported_count: number; updated_count?: number; message: string }>(
+        '/api/v1/optical-boxes/import-csv/commit',
+        { rows: boxesCsvDryRunResult.value.rows },
+      );
+      feedbackType.value = 'success';
+      feedbackMessage.value = res.data.message;
+      isBoxesCsvModalOpen.value = false;
+      boxesCsvDryRunResult.value = null;
+      selectedBoxesCsvFile.value = null;
+      await Promise.all([
+        fieldStore.fetchOpticalBoxes(),
+        loadSubscriberDevices(),
+      ]);
+    } catch (err: unknown) {
+      feedbackType.value = 'error';
+      feedbackMessage.value =
+        err instanceof Error ? err.message : 'Error al importar Cajas NAP por CSV.';
+    } finally {
+      isBoxesCsvCommitLoading.value = false;
     }
   }
 
@@ -607,7 +702,7 @@
           <span v-else>🔄</span>
           {{ isSyncingDhcp ? t('subscribers_map.syncing_dhcp') : t('subscribers_map.btn_sync_dhcp') }}
         </button>
-        <!-- Botón Carga Masiva CSV (Solo SUPERADMIN_GLOBAL y TENANT_ADMIN) -->
+        <!-- Botón Carga Masiva CSV Clientes (Solo SUPERADMIN_GLOBAL y TENANT_ADMIN) -->
         <button
           v-if="canManageBulkSubscribers"
           id="btn-import-subscribers-csv"
@@ -617,6 +712,17 @@
           @click="isCsvModalOpen = true"
         >
           {{ t('subscribers_map.btn_import_csv', '📂 Importar Clientes CSV') }}
+        </button>
+        <!-- Botón Carga Masiva CSV Cajas NAP (Hito 30.26 / Spec 103) -->
+        <button
+          v-if="canManageBulkSubscribers && isIspMode"
+          id="btn-import-optical-boxes-csv"
+          type="button"
+          class="btn-sync-dhcp"
+          aria-label="Importar Cajas NAP CSV"
+          @click="isBoxesCsvModalOpen = true"
+        >
+          {{ t('subscribers_map.btn_import_boxes_csv', '📦 Importar Cajas NAP CSV') }}
         </button>
       </div>
     </div>
@@ -937,7 +1043,16 @@
                     <td class="font-mono">{{ row.onu_serial_number || '—' }}</td>
                     <td class="font-mono">{{ row.assigned_ipv4 || '—' }}</td>
                     <td>{{ row.router_name }}</td>
-                    <td>{{ row.optical_box_name || '—' }}</td>
+                    <td>
+                      {{ row.optical_box_name || '—' }}
+                      <span
+                        v-if="row.is_valid && row.will_auto_create_box"
+                        class="badge-auto-create-box"
+                        :title="t('subscribers_map.badge_auto_create_box_hint', 'Esta Caja NAP no existe aún y se auto-creará automáticamente en PostgreSQL')"
+                      >
+                        ✨ {{ t('subscribers_map.badge_auto_create_box', 'Auto-creará Caja NAP') }}
+                      </span>
+                    </td>
                     <td>
                       <span v-if="row.is_valid" class="text-green">✓ Válido</span>
                       <span v-else class="text-red">✕ {{ row.errors.join('; ') }}</span>
@@ -957,6 +1072,140 @@
                 @click="handleCommitSubscribersCsv"
               >
                 {{ isCsvCommitLoading ? 'Importando...' : t('subscribers_map.btn_commit_import', { count: csvDryRunResult.valid_rows_count }) }}
+              </button>
+              <span v-else class="text-red font-semibold">
+                ⚠️ Corrija los errores indicados en las filas en rojo para habilitar la importación.
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Asistente de Carga Masiva CSV de Cajas NAP (Spec 103) -->
+    <div
+      v-if="isBoxesCsvModalOpen"
+      id="modal-import-optical-boxes-csv"
+      class="rg-modal-backdrop"
+      @click.self="isBoxesCsvModalOpen = false"
+    >
+      <div class="rg-modal" role="dialog" aria-modal="true" aria-labelledby="boxes-csv-modal-title">
+        <header class="modal-header">
+          <div>
+            <h2 id="boxes-csv-modal-title" class="modal-title">
+              {{ t('subscribers_map.modal_boxes_csv_title', '📦 Carga Masiva de Cajas NAP (CSV Upsert)') }}
+            </h2>
+            <p class="modal-subtitle">
+              {{ t('subscribers_map.modal_boxes_csv_subtitle', 'Cargue o actualice masivamente cajas de distribución óptica NAP validando router, splitter y coordenadas GPS con soporte Upsert.') }}
+            </p>
+          </div>
+          <button
+            type="button"
+            class="btn-close"
+            aria-label="Cerrar modal de importación de cajas NAP"
+            @click="isBoxesCsvModalOpen = false"
+          >
+            ✕
+          </button>
+        </header>
+
+        <div class="modal-body">
+          <div class="csv-actions-bar">
+            <button
+              id="btn-download-optical-boxes-csv-template"
+              type="button"
+              class="btn-secondary"
+              @click="handleDownloadBoxesTemplate"
+            >
+              {{ t('subscribers_map.btn_download_boxes_template', '⬇️ Descargar Plantilla Cajas NAP CSV') }}
+            </button>
+            <div class="file-picker-wrapper">
+              <input
+                id="input-optical-boxes-csv-file"
+                type="file"
+                accept=".csv,text/csv"
+                @change="handleBoxesCsvFileSelected"
+              />
+            </div>
+            <button
+              id="btn-run-optical-boxes-dry-run"
+              type="button"
+              class="btn-primary"
+              :disabled="!selectedBoxesCsvFile || isBoxesCsvDryRunLoading"
+              @click="handleRunBoxesDryRun"
+            >
+              {{ isBoxesCsvDryRunLoading ? 'Validando...' : t('subscribers_map.btn_validate_boxes_dry_run', '🔍 Validar Cajas (Dry-Run)') }}
+            </button>
+          </div>
+
+          <!-- Previsualización de Resultados Dry-Run Cajas NAP -->
+          <div v-if="boxesCsvDryRunResult" class="csv-preview-container">
+            <div class="csv-summary-badges">
+              <span class="summary-badge badge--total">
+                Total: {{ boxesCsvDryRunResult.total_rows }}
+              </span>
+              <span class="summary-badge badge--valid">
+                Válidas: {{ boxesCsvDryRunResult.valid_rows_count }}
+              </span>
+              <span class="summary-badge badge--invalid">
+                Inválidas: {{ boxesCsvDryRunResult.invalid_rows_count }}
+              </span>
+              <span class="summary-badge badge--upsert">
+                {{ t('subscribers_map.summary_updates', { count: boxesCsvDryRunResult.rows.filter(r => r.is_update && r.is_valid).length }) }}
+              </span>
+            </div>
+
+            <div class="csv-table-wrapper">
+              <table class="csv-preview-table">
+                <thead>
+                  <tr>
+                    <th>Fila</th>
+                    <th>Código Caja</th>
+                    <th>Router</th>
+                    <th>Puertos / Splitter</th>
+                    <th>Coordenadas GPS</th>
+                    <th>Tipo / Ubicación</th>
+                    <th>Acción / Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="row in boxesCsvDryRunResult.rows"
+                    :key="row.row_number"
+                    :class="{ 'row--invalid': !row.is_valid, 'row--valid': row.is_valid }"
+                  >
+                    <td>#{{ row.row_number }}</td>
+                    <td class="font-mono">{{ row.box_code }}</td>
+                    <td>{{ row.router_name }}</td>
+                    <td>{{ row.capacity_ports }}p ({{ row.splitter_ratio }})</td>
+                    <td class="font-mono text-xs">{{ row.latitude }}, {{ row.longitude }}</td>
+                    <td>{{ row.installation_type }} {{ row.physical_location ? `• ${row.physical_location}` : '' }}</td>
+                    <td>
+                      <template v-if="row.is_valid">
+                        <span v-if="row.is_update" class="badge-upsert">
+                          🔄 {{ t('subscribers_map.badge_box_update', 'Actualizará') }}
+                        </span>
+                        <span v-else class="badge-create">
+                          ✨ {{ t('subscribers_map.badge_box_create', 'Nueva') }}
+                        </span>
+                      </template>
+                      <span v-else class="text-red">✕ {{ row.errors.join('; ') }}</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="modal-footer">
+              <button
+                v-if="boxesCsvDryRunResult.can_proceed"
+                id="btn-commit-optical-boxes-csv"
+                type="button"
+                class="btn-primary"
+                :disabled="isBoxesCsvCommitLoading"
+                @click="handleCommitBoxesCsv"
+              >
+                {{ isBoxesCsvCommitLoading ? 'Importando...' : t('subscribers_map.btn_commit_boxes_import', { count: boxesCsvDryRunResult.valid_rows_count }) }}
               </button>
               <span v-else class="text-red font-semibold">
                 ⚠️ Corrija los errores indicados en las filas en rojo para habilitar la importación.
@@ -1634,5 +1883,45 @@
     align-items: center;
     gap: 1rem;
     padding-top: 0.5rem;
+  }
+
+  .badge--upsert {
+    background: rgba(56, 189, 248, 0.15);
+    border: 1px solid #38bdf8;
+    color: #38bdf8;
+  }
+
+  .badge-auto-create-box {
+    display: inline-block;
+    font-size: 0.65rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    background: rgba(168, 85, 247, 0.2);
+    border: 1px solid rgba(168, 85, 247, 0.5);
+    color: #c084fc;
+    margin-left: 0.4rem;
+    font-weight: 500;
+  }
+
+  .badge-upsert {
+    display: inline-block;
+    font-size: 0.7rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    background: rgba(56, 189, 248, 0.2);
+    border: 1px solid rgba(56, 189, 248, 0.5);
+    color: #38bdf8;
+    font-weight: 500;
+  }
+
+  .badge-create {
+    display: inline-block;
+    font-size: 0.7rem;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    background: rgba(34, 197, 94, 0.2);
+    border: 1px solid rgba(34, 197, 94, 0.5);
+    color: #4ade80;
+    font-weight: 500;
   }
 </style>

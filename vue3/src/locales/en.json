@@ -176,7 +176,18 @@
     "modal_csv_subtitle": "Migrate your FTTH/DHCP subscriber base by dry-run validating format, router and GPS coordinates before committing.",
     "btn_download_template": "⬇️ Download CSV Template",
     "btn_validate_dry_run": "🔍 Validate File (Dry-Run)",
-    "btn_commit_import": "✅ Confirm & Import ({count} clients)"
+    "btn_commit_import": "✅ Confirm & Import ({count} clients)",
+    "btn_import_boxes_csv": "📦 Import NAP Boxes CSV",
+    "modal_boxes_csv_title": "📦 Bulk NAP Boxes Import (CSV Upsert)",
+    "modal_boxes_csv_subtitle": "Bulk upload or update optical NAP distribution boxes validating router, splitter and GPS coordinates with Upsert support.",
+    "btn_download_boxes_template": "⬇️ Download NAP Boxes CSV Template",
+    "btn_validate_boxes_dry_run": "🔍 Validate Boxes (Dry-Run)",
+    "btn_commit_boxes_import": "✅ Confirm & Import ({count} boxes)",
+    "badge_auto_create_box": "Will Auto-create NAP Box",
+    "badge_auto_create_box_hint": "This NAP Box does not exist yet and will be auto-created in PostgreSQL",
+    "badge_box_update": "Will Update",
+    "badge_box_create": "New",
+    "summary_updates": "Updates: {count}"
   },
   "mass_outage": {
     "alert_title": "MASS OUTAGE ALERT DETECTED",

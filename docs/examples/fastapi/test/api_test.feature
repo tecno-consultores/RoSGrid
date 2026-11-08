@@ -1579,6 +1579,26 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  # ============================================================================
+  # SPEC 103: CARGA MASIVA CSV DE CAJAS NAP CON UPSERT Y AUTO-CREACIÓN (HITO 30.26)
+  # ============================================================================
+  Scenario: 175. Descarga de plantilla CSV y validacion Dry-Run para carga masiva de Cajas NAP con soporte Upsert (Spec 103)
+    Given path '/api/v1/optical-boxes/template-csv'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/optical-boxes/import-csv/dry-run'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/optical-boxes/import-csv/commit'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
 
 
 

@@ -504,6 +504,7 @@ class SubscriberCsvRowPreview(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     service_status: str = "ACTIVE"
+    will_auto_create_box: bool = False
     is_valid: bool
     errors: list[str] = Field(default_factory=list)
 
@@ -524,6 +525,42 @@ class SubscriberCsvCommitResponse(BaseModel):
     imported_count: int
     created_ids: list[uuid.UUID] = Field(default_factory=list)
     message: str
+
+
+class OpticalBoxCsvRowPreview(BaseModel):
+    row_number: int
+    box_code: str
+    router_name: str
+    capacity_ports: int = 16
+    splitter_ratio: str = "1:16"
+    installation_type: str = "POLE"
+    input_power_dbm: Optional[float] = None
+    latitude: float
+    longitude: float
+    physical_location: Optional[str] = None
+    is_update: bool = False
+    is_valid: bool
+    errors: list[str] = Field(default_factory=list)
+
+
+class OpticalBoxCsvDryRunResponse(BaseModel):
+    total_rows: int
+    valid_rows_count: int
+    invalid_rows_count: int
+    can_proceed: bool
+    rows: list[OpticalBoxCsvRowPreview] = Field(default_factory=list)
+
+
+class OpticalBoxCsvCommitRequest(BaseModel):
+    rows: list[OpticalBoxCsvRowPreview]
+
+
+class OpticalBoxCsvCommitResponse(BaseModel):
+    imported_count: int
+    updated_count: int = 0
+    box_ids: list[uuid.UUID] = Field(default_factory=list)
+    message: str
+
 
 
 

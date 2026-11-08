@@ -1132,6 +1132,7 @@ def _validate_subscriber_csv_row(
     existing_serials: set[str],
     seen_endpoints: set[tuple[uuid.UUID, str]],
     seen_serials: set[str],
+    boxes_by_code: Optional[dict[str, OpticalBox]] = None,
 ) -> SubscriberCsvRowPreview:
     errors: list[str] = []
     endpoint_id = str(row.get("endpoint_identifier") or row.get("customer_code") or "").strip()
@@ -1185,6 +1186,10 @@ def _validate_subscriber_csv_row(
         except ValueError:
             errors.append(f"Puerto de caja NAP inválido '{raw_port}'")
 
+    will_auto_create = bool(
+        box_name and (boxes_by_code is None or box_name.strip().lower() not in boxes_by_code)
+    )
+
     raw_lat = str(row.get("latitude") or "").strip()
     raw_lng = str(row.get("longitude") or "").strip()
     lat_val: Optional[float] = None
@@ -1214,6 +1219,7 @@ def _validate_subscriber_csv_row(
         latitude=lat_val,
         longitude=lng_val,
         service_status=raw_status,
+        will_auto_create_box=will_auto_create,
         is_valid=len(errors) == 0,
         errors=errors,
     )
@@ -1290,7 +1296,7 @@ async def import_subscribers_csv_dry_run(
     except UnicodeDecodeError as exc:
         raise HTTPException(status_code=400, detail="El archivo debe tener codificación UTF-8 válida") from exc
 
-    routers_by_key, _, existing_endpoints, existing_serials = await _load_subscriber_csv_context(db, tenant_id)
+    routers_by_key, boxes_by_code, existing_endpoints, existing_serials = await _load_subscriber_csv_context(db, tenant_id)
     reader = csv.DictReader(io.StringIO(decoded))
     previews: list[SubscriberCsvRowPreview] = []
     seen_endpoints: set[tuple[uuid.UUID, str]] = set()
@@ -1302,7 +1308,14 @@ async def import_subscribers_csv_dry_run(
         if row_num > 501:
             raise HTTPException(status_code=400, detail="El archivo excede el límite de 500 filas")
         preview = _validate_subscriber_csv_row(
-            row, row_num, routers_by_key, existing_endpoints, existing_serials, seen_endpoints, seen_serials
+            row,
+            row_num,
+            routers_by_key,
+            existing_endpoints,
+            existing_serials,
+            seen_endpoints,
+            seen_serials,
+            boxes_by_code,
         )
         previews.append(preview)
 
@@ -1349,7 +1362,14 @@ async def import_subscribers_csv_commit(
         seen_sn: set[str] = set()
         for idx, row in enumerate(reader, start=2):
             p = _validate_subscriber_csv_row(
-                row, idx, routers_by_key, existing_endpoints, existing_serials, seen_ep, seen_sn
+                row,
+                idx,
+                routers_by_key,
+                existing_endpoints,
+                existing_serials,
+                seen_ep,
+                seen_sn,
+                boxes_by_code,
             )
             if p.is_valid:
                 valid_rows.append(p)
@@ -1369,6 +1389,33 @@ async def import_subscribers_csv_commit(
         matched_box = (
             boxes_by_code.get(item.optical_box_name.strip().lower()) if item.optical_box_name else None
         )
+        if item.optical_box_name and not matched_box:
+            box_lat = (
+                Decimal(str(item.latitude))
+                if item.latitude is not None
+                else (matched_router.latitude or Decimal("10.480600"))
+            )
+            box_lng = (
+                Decimal(str(item.longitude))
+                if item.longitude is not None
+                else (matched_router.longitude or Decimal("-66.903600"))
+            )
+            matched_box = OpticalBox(
+                tenant_id=tenant_id,
+                router_id=matched_router.id,
+                box_code=item.optical_box_name.strip(),
+                capacity_ports=max(16, item.box_port_number or 16),
+                splitter_ratio="1:16",
+                installation_type="POLE",
+                latitude=box_lat,
+                longitude=box_lng,
+                status="ACTIVE",
+                notes="Auto-creada automáticamente durante importación CSV de clientes",
+            )
+            db.add(matched_box)
+            await db.flush()
+            boxes_by_code[item.optical_box_name.strip().lower()] = matched_box
+
         has_coords = item.latitude is not None and item.longitude is not None
         status_enum = CustomerServiceStatusEnum(item.service_status)
 

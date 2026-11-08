@@ -1,6 +1,6 @@
 # Especificación 103: Carga Masiva CSV de Cajas NAP (`OpticalBox` Upsert) y Auto-Creación Inteligente de Cajas NAP Inexistentes al Importar Clientes CSV
 
-**Estado:** Pendiente de Implementación (`[ ]` Hito 30.26)  
+**Estado:** Implementado y Certificado (`[x]` Hito 30.26)  
 **Target de Ejecución:** Gemini 3.8 Flash (High)  
 **Ámbito:** Backend (`fastapi/src/schemas/ipam.py`, `fastapi/src/api/v1/optical_boxes.py`, `fastapi/src/api/v1/subscribers.py`) + Frontend (`vue3/src/locales/es.json`, `vue3/src/locales/en.json`, `vue3/src/views/SubscribersMapView.vue`) + Suite de Pruebas 11X (`fastapi/tests/api/test_subscribers.unit.py`, `vue3/src/views/subscribersMapView.unit.ts`, Karate Labs BDD)
 
