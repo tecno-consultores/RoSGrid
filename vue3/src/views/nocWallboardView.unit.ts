@@ -126,4 +126,40 @@ describe('NocWallboardView.vue — Conmutador de Mapa Geográfico y Grafo L2/PoE
       expect.stringContaining('/api/v1/inventory/routers'),
     );
   });
+
+  it('renderiza la cinta de eventos como HUD flotante semitransparente (.wallboard-events-overlay) y permite minimizarlo y expandirlo (Hito 30.31 / Spec 108)', async () => {
+    const wrapper = mount(NocWallboardView, {
+      global: {
+        plugins: [pinia],
+        stubs: {
+          UnifiedNetworkMap: true,
+          L2TopologyView: true,
+        },
+      },
+    });
+    await flushPromises();
+
+    // Inicialmente el HUD de eventos está expandido y tiene clase .wallboard-events-overlay
+    const eventsHud = wrapper.find('#wallboard-events-hud');
+    expect(eventsHud.exists()).toBe(true);
+    expect(eventsHud.classes()).toContain('wallboard-events-overlay');
+
+    const toggleBtn = wrapper.find('#btn-wallboard-toggle-events-hud');
+    expect(toggleBtn.exists()).toBe(true);
+    expect(wrapper.find('#btn-wallboard-expand-events-hud').exists()).toBe(false);
+
+    // Clic en minimizar el HUD
+    await toggleBtn.trigger('click');
+
+    expect(wrapper.find('#wallboard-events-hud').exists()).toBe(false);
+    const expandPill = wrapper.find('#btn-wallboard-expand-events-hud');
+    expect(expandPill.exists()).toBe(true);
+    expect(expandPill.text()).toContain('Eventos en Vivo');
+
+    // Clic en la píldora para restaurar el HUD
+    await expandPill.trigger('click');
+
+    expect(wrapper.find('#wallboard-events-hud').exists()).toBe(true);
+    expect(wrapper.find('#btn-wallboard-expand-events-hud').exists()).toBe(false);
+  });
 });

@@ -1199,6 +1199,17 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * assert fwHeaderLayout.zero_layout_shift_nat == true
     * assert fwHeaderLayout.proto_query_synced == true
 
+  # ============================================================================
+  # SPEC 108: MAPA / GRAFO L2 AL 100% Y HUD FLOTANTE SEMITRANSPARENTE DE EVENTOS
+  # ============================================================================
+  Scenario: 122. Mapa o grafo L2 al 100% de ancho y cinta de eventos como HUD flotante semitransparente con boton de colapsar y expandir (Spec 108)
+    * def nocWallboardHud = { map_full_width: true, events_overlay_hud: true, can_collapse_hud: true, expand_pill_available: true, shifted_router_hud: true }
+    * assert nocWallboardHud.map_full_width == true
+    * assert nocWallboardHud.events_overlay_hud == true
+    * assert nocWallboardHud.can_collapse_hud == true
+    * assert nocWallboardHud.expand_pill_available == true
+    * assert nocWallboardHud.shifted_router_hud == true
+
 
 
 

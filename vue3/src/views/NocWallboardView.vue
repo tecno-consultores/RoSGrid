@@ -74,6 +74,7 @@
 
   // Cinta de eventos reales en vivo
   const liveEvents = ref<NocEvent[]>([]);
+  const isEventsHudCollapsed = ref<boolean>(false);
 
   // Alerta de Caída Masiva (Mass Outage) — docs/specs/32 §5.3
   interface MassOutageAlertData {
@@ -516,9 +517,8 @@
       </div>
     </transition>
 
-    <!-- Cuerpo Dividido: Mitad Izquierda (Mapa OSM) + Mitad Derecha (Ticker de Eventos) -->
+    <!-- Lienzo 100% (Mapa OSM / Grafo L2) + HUD Flotante Semitransparente de Eventos a la Derecha -->
     <div class="wallboard-body">
-      <!-- Mitad Izquierda: Mapa Interactivo o Grafo Esquemático L2 -->
       <section class="wallboard-map-panel" aria-label="Mapa de routers de la flota">
         <L2TopologyView v-if="showLogicalL2Graph" />
         <UnifiedNetworkMap
@@ -538,6 +538,7 @@
           <div
             v-if="selectedRouter"
             class="wallboard-router-hud"
+            :class="{ 'wallboard-router-hud--shifted': !isEventsHudCollapsed }"
             role="region"
             aria-label="Detalle de router seleccionado"
           >
@@ -578,10 +579,43 @@
         </transition>
       </section>
 
-      <!-- Mitad Derecha: Cinta de Eventos Críticos en Vivo -->
-      <section class="wallboard-events-panel" aria-labelledby="events-panel-title">
+      <!-- Píldora Flotante cuando el HUD de Eventos está minimizado -->
+      <button
+        v-if="isEventsHudCollapsed"
+        id="btn-wallboard-expand-events-hud"
+        type="button"
+        class="btn-events-hud-pill font-mono"
+        aria-label="Mostrar cinta de eventos críticos"
+        @click="isEventsHudCollapsed = false"
+      >
+        📡 Eventos en Vivo ({{ liveEvents.length }})
+      </button>
+
+      <!-- HUD Flotante Semitransparente Derecha: Cinta de Eventos Críticos en Vivo -->
+      <section
+        v-else
+        id="wallboard-events-hud"
+        class="wallboard-events-panel wallboard-events-overlay"
+        aria-labelledby="events-panel-title"
+      >
         <div class="events-header">
-          <h2 id="events-panel-title" class="events-title">Cinta de Eventos Críticos</h2>
+          <div class="events-header-left">
+            <span class="events-live-dot" aria-hidden="true"></span>
+            <h2 id="events-panel-title" class="events-title">
+              Cinta de Eventos Críticos
+            </h2>
+            <span class="events-count-pill font-mono">{{ liveEvents.length }}</span>
+          </div>
+          <button
+            id="btn-wallboard-toggle-events-hud"
+            type="button"
+            class="btn-collapse-events-hud"
+            title="Minimizar panel de eventos"
+            aria-label="Minimizar panel de eventos"
+            @click="isEventsHudCollapsed = true"
+          >
+            ─
+          </button>
         </div>
 
         <div v-if="liveEvents.length === 0" class="events-empty-state">
@@ -879,26 +913,21 @@
     cursor: pointer;
   }
 
-  /* Cuerpo */
+  /* Cuerpo 100% Lienzo con HUD Flotante */
   .wallboard-body {
-    display: grid;
-    grid-template-columns: 55% 45%;
+    position: relative;
+    display: flex;
     flex: 1;
+    width: 100%;
+    height: 100%;
     overflow: hidden;
-  }
-
-  @media (max-width: 1024px) {
-    .wallboard-body {
-      grid-template-columns: 1fr;
-      grid-template-rows: 1fr 1fr;
-    }
   }
 
   .wallboard-map-panel {
     position: relative;
+    flex: 1;
     height: 100%;
     width: 100%;
-    border-right: 2px solid #1f2937;
   }
 
   /* Floating HUD de Router Seleccionado en Wallboard */
@@ -907,7 +936,7 @@
     bottom: 1.25rem;
     left: 1.25rem;
     right: 1.25rem;
-    background: rgba(11, 15, 25, 0.95);
+    background: rgba(11, 15, 25, 0.92);
     backdrop-filter: blur(8px);
     border: 1px solid #0284c7;
     border-radius: 8px;
@@ -920,6 +949,17 @@
     box-shadow:
       0 10px 25px -5px rgba(0, 0, 0, 0.7),
       0 0 15px rgba(2, 132, 199, 0.3);
+    transition: right 0.2s ease;
+  }
+
+  .wallboard-router-hud--shifted {
+    right: 400px;
+  }
+
+  @media (max-width: 1024px) {
+    .wallboard-router-hud--shifted {
+      right: 1.25rem;
+    }
   }
 
   .hud-left {
@@ -1045,82 +1085,173 @@
     transform: translateY(12px);
   }
 
-  .wallboard-events-panel {
+  .wallboard-events-overlay {
+    position: absolute;
+    top: 62px;
+    right: 16px;
+    bottom: 16px;
+    width: 370px;
+    max-width: calc(100vw - 32px);
     display: flex;
     flex-direction: column;
-    background: #090d16;
+    background: rgba(3, 7, 18, 0.72);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(56, 189, 248, 0.28);
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65);
     overflow: hidden;
+    z-index: 850;
+  }
+
+  .btn-events-hud-pill {
+    position: absolute;
+    top: 62px;
+    right: 16px;
+    z-index: 850;
+    background: rgba(3, 7, 18, 0.82);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(56, 189, 248, 0.45);
+    color: #38bdf8;
+    padding: 0.45rem 0.9rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.55);
+    transition: all 0.15s ease;
+  }
+
+  .btn-events-hud-pill:hover {
+    background: rgba(15, 23, 42, 0.92);
+    color: #ffffff;
+    border-color: #38bdf8;
   }
 
   .events-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.75rem 1rem;
-    background: #111827;
-    border-bottom: 1px solid #1f2937;
+    padding: 0.65rem 0.9rem;
+    background: rgba(15, 23, 42, 0.78);
+    border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+  }
+
+  .events-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .events-live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ef4444;
+    box-shadow: 0 0 8px #ef4444;
   }
 
   .events-title {
-    font-size: 1rem;
+    font-size: 0.9rem;
     font-weight: 700;
-    color: #e5e7eb;
+    color: #f8fafc;
     margin: 0;
+  }
+
+  .events-count-pill {
+    background: rgba(56, 189, 248, 0.18);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    border-radius: 999px;
+    padding: 0.05rem 0.45rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+
+  .btn-collapse-events-hud {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #cbd5e1;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-weight: 700;
+    transition: all 0.15s ease;
+  }
+
+  .btn-collapse-events-hud:hover {
+    background: rgba(56, 189, 248, 0.2);
+    color: #ffffff;
+    border-color: #38bdf8;
+  }
+
+  .events-empty-state {
+    padding: 1.25rem;
+    color: #cbd5e1;
+    font-size: 0.85rem;
+    text-align: center;
   }
 
   .events-list {
     list-style: none;
     margin: 0;
-    padding: 0.5rem;
+    padding: 0.55rem;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.45rem;
     flex: 1;
   }
 
   .event-item {
-    background: #111827;
-    border-left: 4px solid #4b5563;
-    padding: 0.5rem 0.75rem;
-    border-radius: 2px;
+    background: rgba(15, 23, 42, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-left: 4px solid #38bdf8;
+    padding: 0.5rem 0.7rem;
+    border-radius: 6px;
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.22rem;
   }
 
   .event-item--critical {
     border-left-color: #ef4444;
-    background: rgba(239, 68, 68, 0.08);
+    background: rgba(69, 10, 10, 0.76);
   }
 
   .event-item--warning {
     border-left-color: #facc15;
-    background: rgba(250, 204, 21, 0.08);
+    background: rgba(66, 32, 6, 0.76);
   }
 
   .event-item--info {
     border-left-color: #38bdf8;
+    background: rgba(15, 23, 42, 0.78);
   }
 
   .event-meta {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 0.75rem;
+    font-size: 0.73rem;
   }
 
   .event-time {
-    color: #9ca3af;
+    color: #cbd5e1;
   }
 
   .event-type-badge {
-    background: #1f2937;
-    color: #e5e7eb;
-    padding: 0.1rem 0.35rem;
-    border-radius: 2px;
-    font-size: 0.7rem;
+    background: rgba(3, 7, 18, 0.75);
+    color: #f8fafc;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.68rem;
     font-weight: 700;
+    border: 1px solid rgba(255, 255, 255, 0.12);
   }
 
   .event-body {
@@ -1129,14 +1260,14 @@
   }
 
   .event-router {
-    font-size: 0.85rem;
-    color: #f3f4f6;
+    font-size: 0.84rem;
+    color: #ffffff;
   }
 
   .event-msg {
     margin: 0;
-    font-size: 0.8rem;
-    color: #9ca3af;
+    font-size: 0.78rem;
+    color: #e2e8f0;
   }
 
   .font-mono {

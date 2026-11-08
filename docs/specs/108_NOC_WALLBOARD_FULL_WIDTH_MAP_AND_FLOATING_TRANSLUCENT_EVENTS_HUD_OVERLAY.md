@@ -1,6 +1,6 @@
 # Especificación 108: Mapa / Grafo L2 al 100% del Lienzo y Cinta de Eventos Críticos como HUD Flotante Semitransparente (*Stream Overlay*) en `NocWallboardView.vue`
 
-**Estado:** Pendiente de Ejecución (`[ ]` Hito 30.31)  
+**Estado:** Completado (`[x]` Hito 30.31)  
 **Target de Ejecución:** Gemini 3.8 Flash (High)  
 **Ámbito:** Frontend (`vue3/src/views/NocWallboardView.vue`, `vue3/src/views/nocWallboardView.unit.ts`, `vue3/src/views/views.unit.ts`) + Karate Labs BDD (`vue3/test/ui_business_flow.feature` Escenario 122 y `docs/examples/vue3/ui_business_flow.feature.example`)
 
