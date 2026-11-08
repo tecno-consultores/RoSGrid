@@ -339,11 +339,13 @@
       renderGroupMarker(grp);
     }
 
-    // Auto-encuadre si hay múltiples nodos en el territorio
+    // Auto-encuadre sobre los nodos reales del tenant (1 o múltiples sitios)
     try {
-      if (mapInstance && groups.length > 1) {
+      if (mapInstance && groups.length === 1) {
+        mapInstance.setView([groups[0].lat, groups[0].lng], Math.max(props.zoomLevel, 14));
+      } else if (mapInstance && groups.length > 1) {
         const bounds = L.latLngBounds(groups.map((g) => [g.lat, g.lng]));
-        mapInstance.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+        mapInstance.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
       }
     } catch {
       // Ignorar en entornos sin motor de renderizado vectorial

@@ -1114,7 +1114,8 @@
     "rca_title": "HEADEND ALERT:",
     "rca_desc": "Router {name} is unreachable.",
     "rca_affected": "({count} dependent subscribers affected by this contingency).",
-    "btn_focus_zone": "🎯 Focus Affected Zone"
+    "btn_focus_zone": "🎯 Focus Affected Zone",
+    "btn_center_fleet": "Center Fleet"
   },
   "routes": {
     "login": "Sign In",

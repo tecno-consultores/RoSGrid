@@ -424,6 +424,59 @@
     return null;
   }
 
+  const hasInitialAutoCentered = ref<boolean>(false);
+
+  function collectAllValidCoordinates(): [number, number][] {
+    const coords: [number, number][] = [];
+    if (showRouters.value) {
+      for (const r of props.routers) {
+        const lat = Number(r.latitude);
+        const lng = Number(r.longitude);
+        if (!Number.isNaN(lat) && !Number.isNaN(lng) && !(lat === 0 && lng === 0)) {
+          coords.push([lat, lng]);
+        }
+      }
+    }
+    if (isIspMode.value && showBoxes.value) {
+      for (const b of props.opticalBoxes) {
+        const lat = Number(b.latitude);
+        const lng = Number(b.longitude);
+        if (!Number.isNaN(lat) && !Number.isNaN(lng) && !(lat === 0 && lng === 0)) {
+          coords.push([lat, lng]);
+        }
+      }
+    }
+    if (showSubscribers.value) {
+      for (const s of props.subscribers) {
+        const resolved = resolveSubscriberBaseCoords(s);
+        if (resolved) {
+          coords.push(resolved);
+        }
+      }
+    }
+    return coords;
+  }
+
+  function fitMapToActiveNodes(force = false): void {
+    if (!mapInstance || isHeadlessTest.value) return;
+    if (hasInitialAutoCentered.value && !force) return;
+
+    const coords = collectAllValidCoordinates();
+    if (coords.length === 0) return;
+
+    try {
+      hasInitialAutoCentered.value = true;
+      if (coords.length === 1) {
+        mapInstance.setView(coords[0], Math.max(props.zoomLevel, 14));
+      } else {
+        const bounds = L.latLngBounds(coords);
+        mapInstance.fitBounds(bounds, { padding: [48, 48], maxZoom: 15 });
+      }
+    } catch {
+      // Ignorar en entornos JSDOM sin layout
+    }
+  }
+
   function renderAllLayers(): void {
     if (!mapInstance || isHeadlessTest.value) return;
 
@@ -683,6 +736,10 @@
         l2LinksLayer.addLayer(poly);
       }
     }
+
+    if (!hasInitialAutoCentered.value) {
+      fitMapToActiveNodes(false);
+    }
   }
 
   function focusAffectedZone(): void {
@@ -743,6 +800,9 @@
     clearSpiderLayer,
     resolveSubscriberBaseCoords,
     getSubscriberColor,
+    hasInitialAutoCentered,
+    collectAllValidCoordinates,
+    fitMapToActiveNodes,
   });
 
   onMounted(() => {
@@ -823,6 +883,15 @@
           <option value="MAINTENANCE">{{ t('enums.admin_state.MAINTENANCE', 'En Mantenimiento') }}</option>
           <option value="OFFLINE">{{ t('network_map.filter_offline') }}</option>
         </select>
+        <button
+          id="btn-map-fit-bounds"
+          type="button"
+          class="btn-layer-toggle"
+          :title="t('network_map.btn_center_fleet', 'Centrar mapa en los equipos de la red')"
+          @click="fitMapToActiveNodes(true)"
+        >
+          🎯 {{ t('network_map.btn_center_fleet', 'Centrar Red') }}
+        </button>
       </div>
     </header>
 
@@ -1082,6 +1151,13 @@
 .counter {
   font-size: 0.75rem;
   opacity: 0.8;
+}
+
+.filter-controls-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .rg-select-filter {

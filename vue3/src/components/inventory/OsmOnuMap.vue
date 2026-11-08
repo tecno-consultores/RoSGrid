@@ -493,8 +493,12 @@
 
     renderSubscriberGroups(validOnus, bounds);
 
-    if (bounds.isValid() && (validOnus.length > 1 || (props.opticalBoxes && props.opticalBoxes.length > 0))) {
-      mapInstance.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+    if (bounds.isValid()) {
+      if (validOnus.length === 1 && (!props.opticalBoxes || props.opticalBoxes.length === 0)) {
+        mapInstance.setView(bounds.getCenter(), Math.max(props.zoomLevel, 14));
+      } else {
+        mapInstance.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+      }
     }
   }
 

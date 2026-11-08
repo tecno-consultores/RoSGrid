@@ -250,4 +250,48 @@ describe('OsmRouterMap.vue — Mapa Interactivo Leaflet & OpenStreetMap', () => 
     expect(wrapper.emitted('select-router')).toBeTruthy();
     expect(createdMarkers.length).toBe(3); // 1 cluster + 2 radial spider markers
   });
+
+  it('centra el mapa con setView cuando existe un único router o grupo en la flota (groups.length === 1)', async () => {
+    let capturedMap: L.Map | null = null;
+    const origMap = L.map;
+
+    vi.spyOn(L, 'map').mockImplementation((el, opts) => {
+      const instance = origMap(el, opts);
+      vi.spyOn(instance, 'setView');
+      capturedMap = instance;
+      return instance;
+    });
+
+    const singleSiteRouters: RouterItem[] = [
+      {
+        id: 'r-single-site',
+        tenant_id: 't-1',
+        display_name: 'CCR2004-SingleSite',
+        ros_identity: 'CCR-Single',
+        ip_address: '10.20.30.1',
+        api_port: 8728,
+        ros_version: '7.18',
+        admin_state: 'PRODUCTION',
+        is_reachable: true,
+        latitude: 10.2323,
+        longitude: -67.8798,
+        network_role: 'EDGE_BGP',
+      },
+    ];
+
+    const wrapper = mount(OsmRouterMap, {
+      props: {
+        routers: singleSiteRouters,
+      },
+    });
+
+    expect(wrapper.find('.osm-map-container').exists()).toBe(true);
+    expect(capturedMap).not.toBeNull();
+    if (capturedMap) {
+      expect((capturedMap as L.Map).setView).toHaveBeenCalledWith(
+        [10.2323, -67.8798],
+        expect.any(Number),
+      );
+    }
+  });
 });

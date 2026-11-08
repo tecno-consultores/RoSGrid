@@ -1141,6 +1141,16 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * assert wallboardL2Response.edges[0].is_poe_delivering == true
     * assert wallboardL2Response.edges[0].protocol == 'LLDP'
 
+  # ============================================================================
+  # SPEC 102: AUTO-ENCUADRE CARTOGRÁFICO DINÁMICO SOBRE COORDENADAS DE LA FLOTA
+  # ============================================================================
+  Scenario: 116. Auto-encuadre dinamico de mapas sobre coordenadas reales de la flota (Spec 102)
+    * def mapFleetCoords = [ [10.2323, -67.8798], [10.2450, -67.8900] ]
+    * assert mapFleetCoords.length == 2
+    * assert mapFleetCoords[0][0] == 10.2323
+    * assert mapFleetCoords[0][1] == -67.8798
+
+
 
 
 

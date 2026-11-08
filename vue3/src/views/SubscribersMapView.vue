@@ -30,6 +30,17 @@
   const searchQuery = ref<string>('');
   const statusFilter = ref<'ALL' | 'OPTIMAL' | 'DEGRADED' | 'DOWN'>('ALL');
 
+  const dynamicCenterCoordinates = computed<[number, number]>(() => {
+    for (const r of routers.value) {
+      const lat = Number(r.latitude);
+      const lng = Number(r.longitude);
+      if (!Number.isNaN(lat) && !Number.isNaN(lng) && !(lat === 0 && lng === 0)) {
+        return [lat, lng];
+      }
+    }
+    return [10.4806, -66.9036];
+  });
+
   // Coordenadas en edición
   const editLat = ref<number | undefined>(undefined);
   const editLng = ref<number | undefined>(undefined);
@@ -618,7 +629,7 @@
         :optical-boxes="fieldStore.opticalBoxes"
         :subscribers="filteredOnus"
         :selected-id="selectedOnuId"
-        :center-coordinates="[10.4806, -66.9036]"
+        :center-coordinates="dynamicCenterCoordinates"
         :zoom-level="12"
         @select-subscriber="handleSelectOnu"
         @select-box="handleSelectBox"

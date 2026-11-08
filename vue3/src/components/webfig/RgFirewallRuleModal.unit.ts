@@ -54,7 +54,7 @@ describe('RgFirewallRuleModal.vue — Creación y Edición de Reglas de Firewall
     });
 
     expect(wrapper.find('.modal-title').text()).toContain('Nueva Regla de Firewall');
-    expect(wrapper.find('.table-badge').text()).toBe('[FILTER]');
+    expect(wrapper.find('.table-badge').text()).toBe('[IPv4 / FILTER]');
 
     const chainSelect = wrapper.find('#rule-chain');
     expect(chainSelect.exists()).toBe(true);
@@ -72,7 +72,7 @@ describe('RgFirewallRuleModal.vue — Creación y Edición de Reglas de Firewall
       },
     });
 
-    expect(wrapper.find('.table-badge').text()).toBe('[NAT]');
+    expect(wrapper.find('.table-badge').text()).toBe('[IPv4 / NAT]');
     const chainSelect = wrapper.find('#rule-chain');
     const options = chainSelect.findAll('option');
     expect(options.some((o) => o.text().includes('srcnat'))).toBe(true);

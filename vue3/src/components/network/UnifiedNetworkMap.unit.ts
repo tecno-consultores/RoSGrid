@@ -114,9 +114,11 @@ describe('UnifiedNetworkMap.vue — Mapa de Red Unificado & Gobierno RCA (Hito 2
 
     vi.spyOn(L, 'map').mockReturnValue({
       setView: vi.fn().mockReturnThis(),
+      fitBounds: vi.fn().mockReturnThis(),
       invalidateSize: vi.fn(),
       flyTo: vi.fn(),
       remove: vi.fn(),
+      on: vi.fn(),
     } as unknown as L.Map);
 
     vi.spyOn(L, 'layerGroup').mockReturnValue({
@@ -616,6 +618,153 @@ describe('UnifiedNetworkMap.vue — Mapa de Red Unificado & Gobierno RCA (Hito 2
     expect(btnClose.exists()).toBe(true);
     await btnClose.trigger('click');
     expect(vm.activeL2Edge).toBeNull();
+  });
+
+  it('ejecuta fitMapToActiveNodes automáticamente al cargar nodos y al pulsar #btn-map-fit-bounds', async () => {
+    const mockMapInstance = {
+      setView: vi.fn().mockReturnThis(),
+      fitBounds: vi.fn().mockReturnThis(),
+      invalidateSize: vi.fn(),
+      flyTo: vi.fn(),
+      remove: vi.fn(),
+      on: vi.fn(),
+    };
+    vi.spyOn(L, 'map').mockReturnValue(mockMapInstance as unknown as L.Map);
+
+    const caraboboRouters: RouterItem[] = [
+      {
+        id: 'r-val-1',
+        tenant_id: 't-1',
+        display_name: 'CCR2004-Valencia',
+        ros_identity: 'CCR-Val',
+        ip_address: '10.230.0.1',
+        api_port: 8728,
+        ros_version: '7.18',
+        admin_state: 'PRODUCTION',
+        is_reachable: true,
+        latitude: 10.2323,
+        longitude: -67.8798,
+        network_role: 'CORE_BGP',
+      },
+      {
+        id: 'r-val-2',
+        tenant_id: 't-1',
+        display_name: 'RB4011-Naguanagua',
+        ros_identity: 'RB4011-Nag',
+        ip_address: '10.230.0.2',
+        api_port: 8728,
+        ros_version: '7.18',
+        admin_state: 'PRODUCTION',
+        is_reachable: true,
+        latitude: 10.2450,
+        longitude: -67.8900,
+        network_role: 'DISTRIBUTION',
+      },
+    ];
+
+    const wrapper = mount(UnifiedNetworkMap, {
+      props: {
+        mode: 'wallboard',
+        routers: caraboboRouters,
+        opticalBoxes: [],
+        subscribers: [],
+      },
+      global: {
+        plugins: [pinia],
+        stubs: { RouterLink: true },
+      },
+    });
+
+    await wrapper.vm.$nextTick();
+
+    // Debe haber llamado a fitBounds al montar y detectar múltiples routers
+    expect(mockMapInstance.fitBounds).toHaveBeenCalled();
+
+    // El botón #btn-map-fit-bounds debe existir en el DOM
+    const btnFit = wrapper.find('#btn-map-fit-bounds');
+    expect(btnFit.exists()).toBe(true);
+    expect(btnFit.text()).toContain('Centrar Red');
+
+    // Al hacer clic en el botón, fuerza re-centrado
+    mockMapInstance.fitBounds.mockClear();
+    await btnFit.trigger('click');
+    expect(mockMapInstance.fitBounds).toHaveBeenCalled();
+  });
+
+  it('ejecuta setView cuando solo existe 1 nodo con coordenadas válidas', async () => {
+    const mockMapInstance = {
+      setView: vi.fn().mockReturnThis(),
+      fitBounds: vi.fn().mockReturnThis(),
+      invalidateSize: vi.fn(),
+      flyTo: vi.fn(),
+      remove: vi.fn(),
+      on: vi.fn(),
+    };
+    vi.spyOn(L, 'map').mockReturnValue(mockMapInstance as unknown as L.Map);
+
+    const singleRouter: RouterItem[] = [
+      {
+        id: 'r-val-single',
+        tenant_id: 't-1',
+        display_name: 'CCR2004-Valencia-Single',
+        ros_identity: 'CCR-Val-1',
+        ip_address: '10.230.0.1',
+        api_port: 8728,
+        ros_version: '7.18',
+        admin_state: 'PRODUCTION',
+        is_reachable: true,
+        latitude: 10.2323,
+        longitude: -67.8798,
+        network_role: 'CORE_BGP',
+      },
+    ];
+
+    const wrapper = mount(UnifiedNetworkMap, {
+      props: {
+        mode: 'wallboard',
+        routers: singleRouter,
+        opticalBoxes: [],
+        subscribers: [],
+      },
+      global: {
+        plugins: [pinia],
+        stubs: { RouterLink: true },
+      },
+    });
+
+    await wrapper.vm.$nextTick();
+    expect(mockMapInstance.setView).toHaveBeenCalledWith(
+      [10.2323, -67.8798],
+      expect.any(Number),
+    );
+  });
+
+  it('encuadra sobre abonados y cajas NAP en modo subscribers', async () => {
+    const mockMapInstance = {
+      setView: vi.fn().mockReturnThis(),
+      fitBounds: vi.fn().mockReturnThis(),
+      invalidateSize: vi.fn(),
+      flyTo: vi.fn(),
+      remove: vi.fn(),
+      on: vi.fn(),
+    };
+    vi.spyOn(L, 'map').mockReturnValue(mockMapInstance as unknown as L.Map);
+
+    const wrapper = mount(UnifiedNetworkMap, {
+      props: {
+        mode: 'subscribers',
+        routers: [],
+        opticalBoxes: mockBoxes,
+        subscribers: mockSubscribers,
+      },
+      global: {
+        plugins: [pinia],
+        stubs: { RouterLink: true },
+      },
+    });
+
+    await wrapper.vm.$nextTick();
+    expect(mockMapInstance.fitBounds).toHaveBeenCalled();
   });
 });
 

@@ -99,11 +99,40 @@
       fieldStore.fetchRecentInstallations(),
     ]);
 
-    // Preseleccionar primer router si existe
-    if (inventoryStore.routers.length > 0 && !napForm.value.router_id) {
-      napForm.value.router_id = inventoryStore.routers[0].id;
+    // Preseleccionar primer router si existe y sincronizar coordenadas si aún son las por defecto
+    if (inventoryStore.routers.length > 0) {
+      if (!napForm.value.router_id) {
+        napForm.value.router_id = inventoryStore.routers[0].id;
+      }
+      syncCoordinatesFromRouter(napForm.value.router_id);
     }
   });
+
+  function syncCoordinatesFromRouter(routerId: string): void {
+    const router = inventoryStore.routers.find((r) => r.id === routerId);
+    if (!router) return;
+    const rLat = Number(router.latitude);
+    const rLng = Number(router.longitude);
+    if (!Number.isNaN(rLat) && !Number.isNaN(rLng) && !(rLat === 0 && rLng === 0)) {
+      if (napForm.value.latitude === 10.4806 && napForm.value.longitude === -66.9036) {
+        napForm.value.latitude = rLat;
+        napForm.value.longitude = rLng;
+      }
+      if (customerForm.value.latitude === 10.4806 && customerForm.value.longitude === -66.9036) {
+        customerForm.value.latitude = rLat;
+        customerForm.value.longitude = rLng;
+      }
+    }
+  }
+
+  watch(
+    () => napForm.value.router_id,
+    (newRouterId) => {
+      if (newRouterId) {
+        syncCoordinatesFromRouter(newRouterId);
+      }
+    },
+  );
 
   // Captura GPS
   function handleCaptureGps() {
@@ -209,6 +238,17 @@
         const firstFree = detail.ports?.find((p) => !p.is_occupied);
         if (firstFree) {
           customerForm.value.optical_box_port = firstFree.port_number;
+        }
+        const box = selectedNapBox.value || detail;
+        if (box) {
+          const bLat = Number(box.latitude);
+          const bLng = Number(box.longitude);
+          if (!Number.isNaN(bLat) && !Number.isNaN(bLng) && !(bLat === 0 && bLng === 0)) {
+            if (customerForm.value.latitude === 10.4806 && customerForm.value.longitude === -66.9036) {
+              customerForm.value.latitude = bLat;
+              customerForm.value.longitude = bLng;
+            }
+          }
         }
       } catch {
         // Fallback silencioso si la consulta de detalle falla en modo offline

@@ -1,6 +1,6 @@
 # Especificación 102: Auto-Encuadre Cartográfico Dinámico (`fitBounds` / `setView`) sobre Coordenadas Reales de la Flota (Eliminación del Centrado Fijo en Caracas)
 
-**Estado:** Pendiente de Implementación (`[ ]` Hito 30.25)  
+**Estado:** Implementado y Certificado (`[x]` Hito 30.25)  
 **Target de Ejecución:** Gemini 3.8 Flash (High)  
 **Ámbito:** Frontend (`vue3/src/components/network/UnifiedNetworkMap.vue`, `vue3/src/components/inventory/OsmRouterMap.vue`, `vue3/src/components/inventory/OsmOnuMap.vue`, `vue3/src/views/SubscribersMapView.vue`, `vue3/src/components/field/FieldTechMobileView.vue`) + Suite de Pruebas 11X (`vue3/src/components/network/UnifiedNetworkMap.unit.ts`, `vue3/src/components/inventory/osmRouterMap.unit.ts`, Karate Labs BDD)
 
@@ -149,6 +149,6 @@ En `vue3/test/ui_business_flow.feature` y `docs/examples/vue3/test/ui_business_f
 
 ## 4. Criterios de Aceptación y Certificación 11X
 
-- [ ] Al abrir **Wallboard NOC**, **Mapa de Clientes**, **Inventario** o **Técnico de Campo**, el mapa encuadra automáticamente (`fitBounds` / `setView`) los equipos reales del tenant (ej. Carabobo `10.230, -67.880`) en cuanto cargan los datos de la API, sin quedarse fijo en Caracas (`10.4806, -66.9036`).
-- [ ] El botón `🎯 Centrar Red` (`#btn-map-fit-bounds`) permite re-encuadrar todos los nodos visibles con 1 clic en cualquier momento.
-- [ ] 100% de pruebas unitarias Vitest y Pytest en verde y 9/9 compuertas en `.agents/scripts/certify_task_completion.sh`.
+- [x] Al abrir **Wallboard NOC**, **Mapa de Clientes**, **Inventario** o **Técnico de Campo**, el mapa encuadra automáticamente (`fitBounds` / `setView`) los equipos reales del tenant (ej. Carabobo `10.230, -67.880`) en cuanto cargan los datos de la API, sin quedarse fijo en Caracas (`10.4806, -66.9036`).
+- [x] El botón `🎯 Centrar Red` (`#btn-map-fit-bounds`) permite re-encuadrar todos los nodos visibles con 1 clic en cualquier momento.
+- [x] 100% de pruebas unitarias Vitest y Pytest en verde y 9/9 compuertas en `.agents/scripts/certify_task_completion.sh`.

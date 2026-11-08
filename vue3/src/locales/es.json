@@ -1114,7 +1114,8 @@
     "rca_title": "ALERTA DE CABECERA:",
     "rca_desc": "El router {name} se encuentra inalcanzable.",
     "rca_affected": "({count} abonados dependientes afectados por esta contingencia).",
-    "btn_focus_zone": "🎯 Enfocar Zona Afectada"
+    "btn_focus_zone": "🎯 Enfocar Zona Afectada",
+    "btn_center_fleet": "Centrar Red"
   },
   "routes": {
     "login": "Iniciar Sesión",
