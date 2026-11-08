@@ -772,6 +772,89 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
     }
   });
 
+  it('InterfacesAndSfpView — muestra interfaces WireGuard con type="wg" nativo de RouterOS v7 y permite editarlas/eliminarlas (Spec 96)', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const getSpy = vi.spyOn(http, 'get').mockResolvedValue({
+      status: 200,
+      data: [
+        {
+          '.id': '*2',
+          name: 'ether1',
+          type: 'ether',
+          'mac-address': '50:00:00:01:00:00',
+          mtu: '1500',
+          running: 'true',
+          disabled: 'false',
+        },
+        {
+          '.id': '*B',
+          name: 'miprueba',
+          type: 'wg',
+          mtu: '1420',
+          running: 'true',
+          disabled: 'false',
+        },
+      ],
+      headers: new Headers(),
+    });
+    const patchSpy = vi.spyOn(http, 'patch').mockResolvedValue({
+      status: 200,
+      data: { status: 'OK' },
+      headers: new Headers(),
+    });
+    const deleteSpy = vi.spyOn(http, 'delete').mockResolvedValue({
+      status: 200,
+      data: { status: 'OK' },
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(InterfacesAndSfpView);
+    await flushPromises();
+
+    // Seleccionar la pestaña WireGuard
+    const wgTabBtn = wrapper.findAll('.btn-subtab').find((b) => b.text() === 'WireGuard');
+    expect(wgTabBtn).toBeDefined();
+    await wgTabBtn!.trigger('click');
+    await flushPromises();
+
+    // Debe renderizar el túnel 'miprueba' aunque RouterOS v7 devuelva type: 'wg'
+    expect(wrapper.text()).toContain('miprueba');
+    expect(wrapper.text()).toContain('1420');
+
+    // No debe mostrar el botón Cable Test sobre una interfaz WireGuard
+    expect(wrapper.text()).not.toContain('Cable Test');
+
+    // Editar la interfaz WireGuard debe llamar a /webfig/interfaces/wireguard/*B
+    const editBtn = wrapper.find('button[aria-label="Editar interfaz"]');
+    expect(editBtn.exists()).toBe(true);
+    await editBtn.trigger('click');
+    await flushPromises();
+
+    const editForm = wrapper.find('.modal-form');
+    expect(editForm.exists()).toBe(true);
+    await editForm.trigger('submit.prevent');
+    await flushPromises();
+
+    expect(patchSpy).toHaveBeenCalledWith(
+      '/api/v1/routers/r-01/webfig/interfaces/wireguard/*B',
+      expect.objectContaining({ name: 'miprueba', mtu: 1420 }),
+    );
+
+    // Eliminar la interfaz WireGuard desde la pestaña WireGuard
+    const delBtn = wrapper.find('button[aria-label="Eliminar interfaz WireGuard"]');
+    expect(delBtn.exists()).toBe(true);
+    await delBtn.trigger('click');
+    await flushPromises();
+
+    expect(deleteSpy).toHaveBeenCalledWith('/api/v1/routers/r-01/webfig/interfaces/wireguard/*B');
+
+    confirmSpy.mockRestore();
+    getSpy.mockRestore();
+    patchSpy.mockRestore();
+    deleteSpy.mockRestore();
+    wrapper.unmount();
+  });
+
   it('FirewallRulesView — gestiona reglas, modales, reseteo de contadores y Safe Mode', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
 

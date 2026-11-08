@@ -56,6 +56,11 @@
     return `${bps} bps`;
   }
 
+  function isWireGuardType(type?: string): boolean {
+    const normalized = String(type || '').toLowerCase();
+    return normalized === 'wireguard' || normalized === 'wg';
+  }
+
   const filteredInterfaces = computed(() => {
     return interfacesList.value.filter((iface) => {
       if (activeTab.value === 'all') return true;
@@ -63,8 +68,10 @@
       if (activeTab.value === 'sfp') return Boolean(iface.is_sfp);
       if (activeTab.value === 'vlan') return iface.type === 'vlan';
       if (activeTab.value === 'bridge') return iface.type === 'bridge';
-      if (activeTab.value === 'wireguard') return iface.type === 'wireguard';
-      if (activeTab.value === 'wifi') return iface.type === 'wifi' || iface.type === 'wlan';
+      if (activeTab.value === 'wireguard') return isWireGuardType(iface.type);
+      if (activeTab.value === 'wifi') {
+        return iface.type === 'wifi' || iface.type === 'wlan' || iface.type === 'cap';
+      }
       return true;
     });
   });
@@ -190,9 +197,12 @@
     errorMessage.value = '';
     try {
       const isVlan = editingIface.value.type === 'vlan';
+      const isWg = isWireGuardType(editingIface.value.type);
       const endpoint = isVlan
         ? `/api/v1/routers/${routerId.value}/webfig/interfaces/vlan/${encodeURIComponent(editingIface.value.id)}`
-        : `/api/v1/routers/${routerId.value}/webfig/interfaces/${encodeURIComponent(editingIface.value.id)}`;
+        : isWg
+          ? `/api/v1/routers/${routerId.value}/webfig/interfaces/wireguard/${encodeURIComponent(editingIface.value.id)}`
+          : `/api/v1/routers/${routerId.value}/webfig/interfaces/${encodeURIComponent(editingIface.value.id)}`;
       const payload = isVlan
         ? {
             name: editIfaceForm.value.name,
@@ -290,25 +300,28 @@
   }
 
   async function handleDeleteVlan(iface: InterfaceRow) {
-    if (!confirm(`¿Eliminar la interfaz VLAN "${iface.name}"?`)) {
+    const isWg = isWireGuardType(iface.type);
+    const label = isWg ? 'WireGuard' : 'VLAN';
+    if (!confirm(`¿Eliminar la interfaz ${label} "${iface.name}"?`)) {
       return;
     }
     isLoading.value = true;
     errorMessage.value = '';
     try {
+      const subPath = isWg ? 'wireguard' : 'vlan';
       const res = await http.delete(
-        `/api/v1/routers/${routerId.value}/webfig/interfaces/vlan/${iface.id}`,
+        `/api/v1/routers/${routerId.value}/webfig/interfaces/${subPath}/${encodeURIComponent(iface.id)}`,
       );
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       statusMessage.value = intercepted
         ? (res.data as any)?.detail || 'Solicitud de eliminación en espera de aprobación humana en Maker-Checker.'
-        : `Interfaz VLAN "${iface.name}" eliminada exitosamente.`;
+        : `Interfaz ${label} "${iface.name}" eliminada exitosamente.`;
       loadInterfaces(true);
     } catch (err: unknown) {
       webFigStore.stopSafeMode?.();
       const error = err as { message?: string; detail?: string; response?: { data?: { detail?: string } } };
       errorMessage.value =
-        error.response?.data?.detail || error.detail || error.message || 'Error al eliminar la interfaz VLAN.';
+        error.response?.data?.detail || error.detail || error.message || `Error al eliminar la interfaz ${label}.`;
     } finally {
       isLoading.value = false;
     }
@@ -431,7 +444,7 @@
               {{ row.disabled ? '▶' : '⏸' }}
             </button>
             <button
-              v-if="row.type === 'ether' || !row.is_sfp"
+              v-if="row.type === 'ether' && !row.is_sfp"
               type="button"
               class="btn-table-action"
               title="Diagnóstico TDR de pares de cobre (Cable Test)"
@@ -441,11 +454,11 @@
               🔌 Cable Test
             </button>
             <button
-              v-if="row.type === 'vlan'"
+              v-if="row.type === 'vlan' || isWireGuardType(row.type)"
               type="button"
               class="btn-table-action btn-table-action--delete"
-              title="Eliminar interfaz VLAN"
-              aria-label="Eliminar interfaz VLAN"
+              :title="isWireGuardType(row.type) ? 'Eliminar interfaz WireGuard' : 'Eliminar interfaz VLAN'"
+              :aria-label="isWireGuardType(row.type) ? 'Eliminar interfaz WireGuard' : 'Eliminar interfaz VLAN'"
               @click="handleDeleteVlan(row as InterfaceRow)"
             >
               🗑️

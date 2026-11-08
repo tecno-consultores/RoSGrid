@@ -175,6 +175,9 @@ async def update_interface(
         )
     await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface")
     await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/ethernet")
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/vlan")
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/bridge")
+    await invalidate_webfig_cache(redis, tenant_id, router_id, "/interface/wireguard")
     return res
 
 

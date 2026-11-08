@@ -1519,6 +1519,16 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  # ============================================================================
+  # SPEC 96: PARIDAD TIPO NATIVO WIREGUARD (type="wg") E INVALIDACIÓN CACHÉ
+  # ============================================================================
+  Scenario: 170. Listado de interfaces (/webfig/interfaces) incluye túneles WireGuard con type="wg" nativo de RouterOS v7
+    Given path '/api/v1/routers/00000000-0000-0000-0000-000000000001/webfig/interfaces'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
 
 
 

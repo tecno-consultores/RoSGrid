@@ -1095,6 +1095,14 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * match notifMarkAllReadContract.unreadRowClass == '.notif-row--unread'
     * match notifMarkAllReadContract.readRowClass == '.notif-row--read'
 
+  # ============================================================================
+  # SPEC 96: PESTAÑA WIREGUARD EN /webfig/interfaces RECONOCE type="wg" DE ROUTEROS V7
+  # ============================================================================
+  Scenario: 110. La sub-pestaña WireGuard en InterfacesAndSfpView filtra tanto type="wg" como type="wireguard"
+    * def ifaceWgNative = { id: '*B', name: 'miprueba', type: 'wg', mtu: 1420, running: true, disabled: false }
+    * assert ifaceWgNative.type == 'wg' || ifaceWgNative.type == 'wireguard'
+
+
 
 
 

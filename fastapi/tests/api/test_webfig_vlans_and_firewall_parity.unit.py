@@ -358,3 +358,36 @@ async def test_mikrotik_client_error_global_handler():
 
     res_conn = await handler(req, MikrotikConnectionError("No route to host"))
     assert res_conn.status_code == 502
+
+
+@pytest.mark.asyncio
+async def test_update_interface_invalidates_wireguard_vlan_and_bridge_caches(mock_claims: dict) -> None:
+    """Certifica que update_interface invalida /interface, /interface/ethernet, /interface/vlan, /interface/bridge y /interface/wireguard (Spec 96)."""
+    from src.api.v1.webfig_interfaces import update_interface
+    from src.schemas.webfig_l1_net import UpdateInterfaceRequest
+
+    router_id = uuid.uuid4()
+    mock_db = AsyncMock()
+    mock_client = AsyncMock()
+    mock_client.get.return_value = {".id": "*B", "name": "miprueba", "type": "wg", "mtu": "1420"}
+
+    with (
+        patch("src.api.v1.webfig_interfaces.get_router_and_client", return_value=(AsyncMock(), mock_client)),
+        patch("src.api.v1.webfig_interfaces.execute_safe_mutation", new_callable=AsyncMock) as mock_safe,
+        patch("src.api.v1.webfig_interfaces.invalidate_webfig_cache", new_callable=AsyncMock) as mock_inv,
+    ):
+        mock_safe.return_value = {"status": "success", "action": "set"}
+        res = await update_interface(
+            router_id=router_id,
+            item_id="*B",
+            payload=UpdateInterfaceRequest(comment="Túnel WG r1", mtu=1420),
+            claims=mock_claims,
+            db=mock_db,
+        )
+        assert res["status"] == "success"
+        invalidated_paths = [call.args[3] for call in mock_inv.await_args_list]
+        assert "/interface" in invalidated_paths
+        assert "/interface/wireguard" in invalidated_paths
+        assert "/interface/vlan" in invalidated_paths
+        assert "/interface/bridge" in invalidated_paths
+
