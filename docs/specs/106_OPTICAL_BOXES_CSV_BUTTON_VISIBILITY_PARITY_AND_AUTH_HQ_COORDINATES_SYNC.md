@@ -1,6 +1,6 @@
 # Especificación 106: Visibilidad Directa del Botón `📦 Importar Cajas NAP CSV` para Administradores en `/subscribers-map`, Capa de Cajas NAP Dinámica en `UnifiedNetworkMap.vue` y Sincronización de `hq_latitude`/`hq_longitude` en Login (`auth.py`)
 
-**Estado:** Pendiente de Ejecución (`[ ]` Hito 30.29)  
+**Estado:** COMPLETADO (`[x]` Hito 30.29)  
 **Target de Ejecución:** Gemini 3.8 Flash (High)  
 **Ámbito:** Frontend (`vue3/src/views/SubscribersMapView.vue`, `vue3/src/components/network/UnifiedNetworkMap.vue`) + Backend (`fastapi/src/api/v1/auth.py`) + Pruebas Unitarias y Karate Labs BDD
 

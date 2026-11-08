@@ -692,15 +692,15 @@
         </button>
         <!-- Botón Modo Empresa / Común: Sincronizar leases DHCP reales desde MikroTik -->
         <button
+          id="btn-sync-dhcp-clients"
           type="button"
           class="btn-sync-dhcp"
           :disabled="isSyncingDhcp"
           aria-label="Sincronizar Dispositivos DHCP"
           @click="handleSyncDhcpClients"
         >
-          <span v-if="isSyncingDhcp">⏳</span>
-          <span v-else>🔄</span>
-          {{ isSyncingDhcp ? t('subscribers_map.syncing_dhcp') : t('subscribers_map.btn_sync_dhcp') }}
+          <span v-if="isSyncingDhcp">⏳ {{ t('subscribers_map.syncing_dhcp') }}</span>
+          <span v-else>{{ t('subscribers_map.btn_sync_dhcp') }}</span>
         </button>
         <!-- Botón Carga Masiva CSV Clientes (Solo SUPERADMIN_GLOBAL y TENANT_ADMIN) -->
         <button
@@ -713,9 +713,9 @@
         >
           {{ t('subscribers_map.btn_import_csv', '📂 Importar Clientes CSV') }}
         </button>
-        <!-- Botón Carga Masiva CSV Cajas NAP (Hito 30.26 / Spec 103) -->
+        <!-- Botón Carga Masiva CSV Cajas NAP (Hito 30.26 / Spec 103 & Spec 106) -->
         <button
-          v-if="canManageBulkSubscribers && isIspMode"
+          v-if="canManageBulkSubscribers"
           id="btn-import-optical-boxes-csv"
           type="button"
           class="btn-sync-dhcp"

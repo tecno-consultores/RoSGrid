@@ -70,6 +70,14 @@
     );
   });
 
+  const canShowBoxesLayer = computed<boolean>(
+    () =>
+      isIspMode.value ||
+      props.opticalBoxes.length > 0 ||
+      props.mode === 'subscribers' ||
+      props.mode === 'wallboard',
+  );
+
   // Control RBAC: Si allowWebfig es false (modo técnico de campo), WebFig está terminantemente prohibido
   const canAccessWebFig = computed<boolean>(() => {
     if (!props.allowWebfig) return false;
@@ -106,7 +114,7 @@
 
   // Estado de los 4 Toggles de Capa Independientes
   const showRouters = ref<boolean>(props.mode === 'inventory' || props.mode === 'wallboard');
-  const showBoxes = ref<boolean>(isIspMode.value && props.mode === 'subscribers');
+  const showBoxes = ref<boolean>(canShowBoxesLayer.value && props.mode === 'subscribers');
   const showSubscribers = ref<boolean>(props.mode === 'subscribers');
   const showL2Links = ref<boolean>(props.mode === 'wallboard');
   const l2Edges = ref<TopologyEdge[]>([]);
@@ -443,7 +451,7 @@
         }
       }
     }
-    if (isIspMode.value && showBoxes.value) {
+    if (canShowBoxesLayer.value && showBoxes.value) {
       for (const b of props.opticalBoxes) {
         const lat = Number(b.latitude);
         const lng = Number(b.longitude);
@@ -578,7 +586,7 @@
 
     // 2. Capa de Cajas NAP FTTH (■ Pequeños cuadrados de colores según ocupación)
     const renderedBoxCoords = new Map<string, [number, number]>();
-    if (isIspMode.value && showBoxes.value && boxesLayer) {
+    if (canShowBoxesLayer.value && showBoxes.value && boxesLayer) {
       props.opticalBoxes.forEach((b, boxIdx) => {
         const baseLat = Number(b.latitude);
         const baseLng = Number(b.longitude);
@@ -865,7 +873,7 @@
         </button>
 
         <button
-          v-if="isIspMode"
+          v-if="canShowBoxesLayer"
           type="button"
           class="btn-layer-toggle btn-layer-boxes"
           :class="{ 'btn-layer-toggle--active': showBoxes }"

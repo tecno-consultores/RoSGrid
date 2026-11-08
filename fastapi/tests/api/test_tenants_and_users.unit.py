@@ -1177,3 +1177,50 @@ async def test_superadmin_create_user_with_explicit_tenant_and_reassign_tenant(
     finally:
         app.dependency_overrides.pop(get_db_session, None)
 
+
+def test_extract_tenant_features_includes_hq_coordinates_and_converts_decimal():
+    """Hito 30.29 / Spec 106: _extract_tenant_features en auth.py debe incluir hq_latitude y
+
+    hq_longitude convertidos estrictamente a float ante valores Decimal o None.
+    """
+    from decimal import Decimal
+    from src.api.v1.auth import _extract_tenant_features
+
+    # Caso 1: Tenant con coordenadas GPS en Decimal (NUMERIC de PostgreSQL)
+    tenant_decimal = Tenant(
+        id=uuid.uuid4(),
+        slug="tecno-carabobo",
+        name="Tecno Sede Carabobo",
+        status=TenantStatusEnum.ACTIVE,
+        max_routers_quota=10,
+        max_users_quota=5,
+        hq_latitude=Decimal("10.231001"),
+        hq_longitude=Decimal("-67.880387"),
+    )
+    tenant_decimal.features = {"custom_flag": True}
+    features_dec = _extract_tenant_features(tenant_decimal)
+    assert features_dec["hq_latitude"] == 10.231001
+    assert isinstance(features_dec["hq_latitude"], float)
+    assert features_dec["hq_longitude"] == -67.880387
+    assert isinstance(features_dec["hq_longitude"], float)
+    assert features_dec["custom_flag"] is True
+    assert features_dec["isp_module_enabled"] is True
+
+    # Caso 2: Tenant con coordenadas nulas (fallback a sede central RoSGrid por defecto)
+    tenant_none = Tenant(
+        id=uuid.uuid4(),
+        slug="tecno-default",
+        name="Tecno Default",
+        status=TenantStatusEnum.ACTIVE,
+        max_routers_quota=10,
+        max_users_quota=5,
+        hq_latitude=None,
+        hq_longitude=None,
+    )
+    features_none = _extract_tenant_features(tenant_none)
+    assert features_none["hq_latitude"] == 10.4806
+    assert isinstance(features_none["hq_latitude"], float)
+    assert features_none["hq_longitude"] == -66.9036
+    assert isinstance(features_none["hq_longitude"], float)
+
+

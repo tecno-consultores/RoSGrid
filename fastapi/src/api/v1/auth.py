@@ -411,10 +411,14 @@ def _extract_tenant_features(tenant: Tenant) -> dict[str, Any]:
         "onboarding_completed": False,
         "mass_outage_threshold": 10,
         "default_locale": "es",
+        "hq_latitude": 10.4806,
+        "hq_longitude": -66.9036,
     }
     for key in list(features_dict.keys()):
         val = getattr(tenant, key, None)
         if val is not None:
+            if key in ("hq_latitude", "hq_longitude"):
+                val = float(val)
             features_dict[key] = val
 
     custom_features = getattr(tenant, "features", None)

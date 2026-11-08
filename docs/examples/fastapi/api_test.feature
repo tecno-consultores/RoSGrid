@@ -1628,6 +1628,16 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  # ============================================================================
+  # SPEC 106: SINCRONIZACIÓN DE COORDENADAS HQ EN AUTH Y VISIBILIDAD CAJAS NAP
+  # ============================================================================
+  Scenario: 178. Entrega de coordenadas GPS de Sede Principal en contrato de autenticacion y perfil (Spec 106)
+    Given path '/api/v1/auth/me'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
 
 
 

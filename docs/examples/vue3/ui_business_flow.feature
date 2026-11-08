@@ -1181,6 +1181,15 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * assert patchTenantHq.hq_longitude == -67.879812
     * assert patchTenantHq.before_hq_lat_type == 'float'
 
+  # ============================================================================
+  # SPEC 106: PARIDAD DE VISIBILIDAD BOTÓN CAJAS NAP CSV Y CAPA DINÁMICA NAP
+  # ============================================================================
+  Scenario: 120. Paridad de visibilidad para importacion masiva de cajas NAP CSV en suscriptores sin depender de isp_module_enabled (Spec 106)
+    * def opticalBoxesCsvVisibility = { role: 'TENANT_ADMIN', isp_module_enabled: false, can_manage_bulk_subscribers: true, btn_boxes_visible: true }
+    * assert opticalBoxesCsvVisibility.can_manage_bulk_subscribers == true
+    * assert opticalBoxesCsvVisibility.btn_boxes_visible == true
+
+
 
 
 

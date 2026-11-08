@@ -190,14 +190,15 @@ describe('UnifiedNetworkMap.vue — Mapa de Red Unificado & Gobierno RCA (Hito 2
     expect(wrapper.text()).toContain('Clientes');
   });
 
-  it('oculta estrictamente el toggle de Cajas NAP si isp_module_enabled es falso (Empresas Privadas / No-ISPs)', () => {
+  it('oculta toggle de Cajas NAP si isp_module_enabled es falso sin cajas cargadas y en modo no-subscribers (Spec 106)', () => {
     const authStore = useAuthStore();
     authStore.tenantFeatures = { isp_module_enabled: false };
 
     const wrapper = mount(UnifiedNetworkMap, {
       props: {
+        mode: 'inventory',
         routers: mockRouters,
-        opticalBoxes: mockBoxes,
+        opticalBoxes: [],
         subscribers: mockSubscribers,
       },
       global: {
@@ -212,6 +213,45 @@ describe('UnifiedNetworkMap.vue — Mapa de Red Unificado & Gobierno RCA (Hito 2
     expect(wrapper.find('.btn-layer-boxes').exists()).toBe(false);
     expect(wrapper.find('.btn-layer-subs').exists()).toBe(true);
     expect(wrapper.text()).toContain('Clientes');
+  });
+
+  it('habilita canShowBoxesLayer en Cajas NAP si existen cajas cargadas o en modo subscribers aun con isp_module_enabled falso (Hito 30.29 / Spec 106)', () => {
+    const authStore = useAuthStore();
+    authStore.tenantFeatures = { isp_module_enabled: false };
+
+    // Caso A: con cajas cargadas en modo inventario
+    const wrapperWithBoxes = mount(UnifiedNetworkMap, {
+      props: {
+        mode: 'inventory',
+        routers: mockRouters,
+        opticalBoxes: mockBoxes,
+        subscribers: mockSubscribers,
+      },
+      global: {
+        plugins: [pinia],
+        stubs: {
+          RouterLink: true,
+        },
+      },
+    });
+    expect(wrapperWithBoxes.find('.btn-layer-boxes').exists()).toBe(true);
+
+    // Caso B: en modo subscribers
+    const wrapperSubscribers = mount(UnifiedNetworkMap, {
+      props: {
+        mode: 'subscribers',
+        routers: mockRouters,
+        opticalBoxes: [],
+        subscribers: mockSubscribers,
+      },
+      global: {
+        plugins: [pinia],
+        stubs: {
+          RouterLink: true,
+        },
+      },
+    });
+    expect(wrapperSubscribers.find('.btn-layer-boxes').exists()).toBe(true);
   });
 
   it('permite alternar el estado activo de las capas al hacer click en los botones', async () => {

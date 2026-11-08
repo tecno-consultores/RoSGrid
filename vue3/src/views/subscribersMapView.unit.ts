@@ -517,4 +517,44 @@ describe('SubscribersMapView.vue — Vista Bimodal de Mapa de Red y Clientes', (
       expect(wrapperAdmin.find('#modal-import-optical-boxes-csv').exists()).toBe(false);
     });
   });
+
+  it('paridad de visibilidad en #btn-import-optical-boxes-csv sin depender de isp_module_enabled y eliminación de doble ícono DHCP (Hito 30.29 / Spec 106)', async () => {
+    const authStore = useAuthStore();
+    authStore.currentRole = 'TENANT_ADMIN';
+    // Empresa privada / no-ISP con isp_module_enabled = false
+    authStore.tenantFeatures = { isp_module_enabled: false };
+
+    const wrapperAdmin = mount(SubscribersMapView, {
+      global: {
+        stubs: { RouterLink: true },
+      },
+    });
+    await vi.waitFor(() => {
+      expect(wrapperAdmin.find(MOCK_MAP_SELECTOR).exists()).toBe(true);
+    });
+
+    // 1. Ambos botones de importación masiva CSV deben ser visibles para administradores
+    expect(wrapperAdmin.find('#btn-import-subscribers-csv').exists()).toBe(true);
+    expect(wrapperAdmin.find('#btn-import-optical-boxes-csv').exists()).toBe(true);
+
+    // 2. Botón de sincronización DHCP debe existir con ID y NO contener doble ícono "🔄 🔄"
+    const syncBtn = wrapperAdmin.find('#btn-sync-dhcp-clients');
+    expect(syncBtn.exists()).toBe(true);
+    const syncText = syncBtn.text();
+    expect(syncText).not.toContain('🔄 🔄');
+    expect(syncText).toContain('Sincronizar Dispositivos DHCP');
+
+    // 3. Para roles sin privilegios masivos (ej. NOC_MONITOR), ambos botones permanecen ocultos
+    authStore.currentRole = 'NOC_MONITOR';
+    const wrapperNoc = mount(SubscribersMapView, {
+      global: {
+        stubs: { RouterLink: true },
+      },
+    });
+    await vi.waitFor(() => {
+      expect(wrapperNoc.find(MOCK_MAP_SELECTOR).exists()).toBe(true);
+    });
+    expect(wrapperNoc.find('#btn-import-subscribers-csv').exists()).toBe(false);
+    expect(wrapperNoc.find('#btn-import-optical-boxes-csv').exists()).toBe(false);
+  });
 });
