@@ -965,7 +965,12 @@
       <div ref="mapContainer" class="unified-leaflet-container" tabindex="0" aria-label="Mapa de Red Unificado"></div>
 
       <!-- Drawer Lateral de Detalle con Gobernanza RBAC y Prevención de Colisiones -->
-      <aside v-if="activeRouter || activeLocationGroup || activeBox || activeSubscriber || activeL2Edge" class="unified-detail-drawer" aria-label="Panel de Información">
+      <aside
+        v-if="activeRouter || activeLocationGroup || activeBox || activeSubscriber || activeL2Edge"
+        class="unified-detail-drawer"
+        :class="{ 'unified-detail-drawer--wallboard': props.mode === 'wallboard' }"
+        aria-label="Panel de Información"
+      >
         <!-- Detalle de Enlace Físico L2 / PoE -->
         <div v-if="activeL2Edge" class="drawer-card l2-edge-detail-card">
           <div class="card-header">
@@ -1277,6 +1282,11 @@
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7);
   z-index: 1000;
   backdrop-filter: blur(8px);
+}
+
+.unified-detail-drawer--wallboard {
+  left: 1rem;
+  right: auto;
 }
 
 @media (max-width: 640px) {

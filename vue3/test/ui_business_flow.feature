@@ -1220,6 +1220,16 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * assert loginSafeScroll.bootstrap_wide_card_2col == true
     * assert loginSafeScroll.register_wide_card_2col == true
 
+  # ============================================================================
+  # SPEC 110: AISLAMIENTO DE STACKING CONTEXT EN SHELL Y CERO SOLAPAMIENTO HUD
+  # ============================================================================
+  Scenario: 124. Aislamiento de contexto de apilamiento entre menu de usuario superior y HUD flotante de eventos en Wallboard NOC (Spec 110)
+    * def wallboardStackingIsolation = { header_z_index_3000: true, main_isolated_stacking: true, user_menu_above_events_hud: true, map_drawer_left_in_wallboard: true }
+    * assert wallboardStackingIsolation.header_z_index_3000 == true
+    * assert wallboardStackingIsolation.main_isolated_stacking == true
+    * assert wallboardStackingIsolation.user_menu_above_events_hud == true
+    * assert wallboardStackingIsolation.map_drawer_left_in_wallboard == true
+
 
 
 

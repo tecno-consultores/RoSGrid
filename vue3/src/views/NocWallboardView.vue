@@ -647,7 +647,9 @@
   .noc-wallboard {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    height: calc(100vh - 108px);
+    height: calc(100dvh - 108px);
+    min-height: 520px;
     width: 100%;
     background-color: #030712;
     color: #f9fafb;
@@ -656,6 +658,13 @@
       -apple-system,
       sans-serif;
     overflow: hidden;
+    border-radius: 8px;
+  }
+
+  .noc-wallboard:fullscreen {
+    height: 100vh;
+    height: 100dvh;
+    border-radius: 0;
   }
 
   /* Banner Táctico de Caída Masiva (docs/specs/32 §5.3) */

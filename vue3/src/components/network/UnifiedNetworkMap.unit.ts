@@ -855,5 +855,39 @@ describe('UnifiedNetworkMap.vue — Mapa de Red Unificado & Gobierno RCA (Hito 2
       expect.any(Number),
     );
   });
+
+  it('posiciona .unified-detail-drawer a la izquierda (.unified-detail-drawer--wallboard) en modo wallboard para no solapar el HUD de eventos (Spec 110)', async () => {
+    const wrapper = mount(UnifiedNetworkMap, {
+      props: {
+        mode: 'wallboard',
+        routers: mockRouters,
+        opticalBoxes: [],
+        subscribers: [],
+      },
+      global: {
+        plugins: [pinia],
+        stubs: { RouterLink: true },
+      },
+    });
+
+    await wrapper.vm.$nextTick();
+
+    // Sin elemento activo, el drawer no existe
+    expect(wrapper.find('.unified-detail-drawer').exists()).toBe(false);
+
+    // Activamos un enlace L2 para abrir el drawer
+    (wrapper.vm as any).activeL2Edge = {
+      source_router_id: 'r1',
+      source_interface: 'ether1',
+      target_router_id: 'r2',
+      target_interface: 'ether2',
+      protocol: 'LLDP',
+    };
+    await wrapper.vm.$nextTick();
+
+    const drawer = wrapper.find('.unified-detail-drawer');
+    expect(drawer.exists()).toBe(true);
+    expect(drawer.classes()).toContain('unified-detail-drawer--wallboard');
+  });
 });
 

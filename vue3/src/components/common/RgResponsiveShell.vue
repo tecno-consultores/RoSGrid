@@ -717,6 +717,7 @@
   }
 
   .rg-header {
+    position: relative;
     height: 52px;
     flex-shrink: 0;
     background: var(--rg-bg-surface);
@@ -725,7 +726,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 0 16px;
-    z-index: 800;
+    z-index: 3000;
   }
 
   .header-left,
@@ -1168,6 +1169,9 @@
   }
 
   .rg-main {
+    position: relative;
+    z-index: 1;
+    isolation: isolate;
     flex: 1;
     height: 100%;
     min-height: 0;

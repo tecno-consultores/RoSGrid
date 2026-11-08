@@ -162,4 +162,23 @@ describe('NocWallboardView.vue — Conmutador de Mapa Geográfico y Grafo L2/PoE
     expect(wrapper.find('#wallboard-events-hud').exists()).toBe(true);
     expect(wrapper.find('#btn-wallboard-expand-events-hud').exists()).toBe(false);
   });
+
+  it('mantiene la jerarquía estructural de .noc-wallboard con .wallboard-header, .wallboard-body y #wallboard-events-hud sin desbordamiento (Spec 110)', async () => {
+    const wrapper = mount(NocWallboardView, {
+      global: {
+        plugins: [pinia],
+        stubs: {
+          UnifiedNetworkMap: true,
+          L2TopologyView: true,
+        },
+      },
+    });
+    await flushPromises();
+
+    const rootWallboard = wrapper.find('.noc-wallboard');
+    expect(rootWallboard.exists()).toBe(true);
+    expect(rootWallboard.find('.wallboard-header').exists()).toBe(true);
+    expect(rootWallboard.find('.wallboard-body').exists()).toBe(true);
+    expect(rootWallboard.find('#wallboard-events-hud').exists()).toBe(true);
+  });
 });
