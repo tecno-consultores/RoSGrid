@@ -188,15 +188,6 @@ async def _log_login_event(
         logger.warning("No se pudo registrar log de auditoría de autenticación: %s", exc)
 
 
-def _validate_user_lock(user: User) -> None:
-    now_utc = datetime.now(UTC)
-    if user.is_locked and user.locked_until and user.locked_until > now_utc:
-        raise HTTPException(
-            status_code=423,
-            detail="Cuenta bloqueada temporalmente por múltiples intentos fallidos. Intenta en 15 minutos.",
-        )
-
-
 async def _verify_user_credentials(
     db: AsyncSession,
     user: User,

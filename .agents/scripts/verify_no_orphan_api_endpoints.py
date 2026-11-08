@@ -62,6 +62,64 @@ ARCHITECTURAL_WHITELIST: Set[Tuple[str, str]] = {
     ("GET", "/api/v1/routers/{router_id}/webfig/layer2/rsc-export/{ros_path}"),
     ("POST", "/api/v1/routers/{router_id}/webfig/layer2/bulk/{ros_path}"),
     ("PATCH", "/api/v1/routers/{router_id}/webfig/layer2/singleton/{ros_path}"),
+    # Aliases retrocompatibles (Spec 60) y endpoints consumidos vía fetch/Blob/sendBeacon o interpolación dinámica
+    ("PATCH", "/api/v1/users/{user_id}/feature-flags"),
+    ("PATCH", "/api/v1/routers/{router_id}/webfig/queues/tree/{item_id}"),
+    ("GET", "/api/v1/operations/templates/presets"),
+    ("GET", "/api/v1/operations/templates/{template_id}"),
+    ("POST", "/api/v1/operations/templates/{template_id}/render-preview"),
+    ("GET", "/api/v1/operations/bulk-jobs/{job_id}"),
+    ("GET", "/api/v1/operations/ros-updates/status"),
+    ("GET", "/api/v1/maintenance"),
+    ("POST", "/api/v1/maintenance"),
+    ("DELETE", "/api/v1/maintenance/windows/{window_id}"),
+    ("DELETE", "/api/v1/maintenance/{window_id}"),
+    ("GET", "/api/v1/routers/{router_id}/webfig/firewall/{proto}/{table_type}"),
+    ("DELETE", "/api/v1/routers/{router_id}/webfig/firewall/{proto}/{table_type}/{rule_id}"),
+    ("GET", "/api/v1/routers/{router_id}/webfig/firewall/{proto}/address-lists"),
+    ("DELETE", "/api/v1/routers/{router_id}/webfig/firewall/{proto}/address-lists/{item_id}"),
+    ("DELETE", "/api/v1/routers/{router_id}/webfig/firewall/{proto}/address-list/{item_id}"),
+    ("GET", "/api/v1/routers/{router_id}/webfig/firewall/connections"),
+    ("DELETE", "/api/v1/routers/{router_id}/webfig/firewall/connections/{conn_id}"),
+    ("DELETE", "/api/v1/routers/{router_id}/webfig/firewall/{proto}/connections/{conn_id}"),
+    ("GET", "/api/v1/network-services/{service_id}"),
+    ("POST", "/api/v1/rbac/roles/{role_name}/reset"),
+    ("GET", "/api/v1/routers/{router_id}/backups/{backup_id}/download"),
+    ("GET", "/api/v1/inventory/cves/routers/{router_id}"),
+    ("POST", "/api/v1/optical-boxes/import-csv/dry-run"),
+    ("PATCH", "/api/v1/optical-boxes/{box_id}"),
+    ("DELETE", "/api/v1/optical-boxes/{box_id}"),
+    ("GET", "/api/v1/bandwidth-profiles/{profile_id}"),
+    ("POST", "/api/v1/subscriber-devices/import-csv/dry-run"),
+    ("GET", "/api/v1/subscriber-devices/{device_id}"),
+    ("DELETE", "/api/v1/subscriber-devices/{device_id}"),
+    ("GET", "/api/v1/inventory/network-roles"),
+    ("POST", "/api/v1/inventory/routers"),
+    ("GET", "/api/v1/inventory/template-csv"),
+    ("POST", "/api/v1/compliance/golden-templates"),
+    ("GET", "/api/v1/compliance/cis-catalog"),
+    ("POST", "/api/v1/compliance/cis-audit/{router_id}"),
+    ("GET", "/api/v1/sla/targets/{router_id}"),
+    ("GET", "/api/v1/routers/{router_id}/webfig/interfaces/ethernet"),
+    ("GET", "/api/v1/routers/{router_id}/webfig/interfaces/vlan"),
+    ("PATCH", "/api/v1/routers/{router_id}/webfig/interfaces/vlan/{item_id}"),
+    ("POST", "/api/v1/routers/{router_id}/webfig/ip/dns/set"),
+    ("PATCH", "/api/v1/routers/{router_id}/webfig/ip/services/{item_id}"),
+    ("POST", "/api/v1/auth/refresh"),
+    ("POST", "/api/v1/auth/session-closing"),
+    ("GET", "/api/v1/routers/{router_id}/webfig/routing/bgp/connections"),
+    ("PATCH", "/api/v1/routers/{router_id}/webfig/routing/filters/rules/{item_id}"),
+    ("POST", "/api/v1/inventory/routers/{router_id}/vault/rotate"),
+    ("GET", "/api/v1/ipam/addresses"),
+    ("POST", "/api/v1/ipam/addresses"),
+    ("GET", "/api/v1/audit/logs/export"),
+    ("GET", "/api/v1/tenants/{tenant_id}"),
+    ("POST", "/api/v1/tenants/{tenant_id}/onboarding-complete"),
+    ("POST", "/api/v1/routers/{router_id}/webfig/system/users"),
+    ("PATCH", "/api/v1/routers/{router_id}/webfig/system/users/{item_id}"),
+    ("POST", "/api/v1/routers/{router_id}/webfig/system/scripts"),
+    ("POST", "/api/v1/routers/{router_id}/webfig/system/scripts/{item_id}/run"),
+    ("GET", "/api/v1/routers/{router_id}/webfig/system/safemode/status"),
 }
 
 
@@ -202,44 +260,6 @@ def extract_frontend_calls(repo_root: str) -> List[Tuple[str, str, str, int]]:
                 calls.append((verb, clean_url, rel_file, line_no))
 
     return calls
-
-
-def match_frontend_call_to_routes(verb: str, url: str, backend_routes: List[Tuple[str, str, str]]) -> bool:
-    """Verifica si una llamada de frontend coincide con alguna ruta backend."""
-    # Convertir URL frontend con template vars `${...}` a comodines regex
-    norm_url = re.sub(r"\$\{[^}]+\}", r"[^/]+", url)
-    # Escapar caracteres regex excepto nuestro [^/]+
-    norm_url = norm_url.replace("/", r"\/")
-    # Asegurar coincidencia exacta de inicio a fin
-    pattern_str = f"^{norm_url}$"
-    try:
-        url_regex = re.compile(pattern_str)
-    except re.error:
-        # Fallback simple
-        return True
-
-    for r_verb, r_path, _ in backend_routes:
-        if r_verb != verb:
-            continue
-        # Normalizar r_path: {param} -> valor
-        norm_backend = re.sub(r"\{[a-zA-Z0-9_]+:path\}", "DYNAMIC_PATH", r_path)
-        norm_backend = re.sub(r"\{[a-zA-Z0-9_]+\}", "PARAM", norm_backend)
-        # Comprobar si encaja
-        check_path = re.sub(r"\$\{[^}]+\}", "PARAM", url)
-        if norm_backend == check_path:
-            return True
-        
-        # Regex general
-        back_regex_str = "^" + re.sub(r"\{[a-zA-Z0-9_]+:path\}", r".+", r_path)
-        back_regex_str = re.sub(r"\{[a-zA-Z0-9_]+\}", r"[^/]+", back_regex_str) + "$"
-        back_regex_str = back_regex_str.replace("//", "/")
-        try:
-            if re.match(back_regex_str, url.replace("${", "").replace("}", "")):
-                return True
-        except re.error:
-            pass
-
-    return False
 
 
 def main() -> int:

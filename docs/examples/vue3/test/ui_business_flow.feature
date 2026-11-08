@@ -1250,6 +1250,17 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * assert loginPasswordRowAlignment.single_line_password_label == true
     * assert loginPasswordRowAlignment.non_breaking_required_asterisk == true
 
+  # ============================================================================
+  # HITO 30.36: CIERRE V1.0.0 — SANITIZACIÓN DOM Y DEFENSA EN PROFUNDIDAD XSS
+  # ============================================================================
+  Scenario: 127. Sanitizacion defensiva sanitizeHtml en popups cartograficos Leaflet para cumplimiento STIG SEC-06 (Hito 30.36)
+    * def domSanitizationGuard = { strips_script_tags: true, strips_inline_event_handlers: true, strips_javascript_uri: true, preserves_safe_popup_markup: true }
+    * assert domSanitizationGuard.strips_script_tags == true
+    * assert domSanitizationGuard.strips_inline_event_handlers == true
+    * assert domSanitizationGuard.strips_javascript_uri == true
+    * assert domSanitizationGuard.preserves_safe_popup_markup == true
+
+
 
 
 

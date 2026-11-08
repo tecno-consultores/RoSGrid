@@ -22,6 +22,7 @@ class StrictBaseModel(BaseModel):
 
 
 class ConfigTemplateCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str = Field(..., min_length=1, max_length=120)
     category: str = Field(..., min_length=1, max_length=64)
     description: str = Field(..., min_length=1)
@@ -31,6 +32,7 @@ class ConfigTemplateCreateRequest(StrictBaseModel):
 
 
 class ConfigTemplateUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str | None = Field(default=None, min_length=1, max_length=120)
     category: str | None = Field(default=None, min_length=1, max_length=64)
     description: str | None = None
@@ -54,6 +56,7 @@ class ConfigTemplateResponse(StrictBaseModel):
 
 
 class TemplateRenderPreviewRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     variables: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -77,6 +80,7 @@ class ConfigTemplatePresetResponse(StrictBaseModel):
 
 
 class BulkJobCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     job_type: str = Field(..., min_length=1, max_length=64)
     title: str = Field(..., min_length=1, max_length=180)
     template_id: uuid.UUID | None = None
@@ -142,6 +146,7 @@ class RosFleetUpdateStatusResponse(StrictBaseModel):
 
 
 class RosUpdateChannelCheckRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     router_ids: list[uuid.UUID] = Field(default_factory=list)
     channel: str = Field(default="stable", pattern="^(stable|long-term|testing|development)$")
 
@@ -171,6 +176,7 @@ class RosUpdateChannelCheckResponse(StrictBaseModel):
 
 
 class RosUpdateExecuteRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     router_ids: list[uuid.UUID] = Field(..., min_length=1)
     channel: str = Field(default="stable", pattern="^(stable|long-term|testing|development)$")
     auto_upgrade_firmware: bool = True

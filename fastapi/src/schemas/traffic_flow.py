@@ -41,6 +41,7 @@ class TrafficAnomaliesResponse(BaseModel):
 
 class TrafficMitigationRequest(StrictBaseModel):
     """Solicitud de mitigación inmediata ante tráfico malicioso o abusivo."""
+    model_config = ConfigDict(extra="forbid")
 
     router_id: uuid.UUID = Field(..., description="ID del router donde aplicar la mitigación")
     target_ip: str = Field(..., min_length=1, max_length=64, description="Dirección IP anómala a aislar")

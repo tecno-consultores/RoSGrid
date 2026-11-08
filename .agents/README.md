@@ -11,6 +11,7 @@ Este directorio implementa el estándar abierto y emergente de la industria para
 ```text
 .agents/
 ├── README.md                                         # Este documento explicativo
+├── ACTIVE_TASK.md                                    # Diario de resiliencia y progreso en tiempo real (Invariante 11X)
 ├── rules/                                            # Reglas y directivas de comportamiento forzadas
 │   ├── mandatory_qa_pyramid_and_doc_sync.md          # Pirámide de pruebas multi-capa y sync documental
 │   ├── secure_development_and_testing_guidelines.md  # Anti-Mocks ciegos, RLS forzado, SSRF, bóveda y deslinde operativo
@@ -19,8 +20,8 @@ Este directorio implementa el estándar abierto y emergente de la industria para
 │   ├── anti_regression_and_side_effects_guardrail.md # Blindaje contra regresiones y control de radio de impacto
 │   └── ground_truth_fixtures_and_negative_invariants.md # Fixtures trimodales RouterOS v7 e invariantes negativos
 ├── skills/                                           # Habilidades y Playbooks de dominio
-│   ├── rosgrid-noc-operator/                         # Operador NOC y diagnóstico autónomo vía MCP (RouterOS v7)
-│   ├── qa-11x-docker-certifier/                      # Certificación 11X en Docker efímero (95% cobertura)
+│   ├── rosgrid-noc-operator/                         # Operador NOC y diagnóstico autónomo vía MCP (RouterOS v7, 22 tools)
+│   ├── qa-11x-docker-certifier/                      # Certificación 11X en Docker efímero (>=95% cobertura)
 │   ├── mikrotik-webfig-safemode/                     # Reglas de dominio MikroTik v7, Safe Mode y RingBuffer
 │   ├── vue3-wcag-tactical-ui/                        # Arquitectura Vue 3 WinBox, WCAG 2.1 AA y Lighthouse
 │   ├── docker-trivy-keydb-hardening/                 # Endurecimiento Docker, Trivy = 0 y KeyDB multi-hilo
@@ -32,7 +33,10 @@ Este directorio implementa el estándar abierto y emergente de la industria para
     ├── verify_topological_health.py                  # Auditoría estricta de salud topológica y límites de capas AST
     ├── inspect_blast_radius.py                       # Análisis de radio de impacto pre-refactorización (aristas entrantes)
     ├── verify_zero_orphan_vue_components.py          # Auditoría estricta: paridad y cobertura de componentes Vue 3 (0 huérfanos)
-    └── certify_task_completion.sh                    # Compuerta de certificación pre-commit automatizada (8 etapas)
+    ├── verify_no_orphan_api_endpoints.py             # Auditoría bidireccional de paridad de endpoints API FastAPI <-> Vue 3
+    ├── verify_anti_silo_test_quality.py              # Auditoría estática anti-mocks ciegos de write_audit_log (Spec 83)
+    ├── verify_roadmap_consistency.py                 # Verificador de consistencia entre ROADMAP.md y ACTIVE_TASK.md
+    └── certify_task_completion.sh                    # Compuerta de certificación pre-commit automatizada (9 etapas)
 ```
 
 ---

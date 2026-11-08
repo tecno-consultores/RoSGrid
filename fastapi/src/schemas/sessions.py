@@ -2,7 +2,7 @@
 # Copyright (C) 2026 RoSGrid Contributors
 
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ActiveSessionItem(BaseModel):
@@ -29,4 +29,5 @@ class ActiveSessionsListResponse(BaseModel):
 
 
 class TerminateSessionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     reason: str = Field("Revocación manual por el Administrador", max_length=255)

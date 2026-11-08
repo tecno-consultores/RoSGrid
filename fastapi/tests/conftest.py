@@ -416,6 +416,7 @@ def make_asserting_audit_mock(return_value: Any = None) -> Any:
             )
 
         import json
+
         from src.core.audit import sanitize_sensitive_data
 
         before_st = kwargs.get("before_state")

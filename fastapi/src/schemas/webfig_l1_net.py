@@ -54,6 +54,7 @@ class CableTestResponse(BaseModel):
 
 
 class UpdateInterfaceRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str | None = Field(default=None, min_length=1, max_length=64)
     comment: str | None = None
     mtu: int | None = Field(default=None, ge=68, le=65535)
@@ -61,6 +62,7 @@ class UpdateInterfaceRequest(StrictBaseModel):
 
 
 class VlanCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str = Field(..., min_length=1, max_length=64)
     vlan_id: int = Field(..., ge=1, le=4094)
     interface: str = Field(..., min_length=1, max_length=64)
@@ -69,6 +71,7 @@ class VlanCreateRequest(StrictBaseModel):
 
 
 class VlanUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str | None = Field(default=None, min_length=1, max_length=64)
     vlan_id: int | None = Field(default=None, ge=1, le=4094)
     interface: str | None = Field(default=None, min_length=1, max_length=64)
@@ -78,6 +81,7 @@ class VlanUpdateRequest(StrictBaseModel):
 
 
 class BridgeCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str = Field(..., min_length=1, max_length=64)
     mtu: int | None = Field(default=None, ge=68, le=65535)
     vlan_filtering: bool = False
@@ -86,6 +90,7 @@ class BridgeCreateRequest(StrictBaseModel):
 
 
 class BridgeUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str | None = Field(default=None, min_length=1, max_length=64)
     mtu: int | None = Field(default=None, ge=68, le=65535)
     vlan_filtering: bool | None = None
@@ -95,6 +100,7 @@ class BridgeUpdateRequest(StrictBaseModel):
 
 
 class BridgePortCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     bridge: str = Field(..., min_length=1, max_length=64)
     interface: str = Field(..., min_length=1, max_length=64)
     pvid: int = Field(default=1, ge=1, le=4094)
@@ -104,6 +110,7 @@ class BridgePortCreateRequest(StrictBaseModel):
 
 
 class BridgePortUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     bridge: str | None = Field(default=None, min_length=1, max_length=64)
     interface: str | None = Field(default=None, min_length=1, max_length=64)
     pvid: int | None = Field(default=None, ge=1, le=4094)
@@ -116,6 +123,7 @@ class BridgePortUpdateRequest(StrictBaseModel):
 
 
 class BridgeVlanCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     bridge: str = Field(..., min_length=1, max_length=64)
     vlan_ids: str = Field(..., min_length=1, max_length=64)
     tagged: str | None = None
@@ -125,6 +133,7 @@ class BridgeVlanCreateRequest(StrictBaseModel):
 
 
 class BridgeVlanUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     bridge: str | None = Field(default=None, min_length=1, max_length=64)
     vlan_ids: str | None = Field(default=None, min_length=1, max_length=64)
     tagged: str | None = None
@@ -134,6 +143,7 @@ class BridgeVlanUpdateRequest(StrictBaseModel):
 
 
 class WireGuardCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str = Field(..., min_length=1, max_length=64)
     listen_port: int = Field(..., ge=1, le=65535)
     mtu: int | None = Field(default=1420, ge=68, le=65535)
@@ -141,6 +151,7 @@ class WireGuardCreateRequest(StrictBaseModel):
 
 
 class WireGuardUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str | None = Field(default=None, min_length=1, max_length=64)
     listen_port: int | None = Field(default=None, ge=1, le=65535)
     mtu: int | None = Field(default=None, ge=68, le=65535)
@@ -149,6 +160,7 @@ class WireGuardUpdateRequest(StrictBaseModel):
 
 
 class WireGuardPeerCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     interface: str = Field(..., min_length=1, max_length=64)
     public_key: str = Field(..., min_length=32, max_length=64)
     allowed_address: str = Field(..., min_length=3)
@@ -159,6 +171,7 @@ class WireGuardPeerCreateRequest(StrictBaseModel):
 
 
 class WireGuardPeerUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     interface: str | None = Field(default=None, min_length=1, max_length=64)
     public_key: str | None = Field(default=None, min_length=4, max_length=128)
     allowed_address: str | None = Field(default=None, min_length=3)
@@ -175,6 +188,7 @@ class WireGuardPeerUpdateRequest(StrictBaseModel):
 
 
 class IpAddressCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     address: str = Field(..., min_length=3, max_length=64)  # ej: 192.168.88.1/24
     network: str | None = None
     interface: str = Field(..., min_length=1, max_length=64)
@@ -183,6 +197,7 @@ class IpAddressCreateRequest(StrictBaseModel):
 
 
 class IpAddressUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     address: str | None = Field(default=None, min_length=3, max_length=64)
     network: str | None = None
     interface: str | None = Field(default=None, min_length=1, max_length=64)
@@ -191,6 +206,7 @@ class IpAddressUpdateRequest(StrictBaseModel):
 
 
 class IpRouteCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     dst_address: str = Field(default="0.0.0.0/0", min_length=3, max_length=64)
     gateway: str = Field(..., min_length=1)  # Soporta multi-gateway separado por comas (ECMP)
     distance: int = Field(default=1, ge=1, le=255)
@@ -201,6 +217,7 @@ class IpRouteCreateRequest(StrictBaseModel):
 
 
 class IpRouteUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     dst_address: str | None = Field(default=None, min_length=3, max_length=64)
     gateway: str | None = Field(default=None, min_length=1)
     distance: int | None = Field(default=None, ge=1, le=255)
@@ -211,6 +228,7 @@ class IpRouteUpdateRequest(StrictBaseModel):
 
 
 class IpArpCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     address: str = Field(..., min_length=3, max_length=64)
     mac_address: str = Field(..., min_length=11, max_length=17)
     interface: str = Field(..., min_length=1, max_length=64)
@@ -218,6 +236,7 @@ class IpArpCreateRequest(StrictBaseModel):
 
 
 class IpArpUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     address: str | None = Field(default=None, min_length=3, max_length=64)
     mac_address: str | None = Field(default=None, min_length=11, max_length=17)
     interface: str | None = Field(default=None, min_length=1, max_length=64)
@@ -226,12 +245,14 @@ class IpArpUpdateRequest(StrictBaseModel):
 
 
 class IpPoolCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str = Field(..., min_length=1, max_length=64)
     ranges: str = Field(..., min_length=3)
     next_pool: str | None = Field(default=None, max_length=64)
 
 
 class IpPoolUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str | None = Field(default=None, min_length=1, max_length=64)
     ranges: str | None = Field(default=None, min_length=3)
     next_pool: str | None = Field(default=None, max_length=64)
@@ -239,6 +260,7 @@ class IpPoolUpdateRequest(StrictBaseModel):
 
 
 class DhcpLeaseCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     address: str = Field(..., min_length=3, max_length=64)
     mac_address: str = Field(..., min_length=11, max_length=17)
     server: str = Field(default="all", min_length=1, max_length=64)
@@ -248,6 +270,7 @@ class DhcpLeaseCreateRequest(StrictBaseModel):
 
 
 class DhcpLeaseUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     address: str | None = Field(default=None, min_length=3, max_length=64)
     mac_address: str | None = Field(default=None, min_length=11, max_length=17)
     server: str | None = Field(default=None, min_length=1, max_length=64)
@@ -257,6 +280,7 @@ class DhcpLeaseUpdateRequest(StrictBaseModel):
 
 
 class IpServiceUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     port: int | None = Field(default=None, ge=1, le=65535)
     address: str | None = None
     disabled: bool | None = None
@@ -268,6 +292,7 @@ class IpServiceUpdateRequest(StrictBaseModel):
 
 
 class DhcpServerCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str = Field(..., min_length=1, max_length=64)
     interface: str = Field(..., min_length=1, max_length=64)
     address_pool: str = Field(..., min_length=1, max_length=64)
@@ -277,6 +302,7 @@ class DhcpServerCreateRequest(StrictBaseModel):
 
 
 class DhcpServerUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str | None = Field(default=None, min_length=1, max_length=64)
     interface: str | None = Field(default=None, min_length=1, max_length=64)
     address_pool: str | None = Field(default=None, min_length=1, max_length=64)
@@ -286,6 +312,7 @@ class DhcpServerUpdateRequest(StrictBaseModel):
 
 
 class DhcpNetworkCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     address: str = Field(..., min_length=3, max_length=64)
     gateway: str | None = None
     dns_server: str | None = None
@@ -295,6 +322,7 @@ class DhcpNetworkCreateRequest(StrictBaseModel):
 
 
 class DhcpNetworkUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     address: str | None = Field(default=None, min_length=3, max_length=64)
     gateway: str | None = None
     dns_server: str | None = None
@@ -304,6 +332,7 @@ class DhcpNetworkUpdateRequest(StrictBaseModel):
 
 
 class DhcpClientCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     interface: str = Field(..., min_length=1, max_length=64)
     add_default_route: bool = True
     use_peer_dns: bool = True
@@ -313,6 +342,7 @@ class DhcpClientCreateRequest(StrictBaseModel):
 
 
 class DhcpClientUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     interface: str | None = Field(default=None, min_length=1, max_length=64)
     add_default_route: bool | None = None
     use_peer_dns: bool | None = None
@@ -323,6 +353,7 @@ class DhcpClientUpdateRequest(StrictBaseModel):
 
 
 class DnsSettingsUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     servers: str | None = None
     allow_remote_requests: bool | None = None
     max_udp_packet_size: int | None = Field(default=None, ge=512, le=65507)
@@ -333,6 +364,7 @@ class DnsSettingsUpdateRequest(StrictBaseModel):
 
 
 class DnsStaticCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str = Field(..., min_length=1, max_length=255)
     address: str | None = Field(default=None, min_length=3, max_length=64)
     cname: str | None = Field(default=None, max_length=255)
@@ -343,6 +375,7 @@ class DnsStaticCreateRequest(StrictBaseModel):
 
 
 class DnsStaticUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str | None = Field(default=None, min_length=1, max_length=255)
     address: str | None = Field(default=None, min_length=3, max_length=64)
     cname: str | None = Field(default=None, max_length=255)
@@ -358,6 +391,7 @@ class DnsStaticUpdateRequest(StrictBaseModel):
 
 
 class Ipv6AddressCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     address: str = Field(..., min_length=3, max_length=64)
     interface: str = Field(..., min_length=1, max_length=64)
     advertise: bool = True
@@ -367,6 +401,7 @@ class Ipv6AddressCreateRequest(StrictBaseModel):
 
 
 class Ipv6AddressUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     address: str | None = Field(default=None, min_length=3, max_length=64)
     interface: str | None = Field(default=None, min_length=1, max_length=64)
     advertise: bool | None = None
@@ -376,6 +411,7 @@ class Ipv6AddressUpdateRequest(StrictBaseModel):
 
 
 class Ipv6DhcpClientCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     interface: str = Field(..., min_length=1, max_length=64)
     request: str = Field(default="prefix", max_length=16)
     pool_name: str | None = Field(default=None, max_length=64)
@@ -386,6 +422,7 @@ class Ipv6DhcpClientCreateRequest(StrictBaseModel):
 
 
 class Ipv6DhcpClientUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     interface: str | None = Field(default=None, min_length=1, max_length=64)
     request: str | None = Field(default=None, max_length=16)
     pool_name: str | None = Field(default=None, max_length=64)
@@ -397,6 +434,7 @@ class Ipv6DhcpClientUpdateRequest(StrictBaseModel):
 
 
 class Ipv6DhcpServerCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str = Field(..., min_length=1, max_length=64)
     interface: str = Field(..., min_length=1, max_length=64)
     address_pool: str = Field(..., min_length=1, max_length=64)
@@ -405,6 +443,7 @@ class Ipv6DhcpServerCreateRequest(StrictBaseModel):
 
 
 class Ipv6DhcpServerUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str | None = Field(default=None, min_length=1, max_length=64)
     interface: str | None = Field(default=None, min_length=1, max_length=64)
     address_pool: str | None = Field(default=None, min_length=1, max_length=64)
@@ -414,12 +453,14 @@ class Ipv6DhcpServerUpdateRequest(StrictBaseModel):
 
 
 class Ipv6PoolCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str = Field(..., min_length=1, max_length=64)
     prefix: str = Field(..., min_length=3, max_length=64)
     prefix_length: int = Field(default=64, ge=16, le=128)
 
 
 class Ipv6PoolUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str | None = Field(default=None, min_length=1, max_length=64)
     prefix: str | None = Field(default=None, min_length=3, max_length=64)
     prefix_length: int | None = Field(default=None, ge=16, le=128)

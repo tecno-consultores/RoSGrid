@@ -9,7 +9,7 @@ import uuid
 from typing import Any, cast
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import require_roles
@@ -287,6 +287,8 @@ ACTIONS_METADATA: list[dict[str, Any]] = [
 
 
 class UpdateRolePermissionsRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     permissions: dict[str, str] = Field(
         ...,
         description="Diccionario de acciones y nivel de permiso (ALLOW, MAKER_CHECKER, READ_ONLY, DENY)",

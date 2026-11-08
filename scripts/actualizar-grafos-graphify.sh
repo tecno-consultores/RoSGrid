@@ -19,23 +19,38 @@ if ! command -v docker &> /dev/null; then
   exit 1
 fi
 
+TARGET_STACK="${1:-all}"
+
 # 2. Descargar o asegurar imagen Graphify
 echo -e "\n📦 Verificando imagen Docker: ${IMAGE_NAME}..."
-docker pull "${IMAGE_NAME}"
+if ! docker image inspect "${IMAGE_NAME}" >/dev/null 2>&1; then
+  docker pull "${IMAGE_NAME}"
+fi
 
 # 3. Procesar Backend (FastAPI)
-echo -e "\n⚙️ [1/2] Extrayendo y agrupando grafo semántico de Backend (fastapi/)..."
-docker compose -f "${REPO_ROOT}/fastapi/docker-compose.qa.yml" --profile graphify run --rm graphify graphify extract . --code-only
-docker compose -f "${REPO_ROOT}/fastapi/docker-compose.qa.yml" --profile graphify run --rm graphify graphify cluster-only .
+if [[ "${TARGET_STACK}" == "all" || "${TARGET_STACK}" == "backend" || "${TARGET_STACK}" == "fastapi" ]]; then
+  echo -e "\n⚙️ [1/2] Extrayendo y agrupando grafo semántico de Backend (fastapi/)..."
+  docker compose -f "${REPO_ROOT}/fastapi/docker-compose.qa.yml" --profile graphify run --rm graphify graphify extract . --code-only
+  docker compose -f "${REPO_ROOT}/fastapi/docker-compose.qa.yml" --profile graphify run --rm graphify graphify cluster-only .
+fi
 
 # 4. Procesar Frontend (Vue 3)
-echo -e "\n🎨 [2/2] Extrayendo y agrupando grafo semántico de Frontend (vue3/)..."
-docker compose -f "${REPO_ROOT}/vue3/docker-compose.qa.yml" --profile graphify run --rm graphify graphify extract . --code-only
-docker compose -f "${REPO_ROOT}/vue3/docker-compose.qa.yml" --profile graphify run --rm graphify graphify cluster-only .
+if [[ "${TARGET_STACK}" == "all" || "${TARGET_STACK}" == "frontend" || "${TARGET_STACK}" == "vue3" ]]; then
+  echo -e "\n🎨 [2/2] Extrayendo y agrupando grafo semántico de Frontend (vue3/)..."
+  docker compose -f "${REPO_ROOT}/vue3/docker-compose.qa.yml" --profile graphify run --rm graphify graphify extract . --code-only
+  docker compose -f "${REPO_ROOT}/vue3/docker-compose.qa.yml" --profile graphify run --rm graphify graphify cluster-only .
+fi
 
 # 5. Normalizar permisos para el usuario del host
 echo -e "\n🔒 Normalizando permisos de salida (UID $(id -u):$(id -g))..."
 docker run --rm -v "${REPO_ROOT}:/work" "${IMAGE_NAME}" chown -R "$(id -u):$(id -g)" /work/fastapi/graphify-out /work/vue3/graphify-out
+
+# Sincronizar copia en graphify-out/ raíz para herramientas MCP (certify_11x_gate / inspect_ast_blast_radius)
+mkdir -p "${REPO_ROOT}/graphify-out"
+if [ -f "${REPO_ROOT}/fastapi/graphify-out/graph.json" ]; then
+  cp "${REPO_ROOT}/fastapi/graphify-out/graph.json" "${REPO_ROOT}/graphify-out/graph.json"
+  cp "${REPO_ROOT}/fastapi/graphify-out/GRAPH_REPORT.md" "${REPO_ROOT}/graphify-out/GRAPH_REPORT.md" 2>/dev/null || true
+fi
 
 # 6. Mostrar resumen
 echo -e "\n✅ Extracción completada exitosamente. Resumen de grafos generados:"

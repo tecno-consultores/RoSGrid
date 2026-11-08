@@ -197,6 +197,9 @@ async def tenant_events_ws(ws: WebSocket) -> None:
     await _verify_ws_origin(ws)
     await ws.accept()
     claims = await _extract_ws_claims(ws)
+    if not claims.get("tid"):
+        await ws.close(code=4403, reason="Tenant context required")
+        return
 
     tenant_id = uuid.UUID(claims["tid"])
     session_id = str(claims["sid"])

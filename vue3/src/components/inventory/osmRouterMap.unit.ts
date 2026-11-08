@@ -232,11 +232,11 @@ describe('OsmRouterMap.vue — Mapa Interactivo Leaflet & OpenStreetMap', () => 
 
     if (popup) {
       const content = popup.getContent() as HTMLElement;
-      expect(content.innerHTML).toContain('2 Routers en la misma ubicación');
-      expect(content.innerHTML).toContain('Router-Rack-Principal');
-      expect(content.innerHTML).toContain('Router-Rack-Secundario');
-      expect(content.innerHTML).toContain('10.10.10.1');
-      expect(content.innerHTML).toContain('10.10.10.2');
+      expect(content.textContent).toContain('2 Routers en la misma ubicación');
+      expect(content.textContent).toContain('Router-Rack-Principal');
+      expect(content.textContent).toContain('Router-Rack-Secundario');
+      expect(content.textContent).toContain('10.10.10.1');
+      expect(content.textContent).toContain('10.10.10.2');
 
       // Ambos botones de WebFig deben estar presentes
       const webfigBtns = content.querySelectorAll('.btn-popup-webfig');

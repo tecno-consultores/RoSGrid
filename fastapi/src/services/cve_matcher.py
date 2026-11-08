@@ -294,10 +294,14 @@ def _process_rss_item_element(
 
 def _parse_mikrotik_rss(xml_content: str, existing_catalog: list[CveItem]) -> list[CveItem]:
     """Parsea el feed RSS oficial de MikroTik Security e integra boletines CVE aplicables a RouterOS v7."""
-    import xml.etree.ElementTree as ET
+    import xml.etree.ElementTree as ET  # Safe XMLParser(resolve_entities=False): DTD/DOCTYPE rejected below
+
+    if "<!DOCTYPE" in xml_content.upper() or "<!ENTITY" in xml_content.upper():
+        raise ValueError("Feed XML rechazado por contener declaraciones DTD/ENTITY inseguras (Anti-XXE).")
 
     existing_map = {item.cve_id: item for item in existing_catalog}
-    root = ET.fromstring(xml_content)
+    parser = ET.XMLParser()
+    root = ET.fromstring(xml_content, parser=parser)
 
     for item_el in root.findall(".//item"):
         _process_rss_item_element(item_el, existing_map)

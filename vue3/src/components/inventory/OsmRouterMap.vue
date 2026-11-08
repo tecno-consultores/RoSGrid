@@ -6,7 +6,7 @@
   import { getActivePinia } from 'pinia';
   import L from 'leaflet';
   import type { RouterItem } from '@/types';
-  import { escapeHtml } from '@/utils/security';
+  import { escapeHtml, sanitizeHtml } from '@/utils/security';
   import { useAuthStore } from '@/stores/useAuthStore';
 
   interface LocationGroup {
@@ -119,7 +119,7 @@
     const rosVersion = escapeHtml(r.ros_version || '7.x');
     const routerId = escapeHtml(r.id);
 
-    popupContent.innerHTML = `
+    popupContent.innerHTML = sanitizeHtml(`
       <div class="popup-title"><strong>${displayName}</strong></div>
       <div class="popup-identity">Identity: <code>${rosIdentity}</code></div>
       <div class="popup-role">Rol: <span class="badge-role">${networkRole}</span></div>
@@ -129,7 +129,7 @@
           Abrir WebFig →
         </button>
       </div>
-    `;
+    `);
 
     L.DomEvent.disableClickPropagation(popupContent);
     const webfigBtn = popupContent.querySelector('.btn-popup-webfig') as HTMLButtonElement | null;
@@ -189,7 +189,7 @@
       })
       .join('');
 
-    popupContent.innerHTML = `
+    popupContent.innerHTML = sanitizeHtml(`
       <div class="popup-site-header">
         <div class="site-badge">🏢 SITIO / NODO COMPARTIDO</div>
         <div class="site-title">${grp.routers.length} Routers en la misma ubicación</div>
@@ -198,7 +198,7 @@
       <div class="popup-routers-list">
         ${itemsHtml}
       </div>
-    `;
+    `);
 
     L.DomEvent.disableClickPropagation(popupContent);
     return popupContent;

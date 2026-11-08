@@ -34,6 +34,7 @@ from src.api.v1.traffic_flow import (
 from src.models.core import SystemRoleEnum
 from src.schemas.diagnostics_360 import Endpoint360Request
 from src.schemas.traffic_flow import TrafficMitigationRequest
+from tests.conftest import make_asserting_audit_mock
 
 # ============================================================================
 # 1. DIAGNOSTICS 360 HELPERS & PARSING
@@ -346,7 +347,7 @@ async def test_detect_traffic_anomalies_and_mitigate() -> None:
     with (
         patch("src.api.v1.traffic_flow.get_router_and_client", return_value=(mock_router_obj, mock_client)),
         patch("src.api.v1.traffic_flow.execute_safe_mutation", return_value={"ret": "*1"}),
-        patch("src.api.v1.traffic_flow.write_audit_log", new_callable=AsyncMock) as mock_audit,
+        patch("src.api.v1.traffic_flow.write_audit_log", new=make_asserting_audit_mock()) as mock_audit,
     ):
         mit_req = TrafficMitigationRequest(
             router_id=router_id,
@@ -364,13 +365,13 @@ async def test_detect_traffic_anomalies_and_mitigate() -> None:
         assert mit_res.status == "MITIGATED"
         assert mit_res.action_taken == "fast_drop"
         assert mit_res.safemode_applied is True
-        assert mock_audit.called
+        mock_audit.assert_called_once()
 
     # Test Mitigate Blackhole
     with (
         patch("src.api.v1.traffic_flow.get_router_and_client", return_value=(mock_router_obj, mock_client)),
         patch("src.api.v1.traffic_flow.execute_safe_mutation", return_value={"ret": "*2"}),
-        patch("src.api.v1.traffic_flow.write_audit_log", new_callable=AsyncMock) as mock_audit,
+        patch("src.api.v1.traffic_flow.write_audit_log", new=make_asserting_audit_mock()) as mock_audit,
     ):
         bh_req = TrafficMitigationRequest(
             router_id=router_id,
@@ -387,4 +388,5 @@ async def test_detect_traffic_anomalies_and_mitigate() -> None:
         )
         assert bh_res.status == "MITIGATED"
         assert bh_res.action_taken == "blackhole"
+        mock_audit.assert_called_once()
         assert mock_audit.called

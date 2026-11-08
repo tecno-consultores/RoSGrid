@@ -1184,6 +1184,7 @@ def test_extract_tenant_features_includes_hq_coordinates_and_converts_decimal():
     hq_longitude convertidos estrictamente a float ante valores Decimal o None.
     """
     from decimal import Decimal
+
     from src.api.v1.auth import _extract_tenant_features
 
     # Caso 1: Tenant con coordenadas GPS en Decimal (NUMERIC de PostgreSQL)

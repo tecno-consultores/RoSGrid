@@ -20,11 +20,13 @@ class StrictBaseModel(BaseModel):
 
 
 class FirewallRuleMoveRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     numbers: str = Field(..., min_length=1)  # ej: "*1C"
     destination: str = Field(..., min_length=1)  # ej: "*14"
 
 
 class FirewallRuleCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     chain: str = Field(..., min_length=1, max_length=32)
     action: str = Field(default="accept", min_length=1, max_length=32)
     src_address: str | None = None
@@ -60,6 +62,7 @@ class FirewallRuleUpdateRequest(StrictBaseModel):
 
 
 class AddressListCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     list: str = Field(..., min_length=1, max_length=64)
     address: str = Field(..., min_length=1, max_length=64)
     timeout: str | None = None
@@ -67,6 +70,7 @@ class AddressListCreateRequest(StrictBaseModel):
 
 
 class AddressListUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     list: str | None = Field(default=None, min_length=1, max_length=64)
     address: str | None = Field(default=None, min_length=1, max_length=64)
     timeout: str | None = None
@@ -80,12 +84,14 @@ class AddressListUpdateRequest(StrictBaseModel):
 
 
 class RoutingTableCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str = Field(..., min_length=1, max_length=64)
     fib: bool = True
     comment: str | None = None
 
 
 class RoutingTableUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str | None = Field(default=None, min_length=1, max_length=64)
     fib: bool | None = None
     comment: str | None = None
@@ -93,6 +99,7 @@ class RoutingTableUpdateRequest(StrictBaseModel):
 
 
 class RoutingRuleCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     table: str = Field(..., min_length=1, max_length=64)
     action: str = Field(default="lookup", min_length=1, max_length=32)
     src_address: str | None = None
@@ -101,6 +108,7 @@ class RoutingRuleCreateRequest(StrictBaseModel):
 
 
 class RoutingRuleUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     table: str | None = Field(default=None, min_length=1, max_length=64)
     action: str | None = Field(default=None, min_length=1, max_length=32)
     src_address: str | None = None
@@ -111,6 +119,7 @@ class RoutingRuleUpdateRequest(StrictBaseModel):
 
 
 class BgpConnectionCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str = Field(..., min_length=1, max_length=64)
     remote_address: str = Field(..., min_length=1)
     remote_as: int = Field(..., ge=1, le=4294967295)
@@ -123,6 +132,7 @@ class BgpConnectionCreateRequest(StrictBaseModel):
 
 
 class BgpConnectionUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     remote_address: str | None = None
     remote_as: int | None = Field(default=None, ge=1, le=4294967295)
     local_as: int | None = Field(default=None, ge=1, le=4294967295)
@@ -150,6 +160,7 @@ class BgpPeerStatusSummary(BaseModel):
 
 
 class RoutingFilterRuleCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     chain: str = Field(..., min_length=1, max_length=64)
     rule: str = Field(..., min_length=1)
     comment: str | None = None
@@ -157,6 +168,7 @@ class RoutingFilterRuleCreateRequest(StrictBaseModel):
 
 
 class RoutingFilterRuleUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     chain: str | None = None
     rule: str | None = None
     comment: str | None = None

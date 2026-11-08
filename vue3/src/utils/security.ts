@@ -85,7 +85,7 @@ export function createSafeRecord<V = unknown>(): Record<string, V> {
 
 /**
  * Sanitiza y escapa caracteres especiales HTML para prevenir Cross-Site Scripting (XSS)
- * en inyecciones directas de DOM (ej. Popups de Leaflet, tooltips o manipulación innerHTML).
+ * en inyecciones directas de DOM (ej. Popups de Leaflet o tooltips).
  */
 export function escapeHtml(value: unknown): string {
   if (value === null || value === undefined) {
@@ -114,4 +114,16 @@ export function escapeHtml(value: unknown): string {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
+}
+
+/**
+ * Purga etiquetas de ejecución (<script>, <iframe>, <object>) y manejadores de eventos inline (on*=)
+ * de fragmentos HTML controlados (ej. plantillas de popups cartográficos cuyos valores interpolados
+ * ya fueron escapados mediante escapeHtml).
+ */
+export function sanitizeHtml(htmlFragment: string): string {
+  return htmlFragment
+    .replaceAll(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replaceAll(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replaceAll(/javascript\s*:/gi, '');
 }

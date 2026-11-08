@@ -248,7 +248,7 @@ def validate_chr_ros_updates_check(
     url = f"{API_BASE_URL}/api/v1/operations/ros-updates/check"
     resp = client.post(
         url,
-        headers=headers,
+        headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
         json={"channel": "stable", "router_ids": [target_id]},
         timeout=45.0,
     )

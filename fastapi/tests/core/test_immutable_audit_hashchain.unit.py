@@ -60,11 +60,11 @@ def test_sanitize_primitive_passthrough() -> None:
 
 
 def test_sanitize_complex_types_jsonb_normalization() -> None:
+    import json
+    import uuid
     from datetime import date, datetime, timezone
     from decimal import Decimal
     from enum import Enum
-    import json
-    import uuid
 
     class SampleEnum(str, Enum):
         ACTIVE = "active"

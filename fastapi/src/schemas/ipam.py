@@ -20,12 +20,14 @@ from src.models.ipam import (
 
 
 class IPAMVrfCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str = Field(..., min_length=1, max_length=64)
     route_distinguisher: Optional[str] = Field(None, max_length=32)
     description: Optional[str] = Field(None, max_length=255)
 
 
 class IPAMVrfUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: Optional[str] = Field(None, min_length=1, max_length=64)
     route_distinguisher: Optional[str] = Field(None, max_length=32)
     description: Optional[str] = Field(None, max_length=255)
@@ -44,6 +46,7 @@ class IPAMVrfResponse(BaseModel):
 
 
 class IPAMPrefixCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     vrf_id: uuid.UUID
     parent_id: Optional[uuid.UUID] = None
     prefix: str = Field(..., description="Notación CIDR ej: 100.64.0.0/10 o 2803:cafe::/32")
@@ -56,6 +59,7 @@ class IPAMPrefixCreate(BaseModel):
 
 
 class IPAMPrefixUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     role: Optional[IPPrefixRoleEnum] = None
     status: Optional[IPPrefixStatusEnum] = None
     is_pool: Optional[bool] = None
@@ -97,6 +101,7 @@ class IPAMPrefixNextAvailableResponse(BaseModel):
 
 
 class IPAMAddressCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     prefix_id: uuid.UUID
     address: str = Field(..., description="Dirección IP ej: 100.64.10.155/32 o 2803:cafe:1::1/64")
     ip_family: IPFamilyEnum
@@ -109,6 +114,7 @@ class IPAMAddressCreate(BaseModel):
 
 
 class IPAMAddressUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     status: Optional[IPAddressStatusEnum] = None
     router_id: Optional[uuid.UUID] = None
     interface_name: Optional[str] = None
@@ -143,6 +149,7 @@ class IPAMAddressResponse(BaseModel):
 
 
 class BandwidthProfileCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str = Field(..., min_length=2, max_length=64)
     rate_down_kbps: int = Field(..., gt=0)
     rate_up_kbps: int = Field(..., gt=0)
@@ -156,6 +163,7 @@ class BandwidthProfileCreate(BaseModel):
 
 
 class BandwidthProfileUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: Optional[str] = Field(None, min_length=2, max_length=64)
     rate_down_kbps: Optional[int] = Field(None, gt=0)
     rate_up_kbps: Optional[int] = Field(None, gt=0)
@@ -217,6 +225,7 @@ def _normalize_onu_mode_input(val: Any) -> Any:
 
 
 class SubscriberDeviceCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     router_id: uuid.UUID
     endpoint_identifier: Optional[str] = Field(None, max_length=64)
     service_type: CustomerServiceTypeEnum = CustomerServiceTypeEnum.PPPOE
@@ -258,6 +267,7 @@ class SubscriberDeviceCreate(BaseModel):
 
 
 class SubscriberDeviceUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     router_id: Optional[uuid.UUID] = None
     bng_router_id: Optional[uuid.UUID] = None
     provision_on_router: bool = True
@@ -378,6 +388,7 @@ CustomerServiceResponse = SubscriberDeviceResponse
 
 
 class OpticalBoxCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     router_id: uuid.UUID
     box_code: str
     brand: Optional[str] = None
@@ -394,6 +405,7 @@ class OpticalBoxCreate(BaseModel):
 
 
 class OpticalBoxUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     box_code: Optional[str] = None
     brand: Optional[str] = None
     model: Optional[str] = None
@@ -518,6 +530,7 @@ class SubscriberCsvDryRunResponse(BaseModel):
 
 
 class SubscriberCsvCommitRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     rows: list[SubscriberCsvRowPreview]
 
 
@@ -552,6 +565,7 @@ class OpticalBoxCsvDryRunResponse(BaseModel):
 
 
 class OpticalBoxCsvCommitRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     rows: list[OpticalBoxCsvRowPreview]
 
 

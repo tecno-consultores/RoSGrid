@@ -20,6 +20,7 @@ class StrictBaseModel(BaseModel):
 
 
 class PppSecretCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str = Field(..., min_length=1, max_length=64)
     password: str = Field(..., min_length=1)
     service: str = Field(default="any", min_length=1, max_length=32)
@@ -32,6 +33,7 @@ class PppSecretCreateRequest(StrictBaseModel):
 
 
 class PppSecretUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str | None = Field(default=None, min_length=1, max_length=64)
     password: str | None = None
     service: str | None = None
@@ -45,6 +47,7 @@ class PppSecretUpdateRequest(StrictBaseModel):
 
 
 class PppProfileCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str = Field(..., min_length=1, max_length=64)
     local_address: str | None = None
     remote_address: str | None = None
@@ -55,6 +58,7 @@ class PppProfileCreateRequest(StrictBaseModel):
 
 
 class PppProfileUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str | None = Field(default=None, min_length=1, max_length=64)
     local_address: str | None = None
     remote_address: str | None = None
@@ -66,6 +70,7 @@ class PppProfileUpdateRequest(StrictBaseModel):
 
 
 class PppoeServerCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     service_name: str = Field(..., min_length=1, max_length=64)
     interface: str = Field(..., min_length=1, max_length=64)
     default_profile: str = Field(default="default", min_length=1, max_length=64)
@@ -78,6 +83,7 @@ class PppoeServerCreateRequest(StrictBaseModel):
 
 
 class PppoeServerUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     service_name: str | None = Field(default=None, min_length=1, max_length=64)
     interface: str | None = Field(default=None, min_length=1, max_length=64)
     default_profile: str | None = Field(default=None, min_length=1, max_length=64)
@@ -96,6 +102,7 @@ class PppoeServerUpdateRequest(StrictBaseModel):
 
 
 class QueueSimpleCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str = Field(..., min_length=1, max_length=64)
     target: str = Field(..., min_length=1)
     max_limit: str = Field(..., min_length=1)  # ej: "100M/100M"
@@ -106,6 +113,7 @@ class QueueSimpleCreateRequest(StrictBaseModel):
 
 
 class QueueSimpleUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str | None = None
     target: str | None = None
     max_limit: str | None = None
@@ -116,11 +124,13 @@ class QueueSimpleUpdateRequest(StrictBaseModel):
 
 
 class QueueMoveRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     numbers: str = Field(..., min_length=1)
     destination: str = Field(..., min_length=1)
 
 
 class QueueTreeCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str = Field(..., min_length=1, max_length=64)
     parent: str = Field(..., min_length=1, max_length=64)
     packet_mark: str | None = None
@@ -130,6 +140,7 @@ class QueueTreeCreateRequest(StrictBaseModel):
 
 
 class QueueTreeUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     parent: str | None = None
     packet_mark: str | None = None
     queue: str | None = None
@@ -144,6 +155,7 @@ class QueueTreeUpdateRequest(StrictBaseModel):
 
 
 class SystemIdentityUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str = Field(..., min_length=1, max_length=128)
     sync_display_name: bool = Field(
         default=True,
@@ -152,6 +164,7 @@ class SystemIdentityUpdateRequest(StrictBaseModel):
 
 
 class SystemUserCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str = Field(..., min_length=1, max_length=64)
     password: str = Field(..., min_length=1)
     group: str = Field(default="read", min_length=1, max_length=32)
@@ -160,6 +173,7 @@ class SystemUserCreateRequest(StrictBaseModel):
 
 
 class SystemUserUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     password: str | None = None
     group: str | None = None
     address: str | None = None
@@ -168,12 +182,14 @@ class SystemUserUpdateRequest(StrictBaseModel):
 
 
 class SystemScriptCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str = Field(..., min_length=1, max_length=64)
     source: str = Field(..., min_length=1)
     policy: str = Field(default="read,write,test", min_length=1)
 
 
 class SystemRebootRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     reason: str = Field(
         default="Reinicio manual desde consola WebFig Live",
         min_length=3,
@@ -187,6 +203,7 @@ class SystemRebootRequest(StrictBaseModel):
 
 
 class RouterPingRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     address: str = Field(..., min_length=1)
     count: int = Field(default=5, ge=1, le=20)
     size: int = Field(default=64, ge=28, le=65507)
@@ -208,6 +225,7 @@ class RouterPingResponse(BaseModel):
 
 
 class RouterTracerouteRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     address: str = Field(..., min_length=1)
     count: int = Field(default=3, ge=1, le=10)
     max_hops: int = Field(default=20, ge=1, le=30)
@@ -215,6 +233,7 @@ class RouterTracerouteRequest(StrictBaseModel):
 
 
 class RouterTorchRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     interface: str = Field(..., min_length=1)
     duration_seconds: int = Field(default=3, ge=1, le=10)
     src_address: str | None = None

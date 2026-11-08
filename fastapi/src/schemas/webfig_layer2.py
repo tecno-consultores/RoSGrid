@@ -104,6 +104,7 @@ class Layer2InspectResponse(StrictBaseModel):
 
 
 class DynamicLayer2WriteRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     attributes: dict[str, Any] = Field(default_factory=dict)
     enable_safemode: bool = True
 
@@ -122,6 +123,7 @@ class DynamicLayer2WriteRequest(StrictBaseModel):
 
 
 class DynamicLayer2CommandRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     arguments: dict[str, Any] = Field(default_factory=dict)
     action: str | None = Field(default=None, max_length=80)
     item_id: str | None = Field(default=None, max_length=80)
@@ -140,6 +142,7 @@ class Layer2QueryFilterItem(StrictBaseModel):
 
 
 class DynamicLayer2QueryRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     proplist: list[str] = Field(default_factory=list, max_length=60)
     filters: list[Layer2QueryFilterItem] = Field(default_factory=list, max_length=15)
 
@@ -150,6 +153,7 @@ class DynamicLayer2QueryRequest(StrictBaseModel):
 
 
 class DynamicLayer2BulkRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     action: Literal["enable", "disable", "comment", "remove"]
     item_ids: list[str] = Field(..., min_length=1, max_length=100)
     comment: str | None = Field(default=None, max_length=255)
@@ -167,6 +171,7 @@ class DynamicLayer2BulkResponse(StrictBaseModel):
 
 
 class DynamicLayer2ExportRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     mode: Literal["compact", "terse", "verbose"] = "compact"
     compare_with_latest_backup: bool = True
 

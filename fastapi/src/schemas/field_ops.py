@@ -12,12 +12,14 @@ from src.models.ipam import FiberCutStatusEnum, FieldOrderStatusEnum
 
 
 class FieldOrderCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     customer_service_id: uuid.UUID
     assigned_tech_id: Optional[uuid.UUID] = None
     notes: Optional[str] = None
 
 
 class FieldOrderUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     assigned_tech_id: Optional[uuid.UUID] = None
     status: Optional[FieldOrderStatusEnum] = None
     onu_scanned_serial: Optional[str] = None
@@ -51,6 +53,7 @@ class FieldOrderResponse(BaseModel):
 
 
 class FieldVerifySubscriberRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     customer_service_id: uuid.UUID
     onu_scanned_serial: Optional[str] = None
     onu_scanned_mac: Optional[str] = None
@@ -74,6 +77,7 @@ class FieldVerifySubscriberResponse(BaseModel):
 
 
 class FieldCertifyOrderRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     order_id: Optional[uuid.UUID] = None
     customer_service_id: Optional[uuid.UUID] = None
     onu_scanned_serial: str = Field(default="ONU-CERTIFIED", min_length=2)

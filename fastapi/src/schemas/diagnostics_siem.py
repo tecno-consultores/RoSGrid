@@ -6,7 +6,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 BundleArchiveFormat = Literal["zip", "tar.gz"]
 SiemProtocolType = Literal["GELF_UDP", "GELF_HTTP", "SYSLOG_UDP", "SYSLOG_TCP", "LOKI_HTTP"]
@@ -38,6 +38,7 @@ class UiErrorTelemetryRecordResponse(BaseModel):
 
 class DiagnosticBundleRequest(BaseModel):
     """Solicitud para generar y descargar el paquete de soporte y diagnóstico sanitizado."""
+    model_config = ConfigDict(extra="forbid")
 
     format: BundleArchiveFormat = Field(
         default="zip",
@@ -76,6 +77,7 @@ class DiagnosticBundleResponse(BaseModel):
 
 class SiemForwarderConfigUpdateRequest(BaseModel):
     """Solicitud para configurar el reenvío de logs hacia el servidor SIEM del ISP."""
+    model_config = ConfigDict(extra="forbid")
 
     enabled: bool = Field(default=False, description="Activa o desactiva el reenvío hacia el SIEM del ISP.")
     protocol: SiemProtocolType = Field(

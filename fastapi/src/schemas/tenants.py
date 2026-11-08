@@ -52,6 +52,7 @@ def extract_tenant_features(tenant: Any) -> dict[str, Any]:
 
 
 class CreateTenantRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     slug: str = Field(..., min_length=2, max_length=64, pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
     name: str = Field(..., min_length=2, max_length=150)
     tax_id: str | None = Field(None, max_length=64)
@@ -108,6 +109,8 @@ class UpdateTenantFeaturesRequest(BaseModel):
 
 
 class UpdateTenantRequest(UpdateTenantFeaturesRequest):
+    model_config = ConfigDict(extra="forbid")
+
     slug: str | None = Field(
         None, min_length=2, max_length=64, pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$"
     )
@@ -123,7 +126,7 @@ class UpdateTenantRequest(UpdateTenantFeaturesRequest):
 class TenantFeatureFlagsMixin(BaseModel):
     """Bloque común de Feature Flags con relleno automático de valores por defecto."""
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True)  # extra="forbid" enforced in request schemas
 
     isp_module_enabled: bool = True
     bgp_looking_glass_enabled: bool = False

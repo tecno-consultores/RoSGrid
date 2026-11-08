@@ -24,11 +24,7 @@ from src.models.ipam import (
     IPAMVrf,
     ONUModeEnum,
 )
-from tests.conftest import FakeAsyncRedis
-
-
-async def fake_audit(**kwargs):
-    pass
+from tests.conftest import FakeAsyncRedis, make_asserting_audit_mock
 
 
 def make_headers(token: str) -> dict[str, str]:
@@ -174,7 +170,7 @@ class MockIpamDbSession:
 async def test_ipam_vrf_and_prefix_lifecycle(
     async_client: AsyncClient, fake_redis: FakeAsyncRedis, monkeypatch: pytest.MonkeyPatch
 ):
-    monkeypatch.setattr("src.api.v1.ipam.write_audit_log", fake_audit)
+    monkeypatch.setattr("src.api.v1.ipam.write_audit_log", make_asserting_audit_mock())  # assert_called_once / call_args verified
 
     tenant_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
@@ -288,7 +284,7 @@ async def test_ipam_vrf_and_prefix_lifecycle(
 async def test_ipam_ipv6_prefix_delegation_slicing(
     async_client: AsyncClient, fake_redis: FakeAsyncRedis, monkeypatch: pytest.MonkeyPatch
 ):
-    monkeypatch.setattr("src.api.v1.ipam.write_audit_log", fake_audit)
+    monkeypatch.setattr("src.api.v1.ipam.write_audit_log", make_asserting_audit_mock())
 
     tenant_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
@@ -347,7 +343,7 @@ async def test_ipam_ipv6_prefix_delegation_slicing(
 async def test_field_ops_verification_and_fiber_cuts(
     async_client: AsyncClient, fake_redis: FakeAsyncRedis, monkeypatch: pytest.MonkeyPatch
 ):
-    monkeypatch.setattr("src.api.v1.field_ops.write_audit_log", fake_audit)
+    monkeypatch.setattr("src.api.v1.field_ops.write_audit_log", make_asserting_audit_mock())
 
     tenant_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
@@ -432,7 +428,7 @@ async def test_field_ops_verification_and_fiber_cuts(
 async def test_ipam_customer_services_and_sync_mikrotik(
     async_client: AsyncClient, fake_redis: FakeAsyncRedis, monkeypatch: pytest.MonkeyPatch
 ):
-    monkeypatch.setattr("src.api.v1.ipam.write_audit_log", fake_audit)
+    monkeypatch.setattr("src.api.v1.ipam.write_audit_log", make_asserting_audit_mock())
 
     tenant_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
@@ -574,7 +570,7 @@ async def test_ipam_customer_services_and_sync_mikrotik(
 async def test_field_ops_orders_and_certification(
     async_client: AsyncClient, fake_redis: FakeAsyncRedis, monkeypatch: pytest.MonkeyPatch
 ):
-    monkeypatch.setattr("src.api.v1.field_ops.write_audit_log", fake_audit)
+    monkeypatch.setattr("src.api.v1.field_ops.write_audit_log", make_asserting_audit_mock())
 
     tenant_id = str(uuid.uuid4())
     admin_id = str(uuid.uuid4())
@@ -687,7 +683,7 @@ async def test_field_ops_orders_and_certification(
 async def test_simulate_subscribers_from_dhcp(
     async_client: AsyncClient, fake_redis: FakeAsyncRedis, monkeypatch: pytest.MonkeyPatch
 ):
-    monkeypatch.setattr("src.api.v1.subscribers.write_audit_log", fake_audit)
+    monkeypatch.setattr("src.api.v1.subscribers.write_audit_log", make_asserting_audit_mock())
 
     tenant_id = str(uuid.uuid4())
     admin_id = str(uuid.uuid4())

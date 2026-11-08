@@ -17,6 +17,7 @@ class StrictBaseModel(BaseModel):
 
 
 class NotificationChannelCreateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str = Field(..., min_length=1, max_length=100)
     channel_type: str = Field(..., pattern="^(TELEGRAM_BOT|SMTP_EMAIL|GENERIC_WEBHOOK)$")
     is_enabled: bool = True
@@ -27,6 +28,7 @@ class NotificationChannelCreateRequest(StrictBaseModel):
 
 
 class NotificationChannelUpdateRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str | None = Field(default=None, min_length=1, max_length=100)
     is_enabled: bool | None = None
     config: dict[str, Any] | None = None
@@ -46,6 +48,7 @@ class NotificationChannelResponse(StrictBaseModel):
 
 
 class NotificationTestRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     message: str | None = Field(default="Mensaje de prueba de notificación RoSGrid")
 
 

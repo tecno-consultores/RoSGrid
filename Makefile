@@ -37,8 +37,8 @@ test: test-backend test-frontend smoke-fleet
 
 lint:
 	@echo "🔍 [Lint] Ejecutando ruff, mypy y vue-tsc..."
-	@docker run --rm --entrypoint ruff -v $$(pwd)/fastapi:/app -w /app sinfallas/rosgrid-backend:local-test check --no-cache src/
-	@docker run --rm --entrypoint mypy -v $$(pwd)/fastapi:/app -w /app sinfallas/rosgrid-backend:local-test --cache-dir=/tmp/mypy src/
+	@docker run --rm --entrypoint ruff -v $$(pwd)/fastapi:/app -w /app sinfallas/rosgrid-backend:local-test check --no-cache src/ tests/
+	@docker run --rm --entrypoint uv -e UV_PROJECT_ENVIRONMENT=/tmp/venv -e UV_CACHE_DIR=/tmp/uv-cache -v $$(pwd)/fastapi:/app -w /app sinfallas/rosgrid-backend:local-test run --with mypy mypy --cache-dir=/tmp/mypy src/
 	@docker run --rm -v $$(pwd)/vue3:/app -w /app sinfallas/base-node-ionic:26 npx vue-tsc --noEmit
 
 certify:

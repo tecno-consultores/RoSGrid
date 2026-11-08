@@ -6,7 +6,7 @@
   import { getActivePinia } from 'pinia';
   import L from 'leaflet';
   import type { OpticalBoxItem, SubscriberDeviceItem } from '@/types';
-  import { escapeHtml } from '@/utils/security';
+  import { escapeHtml, sanitizeHtml } from '@/utils/security';
   import { useAuthStore } from '@/stores/useAuthStore';
 
   interface LocationGroup {
@@ -163,7 +163,7 @@
       ? `${box.input_power_dbm} dBm`
       : 'N/A';
 
-    popupContent.innerHTML = `
+    popupContent.innerHTML = sanitizeHtml(`
       <div class="popup-title"><strong>📦 Caja NAP: ${code}</strong></div>
       <div class="popup-identity">Ubicación: <code>${loc}</code></div>
       <div class="popup-meta">
@@ -177,7 +177,7 @@
           🔍 Ver Puertos y Abonados
         </button>
       </div>
-    `;
+    `);
 
     L.DomEvent.disableClickPropagation(popupContent);
     const inspectBtn = popupContent.querySelector('.btn-popup-inspect-box') as HTMLButtonElement | null;
@@ -210,7 +210,7 @@
     const colorBadge =
       color === '#22C55E' ? '🟢 Óptimo' : color === '#F97316' ? '🟠 Degradado' : '🔴 Caído';
 
-    popupContent.innerHTML = `
+    popupContent.innerHTML = sanitizeHtml(`
       <div class="popup-title"><strong>${escapeHtml(serial)}</strong></div>
       <div class="popup-identity">Cliente: <code>${escapeHtml(client)}</code></div>
       <div class="popup-role">Estado: <span class="badge-status">${colorBadge}</span></div>
@@ -228,7 +228,7 @@
           🔬 360°
         </button>
       </div>
-    `;
+    `);
 
     L.DomEvent.disableClickPropagation(popupContent);
     const testBtn = popupContent.querySelector('.btn-popup-test') as HTMLButtonElement | null;
@@ -284,7 +284,7 @@
       })
       .join('');
 
-    popupContent.innerHTML = `
+    popupContent.innerHTML = sanitizeHtml(`
       <div class="popup-title">
         <strong>Caja / Punto Coincidente</strong>
         <span class="popup-badge font-mono">${grp.onus.length} ONUs</span>
@@ -292,7 +292,7 @@
       <div class="popup-onus-list">
         ${itemsHtml}
       </div>
-    `;
+    `);
 
     L.DomEvent.disableClickPropagation(popupContent);
     const itemElements = popupContent.querySelectorAll('.popup-onu-item');

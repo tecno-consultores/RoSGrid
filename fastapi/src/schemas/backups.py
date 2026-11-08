@@ -67,6 +67,7 @@ class BackupGitDiffResponse(StrictBaseModel):
 
 
 class BatchBackupTriggerRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     router_ids: list[uuid.UUID] = Field(
         ...,
         min_length=1,

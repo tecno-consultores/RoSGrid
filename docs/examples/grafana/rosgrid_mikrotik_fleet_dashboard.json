@@ -715,10 +715,7 @@
         "multi": true,
         "name": "router",
         "options": [],
-        "query": {
-          "query": "label_values(rosgrid_router_status, identity)",
-          "refId": "PrometheusVariableQueryEditor-VariableQuery"
-        },
+        "query": "label_values(rosgrid_router_status, identity)",
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,

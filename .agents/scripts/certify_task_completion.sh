@@ -52,7 +52,7 @@ else
 fi
 
 # 8. Contratos de Integración Front-Back
-echo -e "\n🧪 [8/9] Ejecutando suite de Contratos Front-Back (25 pruebas)..."
+echo -e "\n🧪 [8/9] Ejecutando suite de Contratos Front-Back (28 contratos)..."
 if docker ps --format '{{.Names}}' | grep -q "^rosgrid_api_local$"; then
     if curl -fsS http://127.0.0.1:8000/api/v1/auth/bootstrap-status 2>/dev/null | grep -q '"is_bootstrapped":false'; then
         echo "ℹ️ Contenedor rosgrid_api_local en modo Wizard limpio (is_bootstrapped: false); omitiendo validación autenticada para preservar estado virgen."
@@ -108,6 +108,9 @@ if [ -n "${CODE_CHANGES}" ]; then
 else
   echo "✔ No hay cambios pendientes sin commitear en src/."
 fi
+
+echo -e "\n🗺️  Verificando consistencia entre ROADMAP.md y .agents/ACTIVE_TASK.md..."
+python3 "${REPO_ROOT}/.agents/scripts/verify_roadmap_consistency.py"
 
 echo -e "\n══════════════════════════════════════════════════════════════════════"
 echo "   ✅ CERTIFICACIÓN EXITOSA: La tarea cumple con el estándar 11X     "

@@ -47,6 +47,7 @@ class ApprovalListResponse(StrictBaseModel):
 
 
 class ApproveRequestPayload(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     review_comment: str | None = Field(default=None, min_length=1, max_length=1000)
     comment: str | None = Field(default=None, min_length=1, max_length=1000)
     totp_code: str | None = Field(default=None, max_length=16)
@@ -60,6 +61,7 @@ class ApproveRequestPayload(StrictBaseModel):
 
 
 class RejectRequestPayload(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     review_comment: str | None = Field(default=None, min_length=1, max_length=1000)
     comment: str | None = Field(default=None, min_length=1, max_length=1000)
     totp_code: str | None = Field(default=None, max_length=16)

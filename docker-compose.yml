@@ -112,6 +112,10 @@ services:
       ROSGRID_MIKROTIK_TIMEOUT_SECONDS: "${ROSGRID_MIKROTIK_TIMEOUT_SECONDS:-10}"
       ROSGRID_SAFEMODE_ROLLBACK_SECONDS: "${ROSGRID_SAFEMODE_ROLLBACK_SECONDS:-60}"
       ROSGRID_BACKUP_RETENTION_DAYS: "${ROSGRID_BACKUP_RETENTION_DAYS:-30}"
+      ROSGRID_TELEMETRY_BEACON_ENABLED: "${ROSGRID_TELEMETRY_BEACON_ENABLED:-true}"
+      ROSGRID_BACKGROUND_POLL_INTERVAL_SECONDS: "${ROSGRID_BACKGROUND_POLL_INTERVAL_SECONDS:-180}"
+      ROSGRID_SUBSCRIBER_ICMP_PROBE_ENABLED: "${ROSGRID_SUBSCRIBER_ICMP_PROBE_ENABLED:-true}"
+      ROSGRID_SYSLOG_PORT: "5514"
     volumes:
       - ./fastapi:/app
       - rosgrid_uv_cache:/root/.cache/uv
@@ -119,6 +123,7 @@ services:
     working_dir: /app
     ports:
       - "${ROSGRID_SYSLOG_PORT:-5514}:5514/udp"
+      - "514:5514/udp"
     command: ["bash", "-c", "uv pip install --system -e . && python3 -m src.workers.runner"]
     networks:
       - rosgrid_internal_net

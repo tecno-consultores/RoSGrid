@@ -1,6 +1,6 @@
 # RoSGrid MCP Tools Catalog (`/api/v1/mcp`)
 
-This document details the input parameters, schemas, and usage directives for all 20 MCP tools exposed by the RoSGrid server for AI agents.
+This document details the input parameters, schemas, and usage directives for all **22 MCP tools** exposed by the RoSGrid server for AI agents.
 
 ---
 

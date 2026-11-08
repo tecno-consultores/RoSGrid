@@ -289,10 +289,10 @@ else
     echo "$MCP_RESPONSE" | grep -q '"tools"'
     echo "✔ Endpoint MCP (/api/v1/mcp) respondió JSON-RPC 2.0 con catálogo de Tools semánticas correctamente."
 
-    # Ejecución de la Suite de 26 Contratos Front-Back (validar_comunicacion_front_back.py)
-    echo "Ejecutando suite automatizada de 26 contratos Front-Back (validar_comunicacion_front_back.py)..."
+    # Ejecución de la Suite de 28 Contratos Front-Back (validar_comunicacion_front_back.py)
+    echo "Ejecutando suite automatizada de 28 contratos Front-Back (validar_comunicacion_front_back.py)..."
     docker exec rosgrid_api_local python3 /app/scripts/validar_comunicacion_front_back.py
-    echo "✔ Suite de integración Front-Back superada al 100% (26/26 contratos validados)."
+    echo "✔ Suite de integración Front-Back superada al 100% (28/28 contratos validados)."
 
     # Inspección de logs de API y Worker en busca de excepciones no controladas
     echo "Comprobando ausencia de errores críticos y tracebacks en logs de API y Worker..."

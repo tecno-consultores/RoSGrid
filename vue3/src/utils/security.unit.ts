@@ -2,7 +2,14 @@
 // Copyright (C) 2026 RoSGrid Contributors
 
 import { describe, it, expect } from 'vitest';
-import { isSafeUrl, sanitizeUrl, sanitizeObject, createSafeRecord, escapeHtml } from './security';
+import {
+  isSafeUrl,
+  sanitizeUrl,
+  sanitizeObject,
+  createSafeRecord,
+  escapeHtml,
+  sanitizeHtml,
+} from './security';
 
 describe('Security Utilities (XSS and Prototype Pollution Defense)', () => {
   describe('isSafeUrl', () => {
@@ -120,6 +127,18 @@ describe('Security Utilities (XSS and Prototype Pollution Defense)', () => {
     it('converts numbers and booleans safely to string', () => {
       expect(escapeHtml(12345)).toBe('12345');
       expect(escapeHtml(true)).toBe('true');
+    });
+  });
+
+  describe('sanitizeHtml (DOM Popup Defense-in-Depth)', () => {
+    it('removes script tags, inline event handlers, and javascript URIs', () => {
+      const dirty =
+        '<div class="popup" onclick="alert(1)"><script>evil()</script><a href="javascript:void(0)">Link</a></div>';
+      const cleaned = sanitizeHtml(dirty);
+      expect(cleaned).not.toContain('<script>');
+      expect(cleaned).not.toContain('onclick=');
+      expect(cleaned).not.toContain('javascript:');
+      expect(cleaned).toContain('<div class="popup">');
     });
   });
 });

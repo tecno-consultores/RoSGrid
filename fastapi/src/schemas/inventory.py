@@ -29,6 +29,7 @@ class StrictBaseModel(BaseModel):
 
 
 class CustomNetworkRoleCreate(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     role_name: str = Field(..., min_length=2, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
     description: str | None = Field(default=None, max_length=255)
 
@@ -84,6 +85,7 @@ def validate_router_target_url(v: str | None) -> str | None:
 
 
 class CreateRouterRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     display_name: str = Field(..., min_length=2, max_length=120)
     api_base_url: str = Field(..., min_length=5, max_length=255)
     api_port: int = Field(default=443, ge=1, le=65535)
@@ -110,6 +112,7 @@ class CreateRouterRequest(StrictBaseModel):
 
 
 class UpdateRouterRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     display_name: str | None = Field(default=None, min_length=2, max_length=120)
     api_base_url: str | None = Field(default=None, min_length=5, max_length=255)
     api_port: int | None = Field(default=None, ge=1, le=65535)
@@ -176,6 +179,7 @@ class RouterResponse(BaseModel):
 
 
 class RePinSSLRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     totp_code: str = Field(..., min_length=6, max_length=10)
     expected_new_sha256_fingerprint: str = Field(..., min_length=64, max_length=64)
 
@@ -229,6 +233,7 @@ class CsvCommitRowItem(StrictBaseModel):
 
 
 class CsvCommitRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     rows: list[CsvCommitRowItem] = Field(..., min_length=1, max_length=500)
 
 
@@ -243,6 +248,7 @@ class CsvCommitResponse(BaseModel):
 
 
 class VaultRevealRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     totp_code: str = Field(..., min_length=6, max_length=10)
     reason: str = Field(..., min_length=5, max_length=255)
 
@@ -269,6 +275,7 @@ class VaultRotateResponse(BaseModel):
 
 
 class CreateMaintenanceWindowRequest(StrictBaseModel):
+    model_config = ConfigDict(extra="forbid")
     title: str = Field(..., min_length=3, max_length=150)
     reason: str = Field(..., min_length=5)
     router_id: uuid.UUID | None = None
