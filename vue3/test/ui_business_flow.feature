@@ -1086,6 +1086,16 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * match fieldTechCertifyEnContract.certifyBtn == '#btn-certify-order'
     * match fieldTechCertifyEnContract.migrationRevision == '0014_field_order_signature_svg'
 
+  Scenario: 109. Botón Marcar todo leído junto al botón de avisos sonoros y estado de lectura por fila en el Centro de Notificaciones (Hito 30.18 - Spec 95)
+    * def notifMarkAllReadContract = { soundBtn: '#btn-notif-toggle-sound', markAllReadBtn: '#btn-notif-mark-all-read', snoozeBtn: '#btn-notif-snooze-30m', labelEs: 'Marcar todo leído', labelEn: 'Mark all read', unreadRowClass: '.notif-row--unread', readRowClass: '.notif-row--read' }
+    * match notifMarkAllReadContract.soundBtn == '#btn-notif-toggle-sound'
+    * match notifMarkAllReadContract.markAllReadBtn == '#btn-notif-mark-all-read'
+    * match notifMarkAllReadContract.labelEs == 'Marcar todo leído'
+    * match notifMarkAllReadContract.labelEn == 'Mark all read'
+    * match notifMarkAllReadContract.unreadRowClass == '.notif-row--unread'
+    * match notifMarkAllReadContract.readRowClass == '.notif-row--read'
+
+
 
 
 

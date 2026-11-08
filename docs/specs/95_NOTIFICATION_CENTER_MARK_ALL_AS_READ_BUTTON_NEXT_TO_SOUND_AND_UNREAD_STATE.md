@@ -1,6 +1,6 @@
 # Especificación Técnica 95: Botón Explícito «Marcar todo leído» Junto al Control de Avisos Sonoros y Estado Visual de Lectura por Fila en el Centro de Notificaciones (`RgNotificationCenterBell.vue`)
 
-**Estado:** Pendiente de Implementación (`Hito 30.18` en `ROADMAP.md`)
+**Estado:** Completado e Implementado (`Hito 30.18` en `ROADMAP.md`)
 **Componentes Afectados:**
 - Diccionarios i18n Frontend:
   - `vue3/src/locales/es.json` (bloque `"notifications"`)

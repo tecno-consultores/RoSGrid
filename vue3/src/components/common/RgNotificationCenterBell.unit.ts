@@ -218,7 +218,7 @@ describe('RgNotificationCenterBell.vue — Centro Táctico de Notificaciones In-
     await wrapper.find(BELL_BTN_ID).trigger('click');
     await flushPromises();
 
-    // Al hacer clic en "✓ Vistas", se reconocen las alertas de red pero la aprobación Maker-Checker sigue requiriendo firma
+    // Al hacer clic en "✓✓ Marcar todo leído", se reconocen las alertas de red pero la aprobación Maker-Checker sigue requiriendo firma
     await wrapper.find('#btn-notif-mark-all-read').trigger('click');
     expect(wrapper.find(BELL_BADGE_ID).text()).toBe('1');
 
@@ -307,5 +307,53 @@ describe('RgNotificationCenterBell.vue — Centro Táctico de Notificaciones In-
     expect(textEn).toContain('RoSGrid System');
     expect(textEn).toContain('Tenant parameters updated (by sinfallas)');
     setLocale('es');
+  });
+
+  it('posiciona el botón "✓✓ Marcar todo leído" inmediatamente al lado del botón de avisos sonoros y marca todas las notificaciones como leídas al pulsarlo (Hito 30.18 - Spec 95)', async () => {
+    vi.mocked(http.get).mockResolvedValue({ data: { items: [] } } as never);
+    const { setLocale } = useI18n();
+    setLocale('es');
+
+    const nocStore = useNocEventsStore();
+    nocStore.recentEvents = [
+      {
+        id: 'ev-unread-1',
+        eventName: 'ROUTER_CONFIG_UPDATED',
+        severity: 'INFO',
+        message: 'Actualización de reglas NTP',
+        router_name: BORDE_CARACAS_NAME,
+        routerDisplayName: BORDE_CARACAS_NAME,
+        timestampIso: '2026-11-08T10:00:00Z',
+      },
+    ];
+
+    const wrapper = mount(RgNotificationCenterBell);
+    await flushPromises();
+
+    // Punto de avisos informativos no leídos visible en la campana antes de marcar como leído
+    expect(wrapper.find('#notification-bell-dot').exists()).toBe(true);
+
+    await wrapper.find(BELL_BTN_ID).trigger('click');
+    await flushPromises();
+
+    // Verificar que #btn-notif-mark-all-read está inmediatamente al lado de #btn-notif-toggle-sound
+    const headerButtons = wrapper.findAll('.notif-header-controls .btn-notif-ctrl');
+    expect(headerButtons.length).toBeGreaterThanOrEqual(3);
+    expect(headerButtons[0].attributes('id')).toBe('btn-notif-toggle-sound');
+    expect(headerButtons[1].attributes('id')).toBe('btn-notif-mark-all-read');
+    expect(headerButtons[1].text()).toContain('✓✓ Marcar todo leído');
+
+    // Al abrir el popover, la fila sigue figurando como no leída (.notif-row--unread)
+    expect(wrapper.find('.notif-row--unread').exists()).toBe(true);
+    expect(wrapper.find('.notif-row-unread-dot').exists()).toBe(true);
+
+    // Pulsar el botón "✓✓ Marcar todo leído"
+    await headerButtons[1].trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('.notif-row--unread').exists()).toBe(false);
+    expect(wrapper.find('.notif-row-unread-dot').exists()).toBe(false);
+    expect(wrapper.find('.notif-row--read').exists()).toBe(true);
+    expect(wrapper.find('#notification-bell-dot').exists()).toBe(false);
   });
 });

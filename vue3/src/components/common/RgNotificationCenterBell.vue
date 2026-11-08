@@ -26,6 +26,7 @@
     approvalId?: string;
     requestedByUserId?: string;
     routerId?: string;
+    isRead?: boolean;
   }
 
   const router = useRouter();
@@ -62,6 +63,7 @@
 
   const lastReadIso = ref<string>('');
   const ackedKeys = ref<Set<string>>(new Set());
+  const readKeys = ref<Set<string>>(new Set());
   const soundEnabled = ref<boolean>(false);
   const snoozedUntilMs = ref<number>(0);
   const nowTickMs = ref<number>(Date.now());
@@ -103,6 +105,8 @@
       lastReadIso.value = localStorage.getItem(`${prefix}_last_read`) || '';
       const rawAck = localStorage.getItem(`${prefix}_acked`);
       ackedKeys.value = rawAck ? new Set(JSON.parse(rawAck)) : new Set();
+      const rawRead = localStorage.getItem(`${prefix}_read_keys`);
+      readKeys.value = rawRead ? new Set(JSON.parse(rawRead)) : new Set();
       soundEnabled.value = localStorage.getItem(`${prefix}_sound`) === 'true';
       snoozedUntilMs.value = Number(localStorage.getItem(`${prefix}_snooze_until`) || '0');
     } catch {
@@ -116,6 +120,7 @@
       const prefix = storageKeyPrefix.value;
       localStorage.setItem(`${prefix}_last_read`, lastReadIso.value);
       localStorage.setItem(`${prefix}_acked`, JSON.stringify(Array.from(ackedKeys.value).slice(-100)));
+      localStorage.setItem(`${prefix}_read_keys`, JSON.stringify(Array.from(readKeys.value).slice(-200)));
       localStorage.setItem(`${prefix}_sound`, String(soundEnabled.value));
       localStorage.setItem(`${prefix}_snooze_until`, String(snoozedUntilMs.value));
     } catch {
@@ -191,6 +196,14 @@
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim());
   }
 
+  function isItemRead(dedupKey: string, timestamp: string): boolean {
+    return (
+      ackedKeys.value.has(dedupKey) ||
+      readKeys.value.has(dedupKey) ||
+      Boolean(lastReadIso.value && timestamp && timestamp <= lastReadIso.value)
+    );
+  }
+
   function populateApprovalNotifications(itemsMap: Map<string, TacticalNotificationItem>): void {
     if (!isCheckerAuthorized.value) return;
     for (const req of pendingApprovals.value) {
@@ -210,6 +223,7 @@
         approvalId: req.id,
         requestedByUserId: req.requested_by,
         routerId: req.router_id,
+        isRead: isItemRead(dedupKey, req.created_at),
       });
     }
   }
@@ -217,6 +231,7 @@
   function createRouterNotification(r: (typeof inventoryStore.routers)[number]): TacticalNotificationItem | null {
     if (r.admin_state === 'MAINTENANCE') {
       const dedupKey = `router-maint:${r.id}`;
+      const timestamp = r.last_seen_at || new Date().toISOString();
       return {
         id: dedupKey,
         dedupKey,
@@ -225,11 +240,12 @@
         icon: '🛠️',
         title: `${r.display_name} (${r.ip_address})`,
         subtitle: t('notifications.router_in_maintenance', 'Equipo en ventana de mantenimiento activa (alertas silenciadas)'),
-        timestamp: r.last_seen_at || new Date().toISOString(),
+        timestamp,
         repeatCount: 1,
         targetPath: '/inventory/maintenance-windows',
         requiresAction: false,
         routerId: r.id,
+        isRead: isItemRead(dedupKey, timestamp),
       };
     }
 
@@ -238,6 +254,7 @@
       (!r.is_reachable && r.operational_status !== 'ONLINE');
     if (isOffline) {
       const dedupKey = `router-offline:${r.id}`;
+      const timestamp = r.last_seen_at || new Date().toISOString();
       return {
         id: dedupKey,
         dedupKey,
@@ -246,11 +263,12 @@
         icon: '🚨',
         title: `${r.display_name} (${r.ip_address}) — OFFLINE`,
         subtitle: t('notifications.router_unreachable', 'Pérdida de conectividad REST/ICMP detectada'),
-        timestamp: r.last_seen_at || new Date().toISOString(),
+        timestamp,
         repeatCount: 1,
         targetPath: '/noc-wallboard',
         requiresAction: !ackedKeys.value.has(dedupKey),
         routerId: r.id,
+        isRead: isItemRead(dedupKey, timestamp),
       };
     }
 
@@ -259,6 +277,7 @@
       r.ssl_trust_status === 'FINGERPRINT_MISMATCH';
     if (isTofu) {
       const dedupKey = `router-tofu:${r.id}`;
+      const timestamp = r.last_seen_at || new Date().toISOString();
       return {
         id: dedupKey,
         dedupKey,
@@ -267,11 +286,12 @@
         icon: '🔐',
         title: `${r.display_name} — ${t('notifications.tofu_alert', 'Alerta TOFU SSL')}`,
         subtitle: t('notifications.tofu_mismatch', 'Discrepancia de certificado TLS SHA-256 detectada'),
-        timestamp: r.last_seen_at || new Date().toISOString(),
+        timestamp,
         repeatCount: 1,
         targetPath: '/inventory',
         requiresAction: !ackedKeys.value.has(dedupKey),
         routerId: r.id,
+        isRead: isItemRead(dedupKey, timestamp),
       };
     }
 
@@ -378,6 +398,7 @@
       targetPath,
       requiresAction: isCritical && !isAcked,
       routerId: ev.routerId || ev.router_id || undefined,
+      isRead: isItemRead(dedupKey, eventTimestamp),
     };
   }
 
@@ -397,6 +418,7 @@
         existing.repeatCount += 1;
         if (eventTimestamp > existing.timestamp) {
           existing.timestamp = eventTimestamp;
+          existing.isRead = isItemRead(dedupKey, eventTimestamp);
         }
         continue;
       }
@@ -429,9 +451,11 @@
   );
 
   const unreadInformationalCount = computed(() =>
-    allNotifications.value.filter(
-      (item) => !item.requiresAction && (!lastReadIso.value || item.timestamp > lastReadIso.value),
-    ).length,
+    allNotifications.value.filter((item) => !item.requiresAction && !item.isRead).length,
+  );
+
+  const unreadTotalCount = computed(() =>
+    allNotifications.value.filter((item) => !item.isRead || (item.requiresAction && !item.approvalId)).length,
   );
 
   const highestActivePriority = computed<'P1' | 'P2' | 'P3' | 'NONE'>(() => {
@@ -494,11 +518,17 @@
   function markAllInformationalRead(): void {
     lastReadIso.value = new Date().toISOString();
     for (const item of allNotifications.value) {
+      readKeys.value.add(item.dedupKey);
       if (!item.approvalId) {
         ackedKeys.value.add(item.dedupKey);
       }
     }
+    readKeys.value = new Set(readKeys.value);
     ackedKeys.value = new Set(ackedKeys.value);
+    liveAnnouncerText.value = t(
+      'notifications.all_marked_read_sr',
+      'Todas las notificaciones han sido marcadas como leídas',
+    );
     savePersistedPrefs();
     broadcastStateSync();
   }
@@ -521,6 +551,8 @@
   }
 
   function handleSelectNotification(item: TacticalNotificationItem): void {
+    readKeys.value.add(item.dedupKey);
+    readKeys.value = new Set(readKeys.value);
     if (!item.approvalId) {
       ackedKeys.value.add(item.dedupKey);
       ackedKeys.value = new Set(ackedKeys.value);
@@ -535,8 +567,6 @@
   function togglePopover(): void {
     isOpen.value = !isOpen.value;
     if (isOpen.value) {
-      lastReadIso.value = new Date().toISOString();
-      savePersistedPrefs();
       fetchPendingApprovalsIfAllowed();
     }
   }
@@ -748,6 +778,17 @@
           </button>
 
           <button
+            id="btn-notif-mark-all-read"
+            type="button"
+            class="btn-notif-ctrl btn-notif-ctrl--mark-read"
+            :class="{ 'btn-notif-ctrl--active': unreadTotalCount > 0 }"
+            :title="t('notifications.mark_all_read', 'Marcar todas las notificaciones como leídas')"
+            @click="markAllInformationalRead"
+          >
+            ✓✓ {{ t('notifications.mark_read_short', 'Marcar todo leído') }}
+          </button>
+
+          <button
             id="btn-notif-snooze-30m"
             type="button"
             class="btn-notif-ctrl"
@@ -756,16 +797,6 @@
             @click="toggleSnooze30m"
           >
             {{ isSnoozed ? '🔕 30m' : '🕒 30m' }}
-          </button>
-
-          <button
-            id="btn-notif-mark-all-read"
-            type="button"
-            class="btn-notif-ctrl"
-            :title="t('notifications.mark_all_read', 'Marcar avisos como vistos')"
-            @click="markAllInformationalRead"
-          >
-            ✓ {{ t('notifications.mark_read_short', 'Vistas') }}
           </button>
         </div>
       </div>
@@ -837,6 +868,8 @@
           :class="{
             'notif-row--action-p1': item.requiresAction && item.priority === 'P1',
             'notif-row--action-p2': item.requiresAction && item.priority === 'P2',
+            'notif-row--unread': !item.isRead,
+            'notif-row--read': item.isRead && !item.requiresAction,
           }"
           tabindex="0"
           @click="handleSelectNotification(item)"
@@ -846,6 +879,11 @@
 
           <div class="notif-row-body">
             <div class="notif-row-top">
+              <span
+                v-if="!item.isRead"
+                class="notif-row-unread-dot"
+                aria-hidden="true"
+              ></span>
               <span class="notif-row-title">{{ item.title }}</span>
               <span v-if="item.repeatCount > 1" class="notif-repeat-badge">
                 ×{{ item.repeatCount }}
@@ -1153,6 +1191,19 @@
 
   .notif-row--action-p2 {
     border-left: 3px solid var(--rg-status-warning, #f59e0b);
+  }
+
+  .notif-row--read {
+    opacity: 0.72;
+  }
+
+  .notif-row-unread-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: var(--rg-accent-cyan, #22d3ee);
+    box-shadow: 0 0 6px rgba(34, 211, 238, 0.75);
+    flex-shrink: 0;
   }
 
   .notif-row-icon {
