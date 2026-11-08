@@ -8,6 +8,7 @@ import FieldTechMobileView from './FieldTechMobileView.vue';
 import { useFieldOpsStore } from '@/stores/useFieldOpsStore';
 import { useInventoryStore } from '@/stores/useInventoryStore';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useI18n } from '@/composables/useI18n';
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({
@@ -433,5 +434,41 @@ describe('FieldTechMobileView.vue — Panel Responsive del Técnico de Campo FTT
       }),
     );
     expect(wrapper.text()).toContain('Instalación certificada con éxito');
+  });
+
+  it('renderiza todos los textos de Diagnósticos, Firma Táctil y Mapa de Zona en inglés cuando el locale es en (Spec 94 / Hito 30.17)', async () => {
+    const { setLocale } = useI18n();
+    setLocale('en');
+
+    try {
+      const authStore = useAuthStore();
+      authStore.updateTenantFeatures({ isp_module_enabled: true });
+
+      const fieldStore = useFieldOpsStore();
+      fieldStore.recentInstallations = [
+        {
+          id: 'sub-en-1',
+          tenant_id: 't-1',
+          router_id: 'r-1',
+          endpoint_identifier: '151515',
+          device_serial: 'MAC-55447788',
+          optical_box_port: 1,
+          rx_optical_power_dbm: -19.2,
+          last_reachability_status: 'ONLINE',
+        } as any,
+      ];
+
+      const wrapper = mount(FieldTechMobileView);
+      expect(wrapper.find('#tab-btn-map').text()).toContain('Zone Map');
+
+      await wrapper.find('#tab-btn-diagnostics').trigger('click');
+      expect(wrapper.text()).toContain('Real-Time Diagnostics & 1-Click Certification');
+      expect(wrapper.text()).toContain('1-Click Ping');
+      expect(wrapper.text()).toContain('Quick Diagnostics');
+      expect(wrapper.text()).toContain('Full 360° Diagnostics (MTU+Logs+Torch)');
+      expect(wrapper.text()).toContain('Port 1');
+    } finally {
+      setLocale('es');
+    }
   });
 });

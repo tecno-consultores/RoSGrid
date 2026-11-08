@@ -460,7 +460,10 @@
 
   async function handleCertifyInstallation() {
     if (!hasDrawnSignature.value) {
-      showMessage('Se requiere la firma táctil para certificar la entrega', 'error');
+      showMessage(
+        t('field_tech.err_signature_required', 'Se requiere la firma táctil para certificar la entrega'),
+        'error',
+      );
       return;
     }
     const targetDev =
@@ -497,7 +500,10 @@
         });
       }
       showMessage(
-        '✅ Instalación certificada con éxito. Entrega registrada en auditoría WORM.',
+        t(
+          'field_tech.msg_certified_success',
+          '✅ Instalación certificada con éxito. Entrega registrada en auditoría WORM.',
+        ),
         'success',
       );
     } catch (err: unknown) {
@@ -603,7 +609,7 @@
           :class="['nav-tab', { active: activeTab === 'map' }]"
           @click="activeTab = 'map'"
         >
-          🗺️ Mapa de Zona
+          🗺️ {{ t('field_tech.tab_map', 'Mapa de Zona') }}
         </button>
       </nav>
 
@@ -615,22 +621,22 @@
         <section v-if="activeTab === 'nap'" class="tab-pane" aria-labelledby="tab-btn-nap">
           <div class="pane-grid">
             <div class="card-form">
-              <h2 class="form-title">📦 Registrar Nueva Caja de Distribución Óptica (NAP)</h2>
+              <h2 class="form-title">📦 {{ t('field_tech.nap_form_title', 'Registrar Nueva Caja de Distribución Óptica (NAP)') }}</h2>
               <p class="form-desc">
-                Geolocalice la caja y configure su capacidad de splitters para permitir altas de clientes.
+                {{ t('field_tech.nap_form_desc', 'Geolocalice la caja y configure su capacidad de splitters para permitir altas de clientes.') }}
               </p>
 
               <form class="form-body" @submit.prevent="handleCreateNap">
                 <div class="form-row">
                   <div class="form-group flex-1">
-                    <label for="nap-router-select">Router Asignador / Sede *</label>
+                    <label for="nap-router-select">{{ t('field_tech.nap_router_label', 'Router Asignador / Sede *') }}</label>
                     <select
                       id="nap-router-select"
                       v-model="napForm.router_id"
                       class="rg-input"
                       required
                     >
-                      <option value="" disabled>Seleccione un router...</option>
+                      <option value="" disabled>{{ t('field_tech.nap_router_placeholder', 'Seleccione un router...') }}</option>
                       <option
                         v-for="r in inventoryStore.routers"
                         :key="r.id"
@@ -663,14 +669,14 @@
                         :class="['btn-toggle', { active: napForm.capacity_ports === 8 }]"
                         @click="napForm.capacity_ports = 8; napForm.splitter_ratio = '1:8'"
                       >
-                        8 Puertos
+                        {{ t('field_tech.ports_8', '8 Puertos') }}
                       </button>
                       <button
                         type="button"
                         :class="['btn-toggle', { active: napForm.capacity_ports === 16 }]"
                         @click="napForm.capacity_ports = 16; napForm.splitter_ratio = '1:16'"
                       >
-                        16 Puertos
+                        {{ t('field_tech.ports_16', '16 Puertos') }}
                       </button>
                       <button
                         type="button"
@@ -722,7 +728,7 @@
                     v-model="napForm.physical_location"
                     type="text"
                     class="rg-input"
-                    placeholder="Ej: Av. Bolívar Poste Eléctrico #14 frente a FarmaCentro"
+                    :placeholder="t('field_tech.nap_location_placeholder', 'Ej: Av. Bolívar Poste Eléctrico #14 frente a FarmaCentro')"
                   />
                 </div>
 
@@ -768,9 +774,9 @@
 
             <!-- Listado de Cajas Registradas -->
             <div class="card-list">
-              <h3 class="list-title">Cajas NAP Desplegadas ({{ fieldStore.opticalBoxes.length }})</h3>
+              <h3 class="list-title">{{ t('field_tech.nap_deployed_list_title', 'Cajas NAP Desplegadas') }} ({{ fieldStore.opticalBoxes.length }})</h3>
               <div v-if="fieldStore.opticalBoxes.length === 0" class="empty-hint">
-                No hay cajas NAP registradas aún. Registre la primera caja a la izquierda.
+                {{ t('field_tech.nap_empty_hint', 'No hay cajas NAP registradas aún. Registre la primera caja a la izquierda.') }}
               </div>
               <div v-else class="boxes-scrollable">
                 <article
@@ -783,7 +789,7 @@
                     <span class="box-badge font-mono">{{ b.box_code }}</span>
                     <span class="box-capacity-tag">{{ b.capacity_ports }}p ({{ b.splitter_ratio }})</span>
                   </div>
-                  <p class="box-location">{{ b.physical_location || 'Ubicación sin especificar' }}</p>
+                  <p class="box-location">{{ b.physical_location || t('field_tech.nap_unspecified_location', 'Ubicación sin especificar') }}</p>
                   <div class="box-mini-footer">
                     <span class="font-mono text-cyan">{{ b.input_power_dbm ?? '--' }} dBm Pin</span>
                     <span class="text-subtle font-mono">{{ Number(b.latitude).toFixed(4) }}, {{ Number(b.longitude).toFixed(4) }}</span>
@@ -800,9 +806,9 @@
         <section v-else-if="activeTab === 'customer'" class="tab-pane" aria-labelledby="tab-btn-customer">
           <div class="pane-grid">
             <div class="card-form">
-              <h2 class="form-title">🔌 Registrar y Aprovisionar Nuevo Cliente FTTH</h2>
+              <h2 class="form-title">🔌 {{ t('field_tech.cust_form_title', 'Registrar y Aprovisionar Nuevo Cliente FTTH') }}</h2>
               <p class="form-desc">
-                Asocie la ONU al puerto disponible de la Caja NAP y valide la potencia óptica recibida en domicilio.
+                {{ t('field_tech.cust_form_desc', 'Asocie la ONU al puerto disponible de la Caja NAP y valide la potencia óptica recibida en domicilio.') }}
               </p>
 
               <form class="form-body" @submit.prevent="handleRegisterCustomer">
@@ -827,7 +833,7 @@
                       class="rg-input"
                       required
                     >
-                      <option value="" disabled>Seleccione una caja NAP...</option>
+                      <option value="" disabled>{{ t('field_tech.cust_nap_placeholder', 'Seleccione una caja NAP...') }}</option>
                       <option
                         v-for="b in fieldStore.opticalBoxes"
                         :key="b.id"
@@ -854,13 +860,13 @@
                         :value="p"
                         :disabled="isNapPortOccupied(p)"
                       >
-                        Puerto {{ p }}{{ isNapPortOccupied(p) ? ' (Ocupado)' : '' }}
+                        {{ t('field_tech.port_label', 'Puerto') }} {{ p }}{{ isNapPortOccupied(p) ? ` (${t('field_tech.port_occupied', 'Ocupado')})` : '' }}
                       </option>
                     </select>
                   </div>
 
                   <div class="form-group flex-1">
-                    <label for="cust-onu-mac">MAC WAN de la ONU (Para Reserva DHCP / PPPoE en NOC) *</label>
+                    <label for="cust-onu-mac">{{ t('field_tech.cust_onu_mac_label', 'MAC WAN de la ONU (Para Reserva DHCP / PPPoE en NOC) *') }}</label>
                     <div class="input-with-btn">
                       <input
                         id="cust-onu-mac"
@@ -895,7 +901,7 @@
                   </div>
 
                   <div class="form-group flex-1">
-                    <label for="cust-onu-serial">{{ t('field_tech.serial_onu_label') }} (Opcional — Inventario)</label>
+                    <label for="cust-onu-serial">{{ t('field_tech.serial_onu_label') }} {{ t('field_tech.optional_inventory', '(Opcional — Inventario)') }}</label>
                     <div class="input-with-btn">
                       <input
                         id="cust-onu-serial"
@@ -939,9 +945,9 @@
                     <span class="unit-tag font-mono">dBm</span>
                   </div>
                   <p class="meter-advice">
-                    <span v-if="opticalRxSeverity === 'optimal'">El nivel de luz se encuentra en el rango de máxima estabilidad y cero jitter.</span>
-                    <span v-else-if="opticalRxSeverity === 'warning'">Atenuación elevada. Verifique curvatura del cable drop o limpieza del conector SC/APC.</span>
-                    <span v-else>Riesgo inminente de desconexión o pérdida de tramas FEC. Requiere re-fusionar el drop.</span>
+                    <span v-if="opticalRxSeverity === 'optimal'">{{ t('field_tech.optical_advice_optimal', 'El nivel de luz se encuentra en el rango de máxima estabilidad y cero jitter.') }}</span>
+                    <span v-else-if="opticalRxSeverity === 'warning'">{{ t('field_tech.optical_advice_warning', 'Atenuación elevada. Verifique curvatura del cable drop o limpieza del conector SC/APC.') }}</span>
+                    <span v-else>{{ t('field_tech.optical_advice_critical', 'Riesgo inminente de desconexión o pérdida de tramas FEC. Requiere re-fusionar el drop.') }}</span>
                   </p>
                 </div>
 
@@ -960,7 +966,7 @@
                 <!-- Coordenadas Domicilio -->
                 <div class="coords-box">
                   <div class="coords-header">
-                    <span>Coordenadas del Domicilio</span>
+                    <span>{{ t('field_tech.home_coords_title', 'Coordenadas del Domicilio') }}</span>
                     <button
                       type="button"
                       class="btn-touch-xs btn-touch--cyan"
@@ -1006,9 +1012,9 @@
 
             <!-- Previsualización de la Caja NAP Seleccionada -->
             <div class="card-list">
-              <h3 class="list-title">Detalle de la Caja NAP</h3>
+              <h3 class="list-title">{{ t('field_tech.nap_detail_title', 'Detalle de la Caja NAP') }}</h3>
               <div v-if="!selectedNapBox" class="empty-hint">
-                Seleccione una Caja NAP en el formulario para inspeccionar sus puertos y capacidad.
+                {{ t('field_tech.nap_detail_empty', 'Seleccione una Caja NAP en el formulario para inspeccionar sus puertos y capacidad.') }}
               </div>
               <div v-else class="nap-detail-view">
                 <div class="nap-summary">
@@ -1020,7 +1026,7 @@
                 </div>
 
                 <div class="nap-matrix-preview">
-                  <h5>Matriz de Puertos ({{ selectedNapBox.capacity_ports }} Puertos)</h5>
+                  <h5>{{ t('field_tech.nap_port_matrix_title', 'Matriz de Puertos') }} ({{ selectedNapBox.capacity_ports }} {{ t('field_tech.ports_24', 'Puertos') }})</h5>
                   <div class="ports-grid">
                     <button
                       v-for="p in selectedNapBox.capacity_ports"
@@ -1052,9 +1058,9 @@
         <section v-else-if="activeTab === 'diagnostics'" class="tab-pane" aria-labelledby="tab-btn-diagnostics">
           <div class="pane-grid">
             <div class="card-form">
-              <h2 class="form-title">⚡ Diagnóstico en Tiempo Real y Certificación 1-Click</h2>
+              <h2 class="form-title">⚡ {{ t('field_tech.diag_form_title', 'Diagnóstico en Tiempo Real y Certificación 1-Click') }}</h2>
               <p class="form-desc">
-                Verifique conectividad ICMP, salto de gateway, salida a internet y resolución DNS desde el router MikroTik.
+                {{ t('field_tech.diag_form_desc', 'Verifique conectividad ICMP, salto de gateway, salida a internet y resolución DNS desde el router MikroTik.') }}
               </p>
 
               <div class="diag-action-bar">
@@ -1083,8 +1089,8 @@
                     :disabled="isPinging || !diagTargetId"
                     @click="handleRun1ClickPing(false, false)"
                   >
-                    <span v-if="isPinging">⏳ Probando...</span>
-                    <span v-else>⚡ Ping 1-Click</span>
+                    <span v-if="isPinging">{{ t('field_tech.btn_testing_ping', '⏳ Probando...') }}</span>
+                    <span v-else>{{ t('field_tech.btn_ping_1click', '⚡ Ping 1-Click') }}</span>
                   </button>
                   <button
                     type="button"
@@ -1092,8 +1098,8 @@
                     :disabled="isPinging || !diagTargetId"
                     @click="handleRun1ClickPing(false, true)"
                   >
-                    <span v-if="isPinging">⏳ Diagnosticando...</span>
-                    <span v-else>🌐 Diagnóstico Rápido</span>
+                    <span v-if="isPinging">{{ t('field_tech.btn_diagnosing', '⏳ Diagnosticando...') }}</span>
+                    <span v-else>{{ t('field_tech.btn_quick_diag', '🌐 Diagnóstico Rápido') }}</span>
                   </button>
                   <button
                     id="btn-run-diagnostics-360"
@@ -1102,8 +1108,8 @@
                     :disabled="isPinging || !diagTargetId"
                     @click="handleRunEndpoint360Diagnostics"
                   >
-                    <span v-if="isPinging">⏳ Ejecutando 360°...</span>
-                    <span v-else>🩺 Diagnóstico 360° Integral (MTU+Logs+Torch)</span>
+                    <span v-if="isPinging">{{ t('field_tech.btn_running_360', '⏳ Ejecutando 360°...') }}</span>
+                    <span v-else>{{ t('field_tech.btn_diag_360', '🩺 Diagnóstico 360° Integral (MTU+Logs+Torch)') }}</span>
                   </button>
                 </div>
               </div>
@@ -1184,7 +1190,7 @@
                     @touchend.prevent="stopDrawing"
                   />
                   <div v-if="!hasDrawnSignature" class="signature-watermark" aria-hidden="true">
-                    <span>Dibujar rúbrica de conformidad aquí con el dedo o stylus</span>
+                    <span>{{ t('field_tech.signature_watermark', 'Dibujar rúbrica de conformidad aquí con el dedo o stylus') }}</span>
                   </div>
                 </div>
 
@@ -1203,7 +1209,7 @@
             <div class="card-list">
               <h3 class="list-title">{{ t('field_tech.recent_activity') }} ({{ fieldStore.recentInstallations.length }})</h3>
               <div v-if="fieldStore.recentInstallations.length === 0" class="empty-hint">
-                No hay instalaciones recientes registradas en este turno.
+                {{ t('field_tech.recent_empty_hint', 'No hay instalaciones recientes registradas en este turno.') }}
               </div>
               <div v-else class="boxes-scrollable">
                 <article
@@ -1223,7 +1229,7 @@
                   </div>
                   <p class="font-mono text-cyan">{{ inst.onu_serial_number || inst.device_serial }}</p>
                   <div class="box-mini-footer">
-                    <span>Puerto {{ inst.optical_box_port ?? '1' }}</span>
+                    <span>{{ t('field_tech.port_label', 'Puerto') }} {{ inst.optical_box_port ?? '1' }}</span>
                     <span class="text-subtle font-mono">{{ inst.rx_optical_power_dbm ?? '--' }} dBm Rx</span>
                   </div>
                 </article>
@@ -1237,9 +1243,9 @@
         <!-- ========================================== -->
         <section v-else-if="activeTab === 'map'" class="tab-pane tab-pane-map" aria-labelledby="tab-btn-map">
           <div class="map-tab-header">
-            <h2 class="form-title">🗺️ Mapa de Zona & Topología FTTH</h2>
+            <h2 class="form-title">🗺️ {{ t('field_tech.map_form_title', 'Mapa de Zona & Topología FTTH') }}</h2>
             <p class="form-desc">
-              Visualice clientes y cajas NAP de su zona. Seleccione un abonado para diagnosticarlo. Los routers de cabecera muestran telemetría con acceso WebFig restringido.
+              {{ t('field_tech.map_form_desc', 'Visualice clientes y cajas NAP de su zona. Seleccione un abonado para diagnosticarlo. Los routers de cabecera muestran telemetría con acceso WebFig restringido.') }}
             </p>
           </div>
           <div class="map-embedded-container">

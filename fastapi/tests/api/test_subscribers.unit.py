@@ -17,6 +17,7 @@ from src.models.core import SystemRoleEnum
 from src.models.inventory import Router, RouterAdminStateEnum, RouterNetworkRoleEnum
 from src.models.ipam import (
     BandwidthProfile,
+    FieldInstallationOrder,
     OpticalBox,
     SubscriberDevice,
 )
@@ -74,6 +75,7 @@ class MockSubscribersDbSession:
             )
         ]
         self.optical_boxes: list[OpticalBox] = []
+        self.orders: list[FieldInstallationOrder] = []
         self.deleted: list[Any] = []
 
     def add(self, obj: Any) -> None:
@@ -93,6 +95,8 @@ class MockSubscribersDbSession:
             self.devices.append(obj)
         elif isinstance(obj, OpticalBox):
             self.optical_boxes.append(obj)
+        elif isinstance(obj, FieldInstallationOrder):
+            self.orders.append(obj)
 
     async def commit(self) -> None:
         pass
@@ -176,6 +180,10 @@ class MockSubscribersDbSession:
         if "from routers" in stmt_str:
             item = self.routers[0] if self.routers else None
             return MockSubscribersDbResult(item, self.routers)
+
+        if "from field_installation_orders" in stmt_str:
+            item = self.orders[0] if self.orders else None
+            return MockSubscribersDbResult(item, self.orders)
 
         return MockSubscribersDbResult(None, [])
 
@@ -584,5 +592,67 @@ async def test_subscriber_ipv4_pairing_persistence_and_ipam_list_sync(
         assert create_res.status_code == 201
         create_data = create_res.json()
         assert create_data["assigned_ipv4"] == "10.250.3.56"
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_field_ops_certify_signature_svg_column_parity_and_defensive_truncation(
+    async_client: AsyncClient, subscriber_auth: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Certifica que POST /api/v1/field-ops/certify persista customer_signature_svg con truncamiento defensivo (Spec 94 / Hito 30.17)."""
+    audit_calls: list[dict[str, Any]] = []
+
+    async def fake_audit_capture(**kwargs: Any) -> None:
+        audit_calls.append(kwargs)
+
+    monkeypatch.setattr("src.api.v1.field_ops.write_audit_log", fake_audit_capture)
+
+    tid = subscriber_auth["tenant_id"]
+    headers = subscriber_auth["headers"]
+    mock_db = MockSubscribersDbSession(tid)
+    app.dependency_overrides[get_tenant_db_session] = lambda: mock_db
+
+    router_id = mock_db.routers[0].id
+    now = datetime.now(UTC)
+    sub_dev = SubscriberDevice(
+        id=uuid.uuid4(),
+        tenant_id=tid,
+        router_id=router_id,
+        endpoint_identifier="151515",
+        service_type="DHCP",
+        auth_backend="LOCAL_SECRET",
+        onu_mode="ROUTER",
+        device_serial="MAC-55447788",
+        onu_mac_address="55:44:77:88:99:00",
+        status="PENDING_INSTALL",
+        last_reachability_status="ONLINE",
+        created_at=now,
+        updated_at=now,
+    )
+    mock_db.add(sub_dev)
+
+    try:
+        res = await async_client.post(
+            "/api/v1/field-ops/certify",
+            json={
+                "customer_service_id": str(sub_dev.id),
+                "onu_scanned_serial": "MAC-55447788",
+                "onu_scanned_mac": "55:44:77:88:99:00:EXTRA",
+                "tech_latitude": 10.4806,
+                "tech_longitude": -66.9036,
+                "customer_signature_svg": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA",
+                "notes": "Certificación en campo con firma táctil",
+            },
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res.status_code == 200
+        body = res.json()
+        assert body["status"] == "CERTIFIED"
+        assert body["customer_signature_svg"].startswith("data:image/png;base64,")
+        assert len(body["onu_scanned_mac"]) <= 17
+        assert len(audit_calls) == 1
+        assert audit_calls[0]["event_action"] == "FIELD_INSTALLATION_CERTIFIED"
+        assert audit_calls[0]["after_state"]["signature_captured"] is True
     finally:
         app.dependency_overrides.clear()

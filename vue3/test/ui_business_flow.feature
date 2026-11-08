@@ -1078,6 +1078,15 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * match i18nComplianceEnContract.notificationsTitle == 'Multi-Channel Alert & Notification Channels'
     * match i18nComplianceEnContract.siemSaveBtn == 'Save SIEM Configuration'
 
+  Scenario: 108. Certificación sin error 500 en /field-ops y traducción completa al inglés del panel de técnico de campo (Hito 30.17 - Spec 94)
+    * def fieldTechCertifyEnContract = { mapTab: '#tab-btn-map', mapTabLabelEn: 'Zone Map', diagTitleEn: 'Real-Time Diagnostics & 1-Click Certification', certifyBtn: '#btn-certify-order', migrationRevision: '0014_field_order_signature_svg' }
+    * match fieldTechCertifyEnContract.mapTab == '#tab-btn-map'
+    * match fieldTechCertifyEnContract.mapTabLabelEn == 'Zone Map'
+    * match fieldTechCertifyEnContract.diagTitleEn == 'Real-Time Diagnostics & 1-Click Certification'
+    * match fieldTechCertifyEnContract.certifyBtn == '#btn-certify-order'
+    * match fieldTechCertifyEnContract.migrationRevision == '0014_field_order_signature_svg'
+
+
 
 
 

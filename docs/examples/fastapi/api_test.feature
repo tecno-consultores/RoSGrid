@@ -1470,4 +1470,55 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 167. Filtrado RFC de IPs no enrutables/0.0.0.0 en anomalías de tráfico y sondeo ICMP rápido en SLA (Hito 30.14 - Spec 91)
+    Given path '/api/v1/traffic-flow/anomalies'
+    And param router_id = '00000000-0000-0000-0000-000000000001'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/traffic-flow/mitigate'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000168'
+    And request { router_id: '00000000-0000-0000-0000-000000000001', target_ip: '198.51.100.99', action: 'fast_drop', duration_seconds: 300, comment: 'Karate SLA Anomaly Mitigation' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/sla/probes/run'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000169'
+    And request { router_id: '00000000-0000-0000-0000-000000000001', target_host: '9.9.9.9', target_name: 'Quad9', count: 5 }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 168. Despacho real de prueba en canales de notificación y edición de canal con preservación de secretos (Hito 30.15 - Spec 92)
+    Given path '/api/v1/operations/notification-channels'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/operations/notification-channels/00000000-0000-0000-0000-000000000001/test'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000170'
+    And request { message: 'Prueba Karate Alerta de Canal' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/operations/notification-channels/00000000-0000-0000-0000-000000000001'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000171'
+    And request { name: 'Canal Renovado', config: { chat_id: '123456789' } }
+    When method patch
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+  Scenario: 169. Certificación de instalación en campo con persistencia de customer_signature_svg en PostgreSQL tras migración 0014 (Hito 30.17 - Spec 94)
+    Given path '/api/v1/field-ops/certify'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000172'
+    And request { customer_service_id: 'a9cea882-0a4e-4be4-824a-35fb38080189', onu_scanned_serial: 'MAC-55447788', onu_scanned_mac: '55:44:77:88:99:00', customer_signature_svg: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
+
 

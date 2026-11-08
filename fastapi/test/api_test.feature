@@ -1511,5 +1511,14 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  Scenario: 169. Certificación de instalación en campo con persistencia de customer_signature_svg en PostgreSQL tras migración 0014 (Hito 30.17 - Spec 94)
+    Given path '/api/v1/field-ops/certify'
+    And header Idempotency-Key = '01928900-0000-7000-8000-000000000172'
+    And request { customer_service_id: 'a9cea882-0a4e-4be4-824a-35fb38080189', onu_scanned_serial: 'MAC-55447788', onu_scanned_mac: '55:44:77:88:99:00', customer_signature_svg: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA' }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
 
 

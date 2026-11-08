@@ -115,14 +115,15 @@ async def create_field_order(
         notes=payload.notes,
     )
     db.add(order)
-    await db.commit()
-    await db.refresh(order)
+    if hasattr(db, "flush"):
+        await db.flush()
 
+    actor_name = str(claims.get("preferred_username") or claims.get("username") or "system")
     await write_audit_log(
         session=db,
         tenant_id=tenant_id,
         actor_user_id=uuid.UUID(str(claims["sub"])),
-        actor_username=str(claims.get("preferred_username") or claims.get("username") or "system"),
+        actor_username=actor_name,
         actor_role=claims.get("rol"),
         actor_ip="127.0.0.1",
         event_category="OPERATIONS",
@@ -132,6 +133,7 @@ async def create_field_order(
         after_state={"order_id": str(order.id), "customer_service_id": str(svc.id)},
     )
     await db.commit()
+    await db.refresh(order)
     return order
 
 
@@ -251,6 +253,9 @@ async def certify_installation(
     tenant_id = get_tenant_id(claims)
     order: Optional[FieldInstallationOrder] = None
 
+    clean_serial = (payload.onu_scanned_serial or "ONU-CERTIFIED").strip()[:64]
+    clean_mac = payload.onu_scanned_mac.strip()[:17] if payload.onu_scanned_mac else None
+
     if payload.order_id:
         stmt_ord = select(FieldInstallationOrder).where(
             FieldInstallationOrder.id == payload.order_id,
@@ -276,8 +281,8 @@ async def certify_installation(
                 customer_service_id=payload.customer_service_id,
                 assigned_tech_id=uuid.UUID(str(claims["sub"])),
                 status=FieldOrderStatusEnum.CERTIFIED,
-                onu_scanned_serial=payload.onu_scanned_serial,
-                onu_scanned_mac=payload.onu_scanned_mac,
+                onu_scanned_serial=clean_serial,
+                onu_scanned_mac=clean_mac,
                 tech_latitude=payload.tech_latitude,
                 tech_longitude=payload.tech_longitude,
                 customer_signature_svg=payload.customer_signature_svg,
@@ -291,8 +296,8 @@ async def certify_installation(
 
     # Actualizar datos de certificación
     order.status = FieldOrderStatusEnum.CERTIFIED
-    order.onu_scanned_serial = payload.onu_scanned_serial
-    order.onu_scanned_mac = payload.onu_scanned_mac
+    order.onu_scanned_serial = clean_serial
+    order.onu_scanned_mac = clean_mac
     order.tech_latitude = payload.tech_latitude
     order.tech_longitude = payload.tech_longitude
     if payload.customer_signature_svg:
@@ -305,15 +310,15 @@ async def certify_installation(
     svc = (await db.execute(stmt_svc)).scalar_one_or_none()
     if svc:
         svc.status = CustomerServiceStatusEnum.ACTIVE
-        svc.onu_serial_number = payload.onu_scanned_serial
-        if payload.onu_scanned_mac:
-            svc.onu_mac_address = payload.onu_scanned_mac
+        svc.onu_serial_number = clean_serial
+        if clean_mac:
+            svc.onu_mac_address = clean_mac
         if payload.tech_latitude is not None and payload.tech_longitude is not None:
             svc.latitude = payload.tech_latitude
             svc.longitude = payload.tech_longitude
 
-    await db.commit()
-    await db.refresh(order)
+    if hasattr(db, "flush"):
+        await db.flush()
 
     actor_name = str(claims.get("preferred_username") or claims.get("username") or "system")
     await write_audit_log(
@@ -331,11 +336,12 @@ async def certify_installation(
             "order_id": str(order.id),
             "customer_service_id": str(order.customer_service_id),
             "endpoint_identifier": svc.endpoint_identifier if svc else None,
-            "serial": payload.onu_scanned_serial,
+            "serial": clean_serial,
             "signature_captured": bool(payload.customer_signature_svg),
         },
     )
     await db.commit()
+    await db.refresh(order)
 
     if payload.tech_latitude is not None and payload.tech_longitude is not None:
         await publish_network_service_event(
@@ -344,7 +350,7 @@ async def certify_installation(
             payload={
                 "order_id": str(order.id),
                 "customer_service_id": str(order.customer_service_id),
-                "device_serial": payload.onu_scanned_serial,
+                "device_serial": clean_serial,
                 "latitude": float(payload.tech_latitude),
                 "longitude": float(payload.tech_longitude),
                 "activated_at": datetime.now(UTC).isoformat(),
