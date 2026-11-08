@@ -170,7 +170,13 @@
     "btn_copy_router_coords": "📍 Copiar Coordenadas del Router",
     "btn_save_coords": "💾 Guardar Coordenadas",
     "btn_ping_1click": "⚡ Test Ping 1-Click",
-    "pinging": "Ejecutando Ping..."
+    "pinging": "Ejecutando Ping...",
+    "btn_import_csv": "📂 Importar Clientes CSV",
+    "modal_csv_title": "📂 Carga Masiva de Clientes / Abonados (CSV)",
+    "modal_csv_subtitle": "Migre su cartera de clientes FTTH/DHCP validando formato, router y coordenadas GPS en seco antes de guardar.",
+    "btn_download_template": "⬇️ Descargar Plantilla CSV",
+    "btn_validate_dry_run": "🔍 Validar Archivo (Dry-Run)",
+    "btn_commit_import": "✅ Confirmar e Importar ({count} clientes)"
   },
   "mass_outage": {
     "alert_title": "ALERTA DE CAÍDA MASIVA DETECTADA",

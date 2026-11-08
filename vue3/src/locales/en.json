@@ -170,7 +170,13 @@
     "btn_copy_router_coords": "📍 Copy Router Coordinates",
     "btn_save_coords": "💾 Save Coordinates",
     "btn_ping_1click": "⚡ 1-Click Ping Test",
-    "pinging": "Executing Ping..."
+    "pinging": "Executing Ping...",
+    "btn_import_csv": "📂 Import CSV Clients",
+    "modal_csv_title": "📂 Bulk Subscribers / Clients Import (CSV)",
+    "modal_csv_subtitle": "Migrate your FTTH/DHCP subscriber base by dry-run validating format, router and GPS coordinates before committing.",
+    "btn_download_template": "⬇️ Download CSV Template",
+    "btn_validate_dry_run": "🔍 Validate File (Dry-Run)",
+    "btn_commit_import": "✅ Confirm & Import ({count} clients)"
   },
   "mass_outage": {
     "alert_title": "MASS OUTAGE ALERT DETECTED",

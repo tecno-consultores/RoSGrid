@@ -168,7 +168,7 @@ class MockSubscribersDbSession:
                     return MockSubscribersDbResult(None, [])
 
                 for k, v in compiled_params.items():
-                    if isinstance(v, uuid.UUID):
+                    if "tenant" not in k and isinstance(v, uuid.UUID):
                         for d in self.devices:
                             if d.id == v:
                                 return MockSubscribersDbResult(d, [d])
@@ -656,3 +656,141 @@ async def test_field_ops_certify_signature_svg_column_parity_and_defensive_trunc
         assert audit_calls[0]["after_state"]["signature_captured"] is True
     finally:
         app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_subscribers_bulk_csv_template_dry_run_and_commit(
+    async_client: AsyncClient,
+    subscriber_auth: dict[str, Any],
+    fake_redis: FakeAsyncRedis,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Spec 100 / Hito 30.23: Verifica descarga de plantilla CSV, validación dry-run y commit transaccional con WORM audit."""
+    audit_calls: list[dict[str, Any]] = []
+
+    async def fake_audit_capture(**kwargs: Any) -> None:
+        audit_calls.append(kwargs)
+
+    monkeypatch.setattr("src.api.v1.subscribers.write_audit_log", fake_audit_capture)
+
+    tid = subscriber_auth["tenant_id"]
+    headers = subscriber_auth["headers"]
+    mock_db = MockSubscribersDbSession(tid)
+    app.dependency_overrides[get_tenant_db_session] = lambda: mock_db
+
+    try:
+        # 1. Descarga de Plantilla CSV
+        tpl_res = await async_client.get(
+            "/api/v1/subscriber-devices/template-csv",
+            headers=headers,
+        )
+        assert tpl_res.status_code == 200
+        assert tpl_res.headers["content-type"].startswith("text/csv")
+        assert "rosgrid-clientes-plantilla.csv" in tpl_res.headers.get("content-disposition", "")
+        assert b"endpoint_identifier,onu_serial_number" in tpl_res.content
+
+        # 2. Validación Dry-Run con datos válidos e inválidos
+        router_name = mock_db.routers[0].display_name
+        csv_content = (
+            "endpoint_identifier,onu_serial_number,onu_mac_address,assigned_ipv4,"
+            "router_name,optical_box_name,box_port_number,latitude,longitude,service_status\r\n"
+            f"CLI-TEST-001,HWTC11223344,AA:BB:CC:11:22:33,100.64.10.20,{router_name},,1,10.4812,-66.9041,ACTIVE\r\n"
+            f"CLI-TEST-002,,INVALID-MAC,not-an-ip,UNKNOWN-ROUTER,,99,999.0,999.0,UNKNOWN_STATUS\r\n"
+        )
+        files = {"file": ("test_clients.csv", csv_content.encode("utf-8-sig"), "text/csv")}
+        dry_res = await async_client.post(
+            "/api/v1/subscriber-devices/import-csv/dry-run",
+            files=files,
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert dry_res.status_code == 200, f"Error {dry_res.status_code}: {dry_res.text}"
+        dry_body = dry_res.json()
+        assert dry_body["total_rows"] == 2
+        assert dry_body["valid_rows_count"] == 1
+        assert dry_body["invalid_rows_count"] == 1
+        assert dry_body["can_proceed"] is False
+        assert dry_body["rows"][0]["is_valid"] is True
+        assert dry_body["rows"][1]["is_valid"] is False
+        assert len(dry_body["rows"][1]["errors"]) >= 4
+
+        # 3. Commit transaccional con JSON payload (solo fila válida)
+        valid_row = dry_body["rows"][0]
+        commit_res = await async_client.post(
+            "/api/v1/subscriber-devices/import-csv/commit",
+            json={"rows": [valid_row]},
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert commit_res.status_code == 200, f"Error {commit_res.status_code}: {commit_res.text}"
+        commit_body = commit_res.json()
+        assert commit_body["imported_count"] == 1
+        assert len(commit_body["created_ids"]) == 1
+        assert len(mock_db.devices) == 1
+        assert mock_db.devices[0].endpoint_identifier == "CLI-TEST-001"
+        assert mock_db.devices[0].onu_mac_address == "AA:BB:CC:11:22:33"
+
+        # Verificar auditoría WORM con aserciones semánticas (Anti-Silo Invariant)
+        assert len(audit_calls) == 1
+        assert audit_calls[0]["event_category"] == "SUBSCRIBERS"
+        assert audit_calls[0]["event_action"] == "SUBSCRIBERS_CSV_BULK_IMPORTED"
+        assert audit_calls[0]["after_state"]["imported_count"] == 1
+
+        # 4. Commit transaccional vía multipart/form-data
+        csv_valid_single = (
+            "endpoint_identifier,onu_serial_number,onu_mac_address,assigned_ipv4,"
+            "router_name,optical_box_name,box_port_number,latitude,longitude,service_status\r\n"
+            f"CLI-TEST-003,HWTC99887766,AA:BB:CC:77:88:99,100.64.10.21,{router_name},,2,10.4815,-66.9045,ACTIVE\r\n"
+        )
+        files_commit = {"file": ("commit_clients.csv", csv_valid_single.encode("utf-8-sig"), "text/csv")}
+        commit_file_res = await async_client.post(
+            "/api/v1/subscriber-devices/import-csv/commit",
+            files=files_commit,
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert commit_file_res.status_code == 200
+        assert commit_file_res.json()["imported_count"] == 1
+        assert len(mock_db.devices) == 2
+
+        # 5. Intentar commit sin filas válidas -> HTTP 400
+        commit_empty = await async_client.post(
+            "/api/v1/subscriber-devices/import-csv/commit",
+            json={"rows": []},
+            headers={**headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert commit_empty.status_code == 400
+
+        # 6. Gobernanza RBAC: Rol NOC_MONITOR es denegado (HTTP 403)
+        noc_uid = uuid.uuid4()
+        noc_sid = "sess-noc-002"
+        noc_sess_key = f"rg:{tid}:sess:{noc_sid}"
+        await fake_redis.hset(
+            noc_sess_key,
+            mapping={
+                "session_id": noc_sid,
+                "user_id": str(noc_uid),
+                "username": "noc_operator",
+                "role": SystemRoleEnum.NOC_MONITOR.value,
+            },
+        )
+        noc_token = create_jwt_access_token(
+            str(noc_uid), str(tid), "tenant-sub", noc_sid, SystemRoleEnum.NOC_MONITOR.value, True
+        )
+        noc_headers = {"Authorization": f"Bearer {noc_token}", "Idempotency-Key": str(uuid.uuid4())}
+        res_tpl_noc = await async_client.get("/api/v1/subscriber-devices/template-csv", headers=noc_headers)
+        assert res_tpl_noc.status_code == 403
+
+        res_dry_noc = await async_client.post(
+            "/api/v1/subscriber-devices/import-csv/dry-run",
+            files=files,
+            headers={**noc_headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res_dry_noc.status_code == 403
+
+        res_commit_noc = await async_client.post(
+            "/api/v1/subscriber-devices/import-csv/commit",
+            json={"rows": [valid_row]},
+            headers={**noc_headers, "Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert res_commit_noc.status_code == 403
+    finally:
+        app.dependency_overrides.clear()
+

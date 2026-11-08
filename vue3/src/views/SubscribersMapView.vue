@@ -339,6 +339,98 @@
     }
   }
 
+  // Control RBAC y estado para importación masiva de abonados por CSV (Spec 100)
+  const canManageBulkSubscribers = computed(() => {
+    const role = authStore.currentRole || authStore.user?.role || '';
+    return role === 'SUPERADMIN_GLOBAL' || role === 'TENANT_ADMIN';
+  });
+
+  const isCsvModalOpen = ref(false);
+  const selectedCsvFile = ref<File | null>(null);
+  const isCsvDryRunLoading = ref(false);
+  const isCsvCommitLoading = ref(false);
+  const csvDryRunResult = ref<{
+    total_rows: number;
+    valid_rows_count: number;
+    invalid_rows_count: number;
+    can_proceed: boolean;
+    rows: Array<{
+      row_number: number;
+      endpoint_identifier: string;
+      onu_serial_number?: string | null;
+      assigned_ipv4?: string | null;
+      router_name: string;
+      optical_box_name?: string | null;
+      is_valid: boolean;
+      errors: string[];
+    }>;
+  } | null>(null);
+
+  async function handleDownloadSubscribersTemplate() {
+    try {
+      const res = await http.get<string>('/api/v1/subscriber-devices/template-csv');
+      const blob = new Blob([String(res.data)], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'rosgrid-clientes-plantilla.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      feedbackType.value = 'error';
+      feedbackMessage.value = 'Error al descargar la plantilla CSV de clientes.';
+    }
+  }
+
+  function handleCsvFileSelected(ev: Event) {
+    const input = ev.target as HTMLInputElement;
+    selectedCsvFile.value = input.files?.[0] || null;
+    csvDryRunResult.value = null;
+  }
+
+  async function handleRunSubscribersDryRun() {
+    if (!selectedCsvFile.value) return;
+    isCsvDryRunLoading.value = true;
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedCsvFile.value);
+      const res = await http.post<NonNullable<typeof csvDryRunResult.value>>(
+        '/api/v1/subscriber-devices/import-csv/dry-run',
+        formData,
+      );
+      csvDryRunResult.value = res.data;
+    } catch (err: unknown) {
+      feedbackType.value = 'error';
+      feedbackMessage.value =
+        err instanceof Error ? err.message : 'Error al validar el archivo CSV.';
+    } finally {
+      isCsvDryRunLoading.value = false;
+    }
+  }
+
+  async function handleCommitSubscribersCsv() {
+    if (!csvDryRunResult.value || !csvDryRunResult.value.can_proceed) return;
+    isCsvCommitLoading.value = true;
+    try {
+      const res = await http.post<{ imported_count: number; message: string }>(
+        '/api/v1/subscriber-devices/import-csv/commit',
+        { rows: csvDryRunResult.value.rows },
+      );
+      feedbackType.value = 'success';
+      feedbackMessage.value = res.data.message;
+      isCsvModalOpen.value = false;
+      csvDryRunResult.value = null;
+      selectedCsvFile.value = null;
+      await loadSubscriberDevices();
+    } catch (err: unknown) {
+      feedbackType.value = 'error';
+      feedbackMessage.value =
+        err instanceof Error ? err.message : 'Error al importar clientes por CSV.';
+    } finally {
+      isCsvCommitLoading.value = false;
+    }
+  }
+
   onMounted(async () => {
     await handleRefreshSubscribersMap();
     mapAutoRefreshTimer = setInterval(() => {
@@ -503,6 +595,17 @@
           <span v-if="isSyncingDhcp">⏳</span>
           <span v-else>🔄</span>
           {{ isSyncingDhcp ? t('subscribers_map.syncing_dhcp') : t('subscribers_map.btn_sync_dhcp') }}
+        </button>
+        <!-- Botón Carga Masiva CSV (Solo SUPERADMIN_GLOBAL y TENANT_ADMIN) -->
+        <button
+          v-if="canManageBulkSubscribers"
+          id="btn-import-subscribers-csv"
+          type="button"
+          class="btn-sync-dhcp"
+          aria-label="Importar Clientes CSV"
+          @click="isCsvModalOpen = true"
+        >
+          {{ t('subscribers_map.btn_import_csv', '📂 Importar Clientes CSV') }}
         </button>
       </div>
     </div>
@@ -727,6 +830,130 @@
           </div>
         </div>
       </aside>
+    </div>
+
+    <!-- Modal Asistente de Carga Masiva CSV de Clientes (Spec 100) -->
+    <div
+      v-if="isCsvModalOpen"
+      id="modal-import-subscribers-csv"
+      class="rg-modal-backdrop"
+      @click.self="isCsvModalOpen = false"
+    >
+      <div class="rg-modal" role="dialog" aria-modal="true" aria-labelledby="csv-modal-title">
+        <header class="modal-header">
+          <div>
+            <h2 id="csv-modal-title" class="modal-title">
+              {{ t('subscribers_map.modal_csv_title', '📂 Carga Masiva de Clientes / Abonados (CSV)') }}
+            </h2>
+            <p class="modal-subtitle">
+              {{ t('subscribers_map.modal_csv_subtitle', 'Migre su cartera de clientes FTTH/DHCP validando formato, router y coordenadas GPS en seco antes de guardar.') }}
+            </p>
+          </div>
+          <button
+            type="button"
+            class="btn-close"
+            aria-label="Cerrar modal de importación"
+            @click="isCsvModalOpen = false"
+          >
+            ✕
+          </button>
+        </header>
+
+        <div class="modal-body">
+          <div class="csv-actions-bar">
+            <button
+              id="btn-download-subscribers-csv-template"
+              type="button"
+              class="btn-secondary"
+              @click="handleDownloadSubscribersTemplate"
+            >
+              {{ t('subscribers_map.btn_download_template', '⬇️ Descargar Plantilla CSV') }}
+            </button>
+            <div class="file-picker-wrapper">
+              <input
+                id="input-subscribers-csv-file"
+                type="file"
+                accept=".csv,text/csv"
+                @change="handleCsvFileSelected"
+              />
+            </div>
+            <button
+              id="btn-run-subscribers-dry-run"
+              type="button"
+              class="btn-primary"
+              :disabled="!selectedCsvFile || isCsvDryRunLoading"
+              @click="handleRunSubscribersDryRun"
+            >
+              {{ isCsvDryRunLoading ? 'Validando...' : t('subscribers_map.btn_validate_dry_run', '🔍 Validar Archivo (Dry-Run)') }}
+            </button>
+          </div>
+
+          <!-- Previsualización de Resultados Dry-Run -->
+          <div v-if="csvDryRunResult" class="csv-preview-container">
+            <div class="csv-summary-badges">
+              <span class="summary-badge badge--total">
+                Total: {{ csvDryRunResult.total_rows }}
+              </span>
+              <span class="summary-badge badge--valid">
+                Válidas: {{ csvDryRunResult.valid_rows_count }}
+              </span>
+              <span class="summary-badge badge--invalid">
+                Inválidas: {{ csvDryRunResult.invalid_rows_count }}
+              </span>
+            </div>
+
+            <div class="csv-table-wrapper">
+              <table class="csv-preview-table">
+                <thead>
+                  <tr>
+                    <th>Fila</th>
+                    <th>Endpoint / Código</th>
+                    <th>Serial ONU</th>
+                    <th>IPv4</th>
+                    <th>Router</th>
+                    <th>Caja NAP</th>
+                    <th>Estado / Errores</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="row in csvDryRunResult.rows"
+                    :key="row.row_number"
+                    :class="{ 'row--invalid': !row.is_valid, 'row--valid': row.is_valid }"
+                  >
+                    <td>#{{ row.row_number }}</td>
+                    <td class="font-mono">{{ row.endpoint_identifier }}</td>
+                    <td class="font-mono">{{ row.onu_serial_number || '—' }}</td>
+                    <td class="font-mono">{{ row.assigned_ipv4 || '—' }}</td>
+                    <td>{{ row.router_name }}</td>
+                    <td>{{ row.optical_box_name || '—' }}</td>
+                    <td>
+                      <span v-if="row.is_valid" class="text-green">✓ Válido</span>
+                      <span v-else class="text-red">✕ {{ row.errors.join('; ') }}</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="modal-footer">
+              <button
+                v-if="csvDryRunResult.can_proceed"
+                id="btn-commit-subscribers-csv"
+                type="button"
+                class="btn-primary"
+                :disabled="isCsvCommitLoading"
+                @click="handleCommitSubscribersCsv"
+              >
+                {{ isCsvCommitLoading ? 'Importando...' : t('subscribers_map.btn_commit_import', { count: csvDryRunResult.valid_rows_count }) }}
+              </button>
+              <span v-else class="text-red font-semibold">
+                ⚠️ Corrija los errores indicados en las filas en rojo para habilitar la importación.
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </main>
 </template>
@@ -1207,4 +1434,194 @@
   .text-orange { color: #f97316; }
   .text-red { color: #ef4444; }
   .w-full { width: 100%; }
+
+  /* Modal de Importación Masiva CSV (Spec 100) */
+  .rg-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(3, 7, 18, 0.75);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 1rem;
+    box-sizing: border-box;
+  }
+
+  .rg-modal {
+    background: #090e17;
+    border: 1px solid rgba(0, 243, 255, 0.3);
+    border-radius: 8px;
+    width: 100%;
+    max-width: 860px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 243, 255, 0.1);
+    overflow: hidden;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: #0d1522;
+  }
+
+  .modal-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #00f3ff;
+    margin: 0 0 0.25rem 0;
+  }
+
+  .modal-subtitle {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin: 0;
+  }
+
+  .modal-body {
+    padding: 1.25rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .csv-actions-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    background: #060b13;
+    padding: 0.75rem 1rem;
+    border: 1px dashed rgba(0, 243, 255, 0.25);
+    border-radius: 6px;
+  }
+
+  .file-picker-wrapper input[type='file'] {
+    font-size: 0.8rem;
+    color: #94a3b8;
+  }
+
+  .btn-primary {
+    background: #00f3ff;
+    color: #060b13;
+    border: none;
+    border-radius: 6px;
+    padding: 0.5rem 1rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: #38bdf8;
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-secondary {
+    background: #1e293b;
+    color: #e2e8f0;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    padding: 0.5rem 0.85rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    background: #334155;
+  }
+
+  .csv-summary-badges {
+    display: flex;
+    gap: 0.6rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .summary-badge {
+    padding: 0.25rem 0.65rem;
+    border-radius: 4px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-family: monospace;
+  }
+
+  .badge--total {
+    background: rgba(148, 163, 184, 0.15);
+    border: 1px solid #64748b;
+    color: #cbd5e1;
+  }
+
+  .badge--valid {
+    background: rgba(34, 197, 94, 0.15);
+    border: 1px solid #22c55e;
+    color: #4ade80;
+  }
+
+  .badge--invalid {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid #ef4444;
+    color: #f87171;
+  }
+
+  .csv-table-wrapper {
+    max-height: 280px;
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    background: #060b13;
+  }
+
+  .csv-preview-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+    text-align: left;
+  }
+
+  .csv-preview-table th {
+    background: #0d1522;
+    padding: 0.5rem 0.65rem;
+    color: #94a3b8;
+    position: sticky;
+    top: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .csv-preview-table td {
+    padding: 0.45rem 0.65rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .row--invalid {
+    background: rgba(239, 68, 68, 0.08);
+  }
+
+  .row--valid {
+    background: rgba(34, 197, 94, 0.04);
+  }
+
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 1rem;
+    padding-top: 0.5rem;
+  }
 </style>

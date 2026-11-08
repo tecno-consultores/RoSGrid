@@ -1560,6 +1560,26 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  # ============================================================================
+  # SPEC 100: CARGA MASIVA CSV DE CLIENTES / ABONADOS CON VALIDACIÓN Y DRY-RUN
+  # ============================================================================
+  Scenario: 174. Descarga de plantilla CSV y validacion Dry-Run para carga masiva de clientes (Spec 100)
+    Given path '/api/v1/subscriber-devices/template-csv'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/subscriber-devices/import-csv/dry-run'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+    Given path '/api/v1/subscriber-devices/import-csv/commit'
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
 
 
 

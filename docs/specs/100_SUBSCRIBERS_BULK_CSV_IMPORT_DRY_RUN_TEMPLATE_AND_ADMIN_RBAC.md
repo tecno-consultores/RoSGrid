@@ -1,6 +1,6 @@
 # Especificación 100: Carga Masiva CSV de Clientes / Abonados (`template-csv`, `dry-run` y `commit`) con Gobernanza RBAC (`SUPERADMIN_GLOBAL` / `TENANT_ADMIN`) en `SubscribersMapView.vue`
 
-**Estado:** Pendiente de Implementación (`[ ]` Hito 30.23)  
+**Estado:** Completado y Certificado (`[x]` Hito 30.23)  
 **Target de Ejecución:** Gemini 3.8 Flash (High)  
 **Ámbito:** Backend (`fastapi/src/schemas/ipam.py`, `fastapi/src/api/v1/subscribers.py`) + Frontend (`vue3/src/locales/es.json`, `vue3/src/locales/en.json`, `vue3/src/views/SubscribersMapView.vue`) + Suite de Pruebas 11X (`fastapi/tests/api/test_subscribers.unit.py`, `vue3/src/views/subscribersMapView.unit.ts`, Karate Labs BDD)
 

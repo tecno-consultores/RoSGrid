@@ -492,4 +492,39 @@ class OperationalStatusResponse(BaseModel):
     root_cause: Optional[dict[str, Any]] = None
 
 
+class SubscriberCsvRowPreview(BaseModel):
+    row_number: int
+    endpoint_identifier: str
+    onu_serial_number: Optional[str] = None
+    onu_mac_address: Optional[str] = None
+    assigned_ipv4: Optional[str] = None
+    router_name: str
+    optical_box_name: Optional[str] = None
+    box_port_number: Optional[int] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    service_status: str = "ACTIVE"
+    is_valid: bool
+    errors: list[str] = Field(default_factory=list)
+
+
+class SubscriberCsvDryRunResponse(BaseModel):
+    total_rows: int
+    valid_rows_count: int
+    invalid_rows_count: int
+    can_proceed: bool
+    rows: list[SubscriberCsvRowPreview] = Field(default_factory=list)
+
+
+class SubscriberCsvCommitRequest(BaseModel):
+    rows: list[SubscriberCsvRowPreview]
+
+
+class SubscriberCsvCommitResponse(BaseModel):
+    imported_count: int
+    created_ids: list[uuid.UUID] = Field(default_factory=list)
+    message: str
+
+
+
 

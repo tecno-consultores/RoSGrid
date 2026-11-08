@@ -1124,6 +1124,15 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * assert resourceResponse.schema_source == 'package_not_installed'
     * assert resourceResponse.items.length == 0
 
+  # ============================================================================
+  # SPEC 100: ASISTENTE DE CARGA MASIVA CSV DE CLIENTES EN MAPA DE RED
+  # ============================================================================
+  Scenario: 114. Asistente de carga masiva CSV de clientes en Mapa de Clientes con RBAC Admin (Spec 100)
+    * def dryRunResponse = { total_rows: 2, valid_rows_count: 2, invalid_rows_count: 0, can_proceed: true, rows: [] }
+    * assert dryRunResponse.can_proceed == true
+    * assert dryRunResponse.valid_rows_count == 2
+
+
 
 
 

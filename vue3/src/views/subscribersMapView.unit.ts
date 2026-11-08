@@ -272,4 +272,117 @@ describe('SubscribersMapView.vue — Vista Bimodal de Mapa de Red y Clientes', (
       expect(wrapper.text()).toContain('Matriz de Puertos');
     });
   });
+
+  it('muestra el botón #btn-import-subscribers-csv solo para SUPERADMIN_GLOBAL / TENANT_ADMIN y ejecuta dry-run + commit (Spec 100)', async () => {
+    const authStore = useAuthStore();
+    authStore.currentRole = 'NOC_MONITOR';
+
+    const wrapperNoc = mount(SubscribersMapView, {
+      global: {
+        stubs: { RouterLink: true },
+      },
+    });
+    await vi.waitFor(() => {
+      expect(wrapperNoc.find(MOCK_MAP_SELECTOR).exists()).toBe(true);
+    });
+    expect(wrapperNoc.find('#btn-import-subscribers-csv').exists()).toBe(false);
+
+    authStore.currentRole = 'TENANT_ADMIN';
+    const wrapperAdmin = mount(SubscribersMapView, {
+      global: {
+        stubs: { RouterLink: true },
+      },
+    });
+    await vi.waitFor(() => {
+      expect(wrapperAdmin.find(MOCK_MAP_SELECTOR).exists()).toBe(true);
+    });
+    const importBtn = wrapperAdmin.find('#btn-import-subscribers-csv');
+    expect(importBtn.exists()).toBe(true);
+
+    // Abrir modal
+    await importBtn.trigger('click');
+    expect(wrapperAdmin.find('#modal-import-subscribers-csv').exists()).toBe(true);
+    expect(wrapperAdmin.find('#btn-download-subscribers-csv-template').exists()).toBe(true);
+    expect(wrapperAdmin.find('#input-subscribers-csv-file').exists()).toBe(true);
+    expect(wrapperAdmin.find('#btn-run-subscribers-dry-run').exists()).toBe(true);
+
+    // Mock de descarga de plantilla CSV
+    const spyGet = vi.spyOn(http, 'get').mockResolvedValueOnce({
+      status: 200,
+      headers: new Headers(),
+      data: 'endpoint_identifier,onu_serial_number',
+    } as any);
+
+    await wrapperAdmin.find('#btn-download-subscribers-csv-template').trigger('click');
+    expect(spyGet).toHaveBeenCalledWith('/api/v1/subscriber-devices/template-csv');
+
+    // Mock de Dry-Run
+    const dryRunPayload = {
+      total_rows: 1,
+      valid_rows_count: 1,
+      invalid_rows_count: 0,
+      can_proceed: true,
+      rows: [
+        {
+          row_number: 2,
+          endpoint_identifier: 'CLI-FTTH-001',
+          onu_serial_number: 'HWTC12345678',
+          onu_mac_address: 'AA:BB:CC:11:22:33',
+          assigned_ipv4: '100.64.10.15',
+          router_name: 'ROUTER-CORE-01',
+          optical_box_name: 'NAP-NORTE-01',
+          box_port_number: 1,
+          latitude: 10.4812,
+          longitude: -66.9041,
+          service_status: 'ACTIVE',
+          is_valid: true,
+          errors: [],
+        },
+      ],
+    };
+    const spyPost = vi.spyOn(http, 'post').mockImplementation(async (url: string) => {
+      if (url.includes('/import-csv/dry-run')) {
+        return { status: 200, headers: new Headers(), data: dryRunPayload } as any;
+      }
+      if (url.includes('/import-csv/commit')) {
+        return {
+          status: 200,
+          headers: new Headers(),
+          data: { imported_count: 1, created_ids: ['uuid-01'], message: 'Se importaron 1 clientes exitosamente.' },
+        } as any;
+      }
+      return { status: 200, headers: new Headers(), data: {} } as any;
+    });
+
+    // Simular archivo seleccionado
+    const fakeFile = new File(['csv content'], 'clientes.csv', { type: 'text/csv' });
+    const fileInput = wrapperAdmin.find('#input-subscribers-csv-file');
+    Object.defineProperty(fileInput.element, 'files', {
+      value: [fakeFile],
+      writable: false,
+    });
+    await fileInput.trigger('change');
+
+    // Ejecutar Dry-Run
+    await wrapperAdmin.find('#btn-run-subscribers-dry-run').trigger('click');
+    await wrapperAdmin.vm.$nextTick();
+
+    await vi.waitFor(() => {
+      expect(wrapperAdmin.find('.csv-preview-table').exists()).toBe(true);
+      expect(wrapperAdmin.text()).toContain('CLI-FTTH-001');
+      expect(wrapperAdmin.find('#btn-commit-subscribers-csv').exists()).toBe(true);
+    });
+
+    // Ejecutar Commit
+    await wrapperAdmin.find('#btn-commit-subscribers-csv').trigger('click');
+    await wrapperAdmin.vm.$nextTick();
+
+    await vi.waitFor(() => {
+      expect(spyPost).toHaveBeenCalledWith(
+        '/api/v1/subscriber-devices/import-csv/commit',
+        expect.objectContaining({ rows: dryRunPayload.rows }),
+      );
+      expect(wrapperAdmin.find('#modal-import-subscribers-csv').exists()).toBe(false);
+    });
+  });
 });
