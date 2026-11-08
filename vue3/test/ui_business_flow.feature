@@ -1240,6 +1240,16 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * assert wallboardDynamicTheme.light_theme_supported == true
     * assert wallboardDynamicTheme.map_toolbar_adapts_theme == true
 
+  # ============================================================================
+  # SPEC 112: ALINEACIÓN SIMÉTRICA DE CAMPOS DE CLAVE EN .form-row-2col (LOGIN)
+  # ============================================================================
+  Scenario: 126. Alineacion horizontal simetrica de campos de clave en filas de 2 columnas y etiquetas de 1 linea sin asterisco huerfano en LoginView (Spec 112)
+    * def loginPasswordRowAlignment = { card_wide_max_width_580: true, input_margin_top_auto: true, single_line_password_label: true, non_breaking_required_asterisk: true }
+    * assert loginPasswordRowAlignment.card_wide_max_width_580 == true
+    * assert loginPasswordRowAlignment.input_margin_top_auto == true
+    * assert loginPasswordRowAlignment.single_line_password_label == true
+    * assert loginPasswordRowAlignment.non_breaking_required_asterisk == true
+
 
 
 

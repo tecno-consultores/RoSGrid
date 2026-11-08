@@ -628,5 +628,32 @@ describe('LoginView.vue — Autenticación Multi-Tenant en 2 Etapas y 2FA TOTP',
       expect(regWrapper.findAll('.form-row-2col').length).toBeGreaterThanOrEqual(3);
     }
   });
+
+  it('alinea simétricamente los campos de contraseña en .form-row-2col con etiquetas compactas sin asterisco huérfano (Spec 112)', async () => {
+    vi.spyOn(http, 'get').mockResolvedValueOnce({
+      status: 200,
+      data: { is_bootstrapped: false },
+      headers: new Headers(),
+    });
+
+    const wrapper = mount(LoginView);
+    await flushPromises();
+
+    const passLabel = wrapper.find('label[for="bootstrap-admin-pass"]');
+    const confirmLabel = wrapper.find('label[for="bootstrap-admin-pass-confirm"]');
+    expect(passLabel.exists()).toBe(true);
+    expect(confirmLabel.exists()).toBe(true);
+    expect(passLabel.text()).toContain('Contraseña (Mín. 15 caracteres)');
+    expect(confirmLabel.text()).toContain('Confirmar Contraseña');
+
+    // Ambos inputs deben compartir el mismo contenedor .form-row-2col
+    const rows = wrapper.findAll('.form-row-2col');
+    const passRow = rows.find(
+      (r) =>
+        r.find('#bootstrap-admin-pass').exists() &&
+        r.find('#bootstrap-admin-pass-confirm').exists(),
+    );
+    expect(passRow).toBeDefined();
+  });
 });
 

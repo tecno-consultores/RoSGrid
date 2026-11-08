@@ -632,8 +632,7 @@
         <div class="form-row-2col">
           <div class="form-group">
             <label for="bootstrap-admin-pass" class="form-label">
-              Contraseña Segura (Mínimo 15 caracteres)
-              <span class="required" aria-hidden="true">*</span>
+              Contraseña (Mín. 15 caracteres)&nbsp;<span class="required" aria-hidden="true">*</span>
             </label>
             <input
               id="bootstrap-admin-pass"
@@ -649,7 +648,7 @@
 
           <div class="form-group">
             <label for="bootstrap-admin-pass-confirm" class="form-label">
-              Confirmar Contraseña <span class="required" aria-hidden="true">*</span>
+              Confirmar Contraseña&nbsp;<span class="required" aria-hidden="true">*</span>
             </label>
             <input
               id="bootstrap-admin-pass-confirm"
@@ -856,7 +855,7 @@
           <div class="form-group">
             <div class="label-row">
               <label for="reg-password" class="form-label">
-                Contraseña (Mínimo 8 caracteres) <span class="required" aria-hidden="true">*</span>
+                Contraseña (Mín. 8 caract.)&nbsp;<span class="required" aria-hidden="true">*</span>
               </label>
               <button
                 type="button"
@@ -881,7 +880,7 @@
 
           <div class="form-group">
             <label for="reg-password-confirm" class="form-label">
-              Confirmar Contraseña <span class="required" aria-hidden="true">*</span>
+              Confirmar Contraseña&nbsp;<span class="required" aria-hidden="true">*</span>
             </label>
             <input
               id="reg-password-confirm"
@@ -1135,16 +1134,25 @@
   }
 
   .login-card--wide {
-    max-width: 540px;
+    max-width: 580px;
   }
 
   .form-row-2col {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--rg-space-3, 12px);
+    align-items: stretch;
   }
 
-  @media (max-width: 520px) {
+  .form-row-2col > .form-group {
+    justify-content: space-between;
+  }
+
+  .form-row-2col .form-input {
+    margin-top: auto;
+  }
+
+  @media (max-width: 540px) {
     .form-row-2col {
       grid-template-columns: 1fr;
     }
@@ -1276,12 +1284,14 @@
   .label-row {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: baseline;
+    gap: 6px;
   }
 
   .form-label {
     font-size: 0.85rem;
     font-weight: 600;
+    line-height: 1.3;
     color: var(--rg-text-secondary, #cbd5e1);
   }
 
@@ -1294,8 +1304,11 @@
     border: none;
     color: var(--rg-accent-cyan, #22d3ee);
     font-size: 0.75rem;
+    line-height: 1.3;
     cursor: pointer;
     padding: 0;
+    flex-shrink: 0;
+    white-space: nowrap;
   }
 
   .form-input {
