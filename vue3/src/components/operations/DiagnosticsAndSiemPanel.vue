@@ -133,10 +133,13 @@
       });
       lastBundleResult.value = res.data;
       triggerBase64Download(res.data.bundle_base64, res.data.filename, res.data.content_type);
-      feedbackSuccess.value = `Paquete ${res.data.filename} generado (${res.data.redacted_secrets_count} secretos sanitizados).`;
+      feedbackSuccess.value = t('diagnostics_siem.msg_bundle_generated', {
+        filename: res.data.filename,
+        redacted: res.data.redacted_secrets_count,
+      });
     } catch (err: unknown) {
       const e = err as { detail?: string; message?: string };
-      feedbackError.value = e.detail || e.message || 'Error al generar paquete de diagnóstico.';
+      feedbackError.value = e.detail || e.message || t('diagnostics_siem.err_bundle_generate', 'No se pudo generar el paquete de soporte.');
     } finally {
       isGeneratingBundle.value = false;
     }
@@ -162,10 +165,10 @@
       });
       applySiemConfigState(res.data);
       siemAuthToken.value = '';
-      feedbackSuccess.value = 'Configuración del conector SIEM del ISP guardada correctamente.';
+      feedbackSuccess.value = t('diagnostics_siem.msg_siem_saved', 'Configuración del conector SIEM guardada correctamente.');
     } catch (err: unknown) {
       const e = err as { detail?: string; message?: string };
-      feedbackError.value = e.detail || e.message || 'Error al guardar configuración SIEM.';
+      feedbackError.value = e.detail || e.message || t('diagnostics_siem.err_siem_save', 'Error al guardar la configuración SIEM.');
     } finally {
       isSavingSiem.value = false;
     }
@@ -185,7 +188,7 @@
       }
     } catch (err: unknown) {
       const e = err as { detail?: string; message?: string };
-      feedbackError.value = e.detail || e.message || 'Fallo al ejecutar prueba SIEM.';
+      feedbackError.value = e.detail || e.message || t('diagnostics_siem.err_siem_test', 'Error al probar el envío al servidor SIEM.');
     } finally {
       isTestingSiem.value = false;
     }
@@ -229,21 +232,21 @@
             </p>
           </div>
           <span class="diag-badge-cyan">
-            Ring Buffer UI: {{ uiDiagnosticBuffer.length }} eventos
+            {{ t('diagnostics_siem.ring_buffer_badge', { count: uiDiagnosticBuffer.length }) }}
           </span>
         </header>
 
         <div class="diag-form-row">
           <div class="diag-field">
-            <label for="bundle-format-select">Formato de Archivo</label>
+            <label for="bundle-format-select">{{ t('diagnostics_siem.field_archive_format', 'Formato de Archivo') }}</label>
             <select id="bundle-format-select" v-model="bundleFormat" class="diag-input">
-              <option value="zip">.zip (Estándar Windows / Linux / macOS)</option>
-              <option value="tar.gz">.tar.gz (Tarball Gzip Linux / Unix)</option>
+              <option value="zip">{{ t('diagnostics_siem.option_zip', '.zip (Estándar Windows / Linux / macOS)') }}</option>
+              <option value="tar.gz">{{ t('diagnostics_siem.option_targz', '.tar.gz (Tarball Gzip Linux / Unix)') }}</option>
             </select>
           </div>
 
           <div class="diag-field">
-            <label for="bundle-lines-input">Líneas de Log Backend</label>
+            <label for="bundle-lines-input">{{ t('diagnostics_siem.field_log_lines', 'Líneas de Log Backend') }}</label>
             <input
               id="bundle-lines-input"
               v-model.number="logLinesLimit"
@@ -256,13 +259,13 @@
         </div>
 
         <div class="diag-field">
-          <label for="bundle-operator-notes">Notas del Operador / Descripción de la Falla</label>
+          <label for="bundle-operator-notes">{{ t('diagnostics_siem.field_operator_notes', 'Notas del Operador / Descripción de la Falla') }}</label>
           <textarea
             id="bundle-operator-notes"
             v-model="operatorNotes"
             rows="3"
             class="diag-input"
-            placeholder="Describa los pasos previos al incidente o el comportamiento observado..."
+            :placeholder="t('diagnostics_siem.field_operator_notes_placeholder', 'Describa los pasos previos al incidente o el comportamiento observado...')"
           ></textarea>
         </div>
 
@@ -276,19 +279,19 @@
           >
             {{
               isGeneratingBundle
-                ? '⏳ Empaquetando y Sanitizando...'
-                : `📦 Descargar Paquete de Diagnóstico (.${bundleFormat})`
+                ? t('diagnostics_siem.btn_bundling', '⏳ Empaquetando y Sanitizando...')
+                : t('diagnostics_siem.btn_download_bundle', { format: bundleFormat })
             }}
           </button>
         </div>
 
         <div v-if="lastBundleResult" class="diag-summary-box" data-testid="bundle-summary">
-          <div><strong>Archivo:</strong> {{ lastBundleResult.filename }}</div>
+          <div><strong>{{ t('diagnostics_siem.summary_file', 'Archivo:') }}</strong> {{ lastBundleResult.filename }}</div>
           <div>
-            <strong>Secretos Sanitizados:</strong> {{ lastBundleResult.redacted_secrets_count }}
+            <strong>{{ t('diagnostics_siem.summary_redacted', 'Secretos Sanitizados:') }}</strong> {{ lastBundleResult.redacted_secrets_count }}
           </div>
           <div>
-            <strong>Artefactos Incluidos:</strong>
+            <strong>{{ t('diagnostics_siem.summary_artifacts', 'Artefactos Incluidos:') }}</strong>
             {{ lastBundleResult.included_files.join(', ') }}
           </div>
         </div>
@@ -318,13 +321,13 @@
           </div>
           <label class="diag-toggle-label">
             <input id="siem-enabled-checkbox" v-model="siemEnabled" type="checkbox" />
-            <span>{{ siemEnabled ? 'Habilitado' : 'Deshabilitado' }}</span>
+            <span>{{ siemEnabled ? t('diagnostics_siem.siem_enabled', 'Habilitado') : t('diagnostics_siem.siem_disabled', 'Deshabilitado') }}</span>
           </label>
         </header>
 
         <div class="diag-form-row">
           <div class="diag-field">
-            <label for="siem-protocol-select">Protocolo del Colector SIEM</label>
+            <label for="siem-protocol-select">{{ t('diagnostics_siem.field_protocol', 'Protocolo del Colector SIEM') }}</label>
             <select id="siem-protocol-select" v-model="siemProtocol" class="diag-input">
               <option value="GELF_UDP">Graylog GELF UDP</option>
               <option value="GELF_HTTP">Graylog GELF HTTP/HTTPS</option>
@@ -335,7 +338,7 @@
           </div>
 
           <div class="diag-field">
-            <label for="siem-min-level-select">Severidad Mínima</label>
+            <label for="siem-min-level-select">{{ t('diagnostics_siem.field_min_severity', 'Severidad Mínima') }}</label>
             <select id="siem-min-level-select" v-model="siemMinLevel" class="diag-input">
               <option value="INFO">INFO</option>
               <option value="WARNING">WARNING</option>
@@ -347,7 +350,7 @@
 
         <div class="diag-form-row">
           <div class="diag-field">
-            <label for="siem-host-input">Host / IP del Servidor SIEM del ISP</label>
+            <label for="siem-host-input">{{ t('diagnostics_siem.field_host', 'Host / IP del Servidor SIEM del ISP') }}</label>
             <input
               id="siem-host-input"
               v-model="siemHost"
@@ -358,7 +361,7 @@
           </div>
 
           <div class="diag-field">
-            <label for="siem-port-input">Puerto</label>
+            <label for="siem-port-input">{{ t('diagnostics_siem.field_port', 'Puerto') }}</label>
             <input
               id="siem-port-input"
               v-model.number="siemPort"
@@ -372,7 +375,7 @@
 
         <div class="diag-form-row">
           <div class="diag-field">
-            <label for="siem-stream-input">Etiqueta de Instancia / Stream</label>
+            <label for="siem-stream-input">{{ t('diagnostics_siem.field_stream_label', 'Etiqueta de Instancia / Stream') }}</label>
             <input
               id="siem-stream-input"
               v-model="siemStreamLabel"
@@ -383,7 +386,7 @@
           </div>
 
           <div class="diag-field">
-            <label for="siem-endpoint-input">Ruta HTTP (GELF_HTTP / LOKI_HTTP)</label>
+            <label for="siem-endpoint-input">{{ t('diagnostics_siem.field_http_path', 'Ruta HTTP (GELF_HTTP / LOKI_HTTP)') }}</label>
             <input
               id="siem-endpoint-input"
               v-model="siemEndpointPath"
@@ -396,30 +399,30 @@
 
         <div class="diag-field">
           <label for="siem-token-input">
-            Token Bearer Opcional
-            <span v-if="siemHasSavedToken" class="diag-badge-cyan">(Token configurado)</span>
+            {{ t('diagnostics_siem.field_bearer_token', 'Token Bearer Opcional') }}
+            <span v-if="siemHasSavedToken" class="diag-badge-cyan">{{ t('diagnostics_siem.token_configured_hint', '(Token configurado)') }}</span>
           </label>
           <input
             id="siem-token-input"
             v-model="siemAuthToken"
             type="password"
             class="diag-input"
-            placeholder="Dejar en blanco para conservar el token actual"
+            :placeholder="siemHasSavedToken ? t('diagnostics_siem.token_keep_placeholder', 'Dejar en blanco para conservar el token actual') : 'eyJhbGci...'"
           />
         </div>
 
         <div class="diag-checkbox-group">
           <label>
             <input v-model="siemIncludeFrontend" type="checkbox" />
-            Incluir errores de interfaz (Frontend UI)
+            {{ t('diagnostics_siem.check_include_ui_errors', 'Incluir errores de interfaz (Frontend UI)') }}
           </label>
           <label>
             <input v-model="siemIncludeAudit" type="checkbox" />
-            Incluir eventos de auditoría administrativa
+            {{ t('diagnostics_siem.check_include_audit', 'Incluir eventos de auditoría administrativa') }}
           </label>
           <label>
             <input v-model="siemUseTls" type="checkbox" />
-            Usar TLS (HTTPS)
+            {{ t('diagnostics_siem.check_use_tls', 'Usar TLS (HTTPS)') }}
           </label>
         </div>
 
@@ -431,7 +434,7 @@
             :disabled="isSavingSiem"
             @click="handleSaveSiemConfig"
           >
-            {{ isSavingSiem ? '⏳ Guardando...' : '💾 Guardar Configuración SIEM' }}
+            {{ isSavingSiem ? t('diagnostics_siem.btn_saving_siem', '⏳ Guardando...') : t('diagnostics_siem.btn_save_siem', '💾 Guardar Configuración SIEM') }}
           </button>
 
           <button
@@ -441,12 +444,12 @@
             :disabled="isTestingSiem"
             @click="handleTestSiemDelivery"
           >
-            {{ isTestingSiem ? '⏳ Probando...' : '🧪 Enviar Log de Prueba' }}
+            {{ isTestingSiem ? t('diagnostics_siem.btn_testing_siem', '⏳ Probando...') : t('diagnostics_siem.btn_test_siem', '🧪 Enviar Log de Prueba') }}
           </button>
         </div>
 
         <div v-if="siemTestResult" class="diag-summary-box" data-testid="siem-test-summary">
-          <strong>Resultado Prueba ({{ siemTestResult.protocol }}):</strong>
+          <strong>{{ t('diagnostics_siem.test_result_label', { protocol: siemTestResult.protocol }) }}</strong>
           {{ siemTestResult.detail }} — {{ siemTestResult.latency_ms }} ms
         </div>
       </section>

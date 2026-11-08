@@ -26,7 +26,9 @@
     "router": "equipo",
     "routers": "equipos",
     "hide": "▲ Ocultar",
-    "skip_link": "Saltar al contenido principal"
+    "skip_link": "Saltar al contenido principal",
+    "status_active": "ACTIVO",
+    "status_inactive": "INACTIVO"
   },
   "shell": {
     "search_label": "Buscar...",
@@ -364,7 +366,99 @@
     "wifi_no_ssids": "No se encontraron perfiles de SSIDs inalámbricos aprovisionados en el router.",
     "wifi_capsman_inactive": "El controlador CAPsMAN / WiFi no se encuentra activo o no gestiona radios remotas en este equipo.",
     "tabs_aria": "Módulos de Cumplimiento",
-    "presets_aria": "Perfiles predefinidos de empresa"
+    "presets_aria": "Perfiles Predefinidos de Empresa",
+    "safemode_title": "Todas las mutaciones están protegidas bajo Safe Mode de 60s",
+    "select_router_fleet": "Seleccionar router de la flota",
+    "syncing_state": "Sincronizando estado técnico con RouterOS v7...",
+    "drift_master_template": "Plantilla Maestra:",
+    "drift_default": "Predeterminada",
+    "drift_status": "Estado:",
+    "drift_detected": "⚠️ DRIFT DETECTADO",
+    "drift_clean": "✔ SINCRONIZADO (GOLDEN)",
+    "drift_unauth_lines": "Líneas No Autorizadas:",
+    "drift_diff_title": "Diferencial Unificado (Git-Style Diff)",
+    "drift_diff_legend": "Verde (+): Línea agregada fuera de plantilla | Rojo (-): Línea eliminada respecto a Golden Config",
+    "filter_cis_aria": "Filtrar directivas CIS",
+    "filter_all": "Todas",
+    "filter_isp": "🌐 ISP / Carrier",
+    "filter_corporate": "🏢 Corporativo",
+    "filter_enabled": "✅ Activas en Política",
+    "filter_disabled": "⏸️ Excluidas",
+    "cis_th_active": "Activa",
+    "cis_th_standards": "Estándares Oficiales",
+    "link_standard": "📜 Estándar Oficial",
+    "link_mikrotik": "📘 MikroTik Docs",
+    "status_disabled": "EXCLUIDA",
+    "status_inactive": "Desactivada",
+    "modal_remediate_title": "Confirmar Remediación Táctica CIS",
+    "modal_close": "Cerrar",
+    "safemode_shield_title": "Protección Safe Mode (60 segundos) Activa",
+    "safemode_shield_desc": "Si el cambio interrumpe la sesión administrativa con el router, RouterOS revertirá automáticamente la configuración tras 60 segundos.",
+    "command_preview_label": "Comando CLI / REST Equivalente a Ejecutar en el Router:",
+    "applying_safemode": "⏳ Aplicando bajo Safe Mode...",
+    "btn_confirm_safe_remediate": "⚡ Confirmar y Aplicar en Router",
+    "modal_policies_title": "Políticas de Seguridad CIS Hardening — Personalización de Empresa",
+    "modal_policies_intro": "Seleccione un perfil predefinido (ISP, Corporativo o Data Center) o active/desactive individualmente cada directiva y ajuste su peso en el puntaje global.",
+    "preset_corp_title": "Empresa Corporativa / Finanzas",
+    "preset_corp_desc": "Prioriza VLAN de gestión, DHCP Snooping L2, SNMPv3, bloqueo MAC-Server, SSH fuerte y respaldos cifrados.",
+    "preset_isp_title": "Proveedor de Internet (ISP / WISP / Carrier)",
+    "preset_isp_desc": "Prioriza filtrado Bogon/Martians en RAW, bloqueo DNS WAN, BGP MD5/TCP-AO, CoPP para CPU, OSPF Auth y VRF.",
+    "preset_dc_title": "Máxima Seguridad (Data Center / Crítico)",
+    "preset_dc_desc": "Habilita las 28 directivas simultáneamente para auditorías de misión crítica.",
+    "policies_th_active": "Activa",
+    "policies_th_code": "Código",
+    "policies_th_title": "Directiva y Justificación Técnica",
+    "policies_th_severity": "Severidad",
+    "policies_th_weight": "Peso (Pts)",
+    "policies_th_remediation": "Comando que Ejecutará en el Router",
+    "policies_enabled_count": "Directivas Activas:",
+    "policies_total_weight": "Peso Total Activo:",
+    "policies_saving": "⏳ Guardando Política...",
+    "policies_save_btn": "💾 Guardar Política de Empresa",
+    "switching_intro_desc": "Configure DHCP Snooping individualmente por Bridge bajo Safe Mode (60s) o despliegue la política en toda la flota.",
+    "btn_bulk_dhcp_snooping": "Desplegar en Flota (Acciones Masivas)",
+    "switching_btn_configure_disable": "⚙️ Configurar / Desactivar",
+    "switching_btn_enable_snooping": "⚡ Activar DHCP Snooping",
+    "switching_no_trusted_ports": "Ningún puerto marcado como Trusted",
+    "switching_no_untrusted_ports": "Sin puertos Untrusted en este bridge",
+    "modal_snooping_title": "Configurar DHCP Snooping — Bridge:",
+    "modal_snooping_golden_title": "Regla de Oro en RouterOS v7 (Puertos Trusted):",
+    "modal_snooping_golden_desc": "Al activar dhcp-snooping=yes, el bridge descartará todos los mensajes DHCP Server (DHCPOFFER / DHCPACK) recibidos por puertos no confiables. Debe marcar como Trusted el puerto uplink o troncal donde reside su servidor DHCP legítimo.",
+    "modal_snooping_enable_label": "Habilitar DHCP Snooping en",
+    "modal_snooping_enable_hint": "(Filtra respuestas DHCP no autorizadas en Capa 2)",
+    "modal_snooping_opt82_label": "Inyectar DHCP Option 82 (add-dhcp-option82=yes)",
+    "modal_snooping_opt82_hint": "— Identifica circuito y puerto físico del suscriptor",
+    "modal_snooping_trusted_title": "Seleccione los Puertos Confiables (Trusted Ports / Uplink DHCP):",
+    "modal_snooping_no_ports": "Este bridge aún no tiene puertos miembros registrados en /interface/bridge/port. Escriba el nombre de la interfaz uplink para agregarla al bridge como Trusted:",
+    "modal_snooping_uplink_placeholder": "Ej: ether1",
+    "modal_snooping_port_trusted": "✔ TRUSTED (Uplink / Servidor DHCP)",
+    "modal_snooping_port_untrusted": "🔒 UNTRUSTED (Puerto de Acceso Cliente)",
+    "modal_snooping_add_trunk_label": "Añadir interfaz troncal adicional al bridge como Trusted (opcional):",
+    "modal_snooping_add_trunk_placeholder": "Nombre de interfaz (ej. sfp-sfpplus1)",
+    "modal_snooping_btn_add_trusted": "+ Añadir Trusted",
+    "modal_snooping_btn_save": "⚡ Guardar y Aplicar (Safe Mode 60s)",
+    "switching_saved_msg": "DHCP Snooping {state} en {bridge} ({count} puerto(s) Trusted) bajo Safe Mode (60s).",
+    "switching_enabled_word": "ACTIVADO",
+    "switching_disabled_word": "DESACTIVADO",
+    "switching_port_isolated_msg": "Puerto {port} aislado inmediatamente bajo Safe Mode (60s).",
+    "quick_baseline_sla": "Sondear Gateway WAN + Quad9 (9.9.9.9)",
+    "sla_target_preset_label": "Destino Sugerido / Gateway",
+    "sla_optgroup_gateways": "🌐 Gateways WAN Detectados en Router (/ip/route)",
+    "sla_optgroup_dns": "🖧 DNS Configurados en Router (/ip/dns)",
+    "sla_optgroup_public": "🛡️ Referencias Públicas DNS / Anycast",
+    "sla_option_custom": "✍️ Otra IP / Host Personalizado...",
+    "sla_custom_link_name": "Enlace Personalizado",
+    "sla_anomalies_title": "Detección de Anomalías de Tráfico & Mitigación en 1 Clic",
+    "sla_anomalies_subtitle": "Monitoreo volumétrico en tiempo real con FastDrop automático para mitigar ataques DoS / anomalías.",
+    "sla_btn_mitigating": "Mitigando...",
+    "sla_btn_mitigate_fastdrop": "Mitigar Anomalía (FastDrop 300s)",
+    "sla_zero_anomalies": "✔ Cero anomalías volumétricas detectadas en el router en la ventana actual.",
+    "sla_th_src_ip": "IP Origen",
+    "sla_th_concurrent_conns": "Conexiones Concurrentes",
+    "sla_th_traffic_rate": "Tasa de Tráfico",
+    "sla_th_severity": "Severidad",
+    "sla_th_anomaly_action": "Acción",
+    "sla_anomaly_fallback": "ANOMALÍA"
   },
   "enums": {
     "admin_state": {
@@ -997,117 +1091,175 @@
     "diff_backups": "Comparador de Respaldos Git"
   },
   "cis_directives": {
+    "finding_disabled_by_policy": "Directiva desactivada por política del operador (excluida del cálculo de puntuación).",
     "CIS_1_1": {
       "title": "Deshabilitar servicios inseguros (Telnet, FTP, HTTP sin TLS, API sin TLS)",
-      "rationale": "Los protocolos en texto claro exponen credenciales administrativas y son vulnerables a intercepción y spoofing."
+      "rationale": "Los protocolos en texto claro exponen credenciales administrativas y son vulnerables a intercepción y spoofing.",
+      "finding_passed": "Todos los servicios inseguros (telnet, ftp, www, api) se encuentran deshabilitados.",
+      "finding_failed_prefix": "Servicios inseguros activos en el router:",
+      "finding_failed": "Servicios inseguros activos en el router."
     },
     "CIS_1_2": {
       "title": "Deshabilitar o renombrar usuario administrador por defecto ('admin')",
-      "rationale": "El usuario admin predeterminado es el principal objetivo en ataques automatizados de fuerza bruta."
+      "rationale": "El usuario admin predeterminado es el principal objetivo en ataques automatizados de fuerza bruta.",
+      "finding_passed": "Usuario por defecto 'admin' deshabilitado o renombrado.",
+      "finding_failed": "Usuario por defecto 'admin' activo en el router."
     },
     "CIS_1_3": {
       "title": "Restricción de direcciones IP autorizadas para WinBox y API REST",
-      "rationale": "Limitar el acceso administrativo a subredes de confianza previene ataques desde el exterior e Internet."
+      "rationale": "Limitar el acceso administrativo a subredes de confianza previene ataques desde el exterior e Internet.",
+      "finding_passed": "Acceso WinBox/SSH/WebFig restringido a subredes de gestión autorizadas.",
+      "finding_failed": "Servicio WinBox/API accesible desde cualquier dirección (0.0.0.0/0)."
     },
     "CIS_1_4": {
       "title": "Protección contra Open DNS Resolver en interfaces públicas",
-      "rationale": "Un resolver DNS abierto permite a actores maliciosos utilizar el router como amplificador en ataques DDoS volumétricos."
+      "rationale": "Un resolver DNS abierto permite a actores maliciosos utilizar el router como amplificador en ataques DDoS volumétricos.",
+      "finding_passed": "Open DNS Resolver bloqueado (allow-remote-requests=no).",
+      "finding_failed": "Router configurado como Open DNS Resolver (allow-remote-requests=yes)."
     },
     "CIS_1_5": {
       "title": "Desactivar MAC-Server y Neighbor Discovery en interfaces WAN",
-      "rationale": "MNDP, CDP y LLDP transmiten datos de topología e identidad en texto plano en la capa de enlace hacia redes no confiables."
+      "rationale": "MNDP, CDP y LLDP transmiten datos de topología e identidad en texto plano en la capa de enlace hacia redes no confiables.",
+      "finding_passed": "Neighbor Discovery (MNDP/CDP) restringido a interfaces seguras o deshabilitado.",
+      "finding_failed": "Neighbor Discovery activo en interfaces no confinadas."
     },
     "CIS_1_6": {
       "title": "Actualización y parches de seguridad de RouterOS y firmware RouterBOOT",
-      "rationale": "Mantener el sistema operativo y RouterBOOT en la rama de parches estables corrige CVEs y debilidades del kernel."
+      "rationale": "Mantener el sistema operativo y RouterBOOT en la rama de parches estables corrige CVEs y debilidades del kernel.",
+      "finding_passed": "RouterOS v7.14+ y RouterBOOT sincronizados con parches oficiales.",
+      "finding_failed": "El firmware RouterOS o RouterBOOT requiere sincronización de parches oficiales."
     },
     "CIS_1_7": {
       "title": "Filtrado estricto de paquetes Bogon / RFC 1918 en interfaz WAN",
-      "rationale": "El tráfico con orígenes privados o no asignados en WAN es indicativo de suplantación de IP (IP spoofing) y ataques DDoS."
+      "rationale": "El tráfico con orígenes privados o no asignados en WAN es indicativo de suplantación de IP (IP spoofing) y ataques DDoS.",
+      "finding_passed": "Reglas de filtrado Bogon / RFC 1918 presentes en RAW o Filter.",
+      "finding_failed": "Faltan reglas de filtrado Bogon / RFC 1918 en IP Firewall Filter o RAW."
     },
     "CIS_1_8": {
       "title": "Defensa dinámica contra ataques de fuerza bruta (Brute-Force SSH/WinBox)",
-      "rationale": "Listas de bloqueo temporales mitigantes limitan la capacidad de escáneres masivos de adivinar claves operativas."
+      "rationale": "Listas de bloqueo temporales mitigantes limitan la capacidad de escáneres masivos de adivinar claves operativas.",
+      "finding_passed": "Defensa activa de listas negras de 3 etapas contra ataques Brute-Force configurada en Firewall Filter.",
+      "finding_failed": "Faltan listas negras dinámicas de 3 etapas contra ataques Brute-Force."
     },
     "CIS_1_9": {
       "title": "Criptografía robusta en túneles (prohibición de DES, 3DES y MD5)",
-      "rationale": "Algoritmos criptográficos deprecados (DES/3DES/MD5) son vulnerables a colisiones y descifrado por fuerza computacional."
+      "rationale": "Algoritmos criptográficos deprecados (DES/3DES/MD5) son vulnerables a colisiones y descifrado por fuerza computacional.",
+      "finding_passed": "Perfiles IPsec / WireGuard utilizan AES-256 y suites seguras.",
+      "finding_failed": "Cifrado débil detectado en perfiles VPN."
     },
     "CIS_1_10": {
       "title": "Aislamiento de la gestión administrativa en VLAN dedicada",
-      "rationale": "Separar físicamente o mediante 802.1Q el plano de control y gestión del tráfico de datos de usuarios previene intercepciones."
+      "rationale": "Separar físicamente o mediante 802.1Q el plano de control y gestión del tráfico de datos de usuarios previene intercepciones.",
+      "finding_passed": "Gestión administrativa aislada en VLAN dedicada.",
+      "finding_failed": "No se detectó interfaz VLAN de administración dedicada (ej. mgmt o vlan99)."
     },
     "CIS_2_1": {
       "title": "Seguridad y límites BGP (Prefix-Limit, BGP TCP-AO o MD5)",
-      "rationale": "La autenticación criptográfica en sesiones BGP evita la inyección fraudulenta de prefijos (BGP hijacking) y RST attacks."
+      "rationale": "La autenticación criptográfica en sesiones BGP evita la inyección fraudulenta de prefijos (BGP hijacking) y RST attacks.",
+      "finding_passed": "Protección de sesiones BGP con autenticación TCP-AO/MD5 verificada.",
+      "finding_failed": "Sesiones BGP sin autenticación criptográfica TCP-MD5/TCP-AO."
     },
     "CIS_2_2": {
       "title": "FastTrack selectivo de alto rendimiento (sin bypass de colas QoS)",
-      "rationale": "FastTrack debe omitir paquetes sujetos a políticas de conformación de tráfico QoS para evitar degradación de la latencia."
+      "rationale": "FastTrack debe omitir paquetes sujetos a políticas de conformación de tráfico QoS para evitar degradación de la latencia.",
+      "finding_passed": "FastTrack selectivo implementado respetando el árbol de colas QoS.",
+      "finding_failed": "FastTrack omite árboles de colas o no cuenta con exclusión de tráfico marcado."
     },
     "CIS_ISP_1": {
       "title": "Filtrado de Paquetes Bogon / Martians en Ingress (RFC 1918, RFC 6598, RFC 5737)",
-      "rationale": "Descarta paquetes con orígenes no enrutables en el borde WAN antes de que consuman ciclos de CPU en el connection tracker."
+      "rationale": "Descarta paquetes con orígenes no enrutables en el borde WAN antes de que consuman ciclos de CPU en el connection tracker.",
+      "finding_passed": "Filtrado de Bogons / Martians activo en la cadena prerouting de RAW.",
+      "finding_failed": "Faltan reglas de descarte de Bogon / Martians en RAW para interfaces WAN."
     },
     "CIS_ISP_2": {
       "title": "Protección Total contra Open DNS Resolver en WAN",
-      "rationale": "Bloquea consultas DNS entrantes por la interfaz pública, mitigando que el router sea cómplice en ataques de amplificación DNS."
+      "rationale": "Bloquea consultas DNS entrantes por la interfaz pública, mitigando que el router sea cómplice en ataques de amplificación DNS.",
+      "finding_passed": "Protección contra Open DNS Resolver en WAN verificada.",
+      "finding_failed": "Puerto 53 (DNS) expuesto hacia la interfaz WAN sin filtrado."
     },
     "CIS_ISP_3": {
       "title": "Autenticación Criptográfica en Vecindades BGP (MD5 / TCP-AO)",
-      "rationale": "Exige firma TCP MD5 o TCP-AO en todos los peers BGP eBGP/iBGP para evitar la manipulación de rutas en tránsito."
+      "rationale": "Exige firma TCP MD5 o TCP-AO en todos los peers BGP eBGP/iBGP para evitar la manipulación de rutas en tránsito.",
+      "finding_passed": "Autenticación criptográfica MD5/TCP-AO presente en peers BGP.",
+      "finding_failed": "Conexiones BGP detectadas sin autenticación TCP-MD5 o TCP-AO."
     },
     "CIS_ISP_4": {
       "title": "Control Plane Policing (CoPP) para Tráfico de Señalización de Red",
-      "rationale": "Establece cuotas y límites de tasa para tráfico de control (BGP, OSPF, ICMP) dirigido a la CPU del router."
+      "rationale": "Establece cuotas y límites de tasa para tráfico de control (BGP, OSPF, ICMP) dirigido a la CPU del router.",
+      "finding_passed": "Límites de tasa CoPP configurados para proteger el plano de control y la CPU.",
+      "finding_failed": "No se detectaron reglas de rate-limiting (CoPP) en la cadena input."
     },
     "CIS_ISP_5": {
       "title": "Aislamiento de Gestión Administrativa en Management VRF",
-      "rationale": "Aísla las tablas de enrutamiento y servicios administrativos en una VRF separada, inaccesible desde la tabla global de clientes."
+      "rationale": "Aísla las tablas de enrutamiento y servicios administrativos en una VRF separada, inaccesible desde la tabla global de clientes.",
+      "finding_passed": "Servicios administrativos aislados en Management VRF.",
+      "finding_failed": "Servicios de gestión vinculados a la tabla de enrutamiento global."
     },
     "CIS_ISP_6": {
       "title": "Autenticación Criptográfica OSPFv2/v3 (SHA-256)",
-      "rationale": "Impide que atacantes en la red interna o enlaces de tránsito inyecten rutas espurias o alteren el árbol SPF de OSPF."
+      "rationale": "Impide que atacantes en la red interna o enlaces de tránsito inyecten rutas espurias o alteren el árbol SPF de OSPF.",
+      "finding_passed": "Autenticación criptográfica OSPF (SHA-256 o MD5) activa.",
+      "finding_failed": "Plantillas OSPF operando sin autenticación criptográfica robusta."
     },
     "CIS_ISP_7": {
       "title": "Supresión de ICMP Redirects y Limitación de Respuestas Unreachable",
-      "rationale": "Deshabilita el envío de ICMP redirects para mitigar ataques man-in-the-middle y limita la tasa de paquetes de error ICMP."
+      "rationale": "Deshabilita el envío de ICMP redirects para mitigar ataques man-in-the-middle y limita la tasa de paquetes de error ICMP.",
+      "finding_passed": "ICMP Redirects suprimidos en IP Settings para mitigar ataques MITM.",
+      "finding_failed": "Opción send-redirects habilitada en la configuración IP general."
     },
     "CIS_ISP_8": {
       "title": "Desactivación de Servidores Proxy Web y SOCKS no autorizados",
-      "rationale": "Servidores proxy o SOCKS abiertos o mal configurados pueden ser abusados como pasarelas de anonimización o pivotes de ataque."
+      "rationale": "Servidores proxy o SOCKS abiertos o mal configurados pueden ser abusados como pasarelas de anonimización o pivotes de ataque.",
+      "finding_passed": "Servidores auxiliares Proxy Web y SOCKS deshabilitados.",
+      "finding_failed": "Servidor Proxy Web o SOCKS activo sin autorización."
     },
     "CIS_CORP_1": {
       "title": "Desactivación del Servidor Bandwidth-Test ('btest')",
-      "rationale": "El servidor de prueba de ancho de banda no autenticado puede agotar la CPU y saturar enlaces WAN corporativos."
+      "rationale": "El servidor de prueba de ancho de banda no autenticado puede agotar la CPU y saturar enlaces WAN corporativos.",
+      "finding_passed": "Servidor Bandwidth-Test (btest) deshabilitado.",
+      "finding_failed": "Servidor Bandwidth-Test habilitado (riesgo de agotamiento de CPU)."
     },
     "CIS_CORP_2": {
       "title": "Desactivación de MAC-WinBox y MAC-Telnet en Interfaces de Acceso de Usuario",
-      "rationale": "El acceso de gestión por dirección MAC elude políticas de firewall IP y no debe operar en puertos de usuarios finales."
+      "rationale": "El acceso de gestión por dirección MAC elude políticas de firewall IP y no debe operar en puertos de usuarios finales.",
+      "finding_passed": "MAC-Server y MAC-WinBox restringidos o confinados fuera de puertos de acceso.",
+      "finding_failed": "MAC-Server activo en todas las interfaces de conmutación."
     },
     "CIS_CORP_3": {
       "title": "Hardening Estricto de SSH (Solo Llaves Fuertes Ed25519, Deshabilitar Password)",
-      "rationale": "Impide la autenticación mediante contraseñas vulnerables y restringe SSH a cifrado moderno con llaves públicas Ed25519."
+      "rationale": "Impide la autenticación mediante contraseñas vulnerables y restringe SSH a cifrado moderno con llaves públicas Ed25519.",
+      "finding_passed": "SSH asegurado con criptografía robusta (strong-crypto=yes).",
+      "finding_failed": "SSH permite algoritmos criptográficos débiles o acceso por password abierto."
     },
     "CIS_CORP_4": {
       "title": "DHCP Snooping y Option 82 Activos en Bridges de Conmutación",
-      "rationale": "Bloquea la presencia de servidores DHCP no autorizados (Rogue DHCP) e inyecta Option 82 para trazabilidad de puerto."
+      "rationale": "Bloquea la presencia de servidores DHCP no autorizados (Rogue DHCP) e inyecta Option 82 para trazabilidad de puerto.",
+      "finding_passed": "DHCP Snooping activo en bridges para erradicar servidores Rogue DHCP.",
+      "finding_failed": "DHCP Snooping deshabilitado en los bridges de acceso."
     },
     "CIS_CORP_5": {
       "title": "Erradicación de SNMP v1/v2c (Exigencia Exclusiva de SNMPv3 USM con SHA256/AES)",
-      "rationale": "SNMP v1/v2c transmite comunidades en texto plano; SNMPv3 provee autenticación criptográfica y cifrado de carga útil."
+      "rationale": "SNMP v1/v2c transmite comunidades en texto plano; SNMPv3 provee autenticación criptográfica y cifrado de carga útil.",
+      "finding_passed": "SNMPv3 USM con cifrado implementado (comunidades públicas v1/v2c erradicadas).",
+      "finding_failed": "Comunidades SNMP v1/v2c activas sin cifrado de carga útil."
     },
     "CIS_CORP_6": {
       "title": "Auditoría Forense Completa hacia Syslog Centralizado (Tópicos account, system,info, firewall,info)",
-      "rationale": "Garantiza la exportación en tiempo real de eventos de autenticación, cambios de configuración y bloqueos de cortafuegos."
+      "rationale": "Garantiza la exportación en tiempo real de eventos de autenticación, cambios de configuración y bloqueos de cortafuegos.",
+      "finding_passed": "Reenvío Syslog de auditoría de configuración y eventos de cuenta verificado.",
+      "finding_failed": "Faltan reglas de logging para tópicos account o system,info hacia RoSGrid Syslog."
     },
     "CIS_CORP_7": {
       "title": "Desactivación de RoMON y Protocolos de Descubrimiento (MNDP/CDP/LLDP) en Segmentos de Usuario",
-      "rationale": "RoMON permite administración fuera de banda a nivel L2; debe mantenerse deshabilitado si no se utiliza activamente."
+      "rationale": "RoMON permite administración fuera de banda a nivel L2; debe mantenerse deshabilitado si no se utiliza activamente.",
+      "finding_passed": "Protocolo RoMON deshabilitado en interfaces de usuario.",
+      "finding_failed": "RoMON activo sin aislamiento de segmento."
     },
     "CIS_CORP_8": {
       "title": "Cifrado Obligatorio en Respaldos Binarios y Exportaciones (AES-256)",
-      "rationale": "Los respaldos contienen credenciales y llaves de la red; deben cifrarse con AES para prevenir exfiltración de secretos."
+      "rationale": "Los respaldos contienen credenciales y llaves de la red; deben cifrarse con AES para prevenir exfiltración de secretos.",
+      "finding_passed": "Respaldos binarios automáticos programados con cifrado AES-256.",
+      "finding_failed": "No se detectaron tareas programadas de respaldo cifrado."
     }
   },
   "template_catalog": {
@@ -1199,5 +1351,123 @@
       "name": "Huso Horario del Sistema (/system/clock)",
       "description": "Configura el huso horario oficial IANA del sistema (/system/clock) en toda la flota MikroTik RouterOS v7 y ajusta la autodetección por IP Cloud para garantizar marcas de tiempo exactas en Syslog y auditoría WORM."
     }
+  },
+  "notifications_channels": {
+    "title": "Canales de Alerta y Notificación Multi-Canal",
+    "subtitle": "Configure bots de Telegram, servidores de correo SMTP y Webhooks HTTP para recibir alertas críticas del NOC en tiempo real (Offline, Degradación, TOFU SSL, Drift).",
+    "btn_new_channel": "+ Nuevo Canal de Alerta",
+    "loading_channels": "Cargando canales de alerta configurados...",
+    "empty_title": "No hay canales de notificación configurados",
+    "empty_desc": "Cree un canal de Telegram, Servidor SMTP o Webhook para recibir alarmas críticas en tiempo real.",
+    "btn_configure_first": "+ Configurar Primer Canal",
+    "status_active": "● ACTIVO",
+    "status_inactive": "○ INACTIVO",
+    "badge_telegram": "📱 Telegram Bot",
+    "badge_smtp": "✉️ Correo SMTP",
+    "badge_webhook": "🔗 Webhook HTTP",
+    "label_chat_id": "Chat ID:",
+    "label_bot_token": "Bot Token:",
+    "token_encrypted_aes": "🔒 Cifrado en Vault (AES-256-GCM)",
+    "unconfigured": "Sin configurar",
+    "label_smtp_server": "Servidor SMTP:",
+    "label_sender": "Remitente:",
+    "label_recipients": "Destinatarios:",
+    "label_endpoint": "Endpoint:",
+    "label_Subscribed_events": "Eventos Suscritos",
+    "label_registered": "Registrado:",
+    "btn_test": "🧪 Probar",
+    "btn_test_title": "Enviar mensaje de prueba a este canal",
+    "btn_edit": "✏️ Editar",
+    "btn_edit_title": "Editar configuración del canal",
+    "btn_disable": "⏸ Desactivar",
+    "btn_enable": "▶ Activar",
+    "btn_delete_title": "Eliminar canal",
+    "modal_edit_title": "✏️ Editar Canal de Notificación",
+    "modal_create_title": "➕ Configurar Nuevo Canal de Notificación",
+    "field_name": "Nombre del Canal *",
+    "field_name_placeholder": "Ej: Canal Telegram Guardia NOC",
+    "field_type": "Tipo de Notificación *",
+    "option_telegram": "📱 Bot de Telegram",
+    "option_smtp": "✉️ Servidor de Correo SMTP",
+    "option_webhook": "🔗 Webhook HTTP (JSON Post)",
+    "field_bot_token": "Bot Token de Telegram *",
+    "keep_current_secret_placeholder": "(Sin cambios — se conserva el secreto cifrado actual)",
+    "hint_keep_token": "Dejar en blanco para conservar el Bot Token cifrado actual.",
+    "hint_botfather": "Token proporcionado por @BotFather. Se almacenará cifrado con AES-256-GCM.",
+    "field_chat_id": "Chat ID o Canal *",
+    "field_smtp_host": "Host SMTP *",
+    "field_port": "Puerto",
+    "field_smtp_user": "Usuario SMTP",
+    "field_smtp_pass": "Contraseña SMTP",
+    "field_smtp_from": "Remitente (From)",
+    "field_smtp_to": "Destinatarios (Separados por coma)",
+    "field_webhook_url": "URL del Webhook (HTTPS) *",
+    "field_webhook_auth": "Cabecera de Autorización (Opcional)",
+    "field_events_legend": "Eventos Suscritos",
+    "field_enable_immediately": "Habilitar canal inmediatamente al guardar",
+    "btn_saving": "Guardando...",
+    "btn_update_channel": "💾 Actualizar Canal",
+    "btn_save_encrypt": "🔒 Guardar y Cifrar Canal",
+    "modal_test_title": "🧪 Probar Canal:",
+    "modal_test_desc": "Se enviará una carga útil de prueba real al destino configurado para certificar la conectividad.",
+    "field_test_message": "Mensaje de Prueba",
+    "default_test_message": "🔔 Prueba operativa de canal de alerta desde RoSGrid NOC.",
+    "dispatch_success": "Despacho Exitoso",
+    "dispatch_error": "Error en Despacho",
+    "btn_sending": "Enviando...",
+    "btn_dispatch_test": "🚀 Despachar Prueba",
+    "confirm_delete": "¿Eliminar permanentemente el canal \"{name}\"?",
+    "err_load": "Error al cargar canales de notificación.",
+    "err_name_required": "El nombre del canal es obligatorio.",
+    "err_save": "Error al guardar el canal de notificación.",
+    "err_toggle": "No se pudo actualizar el estado del canal.",
+    "err_delete": "Error al eliminar el canal.",
+    "err_test": "Fallo al despachar notificación de prueba.",
+    "events": {
+      "ROUTER_OFFLINE": "Router Fuera de Línea (Offline)",
+      "ROUTER_ONLINE": "Router Reconectado (Online)",
+      "DEGRADED_HIGH_LOAD": "Carga Crítica de CPU / Memoria",
+      "SSL_MISMATCH": "Discrepancia de Certificado TLS",
+      "CONFIG_DRIFT_DETECTED": "Deriva de Configuración (Drift)",
+      "ROGUE_DHCP_DETECTED": "DHCP no Autorizado / Ataque L2"
+    }
+  },
+  "diagnostics_siem": {
+    "ring_buffer_badge": "Ring Buffer UI: {count} eventos",
+    "field_archive_format": "Formato de Archivo",
+    "option_zip": ".zip (Estándar Windows / Linux / macOS)",
+    "option_targz": ".tar.gz (Tarball Gzip Linux / Unix)",
+    "field_log_lines": "Líneas de Log Backend",
+    "field_operator_notes": "Notas del Operador / Descripción de la Falla",
+    "field_operator_notes_placeholder": "Describa los pasos previos al incidente para el equipo de ingeniería...",
+    "btn_bundling": "⏳ Empaquetando y Sanitizando...",
+    "btn_download_bundle": "📦 Descargar Paquete de Diagnóstico (.{format})",
+    "summary_file": "Archivo:",
+    "summary_redacted": "Secretos Sanitizados:",
+    "summary_artifacts": "Artefactos Incluidos:",
+    "siem_enabled": "Habilitado",
+    "siem_disabled": "Deshabilitado",
+    "field_protocol": "Protocolo del Colector SIEM",
+    "field_min_severity": "Severidad Mínima",
+    "field_host": "Host / IP del Servidor SIEM del ISP",
+    "field_port": "Puerto",
+    "field_stream_label": "Etiqueta de Instancia / Stream",
+    "field_http_path": "Ruta HTTP (GELF_HTTP / LOKI_HTTP)",
+    "field_bearer_token": "Token Bearer Opcional",
+    "token_configured_hint": "(Token configurado)",
+    "token_keep_placeholder": "Dejar en blanco para conservar el token actual",
+    "check_include_ui_errors": "Incluir errores de interfaz (Frontend UI)",
+    "check_include_audit": "Incluir eventos de auditoría administrativa",
+    "check_use_tls": "Usar TLS (HTTPS)",
+    "btn_saving_siem": "⏳ Guardando...",
+    "btn_save_siem": "💾 Guardar Configuración SIEM",
+    "btn_testing_siem": "⏳ Probando...",
+    "btn_test_siem": "🧪 Enviar Log de Prueba",
+    "test_result_label": "Resultado Prueba ({protocol}):",
+    "msg_bundle_generated": "Paquete {filename} generado ({redacted} secretos sanitizados).",
+    "err_bundle_generate": "No se pudo generar el paquete de soporte.",
+    "msg_siem_saved": "Configuración del conector SIEM guardada correctamente.",
+    "err_siem_save": "Error al guardar la configuración SIEM.",
+    "err_siem_test": "Error al probar el envío al servidor SIEM."
   }
 }

@@ -2,7 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
-  import { ref, onMounted } from 'vue';
+  import { ref, onMounted, computed } from 'vue';
   import { http } from '@/api/httpClient';
   import { useI18n } from '@/composables/useI18n';
   import type {
@@ -53,14 +53,46 @@
   const isTesting = ref(false);
   const testResult = ref<NotificationTestResponse | null>(null);
 
-  const availableEvents = [
-    { id: 'ROUTER_OFFLINE', label: 'Router Fuera de Línea (Offline)' },
-    { id: 'ROUTER_ONLINE', label: 'Router Reconectado (Online)' },
-    { id: 'DEGRADED_HIGH_LOAD', label: 'Carga Crítica de CPU / Memoria' },
-    { id: 'SSL_MISMATCH', label: 'Discrepancia de Certificado TLS' },
-    { id: 'CONFIG_DRIFT_DETECTED', label: 'Deriva de Configuración (Drift)' },
-    { id: 'ROGUE_DHCP_ALERT', label: 'DHCP no Autorizado / Ataque L2' },
-  ];
+  const availableEvents = computed(() => [
+    {
+      id: 'ROUTER_OFFLINE',
+      label: t('notifications_channels.events.ROUTER_OFFLINE', 'Router Fuera de Línea (Offline)'),
+    },
+    {
+      id: 'ROUTER_ONLINE',
+      label: t('notifications_channels.events.ROUTER_ONLINE', 'Router Reconectado (Online)'),
+    },
+    {
+      id: 'DEGRADED_HIGH_LOAD',
+      label: t(
+        'notifications_channels.events.DEGRADED_HIGH_LOAD',
+        'Carga Crítica de CPU / Memoria',
+      ),
+    },
+    {
+      id: 'SSL_MISMATCH',
+      label: t('notifications_channels.events.SSL_MISMATCH', 'Discrepancia de Certificado TLS'),
+    },
+    {
+      id: 'CONFIG_DRIFT_DETECTED',
+      label: t(
+        'notifications_channels.events.CONFIG_DRIFT_DETECTED',
+        'Deriva de Configuración (Drift)',
+      ),
+    },
+    {
+      id: 'ROGUE_DHCP_ALERT',
+      label: t(
+        'notifications_channels.events.ROGUE_DHCP_DETECTED',
+        'DHCP no Autorizado / Ataque L2',
+      ),
+    },
+  ]);
+
+  function getEventLabel(code: string): string {
+    const found = availableEvents.value.find((e) => e.id === code);
+    return found ? found.label : code;
+  }
 
   async function fetchChannels() {
     isLoading.value = true;
@@ -73,7 +105,7 @@
     } catch (err: unknown) {
       const error = err as { message?: string; detail?: string };
       errorMessage.value =
-        error.detail || error.message || 'Error al cargar canales de notificación';
+        error.detail || error.message || t('notifications_channels.err_load', 'Error al cargar canales de notificación.');
     } finally {
       isLoading.value = false;
     }
@@ -177,7 +209,7 @@
 
   async function handleCreateChannel() {
     if (!formName.value.trim()) {
-      errorMessage.value = 'Debe indicar un nombre identificador para el canal.';
+      errorMessage.value = t('notifications_channels.err_name_required', 'El nombre del canal es obligatorio.');
       return;
     }
 
@@ -221,7 +253,7 @@
       await fetchChannels();
     } catch (err: unknown) {
       const error = err as { message?: string; detail?: string };
-      errorMessage.value = error.detail || error.message || 'Error al registrar el canal.';
+      errorMessage.value = error.detail || error.message || t('notifications_channels.err_save', 'Error al guardar el canal de notificación.');
     }
   }
 
@@ -234,12 +266,12 @@
       successMessage.value = `Canal "${ch.name}" ${ch.is_enabled ? 'activado' : 'desactivado'}.`;
     } catch (err: unknown) {
       const error = err as { message?: string; detail?: string };
-      errorMessage.value = error.detail || error.message || 'Error al actualizar estado del canal.';
+      errorMessage.value = error.detail || error.message || t('notifications_channels.err_toggle', 'No se pudo actualizar el estado del canal.');
     }
   }
 
   async function handleDeleteChannel(ch: NotificationChannelItem) {
-    if (!confirm(`¿Confirma la eliminación irreversible del canal "${ch.name}"?`)) {
+    if (!confirm(t('notifications_channels.confirm_delete', { name: ch.name }))) {
       return;
     }
     try {
@@ -248,13 +280,13 @@
       await fetchChannels();
     } catch (err: unknown) {
       const error = err as { message?: string; detail?: string };
-      errorMessage.value = error.detail || error.message || 'Error al eliminar el canal.';
+      errorMessage.value = error.detail || error.message || t('notifications_channels.err_delete', 'Error al eliminar el canal.');
     }
   }
 
   function openTestModal(ch: NotificationChannelItem) {
     activeChannelForTest.value = ch;
-    testMessage.value = `[RoSGrid Test] Verificación de despacho táctico para canal "${ch.name}"`;
+    testMessage.value = t('notifications_channels.default_test_message', '🔔 Prueba operativa de canal de alerta desde RoSGrid NOC.');
     testResult.value = null;
     isTestModalOpen.value = true;
   }
@@ -279,7 +311,7 @@
       const error = err as { message?: string; detail?: string };
       testResult.value = {
         status: 'FAILED',
-        detail: error.detail || error.message || 'Fallo de conexión al despachar alerta de prueba',
+        detail: error.detail || error.message || t('notifications_channels.err_test', 'Fallo al despachar notificación de prueba.'),
       };
     } finally {
       isTesting.value = false;
@@ -289,11 +321,20 @@
   function getChannelTypeBadge(type: AlertChannelType): { label: string; class: string } {
     switch (type) {
       case 'TELEGRAM_BOT':
-        return { label: '📱 Telegram Bot', class: 'badge-telegram' };
+        return {
+          label: t('notifications_channels.badge_telegram', '📱 Telegram Bot'),
+          class: 'badge-telegram',
+        };
       case 'SMTP_EMAIL':
-        return { label: '✉️ Correo SMTP', class: 'badge-smtp' };
+        return {
+          label: t('notifications_channels.badge_smtp', '✉️ Correo SMTP'),
+          class: 'badge-smtp',
+        };
       case 'GENERIC_WEBHOOK':
-        return { label: '🔗 Webhook HTTP', class: 'badge-webhook' };
+        return {
+          label: t('notifications_channels.badge_webhook', '🔗 Webhook HTTP'),
+          class: 'badge-webhook',
+        };
       default:
         return { label: type, class: 'badge-default' };
     }
@@ -317,9 +358,9 @@
     <!-- Barra Superior de Acciones -->
     <div class="panel-toolbar">
       <div>
-        <h2 class="section-title">{{ t('notification_channels.title', 'Canales de Alerta y Notificación Multicanal') }}</h2>
+        <h2 class="section-title">{{ t('notifications_channels.title', 'Canales de Alerta y Notificación Multi-Canal') }}</h2>
         <p class="section-desc">
-          {{ t('notification_channels.subtitle', 'Configure la integración segura con Telegram, Servidores SMTP y Webhooks cifrados en AES-256-GCM para notificaciones instantáneas de eventos de red y fallas de la flota.') }}
+          {{ t('notifications_channels.subtitle', 'Configure bots de Telegram, servidores de correo SMTP y Webhooks HTTP para recibir alertas críticas del NOC en tiempo real (Offline, Degradación, TOFU SSL, Drift).') }}
         </p>
       </div>
       <div class="toolbar-actions">
@@ -333,7 +374,7 @@
           🔄 {{ t('inventory.btn_refresh', 'Refrescar') }}
         </button>
         <button type="button" class="btn-tactical btn-primary" @click="openCreateModal">
-          {{ t('notification_channels.btn_new_channel', '➕ Nuevo Canal de Alerta') }}
+          {{ t('notifications_channels.btn_new_channel', '+ Nuevo Canal de Alerta') }}
         </button>
       </div>
     </div>
@@ -341,18 +382,17 @@
     <!-- Lista de Canales -->
     <div v-if="isLoading" class="panel-loading" aria-busy="true">
       <div class="tactical-spinner"></div>
-      <p>Cargando canales de alerta configurados...</p>
+      <p>{{ t('notifications_channels.loading_channels', 'Cargando canales de alerta configurados...') }}</p>
     </div>
 
     <div v-else-if="channels.length === 0" class="empty-state">
       <div class="empty-icon">🔔</div>
-      <p class="empty-title">{{ t('notification_channels.empty_channels', 'No hay canales de notificación configurados') }}</p>
+      <p class="empty-title">{{ t('notifications_channels.empty_title', 'No hay canales de notificación configurados') }}</p>
       <p class="empty-subtitle">
-        Cree un canal de Telegram, Servidor SMTP o Webhook para recibir alarmas críticas en tiempo
-        real.
+        {{ t('notifications_channels.empty_desc', 'Cree un canal de Telegram, Servidor SMTP o Webhook para recibir alarmas críticas en tiempo real.') }}
       </p>
       <button type="button" class="btn-tactical btn-primary" @click="openCreateModal">
-        {{ t('notification_channels.btn_new_channel', '➕ Configurar Primer Canal') }}
+        {{ t('notifications_channels.btn_configure_first', '+ Configurar Primer Canal') }}
       </button>
     </div>
 
@@ -369,7 +409,7 @@
               {{ getChannelTypeBadge(ch.channel_type).label }}
             </span>
             <span class="status-pill" :class="ch.is_enabled ? 'status-enabled' : 'status-disabled'">
-              {{ ch.is_enabled ? '● ACTIVO' : '○ INACTIVO' }}
+              {{ ch.is_enabled ? t('notifications_channels.status_active', '● ACTIVO') : t('notifications_channels.status_inactive', '○ INACTIVO') }}
             </span>
           </div>
           <h3 class="channel-name">{{ ch.name }}</h3>
@@ -377,20 +417,24 @@
 
         <div class="card-body">
           <div class="events-section">
-            <span class="events-label">Eventos Suscritos ({{ ch.subscribed_events.length }}):</span>
+            <span class="events-label">{{ t('notifications_channels.label_Subscribed_events', 'Eventos Suscritos') }} ({{ ch.subscribed_events.length }}):</span>
             <div class="event-tags">
-              <span v-for="evt in ch.subscribed_events" :key="evt" class="event-tag">
-                {{ evt }}
+              <span v-for="evt in ch.subscribed_events" :key="evt" class="event-tag" :title="evt">
+                {{ getEventLabel(evt) }} <small class="text-xs text-subtle font-mono">({{ evt }})</small>
               </span>
             </div>
           </div>
 
           <div class="metadata-row">
+            <span class="meta-label">{{ ch.channel_type === 'TELEGRAM_BOT' ? t('notifications_channels.label_bot_token', 'Bot Token:') : (ch.channel_type === 'SMTP_EMAIL' ? t('notifications_channels.label_smtp_server', 'Servidor SMTP:') : t('notifications_channels.label_endpoint', 'Endpoint:')) }}</span>
+            <span class="meta-val font-mono text-xs">{{ t('notifications_channels.token_encrypted_aes', '🔒 Cifrado en Vault (AES-256-GCM)') }}</span>
+          </div>
+          <div class="metadata-row">
             <span class="meta-label">ID:</span>
             <code class="meta-val">{{ ch.id.slice(0, 8) }}...{{ ch.id.slice(-4) }}</code>
           </div>
           <div class="metadata-row">
-            <span class="meta-label">Registrado:</span>
+            <span class="meta-label">{{ t('notifications_channels.label_registered', 'Registrado:') }}</span>
             <span class="meta-val">{{ new Date(ch.created_at).toLocaleString() }}</span>
           </div>
         </div>
@@ -400,32 +444,32 @@
             :id="'btn-edit-channel-' + ch.id"
             type="button"
             class="btn-card-action btn-edit"
-            title="Editar configuración del canal"
+            :title="t('notifications_channels.btn_edit_title', 'Editar configuración del canal')"
             @click="openEditModal(ch)"
           >
-            ✏️ {{ t('common.edit', 'Editar') }}
+            {{ t('notifications_channels.btn_edit', '✏️ Editar') }}
           </button>
           <button
             type="button"
             class="btn-card-action btn-test"
-            title="Despachar mensaje de prueba a este canal"
+            :title="t('notifications_channels.btn_test_title', 'Enviar mensaje de prueba a este canal')"
             @click="openTestModal(ch)"
           >
-            {{ t('notification_channels.btn_test', '🧪 Probar') }}
+            {{ t('notifications_channels.btn_test', '🧪 Probar') }}
           </button>
           <button
             type="button"
             class="btn-card-action btn-toggle"
             :class="{ active: ch.is_enabled }"
-            :title="ch.is_enabled ? 'Desactivar canal' : 'Activar canal'"
+            :title="ch.is_enabled ? t('notifications_channels.btn_disable', '⏸ Desactivar') : t('notifications_channels.btn_enable', '▶ Activar')"
             @click="handleToggleStatus(ch)"
           >
-            {{ ch.is_enabled ? t('notification_channels.btn_deactivate', 'Desactivar') : t('notification_channels.btn_activate', 'Activar') }}
+            {{ ch.is_enabled ? t('notifications_channels.btn_disable', '⏸ Desactivar') : t('notifications_channels.btn_enable', '▶ Activar') }}
           </button>
           <button
             type="button"
             class="btn-card-action btn-delete"
-            :title="t('notification_channels.btn_delete', 'Eliminar canal de notificación')"
+            :title="t('notifications_channels.btn_delete_title', 'Eliminar canal')"
             @click="handleDeleteChannel(ch)"
           >
             🗑️
@@ -447,12 +491,12 @@
       <div class="modal-card">
         <header class="modal-header">
           <h3 id="create-channel-title" class="modal-title">
-            {{ editingChannelId ? '✏️ ' + t('common.edit', 'Editar') + ' Canal de Notificación' : '➕ Configurar Nuevo Canal de Notificación' }}
+            {{ editingChannelId ? t('notifications_channels.modal_edit_title', '✏️ Editar Canal de Notificación') : t('notifications_channels.modal_create_title', '➕ Configurar Nuevo Canal de Notificación') }}
           </h3>
           <button
             type="button"
             class="btn-close"
-            aria-label="Cerrar modal"
+            :aria-label="t('enterprise.modal_close', 'Cerrar')"
             @click="closeCreateModal"
           >
             ✕
@@ -461,47 +505,47 @@
 
         <form class="modal-body" @submit.prevent="handleCreateChannel">
           <div class="form-group">
-            <label for="ch-name" class="form-label">Nombre del Canal *</label>
+            <label for="ch-name" class="form-label">{{ t('notifications_channels.field_name', 'Nombre del Canal *') }}</label>
             <input
               id="ch-name"
               v-model="formName"
               type="text"
               class="tactical-input"
-              placeholder="Ej: Canal Telegram Guardia NOC"
+              :placeholder="t('notifications_channels.field_name_placeholder', 'Ej: Canal Telegram Guardia NOC')"
               required
             />
           </div>
 
           <div class="form-group">
-            <label for="ch-type" class="form-label">Tipo de Notificación *</label>
+            <label for="ch-type" class="form-label">{{ t('notifications_channels.field_type', 'Tipo de Notificación *') }}</label>
             <select id="ch-type" v-model="formType" class="tactical-select" :disabled="!!editingChannelId">
-              <option value="TELEGRAM_BOT">📱 Bot de Telegram</option>
-              <option value="SMTP_EMAIL">✉️ Servidor de Correo SMTP</option>
-              <option value="GENERIC_WEBHOOK">🔗 Webhook HTTP (JSON Post)</option>
+              <option value="TELEGRAM_BOT">{{ t('notifications_channels.option_telegram', '📱 Bot de Telegram') }}</option>
+              <option value="SMTP_EMAIL">{{ t('notifications_channels.option_smtp', '✉️ Servidor de Correo SMTP') }}</option>
+              <option value="GENERIC_WEBHOOK">{{ t('notifications_channels.option_webhook', '🔗 Webhook HTTP (JSON Post)') }}</option>
             </select>
           </div>
 
           <!-- Campos para Telegram -->
           <div v-if="formType === 'TELEGRAM_BOT'" class="type-fields-box">
             <div class="form-group">
-              <label for="tg-bot-token" class="form-label">Bot Token de Telegram *</label>
+              <label for="tg-bot-token" class="form-label">{{ t('notifications_channels.field_bot_token', 'Bot Token de Telegram *') }}</label>
               <input
                 id="tg-bot-token"
                 v-model="telegramBotToken"
                 type="password"
                 class="tactical-input"
-                placeholder="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"
+                :placeholder="editingChannelId ? t('notifications_channels.keep_current_secret_placeholder', '(Sin cambios — se conserva el secreto cifrado actual)') : '123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ'"
                 :required="!editingChannelId"
               />
               <span v-if="editingChannelId" class="input-hint"
-                >Dejar en blanco para conservar el token previamente cifrado.</span
+                >{{ t('notifications_channels.hint_keep_token', 'Dejar en blanco para conservar el Bot Token cifrado actual.') }}</span
               >
               <span v-else class="input-hint"
-                >Token proporcionado por @BotFather. Se cifra con AES-256-GCM.</span
+                >{{ t('notifications_channels.hint_botfather', 'Token proporcionado por @BotFather. Se almacenará cifrado con AES-256-GCM.') }}</span
               >
             </div>
             <div class="form-group">
-              <label for="tg-chat-id" class="form-label">Chat ID o Canal *</label>
+              <label for="tg-chat-id" class="form-label">{{ t('notifications_channels.field_chat_id', 'Chat ID o Canal *') }}</label>
               <input
                 id="tg-chat-id"
                 v-model="telegramChatId"
@@ -517,7 +561,7 @@
           <div v-else-if="formType === 'SMTP_EMAIL'" class="type-fields-box">
             <div class="form-row">
               <div class="form-group flex-2">
-                <label for="smtp-host" class="form-label">Host SMTP *</label>
+                <label for="smtp-host" class="form-label">{{ t('notifications_channels.field_smtp_host', 'Host SMTP *') }}</label>
                 <input
                   id="smtp-host"
                   v-model="smtpHost"
@@ -528,7 +572,7 @@
                 />
               </div>
               <div class="form-group flex-1">
-                <label for="smtp-port" class="form-label">Puerto</label>
+                <label for="smtp-port" class="form-label">{{ t('notifications_channels.field_port', 'Puerto') }}</label>
                 <input
                   id="smtp-port"
                   v-model.number="smtpPort"
@@ -540,7 +584,7 @@
             </div>
             <div class="form-row">
               <div class="form-group flex-1">
-                <label for="smtp-user" class="form-label">Usuario SMTP</label>
+                <label for="smtp-user" class="form-label">{{ t('notifications_channels.field_smtp_user', 'Usuario SMTP') }}</label>
                 <input
                   id="smtp-user"
                   v-model="smtpUser"
@@ -550,21 +594,21 @@
                 />
               </div>
               <div class="form-group flex-1">
-                <label for="smtp-pass" class="form-label">Contraseña SMTP</label>
+                <label for="smtp-pass" class="form-label">{{ t('notifications_channels.field_smtp_pass', 'Contraseña SMTP') }}</label>
                 <input
                   id="smtp-pass"
                   v-model="smtpPassword"
                   type="password"
                   class="tactical-input"
-                  :placeholder="editingChannelId ? '•••••••••••• (Conservar contraseña)' : '••••••••••••'"
+                  :placeholder="editingChannelId ? t('notifications_channels.keep_current_secret_placeholder', '(Sin cambios — se conserva el secreto cifrado actual)') : '••••••••••••'"
                 />
                 <span v-if="editingChannelId" class="input-hint"
-                  >Dejar en blanco para conservar la contraseña previamente cifrada.</span
+                  >{{ t('notifications_channels.hint_keep_token', 'Dejar en blanco para conservar la contraseña previamente cifrada.') }}</span
                 >
               </div>
             </div>
             <div class="form-group">
-              <label for="smtp-from" class="form-label">Remitente (From)</label>
+              <label for="smtp-from" class="form-label">{{ t('notifications_channels.field_smtp_from', 'Remitente (From)') }}</label>
               <input
                 id="smtp-from"
                 v-model="smtpFrom"
@@ -574,7 +618,7 @@
               />
             </div>
             <div class="form-group">
-              <label for="smtp-to" class="form-label">Destinatarios (Separados por coma)</label>
+              <label for="smtp-to" class="form-label">{{ t('notifications_channels.field_smtp_to', 'Destinatarios (Separados por coma)') }}</label>
               <input
                 id="smtp-to"
                 v-model="smtpTo"
@@ -588,7 +632,7 @@
           <!-- Campos para Webhook -->
           <div v-else-if="formType === 'GENERIC_WEBHOOK'" class="type-fields-box">
             <div class="form-group">
-              <label for="webhook-url" class="form-label">URL del Webhook (HTTPS) *</label>
+              <label for="webhook-url" class="form-label">{{ t('notifications_channels.field_webhook_url', 'URL del Webhook (HTTPS) *') }}</label>
               <input
                 id="webhook-url"
                 v-model="webhookUrl"
@@ -600,7 +644,7 @@
             </div>
             <div class="form-group">
               <label for="webhook-auth" class="form-label"
-                >Cabecera de Autorización (Opcional)</label
+                >{{ t('notifications_channels.field_webhook_auth', 'Cabecera de Autorización (Opcional)') }}</label
               >
               <input
                 id="webhook-auth"
@@ -610,14 +654,14 @@
                 placeholder="Bearer eyJhbGci..."
               />
               <span v-if="editingChannelId" class="input-hint"
-                >Dejar en blanco para conservar la cabecera previa.</span
+                >{{ t('notifications_channels.hint_keep_token', 'Dejar en blanco para conservar el token actual.') }}</span
               >
             </div>
           </div>
 
           <!-- Eventos Suscritos -->
           <div class="form-group">
-            <label class="form-label">Eventos Suscritos</label>
+            <label class="form-label">{{ t('notifications_channels.field_events_legend', 'Eventos Suscritos') }}</label>
             <div class="events-checkbox-grid">
               <label v-for="evt in availableEvents" :key="evt.id" class="checkbox-label">
                 <input
@@ -634,16 +678,16 @@
           <div class="form-group">
             <label class="checkbox-label">
               <input v-model="formIsEnabled" type="checkbox" class="tactical-checkbox" />
-              <span>Habilitar canal inmediatamente al guardar</span>
+              <span>{{ t('notifications_channels.field_enable_immediately', 'Habilitar canal inmediatamente al guardar') }}</span>
             </label>
           </div>
 
           <footer class="modal-footer">
             <button type="button" class="btn-tactical btn-secondary" @click="closeCreateModal">
-              Cancelar
+              {{ t('common.cancel', 'Cancelar') }}
             </button>
             <button type="submit" class="btn-tactical btn-primary">
-              {{ editingChannelId ? '💾 ' + t('common.save', 'Guardar Cambios') : '🔒 Guardar y Cifrar Canal' }}
+              {{ editingChannelId ? t('notifications_channels.btn_update_channel', '💾 Actualizar Canal') : t('notifications_channels.btn_save_encrypt', '🔒 Guardar y Cifrar Canal') }}
             </button>
           </footer>
         </form>
@@ -663,21 +707,20 @@
       <div class="modal-card">
         <header class="modal-header">
           <h3 id="test-channel-title" class="modal-title">
-            🧪 Probar Canal: {{ activeChannelForTest?.name }}
+            {{ t('notifications_channels.modal_test_title', '🧪 Probar Canal:') }} {{ activeChannelForTest?.name }}
           </h3>
-          <button type="button" class="btn-close" aria-label="Cerrar modal" @click="closeTestModal">
+          <button type="button" class="btn-close" :aria-label="t('enterprise.modal_close', 'Cerrar')" @click="closeTestModal">
             ✕
           </button>
         </header>
 
         <div class="modal-body">
           <p class="modal-hint">
-            Se enviará una carga útil de prueba al canal configurado para validar la conectividad y
-            las credenciales cifradas.
+            {{ t('notifications_channels.modal_test_desc', 'Se enviará una carga útil de prueba real al destino configurado para certificar la conectividad.') }}
           </p>
 
           <div class="form-group">
-            <label for="test-msg" class="form-label">Mensaje de Prueba</label>
+            <label for="test-msg" class="form-label">{{ t('notifications_channels.field_test_message', 'Mensaje de Prueba') }}</label>
             <input id="test-msg" v-model="testMessage" type="text" class="tactical-input" />
           </div>
 
@@ -687,7 +730,7 @@
                 {{ testResult.status === 'SUCCESS' ? '✅' : '❌' }}
               </span>
               <strong class="result-title">
-                {{ testResult.status === 'SUCCESS' ? 'Despacho Exitoso' : 'Error en Despacho' }}
+                {{ testResult.status === 'SUCCESS' ? t('notifications_channels.dispatch_success', 'Despacho Exitoso') : t('notifications_channels.dispatch_error', 'Error en Despacho') }}
               </strong>
             </div>
             <p class="result-detail">{{ testResult.detail }}</p>
@@ -696,7 +739,7 @@
 
         <footer class="modal-footer">
           <button type="button" class="btn-tactical btn-secondary" @click="closeTestModal">
-            Cerrar
+            {{ t('enterprise.modal_close', 'Cerrar') }}
           </button>
           <button
             type="button"
@@ -704,7 +747,7 @@
             :disabled="isTesting"
             @click="handleDispatchTest"
           >
-            {{ isTesting ? 'Enviando...' : '🚀 Despachar Prueba' }}
+            {{ isTesting ? t('notifications_channels.btn_sending', 'Enviando...') : t('notifications_channels.btn_dispatch_test', '🚀 Despachar Prueba') }}
           </button>
         </footer>
       </div>

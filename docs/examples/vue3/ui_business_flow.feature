@@ -1052,6 +1052,34 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * match auditWormRefreshContract.categorySelect == '#filter-cat'
     * match auditWormRefreshContract.supportedCategory == 'SWITCHING_SECURITY'
 
+  Scenario: 105. Paridad de columnas connection_count/estimated_pps en anomalías y control de mitigación FastDrop (Hito 30.14 - Spec 91)
+    * def anomalyParityContract = { tableWrapper: '.tactical-table-wrapper', mitigateTopBtn: '#btn-mitigate-traffic-anomaly', connCountCol: 'connection_count', ppsCol: 'estimated_pps', defaultFastDropDuration: 300 }
+    * match anomalyParityContract.tableWrapper == '.tactical-table-wrapper'
+    * match anomalyParityContract.mitigateTopBtn == '#btn-mitigate-traffic-anomaly'
+    * match anomalyParityContract.connCountCol == 'connection_count'
+    * match anomalyParityContract.ppsCol == 'estimated_pps'
+    * match anomalyParityContract.defaultFastDropDuration == 300
+    * def slaProbeQuickContract = { endpoint: '/api/v1/sla/probes/run', maxIcmpCount: 5 }
+    * match slaProbeQuickContract.maxIcmpCount == 5
+
+  Scenario: 106. Despacho real en canales de notificación y modal dual crear/editar con botón #btn-edit-channel (Hito 30.15 - Spec 92)
+    * def channelDispatchContract = { editBtnClass: '.btn-edit', editBtnPrefix: '#btn-edit-channel-', modalTitle: '#create-channel-title', testModalTitle: '#test-channel-title', testBtnClass: '.btn-test' }
+    * match channelDispatchContract.editBtnClass == '.btn-edit'
+    * match channelDispatchContract.editBtnPrefix == '#btn-edit-channel-'
+    * match channelDispatchContract.modalTitle == '#create-channel-title'
+    * match channelDispatchContract.testModalTitle == '#test-channel-title'
+    * match channelDispatchContract.testBtnClass == '.btn-test'
+
+  Scenario: 107. Paridad total de traducción al inglés (i18n EN) en CIS Hardening, Seguridad L2, Telemetría SLA, Alertas y SIEM (Hito 30.16 - Spec 93)
+    * def i18nComplianceEnContract = { cisScoreTitle: 'Overall CIS Security Compliance Score', l2BulkBtn: 'Deploy Across Fleet (Bulk Ops)', slaAnomalyTitle: 'Traffic Anomaly Detection & 1-Click Mitigation', notificationsTitle: 'Multi-Channel Alert & Notification Channels', siemSaveBtn: 'Save SIEM Configuration' }
+    * match i18nComplianceEnContract.cisScoreTitle == 'Overall CIS Security Compliance Score'
+    * match i18nComplianceEnContract.l2BulkBtn == 'Deploy Across Fleet (Bulk Ops)'
+    * match i18nComplianceEnContract.slaAnomalyTitle == 'Traffic Anomaly Detection & 1-Click Mitigation'
+    * match i18nComplianceEnContract.notificationsTitle == 'Multi-Channel Alert & Notification Channels'
+    * match i18nComplianceEnContract.siemSaveBtn == 'Save SIEM Configuration'
+
+
+
 
 
 

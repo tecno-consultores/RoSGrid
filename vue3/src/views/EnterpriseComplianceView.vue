@@ -1022,6 +1022,34 @@
     return t(key, d.rationale);
   }
 
+  function getDirectiveFinding(d: {
+    code: string;
+    finding: string;
+    passed: boolean;
+    enabled?: boolean;
+  }): string {
+    if (d.enabled === false) {
+      return t(
+        'cis_directives.finding_disabled_by_policy',
+        d.finding ||
+          'Directiva desactivada por política del operador (excluida del cálculo de puntuación).',
+      );
+    }
+    const codeKey = getDirectiveCodeKey(d.code);
+    if (d.passed) {
+      return t(`cis_directives.${codeKey}.finding_passed`, d.finding);
+    }
+    if (d.code === 'CIS-1.1' && d.finding && d.finding.includes(':')) {
+      const servicesPart = d.finding.split(':').slice(1).join(':').trim();
+      const prefix = t(
+        'cis_directives.CIS_1_1.finding_failed_prefix',
+        'Servicios inseguros activos en el router:',
+      );
+      return `${prefix} ${servicesPart}`;
+    }
+    return t(`cis_directives.${codeKey}.finding_failed`, d.finding);
+  }
+
   onMounted(() => {
     if (inventoryStore.routers.length === 0) {
       inventoryStore.fetchRouters();
@@ -1518,7 +1546,7 @@
                     {{ d.passed ? t('enterprise.cis_passed', 'APROBADO') : t('enterprise.cis_failed', 'FALLIDO') }}
                   </span>
                 </td>
-                <td class="text-subtle text-xs">{{ d.finding }}</td>
+                <td class="text-subtle text-xs">{{ getDirectiveFinding(d) }}</td>
                 <td>
                   <code class="remediation-snippet">{{ d.remediation_cmd }}</code>
                 </td>
@@ -1972,7 +2000,7 @@
         <div class="panel-action-bar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
           <div>
             <span class="text-subtle text-xs">
-              Configure <strong>DHCP Snooping</strong> individualmente por Bridge bajo Safe Mode (60s) o despliegue la política en toda la flota.
+              {{ t('enterprise.switching_intro_desc', 'Configure DHCP Snooping individualmente por Bridge bajo Safe Mode (60s) o despliegue la política en toda la flota.') }}
             </span>
           </div>
           <button
@@ -2006,8 +2034,8 @@
                   style="padding: 0.25rem 0.65rem; font-size: 0.75rem;"
                   @click="openSnoopingConfigModal(b)"
                 >
-                  <span v-if="b.dhcp_snooping_enabled">⚙️ Configurar / Desactivar</span>
-                  <span v-else>⚡ Activar DHCP Snooping</span>
+                  <span v-if="b.dhcp_snooping_enabled">{{ t('enterprise.switching_btn_configure_disable', '⚙️ Configurar / Desactivar') }}</span>
+                  <span v-else>{{ t('enterprise.switching_btn_enable_snooping', '⚡ Activar DHCP Snooping') }}</span>
                 </button>
               </div>
             </div>
@@ -2019,7 +2047,7 @@
                   <span v-for="p in b.trusted_ports" :key="p" class="port-tag tag-trusted">
                     {{ p }}
                   </span>
-                  <span v-if="b.trusted_ports.length === 0" class="text-subtle text-xs">Ningún puerto marcado como Trusted</span>
+                  <span v-if="b.trusted_ports.length === 0" class="text-subtle text-xs">{{ t('enterprise.switching_no_trusted_ports', 'Ningún puerto marcado como Trusted') }}</span>
                 </div>
               </div>
 
@@ -2031,7 +2059,7 @@
                   <span v-for="p in b.untrusted_ports" :key="p" class="port-tag tag-untrusted">
                     {{ p }}
                   </span>
-                  <span v-if="b.untrusted_ports.length === 0" class="text-subtle text-xs">Sin puertos Untrusted en este bridge</span>
+                  <span v-if="b.untrusted_ports.length === 0" class="text-subtle text-xs">{{ t('enterprise.switching_no_untrusted_ports', 'Sin puertos Untrusted en este bridge') }}</span>
                 </div>
               </div>
             </div>
@@ -2050,12 +2078,12 @@
           <div class="modal-card remediation-modal">
             <header class="modal-header">
               <h3 id="modal-snooping-title">
-                🛡️ Configurar DHCP Snooping — Bridge: {{ snoopingForm.bridge_name }}
+                🛡️ {{ t('enterprise.modal_snooping_title', 'Configurar DHCP Snooping — Bridge:') }} {{ snoopingForm.bridge_name }}
               </h3>
               <button
                 type="button"
                 class="btn-close"
-                aria-label="Cerrar modal de DHCP Snooping"
+                :aria-label="t('enterprise.modal_close', 'Cerrar modal de DHCP Snooping')"
                 @click="selectedBridgeForSnooping = null"
               >
                 ✕
@@ -2065,9 +2093,9 @@
               <div class="safemode-shield-alert mb-3">
                 <span class="shield-icon">⚠️</span>
                 <div class="shield-text">
-                  <strong>Regla de Oro en RouterOS v7 (Puertos Trusted):</strong>
+                  <strong>{{ t('enterprise.modal_snooping_golden_title', 'Regla de Oro en RouterOS v7 (Puertos Trusted):') }}</strong>
                   <p class="text-xs text-subtle mb-0">
-                    Al activar <code>dhcp-snooping=yes</code>, RouterOS descarta paquetes <code>DHCP Offer/Ack</code> en todos los puertos <em>Untrusted</em>. Asegúrese de marcar el puerto troncal (Uplink hacia el servidor DHCP legítimo) como <strong>Trusted</strong>.
+                    {{ t('enterprise.modal_snooping_golden_desc', 'Al activar dhcp-snooping=yes, el bridge descartará todos los mensajes DHCP Server (DHCPOFFER / DHCPACK) recibidos por puertos no confiables. Debe marcar como Trusted el puerto uplink o troncal donde reside su servidor DHCP legítimo.') }}
                   </p>
                 </div>
               </div>
@@ -2075,20 +2103,21 @@
               <div class="form-group mb-3">
                 <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
                   <input id="chk-snooping-enabled" v-model="snoopingForm.enabled" type="checkbox" />
-                  <strong>Habilitar DHCP Snooping en <code>{{ snoopingForm.bridge_name }}</code></strong>
+                  <strong>{{ t('enterprise.modal_snooping_enable_label', 'Habilitar DHCP Snooping en') }} <code>{{ snoopingForm.bridge_name }}</code></strong>
+                  <span class="text-subtle text-xs">{{ t('enterprise.modal_snooping_enable_hint', '(Filtra respuestas DHCP no autorizadas en Capa 2)') }}</span>
                 </label>
               </div>
 
               <div class="form-group mb-3">
                 <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
                   <input id="chk-snooping-option82" v-model="snoopingForm.add_dhcp_option82" type="checkbox" :disabled="!snoopingForm.enabled" />
-                  <span>Inyectar <strong>DHCP Option 82</strong> (Agent Circuit ID / Remote ID)</span>
+                  <span><strong>{{ t('enterprise.modal_snooping_opt82_label', 'Inyectar DHCP Option 82 (add-dhcp-option82=yes)') }}</strong> <span class="text-subtle text-xs">{{ t('enterprise.modal_snooping_opt82_hint', '— Identifica circuito y puerto físico del suscriptor') }}</span></span>
                 </label>
               </div>
 
               <div class="form-group mb-3">
                 <label class="text-xs font-bold mb-1" style="display: block;">
-                  Seleccione los Puertos Confiables (Trusted / Uplink) en <code>{{ snoopingForm.bridge_name }}</code>:
+                  {{ t('enterprise.modal_snooping_trusted_title', 'Seleccione los Puertos Confiables (Trusted Ports / Uplink DHCP):') }}
                 </label>
                 <div v-if="snoopingForm.all_ports.length > 0" class="tags-group" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
                   <button
@@ -2100,11 +2129,11 @@
                     style="cursor: pointer; border: 1px solid currentColor;"
                     @click="toggleTrustedPortInForm(p)"
                   >
-                    {{ snoopingForm.trusted_ports.includes(p) ? `✓ Trusted: ${p}` : `Untrusted: ${p}` }}
+                    {{ snoopingForm.trusted_ports.includes(p) ? `${t('enterprise.modal_snooping_port_trusted', '✔ TRUSTED (Uplink / Servidor DHCP)')}: ${p}` : `${t('enterprise.modal_snooping_port_untrusted', '🔒 UNTRUSTED (Puerto de Acceso Cliente)')}: ${p}` }}
                   </button>
                 </div>
                 <p v-else class="text-xs text-subtle mb-2">
-                  Este bridge aún no tiene puertos miembros asociados en <code>/interface/bridge/port</code>.
+                  {{ t('enterprise.modal_snooping_no_ports', 'Este bridge aún no tiene puertos miembros registrados en /interface/bridge/port.') }}
                 </p>
 
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
@@ -2113,10 +2142,10 @@
                     v-model="snoopingForm.manual_trusted_port"
                     type="text"
                     class="tactical-input"
-                    placeholder="Añadir interfaz troncal (ej: ether1 o sfp-sfpplus1)"
+                    :placeholder="t('enterprise.modal_snooping_add_trunk_placeholder', 'Nombre de interfaz (ej. sfp-sfpplus1)')"
                   />
                   <button type="button" class="tactical-btn btn-secondary" @click="addManualTrustedPort">
-                    + Añadir Trusted
+                    {{ t('enterprise.modal_snooping_btn_add_trusted', '+ Añadir Trusted') }}
                   </button>
                 </div>
               </div>
@@ -2132,8 +2161,8 @@
                   :disabled="actionLoading"
                   @click="handleSaveBridgeSnooping"
                 >
-                  <span v-if="actionLoading">⏳ Aplicando bajo Safe Mode...</span>
-                  <span v-else>⚡ Guardar y Aplicar (Safe Mode 60s)</span>
+                  <span v-if="actionLoading">{{ t('enterprise.applying_safemode', '⏳ Aplicando bajo Safe Mode...') }}</span>
+                  <span v-else>{{ t('enterprise.modal_snooping_btn_save', '⚡ Guardar y Aplicar (Safe Mode 60s)') }}</span>
                 </button>
               </div>
             </div>
@@ -2287,7 +2316,7 @@
               >
                 <optgroup
                   v-if="slaDiscoveredTargets.some((item) => item.category === 'ROUTER_GATEWAY')"
-                  label="🌐 Gateways WAN Detectados en Router (/ip/route)"
+                  :label="t('enterprise.sla_optgroup_gateways', '🌐 Gateways WAN Detectados en Router (/ip/route)')"
                 >
                   <option
                     v-for="gw in slaDiscoveredTargets.filter((item) => item.category === 'ROUTER_GATEWAY')"
@@ -2299,7 +2328,7 @@
                 </optgroup>
                 <optgroup
                   v-if="slaDiscoveredTargets.some((item) => item.category === 'ROUTER_DNS')"
-                  label="🖧 DNS Configurados en Router (/ip/dns)"
+                  :label="t('enterprise.sla_optgroup_dns', '🖧 DNS Configurados en Router (/ip/dns)')"
                 >
                   <option
                     v-for="dns in slaDiscoveredTargets.filter((item) => item.category === 'ROUTER_DNS')"
@@ -2309,7 +2338,7 @@
                     {{ dns.target_host }} — {{ dns.target_name }}
                   </option>
                 </optgroup>
-                <optgroup label="🛡️ Referencias Públicas DNS / Anycast">
+                <optgroup :label="t('enterprise.sla_optgroup_public', '🛡️ Referencias Públicas DNS / Anycast')">
                   <option
                     v-for="pub in slaDiscoveredTargets.filter((item) => item.category === 'PUBLIC_REFERENCE')"
                     :key="pub.target_host"
@@ -2318,7 +2347,7 @@
                     {{ pub.target_host }} — {{ pub.target_name }}
                   </option>
                 </optgroup>
-                <option value="CUSTOM">✍️ Otra IP / Host Personalizado...</option>
+                <option value="CUSTOM">{{ t('enterprise.sla_option_custom', '✍️ Otra IP / Host Personalizado...') }}</option>
               </select>
             </div>
             <div class="form-group">
@@ -2363,10 +2392,10 @@
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 8px;">
             <div>
               <h3 style="margin: 0; color: #00e5ff; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
-                🚨 Detección de Anomalías de Tráfico & Mitigación en 1 Clic
+                🚨 {{ t('enterprise.sla_anomalies_title', 'Detección de Anomalías de Tráfico & Mitigación en 1 Clic') }}
               </h3>
               <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: #94a3b8;">
-                Monitoreo volumétrico en tiempo real con FastDrop automático para mitigar ataques DoS / anomalías.
+                {{ t('enterprise.sla_anomalies_subtitle', 'Monitoreo volumétrico en tiempo real con FastDrop automático para mitigar ataques DoS / anomalías.') }}
               </p>
             </div>
             <button
@@ -2377,22 +2406,22 @@
               @click="handleMitigateAnomaly()"
             >
               <span>🛡️</span>
-              {{ isMitigatingTraffic ? 'Mitigando...' : 'Mitigar Anomalía (FastDrop 300s)' }}
+              {{ isMitigatingTraffic ? t('enterprise.sla_btn_mitigating', 'Mitigando...') : t('enterprise.sla_btn_mitigate_fastdrop', 'Mitigar Anomalía (FastDrop 300s)') }}
             </button>
           </div>
 
           <div v-if="trafficAnomalies.length === 0" style="padding: 12px; background: rgba(15, 23, 42, 0.5); border-radius: 6px; color: #10b981; font-size: 0.9rem;">
-            ✔ Cero anomalías volumétricas detectadas en el router en la ventana actual.
+            {{ t('enterprise.sla_zero_anomalies', '✔ Cero anomalías volumétricas detectadas en el router en la ventana actual.') }}
           </div>
           <div v-else class="tactical-table-wrapper">
             <table class="tactical-table font-tabular" style="width: 100%;">
               <thead>
                 <tr>
-                  <th scope="col">IP Origen</th>
-                  <th scope="col">Conexiones Concurrentes</th>
-                  <th scope="col">Tasa de Tráfico</th>
-                  <th scope="col">Severidad</th>
-                  <th scope="col">Acción</th>
+                  <th scope="col">{{ t('enterprise.sla_th_src_ip', 'IP Origen') }}</th>
+                  <th scope="col">{{ t('enterprise.sla_th_concurrent_conns', 'Conexiones Concurrentes') }}</th>
+                  <th scope="col">{{ t('enterprise.sla_th_traffic_rate', 'Tasa de Tráfico') }}</th>
+                  <th scope="col">{{ t('enterprise.sla_th_severity', 'Severidad') }}</th>
+                  <th scope="col">{{ t('enterprise.sla_th_anomaly_action', 'Acción') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -2403,7 +2432,7 @@
                     {{ a.rate_mbps ? `${a.rate_mbps} Mbps` : (a.estimated_pps != null ? `${a.estimated_pps} pps` : '—') }}
                   </td>
                   <td>
-                    <span class="badge badge-danger">{{ a.severity || 'ANOMALÍA' }}</span>
+                    <span class="badge badge-danger">{{ a.severity || t('enterprise.sla_anomaly_fallback', 'ANOMALÍA') }}</span>
                     <span v-if="a.anomaly_type" class="text-xs text-muted" style="margin-left: 0.35rem;">({{ a.anomaly_type }})</span>
                   </td>
                   <td>

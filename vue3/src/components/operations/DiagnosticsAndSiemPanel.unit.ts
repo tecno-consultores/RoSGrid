@@ -114,4 +114,28 @@ describe('DiagnosticsAndSiemPanel.vue — Paquete 1-Click y SIEM del ISP (Spec 7
     expect(mockPost).toHaveBeenCalledWith('/api/v1/system/siem-config/test', {});
     expect(wrapper.find('[data-testid="siem-test-summary"]').text()).toContain('12.4 ms');
   });
+
+  it('renderiza el formulario de paquete de diagnóstico y el conector SIEM completamente en inglés cuando el locale es en (Hito 30.16 - Spec 93)', async () => {
+    const { useI18n } = await import('@/composables/useI18n');
+    const { setLocale } = useI18n();
+    setLocale('en');
+
+    try {
+      const wrapper = mount(DiagnosticsAndSiemPanel);
+      await flushPromises();
+
+      expect(wrapper.text()).toContain('Unified Support & Diagnostic Bundle (1-Click Bundle)');
+      expect(wrapper.text()).toContain('Archive Format');
+      expect(wrapper.text()).toContain('Backend Log Lines');
+      expect(wrapper.text()).toContain('Operator Notes / Incident Description');
+      expect(wrapper.text()).toContain('Download Diagnostic Bundle (.zip)');
+      expect(wrapper.text()).toContain('ISP SIEM Connector (Graylog / Grafana Loki / Syslog)');
+      expect(wrapper.text()).toContain('SIEM Collector Protocol');
+      expect(wrapper.text()).toContain('Minimum Severity');
+      expect(wrapper.text()).toContain('Save SIEM Configuration');
+      expect(wrapper.text()).toContain('Send Test Log');
+    } finally {
+      setLocale('es');
+    }
+  });
 });

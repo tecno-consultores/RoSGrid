@@ -1070,6 +1070,15 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * match channelDispatchContract.testModalTitle == '#test-channel-title'
     * match channelDispatchContract.testBtnClass == '.btn-test'
 
+  Scenario: 107. Paridad total de traducción al inglés (i18n EN) en CIS Hardening, Seguridad L2, Telemetría SLA, Alertas y SIEM (Hito 30.16 - Spec 93)
+    * def i18nComplianceEnContract = { cisScoreTitle: 'Overall CIS Security Compliance Score', l2BulkBtn: 'Deploy Across Fleet (Bulk Ops)', slaAnomalyTitle: 'Traffic Anomaly Detection & 1-Click Mitigation', notificationsTitle: 'Multi-Channel Alert & Notification Channels', siemSaveBtn: 'Save SIEM Configuration' }
+    * match i18nComplianceEnContract.cisScoreTitle == 'Overall CIS Security Compliance Score'
+    * match i18nComplianceEnContract.l2BulkBtn == 'Deploy Across Fleet (Bulk Ops)'
+    * match i18nComplianceEnContract.slaAnomalyTitle == 'Traffic Anomaly Detection & 1-Click Mitigation'
+    * match i18nComplianceEnContract.notificationsTitle == 'Multi-Channel Alert & Notification Channels'
+    * match i18nComplianceEnContract.siemSaveBtn == 'Save SIEM Configuration'
+
+
 
 
 

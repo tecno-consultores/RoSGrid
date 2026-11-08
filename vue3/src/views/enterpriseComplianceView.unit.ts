@@ -794,4 +794,46 @@ describe('EnterpriseComplianceView.vue — Hito 20 Suite Corporativa', () => {
     expect(postSpy).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain('No hay ninguna IP anómala válida seleccionada para mitigar.');
   });
+
+  it('traduce completamente al inglés CIS Hardening (incluyendo hallazgos d.finding), L2 Security & Rogue DHCP y SLA Telemetry al activar locale en (Hito 30.16 - Spec 93)', async () => {
+    const { useI18n } = await import('@/composables/useI18n');
+    const { setLocale } = useI18n();
+    setLocale('en');
+
+    try {
+      const wrapper = mount(EnterpriseComplianceView);
+
+      // 1. Verificar pestaña CIS Hardening en inglés
+      await wrapper.find('#tab-btn-cis').trigger('click');
+      await vi.waitFor(() => {
+        expect(wrapper.text()).toContain('Overall CIS Security Compliance Score');
+      });
+      expect(wrapper.text()).toContain('Customize Enterprise Policies');
+      expect(wrapper.text()).toContain('Active in Policy');
+      expect(wrapper.text()).toContain('Official Standards');
+      // El hallazgo técnico de CIS-1.1 / CIS-1.2 debe mostrarse traducido al inglés
+      expect(wrapper.text()).not.toContain('Servicios inseguros activos en el router');
+
+      // 2. Verificar pestaña L2 Security & Rogue DHCP en inglés
+      await wrapper.find('#tab-btn-switching').trigger('click');
+      await vi.waitFor(() => {
+        expect(wrapper.text()).toContain('Deploy Across Fleet (Bulk Ops)');
+      });
+      expect(wrapper.text()).toContain(
+        'Configure DHCP Snooping individually per Bridge under Safe Mode (60s)',
+      );
+      expect(wrapper.text()).toContain('Unauthorized DHCP Servers Detected (Rogue DHCP)');
+
+      // 3. Verificar pestaña SLA Telemetry & Traffic Anomalies en inglés
+      await wrapper.find('#tab-btn-sla').trigger('click');
+      await vi.waitFor(() => {
+        expect(wrapper.text()).toContain('Traffic Anomaly Detection & 1-Click Mitigation');
+      });
+      expect(wrapper.text()).toContain('Probe WAN Gateway + Quad9 (9.9.9.9)');
+      expect(wrapper.text()).toContain('Suggested Target / Gateway');
+      expect(wrapper.text()).toContain('Mitigate Anomaly (FastDrop 300s)');
+    } finally {
+      setLocale('es');
+    }
+  });
 });

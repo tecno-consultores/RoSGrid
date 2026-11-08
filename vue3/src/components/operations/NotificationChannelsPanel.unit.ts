@@ -48,6 +48,8 @@ const mockChannels: NotificationChannelItem[] = [
 describe('NotificationChannelsPanel.vue — Gestión de Canales de Alerta', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    mockChannels[0].is_enabled = true;
+    mockChannels[1].is_enabled = false;
   });
 
   it('renderiza estado vacío cuando no existen canales configurados', async () => {
@@ -252,5 +254,40 @@ describe('NotificationChannelsPanel.vue — Gestión de Canales de Alerta', () =
         }),
       }),
     );
+  });
+
+  it('renderiza todos los textos, insignias, eventos y modales en inglés cuando el locale es en (Hito 30.16 - Spec 93)', async () => {
+    const { useI18n } = await import('@/composables/useI18n');
+    const { setLocale } = useI18n();
+    setLocale('en');
+
+    try {
+      vi.spyOn(http, 'get').mockResolvedValueOnce({
+        data: [
+          { ...mockChannels[0], is_enabled: true },
+          { ...mockChannels[1], is_enabled: false },
+        ],
+        status: 200,
+        headers: new Headers(),
+      } as unknown as ApiResponse);
+
+      const wrapper = mount(NotificationChannelsPanel);
+      await flushPromises();
+
+      expect(wrapper.text()).toContain('Multi-Channel Alert & Notification Channels');
+      expect(wrapper.text()).toContain('+ New Alert Channel');
+      expect(wrapper.text()).toContain('● ACTIVE');
+      expect(wrapper.text()).toContain('○ INACTIVE');
+      expect(wrapper.text()).toContain('Router Offline (Unreachable)');
+      expect(wrapper.text()).toContain('Encrypted in Vault (AES-256-GCM)');
+
+      // Abrir modal de edición y verificar etiquetas en inglés
+      await wrapper.find(`#btn-edit-channel-${CH_TELEGRAM_ID}`).trigger('click');
+      expect(wrapper.find('#create-channel-title').text()).toContain('Edit Notification Channel');
+      expect(wrapper.text()).toContain('Channel Name *');
+      expect(wrapper.text()).toContain('Update Channel');
+    } finally {
+      setLocale('es');
+    }
   });
 });
