@@ -2,38 +2,34 @@
 
 Bienvenido a la carpeta de configuración y gobernanza para **Agentes de Inteligencia Artificial** y **Desarrolladores Humanos** de RoSGrid.
 
-Este directorio implementa el estándar abierto y emergente de la industria para agentes autónomos (Google Antigravity, Claude Code / Claude Desktop, Hermes Agent, Cursor, Windsurf, etc.), proporcionando el contexto técnico, las restricciones de seguridad y los playbooks operativos necesarios para mantener la plataforma en el estándar de calidad corporativa **Nivel 11X**.
+Este directorio implementa el estándar abierto de gobernanza para agentes autónomos (Google Antigravity, Claude Code / Claude Desktop, Hermes Agent, Cursor, Windsurf), proporcionando el contexto técnico, las restricciones de seguridad y los playbooks operativos necesarios para mantener la plataforma en el estándar de calidad corporativa **Nivel 11X**.
 
 ---
 
-## 📂 Estructura del Directorio
+## 📂 Estructura Real del Directorio
 
 ```text
 .agents/
 ├── README.md                                         # Este documento explicativo
 ├── ACTIVE_TASK.md                                    # Diario de resiliencia y progreso en tiempo real (Invariante 11X)
-├── rules/                                            # Reglas y directivas de comportamiento forzadas
-│   ├── mandatory_qa_pyramid_and_doc_sync.md          # Pirámide de pruebas multi-capa y sync documental
-│   ├── secure_development_and_testing_guidelines.md  # Anti-Mocks ciegos, RLS forzado, SSRF, bóveda y deslinde operativo
-│   ├── frontend_parity_and_closure.md                # Paridad terminal-UI y protocolo de cierre
-│   ├── continuous_agent_evolution.md                 # Evolución y actualización autónoma y continua de .agents/
-│   ├── anti_regression_and_side_effects_guardrail.md # Blindaje contra regresiones y control de radio de impacto
+├── proposals/                                        # Propuestas de evolución hacia qa-testing-blueprints
+├── rules/                                            # Reglas y directivas de comportamiento forzadas (4 archivos activos)
+│   ├── mandatory_qa_pyramid_and_doc_sync.md          # Pirámide de pruebas 11X, Karate Labs y sync documental conciso
+│   ├── secure_development_and_testing_guidelines.md  # Anti-Mocks ciegos, RLS, SSRF, Vault, MCP Zero-Trust y anti-regresión
+│   ├── frontend_parity_and_closure.md                # Paridad terminal-UI, temas dinámicos, mapas y compuerta de cierre
 │   └── ground_truth_fixtures_and_negative_invariants.md # Fixtures trimodales RouterOS v7 e invariantes negativos
-├── skills/                                           # Habilidades y Playbooks de dominio
-│   ├── rosgrid-noc-operator/                         # Operador NOC y diagnóstico autónomo vía MCP (RouterOS v7, 22 tools)
-│   ├── qa-11x-docker-certifier/                      # Certificación 11X en Docker efímero (>=95% cobertura)
-│   ├── mikrotik-webfig-safemode/                     # Reglas de dominio MikroTik v7, Safe Mode y RingBuffer
-│   ├── vue3-wcag-tactical-ui/                        # Arquitectura Vue 3 WinBox, WCAG 2.1 AA y Lighthouse
-│   ├── docker-trivy-keydb-hardening/                 # Endurecimiento Docker, Trivy = 0 y KeyDB multi-hilo
-│   ├── graphify-docs-api-writer/                     # Redacción de arquitectura, grafos AST y manuales
-│   └── graphify-ast-navigator/                       # Navegación AST, radio de impacto (Blast Radius) y servidor MCP
+├── skills/                                           # Habilidades y Playbooks de dominio de RoSGrid (4 skills locales)
+│   ├── rosgrid-noc-operator/                         # Operador NOC vía MCP (RouterOS v7.13+, 22 tools, 6 Maker-Checker)
+│   ├── mikrotik-webfig-safemode/                     # Reglas de dominio MikroTik v7.13+, Safe Mode 60s y RingBuffer
+│   ├── vue3-wcag-tactical-ui/                        # Arquitectura Vue 3 WinBox, WCAG 2.1 AA y Refactoring UI
+│   └── graphify-docs-api-writer/                     # Redacción y mantenimiento de manuales y API specs con Graphify AST
 └── scripts/                                          # Scripts de automatización y compuertas de calidad
     ├── verify_alembic_orm_parity.py                  # Auditoría estricta: modelos ORM vs migraciones Alembic
     ├── verify_json_no_duplicate_keys.py              # Auditoría estricta anti-colisión de claves duplicadas en JSON i18n
     ├── verify_topological_health.py                  # Auditoría estricta de salud topológica y límites de capas AST
     ├── inspect_blast_radius.py                       # Análisis de radio de impacto pre-refactorización (aristas entrantes)
-    ├── verify_zero_orphan_vue_components.py          # Auditoría estricta: paridad y cobertura de componentes Vue 3 (0 huérfanos)
-    ├── verify_no_orphan_api_endpoints.py             # Auditoría bidireccional de paridad de endpoints API FastAPI <-> Vue 3
+    ├── verify_zero_orphan_vue_components.py          # Auditoría estricta: 100% de componentes Vue 3 con pruebas unitarias
+    ├── verify_no_orphan_api_endpoints.py             # Auditoría bidireccional de paridad FastAPI <-> Vue 3 (0 rutas huérfanas)
     ├── verify_anti_silo_test_quality.py              # Auditoría estática anti-mocks ciegos de write_audit_log (Spec 83)
     ├── verify_roadmap_consistency.py                 # Verificador de consistencia entre ROADMAP.md y ACTIVE_TASK.md
     └── certify_task_completion.sh                    # Compuerta de certificación pre-commit automatizada (9 etapas)
@@ -44,107 +40,32 @@ Este directorio implementa el estándar abierto y emergente de la industria para
 ## 🌐 Estrategia Lingüística y Optimización de Tokens (Inglés Técnico vs. Español Humano)
 
 > **PREMISA DE DISEÑO:**  
-> Las instrucciones destinadas al consumo interno de los modelos de IA (`rules/` y `skills/`) están redactadas en **inglés técnico compacto de alta densidad**, mientras que toda la interacción con desarrolladores humanos, respuestas en el chat y documentación del negocio (`docs/specs/`, `docs/`, `CHANGELOG.md`, `ROADMAP.md`, `TESTING.md`) se mantiene estrictamente en **español**.
-
-### ¿Por qué las directivas de IA están en inglés?
-
-1. **Economía de Tokens en la Ventana de Contexto ($\approx 35\%$ de Ahorro):**
-   - Los tokenizadores de frontera basados en BPE (*Byte-Pair Encoding*, ej. Tiktoken, Gemini Tokenizer, Claude Tokenizer) dividen las palabras en español en una mayor cantidad de fragmentos o subtokens debido a sufijos, conjugaciones y menor frecuencia estadística en los corpus de entrenamiento masivo.
-   - Redactar las reglas y habilidades en inglés técnico de alta densidad reduce drásticamente el consumo de tokens en el prompt de sistema en cada interacción, dejando mayor espacio disponible en el contexto para el código fuente del proyecto, esquemas de bases de datos y trazas de depuración.
-
-2. **Menor Latencia y Mayor Velocidad de Respuesta:**
-   - Menos tokens de entrada se traducen directamente en menor tiempo de procesamiento (Time-To-First-Token y tiempo de procesamiento por turno) en herramientas como Google Antigravity, Claude Code o Hermes Agent.
-
-3. **Adherencia Semántica y Rigor Lógico Superior:**
-   - La literatura técnica de redes (RFCs de IETF, BGP, OSPF, MikroTik REST API, IEEE 802.3, WCAG 2.1 AA) y los estándares de seguridad (OWASP, CIS Benchmark, RLS, AES-256-GCM) tienen su máxima densidad conceptual y precisión de alineación en inglés. Los modelos exhiben un cumplimiento de instrucciones (*instruction following*) más estricto y predecible al procesar directivas en este idioma.
-
-4. **Garantía Inviolable de Salida en Español (`OUTPUT LANGUAGE CONSTRAINT`):**
-   - Para garantizar que el desarrollador reciba siempre explicaciones claras y fluidas en su lengua materna, cada archivo en `.agents/rules/` y `.agents/skills/` incluye la directiva forzada:
-     ```markdown
-     > **OUTPUT LANGUAGE CONSTRAINT:**
-     > Always communicate with the user, provide status updates, explain reasoning,
-     > and write commit messages / user-facing documentation in Spanish.
-     ```
+> Las instrucciones destinadas al consumo interno de los modelos de IA (`rules/` y `skills/`) están redactadas en **inglés técnico compacto de alta densidad** (~35% de ahorro en ventana de contexto), mientras que toda la interacción con desarrolladores humanos, respuestas en el chat, commits y documentación del negocio (`docs/specs/`, `docs/`, `CHANGELOG.md`, `ROADMAP.md`, `TESTING.md`) se mantiene estrictamente en **español**.
 
 ---
 
-## 📚 Fuente Canónica Oficial MikroTik RouterOS v7 (Grounding Directo para Agentes de IA)
-
-Para evitar alucinaciones sintácticas o mezclas con la versión obsoleta RouterOS v6 (por ejemplo, nombres de acción con guiones en logging, invocación ilegal de `PATCH` en menús singulares o parámetros descontinuados de Syslog), todos los agentes de IA y desarrolladores cuentan con los siguientes puntos de referencia oficiales del fabricante:
+## 📚 Fuente Canónica Oficial MikroTik RouterOS v7.13+
 
 - **Portal Oficial de Documentación RouterOS v7:** [https://manual.mikrotik.com/docs/introduction/](https://manual.mikrotik.com/docs/introduction/)
 - **Índice Abierto para LLMs (Fast Semantic Retrieval):** [https://manual.mikrotik.com/llms.txt](https://manual.mikrotik.com/llms.txt)
 - **Referencia Canónica de Comandos CLI y REST API:** [https://manual.mikrotik.com/docs/cli-reference/](https://manual.mikrotik.com/docs/cli-reference/)
 
-Cualquier mutación en `/rest/*`, plantilla Golden Config o herramienta MCP debe verificarse contra estos recursos antes de formular llamadas REST o generar scripts en RouterOS.
-
 ---
 
-## 🤝 Compatibilidad Multi-Agente
-
-Esta carpeta **NO es exclusiva de una sola herramienta**. Ha sido diseñada bajo especificaciones estándar y portables:
-
-1. **Google Antigravity:** Carga automáticamente las directivas en `rules/` y expone las habilidades en `skills/` en cada sesión de trabajo.
-2. **Anthropic Claude Code / Claude Desktop:** Puede consumir los playbooks de `skills/rosgrid-noc-operator/` y leer `rules/` como System Prompt contextual. Incluye preconfiguración en `skills/rosgrid-noc-operator/configs/claude_desktop.json`.
-3. **Hermes Agent (Nous Research):** Compatible nativo para agentes de terminal autónomos conectados al Model Context Protocol (MCP) de RoSGrid vía `skills/rosgrid-noc-operator/configs/hermes_agent.yaml`.
-4. **Cursor / Windsurf / Copilot:** Las directivas de `rules/` y `AGENTS.md` en la raíz son leídas automáticamente como reglas de contexto para generación de código.
-5. **Ingenieros y Desarrolladores Humanos:** Funciona como un catálogo centralizado de directivas ("guía de estilo viva") que explica exactamente cómo probar el sistema, qué trampas evitar (ej. mocks ciegos de base de datos) y cómo operar la flota de routers.
-
----
-
-## 🔒 Seguridad y Versionado en Git
-
-**¿Es seguro y recomendable versionar `.agents/` en GitHub?**
-**Sí, es 100% recomendable y una práctica recomendada en ingeniería de software moderna:**
-- **Cero Secretos:** Este directorio solo contiene directivas en Markdown, configuraciones de muestra (`.json`, `.yaml`) y scripts en Python/Bash. No contiene tokens de producción, contraseñas ni variables de entorno.
-- **Reproducibilidad:** Permite que cualquier desarrollador que clone el repositorio obtenga inmediatamente un agente de IA calibrado y alineado con las reglas de RoSGrid, sin riesgo de que introduzca código roto, modelos sin migración o fallos de seguridad.
-- **Auditoría Continua:** Cualquier script añadido a `.agents/scripts/` es auditado por `ShellCheck` y `./scripts/verificar-secretos.sh` en el pipeline de CI/CD.
-
----
-
-## 🚀 Cómo Usar las Automatizaciones
-
-Para certificar localmente que una tarea cumple con todos los requisitos antes de hacer commit:
+## 🚀 Cómo Ejecutar las Compuertas de Calidad
 
 ```bash
-# Ejecutar compuerta integral de certificación 11X
+# Ejecutar compuerta integral de certificación 11X (9 etapas)
 ./.agents/scripts/certify_task_completion.sh
 
 # Auditar paridad 100% de componentes Vue sin huérfanos
 python3 ./.agents/scripts/verify_zero_orphan_vue_components.py
 
-# Auditar que no existen modelos ORM huérfanos sin migración
+# Auditar paridad bidireccional de endpoints FastAPI <-> Vue 3
+python3 ./.agents/scripts/verify_no_orphan_api_endpoints.py
+
+# Auditar que no existen modelos ORM huérfanos sin migración Alembic
 docker exec -t rosgrid_api_local python scripts/verify_alembic_orm_parity.py
 ```
 
----
-
-## 📦 Protocolo de Cierre Obligatorio y Publicación en Git (`git commit & push`)
-
-Por gobernanza innegociable de Nivel 11X, tras **CADA** tarea o solicitud que modifique, añada o corrija código fuente (`fastapi/`, `vue3/`, scripts o configuraciones), el agente de IA **DEBE** ejecutar de forma autónoma el siguiente protocolo:
-
-1. **Creación Obligatoria de Pruebas 11X (Incluyendo SIEMPRE Karate Labs):**
-   - Utilizar de forma obligatoria los ejemplos y patrones canónicos de `docs/examples/fastapi/` y `docs/examples/vue3/`.
-   - Toda mutación de backend requiere pruebas en `fastapi/tests/**/*.unit.py` con cobertura `>= 95%` y escenarios BDD en `fastapi/test/api_test.feature` (espejo en `docs/examples/fastapi/`).
-   - Toda mutación de frontend requiere pruebas en `vue3/src/**/*.unit.ts` con 100% pass en Vitest y escenarios BDD en `vue3/test/ui_business_flow.feature` (espejo en `docs/examples/vue3/`).
-   - **Invariante Karate Labs:** Todo cambio de endpoints o vistas de interfaz DEBE incorporar o actualizar escenarios BDD en Karate Labs sin excepción.
-2. **Ejecución Obligatoria de Pruebas en Docker Efímero (`Rule Zero`):**
-   - Ejecutar la suite en contenedores efímeros (`docker-compose.qa.yml` o `Makefile`) validando que no existan fallos ni degradación de cobertura.
-3. **Sincronización Documental Obligatoria:**
-   - Actualizar los manuales técnicos afectados en `docs/` (incluyendo `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`).
-   - Actualizar las especificaciones de arquitectura en `docs/specs/`.
-   - Actualizar el historial de cambios en `CHANGELOG.md` (bajo `## [Unreleased]`).
-   - Actualizar el estado de hitos y sub-tareas en `ROADMAP.md`.
-   - Actualizar las métricas y conteo de pruebas en `TESTING.md`.
-   - Actualizar `README.md` y documentación en la raíz cuando aplique.
-4. **Auditoría de Secretos y Paridad ORM:**
-   - Ejecutar `./scripts/verificar-secretos.sh` (0 secretos expuestos).
-   - Ejecutar `./.agents/scripts/certify_task_completion.sh`.
-5. **Registro y Publicación Remota Inmediata:**
-   - Registrar los cambios con `git add .`.
-   - Crear el commit con mensaje semántico en español (`git commit -m "<tipo>(<ámbito>): <descripción_en_español>"`).
-   - Publicar inmediatamente en Git (`git push origin <rama_actual>`).
-
-**Queda estrictamente prohibido concluir un turno dejando código modificado sin confirmar (*uncommitted changes*) ni con documentación desfasada en el repositorio.**
-
-
+Para el flujo completo de ejecución y cierre de tareas (`DOCS_ONLY`, `MICRO_CHANGE` y `FULL_11X`), consulta [`AGENTS.md`](file:///AGENTS.md).

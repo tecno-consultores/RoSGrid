@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 RoSGrid Contributors
 
-# Terminal ↔ Frontend Parity & Task Closure Protocol
+# Terminal ↔ Frontend Parity & UI Invariants
 
 > **CORE GOVERNANCE DIRECTIVE:**
 > Applies to all AI agents and developers working on RoSGrid.
@@ -11,61 +11,35 @@
 
 ## 1. Terminal ↔ Frontend Parity Invariants
 
-1. **Zero Console-Exclusive Actions:** Any administrative, operational, or diagnostics action executable from the terminal (except initial unattended system bootstrap) MUST have an equivalent Vue 3 screen.
-2. **Zero Orphan API Endpoints:** Every route defined under `fastapi/src/api/v1/` MUST be paired with a frontend interface enabling visual inspection, parameter configuration, and interactive verification.
-3. **Bidirectional Audit Sync:** Maintenance CLI scripts issuing tokens or altering sessions MUST sync metadata into KeyDB/Redis (`issued_by_username: "CLI (Terminal)"`) so they are visible and revocable via `ActiveSessionsKillSwitchView.vue`.
-4. **Zero Read-Only Operational Consoles (WebFig v7 Parity):** Every router management table (Firewall, Queues, PPP, DHCPv4, Dual-Stack IPv6, Routing) MUST offer tactical mutation actions (create, edit, toggle enable/disable, delete with confirmation and 1-click setup wizards) guarded by 60s Safe Mode. No screen may be left in view-only state when RouterOS REST API supports mutations.
-5. **Zero-Overlap Geographic Co-location Invariant (Anti-Superposición Cartográfica):** Any cartographic or topology map rendering network entities (routers, ONUs, switches) in Leaflet/OpenStreetMap (`UnifiedNetworkMap.vue`, `OsmRouterMap.vue`, `OsmOnuMap.vue`) MUST group co-located items (distance `<= 25m`) into a distinct cluster marker (`rg-map-pin--multi`) with a numeric count badge. It MUST provide radial spiderfication upon click and a detailed side-drawer card listing all co-located items to prevent any device from being hidden or obscured by DOM injection order.
-6. **Refactoring UI Hierarchy & Zero-Orphan CSS Token Invariant:** All `var(--rg-*)` CSS custom properties MUST be defined across all 3 themes in `vue3/src/assets/themes.css` (using named spacing, radius, and 7-step typography scales). Views must enforce a single primary button rank, keep secondary header/row actions neutral at rest (illuminating semantic colors on `:hover` / `:focus-visible`), apply concentric border radii (`8px` outer / `5px` inner), provide tactical empty states in `RgDataTable.vue`, and pair status colors with geometric shape differentiation (solid dot vs. hollow ring) for colorblind safety.
-7. **Responsive Multi-Viewport & Zero Horizontal Overflow Invariant:** All views, tables, maps, and modals MUST render with zero unintended horizontal viewport overflow (`document.documentElement.scrollWidth <= window.innerWidth`) across mobile (`375x667`), tablet (`768x1024`), and desktop (`1440x900`). Enforce `100dvh` progressive viewport units with `overscroll-behavior: contain` on shells/drawers, wrap all `<table>` elements in `.table-wrapper` / `.table-scroll-wrapper` (`overflow-x: auto; max-width: 100%`), decouple desktop sidebar collapse from mobile/tablet drawer opening (`.rg-rail.rg-rail--collapsed.rg-rail--open`), expose the inline WebFig module toggle (`.btn-webfig-menu-inline`) on `<= 1024px`, and anchor map detail drawers at the bottom within viewport width on narrow screens.
-8. **Contextual Help Boundary, Zero-Trust Anti-Indexing & LLM-Ready MCP Context Invariant:** Every global route and WebFig module MUST resolve to a rich operational guide in `RgContextualHelpDrawer.vue` (`helpCatalog.ts`) with `[ 📋 Copiar Guía como Markdown ]` and strictly zero PDF conversion buttons inside `RoSGrid` (PDF generation belongs exclusively to `rosgrid-web`). The private NOC console (`vue3/nginx/default.conf` and `vue3/index.html`) MUST enforce `X-Robots-Tag: "noindex, nofollow, noarchive, nosnippet"` and `<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">`, persist `rg_theme` and `rg_table_density` in `localStorage` with native `color-scheme` declarations, and provide 1-click `llms.txt` context (`# Agent Instructions`: `ask` + `goal`) plus config snippets for all 6 MCP clients in `RgMcpTokenModal.vue`.
-9. **WebFig Layer 2 Next-Gen Universal Engine Invariant (Spec 54):** `DynamicLayer2ResourceView.vue` and `fastapi/src/api/v1/webfig_layer2.py` MUST provide menu/row contextual RPC actions (`L2_RPC_ACTIONS_CATALOG` + `RgLayer2RpcActionModal.vue`), automatic `/rest/console/inspect` schema fallback for 0-record tables (`schema_source="inspect"`), server-side `.query` & `.proplist` filtering (`RgLayer2QueryBuilder.vue`), multi-row bulk operations (`enable`, `disable`, `comment`, `remove`) under a single atomic 60s Safe Mode window, contextual `.rsc` submenu export with unified Diff (`RgLayer2RscExportDiffModal.vue`), and operator column profiles (`useLayer2ColumnProfiles.ts` with Node 26 memory fallback) plus 1-click JSON creation presets (`layer2PresetsCatalog.ts`).
-10. **Zero-Orphan API Endpoints & Route Parity Invariant (Spec 60):** Prohibit route and HTTP method mismatches (404/405) between frontend and backend. Ensure all operational endpoints are paired with actionable Vue 3 interfaces, provide backward-compatible route aliases for legacy paths, support singleton menus (`/set` and `PATCH /resource/{ros_path}` / `PATCH /singleton/{ros_path}`), and certify 100% bidirectional parity via `.agents/scripts/verify_no_orphan_api_endpoints.py` (integrated into step [6/9] of `certify_task_completion.sh`).
-11. **In-App Tactical Notification Center, Read-vs-Resolved Separation & Real-Time Maker-Checker Reactivity Invariant (Specs 79–82):** Global header (`RgResponsiveShell.vue`) MUST render the unified high-detail `512x512` brand logo (`RgBrandLogo.vue`), connect the tenant events WebSocket on mount (`nocStore.connectEventsWebSocket()`), and expose the In-App Tactical Notification Center (`RgNotificationCenterBell.vue`, shortcut `Alt+N`). The notification center MUST strictly separate *Read State* (`lastReadIso`) from *Action Completion* (`requiresAction`), keeping pending Maker-Checker approvals and unacknowledged (`!acked`) P1 network alerts pinned until resolved, provide 1-click inline triage (`✓ Aprobar 1-Clic` and `👁️ Reconocer (Ack)`), deduplicate repetitive events (`[×N]`), filter out administrative session noise (`SESSION_REFRESHED`), and sync across tabs via `BroadcastChannel`. All live operational views (`NocWallboardView.vue`, `SubscribersMapView.vue`, `ApprovalsInboxView.vue`) MUST provide both automatic background refresh/WebSocket push and an explicit `[ 🔄 Refrescar ]` manual trigger.
-
-
+1. **Zero Console-Exclusive Actions & Zero Orphan API Endpoints (Spec 60):**
+   - Any operational, administrative, or diagnostic capability exposed by the backend (`fastapi/src/api/v1/`) MUST have a matching, actionable Vue 3 interface (`vue3/src/`).
+   - Prohibit route and HTTP method mismatches (404/405) between frontend and backend, support singleton menus (`POST .../set` and `PATCH`), and certify 100% bidirectional parity via `.agents/scripts/verify_no_orphan_api_endpoints.py` (step `[6/9]` of `certify_task_completion.sh`).
+2. **Bidirectional CLI Session Audit Sync:**
+   - Maintenance CLI scripts issuing tokens or altering sessions MUST sync metadata into KeyDB (`issued_by_username: "CLI (Terminal)"`) so they are visible and revocable via `ActiveSessionsKillSwitchView.vue`.
+3. **Zero Read-Only Operational Consoles (WebFig v7 Parity):**
+   - Every router management table (Firewall, Queues, PPP, DHCPv4, Dual-Stack IPv6, Routing) MUST offer tactical mutation actions (create, edit, toggle enable/disable, delete with confirmation, and 1-click setup wizards) guarded by 60s Safe Mode.
+4. **Zero-Overlap Geographic Co-location & Tenant HQ Centering Invariant (Specs 104–113):**
+   - Cartographic Leaflet maps (`UnifiedNetworkMap.vue`, `OsmRouterMap.vue`, `OsmOnuMap.vue`) MUST group co-located devices (`<= 25m`) into a distinct cluster marker (`rg-map-pin--multi`) with numeric badge, radial spiderfication, and side-drawer listing.
+   - `RgResponsiveShell.vue` and `FieldTechMobileView.vue` MUST hydrate `authStore.fetchTenantFeatures()` on mount and center maps/forms on `authStore.tenantHqCoordinates` when no active nodes override the bounds.
+5. **Refactoring UI Hierarchy & Dynamic Theme Token Parity (Specs 53 & 111):**
+   - All `var(--rg-*)` tokens MUST be defined across all 3 themes (`dark`, `light`, `noc-high-contrast`) in `vue3/src/assets/themes.css`. Never hardcode `data-theme` on view roots (`NocWallboardView.vue`) or static dark hex colors.
+   - Enforce a single primary button per view, neutral-at-rest secondary/row actions, concentric segmented radii (`8px`/`5px`), tactical `RgDataTable` empty states, and geometric Online/Offline indicators for colorblind safety.
+6. **Responsive Multi-Viewport, Safe Vertical Scroll & Stacking Context Isolation (Specs 107–112):**
+   - Enforce zero horizontal viewport overflow across mobile (`375x667`), tablet (`768x1024`), and desktop (`1440x900`).
+   - Isolate `.rg-header` (`z-index: 3000`) above `.rg-main` (`isolation: isolate; z-index: 1`) in `RgResponsiveShell.vue` so header dropdowns never collide with the translucent `NocWallboardView.vue` events HUD overlay (`.wallboard-events-overlay`).
+   - In `LoginView.vue`, use safe vertical scroll (`justify-content: flex-start` + `margin: auto`) to prevent logo clipping and keep 2-column form inputs (`.form-row-2col`) baseline-aligned (`margin-top: auto`) with single-line labels.
+7. **Contextual Help Boundary, Zero-Trust Anti-Indexing & LLM-Ready MCP Context (Spec 53):**
+   - Every global route and WebFig module MUST resolve to a topic in `RgContextualHelpDrawer.vue` (`helpCatalog.ts`, zero PDF buttons inside `RoSGrid`), enforce `X-Robots-Tag: "noindex, nofollow, noarchive, nosnippet"`, persist `rg_theme` and `rg_table_density`, and expose all 6 MCP client snippets + `llms.txt` context in `RgMcpTokenModal.vue`.
+8. **WebFig Layer 2 Next-Gen Universal Engine Invariant (Spec 54):**
+   - `DynamicLayer2ResourceView.vue` and `webfig_layer2.py` enforce contextual RPC actions (`RgLayer2RpcActionModal.vue`), `/rest/console/inspect` schema discovery for empty tables, server-side `.query` & `.proplist` projection (`RgLayer2QueryBuilder.vue`), multi-row bulk mutations under a single 60s Safe Mode window, `.rsc` submenu export/diff (`RgLayer2RscExportDiffModal.vue`), and persisted column profiles (`useLayer2ColumnProfiles.ts`).
+9. **In-App Tactical Notification Center & Real-Time Maker-Checker Reactivity (Specs 79–82):**
+   - `RgResponsiveShell.vue` renders `RgBrandLogo.vue`, connects `nocStore.connectEventsWebSocket()` on mount, and exposes `RgNotificationCenterBell.vue` (`Alt+N`) separating *Read State* (`lastReadIso`) from *Action Completion* (`requiresAction`), with 1-click inline triage (`✓ Aprobar 1-Clic` / `👁️ Reconocer (Ack)`), `[×N]` deduplication, session noise filtering, and explicit `[ 🔄 Refrescar ]` triggers on live operational views.
 
 ---
 
-## 2. Proactive Vulnerability Audit
+## 2. Proactive Vulnerability Audit & Closure Gate
 
-Before exposing new endpoints or frontend views:
-
-1. **User State Checks:** Ensure inactive (`is_active = False`) or locked (`is_locked = True`) accounts cannot generate tokens or trigger protected actions.
-2. **Multi-Tenant Context:** Ensure every DB query executes within an active tenant context (`set_tenant_context`).
-3. **Automated SAST:** Run Bandit (`bandit -r src/ -ll`) and dependency auditing in ephemeral Docker with 0 High/Medium alerts.
-4. **Anti-XSS & Anti-CSRF:** In Vue 3, never bind unescaped dynamic HTML (`v-html`); in FastAPI, mandate CSRF tokens on mutation endpoints and strict SameSite cookies.
-
----
-
-## 3. Mandatory Task Closure Protocol & Autonomous Git Publication
-
-After **EVERY** task or turn that adds, edits, or removes code or configuration files, the AI agent **MUST** autonomously execute this protocol and publish to Git without waiting for user prompting:
-
-1. **Mandatory 11X Test Creation (Including Karate Labs for API & UI):**
-   - For backend mutations: add/update unit tests in `fastapi/tests/**/*.unit.py` AND mandatory BDD scenarios in `fastapi/test/api_test.feature` (mirrored in `docs/examples/fastapi/`).
-   - For frontend mutations: add/update unit tests in `vue3/src/**/*.unit.ts` AND mandatory BDD scenarios in `vue3/test/ui_business_flow.feature` (mirrored in `docs/examples/vue3/`).
-   - **Karate Labs Invariant:** Every single code change MUST include corresponding Karate Labs API and/or UI scenarios.
-2. **Full Ephemeral Docker Test Execution (`Rule Zero`):**
-   - Backend: `docker compose -f docker-compose.qa.yml run --rm qa-backend uv run pytest tests/ --cov=src --cov-fail-under=95`
-   - Frontend: `docker compose -f docker-compose.qa.yml run --rm qa-vue3 pnpm run test:unit` & `type-check` (100% pass, 0 type errors).
-   - Linters: `ruff check`, `mypy --strict`, `eslint`, `prettier`.
-3. **Autonomous & Mandatory Multi-Layer Documentation Sync:**
-   - Update affected operational and technical manuals in `docs/` (including `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`).
-   - Update affected specifications in `docs/specs/`.
-   - Update `CHANGELOG.md` under `## [Unreleased]`.
-   - Update `ROADMAP.md` task checkpoints and deliverables.
-   - Update `TESTING.md` metrics and counts.
-   - Update `README.md` and root documentation when user-facing interfaces or architectures change.
-4. **Secret, Dependency Vulnerability, i18n & Parity Certification:**
-   - Run `./scripts/verificar-secretos.sh` (0 secret leaks).
-   - Run `make audit` (or `./scripts/auditar-infra.sh` in ephemeral Docker, certifying 0 CRITICAL/HIGH findings).
-   - Run `python3 .agents/scripts/verify_json_no_duplicate_keys.py` (0 duplicate keys in locale files).
-   - Run `./.agents/scripts/certify_task_completion.sh` (all 8 gates passed).
-5. **Mandatory Git Commit & Push:**
-   - Run `git add .`
-   - Create a commit following Conventional Commits in Spanish: `git commit -m "<tipo>(<ámbito>): <descripción_en_español>"`
-   - Push immediately to remote: `git push origin <current_branch>`
-   - **Never leave uncommitted or unpushed code changes** in the workspace at the end of a response.
-
-
+1. **User State, Tenant Context & Anti-XSS:**
+   - Ensure inactive/locked accounts cannot generate tokens, every DB query runs within `set_tenant_context`, dynamic HTML is sanitized (`sanitizeHtml` in Leaflet popups, zero raw `v-html`), and mutation endpoints validate CSRF tokens + `Idempotency-Key`.
+2. **Unified 9-Step Certification Gate (`certify_task_completion.sh`):**
+   - Before committing and pushing (`git push origin <branch>`), run `./.agents/scripts/certify_task_completion.sh` to certify all **9 gates**: (1) zero exposed secrets, (2) Trivy IaC/FS scan = 0 CRITICAL/HIGH, (3) i18n JSON integrity, (4) AST topological health, (5) zero orphan Vue components, (6) zero orphan API endpoints + anti-silo test quality, (7) ORM/Alembic parity, (8) 28 live Front-Back contracts, and (9) documentation + `ROADMAP.md` / `ACTIVE_TASK.md` consistency.

@@ -1,20 +1,19 @@
 ---
 name: mikrotik-webfig-safemode
 description: >-
-  MikroTik RouterOS v7 REST API domain rules (/rest/*), native flags ([D]/[X]/[I]/[R]),
-  WebFig tabs with <KeepAlive :max="5">, ephemeral RingBuffer telemetry, 60s Safe Mode,
+  MikroTik RouterOS v7.13+ REST API domain rules (/rest/*), native flags ([D]/[X]/[I]/[R]),
+  in-memory <KeepAlive :max="5"> workspace cache, ephemeral RingBuffer telemetry, 60s Safe Mode,
   HTTP 202 Maker-Checker interception, and 30s Step-Up Auth Vault.
-  Applies to RoSGrid Milestones 11, 12, and 13.
 ---
 
-# MikroTik RouterOS v7 Domain, Dual-Layer WebFig & Operational Safety
+# MikroTik RouterOS v7.13+ Domain, Dual-Layer WebFig & Operational Safety
 
-This skill guides the integration between Vue 3 (`vue3/`) and FastAPI endpoints for operating MikroTik RouterOS v7.1+ fleets.
+This skill governs the integration between Vue 3 (`vue3/`) and FastAPI endpoints for operating MikroTik **RouterOS v7.13+** fleets over HTTPS REST API (`/rest/*`).
 > **OUTPUT LANGUAGE CONSTRAINT:** Always communicate with the user and write final explanations in Spanish.
 
 ---
 
-## 1. RouterOS v7 (`/rest/*`) UI Particulars
+## 1. RouterOS v7.13+ (`/rest/*`) UI Particulars
 
 1. **Internal Identifiers (`.id`) & Native Flags:**
    - Preserve RouterOS hexadecimal identifiers with asterisks (`*1`, `*1A`, `*1C`) when selecting, modifying, deleting, or reordering rules (`POST .../move`).
@@ -26,20 +25,19 @@ This skill guides the integration between Vue 3 (`vue3/`) and FastAPI endpoints 
 2. **SFP/SFP+ Optical DDM Diagnostics (`InterfacesAndSfpView.vue`):**
    - Display `tx-power` and `rx-power` laser levels in `dBm`, temperature, and voltage color-coded by optical health (`OPTIMAL`, `WARNING`, `CRITICAL_LOW_LIGHT`).
 3. **Universal Layer 2 Dynamic Engine (`DynamicLayer2ResourceView.vue`):**
-   - Consume `GET /api/v1/routers/{router_id}/webfig/layer2/resource/{ros_path}`.
+   - Consume `GET /api/v1/routers/{router_id}/webfig/layer2/resource/{ros_path}` with `/rest/console/inspect` schema fallback for empty tables, server-side `.query`/`.proplist` projection, contextual RPC actions (`RgLayer2RpcActionModal.vue`), bulk mutations under a single 60s Safe Mode window, and `.rsc` submenu export/diff (`RgLayer2RscExportDiffModal.vue`).
    - If `is_singleton === false`, generate `RgDataTable.vue` from `columns_schema` and modal CRUD mapping `string`, `integer`, and `boolean_ros`.
-   - If `is_singleton === true`, render the configuration form with **Safe Mode (60s)** enabled by default.
+   - If `is_singleton === true`, render the configuration form dispatching `POST <endpoint>/set` with **Safe Mode (60s)** enabled by default.
 
 ---
 
-## 2. Workspace Tabs (`KeepAlive`) & Ephemeral Telemetry (`TelemetryRingBuffer`)
+## 2. In-Memory Workspace Cache (`KeepAlive`) & Ephemeral Telemetry (`TelemetryRingBuffer`)
 
-1. **Caché en Memoria (`KeepAlive`) y Navegación Limpia (Hito 28.18):**
-   - La barra visual de pestañas (`RouterWorkspaceTabsBar.vue`) fue retirada para recuperar ~50px de espacio vertical y eliminar la redundancia frente a `RouterSidebarMenu.vue`.
-   - La persistencia en memoria RAM se mantiene al 100% mediante `<keep-alive :max="5">` en `RouterWebFigLayout.vue` y `useWebFigStore.openRouterTabs`, conservando filtros (ej. `chain=forward`), ordenamiento y herramientas diagnósticas (`Ping`, `Traceroute`, `Torch`) al alternar entre submódulos del mismo router.
+1. **In-Memory Cache (`KeepAlive`) Without Redundant Tab Bar:**
+   - `RouterWebFigLayout.vue` maintains `<keep-alive :max="5">` in RAM so switching between submodules of the same router via `RouterSidebarMenu.vue` preserves filters, sorting, and diagnostic state (`Ping`, `Traceroute`, `Torch`) without rendering a redundant top tab bar.
 2. **Strict Telemetry Lifecycle (`TelemetryRingBuffer`):**
-   - Exact memory capacity: `MAX_POINTS = 5400` points in RAM (3 hours at 1 tick every 2 seconds, $O(1)$ ring buffer insertion) with zoom buttons (`2m`, `15m`, `1h`, `3h`).
-   - The `/ws/v1/routers/{router_id}/live-telemetry` WebSocket lives in parent `RouterWebFigLayout.vue` so it remains uninterrupted when switching internal tabs.
+   - Exact memory capacity: `MAX_POINTS = 5400` points in RAM (3 hours at 1 tick every 2 seconds, $O(1)$ ring buffer insertion) with window selectors (`2m`, `15m`, `1h`, `3h`).
+   - The `/ws/v1/routers/{router_id}/live-telemetry` WebSocket lives in parent `RouterWebFigLayout.vue` so it remains uninterrupted when switching submodules.
    - Upon **leaving the router** (`onBeforeUnmount` in `RouterWebFigLayout.vue`) or changing `router_id`, immediately close the WebSocket (triggering backend polling stop if `SCARD == 0` in KeyDB) and call `liveTelemetryStore.resetChartsBuffer()` and `webFigStore.clearRouterWorkspace()`. Never persist metrics in `localStorage` or `IndexedDB`.
 
 ---
@@ -51,7 +49,7 @@ This skill guides the integration between Vue 3 (`vue3/`) and FastAPI endpoints 
    - Attach `X-CSRF-Token` and `Idempotency-Key` (UUIDv7 generated via `crypto.getRandomValues`, preserved across `502`/`503`/`504` retries) to all mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`).
    - Seamless token rotation on `401` using a shared singleton promise (`refreshPromiseSingleton`) towards `/api/v1/auth/refresh`.
 2. **`HTTP 202 Accepted` Interception (*Maker-Checker*):**
-   - When an operation returns `202 Accepted` with `status === "INTERCEPTED_FOR_APPROVAL"`, do NOT throw: dispatch an informative toast with the request ID and update the visual form state.
+   - When an operation returns `202 Accepted` with `status === "INTERCEPTED_FOR_APPROVAL"` (or `AWAITING_APPROVAL` in MCP), do NOT throw: dispatch an informative toast with the request ID and update the visual form state.
 3. **Safe Mode Countdown Banner (`RgSafeModeBanner.vue`):**
    - Accessible top banner (`role="status"`, `aria-live="polite"`) displaying a 60-second countdown while backend verifies router survivability and confirms the `rosgrid_safemode_*` scheduler removal.
 4. **Step-Up Auth Vault with 30s Auto-Destruction (`VaultRevealModal.vue`):**
@@ -67,12 +65,10 @@ Before introducing new WebFig endpoints, Golden Config templates, or bulk operat
 - **Open LLM Index (Fast Semantic Retrieval):** [https://manual.mikrotik.com/llms.txt](https://manual.mikrotik.com/llms.txt)
 - **CLI & REST API Reference:** [https://manual.mikrotik.com/docs/cli-reference/](https://manual.mikrotik.com/docs/cli-reference/)
 
-### Key RouterOS v7 REST Invariants:
-1. **Singleton Settings Menus (`/snmp`, `/system/ntp/client`, `/ip/dns`):**
-   - RouterOS v7 rejects root-level `PATCH` requests on singleton configuration menus with `HTTP 500` or identifier errors.
-   - Always dispatch property modifications via `POST <endpoint>/set` (e.g. `POST snmp/set` with `{enabled: "yes"}`).
-2. **Identifier & Action Name Constraints:**
-   - Resource names such as `/system/logging/action` require strict alphanumeric identifiers (`letters and digits only`). Avoid hyphens (`-`) or special characters that trigger `HTTP 400 failure: action name can contain only letters and numbers`.
-3. **Parameter Evolution (v6 vs v7):**
-   - Legacy parameters (e.g. `bsd-syslog`, `facility`, `sys-ident`) are discontinued. Modern v7 equivalents must be used (e.g. `remote-log-format: syslog`, `syslog-facility: daemon`).
-
+### Key RouterOS v7.13+ REST Invariants:
+1. **Required Group Policies (`rosgrid-api-group`):**
+   - RouterOS v7.13+ requires `policy=api,rest-api,read,write,ftp,test,reboot,policy,sensitive` (`rest-api` for `/rest/*`, `ftp` for `/export file=...` while `/ip service ftp` remains disabled, and `sensitive` for reading secrets/certificates).
+2. **Singleton Settings Menus (`/snmp`, `/system/ntp/client`, `/ip/dns`, `/system/clock`):**
+   - RouterOS v7 rejects root-level `PATCH` requests on singleton configuration menus with `HTTP 500` or identifier errors. Always dispatch property modifications via `POST <endpoint>/set`.
+3. **Identifier & Action Name Constraints:**
+   - Resource names such as `/system/logging/action` require strict alphanumeric identifiers (`letters and digits only`, e.g. `rosgridsyslog`).

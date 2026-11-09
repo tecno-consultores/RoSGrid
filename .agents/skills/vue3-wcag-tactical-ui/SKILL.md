@@ -4,12 +4,11 @@ description: >-
   High-density WinBox-style Vue 3 + TypeScript architecture (Tactical NOC Cyan),
   optimized with shallowRef, native Virtual Scrolling, and Canvas 2D to pass @axe-core/playwright
   (0 WCAG 2.1 AA violations) and Lighthouse CI (>= 90 / >= 95 A11y) on the first pass.
-  Applies to RoSGrid Milestones 11, 12, and 13.
 ---
 
 # Vue 3 WCAG 2.1 AA & Tactical NOC UI (Standard 11X)
 
-This skill governs all stores, composables, components, and views inside `vue3/` during **Milestones 11, 12, and 13**.
+This skill governs all stores, composables, components, and views inside `vue3/`.
 > **OUTPUT LANGUAGE CONSTRAINT:** Always communicate with the user and write final explanations in Spanish.
 
 ---
@@ -23,6 +22,7 @@ This skill governs all stores, composables, components, and views inside `vue3/`
      * `--rg-text-primary`: `#F8FAFC` | `--rg-text-secondary`: `#CBD5E1` | `--rg-text-muted`: `#94A3B8` (forbid grays with ratio `< 4.5:1`).
    - **Light Theme (`data-theme="light"`):** Background `#F8FAFC`/`#FFFFFF`, dark cyan accent `#0E7490` (ratio `>= 5.2:1`), text `#0F172A`/`#334155`.
    - **NOC Wallboard Theme (`data-theme="noc-high-contrast"`):** Pure `#000000` background, scaled typography `1.15rem`, and `2px` borders for readability at 5 meters.
+   - **Dynamic Theme Parity:** Views (`NocWallboardView.vue`, `UnifiedNetworkMap.vue`, `SubscribersMapView.vue`) must never hardcode `data-theme` on root containers or static dark hex backgrounds; always consume `var(--rg-*)` tokens.
 2. **Zero External Fonts & Mandatory `tabular-nums`:**
    - **Strictly forbidden** to load fonts from Google Fonts or external CDNs.
    - All IP/MAC addresses, byte/packet counters, SFP optical powers (`dBm`), uptimes, and timers MUST use the system monospace stack (`'JetBrains Mono', 'Ubuntu Mono', ui-monospace, monospace`) with `font-variant-numeric: tabular-nums`.
@@ -47,11 +47,11 @@ This skill governs all stores, composables, components, and views inside `vue3/`
 
 ## 3. Strict Accessibility Directives (`@axe-core/playwright` = 0 Violations)
 
-1. **HTML5 Semantic Landmarks in `RgResponsiveShell.vue`:**
-   - Provide `<header>`, `<nav aria-label="Navegación principal">`, `<main id="main-content">` (with *Skip to main content* link on `Tab`), and `<aside aria-label="Estado de sesión y alertas">`.
+1. **HTML5 Semantic Landmarks & Stacking Context in `RgResponsiveShell.vue`:**
+   - Provide `<header>` (`z-index: 3000`), `<nav aria-label="Navegación principal">`, `<main id="main-content">` (`isolation: isolate; z-index: 1`, with *Skip to main content* link on `Tab`), and `<aside aria-label="Estado de sesión y alertas">`.
    - On mobile (`< 768px`), activate the fixed bottom bar with 5 targets of `44x44px`.
 2. **Form & Table Controls:**
-   - Every `<input>`, `<select>`, or `<textarea>` MUST have an explicit `<label :for="id">` or descriptive `aria-label`.
+   - Every `<input>`, `<select>`, or `<textarea>` MUST have an explicit `<label :for="id">` or descriptive `aria-label`. In 2-column form grids (`.form-row-2col`), anchor `.form-input` with `margin-top: auto` and keep labels concise on a single line.
 3. **Icon Buttons & Keyboard Drag-and-Drop:**
    - Every icon button MUST have an `aria-label="..."` and the inner SVG MUST declare `aria-hidden="true"`.
    - Reorderable rows in `RgDataTable.vue` MUST provide keyboard shortcuts (`Alt + ArrowUp` / `Alt + ArrowDown` with `aria-label="Mover regla *1C hacia arriba"`) to fulfill **WCAG 2.1.1**.
@@ -75,4 +75,3 @@ This skill governs all stores, composables, components, and views inside `vue3/`
 4. **Colorblind Safety (*Color Supports, Never Carries*) & Dynamic Canvas Tokens:**
    - Status indicators MUST combine color with shape/border geometry (solid filled dot `#10B981` for Online vs. hollow 2px ring `#EF4444` for Offline).
    - 2D `<canvas>` charts MUST resolve `--rg-border-grid` and `--rg-text-muted` via `getComputedStyle(document.documentElement)` instead of hardcoding dark hex colors.
-

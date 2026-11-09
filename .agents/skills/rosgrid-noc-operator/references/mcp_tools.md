@@ -1,10 +1,10 @@
 # RoSGrid MCP Tools Catalog (`/api/v1/mcp`)
 
-This document details the input parameters, schemas, and usage directives for all **22 MCP tools** exposed by the RoSGrid server for AI agents.
+This document details the input parameters, schemas, and governance directives for all **22 MCP tools** exposed by the RoSGrid server (`POST /api/v1/mcp`) exclusively for `SERVICE_ACCOUNT` tokens with a non-empty `allowed_cidr_list`.
 
 ---
 
-## 1. Observability & Fleet Inventory
+## 1. Observability & Fleet Inventory (Read-Only)
 
 ### `rosgrid_list_inventory`
 - **Description:** Lists authorized MikroTik routers for the tenant with ID, name, identity, model, RouterOS v7 version, KeyDB health status, and TOFU SSL certificate state.
@@ -25,7 +25,7 @@ This document details the input parameters, schemas, and usage directives for al
 
 ---
 
-## 2. Routing & Network Diagnostics
+## 2. Routing & Network Diagnostics (Read-Only)
 
 ### `rosgrid_inspect_routing_bgp_ospf`
 - **Description:** Summarizes RouterOS v7 BGP sessions (state `established`, received prefix count, uptime) and active OSPF adjacencies.
@@ -60,7 +60,7 @@ This document details the input parameters, schemas, and usage directives for al
 
 ---
 
-## 3. Outside Plant & Outage Correlation
+## 3. Outside Plant & Outage Correlation (Read-Only)
 
 ### `rosgrid_detect_mass_outage`
 - **Description:** Spatial correlation engine detecting mass fiber cuts by clustering offline ONUs by PON port, OLT, or NAP box.
@@ -70,38 +70,7 @@ This document details the input parameters, schemas, and usage directives for al
 
 ---
 
-## 4. Subscriber Management & Service Mitigation
-
-### `rosgrid_reconnect_pppoe_client`
-- **Description:** Locates active subscriber session in `/ppp/active`, requests graceful termination to trigger clean LCP renegotiation, and logs to immutable WORM audit trail.
-- **Parameters:**
-  - `router_id` (string UUID, required): Router identifier.
-  - `pppoe_username` (string, required): Subscriber PPPoE username.
-  - `reason` (string, required): Technical reason for reset.
-
-### `rosgrid_isolate_subscriber`
-- **Description:** Quarantines a compromised subscriber: adds IP to `AISLADOS_TECNICO` firewall list and switches QoS queue to 64k/64k.
-- **Parameters:**
-  - `subscriber_device_id` (string UUID, required): Subscriber device or service ID.
-  - `reason` (string, optional): Reason for isolation (e.g. "Outbound port 25 SMTP spam flood").
-  - `idempotency_key` (string UUID, optional): Idempotency key to prevent duplicates.
-
-### `rosgrid_restore_subscriber`
-- **Description:** Restores service for a quarantined subscriber: removes from `AISLADOS_TECNICO` and re-applies nominal bandwidth/QoS profile.
-- **Parameters:**
-  - `subscriber_device_id` (string UUID, required): Subscriber device ID.
-  - `idempotency_key` (string UUID, optional): Idempotency key.
-
-### `rosgrid_change_rate_limit`
-- **Description:** Dynamically modifies subscriber bandwidth profile (Simple Queue / PCQ with Burst) without dropping physical link or resetting PPPoE session.
-- **Parameters:**
-  - `subscriber_device_id` (string UUID, required): Subscriber device ID.
-  - `bandwidth_profile_id` (string UUID, required): New bandwidth profile ID.
-  - `idempotency_key` (string UUID, optional): Idempotency key.
-
----
-
-## 5. Configuration Drift, Diff & Security Audits
+## 4. Configuration Drift, Diff, Topology, CVEs & Security Audits (Read-Only)
 
 ### `rosgrid_compare_config_diff`
 - **Description:** Runs Git-style `unified_diff` across `.rsc` backups or against `LIVE` running configuration.
@@ -116,32 +85,14 @@ This document details the input parameters, schemas, and usage directives for al
   - `router_id` (string UUID, required): Router identifier.
 
 ### `rosgrid_run_cis_audit`
-- **Description:** Executes automated CIS Benchmark security audit for RouterOS v7, evaluating 10 critical security controls and computing the Security Score (0-100).
+- **Description:** Executes automated live CIS Benchmark security audit for RouterOS v7, evaluating all **28 critical security directives** (`12 Base + 8 ISP + 8 CORP`, including `CIS-1.6` RouterBOOT protection and `CIS-1.9` IPsec profiles) and computing the Security Score (0-100).
 - **Parameters:**
   - `router_id` (string UUID, required): Router identifier.
-
----
-
-## 6. Governed Mutations & Maker-Checker
-
-### `rosgrid_propose_network_change`
-- **Description:** Submits a network mutation to the Maker-Checker authorization queue (returns `HTTP 202 Accepted`). Enforces 60-second Safe Mode upon human approval.
-- **Parameters:**
-  - `router_id` (string UUID, required): Router identifier.
-  - `category` (string, required): Change category (e.g. `FIREWALL_INPUT_OR_SERVICE_PORT_CHANGE`, `ROUTING_BGP_OSPF_DEFAULT_CHANGE`).
-  - `ros_path` (string, required): RouterOS REST path (e.g. `/ip/firewall/filter`, `/ip/service`).
-  - `http_method` (string enum: `["POST", "PATCH", "DELETE", "PUT"]`, required).
-  - `payload` (object, required): JSON object containing RouterOS v7 configuration attributes.
-  - `justification` (string, required): Formal technical justification for the human approver.
-
----
-
-## 7. Layer 2 Topology, PoE Automation & Ephemeral Syslog
 
 ### `rosgrid_get_l2_topology`
-- **Description:** Queries Layer 2 physical interconnection graph discovered via MNDP, LLDP, and CDP. Returns verified port-to-port links (`RouterA:sfp1 <---> SwitchB:sfp24`), link state, and negotiated speed.
+- **Description:** Queries Layer 2 physical interconnection graph discovered via MNDP, LLDP, and CDP. Returns verified port-to-port links, link state, and negotiated speed.
 - **Parameters:**
-  - `router_id` (string UUID, optional): When specified, filters direct adjacencies for that router; when omitted, returns full tenant topology.
+  - `router_id` (string UUID, optional): Filters direct adjacencies for that router when specified.
 
 ### `rosgrid_check_fleet_cves`
 - **Description:** Proactively evaluates active RouterOS versions against the local sovereign CVE vulnerability catalog.
@@ -150,34 +101,78 @@ This document details the input parameters, schemas, and usage directives for al
   - `min_severity` (string enum: `["CRITICAL", "HIGH", "MEDIUM", "ALL"]`, optional, default `"HIGH"`).
 
 ### `rosgrid_get_recent_syslog`
-- **Description:** Reads recent Syslog events from the volatile KeyDB RingBuffer (up to 500 events per router in RAM). Rapidly surfaces interface down flaps and kernel reboots.
+- **Description:** Reads recent Syslog events from the volatile KeyDB RingBuffer (up to 500 events per router in RAM).
 - **Parameters:**
   - `router_id` (string UUID, required): Router identifier.
   - `limit` (integer, optional, range 10-100, default 30): Number of recent entries to return.
-  - `topic_filter` (string, optional): Filter by topic (e.g. `"interface"`, `"route,bgp"`, `"system,error"`).
-
-### `rosgrid_execute_poe_aware_upgrade`
-- **Description:** Initiates mass firmware upgrade with PoE-aware topological ordering (PD devices before PSE switches) and automatic Safety Stop upon post-reboot failure. Enforces Maker-Checker workflow (`HTTP 202 Accepted`).
-- **Parameters:**
-  - `router_ids` (array of string UUID, required): Target router IDs.
-  - `target_version` (string, required): Target RouterOS v7 version (e.g. `"7.16.1"`).
-  - `safety_stop_threshold_percent` (float, optional, default 1.0): Failure percentage threshold to halt execution.
-  - `justification` (string, required): Formal maintenance justification.
+  - `topic_filter` (string, optional): Filter by topic.
 
 ---
 
-## 8. Official MikroTik Documentation & Grounding (`llms.txt`)
+## 5. Official MikroTik Documentation & Grounding (`llms.txt` — Read-Only)
 
 ### `rosgrid_search_mikrotik_docs`
-- **Description:** Searches the official MikroTik RouterOS v7 documentation index (`https://manual.mikrotik.com/llms.txt`). Returns titles, categories, snippets, and clean Markdown URLs to validate command parameters and syntax rules with zero hallucinations.
+- **Description:** Searches the official MikroTik RouterOS v7 documentation index (`https://manual.mikrotik.com/llms.txt`). Returns titles, categories, snippets, and clean Markdown URLs.
 - **Parameters:**
-  - `query` (string, required): RouterOS v7 command, menu, or concept (e.g. `"routing bgp template"`, `"interface wireguard"`, `"firewall raw"`).
-  - `category` (string, optional): Specific documentation category (e.g. `"Routing and Networking Protocols"`, `"CLI Reference"`).
-  - `max_results` (integer, optional, range 1-10, default 5): Maximum results to return.
+  - `query` (string, required): RouterOS v7 command, menu, or concept.
+  - `ask` (string, optional): Specific question to resolve.
+  - `goal` (string, optional): Operational goal in the NOC workflow.
 
 ### `rosgrid_get_mikrotik_doc_topic`
-- **Description:** Retrieves the official Markdown documentation page from MikroTik (`https://manual.mikrotik.com/docs/*.md`). Delivers exact CLI parameters, property types, defaults, and syntax rules directly from the vendor manual.
+- **Description:** Retrieves the official Markdown documentation page from MikroTik (`https://manual.mikrotik.com/docs/*.md`) with anti-SSRF validation.
 - **Parameters:**
-  - `doc_path_or_url` (string, required): Full URL or relative path ending in `.md` (e.g. `"/docs/cli-reference/routing/bgp/template.md"`).
-  - `max_characters` (integer, optional, default 8000): Maximum characters to return to prevent context window saturation.
+  - `doc_path_or_url` (string, required): Full URL or relative path under `https://manual.mikrotik.com/docs/`.
+  - `ask` (string, optional): Specific question to resolve.
+  - `goal` (string, optional): Operational goal in the NOC workflow.
 
+---
+
+## 6. Governed Level-3 Mutations (All 6 Require Maker-Checker `AWAITING_APPROVAL` + 60s Safe Mode)
+
+> **STRICT ZERO-TRUST INVARIANT (Spec 113):** None of the 6 tools below touches the router directly when called by an AI agent. Every call inserts an `ApprovalRequest` (`status: "AWAITING_APPROVAL"`, `safe_mode_timeout_seconds: 60`) and executes only after a human `Checker` approves it in `POST /api/v1/approvals/{request_id}/approve`.
+
+### `rosgrid_reconnect_pppoe_client`
+- **Description:** Queues an `ApprovalRequest` (`AWAITING_APPROVAL`) to terminate a subscriber's active PPPoE session in `/ppp/active` for clean LCP renegotiation.
+- **Parameters:**
+  - `router_id` (string UUID, required): Router identifier.
+  - `pppoe_username` (string, required): Subscriber PPPoE username.
+  - `reason` (string, required): Technical reason for reset.
+
+### `rosgrid_isolate_subscriber`
+- **Description:** Queues an `ApprovalRequest` (`AWAITING_APPROVAL`) to quarantine a subscriber into `AISLADOS_TECNICO` and switch QoS to 64k/64k.
+- **Parameters:**
+  - `subscriber_device_id` (string UUID, required): Subscriber device or service ID.
+  - `reason` (string, optional): Reason for isolation.
+  - `idempotency_key` (string UUID, optional): Idempotency key.
+
+### `rosgrid_restore_subscriber`
+- **Description:** Queues an `ApprovalRequest` (`AWAITING_APPROVAL`) to restore a quarantined subscriber to its nominal bandwidth/QoS profile.
+- **Parameters:**
+  - `subscriber_device_id` (string UUID, required): Subscriber device ID.
+  - `idempotency_key` (string UUID, optional): Idempotency key.
+
+### `rosgrid_change_rate_limit`
+- **Description:** Queues an `ApprovalRequest` (`AWAITING_APPROVAL`) to modify a subscriber's bandwidth profile (Simple Queue / PCQ with Burst).
+- **Parameters:**
+  - `subscriber_device_id` (string UUID, required): Subscriber device ID.
+  - `bandwidth_profile_id` (string UUID, required): New bandwidth profile ID.
+  - `idempotency_key` (string UUID, optional): Idempotency key.
+
+### `rosgrid_propose_network_change`
+- **Description:** Submits a structural network mutation to the Maker-Checker authorization queue (`AWAITING_APPROVAL`), enforcing 60-second Safe Mode upon human approval.
+- **Parameters:**
+  - `router_id` (string UUID, required): Router identifier.
+  - `category` (string, required): Change category (e.g. `FIREWALL_INPUT_OR_SERVICE_PORT_CHANGE`, `ROUTING_BGP_OSPF_DEFAULT_CHANGE`).
+  - `ros_path` (string, required): RouterOS REST path (e.g. `/ip/firewall/filter`).
+  - `http_method` (string enum: `["POST", "PATCH", "DELETE", "PUT"]`, required).
+  - `payload` (object, required): JSON object containing RouterOS v7 configuration attributes.
+  - `justification` (string, required): Formal technical justification for the human approver.
+
+### `rosgrid_execute_poe_aware_upgrade`
+- **Description:** Queues an `ApprovalRequest` (`AWAITING_APPROVAL`) to run a mass firmware upgrade with PoE-aware topological ordering (PD devices before PSE switches) and 1% Safety Stop.
+- **Parameters:**
+  - `router_ids` (array of string UUID, required): Target router IDs.
+  - `target_version` (string, optional): Target RouterOS v7 version.
+  - `channel` (string, optional, default `"stable"`): Update channel.
+  - `safety_stop_threshold_percent` (float, optional, default 1.0): Failure percentage threshold to halt execution.
+  - `justification` (string, optional): Formal maintenance justification.

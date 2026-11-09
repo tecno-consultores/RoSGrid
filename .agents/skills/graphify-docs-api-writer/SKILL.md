@@ -1,14 +1,14 @@
 ---
 name: graphify-docs-api-writer
 description: >-
-  Technical authoring for operations manuals, Mermaid architecture diagrams, security ADRs, complete
-  REST/WebSockets API specifications, and AI MCP integration guides (Hermes Agent and Claude) inside docs/,
-  grounded in Graphify AST graphs (GRAPH_REPORT.md). Applies to RoSGrid Milestone 14.
+  Technical authoring and maintenance for operations manuals, Mermaid architecture diagrams,
+  security ADRs, complete REST/WebSockets API specifications, and AI MCP integration guides
+  (Hermes Agent and Claude) inside docs/, grounded in Graphify AST graphs (GRAPH_REPORT.md).
 ---
 
 # Technical Documentation, API Reference & AI MCP Authoring (Graphify AST-Grounded)
 
-This skill guides the execution of **Milestone 14 (`14.1` to `14.8`)**, using `fastapi/graphify-out/GRAPH_REPORT.md`, `vue3/graphify-out/GRAPH_REPORT.md`, and `docs/specs/30_BACKEND_MCP_PROTECTED_ENDPOINT.md` as sources of truth.
+This skill governs the authoring and continuous maintenance of all technical manuals in `docs/`, using `fastapi/graphify-out/GRAPH_REPORT.md` and `vue3/graphify-out/GRAPH_REPORT.md` as sources of truth.
 > **OUTPUT LANGUAGE CONSTRAINT:** Always communicate with the user and write final explanations in Spanish.
 
 ---
@@ -16,7 +16,7 @@ This skill guides the execution of **Milestone 14 (`14.1` to `14.8`)**, using `f
 ## 1. Formatting Rules & Architectural Fidelity
 
 1. **Semantic Grounding (`GRAPH_REPORT.md`):**
-   - Before drafting documentation in `docs/`, inspect `fastapi/graphify-out/GRAPH_REPORT.md` and `vue3/graphify-out/GRAPH_REPORT.md` to accurately reference module names, Pydantic v2 schemas (`src/schemas/mcp.py`), Pinia stores, Vue 3 components, and actual backend routes.
+   - Before drafting or updating documentation in `docs/`, inspect `fastapi/graphify-out/GRAPH_REPORT.md` and `vue3/graphify-out/GRAPH_REPORT.md` to accurately reference module names, Pydantic v2 schemas (`src/schemas/`), Pinia stores, Vue 3 components, and actual backend routes.
 2. **Clean Markdown Format:**
    - **Language Directive:** Write all deliverables in `docs/` in clear, professional technical Spanish.
    - Use `mermaid` blocks to illustrate architecture flows (Split-Credential, 60s Safe Mode, Maker-Checker, KeyDB WebSocket multiplexer, WORM chain, and AI MCP tool invocation flow).
@@ -24,49 +24,37 @@ This skill guides the execution of **Milestone 14 (`14.1` to `14.8`)**, using `f
 
 ---
 
-## 2. Mandatory Deliverables in `docs/` (`Sub-tasks 14.1 to 14.7`)
+## 2. Canonical Manuals Catalog in `docs/`
 
-1. **`docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md` (`14.1`):**
-   - Hardware/network requirements, `.env` secret generation with `openssl` (including `ROSGRID_MCP_ENABLED` and `ROSGRID_MCP_RATE_LIMIT_PER_MIN`), default **Multi-Threaded KeyDB** vs optional **DragonflyDB High-Performance Profile**, deployment via `docker-compose.yml` and `docker-compose.prod.yml`, auto-migration with `pg_advisory_lock`, and `./scripts/build.sh` usage.
-2. **`docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md` (`14.2`):**
-   - RouterOS v7.1+ CLI commands for TOFU self-signed TLS certificate generation, enabling `/ip/service/www-ssl`, disabling plaintext HTTP, API service user creation, and detailed explanation of *Safe Mode (Dead Man's Switch)* via `/system/scheduler`.
-3. **`docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md` (`14.3`):**
-   - Tenant RLS isolation, complete matrix of the **11 RBAC roles** (including `SERVICE_ACCOUNT` with CIDR whitelisting for M2M/MCP integrations), router technician assignment matrix, Vault secret revelation via *Step-Up Auth* (30s TTL autodestruction), and real-time *Kill-Switch* usage.
-4. **`docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md` (`14.4`):**
-   - WebFig Layer 1 and Layer 2 daily operations, WinBox-style tab bar with `<KeepAlive :max="5">`, adaptive dual density (`32px`/`44px`) with *Virtual Scrolling*, ephemeral `TelemetryRingBuffer` charts on HTML5 2D `<canvas>`, *Maker-Checker* approval queue, Git-style `.rsc` Diff viewer, 2-step CSV onboarding wizard, and **NOC Wallboard** mode.
-5. **`docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md` (`14.5`):**
-   - `AUDITOR` role manual, mathematical verification of the immutable WORM chain (`audit_logs` with `BRIN` index, including `MCP_AI_TOOL_CALL` events), **formal ADR detailing the 5 security reasons why RoSGrid intentionally omits an unconstrained interactive CLI/SSH terminal**, and Mermaid architecture diagrams extracted from `GRAPH_REPORT.md`.
-6. **`docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md` (`14.6`):**
-   - Since Swagger (`/docs`), ReDoc (`/redoc`), and OpenAPI (`/openapi.json`) are suppressed in production (`ROSGRID_ENV=production`), this document provides exhaustive coverage of all `/api/v1/*` endpoints (including `POST /api/v1/mcp`) and `/ws/v1/*` WebSocket channels:
-     * HTTP method, exact path, allowed RBAC roles, and *Maker-Checker* interception status.
-     * Required headers (`Cookie: __Host-rg_at`, `X-CSRF-Token`, `Idempotency-Key` UUIDv7, or `Authorization: Bearer` with CIDR validation for `SERVICE_ACCOUNT`).
-     * JSON request/response schemas, HTTP status codes (`200`, `201`, `202 Accepted`, `401`, `403`, `404`, `409`, `422`, `429`), and WebSocket frame structure (`TELEMETRY_TICK`, `SESSION_KILLED`, NOC alerts).
-7. **`docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md` (`14.7`):**
-   - Technical manual for integrating AI agents (**Hermes Agent**, **Claude Desktop / Claude Code**, and compliant MCP clients) with the **Protected MCP Endpoint (`POST /api/v1/mcp`)**:
-     * **Architecture & Security:** Activation via `ROSGRID_MCP_ENABLED=true`, `SERVICE_ACCOUNT` creation, CIDR whitelisting, router assignment, KeyDB rate-limiting (`ROSGRID_MCP_RATE_LIMIT_PER_MIN`), and *Split-Credential* isolation (zero access to `AES-256-GCM` Vault keys).
-     * **JSON-RPC 2.0 Streamable HTTP Protocol:** Request and response payloads for `initialize`, `ping`, `tools/list`, and `tools/call`.
-     * **MCP Tool Catalog:** Detailed specifications, input schemas, and execution examples for all tools (`rosgrid_list_inventory`, `rosgrid_get_router_health`, `rosgrid_check_sfp_optical_ddm`, `rosgrid_inspect_routing_bgp_ospf`, `rosgrid_run_live_diagnostic`, `rosgrid_compare_config_diff`, `rosgrid_reconnect_pppoe_client`, `rosgrid_propose_network_change`).
-     * **Client Configurations:** Ready-to-use registration blocks for Hermes Agent (`hermes_agent.yaml`) and Claude Desktop (`claude_desktop_config.json`).
-     * **Autonomous 24/7 NOC Workflow (Webhooks + Maker-Checker):** Mermaid workflow showing HMAC-SHA256 webhooks alerting Hermes Agent on optical/BGP anomalies, root cause diagnosis with `.rsc` Diff, and proposed mitigations held in `AWAITING_APPROVAL` with **60s Safe Mode**.
+1. **`docs/MANUAL_ADMINISTRADOR_E_INSTALADOR.md` & `docs/MANUAL_USUARIO_Y_OPERADOR_NOC.md`:**
+   - Master PDF-ready guides with Mermaid diagrams covering installation, Multi-Tenant governance (19 Feature Flags, 30 granular user flags, 10 router flags), 11 RBAC roles, 2FA Vault, MCP, and daily WebFig v7 NOC operations.
+2. **`docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md`:**
+   - Hardware/network requirements, `.env` secret generation with `openssl` (including `ROSGRID_MCP_ENABLED`, `ROSGRID_MCP_RATE_LIMIT_PER_MIN`, and opt-in `ROSGRID_TELEMETRY_BEACON_ENABLED=false`), default **Multi-Threaded KeyDB** vs optional **DragonflyDB**, deployment via `docker-compose.yml` and `docker-compose.prod.yml`, auto-migration with `pg_advisory_lock`, and `./scripts/build.sh` usage for official releases.
+3. **`docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md`:**
+   - **RouterOS v7.13+** CLI commands for TOFU self-signed TLS certificate generation, enabling `/ip/service/www-ssl` (port 443), disabling legacy services (`www,api,api-ssl,telnet,ftp`), creating `rosgrid-api-group` with `policy=api,rest-api,read,write,ftp,test,reboot,policy,sensitive` (explaining `ftp` policy is required by RouterOS `/export file=...` while `/ip service ftp` stays disabled), and *Safe Mode (Dead Man's Switch)* via `/system/scheduler`.
+4. **`docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md`:**
+   - Tenant RLS isolation, complete matrix of the **11 RBAC roles** (including `SERVICE_ACCOUNT` with mandatory non-empty `allowed_cidr_list` for MCP), router technician assignment matrix, Vault secret revelation via *Step-Up Auth* (30s TTL autodestruction), and real-time *Kill-Switch* usage.
+5. **`docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md`:**
+   - WebFig Layer 1 and Layer 2 daily operations, `<KeepAlive :max="5">` in-memory cache, adaptive dual density (`32px`/`44px`) with *Virtual Scrolling*, ephemeral `TelemetryRingBuffer` charts on HTML5 2D `<canvas>`, *Maker-Checker* approval queue, Git-style `.rsc` Diff viewer, 2-step CSV onboarding wizard, and **NOC Wallboard** mode.
+6. **`docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md`:**
+   - `AUDITOR` role manual, mathematical verification of the immutable WORM chain (`audit_logs` with `BRIN` index, including `MCP_AI_TOOL_CALL` events), **formal ADR detailing the 5 security reasons why RoSGrid intentionally omits an unconstrained interactive CLI/SSH terminal**, and Mermaid architecture diagrams.
+7. **`docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`:**
+   - Exhaustive specification of all `/api/v1/*` endpoints (including `POST /api/v1/mcp`) and `/ws/v1/*` WebSocket channels, since Swagger/ReDoc/OpenAPI are suppressed in production (`ROSGRID_ENV=production`).
+8. **`docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md`:**
+   - Integration manual for AI agents (**Hermes Agent**, **Claude Desktop / Claude Code**, **Cursor**) with `POST /api/v1/mcp`:
+     * **Zero-Trust Security:** Exclusive to `SERVICE_ACCOUNT` with mandatory non-empty `allowed_cidr_list`, KeyDB rate-limiting (`30 req/min`), and *Split-Credential* isolation.
+     * **22 Semantic MCP Tools:** 16 read/diagnostic/grounding tools and **6 Level-3 mutation tools** (`rosgrid_reconnect_pppoe_client`, `rosgrid_propose_network_change`, `rosgrid_isolate_subscriber`, `rosgrid_restore_subscriber`, `rosgrid_change_rate_limit`, `rosgrid_execute_poe_aware_upgrade`), all strictly governed by **Maker-Checker (`AWAITING_APPROVAL` + 60s Safe Mode)**, plus **28 live CIS Benchmark directives** in `rosgrid_run_cis_audit`.
+9. **`docs/08` to `docs/12` & Root Guides (`INSTALL.md`, `FAQ.md`, `RESOURCES.md`):**
+   - Local production validation pipeline (`08`), UAT master plan (`09`), Python 3.15 (`10`) and Node 26 (`11`) reports, and L2 topology / ephemeral Syslog UDP `514`/`5514` / dual Prometheus observability (`12`).
 
 ---
 
-## 3. Governance Sync in Root Files (`Sub-task 14.8`)
+## 3. Operational Refresh Workflow (One-Click)
 
-- Upon finalizing all manuals in `docs/`, verify that root governance files (`README.md`, `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`) and manuals in `docs/` (`docs/INSTALL.md`, `docs/RESOURCES.md`, `docs/FAQ.md`) are 100% aligned with implementation.
-
----
-
-## 4. Operational Refresh Workflow (One-Click)
-
-Whenever significant code changes or milestone completions occur, refresh both AST graphs in ephemeral Docker using the canonical script:
+Whenever code changes modify the AST structure, refresh both graphs in ephemeral Docker using the canonical script:
 
 ```bash
-# Refrescar ambos grafos (fastapi/ y vue3/) bajo la Regla Cero:
 ./scripts/actualizar-grafos-graphify.sh
 ```
 
-*(Or `make graphify` if `make` is available).*
-
-This updates `GRAPH_REPORT.md`, `graph.json`, and `graph.html` under `fastapi/graphify-out/` and `vue3/graphify-out/` with zero paid token consumption (`--code-only`) and normalizes host permissions.
-
+This updates `GRAPH_REPORT.md`, `graph.json`, and `graph.html` under `fastapi/graphify-out/` and `vue3/graphify-out/` (`--code-only`).
