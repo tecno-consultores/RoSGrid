@@ -1,6 +1,6 @@
 # 02 — Preparación de Routers MikroTik RouterOS v7+
 
-Este manual describe los procedimientos oficiales para preparar cualquier router MikroTik con **RouterOS v7.1+** (recomendado v7.16 o superior) para su integración segura con **RoSGrid**: configuración de certificados SSL para pinning TOFU, activación de la API REST HTTPS, desactivación de servicios inseguros, asignación de cuentas de servicio y funcionamiento del *Dead Man's Switch (Safe Mode)*.
+Este manual describe los procedimientos oficiales para preparar cualquier router MikroTik con **RouterOS v7.13+** (recomendado v7.16 o superior) para su integración segura con **RoSGrid**: configuración de certificados SSL para pinning TOFU, activación de la API REST HTTPS, desactivación de servicios inseguros, asignación de cuentas de servicio y funcionamiento del *Dead Man's Switch (Safe Mode)*.
 
 ---
 

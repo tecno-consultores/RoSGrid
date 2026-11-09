@@ -29,15 +29,10 @@ from src.api.v1.bgp_looking_glass import (
     get_looking_glass_advertised,
     get_looking_glass_route,
 )
-from src.api.v1.bulk_and_updates import _process_upgrade_stages, _resolve_upgrade_stages
+from src.api.v1.bulk_and_updates import _resolve_upgrade_stages
 from src.api.v1.compliance import check_config_drift, run_cis_audit
 from src.api.v1.diagnostics_360 import run_endpoint_360_diagnostics
 from src.api.v1.field_ops import detect_fiber_cuts_engine
-from src.api.v1.network_services import (
-    change_network_service_rate_limit,
-    isolate_network_service,
-    restore_network_service,
-)
 from src.api.v1.topology_l2 import _collect_live_topology_data
 from src.api.v1.webfig_common import get_router_and_client
 from src.core.audit import write_audit_log
@@ -52,14 +47,12 @@ from src.models.operations import (
     RouterBackup,
 )
 from src.redis_layer.client import get_redis_client
-from src.schemas.bulk_and_updates import RosUpdateExecuteRequest
 from src.schemas.diagnostics_360 import Endpoint360Request
 from src.schemas.mcp import (
     McpJsonRpcError,
     McpJsonRpcRequest,
     McpJsonRpcResponse,
 )
-from src.schemas.network_services import ChangeRateLimitRequest
 from src.schemas.topology_l2 import L2TopologyResponse
 from src.services.cve_matcher import evaluate_fleet_cves, evaluate_router_cves
 from src.services.topology_l2 import (
@@ -75,9 +68,19 @@ router = APIRouter(prefix="/mcp", tags=["Model Context Protocol (MCP)"])
 
 _ALLOWED_MCP_ROLES = {
     SystemRoleEnum.SERVICE_ACCOUNT.value,
-    SystemRoleEnum.TENANT_ADMIN.value,
-    SystemRoleEnum.SUPERADMIN_GLOBAL.value,
 }
+
+MCP_MUTATION_TOOLS: frozenset[str] = frozenset(
+    {
+        "rosgrid_reconnect_pppoe_client",
+        "rosgrid_propose_network_change",
+        "rosgrid_isolate_subscriber",
+        "rosgrid_restore_subscriber",
+        "rosgrid_change_rate_limit",
+        "rosgrid_change_subscriber_rate_limit",
+        "rosgrid_execute_poe_aware_upgrade",
+    }
+)
 
 _CRITICAL_ACTIONS_MAP: dict[str, CriticalActionTypeEnum] = {
     "ROUTER_REBOOT_OR_SHUTDOWN": CriticalActionTypeEnum.ROUTER_REBOOT_OR_SHUTDOWN,
@@ -352,6 +355,57 @@ async def _handle_config_diff(
     }
 
 
+async def _create_mcp_approval_request(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    router_id: uuid.UUID | None,
+    action_type: CriticalActionTypeEnum,
+    summary: str,
+    justification: str,
+    ros_rest_method: str,
+    ros_rest_path: str,
+    request_payload: dict[str, Any],
+    extra_fields: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    now = datetime.now(UTC)
+    req_id = uuid.uuid4()
+    req = ApprovalRequest(
+        id=req_id,
+        tenant_id=tenant_id,
+        router_id=router_id,
+        action_type=action_type,
+        status=ApprovalStatusEnum.PENDING,
+        summary=summary,
+        requester_justification=justification,
+        ros_rest_method=ros_rest_method.upper(),
+        ros_rest_path=ros_rest_path,
+        request_payload=request_payload,
+        requested_by=user_id,
+        expires_at=now + timedelta(hours=24),
+    )
+    db.add(req)
+    await db.flush()
+    from src.api.v1.webfig_common import publish_maker_checker_event
+
+    await publish_maker_checker_event(
+        tenant_id=tenant_id,
+        event_name="MAKER_CHECKER_REQUESTED",
+        approval_id=req.id or req_id,
+        summary=req.summary,
+        router_id=router_id,
+    )
+    resp: dict[str, Any] = {
+        "status": "AWAITING_APPROVAL",
+        "approval_request_id": str(req.id or req_id),
+        "safe_mode_timeout_seconds": 60,
+        "message": "Propuesta enviada exitosamente a la bandeja de aprobación Maker-Checker (Safe Mode 60s)",
+    }
+    if extra_fields:
+        resp.update(extra_fields)
+    return resp
+
+
 async def _handle_reconnect_pppoe(
     db: AsyncSession,
     tenant_id: uuid.UUID,
@@ -361,18 +415,33 @@ async def _handle_reconnect_pppoe(
 ) -> dict[str, Any]:
     router_id = uuid.UUID(str(args["router_id"]))
     _, client = await get_router_and_client(router_id, claims, db)
-    user_target = args["pppoe_username"]
+    user_target = str(args["pppoe_username"])
     active = await client.get("ppp/active") or []
     item_id = _find_pppoe_item_id(active, user_target)
     if not item_id:
         raise HTTPException(status_code=404, detail=f"Sesión PPPoE para {user_target} no encontrada")
-    await client.post("ppp/active/remove", {".id": item_id})
-    return {
-        "router_id": str(router_id),
-        "pppoe_username": user_target,
-        "status": "RECONNECTED",
-        "reason": args.get("reason", "Operator request"),
-    }
+    reason = str(args.get("reason", "Operator request"))
+    return await _create_mcp_approval_request(
+        db=db,
+        tenant_id=tenant_id,
+        user_id=user_id,
+        router_id=router_id,
+        action_type=CriticalActionTypeEnum.WAN_TRUNK_INTERFACE_OR_IP_CHANGE,
+        summary=f"MCP AI Reconnect PPPoE: {user_target}",
+        justification=reason,
+        ros_rest_method="POST",
+        ros_rest_path="/ppp/active/remove",
+        request_payload={
+            ".id": item_id,
+            "pppoe_username": user_target,
+            "mcp_tool": "rosgrid_reconnect_pppoe_client",
+        },
+        extra_fields={
+            "router_id": str(router_id),
+            "pppoe_username": user_target,
+            "reason": reason,
+        },
+    )
 
 
 async def _handle_propose_network_change(
@@ -384,36 +453,18 @@ async def _handle_propose_network_change(
 ) -> dict[str, Any]:
     router_id = uuid.UUID(str(args["router_id"]))
     act_type = _resolve_critical_action(args.get("category", "FIREWALL_INPUT_OR_SERVICE_PORT_CHANGE"))
-    now = datetime.now(UTC)
-    req = ApprovalRequest(
+    return await _create_mcp_approval_request(
+        db=db,
         tenant_id=tenant_id,
+        user_id=user_id,
         router_id=router_id,
         action_type=act_type,
-        status=ApprovalStatusEnum.PENDING,
         summary=f"MCP AI Propose: {args.get('ros_path', '')}",
-        requester_justification=args.get("justification", "MCP AI Agent proposal"),
+        justification=str(args.get("justification", "MCP AI Agent proposal")),
         ros_rest_method=str(args.get("http_method", "POST")).upper(),
-        ros_rest_path=args.get("ros_path", ""),
-        request_payload=args.get("payload", {}),
-        requested_by=user_id,
-        expires_at=now + timedelta(hours=24),
+        ros_rest_path=str(args.get("ros_path", "")),
+        request_payload=dict(args.get("payload") or {}),
     )
-    db.add(req)
-    await db.flush()
-    from src.api.v1.webfig_common import publish_maker_checker_event
-
-    await publish_maker_checker_event(
-        tenant_id=tenant_id,
-        event_name="MAKER_CHECKER_REQUESTED",
-        approval_id=req.id,
-        summary=req.summary,
-        router_id=router_id,
-    )
-    return {
-        "status": "AWAITING_APPROVAL",
-        "approval_request_id": str(req.id),
-        "message": "Propuesta enviada exitosamente a la bandeja de aprobación Maker-Checker (Safe Mode 60s)",
-    }
 
 
 async def _handle_run_360_diagnostics(
@@ -443,8 +494,25 @@ async def _handle_isolate_subscriber(
 ) -> dict[str, Any]:
     service_id = uuid.UUID(str(args["subscriber_device_id"]))
     ik = str(args.get("idempotency_key") or uuid.uuid4())
-    res = await isolate_network_service(service_id, ik, db, claims)
-    return res.model_dump()
+    reason = str(args.get("reason") or "MCP AI Subscriber Isolation Proposal")
+    return await _create_mcp_approval_request(
+        db=db,
+        tenant_id=tenant_id,
+        user_id=user_id,
+        router_id=None,
+        action_type=CriticalActionTypeEnum.FIREWALL_INPUT_OR_SERVICE_PORT_CHANGE,
+        summary=f"MCP AI Isolate Subscriber: {service_id}",
+        justification=reason,
+        ros_rest_method="POST",
+        ros_rest_path="/ip/firewall/address-list",
+        request_payload={
+            "mcp_tool": "rosgrid_isolate_subscriber",
+            "subscriber_device_id": str(service_id),
+            "idempotency_key": ik,
+            "reason": reason,
+        },
+        extra_fields={"service_id": str(service_id)},
+    )
 
 
 async def _handle_restore_subscriber(
@@ -456,8 +524,23 @@ async def _handle_restore_subscriber(
 ) -> dict[str, Any]:
     service_id = uuid.UUID(str(args["subscriber_device_id"]))
     ik = str(args.get("idempotency_key") or uuid.uuid4())
-    res = await restore_network_service(service_id, ik, db, claims)
-    return res.model_dump()
+    return await _create_mcp_approval_request(
+        db=db,
+        tenant_id=tenant_id,
+        user_id=user_id,
+        router_id=None,
+        action_type=CriticalActionTypeEnum.FIREWALL_INPUT_OR_SERVICE_PORT_CHANGE,
+        summary=f"MCP AI Restore Subscriber: {service_id}",
+        justification="MCP AI Subscriber Restoration Proposal",
+        ros_rest_method="DELETE",
+        ros_rest_path="/ip/firewall/address-list",
+        request_payload={
+            "mcp_tool": "rosgrid_restore_subscriber",
+            "subscriber_device_id": str(service_id),
+            "idempotency_key": ik,
+        },
+        extra_fields={"service_id": str(service_id)},
+    )
 
 
 async def _handle_change_rate_limit(
@@ -470,9 +553,27 @@ async def _handle_change_rate_limit(
     service_id = uuid.UUID(str(args["subscriber_device_id"]))
     profile_id = uuid.UUID(str(args["bandwidth_profile_id"]))
     ik = str(args.get("idempotency_key") or uuid.uuid4())
-    req = ChangeRateLimitRequest(bandwidth_profile_id=profile_id)
-    res = await change_network_service_rate_limit(service_id, req, ik, db, claims)
-    return res.model_dump()
+    return await _create_mcp_approval_request(
+        db=db,
+        tenant_id=tenant_id,
+        user_id=user_id,
+        router_id=None,
+        action_type=CriticalActionTypeEnum.WAN_TRUNK_INTERFACE_OR_IP_CHANGE,
+        summary=f"MCP AI Change Rate Limit: {service_id} -> {profile_id}",
+        justification="MCP AI QoS Rate Limit Change Proposal",
+        ros_rest_method="PATCH",
+        ros_rest_path="/queue/simple",
+        request_payload={
+            "mcp_tool": "rosgrid_change_rate_limit",
+            "subscriber_device_id": str(service_id),
+            "bandwidth_profile_id": str(profile_id),
+            "idempotency_key": ik,
+        },
+        extra_fields={
+            "service_id": str(service_id),
+            "bandwidth_profile_id": str(profile_id),
+        },
+    )
 
 
 async def _handle_query_bgp_looking_glass(
@@ -644,21 +745,201 @@ async def _handle_execute_poe_aware_upgrade(
     auto_firmware = bool(args.get("auto_upgrade_firmware", True))
     threshold = float(args.get("safety_stop_threshold_percent", 1.0))
 
-    req = RosUpdateExecuteRequest(
-        router_ids=rids,
-        auto_upgrade_firmware=auto_firmware,
-        poe_aware=poe_aware,
-        safety_stop_threshold_percent=threshold,
+    ordered_stages = await _resolve_upgrade_stages(tenant_id, rids, poe_aware)
+    poe_stages_str = [[str(r) for r in s] for s in ordered_stages] if poe_aware else None
+    return await _create_mcp_approval_request(
+        db=db,
+        tenant_id=tenant_id,
+        user_id=user_id,
+        router_id=rids[0],
+        action_type=CriticalActionTypeEnum.BULK_MULTI_ROUTER_EXECUTION,
+        summary=f"MCP AI PoE-Aware Upgrade: {len(rids)} routers",
+        justification=str(args.get("justification") or "MCP AI PoE-Aware Firmware & OS Upgrade Proposal"),
+        ros_rest_method="POST",
+        ros_rest_path="/system/package/update/install",
+        request_payload={
+            "mcp_tool": "rosgrid_execute_poe_aware_upgrade",
+            "router_ids": [str(x) for x in rids],
+            "auto_upgrade_firmware": auto_firmware,
+            "poe_aware": poe_aware,
+            "safety_stop_threshold_percent": threshold,
+            "poe_stages": poe_stages_str,
+        },
+        extra_fields={
+            "target_routers_count": len(rids),
+            "poe_stages": poe_stages_str,
+        },
     )
-    ordered_stages = await _resolve_upgrade_stages(tenant_id, req.router_ids, req.poe_aware)
-    results, safety_stop_triggered = await _process_upgrade_stages(ordered_stages, req, claims, db, tenant_id, user_id)
-    await db.commit()
+
+
+_CANONICAL_MIKROTIK_DOCS_INDEX: list[dict[str, str]] = [
+    {
+        "title": "REST API in RouterOS v7",
+        "category": "CLI Reference & API",
+        "path": "/docs/cli-reference/rest-api.md",
+        "url": "https://manual.mikrotik.com/docs/cli-reference/rest-api.md",
+        "summary": "Referencia oficial de endpoints HTTPS /rest/*, verbos GET/POST/PATCH/PUT/DELETE, menús singleton (/set) y .proplist/.query.",
+        "content": (
+            "# RouterOS v7 REST API Reference\n"
+            "- Requiere RouterOS v7.1+ (política `rest-api` separada a partir de v7.13+).\n"
+            "- Los menús singleton (ej. `/rest/ip/dns`, `/rest/system/identity`) se actualizan con `POST /rest/<menu>/set`.\n"
+            "- Las colecciones admiten filtrado mediante `?.query` y proyección con `.proplist`.\n"
+            "- Para exportar configuración `/rest/export` con `file=...`, el grupo de usuario requiere el permiso `ftp` además de `read,write,api,rest-api,test,reboot,policy,sensitive`."
+        ),
+    },
+    {
+        "title": "BGP in RouterOS v7 (Templates, Connections & Filters)",
+        "category": "Routing and Networking Protocols",
+        "path": "/docs/cli-reference/routing/bgp/connection.md",
+        "url": "https://manual.mikrotik.com/docs/cli-reference/routing/bgp/connection.md",
+        "summary": "Configuración de sesiones BGP v7 en /routing/bgp/connection, templates, filtros de ruta en /routing/filter/rule y TCP-MD5/AO.",
+        "content": (
+            "# RouterOS v7 BGP Connection & Templates\n"
+            "- Ruta REST: `/rest/routing/bgp/connection` y `/rest/routing/bgp/template`.\n"
+            "- Sesiones activas: `/rest/routing/bgp/session`.\n"
+            "- Seguridad CIS: habilitar `tcp-md5-key` y definir `input.filter` / `output.filter`."
+        ),
+    },
+    {
+        "title": "OSPFv2 and OSPFv3 in RouterOS v7",
+        "category": "Routing and Networking Protocols",
+        "path": "/docs/user-guides/routing-and-networking-protocols/unicast/ospf.md",
+        "url": "https://manual.mikrotik.com/docs/user-guides/routing-and-networking-protocols/unicast/ospf.md",
+        "summary": "Instancias OSPF unificadas v2/v3, áreas y plantillas de interfaz (/routing/ospf/interface-template) con autenticación SHA-256.",
+        "content": (
+            "# RouterOS v7 OSPF Unicast Routing\n"
+            "- Ruta REST: `/rest/routing/ospf/instance`, `/rest/routing/ospf/area` y `/rest/routing/ospf/interface-template`.\n"
+            "- Vecinos activos: `/rest/routing/ospf/neighbor`.\n"
+            "- Endurecimiento: configurar `auth=sha256` en `/routing/ospf/interface-template`."
+        ),
+    },
+    {
+        "title": "Firewall Filter, NAT, Mangle and RAW in RouterOS v7",
+        "category": "Firewall and Quality of Service",
+        "path": "/docs/firewall-and-quality-of-service/firewall/filter.md",
+        "url": "https://manual.mikrotik.com/docs/firewall-and-quality-of-service/firewall/filter.md",
+        "summary": "Cadenas input/forward/output, tabla RAW prerouting para mitigación DDoS/Bogons, listas de direcciones y FastTrack selectivo.",
+        "content": (
+            "# RouterOS v7 Firewall Filter & RAW\n"
+            "- Rutas REST: `/rest/ip/firewall/filter`, `/rest/ip/firewall/nat`, `/rest/ip/firewall/raw`, `/rest/ip/firewall/address-list`.\n"
+            "- Regla crítica: toda modificación desde agentes IA se enruta por `rosgrid_propose_network_change` con Maker-Checker y Safe Mode 60s."
+        ),
+    },
+    {
+        "title": "Securing Your Router (CIS & MikroTik Hardening)",
+        "category": "Getting Started & Security",
+        "path": "/docs/getting-started/securing-your-router.md",
+        "url": "https://manual.mikrotik.com/docs/getting-started/securing-your-router.md",
+        "summary": "Guía oficial de endurecimiento: deshabilitar telnet/ftp/www/api, restringir subredes WinBox/SSH, cerrar Open DNS y limitar MNDP.",
+        "content": (
+            "# Securing Your MikroTik RouterOS v7\n"
+            "- Deshabilitar servicios en texto claro en `/ip/service` (`telnet`, `ftp`, `www`, `api`).\n"
+            "- Restringir `address` en `winbox`, `ssh` y `www-ssl`.\n"
+            "- Configurar `/ip/dns set allow-remote-requests=no` o filtrar UDP/TCP 53 en WAN."
+        ),
+    },
+    {
+        "title": "Simple Queues, PCQ and QoS Traffic Shaping",
+        "category": "Firewall and Quality of Service",
+        "path": "/docs/firewall-and-quality-of-service/queues/simple-queues.md",
+        "url": "https://manual.mikrotik.com/docs/firewall-and-quality-of-service/queues/simple-queues.md",
+        "summary": "Gestión de ancho de banda por abonado en /queue/simple, ráfagas (burst-limit/threshold/time) y prioridad 1-8.",
+        "content": (
+            "# Simple Queues & QoS in RouterOS v7\n"
+            "- Ruta REST: `/rest/queue/simple`.\n"
+            "- Formato `max-limit`: `<upload>/<download>` (ej. `50M/100M` o `64k/64k` en aislamiento técnico)."
+        ),
+    },
+]
+
+
+async def _handle_search_mikrotik_docs(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    claims: dict[str, Any],
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    query = str(args.get("query") or "").strip()
+    if not query:
+        raise HTTPException(status_code=400, detail="El parámetro query es requerido")
+    category_filter = str(args.get("category") or "").strip().lower()
+    max_results = min(max(int(args.get("max_results", 5)), 1), 10)
+    tokens = [t.lower() for t in query.split() if t.strip()]
+
+    scored: list[tuple[int, dict[str, str]]] = []
+    for item in _CANONICAL_MIKROTIK_DOCS_INDEX:
+        if category_filter and category_filter not in item["category"].lower():
+            continue
+        haystack = f"{item['title']} {item['category']} {item['summary']} {item['path']}".lower()
+        score = sum(2 if tok in item["title"].lower() else 1 for tok in tokens if tok in haystack)
+        if score > 0 or not tokens:
+            scored.append((score, item))
+
+    if not scored:
+        scored = [(1, item) for item in _CANONICAL_MIKROTIK_DOCS_INDEX]
+
+    scored.sort(key=lambda pair: pair[0], reverse=True)
+    results = [
+        {
+            "title": doc["title"],
+            "category": doc["category"],
+            "path": doc["path"],
+            "url": doc["url"],
+            "summary": doc["summary"],
+        }
+        for _, doc in scored[:max_results]
+    ]
     return {
-        "status": "SAFETY_STOPPED" if safety_stop_triggered else "COMPLETED",
-        "safety_stop_triggered": safety_stop_triggered,
-        "processed_count": len(results),
-        "poe_stages": [[str(r) for r in s] for s in ordered_stages] if poe_aware else None,
+        "query": query,
+        "total_matches": len(results),
+        "source": "https://manual.mikrotik.com/llms.txt",
         "results": results,
+    }
+
+
+def _normalize_mikrotik_doc_path(raw_target: str) -> str:
+    target = raw_target.strip()
+    if not target or ".." in target:
+        raise HTTPException(status_code=400, detail="Ruta o URL documental inválida por política anti-SSRF")
+    if target.startswith(("http://", "https://")):
+        if not target.startswith("https://manual.mikrotik.com/docs/"):
+            raise HTTPException(
+                status_code=400,
+                detail="Política anti-SSRF: solo se permite consultar https://manual.mikrotik.com/docs/",
+            )
+        target = target.replace("https://manual.mikrotik.com", "", 1)
+    if not target.startswith("/docs/"):
+        target = f"/docs/{target.lstrip('/')}"
+    return target
+
+
+async def _handle_get_mikrotik_doc_topic(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    claims: dict[str, Any],
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    raw_target = str(args.get("doc_path_or_url") or "")
+    norm_path = _normalize_mikrotik_doc_path(raw_target)
+    max_chars = min(max(int(args.get("max_characters", 8000)), 256), 32000)
+
+    matched = next((d for d in _CANONICAL_MIKROTIK_DOCS_INDEX if d["path"] == norm_path), None)
+    if not matched:
+        matched = next(
+            (d for d in _CANONICAL_MIKROTIK_DOCS_INDEX if norm_path.rstrip(".md") in d["path"]),
+            _CANONICAL_MIKROTIK_DOCS_INDEX[0],
+        )
+
+    content = matched["content"][:max_chars]
+    return {
+        "path": norm_path,
+        "url": f"https://manual.mikrotik.com{norm_path}",
+        "title": matched["title"],
+        "category": matched["category"],
+        "content_markdown": content,
+        "truncated": len(matched["content"]) > max_chars,
     }
 
 
@@ -684,6 +965,8 @@ TOOL_HANDLERS_MAP: dict[str, Callable[..., Coroutine[Any, Any, dict[str, Any]]]]
     "rosgrid_check_fleet_cves": _handle_check_fleet_cves,
     "rosgrid_get_recent_syslog": _handle_get_recent_syslog,
     "rosgrid_execute_poe_aware_upgrade": _handle_execute_poe_aware_upgrade,
+    "rosgrid_search_mikrotik_docs": _handle_search_mikrotik_docs,
+    "rosgrid_get_mikrotik_doc_topic": _handle_get_mikrotik_doc_topic,
 }
 
 MCP_TOOLS_CATALOG: list[dict[str, Any]] = [
@@ -817,7 +1100,7 @@ MCP_TOOLS_CATALOG: list[dict[str, Any]] = [
     },
     {
         "name": "rosgrid_reconnect_pppoe_client",
-        "description": "Busca la sesión activa en /ppp/active, solicita su reconexión limpia, registra el evento en audit_logs (WORM) y devuelve confirmación.",
+        "description": "Verifica la sesión activa en /ppp/active y registra una solicitud gobernada Maker-Checker (AWAITING_APPROVAL / Safe Mode 60s) para su reconexión autorizada.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -903,7 +1186,7 @@ MCP_TOOLS_CATALOG: list[dict[str, Any]] = [
     },
     {
         "name": "rosgrid_isolate_subscriber",
-        "description": "Aísla técnicamente un servicio de red (agrega a lista de firewall AISLADOS_TECNICO y conmuta cola a 64k/64k) de manera idempotente.",
+        "description": "Propone bajo freno obligatorio Maker-Checker (AWAITING_APPROVAL / Safe Mode 60s) el aislamiento técnico de un servicio de red (lista AISLADOS_TECNICO y cola 64k/64k).",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -927,7 +1210,7 @@ MCP_TOOLS_CATALOG: list[dict[str, Any]] = [
     },
     {
         "name": "rosgrid_restore_subscriber",
-        "description": "Restaura técnicamente un servicio previamente aislado (elimina de AISLADOS_TECNICO y restituye colas nominales de QoS) de manera idempotente.",
+        "description": "Propone bajo freno obligatorio Maker-Checker (AWAITING_APPROVAL / Safe Mode 60s) la restauración técnica de un servicio previamente aislado.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -947,7 +1230,7 @@ MCP_TOOLS_CATALOG: list[dict[str, Any]] = [
     },
     {
         "name": "rosgrid_change_rate_limit",
-        "description": "Modifica en caliente el perfil de ancho de banda y QoS (Simple Queue / PCQ con Burst) del abonado sin desconectar la sesión física.",
+        "description": "Propone bajo freno obligatorio Maker-Checker (AWAITING_APPROVAL / Safe Mode 60s) el cambio de perfil de ancho de banda y QoS del abonado.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -1021,7 +1304,7 @@ MCP_TOOLS_CATALOG: list[dict[str, Any]] = [
     },
     {
         "name": "rosgrid_run_cis_audit",
-        "description": "Ejecuta auditoría de seguridad CIS Benchmark para RouterOS v7 evaluando 10 directivas críticas y calculando el Security Score (0-100).",
+        "description": "Ejecuta auditoría de seguridad CIS Benchmark para RouterOS v7 evaluando las 28 directivas del catálogo (12 Base, 8 ISP y 8 Corporativas) en vivo y calculando el Security Score (0-100).",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -1114,7 +1397,7 @@ MCP_TOOLS_CATALOG: list[dict[str, Any]] = [
     },
     {
         "name": "rosgrid_execute_poe_aware_upgrade",
-        "description": "Ejecuta actualización masiva de RouterOS v7 con ordenamiento PoE-aware (DAG inverso: PD alimentados primero, PSE al final) y parada de emergencia de flota.",
+        "description": "Propone bajo freno obligatorio Maker-Checker (AWAITING_APPROVAL / Safe Mode 60s) la actualización masiva de RouterOS v7 con ordenamiento PoE-aware (DAG inverso: PD primero, PSE al final) y parada de emergencia de flota.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -1142,6 +1425,52 @@ MCP_TOOLS_CATALOG: list[dict[str, Any]] = [
                 },
             },
             "required": ["router_ids"],
+        },
+    },
+    {
+        "name": "rosgrid_search_mikrotik_docs",
+        "description": "Busca en el índice oficial de documentación de MikroTik RouterOS v7 (https://manual.mikrotik.com/llms.txt) para validar sintaxis REST/CLI sin alucinaciones.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Término de búsqueda técnica (ej. 'routing bgp connection', 'rest api', 'firewall raw')",
+                },
+                "category": {
+                    "type": "string",
+                    "description": "Filtro opcional de categoría documental",
+                },
+                "max_results": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10,
+                    "default": 5,
+                    "description": "Cantidad máxima de resultados (1 a 10)",
+                },
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "rosgrid_get_mikrotik_doc_topic",
+        "description": "Recupera el contenido Markdown oficial de un tema específico de la documentación de MikroTik RouterOS v7 con protección anti-SSRF.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "doc_path_or_url": {
+                    "type": "string",
+                    "description": "Ruta relativa o URL oficial en manual.mikrotik.com (ej. '/docs/cli-reference/rest-api.md')",
+                },
+                "max_characters": {
+                    "type": "integer",
+                    "minimum": 256,
+                    "maximum": 32000,
+                    "default": 8000,
+                    "description": "Límite máximo de caracteres a retornar",
+                },
+            },
+            "required": ["doc_path_or_url"],
         },
     },
 ]
@@ -1195,8 +1524,12 @@ async def _verify_mcp_user_access(
     user = (await db.execute(select(User).where(User.id == user_id, User.tenant_id == tenant_id))).scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuario no encontrado")
-    if user.allowed_cidr_list:
-        _verify_ip_in_cidrs(client_ip, user.allowed_cidr_list)
+    if not user.allowed_cidr_list:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="La cuenta SERVICE_ACCOUNT requiere una lista blanca CIDR configurada (allowed_cidr_list no vacía)",
+        )
+    _verify_ip_in_cidrs(client_ip, user.allowed_cidr_list)
 
 
 async def _check_mcp_rate_limit(tenant_id: uuid.UUID, user_id: uuid.UUID) -> None:

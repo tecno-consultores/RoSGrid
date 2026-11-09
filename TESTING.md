@@ -2355,11 +2355,20 @@ Conforme a la Especificación 43 v2.0.0 y la directiva `.agents/rules/ground_tru
       - Cobertura: `enterpriseComplianceView.unit.ts`, `NotificationChannelsPanel.unit.ts` y `DiagnosticsAndSiemPanel.unit.ts` ampliados con pruebas de conmutación `setLocale('en')` (575 pruebas frontend Vitest en 83 suites aprobadas al 100%).
       - Escenario 107 Karate UI sincronizado en `docs/examples/`.
 
-27. **Totales de Aseguramiento de Calidad:**
-    - **Pruebas Unitarias Backend:** 757 de 757 pruebas PASADAS (100% pass rate).
-    - **Pruebas Unitarias Frontend:** 602 de 602 pruebas PASADAS en 84 suites (100% pass rate).
-    - **Total Pruebas Unitarias:** 1,359 pruebas.
-    - **Escenarios BDD Karate Labs:** 178 en API REST y 122 en UI WebFig (300 escenarios totales).
+27. **Hito 30.37: Gobernanza Zero-Trust MCP (Maker-Checker en las 6 Herramientas de Mutación), Defensa RBAC en Capa de Servicio, Catálogo de 22 Tools, Auditoría CIS Viva de 28 Directivas, Telemetría Opt-In y Centrado Cartográfico de Técnico de Campo (`docs/specs/113`):**
+    - **Backend FastAPI (`mcp.py`, `approvals.py`, `network_services.py`, `bulk_and_updates.py`, `compliance.py`, `config.py`):**
+      - Freno Maker-Checker (`status: "AWAITING_APPROVAL"`, `safe_mode_timeout_seconds: 60`) en las 6 herramientas de mutación Nivel 3 y ejecución diferida en `_execute_mcp_deferred_tool` al aprobar el `Checker`.
+      - Restricción exclusiva de `/api/v1/mcp` a `SERVICE_ACCOUNT` con `allowed_cidr_list` no vacía, remoción de `NOC_MONITOR` de `_PROVISIONING_ROLES` y validación explícita de rol en Python en las funciones de servicio.
+      - Incorporación de `#21 rosgrid_search_mikrotik_docs` y `#22 rosgrid_get_mikrotik_doc_topic` (22 tools MCP), sondeo en vivo de `CIS-1.9` y `CIS-1.6` (28 directivas CIS) y `ROSGRID_TELEMETRY_BEACON_ENABLED=false` por defecto.
+    - **Frontend Vue 3 (`RgResponsiveShell.vue`, `FieldTechMobileView.vue`, `UnifiedNetworkMap.vue`):**
+      - Sincronización de `authStore.tenantHqCoordinates` al montar y centrado reactivo en `FieldTechMobileView.vue`.
+      - Escenario 180 Karate API y Escenario 128 Karate UI sincronizados en `docs/examples/`.
+
+28. **Totales de Aseguramiento de Calidad:**
+    - **Pruebas Unitarias Backend:** 763 de 763 pruebas PASADAS (100% pass rate).
+    - **Pruebas Unitarias Frontend:** 609 de 609 pruebas PASADAS en 84 suites (100% pass rate).
+    - **Total Pruebas Unitarias:** 1,372 pruebas.
+    - **Escenarios BDD Karate Labs:** 180 en API REST y 128 en UI WebFig (308 escenarios totales).
     - **Linters y Tipado Estático:** 0 errores en `ruff check`, 0 errores en `mypy`, 0 errores en `vue-tsc --noEmit`, 0 advertencias en `eslint --max-warnings 0`.
 
 

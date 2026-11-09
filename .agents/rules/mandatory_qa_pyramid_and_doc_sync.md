@@ -109,7 +109,7 @@ Whenever code is added, updated, or refactored, the AI agent **MUST OBLIGATORILY
 2. **`docs/specs/` Directory:**
    - Update all affected domain and functional specifications (`docs/specs/01` through `docs/specs/51`).
 3. **Monorepo Root:**
-   - **`CHANGELOG.md`:** Document changes under `## [Unreleased]` (`Added`, `Fixed`, `Changed`) with technical detail.
+   - **`CHANGELOG.md` (Concise Release-Level Format):** Document user-facing changes under `## [Unreleased]` (`Added`, `Fixed`, `Changed`) in concise 1–2 line bullets. Never create duplicate version headers or dump verbose internal sub-milestone logs into `CHANGELOG.md`.
    - **`ROADMAP.md`:** Update milestone checkpoints, sub-task statuses, and deliverables.
    - **`TESTING.md`:** Update test metrics, coverage percentages, and scenario counts.
    - **`README.md` & Root Docs:** Update user-facing features, installation guidelines, architecture descriptions, or table of contents whenever applicable.

@@ -478,7 +478,12 @@
     const coords = collectAllValidCoordinates();
     if (coords.length === 0) {
       try {
-        mapInstance.setView(authStore.tenantHqCoordinates, props.zoomLevel);
+        const targetCenter =
+          props.centerCoordinates &&
+          (props.centerCoordinates[0] !== 10.4806 || props.centerCoordinates[1] !== -66.9036)
+            ? props.centerCoordinates
+            : authStore.tenantHqCoordinates;
+        mapInstance.setView(targetCenter, props.zoomLevel);
       } catch {
         // Ignorar en entornos JSDOM sin layout
       }
@@ -806,17 +811,22 @@
   );
 
   watch(
-    () => authStore.tenantHqCoordinates,
-    (newHq) => {
+    () => [authStore.tenantHqCoordinates, props.centerCoordinates] as const,
+    ([newHq, newCenter]) => {
       if (!mapInstance || isHeadlessTest.value) return;
       if (collectAllValidCoordinates().length === 0) {
         try {
-          mapInstance.setView(newHq, props.zoomLevel);
+          const targetCenter =
+            newCenter && (newCenter[0] !== 10.4806 || newCenter[1] !== -66.9036)
+              ? newCenter
+              : newHq;
+          mapInstance.setView(targetCenter, props.zoomLevel);
         } catch {
           // Ignorar en entornos JSDOM
         }
       }
     },
+    { deep: true },
   );
 
   defineExpose({

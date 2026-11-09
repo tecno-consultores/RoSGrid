@@ -199,12 +199,78 @@ async def list_approvals(
     return ApprovalListResponse(total=total, items=items)
 
 
+async def _execute_mcp_deferred_tool(
+    approval: ApprovalRequest,
+    claims: dict[str, Any],
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    checker_user_id: uuid.UUID,
+) -> dict[str, Any] | None:
+    payload = approval.request_payload if isinstance(approval.request_payload, dict) else {}
+    mcp_tool = payload.get("mcp_tool")
+    if not mcp_tool:
+        return None
+    ik = str(payload.get("idempotency_key") or uuid.uuid4())
+    if mcp_tool == "rosgrid_isolate_subscriber":
+        from src.api.v1.network_services import isolate_network_service
+
+        sub_id = uuid.UUID(str(payload["subscriber_device_id"]))
+        res = await isolate_network_service(sub_id, ik, db, claims)
+        return res.model_dump()
+    if mcp_tool == "rosgrid_restore_subscriber":
+        from src.api.v1.network_services import restore_network_service
+
+        sub_id = uuid.UUID(str(payload["subscriber_device_id"]))
+        res = await restore_network_service(sub_id, ik, db, claims)
+        return res.model_dump()
+    if mcp_tool in ("rosgrid_change_rate_limit", "rosgrid_change_subscriber_rate_limit"):
+        from src.api.v1.network_services import change_network_service_rate_limit
+        from src.schemas.network_services import ChangeRateLimitRequest
+
+        sub_id = uuid.UUID(str(payload["subscriber_device_id"]))
+        prof_id = uuid.UUID(str(payload["bandwidth_profile_id"]))
+        req = ChangeRateLimitRequest(bandwidth_profile_id=prof_id)
+        res = await change_network_service_rate_limit(sub_id, req, ik, db, claims)
+        return res.model_dump()
+    if mcp_tool == "rosgrid_execute_poe_aware_upgrade":
+        from src.api.v1.bulk_and_updates import _process_upgrade_stages, _resolve_upgrade_stages
+        from src.schemas.bulk_and_updates import RosUpdateExecuteRequest
+
+        rids = [uuid.UUID(str(x)) for x in payload.get("router_ids", [])]
+        upg_req = RosUpdateExecuteRequest(
+            router_ids=rids,
+            auto_upgrade_firmware=bool(payload.get("auto_upgrade_firmware", True)),
+            poe_aware=bool(payload.get("poe_aware", True)),
+            safety_stop_threshold_percent=float(payload.get("safety_stop_threshold_percent", 1.0)),
+        )
+        stages = await _resolve_upgrade_stages(tenant_id, upg_req.router_ids, upg_req.poe_aware)
+        results, stopped = await _process_upgrade_stages(stages, upg_req, claims, db, tenant_id, checker_user_id)
+        return {
+            "status": "SAFETY_STOPPED" if stopped else "COMPLETED",
+            "safety_stop_triggered": stopped,
+            "processed_count": len(results),
+            "results": results,
+        }
+    return None
+
+
 async def _execute_approval_lifecycle(
     client: MikrotikRestClient | None,
     approval: ApprovalRequest,
     now_utc: datetime,
+    claims: dict[str, Any] | None = None,
+    db: AsyncSession | None = None,
+    tenant_id: uuid.UUID | None = None,
+    checker_user_id: uuid.UUID | None = None,
 ) -> tuple[str, int]:
     try:
+        if claims and db and tenant_id and checker_user_id:
+            mcp_res = await _execute_mcp_deferred_tool(approval, claims, db, tenant_id, checker_user_id)
+            if mcp_res is not None:
+                approval.execution_result = mcp_res
+                approval.status = ApprovalStatusEnum.APPROVED_AND_EXECUTED
+                approval.executed_at = now_utc
+                return "MAKER_CHECKER_APPROVED_AND_EXECUTED", 200
         if client:
             exec_res = await _execute_deferred_operation(client, approval)
             approval.execution_result = exec_res if isinstance(exec_res, dict) else {"response": exec_res}
@@ -298,7 +364,11 @@ async def approve_request(
     approval.reviewed_at = now_utc
     approval.review_comment = payload.review_comment
 
-    if approval.action_type == CriticalActionTypeEnum.BULK_MULTI_ROUTER_EXECUTION:
+    is_mcp_upgrade = (
+        isinstance(approval.request_payload, dict)
+        and approval.request_payload.get("mcp_tool") == "rosgrid_execute_poe_aware_upgrade"
+    )
+    if approval.action_type == CriticalActionTypeEnum.BULK_MULTI_ROUTER_EXECUTION and not is_mcp_upgrade:
         stmt_job = select(BulkJob).where(BulkJob.approval_request_id == approval.id)
         job_obj = (await db.execute(stmt_job)).scalar_one_or_none()
         if job_obj:
@@ -330,7 +400,9 @@ async def approve_request(
             stat_code = 200
         approval.executed_at = now_utc
     else:
-        event_action, stat_code = await _execute_approval_lifecycle(client, approval, now_utc)
+        event_action, stat_code = await _execute_approval_lifecycle(
+            client, approval, now_utc, claims=claims, db=db, tenant_id=tenant_id, checker_user_id=checker_user_id
+        )
 
     await _log_approval_audit(
         db, tenant_id, claims, request, checker_user_id, approval, router_name, event_action, stat_code

@@ -169,6 +169,97 @@ async def test_run_cis_audit_score_dynamic_calculation(
             assert d.passed is False
 
 
+@pytest.mark.asyncio
+async def test_run_cis_audit_live_evaluates_all_28_directives_including_cis_1_6_and_1_9(
+    sample_tenant_id: uuid.UUID, sample_claims: dict[str, Any]
+) -> None:
+    """Certifica que run_cis_audit evalúe en vivo las 28 directivas (incluyendo CIS-1.6 y CIS-1.9) cuando el router está conectado (Spec 113)."""
+    router_id = uuid.uuid4()
+    mock_router = Router(
+        id=router_id,
+        tenant_id=sample_tenant_id,
+        display_name="Router Live CIS 28",
+        api_base_url="https://10.250.3.5",
+        api_port=443,
+        network_role="CORE",
+        serial_number="SN-LIVE-CIS-28",
+        physical_location="NOC Principal",
+        online_since_date=date(2026, 1, 1),
+    )
+
+    db = AsyncMock()
+    db.execute.return_value = MockDbResult([mock_router])
+
+    mock_redis = AsyncMock()
+    mock_redis.get.return_value = b"DATACENTER"
+    mock_redis.smembers.return_value = set()
+
+    mock_client = AsyncMock()
+
+    async def _fake_get(path: str) -> Any:
+        if path == "/ip/service":
+            return [
+                {"name": "telnet", "disabled": "true"},
+                {"name": "ftp", "disabled": "true"},
+                {"name": "www", "disabled": "true"},
+                {"name": "api", "disabled": "true"},
+                {"name": "ssh", "disabled": "false", "address": "10.0.0.0/8"},
+                {"name": "winbox", "disabled": "false", "address": "10.0.0.0/8"},
+            ]
+        if path == "/tool/bandwidth-server":
+            return {"enabled": "false"}
+        if path == "/ip/socks":
+            return {"enabled": "false"}
+        if path == "/ip/proxy":
+            return {"enabled": "false"}
+        if path == "/ip/neighbor/discovery-settings":
+            return {"discover-interface-list": "LAN"}
+        if path == "/tool/mac-server":
+            return {"allowed-interface-list": "none"}
+        if path == "/tool/mac-server/mac-winbox":
+            return {"allowed-interface-list": "LAN"}
+        if path == "/ip/dns":
+            return {"allow-remote-requests": "false"}
+        if path == "/ip/settings":
+            return {"rp-filter": "strict", "ip-forward": "true"}
+        if path == "/system/ntp/client":
+            return {"enabled": "true"}
+        if path == "/system/logging/action":
+            return [{"name": "remote", "target": "remote", "remote": "10.0.0.50"}]
+        if path == "/user":
+            return [{"name": "rosgrid_svc", "disabled": "false"}]
+        if path == "/ip/ssh":
+            return {"strong-crypto": "true", "forwarding-enabled": "no"}
+        if path == "/snmp":
+            return {"enabled": "false"}
+        if path == "/ip/firewall/filter":
+            return [{"chain": "input", "action": "drop"}]
+        if path == "/routing/bgp/connection":
+            return [{"name": "peer1", "tcp-md5-key": "secret"}]
+        if path == "/ip/dhcp-server/Alert":
+            return [{"interface": "bridge1"}]
+        if path == "/interface/bridge":
+            return [{"name": "bridge1", "vlan-filtering": "true"}]
+        if path == "/ip/ipsec/profile":
+            return [{"name": "default", "dh-group": "modp2048", "enc-algorithm": "aes-256", "hash-algorithm": "sha256"}]
+        if path == "/system/routerboard":
+            return {"routerboard": "true", "protected-routerboot": "enabled"}
+        return []
+
+    mock_client.get.side_effect = _fake_get
+
+    with (
+        patch("src.api.v1.compliance.get_redis_client", return_value=mock_redis),
+        patch("src.api.v1.compliance.get_router_and_client", return_value=(mock_router, mock_client)),
+    ):
+        audit_res = await run_cis_audit(router_id=router_id, db=db, claims=sample_claims)
+        assert len(audit_res.directives) == 28
+        by_code = {d.code: d for d in audit_res.directives}
+        assert by_code["CIS-1.9"].passed is True
+        assert by_code["CIS-1.6"].passed is True
+        assert audit_res.total_directives > 0
+
+
 def test_starter_templates_catalog_and_syslog() -> None:
     """Certifica la presencia y validez de las 10 nuevas plantillas masivas avanzadas y la plantilla de Syslog."""
     template_names = {t["name"] for t in _DEFAULT_STARTER_TEMPLATES}

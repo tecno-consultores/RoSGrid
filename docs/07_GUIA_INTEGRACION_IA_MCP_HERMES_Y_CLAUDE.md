@@ -32,11 +32,11 @@ flowchart TB
     end
 
     subgraph "Freno de Seguridad y Enlace a MikroTik"
-        ToolExec --> ReadTools["1-7, 9-19 & 21-22: Diagnóstico, Topología L2, CVE, Syslog y Grounding"]
-        ToolExec --> MutationTools["8 & 20: Mutaciones Sensibles (Maker-Checker 202 y Safe Mode 60s)"]
+        ToolExec --> ReadTools["1-6, 9, 13-19 & 21-22: Diagnóstico, Topología L2, CVE, Syslog y Grounding"]
+        ToolExec --> MutationTools["7, 8, 10-12 & 20: 6 Mutaciones Nivel 3 (Maker-Checker AWAITING_APPROVAL y Safe Mode 60s)"]
         
         ReadTools -->|Pool TLS Keep-Alive| MikroTik[MikroTik RouterOS v7]
-        MutationTools -->|HTTP 202 Accepted| MakerChecker[Bandeja approval_requests: AWAITING_APPROVAL]
+        MutationTools -->|ApprovalRequest PENDING| MakerChecker[Bandeja approval_requests: AWAITING_APPROVAL]
         MakerChecker -.->|Supervisión Humana Requerida| Supervisor[Supervisor Humano en WebFig]
         Supervisor -->|Aprobación Explícita| SafeMode[Ejecución con Safe Mode 60s]
         SafeMode --> MikroTik
@@ -46,10 +46,10 @@ flowchart TB
 ### 1.1 Principios de Seguridad Innegociables
 
 1. **Superficie de Ataque Cero por Defecto:** En `fastapi/src/core/config.py` y `.env`, `ROSGRID_MCP_ENABLED` está en `false`. Si no se activa explícitamente, cualquier petición al endpoint devuelve inmediatamente HTTP `404 Not Found`.
-2. **Rol Exclusivo `SERVICE_ACCOUNT` y Lista Blanca CIDR:** Solo tokens Bearer pertenecientes al rol `SERVICE_ACCOUNT` pueden interactuar con el endpoint. Cada cuenta cuenta con un arreglo `allowed_cidr_list` (ej. `["10.0.10.0/24", "192.168.1.50/32"]`). Si la IP del agente IA proviene de otro segmento, la conexión es rechazada con HTTP `403 Forbidden`.
+2. **Rol Exclusivo `SERVICE_ACCOUNT` y Lista Blanca CIDR Obligatoria:** Solo tokens Bearer pertenecientes exclusivamente al rol `SERVICE_ACCOUNT` pueden interactuar con el endpoint. Cada cuenta debe tener configurada una lista no vacía `allowed_cidr_list` (ej. `["10.0.10.0/24", "192.168.1.50/32"]`); una lista vacía `[]` o una IP fuera de rango es rechazada inmediatamente con HTTP `403 Forbidden`.
 3. **Protección contra Ruido Vecino (*Rate-Limiting* en KeyDB):** Cada petición incrementa un contador atómico con ventana móvil de 60 segundos (`mcp:ratelimit:{tenant_id}:{user_id}`). Si supera `ROSGRID_MCP_RATE_LIMIT_PER_MIN` (30 req/min), responde con HTTP `429 Too Many Requests`.
 4. **Aislamiento *Split-Credential* (Cero Acceso a la Bóveda):** Ninguna herramienta MCP permite a la IA leer contraseñas de routers. La IA opera invocando las herramientas mediante el `router_id`; el backend resuelve internamente las credenciales y maneja la sesión HTTPS.
-5. **Freno Obligatorio *Maker-Checker* en Mutaciones:** Los agentes IA **jamás pueden modificar directamente** reglas de firewall, sesiones BGP/OSPF ni direccionamiento. La herramienta `rosgrid_propose_network_change` inserta la propuesta forzosamente en `approval_requests` con estado `PENDING` (HTTP `202 Accepted`) para que un humano la apruebe y ejecute con Safe Mode (60s).
+5. **Freno Obligatorio *Maker-Checker* en las 6 Herramientas de Mutación Nivel 3:** Los agentes IA **jamás pueden modificar directamente** el router MikroTik. Las 6 herramientas de mutación (`rosgrid_reconnect_pppoe_client`, `rosgrid_propose_network_change`, `rosgrid_isolate_subscriber`, `rosgrid_restore_subscriber`, `rosgrid_change_rate_limit` y `rosgrid_execute_poe_aware_upgrade`) insertan la propuesta forzosamente en `approval_requests` con estado `PENDING` (`status: "AWAITING_APPROVAL"`) para que un operador humano (`Checker`) la apruebe y ejecute bajo Safe Mode (60s).
 6. **Trazabilidad Forense WORM:** Toda invocación a `tools/call` queda sellada criptográficamente en `audit_logs` con `action_category = "MCP_AI_TOOL_CALL"`.
 
 ### 1.2 ¿De Dónde Sale el Token Bearer y Cómo se Genera?
@@ -256,8 +256,8 @@ Devuelve el catálogo de las 22 herramientas semánticas con sus esquemas JSON d
 
 ### Herramienta 7: `rosgrid_reconnect_pppoe_client`
 
-- **Nivel de Riesgo:** Operación N1 Directa (Auditada en WORM).
-- **Descripción:** Busca la sesión activa de un abonado PPPoE y solicita su reinicio limpio para resolver problemas de autenticación o bloqueo de sesión.
+- **Nivel de Riesgo:** **Gobernada por Freno Maker-Checker (`AWAITING_APPROVAL` / Safe Mode 60s).**
+- **Descripción:** Registra una solicitud de aprobación (`ApprovalRequest`) para reiniciar limpiamente la sesión activa de un abonado PPPoE tras validación de un operador humano (`Checker`).
 - **Argumentos:**
   - `router_id` (UUID requerido).
   - `pppoe_username` (string requerido).
@@ -304,8 +304,8 @@ Devuelve el catálogo de las 22 herramientas semánticas con sus esquemas JSON d
 
 ### Herramienta 10: `rosgrid_isolate_subscriber`
 
-- **Nivel de Riesgo:** Operación de Aislamiento Técnico (Idempotente).
-- **Descripción:** Permite al agente IA aislar un equipo en MikroTik (bloqueo por lista de firewall `AISLADOS_TECNICO` o degradación a 64k) ante detección de bucles de capa 2, ataques DDoS o requerimiento de seguridad.
+- **Nivel de Riesgo:** **Gobernada por Freno Maker-Checker (`AWAITING_APPROVAL` / Safe Mode 60s).**
+- **Descripción:** Registra una propuesta de aislamiento técnico de un suscriptor en MikroTik (bloqueo por lista de firewall `AISLADOS_TECNICO` o degradación a 64k) sujeta a aprobación humana (`Checker`).
 - **Argumentos:**
   - `subscriber_device_id` (UUID requerido).
   - `reason` (string justificando el aislamiento).
@@ -315,8 +315,8 @@ Devuelve el catálogo de las 22 herramientas semánticas con sus esquemas JSON d
 
 ### Herramienta 11: `rosgrid_restore_subscriber`
 
-- **Nivel de Riesgo:** Operación de Restauración Técnica (Idempotente).
-- **Descripción:** Restaura el servicio normal de un equipo previamente aislado, removiendo la regla de bloqueo y restableciendo los límites de cola nominales.
+- **Nivel de Riesgo:** **Gobernada por Freno Maker-Checker (`AWAITING_APPROVAL` / Safe Mode 60s).**
+- **Descripción:** Registra una propuesta para restaurar el servicio normal de un equipo previamente aislado, sujeta a aprobación humana (`Checker`).
 - **Argumentos:**
   - `subscriber_device_id` (UUID requerido).
   - `idempotency_key` (UUIDv7 opcional).
@@ -325,8 +325,8 @@ Devuelve el catálogo de las 22 herramientas semánticas con sus esquemas JSON d
 
 ### Herramienta 12: `rosgrid_change_rate_limit` (Alias: `rosgrid_change_subscriber_rate_limit`)
 
-- **Nivel de Riesgo:** Modificación Técnica de Ancho de Banda.
-- **Descripción:** Aplica un nuevo perfil de velocidad (Queue Simple / PCQ con parámetros de Burst) al equipo sin desconectar la sesión física.
+- **Nivel de Riesgo:** **Gobernada por Freno Maker-Checker (`AWAITING_APPROVAL` / Safe Mode 60s).**
+- **Descripción:** Registra una propuesta para aplicar un nuevo perfil de velocidad (Queue Simple / PCQ con parámetros de Burst) al equipo tras aprobación humana (`Checker`).
 - **Argumentos:**
   - `subscriber_device_id` (UUID requerido).
   - `bandwidth_profile_id` (UUID requerido).
@@ -358,7 +358,7 @@ Devuelve el catálogo de las 22 herramientas semánticas con sus esquemas JSON d
 ### Herramienta 15: `rosgrid_run_cis_audit`
 
 - **Nivel de Riesgo:** Auditoría de Ciberseguridad.
-- **Descripción:** Evalúa las 10 directivas críticas de endurecimiento CIS Benchmark en RouterOS y retorna el Security Score (0 a 100) junto con la lista detallada de vulnerabilidades detectadas.
+- **Descripción:** Evalúa en vivo las 28 directivas críticas de endurecimiento CIS Benchmark (`12 Base + 8 ISP + 8 CORP`) en RouterOS y retorna el Security Score (0 a 100) junto con la lista detallada de vulnerabilidades detectadas.
 - **Argumentos:**
   - `router_id` (UUID requerido).
 

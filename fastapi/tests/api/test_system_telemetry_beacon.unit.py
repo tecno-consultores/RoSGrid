@@ -82,7 +82,7 @@ async def test_get_telemetry_beacon_status_superadmin_success(
     resp = await async_client.get("/api/v1/system/telemetry-beacon/status", headers=headers)
     assert resp.status_code == 200
     data = resp.json()
-    assert data["enabled"] is True
+    assert data["enabled"] is False
     assert data["instance_id"] == "test_instance_hash_64"
     assert data["last_sent_at"] == "2026-11-01T10:00:00Z"
     assert data["last_heartbeat_at"] == "2026-11-01T10:00:00Z"
@@ -104,7 +104,7 @@ async def test_get_telemetry_beacon_status_tenant_admin_success(
     resp = await async_client.get("/api/v1/system/telemetry-beacon/status", headers=headers)
     assert resp.status_code == 200
     data = resp.json()
-    assert data["enabled"] is True
+    assert data["enabled"] is False
     assert len(data["instance_id"]) == 64
 
 

@@ -38,12 +38,28 @@ _PROVISIONING_ROLES = (
     SystemRoleEnum.SUPERADMIN_GLOBAL,
     SystemRoleEnum.TENANT_ADMIN,
     SystemRoleEnum.SUPERVISOR,
-    SystemRoleEnum.NOC_MONITOR,
     SystemRoleEnum.SUPPORT_L1,
     SystemRoleEnum.SUPPORT_L2,
     SystemRoleEnum.SUPPORT_L3,
     SystemRoleEnum.FIELD_TECH,
 )
+
+_PROVISIONING_READ_ROLES = (
+    *_PROVISIONING_ROLES,
+    SystemRoleEnum.NOC_MONITOR,
+    SystemRoleEnum.AUDITOR,
+)
+
+
+def _ensure_provisioning_role(claims: dict[str, Any]) -> None:
+    """Verifica explícitamente en capa de servicio que el rol tenga permiso de mutación de aprovisionamiento."""
+    role = claims.get("rol")
+    allowed = {r.value for r in _PROVISIONING_ROLES}
+    if role not in allowed:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes los privilegios requeridos para modificar servicios de red",
+        )
 
 
 def _validate_idempotency_key(idempotency_key: str) -> uuid.UUID:
@@ -82,7 +98,7 @@ async def _resolve_subscriber_target_ip(device: SubscriberDevice) -> Optional[st
 async def get_network_service_detail(
     service_id: uuid.UUID,
     db: AsyncSession = Depends(get_tenant_db_session),
-    claims: dict[str, Any] = Depends(require_roles(*_PROVISIONING_ROLES)),
+    claims: dict[str, Any] = Depends(require_roles(*_PROVISIONING_READ_ROLES)),
 ) -> SubscriberDevice:
     """Obtiene el detalle y estado técnico actual de un servicio de red."""
     tenant_id = _get_tenant_id(claims)
@@ -108,6 +124,7 @@ async def isolate_network_service(
 
     Idempotente: si el servicio ya se encuentra aislado, responde HTTP 200 con status ALREADY_ISOLATED.
     """
+    _ensure_provisioning_role(claims)
     _validate_idempotency_key(idempotency_key)
     tenant_id = _get_tenant_id(claims)
 
@@ -223,6 +240,7 @@ async def restore_network_service(
 
     Idempotente: si el servicio ya se encuentra activo, responde HTTP 200 con status ALREADY_ACTIVE.
     """
+    _ensure_provisioning_role(claims)
     _validate_idempotency_key(idempotency_key)
     tenant_id = _get_tenant_id(claims)
 
@@ -339,6 +357,7 @@ async def change_network_service_rate_limit(
     claims: dict[str, Any] = Depends(require_roles(*_PROVISIONING_ROLES)),
 ) -> NetworkServiceActionResponse:
     """Modifica en caliente los límites de ancho de banda y QoS en RouterOS sin desconectar la sesión física del abonado."""
+    _ensure_provisioning_role(claims)
     _validate_idempotency_key(idempotency_key)
     tenant_id = _get_tenant_id(claims)
 

@@ -1006,6 +1006,7 @@ async def run_cis_audit(
     bogon_rules_present = False
     bruteforce_defense_present = False
     ipsec_crypto_secure = True
+    ros_routerboot_updated = True
     mgmt_vlan_present = False
     bgp_secure = False
     fasttrack_selective = False
@@ -1240,6 +1241,30 @@ async def run_cis_audit(
         except Exception as exc:
             logger.debug("Sondeo /routing/ospf/interface-template en CIS audit: %s", exc)
 
+        # 20. IPsec Profile Crypto (CIS-1.9)
+        try:
+            ipsec_profs = await client.get("/ip/ipsec/profile")
+            if isinstance(ipsec_profs, list) and ipsec_profs:
+                weak_found = any(
+                    any(w in str(p.get("enc-algorithm", "")).lower() for w in ("des", "3des"))
+                    or "md5" in str(p.get("hash-algorithm", "")).lower()
+                    for p in ipsec_profs
+                )
+                ipsec_crypto_secure = not weak_found
+        except Exception as exc:
+            logger.debug("Sondeo /ip/ipsec/profile en CIS audit: %s", exc)
+
+        # 21. RouterBOOT & RouterOS Sync (CIS-1.6)
+        try:
+            rb_info = await client.get("/system/routerboard")
+            if isinstance(rb_info, dict):
+                cur_fw = str(rb_info.get("current-firmware", "")).strip()
+                upg_fw = str(rb_info.get("upgrade-firmware", "")).strip()
+                if cur_fw and upg_fw and cur_fw != upg_fw:
+                    ros_routerboot_updated = False
+        except Exception as exc:
+            logger.debug("Sondeo /system/routerboard en CIS audit: %s", exc)
+
     except Exception as exc:
         logger.debug("Sondeo en vivo de RouterOS en CIS audit para %s: %s (utilizando heurística)", router_id, exc)
 
@@ -1301,8 +1326,12 @@ async def run_cis_audit(
                     passed = False
                     finding = "Neighbor Discovery activo en interfaces no confinadas."
             elif code == "CIS-1.6":
-                passed = True
-                finding = "RouterOS v7.14+ y RouterBOOT sincronizados con parches oficiales."
+                if code in applied_codes or ros_routerboot_updated:
+                    passed = True
+                    finding = "RouterOS v7.13+ y RouterBOOT sincronizados con parches oficiales."
+                else:
+                    passed = False
+                    finding = "Firmware RouterBOOT desactualizado respecto a la versión de RouterOS instalada."
             elif code == "CIS-1.7":
                 if code in applied_codes or bogon_rules_present:
                     passed = True

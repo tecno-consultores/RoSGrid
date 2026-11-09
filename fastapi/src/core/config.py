@@ -91,8 +91,8 @@ class Settings(BaseSettings):
     ROSGRID_CVE_NVD_SYNC_ENABLED: bool = True
     ROSGRID_CVE_NVD_RESULTS_PER_PAGE: int = 200
 
-    # Telemetría Anónima de Instancias Activas (Spec 55 / Hito 27.18)
-    ROSGRID_TELEMETRY_BEACON_ENABLED: bool = True
+    # Telemetría Anónima de Instancias Activas (Spec 55 / Hito 27.18 — Opt-In por defecto en Spec 113)
+    ROSGRID_TELEMETRY_BEACON_ENABLED: bool = False
     ROSGRID_TELEMETRY_BEACON_URL: str = "https://rosgrid.net/api/telemetry/heartbeat"
     ROSGRID_TELEMETRY_BEACON_INTERVAL_SECONDS: int = 21600
 

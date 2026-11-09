@@ -102,7 +102,7 @@ async def test_get_telemetry_beacon_status_with_and_without_state() -> None:
         patch("src.workers.telemetry_beacon_worker._count_active_routers_safe", return_value=7),
     ):
         status = await get_telemetry_beacon_status()
-        assert status["enabled"] is True
+        assert status["enabled"] is False
         assert len(status["instance_id"]) == 64
         assert status["last_sent_at"] is None
         assert status["last_heartbeat_at"] is None

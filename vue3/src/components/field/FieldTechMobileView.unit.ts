@@ -471,4 +471,23 @@ describe('FieldTechMobileView.vue — Panel Responsive del Técnico de Campo FTT
       setLocale('es');
     }
   });
+
+  it('sincroniza coordenadas de sede central (tenantHqCoordinates) al montar y las pasa a UnifiedNetworkMap (Spec 113)', async () => {
+    const authStore = useAuthStore();
+    authStore.updateTenantFeatures({
+      isp_module_enabled: true,
+      hq_latitude: 10.232345,
+      hq_longitude: -67.879812,
+    });
+    const fetchFeaturesSpy = vi.spyOn(authStore, 'fetchTenantFeatures').mockResolvedValue();
+
+    const wrapper = mount(FieldTechMobileView);
+    await flushPromises();
+
+    expect(fetchFeaturesSpy).toHaveBeenCalled();
+    await wrapper.find('#tab-btn-map').trigger('click');
+    const mapComp = wrapper.findComponent({ name: 'UnifiedNetworkMap' });
+    expect(mapComp.exists()).toBe(true);
+    expect(mapComp.props('centerCoordinates')).toEqual([10.232345, -67.879812]);
+  });
 });

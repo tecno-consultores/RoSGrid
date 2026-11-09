@@ -52,7 +52,7 @@ def mcp_context() -> dict[str, Any]:
         full_name="Hermes Agent Service Account",
         password_hash="fakehash",
         role=SystemRoleEnum.SERVICE_ACCOUNT,
-        allowed_cidr_list=[],
+        allowed_cidr_list=["10.0.0.0/8", "192.168.1.0/24", "127.0.0.1/32"],
         has_all_routers_access=True,
     )
     client = AsyncMock()
@@ -226,7 +226,7 @@ async def test_mcp_tools_list(mcp_context: dict[str, Any]) -> None:
         assert resp.id == 2
         assert resp.result is not None
         tools = resp.result.get("tools", [])
-        assert len(tools) == 20
+        assert len(tools) == 22
         names = {t["name"] for t in tools}
         assert "rosgrid_list_inventory" in names
         assert "rosgrid_get_router_health" in names
@@ -248,6 +248,8 @@ async def test_mcp_tools_list(mcp_context: dict[str, Any]) -> None:
         assert "rosgrid_check_fleet_cves" in names
         assert "rosgrid_get_recent_syslog" in names
         assert "rosgrid_execute_poe_aware_upgrade" in names
+        assert "rosgrid_search_mikrotik_docs" in names
+        assert "rosgrid_get_mikrotik_doc_topic" in names
 
 
 # ============================================================================
@@ -549,8 +551,10 @@ async def test_tool_rosgrid_reconnect_pppoe_client(mcp_context: dict[str, Any]) 
         resp = await api_mcp.mcp_endpoint(mcp_context["request"], body, mcp_context["claims"], db)
         assert resp.result is not None
         content = json.loads(resp.result["content"][0]["text"])
-        assert content["data"]["status"] == "RECONNECTED"
-        client.post.assert_awaited_with("ppp/active/remove", {".id": "*1A"})
+        assert content["data"]["status"] == "AWAITING_APPROVAL"
+        assert "approval_request_id" in content["data"]
+        client.post.assert_not_awaited()
+        db.add.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -849,12 +853,6 @@ async def test_tool_rosgrid_isolate_subscriber(mcp_context: dict[str, Any]) -> N
     fake_redis.incr.return_value = 1
 
     sub_id = uuid.uuid4()
-    mock_resp = MagicMock()
-    mock_resp.model_dump.return_value = {
-        "status": "ISOLATED",
-        "service_id": str(sub_id),
-        "endpoint_identifier": "ONU-TEST-001",
-    }
 
     body = McpJsonRpcRequest(
         id=21,
@@ -870,14 +868,15 @@ async def test_tool_rosgrid_isolate_subscriber(mcp_context: dict[str, Any]) -> N
     with (
         patch.object(settings, "ROSGRID_MCP_ENABLED", True),
         patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
-        patch("src.api.v1.mcp.isolate_network_service", new_callable=AsyncMock, return_value=mock_resp),
         patch("src.api.v1.mcp.write_audit_log", make_asserting_audit_mock()),
     ):
         resp = await api_mcp.mcp_endpoint(mcp_context["request"], body, mcp_context["claims"], db)
         assert resp.result is not None
         content = json.loads(resp.result["content"][0]["text"])
         assert content["status"] == "OK"
-        assert content["data"]["status"] == "ISOLATED"
+        assert content["data"]["status"] == "AWAITING_APPROVAL"
+        assert content["data"]["service_id"] == str(sub_id)
+        db.add.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -891,12 +890,6 @@ async def test_tool_rosgrid_restore_subscriber(mcp_context: dict[str, Any]) -> N
     fake_redis.incr.return_value = 1
 
     sub_id = uuid.uuid4()
-    mock_resp = MagicMock()
-    mock_resp.model_dump.return_value = {
-        "status": "RESTORED",
-        "service_id": str(sub_id),
-        "endpoint_identifier": "ONU-TEST-001",
-    }
 
     body = McpJsonRpcRequest(
         id=22,
@@ -909,14 +902,15 @@ async def test_tool_rosgrid_restore_subscriber(mcp_context: dict[str, Any]) -> N
     with (
         patch.object(settings, "ROSGRID_MCP_ENABLED", True),
         patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
-        patch("src.api.v1.mcp.restore_network_service", new_callable=AsyncMock, return_value=mock_resp),
         patch("src.api.v1.mcp.write_audit_log", make_asserting_audit_mock()),
     ):
         resp = await api_mcp.mcp_endpoint(mcp_context["request"], body, mcp_context["claims"], db)
         assert resp.result is not None
         content = json.loads(resp.result["content"][0]["text"])
         assert content["status"] == "OK"
-        assert content["data"]["status"] == "RESTORED"
+        assert content["data"]["status"] == "AWAITING_APPROVAL"
+        assert content["data"]["service_id"] == str(sub_id)
+        db.add.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -931,12 +925,6 @@ async def test_tool_rosgrid_change_rate_limit(mcp_context: dict[str, Any]) -> No
 
     sub_id = uuid.uuid4()
     prof_id = uuid.uuid4()
-    mock_resp = MagicMock()
-    mock_resp.model_dump.return_value = {
-        "status": "RATE_LIMIT_UPDATED",
-        "service_id": str(sub_id),
-        "bandwidth_profile_id": str(prof_id),
-    }
 
     # Test standard name
     body = McpJsonRpcRequest(
@@ -953,14 +941,13 @@ async def test_tool_rosgrid_change_rate_limit(mcp_context: dict[str, Any]) -> No
     with (
         patch.object(settings, "ROSGRID_MCP_ENABLED", True),
         patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
-        patch("src.api.v1.mcp.change_network_service_rate_limit", new_callable=AsyncMock, return_value=mock_resp),
         patch("src.api.v1.mcp.write_audit_log", make_asserting_audit_mock()),
     ):
         resp = await api_mcp.mcp_endpoint(mcp_context["request"], body, mcp_context["claims"], db)
         assert resp.result is not None
         content = json.loads(resp.result["content"][0]["text"])
         assert content["status"] == "OK"
-        assert content["data"]["status"] == "RATE_LIMIT_UPDATED"
+        assert content["data"]["status"] == "AWAITING_APPROVAL"
 
     # Test alias name
     body_alias = McpJsonRpcRequest(
@@ -977,13 +964,13 @@ async def test_tool_rosgrid_change_rate_limit(mcp_context: dict[str, Any]) -> No
     with (
         patch.object(settings, "ROSGRID_MCP_ENABLED", True),
         patch("src.api.v1.mcp.get_redis_client", return_value=fake_redis),
-        patch("src.api.v1.mcp.change_network_service_rate_limit", new_callable=AsyncMock, return_value=mock_resp),
         patch("src.api.v1.mcp.write_audit_log", make_asserting_audit_mock()),
     ):
         resp_alias = await api_mcp.mcp_endpoint(mcp_context["request"], body_alias, mcp_context["claims"], db)
         assert resp_alias.result is not None
         content_alias = json.loads(resp_alias.result["content"][0]["text"])
         assert content_alias["status"] == "OK"
+        assert content_alias["data"]["status"] == "AWAITING_APPROVAL"
 
 
 @pytest.mark.asyncio
@@ -1208,3 +1195,274 @@ def test_load_skill_markdown_fallback() -> None:
         text = api_mcp._load_skill_markdown()
         assert "rosgrid-noc-operator" in text
         assert "Consulta https://github.com/tecno-consultores/RoSGrid" in text
+
+
+# ============================================================================
+# 5. SUITE DE REGRESIÓN AUDITORÍA EXTERNA MCP ZERO-TRUST (SPEC 113)
+# ============================================================================
+
+
+@pytest.mark.asyncio
+async def test_mcp_all_mutation_tools_require_maker_checker_approval(mcp_context: dict[str, Any]) -> None:
+    """Test 1 Auditoría: Toda tool en MCP_MUTATION_TOOLS produce ApprovalRequest (AWAITING_APPROVAL) sin tocar el router."""
+    t_id = mcp_context["t_id"]
+    u_id = mcp_context["u_id"]
+    r_id = mcp_context["r_id"]
+    claims = mcp_context["claims"]
+
+    client = mcp_context["client"]
+    client.get.return_value = [{"name": "pppoe_usr_1", ".id": "*10"}]
+    client.post.reset_mock()
+    client.patch.reset_mock()
+    client.put.reset_mock()
+    client.delete.reset_mock()
+
+    sample_args: dict[str, dict[str, Any]] = {
+        "rosgrid_reconnect_pppoe_client": {
+            "router_id": str(r_id),
+            "pppoe_username": "pppoe_usr_1",
+            "reason": "Audit test",
+        },
+        "rosgrid_propose_network_change": {
+            "router_id": str(r_id),
+            "category": "FIREWALL_INPUT_OR_SERVICE_PORT_CHANGE",
+            "ros_path": "/ip/firewall/filter",
+            "http_method": "POST",
+            "payload": {"chain": "input", "action": "drop"},
+            "justification": "Audit test",
+        },
+        "rosgrid_isolate_subscriber": {
+            "subscriber_device_id": str(uuid.uuid4()),
+            "reason": "Audit isolation",
+        },
+        "rosgrid_restore_subscriber": {
+            "subscriber_device_id": str(uuid.uuid4()),
+        },
+        "rosgrid_change_rate_limit": {
+            "subscriber_device_id": str(uuid.uuid4()),
+            "bandwidth_profile_id": str(uuid.uuid4()),
+        },
+        "rosgrid_change_subscriber_rate_limit": {
+            "subscriber_device_id": str(uuid.uuid4()),
+            "bandwidth_profile_id": str(uuid.uuid4()),
+        },
+        "rosgrid_execute_poe_aware_upgrade": {
+            "router_ids": [str(r_id)],
+            "poe_aware": True,
+        },
+    }
+
+    with (
+        patch("src.api.v1.mcp.get_router_and_client", return_value=(mcp_context["router"], client)),
+        patch("src.api.v1.mcp._resolve_upgrade_stages", AsyncMock(return_value=[[r_id]])),
+    ):
+        for tool_name in api_mcp.MCP_MUTATION_TOOLS:
+            db = AsyncMock()
+            handler = api_mcp.TOOL_HANDLERS_MAP[tool_name]
+            res = await handler(db, t_id, u_id, claims, sample_args[tool_name])
+            assert res["status"] == "AWAITING_APPROVAL", f"{tool_name} no devolvió AWAITING_APPROVAL"
+            assert "approval_request_id" in res
+            assert res["safe_mode_timeout_seconds"] == 60
+            db.add.assert_called_once()
+            db.flush.assert_awaited_once()
+
+    # Ninguna llamada de escritura llegó al cliente RouterOS
+    client.post.assert_not_awaited()
+    client.patch.assert_not_awaited()
+    client.put.assert_not_awaited()
+    client.delete.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_service_layer_rbac_prevents_depends_bypass_and_noc_monitor_write() -> None:
+    """Test 2 Auditoría: Funciones de servicio validan rol explícitamente sin depender de Depends(...) de FastAPI."""
+    from src.api.v1.bulk_and_updates import _process_upgrade_stages
+    from src.api.v1.network_services import (
+        change_network_service_rate_limit,
+        isolate_network_service,
+        restore_network_service,
+    )
+    from src.schemas.bulk_and_updates import RosUpdateExecuteRequest
+    from src.schemas.network_services import ChangeRateLimitRequest
+
+    db = AsyncMock()
+    s_id = uuid.uuid4()
+    idem = str(uuid.uuid4())
+    t_id = uuid.uuid4()
+    u_id = uuid.uuid4()
+
+    for forbidden_role in (SystemRoleEnum.SERVICE_ACCOUNT.value, SystemRoleEnum.NOC_MONITOR.value):
+        bad_claims = {"tid": str(t_id), "sub": str(u_id), "rol": forbidden_role}
+
+        with pytest.raises(HTTPException) as exc1:
+            await isolate_network_service(s_id, idem, db, bad_claims)
+        assert exc1.value.status_code == 403
+
+        with pytest.raises(HTTPException) as exc2:
+            await restore_network_service(s_id, idem, db, bad_claims)
+        assert exc2.value.status_code == 403
+
+        with pytest.raises(HTTPException) as exc3:
+            await change_network_service_rate_limit(
+                s_id, ChangeRateLimitRequest(bandwidth_profile_id=uuid.uuid4()), idem, db, bad_claims
+            )
+        assert exc3.value.status_code == 403
+
+        with pytest.raises(HTTPException) as exc4:
+            await _process_upgrade_stages(
+                [[uuid.uuid4()]],
+                RosUpdateExecuteRequest(router_ids=[uuid.uuid4()]),
+                bad_claims,
+                db,
+                t_id,
+                u_id,
+            )
+        assert exc4.value.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_mcp_strict_service_account_only_and_mandatory_cidr(mcp_context: dict[str, Any]) -> None:
+    """Test 3 Auditoría: Solo SERVICE_ACCOUNT puede usar /api/v1/mcp y allowed_cidr_list no puede estar vacía."""
+    body = McpJsonRpcRequest(method="tools/list")
+    db = AsyncMock()
+
+    # 1. TENANT_ADMIN y SUPERADMIN_GLOBAL son rechazados con 403 en /api/v1/mcp
+    for human_role in (SystemRoleEnum.TENANT_ADMIN.value, SystemRoleEnum.SUPERADMIN_GLOBAL.value):
+        claims = dict(mcp_context["claims"])
+        claims["rol"] = human_role
+        with patch.object(settings, "ROSGRID_MCP_ENABLED", True):
+            with pytest.raises(HTTPException) as exc_role:
+                await api_mcp.mcp_endpoint(mcp_context["request"], body, claims, db)
+            assert exc_role.value.status_code == 403
+
+    # 2. SERVICE_ACCOUNT con allowed_cidr_list vacía ([]) es rechazado con 403
+    user_no_cidr = mcp_context["user"]
+    user_no_cidr.allowed_cidr_list = []
+    res_mock = MagicMock()
+    res_mock.scalar_one_or_none.return_value = user_no_cidr
+    db.execute.return_value = res_mock
+
+    with patch.object(settings, "ROSGRID_MCP_ENABLED", True):
+        with pytest.raises(HTTPException) as exc_cidr:
+            await api_mcp.mcp_endpoint(mcp_context["request"], body, mcp_context["claims"], db)
+        assert exc_cidr.value.status_code == 403
+        assert "allowed_cidr_list" in exc_cidr.value.detail
+
+
+@pytest.mark.asyncio
+async def test_tools_21_and_22_mikrotik_docs_grounding(mcp_context: dict[str, Any]) -> None:
+    """Verifica las herramientas #21 (rosgrid_search_mikrotik_docs) y #22 (rosgrid_get_mikrotik_doc_topic)."""
+    db = AsyncMock()
+    t_id = mcp_context["t_id"]
+    u_id = mcp_context["u_id"]
+    claims = mcp_context["claims"]
+
+    # Tool 21: búsqueda exitosa y validación de query vacío
+    with pytest.raises(HTTPException) as exc_empty:
+        await api_mcp._handle_search_mikrotik_docs(db, t_id, u_id, claims, {"query": "   "})
+    assert exc_empty.value.status_code == 400
+
+    res_search = await api_mcp._handle_search_mikrotik_docs(
+        db, t_id, u_id, claims, {"query": "bgp connection", "max_results": 3}
+    )
+    assert res_search["total_matches"] >= 1
+    assert any("BGP" in r["title"] for r in res_search["results"])
+
+    # Tool 22: lectura de tópico oficial y bloqueo anti-SSRF
+    res_topic = await api_mcp._handle_get_mikrotik_doc_topic(
+        db,
+        t_id,
+        u_id,
+        claims,
+        {"doc_path_or_url": "https://manual.mikrotik.com/docs/cli-reference/rest-api.md", "max_characters": 500},
+    )
+    assert res_topic["path"] == "/docs/cli-reference/rest-api.md"
+    assert "RouterOS v7" in res_topic["content_markdown"]
+
+    with pytest.raises(HTTPException) as exc_ssrf:
+        await api_mcp._handle_get_mikrotik_doc_topic(
+            db, t_id, u_id, claims, {"doc_path_or_url": "http://169.254.169.254/latest/meta-data"}
+        )
+    assert exc_ssrf.value.status_code == 400
+
+    with pytest.raises(HTTPException) as exc_traversal:
+        await api_mcp._handle_get_mikrotik_doc_topic(
+            db, t_id, u_id, claims, {"doc_path_or_url": "/docs/../../etc/passwd"}
+        )
+    assert exc_traversal.value.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_approvals_execute_mcp_deferred_tools() -> None:
+    """Verifica que al aprobar una solicitud MCP en approvals.py se ejecute la acción diferida con el rol del Checker."""
+    from src.api.v1.approvals import _execute_mcp_deferred_tool
+    from src.models.operations import ApprovalRequest, ApprovalStatusEnum
+
+    db = AsyncMock()
+    t_id = uuid.uuid4()
+    checker_id = uuid.uuid4()
+    sub_id = uuid.uuid4()
+    prof_id = uuid.uuid4()
+    r_id = uuid.uuid4()
+    checker_claims = {"tid": str(t_id), "sub": str(checker_id), "rol": SystemRoleEnum.SUPERVISOR.value}
+
+    mock_action_resp = MagicMock()
+    mock_action_resp.model_dump.return_value = {"status": "EXECUTED", "service_id": str(sub_id)}
+
+    for tool_name in ("rosgrid_isolate_subscriber", "rosgrid_restore_subscriber", "rosgrid_change_rate_limit"):
+        app_req = ApprovalRequest(
+            id=uuid.uuid4(),
+            tenant_id=t_id,
+            action_type=CriticalActionTypeEnum.FIREWALL_INPUT_OR_SERVICE_PORT_CHANGE,
+            status=ApprovalStatusEnum.PENDING,
+            summary="Test",
+            requester_justification="Test",
+            ros_rest_method="POST",
+            ros_rest_path="/queue/simple",
+            request_payload={
+                "mcp_tool": tool_name,
+                "subscriber_device_id": str(sub_id),
+                "bandwidth_profile_id": str(prof_id),
+            },
+            requested_by=uuid.uuid4(),
+        )
+        with (
+            patch("src.api.v1.network_services.isolate_network_service", AsyncMock(return_value=mock_action_resp)),
+            patch("src.api.v1.network_services.restore_network_service", AsyncMock(return_value=mock_action_resp)),
+            patch(
+                "src.api.v1.network_services.change_network_service_rate_limit",
+                AsyncMock(return_value=mock_action_resp),
+            ),
+        ):
+            out = await _execute_mcp_deferred_tool(app_req, checker_claims, db, t_id, checker_id)
+            assert out is not None
+            assert out["status"] == "EXECUTED"
+
+    app_upg = ApprovalRequest(
+        id=uuid.uuid4(),
+        tenant_id=t_id,
+        action_type=CriticalActionTypeEnum.BULK_MULTI_ROUTER_EXECUTION,
+        status=ApprovalStatusEnum.PENDING,
+        summary="Upgrade",
+        requester_justification="Upgrade",
+        ros_rest_method="POST",
+        ros_rest_path="/system/package/update/install",
+        request_payload={
+            "mcp_tool": "rosgrid_execute_poe_aware_upgrade",
+            "router_ids": [str(r_id)],
+            "poe_aware": True,
+        },
+        requested_by=uuid.uuid4(),
+    )
+    with (
+        patch("src.api.v1.bulk_and_updates._resolve_upgrade_stages", AsyncMock(return_value=[[r_id]])),
+        patch(
+            "src.api.v1.bulk_and_updates._process_upgrade_stages",
+            AsyncMock(return_value=([{"router_id": str(r_id), "status": "UPGRADE_TRIGGERED"}], False)),
+        ),
+    ):
+        out_upg = await _execute_mcp_deferred_tool(app_upg, checker_claims, db, t_id, checker_id)
+        assert out_upg is not None
+        assert out_upg["status"] == "COMPLETED"
+        assert out_upg["processed_count"] == 1
+

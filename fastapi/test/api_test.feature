@@ -1694,6 +1694,16 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     And match response.version == '1.0.0'
     And match response.content contains 'rosgrid-noc-operator'
 
+  # ============================================================================
+  # SPEC 113: ENDURECIMIENTO MCP ZERO-TRUST (22 TOOLS, MAKER-CHECKER 6 TOOLS, CIDR)
+  # ============================================================================
+  Scenario: 180. Proteccion de endpoint MCP Zero-Trust exigiendo autenticacion Bearer previa (Spec 113)
+    Given path '/api/v1/mcp'
+    And request { jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} }
+    When method post
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
 
 
 

@@ -38,8 +38,8 @@
     installation_type: 'POSTE',
     physical_location: '',
     input_power_dbm: -15.5,
-    latitude: 10.4806,
-    longitude: -66.9036,
+    latitude: authStore.tenantHqCoordinates[0],
+    longitude: authStore.tenantHqCoordinates[1],
     notes: '',
   });
 
@@ -56,8 +56,8 @@
     onu_mode: 'ROUTER',
     rx_optical_power_dbm: -19.2,
     drop_cable_meters: 65,
-    latitude: 10.4806,
-    longitude: -66.9036,
+    latitude: authStore.tenantHqCoordinates[0],
+    longitude: authStore.tenantHqCoordinates[1],
   });
 
   // Formulario 3: Diagnósticos y Certificación
@@ -92,6 +92,16 @@
 
   // Inicialización de datos
   onMounted(async () => {
+    await authStore.fetchTenantFeatures();
+    const [hqLat, hqLng] = authStore.tenantHqCoordinates;
+    if (napForm.value.latitude === 10.4806 && napForm.value.longitude === -66.9036) {
+      napForm.value.latitude = hqLat;
+      napForm.value.longitude = hqLng;
+    }
+    if (customerForm.value.latitude === 10.4806 && customerForm.value.longitude === -66.9036) {
+      customerForm.value.latitude = hqLat;
+      customerForm.value.longitude = hqLng;
+    }
     if (!isIspEnabled.value) return;
     await Promise.all([
       inventoryStore.fetchRouters(),
@@ -1292,6 +1302,7 @@
             <UnifiedNetworkMap
               mode="subscribers"
               :allow-webfig="false"
+              :center-coordinates="authStore.tenantHqCoordinates"
               :routers="inventoryStore.routers"
               :optical-boxes="fieldStore.opticalBoxes"
               :subscribers="fieldStore.recentInstallations"

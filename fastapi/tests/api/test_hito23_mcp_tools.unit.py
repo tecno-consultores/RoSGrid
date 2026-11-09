@@ -151,19 +151,14 @@ async def test_handle_execute_poe_aware_upgrade(mcp_context):
     r_id = mcp_context["router_id"]
     db = AsyncMock()
 
-    with (
-        patch("src.api.v1.mcp._resolve_upgrade_stages", AsyncMock(return_value=[[r_id]])),
-        patch(
-            "src.api.v1.mcp._process_upgrade_stages",
-            AsyncMock(return_value=([{"router_id": str(r_id), "status": "UPGRADE_TRIGGERED"}], False)),
-        ),
-    ):
+    with patch("src.api.v1.mcp._resolve_upgrade_stages", AsyncMock(return_value=[[r_id]])):
         res = await api_mcp._handle_execute_poe_aware_upgrade(
             db, t_id, mcp_context["user_id"], mcp_context["claims"], {"router_ids": [str(r_id)], "poe_aware": True}
         )
-        assert res["status"] == "COMPLETED"
-        assert res["safety_stop_triggered"] is False
-        assert res["processed_count"] == 1
+        assert res["status"] == "AWAITING_APPROVAL"
+        assert "approval_request_id" in res
+        assert res["target_routers_count"] == 1
+        db.add.assert_called_once()
 
 
 @pytest.mark.asyncio

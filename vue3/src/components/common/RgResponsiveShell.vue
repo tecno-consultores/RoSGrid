@@ -132,6 +132,7 @@
   }
 
   onMounted(() => {
+    void authStore.fetchTenantFeatures();
     heartbeatStore.startMonitoring();
     nocStore.connectEventsWebSocket();
     headerClockTimer = setInterval(updateHeaderClock, 1000);

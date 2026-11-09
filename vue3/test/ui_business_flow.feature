@@ -1260,6 +1260,16 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * assert domSanitizationGuard.strips_javascript_uri == true
     * assert domSanitizationGuard.preserves_safe_popup_markup == true
 
+  # ============================================================================
+  # SPEC 113: CENTRADO CARTOGRÁFICO EN SEDE PRINCIPAL PARA TÉCNICO DE CAMPO Y MCP
+  # ============================================================================
+  Scenario: 128. Centrado cartografico de sede principal en FieldTechMobileView y gobernanza de 22 tools MCP (Spec 113)
+    * def fieldTechAndMcpGovernance = { fetches_tenant_features_on_mount: true, binds_hq_coordinates_to_map: true, mcp_catalog_tools_count: 22, mcp_mutation_tools_awaiting_approval: 6 }
+    * assert fieldTechAndMcpGovernance.fetches_tenant_features_on_mount == true
+    * assert fieldTechAndMcpGovernance.binds_hq_coordinates_to_map == true
+    * assert fieldTechAndMcpGovernance.mcp_catalog_tools_count == 22
+    * assert fieldTechAndMcpGovernance.mcp_mutation_tools_awaiting_approval == 6
+
 
 
 

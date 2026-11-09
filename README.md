@@ -120,9 +120,9 @@ flowchart TB
 
 ### 5. Servidor MCP Protegido para Agentes de IA (`Hermes Agent`, `Claude Desktop / Code`)
 
-- **Model Context Protocol (JSON-RPC 2.0 Streamable HTTP):** Endpoint `POST /api/v1/mcp` protegido por lista blanca CIDR, tokens de cuenta `SERVICE_ACCOUNT` y límite de tasa en KeyDB (`30 req/min`).
+- **Model Context Protocol (JSON-RPC 2.0 Streamable HTTP):** Endpoint `POST /api/v1/mcp` protegido de forma exclusiva para cuentas `SERVICE_ACCOUNT` con lista blanca `allowed_cidr_list` obligatoriamente no vacía y límite de tasa en KeyDB (`30 req/min`).
 - **Catálogo de 22 Tools Semánticas:** Inventario (`rosgrid_list_inventory`), salud física (`rosgrid_get_router_health`), óptica SFP DDM (`rosgrid_check_sfp_optical_ddm`), enrutamiento BGP/OSPF (`rosgrid_inspect_routing_bgp_ospf`), diagnóstico en vivo (`rosgrid_run_live_diagnostic`), comparador Diff Git `.rsc` (`rosgrid_compare_config_diff`), reconexión PPPoE (`rosgrid_reconnect_pppoe_client`), propuesta de mutaciones de red (`rosgrid_propose_network_change`), diagnóstico 360° (`rosgrid_run_360_diagnostics`), aislamiento técnico (`rosgrid_isolate_subscriber`), restauración técnica (`rosgrid_restore_subscriber`), cambio de rate-limit (`rosgrid_change_rate_limit`), consultas BGP Looking Glass (`rosgrid_query_bgp_looking_glass`), detección de desviación de configuración (`rosgrid_check_config_drift`), auditoría CIS Benchmark (`rosgrid_run_cis_audit`), detección de caídas masivas (`rosgrid_detect_mass_outage`), topología L2 física (`rosgrid_get_l2_topology`), matriz local de CVEs (`rosgrid_check_fleet_cves`), terminal Syslog efímero (`rosgrid_get_recent_syslog`), actualizaciones PoE-aware con Safety Stop (`rosgrid_execute_poe_aware_upgrade`), y **Grounding Oficial de Documentación MikroTik** mediante búsqueda en índice oficial (`rosgrid_search_mikrotik_docs`) y lectura de tópicos Markdown (`rosgrid_get_mikrotik_doc_topic`) sobre el estándar abierto `[https://manual.mikrotik.com/llms.txt](https://manual.mikrotik.com/llms.txt)`.
-- **NOC Autónomo 24/7 y Gobierno Maker-Checker:** Las propuestas de mutación generadas por agentes IA se retienen automáticamente como `202 Accepted` (`AWAITING_APPROVAL`) para autorización humana previa, protegidas por *Safe Mode (60s)* y registradas en la bitácora forense WORM (`MCP_AI_TOOL_CALL`). Consulta `docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md`.
+- **NOC Autónomo 24/7 y Gobierno Maker-Checker:** Las 6 herramientas de mutación Nivel 3 generadas por agentes IA (`rosgrid_reconnect_pppoe_client`, `rosgrid_propose_network_change`, `rosgrid_isolate_subscriber`, `rosgrid_restore_subscriber`, `rosgrid_change_rate_limit` y `rosgrid_execute_poe_aware_upgrade`) se retienen automáticamente como `AWAITING_APPROVAL` (`ApprovalRequest`) sin tocar el router hasta recibir autorización humana previa (`Checker`), protegidas por *Safe Mode (60s)* y registradas en la bitácora forense WORM (`MCP_AI_TOOL_CALL`). Consulta `docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md`.
 
 ### 6. Gobernanza Modular (Feature Flags): Operación Dual ISP y Corporativa
 
@@ -139,7 +139,7 @@ Una sola instalación de RoSGrid se adapta instantáneamente a las necesidades d
 - **Modo Redes Corporativas / Enterprise (Banca, Retail, Universidades, Hospitales):**
   - **Detección de Desviación de Configuración (*Config Drift*):** Comparación continua contra la Plantilla Maestra (*Golden Baseline*) con visor Git Diff y reversión en 1-clic (*Auto-Revert*) bajo Safe Mode.
   - **Orquestador SD-WAN WireGuard Hub & Spoke:** Despliegue automático de túneles WireGuard inter-sucursal con enrutamiento dinámico OSPF y failover multi-WAN recursivo en $< 1\text{s}$.
-  - **Auditoría de Seguridad CIS Benchmark:** Evaluación de 10 directivas críticas de RouterOS, cálculo de Security Score (0 a 100) y botón de auto-endurecimiento (*Auto-Hardening*).
+  - **Auditoría de Seguridad CIS Benchmark:** Evaluación en vivo de las 28 directivas críticas de RouterOS (`12 Base + 8 ISP + 8 CORP`), cálculo de Security Score (0 a 100) y botón de auto-endurecimiento (*Auto-Hardening*).
   - **Detección de Rogue DHCP & Seguridad LAN:** Detección de servidores DHCP no autorizados mediante DHCP Snooping en switches/bridges y aislamiento de puertos comprometidos.
   - **Monitor de Cumplimiento de SLA:** Sondas continuas hacia gateways de carriers con generación de reportes mensuales de disponibilidad y latencia P95/P99 para reclamos contractuales.
   - **Gestión Centralizada WiFi (CAPsMAN / WiFiWave2):** Perfiles de radio para SSIDs Corporativo (WPA3-Enterprise 802.1X), Invitados (aislado) y dispositivos IoT.
@@ -225,7 +225,7 @@ Para una referencia exhaustiva de operación, seguridad y despliegue, consulta l
 | **[`docs/MANUAL_ADMINISTRADOR_E_INSTALADOR.md`](./docs/MANUAL_ADMINISTRADOR_E_INSTALADOR.md)** | **Manual Maestro de Administrador e Instalador (PDF-Ready + Mermaid):** Requisitos, despliegue Turnkey/Docker, `.env`, preparación MikroTik v7, gobierno Multi-Tenant (19 Feature Flags), 11 roles RBAC, Bóveda 2FA, MCP y mantenimiento. |
 | **[`docs/MANUAL_USUARIO_Y_OPERADOR_NOC.md`](./docs/MANUAL_USUARIO_Y_OPERADOR_NOC.md)** | **Manual Maestro de Usuario y Operador NOC (PDF-Ready + Mermaid):** Guía paso a paso de todas las pantallas WebFig v7 (Bridge, WireGuard, IP/DHCP/Pools/DNS, IPv6, Firewall, Routing, PPPoE), Safe Mode 60s, Maker-Checker, IPAM, Mapa Bimodal, Ventanas de Mantenimiento y Auditoría WORM. |
 | **[`docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md`](./docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md)** | Variables `.env`, entropía criptográfica, arquitectura **KeyDB Multi-Hilo por defecto** vs. perfil **DragonflyDB**, Compose y `./scripts/build.sh`. |
-| **[`docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md`](./docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md)** | Comandos CLI RouterOS v7.1+, política obligatoria `rest-api` (v7.13+), certificados TLS para Pinning TOFU (`SHA-256`), `/ip/service/www-ssl` y Safe Mode. |
+| **[`docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md`](./docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md)** | Comandos CLI RouterOS v7.13+, política obligatoria `rest-api`, certificados TLS para Pinning TOFU (`SHA-256`), `/ip/service/www-ssl` y Safe Mode. |
 | **[`docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md`](./docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md)** | Aislamiento RLS en PostgreSQL 17, matriz de 11 roles RBAC, permisos por router, Bóveda 2FA (30s), Kill-Switch y Auto-Registro con Maker-Checker. |
 | **[`docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md`](./docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md)** | Consola WebFig L1/L2, pestañas `<KeepAlive :max="5">`, gráficas Canvas 2D, Maker-Checker, comparador Git Diff `.rsc`, Wallboard y Plantillas Golden Configs masivas. |
 | **[`docs/05_AUDITORIA_FORENSE_Y_ARQUITURA.md`](./docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md)** | Perfil Auditor, cadena WORM SHA-256 e índice BRIN, ADR sobre la exclusión de terminal CLI/SSH y diagramas Mermaid AST. |
@@ -254,7 +254,7 @@ flowchart LR
 
 - **Servidor Anfitrión:** Servidor Linux de 64-bit (Ubuntu 24.04/26.04 LTS o Debian 12+) con **Docker Engine 24.0+** y **Docker Compose v2.20+**.
 - **Recursos Mínimos:** 2 vCPU y **4 GB de RAM** (gracias a **KeyDB Multi-Hilo**, que consume apenas ~35 MB en reposo).
-- **Routers MikroTik:** Equipos con **RouterOS v7.1 o superior** (v7.13+ con política `rest-api`) y alcance de red por el puerto HTTPS `443`.
+- **Routers MikroTik:** Equipos con **RouterOS v7.13 o superior** (requerido para la política explícita `rest-api`) y alcance de red por el puerto HTTPS `443`.
 
 ---
 

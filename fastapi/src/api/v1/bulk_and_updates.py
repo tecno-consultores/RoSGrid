@@ -79,6 +79,17 @@ _ADMIN_OPERATIONS_ROLES = (
 )
 
 
+def _ensure_admin_operations_role(claims: dict[str, Any]) -> None:
+    """Valida explícitamente en capa de servicio que el rol pertenezca a _ADMIN_OPERATIONS_ROLES."""
+    role = claims.get("rol")
+    allowed = {r.value for r in _ADMIN_OPERATIONS_ROLES}
+    if role not in allowed:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes los privilegios requeridos para ejecutar actualizaciones masivas de firmware",
+        )
+
+
 def _render_template_steps(steps: list[dict[str, Any]], vars_dict: dict[str, Any]) -> list[dict[str, Any]]:
     rendered: list[dict[str, Any]] = []
     raw_str = json.dumps(steps)
@@ -2215,6 +2226,7 @@ async def _process_upgrade_stages(
     user_id: uuid.UUID,
 ) -> tuple[list[dict[str, Any]], bool]:
     """Itera etapas aplicando Safety Stop."""
+    _ensure_admin_operations_role(claims)
     results: list[dict[str, Any]] = []
     failed_count = 0
     total_processed = 0
