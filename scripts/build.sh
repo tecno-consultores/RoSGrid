@@ -11,7 +11,7 @@ if [[ "${EUID}" -eq 0 ]]; then
 	exit 1
 fi
 
-VERSION="1.0.0"
+VERSION="1.1.0"
 SKIP_VALIDATION=false
 
 # Procesar argumentos

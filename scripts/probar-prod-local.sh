@@ -106,6 +106,11 @@ while [ $# -gt 0 ]; do
 done
 
 export ROSGRID_HTTP_PORT="$UI_PORT"
+export ROSGRID_ENV="${ROSGRID_ENV:-production}"
+export ROSGRID_MCP_ENABLED="${ROSGRID_MCP_ENABLED:-true}"
+export ROSGRID_MASTER_VAULT_KEY="${ROSGRID_MASTER_VAULT_KEY:-$(openssl rand -base64 32)}"
+export ROSGRID_JWT_SECRET_KEY="${ROSGRID_JWT_SECRET_KEY:-$(openssl rand -hex 32)}"
+export ROSGRID_CSRF_HMAC_SECRET="${ROSGRID_CSRF_HMAC_SECRET:-$(openssl rand -hex 32)}"
 
 echo "=============================================================================="
 echo "      🚀 Pipeline de Pruebas Locales de Producción RoSGrid (QA 11X)         "
@@ -294,7 +299,7 @@ else
 
     # Ejecución de la Suite de 28 Contratos Front-Back (validar_comunicacion_front_back.py)
     echo "Ejecutando suite automatizada de 28 contratos Front-Back (validar_comunicacion_front_back.py)..."
-    docker exec rosgrid_api_local python3 /app/scripts/validar_comunicacion_front_back.py
+    docker exec -e ROSGRID_ADMIN_PASSWORD="${LOCAL_ADMIN_PASS}" rosgrid_api_local python3 /app/scripts/validar_comunicacion_front_back.py
     echo "✔ Suite de integración Front-Back superada al 100% (28/28 contratos validados)."
 
     # Inspección de logs de API y Worker en busca de excepciones no controladas

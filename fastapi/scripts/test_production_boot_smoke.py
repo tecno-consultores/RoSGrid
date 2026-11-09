@@ -70,9 +70,15 @@ async def verificar_instancia_produccion() -> None:
 
     from fastapi import Response
 
+    from src.core.config import settings
     from src.main import create_app, health_check
 
-    app = create_app()
+    prev_env = settings.ROSGRID_ENV
+    settings.ROSGRID_ENV = "production"
+    try:
+        app = create_app()
+    finally:
+        settings.ROSGRID_ENV = prev_env
 
     # Verificar ocultamiento estricto de documentación en producción (Hardening Trivy / Swagger)
     assert app.docs_url is None, "docs_url debe ser None en producción"
