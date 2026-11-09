@@ -36,6 +36,7 @@ jobs:
 
       - name: 🛡️ Verificar scripts de gobernanza 11X
         run: |
+          ./scripts/actualizar-grafos-graphify.sh
           docker run --rm --entrypoint sh \
             -v "${GITHUB_WORKSPACE}:/workspace:ro" \
             -w /workspace \
