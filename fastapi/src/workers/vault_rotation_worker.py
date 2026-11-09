@@ -79,8 +79,14 @@ async def _rotate_single_vault(
 
 async def run_vault_rotation_cycle() -> None:
     """Busca credenciales que vencieron su intervalo de rotación y las renueva."""
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from src.db.session import set_tenant_context
+
     now_utc = datetime.now(UTC)
     async with async_session_maker() as session:
+        if type(session) is AsyncSession:
+            await set_tenant_context(session, None, is_superadmin=True)
         stmt = (
             select(RouterCredentialsVault)
             .options(selectinload(RouterCredentialsVault.router))

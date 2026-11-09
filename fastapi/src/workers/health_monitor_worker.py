@@ -163,8 +163,14 @@ async def _evaluate_single_router(session: Any, redis: Any, r: Router) -> None:
 
 async def run_health_monitor_cycle() -> None:
     """Ejecuta una ronda de sondeo de salud sobre todos los routers en producción."""
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from src.db.session import set_tenant_context
+
     redis = get_redis_client()
     async with async_session_maker() as session:
+        if type(session) is AsyncSession:
+            await set_tenant_context(session, None, is_superadmin=True)
         stmt = (
             select(Router)
             .options(selectinload(Router.vault))

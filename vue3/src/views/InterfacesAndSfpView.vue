@@ -2,6 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  import type { WebFigDynamic } from '@/types';
   import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
   import { useRoute } from 'vue-router';
   import { http } from '@/api/httpClient';
@@ -84,7 +85,7 @@
         `/api/v1/routers/${routerId.value}/webfig/interfaces${query}`,
       );
       const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
-      interfacesList.value = raw.map((item: any) => ({
+      interfacesList.value = raw.map((item: WebFigDynamic) => ({
         ...item,
         id: item.id || item['.id'] || item.name,
         mac_address: item.mac_address || item['mac-address'] || '',
@@ -110,7 +111,7 @@
     }
   }
 
-  const selectedCableTest = ref<any>(null);
+  const selectedCableTest = ref<WebFigDynamic>(null);
   const isCableTestModalOpen = ref(false);
   const isRunningCableTest = ref(false);
 
@@ -118,7 +119,7 @@
     isRunningCableTest.value = true;
     selectedCableTest.value = null;
     try {
-      const res = await http.post<any>(
+      const res = await http.post<WebFigDynamic>(
         `/api/v1/routers/${routerId.value}/webfig/interfaces/ethernet/${encodeURIComponent(interfaceName)}/cable-test`,
       );
       selectedCableTest.value = res.data;
@@ -130,11 +131,11 @@
     }
   }
 
-  const wifiRegistrationList = ref<any[]>([]);
+  const wifiRegistrationList = ref<WebFigDynamic[]>([]);
 
   async function loadWifiRegistrationTable() {
     try {
-      const res = await http.get<any>(
+      const res = await http.get<WebFigDynamic>(
         `/api/v1/routers/${routerId.value}/webfig/interfaces/wifi/registration-table`,
       );
       wifiRegistrationList.value = Array.isArray(res.data) ? res.data : (res.data?.items || []);
@@ -183,8 +184,8 @@
     editIfaceForm.value = {
       name: iface.name,
       mtu: Number(iface.mtu || 1500),
-      vlan_id: Number((iface as any).vlan_id || (iface as any)['vlan-id'] || 10),
-      interface: String((iface as any).interface || ''),
+      vlan_id: Number((iface as WebFigDynamic).vlan_id || (iface as WebFigDynamic)['vlan-id'] || 10),
+      interface: String((iface as WebFigDynamic).interface || ''),
       comment: String(iface.comment || ''),
       disabled: Boolean(iface.disabled),
     };
@@ -221,7 +222,7 @@
       const res = await http.patch(endpoint, payload);
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       statusMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Modificación de interfaz en espera de aprobación en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Modificación de interfaz en espera de aprobación en Maker-Checker.'
         : `Interfaz "${editIfaceForm.value.name}" actualizada exitosamente bajo Safe Mode.`;
       isEditIfaceModalOpen.value = false;
       loadInterfaces(true);
@@ -278,7 +279,7 @@
       );
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       statusMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Solicitud de VLAN en espera de aprobación humana en la bandeja Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Solicitud de VLAN en espera de aprobación humana en la bandeja Maker-Checker.'
         : `Interfaz VLAN "${newVlan.value.name}" (ID ${newVlan.value.vlan_id}) creada exitosamente bajo Safe Mode.`;
       isCreateVlanModalOpen.value = false;
       newVlan.value = {
@@ -314,7 +315,7 @@
       );
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       statusMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Solicitud de eliminación en espera de aprobación humana en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Solicitud de eliminación en espera de aprobación humana en Maker-Checker.'
         : `Interfaz ${label} "${iface.name}" eliminada exitosamente.`;
       loadInterfaces(true);
     } catch (err: unknown) {
@@ -383,7 +384,7 @@
           :class="{ 'btn-subtab--active': activeTab === tab.id }"
           role="tab"
           :aria-selected="activeTab === tab.id"
-          @click="activeTab = tab.id as any"
+          @click="activeTab = tab.id as typeof activeTab"
         >
           {{ tab.label }}
         </button>

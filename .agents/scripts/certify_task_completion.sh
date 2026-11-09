@@ -7,6 +7,17 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+STRICT_MODE=false
+if [[ "${1:-}" == "--strict" ]]; then
+  STRICT_MODE=true
+fi
+
+run_py_in_docker() {
+  docker run --rm --entrypoint python3 \
+    -v "${REPO_ROOT}:/workspace:ro" \
+    -w /workspace \
+    sinfallas/rosgrid-backend:local-test "$@"
+}
 
 echo "══════════════════════════════════════════════════════════════════════"
 echo "   🤖 RoSGrid Agent Certification Gate (Regla Cero & QA 11X)        "
@@ -24,23 +35,23 @@ echo "✔ Cero vulnerabilidades críticas o de alto impacto detectadas."
 
 # 3. Integridad de Diccionarios i18n (Anti-Colisión de Claves JSON)
 echo -e "\n🌐 [3/9] Verificando integridad de diccionarios i18n (anti-colisión de claves)..."
-python3 "${REPO_ROOT}/.agents/scripts/verify_json_no_duplicate_keys.py"
+run_py_in_docker .agents/scripts/verify_json_no_duplicate_keys.py
 echo "✔ Diccionarios i18n validados sin claves duplicadas."
 
 # 4. Invariante de Cero Componentes Vue Huérfanos y Calidad Anti-Silo (3 Fases + 0 Mocks Ciegos)
 echo -e "\n🧩 [4/9] Verificando cobertura de componentes Vue y calidad Anti-Silo de pruebas..."
-python3 "${REPO_ROOT}/.agents/scripts/verify_zero_orphan_vue_components.py"
-python3 "${REPO_ROOT}/.agents/scripts/verify_anti_silo_test_quality.py"
+run_py_in_docker .agents/scripts/verify_zero_orphan_vue_components.py
+run_py_in_docker .agents/scripts/verify_anti_silo_test_quality.py
 echo "✔ Todos los componentes Vue y suites Anti-Silo (0 mocks ciegos / 3 fases temporales) verificados."
 
 # 5. Salud Topológica y Límites de Capas (Graphify AST)
 echo -e "\n🧠 [5/9] Auditando salud topológica y límites de capas arquitectónicas (Graphify AST)..."
-python3 "${REPO_ROOT}/.agents/scripts/verify_topological_health.py"
+run_py_in_docker .agents/scripts/verify_topological_health.py
 echo "✔ Salud topológica y límites de capas certificados (0 acoplamientos indebidos)."
 
 # 6. Invariante de Cero Endpoints de API Huérfanos
 echo -e "\n🔗 [6/9] Verificando paridad de endpoints API e invariante cero huérfanos..."
-python3 "${REPO_ROOT}/.agents/scripts/verify_no_orphan_api_endpoints.py"
+run_py_in_docker .agents/scripts/verify_no_orphan_api_endpoints.py
 echo "✔ Paridad bidireccional API certificada (0 llamadas 404/405)."
 
 # 7. Paridad ORM vs Alembic en Docker
@@ -67,7 +78,7 @@ fi
 
 # 9. Verificación de Sincronización Documental
 echo -e "\n📚 [9/9] Verificando sincronización de documentación y pruebas obligatorias..."
-CODE_CHANGES=$(git diff --name-only HEAD 2>/dev/null | grep -E '^(fastapi/src|vue3/src)' || true)
+CODE_CHANGES=$(git -C "${REPO_ROOT}" diff --name-only HEAD 2>/dev/null | grep -E '^(fastapi/src|vue3/src)' || true)
 
 if [ -n "${CODE_CHANGES}" ]; then
   echo "Se detectaron cambios en código fuente:"
@@ -75,9 +86,10 @@ if [ -n "${CODE_CHANGES}" ]; then
     [ -n "${line}" ] && echo "  - ${line}"
   done <<< "${CODE_CHANGES}"
 
-  TEST_CHANGES=$({ git diff --name-only HEAD 2>/dev/null; git ls-files --others --exclude-standard; } | grep -E '^(fastapi/tests/|vue3/src/.*\.unit\.ts)' | sort -u || true)
+  TEST_CHANGES=$({ git -C "${REPO_ROOT}" diff --name-only HEAD 2>/dev/null; git -C "${REPO_ROOT}" ls-files --others --exclude-standard; } | grep -E '^(fastapi/tests/|vue3/src/.*\.unit\.ts)' | sort -u || true)
   if [ -z "${TEST_CHANGES}" ]; then
     echo "⚠️ ADVERTENCIA: Se modificó código fuente pero NO se detectan pruebas unitarias nuevas o modificadas (fastapi/tests/ o vue3/src/)."
+    [ "${STRICT_MODE}" = true ] && exit 1
   else
     echo "✔ Pruebas unitarias 11X detectadas en paralelo:"
     while IFS= read -r t_line; do
@@ -85,21 +97,23 @@ if [ -n "${CODE_CHANGES}" ]; then
     done <<< "${TEST_CHANGES}"
   fi
 
-  KARATE_CHANGES=$(git diff --name-only HEAD 2>/dev/null | grep -E '^(fastapi/test/.*\.feature|vue3/test/.*\.feature|docs/examples/fastapi/test/|docs/examples/vue3/test/)' || true)
+  KARATE_CHANGES=$(git -C "${REPO_ROOT}" diff --name-only HEAD 2>/dev/null | grep -E '^(fastapi/test/.*\.feature|vue3/test/.*\.feature|docs/examples/fastapi/test/|docs/examples/vue3/test/)' || true)
   if [ -z "${KARATE_CHANGES}" ]; then
     echo "⚠️ ADVERTENCIA: Se modificó código fuente pero NO se detectan escenarios BDD Karate Labs (fastapi/test/ o vue3/test/)."
     echo "Recuerda la Invariante Karate Labs: cada cambio de API o UI DEBE incluir sus escenarios BDD correspondientes."
+    [ "${STRICT_MODE}" = true ] && exit 1
   else
-    echo "✔ Escenarios BDD Karate Labs detectados en paralelo:"
+    echo "✔ Escenarios BDD Karate Labs detectadas en paralelo:"
     while IFS= read -r k_line; do
       [ -n "${k_line}" ] && echo "  - ${k_line}"
     done <<< "${KARATE_CHANGES}"
   fi
 
-  DOC_CHANGES=$(git diff --name-only HEAD 2>/dev/null | grep -E '^(docs/|CHANGELOG\.md|ROADMAP\.md|TESTING\.md|README\.md)' || true)
+  DOC_CHANGES=$(git -C "${REPO_ROOT}" diff --name-only HEAD 2>/dev/null | grep -E '^(docs/|CHANGELOG\.md|ROADMAP\.md|TESTING\.md|README\.md)' || true)
   if [ -z "${DOC_CHANGES}" ]; then
     echo "⚠️ ADVERTENCIA: Se modificó código pero NO se han actualizado docs/, CHANGELOG.md, ROADMAP.md, TESTING.md o README.md."
     echo "Recuerda la Directiva Suprema: la documentación debe sincronizarse con cada cambio."
+    [ "${STRICT_MODE}" = true ] && exit 1
   else
     echo "✔ Documentación actualizada en paralelo:"
     while IFS= read -r doc_line; do
@@ -111,7 +125,7 @@ else
 fi
 
 echo -e "\n🗺️  Verificando consistencia entre ROADMAP.md y .agents/ACTIVE_TASK.md..."
-python3 "${REPO_ROOT}/.agents/scripts/verify_roadmap_consistency.py"
+run_py_in_docker .agents/scripts/verify_roadmap_consistency.py
 
 echo -e "\n══════════════════════════════════════════════════════════════════════"
 echo "   ✅ CERTIFICACIÓN EXITOSA: La tarea cumple con el estándar 11X     "

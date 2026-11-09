@@ -2,6 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  import type { WebFigDynamic } from '@/types';
   import { ref, computed, onMounted, onUnmounted } from 'vue';
   import { http } from '@/api/httpClient';
   import { useAuthStore } from '@/stores/useAuthStore';
@@ -45,11 +46,11 @@
     isLoading.value = true;
     errorMessage.value = '';
     try {
-      const res = await http.get<{ items: any[] } | any[]>(
+      const res = await http.get<{ items?: WebFigDynamic[] } | WebFigDynamic[]>(
         '/api/v1/operations/approvals',
       );
       const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
-      requests.value = raw.map((item: any) => ({
+      requests.value = raw.map((item: WebFigDynamic) => ({
         ...item,
         id: String(item.id),
         requested_by: String(item.requested_by || ''),
@@ -88,7 +89,7 @@
   async function handleApprove(request: ApprovalRequestItem) {
     if (isSelfApproval(request)) return;
     try {
-      const res = await http.post<any>(`/api/v1/operations/approvals/${request.id}/approve`, {
+      const res = await http.post<WebFigDynamic>(`/api/v1/operations/approvals/${request.id}/approve`, {
         review_comment: reviewComment.value || 'Aprobado y ejecutado por Supervisor/Administrador',
       });
       request.status = 'APPROVED';
@@ -101,7 +102,8 @@
         actionMessage.value = '';
       }, 4000);
       await loadApprovals();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value =
         err?.detail ||
         err?.response?.data?.detail ||
@@ -125,7 +127,8 @@
         actionMessage.value = '';
       }, 4000);
       await loadApprovals();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value =
         err?.detail ||
         err?.response?.data?.detail ||

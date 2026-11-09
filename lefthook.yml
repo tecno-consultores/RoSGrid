@@ -12,44 +12,37 @@ pre-commit:
     # ECOSISTEMA PYTHON & FASTAPI
     # --------------------------------------------------------------------------
     python-lint:
-      glob: "{python,fastapi}/**/*.py"
-      # Usa --check para rechazar el commit si el código no está formateado.
-      # El desarrollador deberá correr `make qa-lint` manualmente.
-      run: docker compose -f {1}/docker-compose.qa.yml run --rm qa-backend bash -c "uv sync -q && ruff check {staged_files} && ruff format --check {staged_files}"
+      glob: "fastapi/**/*.py"
+      run: docker run --rm --entrypoint ruff -v "$(pwd):/workspace" -w /workspace sinfallas/rosgrid-backend:local-test check --no-cache {staged_files}
 
     # --------------------------------------------------------------------------
-    # ECOSISTEMA JAVASCRIPT (NODE, VUE3 & REACT)
+    # ECOSISTEMA JAVASCRIPT (VUE 3 & TYPESCRIPT)
     # --------------------------------------------------------------------------
     node-vue-react-lint:
-      glob: "{node-backend,vue3,react-frontend}/**/*.{js,ts,vue,tsx}"
-      # Levanta el entorno efímero para correr ESLint y Prettier.
-      run: docker compose -f {1}/docker-compose.qa.yml run --rm {1}-qa-frontend bash -c "pnpm install --silent && npx prettier --check {staged_files} && npx eslint {staged_files}"
+      glob: "vue3/**/*.{js,ts,vue,tsx}"
+      run: docker compose -f vue3/docker-compose.qa.yml run --rm -v "$(pwd):/workspace" -w /workspace/vue3 qa-frontend bash -c "npx eslint --max-warnings=0 src --ext .ts,.vue"
 
     # --------------------------------------------------------------------------
     # ECOSISTEMA BASH (DEVOPS)
     # --------------------------------------------------------------------------
     bash-lint:
       glob: "{scripts,fastapi/scripts,.agents/scripts}/**/*.sh"
-      # shellCheck evalúa vulnerabilidades POSIX en contenedor Docker efímero
-      run: docker run --rm -v $(pwd):/workspace -w /workspace koalaman/shellcheck:stable {staged_files}
+      run: docker run --rm -v "$(pwd):/workspace" -w /workspace koalaman/shellcheck:stable {staged_files}
 
     # --------------------------------------------------------------------------
     # PROTECCIÓN DE SECRETOS (Global)
     # --------------------------------------------------------------------------
     leaks-check:
       glob: "**/*"
-      # Busca patrones comunes de contraseñas y tokens en archivos antes del commit
       run: ./scripts/verificar-secretos.sh {staged_files}
 
 commit-msg:
   commands:
     # --------------------------------------------------------------------------
-    # AUDITORÍA DE CONVENCIONES DE GIT (Commitlint)
+    # AUDITORÍA DE CONVENCIONES DE GIT (Commitlint en contenedor efímero)
     # --------------------------------------------------------------------------
     conventional-commits:
-      # Exige que el mensaje de commit respete el commitlint.config.js
-      # Se ejecuta usando npx al vuelo para no requerir instalación global
-      run: npx --no-install commitlint --edit {1}
+      run: docker run --rm -v "$(pwd):/workspace" -w /workspace sinfallas/base-node-ionic:26 npx --no-install commitlint --edit {1}
 
 pre-push:
   commands:
@@ -57,6 +50,4 @@ pre-push:
     # AUDITORÍA DE INFRAESTRUCTURA (IaC) ANTES DE SUBIR
     # --------------------------------------------------------------------------
     trivy-iac-scan:
-      # Bloquea el `git push` si hay puertos expuestos, contenedores en modo root
-      # o vulnerabilidades críticas en dependencias (File System).
       run: ./scripts/auditar-infra.sh

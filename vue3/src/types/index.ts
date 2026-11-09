@@ -291,7 +291,7 @@ export interface FirewallRuleItem {
     | 'postrouting'
     | 'srcnat'
     | 'dstnat'
-    | (string & {});
+    | (string & Record<never, never>);
   action: string;
   src_address?: string;
   dst_address?: string;
@@ -310,7 +310,7 @@ export interface BgpSessionItem {
   name: string;
   remote_address: string;
   remote_as: number;
-  state: 'established' | 'connect' | 'active' | 'idle' | (string & {});
+  state: 'established' | 'connect' | 'active' | 'idle' | (string & Record<never, never>);
   uptime: string;
   prefixes_received: number;
   prefixes_sent: number;
@@ -1259,7 +1259,7 @@ export interface NotificationChannelItem {
   channel_type: AlertChannelType;
   is_enabled: boolean;
   subscribed_events: string[];
-  config_summary?: Record<string, any>;
+  config_summary?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -1268,14 +1268,14 @@ export interface NotificationChannelCreateRequest {
   name: string;
   channel_type: AlertChannelType;
   is_enabled: boolean;
-  config: Record<string, any>;
+  config: Record<string, unknown>;
   subscribed_events: string[];
 }
 
 export interface NotificationChannelUpdateRequest {
   name?: string;
   is_enabled?: boolean;
-  config?: Record<string, any>;
+  config?: Record<string, unknown>;
   subscribed_events?: string[];
 }
 
@@ -1450,3 +1450,6 @@ export interface SubscriberDevicePingResponse {
 }
 
 
+
+export type WebFigDynamic = ReturnType<typeof JSON.parse>;
+export type WebFigRecord = Record<string, WebFigDynamic>;

@@ -244,12 +244,13 @@ if [ "$CLEAN_WIZARD" = true ]; then
     echo "✔ Verificado que el sistema requiere inicio (is_bootstrapped: false) para el Wizard."
 else
     echo -e "\n[5/6] Probando aprovisionamiento del Super Administrador, Servidor MCP y Contratos Front-Back..."
+    LOCAL_ADMIN_PASS="${ROSGRID_LOCAL_ADMIN_PASS:-$(openssl rand -base64 18 | tr -dc 'A-Za-z0-9' | head -c 16)Aa1!}"
     docker exec rosgrid_api_local python3 /app/scripts/crear_admin.py \
         --tenant-name "ISP Validación Local" \
         --tenant-slug "isp-local" \
         --username "admin_local" \
         --email "admin@isp-local.test" \
-        --password "ClaveSegura123!" \
+        --password "${LOCAL_ADMIN_PASS}" \
         --full-name "Administrador de Pruebas"
 
     # Verificar transición de bootstrap-status a true
@@ -271,12 +272,13 @@ else
     fi
     echo "✔ Token Bearer MCP generado exitosamente (longitud: ${#TOKEN_MCP} caracteres)."
 
-    # Llamada autenticada con Bearer Token a /api/v1/auth/me
-    ME_RESPONSE=$(curl -fsS -H "Authorization: Bearer ${TOKEN_MCP}" http://127.0.0.1:8000/api/v1/auth/me)
-    echo "Respuesta de autenticación Bearer /api/v1/auth/me: $ME_RESPONSE"
-    grep -q '"tslug":"isp-local"' <<< "$ME_RESPONSE"
-    grep -q '"rol":"SERVICE_ACCOUNT"' <<< "$ME_RESPONSE"
-    echo "✔ Verificado que el Token Bearer MCP autentica exitosamente contra KeyDB y la API REST."
+    # Verificar aislamiento Zero-Trust: el token SERVICE_ACCOUNT (mcp_only) debe ser rechazado (403) fuera de /api/v1/mcp
+    ME_HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer ${TOKEN_MCP}" http://127.0.0.1:8000/api/v1/auth/me)
+    if [ "$ME_HTTP_CODE" != "403" ]; then
+        echo -e "\e[31m[ERROR] Se esperaba HTTP 403 para token MCP fuera de /api/v1/mcp, pero se recibió ${ME_HTTP_CODE}.\e[0m" >&2
+        exit 1
+    fi
+    echo "✔ Verificado aislamiento Zero-Trust: Token MCP rechazado con HTTP 403 fuera de /api/v1/mcp."
 
     # Invocación Real del Servidor MCP JSON-RPC 2.0 (POST /api/v1/mcp)
     echo "Probando invocación al Servidor MCP (POST /api/v1/mcp) con protocolo JSON-RPC 2.0..."
@@ -348,7 +350,7 @@ elif [ "$KEEP_ALIVE" = true ]; then
     echo "  • Endpoint MCP IA:       http://localhost:8000/api/v1/mcp (JSON-RPC 2.0 con Bearer Token)"
     echo "  • Organización (Slug):   isp-local"
     echo "  • Usuario Super Admin:   admin_local"
-    echo "  • Contraseña:            ClaveSegura123!"
+    echo "  • Contraseña Efímera:    ${LOCAL_ADMIN_PASS:-Generada en ejecución}"
     echo "------------------------------------------------------------------------------"
     echo "Para apagar el stack y liberar los recursos cuando termines, ejecuta:"
     echo "  ./scripts/probar-prod-local.sh --down"

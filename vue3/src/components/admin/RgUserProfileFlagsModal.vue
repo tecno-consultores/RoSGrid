@@ -2,6 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  /* eslint-disable security/detect-object-injection */
   import { ref, computed, watch } from 'vue';
   import { http } from '@/api/httpClient';
   import type { UserManagementItem } from '@/types';

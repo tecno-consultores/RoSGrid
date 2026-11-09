@@ -2,6 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  /* eslint-disable security/detect-object-injection, sonarjs/cognitive-complexity, sonarjs/no-duplicate-string */
   import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
   import L from 'leaflet';
   import type {
@@ -169,7 +170,7 @@
       l2Edges.value = Array.isArray(res.data?.edges) ? res.data.edges : [];
       renderAllLayers();
     } catch {
-      l2Edges.value = [];
+      // Preservar estado previo de enlaces L2 ante fallo transitorio
     }
   }
 
@@ -971,7 +972,7 @@
     </aside>
 
     <!-- Contenedor del Mapa Cartográfico -->
-    <main class="map-view-body">
+    <div class="map-view-body" role="region" aria-label="Visor cartográfico de red">
       <div ref="mapContainer" class="unified-leaflet-container" tabindex="0" aria-label="Mapa de Red Unificado"></div>
 
       <!-- Drawer Lateral de Detalle con Gobernanza RBAC y Prevención de Colisiones -->
@@ -1137,7 +1138,7 @@
           </div>
         </div>
       </aside>
-    </main>
+    </div>
   </div>
 </template>
 

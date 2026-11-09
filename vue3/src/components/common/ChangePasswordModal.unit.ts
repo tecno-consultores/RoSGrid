@@ -1,6 +1,8 @@
+/* eslint-disable sonarjs/no-duplicate-string */
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
+import type { WebFigDynamic } from '@/types';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { setActivePinia, createPinia } from 'pinia';
@@ -93,7 +95,7 @@ describe('ChangePasswordModal.vue — Cambio Seguro de Contraseña', () => {
   });
 
   it('envía petición exitosa y emite eventos password-changed y close', async () => {
-    vi.mocked(http.post).mockResolvedValueOnce({ data: { status: 'password_changed' } } as any);
+    (http.post as WebFigDynamic).mockResolvedValueOnce({ data: { status: 'password_changed' } } as never);
 
     const wrapper = mount(ChangePasswordModal, {
       props: {

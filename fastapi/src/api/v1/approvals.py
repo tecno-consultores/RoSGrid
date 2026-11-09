@@ -92,7 +92,12 @@ async def _execute_deferred_operation(
     if path.startswith("rest/"):
         path = path[5:].strip("/")
     payload = approval.request_payload if isinstance(approval.request_payload, dict) else {}
-    clean_payload = {k: v for k, v in payload.items() if k != ".id"}
+    keep_dot_id = method == "POST" and (path.endswith("/remove") or "/remove" in path or "mcp_tool" in payload)
+    clean_payload = (
+        {k: v for k, v in payload.items() if k not in ("mcp_tool", "pppoe_username")}
+        if keep_dot_id
+        else {k: v for k, v in payload.items() if k != ".id"}
+    )
 
     async def _action() -> Any:
         if method == "PUT":
@@ -152,22 +157,41 @@ async def list_approvals(
     stmt = stmt.order_by(desc(ApprovalRequest.created_at)).limit(limit).offset(offset)
     records = (await db.execute(stmt)).scalars().all()
 
+    users_map: dict[uuid.UUID, User] = {}
+    routers_map: dict[uuid.UUID, Router] = {}
+    if type(db) is AsyncSession and records:
+        req_uids = {r.requested_by for r in records if r.requested_by}
+        req_rids = {r.router_id for r in records if r.router_id}
+        if req_uids:
+            u_rows = (await db.execute(select(User).where(User.id.in_(req_uids)))).scalars().all()
+            users_map = {u.id: u for u in u_rows}
+        if req_rids:
+            rt_rows = (await db.execute(select(Router).where(Router.id.in_(req_rids)))).scalars().all()
+            routers_map = {rt.id: rt for rt in rt_rows}
+
     items: list[ApprovalRequestResponse] = []
     for r in records:
         req_username: str | None = None
         req_role: str | None = None
         r_name: str | None = None
-        try:
-            u_obj = await db.get(User, r.requested_by)
-            if isinstance(u_obj, User):
-                req_username = u_obj.username
-                req_role = u_obj.role.value if hasattr(u_obj.role, "value") else str(u_obj.role)
-            if r.router_id:
-                rt_obj = await db.get(Router, r.router_id)
-                if isinstance(rt_obj, Router):
-                    r_name = rt_obj.display_name
-        except Exception:
-            pass
+        if r.requested_by in users_map:
+            u_cached = users_map[r.requested_by]
+            req_username = u_cached.username
+            req_role = u_cached.role.value if hasattr(u_cached.role, "value") else str(u_cached.role)
+        if r.router_id and r.router_id in routers_map:
+            r_name = routers_map[r.router_id].display_name
+        if type(db) is not AsyncSession:
+            try:
+                u_obj = await db.get(User, r.requested_by)
+                if isinstance(u_obj, User):
+                    req_username = u_obj.username
+                    req_role = u_obj.role.value if hasattr(u_obj.role, "value") else str(u_obj.role)
+                if r.router_id:
+                    rt_obj = await db.get(Router, r.router_id)
+                    if isinstance(rt_obj, Router):
+                        r_name = rt_obj.display_name
+            except Exception as exc:
+                logger.debug("No se pudo resolver metadatos de solicitud en sesión mock: %s", exc)
 
         items.append(
             ApprovalRequestResponse(
@@ -340,7 +364,20 @@ async def approve_request(
     tenant_id = uuid.UUID(claims["tid"])
     checker_user_id = uuid.UUID(claims["sub"])
 
-    approval = await db.get(ApprovalRequest, approval_id)
+    if payload.totp_code:
+        from src.api.v1.vault import _verify_admin_totp
+
+        await _verify_admin_totp(db, tenant_id, checker_user_id, payload.totp_code)
+
+    if type(db) is AsyncSession:
+        stmt_lock = (
+            select(ApprovalRequest)
+            .where(ApprovalRequest.id == approval_id, ApprovalRequest.tenant_id == tenant_id)
+            .with_for_update()
+        )
+        approval = (await db.execute(stmt_lock)).scalar_one_or_none()
+    else:
+        approval = await db.get(ApprovalRequest, approval_id)
     if not approval or approval.tenant_id != tenant_id:
         raise HTTPException(status_code=404, detail="Solicitud de aprobación no encontrada")
 
@@ -368,41 +405,45 @@ async def approve_request(
         isinstance(approval.request_payload, dict)
         and approval.request_payload.get("mcp_tool") == "rosgrid_execute_poe_aware_upgrade"
     )
-    if approval.action_type == CriticalActionTypeEnum.BULK_MULTI_ROUTER_EXECUTION and not is_mcp_upgrade:
-        stmt_job = select(BulkJob).where(BulkJob.approval_request_id == approval.id)
-        job_obj = (await db.execute(stmt_job)).scalar_one_or_none()
-        if job_obj:
-            job_obj = await execute_bulk_job_on_fleet(job_obj, db, claims)
-            if job_obj.status in (BulkJobStatusEnum.COMPLETED, BulkJobStatusEnum.PARTIAL_FAILURE):
+    try:
+        if approval.action_type == CriticalActionTypeEnum.BULK_MULTI_ROUTER_EXECUTION and not is_mcp_upgrade:
+            stmt_job = select(BulkJob).where(BulkJob.approval_request_id == approval.id)
+            job_obj = (await db.execute(stmt_job)).scalar_one_or_none()
+            if job_obj:
+                job_obj = await execute_bulk_job_on_fleet(job_obj, db, claims)
+                if job_obj.status in (BulkJobStatusEnum.COMPLETED, BulkJobStatusEnum.PARTIAL_FAILURE):
+                    approval.status = ApprovalStatusEnum.APPROVED_AND_EXECUTED
+                    approval.execution_result = {
+                        "succeeded_count": job_obj.succeeded_count,
+                        "failed_count": job_obj.failed_count,
+                        "total_routers": job_obj.total_routers,
+                        "job_status": job_obj.status.value,
+                    }
+                    event_action = "MAKER_CHECKER_APPROVED_AND_EXECUTED"
+                    stat_code = 200
+                else:
+                    approval.status = ApprovalStatusEnum.APPROVED_EXECUTION_FAILED
+                    approval.execution_result = {
+                        "succeeded_count": job_obj.succeeded_count,
+                        "failed_count": job_obj.failed_count,
+                        "job_status": job_obj.status.value,
+                        "error": "Falló la ejecución de la plantilla en los routers objetivo",
+                    }
+                    event_action = "MAKER_CHECKER_EXECUTION_FAILED"
+                    stat_code = 500
+            else:
                 approval.status = ApprovalStatusEnum.APPROVED_AND_EXECUTED
-                approval.execution_result = {
-                    "succeeded_count": job_obj.succeeded_count,
-                    "failed_count": job_obj.failed_count,
-                    "total_routers": job_obj.total_routers,
-                    "job_status": job_obj.status.value,
-                }
+                approval.execution_result = {"status": "NO_BULK_JOB_ATTACHED"}
                 event_action = "MAKER_CHECKER_APPROVED_AND_EXECUTED"
                 stat_code = 200
-            else:
-                approval.status = ApprovalStatusEnum.APPROVED_EXECUTION_FAILED
-                approval.execution_result = {
-                    "succeeded_count": job_obj.succeeded_count,
-                    "failed_count": job_obj.failed_count,
-                    "job_status": job_obj.status.value,
-                    "error": "Falló la ejecución de la plantilla en los routers objetivo",
-                }
-                event_action = "MAKER_CHECKER_EXECUTION_FAILED"
-                stat_code = 500
+            approval.executed_at = now_utc
         else:
-            approval.status = ApprovalStatusEnum.APPROVED_AND_EXECUTED
-            approval.execution_result = {"status": "NO_BULK_JOB_ATTACHED"}
-            event_action = "MAKER_CHECKER_APPROVED_AND_EXECUTED"
-            stat_code = 200
-        approval.executed_at = now_utc
-    else:
-        event_action, stat_code = await _execute_approval_lifecycle(
-            client, approval, now_utc, claims=claims, db=db, tenant_id=tenant_id, checker_user_id=checker_user_id
-        )
+            event_action, stat_code = await _execute_approval_lifecycle(
+                client, approval, now_utc, claims=claims, db=db, tenant_id=tenant_id, checker_user_id=checker_user_id
+            )
+    finally:
+        if client is not None:
+            await client.close()
 
     await _log_approval_audit(
         db, tenant_id, claims, request, checker_user_id, approval, router_name, event_action, stat_code
@@ -458,7 +499,20 @@ async def reject_request(
     tenant_id = uuid.UUID(claims["tid"])
     checker_user_id = uuid.UUID(claims["sub"])
 
-    approval = await db.get(ApprovalRequest, approval_id)
+    if payload.totp_code:
+        from src.api.v1.vault import _verify_admin_totp
+
+        await _verify_admin_totp(db, tenant_id, checker_user_id, payload.totp_code)
+
+    if type(db) is AsyncSession:
+        stmt_lock = (
+            select(ApprovalRequest)
+            .where(ApprovalRequest.id == approval_id, ApprovalRequest.tenant_id == tenant_id)
+            .with_for_update()
+        )
+        approval = (await db.execute(stmt_lock)).scalar_one_or_none()
+    else:
+        approval = await db.get(ApprovalRequest, approval_id)
     if not approval or approval.tenant_id != tenant_id:
         raise HTTPException(status_code=404, detail="Solicitud de aprobación no encontrada")
 

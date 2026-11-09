@@ -101,6 +101,13 @@ async def provision_spoke_tunnel(
         )
 
     # 2. Asignar subred punto a punto /31 o /30 si no viene provista
+    from src.core.config import settings
+
+    if settings.ROSGRID_ENV == "production" and not payload.spoke_public_key:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="spoke_public_key es obligatorio en entorno de producción para aprovisionar túneles WireGuard.",
+        )
     subnet = payload.allocated_subnet or f"10.250.{secrets.randbelow(200)}.{secrets.randbelow(60) * 2}/31"
     spoke_pub_key = payload.spoke_public_key or _generate_mock_wireguard_key()
     hub_host = hub_router.api_base_url.replace("https://", "").replace("http://", "").split("/")[0].split(":")[0]

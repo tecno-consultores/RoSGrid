@@ -4,6 +4,7 @@
 """Esquemas Pydantic v2 para Inventario MikroTik, CSV, Bóveda Step-Up y Mantenimiento."""
 
 import ipaddress
+import socket
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
@@ -48,28 +49,60 @@ class NetworkRolesListResponse(StrictBaseModel):
 
 _BLOCKED_ROUTER_HOSTS = {
     "localhost",
+    "localtest.me",
     "rosgrid-db",
     "rosgrid-redis",
     "rosgrid-api",
     "rosgrid-worker",
     "rosgrid-keydb",
+    "rosgrid-ui",
 }
 
+_BLOCKED_DOMAIN_SUFFIXES = (
+    ".local",
+    ".internal",
+    ".localhost",
+    ".localtest.me",
+    ".nip.io",
+    ".sslip.io",
+    ".xip.io",
+)
 
-def _verify_host_ssrf(host: str) -> None:
-    host_lower = host.lower()
-    if host_lower in _BLOCKED_ROUTER_HOSTS or host_lower.endswith((".local", ".internal")):
+
+def _check_ip_ssrf(ip: ipaddress.IPv4Address | ipaddress.IPv6Address, host: str) -> None:
+    if ip.is_loopback:
+        raise ValueError(f"Dirección loopback no permitida para routers: '{host}'")
+    if ip.is_link_local:
+        raise ValueError(f"Dirección link-local / metadatos cloud no permitida para routers: '{host}'")
+    if ip.is_unspecified or ip.is_multicast:
+        raise ValueError(f"Dirección no especificada o multicast no permitida para routers: '{host}'")
+
+
+def _verify_host_ssrf(host: str, *, resolve_dns: bool = False) -> None:
+    host_lower = host.lower().strip(".")
+    norm_host = host_lower.replace("_", "-")
+    if norm_host in _BLOCKED_ROUTER_HOSTS or host_lower.endswith(_BLOCKED_DOMAIN_SUFFIXES):
         raise ValueError(f"Host de infraestructura interna no permitido para routers: '{host}'")
 
     try:
-        ip = ipaddress.ip_address(host)
-        if ip.is_loopback:
-            raise ValueError(f"Dirección loopback no permitida para routers: '{host}'")
-        if ip.is_link_local:
-            raise ValueError(f"Dirección link-local / metadatos cloud no permitida para routers: '{host}'")
+        ip = ipaddress.ip_address(host_lower)
+        _check_ip_ssrf(ip, host)
+        return
     except ValueError as err:
         if "no permitida" in str(err):
             raise err
+
+    if resolve_dns:
+        try:
+            infos = socket.getaddrinfo(host_lower, None)
+            for info in infos:
+                resolved_ip_str = str(info[4][0])
+                resolved_ip = ipaddress.ip_address(resolved_ip_str)
+                _check_ip_ssrf(resolved_ip, host)
+        except ValueError:
+            raise
+        except OSError:
+            pass
 
 
 def validate_router_target_url(v: str | None) -> str | None:

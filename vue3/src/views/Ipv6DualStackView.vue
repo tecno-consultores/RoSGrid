@@ -2,6 +2,8 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  /* eslint-disable sonarjs/cognitive-complexity */
+  import type { WebFigDynamic } from '@/types';
   import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
   import { http } from '@/api/httpClient';
@@ -21,12 +23,12 @@
   const actionMessage = ref('');
 
   // Colecciones de datos
-  const ipv6Addresses = ref<any[]>([]);
-  const dhcpv6Clients = ref<any[]>([]);
-  const dhcpv6Servers = ref<any[]>([]);
-  const ipv6Pools = ref<any[]>([]);
-  const ipv6Neighbors = ref<any[]>([]);
-  const ndSettings = ref<any[]>([]);
+  const ipv6Addresses = ref<WebFigDynamic[]>([]);
+  const dhcpv6Clients = ref<WebFigDynamic[]>([]);
+  const dhcpv6Servers = ref<WebFigDynamic[]>([]);
+  const ipv6Pools = ref<WebFigDynamic[]>([]);
+  const ipv6Neighbors = ref<WebFigDynamic[]>([]);
+  const ndSettings = ref<WebFigDynamic[]>([]);
 
   // Modales
   const isAddressModalOpen = ref(false);
@@ -59,24 +61,25 @@
     try {
       const query = forceRefresh ? '?refresh=true' : '';
       if (activeTab.value === 'addresses') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ipv6/addresses${query}`);
+        const res = await http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/ipv6/addresses${query}`);
         ipv6Addresses.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
       } else if (activeTab.value === 'dhcp-client') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ipv6/dhcp-clients${query}`);
+        const res = await http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/ipv6/dhcp-clients${query}`);
         dhcpv6Clients.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
       } else if (activeTab.value === 'dhcp-server') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ipv6/dhcp-servers${query}`);
+        const res = await http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/ipv6/dhcp-servers${query}`);
         dhcpv6Servers.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
       } else if (activeTab.value === 'pools') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ipv6/pools${query}`);
+        const res = await http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/ipv6/pools${query}`);
         ipv6Pools.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
       } else if (activeTab.value === 'ndp') {
-        const resNeigh = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ipv6/neighbors${query}`);
+        const resNeigh = await http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/ipv6/neighbors${query}`);
         ipv6Neighbors.value = Array.isArray(resNeigh.data) ? resNeigh.data : resNeigh.data?.items || [];
-        const resNd = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ipv6/nd${query}`);
+        const resNd = await http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/ipv6/nd${query}`);
         ndSettings.value = Array.isArray(resNd.data) ? resNd.data : resNd.data?.items || [];
       }
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al cargar datos IPv6.';
     } finally {
       isLoading.value = false;
@@ -101,19 +104,21 @@
       isAddressModalOpen.value = false;
       newAddress.value = { address: '', interface: 'ether2', advertise: true, eui_64: false, comment: '', disabled: false };
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al asignar IPv6.';
     }
   }
 
-  async function handleDeleteAddress(item: any) {
+  async function handleDeleteAddress(item: WebFigDynamic) {
     if (!confirm(`¿Eliminar la dirección IPv6 ${item.address}?`)) return;
     webFigStore.startSafeModeCountdown(60);
     try {
       await http.delete(`/api/v1/routers/${routerId.value}/webfig/ipv6/addresses/${item.id || item['.id']}`);
       actionMessage.value = `Dirección IPv6 ${item.address} eliminada.`;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al eliminar IPv6.';
     }
   }
@@ -126,19 +131,21 @@
       actionMessage.value = `Cliente DHCPv6 solicitando prefijo en ${newClient.value.interface}.`;
       isClientModalOpen.value = false;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al crear cliente DHCPv6.';
     }
   }
 
-  async function handleDeleteDhcpClient(item: any) {
+  async function handleDeleteDhcpClient(item: WebFigDynamic) {
     if (!confirm(`¿Eliminar cliente DHCPv6 en ${item.interface}?`)) return;
     webFigStore.startSafeModeCountdown(60);
     try {
       await http.delete(`/api/v1/routers/${routerId.value}/webfig/ipv6/dhcp-clients/${item.id || item['.id']}`);
       actionMessage.value = `Cliente DHCPv6 eliminado.`;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al eliminar cliente DHCPv6.';
     }
   }
@@ -151,19 +158,21 @@
       actionMessage.value = `Servidor DHCPv6 "${newServer.value.name}" activado en ${newServer.value.interface}.`;
       isServerModalOpen.value = false;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al crear servidor DHCPv6.';
     }
   }
 
-  async function handleDeleteDhcpServer(item: any) {
+  async function handleDeleteDhcpServer(item: WebFigDynamic) {
     if (!confirm(`¿Eliminar servidor DHCPv6 "${item.name}"?`)) return;
     webFigStore.startSafeModeCountdown(60);
     try {
       await http.delete(`/api/v1/routers/${routerId.value}/webfig/ipv6/dhcp-servers/${item.id || item['.id']}`);
       actionMessage.value = `Servidor DHCPv6 eliminado.`;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al eliminar servidor DHCPv6.';
     }
   }
@@ -176,24 +185,26 @@
       actionMessage.value = `Pool IPv6 "${newPool.value.name}" creado.`;
       isPoolModalOpen.value = false;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al crear pool IPv6.';
     }
   }
 
-  async function handleDeletePool(item: any) {
+  async function handleDeletePool(item: WebFigDynamic) {
     if (!confirm(`¿Eliminar pool IPv6 "${item.name}"?`)) return;
     webFigStore.startSafeModeCountdown(60);
     try {
       await http.delete(`/api/v1/routers/${routerId.value}/webfig/ipv6/pools/${item.id || item['.id']}`);
       actionMessage.value = `Pool IPv6 eliminado.`;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al eliminar pool IPv6.';
     }
   }
 
-  function openEditAddressModal(addr: any) {
+  function openEditAddressModal(addr: WebFigDynamic) {
     editingAddressId.value = String(addr.id || addr['.id'] || '');
     editAddressForm.value = {
       address: String(addr.address || ''),
@@ -217,12 +228,13 @@
       actionMessage.value = `Dirección IPv6 ${editAddressForm.value.address} actualizada.`;
       isEditAddressModalOpen.value = false;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al actualizar dirección IPv6.';
     }
   }
 
-  function openEditDhcpClientModal(cli: any) {
+  function openEditDhcpClientModal(cli: WebFigDynamic) {
     editingClientId.value = String(cli.id || cli['.id'] || '');
     const addDef = cli['add-default-route'] ?? cli.add_default_route;
     editClientForm.value = {
@@ -248,12 +260,13 @@
       actionMessage.value = `Cliente DHCPv6 en ${editClientForm.value.interface} actualizado.`;
       isEditClientModalOpen.value = false;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al actualizar cliente DHCPv6.';
     }
   }
 
-  function openEditDhcpServerModal(srv: any) {
+  function openEditDhcpServerModal(srv: WebFigDynamic) {
     editingServerId.value = String(srv.id || srv['.id'] || '');
     editServerForm.value = {
       name: String(srv.name || ''),
@@ -276,12 +289,13 @@
       actionMessage.value = `Servidor DHCPv6 "${editServerForm.value.name}" actualizado.`;
       isEditServerModalOpen.value = false;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al actualizar servidor DHCPv6.';
     }
   }
 
-  function openEditPoolModal(pool: any) {
+  function openEditPoolModal(pool: WebFigDynamic) {
     editingPoolId.value = String(pool.id || pool['.id'] || '');
     editPoolForm.value = {
       name: String(pool.name || ''),
@@ -302,7 +316,8 @@
       actionMessage.value = `Pool IPv6 "${editPoolForm.value.name}" actualizado.`;
       isEditPoolModalOpen.value = false;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al actualizar pool IPv6.';
     }
   }
@@ -448,13 +463,13 @@
         <table class="tactical-table">
           <thead>
             <tr>
-              <th>Prefijo / Dirección IPv6</th>
-              <th>Interfaz</th>
-              <th>Advertise (SLAAC)</th>
-              <th>EUI-64</th>
-              <th>Comentario</th>
-              <th>Estado</th>
-              <th class="actions-col">Acciones</th>
+              <th scope="col">Prefijo / Dirección IPv6</th>
+              <th scope="col">Interfaz</th>
+              <th scope="col">Advertise (SLAAC)</th>
+              <th scope="col">EUI-64</th>
+              <th scope="col">Comentario</th>
+              <th scope="col">Estado</th>
+              <th class="actions-col" scope="col">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -506,13 +521,13 @@
         <table class="tactical-table">
           <thead>
             <tr>
-              <th>Interfaz WAN</th>
-              <th>Solicitud</th>
-              <th>Pool de Destino</th>
-              <th>Longitud Delegada</th>
-              <th>Prefijo Delegado Recibido</th>
-              <th>Estado</th>
-              <th class="actions-col">Acciones</th>
+              <th scope="col">Interfaz WAN</th>
+              <th scope="col">Solicitud</th>
+              <th scope="col">Pool de Destino</th>
+              <th scope="col">Longitud Delegada</th>
+              <th scope="col">Prefijo Delegado Recibido</th>
+              <th scope="col">Estado</th>
+              <th class="actions-col" scope="col">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -560,12 +575,12 @@
         <table class="tactical-table">
           <thead>
             <tr>
-              <th>Nombre del Servidor</th>
-              <th>Interfaz</th>
-              <th>Pool de Prefijos Delegable</th>
-              <th>Tiempo de Concesión</th>
-              <th>Estado</th>
-              <th class="actions-col">Acciones</th>
+              <th scope="col">Nombre del Servidor</th>
+              <th scope="col">Interfaz</th>
+              <th scope="col">Pool de Prefijos Delegable</th>
+              <th scope="col">Tiempo de Concesión</th>
+              <th scope="col">Estado</th>
+              <th class="actions-col" scope="col">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -612,10 +627,10 @@
         <table class="tactical-table">
           <thead>
             <tr>
-              <th>Nombre del Pool</th>
-              <th>Prefijo Base IPv6</th>
-              <th>Longitud de Prefijo de Clientes</th>
-              <th class="actions-col">Acciones</th>
+              <th scope="col">Nombre del Pool</th>
+              <th scope="col">Prefijo Base IPv6</th>
+              <th scope="col">Longitud de Prefijo de Clientes</th>
+              <th class="actions-col" scope="col">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -657,10 +672,10 @@
         <table class="tactical-table">
           <thead>
             <tr>
-              <th>Dirección IPv6</th>
-              <th>Dirección MAC Física</th>
-              <th>Interfaz</th>
-              <th>Estado / Tipo</th>
+              <th scope="col">Dirección IPv6</th>
+              <th scope="col">Dirección MAC Física</th>
+              <th scope="col">Interfaz</th>
+              <th scope="col">Estado / Tipo</th>
             </tr>
           </thead>
           <tbody>

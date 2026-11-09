@@ -421,7 +421,7 @@
       <div class="rg-modal rg-modal--sm">
         <header class="modal-header">
           <h3>⚡ Recurso Libre Asignado</h3>
-          <button type="button" class="btn-close" @click="nextAvailableModalOpen = false">✕</button>
+          <button type="button" class="btn-close" aria-label="Cerrar" @click="nextAvailableModalOpen = false">✕</button>
         </header>
         <div class="modal-body text-center">
           <p class="recurso-label">

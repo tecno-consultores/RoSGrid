@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
+import type { WebFigDynamic } from '@/types';
 import { mount, flushPromises } from '@vue/test-utils';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CapsmanSsidModal from './CapsmanSsidModal.vue';
@@ -35,7 +36,7 @@ describe('CapsmanSsidModal.vue', () => {
   });
 
   it('crea una nueva configuración SSID tras validar campos obligatorios', async () => {
-    (http.post as any).mockResolvedValueOnce({ data: { id: '*C1' } });
+    (http.post as WebFigDynamic).mockResolvedValueOnce({ data: { id: '*C1' } });
 
     const wrapper = mount(CapsmanSsidModal, {
       props: {
@@ -67,7 +68,7 @@ describe('CapsmanSsidModal.vue', () => {
   });
 
   it('modifica mediante PATCH una configuración existente en modo edición', async () => {
-    (http.patch as any).mockResolvedValueOnce({ data: { status: 'ok' } });
+    (http.patch as WebFigDynamic).mockResolvedValueOnce({ data: { status: 'ok' } });
 
     const editItem = {
       id: '*C99',

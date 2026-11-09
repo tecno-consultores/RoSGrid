@@ -509,7 +509,10 @@ async def get_safemode_status(
     """Consulta el estado real del Safe Mode activo en KeyDB y en el router MikroTik."""
     redis = get_redis_client()
     _, client = await get_router_and_client(router_id, claims, db)
-    job = await _load_active_safemode_job(redis, router_id, client.host)
+    try:
+        job = await _load_active_safemode_job(redis, router_id, client.host)
+    finally:
+        await client.close()
     if not job:
         return {"active": False, "job_name": None, "remaining_seconds": 0}
     return {
@@ -559,10 +562,21 @@ async def verify_safemode_live_on_router(
     }
 
 
+_SAFEMODE_WRITE_ROLES = (
+    SystemRoleEnum.SUPERADMIN_GLOBAL,
+    SystemRoleEnum.TENANT_ADMIN,
+    SystemRoleEnum.SUPERVISOR,
+    SystemRoleEnum.INVENTORY_MANAGER,
+    SystemRoleEnum.SUPPORT_L3,
+    SystemRoleEnum.SUPPORT_L2,
+    SystemRoleEnum.SUPPORT_L1,
+)
+
+
 @system_router.post("/safemode/confirm")
 async def confirm_safemode_changes(
     router_id: uuid.UUID,
-    claims: dict[str, Any] = Depends(get_current_user_claims),
+    claims: dict[str, Any] = Depends(require_roles(*_SAFEMODE_WRITE_ROLES)),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> dict[str, Any]:
     """Confirma los cambios en curso eliminando el script y scheduler de rollback en el router MikroTik."""
@@ -586,7 +600,7 @@ async def confirm_safemode_changes(
 @system_router.post("/safemode/rollback")
 async def rollback_safemode_changes(
     router_id: uuid.UUID,
-    claims: dict[str, Any] = Depends(get_current_user_claims),
+    claims: dict[str, Any] = Depends(require_roles(*_SAFEMODE_WRITE_ROLES)),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> dict[str, Any]:
     """Ejecuta el rollback inmediato del cambio en el router MikroTik (al expirar los 60s o pulsar Revertir Ahora)."""

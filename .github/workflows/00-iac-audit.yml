@@ -16,10 +16,10 @@ jobs:
 
     steps:
       - name: 📥 Checkout del código de RoSGrid
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: 🔍 Escaneo de Misconfiguraciones IaC (Dockerfiles, Compose Prod/Local y Nginx)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@18f2510ee396bbf400402947b394f2dd8c87dbb0 # v0.28.0
         with:
           scan-type: 'config'
           scan-ref: '.'
@@ -31,12 +31,12 @@ jobs:
           trivy-config: '.trivy.yaml'
 
       - name: 📦 Escaneo de Vulnerabilidades y Secretos en Sistema de Archivos (CVEs)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@18f2510ee396bbf400402947b394f2dd8c87dbb0 # v0.28.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
           format: 'table'
           exit-code: '1'
           ignore-unfixed: true
-          severity: 'CRITICAL'
+          severity: 'CRITICAL,HIGH'
           trivy-config: '.trivy.yaml'

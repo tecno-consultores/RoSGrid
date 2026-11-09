@@ -2,6 +2,8 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  /* eslint-disable security/detect-object-injection */
+  import type { WebFigDynamic } from '@/types';
   import { ref, onMounted } from 'vue';
   import { useRouter } from 'vue-router';
   import { http } from '@/api/httpClient';
@@ -282,7 +284,7 @@
 
   async function loadBeaconStatus() {
     try {
-      const res = await http.get<any>('/api/v1/system/telemetry-beacon/status');
+      const res = await http.get<WebFigDynamic>('/api/v1/system/telemetry-beacon/status');
       beaconStatus.value = res.data;
     } catch {
       beaconStatus.value = null;
@@ -293,7 +295,7 @@
     isTriggeringBeacon.value = true;
     errorMessage.value = '';
     try {
-      const res = await http.post<any>('/api/v1/system/telemetry-beacon/trigger');
+      const res = await http.post<WebFigDynamic>('/api/v1/system/telemetry-beacon/trigger');
       if (res.data && typeof res.data === 'object') {
         beaconStatus.value = { ...beaconStatus.value, ...res.data };
       }

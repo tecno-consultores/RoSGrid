@@ -2,6 +2,8 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  /* eslint-disable sonarjs/no-duplicate-string */
+  import type { WebFigDynamic } from '@/types';
   import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
   import { useRoute } from 'vue-router';
   import { http } from '@/api/httpClient';
@@ -122,11 +124,11 @@
     try {
       const query = forceRefresh ? '?refresh=true' : '';
       if (activeTab.value === 'interfaces') {
-        const res = await http.get<any>(
+        const res = await http.get<WebFigDynamic>(
           `/api/v1/routers/${routerId.value}/webfig/interfaces/wireguard${query}`,
         );
         const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
-        ifacesList.value = items.map((i: any) => ({
+        ifacesList.value = items.map((i: WebFigDynamic) => ({
           ...i,
           id: i.id || i['.id'] || i.name,
           listen_port: i.listen_port ? Number(i.listen_port) : Number(i['listen-port'] || 13231),
@@ -135,11 +137,11 @@
           disabled: i.disabled === 'true' || i.disabled === true,
         }));
       } else {
-        const res = await http.get<any>(
+        const res = await http.get<WebFigDynamic>(
           `/api/v1/routers/${routerId.value}/webfig/interfaces/wireguard/peers${query}`,
         );
         const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
-        peersList.value = items.map((p: any) => ({
+        peersList.value = items.map((p: WebFigDynamic) => ({
           ...p,
           id: p.id || p['.id'] || `${p.interface}-${p.public_key || p['public-key']}`,
           public_key: p.public_key || p['public-key'] || '',
@@ -170,7 +172,7 @@
       );
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       statusMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Solicitud WireGuard en espera de aprobación humana en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Solicitud WireGuard en espera de aprobación humana en Maker-Checker.'
         : `Interfaz WireGuard "${newIface.value.name}" creada exitosamente bajo Safe Mode.`;
       isCreateIfaceModalOpen.value = false;
       newIface.value = {
@@ -199,7 +201,7 @@
       );
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       statusMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Solicitud de Peer WireGuard en espera de aprobación humana en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Solicitud de Peer WireGuard en espera de aprobación humana en Maker-Checker.'
         : `Peer WireGuard registrado exitosamente bajo Safe Mode.`;
       isCreatePeerModalOpen.value = false;
       newPeer.value = {
@@ -244,7 +246,7 @@
       );
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       statusMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Modificación de interfaz WireGuard en espera de aprobación en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Modificación de interfaz WireGuard en espera de aprobación en Maker-Checker.'
         : `Interfaz WireGuard "${editIfaceForm.value.name}" actualizada exitosamente bajo Safe Mode.`;
       isEditIfaceModalOpen.value = false;
       loadData(true);
@@ -269,7 +271,7 @@
       );
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       statusMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Eliminación de interfaz WireGuard en espera de aprobación en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Eliminación de interfaz WireGuard en espera de aprobación en Maker-Checker.'
         : `Interfaz de túnel WireGuard "${iface.name}" eliminada exitosamente.`;
       loadData(true);
     } catch (err: unknown) {
@@ -289,7 +291,7 @@
       endpoint_address: String(peer.endpoint_address || ''),
       endpoint_port: Number(peer.endpoint_port || 13231),
       allowed_address: String(peer.allowed_address || ''),
-      persistent_keepalive: Number((peer as any).persistent_keepalive || 25),
+      persistent_keepalive: Number((peer as WebFigDynamic).persistent_keepalive || 25),
       disabled: Boolean(peer.disabled),
       comment: String(peer.comment || ''),
     };
@@ -307,7 +309,7 @@
       );
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       statusMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Modificación de Peer WireGuard en espera de aprobación en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Modificación de Peer WireGuard en espera de aprobación en Maker-Checker.'
         : `Peer WireGuard actualizado exitosamente bajo Safe Mode.`;
       isEditPeerModalOpen.value = false;
       loadData(true);
@@ -332,7 +334,7 @@
       );
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       statusMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Eliminación de Peer WireGuard en espera de aprobación en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Eliminación de Peer WireGuard en espera de aprobación en Maker-Checker.'
         : `Peer WireGuard eliminado exitosamente.`;
       loadData(true);
     } catch (err: unknown) {
@@ -436,7 +438,7 @@
     <div class="tab-content">
       <div v-if="activeTab === 'interfaces'">
         <RgDataTable
-          :columns="ifaceColumns as any"
+          :columns="ifaceColumns"
           :rows="ifacesList"
           caption="Túneles WireGuard Configurados"
           row-key="id"
@@ -468,7 +470,7 @@
 
       <div v-else-if="activeTab === 'peers'">
         <RgDataTable
-          :columns="peerColumns as any"
+          :columns="peerColumns"
           :rows="peersList"
           caption="Peers Criptográficos WireGuard"
           row-key="id"
@@ -508,7 +510,7 @@
       <div class="modal-card" role="dialog" aria-labelledby="modal-wg-title" aria-modal="true">
         <header class="modal-header">
           <h2 id="modal-wg-title">Crear Interfaz WireGuard</h2>
-          <button type="button" class="btn-close" @click="isCreateIfaceModalOpen = false">✕</button>
+          <button type="button" class="btn-close" aria-label="Cerrar" @click="isCreateIfaceModalOpen = false">✕</button>
         </header>
         <form class="modal-form" @submit.prevent="handleCreateIface">
           <div class="form-group">
@@ -566,7 +568,7 @@
       <div class="modal-card" role="dialog" aria-labelledby="modal-peer-title" aria-modal="true">
         <header class="modal-header">
           <h2 id="modal-peer-title">Agregar Peer Criptográfico WireGuard</h2>
-          <button type="button" class="btn-close" @click="isCreatePeerModalOpen = false">✕</button>
+          <button type="button" class="btn-close" aria-label="Cerrar" @click="isCreatePeerModalOpen = false">✕</button>
         </header>
         <form class="modal-form" @submit.prevent="handleCreatePeer">
           <div class="form-group">
@@ -630,7 +632,7 @@
       <div class="modal-card" role="dialog" aria-labelledby="modal-edit-wg-title" aria-modal="true">
         <header class="modal-header">
           <h2 id="modal-edit-wg-title">Editar Interfaz WireGuard ({{ editIfaceForm.name }})</h2>
-          <button type="button" class="btn-close" @click="isEditIfaceModalOpen = false">✕</button>
+          <button type="button" class="btn-close" aria-label="Cerrar" @click="isEditIfaceModalOpen = false">✕</button>
         </header>
         <form class="modal-form" @submit.prevent="handleUpdateIface">
           <div class="form-group">
@@ -670,7 +672,7 @@
       <div class="modal-card" role="dialog" aria-labelledby="modal-edit-peer-title" aria-modal="true">
         <header class="modal-header">
           <h2 id="modal-edit-peer-title">Editar Peer WireGuard</h2>
-          <button type="button" class="btn-close" @click="isEditPeerModalOpen = false">✕</button>
+          <button type="button" class="btn-close" aria-label="Cerrar" @click="isEditPeerModalOpen = false">✕</button>
         </header>
         <form class="modal-form" @submit.prevent="handleUpdatePeer">
           <div class="form-group">

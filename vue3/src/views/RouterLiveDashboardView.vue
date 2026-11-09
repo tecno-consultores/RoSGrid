@@ -2,6 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  /* eslint-disable security/detect-object-injection, sonarjs/no-duplicate-string */
   import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
   import { useLiveTelemetryStore } from '@/stores/useLiveTelemetryStore';
   import { useWebFigStore } from '@/stores/useWebFigStore';

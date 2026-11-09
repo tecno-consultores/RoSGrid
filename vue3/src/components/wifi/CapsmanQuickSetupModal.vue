@@ -69,7 +69,8 @@ async function handleDeploy() {
     await http.post(`/api/v1/wifi/capsman/${props.routerId}/quick-setup`, form.value);
     emit('saved');
     emit('close');
-  } catch (err: any) {
+  } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
     errorMsg.value = err.response?.data?.detail || err.message || t('wifi.deploy_error', 'Error al desplegar asistente Wi-Fi.');
   } finally {
     isSubmitting.value = false;

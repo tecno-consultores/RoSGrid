@@ -1,6 +1,8 @@
+/* eslint-disable sonarjs/no-duplicate-string */
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
+import type { WebFigDynamic } from '@/types';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 import { useFieldOpsStore } from './useFieldOpsStore';
@@ -86,7 +88,7 @@ describe('useFieldOpsStore — Operaciones de Campo y Detección de Cortes', () 
 
   it('fetchOrders actualiza la lista de órdenes', async () => {
     const { http } = await import('@/api/httpClient');
-    (http.get as any).mockResolvedValueOnce({ data: sampleOrders });
+    (http.get as WebFigDynamic).mockResolvedValueOnce({ data: sampleOrders });
 
     const store = useFieldOpsStore();
     await store.fetchOrders(true);
@@ -96,7 +98,7 @@ describe('useFieldOpsStore — Operaciones de Campo y Detección de Cortes', () 
 
   it('verifySubscriberLive ejecuta diagnóstico y guarda resultado', async () => {
     const { http } = await import('@/api/httpClient');
-    (http.post as any).mockResolvedValueOnce({ data: sampleVerification });
+    (http.post as WebFigDynamic).mockResolvedValueOnce({ data: sampleVerification });
 
     const store = useFieldOpsStore();
     const res = await store.verifySubscriberLive('svc-01', '48:8F:5A:11:22:33');
@@ -108,7 +110,7 @@ describe('useFieldOpsStore — Operaciones de Campo y Detección de Cortes', () 
 
   it('detectFiberCuts detecta caídas masivas agrupadas por PON / NAP', async () => {
     const { http } = await import('@/api/httpClient');
-    (http.post as any).mockResolvedValueOnce({ data: sampleIncidents });
+    (http.post as WebFigDynamic).mockResolvedValueOnce({ data: sampleIncidents });
 
     const store = useFieldOpsStore();
     const incs = await store.detectFiberCuts(3);

@@ -206,8 +206,8 @@
         <div class="form-check">
           <label class="check-label">
             <input
-              type="checkbox"
               v-model="showPasswords"
+              type="checkbox"
               class="form-checkbox"
             />
             <span>Mostrar contraseñas en texto claro</span>

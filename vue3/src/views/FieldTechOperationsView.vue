@@ -6,9 +6,9 @@
 </script>
 
 <template>
-  <main class="field-tech-operations-view" aria-label="Operaciones de Campo">
+  <div class="field-tech-operations-view" role="region" aria-label="Operaciones de Campo">
     <FieldTechMobileView />
-  </main>
+  </div>
 </template>
 
 <style scoped>

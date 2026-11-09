@@ -4,6 +4,7 @@
 import hashlib
 import json
 import logging
+import re
 import secrets
 import time
 import uuid
@@ -13,7 +14,7 @@ from typing import Any, Literal
 import jwt
 import pyotp
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import extract_token_from_request, get_current_user_claims
@@ -80,6 +81,9 @@ def create_jwt_access_token(
     return jwt.encode(payload, settings.ROSGRID_JWT_SECRET_KEY, algorithm="HS256")
 
 
+_SAFE_REDIS_ID_RE = re.compile(r"^[a-zA-Z0-9_\-:.]{1,128}$")
+
+
 def set_auth_cookies(
     response: Response,
     access_token: str,
@@ -95,7 +99,7 @@ def set_auth_cookies(
         secure_cookie = True
     else:
         at_name = "__Host-rg_at" if is_secure else "rg_at"
-        rt_name = "__Host-rg_rt" if is_secure else "rg_rt"
+        rt_name = "__Secure-rg_rt" if is_secure else "rg_rt"
         samesite = "strict"
         secure_cookie = is_secure
 
@@ -196,6 +200,7 @@ async def _verify_user_credentials(
 ) -> None:
     now_utc = datetime.now(UTC)
     if user.is_locked and user.locked_until and user.locked_until > now_utc:
+        verify_dummy_password(password)
         await _log_login_event(
             db=db,
             tenant_id=user.tenant_id,
@@ -261,6 +266,7 @@ async def _verify_user_credentials(
 async def _dispatch_preauth_challenge(redis: Any, tenant: Tenant, user: User) -> LoginStep1Response:
     challenge_id = secrets.token_hex(16)
     preauth_key = f"rg:{tenant.id}:preauth:{challenge_id}"
+    await redis.set(f"rg:preauth_idx:{challenge_id}", str(tenant.id), ex=180)
 
     if not user.totp_enabled:
         secret = pyotp.random_base32()
@@ -336,10 +342,17 @@ async def login_step1(
 
 
 async def _fetch_preauth_state(redis: Any, challenge_id: str) -> tuple[str, dict[str, str]]:
-    keys = await redis.keys(f"rg:*:preauth:{challenge_id}")
-    if not keys:
+    if not challenge_id or not _SAFE_REDIS_ID_RE.match(challenge_id):
         raise HTTPException(status_code=401, detail="Desafío 2FA inválido o expirado")
-    key = str(keys[0])
+    idx_tid = await redis.get(f"rg:preauth_idx:{challenge_id}")
+    if idx_tid:
+        tid_str = idx_tid.decode("utf-8") if isinstance(idx_tid, bytes) else str(idx_tid)
+        key = f"rg:{tid_str}:preauth:{challenge_id}"
+    else:
+        keys = await redis.keys(f"rg:*:preauth:{challenge_id}")
+        if not keys:
+            raise HTTPException(status_code=401, detail="Desafío 2FA inválido o expirado")
+        key = str(keys[0])
     data = await redis.hgetall(key)
     if not data:
         raise HTTPException(status_code=401, detail="Desafío 2FA inválido o expirado")
@@ -598,7 +611,11 @@ async def confirm_2fa_enrollment(
 
 
 def _extract_refresh_cookies(request: Request) -> tuple[str, str]:
-    rt = request.cookies.get("__Host-rg_rt") or request.cookies.get("rg_rt")
+    rt = (
+        request.cookies.get("__Secure-rg_rt")
+        or request.cookies.get("__Host-rg_rt")
+        or request.cookies.get("rg_rt")
+    )
     if not rt:
         raise HTTPException(status_code=401, detail="Cookie de Refresh Token ausente")
     token = request.cookies.get("__Host-rg_at") or request.cookies.get("rg_at")
@@ -636,6 +653,26 @@ async def refresh_access_token(
     sess_data = await redis.hgetall(f"rg:{tenant_id}:sess:{session_id}")
     if not sess_data:
         raise HTTPException(status_code=401, detail="Sesión revocada o finalizada")
+
+    if sess_data.get("role"):
+        role = str(sess_data["role"])
+
+    try:
+        tid_uuid = uuid.UUID(str(tenant_id))
+        uid_uuid = uuid.UUID(str(user_id))
+        await set_tenant_context(db, tid_uuid, is_superadmin=(role == SystemRoleEnum.SUPERADMIN_GLOBAL.value))
+        if hasattr(db, "get"):
+            db_user = await db.get(User, uid_uuid)
+            if isinstance(db_user, User):
+                if not db_user.is_active or db_user.is_locked:
+                    await kill_session(tenant_id, session_id, killed_by="SYSTEM_SECURITY", reason="Usuario inactivo")
+                    raise HTTPException(status_code=401, detail="Cuenta de usuario inactiva o bloqueada")
+                role = db_user.role.value if hasattr(db_user.role, "value") else str(db_user.role)
+                all_r = bool(db_user.has_all_routers_access)
+    except HTTPException:
+        raise
+    except Exception:
+        pass
 
     family_id = str(sess_data.get("refresh_family_id", ""))
     ok, error_code, new_rt = await rotate_refresh_token(tenant_id, family_id, rt)
@@ -692,6 +729,7 @@ async def logout(
     response.headers["Clear-Site-Data"] = '"cache", "cookies", "storage"'
     response.delete_cookie("__Host-rg_at", path="/")
     response.delete_cookie("rg_at", path="/")
+    response.delete_cookie("__Secure-rg_rt", path="/api/v1/auth/refresh")
     response.delete_cookie("__Host-rg_rt", path="/api/v1/auth/refresh")
     response.delete_cookie("rg_rt", path="/api/v1/auth/refresh")
     response.delete_cookie("rg_csrf", path="/")
@@ -750,6 +788,12 @@ async def session_closing(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Se requiere session_id para registrar el cierre",
+        )
+
+    if not _SAFE_REDIS_ID_RE.match(str(sid)):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Formato de session_id inválido",
         )
 
     redis = get_redis_client()
@@ -885,6 +929,8 @@ async def get_me(claims: dict[str, Any] = Depends(get_current_user_claims)) -> d
 async def get_bootstrap_status(
     db: AsyncSession = Depends(get_db_session),
 ) -> BootstrapStatusResponse:
+    if type(db) is AsyncSession:
+        await set_tenant_context(db, None, is_superadmin=True)
     redis = get_redis_client()
     users_count = await db.scalar(select(func.count(User.id))) or 0
     tenants_count = await db.scalar(select(func.count(Tenant.id))) or 0
@@ -923,6 +969,8 @@ async def register_user(
     body: RegisterUserRequest,
     db: AsyncSession = Depends(get_db_session),
 ) -> RegisterUserResponse:
+    if type(db) is AsyncSession:
+        await set_tenant_context(db, None, is_superadmin=True)
     redis = get_redis_client()
     users_count = await db.scalar(select(func.count(User.id))) or 0
     if users_count == 0:
@@ -959,8 +1007,11 @@ async def register_user(
     if not tenant:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"La empresa o tenant '{body.tenant_slug}' no existe en RoSGrid. Verifica el identificador de la organización.",
+            detail="La empresa o tenant especificada no existe en RoSGrid. Verifica el identificador de la organización.",
         )
+
+    if type(db) is AsyncSession:
+        await set_tenant_context(db, tenant.id, is_superadmin=False)
 
     # 3. Verificar unicidad de username y email
     clean_username = body.username.strip()
@@ -1009,6 +1060,9 @@ async def bootstrap_initial_admin(
     body: BootstrapInitRequest,
     db: AsyncSession = Depends(get_db_session),
 ) -> BootstrapInitResponse:
+    if type(db) is AsyncSession:
+        await set_tenant_context(db, None, is_superadmin=True)
+        await db.execute(text("SELECT pg_advisory_xact_lock(948271606)"))
     users_count = await db.scalar(select(func.count(User.id))) or 0
     if users_count > 0:
         raise HTTPException(
@@ -1075,6 +1129,7 @@ async def bootstrap_initial_admin(
     }
     await redis.hset(preauth_key, mapping=mapping)
     await redis.expire(preauth_key, 300)
+    await redis.set(f"rg:preauth_idx:{challenge_id}", preauth_key, ex=300)
 
     return BootstrapInitResponse(
         status="success",

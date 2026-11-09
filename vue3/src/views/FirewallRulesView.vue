@@ -2,6 +2,8 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  /* eslint-disable sonarjs/cognitive-complexity, sonarjs/no-duplicate-string */
+  import type { WebFigDynamic } from '@/types';
   import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
   import { http } from '@/api/httpClient';
@@ -16,7 +18,7 @@
   const webFigStore = useWebFigStore();
 
   const activeProto = ref<'ip' | 'ipv6'>(
-    String((route as any)?.query?.proto || '').toLowerCase() === 'ipv6' ? 'ipv6' : 'ip',
+    String((route as { query?: Record<string, string> })?.query?.proto || '').toLowerCase() === 'ipv6' ? 'ipv6' : 'ip',
   );
   const activeTab = ref<'filter' | 'nat' | 'mangle' | 'raw' | 'address-list' | 'connections'>(
     'filter',
@@ -26,7 +28,7 @@
     if (activeProto.value === proto) return;
     activeProto.value = proto;
     try {
-      const nextQuery = { ...((route as any)?.query || {}) };
+      const nextQuery = { ...((route as { query?: Record<string, string> })?.query || {}) };
       if (proto === 'ipv6') {
         nextQuery.proto = 'ipv6';
       } else {
@@ -40,7 +42,7 @@
   }
 
   watch(
-    () => (route as any)?.query?.proto,
+    () => (route as { query?: Record<string, string> })?.query?.proto,
     (newProto) => {
       const normalized = String(newProto || '').toLowerCase() === 'ipv6' ? 'ipv6' : 'ip';
       if (activeProto.value !== normalized) {
@@ -110,7 +112,7 @@
     return `${bytes} B`;
   }
 
-  const computedColumns = computed(() => {
+  const computedColumns = computed<TableColumn<FirewallRuleItem>[]>(() => {
     if (activeTab.value === 'address-list') {
       return [
         { key: 'chain', label: 'Nombre Lista', sortable: true },
@@ -156,7 +158,7 @@
       const endpoint = `${baseEndpoint}${query}`;
       const res = await http.get<FirewallRuleItem[] | { items: FirewallRuleItem[] }>(endpoint);
       const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
-      rulesList.value = raw.map((item: any) => ({
+      rulesList.value = raw.map((item: WebFigDynamic) => ({
         ...item,
         id: item.id || item['.id'] || '',
         chain:
@@ -184,7 +186,8 @@
         dynamic: item.dynamic === true || item.dynamic === 'true',
         invalid: item.invalid === true || item.invalid === 'true',
       }));
-    } catch (e: any) {
+    } catch (rawE: unknown) {
+      const e = rawE as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       rulesList.value = [];
       errorMessage.value =
         e?.detail || e?.response?.data?.detail || e?.message || 'Error al cargar las reglas de firewall.';
@@ -193,11 +196,11 @@
     }
   }
 
-  function isInterceptedResponse(res: any): boolean {
+  function isInterceptedResponse(res: WebFigDynamic): boolean {
     return (
       res?.status === 202 ||
       Boolean(res?.isMakerCheckerIntercepted) ||
-      (res?.data as any)?.status === 'INTERCEPTED_FOR_APPROVAL'
+      (res?.data as { status?: string })?.status === 'INTERCEPTED_FOR_APPROVAL'
     );
   }
 
@@ -221,7 +224,7 @@
       addressListForm.value = {
         list: rule.chain,
         address: rule.action,
-        timeout: String((rule as any).timeout || ''),
+        timeout: String((rule as WebFigDynamic).timeout || ''),
         comment: String(rule.comment || ''),
       };
       isAddressListModalOpen.value = true;
@@ -249,7 +252,7 @@
         );
         const intercepted = webFigStore.handleMutationResponse(res, 60);
         actionMessage.value = intercepted
-          ? (res.data as any)?.detail || 'Solicitud de Address-List en espera de aprobación en Maker-Checker.'
+          ? (res.data as { detail?: string })?.detail || 'Solicitud de Address-List en espera de aprobación en Maker-Checker.'
           : 'Entrada de Address-List actualizada exitosamente.';
       } else {
         res = await http.post(
@@ -263,12 +266,13 @@
         );
         const intercepted = webFigStore.handleMutationResponse(res, 60);
         actionMessage.value = intercepted
-          ? (res.data as any)?.detail || 'Solicitud de Address-List en espera de aprobación en Maker-Checker.'
+          ? (res.data as { detail?: string })?.detail || 'Solicitud de Address-List en espera de aprobación en Maker-Checker.'
           : 'Entrada agregada a Address-List exitosamente.';
       }
       isAddressListModalOpen.value = false;
       await loadFirewallRules(true);
-    } catch (e: any) {
+    } catch (rawE: unknown) {
+      const e = rawE as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       webFigStore.stopSafeMode?.();
       errorMessage.value =
         e?.detail || e?.response?.data?.detail || e?.message || 'Error al guardar entrada en Address-List.';
@@ -281,7 +285,7 @@
     isRuleModalOpen.value = true;
   }
 
-  async function handleSaveRule(payload: Record<string, any>) {
+  async function handleSaveRule(payload: Record<string, WebFigDynamic>) {
     errorMessage.value = '';
     actionMessage.value = '';
 
@@ -294,7 +298,7 @@
         );
         const intercepted = webFigStore.handleMutationResponse(res, 60);
         actionMessage.value = intercepted
-          ? (res.data as any)?.detail || 'Solicitud en espera de aprobación humana en la bandeja Maker-Checker.'
+          ? (res.data as { detail?: string })?.detail || 'Solicitud en espera de aprobación humana en la bandeja Maker-Checker.'
           : 'Regla modificada exitosamente con Safe Mode activo.';
       } else {
         res = await http.post(
@@ -303,12 +307,13 @@
         );
         const intercepted = webFigStore.handleMutationResponse(res, 60);
         actionMessage.value = intercepted
-          ? (res.data as any)?.detail || 'Solicitud en espera de aprobación humana en la bandeja Maker-Checker.'
+          ? (res.data as { detail?: string })?.detail || 'Solicitud en espera de aprobación humana en la bandeja Maker-Checker.'
           : 'Nueva regla creada exitosamente bajo Safe Mode.';
       }
       isRuleModalOpen.value = false;
       await loadFirewallRules(true);
-    } catch (e: any) {
+    } catch (rawE: unknown) {
+      const e = rawE as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       webFigStore.stopSafeMode?.();
       errorMessage.value =
         e?.detail || e?.response?.data?.detail || e?.message || 'Error al persistir la regla de firewall.';
@@ -324,10 +329,11 @@
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       if (intercepted) {
         actionMessage.value =
-          (res.data as any)?.detail || 'Solicitud en espera de aprobación humana en la bandeja Maker-Checker.';
+          (res.data as { detail?: string })?.detail || 'Solicitud en espera de aprobación humana en la bandeja Maker-Checker.';
       }
       await loadFirewallRules(true);
-    } catch (e: any) {
+    } catch (rawE: unknown) {
+      const e = rawE as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       webFigStore.stopSafeMode?.();
       errorMessage.value =
         e?.detail || e?.response?.data?.detail || e?.message || 'Error al conmutar estado de la regla.';
@@ -349,12 +355,13 @@
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       if (intercepted) {
         actionMessage.value =
-          (res.data as any)?.detail || 'Solicitud en espera de aprobación humana en la bandeja Maker-Checker.';
+          (res.data as { detail?: string })?.detail || 'Solicitud en espera de aprobación humana en la bandeja Maker-Checker.';
       } else {
         actionMessage.value = 'Regla eliminada exitosamente.';
       }
       await loadFirewallRules(true);
-    } catch (e: any) {
+    } catch (rawE: unknown) {
+      const e = rawE as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       webFigStore.stopSafeMode?.();
       errorMessage.value =
         e?.detail || e?.response?.data?.detail || e?.message || 'Error al eliminar la regla de firewall.';
@@ -372,7 +379,8 @@
       );
       actionMessage.value = 'Contadores de tráfico reiniciados a cero.';
       await loadFirewallRules(true);
-    } catch (e: any) {
+    } catch (rawE: unknown) {
+      const e = rawE as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value =
         e?.detail || e?.response?.data?.detail || e?.message || 'Error al reiniciar contadores.';
     } finally {
@@ -421,13 +429,14 @@
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       if (intercepted) {
         actionMessage.value =
-          (res.data as any)?.detail || 'Solicitud Masquerade en espera de aprobación humana en Maker-Checker.';
+          (res.data as { detail?: string })?.detail || 'Solicitud Masquerade en espera de aprobación humana en Maker-Checker.';
       } else {
         actionMessage.value = `Regla Masquerade creada para salida WAN en ${masqueradeWan.value}.`;
       }
       isMasqueradeWizardOpen.value = false;
       await loadFirewallRules(true);
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       webFigStore.stopSafeMode?.();
       errorMessage.value =
         err?.detail || err?.response?.data?.detail || err?.message || 'Error al crear regla Masquerade.';
@@ -453,7 +462,7 @@
       );
 
       // 2. Regla opcional en Filter forward
-      let resFilter: any = null;
+      let resFilter: { status: number; data: WebFigDynamic } | null = null;
       if (portForward.value.auto_filter) {
         resFilter = await http.post(
           `/api/v1/routers/${routerId.value}/webfig/firewall/ip/filter`,
@@ -470,11 +479,11 @@
 
       if (isInterceptedResponse(resNat) || isInterceptedResponse(resFilter)) {
         webFigStore.notifyMakerCheckerPending(
-          (resNat.data as any)?.detail ||
+          (resNat.data as { detail?: string })?.detail ||
             'Solicitud de Port Forwarding en espera de aprobación humana en Maker-Checker.',
         );
         actionMessage.value =
-          (resNat.data as any)?.detail ||
+          (resNat.data as { detail?: string })?.detail ||
           'Solicitud de Port Forwarding en espera de aprobación humana en Maker-Checker.';
       } else {
         webFigStore.startSafeModeCountdown(60);
@@ -482,7 +491,8 @@
       }
       isPortForwardWizardOpen.value = false;
       await loadFirewallRules(true);
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       webFigStore.stopSafeMode?.();
       errorMessage.value =
         err?.detail ||
@@ -512,11 +522,11 @@
     <!-- Alertas informativas / de error -->
     <div v-if="actionMessage" class="feedback-banner feedback-banner--success" role="status">
       <span>✅ {{ actionMessage }}</span>
-      <button type="button" class="btn-dismiss" @click="actionMessage = ''">✕</button>
+      <button type="button" class="btn-dismiss" aria-label="Cerrar" @click="actionMessage = ''">✕</button>
     </div>
     <div v-if="errorMessage" class="feedback-banner feedback-banner--error" role="alert">
       <span>⚠️ {{ errorMessage }}</span>
-      <button type="button" class="btn-dismiss" @click="errorMessage = ''">✕</button>
+      <button type="button" class="btn-dismiss" aria-label="Cerrar" @click="errorMessage = ''">✕</button>
     </div>
 
     <header class="view-header">
@@ -574,7 +584,7 @@
             role="tab"
             :aria-selected="activeTab === tab.id"
             @click="
-              activeTab = tab.id as any;
+              activeTab = tab.id as typeof activeTab;
               loadFirewallRules();
             "
           >
@@ -657,7 +667,7 @@
     <!-- Tabla de Reglas con Barras de Tráfico Proporcionales -->
     <div class="table-card">
       <RgDataTable
-        :columns="computedColumns as any"
+        :columns="computedColumns"
         :rows="filteredRules"
         :sortable-rows="activeTab !== 'address-list' && activeTab !== 'connections'"
         caption="Reglas de Firewall RouterOS"

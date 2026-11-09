@@ -11,7 +11,11 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_current_user_claims, require_roles
-from src.api.v1.webfig_common import cached_mikrotik_get, get_router_and_client
+from src.api.v1.webfig_common import (
+    cached_mikrotik_get,
+    get_router_and_client,
+    invalidate_webfig_cache,
+)
 from src.db.session import get_tenant_db_session
 from src.models.core import SystemRoleEnum
 from src.redis_layer.client import get_redis_client
@@ -78,7 +82,9 @@ async def create_simple_queue(
     if payload.comment:
         body["comment"] = payload.comment
     async with client:
-        return await client.put("/queue/simple", json_data=body)
+        res = await client.put("/queue/simple", json_data=body)
+    await invalidate_webfig_cache(get_redis_client(), uuid.UUID(claims["tid"]), router_id, "/queue/simple")
+    return res
 
 
 @router.patch("/simple/{item_id}")
@@ -107,7 +113,9 @@ async def update_simple_queue(
     if payload.disabled is not None:
         patch_data["disabled"] = payload.disabled
     async with client:
-        return await client.patch(f"/queue/simple/{item_id}", json_data=patch_data)
+        res = await client.patch(f"/queue/simple/{item_id}", json_data=patch_data)
+    await invalidate_webfig_cache(get_redis_client(), uuid.UUID(claims["tid"]), router_id, "/queue/simple")
+    return res
 
 
 @router.delete("/simple/{item_id}")
@@ -120,7 +128,9 @@ async def delete_simple_queue(
     """Elimina una Simple Queue."""
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
-        return await client.delete(f"/queue/simple/{item_id}")
+        res = await client.delete(f"/queue/simple/{item_id}")
+    await invalidate_webfig_cache(get_redis_client(), uuid.UUID(claims["tid"]), router_id, "/queue/simple")
+    return res
 
 
 @router.post("/simple/move")
@@ -134,7 +144,9 @@ async def move_simple_queue(
     _, client = await get_router_and_client(router_id, claims, db)
     body = {"numbers": payload.numbers, "destination": payload.destination}
     async with client:
-        return await client.post("/queue/simple/move", json_data=body)
+        res = await client.post("/queue/simple/move", json_data=body)
+    await invalidate_webfig_cache(get_redis_client(), uuid.UUID(claims["tid"]), router_id, "/queue/simple")
+    return res
 
 
 # ============================================================================
@@ -177,7 +189,9 @@ async def create_queue_tree(
     if payload.max_limit:
         body["max-limit"] = payload.max_limit
     async with client:
-        return await client.put("/queue/tree", json_data=body)
+        res = await client.put("/queue/tree", json_data=body)
+    await invalidate_webfig_cache(get_redis_client(), uuid.UUID(claims["tid"]), router_id, "/queue/tree")
+    return res
 
 
 @router.patch("/tree/{item_id}")
@@ -204,7 +218,9 @@ async def update_queue_tree(
     if payload.disabled is not None:
         patch_data["disabled"] = payload.disabled
     async with client:
-        return await client.patch(f"/queue/tree/{item_id}", json_data=patch_data)
+        res = await client.patch(f"/queue/tree/{item_id}", json_data=patch_data)
+    await invalidate_webfig_cache(get_redis_client(), uuid.UUID(claims["tid"]), router_id, "/queue/tree")
+    return res
 
 
 @router.delete("/tree/{item_id}")
@@ -217,7 +233,9 @@ async def delete_queue_tree(
     """Elimina un nodo de Queue Tree."""
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
-        return await client.delete(f"/queue/tree/{item_id}")
+        res = await client.delete(f"/queue/tree/{item_id}")
+    await invalidate_webfig_cache(get_redis_client(), uuid.UUID(claims["tid"]), router_id, "/queue/tree")
+    return res
 
 
 @router.get("/types")

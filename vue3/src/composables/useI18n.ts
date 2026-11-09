@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-non-literal-regexp */
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
@@ -15,11 +16,16 @@ const dictionaries: Record<SupportedLocale, TranslationDict> = {
 };
 
 function getStoredLocale(): SupportedLocale {
-  if (typeof window !== 'undefined' && window.localStorage) {
-    const saved = window.localStorage.getItem('rg_locale');
-    if (saved === 'es' || saved === 'en') {
-      return saved;
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const saved =
+        window.localStorage.getItem('rg_locale') || window.localStorage.getItem('rosgrid_locale');
+      if (saved === 'es' || saved === 'en') {
+        return saved;
+      }
     }
+  } catch {
+    // Ignorar acceso bloqueado a localStorage
   }
   return 'es';
 }
@@ -68,8 +74,12 @@ export function useI18n() {
   function setLocale(locale: SupportedLocale): void {
     if (locale !== 'es' && locale !== 'en') return;
     activeLocale.value = locale;
-    if (typeof window !== 'undefined' && window.localStorage) {
-      window.localStorage.setItem('rg_locale', locale);
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('rg_locale', locale);
+      }
+    } catch {
+      // Ignorar fallos de cuota o acceso a localStorage
     }
     if (typeof document !== 'undefined') {
       document.documentElement.lang = locale;

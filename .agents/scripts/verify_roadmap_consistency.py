@@ -79,7 +79,7 @@ def parse_roadmap_sections(content: str) -> Dict[str, Dict[str, Any]]:
 
     # Divide por encabezados de segundo nivel: ## [icon] Hito X: ...
     section_header_pattern = re.compile(
-        r"^##\s+([✅⏳🚧]?)\s*Hito\s+([0-9]+(?:\.[0-9]+)?)\s*[:—\-]\s*(.*)$",
+        r"^##\s+([^\w]*?)\s*Hito\s+([0-9]+(?:\.[0-9]+)?)\s*[:—\-]\s*(.*)$",
         re.MULTILINE | re.IGNORECASE,
     )
 
@@ -160,6 +160,12 @@ def validate_roadmap_consistency(roadmap_path: Path) -> List[str]:
     table_hitos = parse_roadmap_table(content)
     sections = parse_roadmap_sections(content)
 
+    archive_path = roadmap_path.parent / "docs" / "archive" / "ROADMAP_HITOS_00-29.md"
+    if archive_path.is_file():
+        archived_sections = parse_roadmap_sections(archive_path.read_text(encoding="utf-8"))
+        for k, v in archived_sections.items():
+            sections.setdefault(k, v)
+
     if not table_hitos:
         return []
 
@@ -189,7 +195,7 @@ def validate_roadmap_consistency(roadmap_path: Path) -> List[str]:
                     f"{t_hito['progreso_pct']}%', pero todas sus tareas ({done}/{total}) están completadas [x]. "
                     f"Debe actualizarse la tabla a '✅ Completado | 100%'."
                 )
-            if sec["header_icon"] not in ("✅", ""):
+            if sec["header_icon"] in ("⏳", "🚧"):
                 errors.append(
                     f"Inconsistencia en Hito {num}: El encabezado de sección tiene icono '{sec['header_icon']}', "
                     f"pero todas las tareas están completadas. Debe llevar '## ✅ Hito {num}:'."

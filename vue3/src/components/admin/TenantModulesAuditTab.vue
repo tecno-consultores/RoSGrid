@@ -2,6 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  /* eslint-disable security/detect-object-injection */
   import { ref, onMounted } from 'vue';
   import { http } from '@/api/httpClient';
   import { useI18n } from '@/composables/useI18n';

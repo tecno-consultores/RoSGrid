@@ -64,7 +64,7 @@ describe('TenantOnboardingModal.vue — Onboarding de Feature Flags', () => {
         isp_module_enabled: false,
         onboarding_completed: true,
       },
-    } as any);
+    } as never);
 
     const submitBtn = wrapper.find('#btn-confirm-onboarding');
     await submitBtn.trigger('click');

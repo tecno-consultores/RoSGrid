@@ -192,7 +192,11 @@ class SyslogUdpProtocol(asyncio.DatagramProtocol):
         tenant_id, router_id = mapping
         try:
             event = parse_syslog_message(clean)
-            asyncio.create_task(push_event_to_ringbuffer(tenant_id, router_id, event))
+            task = asyncio.create_task(push_event_to_ringbuffer(tenant_id, router_id, event))
+            if not hasattr(self, "_bg_tasks"):
+                self._bg_tasks: set[asyncio.Task[None]] = set()
+            self._bg_tasks.add(task)
+            task.add_done_callback(self._bg_tasks.discard)
         except Exception as exc:
             logger.debug("Error procesando datagrama Syslog de %s: %s", src_ip, exc)
 
@@ -203,14 +207,17 @@ async def load_router_syslog_maps() -> tuple[
 ]:
     """Consulta la base de datos para mapear IPs y nombres de routers activos a (tenant_id, router_id)."""
     from sqlalchemy import select
+    from sqlalchemy.ext.asyncio import AsyncSession
 
-    from src.db.session import async_session_maker
+    from src.db.session import async_session_maker, set_tenant_context
     from src.models.inventory import Router, RouterAdminStateEnum
 
     ip_map: dict[str, tuple[uuid.UUID, uuid.UUID]] = {}
     name_map: dict[str, tuple[uuid.UUID, uuid.UUID]] = {}
     try:
         async with async_session_maker() as session:
+            if type(session) is AsyncSession:
+                await set_tenant_context(session, None, is_superadmin=True)
             stmt = select(
                 Router.id,
                 Router.tenant_id,

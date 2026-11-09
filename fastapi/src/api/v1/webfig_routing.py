@@ -16,6 +16,7 @@ from src.api.v1.webfig_common import (
     execute_safe_mutation,
     get_router_and_client,
     intercept_maker_checker_if_needed,
+    invalidate_webfig_cache,
 )
 from src.db.session import get_tenant_db_session
 from src.models.core import SystemRoleEnum
@@ -126,13 +127,15 @@ async def create_table(
 
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
-        return await execute_safe_mutation(
+        res = await execute_safe_mutation(
             client=client,
             menu="routing/table",
             action="create",
             before_state=body,
             coro_fn=lambda: client.put("/routing/table", json_data=body),
         )
+    await invalidate_webfig_cache(get_redis_client(), uuid.UUID(claims["tid"]), router_id, "/routing/table")
+    return res
 
 
 @router.patch("/tables/{item_id}")

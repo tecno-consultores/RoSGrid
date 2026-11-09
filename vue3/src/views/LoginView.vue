@@ -295,9 +295,15 @@
   }
 
   function completeLogin(user: UserInfo, csrfToken?: string, sessionId?: string) {
-    authStore.setAuth(user, csrfToken || 'csrf-session', sessionId);
-    const redirect =
-      (route.query.redirect as string) || (user.role === 'NOC_MONITOR' ? '/noc-wallboard' : '/');
+    authStore.setAuth(user, csrfToken || null, sessionId);
+    const rawRedirect = typeof route.query.redirect === 'string' ? route.query.redirect.trim() : '';
+    const isSafeRedirect =
+      rawRedirect.startsWith('/') && !rawRedirect.startsWith('//') && !rawRedirect.includes('://');
+    const redirect = isSafeRedirect
+      ? rawRedirect
+      : user.role === 'NOC_MONITOR'
+        ? '/noc-wallboard'
+        : '/';
     router.push(redirect);
   }
 
@@ -473,11 +479,11 @@
 
 <template>
   <div class="login-wrapper">
-    <main
+    <div
       id="main-content"
       class="login-card"
       :class="{ 'login-card--wide': currentStep === 'BOOTSTRAP' || currentStep === 'REGISTER' }"
-      role="main"
+      role="region"
       aria-labelledby="login-heading"
     >
       <header class="login-header">
@@ -1054,7 +1060,7 @@
           </button>
         </form>
       </div>
-    </main>
+    </div>
 
     <!-- Pie de página Institucional y Enlaces Oficiales (Subtarea 16.5) -->
     <footer class="login-footer" role="contentinfo">

@@ -99,7 +99,7 @@ describe('IpamPrefixTable.vue — Tabla Integral de Subredes y Pools IPAM', () =
     ipamStore.vrfs = mockVrfs;
     vi.spyOn(ipamStore, 'fetchPrefixes').mockResolvedValue();
     vi.spyOn(ipamStore, 'fetchVrfs').mockResolvedValue();
-    const createSpy = vi.spyOn(ipamStore, 'createPrefix').mockResolvedValue({} as any);
+    const createSpy = vi.spyOn(ipamStore, 'createPrefix').mockResolvedValue({} as never);
 
     const wrapper = mount(IpamPrefixTable);
     await flushPromises();

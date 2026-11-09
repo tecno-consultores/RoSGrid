@@ -52,8 +52,8 @@
         <button
           type="button"
           class="btn-banner-action"
-          @click="handleManualDetection"
           :disabled="isChecking"
+          @click="handleManualDetection"
         >
           🔄 Re-verificar
         </button>

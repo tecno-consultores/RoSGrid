@@ -1,14 +1,15 @@
 <!-- SPDX-License-Identifier: GPL-3.0-only -->
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
-<script setup lang="ts" generic="T extends Record<string, unknown>">
+<script setup lang="ts" generic="T extends object = Record<string, unknown>">
+  /* eslint-disable security/detect-object-injection, sonarjs/no-duplicate-string */
   import { computed, onMounted, ref } from 'vue';
   import { useThemeAndLayoutStore } from '@/stores/useThemeAndLayoutStore';
   import type { TableColumn, TableRowFlags } from '@/types';
 
   const props = withDefaults(
     defineProps<{
-      columns: TableColumn<T>[];
+      columns: Array<TableColumn<T> | TableColumn>;
       rows: T[];
       rowKey?: string;
       sortableRows?: boolean;
@@ -103,12 +104,15 @@
 
   // Selector de filas y detalles en móvil
   function getKey(row: T, index: number): string {
-    const k = row[props.rowKey] ?? row['.id'] ?? row['id'];
+    const rec = row as Record<string, unknown>;
+    const k = rec[props.rowKey] ?? rec['.id'] ?? rec['id'];
     return k !== undefined && k !== null ? String(k) : String(index);
   }
 
-  function getCellText(col: TableColumn<T>, row: T): string {
-    return String(col.formatter ? col.formatter(row) : (row[col.key] ?? '—'));
+  function getCellText(col: TableColumn<T> | TableColumn, row: T): string {
+    const rec = row as Record<string, unknown>;
+    const fmt = col.formatter as ((r: T) => string | number) | undefined;
+    return String(fmt ? fmt(row) : (rec[col.key] ?? '—'));
   }
 
   function handleRowClick(row: T): void {
@@ -157,15 +161,16 @@
 
   // Banderas / Flags nativas RouterOS ([D], [X], [I], [R])
   function getRowFlags(row: T): TableRowFlags {
-    const flags = row.flags as TableRowFlags | undefined;
+    const rec = row as Record<string, unknown>;
+    const flags = rec.flags as TableRowFlags | undefined;
     if (flags) return flags;
 
     return {
-      dynamic: Boolean(row.dynamic || row['.dynamic']),
-      disabled: Boolean(row.disabled || row['.disabled']),
-      invalid: Boolean(row.invalid || row['.invalid']),
-      invalidReason: String(row.invalidReason || row['comment'] || ''),
-      running: Boolean(row.running || row.is_reachable),
+      dynamic: Boolean(rec.dynamic || rec['.dynamic']),
+      disabled: Boolean(rec.disabled || rec['.disabled']),
+      invalid: Boolean(rec.invalid || rec['.invalid']),
+      invalidReason: String(rec.invalidReason || rec['comment'] || ''),
+      running: Boolean(rec.running || rec.is_reachable),
     };
   }
 
@@ -399,7 +404,7 @@
                   <template v-for="col in dataColumns" :key="col.key">
                     <dt>{{ col.label }}:</dt>
                     <dd class="rg-data">
-                      {{ col.formatter ? col.formatter(row) : (row[col.key] ?? '—') }}
+                      {{ getCellText(col, row) }}
                     </dd>
                   </template>
                 </dl>

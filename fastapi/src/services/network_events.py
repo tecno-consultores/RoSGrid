@@ -5,8 +5,10 @@
 
 import hashlib
 import hmac
+import ipaddress
 import json
 import logging
+import urllib.parse
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -16,6 +18,58 @@ import httpx
 from src.redis_layer.client import get_redis_client
 
 logger = logging.getLogger(__name__)
+
+_BLOCKED_OUTBOUND_HOSTS = {
+    "localhost",
+    "localhost.localdomain",
+    "127.0.0.1",
+    "::1",
+    "0.0.0.0",  # nosec B104
+    "169.254.169.254",
+    "metadata.google.internal",
+    "localtest.me",
+    "rosgrid-db",
+    "rosgrid_db",
+    "rosgrid-redis",
+    "rosgrid_redis",
+    "rosgrid-api",
+    "rosgrid_api",
+    "rosgrid-worker",
+    "rosgrid_worker",
+    "rosgrid-frontend",
+    "rosgrid_frontend",
+    "db",
+    "redis",
+    "keydb",
+    "postgres",
+}
+
+
+def is_safe_outbound_service_url(url: str) -> bool:
+    """Valida que un webhook o destino HTTP saliente no apunte a loopback, link-local o contenedores internos."""
+    try:
+        parsed = urllib.parse.urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            return False
+        hostname = (parsed.hostname or "").strip().lower().rstrip(".")
+        norm_host = hostname.replace("_", "-")
+        if (
+            not hostname
+            or hostname in _BLOCKED_OUTBOUND_HOSTS
+            or norm_host in _BLOCKED_OUTBOUND_HOSTS
+            or norm_host.startswith("rosgrid-")
+            or hostname.endswith((".localhost", ".internal", ".localtest.me", ".nip.io", ".sslip.io", ".xip.io"))
+        ):
+            return False
+        try:
+            ip = ipaddress.ip_address(hostname)
+            if ip.is_loopback or ip.is_link_local or ip.is_unspecified or ip.is_multicast:
+                return False
+        except ValueError:
+            pass
+        return True
+    except Exception:
+        return False
 
 
 async def publish_network_service_event(
@@ -47,6 +101,9 @@ async def send_signed_webhook_payload(
     timeout: float = 10.0,
 ) -> bool:
     """Envía un webhook HTTP POST firmado con HMAC-SHA256 según estándar RoSGrid."""
+    if not is_safe_outbound_service_url(webhook_url):
+        logger.warning("Webhook saliente rechazado por validación anti-SSRF: %s", webhook_url)
+        return False
     body_data = {
         "event": event_name,
         "timestamp": datetime.now(UTC).isoformat(),

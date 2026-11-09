@@ -4,6 +4,10 @@
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+_DEFAULT_QA_VAULT_KEY = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+_DEFAULT_QA_JWT_SECRET = "qa_jwt_secret_key_for_ephemeral_testing_only"
+_DEFAULT_QA_CSRF_SECRET = "qa_csrf_hmac_secret_for_ephemeral_testing_only"
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -12,8 +16,8 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    ROSGRID_ENV: str = "production"
-    ENVIRONMENT: str = "production"
+    ROSGRID_ENV: str = "development"
+    ENVIRONMENT: str = "development"
     PROJECT_NAME: str = "RoSGrid"
     VERSION: str = "1.0.0"
     ROSGRID_HTTP_PORT: int = 8080
@@ -33,7 +37,36 @@ class Settings(BaseSettings):
     def _compute_default_urls(self) -> "Settings":
         self._ensure_database_urls()
         self._ensure_redis_url()
+        self._validate_production_secrets()
         return self
+
+    def _validate_production_secrets(self) -> None:
+        if self.ROSGRID_ENV.strip().lower() != "production":
+            return
+        if (
+            not self.ROSGRID_MASTER_VAULT_KEY
+            or self.ROSGRID_MASTER_VAULT_KEY == _DEFAULT_QA_VAULT_KEY
+            or len(self.ROSGRID_MASTER_VAULT_KEY.strip()) < 32
+        ):
+            raise ValueError(
+                "Seguridad Crítica: ROSGRID_MASTER_VAULT_KEY no puede usar el valor QA por defecto ni medir <32 caracteres en ROSGRID_ENV=production."
+            )
+        if (
+            not self.ROSGRID_JWT_SECRET_KEY
+            or self.ROSGRID_JWT_SECRET_KEY == _DEFAULT_QA_JWT_SECRET
+            or len(self.ROSGRID_JWT_SECRET_KEY.strip()) < 32
+        ):
+            raise ValueError(
+                "Seguridad Crítica: ROSGRID_JWT_SECRET_KEY no puede usar el valor QA por defecto ni medir <32 caracteres en ROSGRID_ENV=production."
+            )
+        if (
+            not self.ROSGRID_CSRF_HMAC_SECRET
+            or self.ROSGRID_CSRF_HMAC_SECRET == _DEFAULT_QA_CSRF_SECRET
+            or len(self.ROSGRID_CSRF_HMAC_SECRET.strip()) < 32
+        ):
+            raise ValueError(
+                "Seguridad Crítica: ROSGRID_CSRF_HMAC_SECRET no puede usar el valor QA por defecto ni medir <32 caracteres en ROSGRID_ENV=production."
+            )
 
     def _ensure_database_urls(self) -> None:
         if not self.ROSGRID_DATABASE_URL:

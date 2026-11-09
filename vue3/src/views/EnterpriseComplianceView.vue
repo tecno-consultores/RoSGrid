@@ -2,6 +2,8 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  /* eslint-disable sonarjs/no-duplicate-string */
+  import type { WebFigDynamic } from '@/types';
   import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
   import { useI18n } from '@/composables/useI18n';
@@ -465,7 +467,8 @@
       });
       successMessage.value = res.data?.message || 'Estado de CAPsMAN conmutado exitosamente.';
       await loadWifiTab();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err.response?.data?.detail || err.message || 'Error al conmutar CAPsMAN.';
     } finally {
       isTogglingCapsman.value = false;
@@ -479,7 +482,8 @@
       const res = await http.post<{ message?: string }>(`/api/v1/wifi/capsman/${selectedRouterId.value}/reprovision`);
       successMessage.value = res.data?.message || 'Señal de reprovisionamiento enviada a la flota de APs.';
       await loadWifiTab();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err.response?.data?.detail || err.message || 'Error al reprovisionar flota de APs.';
     } finally {
       isReprovisioning.value = false;
@@ -508,7 +512,8 @@
         ? `SSID ${ssid.name} deshabilitado [X].`
         : `SSID ${ssid.name} habilitado exitosamente.`;
       await loadWifiTab();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value =
         err.response?.data?.detail || err.message || 'Error al alternar estado del SSID.';
     }
@@ -520,7 +525,8 @@
       await http.delete(`/api/v1/wifi/capsman/${selectedRouterId.value}/configurations/${encodeURIComponent(ssid.id)}`);
       successMessage.value = `Configuración ${ssid.name} eliminada.`;
       await loadWifiTab();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err.response?.data?.detail || err.message || 'Error al eliminar SSID.';
     }
   }
@@ -531,7 +537,8 @@
       await http.delete(`/api/v1/wifi/clients/${selectedRouterId.value}/${encodeURIComponent(client.mac_address)}`);
       successMessage.value = `Cliente ${client.mac_address} expulsado exitosamente.`;
       await loadWifiTab();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err.response?.data?.detail || err.message || 'Error al expulsar cliente.';
     }
   }
@@ -676,13 +683,13 @@
     await loadTrafficAnomalies();
   }
 
-  const trafficAnomalies = ref<any[]>([]);
+  const trafficAnomalies = ref<WebFigDynamic[]>([]);
   const isMitigatingTraffic = ref(false);
 
   async function loadTrafficAnomalies() {
     if (!selectedRouterId.value) return;
     try {
-      const res = await http.get<any>(`/api/v1/traffic-flow/anomalies?router_id=${selectedRouterId.value}`);
+      const res = await http.get<WebFigDynamic>(`/api/v1/traffic-flow/anomalies?router_id=${selectedRouterId.value}`);
       trafficAnomalies.value = res.data?.items || [];
     } catch {
       trafficAnomalies.value = [];
@@ -1061,9 +1068,9 @@
 </script>
 
 <template>
-  <main
+  <div
     class="enterprise-compliance-view"
-    role="main"
+    role="region"
     :aria-label="t('enterprise.title', 'Gestión de Flota & Cumplimiento Normativo')"
   >
     <!-- Header Corporativo -->
@@ -2735,7 +2742,7 @@
       @close="showSsidModal = false"
       @saved="loadWifiTab"
     />
-  </main>
+  </div>
 </template>
 
 <style scoped>

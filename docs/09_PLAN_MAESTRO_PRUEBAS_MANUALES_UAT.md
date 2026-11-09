@@ -353,7 +353,7 @@ flowchart TD
 | ID | Caso de Prueba | Precondición | Pasos de Ejecución | Resultado Esperado |
 | :--- | :--- | :--- | :--- | :--- |
 | **UAT-84** | Emisión Visual de Bearer Token MCP | Rol `SUPERADMIN` o `TENANT_ADMIN` | 1. En *Usuarios y Permisos* (`/users`), hacer clic en *"🔑 Generar Token MCP"*. 2. Seleccionar vigencia (ej. 90 días) y cuenta de servicio. 3. Generar. | Se muestra el Bearer Token en pantalla con snippets de configuración para Claude Desktop (`claude_desktop_config.json`) y Hermes Agent (`config.yaml`). |
-| **UAT-85** | Descarga y Consulta de Skill Oficial (`rosgrid-noc-operator`) | Modal de Token MCP abierto | 1. Probar el botón *"Descargar SKILL.md"*. 2. Probar *"Copiar System Prompt"*. 3. En otra pestaña, consultar `GET /api/v1/mcp/skill`. | El archivo se descarga en formato Markdown completo con los 7 Playbooks SOP. El endpoint público responde el contenido estructurado de la Skill. |
+| **UAT-85** | Descarga y Consulta de Skill Oficial (`rosgrid-noc-operator`) | Modal de Token MCP abierto | 1. Probar el botón *"Descargar SKILL.md"*. 2. Probar *"Copiar System Prompt"*. 3. En otra pestaña, consultar `GET /api/v1/mcp/skill`. | El archivo se descarga en formato Markdown completo con los 8 Playbooks SOP y las 22 herramientas MCP. El endpoint público responde el contenido estructurado de la Skill. |
 | **UAT-86** | Supervisión y Revocación de Sesiones IA | Agente IA con token emitido | 1. Ir a *Sesiones Activas* (`/sessions`). 2. Filtrar por pestaña *"Agentes IA MCP"*. 3. Observar linaje (*"Por: @admin_local"*). 4. Presionar *"Revocar Sesión"*. | La sesión se elimina instantáneamente de KeyDB. Toda petición subsiguiente con dicho token responde HTTP 401 Unauthorized. |
 
 ---

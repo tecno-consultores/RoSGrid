@@ -1,3 +1,4 @@
+/* eslint-disable sonarjs/no-duplicate-string */
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
@@ -20,7 +21,7 @@ describe('IpamSubscriberPairing — Emparejamiento de Red FTTH (DHCP / PPPoE / I
     setActivePinia(createPinia());
     vi.restoreAllMocks();
     window.alert = vi.fn();
-    vi.spyOn(http, 'get').mockResolvedValue({ data: [] } as any);
+    vi.spyOn(http, 'get').mockResolvedValue({ data: [] } as never);
   });
 
   const mockSubUnpaired: CustomerService = {
@@ -219,8 +220,8 @@ describe('IpamSubscriberPairing — Emparejamiento de Red FTTH (DHCP / PPPoE / I
     const invStore = useInventoryStore();
 
     invStore.routers = [
-      { id: 'r-bridge', display_name: 'r3-Bridge', ip_address: '10.0.0.3' } as any,
-      { id: 'r-bng', display_name: 'r111-BNG', ip_address: '10.0.0.111' } as any,
+      { id: 'r-bridge', display_name: 'r3-Bridge', ip_address: '10.0.0.3' } as never,
+      { id: 'r-bng', display_name: 'r111-BNG', ip_address: '10.0.0.111' } as never,
     ];
 
     vi.spyOn(ipamStore, 'fetchVrfs').mockResolvedValue();

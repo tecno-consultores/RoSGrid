@@ -2,6 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  import type { WebFigDynamic } from '@/types';
   import { ref, computed, onMounted } from 'vue';
   import { http } from '@/api/httpClient';
   import { useI18n } from '@/composables/useI18n';
@@ -33,9 +34,9 @@
     loading.value = true;
     error.value = null;
     try {
-      const res = await http.get<{ items: any[] } | any[]>('/api/v1/audit/logs');
+      const res = await http.get<{ items?: WebFigDynamic[] } | WebFigDynamic[]>('/api/v1/audit/logs');
       const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
-      auditLogs.value = raw.map((item: any) => ({
+      auditLogs.value = raw.map((item: WebFigDynamic) => ({
         id: String(item.id),
         actor_id: String(item.actor_user_id || item.actor_id || ''),
         actor_username: item.actor_username || 'sistema',
@@ -221,7 +222,7 @@
 </script>
 
 <template>
-  <main class="audit-view" aria-labelledby="audit-title">
+  <div class="audit-view" role="region" aria-labelledby="audit-title">
     <!-- Cabecera -->
     <header class="audit-header">
       <div>
@@ -338,14 +339,14 @@
         <table v-else class="audit-table">
           <thead>
             <tr>
-              <th>{{ t('audit_logs.th_timestamp', 'Timestamp UTC') }}</th>
-              <th>{{ t('audit_logs.th_actor', 'Actor & Rol') }}</th>
-              <th>IP Origen</th>
-              <th>{{ t('audit_logs.th_category', 'Categoría') }}</th>
-              <th>{{ t('audit_logs.th_action', 'Acción') }}</th>
-              <th>{{ t('audit_logs.th_target', 'Router') }}</th>
-              <th>{{ t('audit_logs.th_status', 'HTTP') }}</th>
-              <th>{{ t('audit_logs.th_hash', 'Hash SHA-256') }}</th>
+              <th scope="col">{{ t('audit_logs.th_timestamp', 'Timestamp UTC') }}</th>
+              <th scope="col">{{ t('audit_logs.th_actor', 'Actor & Rol') }}</th>
+              <th scope="col">IP Origen</th>
+              <th scope="col">{{ t('audit_logs.th_category', 'Categoría') }}</th>
+              <th scope="col">{{ t('audit_logs.th_action', 'Acción') }}</th>
+              <th scope="col">{{ t('audit_logs.th_target', 'Router') }}</th>
+              <th scope="col">{{ t('audit_logs.th_status', 'HTTP') }}</th>
+              <th scope="col">{{ t('audit_logs.th_hash', 'Hash SHA-256') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -436,7 +437,7 @@
         </div>
       </section>
     </div>
-  </main>
+  </div>
 </template>
 
 <style scoped>

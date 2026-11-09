@@ -68,4 +68,4 @@ python3 ./.agents/scripts/verify_no_orphan_api_endpoints.py
 docker exec -t rosgrid_api_local python scripts/verify_alembic_orm_parity.py
 ```
 
-Para el flujo completo de ejecución y cierre de tareas (`DOCS_ONLY`, `MICRO_CHANGE` y `FULL_11X`), consulta [`AGENTS.md`](file:///AGENTS.md).
+Para el flujo completo de ejecución y cierre de tareas (`DOCS_ONLY`, `MICRO_CHANGE` y `FULL_11X`), consulta [`AGENTS.md`](../AGENTS.md).

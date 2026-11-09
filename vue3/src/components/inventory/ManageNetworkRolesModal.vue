@@ -75,7 +75,8 @@
       successMessage.value = `Rol "${cleanName}" creado exitosamente.`;
       newRoleName.value = '';
       newRoleDesc.value = '';
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value =
         err?.detail || err?.response?.data?.detail || err?.message || 'Error al guardar el rol de red.';
     } finally {
@@ -95,7 +96,8 @@
       isSubmitting.value = true;
       await inventoryStore.deleteCustomRole(roleName);
       successMessage.value = `Rol "${roleName}" eliminado correctamente.`;
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value =
         err?.detail || err?.response?.data?.detail || err?.message || 'Error al eliminar el rol.';
     } finally {

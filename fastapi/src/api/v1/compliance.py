@@ -285,6 +285,7 @@ async def check_config_drift(
 
     # 3. Obtener configuración activa exportada del router
     active_rsc = ""
+    client: Any = None
     try:
         _, client = await get_router_and_client(router_id, claims, db)
         # Intenta exportar o listar servicios
@@ -302,6 +303,9 @@ async def check_config_drift(
             baseline_content
             + '\n/ip service set telnet disabled=no\n/ip service set api disabled=no\n/ip firewall filter add chain=input port=8080 action=accept comment="Unapproved port open by tech"'
         )
+    finally:
+        if client is not None and hasattr(client, "close"):
+            await client.close()
 
     # 4. Normalizar y computar diferencias semánticas
     baseline_lines = _normalize_rsc_content(baseline_content)
@@ -376,6 +380,7 @@ async def revert_config_drift(
             baseline_content = tpl.baseline_rsc_content
 
     # Aplicar bajo Safe Mode (60s)
+    client: Any = None
     try:
         _, client = await get_router_and_client(router_obj.id, claims, db)
 
@@ -396,6 +401,9 @@ async def revert_config_drift(
         )
     except Exception as exc:
         logger.warning("Simulación de Safe Mode en auto-revert: %s", exc)
+    finally:
+        if client is not None and hasattr(client, "close"):
+            await client.close()
 
     # Registrar evento inmutable WORM
     actor = audit_actor_from_claims(claims, request)
@@ -1027,6 +1035,7 @@ async def run_cis_audit(
     romon_disabled = True
     encrypted_backup_scheduled = False
 
+    client: Any = None
     try:
         _, client = await get_router_and_client(router_id, claims, db)
 
@@ -1267,6 +1276,9 @@ async def run_cis_audit(
 
     except Exception as exc:
         logger.debug("Sondeo en vivo de RouterOS en CIS audit para %s: %s (utilizando heurística)", router_id, exc)
+    finally:
+        if client is not None and hasattr(client, "close"):
+            await client.close()
 
     # Evaluar todas las directivas de la política del tenant (soberanía total)
     results: list[CisDirectiveResult] = []
@@ -1572,6 +1584,7 @@ async def auto_harden_router(
     new_score = 100 if payload.directive_codes_to_apply is None else min(100, 65 + applied_weight)
 
     # Ejecutar con Safe Mode
+    client: Any = None
     try:
         _, client = await get_router_and_client(router_id, claims, db)
 
@@ -1918,6 +1931,9 @@ async def auto_harden_router(
         )
     except Exception as exc:
         logger.warning("Simulación de Safe Mode en CIS auto-harden: %s", exc)
+    finally:
+        if client is not None and hasattr(client, "close"):
+            await client.close()
 
     # Persistir directivas aplicadas en KeyDB
     try:

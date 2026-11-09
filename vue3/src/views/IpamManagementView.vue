@@ -2,6 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  /* eslint-disable sonarjs/no-duplicate-string */
   import { computed, onMounted, ref } from 'vue';
   import { useIpamStore } from '@/stores/useIpamStore';
   import { useInventoryStore } from '@/stores/useInventoryStore';
@@ -539,7 +540,7 @@
 
 
 <template>
-  <main class="ipam-management-view" aria-label="Gestor IPAM y Servicios de Abonados">
+  <div class="ipam-management-view" role="region" aria-label="Gestor IPAM y Servicios de Abonados">
     <!-- Banner de Alerta de Corte de Fibra (Si hay ONUs caídas en el mismo puerto PON) -->
     <FiberCutAlertBanner />
 
@@ -905,7 +906,7 @@
           <h3 id="modal-pair-subscriber-title">
             🔗 Emparejar Red de Abonado FTTH ({{ selectedSubForPair?.customer_name || selectedSubForPair?.endpoint_identifier }})
           </h3>
-          <button type="button" class="btn-close" @click="pairModalOpen = false">✕</button>
+          <button type="button" class="btn-close" aria-label="Cerrar" @click="pairModalOpen = false">✕</button>
         </header>
 
         <form class="modal-body" @submit.prevent="handleSavePairSubscriber">
@@ -1114,7 +1115,7 @@
       <div class="rg-modal">
         <header class="modal-header">
           <h3>Registrar Nuevo Servicio FTTH</h3>
-          <button type="button" class="btn-close" @click="newSubscriberModalOpen = false">✕</button>
+          <button type="button" class="btn-close" aria-label="Cerrar" @click="newSubscriberModalOpen = false">✕</button>
         </header>
         <form class="modal-body" @submit.prevent="handleCreateSubscriber">
           <div class="form-group mb-3">
@@ -1255,7 +1256,7 @@
       <div class="rg-modal rg-modal--sm">
         <header class="modal-header">
           <h3>📍 Ubicación Geográfica de Cliente</h3>
-          <button type="button" class="btn-close" @click="locationModalOpen = false">✕</button>
+          <button type="button" class="btn-close" aria-label="Cerrar" @click="locationModalOpen = false">✕</button>
         </header>
         <div class="modal-body">
           <p class="sub-target-info">
@@ -1343,7 +1344,7 @@
       <div class="modal-card">
         <header class="modal-header">
           <h3>{{ editingProfileId ? '✏️ Editar Perfil de Ancho de Banda' : '➕ Nuevo Perfil de Ancho de Banda QoS' }}</h3>
-          <button type="button" class="btn-close" @click="isBandwidthModalOpen = false">✕</button>
+          <button type="button" class="btn-close" aria-label="Cerrar" @click="isBandwidthModalOpen = false">✕</button>
         </header>
         <div class="modal-body form-grid">
           <label>
@@ -1395,7 +1396,7 @@
       <div class="modal-card">
         <header class="modal-header">
           <h3>{{ scriptTitle }}</h3>
-          <button type="button" class="btn-close" @click="isScriptModalOpen = false">✕</button>
+          <button type="button" class="btn-close" aria-label="Cerrar" @click="isScriptModalOpen = false">✕</button>
         </header>
         <div class="modal-body">
           <p class="section-subtitle">Comando RouterOS v7 generado para despliegue manual o auditoría:</p>
@@ -1419,7 +1420,7 @@
       <div class="modal-card">
         <header class="modal-header">
           <h3>⚡ Modificar Plan de Ancho de Banda (En Caliente)</h3>
-          <button type="button" class="btn-close" @click="isChangeRateLimitModalOpen = false">✕</button>
+          <button type="button" class="btn-close" aria-label="Cerrar" @click="isChangeRateLimitModalOpen = false">✕</button>
         </header>
         <div class="modal-body">
           <p>
@@ -1448,7 +1449,7 @@
         </footer>
       </div>
     </div>
-  </main>
+  </div>
 </template>
 
 <style scoped>

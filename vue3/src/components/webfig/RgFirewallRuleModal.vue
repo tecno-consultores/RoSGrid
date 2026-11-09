@@ -2,6 +2,8 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  /* eslint-disable security/detect-object-injection, sonarjs/cognitive-complexity */
+  import type { WebFigDynamic } from '@/types';
   import { ref, watch, computed } from 'vue';
   import { useAuthStore } from '@/stores/useAuthStore';
   import type { FirewallRuleItem } from '@/types';
@@ -17,7 +19,7 @@
 
   const emit = defineEmits<{
     (e: 'close'): void;
-    (e: 'save', payload: Record<string, any>): void;
+    (e: 'save', payload: Record<string, WebFigDynamic>): void;
   }>();
 
   const isMakerCheckerRole = computed(() => {
@@ -117,43 +119,28 @@
     return chain.value === 'input' && (action.value === 'drop' || action.value === 'reject');
   });
 
+  function applyRuleDefaults(r?: WebFigDynamic) {
+    chain.value = r?.chain || chainOptions.value[0]?.value || 'forward';
+    action.value = r?.action || actionOptions.value[0]?.value || 'accept';
+    protocol.value = r?.protocol || 'any';
+    srcAddress.value = r?.src_address || '';
+    dstAddress.value = r?.dst_address || '';
+    srcPort.value = r?.src_port || '';
+    dstPort.value = r?.dst_port || '';
+    inInterface.value = r?.in_interface || '';
+    outInterface.value = r?.out_interface || '';
+    toAddresses.value = r?.to_addresses || '';
+    toPorts.value = r?.to_ports || '';
+    comment.value = r?.comment || '';
+    disabled.value = Boolean(r?.disabled);
+    placeBefore.value = '';
+  }
+
   watch(
     () => props.isOpen,
     (open) => {
       if (open) {
-        if (props.isEditing && props.initialRule) {
-          const r = props.initialRule as any;
-          chain.value = r.chain || chainOptions.value[0]?.value || 'forward';
-          action.value = r.action || actionOptions.value[0]?.value || 'accept';
-          protocol.value = r.protocol || 'any';
-          srcAddress.value = r.src_address || '';
-          dstAddress.value = r.dst_address || '';
-          srcPort.value = r.src_port || '';
-          dstPort.value = r.dst_port || '';
-          inInterface.value = r.in_interface || '';
-          outInterface.value = r.out_interface || '';
-          toAddresses.value = r.to_addresses || '';
-          toPorts.value = r.to_ports || '';
-          comment.value = r.comment || '';
-          disabled.value = Boolean(r.disabled);
-          placeBefore.value = '';
-        } else {
-          // Valores por defecto al crear
-          chain.value = chainOptions.value[0]?.value || 'forward';
-          action.value = actionOptions.value[0]?.value || 'accept';
-          protocol.value = 'any';
-          srcAddress.value = '';
-          dstAddress.value = '';
-          srcPort.value = '';
-          dstPort.value = '';
-          inInterface.value = '';
-          outInterface.value = '';
-          toAddresses.value = '';
-          toPorts.value = '';
-          comment.value = '';
-          disabled.value = false;
-          placeBefore.value = '';
-        }
+        applyRuleDefaults(props.isEditing && props.initialRule ? (props.initialRule as WebFigDynamic) : undefined);
       }
     },
     { immediate: true },
@@ -166,27 +153,32 @@
   }
 
   function handleSubmit() {
-    const payload: Record<string, any> = {
+    const payload: Record<string, WebFigDynamic> = {
       chain: chain.value,
       action: action.value,
       disabled: disabled.value,
     };
 
     if (protocol.value && protocol.value !== 'any') payload.protocol = protocol.value;
-    if (srcAddress.value.trim()) payload.src_address = srcAddress.value.trim();
-    if (dstAddress.value.trim()) payload.dst_address = dstAddress.value.trim();
-    if (srcPort.value.trim()) payload.src_port = srcPort.value.trim();
-    if (dstPort.value.trim()) payload.dst_port = dstPort.value.trim();
-    if (inInterface.value.trim()) payload.in_interface = inInterface.value.trim();
-    if (outInterface.value.trim()) payload.out_interface = outInterface.value.trim();
-    if (comment.value.trim()) payload.comment = comment.value.trim();
+    const textFields: Array<[string, string]> = [
+      ['src_address', srcAddress.value],
+      ['dst_address', dstAddress.value],
+      ['src_port', srcPort.value],
+      ['dst_port', dstPort.value],
+      ['in_interface', inInterface.value],
+      ['out_interface', outInterface.value],
+      ['comment', comment.value],
+    ];
+    for (const [key, val] of textFields) {
+      if (val.trim()) payload[key] = val.trim();
+    }
 
     // Parámetros NAT
-    if (action.value === 'dst-nat') {
-      if (toAddresses.value.trim()) payload.to_addresses = toAddresses.value.trim();
-      if (toPorts.value.trim()) payload.to_ports = toPorts.value.trim();
-    } else if (action.value === 'src-nat') {
-      if (toAddresses.value.trim()) payload.to_addresses = toAddresses.value.trim();
+    if ((action.value === 'dst-nat' || action.value === 'src-nat') && toAddresses.value.trim()) {
+      payload.to_addresses = toAddresses.value.trim();
+    }
+    if (action.value === 'dst-nat' && toPorts.value.trim()) {
+      payload.to_ports = toPorts.value.trim();
     }
 
     // Posicionamiento antes de otra regla

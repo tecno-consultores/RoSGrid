@@ -10,6 +10,7 @@ import httpx
 
 from src.mikrotik.ssl_tofu import (
     SSLTrustStatus,
+    compute_der_sha256_fingerprint,
     create_tofu_ssl_context,
     evaluate_ssl_fingerprint,
     extract_peer_ssl_fingerprint,
@@ -80,6 +81,9 @@ class MikrotikRestClient:
 
     async def ensure_ssl_verified(self) -> str | None:
         """Verifica la huella SHA-256 del certificado TLS contra la huella pinned antes de enviar credenciales."""
+        from src.schemas.inventory import _verify_host_ssrf
+
+        _verify_host_ssrf(self.host)
         if not self.use_ssl or self._ssl_verified:
             return self._observed_fingerprint
 
@@ -156,7 +160,21 @@ class MikrotikRestClient:
             }
             if timeout is not None:
                 req_kwargs["timeout"] = effective_timeout
-            return await client.request(**req_kwargs)
+            resp = await client.request(**req_kwargs)
+            expected_fp = self._observed_fingerprint or self.ssl_pinned_fingerprint
+            if self.use_ssl and expected_fp and hasattr(resp, "extensions") and isinstance(resp.extensions, dict):
+                net_stream = resp.extensions.get("network_stream")
+                if net_stream is not None and hasattr(net_stream, "get_extra_info"):
+                    ssl_obj = net_stream.get_extra_info("ssl_object")
+                    if ssl_obj is not None and hasattr(ssl_obj, "getpeercert"):
+                        der_cert = ssl_obj.getpeercert(binary_form=True)
+                        if isinstance(der_cert, bytes) and der_cert:
+                            evaluate_ssl_fingerprint(
+                                observed_fp=compute_der_sha256_fingerprint(der_cert),
+                                pinned_fp=expected_fp,
+                                trust_status=SSLTrustStatus.TRUSTED_PINNED.value,
+                            )
+            return resp
         except httpx.TimeoutException as exc:
             raise MikrotikTimeoutError(f"Timeout en {method} {url} tras {effective_timeout}s") from exc
         except (httpx.NetworkError, httpx.TransportError, httpx.HTTPError) as exc:

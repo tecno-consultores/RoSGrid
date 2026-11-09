@@ -406,7 +406,17 @@ async def list_routers(
 @router.post("/routers/{router_id}/sync-syslog", response_model=RouterResponse)
 async def sync_router_syslog(
     router_id: uuid.UUID,
-    claims: dict[str, Any] = Depends(get_current_user_claims),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.INVENTORY_MANAGER,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> RouterResponse:
     """Verifica y sincroniza activamente la presencia y configuración de Syslog en el router."""

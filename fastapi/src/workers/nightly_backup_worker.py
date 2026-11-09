@@ -100,8 +100,14 @@ async def _backup_single_router(session: Any, r: Router) -> None:
 
 async def run_nightly_backup_cycle() -> None:
     """Ejecuta el ciclo de respaldo nocturno para la flota completa y purga respaldos > 30 días."""
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from src.db.session import set_tenant_context
+
     logger.info("Iniciando ronda de respaldos nocturnos deduplicados...")
     async with async_session_maker() as session:
+        if type(session) is AsyncSession:
+            await set_tenant_context(session, None, is_superadmin=True)
         stmt = (
             select(Router)
             .options(selectinload(Router.vault))

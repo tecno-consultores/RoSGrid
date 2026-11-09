@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-unsafe-regex, sonarjs/no-duplicate-string */
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 

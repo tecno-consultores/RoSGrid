@@ -107,10 +107,11 @@
   }
 
   function createOnuIcon(color: string, label: string): L.DivIcon {
+    const safeLabel = escapeHtml(label);
     return L.divIcon({
       className: 'rg-onu-pin-container',
       html: `
-        <div class="rg-onu-pin" style="--pin-color: ${color};" role="button" tabindex="0" aria-label="ONU ${label}">
+        <div class="rg-onu-pin" style="--pin-color: ${color};" role="button" tabindex="0" aria-label="ONU ${safeLabel}">
           <div class="pin-pulse"></div>
           <div class="pin-dot"></div>
         </div>
@@ -121,10 +122,11 @@
   }
 
   function createMultiOnuIcon(color: string, count: number, label: string): L.DivIcon {
+    const safeLabel = escapeHtml(label);
     return L.divIcon({
       className: 'rg-onu-pin-container',
       html: `
-        <div class="rg-onu-pin rg-onu-pin--multi" style="--pin-color: ${color};" role="button" tabindex="0" aria-label="Caja con ${count} ONUs: ${label}">
+        <div class="rg-onu-pin rg-onu-pin--multi" style="--pin-color: ${color};" role="button" tabindex="0" aria-label="Caja con ${count} ONUs: ${safeLabel}">
           <div class="pin-pulse pin-pulse--multi"></div>
           <div class="pin-dot pin-dot--multi">
             <span class="pin-count-badge">${count}</span>

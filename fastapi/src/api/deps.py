@@ -45,18 +45,27 @@ async def get_current_user_claims(request: Request) -> dict[str, Any]:
     except jwt.PyJWTError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Token de acceso inválido o expirado: {exc}",
+            detail="Token de acceso inválido o expirado",
         ) from exc
 
     session_id = payload.get("sid")
     tenant_id = payload.get("tid")
     user_id = payload.get("sub")
     role = payload.get("rol")
+    scope = payload.get("scope")
 
     if not session_id or not tenant_id or not user_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token malformado (claims requeridos faltantes)",
+        )
+
+    if (role == SystemRoleEnum.SERVICE_ACCOUNT.value or scope == "mcp_only") and not request.url.path.startswith(
+        "/api/v1/mcp"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="El rol SERVICE_ACCOUNT y los tokens MCP están restringidos exclusivamente al endpoint /api/v1/mcp",
         )
 
     # Verificación en tiempo real contra Redis (Kill-Switch inmediato)

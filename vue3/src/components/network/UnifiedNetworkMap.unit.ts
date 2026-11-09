@@ -1,6 +1,8 @@
+/* eslint-disable sonarjs/no-duplicate-string */
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
+import type { WebFigDynamic } from '@/types';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
@@ -838,7 +840,7 @@ describe('UnifiedNetworkMap.vue — Mapa de Red Unificado & Gobierno RCA (Hito 2
 
     await wrapper.vm.$nextTick();
 
-    (wrapper.vm as any).fitMapToActiveNodes(true);
+    (wrapper.vm as unknown as WebFigDynamic).fitMapToActiveNodes(true);
     expect(mockMapInstance.setView).toHaveBeenCalledWith(
       [10.25, -67.6],
       expect.any(Number),
@@ -876,7 +878,7 @@ describe('UnifiedNetworkMap.vue — Mapa de Red Unificado & Gobierno RCA (Hito 2
     expect(wrapper.find('.unified-detail-drawer').exists()).toBe(false);
 
     // Activamos un enlace L2 para abrir el drawer
-    (wrapper.vm as any).activeL2Edge = {
+    (wrapper.vm as unknown as WebFigDynamic).activeL2Edge = {
       source_router_id: 'r1',
       source_interface: 'ether1',
       target_router_id: 'r2',

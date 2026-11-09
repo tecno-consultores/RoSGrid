@@ -10,6 +10,7 @@ import ipaddress
 import json
 import logging
 import smtplib
+import socket
 import urllib.parse
 import uuid
 from email.message import EmailMessage
@@ -17,9 +18,10 @@ from typing import Any, cast
 
 import httpx
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.crypto import decrypt_aes_gcm
-from src.db.session import async_session_maker
+from src.db.session import async_session_maker, set_tenant_context
 from src.models.operations import AlertChannelTypeEnum, NotificationChannel
 from src.redis_layer.client import get_redis_client
 
@@ -123,21 +125,75 @@ def _dispatch_smtp_sync(config: dict[str, Any], alert: dict[str, Any]) -> None:
         server.send_message(msg)
 
 
+_BLOCKED_WEBHOOK_HOSTS = {
+    "localhost",
+    "localhost.localdomain",
+    "127.0.0.1",
+    "::1",
+    "0.0.0.0",  # nosec B104
+    "169.254.169.254",
+    "metadata.google.internal",
+    "localtest.me",
+    "rosgrid-db",
+    "rosgrid_db",
+    "rosgrid-redis",
+    "rosgrid_redis",
+    "rosgrid-api",
+    "rosgrid_api",
+    "rosgrid-worker",
+    "rosgrid_worker",
+    "rosgrid-frontend",
+    "rosgrid_frontend",
+    "db",
+    "redis",
+    "keydb",
+    "postgres",
+}
+
+
 def is_safe_webhook_url(url: str) -> bool:
     """Verifica que la URL no apunte a esquemas no válidos o direcciones IP privadas / locales (Anti-SSRF)."""
     try:
         parsed = urllib.parse.urlparse(url)
         if parsed.scheme not in ("http", "https"):
             return False
-        hostname = (parsed.hostname or "").strip().lower()
-        if not hostname or hostname in ("localhost", "127.0.0.1", "::1"):
+        hostname = (parsed.hostname or "").strip().lower().rstrip(".")
+        normalized_host = hostname.replace("_", "-")
+        if (
+            not hostname
+            or hostname in _BLOCKED_WEBHOOK_HOSTS
+            or normalized_host in _BLOCKED_WEBHOOK_HOSTS
+            or hostname.endswith((".localhost", ".internal", ".localtest.me", ".nip.io", ".sslip.io", ".xip.io"))
+        ):
             return False
         try:
             ip = ipaddress.ip_address(hostname)
-            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
+            if (
+                ip.is_private
+                or ip.is_loopback
+                or ip.is_link_local
+                or ip.is_reserved
+                or ip.is_multicast
+                or ip.is_unspecified
+            ):
                 return False
         except ValueError:
-            pass
+            try:
+                infos = socket.getaddrinfo(hostname, None, proto=socket.IPPROTO_TCP)
+                for info in infos:
+                    resolved_str = str(info[4][0]).split("%")[0]
+                    resolved_ip = ipaddress.ip_address(resolved_str)
+                    if (
+                        resolved_ip.is_private
+                        or resolved_ip.is_loopback
+                        or resolved_ip.is_link_local
+                        or resolved_ip.is_reserved
+                        or resolved_ip.is_multicast
+                        or resolved_ip.is_unspecified
+                    ):
+                        return False
+            except OSError:
+                pass
         return True
     except Exception:
         return False
@@ -197,6 +253,8 @@ async def _process_alert_payload(tenant_id_str: str, raw_alert: str) -> None:
         return
 
     async with async_session_maker() as session:
+        if type(session) is AsyncSession:
+            await set_tenant_context(session, tenant_id, is_superadmin=False)
         stmt = select(NotificationChannel).where(
             NotificationChannel.tenant_id == tenant_id, NotificationChannel.is_enabled.is_(True)
         )

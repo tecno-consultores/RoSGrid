@@ -7,6 +7,7 @@ Todos los cambios relevantes de este proyecto se documentan en este archivo sigu
 ## [Unreleased]
 
 ### Added
+- **Remediación Integral Zero-Trust, RLS Multi-Transacción, Cadena WORM Determinista, Accesibilidad WCAG 2.1 AA y Pipelines CI/CD 11X (`Spec 114` / Hito `30.38`):** Migración Alembic `0016` con rol `rosgrid_app` (`NOSUPERUSER NOBYPASSRLS`), función `SECURITY DEFINER` `fn_resolve_tenant_by_slug`, secuencia determinista `audit_logs_worm_seq` + bloqueo transaccional `pg_advisory_xact_lock`, listener `after_begin` en `AsyncSession`, cierre de escalación de privilegios en `PATCH /api/v1/users/{id}`, bloqueo de token `mcp_only` fuera de `/api/v1/mcp`, pool TCP reutilizable en `MikrotikRestClient`, mitigación XSS/CSRF/Open Redirect en Vue 3, paridad WCAG 2.1 AA e i18n, workflows `.github/workflows/01-backend-qa.yml` y `02-frontend-qa.yml`, y archivado histórico en `docs/archive/`.
 - **Catálogo MCP Completo de 22 Herramientas (`fastapi/src/api/v1/mcp.py` — Spec 113):** Implementación de las herramientas de consulta documental oficial de MikroTik `#21 rosgrid_search_mikrotik_docs` y `#22 rosgrid_get_mikrotik_doc_topic` (con validación anti-SSRF sobre `https://manual.mikrotik.com/docs/`).
 
 ### Changed

@@ -1,6 +1,8 @@
+/* eslint-disable sonarjs/no-duplicate-string */
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
+import type { WebFigDynamic } from '@/types';
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
 import RgFirewallRuleModal from './RgFirewallRuleModal.vue';
@@ -132,7 +134,7 @@ describe('RgFirewallRuleModal.vue — Creación y Edición de Reglas de Firewall
     await wrapper.find('form').trigger('submit.prevent');
 
     expect(wrapper.emitted('save')).toBeTruthy();
-    const emitted = wrapper.emitted('save')?.[0]?.[0] as Record<string, any>;
+    const emitted = wrapper.emitted('save')?.[0]?.[0] as Record<string, WebFigDynamic>;
     expect(emitted.chain).toBe('forward');
     expect(emitted.action).toBe('accept');
     expect(emitted.protocol).toBe('tcp');

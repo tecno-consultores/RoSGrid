@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright (C) 2026 RoSGrid Contributors
+
+name: "Paso 1: QA Backend FastAPI (Ruff, Mypy Strict, Pytest >=95% & Gobernanza)"
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+permissions:
+  contents: read
+
+jobs:
+  backend-qa:
+    name: 🧪 Certificación Efímera de Backend en Docker (Regla Cero)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout del código de RoSGrid
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: 🐳 Construir imagen local de prueba del Backend
+        run: docker build -t sinfallas/rosgrid-backend:local-test ./fastapi
+
+      - name: 🔍 Ejecutar Ruff, Mypy Strict y Pytest (>=95% Cobertura)
+        run: |
+          docker run --rm --entrypoint sh \
+            -e COVERAGE_FILE=/tmp/.coverage \
+            -v "${GITHUB_WORKSPACE}/fastapi:/app" \
+            -v "${GITHUB_WORKSPACE}:/workspace:ro" \
+            -w /app \
+            sinfallas/rosgrid-backend:local-test \
+            -c "ruff check --no-cache src/ tests/ && UV_PROJECT_ENVIRONMENT=/tmp/venv UV_CACHE_DIR=/tmp/uv-cache PYTHONPATH=/app/src uv run --with mypy --with pytest --with pytest-asyncio --with pytest-cov sh -c 'mypy --cache-dir=/tmp/mypy src/ && pytest -o addopts=\"\" -o cache_dir=/tmp/pytest-cache --import-mode=importlib --cov=src --cov-fail-under=95 -q --tb=short tests/'"
+
+      - name: 🛡️ Verificar scripts de gobernanza 11X
+        run: |
+          docker run --rm --entrypoint sh \
+            -v "${GITHUB_WORKSPACE}:/workspace:ro" \
+            -w /workspace \
+            sinfallas/rosgrid-backend:local-test \
+            -c "python3 .agents/scripts/verify_json_no_duplicate_keys.py && python3 .agents/scripts/verify_zero_orphan_vue_components.py && python3 .agents/scripts/verify_anti_silo_test_quality.py && python3 .agents/scripts/verify_topological_health.py && python3 .agents/scripts/verify_no_orphan_api_endpoints.py && python3 .agents/scripts/verify_roadmap_consistency.py"

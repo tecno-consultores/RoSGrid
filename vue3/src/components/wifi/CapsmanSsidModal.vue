@@ -97,7 +97,8 @@ async function handleSave() {
     }
     emit('saved');
     emit('close');
-  } catch (err: any) {
+  } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
     errorMsg.value = err.response?.data?.detail || err.message || t('wifi.save_error', 'Error al guardar configuración SSID.');
   } finally {
     isSubmitting.value = false;

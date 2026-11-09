@@ -2,6 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  /* eslint-disable sonarjs/cognitive-complexity */
   import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
   import { useAuthStore } from '@/stores/useAuthStore';
@@ -696,7 +697,7 @@
 
     <RgMcpTokenModal
       :is-open="isMcpTokenModalOpen"
-      :user="authStore.user as any"
+      :user="(authStore.user as unknown as never)"
       @close="isMcpTokenModalOpen = false"
     />
 

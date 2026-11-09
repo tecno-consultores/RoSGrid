@@ -2,6 +2,8 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  /* eslint-disable sonarjs/cognitive-complexity, sonarjs/no-duplicate-string */
+  import type { WebFigDynamic } from '@/types';
   import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
   import { useRoute } from 'vue-router';
   import { http } from '@/api/httpClient';
@@ -44,24 +46,24 @@
 
   // Colecciones
   const bgpSessions = ref<BgpSessionItem[]>([]);
-  const bgpTemplates = ref<any[]>([]);
-  const bgpAdvertisements = ref<any[]>([]);
+  const bgpTemplates = ref<WebFigDynamic[]>([]);
+  const bgpAdvertisements = ref<WebFigDynamic[]>([]);
   const ospfNeighbors = ref<OspfNeighborItem[]>([]);
-  const ospfInstances = ref<any[]>([]);
-  const ospfAreas = ref<any[]>([]);
-  const ospfInterfaceTemplates = ref<any[]>([]);
+  const ospfInstances = ref<WebFigDynamic[]>([]);
+  const ospfAreas = ref<WebFigDynamic[]>([]);
+  const ospfInterfaceTemplates = ref<WebFigDynamic[]>([]);
   const staticRoutes = ref<StaticRouteItem[]>([]);
-  const routingTables = ref<any[]>([]);
-  const routingRules = ref<any[]>([]);
-  const routingFilters = ref<any[]>([]);
-  const bfdSessions = ref<any[]>([]);
+  const routingTables = ref<WebFigDynamic[]>([]);
+  const routingRules = ref<WebFigDynamic[]>([]);
+  const routingFilters = ref<WebFigDynamic[]>([]);
+  const bfdSessions = ref<WebFigDynamic[]>([]);
 
   // BGP Looking Glass State
   const lgMode = ref<'route' | 'advertised'>('route');
   const lgDstPrefix = ref('1.1.1.0/24');
   const lgPeerName = ref('');
-  const lgRouteResult = ref<any>(null);
-  const lgAdvResult = ref<any>(null);
+  const lgRouteResult = ref<WebFigDynamic>(null);
+  const lgAdvResult = ref<WebFigDynamic>(null);
   const isLgLoading = ref(false);
 
   // Modales
@@ -162,29 +164,29 @@
       const query = forceRefresh ? '?refresh=true' : '';
       if (activeTab.value === 'bgp') {
         const [res, tplRes, advRes] = await Promise.all([
-          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/bgp/sessions${query}`),
-          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/bgp/templates${query}`).catch(() => ({ data: [] })),
-          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/bgp/advertisements${query}`).catch(() => ({ data: [] })),
+          http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/routing/bgp/sessions${query}`),
+          http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/routing/bgp/templates${query}`).catch(() => ({ data: [] })),
+          http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/routing/bgp/advertisements${query}`).catch(() => ({ data: [] })),
         ]);
-        const data: any = res.data;
+        const data: WebFigDynamic = res.data;
         bgpSessions.value = Array.isArray(data) ? data : data?.sessions || data?.peers || data?.items || [];
         bgpTemplates.value = Array.isArray(tplRes.data) ? tplRes.data : [];
         bgpAdvertisements.value = Array.isArray(advRes.data) ? advRes.data : [];
       } else if (activeTab.value === 'ospf') {
         const [res, instRes, areasRes, ifTplRes] = await Promise.all([
-          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/ospf/neighbors${query}`),
-          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/ospf/instances${query}`).catch(() => ({ data: [] })),
-          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/ospf/areas${query}`).catch(() => ({ data: [] })),
-          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/ospf/interface-templates${query}`).catch(() => ({ data: [] })),
+          http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/routing/ospf/neighbors${query}`),
+          http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/routing/ospf/instances${query}`).catch(() => ({ data: [] })),
+          http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/routing/ospf/areas${query}`).catch(() => ({ data: [] })),
+          http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/routing/ospf/interface-templates${query}`).catch(() => ({ data: [] })),
         ]);
         ospfNeighbors.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
         ospfInstances.value = Array.isArray(instRes.data) ? instRes.data : [];
         ospfAreas.value = Array.isArray(areasRes.data) ? areasRes.data : [];
         ospfInterfaceTemplates.value = Array.isArray(ifTplRes.data) ? ifTplRes.data : [];
       } else if (activeTab.value === 'routes') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/routes${query}`);
+        const res = await http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/ip/routes${query}`);
         const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
-        staticRoutes.value = items.map((r: any) => ({
+        staticRoutes.value = items.map((r: WebFigDynamic) => ({
           ...r,
           id: r.id || r['.id'],
           dst_address: r.dst_address || r['dst-address'] || '0.0.0.0/0',
@@ -197,18 +199,19 @@
           dynamic: r.dynamic === 'true' || r.dynamic === true,
         }));
       } else if (activeTab.value === 'policy-routing') {
-        const resT = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/tables${query}`);
+        const resT = await http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/routing/tables${query}`);
         routingTables.value = Array.isArray(resT.data) ? resT.data : resT.data?.items || [];
-        const resR = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/rules${query}`);
+        const resR = await http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/routing/rules${query}`);
         routingRules.value = Array.isArray(resR.data) ? resR.data : resR.data?.items || [];
       } else if (activeTab.value === 'filters') {
-        const resF = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/filters/rules${query}`);
+        const resF = await http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/routing/filters/rules${query}`);
         routingFilters.value = Array.isArray(resF.data) ? resF.data : [];
       } else if (activeTab.value === 'bfd') {
-        const resBfd = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/routing/bfd/sessions${query}`);
+        const resBfd = await http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/routing/bfd/sessions${query}`);
         bfdSessions.value = Array.isArray(resBfd.data) ? resBfd.data : [];
       }
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al cargar datos de enrutamiento.';
     } finally {
       isLoading.value = false;
@@ -221,11 +224,12 @@
     isLgLoading.value = true;
     lgRouteResult.value = null;
     try {
-      const res = await http.get<any>(
+      const res = await http.get<WebFigDynamic>(
         `/api/v1/bgp/looking-glass/route?router_id=${routerId.value}&dst_prefix=${encodeURIComponent(lgDstPrefix.value)}`,
       );
       lgRouteResult.value = res.data;
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || 'Error al consultar Looking Glass de ruta';
     } finally {
       isLgLoading.value = false;
@@ -237,11 +241,12 @@
     isLgLoading.value = true;
     lgAdvResult.value = null;
     try {
-      const res = await http.get<any>(
+      const res = await http.get<WebFigDynamic>(
         `/api/v1/bgp/looking-glass/advertised?router_id=${routerId.value}&peer_name=${encodeURIComponent(lgPeerName.value)}`,
       );
       lgAdvResult.value = res.data;
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || 'Error al consultar Looking Glass de prefijos anunciados';
     } finally {
       isLgLoading.value = false;
@@ -253,7 +258,8 @@
       await http.post(`/api/v1/routers/${routerId.value}/webfig/routing/filters/rules`, newFilter.value);
       isFilterModalOpen.value = false;
       await loadRoutingData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || 'Error al crear regla de filtro de ruteo';
     }
   }
@@ -263,7 +269,8 @@
     try {
       await http.delete(`/api/v1/routers/${routerId.value}/webfig/routing/filters/rules/${ruleId}`);
       await loadRoutingData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || 'Error al eliminar regla de filtro';
     }
   }
@@ -282,11 +289,12 @@
       });
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       actionMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Solicitud en espera de aprobación humana en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Solicitud en espera de aprobación humana en Maker-Checker.'
         : `Ruta hacia ${newRoute.value.dst_address} creada con éxito.`;
       isRouteModalOpen.value = false;
       loadRoutingData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       webFigStore.stopSafeMode?.();
       errorMessage.value = err?.detail || err?.message || 'Error al crear ruta estática.';
     }
@@ -299,7 +307,8 @@
       });
       webFigStore.handleMutationResponse(res, 60);
       loadRoutingData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       webFigStore.stopSafeMode?.();
       errorMessage.value = err?.detail || 'Error al conmutar ruta.';
     }
@@ -311,10 +320,11 @@
       const res = await http.delete(`/api/v1/routers/${routerId.value}/webfig/ip/routes/${r.id}`);
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       actionMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Solicitud en espera de aprobación humana en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Solicitud en espera de aprobación humana en Maker-Checker.'
         : `Ruta hacia ${r.dst_address} eliminada.`;
       loadRoutingData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       webFigStore.stopSafeMode?.();
       errorMessage.value = err?.detail || 'Error al eliminar ruta.';
     }
@@ -350,17 +360,18 @@
       );
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       actionMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Solicitud en espera de aprobación humana en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Solicitud en espera de aprobación humana en Maker-Checker.'
         : `Ruta hacia ${editRouteForm.value.dst_address} actualizada.`;
       isEditRouteModalOpen.value = false;
       loadRoutingData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       webFigStore.stopSafeMode?.();
       errorMessage.value = err?.detail || 'Error al actualizar ruta.';
     }
   }
 
-  function openEditBgpModal(peer: any) {
+  function openEditBgpModal(peer: WebFigDynamic) {
     editingBgpId.value = String(peer.id || peer['.id'] || '');
     editBgpForm.value = {
       name: String(peer.name || ''),
@@ -384,17 +395,18 @@
       );
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       actionMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Solicitud BGP en espera de aprobación humana en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Solicitud BGP en espera de aprobación humana en Maker-Checker.'
         : `Conexión BGP "${editBgpForm.value.name}" actualizada.`;
       isEditBgpModalOpen.value = false;
       loadRoutingData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       webFigStore.stopSafeMode?.();
       errorMessage.value = err?.detail || 'Error al actualizar conexión BGP.';
     }
   }
 
-  async function handleDeleteBgpConnection(peer: any) {
+  async function handleDeleteBgpConnection(peer: WebFigDynamic) {
     if (!confirm(`¿Eliminar la conexión BGP "${peer.name}"?`)) return;
     try {
       const res = await http.delete(
@@ -402,16 +414,17 @@
       );
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       actionMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Solicitud BGP en espera de aprobación humana en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Solicitud BGP en espera de aprobación humana en Maker-Checker.'
         : `Conexión BGP "${peer.name}" eliminada.`;
       loadRoutingData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       webFigStore.stopSafeMode?.();
       errorMessage.value = err?.detail || 'Error al eliminar conexión BGP.';
     }
   }
 
-  function openEditTableModal(tbl: any) {
+  function openEditTableModal(tbl: WebFigDynamic) {
     editingTableId.value = String(tbl.id || tbl['.id'] || '');
     editTableForm.value = {
       name: String(tbl.name || ''),
@@ -430,17 +443,18 @@
       );
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       actionMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Solicitud FIB en espera de aprobación humana en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Solicitud FIB en espera de aprobación humana en Maker-Checker.'
         : `Tabla FIB "${editTableForm.value.name}" actualizada.`;
       isEditTableModalOpen.value = false;
       loadRoutingData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       webFigStore.stopSafeMode?.();
       errorMessage.value = err?.detail || 'Error al actualizar tabla FIB.';
     }
   }
 
-  async function handleDeleteTable(tbl: any) {
+  async function handleDeleteTable(tbl: WebFigDynamic) {
     if (!confirm(`¿Eliminar la tabla FIB "${tbl.name}"?`)) return;
     try {
       const res = await http.delete(
@@ -448,16 +462,17 @@
       );
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       actionMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Solicitud FIB en espera de aprobación humana en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Solicitud FIB en espera de aprobación humana en Maker-Checker.'
         : `Tabla FIB "${tbl.name}" eliminada.`;
       loadRoutingData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       webFigStore.stopSafeMode?.();
       errorMessage.value = err?.detail || 'Error al eliminar tabla FIB.';
     }
   }
 
-  function openEditRuleModal(rule: any) {
+  function openEditRuleModal(rule: WebFigDynamic) {
     editingRuleId.value = String(rule.id || rule['.id'] || '');
     editRuleForm.value = {
       src_address: String(rule['src-address'] || rule.src_address || ''),
@@ -478,17 +493,18 @@
       );
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       actionMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Solicitud PBR en espera de aprobación humana en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Solicitud PBR en espera de aprobación humana en Maker-Checker.'
         : `Regla PBR actualizada.`;
       isEditRuleModalOpen.value = false;
       loadRoutingData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       webFigStore.stopSafeMode?.();
       errorMessage.value = err?.detail || 'Error al actualizar regla PBR.';
     }
   }
 
-  async function handleDeleteRule(rule: any) {
+  async function handleDeleteRule(rule: WebFigDynamic) {
     if (!confirm(`¿Eliminar la regla PBR hacia tabla "${rule.table}"?`)) return;
     try {
       const res = await http.delete(
@@ -496,10 +512,11 @@
       );
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       actionMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Solicitud PBR en espera de aprobación humana en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Solicitud PBR en espera de aprobación humana en Maker-Checker.'
         : `Regla PBR eliminada.`;
       loadRoutingData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       webFigStore.stopSafeMode?.();
       errorMessage.value = err?.detail || 'Error al eliminar regla PBR.';
     }
@@ -519,11 +536,12 @@
       });
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       actionMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Solicitud de conexión BGP en espera de aprobación humana en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Solicitud de conexión BGP en espera de aprobación humana en Maker-Checker.'
         : `Conexión BGP "${newBgp.value.name}" configurada.`;
       isBgpModalOpen.value = false;
       loadRoutingData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       webFigStore.stopSafeMode?.();
       errorMessage.value = err?.detail || 'Error al crear conexión BGP.';
     }
@@ -535,11 +553,12 @@
       const res = await http.post(`/api/v1/routers/${routerId.value}/webfig/routing/tables`, newTable.value);
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       actionMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Solicitud de tabla FIB en espera de aprobación humana en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Solicitud de tabla FIB en espera de aprobación humana en Maker-Checker.'
         : `Tabla de enrutamiento FIB "${newTable.value.name}" creada.`;
       isTableModalOpen.value = false;
       loadRoutingData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       webFigStore.stopSafeMode?.();
       errorMessage.value = err?.detail || 'Error al crear tabla FIB.';
     }
@@ -550,11 +569,12 @@
       const res = await http.post(`/api/v1/routers/${routerId.value}/webfig/routing/rules`, newRule.value);
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       actionMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Solicitud de regla PBR en espera de aprobación humana en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Solicitud de regla PBR en espera de aprobación humana en Maker-Checker.'
         : `Regla de enrutamiento PBR creada.`;
       isRuleModalOpen.value = false;
       loadRoutingData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       webFigStore.stopSafeMode?.();
       errorMessage.value = err?.detail || 'Error al crear regla PBR.';
     }
@@ -661,7 +681,7 @@
           role="tab"
           :aria-selected="activeTab === tab.id"
           @click="
-            activeTab = tab.id as any;
+            activeTab = tab.id as typeof activeTab;
             loadRoutingData();
           "
         >
@@ -858,10 +878,10 @@
       <table class="tactical-table">
         <thead>
           <tr>
-            <th>Cadena (Chain)</th>
-            <th>Regla de Filtro (Sintaxis v7)</th>
-            <th>Estado</th>
-            <th class="actions-col">Acciones</th>
+            <th scope="col">Cadena (Chain)</th>
+            <th scope="col">Regla de Filtro (Sintaxis v7)</th>
+            <th scope="col">Estado</th>
+            <th class="actions-col" scope="col">Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -901,11 +921,11 @@
       <table class="tactical-table">
         <thead>
           <tr>
-            <th>Dirección Destino</th>
-            <th>Interfaz</th>
-            <th>Estado</th>
-            <th>Intervalo TX/RX</th>
-            <th>Multiplicador</th>
+            <th scope="col">Dirección Destino</th>
+            <th scope="col">Interfaz</th>
+            <th scope="col">Estado</th>
+            <th scope="col">Intervalo TX/RX</th>
+            <th scope="col">Multiplicador</th>
           </tr>
         </thead>
         <tbody>
@@ -932,13 +952,13 @@
       <table class="tactical-table">
         <thead>
           <tr>
-            <th>Destino (Dst-Address)</th>
-            <th>Gateway</th>
-            <th>Distancia</th>
-            <th>Check Gateway</th>
-            <th>Tabla</th>
-            <th>Estado</th>
-            <th class="actions-col">Acciones</th>
+            <th scope="col">Destino (Dst-Address)</th>
+            <th scope="col">Gateway</th>
+            <th scope="col">Distancia</th>
+            <th scope="col">Check Gateway</th>
+            <th scope="col">Tabla</th>
+            <th scope="col">Estado</th>
+            <th class="actions-col" scope="col">Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -994,10 +1014,10 @@
         <table class="tactical-table">
           <thead>
             <tr>
-              <th>Nombre de la Tabla</th>
-              <th>FIB</th>
-              <th>Deshabilitada</th>
-              <th class="actions-col">Acciones</th>
+              <th scope="col">Nombre de la Tabla</th>
+              <th scope="col">FIB</th>
+              <th scope="col">Deshabilitada</th>
+              <th class="actions-col" scope="col">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -1022,10 +1042,10 @@
         <table class="tactical-table">
           <thead>
             <tr>
-              <th>IP Origen</th>
-              <th>Acción</th>
-              <th>Tabla de Consulta</th>
-              <th class="actions-col">Acciones</th>
+              <th scope="col">IP Origen</th>
+              <th scope="col">Acción</th>
+              <th scope="col">Tabla de Consulta</th>
+              <th class="actions-col" scope="col">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -1259,7 +1279,7 @@
       <div class="modal-box">
         <div class="modal-header">
           <h3>🛡️ Nueva Regla de Filtro de Ruteo (/routing/filter/rule)</h3>
-          <button type="button" class="btn-close" @click="isFilterModalOpen = false">✕</button>
+          <button type="button" class="btn-close" aria-label="Cerrar" @click="isFilterModalOpen = false">✕</button>
         </div>
         <form class="modal-body" @submit.prevent="handleCreateFilterRule">
           <div class="form-group">

@@ -2,6 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  /* eslint-disable security/detect-object-injection */
   import { ref, computed, onMounted } from 'vue';
   import { http } from '@/api/httpClient';
   import { useAuthStore } from '@/stores/useAuthStore';
@@ -74,9 +75,9 @@
       ]);
 
       const rawRoles = resRoles?.data;
-      rolesList.value = Array.isArray(rawRoles) ? rawRoles : (rawRoles as any)?.items || [];
+      rolesList.value = Array.isArray(rawRoles) ? rawRoles : (rawRoles as { items?: RbacRoleItem[] })?.items || [];
       const rawActions = resActions?.data;
-      actionsList.value = Array.isArray(rawActions) ? rawActions : (rawActions as any)?.items || [];
+      actionsList.value = Array.isArray(rawActions) ? rawActions : (rawActions as { items?: RbacActionItem[] })?.items || [];
 
       if (
         Array.isArray(rolesList.value) &&

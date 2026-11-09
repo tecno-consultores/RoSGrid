@@ -654,16 +654,18 @@ async def get_catalog(
     tenant_id = uuid.UUID(claims["tid"])
     redis = from_deps_redis()
     router_obj, client = await get_router_and_client(router_id, claims, db)
-
-    raw_pkgs = await cached_mikrotik_get(
-        redis=redis,
-        tenant_id=tenant_id,
-        router_id=router_id,
-        endpoint="system/package",
-        client=client,
-        refresh=refresh,
-        ttl_seconds=300,
-    )
+    try:
+        raw_pkgs = await cached_mikrotik_get(
+            redis=redis,
+            tenant_id=tenant_id,
+            router_id=router_id,
+            endpoint="system/package",
+            client=client,
+            refresh=refresh,
+            ttl_seconds=300,
+        )
+    finally:
+        await client.close()
     installed_pkgs = (
         [str(p.get("name", "")).strip() for p in raw_pkgs if isinstance(p, dict) and _is_ros_package_active(p)]
         if isinstance(raw_pkgs, list)
@@ -689,7 +691,8 @@ async def get_rpc_catalog(
 ) -> list[Layer2RpcActionDescriptor]:
     """Devuelve el catálogo de verbos RPC contextuales soportados por un submenú de Capa 2."""
     clean_path = _validate_l2_path(ros_path)
-    await get_router_and_client(router_id, claims, db)
+    _, client = await get_router_and_client(router_id, claims, db)
+    await client.close()
     return get_rpc_actions_for_path(clean_path)
 
 
@@ -706,8 +709,10 @@ async def inspect_layer2_schema(
     redis = from_deps_redis()
     router_obj, client = await get_router_and_client(router_id, claims, db)
     ros_ver = router_obj.ros_version or "7.16"
-
-    cols, source = await _resolve_schema_via_inspect(redis, tenant_id, ros_ver, clean_path, client)
+    try:
+        cols, source = await _resolve_schema_via_inspect(redis, tenant_id, ros_ver, clean_path, client)
+    finally:
+        await client.close()
     rpc_actions = get_rpc_actions_for_path(clean_path)
     return Layer2InspectResponse(
         ros_path=clean_path,
@@ -769,7 +774,12 @@ async def get_resource(
 
     if not columns:
         ros_ver = router_obj.ros_version or "7.16"
-        columns, schema_source = await _resolve_schema_via_inspect(redis, tenant_id, ros_ver, clean_path, client)
+        try:
+            columns, schema_source = await _resolve_schema_via_inspect(redis, tenant_id, ros_ver, clean_path, client)
+        finally:
+            await client.close()
+    else:
+        await client.close()
 
     return DynamicLayer2CollectionResponse(
         ros_path=clean_path,
@@ -826,7 +836,12 @@ async def query_resource_server_side(
     schema_source = "inferred"
     if not columns:
         ros_ver = router_obj.ros_version or "7.16"
-        columns, schema_source = await _resolve_schema_via_inspect(redis, tenant_id, ros_ver, clean_path, client)
+        try:
+            columns, schema_source = await _resolve_schema_via_inspect(redis, tenant_id, ros_ver, clean_path, client)
+        finally:
+            await client.close()
+    else:
+        await client.close()
 
     reduction_pct = round(max(0.0, (1.0 - (len(normalized_props) / 35.0)) * 100.0), 1) if normalized_props else 0.0
     return DynamicLayer2CollectionResponse(
@@ -862,7 +877,14 @@ async def create_resource(
     async def _action() -> Any:
         return await client.put(clean_path, payload.attributes)
 
-    res = await execute_safe_mutation(client, clean_path, "create", _action) if payload.enable_safemode else await _action()
+    try:
+        res = (
+            await execute_safe_mutation(client, clean_path, "create", _action)
+            if payload.enable_safemode
+            else await _action()
+        )
+    finally:
+        await client.close()
     await invalidate_webfig_cache(from_deps_redis(), uuid.UUID(claims["tid"]), router_id, clean_path)
 
     await write_audit_log(
@@ -916,16 +938,22 @@ async def update_resource(
                 return await client.patch(full_path, attributes)
 
         if enable_safemode:
-            res = await execute_safe_mutation(
-                client,
-                full_path,
-                "update_singleton",
-                _action_singleton,
-                item_id=None,
-                before_state=before_state if isinstance(before_state, dict) else None,
-            )
+            try:
+                res = await execute_safe_mutation(
+                    client,
+                    full_path,
+                    "update_singleton",
+                    _action_singleton,
+                    item_id=None,
+                    before_state=before_state if isinstance(before_state, dict) else None,
+                )
+            finally:
+                await client.close()
         else:
-            res = await _action_singleton()
+            try:
+                res = await _action_singleton()
+            finally:
+                await client.close()
 
         if full_path == "system/identity" and isinstance(attributes, dict) and attributes.get("name"):
             new_ident = str(attributes["name"]).strip()
@@ -961,16 +989,22 @@ async def update_resource(
         return await client.patch(f"{clean_path}/{item_id}", attributes)
 
     if enable_safemode:
-        res = await execute_safe_mutation(
-            client,
-            clean_path,
-            "update",
-            _action,
-            item_id=item_id,
-            before_state=before_state if isinstance(before_state, dict) else None,
-        )
+        try:
+            res = await execute_safe_mutation(
+                client,
+                clean_path,
+                "update",
+                _action,
+                item_id=item_id,
+                before_state=before_state if isinstance(before_state, dict) else None,
+            )
+        finally:
+            await client.close()
     else:
-        res = await _action()
+        try:
+            res = await _action()
+        finally:
+            await client.close()
     await invalidate_webfig_cache(from_deps_redis(), uuid.UUID(claims["tid"]), router_id, clean_path)
 
     await write_audit_log(
@@ -1022,16 +1056,22 @@ async def update_singleton_resource(
             return await client.patch(clean_path, attributes)
 
     if enable_safemode:
-        res = await execute_safe_mutation(
-            client,
-            clean_path,
-            "update_singleton",
-            _action_singleton,
-            item_id=None,
-            before_state=before_state if isinstance(before_state, dict) else None,
-        )
+        try:
+            res = await execute_safe_mutation(
+                client,
+                clean_path,
+                "update_singleton",
+                _action_singleton,
+                item_id=None,
+                before_state=before_state if isinstance(before_state, dict) else None,
+            )
+        finally:
+            await client.close()
     else:
-        res = await _action_singleton()
+        try:
+            res = await _action_singleton()
+        finally:
+            await client.close()
 
     if clean_path == "system/identity" and isinstance(attributes, dict) and attributes.get("name"):
         new_ident = str(attributes["name"]).strip()
@@ -1087,14 +1127,17 @@ async def delete_resource(
     async def _action() -> Any:
         return await client.delete(f"{clean_path}/{item_id}")
 
-    res = await execute_safe_mutation(
-        client,
-        clean_path,
-        "delete",
-        _action,
-        item_id=item_id,
-        before_state=before_state if isinstance(before_state, dict) else None,
-    )
+    try:
+        res = await execute_safe_mutation(
+            client,
+            clean_path,
+            "delete",
+            _action,
+            item_id=item_id,
+            before_state=before_state if isinstance(before_state, dict) else None,
+        )
+    finally:
+        await client.close()
     await invalidate_webfig_cache(from_deps_redis(), uuid.UUID(claims["tid"]), router_id, clean_path)
 
     await write_audit_log(
@@ -1164,10 +1207,13 @@ async def execute_bulk_operation(
             results.append(res_item)
         return results
 
-    if payload.enable_safemode:
-        await execute_safe_mutation(client, clean_path, f"bulk_{payload.action}", _batch_action)
-    else:
-        await _batch_action()
+    try:
+        if payload.enable_safemode:
+            await execute_safe_mutation(client, clean_path, f"bulk_{payload.action}", _batch_action)
+        else:
+            await _batch_action()
+    finally:
+        await client.close()
 
     await invalidate_webfig_cache(from_deps_redis(), uuid.UUID(claims["tid"]), router_id, clean_path)
     await write_audit_log(
@@ -1258,8 +1304,10 @@ async def export_layer2_submenu(
     clean_path = _validate_l2_path(ros_path)
     tenant_id = uuid.UUID(claims["tid"])
     router_obj, client = await get_router_and_client(router_id, claims, db)
-
-    live_rsc = await _fetch_live_submenu_rsc(client, clean_path, payload.mode)
+    try:
+        live_rsc = await _fetch_live_submenu_rsc(client, clean_path, payload.mode)
+    finally:
+        await client.close()
     backup_rsc, latest_ts = (
         await _fetch_latest_backup_section(db, tenant_id, router_id, clean_path)
         if payload.compare_with_latest_backup
@@ -1359,7 +1407,10 @@ async def execute_command(
     async def _rpc_call() -> Any:
         return await client.post(target_ep, rpc_args)
 
-    res = await execute_safe_mutation(client, clean_path, "rpc", _rpc_call) if use_sm else await _rpc_call()
+    try:
+        res = await execute_safe_mutation(client, clean_path, "rpc", _rpc_call) if use_sm else await _rpc_call()
+    finally:
+        await client.close()
     await invalidate_webfig_cache(from_deps_redis(), uuid.UUID(claims["tid"]), router_id, clean_path)
 
     await write_audit_log(

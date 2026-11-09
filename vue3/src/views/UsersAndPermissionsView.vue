@@ -2,6 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  /* eslint-disable sonarjs/cognitive-complexity */
   import { ref, computed, onMounted, defineAsyncComponent, watch } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
   import { http } from '@/api/httpClient';
@@ -152,7 +153,7 @@
           slug: tItem.slug || tItem.id,
         }));
     } catch {
-      availableTenants.value = [];
+      // Preservar estado previo en memoria ante fallo transitorio
     }
   }
 
@@ -439,8 +440,7 @@
       const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
       usersList.value = raw;
     } catch {
-      // Sin datos de demostración en producción
-      usersList.value = [];
+      // Preservar estado previo en memoria ante fallo transitorio
     } finally {
       isLoading.value = false;
     }

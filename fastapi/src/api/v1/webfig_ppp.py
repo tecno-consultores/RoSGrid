@@ -15,6 +15,7 @@ from src.api.v1.webfig_common import (
     cached_mikrotik_get,
     execute_safe_mutation,
     get_router_and_client,
+    invalidate_webfig_cache,
 )
 from src.db.session import get_tenant_db_session
 from src.models.core import SystemRoleEnum
@@ -83,13 +84,17 @@ async def list_active_sessions(
 async def disconnect_active_session(
     router_id: uuid.UUID,
     session_id: str,
-    claims: dict[str, Any] = Depends(get_current_user_claims),
+    claims: dict[str, Any] = Depends(
+        require_roles(*_PPP_WRITE_ROLES, SystemRoleEnum.SUPPORT_L1)
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Reconexión Rápida L1: Desconecta una sesión PPP activa para forzar reconexión del CPE."""
     _, client = await get_router_and_client(router_id, claims, db)
     async with client:
-        return await client.delete(f"/ppp/active/{session_id}")
+        res = await client.delete(f"/ppp/active/{session_id}")
+    await invalidate_webfig_cache(get_redis_client(), uuid.UUID(claims["tid"]), router_id, "/ppp/active")
+    return res
 
 
 # ============================================================================

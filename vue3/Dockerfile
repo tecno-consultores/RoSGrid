@@ -6,8 +6,8 @@ FROM sinfallas/base-node-ionic:26 AS builder
 
 WORKDIR /app
 
-COPY package.json .npmrc ./
-RUN pnpm install --frozen-lockfile=false
+COPY package.json pnpm-lock.yaml .npmrc ./
+RUN pnpm install --frozen-lockfile
 
 COPY . .
 RUN pnpm run build

@@ -53,7 +53,15 @@ async def _verify_ws_origin(ws: WebSocket) -> None:
             raise WebSocketDisconnect(code=4403)
         return
 
-    if "*" not in cors_origins and origin not in cors_origins:
+    if "*" in cors_origins:
+        if settings.ROSGRID_ENV == "production":
+            host_hdr = ws.headers.get("host", "") if hasattr(ws, "headers") and ws.headers else ""
+            if not host_hdr or origin not in (f"https://{host_hdr}", f"http://{host_hdr}"):
+                await ws.close(code=4403, reason="Origen comodín no permitido en producción (CSWSH)")
+                raise WebSocketDisconnect(code=4403)
+        return
+
+    if origin not in cors_origins:
         await ws.close(code=4403, reason="Origen no autorizado (CSWSH)")
         raise WebSocketDisconnect(code=4403)
 
@@ -95,6 +103,12 @@ async def _verify_ws_router_permission(claims: dict[str, Any], router_id: uuid.U
     tenant_id = uuid.UUID(claims["tid"])
     user_id = uuid.UUID(claims["sub"])
     async with async_session_maker() as session:
+        from sqlalchemy.ext.asyncio import AsyncSession
+
+        from src.db.session import set_tenant_context
+
+        if type(session) is AsyncSession:
+            await set_tenant_context(session, tenant_id, is_superadmin=False)
         stmt = select(UserRouterPermission).where(
             UserRouterPermission.tenant_id == tenant_id,
             UserRouterPermission.user_id == user_id,

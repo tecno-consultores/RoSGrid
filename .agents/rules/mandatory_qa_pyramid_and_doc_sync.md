@@ -22,7 +22,7 @@ Any modification, addition, or bugfix in source code (`fastapi/src/` or `vue3/sr
 | **5. Karate Labs API BDD** | `fastapi/test/api_test.feature` | `docs/examples/fastapi/test/api_test.feature` | **MANDATORY FOR ALL API CHANGES:** Black-box Gherkin scenarios testing 401 unauth, 422 malformed payloads, and 200/201 success contracts. |
 | **6. Karate Labs UI BDD** | `vue3/test/ui_business_flow.feature` | `docs/examples/vue3/test/ui_business_flow.feature` | **MANDATORY FOR ALL UI CHANGES:** Real browser acceptance scenarios with Chrome CDP (button clicks, modal flows, navigation). |
 | **7. Visual Geometry** | DOM Hierarchy & Viewport Layout | `docs/examples/vue3/e2e/` | **Anti-JSDOM Blindness:** JSDOM does not render Flexbox/Grid boxes. Test DOM order and inspect viewports in real browser sessions. |
-| **8. Trimodal Fixtures & Fleet Smoke** | `fastapi/tests/fixtures/mikrotik/` & `scripts/validar-flota-real.py` | [ground_truth_fixtures_and_negative_invariants.md](file:///.agents/rules/ground_truth_fixtures_and_negative_invariants.md) | **Universal Ground-Truth Invariant:** All RouterOS integrations MUST validate against 3 raw JSON fixtures (Factory Default asserting negative, Nominal asserting active, Degraded asserting graceful handling). |
+| **8. Trimodal Fixtures & Fleet Smoke** | `fastapi/tests/fixtures/mikrotik/` & `scripts/validar-flota-real.py` | [ground_truth_fixtures_and_negative_invariants.md](ground_truth_fixtures_and_negative_invariants.md) | **Universal Ground-Truth Invariant:** All RouterOS integrations MUST validate against 3 raw JSON fixtures (Factory Default asserting negative, Nominal asserting active, Degraded asserting graceful handling). |
 
 ### 1.1 Zero-Orphan Vue Component Invariant
 
@@ -44,7 +44,7 @@ When interacting with RouterOS v7 telemetry or Syslog:
 
 ## 2. Mandatory Ephemeral Docker Test Execution (`Rule Zero`)
 
-Execute all tests and linters strictly inside ephemeral Docker containers (as defined in [`Makefile`](file:///Makefile)) before concluding any code task:
+Execute all tests and linters strictly inside ephemeral Docker containers (as defined in [`Makefile`](../../Makefile)) before concluding any code task:
 
 ```bash
 # Backend unit tests & linters (Rule Zero)

@@ -13,10 +13,16 @@ echo "🛡️ Iniciando Auditoría de Seguridad de Infraestructura (Trivy IaC)..
 
 # Ejecuta el escáner de misconfiguraciones mapeando la carpeta raíz del repositorio al contenedor.
 # Usamos ":ro" (Read-Only) para garantizar que Trivy no pueda alterar el código fuente.
+TRIVY_IMAGE="${TRIVY_IMAGE:-aquasec/trivy:0.58.2}"
+if ! docker image inspect "${TRIVY_IMAGE}" >/dev/null 2>&1; then
+  TRIVY_IMAGE="aquasec/trivy:latest"
+fi
+
 docker run --rm \
   -v "${REPO_ROOT}:/app:ro" \
   -w /app \
-  aquasec/trivy:latest config . \
+  "${TRIVY_IMAGE}" config . \
+  --config /app/.trivy.yaml \
   --severity HIGH,CRITICAL \
   --exit-code 1
 
@@ -27,8 +33,9 @@ echo "✅ IaC validado. Escaneando vulnerabilidades (CVEs) en el File System..."
 docker run --rm \
   -v "${REPO_ROOT}:/app:ro" \
   -w /app \
-  aquasec/trivy:latest fs . \
-  --severity CRITICAL \
+  "${TRIVY_IMAGE}" fs . \
+  --config /app/.trivy.yaml \
+  --severity HIGH,CRITICAL \
   --exit-code 1
 
 echo "✅ Auditoría de Infraestructura superada. Entorno seguro."

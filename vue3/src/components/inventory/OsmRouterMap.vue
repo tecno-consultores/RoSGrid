@@ -2,6 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  /* eslint-disable security/detect-object-injection, sonarjs/no-duplicate-string */
   import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
   import { getActivePinia } from 'pinia';
   import L from 'leaflet';
@@ -38,7 +39,7 @@
   }>();
 
   const isHeadlessTest = computed(
-    () => typeof navigator !== 'undefined' && Boolean((navigator as any).webdriver),
+    () => typeof navigator !== 'undefined' && Boolean((navigator as Navigator & { webdriver?: boolean }).webdriver),
   );
 
   function getTenantHqCoords(): [number, number] {
@@ -78,10 +79,11 @@
   }
 
   function createRouterIcon(color: string, label: string): L.DivIcon {
+    const safeLabel = escapeHtml(label);
     return L.divIcon({
       className: 'rg-map-pin-container',
       html: `
-        <div class="rg-map-pin" style="--pin-color: ${color};" role="button" tabindex="0" aria-label="Router ${label}">
+        <div class="rg-map-pin" style="--pin-color: ${color};" role="button" tabindex="0" aria-label="Router ${safeLabel}">
           <div class="pin-pulse"></div>
           <div class="pin-dot"></div>
         </div>
@@ -93,7 +95,7 @@
 
   function createMultiRouterIcon(color: string, routers: RouterItem[]): L.DivIcon {
     const count = routers.length;
-    const label = routers.map((r) => r.display_name).join(', ');
+    const label = escapeHtml(routers.map((r) => r.display_name).join(', '));
     return L.divIcon({
       className: 'rg-map-pin-container',
       html: `

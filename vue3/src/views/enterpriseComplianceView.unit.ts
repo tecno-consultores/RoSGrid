@@ -1,6 +1,8 @@
+/* eslint-disable sonarjs/cognitive-complexity, sonarjs/no-duplicate-string */
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
+import type { WebFigDynamic } from '@/types';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
@@ -360,7 +362,7 @@ describe('EnterpriseComplianceView.vue — Hito 20 Suite Corporativa', () => {
         updated_at: new Date().toISOString(),
         rules: [],
       },
-    } as any);
+    } as never);
 
     await saveBtn.trigger('click');
     expect(http.put).toHaveBeenCalledWith(
@@ -790,7 +792,7 @@ describe('EnterpriseComplianceView.vue — Hito 20 Suite Corporativa', () => {
 
     const postSpy = vi.spyOn(http, 'post');
     // Intento forzado de llamada a la función interna no debe llamar a la API
-    await (wrapper.vm as any).handleMitigateAnomaly('0.0.0.0');
+    await (wrapper.vm as unknown as WebFigDynamic).handleMitigateAnomaly('0.0.0.0');
     expect(postSpy).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain('No hay ninguna IP anómala válida seleccionada para mitigar.');
   });

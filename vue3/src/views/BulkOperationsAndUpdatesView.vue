@@ -2,6 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  /* eslint-disable security/detect-object-injection */
   import { ref, computed, onMounted, watch } from 'vue';
   import { useRoute } from 'vue-router';
   import { http } from '@/api/httpClient';
@@ -698,7 +699,7 @@
 </script>
 
 <template>
-  <main class="bulk-view" aria-labelledby="bulk-title">
+  <div class="bulk-view" role="region" aria-labelledby="bulk-title">
     <header class="bulk-header">
       <div>
         <h1 id="bulk-title" class="bulk-title">{{ t('bulk_ops.title') }}</h1>
@@ -798,18 +799,18 @@
           <table class="fleet-table">
             <thead>
               <tr>
-                <th class="th-chk">
+                <th class="th-chk" scope="col">
                   <input
                     type="checkbox"
                     :aria-label="t('bulk_ops.th_select_all')"
                     @change="toggleAllVisible(($event.target as HTMLInputElement).checked)"
                   />
                 </th>
-                <th>{{ t('bulk_ops.th_identity') }}</th>
-                <th>{{ t('bulk_ops.th_ip') }}</th>
-                <th>{{ t('bulk_ops.th_role') }}</th>
-                <th>{{ t('bulk_ops.th_tag') }}</th>
-                <th>{{ t('bulk_ops.th_ros') }}</th>
+                <th scope="col">{{ t('bulk_ops.th_identity') }}</th>
+                <th scope="col">{{ t('bulk_ops.th_ip') }}</th>
+                <th scope="col">{{ t('bulk_ops.th_role') }}</th>
+                <th scope="col">{{ t('bulk_ops.th_tag') }}</th>
+                <th scope="col">{{ t('bulk_ops.th_ros') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -928,8 +929,8 @@
             >
               <div class="tpl-item-radio-wrapper">
                 <input
-                  type="radio"
                   :id="`tpl-radio-${tpl.id}`"
+                  type="radio"
                   name="selected_golden_template"
                   :value="tpl.id"
                   :checked="selectedTemplateId === tpl.id"
@@ -1087,11 +1088,11 @@
               <table class="fleet-table" style="font-size: 0.85rem;">
                 <thead>
                   <tr>
-                    <th>Equipo</th>
-                    <th>Hardware</th>
-                    <th>Versión Instalada</th>
-                    <th>Versión Disponible</th>
-                    <th>Plan de Acción</th>
+                    <th scope="col">Equipo</th>
+                    <th scope="col">Hardware</th>
+                    <th scope="col">Versión Instalada</th>
+                    <th scope="col">Versión Disponible</th>
+                    <th scope="col">Plan de Acción</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1160,10 +1161,10 @@
           <table class="fleet-table">
             <thead>
               <tr>
-                <th>{{ t('bulk_ops.th_res_router', 'Router') }}</th>
-                <th>{{ t('bulk_ops.th_res_status', 'Estado') }}</th>
-                <th>{{ t('bulk_ops.th_res_progress', 'Progreso') }}</th>
-                <th>{{ t('bulk_ops.th_res_details', 'Detalles / Rollback') }}</th>
+                <th scope="col">{{ t('bulk_ops.th_res_router', 'Router') }}</th>
+                <th scope="col">{{ t('bulk_ops.th_res_status', 'Estado') }}</th>
+                <th scope="col">{{ t('bulk_ops.th_res_progress', 'Progreso') }}</th>
+                <th scope="col">{{ t('bulk_ops.th_res_details', 'Detalles / Rollback') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -1291,13 +1292,13 @@
         <table class="fleet-table">
           <thead>
             <tr>
-              <th>{{ t('bulk_ops.th_device', 'Equipo') }}</th>
-              <th>{{ t('bulk_ops.th_ip', 'IP Primaria') }}</th>
-              <th>Hardware / Modo</th>
-              <th>{{ t('bulk_ops.th_current_version', 'Versión Actual') }}</th>
-              <th>{{ t('bulk_ops.th_target_version', 'Disponible en Canal') }}</th>
-              <th>{{ t('bulk_ops.th_diff', 'Estado') }}</th>
-              <th>{{ t('bulk_ops.th_action', 'Acción de Actualización') }}</th>
+              <th scope="col">{{ t('bulk_ops.th_device', 'Equipo') }}</th>
+              <th scope="col">{{ t('bulk_ops.th_ip', 'IP Primaria') }}</th>
+              <th scope="col">Hardware / Modo</th>
+              <th scope="col">{{ t('bulk_ops.th_current_version', 'Versión Actual') }}</th>
+              <th scope="col">{{ t('bulk_ops.th_target_version', 'Disponible en Canal') }}</th>
+              <th scope="col">{{ t('bulk_ops.th_diff', 'Estado') }}</th>
+              <th scope="col">{{ t('bulk_ops.th_action', 'Acción de Actualización') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -1350,7 +1351,7 @@
       @close="isTemplateModalOpen = false"
       @saved="handleTemplateSaved"
     />
-  </main>
+  </div>
 </template>
 
 <style scoped>

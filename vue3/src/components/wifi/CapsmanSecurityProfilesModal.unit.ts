@@ -1,6 +1,8 @@
+/* eslint-disable sonarjs/no-duplicate-string */
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
+import type { WebFigDynamic } from '@/types';
 import { mount, flushPromises } from '@vue/test-utils';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CapsmanSecurityProfilesModal from './CapsmanSecurityProfilesModal.vue';
@@ -47,7 +49,7 @@ describe('CapsmanSecurityProfilesModal.vue', () => {
   });
 
   it('carga y muestra la lista de perfiles existentes al montarse', async () => {
-    (http.get as any).mockResolvedValueOnce({ data: mockProfiles });
+    (http.get as WebFigDynamic).mockResolvedValueOnce({ data: mockProfiles });
 
     const wrapper = mount(CapsmanSecurityProfilesModal, {
       props: {
@@ -62,8 +64,8 @@ describe('CapsmanSecurityProfilesModal.vue', () => {
   });
 
   it('crea un nuevo perfil de seguridad válido tras desplegar el formulario', async () => {
-    (http.get as any).mockResolvedValue({ data: mockProfiles });
-    (http.post as any).mockResolvedValueOnce({ data: { id: '*2', name: 'sec-guests' } });
+    (http.get as WebFigDynamic).mockResolvedValue({ data: mockProfiles });
+    (http.post as WebFigDynamic).mockResolvedValueOnce({ data: { id: '*2', name: 'sec-guests' } });
 
     const wrapper = mount(CapsmanSecurityProfilesModal, {
       props: {
@@ -95,8 +97,8 @@ describe('CapsmanSecurityProfilesModal.vue', () => {
   });
 
   it('elimina un perfil al hacer click en el botón de eliminación tras confirmación', async () => {
-    (http.get as any).mockResolvedValue({ data: mockProfiles });
-    (http.delete as any).mockResolvedValueOnce({ data: { success: true } });
+    (http.get as WebFigDynamic).mockResolvedValue({ data: mockProfiles });
+    (http.delete as WebFigDynamic).mockResolvedValueOnce({ data: { success: true } });
     vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     const wrapper = mount(CapsmanSecurityProfilesModal, {

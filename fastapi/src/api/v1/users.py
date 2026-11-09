@@ -352,6 +352,12 @@ async def reset_user_2fa(
     if not target_user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
+    if not is_sa and target_user.role == SystemRoleEnum.SUPERADMIN_GLOBAL:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Un Administrador de Organización no puede reiniciar el 2FA de un SUPERADMIN_GLOBAL.",
+        )
+
     target_user.totp_enabled = False
     target_user.totp_secret_ciphertext = None
     target_user.totp_secret_iv = None
@@ -407,6 +413,12 @@ async def change_password(
     user = res.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
+
+    if not is_sa and not is_self and user.role == SystemRoleEnum.SUPERADMIN_GLOBAL:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Un Administrador de Organización no puede modificar la contraseña de un SUPERADMIN_GLOBAL.",
+        )
 
     if is_self:
         if not body.current_password:
@@ -501,12 +513,27 @@ async def approve_user(
     if not target_user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
+    if not is_sa and target_user.role == SystemRoleEnum.SUPERADMIN_GLOBAL:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Un Administrador de Organización no puede modificar un usuario SUPERADMIN_GLOBAL.",
+        )
+
+    role_changed = target_user.role != body.role
     target_user.is_active = True
     target_user.role = body.role
     target_user.has_all_routers_access = body.has_all_routers_access
     target_user.allowed_cidr_list = body.allowed_cidr_list
     await db.commit()
     await db.refresh(target_user)
+
+    if role_changed:
+        await kill_all_user_sessions(
+            str(target_user.tenant_id),
+            str(target_user.id),
+            killed_by=str(claims.get("sub", "admin")),
+            reason="Cambio administrativo de rol",
+        )
 
     return UserResponse.model_validate(target_user)
 
@@ -529,6 +556,19 @@ async def reject_user(
     target_user = res.scalar_one_or_none()
     if not target_user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    if not is_sa and target_user.role == SystemRoleEnum.SUPERADMIN_GLOBAL:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Un Administrador de Organización no puede desactivar ni eliminar un SUPERADMIN_GLOBAL.",
+        )
+
+    await kill_all_user_sessions(
+        str(target_user.tenant_id),
+        str(target_user.id),
+        killed_by=str(claims.get("sub", "admin")),
+        reason="Usuario rechazado o revocado",
+    )
 
     try:
         await db.delete(target_user)
@@ -591,13 +631,11 @@ async def generate_user_mcp_token(
 
     allowed_mcp_roles = {
         SystemRoleEnum.SERVICE_ACCOUNT,
-        SystemRoleEnum.TENANT_ADMIN,
-        SystemRoleEnum.SUPERADMIN_GLOBAL,
     }
     if target_user.role not in allowed_mcp_roles:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"El usuario con rol '{target_user.role.value}' no tiene permitido operar el endpoint MCP (roles permitidos: SERVICE_ACCOUNT, TENANT_ADMIN, SUPERADMIN_GLOBAL)",
+            detail=f"El usuario con rol '{target_user.role.value}' no tiene permitido operar el endpoint MCP (roles permitidos: SERVICE_ACCOUNT)",
         )
 
     stmt_t = select(Tenant).where(Tenant.id == target_user.tenant_id)
@@ -653,6 +691,7 @@ async def generate_user_mcp_token(
         "tslug": tenant_slug,
         "sid": session_id,
         "rol": target_user.role.value,
+        "scope": "mcp_only",
         "all_r": target_user.has_all_routers_access,
         "preferred_username": target_user.username,
         "iat": now,

@@ -1,3 +1,4 @@
+/* eslint-disable sonarjs/no-duplicate-string */
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
@@ -183,7 +184,7 @@ describe('EnterpriseComplianceView.vue — Hito 27.11 CIS Benchmark 28 Directiva
         data,
         status: 200,
         headers: new Headers(),
-      } as any;
+      } as never;
     });
 
     vi.spyOn(http, 'post').mockResolvedValue({
@@ -196,7 +197,7 @@ describe('EnterpriseComplianceView.vue — Hito 27.11 CIS Benchmark 28 Directiva
       },
       status: 200,
       headers: new Headers(),
-    } as any);
+    } as never);
 
     vi.spyOn(http, 'put').mockResolvedValue({
       data: {
@@ -207,7 +208,7 @@ describe('EnterpriseComplianceView.vue — Hito 27.11 CIS Benchmark 28 Directiva
       },
       status: 200,
       headers: new Headers(),
-    } as any);
+    } as never);
   });
 
   it('renderiza las 28 directivas CIS y muestra los badges normativos y enlaces oficiales', async () => {

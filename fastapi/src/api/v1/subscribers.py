@@ -418,19 +418,22 @@ async def sync_dhcp_clients(
                 logger.warning(f"Error consultando /ip/dhcp-server/lease en router {r.display_name}: {e}")
 
             if not leases:
-                stmt_ips = select(IPAMAddress).where(
-                    IPAMAddress.tenant_id == tenant_id,
-                    IPAMAddress.router_id == r.id,
-                )
-                db_ips = list((await db.execute(stmt_ips)).scalars().all())
-                for idx, ip_row in enumerate(db_ips):
-                    leases.append({
-                        "address": str(ip_row.address).split("/")[0],
-                        "mac-address": ip_row.mac_address or f"00:50:79:66:68:{idx+1:02X}",
-                        "host-name": f"PC-OFICINA-{idx+1:02d}",
-                        "status": "bound",
-                        "_ip_id": ip_row.id,
-                    })
+                from src.core.config import settings as _cfg
+
+                if _cfg.ROSGRID_ENV != "production":
+                    stmt_ips = select(IPAMAddress).where(
+                        IPAMAddress.tenant_id == tenant_id,
+                        IPAMAddress.router_id == r.id,
+                    )
+                    db_ips = list((await db.execute(stmt_ips)).scalars().all())
+                    for idx, ip_row in enumerate(db_ips):
+                        leases.append({
+                            "address": str(ip_row.address).split("/")[0],
+                            "mac-address": ip_row.mac_address or f"00:50:79:66:68:{idx+1:02X}",
+                            "host-name": f"PC-OFICINA-{idx+1:02d}",
+                            "status": "bound",
+                            "_ip_id": ip_row.id,
+                        })
 
             for idx, lease in enumerate(leases):
                 ip_addr = str(lease.get("address", "")).strip()
@@ -583,15 +586,18 @@ async def simulate_subscribers_from_dhcp(
                 "interface": ip_row.interface_name or "ether2",
             })
     else:
-        for idx in range(10):
-            records_to_process.append({
-                "address_id": None,
-                "ip": f"192.168.10.{100 + idx}",
-                "mac": f"00:50:79:66:68:{idx+1:02X}",
-                "name": f"PC-LAB-{idx+1:02d}",
-                "router_id": target_router.id,
-                "interface": "ether2",
-            })
+        from src.core.config import settings as _cfg
+
+        if _cfg.ROSGRID_ENV != "production":
+            for idx in range(10):
+                records_to_process.append({
+                    "address_id": None,
+                    "ip": f"192.168.10.{100 + idx}",
+                    "mac": f"00:50:79:66:68:{idx+1:02X}",
+                    "name": f"PC-LAB-{idx+1:02d}",
+                    "router_id": target_router.id,
+                    "interface": "ether2",
+                })
 
     created_count = 0
     updated_count = 0

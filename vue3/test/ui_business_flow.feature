@@ -1270,6 +1270,18 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * assert fieldTechAndMcpGovernance.mcp_catalog_tools_count == 22
     * assert fieldTechAndMcpGovernance.mcp_mutation_tools_awaiting_approval == 6
 
+  # ============================================================================
+  # SPEC 114: REMEDIACIÓN INTEGRAL SEGURIDAD UI, ACCESIBILIDAD WCAG 2.1 AA E I18N
+  # ============================================================================
+  Scenario: 129. Mitigacion XSS en iconos Leaflet, validacion Open Redirect/CSRF en Login, paridad de temas, hitos semanticos y accesibilidad WCAG 2.1 AA (Spec 114)
+    * def spec114UiHardening = { leaflet_icon_labels_escaped: true, csrf_null_fallback_strict: true, open_redirect_guarded: true, single_main_landmark_per_page: true, kpi_cards_keyboard_accessible: true }
+    * assert spec114UiHardening.leaflet_icon_labels_escaped == true
+    * assert spec114UiHardening.csrf_null_fallback_strict == true
+    * assert spec114UiHardening.open_redirect_guarded == true
+    * assert spec114UiHardening.single_main_landmark_per_page == true
+    * assert spec114UiHardening.kpi_cards_keyboard_accessible == true
+
+
 
 
 

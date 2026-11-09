@@ -410,6 +410,10 @@ async def _send_http_siem_payload(
     auth_token: str,
 ) -> None:
     """Envía un payload JSON mediante HTTP POST hacia Graylog GELF HTTP o Grafana Loki (CC = 2)."""
+    from src.services.network_events import is_safe_outbound_service_url
+
+    if not is_safe_outbound_service_url(url):
+        raise ValueError(f"URL de colector SIEM bloqueada por política Anti-SSRF: {url}")
     headers = {"Content-Type": "application/json"}
     if auth_token:
         headers["Authorization"] = f"Bearer {auth_token}"

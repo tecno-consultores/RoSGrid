@@ -252,7 +252,7 @@
       const raw = Array.isArray(res.data) ? res.data : (res.data as { items?: OpticalBoxItem[] })?.items || [];
       opticalBoxes.value = raw;
     } catch {
-      opticalBoxes.value = [];
+      // Preservar estado previo en memoria ante fallo transitorio
     }
   }
 
@@ -262,7 +262,7 @@
       const raw = Array.isArray(res.data) ? res.data : (res.data as { items?: SubscriberDeviceItem[] })?.items || [];
       subscribers.value = raw;
     } catch {
-      subscribers.value = [];
+      // Preservar estado previo en memoria ante fallo transitorio
     }
   }
 
@@ -315,7 +315,7 @@
         };
       });
     } catch {
-      liveEvents.value = [];
+      // Preservar estado previo en memoria ante fallo transitorio
     }
   }
 

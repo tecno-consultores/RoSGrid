@@ -72,13 +72,15 @@ services:
       ROSGRID_MCP_RATE_LIMIT_PER_MIN: "${ROSGRID_MCP_RATE_LIMIT_PER_MIN:-30}"
       ROSGRID_CORS_ORIGINS: "${ROSGRID_CORS_ORIGINS:-*}"
       ROSGRID_CROSS_ORIGIN_COOKIES: "${ROSGRID_CROSS_ORIGIN_COOKIES:-false}"
-      ROSGRID_TELEMETRY_BEACON_ENABLED: "${ROSGRID_TELEMETRY_BEACON_ENABLED:-true}"
+      ROSGRID_TELEMETRY_BEACON_ENABLED: "${ROSGRID_TELEMETRY_BEACON_ENABLED:-false}"
       ROSGRID_CVE_NVD_API_URL: "${ROSGRID_CVE_NVD_API_URL:-https://services.nvd.nist.gov/rest/json/cves/2.0}"
       ROSGRID_CVE_NVD_API_KEY: "${ROSGRID_CVE_NVD_API_KEY:-}"
       ROSGRID_CVE_NVD_SYNC_ENABLED: "${ROSGRID_CVE_NVD_SYNC_ENABLED:-true}"
       ROSGRID_CVE_NVD_RESULTS_PER_PAGE: "${ROSGRID_CVE_NVD_RESULTS_PER_PAGE:-200}"
       ROSGRID_DIAGNOSTIC_LOG_RING_SIZE: "${ROSGRID_DIAGNOSTIC_LOG_RING_SIZE:-1000}"
       ROSGRID_SIEM_FORWARDER_TIMEOUT_SECONDS: "${ROSGRID_SIEM_FORWARDER_TIMEOUT_SECONDS:-5}"
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - ./fastapi:/app
       - rosgrid_uv_cache:/root/.cache/uv
@@ -108,14 +110,18 @@ services:
       ROSGRID_ENV: "${ROSGRID_ENV:-production}"
       ROSGRID_DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-rosgrid_user}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-rosgrid_db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-rosgrid}"
       ROSGRID_REDIS_URL: "redis://:${REDIS_PASSWORD}@${REDIS_HOST:-rosgrid_redis}:${REDIS_PORT:-6379}/0"
-      ROSGRID_MASTER_VAULT_KEY: "${ROSGRID_MASTER_VAULT_KEY}"
+      ROSGRID_MASTER_VAULT_KEY: "${ROSGRID_MASTER_VAULT_KEY:?Debes definir ROSGRID_MASTER_VAULT_KEY (32 bytes base64)}"
+      ROSGRID_JWT_SECRET_KEY: "${ROSGRID_JWT_SECRET_KEY:?Debes definir ROSGRID_JWT_SECRET_KEY}"
+      ROSGRID_CSRF_HMAC_SECRET: "${ROSGRID_CSRF_HMAC_SECRET:?Debes definir ROSGRID_CSRF_HMAC_SECRET}"
       ROSGRID_MIKROTIK_TIMEOUT_SECONDS: "${ROSGRID_MIKROTIK_TIMEOUT_SECONDS:-10}"
       ROSGRID_SAFEMODE_ROLLBACK_SECONDS: "${ROSGRID_SAFEMODE_ROLLBACK_SECONDS:-60}"
       ROSGRID_BACKUP_RETENTION_DAYS: "${ROSGRID_BACKUP_RETENTION_DAYS:-30}"
-      ROSGRID_TELEMETRY_BEACON_ENABLED: "${ROSGRID_TELEMETRY_BEACON_ENABLED:-true}"
+      ROSGRID_TELEMETRY_BEACON_ENABLED: "${ROSGRID_TELEMETRY_BEACON_ENABLED:-false}"
       ROSGRID_BACKGROUND_POLL_INTERVAL_SECONDS: "${ROSGRID_BACKGROUND_POLL_INTERVAL_SECONDS:-180}"
       ROSGRID_SUBSCRIBER_ICMP_PROBE_ENABLED: "${ROSGRID_SUBSCRIBER_ICMP_PROBE_ENABLED:-true}"
       ROSGRID_SYSLOG_PORT: "5514"
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - ./fastapi:/app
       - rosgrid_uv_cache:/root/.cache/uv
@@ -141,7 +147,7 @@ services:
       - rosgrid_pnpm_store:/pnpm
       - rosgrid_ui_dist:/app/dist
     working_dir: /app
-    command: ["bash", "-c", "pnpm install --frozen-lockfile=false && pnpm run build"]
+    command: ["bash", "-c", "pnpm install --frozen-lockfile && pnpm run build"]
     networks:
       - rosgrid_internal_net
 

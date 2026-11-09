@@ -69,7 +69,8 @@
       dryRunResult.value = res.data;
       step.value = 2;
       refreshNetworkRoles();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value =
         err?.detail ||
         err?.response?.data?.detail ||
@@ -98,7 +99,8 @@
       emit('imported', count);
       resetState();
       emit('close');
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value =
         err?.detail ||
         err?.response?.data?.detail ||

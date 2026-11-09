@@ -29,8 +29,8 @@ describe('CorporateIpv6ManagerModal.vue — Gestor de Asignación IPv6 Corporati
 
   it('permite registrar una asignación IPv6 corporativa', async () => {
     const ipamStore = useIpamStore();
-    ipamStore.vrfs = [{ id: 'vrf-01', name: 'default', rd: '65000:1', tenant_id: 't-1' } as any];
-    const createSpy = vi.spyOn(ipamStore, 'createPrefix').mockResolvedValue({} as any);
+    ipamStore.vrfs = [{ id: 'vrf-01', name: 'default', rd: '65000:1', tenant_id: 't-1' } as never];
+    const createSpy = vi.spyOn(ipamStore, 'createPrefix').mockResolvedValue({} as never);
 
     const wrapper = mount(CorporateIpv6ManagerModal);
     await wrapper.find('#corp-client').setValue('Banco Central');

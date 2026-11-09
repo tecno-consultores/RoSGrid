@@ -15,6 +15,7 @@ from src.api.v1.webfig_common import (
     cached_mikrotik_get,
     execute_safe_mutation,
     get_router_and_client,
+    invalidate_webfig_cache,
 )
 from src.db.session import get_tenant_db_session
 from src.models.core import SystemRoleEnum
@@ -83,13 +84,15 @@ async def create_ipv6_address(
         body["comment"] = payload.comment
 
     async with client:
-        return await execute_safe_mutation(
+        res = await execute_safe_mutation(
             client=client,
             menu="ipv6/address",
             action="create",
             before_state=body,
             coro_fn=lambda: client.put("/ipv6/address", json_data=body),
         )
+    await invalidate_webfig_cache(get_redis_client(), uuid.UUID(claims["tid"]), router_id, "/ipv6/address")
+    return res
 
 
 @router.patch("/addresses/{item_id}")

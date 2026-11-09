@@ -52,6 +52,10 @@ if [ -f "${REPO_ROOT}/fastapi/graphify-out/graph.json" ]; then
   cp "${REPO_ROOT}/fastapi/graphify-out/graph.json" "${REPO_ROOT}/graphify-out/graph.json"
   cp "${REPO_ROOT}/fastapi/graphify-out/GRAPH_REPORT.md" "${REPO_ROOT}/graphify-out/GRAPH_REPORT.md" 2>/dev/null || true
 fi
+if [ -f "${REPO_ROOT}/vue3/graphify-out/graph.json" ]; then
+  cp "${REPO_ROOT}/vue3/graphify-out/graph.json" "${REPO_ROOT}/graphify-out/graph-vue3.json"
+  cp "${REPO_ROOT}/vue3/graphify-out/GRAPH_REPORT.md" "${REPO_ROOT}/graphify-out/GRAPH_REPORT_VUE3.md" 2>/dev/null || true
+fi
 
 # 6. Mostrar resumen
 echo -e "\n✅ Extracción completada exitosamente. Resumen de grafos generados:"

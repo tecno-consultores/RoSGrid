@@ -2,6 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  import type { WebFigDynamic } from '@/types';
   import { ref, computed, onMounted } from 'vue';
   import { useRouter } from 'vue-router';
   import { useInventoryStore } from '@/stores/useInventoryStore';
@@ -124,7 +125,7 @@
       label: t('inventory.col_hardware'),
       formatter: (row: Record<string, unknown>) => {
         const r = row as unknown as RouterItem;
-        const rawModel = String(r.model || (r as any).model_name || r.board_name || 'CHR').trim();
+        const rawModel = String(r.model || (r as WebFigDynamic).model_name || r.board_name || 'CHR').trim();
         const compactModel = rawModel.replace(
           /QEMU Standard PC\s*\([^)]*\)/i,
           'QEMU',

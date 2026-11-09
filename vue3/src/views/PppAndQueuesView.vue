@@ -2,6 +2,8 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  /* eslint-disable sonarjs/cognitive-complexity, sonarjs/no-duplicate-string */
+  import type { WebFigDynamic } from '@/types';
   import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
   import { useRoute } from 'vue-router';
   import { http } from '@/api/httpClient';
@@ -63,8 +65,8 @@
   const pppProfiles = ref<PppProfileItem[]>([]);
   const pppoeServers = ref<PppoeServerItem[]>([]);
   const simpleQueues = ref<SimpleQueueItem[]>([]);
-  const queueTrees = ref<any[]>([]);
-  const queueTypes = ref<any[]>([]);
+  const queueTrees = ref<WebFigDynamic[]>([]);
+  const queueTypes = ref<WebFigDynamic[]>([]);
 
   // Modals Queue Tree
   const isCreateTreeModalOpen = ref(false);
@@ -254,17 +256,17 @@
     try {
       const query = forceRefresh ? '?refresh=true' : '';
       if (activeTab.value === 'pppoe-active') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ppp/active${query}`);
+        const res = await http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/ppp/active${query}`);
         const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
-        pppSessions.value = items.map((s: any) => ({
+        pppSessions.value = items.map((s: WebFigDynamic) => ({
           ...s,
           id: s.id || s['.id'] || s.name,
           caller_id: s.caller_id || s['caller-id'] || '',
         }));
       } else if (activeTab.value === 'ppp-secrets') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ppp/secrets${query}`);
+        const res = await http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/ppp/secrets${query}`);
         const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
-        pppSecrets.value = items.map((sec: any) => ({
+        pppSecrets.value = items.map((sec: WebFigDynamic) => ({
           ...sec,
           id: sec.id || sec['.id'] || sec.name,
           local_address: sec.local_address || sec['local-address'] || '',
@@ -273,9 +275,9 @@
           disabled: sec.disabled === 'true' || sec.disabled === true,
         }));
       } else if (activeTab.value === 'ppp-profiles') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ppp/profiles${query}`);
+        const res = await http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/ppp/profiles${query}`);
         const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
-        pppProfiles.value = items.map((prof: any) => ({
+        pppProfiles.value = items.map((prof: WebFigDynamic) => ({
           ...prof,
           id: prof.id || prof['.id'] || prof.name,
           local_address: prof.local_address || prof['local-address'] || '',
@@ -285,11 +287,11 @@
           only_one: prof.only_one || prof['only-one'] || '',
         }));
       } else if (activeTab.value === 'pppoe-servers') {
-        const res = await http.get<any>(
+        const res = await http.get<WebFigDynamic>(
           `/api/v1/routers/${routerId.value}/webfig/ppp/pppoe-servers${query}`,
         );
         const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
-        pppoeServers.value = items.map((srv: any) => {
+        pppoeServers.value = items.map((srv: WebFigDynamic) => {
           const rawKa = srv.keepalive_timeout ?? srv['keepalive-timeout'];
           const parsedKa =
             rawKa === 'disabled' || rawKa === 0 || rawKa === '0'
@@ -313,15 +315,15 @@
         });
       } else if (activeTab.value === 'queue-tree') {
         const [treesRes, typesRes] = await Promise.all([
-          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/queues/tree${query}`).catch(() => ({ data: [] })),
-          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/queues/types${query}`).catch(() => ({ data: [] })),
+          http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/queues/tree${query}`).catch(() => ({ data: [] })),
+          http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/queues/types${query}`).catch(() => ({ data: [] })),
         ]);
         queueTrees.value = Array.isArray(treesRes.data) ? treesRes.data : treesRes.data?.items || [];
         queueTypes.value = Array.isArray(typesRes.data) ? typesRes.data : typesRes.data?.items || [];
       } else {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/queues/simple${query}`);
+        const res = await http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/queues/simple${query}`);
         const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
-        simpleQueues.value = items.map((q: any) => ({
+        simpleQueues.value = items.map((q: WebFigDynamic) => ({
           ...q,
           id: q.id || q['.id'] || q.name,
           bytes_in: Number(q.bytes_in || 0),
@@ -342,7 +344,7 @@
     }
   }
 
-  async function handleMoveSimpleQueue(event: { numbers?: string; destination?: string } | any) {
+  async function handleMoveSimpleQueue(event: WebFigDynamic) {
     try {
       const body = {
         numbers: event.numbers || event.id || event.from,
@@ -367,7 +369,7 @@
     }
   }
 
-  async function handleDeleteQueueTree(tree: any) {
+  async function handleDeleteQueueTree(tree: WebFigDynamic) {
     if (!confirm(`¿Eliminar la cola Tree ${tree.name || tree.id}?`)) return;
     try {
       await http.delete(`/api/v1/routers/${routerId.value}/webfig/queues/tree/${tree.id || tree['.id'] || tree.name}`);
@@ -387,7 +389,8 @@
         actionMessage.value = '';
       }, 4000);
       loadPppData(true);
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       actionMessage.value = err?.detail || err?.message || 'Error al reiniciar sesión';
       setTimeout(() => {
         actionMessage.value = '';
@@ -479,7 +482,7 @@
     isCreateQueueModalOpen.value = true;
   }
 
-  async function handleSaveQueue(payload: Record<string, any>) {
+  async function handleSaveQueue(payload: Record<string, WebFigDynamic>) {
     webFigStore.startSafeModeCountdown(60);
     errorMessage.value = '';
     try {
@@ -495,7 +498,8 @@
       }
       isCreateQueueModalOpen.value = false;
       loadPppData(true);
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value =
         err?.response?.data?.detail || err?.message || 'Error al persistir cola simple.';
     }
@@ -509,7 +513,8 @@
         { disabled: !queue.disabled },
       );
       loadPppData(true);
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.response?.data?.detail || 'Error al conmutar cola.';
     }
   }
@@ -521,7 +526,8 @@
       await http.delete(`/api/v1/routers/${routerId.value}/webfig/queues/simple/${queue.id}`);
       actionMessage.value = `Cola "${queue.name}" eliminada.`;
       loadPppData(true);
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.response?.data?.detail || 'Error al eliminar cola simple.';
     }
   }
@@ -534,7 +540,8 @@
         { disabled: !secret.disabled },
       );
       loadPppData(true);
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.response?.data?.detail || 'Error al conmutar usuario PPP.';
     }
   }
@@ -546,7 +553,8 @@
       await http.delete(`/api/v1/routers/${routerId.value}/webfig/ppp/secrets/${secret.id}`);
       actionMessage.value = `Usuario "${secret.name}" eliminado.`;
       loadPppData(true);
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.response?.data?.detail || 'Error al eliminar usuario PPP.';
     }
   }
@@ -573,7 +581,7 @@
     errorMessage.value = '';
     webFigStore.startSafeModeCountdown(60);
     try {
-      const payload: Record<string, any> = {
+      const payload: Record<string, WebFigDynamic> = {
         name: editSecretForm.value.name,
         service: editSecretForm.value.service,
         profile: editSecretForm.value.profile,
@@ -593,7 +601,8 @@
       actionMessage.value = `Usuario PPP "${editSecretForm.value.name}" actualizado exitosamente.`;
       isEditSecretModalOpen.value = false;
       loadPppData(true);
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.response?.data?.detail || err?.detail || 'Error al actualizar usuario PPP.';
     } finally {
       isLoading.value = false;
@@ -626,7 +635,8 @@
       actionMessage.value = `Perfil PPP "${editProfileForm.value.name}" actualizado exitosamente.`;
       isEditProfileModalOpen.value = false;
       loadPppData(true);
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.response?.data?.detail || err?.detail || 'Error al actualizar perfil PPP.';
     } finally {
       isLoading.value = false;
@@ -665,7 +675,8 @@
       actionMessage.value = `Servidor PPPoE "${editServerForm.value.service_name}" actualizado exitosamente.`;
       isEditServerModalOpen.value = false;
       loadPppData(true);
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.response?.data?.detail || err?.detail || 'Error al actualizar servidor PPPoE.';
     } finally {
       isLoading.value = false;
@@ -680,7 +691,8 @@
         { disabled: !srv.disabled },
       );
       loadPppData(true);
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.response?.data?.detail || 'Error al conmutar servidor PPPoE.';
     }
   }
@@ -692,7 +704,8 @@
       await http.delete(`/api/v1/routers/${routerId.value}/webfig/ppp/pppoe-servers/${encodeURIComponent(srv.id)}`);
       actionMessage.value = `Servidor PPPoE "${srv.service_name}" eliminado.`;
       loadPppData(true);
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.response?.data?.detail || 'Error al eliminar servidor PPPoE.';
     }
   }
@@ -704,7 +717,8 @@
       await http.delete(`/api/v1/routers/${routerId.value}/webfig/ppp/profiles/${profile.id}`);
       actionMessage.value = `Perfil "${profile.name}" eliminado.`;
       loadPppData(true);
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.response?.data?.detail || 'Error al eliminar perfil PPP.';
     }
   }
@@ -869,7 +883,7 @@
       <!-- Pestaña 1: Sesiones Activas -->
       <div v-if="activeTab === 'pppoe-active'">
         <RgDataTable
-          :columns="pppColumns as any"
+          :columns="pppColumns"
           :rows="filteredPppSessions"
           caption="Sesiones PPPoE Activas"
           row-key="id"
@@ -878,9 +892,9 @@
             <button
               type="button"
               class="btn-row-action btn-row-action--danger"
-              :aria-label="`Desconectar sesión PPPoE de ${(row as any).name}`"
+              :aria-label="`Desconectar sesión PPPoE de ${row.name}`"
               title="Desconectar / Expulsar Abonado (Kick Session)"
-              @click="handleReconnectPpp(row as any)"
+              @click="handleReconnectPpp(row)"
             >
               ⏏ Desconectar
             </button>
@@ -891,7 +905,7 @@
       <!-- Pestaña 2: Secretos PPP -->
       <div v-else-if="activeTab === 'ppp-secrets'">
         <RgDataTable
-          :columns="secretColumns as any"
+          :columns="secretColumns"
           :rows="pppSecrets"
           caption="Secretos y Clientes PPP"
           row-key="id"
@@ -902,26 +916,26 @@
                 type="button"
                 class="btn-row-action"
                 title="Editar usuario PPP"
-                :aria-label="`Editar usuario ${(row as any).name}`"
-                @click="openEditSecretModal(row as any)"
+                :aria-label="`Editar usuario ${row.name}`"
+                @click="openEditSecretModal(row)"
               >
                 ✏
               </button>
               <button
                 type="button"
                 class="btn-row-action"
-                :title="(row as any).disabled ? 'Habilitar usuario' : 'Deshabilitar usuario'"
-                :aria-label="(row as any).disabled ? 'Habilitar usuario' : 'Deshabilitar usuario'"
-                @click="handleToggleSecret(row as any)"
+                :title="row.disabled ? 'Habilitar usuario' : 'Deshabilitar usuario'"
+                :aria-label="row.disabled ? 'Habilitar usuario' : 'Deshabilitar usuario'"
+                @click="handleToggleSecret(row)"
               >
-                {{ (row as any).disabled ? '▶' : '⏸' }}
+                {{ row.disabled ? '▶' : '⏸' }}
               </button>
               <button
                 type="button"
                 class="btn-row-action btn-row-action--danger"
                 title="Eliminar usuario"
-                :aria-label="`Eliminar usuario ${(row as any).name}`"
-                @click="handleDeleteSecret(row as any)"
+                :aria-label="`Eliminar usuario ${row.name}`"
+                @click="handleDeleteSecret(row)"
               >
                 🗑
               </button>
@@ -933,7 +947,7 @@
       <!-- Pestaña 3: Perfiles PPP -->
       <div v-else-if="activeTab === 'ppp-profiles'">
         <RgDataTable
-          :columns="profileColumns as any"
+          :columns="profileColumns"
           :rows="pppProfiles"
           caption="Perfiles de Servicio PPP"
           row-key="id"
@@ -944,8 +958,8 @@
                 type="button"
                 class="btn-row-action"
                 title="Editar perfil PPP"
-                :aria-label="`Editar perfil ${(row as any).name}`"
-                @click="openEditProfileModal(row as any)"
+                :aria-label="`Editar perfil ${row.name}`"
+                @click="openEditProfileModal(row)"
               >
                 ✏
               </button>
@@ -953,8 +967,8 @@
                 type="button"
                 class="btn-row-action btn-row-action--danger"
                 title="Eliminar perfil"
-                :aria-label="`Eliminar perfil ${(row as any).name}`"
-                @click="handleDeleteProfile(row as any)"
+                :aria-label="`Eliminar perfil ${row.name}`"
+                @click="handleDeleteProfile(row)"
               >
                 🗑
               </button>
@@ -966,7 +980,7 @@
       <!-- Pestaña 4: Servidores PPPoE -->
       <div v-else-if="activeTab === 'pppoe-servers'">
         <RgDataTable
-          :columns="serverColumns as any"
+          :columns="serverColumns"
           :rows="pppoeServers"
           caption="Servidores de Autenticación PPPoE"
           row-key="id"
@@ -977,26 +991,26 @@
                 type="button"
                 class="btn-row-action"
                 title="Editar servidor PPPoE"
-                :aria-label="`Editar servidor PPPoE ${(row as any).service_name}`"
-                @click="openEditServerModal(row as any)"
+                :aria-label="`Editar servidor PPPoE ${row.service_name}`"
+                @click="openEditServerModal(row)"
               >
                 ✏
               </button>
               <button
                 type="button"
                 class="btn-row-action"
-                :title="(row as any).disabled ? 'Habilitar servidor PPPoE' : 'Deshabilitar servidor PPPoE'"
-                :aria-label="(row as any).disabled ? 'Habilitar servidor PPPoE' : 'Deshabilitar servidor PPPoE'"
-                @click="handleToggleServer(row as any)"
+                :title="row.disabled ? 'Habilitar servidor PPPoE' : 'Deshabilitar servidor PPPoE'"
+                :aria-label="row.disabled ? 'Habilitar servidor PPPoE' : 'Deshabilitar servidor PPPoE'"
+                @click="handleToggleServer(row)"
               >
-                {{ (row as any).disabled ? '▶' : '⏸' }}
+                {{ row.disabled ? '▶' : '⏸' }}
               </button>
               <button
                 type="button"
                 class="btn-row-action btn-row-action--danger"
                 title="Eliminar servidor PPPoE"
-                :aria-label="`Eliminar servidor PPPoE ${(row as any).service_name}`"
-                @click="handleDeleteServer(row as any)"
+                :aria-label="`Eliminar servidor PPPoE ${row.service_name}`"
+                @click="handleDeleteServer(row)"
               >
                 🗑
               </button>
@@ -1008,7 +1022,7 @@
       <!-- Pestaña 5: Simple Queues -->
       <div v-else-if="activeTab === 'simple-queues'">
         <RgDataTable
-          :columns="queueColumns as any"
+          :columns="queueColumns"
           :rows="simpleQueues"
           caption="Colas de Ancho de Banda Simples"
           row-key="id"
@@ -1021,26 +1035,26 @@
                 type="button"
                 class="btn-row-action"
                 title="Editar cola simple"
-                :aria-label="`Editar cola ${(row as any).name}`"
-                @click="openEditQueueModal(row as any)"
+                :aria-label="`Editar cola ${row.name}`"
+                @click="openEditQueueModal(row)"
               >
                 ✏
               </button>
               <button
                 type="button"
                 class="btn-row-action"
-                :title="(row as any).disabled ? 'Habilitar cola' : 'Deshabilitar cola'"
-                :aria-label="(row as any).disabled ? 'Habilitar cola' : 'Deshabilitar cola'"
-                @click="handleToggleQueue(row as any)"
+                :title="row.disabled ? 'Habilitar cola' : 'Deshabilitar cola'"
+                :aria-label="row.disabled ? 'Habilitar cola' : 'Deshabilitar cola'"
+                @click="handleToggleQueue(row)"
               >
-                {{ (row as any).disabled ? '▶' : '⏸' }}
+                {{ row.disabled ? '▶' : '⏸' }}
               </button>
               <button
                 type="button"
                 class="btn-row-action btn-row-action--danger"
                 title="Eliminar cola simple"
-                :aria-label="`Eliminar cola ${(row as any).name}`"
-                @click="handleDeleteQueue(row as any)"
+                :aria-label="`Eliminar cola ${row.name}`"
+                @click="handleDeleteQueue(row)"
               >
                 🗑
               </button>
@@ -1133,7 +1147,7 @@
       <div class="modal-card" role="dialog" aria-labelledby="modal-secret-title" aria-modal="true">
         <header class="modal-header">
           <h2 id="modal-secret-title">Crear Secreto / Usuario PPP</h2>
-          <button type="button" class="btn-close" @click="isCreateSecretModalOpen = false">
+          <button type="button" class="btn-close" aria-label="Cerrar" @click="isCreateSecretModalOpen = false">
             ✕
           </button>
         </header>
@@ -1207,7 +1221,7 @@
       <div class="modal-card" role="dialog" aria-labelledby="modal-profile-title" aria-modal="true">
         <header class="modal-header">
           <h2 id="modal-profile-title">Crear Perfil PPP</h2>
-          <button type="button" class="btn-close" @click="isCreateProfileModalOpen = false">
+          <button type="button" class="btn-close" aria-label="Cerrar" @click="isCreateProfileModalOpen = false">
             ✕
           </button>
         </header>
@@ -1255,7 +1269,7 @@
       <div class="modal-card" role="dialog" aria-labelledby="modal-server-title" aria-modal="true">
         <header class="modal-header">
           <h2 id="modal-server-title">Activar Servidor PPPoE</h2>
-          <button type="button" class="btn-close" @click="isCreateServerModalOpen = false">
+          <button type="button" class="btn-close" aria-label="Cerrar" @click="isCreateServerModalOpen = false">
             ✕
           </button>
         </header>
@@ -1333,7 +1347,7 @@
       <div class="modal-card" role="dialog" aria-labelledby="modal-edit-secret-title" aria-modal="true">
         <header class="modal-header">
           <h2 id="modal-edit-secret-title">Editar Usuario / Secreto PPP ({{ editSecretForm.name }})</h2>
-          <button type="button" class="btn-close" @click="isEditSecretModalOpen = false">✕</button>
+          <button type="button" class="btn-close" aria-label="Cerrar" @click="isEditSecretModalOpen = false">✕</button>
         </header>
         <form class="modal-form" @submit.prevent="handleUpdateSecret">
           <div class="form-group">
@@ -1395,7 +1409,7 @@
       <div class="modal-card" role="dialog" aria-labelledby="modal-edit-profile-title" aria-modal="true">
         <header class="modal-header">
           <h2 id="modal-edit-profile-title">Editar Perfil PPP ({{ editProfileForm.name }})</h2>
-          <button type="button" class="btn-close" @click="isEditProfileModalOpen = false">✕</button>
+          <button type="button" class="btn-close" aria-label="Cerrar" @click="isEditProfileModalOpen = false">✕</button>
         </header>
         <form class="modal-form" @submit.prevent="handleUpdateProfile">
           <div class="form-group">
@@ -1447,7 +1461,7 @@
       <div class="modal-card" role="dialog" aria-labelledby="modal-edit-server-title" aria-modal="true">
         <header class="modal-header">
           <h2 id="modal-edit-server-title">Editar Servidor PPPoE ({{ editServerForm.service_name }})</h2>
-          <button type="button" class="btn-close" @click="isEditServerModalOpen = false">✕</button>
+          <button type="button" class="btn-close" aria-label="Cerrar" @click="isEditServerModalOpen = false">✕</button>
         </header>
         <form class="modal-form" @submit.prevent="handleUpdateServer">
           <div class="form-group">
@@ -1507,7 +1521,7 @@
       <div class="modal-card" role="dialog" aria-labelledby="modal-tree-title" aria-modal="true">
         <header class="modal-header">
           <h2 id="modal-tree-title">➕ Nueva Cola HTB (Queue Tree)</h2>
-          <button type="button" class="btn-close" @click="isCreateTreeModalOpen = false">✕</button>
+          <button type="button" class="btn-close" aria-label="Cerrar" @click="isCreateTreeModalOpen = false">✕</button>
         </header>
         <form class="modal-form" @submit.prevent="handleCreateQueueTree">
           <div class="form-group">

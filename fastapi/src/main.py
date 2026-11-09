@@ -37,25 +37,9 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
-    beacon_task: asyncio.Task[None] | None = None
-    is_test_env = settings.ROSGRID_ENV.startswith("qa") or settings.ROSGRID_ENV == "test"
-    if not is_test_env and settings.ROSGRID_TELEMETRY_BEACON_ENABLED:
-        try:
-            from src.workers.telemetry_beacon_worker import telemetry_beacon_worker_loop
-
-            beacon_task = asyncio.create_task(telemetry_beacon_worker_loop(), name="TelemetryBeaconLifespan")
-        except Exception as exc:
-            logger.debug("Omitiendo inicio de beacon en lifespan: %s", exc)
-
     try:
         yield
     finally:
-        if beacon_task is not None:
-            beacon_task.cancel()
-            try:
-                await beacon_task
-            except (asyncio.CancelledError, Exception):
-                pass
         await close_redis_client()
 
 
@@ -234,30 +218,37 @@ def create_app() -> FastAPI:
             request.url.path,
             exc,
         )
+        is_prod = settings.ROSGRID_ENV == "production"
         if isinstance(exc, MikrotikApiError):
             http_status = (
                 exc.status_code
                 if exc.status_code in (400, 404, 409, 422)
                 else status.HTTP_400_BAD_REQUEST
             )
-            error_detail = exc.message or exc.detail or str(exc)
+            error_detail = "Operación rechazada por RouterOS REST API." if is_prod else (exc.message or exc.detail or str(exc))
             return JSONResponse(
                 status_code=http_status,
                 content={"detail": f"Error en RouterOS REST API: {error_detail}"},
             )
         if isinstance(exc, MikrotikAuthFailedError):
+            msg = "Fallo de autenticación con el router MikroTik." if is_prod else f"Fallo de autenticación con el router: {exc}"
             return JSONResponse(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                content={"detail": f"Fallo de autenticación con el router: {exc}"},
+                content={"detail": msg},
             )
         if isinstance(exc, (MikrotikTimeoutError, MikrotikConnectionError)):
+            msg = (
+                "El router MikroTik no responde o rechazó la conexión."
+                if is_prod
+                else f"El router MikroTik no responde o rechazó la conexión: {exc}"
+            )
             return JSONResponse(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                content={"detail": f"El router MikroTik no responde o rechazó la conexión: {exc}"},
+                content={"detail": msg},
             )
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
-            content={"detail": str(exc)},
+            content={"detail": "Error de comunicación con el router MikroTik." if is_prod else str(exc)},
         )
 
     return app

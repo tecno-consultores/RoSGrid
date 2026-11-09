@@ -39,6 +39,22 @@ _GLOBAL_ACCESS_ROLES = {
     SystemRoleEnum.AUDITOR.value,
 }
 
+_READ_ONLY_ROLES = {
+    SystemRoleEnum.AUDITOR.value,
+    SystemRoleEnum.NOC_MONITOR.value,
+    SystemRoleEnum.SERVICE_ACCOUNT.value,
+}
+
+
+def assert_router_write_role(claims: dict[str, Any]) -> None:
+    """Rechaza con 403 cualquier intento de mutación sobre un router desde un rol de solo lectura."""
+    role = str(claims.get("rol") or "")
+    if role in _READ_ONLY_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="El rol actual es de solo lectura y no tiene autorización para modificar el router",
+        )
+
 
 async def _check_router_permission(
     db: AsyncSession,
@@ -46,7 +62,10 @@ async def _check_router_permission(
     user_id: uuid.UUID,
     router_id: uuid.UUID,
     claims: dict[str, Any],
+    require_write: bool = False,
 ) -> None:
+    if require_write:
+        assert_router_write_role(claims)
     role = claims.get("rol")
     has_all = claims.get("all_r", False)
     if role in _GLOBAL_ACCESS_ROLES or has_all:
@@ -58,6 +77,8 @@ async def _check_router_permission(
         UserRouterPermission.router_id == router_id,
         UserRouterPermission.can_read.is_(True),
     )
+    if require_write:
+        stmt = stmt.where(UserRouterPermission.can_write_layer1.is_(True))
     perm = (await db.execute(stmt)).scalar_one_or_none()
     if not perm:
         raise HTTPException(
@@ -103,12 +124,16 @@ async def get_router_and_client(
     router_id: uuid.UUID,
     claims: dict[str, Any],
     db: AsyncSession,
+    require_write: bool = False,
 ) -> tuple[Router, MikrotikRestClient]:
     """Valida permisos del usuario y devuelve el router junto con su cliente REST configurado."""
     tenant_id = uuid.UUID(claims["tid"])
     user_id = uuid.UUID(claims["sub"])
 
-    await _check_router_permission(db, tenant_id, user_id, router_id, claims)
+    if require_write:
+        await _check_router_permission(db, tenant_id, user_id, router_id, claims, require_write=True)
+    else:
+        await _check_router_permission(db, tenant_id, user_id, router_id, claims)
 
     query = (
         select(Router).options(selectinload(Router.vault)).where(Router.id == router_id, Router.tenant_id == tenant_id)
@@ -189,8 +214,12 @@ async def invalidate_webfig_cache(
     """Invalida las entradas de caché corto de un endpoint WebFig tras una mutación."""
     if not redis:
         return
-    clean_ep = endpoint.strip("/")
-    for candidate in (f"/{clean_ep}", clean_ep):
+    clean_ep = endpoint.strip("/").split("?", 1)[0]
+    candidates = [f"/{clean_ep}", clean_ep]
+    if clean_ep == "interface":
+        for q_type in ("ether", "vlan", "bridge", "wg", "wlan"):
+            candidates.extend((f"/interface?type={q_type}", f"interface?type={q_type}"))
+    for candidate in candidates:
         ep_hash = hashlib.sha256(candidate.encode("utf-8")).hexdigest()[:16]
         cache_key = f"rg:{tenant_id}:rcache:{router_id}:{ep_hash}"
         try:

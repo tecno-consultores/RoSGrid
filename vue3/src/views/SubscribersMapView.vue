@@ -64,7 +64,7 @@
       const res = await http.get<RouterItem[]>('/api/v1/inventory/routers');
       routers.value = Array.isArray(res.data) ? res.data : [];
     } catch {
-      routers.value = [];
+      // Preservar estado previo en memoria ante fallo transitorio
     }
   }
 
@@ -145,7 +145,7 @@
         return dev;
       });
     } catch {
-      onus.value = [];
+      // Preservar estado previo en memoria ante fallo transitorio
     } finally {
       isLoading.value = false;
     }
@@ -553,10 +553,9 @@
 </script>
 
 <template>
-  <main
+  <div
     class="subscribers-map-view"
-    data-theme="noc-dark"
-    role="main"
+    role="region"
     :aria-label="isIspMode ? t('subscribers_map.title_isp') : t('subscribers_map.title_enterprise')"
   >
     <!-- Encabezado Táctico & KPIs Zero-Metrics (Bimodal) -->
@@ -571,30 +570,39 @@
       </div>
 
       <div class="kpi-ribbon" role="region" aria-label="Indicadores Zero-Metrics">
-        <div class="kpi-card" @click="statusFilter = 'ALL'">
+        <div class="kpi-card" role="button" tabindex="0" @click="statusFilter = 'ALL'" @keydown.enter="statusFilter = 'ALL'">
           <span class="kpi-label">{{ t('subscribers_map.total_onus') }}</span>
           <span class="kpi-value text-cyan">{{ totalCount }}</span>
         </div>
         <div
           class="kpi-card"
+          role="button"
+          tabindex="0"
           :class="{ active: statusFilter === 'OPTIMAL' }"
           @click="statusFilter = 'OPTIMAL'"
+          @keydown.enter="statusFilter = 'OPTIMAL'"
         >
           <span class="kpi-label">🟢 {{ t('subscribers_map.optimal_count') }}</span>
           <span class="kpi-value text-green">{{ optimalCount }}</span>
         </div>
         <div
           class="kpi-card"
+          role="button"
+          tabindex="0"
           :class="{ active: statusFilter === 'DEGRADED' }"
           @click="statusFilter = 'DEGRADED'"
+          @keydown.enter="statusFilter = 'DEGRADED'"
         >
           <span class="kpi-label">🟠 {{ t('subscribers_map.degraded_count') }}</span>
           <span class="kpi-value text-orange">{{ degradedCount }}</span>
         </div>
         <div
           class="kpi-card"
+          role="button"
+          tabindex="0"
           :class="{ active: statusFilter === 'DOWN' }"
           @click="statusFilter = 'DOWN'"
+          @keydown.enter="statusFilter = 'DOWN'"
         >
           <span class="kpi-label">🔴 {{ t('subscribers_map.down_count') }}</span>
           <span class="kpi-value text-red">{{ downCount }}</span>
@@ -1023,13 +1031,13 @@
               <table class="csv-preview-table">
                 <thead>
                   <tr>
-                    <th>Fila</th>
-                    <th>Endpoint / Código</th>
-                    <th>Serial ONU</th>
-                    <th>IPv4</th>
-                    <th>Router</th>
-                    <th>Caja NAP</th>
-                    <th>Estado / Errores</th>
+                    <th scope="col">Fila</th>
+                    <th scope="col">Endpoint / Código</th>
+                    <th scope="col">Serial ONU</th>
+                    <th scope="col">IPv4</th>
+                    <th scope="col">Router</th>
+                    <th scope="col">Caja NAP</th>
+                    <th scope="col">Estado / Errores</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1159,13 +1167,13 @@
               <table class="csv-preview-table">
                 <thead>
                   <tr>
-                    <th>Fila</th>
-                    <th>Código Caja</th>
-                    <th>Router</th>
-                    <th>Puertos / Splitter</th>
-                    <th>Coordenadas GPS</th>
-                    <th>Tipo / Ubicación</th>
-                    <th>Acción / Estado</th>
+                    <th scope="col">Fila</th>
+                    <th scope="col">Código Caja</th>
+                    <th scope="col">Router</th>
+                    <th scope="col">Puertos / Splitter</th>
+                    <th scope="col">Coordenadas GPS</th>
+                    <th scope="col">Tipo / Ubicación</th>
+                    <th scope="col">Acción / Estado</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1215,7 +1223,7 @@
         </div>
       </div>
     </div>
-  </main>
+  </div>
 </template>
 
 <style scoped>

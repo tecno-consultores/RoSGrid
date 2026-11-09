@@ -9,7 +9,7 @@ import io
 import json
 import logging
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Response
@@ -193,7 +193,9 @@ async def verify_audit_integrity(
     """Verifica matemáticamente la integridad de la cadena WORM encadenada por SHA-256."""
     tenant_id = uuid.UUID(claims["tid"])
     stmt = (
-        select(AuditLog).where(AuditLog.tenant_id == tenant_id).order_by(AuditLog.created_at.asc(), AuditLog.id.asc())
+        select(AuditLog)
+        .where(AuditLog.tenant_id == tenant_id)
+        .order_by(AuditLog.seq_num.asc(), AuditLog.created_at.asc(), AuditLog.id.asc())
     )
     records = (await db.execute(stmt)).scalars().all()
 
@@ -244,7 +246,7 @@ async def export_audit_logs(
     if export_format.lower() == "csv":
         content_str = "\ufeff" + _build_export_csv(records)
         media_type = "text/csv; charset=utf-8"
-        filename = f"rosgrid_audit_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        filename = f"rosgrid_audit_export_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.csv"
         digest = hashlib.sha256(content_str.encode("utf-8")).hexdigest()
     else:
         raw_list = [
@@ -268,7 +270,7 @@ async def export_audit_logs(
             "$schema": "https://rosgrid.net/schemas/audit-export-v1.json",
             "title": "RoSGrid Signed Immutable Audit Log Report (WORM Compliance)",
             "version": "1.0",
-            "exported_at": datetime.utcnow().isoformat() + "Z",
+            "exported_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             "total_records": len(records),
             "cryptographic_signature": {
                 "algorithm": "SHA-256",
@@ -278,7 +280,7 @@ async def export_audit_logs(
         }
         content_str = json.dumps(signed_export, indent=2)
         media_type = "application/json; charset=utf-8"
-        filename = f"rosgrid_audit_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        filename = f"rosgrid_audit_export_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.json"
 
     headers = {
         "Content-Disposition": f'attachment; filename="{filename}"',

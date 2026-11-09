@@ -102,18 +102,31 @@ async def write_audit_log(
     error_message: str | None = None,
 ) -> Any:
     """Registra de forma inmutable un evento de auditoría en PostgreSQL calculando el hash WORM encadenado."""
-    from sqlalchemy import select
+    from sqlalchemy import select, text
+    from sqlalchemy.ext.asyncio import AsyncSession
 
     from src.models.operations import AuditLog
+
+    if type(session) is AsyncSession:
+        await session.execute(text("SELECT pg_advisory_xact_lock(hashtext(:tid))"), {"tid": str(tenant_id)})
 
     stmt = (
         select(AuditLog.record_sha256_hash)
         .where(AuditLog.tenant_id == tenant_id)
-        .order_by(AuditLog.created_at.desc(), AuditLog.id.desc())
+        .order_by(AuditLog.seq_num.desc(), AuditLog.created_at.desc(), AuditLog.id.desc())
         .limit(1)
     )
     res = await session.execute(stmt)
-    prev_hash = res.scalar_one_or_none() or GENESIS_AUDIT_HASH
+    raw_prev_hash = res.scalar_one_or_none()
+    db_prev_hash = raw_prev_hash if isinstance(raw_prev_hash, str) else None
+    tid_key = str(tenant_id)
+    raw_in_tx = session.__dict__.get("_rg_in_tx_audit_hash")
+    in_tx_hashes: dict[str, tuple[str | None, str]] = raw_in_tx if isinstance(raw_in_tx, dict) else {}
+    prev_tuple = in_tx_hashes.get(tid_key)
+    if isinstance(prev_tuple, tuple) and len(prev_tuple) == 2 and prev_tuple[0] == db_prev_hash:
+        prev_hash = prev_tuple[1]
+    else:
+        prev_hash = db_prev_hash or GENESIS_AUDIT_HASH
 
     resolved_username = actor_username
     if actor_user_id and (not resolved_username or str(resolved_username).strip() == str(actor_user_id).strip()):
@@ -181,4 +194,11 @@ async def write_audit_log(
         record_sha256_hash=rec_hash,
     )
     session.add(log_entry)
+    try:
+        in_tx_hashes[tid_key] = (db_prev_hash, rec_hash)
+        session.__dict__["_rg_in_tx_audit_hash"] = in_tx_hashes
+    except Exception:
+        pass
+    if type(session) is AsyncSession:
+        await session.flush()
     return log_entry

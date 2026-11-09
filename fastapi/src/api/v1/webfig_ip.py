@@ -415,7 +415,15 @@ async def update_arp(
 async def delete_arp(
     router_id: uuid.UUID,
     item_id: str,
-    claims: dict[str, Any] = Depends(get_current_user_claims),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Limpia o elimina una entrada ARP."""
@@ -627,7 +635,15 @@ async def create_dhcp_lease(
 async def make_dhcp_lease_static(
     router_id: uuid.UUID,
     item_id: str,
-    claims: dict[str, Any] = Depends(get_current_user_claims),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Convierte un lease DHCP dinámico en reservación estática."""
@@ -679,7 +695,15 @@ async def update_dhcp_lease(
 async def delete_dhcp_lease(
     router_id: uuid.UUID,
     item_id: str,
-    claims: dict[str, Any] = Depends(get_current_user_claims),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Libera o elimina una concesión DHCP."""
@@ -1366,7 +1390,15 @@ async def delete_dns_static(
 @router.post("/dns/flush-cache")
 async def flush_dns_cache(
     router_id: uuid.UUID,
-    claims: dict[str, Any] = Depends(get_current_user_claims),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Vacía la caché DNS del router."""

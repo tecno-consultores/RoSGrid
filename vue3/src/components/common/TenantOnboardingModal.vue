@@ -90,7 +90,8 @@
       const res = await http.patch<TenantFeatureFlags>(`/api/v1/tenants/${tid}/features`, payload);
       authStore.updateTenantFeatures(res.data || payload);
       emit('completed');
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       console.error('Error completando onboarding:', err);
       errorMessage.value =
         err?.detail ||

@@ -1677,9 +1677,9 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
     - `rosgrid_router_syslog_critical_events_total`: Total acumulado de eventos críticos Syslog.
   - **Autenticación:** Cabecera `Authorization: Bearer <ROSGRID_PROMETHEUS_SCRAPE_TOKEN>` y Feature Flag de Tenant `prometheus_fleet_exporter_enabled`.
   - **Plantillas Oficiales de Observabilidad:**
-    - Tablero Grafana JSON: [`docs/examples/grafana/rosgrid_mikrotik_fleet_dashboard.json`](file:///docs/examples/grafana/rosgrid_mikrotik_fleet_dashboard.json)
-    - Manifiesto `prometheus.yml`: [`docs/examples/prometheus/prometheus.yml`](file:///docs/examples/prometheus/prometheus.yml)
-    - Reglas Alertmanager: [`docs/examples/prometheus/rosgrid-alerts.rules.yml`](file:///docs/examples/prometheus/rosgrid-alerts.rules.yml)
+    - Tablero Grafana JSON: [`docs/examples/grafana/rosgrid_mikrotik_fleet_dashboard.json`](./examples/grafana/rosgrid_mikrotik_fleet_dashboard.json)
+    - Manifiesto `prometheus.yml`: [`docs/examples/prometheus/prometheus.yml`](./examples/prometheus/prometheus.yml)
+    - Reglas Alertmanager: [`docs/examples/prometheus/rosgrid-alerts.rules.yml`](./examples/prometheus/rosgrid-alerts.rules.yml)
   - **Especificación Completa:** Consulta [`docs/specs/55_GRANULAR_USER_PROFILE_FLAGS_TELEMETRY_BEACON_AND_PROMETHEUS_GRAFANA_OBSERVABILITY.md`](./specs/55_GRANULAR_USER_PROFILE_FLAGS_TELEMETRY_BEACON_AND_PROMETHEUS_GRAFANA_OBSERVABILITY.md).
 
 ### 8.3 Diagnóstico de Telemetría Anónima de Instancias Activas (Privacy-Preserving Heartbeat Beacon)
@@ -1708,7 +1708,7 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
 
 - **`POST /api/v1/system/diagnostics/ui-error`:**
   - **Propósito:** Registra un evento del Ring Buffer de diagnóstico del navegador (`HTTP_ERROR`, `VUE_EXCEPTION`, `UNHANDLED_REJECTION`, `API_LATENCY`, `MANUAL_NOTE`) en la cola compartida del tenant en KeyDB (`rg:diagnostics:ui_errors:{tenant_id}`) adjuntando `reported_by_username` y `reported_by_role`, y lo reenvía de forma fail-silent al SIEM del ISP si está habilitado.
-  - **Autenticación:** Abierto a cualquier operador autenticado del tenant (`SUPPORT_L1`, `SUPPORT_L2`, `SUPPORT_L3`, `FIELD_TECH`, `NOC_ENGINEER`, `SUPERVISOR`, `TENANT_ADMIN`, `SUPERADMIN_GLOBAL`), permitiendo capturar fallas ocurridas en las pantallas de los técnicos cuando el Admin descarga el paquete 1-Click.
+  - **Autenticación:** Abierto a cualquier operador autenticado del tenant (`SUPPORT_L1`, `SUPPORT_L2`, `SUPPORT_L3`, `FIELD_TECH`, `NOC_MONITOR`, `SUPERVISOR`, `TENANT_ADMIN`, `SUPERADMIN_GLOBAL`), permitiendo capturar fallas ocurridas en las pantallas de los técnicos cuando el Admin descarga el paquete 1-Click.
 - **`POST /api/v1/system/diagnostics/bundle`:**
   - **Propósito:** Genera en memoria un paquete de soporte comprimido (`.zip` por defecto o `.tar.gz`) codificado en Base64 (`bundle_base64`) con sanitización automática de secretos (`redacted_secrets_count`), conteniendo `metadata.json`, `frontend/ui_errors.json`, `backend/application_logs.log` y `backend/siem_forwarder_status.json`.
   - **Autenticación:** Requiere sesión activa de `SUPERADMIN_GLOBAL` o `TENANT_ADMIN`.
@@ -1718,6 +1718,33 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
   - **Propósito:** Actualiza en KeyDB (`rg:siem:config:{tenant_id}`) el protocolo, host, puerto, ruta HTTP, nivel mínimo de severidad y etiqueta de stream del colector SIEM del ISP.
 - **`POST /api/v1/system/siem-config/test`:**
   - **Propósito:** Dispara un evento de prueba hacia el colector Graylog, Grafana Loki o Syslog configurado por el ISP y retorna el estado de entrega y la latencia medida en milisegundos (`latency_ms`).
+
+---
+
+## 9. Catálogo de Módulos Especializados ISP, Cumplimiento Corporativo y MCP Zero-Trust
+
+| Prefijo / Router | Módulo (`fastapi/src/api/v1/`) | Endpoints Principales |
+| :--- | :--- | :--- |
+| `/api/v1/ipam` | `ipam.py` | `GET/POST/DELETE /blocks`, `GET/POST /subnets`, `GET/POST/PATCH/DELETE /addresses`, `POST /subnets/{id}/sync-dhcp`, `POST /addresses/{id}/pair-subscriber` |
+| `/api/v1/subscriber-devices` | `subscribers.py` | `GET/POST/PATCH/DELETE /subscriber-devices`, `POST /{id}/ping`, `GET /{id}/live-candidates`, `POST /sync-dhcp`, `GET /template-csv`, `POST /import-csv/dry-run`, `POST /import-csv/commit` |
+| `/api/v1/optical-boxes` | `optical_boxes.py` | `GET/POST/PATCH/DELETE /optical-boxes`, `GET /{id}`, `GET /template-csv`, `POST /import-csv/dry-run`, `POST /import-csv/commit` |
+| `/api/v1/field-ops` | `field_ops.py` | `POST /activate-device`, `POST /certify-installation`, `GET /nearby-boxes`, `POST /detect-fiber-cuts` |
+| `/api/v1/network-services` | `network_services.py` | `GET/POST/DELETE /bandwidth-profiles`, `POST /{id}/isolate`, `POST /{id}/restore`, `POST /{id}/change-profile` |
+| `/api/v1/diagnostics-360` | `diagnostics_360.py` | `POST /run`, `POST /torch-sample`, `GET /routers/{router_id}/sfp-ddm` |
+| `/api/v1/bgp-looking-glass` | `bgp_looking_glass.py` | `POST /query`, `GET /routers/{router_id}/peers` |
+| `/api/v1/traffic-flow` | `traffic_flow.py` | `GET /routers/{router_id}/config`, `PUT /routers/{router_id}/config`, `GET /routers/{router_id}/top-talkers`, `GET /anomalies` |
+| `/api/v1/topology` | `topology_l2.py` | `GET /l2`, `GET /routers/{router_id}/poe` |
+| `/api/v1/cves` | `cve.py` | `GET /fleet-matrix`, `POST /sync-catalog`, `GET /catalog` |
+| `/api/v1/routers/{id}/syslog` | `syslog.py` | `GET /recent`, `GET /enrollment-script` |
+| `/api/v1/compliance` | `compliance.py` | `GET/POST/DELETE /golden-templates`, `POST /drift/check/{router_id}`, `POST /drift/remediate/{router_id}`, `POST /cis/audit/{router_id}`, `POST /cis/harden/{router_id}`, `GET /cis/policies`, `PUT /cis/policies` |
+| `/api/v1/sdwan` | `sdwan.py` | `GET /topology`, `POST /provision-spoke`, `DELETE /tunnels/{tunnel_id}` |
+| `/api/v1/switching` | `switching.py` | `GET /routers/{router_id}/vlans`, `GET /rogue-dhcp-alerts`, `POST /dhcp-snooping/enable` |
+| `/api/v1/sla` | `sla.py` | `GET /metrics`, `GET /targets/{router_id}`, `POST /probe/{router_id}`, `GET /report` |
+| `/api/v1/wifi` | `wifi.py` | `GET /overview/{router_id}`, `POST /capsman/toggle/{router_id}`, `GET/POST/PATCH/DELETE /security-profiles/{router_id}`, `GET/POST/PATCH/DELETE /configurations/{router_id}`, `GET/POST/DELETE /provisioning/{router_id}`, `POST /reprovision/{router_id}`, `POST /clients/kick/{router_id}`, `POST /quick-setup/{router_id}` |
+| `/api/v1/notification-channels` | `notification_channels.py` | `GET/POST/PATCH/DELETE /notification-channels`, `POST /{id}/test` |
+| `/api/v1/routers/{id}/webfig/ipv6` | `webfig_ipv6.py` | `GET/POST/PATCH/DELETE /addresses`, `GET/POST/PATCH/DELETE /routes`, `GET /neighbors` |
+| `/api/v1/mcp` | `mcp.py` | `POST /api/v1/mcp` (Exclusivo `SERVICE_ACCOUNT` con `scope: "mcp_only"` y `allowed_cidr_list` no vacío; 22 tools semánticas, 6 tools de mutación bajo Maker-Checker `AWAITING_APPROVAL`), `GET /api/v1/mcp/skill` (`SKILL.md` con 8 SOP Playbooks) |
+
 
 
 

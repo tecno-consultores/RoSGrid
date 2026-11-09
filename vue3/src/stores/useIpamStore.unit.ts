@@ -1,6 +1,8 @@
+/* eslint-disable sonarjs/no-duplicate-string */
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
+import type { WebFigDynamic } from '@/types';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 import { useIpamStore } from './useIpamStore';
@@ -135,8 +137,8 @@ describe('useIpamStore — Gestor IPAM Dual-Stack Universal', () => {
 
   it('fetchVrfs y fetchPrefixes obtienen datos del backend', async () => {
     const { http } = await import('@/api/httpClient');
-    vi.mocked(http.get).mockResolvedValueOnce({ data: sampleVrfs } as never);
-    vi.mocked(http.get).mockResolvedValueOnce({ data: samplePrefixes } as never);
+    (http.get as WebFigDynamic).mockResolvedValueOnce({ data: sampleVrfs } as never);
+    (http.get as WebFigDynamic).mockResolvedValueOnce({ data: samplePrefixes } as never);
 
     const store = useIpamStore();
     await store.fetchVrfs();
@@ -148,7 +150,7 @@ describe('useIpamStore — Gestor IPAM Dual-Stack Universal', () => {
 
   it('syncAllMikrotikIpam envía petición POST /api/v1/ipam/sync-all y recarga colecciones', async () => {
     const { http } = await import('@/api/httpClient');
-    vi.mocked(http.post).mockResolvedValueOnce({
+    (http.post as WebFigDynamic).mockResolvedValueOnce({
       data: {
         synced_prefixes: 3,
         synced_ips: 13,
@@ -156,8 +158,8 @@ describe('useIpamStore — Gestor IPAM Dual-Stack Universal', () => {
         message: 'Descubrimiento IPAM completado en 6 routers',
       },
     } as never);
-    vi.mocked(http.get).mockResolvedValueOnce({ data: samplePrefixes } as never);
-    vi.mocked(http.get).mockResolvedValueOnce({ data: [] } as never);
+    (http.get as WebFigDynamic).mockResolvedValueOnce({ data: samplePrefixes } as never);
+    (http.get as WebFigDynamic).mockResolvedValueOnce({ data: [] } as never);
 
     const store = useIpamStore();
     const result = await store.syncAllMikrotikIpam();

@@ -1,6 +1,8 @@
+/* eslint-disable security/detect-object-injection */
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
+import type { WebFigDynamic } from '@/types';
 import { defineStore } from 'pinia';
 import { computed, ref, shallowRef, triggerRef } from 'vue';
 import type { MaintenanceWindowItem, RouterItem } from '@/types';
@@ -74,7 +76,7 @@ export const useInventoryStore = defineStore('inventory', () => {
       const url = refresh ? '/api/v1/inventory/routers?refresh=true' : '/api/v1/inventory/routers';
       const res = await http.get<RouterItem[] | { items: RouterItem[] }>(url);
       const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
-      const items: RouterItem[] = raw.map((item: any) => ({
+      const items: RouterItem[] = raw.map((item: WebFigDynamic) => ({
         ...item,
         latitude:
           item.latitude !== null && item.latitude !== undefined && item.latitude !== ''
@@ -99,9 +101,7 @@ export const useInventoryStore = defineStore('inventory', () => {
         syslog_active: Boolean(item.syslog_active),
         syslog_event_count: Number(item.syslog_event_count || 0),
       }));
-      if (items.length > 0 || routers.value.length === 0) {
-        setRouters(items);
-      }
+      setRouters(items);
     } catch (err) {
       // Directiva Anti-Degradación: Preservar estado previo si ya existían routers en memoria
       if (routers.value.length === 0) {

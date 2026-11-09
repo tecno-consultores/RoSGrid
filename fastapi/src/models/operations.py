@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     DateTime,
     Enum,
@@ -283,6 +284,7 @@ class AuditLog(Base):
 
     prev_record_hash: Mapped[str] = mapped_column(CHAR(64), nullable=False)
     record_sha256_hash: Mapped[str] = mapped_column(CHAR(64), nullable=False)
+    seq_num: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default=text("0"), index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("NOW()"), index=True
     )

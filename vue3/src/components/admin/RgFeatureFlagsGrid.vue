@@ -2,6 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  /* eslint-disable security/detect-object-injection, sonarjs/no-duplicate-string */
   import { ref, computed, watch } from 'vue';
   import type { TenantFeatureFlags } from '@/types';
 

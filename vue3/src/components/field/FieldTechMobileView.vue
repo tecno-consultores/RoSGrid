@@ -2,6 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  import type { WebFigDynamic } from '@/types';
   import { computed, onMounted, ref, watch } from 'vue';
   import { useRouter } from 'vue-router';
   import { http } from '@/api/httpClient';
@@ -253,11 +254,15 @@
         if (box) {
           const bLat = Number(box.latitude);
           const bLng = Number(box.longitude);
-          if (!Number.isNaN(bLat) && !Number.isNaN(bLng) && !(bLat === 0 && bLng === 0)) {
-            if (customerForm.value.latitude === 10.4806 && customerForm.value.longitude === -66.9036) {
-              customerForm.value.latitude = bLat;
-              customerForm.value.longitude = bLng;
-            }
+          if (
+            !Number.isNaN(bLat) &&
+            !Number.isNaN(bLng) &&
+            !(bLat === 0 && bLng === 0) &&
+            customerForm.value.latitude === 10.4806 &&
+            customerForm.value.longitude === -66.9036
+          ) {
+            customerForm.value.latitude = bLat;
+            customerForm.value.longitude = bLng;
           }
         }
       } catch {
@@ -425,12 +430,12 @@
     }
     const dev = selectedSubscriberForDiag.value;
     const routerId = dev?.router_id || (inventoryStore.routers[0]?.id || '00000000-0000-0000-0000-000000000001');
-    const targetIp = (dev as any)?.assigned_ipv4 || (dev as any)?.onu_ip || '100.64.0.2';
+    const targetIp = (dev as WebFigDynamic)?.assigned_ipv4 || (dev as WebFigDynamic)?.onu_ip || '100.64.0.2';
 
     isPinging.value = true;
     pingResult.value = null;
     try {
-      const res = await http.post<any>('/api/v1/diagnostics/endpoint-360', {
+      const res = await http.post<WebFigDynamic>('/api/v1/diagnostics/endpoint-360', {
         router_id: routerId,
         target_ip: targetIp,
         duration_seconds: 5,
@@ -570,7 +575,7 @@
 </script>
 
 <template>
-  <div class="field-mobile-view" data-theme="noc-dark">
+  <div class="field-mobile-view">
     <!-- Pantalla informativa si Modo ISP está Desactivado (Organización No-ISP) -->
     <div v-if="!isIspEnabled" class="non-isp-blocker">
       <div class="blocker-card">
@@ -624,7 +629,7 @@
         role="alert"
       >
         <span>{{ actionStatus === 'success' ? '⚡' : '⚠️' }} {{ actionMessage }}</span>
-        <button type="button" class="btn-close-msg" @click="actionMessage = null">✕</button>
+        <button type="button" class="btn-close-msg" aria-label="Cerrar" @click="actionMessage = null">✕</button>
       </div>
 
       <!-- Pestañas de Acción Táctica -->
@@ -664,7 +669,7 @@
       </nav>
 
       <!-- Contenedor Principal de la Pestaña Activa -->
-      <main class="field-tab-content">
+      <div class="field-tab-content" role="region" aria-label="Contenido de pestaña de operaciones de campo">
         <!-- ========================================== -->
         <!-- TAB 1: REGISTRAR CAJA NAP                  -->
         <!-- ========================================== -->
@@ -1310,7 +1315,7 @@
             />
           </div>
         </section>
-      </main>
+      </div>
     </div>
   </div>
 </template>

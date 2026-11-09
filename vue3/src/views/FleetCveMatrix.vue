@@ -207,7 +207,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="cve-matrix-view" aria-labelledby="cve-matrix-title">
+  <div class="cve-matrix-view" role="region" aria-labelledby="cve-matrix-title">
     <!-- Encabezado de Vista -->
     <header class="cve-header">
       <div class="cve-header-text">
@@ -485,7 +485,7 @@ onMounted(() => {
         </tbody>
       </table>
     </section>
-  </main>
+  </div>
 </template>
 
 <style scoped>

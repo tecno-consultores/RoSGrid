@@ -2,6 +2,8 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  /* eslint-disable sonarjs/cognitive-complexity */
+  import type { WebFigDynamic } from '@/types';
   import { ref, onMounted, computed } from 'vue';
   import { http } from '@/api/httpClient';
   import { useI18n } from '@/composables/useI18n';
@@ -144,7 +146,7 @@
     formIsEnabled.value = ch.is_enabled;
     formSubscribedEvents.value = [...ch.subscribed_events];
 
-    const summary = (ch.config_summary || {}) as Record<string, any>;
+    const summary = (ch.config_summary || {}) as Record<string, WebFigDynamic>;
     if (ch.channel_type === 'TELEGRAM_BOT') {
       telegramChatId.value = String(summary.chat_id || '');
       telegramBotToken.value = '';

@@ -1,3 +1,4 @@
+/* eslint-disable sonarjs/no-duplicate-string */
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
@@ -41,7 +42,7 @@ describe('SubscribersMapView.vue — Vista Bimodal de Mapa de Red y Clientes', (
               is_reachable: true,
             },
           ],
-        } as any;
+        } as never;
       }
       return {
         status: 200,
@@ -98,7 +99,7 @@ describe('SubscribersMapView.vue — Vista Bimodal de Mapa de Red y Clientes', (
             updated_at: new Date().toISOString(),
           },
         ],
-      } as any;
+      } as never;
     });
   });
 
@@ -246,7 +247,7 @@ describe('SubscribersMapView.vue — Vista Bimodal de Mapa de Red y Clientes', (
         },
       ],
       subscribers: [
-        { id: 'onu-01', endpoint_identifier: 'CLI-01', device_serial: 'ZTEGC00001', optical_box_port: 1 } as any,
+        { id: 'onu-01', endpoint_identifier: 'CLI-01', device_serial: 'ZTEGC00001', optical_box_port: 1 } as never,
       ],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -314,7 +315,7 @@ describe('SubscribersMapView.vue — Vista Bimodal de Mapa de Red y Clientes', (
       status: 200,
       headers: new Headers(),
       data: 'endpoint_identifier,onu_serial_number',
-    } as any);
+    } as never);
 
     await wrapperAdmin.find('#btn-download-subscribers-csv-template').trigger('click');
     expect(spyGet).toHaveBeenCalledWith('/api/v1/subscriber-devices/template-csv');
@@ -346,16 +347,16 @@ describe('SubscribersMapView.vue — Vista Bimodal de Mapa de Red y Clientes', (
     };
     const spyPost = vi.spyOn(http, 'post').mockImplementation(async (url: string) => {
       if (url.includes('/import-csv/dry-run')) {
-        return { status: 200, headers: new Headers(), data: dryRunPayload } as any;
+        return { status: 200, headers: new Headers(), data: dryRunPayload } as never;
       }
       if (url.includes('/import-csv/commit')) {
         return {
           status: 200,
           headers: new Headers(),
           data: { imported_count: 1, created_ids: ['uuid-01'], message: 'Se importaron 1 clientes exitosamente.' },
-        } as any;
+        } as never;
       }
-      return { status: 200, headers: new Headers(), data: {} } as any;
+      return { status: 200, headers: new Headers(), data: {} } as never;
     });
 
     // Simular archivo seleccionado
@@ -419,7 +420,7 @@ describe('SubscribersMapView.vue — Vista Bimodal de Mapa de Red y Clientes', (
       status: 200,
       headers: new Headers(),
       data: 'box_code,router_name,capacity_ports',
-    } as any);
+    } as never);
 
     await wrapperAdmin.find('#btn-download-optical-boxes-csv-template').trigger('click');
     expect(spyGet).toHaveBeenCalledWith('/api/v1/optical-boxes/template-csv');
@@ -466,7 +467,7 @@ describe('SubscribersMapView.vue — Vista Bimodal de Mapa de Red y Clientes', (
 
     const spyPost = vi.spyOn(http, 'post').mockImplementation(async (url: string) => {
       if (url.includes('/optical-boxes/import-csv/dry-run')) {
-        return { status: 200, headers: new Headers(), data: boxesDryRunPayload } as any;
+        return { status: 200, headers: new Headers(), data: boxesDryRunPayload } as never;
       }
       if (url.includes('/optical-boxes/import-csv/commit')) {
         return {
@@ -478,9 +479,9 @@ describe('SubscribersMapView.vue — Vista Bimodal de Mapa de Red y Clientes', (
             box_ids: ['box-uuid-01', 'box-uuid-02'],
             message: 'Se procesaron 2 Cajas NAP exitosamente (1 nuevas, 1 actualizadas).',
           },
-        } as any;
+        } as never;
       }
-      return { status: 200, headers: new Headers(), data: {} } as any;
+      return { status: 200, headers: new Headers(), data: {} } as never;
     });
 
     // Simular archivo seleccionado

@@ -96,8 +96,18 @@ def _extract_raw_voltage(raw: Mapping[Any, Any]) -> float:
 
 def _validate_scrape_auth(authorization: str | None = Header(None)) -> None:
     """Valida token Bearer configurado para scraping Prometheus (CC = 5)."""
+    import hmac as _hmac
+
     expected_token = settings.ROSGRID_PROMETHEUS_SCRAPE_TOKEN
     if not expected_token:
+        if settings.ROSGRID_ENV == "production":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={
+                    "code": "PROMETHEUS_UNAUTHORIZED",
+                    "message": "ROSGRID_PROMETHEUS_SCRAPE_TOKEN es obligatorio en producción.",
+                },
+            )
         return
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(
@@ -105,7 +115,7 @@ def _validate_scrape_auth(authorization: str | None = Header(None)) -> None:
             detail={"code": "PROMETHEUS_UNAUTHORIZED", "message": "Bearer token requerido para scraping."},
         )
     token = authorization.split("Bearer ", 1)[1].strip()
-    if token != expected_token:
+    if not _hmac.compare_digest(token.encode("utf-8"), expected_token.encode("utf-8")):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail={"code": "PROMETHEUS_UNAUTHORIZED", "message": "Token de scraping inválido."},
@@ -192,6 +202,10 @@ async def get_prometheus_fleet_metrics(
     _auth: None = Depends(_validate_scrape_auth),
 ) -> Response:
     """Exportador dinámico de telemetría de flota en formato estándar Prometheus (cero persistencia en Postgres)."""
+    if type(db) is AsyncSession:
+        from src.db.session import set_tenant_context
+
+        await set_tenant_context(db, None, is_superadmin=True)
     query = (
         select(Router)
         .join(Tenant, Router.tenant_id == Tenant.id)

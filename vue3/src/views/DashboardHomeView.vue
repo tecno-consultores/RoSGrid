@@ -297,7 +297,7 @@
 
     <!-- Franja de KPIs Tácticos -->
     <section class="kpi-strip" :aria-label="t('dashboard.kpi_fleet', 'Indicadores Clave de Rendimiento')">
-      <div class="kpi-card" @click="navigateTo('/inventory')">
+      <div class="kpi-card" role="button" tabindex="0" @click="navigateTo('/inventory')" @keydown.enter.prevent="navigateTo('/inventory')" @keydown.space.prevent="navigateTo('/inventory')">
         <div class="kpi-icon-wrap kpi-icon--cyan">🖥️</div>
         <div class="kpi-content">
           <span class="kpi-label">{{ t('dashboard.kpi_fleet') }}</span>
@@ -317,7 +317,7 @@
         </div>
       </div>
 
-      <div class="kpi-card" @click="navigateTo('/inventory')">
+      <div class="kpi-card" role="button" tabindex="0" @click="navigateTo('/inventory')" @keydown.enter.prevent="navigateTo('/inventory')" @keydown.space.prevent="navigateTo('/inventory')">
         <div
           class="kpi-icon-wrap"
           :class="availabilityPct >= 90 ? 'kpi-icon--green' : 'kpi-icon--amber'"
@@ -341,7 +341,7 @@
         </div>
       </div>
 
-      <div class="kpi-card" @click="navigateTo('/noc-wallboard')">
+      <div class="kpi-card" role="button" tabindex="0" @click="navigateTo('/noc-wallboard')" @keydown.enter.prevent="navigateTo('/noc-wallboard')" @keydown.space.prevent="navigateTo('/noc-wallboard')">
         <div
           class="kpi-icon-wrap"
           :class="nocStore.activeAlertsCount > 0 ? 'kpi-icon--red' : 'kpi-icon--green'"
@@ -363,7 +363,7 @@
         </div>
       </div>
 
-      <div class="kpi-card" @click="navigateTo('/approvals')">
+      <div class="kpi-card" role="button" tabindex="0" @click="navigateTo('/approvals')" @keydown.enter.prevent="navigateTo('/approvals')" @keydown.space.prevent="navigateTo('/approvals')">
         <div
           class="kpi-icon-wrap"
           :class="nocStore.pendingApprovalsCount > 0 ? 'kpi-icon--amber' : 'kpi-icon--cyan'"

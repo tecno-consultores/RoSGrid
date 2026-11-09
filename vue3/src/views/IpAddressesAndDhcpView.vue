@@ -2,6 +2,8 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  /* eslint-disable sonarjs/cognitive-complexity, sonarjs/no-duplicate-string */
+  import type { WebFigDynamic } from '@/types';
   import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
   import { useRoute } from 'vue-router';
   import { http } from '@/api/httpClient';
@@ -26,15 +28,15 @@
   const actionMessage = ref('');
 
   // Colecciones
-  const ipAddresses = ref<any[]>([]);
-  const dhcpLeases = ref<any[]>([]);
-  const dhcpServers = ref<any[]>([]);
-  const dhcpNetworks = ref<any[]>([]);
-  const dhcpClients = ref<any[]>([]);
-  const ipPools = ref<any[]>([]);
-  const arpEntries = ref<any[]>([]);
-  const dnsConfig = ref<any>({ servers: '', allow_remote_requests: false });
-  const dnsStatics = ref<any[]>([]);
+  const ipAddresses = ref<WebFigDynamic[]>([]);
+  const dhcpLeases = ref<WebFigDynamic[]>([]);
+  const dhcpServers = ref<WebFigDynamic[]>([]);
+  const dhcpNetworks = ref<WebFigDynamic[]>([]);
+  const dhcpClients = ref<WebFigDynamic[]>([]);
+  const ipPools = ref<WebFigDynamic[]>([]);
+  const arpEntries = ref<WebFigDynamic[]>([]);
+  const dnsConfig = ref<WebFigDynamic>({ servers: '', allow_remote_requests: false });
+  const dnsStatics = ref<WebFigDynamic[]>([]);
 
   // Modales
   const isAddressModalOpen = ref(false);
@@ -128,32 +130,33 @@
     try {
       const query = forceRefresh ? '?refresh=true' : '';
       if (activeTab.value === 'addresses') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/addresses${query}`);
+        const res = await http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/ip/addresses${query}`);
         ipAddresses.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
       } else if (activeTab.value === 'dhcp-server') {
         const [srvRes, netRes, leaseRes] = await Promise.all([
-          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-servers${query}`),
-          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-server/networks${query}`),
-          http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-server/leases${query}`),
+          http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-servers${query}`),
+          http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-server/networks${query}`),
+          http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-server/leases${query}`),
         ]);
         dhcpServers.value = Array.isArray(srvRes.data) ? srvRes.data : srvRes.data?.items || [];
         dhcpNetworks.value = Array.isArray(netRes.data) ? netRes.data : netRes.data?.items || [];
         dhcpLeases.value = Array.isArray(leaseRes.data) ? leaseRes.data : leaseRes.data?.items || [];
       } else if (activeTab.value === 'dhcp-client') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-clients${query}`);
+        const res = await http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-clients${query}`);
         dhcpClients.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
       } else if (activeTab.value === 'pools') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/pools${query}`);
+        const res = await http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/ip/pools${query}`);
         ipPools.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
       } else if (activeTab.value === 'dns') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/dns${query}`);
+        const res = await http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/ip/dns${query}`);
         dnsConfig.value = res.data?.config || {};
         dnsStatics.value = res.data?.static_records || [];
       } else if (activeTab.value === 'arp') {
-        const res = await http.get<any>(`/api/v1/routers/${routerId.value}/webfig/ip/arp${query}`);
+        const res = await http.get<WebFigDynamic>(`/api/v1/routers/${routerId.value}/webfig/ip/arp${query}`);
         arpEntries.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
       }
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al cargar datos IP.';
     } finally {
       isLoading.value = false;
@@ -179,24 +182,26 @@
       isAddressModalOpen.value = false;
       newAddress.value = { address: '', interface: 'ether1', comment: '', disabled: false };
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al asignar IP.';
     }
   }
 
-  async function handleDeleteAddress(item: any) {
+  async function handleDeleteAddress(item: WebFigDynamic) {
     if (!confirm(`¿Eliminar la dirección IP ${item.address}?`)) return;
     webFigStore.startSafeModeCountdown(60);
     try {
       await http.delete(`/api/v1/routers/${routerId.value}/webfig/ip/addresses/${item.id || item['.id']}`);
       actionMessage.value = `Dirección ${item.address} eliminada.`;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al eliminar IP.';
     }
   }
 
-  function openEditAddressModal(item: any) {
+  function openEditAddressModal(item: WebFigDynamic) {
     editingAddressId.value = String(item.id || item['.id'] || '');
     editAddressForm.value = {
       address: String(item.address || ''),
@@ -218,13 +223,14 @@
       actionMessage.value = `Dirección IP ${editAddressForm.value.address} actualizada.`;
       isEditAddressModalOpen.value = false;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al actualizar dirección IP.';
     }
   }
 
   // --- Acciones DHCP Leases ---
-  function openEditLeaseModal(lease: any) {
+  function openEditLeaseModal(lease: WebFigDynamic) {
     editingLeaseId.value = String(lease.id || lease['.id'] || '');
     editLeaseForm.value = {
       address: String(lease.address || ''),
@@ -244,7 +250,8 @@
       isCreateLeaseModalOpen.value = false;
       newLease.value = { address: '', mac_address: '', server: 'all', rate_limit: '', comment: '', disabled: false };
       loadData(true);
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al crear concesión estática DHCP.';
     }
   }
@@ -260,29 +267,32 @@
       actionMessage.value = `Concesión ${editLeaseForm.value.address} actualizada.`;
       isEditLeaseModalOpen.value = false;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al actualizar concesión DHCP.';
     }
   }
-  async function handleMakeLeaseStatic(lease: any) {
+  async function handleMakeLeaseStatic(lease: WebFigDynamic) {
     webFigStore.startSafeModeCountdown(60);
     try {
       await http.post(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-server/leases/${lease.id || lease['.id']}/make-static`);
       actionMessage.value = `Concesión ${lease.address} (${lease['mac-address'] || lease.mac_address}) fijada como estática.`;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al fijar concesión estática.';
     }
   }
 
-  async function handleDeleteLease(lease: any) {
+  async function handleDeleteLease(lease: WebFigDynamic) {
     if (!confirm(`¿Eliminar o expulsar la concesión ${lease.address}?`)) return;
     webFigStore.startSafeModeCountdown(60);
     try {
       await http.delete(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-server/leases/${lease.id || lease['.id']}`);
       actionMessage.value = `Concesión ${lease.address} eliminada.`;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al eliminar concesión.';
     }
   }
@@ -295,19 +305,21 @@
       actionMessage.value = `Servidor DHCP "${newServer.value.name}" creado.`;
       isServerModalOpen.value = false;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al crear servidor DHCP.';
     }
   }
 
-  async function handleDeleteServer(item: any) {
+  async function handleDeleteServer(item: WebFigDynamic) {
     if (!confirm(`¿Eliminar el servidor DHCP "${item.name}"?`)) return;
     webFigStore.startSafeModeCountdown(60);
     try {
       await http.delete(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-servers/${item.id || item['.id']}`);
       actionMessage.value = `Servidor DHCP eliminado.`;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al eliminar servidor DHCP.';
     }
   }
@@ -319,24 +331,26 @@
       actionMessage.value = `Red DHCP ${newNetwork.value.address} creada.`;
       isNetworkModalOpen.value = false;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al crear red DHCP.';
     }
   }
 
-  async function handleDeleteNetwork(item: any) {
+  async function handleDeleteNetwork(item: WebFigDynamic) {
     if (!confirm(`¿Eliminar la red DHCP ${item.address}?`)) return;
     webFigStore.startSafeModeCountdown(60);
     try {
       await http.delete(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-server/networks/${item.id || item['.id']}`);
       actionMessage.value = `Red DHCP eliminada.`;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al eliminar red DHCP.';
     }
   }
 
-  function openEditServerModal(srv: any) {
+  function openEditServerModal(srv: WebFigDynamic) {
     editingServerId.value = String(srv.id || srv['.id'] || '');
     editServerForm.value = {
       name: String(srv.name || ''),
@@ -360,12 +374,13 @@
       actionMessage.value = `Servidor DHCP "${editServerForm.value.name}" actualizado.`;
       isEditServerModalOpen.value = false;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al actualizar servidor DHCP.';
     }
   }
 
-  function openEditNetworkModal(net: any) {
+  function openEditNetworkModal(net: WebFigDynamic) {
     editingNetworkId.value = String(net.id || net['.id'] || '');
     editNetworkForm.value = {
       address: String(net.address || ''),
@@ -389,7 +404,8 @@
       actionMessage.value = `Red DHCP "${editNetworkForm.value.address}" actualizada.`;
       isEditNetworkModalOpen.value = false;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al actualizar red DHCP.';
     }
   }
@@ -420,7 +436,8 @@
       actionMessage.value = `Asistente completado: Servidor DHCP configurado en ${dhcpWizard.value.interface}.`;
       isDhcpWizardOpen.value = false;
       setDhcpSubtab('servers');
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al ejecutar el asistente DHCP.';
     }
   }
@@ -433,43 +450,47 @@
       actionMessage.value = `Cliente DHCP creado en ${newClient.value.interface}.`;
       isClientModalOpen.value = false;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al crear cliente DHCP.';
     }
   }
 
-  async function handleRenewClient(item: any) {
+  async function handleRenewClient(item: WebFigDynamic) {
     try {
       await http.post(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-clients/${item.id || item['.id']}/renew`);
       actionMessage.value = `Solicitud de renovación DHCP enviada para ${item.interface}.`;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al renovar concesión.';
     }
   }
 
-  async function handleReleaseClient(item: any) {
+  async function handleReleaseClient(item: WebFigDynamic) {
     try {
       await http.post(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-clients/${item.id || item['.id']}/release`);
       actionMessage.value = `Concesión DHCP liberada en ${item.interface}.`;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al liberar concesión.';
     }
   }
 
-  async function handleDeleteClient(item: any) {
+  async function handleDeleteClient(item: WebFigDynamic) {
     if (!confirm(`¿Eliminar cliente DHCP en ${item.interface}?`)) return;
     try {
       await http.delete(`/api/v1/routers/${routerId.value}/webfig/ip/dhcp-clients/${item.id || item['.id']}`);
       actionMessage.value = `Cliente DHCP eliminado.`;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al eliminar cliente DHCP.';
     }
   }
 
-  function openEditClientModal(cli: any) {
+  function openEditClientModal(cli: WebFigDynamic) {
     editingClientId.value = String(cli.id || cli['.id'] || '');
     const addDefRoute = cli['add-default-route'] ?? cli.add_default_route;
     const usePeerDns = cli['use-peer-dns'] ?? cli.use_peer_dns;
@@ -497,7 +518,8 @@
       actionMessage.value = `Cliente DHCP en ${editClientForm.value.interface} actualizado.`;
       isEditClientModalOpen.value = false;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al actualizar cliente DHCP.';
     }
   }
@@ -510,12 +532,13 @@
       actionMessage.value = `Pool de IPs "${newPool.value.name}" creado.`;
       isPoolModalOpen.value = false;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al crear pool.';
     }
   }
 
-  function openEditPoolModal(pool: any) {
+  function openEditPoolModal(pool: WebFigDynamic) {
     editingPoolId.value = String(pool.id || pool['.id'] || '');
     editPoolForm.value = {
       name: String(pool.name || ''),
@@ -537,19 +560,21 @@
       actionMessage.value = `Pool de IPs "${editPoolForm.value.name}" actualizado.`;
       isEditPoolModalOpen.value = false;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al actualizar pool.';
     }
   }
 
-  async function handleDeletePool(pool: any) {
+  async function handleDeletePool(pool: WebFigDynamic) {
     if (!confirm(`¿Eliminar el pool de conexiones "${pool.name}"?`)) return;
     webFigStore.startSafeModeCountdown(60);
     try {
       await http.delete(`/api/v1/routers/${routerId.value}/webfig/ip/pools/${encodeURIComponent(pool.id || pool['.id'])}`);
       actionMessage.value = `Pool de conexiones "${pool.name}" eliminado.`;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al eliminar pool de conexiones.';
     }
   }
@@ -575,7 +600,8 @@
       actionMessage.value = 'Parámetros DNS actualizados exitosamente bajo Safe Mode.';
       isEditDnsModalOpen.value = false;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al actualizar parámetros DNS.';
     }
   }
@@ -588,12 +614,13 @@
       isCreateDnsStaticModalOpen.value = false;
       newDnsStatic.value = { name: '', address: '', type: 'A', ttl: '1d', comment: '', disabled: false };
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al crear registro DNS estático.';
     }
   }
 
-  function openEditDnsStaticModal(rec: any) {
+  function openEditDnsStaticModal(rec: WebFigDynamic) {
     editingDnsStaticId.value = String(rec.id || rec['.id'] || '');
     editDnsStaticForm.value = {
       name: String(rec.name || ''),
@@ -617,19 +644,21 @@
       actionMessage.value = `Registro DNS "${editDnsStaticForm.value.name}" actualizado.`;
       isEditDnsStaticModalOpen.value = false;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al actualizar registro DNS.';
     }
   }
 
-  async function handleDeleteDnsStatic(rec: any) {
+  async function handleDeleteDnsStatic(rec: WebFigDynamic) {
     if (!confirm(`¿Eliminar el registro DNS "${rec.name}"?`)) return;
     webFigStore.startSafeModeCountdown(60);
     try {
       await http.delete(`/api/v1/routers/${routerId.value}/webfig/ip/dns/static/${encodeURIComponent(rec.id || rec['.id'])}`);
       actionMessage.value = `Registro DNS "${rec.name}" eliminado.`;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al eliminar registro DNS.';
     }
   }
@@ -638,7 +667,8 @@
     try {
       await http.post(`/api/v1/routers/${routerId.value}/webfig/ip/dns/flush-cache`);
       actionMessage.value = 'Caché DNS vaciada con éxito.';
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al vaciar caché DNS.';
     }
   }
@@ -652,12 +682,13 @@
       isCreateArpModalOpen.value = false;
       newArp.value = { address: '', mac_address: '', interface: 'ether1', comment: '' };
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al crear entrada ARP.';
     }
   }
 
-  function openEditArpModal(arp: any) {
+  function openEditArpModal(arp: WebFigDynamic) {
     editingArpId.value = String(arp.id || arp['.id'] || '');
     editArpForm.value = {
       address: String(arp.address || ''),
@@ -680,24 +711,26 @@
       actionMessage.value = `Entrada ARP ${editArpForm.value.address} actualizada.`;
       isEditArpModalOpen.value = false;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al actualizar entrada ARP.';
     }
   }
 
-  async function handleDeleteArp(arp: any) {
+  async function handleDeleteArp(arp: WebFigDynamic) {
     if (!confirm(`¿Eliminar la entrada ARP ${arp.address}?`)) return;
     webFigStore.startSafeModeCountdown(60);
     try {
       await http.delete(`/api/v1/routers/${routerId.value}/webfig/ip/arp/${encodeURIComponent(arp.id || arp['.id'])}`);
       actionMessage.value = `Entrada ARP ${arp.address} eliminada.`;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al eliminar entrada ARP.';
     }
   }
 
-  async function handleMakeArpStatic(arp: any) {
+  async function handleMakeArpStatic(arp: WebFigDynamic) {
     webFigStore.startSafeModeCountdown(60);
     try {
       await http.post(`/api/v1/routers/${routerId.value}/webfig/ip/arp`, {
@@ -708,7 +741,8 @@
       });
       actionMessage.value = `Entrada ARP ${arp.address} fijada como estática.`;
       loadData();
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       errorMessage.value = err?.detail || err?.message || 'Error al fijar ARP.';
     }
   }
@@ -947,12 +981,12 @@
         <table class="tactical-table">
           <thead>
             <tr>
-              <th>Dirección CIDR</th>
-              <th>Red</th>
-              <th>Interfaz</th>
-              <th>Comentario</th>
-              <th>Estado</th>
-              <th class="actions-col">Acciones</th>
+              <th scope="col">Dirección CIDR</th>
+              <th scope="col">Red</th>
+              <th scope="col">Interfaz</th>
+              <th scope="col">Comentario</th>
+              <th scope="col">Estado</th>
+              <th class="actions-col" scope="col">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -1000,12 +1034,12 @@
         <table class="tactical-table">
           <thead>
             <tr>
-              <th>Dirección IP</th>
-              <th>Dirección MAC</th>
-              <th>Hostname del Cliente</th>
-              <th>Servidor</th>
-              <th>Estado</th>
-              <th class="actions-col">Acciones</th>
+              <th scope="col">Dirección IP</th>
+              <th scope="col">Dirección MAC</th>
+              <th scope="col">Hostname del Cliente</th>
+              <th scope="col">Servidor</th>
+              <th scope="col">Estado</th>
+              <th class="actions-col" scope="col">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -1059,13 +1093,13 @@
         <table class="tactical-table">
           <thead>
             <tr>
-              <th>Nombre</th>
-              <th>Interfaz</th>
-              <th>Pool de Direcciones</th>
-              <th>Tiempo de Concesión</th>
-              <th>Comentario</th>
-              <th>Estado</th>
-              <th class="actions-col">Acciones</th>
+              <th scope="col">Nombre</th>
+              <th scope="col">Interfaz</th>
+              <th scope="col">Pool de Direcciones</th>
+              <th scope="col">Tiempo de Concesión</th>
+              <th scope="col">Comentario</th>
+              <th scope="col">Estado</th>
+              <th class="actions-col" scope="col">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -1111,13 +1145,13 @@
         <table class="tactical-table">
           <thead>
             <tr>
-              <th>Subred / CIDR</th>
-              <th>Puerta de Enlace (Gateway)</th>
-              <th>Servidores DNS</th>
-              <th>Servidor NTP</th>
-              <th>Dominio</th>
-              <th>Comentario</th>
-              <th class="actions-col">Acciones</th>
+              <th scope="col">Subred / CIDR</th>
+              <th scope="col">Puerta de Enlace (Gateway)</th>
+              <th scope="col">Servidores DNS</th>
+              <th scope="col">Servidor NTP</th>
+              <th scope="col">Dominio</th>
+              <th scope="col">Comentario</th>
+              <th class="actions-col" scope="col">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -1161,13 +1195,13 @@
         <table class="tactical-table">
           <thead>
             <tr>
-              <th>Interfaz</th>
-              <th>IP Asignada (WAN)</th>
-              <th>Puerta de Enlace</th>
-              <th>Ruta por Defecto</th>
-              <th>DNS del Peer</th>
-              <th>Estado</th>
-              <th class="actions-col">Acciones</th>
+              <th scope="col">Interfaz</th>
+              <th scope="col">IP Asignada (WAN)</th>
+              <th scope="col">Puerta de Enlace</th>
+              <th scope="col">Ruta por Defecto</th>
+              <th scope="col">DNS del Peer</th>
+              <th scope="col">Estado</th>
+              <th class="actions-col" scope="col">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -1231,10 +1265,10 @@
         <table class="tactical-table">
           <thead>
             <tr>
-              <th>Nombre del Pool</th>
-              <th>Rangos de Direcciones</th>
-              <th>Siguiente Pool (Next Pool)</th>
-              <th class="actions-col">Acciones</th>
+              <th scope="col">Nombre del Pool</th>
+              <th scope="col">Rangos de Direcciones</th>
+              <th scope="col">Siguiente Pool (Next Pool)</th>
+              <th class="actions-col" scope="col">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -1316,10 +1350,10 @@
           <table class="tactical-table">
             <thead>
               <tr>
-                <th>Nombre de Dominio</th>
-                <th>Dirección IP</th>
-                <th>TTL</th>
-                <th class="actions-col">Acciones</th>
+                <th scope="col">Nombre de Dominio</th>
+                <th scope="col">Dirección IP</th>
+                <th scope="col">TTL</th>
+                <th class="actions-col" scope="col">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -1361,11 +1395,11 @@
         <table class="tactical-table">
           <thead>
             <tr>
-              <th>Dirección IP</th>
-              <th>Dirección MAC</th>
-              <th>Interfaz</th>
-              <th>Tipo</th>
-              <th class="actions-col">Acciones</th>
+              <th scope="col">Dirección IP</th>
+              <th scope="col">Dirección MAC</th>
+              <th scope="col">Interfaz</th>
+              <th scope="col">Tipo</th>
+              <th class="actions-col" scope="col">Acciones</th>
             </tr>
           </thead>
           <tbody>

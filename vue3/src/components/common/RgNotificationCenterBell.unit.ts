@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
+import type { WebFigDynamic } from '@/types';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { setActivePinia, createPinia } from 'pinia';
@@ -84,7 +85,7 @@ describe('RgNotificationCenterBell.vue — Centro Táctico de Notificaciones In-
   });
 
   it('muestra insignia con conteo de ítems que requieren acción (Maker-Checker + Router OFFLINE) y filtra ruido de sesión', async () => {
-    vi.mocked(http.get).mockResolvedValueOnce({
+    (http.get as WebFigDynamic).mockResolvedValueOnce({
       data: {
         items: [
           {
@@ -180,7 +181,7 @@ describe('RgNotificationCenterBell.vue — Centro Táctico de Notificaciones In-
   });
 
   it('permite aprobar en 1 clic desde la campana y reconocer (Ack) una caída sin borrar ítems no resueltos al marcar vistas', async () => {
-    vi.mocked(http.get).mockResolvedValue({
+    (http.get as WebFigDynamic).mockResolvedValue({
       data: {
         items: [
           {
@@ -196,7 +197,7 @@ describe('RgNotificationCenterBell.vue — Centro Táctico de Notificaciones In-
         ],
       },
     } as never);
-    vi.mocked(http.post).mockResolvedValueOnce({ data: { status: 'APPROVED' } } as never);
+    (http.post as WebFigDynamic).mockResolvedValueOnce({ data: { status: 'APPROVED' } } as never);
 
     const inventoryStore = useInventoryStore();
     inventoryStore.routers = [
@@ -238,7 +239,7 @@ describe('RgNotificationCenterBell.vue — Centro Táctico de Notificaciones In-
   });
 
   it('permite activar el modo Snooze de 30 minutos (🔕 30m) y navegar al hacer clic en una notificación', async () => {
-    vi.mocked(http.get).mockResolvedValue({ data: { items: [] } } as never);
+    (http.get as WebFigDynamic).mockResolvedValue({ data: { items: [] } } as never);
     const inventoryStore = useInventoryStore();
     inventoryStore.routers = [
       {
@@ -266,7 +267,7 @@ describe('RgNotificationCenterBell.vue — Centro Táctico de Notificaciones In-
   });
 
   it('formatea códigos crudos de auditoría en texto legible bilingüe (ES/EN) y filtra LOGIN_SUCCESSFUL', async () => {
-    vi.mocked(http.get).mockResolvedValue({ data: { items: [] } } as never);
+    (http.get as WebFigDynamic).mockResolvedValue({ data: { items: [] } } as never);
     const { setLocale } = useI18n();
     setLocale('es');
 
@@ -310,7 +311,7 @@ describe('RgNotificationCenterBell.vue — Centro Táctico de Notificaciones In-
   });
 
   it('posiciona el botón "✓✓ Marcar todo leído" inmediatamente al lado del botón de avisos sonoros y marca todas las notificaciones como leídas al pulsarlo (Hito 30.18 - Spec 95)', async () => {
-    vi.mocked(http.get).mockResolvedValue({ data: { items: [] } } as never);
+    (http.get as WebFigDynamic).mockResolvedValue({ data: { items: [] } } as never);
     const { setLocale } = useI18n();
     setLocale('es');
 

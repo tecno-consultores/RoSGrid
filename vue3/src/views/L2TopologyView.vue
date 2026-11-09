@@ -422,7 +422,7 @@ watch([searchQuery, onlyPoeFilter], () => {
 </script>
 
 <template>
-  <main class="l2-topology-view" aria-labelledby="topology-title">
+  <div class="l2-topology-view" role="region" aria-labelledby="topology-title">
     <header class="topo-header">
       <div>
         <h1 id="topology-title" class="topo-title">{{ t('l2_topology.title') }}</h1>
@@ -611,7 +611,7 @@ watch([searchQuery, onlyPoeFilter], () => {
         </li>
       </ul>
     </section>
-  </main>
+  </div>
 </template>
 
 <style scoped>

@@ -62,7 +62,8 @@ async function fetchRules() {
       `/api/v1/wifi/capsman/${props.routerId}/provisioning`,
     );
     rules.value = res.data || [];
-  } catch (err: any) {
+  } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
     errorMsg.value =
       err.response?.data?.detail ||
       err.message ||
@@ -110,7 +111,8 @@ async function handleCreateRule() {
     };
     await fetchRules();
     emit('updated');
-  } catch (err: any) {
+  } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
     errorMsg.value =
       err.response?.data?.detail ||
       err.message ||
@@ -128,7 +130,8 @@ async function handleDeleteRule(provId: string) {
     );
     await fetchRules();
     emit('updated');
-  } catch (err: any) {
+  } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
     errorMsg.value =
       err.response?.data?.detail ||
       err.message ||

@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection */
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
@@ -168,9 +169,10 @@ export const useWebFigStore = defineStore('webfig', () => {
     } finally {
       isSafeModeBusy.value = false;
       stopSafeMode();
+      const summarySuffix = prevSummary ? ` (${prevSummary})` : '';
       safeModeRevertedNotice.value = expiredAutomatically
-        ? `⏱️ Tiempo de Safe Mode (60s) agotado sin confirmación: Se revirtió automáticamente en el router${prevSummary ? ` (${prevSummary})` : ''}.`
-        : `↩️ Cambio revertido manualmente en el router MikroTik${prevSummary ? ` (${prevSummary})` : ''}.`;
+        ? `⏱️ Tiempo de Safe Mode (60s) agotado sin confirmación: Se revirtió automáticamente en el router${summarySuffix}.`
+        : `↩️ Cambio revertido manualmente en el router MikroTik${summarySuffix}.`;
       emitWebFigForceRefresh();
     }
   }

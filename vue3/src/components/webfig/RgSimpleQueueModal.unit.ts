@@ -1,6 +1,8 @@
+/* eslint-disable sonarjs/no-duplicate-string */
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
+import type { WebFigDynamic } from '@/types';
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
 import RgSimpleQueueModal from './RgSimpleQueueModal.vue';
@@ -78,7 +80,7 @@ describe('RgSimpleQueueModal.vue — Creación y Edición de Simple Queues', () 
     await wrapper.find('form').trigger('submit.prevent');
 
     expect(wrapper.emitted('save')).toBeTruthy();
-    const emitted = wrapper.emitted('save')?.[0]?.[0] as Record<string, any>;
+    const emitted = wrapper.emitted('save')?.[0]?.[0] as Record<string, WebFigDynamic>;
     expect(emitted.name).toBe('queue-fibra-100');
     expect(emitted.target).toBe('192.168.88.50/32');
     expect(emitted.max_limit).toBe('50M/100M');

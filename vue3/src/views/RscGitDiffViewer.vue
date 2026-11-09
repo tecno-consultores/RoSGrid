@@ -2,6 +2,8 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  /* eslint-disable security/detect-object-injection */
+  import type { WebFigDynamic } from '@/types';
   import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
   import { useRoute } from 'vue-router';
   import { useInventoryStore } from '@/stores/useInventoryStore';
@@ -139,9 +141,9 @@
     loading.value = true;
     error.value = null;
     try {
-      const res = await http.get<{ items: any[] }>(`/api/v1/routers/${routerId.value}/backups`);
+      const res = await http.get<{ items?: WebFigDynamic[] }>(`/api/v1/routers/${routerId.value}/backups`);
       const raw = res.data?.items || [];
-      backups.value = raw.map((b: any) => ({
+      backups.value = raw.map((b: WebFigDynamic) => ({
         id: String(b.id),
         router_id: String(b.router_id || routerId.value),
         filename: b.filename || `rosgrid-bk-${String(b.id).slice(0, 8)}.rsc`,
@@ -403,7 +405,7 @@
 </script>
 
 <template>
-  <main class="diff-view" aria-labelledby="diff-title">
+  <div class="diff-view" role="region" aria-labelledby="diff-title">
     <!-- Cabecera de la vista -->
     <header class="diff-header">
       <div>
@@ -721,10 +723,10 @@
           <table class="diff-table">
             <thead>
               <tr>
-                <th class="th-num">Old</th>
-                <th class="th-num">New</th>
-                <th class="th-marker">+/-</th>
-                <th class="th-code">Instrucción RouterOS</th>
+                <th class="th-num" scope="col">Old</th>
+                <th class="th-num" scope="col">New</th>
+                <th class="th-marker" scope="col">+/-</th>
+                <th class="th-code" scope="col">Instrucción RouterOS</th>
               </tr>
             </thead>
             <tbody>
@@ -811,6 +813,7 @@
               id="btn-batch-clear-all"
               type="button"
               class="btn-text"
+              aria-label="Limpiar selección"
               @click="clearBatchRouters"
             >
               ✕ Limpiar
@@ -892,7 +895,7 @@
         </footer>
       </div>
     </div>
-  </main>
+  </div>
 </template>
 
 <style scoped>

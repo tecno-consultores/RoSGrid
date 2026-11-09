@@ -1,6 +1,8 @@
+/* eslint-disable sonarjs/no-duplicate-string */
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
+import type { WebFigDynamic } from '@/types';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import TenantModulesAuditTab from './TenantModulesAuditTab.vue';
@@ -18,7 +20,7 @@ describe('TenantModulesAuditTab.vue — Historial Forense WORM de Módulos (Hito
   });
 
   it('renderiza estado de carga inicial y consulta el endpoint de auditoría del tenant', async () => {
-    vi.mocked(http.get).mockImplementation(() => new Promise(() => {})); // Suspended promise
+    (http.get as WebFigDynamic).mockImplementation(() => new Promise(() => {})); // Suspended promise
 
     const wrapper = mount(TenantModulesAuditTab, {
       props: {
@@ -56,7 +58,7 @@ describe('TenantModulesAuditTab.vue — Historial Forense WORM de Módulos (Hito
       },
     ];
 
-    vi.mocked(http.get).mockResolvedValueOnce({ data: mockRecords } as any);
+    (http.get as WebFigDynamic).mockResolvedValueOnce({ data: mockRecords } as never);
 
     const wrapper = mount(TenantModulesAuditTab, {
       props: {
@@ -98,7 +100,7 @@ describe('TenantModulesAuditTab.vue — Historial Forense WORM de Módulos (Hito
       },
     ];
 
-    vi.mocked(http.get).mockResolvedValueOnce({ data: mockRecords } as any);
+    (http.get as WebFigDynamic).mockResolvedValueOnce({ data: mockRecords } as never);
 
     const wrapper = mount(TenantModulesAuditTab, {
       props: {
@@ -121,7 +123,7 @@ describe('TenantModulesAuditTab.vue — Historial Forense WORM de Módulos (Hito
   });
 
   it('renderiza estado vacío cuando la API devuelve 0 modificaciones', async () => {
-    vi.mocked(http.get).mockResolvedValueOnce({ data: [] } as any);
+    (http.get as WebFigDynamic).mockResolvedValueOnce({ data: [] } as never);
 
     const wrapper = mount(TenantModulesAuditTab, {
       props: {
@@ -136,7 +138,7 @@ describe('TenantModulesAuditTab.vue — Historial Forense WORM de Módulos (Hito
   });
 
   it('despliega caja de error si la petición falla', async () => {
-    vi.mocked(http.get).mockRejectedValueOnce(new Error('Network error'));
+    (http.get as WebFigDynamic).mockRejectedValueOnce(new Error('Network error'));
 
     const wrapper = mount(TenantModulesAuditTab, {
       props: {

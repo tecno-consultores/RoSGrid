@@ -1,6 +1,8 @@
+/* eslint-disable sonarjs/no-duplicate-string */
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
+import type { WebFigDynamic } from '@/types';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
@@ -110,7 +112,7 @@ describe('WebFig Layer 3: IpAddressesAndDhcpView & Ipv6DualStackView', () => {
 
     expect(wrapper.text()).toContain('192.168.88.1/24');
 
-    const vm = wrapper.vm as any;
+    const vm = (wrapper.vm as unknown as WebFigDynamic);
 
     // 1. Asignar Dirección IP
     vm.newAddress = { address: '10.0.0.1/24', interface: 'ether2', comment: 'DMZ', disabled: false };
@@ -311,7 +313,7 @@ describe('WebFig Layer 3: IpAddressesAndDhcpView & Ipv6DualStackView', () => {
 
     expect(wrapper.text()).toContain('2001:db8:acad::1/64');
 
-    const vm = wrapper.vm as any;
+    const vm = (wrapper.vm as unknown as WebFigDynamic);
 
     // 1. Asignar IPv6
     vm.newAddress = { address: '2001:db8:beef::1/64', interface: 'ether2', advertise: true, eui_64: false, comment: 'DMZ IPv6', disabled: false };
@@ -404,7 +406,7 @@ describe('WebFig Layer 3: IpAddressesAndDhcpView & Ipv6DualStackView', () => {
     const wrapper = mount(IpAddressesAndDhcpView);
     await flushPromises();
 
-    const vm = wrapper.vm as any;
+    const vm = (wrapper.vm as unknown as WebFigDynamic);
     vm.setTab('dhcp-server');
     await flushPromises();
 

@@ -3,9 +3,10 @@
 
 import uuid
 from collections.abc import AsyncGenerator
+from typing import Any
 
 from fastapi import Request
-from sqlalchemy import text
+from sqlalchemy import event, text
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -29,6 +30,22 @@ async_session_maker = async_sessionmaker(
 )
 
 
+@event.listens_for(AsyncSession.sync_session_class, "after_begin")
+def _reapply_rls_context_after_begin(session: Any, _transaction: Any, connection: Any) -> None:
+    info = getattr(session, "info", None)
+    if not isinstance(info, dict) or not info.get("rls_initialized"):
+        return
+    tid_str = str(info.get("tenant_id", ""))
+    sa_str = str(info.get("is_superadmin", "false"))
+    connection.execute(
+        text(
+            "SELECT set_config('app.current_tenant_id', :tid, true), "
+            "set_config('app.is_superadmin_global', :sa, true)"
+        ),
+        {"tid": tid_str, "sa": sa_str},
+    )
+
+
 async def get_db_session() -> AsyncGenerator[AsyncSession]:
     async with async_session_maker() as session:
         yield session
@@ -41,6 +58,11 @@ async def set_tenant_context(session: AsyncSession, tenant_id: uuid.UUID | None,
         "SELECT set_config('app.current_tenant_id', :tid, true), set_config('app.is_superadmin_global', :sa, true)"
     )
     await session.execute(stmt, {"tid": tid_str, "sa": sa_str})
+    info = getattr(session, "info", None)
+    if isinstance(info, dict):
+        info["tenant_id"] = tid_str
+        info["is_superadmin"] = sa_str
+        info["rls_initialized"] = True
 
 
 async def get_tenant_db_session(request: Request) -> AsyncGenerator[AsyncSession]:

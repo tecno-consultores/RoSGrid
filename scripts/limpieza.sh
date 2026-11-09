@@ -57,9 +57,9 @@ rm -rf fastapi/graphify-out/cache fastapi/graphify-out/2026-* 2>/dev/null || tru
 rm -f fastapi/graphify-out/.graphify_* fastapi/graphify-out/.cloud-cta-shown 2>/dev/null || true
 
 # Eliminación de bytecode compilado y __pycache__ (con fallback Docker para carpetas creadas como root)
-find fastapi -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-find fastapi -type f -name "*.py[cod]" -delete 2>/dev/null || true
-docker run --rm -v "${REPO_ROOT}:/workspace" alpine sh -c "find /workspace/fastapi -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true; find /workspace/fastapi -type f -name '*.py[cod]' -delete 2>/dev/null || true" 2>/dev/null || true
+find fastapi .agents/scripts -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+find fastapi .agents/scripts -type f -name "*.py[cod]" -delete 2>/dev/null || true
+docker run --rm -v "${REPO_ROOT}:/workspace" alpine sh -c "find /workspace/fastapi /workspace/.agents/scripts -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true; find /workspace/fastapi /workspace/.agents/scripts -type f -name '*.py[cod]' -delete 2>/dev/null || true" 2>/dev/null || true
 
 echo "[3/4] Eliminando artefactos temporales del Frontend (vue3)..."
 rm -rf vue3/dist 2>/dev/null || docker run --rm -v "${REPO_ROOT}:/workspace" alpine rm -rf /workspace/vue3/dist 2>/dev/null || true
@@ -100,10 +100,10 @@ fi
 # Normalización de permisos para evitar candados (root:root) en el entorno gráfico (Nautilus)
 CURRENT_UID="$(id -u)"
 CURRENT_GID="$(id -g)"
-docker run --rm -v "${REPO_ROOT}:/workspace" alpine sh -c "chown -R ${CURRENT_UID}:${CURRENT_GID} /workspace/fastapi /workspace/vue3 /workspace/scripts 2>/dev/null || true; find /workspace -maxdepth 1 -user 0 -exec chown ${CURRENT_UID}:${CURRENT_GID} {} + 2>/dev/null || true" 2>/dev/null || true
+docker run --rm -v "${REPO_ROOT}:/workspace" alpine sh -c "chown -R ${CURRENT_UID}:${CURRENT_GID} /workspace/fastapi /workspace/vue3 /workspace/scripts /workspace/.agents 2>/dev/null || true; find /workspace -maxdepth 1 -user 0 -exec chown ${CURRENT_UID}:${CURRENT_GID} {} + 2>/dev/null || true" 2>/dev/null || true
 
-docker container prune -f 2>/dev/null || true
-docker network prune -f 2>/dev/null || true
+docker container prune -f --filter "label=com.docker.compose.project=rosgrid" 2>/dev/null || true
+docker network prune -f --filter "label=com.docker.compose.project=rosgrid" 2>/dev/null || true
 docker builder prune -f --filter "until=24h" 2>/dev/null || true
 
 # Verificación de integridad: los reportes de Graphify AST se conservan intactos

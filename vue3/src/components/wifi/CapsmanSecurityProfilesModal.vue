@@ -43,7 +43,8 @@ async function fetchProfiles() {
       `/api/v1/wifi/capsman/${props.routerId}/security-profiles`,
     );
     profiles.value = res.data || [];
-  } catch (err: any) {
+  } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
     errorMsg.value = err.response?.data?.detail || err.message || t('wifi.fetch_sec_error', 'Error al cargar perfiles de seguridad.');
   } finally {
     isLoading.value = false;
@@ -78,7 +79,8 @@ async function handleCreateProfile() {
     };
     await fetchProfiles();
     emit('updated');
-  } catch (err: any) {
+  } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
     errorMsg.value = err.response?.data?.detail || err.message || t('wifi.create_sec_error', 'Error creando perfil.');
   } finally {
     isCreating.value = false;
@@ -91,7 +93,8 @@ async function handleDeleteProfile(secId: string) {
     await http.delete(`/api/v1/wifi/capsman/${props.routerId}/security-profiles/${encodeURIComponent(secId)}`);
     await fetchProfiles();
     emit('updated');
-  } catch (err: any) {
+  } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
     errorMsg.value = err.response?.data?.detail || err.message || t('wifi.delete_sec_error', 'Error eliminando perfil.');
   }
 }

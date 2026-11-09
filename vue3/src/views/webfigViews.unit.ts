@@ -1,6 +1,8 @@
+/* eslint-disable sonarjs/cognitive-complexity, sonarjs/no-duplicate-string */
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
+import type { WebFigDynamic } from '@/types';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { setActivePinia, createPinia } from 'pinia';
@@ -941,10 +943,10 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
     const btnNewRule = wrapper.find('.btn-primary-action');
     if (btnNewRule.exists()) {
       await btnNewRule.trigger('click');
-      expect((wrapper.vm as any).isRuleModalOpen).toBe(true);
+      expect((wrapper.vm as unknown as WebFigDynamic).isRuleModalOpen).toBe(true);
 
       // Guardar regla nueva
-      await (wrapper.vm as any).handleSaveRule({
+      await (wrapper.vm as unknown as WebFigDynamic).handleSaveRule({
         chain: 'forward',
         action: 'accept',
         comment: 'Test rule',
@@ -954,11 +956,11 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
     }
 
     // Editar regla existente
-    const rowSample = (wrapper.vm as any).rulesList[0];
+    const rowSample = (wrapper.vm as unknown as WebFigDynamic).rulesList[0];
     if (rowSample) {
-      (wrapper.vm as any).openEditRuleModal(rowSample);
-      expect((wrapper.vm as any).isEditingRule).toBe(true);
-      await (wrapper.vm as any).handleSaveRule({
+      (wrapper.vm as unknown as WebFigDynamic).openEditRuleModal(rowSample);
+      expect((wrapper.vm as unknown as WebFigDynamic).isEditingRule).toBe(true);
+      await (wrapper.vm as unknown as WebFigDynamic).handleSaveRule({
         chain: 'forward',
         action: 'accept',
         comment: 'Updated comment',
@@ -966,15 +968,15 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
       await flushPromises();
 
       // Duplicar regla
-      (wrapper.vm as any).handleDuplicateRule(rowSample);
-      expect((wrapper.vm as any).isRuleModalOpen).toBe(true);
+      (wrapper.vm as unknown as WebFigDynamic).handleDuplicateRule(rowSample);
+      expect((wrapper.vm as unknown as WebFigDynamic).isRuleModalOpen).toBe(true);
 
       // Toggle regla
-      await (wrapper.vm as any).handleToggleRule(rowSample);
+      await (wrapper.vm as unknown as WebFigDynamic).handleToggleRule(rowSample);
       await flushPromises();
 
       // Eliminar regla
-      await (wrapper.vm as any).handleDeleteRule(rowSample);
+      await (wrapper.vm as unknown as WebFigDynamic).handleDeleteRule(rowSample);
       await flushPromises();
     }
 
@@ -1006,7 +1008,7 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
     }
 
     // Wizards NAT (Masquerade & Port Forwarding)
-    const vmFw = wrapper.vm as any;
+    const vmFw = (wrapper.vm as unknown as WebFigDynamic);
     const postSpyFw = vi.spyOn(http, 'post');
     vmFw.activeTab = 'nat';
     vmFw.masqueradeWan = 'ether1';
@@ -1110,7 +1112,7 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
     expect(wrapper.text()).toContain('Permitir ICMPv6 NDP');
 
     // Crear nueva regla IPv6
-    const vm = wrapper.vm as any;
+    const vm = (wrapper.vm as unknown as WebFigDynamic);
     vm.isEditingRule = false;
     await vm.handleSaveRule({
       chain: 'forward',
@@ -1274,7 +1276,7 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
       await flushPromises();
     }
 
-    const vm = wrapper.vm as any;
+    const vm = (wrapper.vm as unknown as WebFigDynamic);
 
     // Rutas Estáticas
     vm.activeTab = 'routes';
@@ -1392,7 +1394,7 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
     }
 
     // Modal de colas simples y creación
-    const vm = wrapper.vm as any;
+    const vm = (wrapper.vm as unknown as WebFigDynamic);
     if (typeof vm.openCreateQueueModal === 'function') {
       vm.openCreateQueueModal();
       expect(vm.isCreateQueueModalOpen).toBe(true);
@@ -1994,7 +1996,7 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
     // Editar y eliminar interfaz de túnel WireGuard y Peer
     vi.spyOn(http, 'patch').mockResolvedValue({ status: 200, data: { status: 'success' }, headers: new Headers() });
     vi.spyOn(http, 'delete').mockResolvedValue({ status: 200, data: { status: 'success' }, headers: new Headers() });
-    const wgVm = wrapper.vm as any;
+    const wgVm = (wrapper.vm as unknown as WebFigDynamic);
     wgVm.openEditIfaceModal({ id: '*wg1', name: 'wg0', listen_port: 13231, mtu: 1420, public_key: 'abc=', running: true, disabled: false, comment: 'Túnel' });
     await wgVm.handleUpdateIface();
     await flushPromises();
@@ -2046,7 +2048,7 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
     // 1. BridgeView: editar puerto y sacar puerto del bridge
     const bridgeWrapper = mount(BridgeView);
     await flushPromises();
-    const brVm = bridgeWrapper.vm as any;
+    const brVm = (bridgeWrapper.vm as unknown as WebFigDynamic);
     brVm.openEditPortModal({
       id: '*bp1',
       interface: 'ether2',
@@ -2087,7 +2089,7 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
     // 2. PppAndQueuesView: editar secreto, perfil y servidor PPPoE
     const pppWrapper = mount(PppAndQueuesView);
     await flushPromises();
-    const pppVm = pppWrapper.vm as any;
+    const pppVm = (pppWrapper.vm as unknown as WebFigDynamic);
 
     pppVm.openEditSecretModal({
       id: '*sec1',

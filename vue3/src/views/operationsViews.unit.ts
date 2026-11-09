@@ -1,6 +1,8 @@
+/* eslint-disable sonarjs/no-duplicate-string */
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
+import type { WebFigDynamic } from '@/types';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';
 import { setActivePinia, createPinia } from 'pinia';
@@ -13,7 +15,7 @@ import BulkOperationsAndUpdatesView from './BulkOperationsAndUpdatesView.vue';
 import NocWallboardView from './NocWallboardView.vue';
 import ImmutableAuditLogsView from './ImmutableAuditLogsView.vue';
 
-let mockRouteParams: Record<string, any> = { routerId: 'r-01' };
+let mockRouteParams: Record<string, WebFigDynamic> = { routerId: 'r-01' };
 
 vi.mock('vue-router', () => ({
   useRoute: () => ({
@@ -479,7 +481,7 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
         is_online: true,
         network_role: 'CORE',
         admin_state: 'PRODUCTION',
-      } as any,
+      } as never,
       {
         id: 'r-02',
         display_name: 'Edge-02',
@@ -487,7 +489,7 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
         is_online: false,
         network_role: 'EDGE',
         admin_state: 'PRODUCTION',
-      } as any,
+      } as never,
     ];
 
     vi.spyOn(http, 'get').mockResolvedValue({
@@ -606,6 +608,7 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
 
     const { useInventoryStore } = await import('@/stores/useInventoryStore');
     const invStore = useInventoryStore();
+    vi.spyOn(invStore, 'fetchRouters').mockResolvedValue();
     invStore.setRouters([
       {
         id: 'r-01',
@@ -1112,9 +1115,9 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
             ],
           },
           headers: new Headers(),
-        } as any);
+        } as never);
       }
-      return Promise.resolve({ status: 200, data: {}, headers: new Headers() } as any);
+      return Promise.resolve({ status: 200, data: {}, headers: new Headers() } as never);
     });
 
     vi.spyOn(http, 'get').mockImplementation((url) => {
@@ -1142,18 +1145,18 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
             },
           ],
           headers: new Headers(),
-        } as any);
+        } as never);
       }
-      return Promise.resolve({ status: 200, data: [], headers: new Headers() } as any);
+      return Promise.resolve({ status: 200, data: [], headers: new Headers() } as never);
     });
 
     const wrapper = mount(BulkOperationsAndUpdatesView);
     await flushPromises();
 
-    (wrapper.vm as any).wizardStep = 2;
+    (wrapper.vm as unknown as WebFigDynamic).wizardStep = 2;
     await flushPromises();
 
-    (wrapper.vm as any).onSelectTemplate('tpl-15');
+    (wrapper.vm as unknown as WebFigDynamic).onSelectTemplate('tpl-15');
     await flushPromises();
 
     expect(wrapper.find('#channel-update-discovery-box').exists()).toBe(true);
@@ -1184,6 +1187,7 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
 
     const { useInventoryStore } = await import('@/stores/useInventoryStore');
     const invStore = useInventoryStore();
+    vi.spyOn(invStore, 'fetchRouters').mockResolvedValue();
     invStore.setRouters([
       {
         id: 'r-chr-fail',
@@ -1238,20 +1242,20 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
       headers: new Headers(),
     });
 
-    const firstRouter = (wrapper.vm as any).fleetRouters.find((r: any) => r.id === 'r-chr-fail');
+    const firstRouter = (wrapper.vm as unknown as WebFigDynamic).fleetRouters.find((r: WebFigDynamic) => r.id === 'r-chr-fail');
     firstRouter.latest_version = '7.25.1';
     firstRouter.update_available = true;
 
-    await (wrapper.vm as any).triggerRosUpdate(firstRouter);
+    await (wrapper.vm as unknown as WebFigDynamic).triggerRosUpdate(firstRouter);
     await flushPromises();
 
-    expect((wrapper.vm as any).updateSuccess).toContain('Error al actualizar caps1 (caps): Timeout descargando NPK');
+    expect((wrapper.vm as unknown as WebFigDynamic).updateSuccess).toContain('Error al actualizar caps1 (caps): Timeout descargando NPK');
     expect(firstRouter.upgraded_in_session).toBeFalsy();
     expect(firstRouter.ros_version).toBe('7.25');
     expect(wrapper.find('.alert--error').exists()).toBe(true);
 
     // 2. Simular actualización masiva mixta (1 éxito, 1 fallo)
-    const secondRouter = (wrapper.vm as any).fleetRouters.find((r: any) => r.id === 'r-chr-ok');
+    const secondRouter = (wrapper.vm as unknown as WebFigDynamic).fleetRouters.find((r: WebFigDynamic) => r.id === 'r-chr-ok');
     secondRouter.latest_version = '7.25.1';
     secondRouter.update_available = true;
     firstRouter.selected = true;
@@ -1279,10 +1283,10 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
       headers: new Headers(),
     });
 
-    await (wrapper.vm as any).triggerFleetPoeUpdate();
+    await (wrapper.vm as unknown as WebFigDynamic).triggerFleetPoeUpdate();
     await flushPromises();
 
-    expect((wrapper.vm as any).updateSuccess).toContain('Error en actualización masiva (1/2 iniciados)');
+    expect((wrapper.vm as unknown as WebFigDynamic).updateSuccess).toContain('Error en actualización masiva (1/2 iniciados)');
     expect(secondRouter.upgraded_in_session).toBe(true);
     expect(secondRouter.ros_version).toBe('7.25.1');
     expect(firstRouter.upgraded_in_session).toBeFalsy();
@@ -1342,15 +1346,15 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
     await flushPromises();
 
     // Ir al Paso 2 y seleccionar la plantilla HUSO_HORARIO_SISTEMA
-    (wrapper.vm as any).wizardStep = 2;
-    (wrapper.vm as any).onSelectTemplate('tpl-tz');
+    (wrapper.vm as unknown as WebFigDynamic).wizardStep = 2;
+    (wrapper.vm as unknown as WebFigDynamic).onSelectTemplate('tpl-tz');
     await flushPromises();
 
     const tzSelect = wrapper.find('select#tpl-var-time_zone_name');
     const autoSelect = wrapper.find('select#tpl-var-time_zone_autodetect');
     expect(tzSelect.exists()).toBe(true);
     expect(autoSelect.exists()).toBe(true);
-    expect((wrapper.vm as any).previewPayload).toContain(
+    expect((wrapper.vm as unknown as WebFigDynamic).previewPayload).toContain(
       '/system clock set time-zone-autodetect=no time-zone-name=America/Caracas',
     );
 
@@ -1358,7 +1362,7 @@ describe('Operations and Auditor Views Unit Tests (Hito 13)', () => {
     await tzSelect.setValue('UTC');
     await tzSelect.trigger('change');
     await flushPromises();
-    expect((wrapper.vm as any).previewPayload).toContain(
+    expect((wrapper.vm as unknown as WebFigDynamic).previewPayload).toContain(
       '/system clock set time-zone-autodetect=no time-zone-name=UTC',
     );
   });

@@ -141,13 +141,13 @@ En [`run_sla_probe`](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGri
 ## 3. Criterios de Aceptación y Pirámide de Pruebas 11X
 
 1. **Pruebas Unitarias Backend:**
-   - En [`fastapi/tests/unit/test_traffic_flow.unit.py`](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/fastapi/tests/unit/test_traffic_flow.unit.py):
+   - En [`fastapi/tests/api/test_traffic_flow.unit.py`](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/fastapi/tests/api/test_traffic_flow.unit.py):
      - Verificar que conexiones en `/ip/firewall/connection` con `src-address="0.0.0.0:68"`, `127.0.0.1:53`, `255.255.255.255:67`, `169.254.1.10:1234`, `224.0.0.5` o la propia IP del router (`10.250.3.20`) sean **excluidas al 100%** y devuelvan `anomalies_detected == 0`.
      - Verificar que `POST /api/v1/traffic-flow/mitigate` con `target_ip="0.0.0.0"` o `target_ip="127.0.0.1"` sea rechazado con `HTTP 422`.
-   - En [`fastapi/tests/unit/test_sla_tracker.unit.py`](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/fastapi/tests/unit/test_sla_tracker.unit.py):
+   - En [`fastapi/tests/api/test_sla_tracker.unit.py`](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/fastapi/tests/api/test_sla_tracker.unit.py):
      - Verificar que `POST /api/v1/sla/probes/run` limite la ráfaga interactiva de `/ping` para no agotar el timeout HTTP y calcule RTT real.
 2. **Pruebas Unitarias Frontend:**
-   - En [`vue3/src/views/EnterpriseComplianceView.unit.ts`](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/vue3/src/views/EnterpriseComplianceView.unit.ts):
+   - En [`vue3/src/views/enterpriseComplianceView.unit.ts`](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/vue3/src/views/enterpriseComplianceView.unit.ts):
      - Verificar que la tabla de anomalías renderice `connection_count` y `estimated_pps` (`pps`) en lugar de `—`, y que el botón de mitigación superior esté deshabilitado cuando `trafficAnomalies` está vacío.
 3. **Escenarios BDD Karate Labs:**
    - Añadir validación en [`fastapi/test/api_test.feature`](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/fastapi/test/api_test.feature) y [`vue3/test/ui_business_flow.feature`](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/vue3/test/ui_business_flow.feature) (y réplicas en `docs/examples/`).

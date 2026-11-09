@@ -1,6 +1,8 @@
+/* eslint-disable sonarjs/cognitive-complexity */
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
+import type { WebFigDynamic } from '@/types';
 import { defineStore } from 'pinia';
 import { ref, shallowRef, triggerRef } from 'vue';
 import type { NocEventItem } from '@/types';
@@ -22,6 +24,7 @@ export const useNocEventsStore = defineStore('nocEvents', () => {
 
   let socket: WebSocket | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let reconnectAttempts = 0;
 
   function handleIncomingEvent(rawMessage: string): void {
     try {
@@ -133,6 +136,7 @@ export const useNocEventsStore = defineStore('nocEvents', () => {
 
       socket.onopen = () => {
         isConnected.value = true;
+        reconnectAttempts = 0;
       };
 
       socket.onmessage = (event: MessageEvent) => {
@@ -146,10 +150,14 @@ export const useNocEventsStore = defineStore('nocEvents', () => {
         if (!authStore.isAuthenticated) {
           return;
         }
-        // Reintento con backoff
+        // Reintento con backoff exponencial y jitter
+        const delayMs =
+          Math.min(30000, 1000 * Math.pow(2, reconnectAttempts)) +
+          Math.floor(Math.random() * 500);
+        reconnectAttempts = Math.min(reconnectAttempts + 1, 6);
         reconnectTimer = setTimeout(() => {
           connectEventsWebSocket(wsUrl);
-        }, 5000);
+        }, delayMs);
       };
 
       socket.onerror = () => {
@@ -164,6 +172,7 @@ export const useNocEventsStore = defineStore('nocEvents', () => {
   }
 
   function disconnectEventsWebSocket(): void {
+    reconnectAttempts = 0;
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
@@ -179,10 +188,10 @@ export const useNocEventsStore = defineStore('nocEvents', () => {
   async function fetchRecentAuditLogs(force = false): Promise<void> {
     try {
       const { http } = await import('@/api/httpClient');
-      const res = await http.get<{ items: any[] } | any[]>('/api/v1/audit/logs');
+      const res = await http.get<{ items?: WebFigDynamic[] } | WebFigDynamic[]>('/api/v1/audit/logs');
       const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
       if (items.length > 0 && (recentEvents.value.length === 0 || force)) {
-        const mapped: NocEventItem[] = items.slice(0, 20).map((log: any) => ({
+        const mapped: NocEventItem[] = items.slice(0, 20).map((log: WebFigDynamic) => ({
           id: String(log.id),
           eventName: log.event_action || log.event_category || 'AUDIT_LOG',
           routerId: log.router_id,

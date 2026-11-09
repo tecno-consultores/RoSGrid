@@ -157,8 +157,11 @@ async def _fetch_live_rsc(
     db: AsyncSession,
 ) -> str:
     _, client = await get_router_and_client(router_id, claims, db)
-    live = await client.post("export", {"terse": "false", "show-sensitive": "false"})
-    return clean_rsc_export_comments(_extract_raw_rsc_text(live))
+    try:
+        live = await client.post("export", {"terse": "false", "show-sensitive": "false"})
+        return clean_rsc_export_comments(_extract_raw_rsc_text(live))
+    finally:
+        await client.close()
 
 
 async def _fetch_backup_rsc_from_db(
@@ -247,8 +250,11 @@ async def _handle_get_router_health(
 ) -> dict[str, Any]:
     router_id = uuid.UUID(str(args["router_id"]))
     r, client = await get_router_and_client(router_id, claims, db)
-    resource = await client.get("system/resource") or {}
-    health = await client.get("system/health") or []
+    try:
+        resource = await client.get("system/resource") or {}
+        health = await client.get("system/health") or []
+    finally:
+        await client.close()
     temp, volt = _extract_health_metrics(health)
     return {
         "router_id": str(r.id),
@@ -271,7 +277,10 @@ async def _handle_check_sfp(
     router_id = uuid.UUID(str(args["router_id"]))
     _, client = await get_router_and_client(router_id, claims, db)
     ifname = args.get("interface_name", "sfp-sfpplus1")
-    mon = await client.post("interface/ethernet/monitor", {"numbers": ifname, "once": "true"}) or {}
+    try:
+        mon = await client.post("interface/ethernet/monitor", {"numbers": ifname, "once": "true"}) or {}
+    finally:
+        await client.close()
     data = mon[0] if isinstance(mon, list) and mon else (mon if isinstance(mon, dict) else {})
     rx_val = _parse_rx_power(data.get("sfp-rx-power"))
     tx_val = _parse_rx_power(data.get("sfp-tx-power"))
@@ -296,10 +305,13 @@ async def _handle_inspect_routing(
     proto = args.get("protocol", "all")
     bgp_data: Any = []
     ospf_data: Any = []
-    if proto in ("bgp", "all"):
-        bgp_data = await client.get("routing/bgp/session") or []
-    if proto in ("ospf", "all"):
-        ospf_data = await client.get("routing/ospf/neighbor") or []
+    try:
+        if proto in ("bgp", "all"):
+            bgp_data = await client.get("routing/bgp/session") or []
+        if proto in ("ospf", "all"):
+            ospf_data = await client.get("routing/ospf/neighbor") or []
+    finally:
+        await client.close()
     return {
         "router_id": str(router_id),
         "protocol": proto,
@@ -321,7 +333,10 @@ async def _handle_live_diagnostic(
     target = args["target"]
     cnt = max(1, min(int(args.get("count", 4)), 5))
     ep = "tool/ping" if diag_tool == "ping" else "tool/traceroute"
-    res = await client.post(ep, {"address": target, "count": str(cnt)})
+    try:
+        res = await client.post(ep, {"address": target, "count": str(cnt)})
+    finally:
+        await client.close()
     return {
         "router_id": str(router_id),
         "tool": diag_tool,
@@ -416,7 +431,10 @@ async def _handle_reconnect_pppoe(
     router_id = uuid.UUID(str(args["router_id"]))
     _, client = await get_router_and_client(router_id, claims, db)
     user_target = str(args["pppoe_username"])
-    active = await client.get("ppp/active") or []
+    try:
+        active = await client.get("ppp/active") or []
+    finally:
+        await client.close()
     item_id = _find_pppoe_item_id(active, user_target)
     if not item_id:
         raise HTTPException(status_code=404, detail=f"Sesión PPPoE para {user_target} no encontrada")
@@ -444,6 +462,11 @@ async def _handle_reconnect_pppoe(
     )
 
 
+_RESERVED_MCP_PAYLOAD_KEYS = frozenset(
+    {"mcp_tool", "router_ids", "subscriber_device_id", "bandwidth_profile_id"}
+)
+
+
 async def _handle_propose_network_change(
     db: AsyncSession,
     tenant_id: uuid.UUID,
@@ -453,6 +476,8 @@ async def _handle_propose_network_change(
 ) -> dict[str, Any]:
     router_id = uuid.UUID(str(args["router_id"]))
     act_type = _resolve_critical_action(args.get("category", "FIREWALL_INPUT_OR_SERVICE_PORT_CHANGE"))
+    raw_payload = dict(args.get("payload") or {})
+    sanitized_payload = {k: v for k, v in raw_payload.items() if k not in _RESERVED_MCP_PAYLOAD_KEYS}
     return await _create_mcp_approval_request(
         db=db,
         tenant_id=tenant_id,
@@ -463,7 +488,7 @@ async def _handle_propose_network_change(
         justification=str(args.get("justification", "MCP AI Agent proposal")),
         ros_rest_method=str(args.get("http_method", "POST")).upper(),
         ros_rest_path=str(args.get("ros_path", "")),
-        request_payload=dict(args.get("payload") or {}),
+        request_payload=sanitized_payload,
     )
 
 
@@ -1490,14 +1515,27 @@ def _verify_mcp_role(claims: dict[str, Any]) -> None:
         )
 
 
+def _is_trusted_proxy_peer(peer_host: str | None) -> bool:
+    if not peer_host or not isinstance(peer_host, str):
+        return True
+    try:
+        ip_obj = ipaddress.ip_address(peer_host)
+        return bool(ip_obj.is_private or ip_obj.is_loopback)
+    except ValueError:
+        return True
+
+
 def _extract_client_ip(request: Request) -> str:
+    peer_host = request.client.host if request.client else None
+    if not _is_trusted_proxy_peer(peer_host):
+        return str(peer_host)
     real_ip = request.headers.get("X-Real-IP")
     if real_ip:
         return real_ip.split(",")[0].strip()
     fwd = request.headers.get("X-Forwarded-For")
     if fwd:
         return fwd.split(",")[0].strip()
-    return request.client.host if request.client else "127.0.0.1"
+    return str(peer_host) if isinstance(peer_host, str) and peer_host else "127.0.0.1"
 
 
 def _verify_ip_in_cidrs(client_ip: str, cidrs: list[str]) -> None:
@@ -1656,9 +1694,9 @@ async def mcp_endpoint(
 
 
 _SKILL_CANDIDATE_PATHS: tuple[Path, ...] = (
+    Path(__file__).resolve().parents[4] / ".agents" / "skills" / "rosgrid-noc-operator" / "SKILL.md",
     Path(__file__).resolve().parent / "SKILL.md",
     Path("/opt/rosgrid/skills/rosgrid-noc-operator/SKILL.md"),
-    Path(__file__).resolve().parents[4] / ".agents" / "skills" / "rosgrid-noc-operator" / "SKILL.md",
 )
 
 _EMBEDDED_SKILL_FALLBACK = """---

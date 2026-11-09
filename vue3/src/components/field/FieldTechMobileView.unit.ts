@@ -1,3 +1,4 @@
+/* eslint-disable sonarjs/no-duplicate-string */
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
@@ -66,7 +67,7 @@ describe('FieldTechMobileView.vue — Panel Responsive del Técnico de Campo FTT
         ip_address: '10.0.0.1',
         admin_state: 'PRODUCTION',
         network_role: 'CORE_ROUTER',
-      } as any,
+      } as never,
     ];
 
     const fieldStore = useFieldOpsStore();
@@ -166,7 +167,7 @@ describe('FieldTechMobileView.vue — Panel Responsive del Técnico de Campo FTT
         customer_code: 'CLI-001',
         device_serial: 'HWTC11223344',
         last_reachability_status: 'UNKNOWN',
-      } as any,
+      } as never,
     ];
 
     const pingSpy = vi.spyOn(fieldStore, 'pingSubscriberLive').mockResolvedValue({
@@ -350,7 +351,7 @@ describe('FieldTechMobileView.vue — Panel Responsive del Técnico de Campo FTT
       optical_box_port: 2,
       rx_optical_power_dbm: -19.2,
       last_reachability_status: 'ONLINE',
-    } as any);
+    } as never);
 
     const wrapper = mount(FieldTechMobileView);
     await wrapper.find('#tab-btn-customer').trigger('click');
@@ -396,7 +397,7 @@ describe('FieldTechMobileView.vue — Panel Responsive del Técnico de Campo FTT
         onu_serial_number: 'HWTC-9999-CERT',
         created_at: '2026-01-01',
         updated_at: '2026-01-01',
-      } as any,
+      } as never,
     ];
 
     const certifySpy = vi.spyOn(fieldStore, 'certifyInstallation').mockResolvedValueOnce({
@@ -409,7 +410,7 @@ describe('FieldTechMobileView.vue — Panel Responsive del Técnico de Campo FTT
       customer_signature_svg: 'data:image/png;base64,mock',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-    } as any);
+    } as never);
 
     const wrapper = mount(FieldTechMobileView);
     await wrapper.find('#tab-btn-diagnostics').trigger('click');
@@ -455,7 +456,7 @@ describe('FieldTechMobileView.vue — Panel Responsive del Técnico de Campo FTT
           optical_box_port: 1,
           rx_optical_power_dbm: -19.2,
           last_reachability_status: 'ONLINE',
-        } as any,
+        } as never,
       ];
 
       const wrapper = mount(FieldTechMobileView);

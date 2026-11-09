@@ -88,8 +88,8 @@
     aria-label="Indicador de salud y disponibilidad del API"
   >
     <button
-      type="button"
       id="api-health-badge"
+      type="button"
       class="rg-health-badge font-mono"
       :class="[
         `rg-health-badge--${heartbeatStore.status}`,
@@ -120,7 +120,7 @@
         aria-labelledby="health-popover-title"
       >
         <div class="popover-header">
-          <span class="popover-title" id="health-popover-title">
+          <span id="health-popover-title" class="popover-title">
             <span class="popover-icon" aria-hidden="true">⚡</span>
             Telemetría Backend
           </span>

@@ -1,3 +1,4 @@
+/* eslint-disable sonarjs/no-duplicate-string */
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
@@ -45,6 +46,7 @@ describe('RouterInventoryView.vue — Inventario y Modos Tabla, Mapa y Dividido'
       headers: new Headers(),
     });
     const inventoryStore = useInventoryStore();
+    vi.spyOn(inventoryStore, 'fetchRouters').mockResolvedValue();
     inventoryStore.setRouters([
       {
         id: 'r-01',
@@ -227,6 +229,7 @@ describe('RouterInventoryView.vue — Inventario y Modos Tabla, Mapa y Dividido'
 
   it('muestra indicador de Syslog y permite navegar a la consola Syslog Live', async () => {
     const inventoryStore = useInventoryStore();
+    vi.spyOn(inventoryStore, 'fetchRouters').mockResolvedValue();
     inventoryStore.setRouters([
       {
         id: 'r-syslog-1',
@@ -348,6 +351,7 @@ describe('RouterInventoryView.vue — Inventario y Modos Tabla, Mapa y Dividido'
 
   it('preserva todas las acciones tácticas por fila en línea (Refactoring UI sin menú oculto) y muestra empty state cuando no hay equipos', () => {
     const inventoryStore = useInventoryStore();
+    vi.spyOn(inventoryStore, 'fetchRouters').mockResolvedValue();
     inventoryStore.setRouters([]);
 
     const emptyWrapper = mount(RouterInventoryView, {

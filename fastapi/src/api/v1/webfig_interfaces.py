@@ -215,7 +215,18 @@ async def sfp_monitor(
 async def cable_test(
     router_id: uuid.UUID,
     item_id: str,
-    claims: dict[str, Any] = Depends(get_current_user_claims),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.INVENTORY_MANAGER,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
+            SystemRoleEnum.FIELD_TECH,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> CableTestResponse:
     """Ejecuta prueba TDR de integridad de pares de cable de cobre."""

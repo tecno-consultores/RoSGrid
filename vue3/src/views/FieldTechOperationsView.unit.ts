@@ -32,7 +32,7 @@ describe('FieldTechOperationsView.vue — Envoltorio de Operaciones de Campo', (
     authStore.updateTenantFeatures({ isp_module_enabled: true });
 
     const wrapper = mount(FieldTechOperationsView);
-    expect(wrapper.find('main.field-tech-operations-view').exists()).toBe(true);
+    expect(wrapper.find('[role="region"].field-tech-operations-view').exists()).toBe(true);
     expect(wrapper.find('#tab-btn-nap').exists()).toBe(true);
   });
 });

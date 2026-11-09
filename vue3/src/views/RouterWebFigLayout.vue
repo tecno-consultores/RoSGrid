@@ -2,6 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  /* eslint-disable sonarjs/cognitive-complexity */
   import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
   import { useRoute } from 'vue-router';
   import { useWebFigStore } from '@/stores/useWebFigStore';
@@ -174,10 +175,10 @@
         @close-mobile="isMobileSidebarOpen = false"
       />
 
-      <main
+      <div
         id="webfig-main-view"
         class="console-view-container"
-        role="main"
+        role="region"
         aria-label="Módulo WebFig activo"
       >
         <div class="webfig-module-help-bar">
@@ -210,7 +211,7 @@
             <component :is="Component" :key="route.name" />
           </keep-alive>
         </router-view>
-      </main>
+      </div>
     </div>
   </div>
 </template>

@@ -80,7 +80,7 @@
           <h3 id="grid-modal-title">🔲 Matriz Visual de Direcciones IP (/24)</h3>
           <span class="prefix-tag">{{ prefix.prefix }}</span>
         </div>
-        <button type="button" class="btn-close" @click="emit('close')" aria-label="Cerrar matriz">
+        <button type="button" class="btn-close" aria-label="Cerrar matriz" @click="emit('close')">
           ✕
         </button>
       </header>

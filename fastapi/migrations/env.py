@@ -24,7 +24,12 @@ def get_sync_db_url() -> str:
     db_url = os.environ.get(
         "ROSGRID_DATABASE_URL", "postgresql://rosgrid_user:cambiar_en_entorno_local@rosgrid_db:5432/rosgrid"
     )
-    return db_url.replace("postgresql+asyncpg://", "postgresql://")
+    try:
+        import psycopg  # noqa: F401
+
+        return db_url.replace("postgresql+asyncpg://", "postgresql+psycopg://")
+    except ImportError:
+        return db_url.replace("postgresql+asyncpg://", "postgresql://")
 
 
 def run_migrations_offline() -> None:

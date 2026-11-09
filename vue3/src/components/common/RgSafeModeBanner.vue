@@ -63,8 +63,8 @@
           </span>
           <span
             v-if="webFigStore.safeModeLiveVerified"
-            class="badge-verified safemode-badge--live font-tabular"
             id="badge-safemode-verified"
+            class="badge-verified safemode-badge--live font-tabular"
           >
             ✔ Verificado en RouterOS
             {{

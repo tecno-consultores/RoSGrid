@@ -2,6 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  import type { WebFigDynamic } from '@/types';
   import { ref, watch } from 'vue';
   import type { SimpleQueueItem } from '@/types';
 
@@ -13,7 +14,7 @@
 
   const emit = defineEmits<{
     (e: 'close'): void;
-    (e: 'save', payload: Record<string, any>): void;
+    (e: 'save', payload: Record<string, WebFigDynamic>): void;
   }>();
 
   const name = ref('');
@@ -39,7 +40,7 @@
     (open) => {
       if (open) {
         if (props.isEditing && props.initialQueue) {
-          const q = props.initialQueue as any;
+          const q = (props.initialQueue as WebFigDynamic);
           name.value = q.name || '';
           target.value = q.target || '';
           maxLimit.value = q.max_limit || '25M/50M';
@@ -74,7 +75,7 @@
   }
 
   function handleSubmit() {
-    const payload: Record<string, any> = {
+    const payload: Record<string, WebFigDynamic> = {
       name: name.value.trim(),
       target: target.value.trim(),
       max_limit: maxLimit.value.trim(),

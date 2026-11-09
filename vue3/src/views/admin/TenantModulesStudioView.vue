@@ -179,7 +179,7 @@
       <p>{{ t('tenants_mgmt.studio_loading', 'Cargando capacidades de la empresa...') }}</p>
     </div>
 
-    <main v-else class="studio-main-content">
+    <div v-else class="studio-main-content" role="region" aria-label="Configuración de módulos de la organización">
       <RgFeatureFlagsGrid
         v-if="activeTab === 'matrix'"
         v-model="tenantFeatures"
@@ -192,7 +192,7 @@
         :tenant-id="tenantId"
         @rollback="handleRollback"
       />
-    </main>
+    </div>
   </div>
 </template>
 

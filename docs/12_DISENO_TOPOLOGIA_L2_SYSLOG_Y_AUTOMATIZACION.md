@@ -271,7 +271,7 @@ flowchart LR
    * `rosgrid_router_voltage_volts{tenant_id, router_id, identity, model, ros_version}`: Voltaje DC de alimentación en voltios desde `/rest/system/health`.
    * `rosgrid_router_active_cves_count{tenant_id, router_id, identity, model, severity="critical|high"}`: Número de vulnerabilidades CVE detectadas según la versión de RouterOS instalada.
    * `rosgrid_router_syslog_critical_events_total{tenant_id, router_id, identity, model}`: Total acumulado de eventos críticos Syslog detectados en el RingBuffer.
-   * *(Plantilla de Grafana y Manifiestos)*: Tablero oficial JSON en [`docs/examples/grafana/rosgrid_mikrotik_fleet_dashboard.json`](file:///docs/examples/grafana/rosgrid_mikrotik_fleet_dashboard.json) y reglas de alerta en [`docs/examples/prometheus/rosgrid-alerts.rules.yml`](file:///docs/examples/prometheus/rosgrid-alerts.rules.yml).
+   * *(Plantilla de Grafana y Manifiestos)*: Tablero oficial JSON en [`docs/examples/grafana/rosgrid_mikrotik_fleet_dashboard.json`](examples/grafana/rosgrid_mikrotik_fleet_dashboard.json) y reglas de alerta en [`docs/examples/prometheus/rosgrid-alerts.rules.yml`](examples/prometheus/rosgrid-alerts.rules.yml).
 
 ### 7.3. Configuración de `prometheus.yml` y Consultas PromQL para Grafana
 

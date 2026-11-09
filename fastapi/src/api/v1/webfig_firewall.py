@@ -412,7 +412,16 @@ async def create_address_list(
     router_id: uuid.UUID,
     proto: str,
     payload: AddressListCreateRequest,
-    claims: dict[str, Any] = Depends(get_current_user_claims),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Agrega una IP o prefijo a una Address-List bajo Safe Mode o Maker-Checker (L2)."""
@@ -459,7 +468,16 @@ async def update_address_list(
     proto: str,
     item_id: str,
     payload: AddressListUpdateRequest,
-    claims: dict[str, Any] = Depends(get_current_user_claims),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Modifica una entrada existente de Address-List bajo Safe Mode o Maker-Checker."""
@@ -513,7 +531,16 @@ async def delete_address_list(
     router_id: uuid.UUID,
     proto: str,
     item_id: str,
-    claims: dict[str, Any] = Depends(get_current_user_claims),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+            SystemRoleEnum.SUPPORT_L1,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Elimina una entrada de Address-List bajo Safe Mode o Maker-Checker (L2)."""
@@ -578,7 +605,15 @@ async def delete_connection(
     router_id: uuid.UUID,
     conn_id: str,
     proto: str = "ip",
-    claims: dict[str, Any] = Depends(get_current_user_claims),
+    claims: dict[str, Any] = Depends(
+        require_roles(
+            SystemRoleEnum.SUPERADMIN_GLOBAL,
+            SystemRoleEnum.TENANT_ADMIN,
+            SystemRoleEnum.SUPERVISOR,
+            SystemRoleEnum.SUPPORT_L3,
+            SystemRoleEnum.SUPPORT_L2,
+        )
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Elimina/cierra una conexión activa de la tabla de Connection Tracking (IPv4 o IPv6)."""

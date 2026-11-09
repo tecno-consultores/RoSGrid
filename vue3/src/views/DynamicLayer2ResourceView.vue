@@ -2,6 +2,7 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  import type { WebFigDynamic } from '@/types';
   import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
   import { useRoute } from 'vue-router';
   import { http } from '@/api/httpClient';
@@ -268,7 +269,7 @@
         title: rawTitle,
         is_singleton: Boolean(baseData.is_singleton),
         columns_schema: Array.isArray(baseData.columns_schema) ? baseData.columns_schema : [],
-        items: isArrayData ? (res.data as any) : Array.isArray(baseData.items) ? baseData.items : [],
+        items: isArrayData ? (res.data as unknown as WebFigDynamic[]) : Array.isArray(baseData.items) ? baseData.items : [],
         rpc_actions: mergedRpc,
         form_data:
           baseData.form_data ||
@@ -293,7 +294,7 @@
   async function handleInspectSchema() {
     isInspectingSchema.value = true;
     try {
-      const res = await http.get<any>(
+      const res = await http.get<WebFigDynamic>(
         `/api/v1/routers/${routerId.value}/webfig/layer2/inspect/${rosPath.value}`,
       );
       if (res.data?.columns_schema?.length) {
@@ -908,7 +909,7 @@
           <h3 class="modal-title">
             {{ getRecordId(activeRecord) ? 'Editar' : 'Crear' }} {{ resourceData.title }}
           </h3>
-          <button type="button" class="btn-close" @click="isModalOpen = false">✕</button>
+          <button type="button" class="btn-close" aria-label="Cerrar" @click="isModalOpen = false">✕</button>
         </header>
 
         <form class="modal-body" @submit.prevent="handleSaveRecord">

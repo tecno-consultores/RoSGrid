@@ -36,7 +36,7 @@ describe('FiberCutAlertBanner.vue — Detección Proactiva de Cortes de Fibra Ó
         affected_onus_count: 8,
         incident_summary: 'Posible corte de fibra troncal en GPON OLT 1/1/1',
         detected_at: new Date().toISOString(),
-      } as any,
+      } as never,
     ];
     vi.spyOn(fieldStore, 'detectFiberCuts').mockResolvedValue(fieldStore.incidents);
 
@@ -61,7 +61,7 @@ describe('FiberCutAlertBanner.vue — Detección Proactiva de Cortes de Fibra Ó
         affected_onus_count: 5,
         incident_summary: 'Corte detectado',
         detected_at: new Date().toISOString(),
-      } as any,
+      } as never,
     ];
     const detectSpy = vi.spyOn(fieldStore, 'detectFiberCuts').mockResolvedValue([]);
 

@@ -188,8 +188,11 @@ const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]
 function resolveActiveLocale(locale?: 'es' | 'en' | string | null): 'es' | 'en' {
   if (locale === 'en' || locale === 'es') return locale;
   try {
-    if (typeof localStorage !== 'undefined' && localStorage.getItem('rosgrid_locale') === 'en') {
-      return 'en';
+    if (typeof localStorage !== 'undefined') {
+      const stored = localStorage.getItem('rg_locale') || localStorage.getItem('rosgrid_locale');
+      if (stored === 'en') {
+        return 'en';
+      }
     }
   } catch {
     // Ignorar errores de acceso a localStorage

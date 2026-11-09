@@ -327,9 +327,9 @@ RoSGrid mantiene el principio **Zero-Metrics Storage** en PostgreSQL, pero expon
 ### 9.1 Ejemplo de `prometheus.yml`, Reglas Alertmanager y Consultas PromQL en Grafana
 
 Plantillas canónicas listas para usar en:
-- Manifiesto Prometheus: [`docs/examples/prometheus/prometheus.yml`](file:///docs/examples/prometheus/prometheus.yml)
-- Reglas Alertmanager: [`docs/examples/prometheus/rosgrid-alerts.rules.yml`](file:///docs/examples/prometheus/rosgrid-alerts.rules.yml)
-- Plantilla JSON de Tablero Grafana: [`docs/examples/grafana/rosgrid_mikrotik_fleet_dashboard.json`](file:///docs/examples/grafana/rosgrid_mikrotik_fleet_dashboard.json)
+- Manifiesto Prometheus: [`docs/examples/prometheus/prometheus.yml`](examples/prometheus/prometheus.yml)
+- Reglas Alertmanager: [`docs/examples/prometheus/rosgrid-alerts.rules.yml`](examples/prometheus/rosgrid-alerts.rules.yml)
+- Plantilla JSON de Tablero Grafana: [`docs/examples/grafana/rosgrid_mikrotik_fleet_dashboard.json`](examples/grafana/rosgrid_mikrotik_fleet_dashboard.json)
 
 ```yaml
 global:

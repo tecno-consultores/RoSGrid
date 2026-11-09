@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
+import type { WebFigDynamic } from '@/types';
 import { mount, flushPromises } from '@vue/test-utils';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CapsmanQuickSetupModal from './CapsmanQuickSetupModal.vue';
@@ -52,7 +53,7 @@ describe('CapsmanQuickSetupModal.vue', () => {
   });
 
   it('despliega con éxito el asistente cuando el formulario es válido', async () => {
-    (http.post as any).mockResolvedValueOnce({ data: { success: true } });
+    (http.post as WebFigDynamic).mockResolvedValueOnce({ data: { success: true } });
 
     const wrapper = mount(CapsmanQuickSetupModal, {
       props: {

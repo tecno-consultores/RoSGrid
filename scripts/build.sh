@@ -82,10 +82,9 @@ docker buildx build \
 	-f vue3/Dockerfile vue3
 
 echo -e "\n[Paso 4] Limpieza de constructores y caché temporal..."
-docker buildx rm container-builder
-docker system prune -af
-docker builder prune -af
-docker buildx prune -af
+docker buildx prune -af --builder=container-builder 2>/dev/null || true
+docker buildx rm container-builder 2>/dev/null || true
+docker builder prune -f --filter "until=24h" 2>/dev/null || true
 
 echo "=============================================================================="
 echo -e "\e[32m  🎉 Publicación exitosa de RoSGrid ${VERSION} en Docker Hub (amd64, arm64) \e[0m"

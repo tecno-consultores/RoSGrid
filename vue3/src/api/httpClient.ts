@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection, sonarjs/cognitive-complexity */
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
@@ -144,11 +145,34 @@ export function getBaseUrl(): string {
   return '';
 }
 
+function getAllowedOrigins(baseUrl: string): Set<string> {
+  const allowedOrigins = new Set<string>();
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    allowedOrigins.add(window.location.origin);
+  }
+  if (baseUrl.startsWith('http://') || baseUrl.startsWith('https://')) {
+    allowedOrigins.add(new URL(baseUrl).origin);
+  }
+  return allowedOrigins;
+}
+
 export function resolveUrl(path: string): string {
+  const baseUrl = getBaseUrl();
   if (path.startsWith('http://') || path.startsWith('https://')) {
+    try {
+      const parsed = new URL(path);
+      const allowedOrigins = getAllowedOrigins(baseUrl);
+      if (allowedOrigins.size > 0 && !allowedOrigins.has(parsed.origin)) {
+        throw new Error(`Origen externo no autorizado en httpClient: ${parsed.origin}`);
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message.startsWith('Origen externo')) {
+        throw err;
+      }
+      throw new Error('URL absoluta inválida en httpClient');
+    }
     return path;
   }
-  const baseUrl = getBaseUrl();
   const normalizedPath = path.startsWith('/') ? path : '/' + path;
   return `${baseUrl}${normalizedPath}`;
 }
@@ -225,6 +249,16 @@ function triggerSessionExpiredRedirect(): void {
 // Cliente Core HTTP
 // ---------------------------------------------------------------------------
 
+function emitHealthEvent(ok: boolean, status: number, latencyMs: number | null, url: string): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('rosgrid:api-health-event', {
+        detail: { ok, status, latencyMs, url },
+      }),
+    );
+  }
+}
+
 export async function request<T = unknown>(
   url: string,
   options: RequestOptions = {},
@@ -239,31 +273,17 @@ export async function request<T = unknown>(
     credentials: 'include',
   };
 
-  const startTime = typeof performance !== 'undefined' ? performance.now() : Date.now();
+  const nowFn = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  const startTime = nowFn();
   let response: Response;
   try {
     response = await fetch(resolveUrl(url), init);
   } catch (netErr) {
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(
-        new CustomEvent('rosgrid:api-health-event', {
-          detail: { ok: false, status: 0, latencyMs: null, url },
-        }),
-      );
-    }
+    emitHealthEvent(false, 0, null, url);
     throw new ApiError(0, 'NetworkError', null, (netErr as Error).message);
   }
 
-  const durationMs = Math.round(
-    (typeof performance !== 'undefined' ? performance.now() : Date.now()) - startTime,
-  );
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(
-      new CustomEvent('rosgrid:api-health-event', {
-        detail: { ok: response.ok, status: response.status, latencyMs: durationMs, url },
-      }),
-    );
-  }
+  emitHealthEvent(response.ok, response.status, Math.round(nowFn() - startTime), url);
 
   // Interceptor 3: Manejo 401 con Singleton Refresh
   const isAuthEndpoint =

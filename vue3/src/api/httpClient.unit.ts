@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection, sonarjs/no-duplicate-string */
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 RoSGrid Contributors
 
@@ -282,9 +283,12 @@ describe('httpClient — Zero Trust & Interceptores', () => {
   });
 
   describe('resolveUrl', () => {
-    it('mantiene URLs absolutas con esquema http o https intactas', () => {
-      expect(resolveUrl('https://api.rosgrid.io/v1/auth')).toBe('https://api.rosgrid.io/v1/auth');
-      expect(resolveUrl('http://192.168.88.1/rest/system')).toBe('http://192.168.88.1/rest/system');
+    it('mantiene URLs absolutas del mismo origen o base URL autorizada y bloquea orígenes externos', () => {
+      const origin = window.location.origin;
+      expect(resolveUrl(`${origin}/v1/auth`)).toBe(`${origin}/v1/auth`);
+      expect(() => resolveUrl('https://evil.example.com/v1/auth')).toThrow(
+        'Origen externo no autorizado en httpClient',
+      );
     });
 
     it('resuelve rutas relativas con o sin barra inicial', () => {

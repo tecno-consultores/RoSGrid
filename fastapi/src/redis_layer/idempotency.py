@@ -48,6 +48,22 @@ def compute_request_hash(method: str, path: str, body: bytes) -> str:
 async def check_idempotency_state(redis_client: Any, key: str, req_hash: str) -> tuple[Response | None, bool]:
     data = await redis_client.hgetall(key)
     if not data:
+        if hasattr(redis_client, "setnx"):
+            try:
+                lock_ok = await redis_client.setnx(f"{key}:lock", req_hash)
+                if lock_ok is False or lock_ok == 0:
+                    return (
+                        JSONResponse(
+                            status_code=409,
+                            content={
+                                "detail": "La operación con esta Idempotency-Key ya se encuentra en ejecución en el router"
+                            },
+                        ),
+                        False,
+                    )
+                await redis_client.expire(f"{key}:lock", 60)
+            except Exception:
+                pass
         # No existe -> Adquirir bloqueo IN_PROGRESS
         await redis_client.hset(key, mapping={"status": "IN_PROGRESS", "request_hash": req_hash})
         await redis_client.expire(key, 60)

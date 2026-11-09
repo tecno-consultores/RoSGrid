@@ -2,6 +2,8 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  /* eslint-disable sonarjs/cognitive-complexity, sonarjs/no-duplicate-string */
+  import type { WebFigDynamic } from '@/types';
   import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
   import { useRoute } from 'vue-router';
   import { http } from '@/api/httpClient';
@@ -194,11 +196,11 @@
     try {
       const query = forceRefresh ? '?refresh=true' : '';
       if (activeTab.value === 'bridges') {
-        const res = await http.get<any>(
+        const res = await http.get<WebFigDynamic>(
           `/api/v1/routers/${routerId.value}/webfig/interfaces/bridge${query}`,
         );
         const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
-        bridgesList.value = items.map((b: any) => ({
+        bridgesList.value = items.map((b: WebFigDynamic) => ({
           ...b,
           id: b.id || b['.id'] || b.name,
           mac_address: b.mac_address || b['mac-address'] || '',
@@ -208,11 +210,11 @@
           disabled: b.disabled === 'true' || b.disabled === true,
         }));
       } else if (activeTab.value === 'ports') {
-        const res = await http.get<any>(
+        const res = await http.get<WebFigDynamic>(
           `/api/v1/routers/${routerId.value}/webfig/interfaces/bridge/ports${query}`,
         );
         const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
-        portsList.value = items.map((p: any) => ({
+        portsList.value = items.map((p: WebFigDynamic) => ({
           ...p,
           id: p.id || p['.id'] || `${p.bridge}-${p.interface}`,
           pvid: p.pvid ? Number(p.pvid) : 1,
@@ -221,11 +223,11 @@
           disabled: p.disabled === 'true' || p.disabled === true,
         }));
       } else if (activeTab.value === 'vlans') {
-        const res = await http.get<any>(
+        const res = await http.get<WebFigDynamic>(
           `/api/v1/routers/${routerId.value}/webfig/interfaces/bridge/vlans${query}`,
         );
         const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
-        vlansList.value = items.map((v: any) => ({
+        vlansList.value = items.map((v: WebFigDynamic) => ({
           ...v,
           id: v.id || v['.id'] || `${v.bridge}-${v.vlan_ids || v['vlan-ids']}`,
           vlan_ids: v.vlan_ids || v['vlan-ids'] || '',
@@ -233,11 +235,11 @@
           current_untagged: v.current_untagged || v['current-untagged'] || '',
         }));
       } else if (activeTab.value === 'hosts') {
-        const res = await http.get<any>(
+        const res = await http.get<WebFigDynamic>(
           `/api/v1/routers/${routerId.value}/webfig/interfaces/bridge/hosts${query}`,
         );
         const items = Array.isArray(res.data) ? res.data : res.data?.items || [];
-        hostsList.value = items.map((h: any) => ({
+        hostsList.value = items.map((h: WebFigDynamic) => ({
           ...h,
           id: h.id || h['.id'] || `${h.bridge}-${h.mac_address || h['mac-address']}`,
           mac_address: h.mac_address || h['mac-address'] || '',
@@ -265,7 +267,7 @@
       );
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       statusMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Solicitud de Bridge en espera de aprobación humana en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Solicitud de Bridge en espera de aprobación humana en Maker-Checker.'
         : `Bridge "${newBridge.value.name}" creado exitosamente bajo Safe Mode.`;
       isCreateBridgeModalOpen.value = false;
       newBridge.value = {
@@ -294,7 +296,7 @@
       );
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       statusMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Solicitud de puerto Bridge en espera de aprobación humana en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Solicitud de puerto Bridge en espera de aprobación humana en Maker-Checker.'
         : `Puerto agregado al Bridge "${newPort.value.bridge}" exitosamente.`;
       isCreatePortModalOpen.value = false;
       loadData(true);
@@ -331,7 +333,7 @@
       );
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       statusMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Modificación de Bridge en espera de aprobación en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Modificación de Bridge en espera de aprobación en Maker-Checker.'
         : `Bridge "${editBridgeForm.value.name}" actualizado exitosamente bajo Safe Mode.`;
       isEditBridgeModalOpen.value = false;
       loadData(true);
@@ -356,7 +358,7 @@
       );
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       statusMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Eliminación de Bridge en espera de aprobación en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Eliminación de Bridge en espera de aprobación en Maker-Checker.'
         : `Bridge "${bridge.name}" eliminado exitosamente bajo Safe Mode.`;
       loadData(true);
     } catch (err: unknown) {
@@ -394,7 +396,7 @@
       );
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       statusMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Modificación de puerto Bridge en espera de aprobación en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Modificación de puerto Bridge en espera de aprobación en Maker-Checker.'
         : `Puerto "${editPortForm.value.interface}" actualizado en Bridge "${editPortForm.value.bridge}".`;
       isEditPortModalOpen.value = false;
       loadData(true);
@@ -419,7 +421,7 @@
       );
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       statusMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Solicitud para sacar puerto del Bridge en espera de aprobación en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Solicitud para sacar puerto del Bridge en espera de aprobación en Maker-Checker.'
         : `Puerto "${port.interface}" liberado del Bridge "${port.bridge}" exitosamente.`;
       loadData(true);
     } catch (err: unknown) {
@@ -455,7 +457,7 @@
       );
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       statusMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Modificación de VLAN Bridge en espera de aprobación en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Modificación de VLAN Bridge en espera de aprobación en Maker-Checker.'
         : `VLAN "${editVlanForm.value.vlan_ids}" actualizada exitosamente.`;
       isEditVlanModalOpen.value = false;
       loadData(true);
@@ -492,7 +494,7 @@
       );
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       statusMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Solicitud de Bridge VLAN en espera de aprobación humana en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Solicitud de Bridge VLAN en espera de aprobación humana en Maker-Checker.'
         : `VLAN(s) "${newVlan.value.vlan_ids}" agregada(s) al Bridge "${newVlan.value.bridge}" bajo Safe Mode.`;
       isCreateVlanModalOpen.value = false;
       newVlan.value = {
@@ -526,7 +528,7 @@
       );
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       statusMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Solicitud de eliminación en espera de aprobación humana en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Solicitud de eliminación en espera de aprobación humana en Maker-Checker.'
         : `VLAN "${vlan.vlan_ids}" eliminada del Bridge con éxito.`;
       loadData(true);
     } catch (err: unknown) {
@@ -549,7 +551,7 @@
       );
       const intercepted = webFigStore.handleMutationResponse(res, 60);
       statusMessage.value = intercepted
-        ? (res.data as any)?.detail || 'Solicitud de subinterfaz VLAN en espera de aprobación humana en Maker-Checker.'
+        ? (res.data as { detail?: string })?.detail || 'Solicitud de subinterfaz VLAN en espera de aprobación humana en Maker-Checker.'
         : `Subinterfaz VLAN "${newInterfaceVlan.value.name}" (ID ${newInterfaceVlan.value.vlan_id}) creada exitosamente bajo Safe Mode.`;
       isCreateInterfaceVlanModalOpen.value = false;
       newInterfaceVlan.value = {
@@ -694,7 +696,7 @@
     <div class="tab-content">
       <div v-if="activeTab === 'bridges'">
         <RgDataTable
-          :columns="bridgeColumns as any"
+          :columns="bridgeColumns"
           :rows="bridgesList"
           caption="Interfaces Bridge RouterOS"
           row-key="id"
@@ -726,7 +728,7 @@
 
       <div v-else-if="activeTab === 'ports'">
         <RgDataTable
-          :columns="portColumns as any"
+          :columns="portColumns"
           :rows="portsList"
           caption="Puertos Miembros Bridge"
           row-key="id"
@@ -758,7 +760,7 @@
 
       <div v-else-if="activeTab === 'vlans'">
         <RgDataTable
-          :columns="vlanColumns as any"
+          :columns="vlanColumns"
           :rows="vlansList"
           caption="Tabla VLAN Switching"
           row-key="id"
@@ -790,7 +792,7 @@
 
       <div v-else-if="activeTab === 'hosts'">
         <RgDataTable
-          :columns="hostColumns as any"
+          :columns="hostColumns"
           :rows="hostsList"
           caption="Tabla de Direcciones MAC Hosts (FDB)"
           row-key="id"
@@ -807,7 +809,7 @@
       <div class="modal-card" role="dialog" aria-labelledby="modal-bridge-title" aria-modal="true">
         <header class="modal-header">
           <h2 id="modal-bridge-title">Crear Nuevo Bridge MikroTik</h2>
-          <button type="button" class="btn-close" @click="isCreateBridgeModalOpen = false">
+          <button type="button" class="btn-close" aria-label="Cerrar" @click="isCreateBridgeModalOpen = false">
             ✕
           </button>
         </header>
@@ -865,7 +867,7 @@
       <div class="modal-card" role="dialog" aria-labelledby="modal-port-title" aria-modal="true">
         <header class="modal-header">
           <h2 id="modal-port-title">Agregar Puerto al Bridge</h2>
-          <button type="button" class="btn-close" @click="isCreatePortModalOpen = false">✕</button>
+          <button type="button" class="btn-close" aria-label="Cerrar" @click="isCreatePortModalOpen = false">✕</button>
         </header>
         <form class="modal-form" @submit.prevent="handleCreatePort">
           <div class="form-group">
@@ -934,7 +936,7 @@
       <div class="modal-card" role="dialog" aria-labelledby="modal-vlan-title" aria-modal="true">
         <header class="modal-header">
           <h2 id="modal-vlan-title">Definir VLAN en Bridge (/interface/bridge/vlan)</h2>
-          <button type="button" class="btn-close" @click="isCreateVlanModalOpen = false">✕</button>
+          <button type="button" class="btn-close" aria-label="Cerrar" @click="isCreateVlanModalOpen = false">✕</button>
         </header>
         <form class="modal-form" @submit.prevent="handleCreateVlan">
           <div class="form-group">
@@ -999,7 +1001,7 @@
       <div class="modal-card" role="dialog" aria-labelledby="modal-iface-vlan-title" aria-modal="true">
         <header class="modal-header">
           <h2 id="modal-iface-vlan-title">Crear Subinterfaz VLAN (/interface/vlan)</h2>
-          <button type="button" class="btn-close" @click="isCreateInterfaceVlanModalOpen = false">✕</button>
+          <button type="button" class="btn-close" aria-label="Cerrar" @click="isCreateInterfaceVlanModalOpen = false">✕</button>
         </header>
         <form class="modal-form" @submit.prevent="handleCreateInterfaceVlan">
           <div class="form-group">
@@ -1067,7 +1069,7 @@
       <div class="modal-card" role="dialog" aria-labelledby="modal-edit-bridge-title" aria-modal="true">
         <header class="modal-header">
           <h2 id="modal-edit-bridge-title">Editar Bridge ({{ editBridgeForm.name }})</h2>
-          <button type="button" class="btn-close" @click="isEditBridgeModalOpen = false">✕</button>
+          <button type="button" class="btn-close" aria-label="Cerrar" @click="isEditBridgeModalOpen = false">✕</button>
         </header>
         <form class="modal-form" @submit.prevent="handleUpdateBridge">
           <div class="form-group">
@@ -1124,7 +1126,7 @@
       <div class="modal-card" role="dialog" aria-labelledby="modal-edit-port-title" aria-modal="true">
         <header class="modal-header">
           <h2 id="modal-edit-port-title">Editar Puerto de Bridge ({{ editPortForm.interface }})</h2>
-          <button type="button" class="btn-close" @click="isEditPortModalOpen = false">✕</button>
+          <button type="button" class="btn-close" aria-label="Cerrar" @click="isEditPortModalOpen = false">✕</button>
         </header>
         <form class="modal-form" @submit.prevent="handleUpdatePort">
           <div class="form-group">
@@ -1178,7 +1180,7 @@
       <div class="modal-card" role="dialog" aria-labelledby="modal-edit-vlan-title" aria-modal="true">
         <header class="modal-header">
           <h2 id="modal-edit-vlan-title">Editar VLAN en Bridge</h2>
-          <button type="button" class="btn-close" @click="isEditVlanModalOpen = false">✕</button>
+          <button type="button" class="btn-close" aria-label="Cerrar" @click="isEditVlanModalOpen = false">✕</button>
         </header>
         <form class="modal-form" @submit.prevent="handleUpdateVlan">
           <div class="form-group">

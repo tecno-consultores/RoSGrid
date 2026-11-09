@@ -2,6 +2,8 @@
 <!-- Copyright (C) 2026 RoSGrid Contributors -->
 
 <script setup lang="ts">
+  /* eslint-disable sonarjs/cognitive-complexity */
+  import type { WebFigDynamic } from '@/types';
   import { ref, computed, onMounted } from 'vue';
   import { useRoute } from 'vue-router';
   import { http } from '@/api/httpClient';
@@ -52,7 +54,7 @@
     isRunning.value = true;
     pingResults.value = [];
     try {
-      const payload: Record<string, any> = {};
+      const payload: Record<string, WebFigDynamic> = {};
       if (activeTab.value === 'ping') {
         payload.address = targetHost.value.trim();
         payload.count = Number(pingCount.value) || 4;
@@ -65,14 +67,14 @@
         payload.duration_seconds = 3;
       }
 
-      const res = await http.post<any>(
+      const res = await http.post<WebFigDynamic>(
         `/api/v1/routers/${routerId.value}/webfig/tools/${activeTab.value}`,
         payload,
       );
 
       if (activeTab.value === 'ping') {
         const items = res.data?.results || (Array.isArray(res.data) ? res.data : []);
-        pingResults.value = items.map((r: any, idx: number) => ({
+        pingResults.value = items.map((r: WebFigDynamic, idx: number) => ({
           seq: r.seq !== undefined ? Number(r.seq) + 1 : idx + 1,
           host: r.host || r.address || targetHost.value,
           size: r.size ? Number(r.size) : 56,
@@ -83,8 +85,8 @@
       } else if (activeTab.value === 'traceroute') {
         const items = Array.isArray(res.data) ? res.data : res.data?.results || [];
         pingResults.value = items
-          .filter((r: any) => r.address || r.last)
-          .map((r: any, idx: number) => ({
+          .filter((r: WebFigDynamic) => r.address || r.last)
+          .map((r: WebFigDynamic, idx: number) => ({
             seq: r['.section'] ? Number(r['.section']) : idx + 1,
             host: r.address || '(sin respuesta)',
             size: 56,
@@ -94,7 +96,7 @@
           }));
       } else if (activeTab.value === 'torch') {
         const items = Array.isArray(res.data) ? res.data : res.data?.results || [];
-        pingResults.value = items.map((r: any, idx: number) => ({
+        pingResults.value = items.map((r: WebFigDynamic, idx: number) => ({
           seq: idx + 1,
           host: `${r['src-address'] || '*'}:${r['src-port'] || '*'} -> ${r['dst-address'] || '*'}:${r['dst-port'] || '*'}`,
           size: Number(r.rx || 0) + Number(r.tx || 0),
@@ -116,7 +118,7 @@
         `/api/v1/routers/${routerId.value}/webfig/tools/logs`,
       );
       const raw = Array.isArray(res.data) ? res.data : res.data?.items || [];
-      logEntries.value = raw.map((l: any, idx: number) => ({
+      logEntries.value = raw.map((l: WebFigDynamic, idx: number) => ({
         id: l.id || l['.id'] || String(idx),
         time: l.time || '',
         topics: l.topics || 'system',
@@ -169,7 +171,7 @@
           role="tab"
           :aria-selected="activeTab === tool.id"
           @click="
-            activeTab = tool.id as any;
+            activeTab = tool.id as typeof activeTab;
             if (activeTab === 'logs') loadLogs();
           "
         >

@@ -19,7 +19,7 @@ describe('IpamManagementView.vue — Centro de Mando IPAM y Gestión de Clientes
     setActivePinia(createPinia());
     vi.restoreAllMocks();
     window.alert = vi.fn();
-    vi.spyOn(http, 'get').mockResolvedValue({ data: [] } as any);
+    vi.spyOn(http, 'get').mockResolvedValue({ data: [] } as never);
   });
 
   it('renderiza la cabecera IPAM, métricas KPI y las pestañas operativas', async () => {
@@ -34,7 +34,7 @@ describe('IpamManagementView.vue — Centro de Mando IPAM y Gestión de Clientes
     const wrapper = mount(IpamManagementView);
     await flushPromises();
 
-    expect(wrapper.find('main.ipam-management-view').exists()).toBe(true);
+    expect(wrapper.find('[role="region"].ipam-management-view').exists()).toBe(true);
     expect(wrapper.find('.ipam-kpi-grid').exists()).toBe(true);
     expect(wrapper.find('.ipam-tabs-nav').exists()).toBe(true);
   });

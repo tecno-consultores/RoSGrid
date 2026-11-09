@@ -1704,6 +1704,21 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 401
     And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
 
+  # ============================================================================
+  # SPEC 114: REMEDIACIÓN INTEGRAL ZERO-TRUST, RLS MULTI-TRANSACCIÓN Y WORM
+  # ============================================================================
+  Scenario: 181. Paridad del catalogo publico SKILL.md en /api/v1/mcp/skill con 22 herramientas y 8 Playbooks SOP (Spec 114)
+    Given path '/api/v1/mcp/skill'
+    And param format = 'json'
+    When method get
+    Then status 200
+    And match response.name == 'rosgrid-noc-operator'
+    And match response.content contains '22 herramientas'
+    And match response.content contains 'Playbook 8'
+    And match response.content contains 'rosgrid_search_mikrotik_docs'
+    And match response.content contains 'rosgrid_get_mikrotik_doc_topic'
+
+
 
 
 

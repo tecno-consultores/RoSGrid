@@ -34,6 +34,14 @@ def _setup_signal_handlers(stop_event: asyncio.Event) -> None:
             pass
 
 
+def _on_worker_task_done(task: asyncio.Task[None]) -> None:
+    if task.cancelled():
+        return
+    exc = task.exception()
+    if exc is not None:
+        logger.error("Worker %s finalizó con excepción no controlada: %s", task.get_name(), exc)
+
+
 async def main_workers_runner() -> None:
     """Inicia concurrentemente los workers de RoSGrid y gestiona el apagado ordenado."""
     logger.info("=== Iniciando Orquestador de Workers RoSGrid ===")
@@ -50,6 +58,8 @@ async def main_workers_runner() -> None:
         asyncio.create_task(session_lifecycle_worker_loop(), name="SessionLifecycleWorker"),
         asyncio.create_task(telemetry_beacon_worker_loop(stop_event), name="TelemetryBeaconWorker"),
     ]
+    for t in tasks:
+        t.add_done_callback(_on_worker_task_done)
 
     try:
         await stop_event.wait()

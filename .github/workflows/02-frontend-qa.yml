@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright (C) 2026 RoSGrid Contributors
+
+name: "Paso 2: QA Frontend Vue 3 (vue-tsc, ESLint & Vitest)"
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+permissions:
+  contents: read
+
+jobs:
+  frontend-qa:
+    name: 🎨 Certificación Efímera de Frontend Vue 3 en Docker (Regla Cero)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout del código de RoSGrid
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: 🔍 Ejecutar vue-tsc, ESLint y Vitest en contenedor efímero
+        run: |
+          docker run --rm \
+            -v "${GITHUB_WORKSPACE}/vue3:/app" \
+            -w /app \
+            sinfallas/base-node-ionic:26 \
+            sh -c "pnpm install --frozen-lockfile && npx vue-tsc --noEmit && npx eslint src --ext .ts,.vue && npx vitest run"

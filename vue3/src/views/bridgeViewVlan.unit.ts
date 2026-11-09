@@ -38,11 +38,11 @@ describe('BridgeView & InterfacesAndSfpView VLAN Creation Parity', () => {
               untagged: 'ether2',
             },
           ],
-        } as any;
+        } as never;
       }
       return {
         data: [{ id: '*B1', name: 'bridge1', vlan_filtering: true }],
-      } as any;
+      } as never;
     });
 
     const wrapper = mount(BridgeView, {
@@ -80,7 +80,7 @@ describe('BridgeView & InterfacesAndSfpView VLAN Creation Parity', () => {
     expect(wrapper.find('#modal-vlan-title').exists()).toBe(true);
 
     // Mock post call
-    const postSpy = vi.spyOn(http, 'post').mockResolvedValueOnce({ data: { status: 'success' } } as any);
+    const postSpy = vi.spyOn(http, 'post').mockResolvedValueOnce({ data: { status: 'success' } } as never);
 
     // Submit form
     await wrapper.find('#vlan-ids').setValue('50');
@@ -101,7 +101,7 @@ describe('BridgeView & InterfacesAndSfpView VLAN Creation Parity', () => {
         { id: '*1', name: 'ether1', type: 'ether' },
         { id: '*2', name: 'vlan10', type: 'vlan' },
       ],
-    } as any);
+    } as never);
 
     const wrapper = mount(InterfacesAndSfpView, {
       global: {
@@ -128,7 +128,7 @@ describe('BridgeView & InterfacesAndSfpView VLAN Creation Parity', () => {
 
     expect(wrapper.find('#modal-vlan-create-title').exists()).toBe(true);
 
-    const postSpy = vi.spyOn(http, 'post').mockResolvedValueOnce({ data: { status: 'success' } } as any);
+    const postSpy = vi.spyOn(http, 'post').mockResolvedValueOnce({ data: { status: 'success' } } as never);
 
     await wrapper.find('#vlan-create-name').setValue('vlan99-test');
     await wrapper.find('#vlan-create-id').setValue('99');
@@ -149,7 +149,7 @@ describe('BridgeView & InterfacesAndSfpView VLAN Creation Parity', () => {
   it('renders BridgeView tab labels cleanly without misleading (0) counters', async () => {
     vi.spyOn(http, 'get').mockResolvedValue({
       data: [{ id: '*B1', name: 'bridge1', vlan_filtering: true }],
-    } as any);
+    } as never);
 
     const wrapper = mount(BridgeView, {
       global: {

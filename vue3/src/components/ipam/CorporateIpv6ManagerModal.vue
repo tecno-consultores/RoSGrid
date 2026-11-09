@@ -55,7 +55,8 @@
       });
       alert(`Prefijo Corporativo ${calculatedPrefixPreview.value} asignado exitosamente.`);
       emit('close');
-    } catch (err: any) {
+    } catch (rawErr: unknown) {
+      const err = rawErr as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
       alert(err?.response?.data?.detail || err?.message || 'Error al asignar prefijo corporativo');
     }
   }
@@ -66,12 +67,12 @@
     <div class="rg-modal rg-modal--corp">
       <header class="modal-header">
         <h3 id="corp-modal-title">🏢 Gestor de Asignación IPv6 Corporativo</h3>
-        <button type="button" class="btn-close" @click="emit('close')" aria-label="Cerrar modal">
+        <button type="button" class="btn-close" aria-label="Cerrar modal" @click="emit('close')">
           ✕
         </button>
       </header>
 
-      <form @submit.prevent="handleAssignCorporatePrefix" class="modal-body">
+      <form class="modal-body" @submit.prevent="handleAssignCorporatePrefix">
         <div class="info-banner">
           Permite segmentar bloques dedicados (<strong>/48</strong>, <strong>/52</strong> o
           <strong>/56</strong>) para empresas con múltiples VLANs, infraestructura interna o sesión

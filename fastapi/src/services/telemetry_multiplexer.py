@@ -27,7 +27,13 @@ _LAST_SNAPSHOTS: dict[str, tuple[float, dict[str, dict[str, int]]]] = {}
 
 
 async def _resolve_router_client(tenant_id: uuid.UUID, router_id: uuid.UUID) -> MikrotikRestClient | None:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from src.db.session import set_tenant_context
+
     async with async_session_maker() as session:
+        if type(session) is AsyncSession:
+            await set_tenant_context(session, tenant_id, is_superadmin=False)
         stmt = (
             select(Router)
             .options(selectinload(Router.vault))
