@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 """
 verify_zero_orphan_vue_components.py — Invariante de Cero Componentes Vue Huérfanos.

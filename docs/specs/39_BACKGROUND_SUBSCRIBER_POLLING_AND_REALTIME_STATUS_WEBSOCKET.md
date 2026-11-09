@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # 📑 Especificación 39: Sondeo Pasivo Escalonado de Fondo (Worker Jitter) y Notificación Reactiva WebSocket en Tiempo Real — RoSGrid
 

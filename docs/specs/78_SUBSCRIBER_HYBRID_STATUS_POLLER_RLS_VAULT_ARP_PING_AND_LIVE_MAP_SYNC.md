@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación 78: Monitoreo Periódico Híbrido de Abonados FTTH (`StaggeredSessionPoller`): Unificación PPPoE + DHCP + Tabla ARP + Ping ICMP Ligero, Contexto RLS + `selectinload(Router.vault, SubscriberDevice.ipv4_address)` y Sincronización Reactiva WebSocket en Mapa e IPAM (Hito 28.21)
 
@@ -67,7 +67,7 @@ Reemplazar el contenido de [`fastapi/src/workers/subscriber_status_poller.py`](f
 #### `Target` en `fastapi/src/workers/subscriber_status_poller.py`:
 ```python
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 """Worker de Sondeo Pasivo Escalonado (StaggeredSessionPoller) de Clientes y Dispositivos.
 
@@ -271,7 +271,7 @@ async def subscriber_status_poller_worker_loop() -> None:
 #### `Replacement` en `fastapi/src/workers/subscriber_status_poller.py`:
 ```python
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 """Worker de Sondeo Híbrido Escalonado (StaggeredSessionPoller) de Clientes y Dispositivos FTTH.
 

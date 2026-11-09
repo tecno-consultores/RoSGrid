@@ -1,6 +1,6 @@
 /* eslint-disable security/detect-unsafe-regex */
 // SPDX-License-Identifier: GPL-3.0-only
-// Copyright (C) 2026 RoSGrid Contributors
+// Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 /**
  * Módulo de Utilidades de Seguridad para Vue 3 (RoSGrid)

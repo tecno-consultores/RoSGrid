@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación 75: Eliminación de la Barra de Pestañas Redundante (`RouterWorkspaceTabsBar.vue`) en WebFig v7, Recuperación de Espacio Vertical (~50px) y Reubicación del Toggle Responsivo (`<= 1024px`) (Hito 28.18)
 

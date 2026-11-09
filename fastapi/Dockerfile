@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 FROM sinfallas/base-python-uv:3.15
 
 ARG BUILD_DATE="unknown"
 LABEL org.opencontainers.image.title="RoSGrid Backend API & Workers" \
       org.opencontainers.image.description="Backend Multi-Tenant para Flotas MikroTik RouterOS v7+" \
-      org.opencontainers.image.authors="Sinfallas <sinfallas@yahoo.com>" \
+      org.opencontainers.image.authors="Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)" \
       org.opencontainers.image.licenses="GPL-3.0-only" \
       org.opencontainers.image.created="${BUILD_DATE}"
 

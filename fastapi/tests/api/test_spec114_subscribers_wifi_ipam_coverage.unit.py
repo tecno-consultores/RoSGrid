@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 """Suite unitaria de cobertura profunda (Spec 114) para Subscribers, Wi-Fi CAPsMAN,
 IPAM, Inventory, WebFig Layer 2, Auth, DiagnosticGovernor y SyslogCollector."""

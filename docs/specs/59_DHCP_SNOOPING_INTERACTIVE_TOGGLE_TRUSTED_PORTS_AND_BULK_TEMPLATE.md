@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación Técnica 59: Activación/Configuración Interactiva de DHCP Snooping y Puertos Trusted/Untrusted por Bridge bajo Safe Mode (60s) + Plantilla Masiva en Flota (`SEGURIDAD_L2_DHCP_SNOOPING_Y_OPTION82`)
 

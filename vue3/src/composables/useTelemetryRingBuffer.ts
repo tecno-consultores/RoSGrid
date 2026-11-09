@@ -1,6 +1,6 @@
 /* eslint-disable security/detect-object-injection */
 // SPDX-License-Identifier: GPL-3.0-only
-// Copyright (C) 2026 RoSGrid Contributors
+// Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 import { ref, shallowRef, computed, onBeforeUnmount, triggerRef } from 'vue';
 import type { TelemetryPoint } from '@/types';

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 # Suite Integral de Aceptación BDD con Karate UI para RoSGrid Frontend
 
 Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid

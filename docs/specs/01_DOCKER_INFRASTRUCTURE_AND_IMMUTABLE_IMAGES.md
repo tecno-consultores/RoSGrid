@@ -59,7 +59,7 @@ Antigravity DEBE crear o actualizar el script `fastapi/scripts/entrypoint.sh` (v
 ~~~bash
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 LC_ALL=C
 set -euo pipefail
@@ -412,13 +412,13 @@ Para distribuir **RoSGrid** como imágenes listas para producción en Docker Hub
 
 ~~~dockerfile
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 FROM sinfallas/base-python-uv:3.15
 
 ARG BUILD_DATE="unknown"
 LABEL org.opencontainers.image.title="RoSGrid Backend API & Workers" \
       org.opencontainers.image.description="Backend Multi-Tenant para Flotas MikroTik RouterOS v7+" \
-      org.opencontainers.image.authors="Sinfallas <sinfallas@yahoo.com>" \
+      org.opencontainers.image.authors="Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)" \
       org.opencontainers.image.licenses="GPL-3.0-only" \
       org.opencontainers.image.created="${BUILD_DATE}"
 
@@ -457,7 +457,7 @@ ENTRYPOINT ["/usr/bin/env", "bash", "/app/scripts/entrypoint.sh"]
 
 ~~~dockerfile
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # --- Etapa 1: Compilación de la SPA Vue 3 + TypeScript ---
 FROM sinfallas/base-node-ionic:26 AS builder
@@ -476,7 +476,7 @@ FROM nginx:1.27-alpine
 ARG BUILD_DATE="unknown"
 LABEL org.opencontainers.image.title="RoSGrid Frontend UI" \
       org.opencontainers.image.description="Consola WebFig Multi-Tenant y Wallboard NOC para MikroTik RouterOS v7+" \
-      org.opencontainers.image.authors="Sinfallas <sinfallas@yahoo.com>" \
+      org.opencontainers.image.authors="Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)" \
       org.opencontainers.image.licenses="GPL-3.0-only" \
       org.opencontainers.image.created="${BUILD_DATE}"
 
@@ -504,7 +504,7 @@ Antigravity DEBE crear en `scripts/` el archivo ejecutable `build.sh` (`chmod +x
 
 ~~~bash
 #!/usr/bin/env bash
-# Made by Sinfallas <sinfallas@yahoo.com>
+# Made by Jesus Palencia <sinfallas@gmail.com>
 # Licence: GPL-3.0-only
 
 set -euo pipefail

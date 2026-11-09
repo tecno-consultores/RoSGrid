@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # --- Etapa 1: Compilación de la SPA Vue 3 + TypeScript ---
 FROM sinfallas/base-node-ionic:26 AS builder
@@ -18,7 +18,7 @@ FROM nginx:1.27-alpine
 ARG BUILD_DATE="unknown"
 LABEL org.opencontainers.image.title="RoSGrid Frontend UI" \
       org.opencontainers.image.description="Consola WebFig Multi-Tenant y Wallboard NOC para MikroTik RouterOS v7+" \
-      org.opencontainers.image.authors="Sinfallas <sinfallas@yahoo.com>" \
+      org.opencontainers.image.authors="Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)" \
       org.opencontainers.image.licenses="GPL-3.0-only" \
       org.opencontainers.image.created="${BUILD_DATE}"
 

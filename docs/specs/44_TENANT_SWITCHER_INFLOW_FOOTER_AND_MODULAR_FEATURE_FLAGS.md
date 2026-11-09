@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # 📑 Especificación 44: Conmutador Rápido de Tenants en Cabecera, Ergonomía de Pie de Página In-Flow y Gestión Táctica de Feature Flags por Empresa
 

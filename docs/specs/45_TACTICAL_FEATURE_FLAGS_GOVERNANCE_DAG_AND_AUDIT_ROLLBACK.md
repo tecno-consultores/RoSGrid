@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # 📑 Especificación 45: Gobernanza Táctica de Módulos B2B — DAG en Cascada (Hard Lock), Blindaje RBAC de Licenciamiento, Modo Contingencia y Auditoría Visual con Rollback
 

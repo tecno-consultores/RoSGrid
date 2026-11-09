@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación 81: Empuje Reactivo por WebSocket (`MAKER_CHECKER_REQUESTED` / `MAKER_CHECKER_RESOLVED`), Auto-Refresco Periódico (15s), Sincronización de Contadores de Pendientes y Botón `[ 🔄 Refrescar ]` en la Bandeja Maker-Checker (`/approvals`)
 

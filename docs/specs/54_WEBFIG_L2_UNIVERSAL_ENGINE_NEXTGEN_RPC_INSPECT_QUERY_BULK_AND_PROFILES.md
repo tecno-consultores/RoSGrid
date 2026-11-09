@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # 54 — EVOLUCIÓN NEXT-GEN DEL MOTOR DINÁMICO UNIVERSAL WEBFIG CAPA 2: ACCIONES RPC CONTEXTUALES, INTROSPECCIÓN `/console/inspect`, FILTRADO SERVER-SIDE (`.query`/`.proplist`), OPERACIONES POR LOTE (`BULK`), EXPORTACIÓN `.rsc` CON DIFF Y PERFILES/PRESETS (RoSGrid)
 

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 # Makefile canónico para desarrollo local, automatización y gobernanza Level-11X
 
 .PHONY: help audit test test-backend test-frontend smoke-fleet lint certify graphify map build build-local release clean

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación 62: Aislamiento de Destinatario en Kill-Switch de Sesiones (`SESSION_KILLED`) — Prevención de Cierre Colateral de Sesión del SuperAdmin en WebSocket y Pinia (Hito 28.7)
 

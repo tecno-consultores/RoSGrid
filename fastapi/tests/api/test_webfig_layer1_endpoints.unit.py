@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 """Pruebas unitarias para WebFig Capa 1: Interfaces, SFP DDM, IP, Anti-Suicidio, Firewall, Routing, PPP, Queues, System y Tools."""
 

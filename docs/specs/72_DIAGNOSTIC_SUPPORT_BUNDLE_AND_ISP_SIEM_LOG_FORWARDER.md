@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación Técnica 72: Paquete de Soporte y Diagnóstico Unificado (1-Click Support Bundle) y Conector SIEM Multi-Protocolo del ISP (Graylog / Loki / Syslog) — Spec Flash-Ready (Gemini 3.8 Flash High)
 
@@ -112,7 +112,7 @@ Crear el archivo nuevo [`fastapi/src/schemas/diagnostics_siem.py`](file:///home/
 
 ```python
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 """Esquemas Pydantic para Paquete de Diagnóstico 1-Click y Conector SIEM del ISP (Spec 72)."""
 
@@ -268,7 +268,7 @@ Crear el archivo nuevo [`fastapi/src/services/diagnostics_and_siem.py`](file:///
 
 ```python
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 """
 Servicio de Paquete de Soporte 1-Click (.zip/.tar.gz) con Sanitización de Secretos
@@ -1004,7 +1004,7 @@ Crear [`vue3/src/composables/useDiagnosticsCollector.ts`](file:///home/sinfallas
 
 ```typescript
 // SPDX-License-Identifier: GPL-3.0-only
-// Copyright (C) 2026 RoSGrid Contributors
+// Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 import { ref } from 'vue';
 import { http } from '@/api/httpClient';
@@ -1154,7 +1154,7 @@ Crear [`vue3/src/composables/useDiagnosticsCollector.unit.ts`](file:///home/sinf
 
 ```typescript
 // SPDX-License-Identifier: GPL-3.0-only
-// Copyright (C) 2026 RoSGrid Contributors
+// Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useDiagnosticsCollector } from './useDiagnosticsCollector';
@@ -1223,7 +1223,7 @@ Crear [`vue3/src/components/operations/DiagnosticsAndSiemPanel.vue`](file:///hom
 
 ```vue
 <!-- SPDX-License-Identifier: GPL-3.0-only -->
-<!-- Copyright (C) 2026 RoSGrid Contributors -->
+<!-- Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores) -->
 
 <script setup lang="ts">
   import { onMounted, ref } from 'vue';
@@ -1823,7 +1823,7 @@ Crear [`vue3/src/components/operations/DiagnosticsAndSiemPanel.unit.ts`](file://
 
 ```typescript
 // SPDX-License-Identifier: GPL-3.0-only
-// Copyright (C) 2026 RoSGrid Contributors
+// Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';

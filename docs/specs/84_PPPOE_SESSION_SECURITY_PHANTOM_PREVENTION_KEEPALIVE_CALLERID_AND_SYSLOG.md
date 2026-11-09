@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación 84: Seguridad de Sesiones PPPoE, Prevención de Sesiones Fantasma (`keepalive-timeout=10`, `one-session-per-host=yes`, `only-one=yes`), Candado MAC (`caller-id`), Telemetría Syslog PPPoE y Detección ICMP en Poller (Hito 30.6)
 

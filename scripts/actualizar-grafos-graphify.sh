@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 # Propósito: Extracción y actualización canónica de grafos semánticos AST (Graphify) para Backend y Frontend.
 # Cumple estrictamente con la Regla Cero (ejecución en contenedor Docker efímero).
 

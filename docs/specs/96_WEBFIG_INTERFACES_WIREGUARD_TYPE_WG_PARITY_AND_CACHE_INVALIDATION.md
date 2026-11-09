@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación 96: Paridad de Tipo Nativo RouterOS v7 (`type: "wg"` / `"wireguard"`) en la Pestaña WireGuard de `InterfacesAndSfpView.vue`, Fusión Defensiva de Sub-Endpoints y Sincronización de Caché KeyDB (`webfig_interfaces.py`)
 

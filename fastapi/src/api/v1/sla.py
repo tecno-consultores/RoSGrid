@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 """Endpoints del Monitor de Cumplimiento de SLA para Enlaces Dedicados (Hito 20.5 / docs/specs/33 §5)."""
 

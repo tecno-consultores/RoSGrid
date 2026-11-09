@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación 71: Conector Oficial a la API REST v2.0 de NIST NVD, Filtrado Estricto RouterOS v7 y Fusión Multi-Fuente de Boletines CVE (Hito 29.1)
 

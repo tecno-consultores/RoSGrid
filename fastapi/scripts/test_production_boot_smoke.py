@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 """Smoke Test de Arranque Estricto de Producción (--no-dev).
 
 Verifica que el Backend de RoSGrid pueda inicializarse y resolver todas sus

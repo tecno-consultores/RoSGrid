@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación Técnica 60: Auditoría Integral Bidireccional de Endpoints Huérfanos, Corrección de Rutas Desalineadas (404/405) y Paridad Total Backend ↔ Frontend Vue 3
 

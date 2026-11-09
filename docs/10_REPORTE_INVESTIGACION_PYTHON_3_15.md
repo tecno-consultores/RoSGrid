@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: GPL-3.0-only -->
-<!-- Copyright (C) 2026 RoSGrid Contributors -->
+<!-- Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores) -->
 
 # 10 — Reporte Técnico de Investigación: Migración a Python 3.15 y Adopción de `sinfallas/base-python-uv:3.15`
 

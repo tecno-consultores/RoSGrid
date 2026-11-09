@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 # Docker Compose para Pruebas Integrales Locales de Producción (Sin depender de Docker Hub)
 # Permite validar imágenes de producción (--no-dev) antes de publicarlas o desplegarlas.
 

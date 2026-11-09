@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación 97: Visibilidad Inmediata de Servidores y Redes DHCP en `IpAddressesAndDhcpView.vue` (Orden Canónico WinBox + Carga Paralela con Contadores) y Creación de Concesiones Estáticas DHCP (`POST /dhcp-server/leases`)
 

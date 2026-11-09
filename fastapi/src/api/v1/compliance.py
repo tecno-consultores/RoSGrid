@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 """Endpoints de Cumplimiento Normativo Corporativo: Config Drift & Auditoría CIS Benchmark (Hito 20.1 & 20.3)."""
 

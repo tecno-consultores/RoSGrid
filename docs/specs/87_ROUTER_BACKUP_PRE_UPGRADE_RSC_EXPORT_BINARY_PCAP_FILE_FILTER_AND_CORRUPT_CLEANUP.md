@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación 87: Corrección de Respaldos `.rsc` Vacíos (`"[]"`) en Pre-Upgrade, Filtrado `file?name=` ante Archivos Binarios (`.pcap`) en RouterOS v7 y Generación de Binario `.backup`
 

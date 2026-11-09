@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 """Pruebas unitarias para la expansión de CIS Benchmark (28 Directivas, Enlaces Oficiales) y Catálogo de Plantillas Masivas Avanzadas (Hito 27.11)."""
 

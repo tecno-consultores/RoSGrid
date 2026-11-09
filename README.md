@@ -375,6 +375,8 @@ Cualquier desarrollador que clone el repositorio puede utilizar estos recursos p
 
 ---
 
-## 📄 Licencia
+## 📄 Licencia y Autoría
+
+**Copyright (C) 2026 Jesus Palencia `<sinfallas@gmail.com>` (Creado en Tecno Consultores)**
 
 Este proyecto es Software Libre distribuido bajo los términos de la **GNU General Public License v3.0 (GPL-3.0-only)**. Consulta el archivo [LICENSE](./LICENSE) para más detalles.

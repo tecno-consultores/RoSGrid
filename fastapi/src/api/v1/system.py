@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 """Endpoints de Diagnóstico del Sistema y Telemetría Anónima de Instancias Activas (Spec 55 / Hito 27.18 y Spec 72 / Hito 29)."""
 

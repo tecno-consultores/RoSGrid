@@ -6,6 +6,9 @@ Todos los cambios relevantes de este proyecto se documentan en este archivo sigu
 
 ## [Unreleased]
 
+### Changed
+- **Unificación Global de Autoría y Copyright SPDX (`GPL-3.0-only`):** Estandarización de la cabecera legal `# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)` en los 514 archivos del repositorio, metadatos OCI de `Dockerfile`, `pyproject.toml`, `package.json`, manuales y `README.md`, eliminando referencias residuales a `RoSGrid Contributors` y correos personales antiguos.
+
 ### Fixed
 - **Paridad de Validación de Producción y Smoke Test `--no-dev` en `./scripts/build.sh` (`fastapi/scripts/test_production_boot_smoke.py`, `scripts/probar-prod-local.sh`, `docker-compose.prod.local.yml`, `scripts/build.sh`):** Sincronización de `settings.ROSGRID_ENV = "production"` antes de `create_app()`, aprovisionamiento de secretos efímeros de validación (`ROSGRID_ENV=production`, `ROSGRID_MCP_ENABLED=true`), propagación de `ROSGRID_ADMIN_PASSWORD` a `validar_comunicacion_front_back.py` y versión por defecto `1.1.0` en `scripts/build.sh`.
 

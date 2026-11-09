@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # 55 — GOBERNANZA GRANULAR DE FLAGS EN PERFILES DE USUARIO (30 ACCIONES RBAC + OVERRIDES INDIVIDUALES), TELEMETRÍA ANÓNIMA DE INSTANCIAS ACTIVAS (`rosgrid-web` BEACON) Y ARQUITECTURA DUAL DE OBSERVABILIDAD PROMETHEUS + GRAFANA (RoSGrid)
 
@@ -378,7 +378,7 @@ Crear el archivo `fastapi/migrations/versions/0012_user_profile_flags_and_router
 
 ```python
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 """0012_user_profile_flags_and_router_perms
 
@@ -587,7 +587,7 @@ Y añade los dos endpoints en `fastapi/src/api/v1/users.py`:
 1. **`fastapi/src/workers/telemetry_beacon_worker.py` (Complejidad `CC <= 4` por función):**
    ```python
    # SPDX-License-Identifier: GPL-3.0-only
-   # Copyright (C) 2026 RoSGrid Contributors
+   # Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
    import asyncio
    import hashlib

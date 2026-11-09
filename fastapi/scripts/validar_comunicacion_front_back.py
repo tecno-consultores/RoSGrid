@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 """Validación Integral de Comunicación Frontend - Backend (RoSGrid).
 
 Verifica la comunicación real entre todos los endpoints consumidos por el cliente

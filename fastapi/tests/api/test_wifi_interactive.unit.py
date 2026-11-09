@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 """Tests unitarios para la consola interactiva WiFi CAPsMAN v7 y endpoints de aprovisionamiento (Hito 27.13 / Spec 51)."""
 

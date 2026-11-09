@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación Técnica 65 — Corrección de Conteo RLS de Flota en Telemetría Anónima (Beacon), Persistencia de `fleet_bucket` en KeyDB y Paridad de Contrato JSON en Administración de Empresas (`/admin/tenants`)
 

@@ -3,7 +3,7 @@ title: "RoSGrid — Manual de Usuario y Operador NOC"
 subtitle: "Guía Práctica de Operación WebFig v7, Safe Mode, Maker-Checker, Monitoreo NOC, IPAM y Operaciones de Campo"
 version: "1.0.0"
 date: "2026-10-29"
-author: "Tecno Consultores 2023 C.A. & Colaboradores RoSGrid"
+author: "Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)"
 license: "GPL-3.0-only"
 ---
 

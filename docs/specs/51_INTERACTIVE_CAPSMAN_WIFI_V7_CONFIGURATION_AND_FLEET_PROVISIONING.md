@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # 📡 Especificación Técnica 51: Consola Táctica Interactiva CAPsMAN v7, Aprovisionamiento Masivo de Wi-Fi y Gestión de Clientes en Tiempo Real
 

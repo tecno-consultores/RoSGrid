@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación 61: Telemetría de SLA Real — Eliminación de IPs Hardcodeadas (`190.202.10.1`), Autodescubrimiento de Gateways WAN en RouterOS v7, Selector Desplegable con Quad9 (`9.9.9.9`) y Parser Nativo de RTT (Hito 28.6)
 

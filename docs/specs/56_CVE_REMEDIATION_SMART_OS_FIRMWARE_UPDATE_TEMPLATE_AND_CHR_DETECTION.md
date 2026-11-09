@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # 56 — REMEDIACIÓN DIRECTA DE CVES, PLANTILLA MASIVA INTELIGENTE DE ACTUALIZACIÓN ROUTEROS V7 + FIRMWARE ROUTERBOOT, SONDEO DE CANAL EN VIVO Y AUTO-DETECCIÓN CHR (RoSGrid — Hito 28.1)
 

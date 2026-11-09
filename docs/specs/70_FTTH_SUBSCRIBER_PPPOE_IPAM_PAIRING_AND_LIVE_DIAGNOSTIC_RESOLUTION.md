@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación 70: Emparejamiento de Abonados FTTH (DHCP, PPPoE e IP Estática/IPAM), Reparación de Modales en `/ipam` y Resolución Automática de IP en Diagnóstico de Campo (Hito 28.15)
 

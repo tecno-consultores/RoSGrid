@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 """Suite de pruebas unitarias para paridad CRUD WebFig v7 (Bridge, WireGuard, IP/DHCP/Pools/DNS, PPPoE, IPv6, Routing, Firewall) y auto-expiración WORM de ventanas de mantenimiento."""
 

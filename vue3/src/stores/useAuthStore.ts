@@ -1,6 +1,6 @@
 /* eslint-disable security/detect-object-injection, sonarjs/cognitive-complexity */
 // SPDX-License-Identifier: GPL-3.0-only
-// Copyright (C) 2026 RoSGrid Contributors
+// Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';

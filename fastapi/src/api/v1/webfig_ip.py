@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 """Endpoints WebFig Capa 1: Direccionamiento IPv4/IPv6, Rutas ECMP, ARP, Pools, DHCP, DNS y Servicios."""
 

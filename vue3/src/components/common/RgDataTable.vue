@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: GPL-3.0-only -->
-<!-- Copyright (C) 2026 RoSGrid Contributors -->
+<!-- Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores) -->
 
 <script setup lang="ts" generic="T extends object = Record<string, unknown>">
   /* eslint-disable security/detect-object-injection, sonarjs/no-duplicate-string */

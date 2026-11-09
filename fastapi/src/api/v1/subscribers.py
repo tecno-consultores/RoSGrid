@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 """Endpoints de Perfiles de Ancho de Banda (QoS) y Dispositivos de Abonados (Subscriber Devices).
 Arquitectura de Cero Facturación y Cero Datos Personales (Identificación Técnica Exclusiva).

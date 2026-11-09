@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación 69: Persistencia Relacional de `onboarding_completed` en PostgreSQL y Resiliencia ante Reinicio de Contenedores Docker
 
@@ -92,7 +92,7 @@ Crear el archivo `fastapi/migrations/versions/0013_tenant_onboarding_flag.py` (`
 
 ```python
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 """0013_tenant_onboarding_flag
 

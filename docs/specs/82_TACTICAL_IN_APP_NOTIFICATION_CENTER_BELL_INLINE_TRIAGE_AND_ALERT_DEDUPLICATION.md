@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación 82: Centro Táctico de Notificaciones In-App (`RgNotificationCenterBell.vue`), Triaje en Línea 1-Clic, Deduplicación Anti-Fatiga, Separación Visto vs. Resuelto, Alerta en Pestaña y Audio Opcional (`Subhito 30.4`)
 
@@ -47,7 +47,7 @@ Crear el archivo `vue3/src/components/common/RgNotificationCenterBell.vue` con s
 
 ```vue
 <!-- SPDX-License-Identifier: GPL-3.0-only -->
-<!-- Copyright (C) 2026 RoSGrid Contributors -->
+<!-- Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores) -->
 
 <script setup lang="ts">
   import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
@@ -1451,7 +1451,7 @@ Crear el archivo `vue3/src/components/common/RgNotificationCenterBell.unit.ts` v
 
 ```ts
 // SPDX-License-Identifier: GPL-3.0-only
-// Copyright (C) 2026 RoSGrid Contributors
+// Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mount, flushPromises } from '@vue/test-utils';

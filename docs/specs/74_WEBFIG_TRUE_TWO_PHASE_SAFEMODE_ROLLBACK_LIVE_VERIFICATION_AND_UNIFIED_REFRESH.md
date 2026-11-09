@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación Técnica 74: Motor Safe Mode Transaccional de 2 Fases en RouterOS v7 (Script + Scheduler Reales con Rollback Automático a los 60s), Verificación en Vivo sin WinBox y Homologación del Botón Refrescar (`?refresh=true`) — Spec Flash-Ready (Gemini 3.8 Flash High)
 

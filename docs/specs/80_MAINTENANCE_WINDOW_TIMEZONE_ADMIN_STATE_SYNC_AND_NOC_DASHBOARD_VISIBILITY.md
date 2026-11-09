@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación 80: Sincronización Automática de Ventanas de Mantenimiento con `admin_state` del Router, Estado Reactivo `En Curso` / `Programada`, Visibilidad en Wallboard NOC y Centro de Mando, y Resolución Humana de Actores/Routers en Cinta de Eventos WORM
 

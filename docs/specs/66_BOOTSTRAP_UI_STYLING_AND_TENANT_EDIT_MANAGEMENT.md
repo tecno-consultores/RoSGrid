@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación Técnica 66 — Homologación de Estilo Táctico del Botón de Inicialización (*Bootstrap*) en `LoginView.vue` y Edición Integral de Empresas / Cuotas Multi-Tenant en `/admin/tenants` (`TenantsManagementView.vue` y `PATCH /api/v1/tenants/{tenant_id}`)
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 # Generador automatizado de Software Bill of Materials (SBOM) CycloneDX 1.5 (OWASP DevGuide 5.3.4 / DISA STIG V-222658)
 
 LC_ALL=C

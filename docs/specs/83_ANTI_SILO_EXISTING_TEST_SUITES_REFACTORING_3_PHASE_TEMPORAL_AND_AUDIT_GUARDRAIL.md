@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación 83: Refactorización Integral de las Suites de Pruebas Existentes bajo el Criterio Anti-Silo (Propagación Transversal, 3 Fases Temporales, Erradicación de los 49 Mocks Ciegos de `write_audit_log` y Guardrail Estático `verify_anti_silo_test_quality.py` — `Subhito 30.5`)
 
@@ -113,7 +113,7 @@ def make_asserting_audit_mock(return_value: Any = None) -> Any:
 **`Target` en `fastapi/tests/api/test_inventory_and_vault_endpoints_full.unit.py` (líneas 1–16):**
 ```python
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
@@ -129,7 +129,7 @@ import pytest
 **`Replacement` en `fastapi/tests/api/test_inventory_and_vault_endpoints_full.unit.py`:**
 ```python
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
@@ -805,7 +805,7 @@ async def test_safemode_three_phase_temporal_lifecycle_and_rollback() -> None:
 ```python
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 """Guardrail estático QA 11X para el Invariante Anti-Silo (Sección 1.5).
 

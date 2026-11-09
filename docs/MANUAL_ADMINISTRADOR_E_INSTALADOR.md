@@ -3,7 +3,7 @@ title: "RoSGrid — Manual de Administrador e Instalador"
 subtitle: "Guía Oficial de Despliegue Inmutable, Preparación de MikroTik RouterOS v7, Seguridad Multi-Tenant y Operación de Plataforma"
 version: "1.0.0"
 date: "2026-10-29"
-author: "Tecno Consultores 2023 C.A. & Colaboradores RoSGrid"
+author: "Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)"
 license: "GPL-3.0-only"
 ---
 

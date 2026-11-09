@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 """Pruebas unitarias para Emparejamiento de Abonados FTTH (DHCP, PPPoE e IP Estática/IPAM),
 descubrimiento de candidatos en vivo y resolución automática de IP en Ping (Hito 28.15 - Spec 70).

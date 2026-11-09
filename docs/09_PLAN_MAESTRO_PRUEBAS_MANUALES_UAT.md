@@ -1,7 +1,7 @@
 # 📋 Plan Maestro de Pruebas Manuales y Aceptación de Usuario (UAT 11X) — RoSGrid
 
 **Licencia:** GPL-3.0-only  
-**Copyright:** (C) 2026 RoSGrid Contributors  
+**Copyright:** (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)  
 **Audiencia:** Ingenieros de Red, Administradores de Sistemas, Auditores de Seguridad y Operadores NOC  
 **Objetivo:** Certificar la experiencia humana de usuario, la estabilidad operativa de extremo a extremo (E2E) y la interacción real con equipos MikroTik RouterOS v7+ antes de cada pase a producción.
 

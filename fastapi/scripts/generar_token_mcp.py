@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 """
 Script de Generación de Tokens de Servicio de Larga Duración (Bearer JWT) para Agentes IA MCP.
 Permite emitir tokens estables para Hermes Agent y Claude Desktop asociados al rol SERVICE_ACCOUNT,

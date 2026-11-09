@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 """
 Script de Semilla (Seeder) y Creación del Super Administrador Inicial de RoSGrid.
 Permite aprovisionar el primer Tenant y el usuario SUPERADMIN_GLOBAL tanto de forma

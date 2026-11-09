@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación Técnica 73: Escala Proporcional Real por Ventana en Gráficas de Telemetría WebFig Live y Resiliencia en Reinicio de Router (HTTP 422 / Desconexión TCP) — Spec Flash-Ready (Gemini 3.8 Flash High)
 

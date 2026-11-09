@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación 77: Alta de Campo FTTH Centrada en MAC WAN, Aprovisionamiento Automático MikroTik desde IPAM (Reserva DHCP / Secreto PPPoE) y Arquitectura Desacoplada Nodo Físico L2 Bridge (`r3`) vs. Router Cabecera BNG (`r111`) (Hito 28.20)
 

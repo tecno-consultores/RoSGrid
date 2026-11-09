@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación Técnica 53: Paridad de Sistema de Diseño Frontend, Persistencia de Tema/Densidad, Higiene de Metadatos Zero-Trust (`X-Robots-Tag`), Accesibilidad Móvil (`data-label`) y Contexto `llms.txt` para Agentes MCP
 

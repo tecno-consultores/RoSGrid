@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 """Endpoints de Gestión de Cajas NAP (Optical Distribution Boxes / ODB / Infraestructura Pasiva).
 Permite inventariar cajas en postes/fachadas, consultar matriz de puertos y clientes conectados.

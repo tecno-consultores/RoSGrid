@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación 85: Resiliencia de Actualización RouterOS v7 en CHR y RouterBOARD — Timeout Extendido (`180s`), Fallback `/tool/fetch` `.npk`, Tolerancia `/system/routerboard` y Verificación Real por Equipo en UI (Hito 30.8)
 

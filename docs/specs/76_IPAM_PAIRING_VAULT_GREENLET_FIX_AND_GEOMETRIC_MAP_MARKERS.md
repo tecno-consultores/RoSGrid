@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación 76: Corrección de `MissingGreenlet` (`HTTP 500`) en Emparejamiento IPAM (`Router.vault`) y Simbología Geométrica Cartográfica (`●` Routers, `■` Cajas NAP, `▲` Clientes) con Anti-Solapamiento Orbital en `UnifiedNetworkMap.vue` (Hito 28.19)
 

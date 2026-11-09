@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 """Pruebas unitarias para Sondeo SLA Rápido en Tiempo Real (/rest/ping) y Parsing RTT (Hito 30.14 - Spec 91)."""
 

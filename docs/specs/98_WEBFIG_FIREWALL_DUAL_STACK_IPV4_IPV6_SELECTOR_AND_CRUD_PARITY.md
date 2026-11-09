@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación 98: Paridad Dual-Stack IPv4 / IPv6 en `FirewallRulesView.vue` (`/ip/firewall` y `/ipv6/firewall`), Selector de Protocolo con Sincronización de Ruta (`?proto=ipv6`) y Soporte CRUD Completo de Reglas IPv6
 

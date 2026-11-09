@@ -1,6 +1,6 @@
 /* eslint-disable security/detect-non-literal-regexp */
 // SPDX-License-Identifier: GPL-3.0-only
-// Copyright (C) 2026 RoSGrid Contributors
+// Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 import { ref, computed } from 'vue';
 import esDict from '@/locales/es.json';

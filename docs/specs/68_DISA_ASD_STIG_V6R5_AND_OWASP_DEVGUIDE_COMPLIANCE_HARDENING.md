@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación 68: Endurecimiento Normativo DISA ASD STIG V6R5 (XCCDF) y OWASP Developer Guide v4.2.0
 
@@ -852,7 +852,7 @@ Crear `scripts/generar-sbom-cyclonedx.sh` (ejecutado 100% en contenedor Docker e
 ```bash
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 # Generador automatizado de Software Bill of Materials (SBOM) CycloneDX 1.5 (OWASP DevGuide 5.3.4 / DISA STIG V-222658)
 
 set -euo pipefail

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación 88: Desbloqueo del Onboarding Inicial para `TENANT_ADMIN`, Asignación Directa de Empresa (`tenant_id`) a Usuarios en `/admin/users` y Guardrail `WebSocketDisconnected`
 

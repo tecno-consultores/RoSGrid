@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 """Motor Safe Mode (Dead Man's Switch) anti-bloqueo para RouterOS v7+ usando /system/script y /system/scheduler."""
 

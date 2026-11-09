@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación 63: Columnas Auto-Ajustables al Contenido (*Content-Hugging*) en `RgDataTable.vue` y Ergonomía Responsiva de la Tabla de Inventario (Hito 28.8)
 

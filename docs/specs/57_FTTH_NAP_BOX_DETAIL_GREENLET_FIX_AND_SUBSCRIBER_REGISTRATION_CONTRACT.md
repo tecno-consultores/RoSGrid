@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación 57: Corrección de Serialización Asíncrona (`MissingGreenlet`) en Detalle de Cajas NAP (`/subscribers/map`) y Contrato de Registro FTTH en Técnico de Campo (`/field-ops`) — Hito 28.2
 

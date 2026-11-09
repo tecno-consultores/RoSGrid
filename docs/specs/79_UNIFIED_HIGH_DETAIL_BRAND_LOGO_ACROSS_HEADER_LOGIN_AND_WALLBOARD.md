@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Copyright (C) 2026 RoSGrid Contributors
+# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 # Especificación 79: Unificación del Isotipo de Alta Definición (`512×512` Mesh + Glow) en `RgBrandLogo.vue` para Cabecera Global (`RgResponsiveShell.vue`) y Pantalla de Acceso (`LoginView.vue`) (Hito 30.1)
 
@@ -36,7 +36,7 @@ Reemplazar el contenido de [`vue3/src/components/common/RgBrandLogo.vue`](file:/
 #### `Target` en `vue3/src/components/common/RgBrandLogo.vue`:
 ```vue
 <!-- SPDX-License-Identifier: GPL-3.0-only -->
-<!-- Copyright (C) 2026 RoSGrid Contributors -->
+<!-- Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores) -->
 
 <script setup lang="ts">
   withDefaults(
@@ -244,7 +244,7 @@ Reemplazar el contenido de [`vue3/src/components/common/RgBrandLogo.vue`](file:/
 #### `Replacement` en `vue3/src/components/common/RgBrandLogo.vue`:
 ```vue
 <!-- SPDX-License-Identifier: GPL-3.0-only -->
-<!-- Copyright (C) 2026 RoSGrid Contributors -->
+<!-- Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores) -->
 
 <script setup lang="ts">
   withDefaults(
