@@ -679,7 +679,10 @@ async def test_syslog_collector_worker_loop_bind_and_cancel():
     mock_proto.ip_router_map = {}
 
     with (
-        patch("src.workers.syslog_collector.load_ip_router_map", AsyncMock(return_value={"10.0.0.1": (uuid.uuid4(), uuid.uuid4())})),
+        patch(
+            "src.workers.syslog_collector.load_router_syslog_maps",
+            AsyncMock(return_value=({"10.0.0.1": (uuid.uuid4(), uuid.uuid4())}, {})),
+        ),
         patch("asyncio.get_running_loop") as mock_get_loop,
     ):
         mock_loop = MagicMock()
@@ -699,7 +702,10 @@ async def test_syslog_collector_worker_loop_bind_and_cancel():
 @pytest.mark.asyncio
 async def test_syslog_collector_worker_loop_bind_error():
     with (
-        patch("src.workers.syslog_collector.load_ip_router_map", AsyncMock(return_value={})),
+        patch(
+            "src.workers.syslog_collector.load_router_syslog_maps",
+            AsyncMock(return_value=({}, {})),
+        ),
         patch("asyncio.get_running_loop") as mock_get_loop,
     ):
         mock_loop = MagicMock()
