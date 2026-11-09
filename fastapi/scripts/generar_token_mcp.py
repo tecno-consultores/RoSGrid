@@ -10,6 +10,7 @@ registrando la sesión activa en KeyDB sin requerir interacción web ni códigos
 import argparse
 import asyncio
 import json
+import secrets
 import sys
 import time
 import uuid
@@ -19,8 +20,17 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from src.core.config import settings
+from src.core.crypto import hash_password
 from src.models.core import SystemRoleEnum, Tenant, User
 from src.redis_layer.client import get_redis_client
+
+DEFAULT_MCP_CIDRS: list[str] = [
+    "127.0.0.1/32",
+    "172.16.0.0/12",
+    "10.0.0.0/8",
+    "192.168.0.0/16",
+    "::1/128",
+]
 
 
 def parse_args() -> argparse.Namespace:
@@ -31,6 +41,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--tenant-slug", help="Slug de la organización (opcional)", default=None)
     parser.add_argument("--expiry-days", help="Días de validez del token (default: 365 días)", type=int, default=365)
     parser.add_argument(
+        "--allowed-cidrs",
+        help="Lista de CIDRs separados por coma autorizados para el SERVICE_ACCOUNT",
+        default=None,
+    )
+    parser.add_argument(
         "--raw-token",
         help="Imprimir únicamente la cadena del token JWT en stdout (ideal para pipelines y scripts)",
         action="store_true",
@@ -38,33 +53,119 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-async def generate_mcp_token(
-    session: AsyncSession, username: str, tenant_slug: str | None, expiry_days: int
-) -> tuple[str, str, str, str]:
-    # 1. Buscar usuario
+async def _resolve_or_provision_service_account(
+    session: AsyncSession,
+    username: str,
+    tenant_slug: str | None,
+    allowed_cidrs: str | None,
+) -> tuple[User, Tenant]:
+    cidrs_list = (
+        [c.strip() for c in allowed_cidrs.split(",") if c.strip()]
+        if allowed_cidrs
+        else list(DEFAULT_MCP_CIDRS)
+    )
+
     stmt = select(User).where(User.username == username)
-    res = await session.execute(stmt)
-    user = res.scalar_one_or_none()
+    user = (await session.execute(stmt)).scalar_one_or_none()
 
-    if not user:
-        print(f"[ERROR] No se encontró el usuario '{username}' en la base de datos.", file=sys.stderr)
-        sys.exit(1)
+    if user:
+        tenant = (await session.execute(select(Tenant).where(Tenant.id == user.tenant_id))).scalar_one_or_none()
+        if not tenant:
+            print(f"[ERROR] Organización asociada a '{username}' no encontrada.", file=sys.stderr)
+            sys.exit(1)
+        if tenant_slug and tenant.slug != tenant_slug:
+            print(f"[ERROR] El usuario pertenece al tenant '{tenant.slug}', no a '{tenant_slug}'.", file=sys.stderr)
+            sys.exit(1)
 
-    # 2. Obtener Tenant
-    res_t = await session.execute(select(Tenant).where(Tenant.id == user.tenant_id))
-    tenant = res_t.scalar_one_or_none()
-    if not tenant:
-        print(f"[ERROR] Organización asociada a '{username}' no encontrada.", file=sys.stderr)
-        sys.exit(1)
+        if user.role != SystemRoleEnum.SERVICE_ACCOUNT:
+            svc_username = f"{username}_mcp"
+            print(
+                f"[INFO] El usuario '{username}' tiene rol '{user.role.value}'. "
+                f"Resolviendo cuenta SERVICE_ACCOUNT dedicada ('{svc_username}') para Zero-Trust MCP...",
+                file=sys.stderr,
+            )
+            svc_stmt = select(User).where(
+                User.tenant_id == tenant.id,
+                User.username == svc_username,
+            )
+            svc_user = (await session.execute(svc_stmt)).scalar_one_or_none()
+            if not svc_user:
+                svc_user = User(
+                    id=uuid.uuid4(),
+                    tenant_id=tenant.id,
+                    username=svc_username,
+                    email=f"{svc_username}@{tenant.slug}.local",
+                    full_name=f"MCP Service Account ({svc_username})",
+                    password_hash=hash_password(secrets.token_urlsafe(24)),
+                    role=SystemRoleEnum.SERVICE_ACCOUNT,
+                    is_active=True,
+                    is_locked=False,
+                    failed_login_attempts=0,
+                    totp_enabled=False,
+                    has_all_routers_access=True,
+                    allowed_cidr_list=cidrs_list,
+                )
+                session.add(svc_user)
+                await session.commit()
+                await session.refresh(svc_user)
+            user = svc_user
+    else:
+        if tenant_slug:
+            tenant = (await session.execute(select(Tenant).where(Tenant.slug == tenant_slug))).scalar_one_or_none()
+        else:
+            tenant = (await session.execute(select(Tenant).limit(1))).scalar_one_or_none()
 
-    if tenant_slug and tenant.slug != tenant_slug:
-        print(f"[ERROR] El usuario pertenece al tenant '{tenant.slug}', no a '{tenant_slug}'.", file=sys.stderr)
-        sys.exit(1)
+        if not tenant:
+            print(
+                f"[ERROR] No se encontró la organización '{tenant_slug or 'principal'}' para aprovisionar '{username}'.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
 
-    # 3. Advertencia si no es SERVICE_ACCOUNT
-    if user.role != SystemRoleEnum.SERVICE_ACCOUNT:
-        print(f"[AVISO] El usuario '{username}' tiene rol '{user.role.value}', no 'SERVICE_ACCOUNT'.", file=sys.stderr)
-        print("El endpoint MCP /api/v1/mcp rechazará llamadas si el token no pertenece a SERVICE_ACCOUNT.", file=sys.stderr)
+        print(
+            f"[INFO] Aprovisionando cuenta SERVICE_ACCOUNT '{username}' en organización '{tenant.slug}'...",
+            file=sys.stderr,
+        )
+        user = User(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            username=username,
+            email=f"{username}@{tenant.slug}.local",
+            full_name=f"MCP Service Account ({username})",
+            password_hash=hash_password(secrets.token_urlsafe(24)),
+            role=SystemRoleEnum.SERVICE_ACCOUNT,
+            is_active=True,
+            is_locked=False,
+            failed_login_attempts=0,
+            totp_enabled=False,
+            has_all_routers_access=True,
+            allowed_cidr_list=cidrs_list,
+        )
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+
+    if not user.allowed_cidr_list or allowed_cidrs is not None:
+        user.allowed_cidr_list = cidrs_list
+        await session.commit()
+        await session.refresh(user)
+
+    return user, tenant
+
+
+async def generate_mcp_token(
+    session: AsyncSession,
+    username: str,
+    tenant_slug: str | None,
+    expiry_days: int,
+    allowed_cidrs: str | None = None,
+) -> tuple[str, str, str, str]:
+    user, tenant = await _resolve_or_provision_service_account(
+        session=session,
+        username=username,
+        tenant_slug=tenant_slug,
+        allowed_cidrs=allowed_cidrs,
+    )
 
     # 4. Generar identificador de sesión y registrar en KeyDB
     session_id = str(uuid.uuid4())
@@ -131,6 +232,7 @@ async def main() -> None:
             username=args.username,
             tenant_slug=args.tenant_slug,
             expiry_days=args.expiry_days,
+            allowed_cidrs=args.allowed_cidrs,
         )
 
         if args.raw_token:

@@ -4,6 +4,7 @@
 # Propósito: Extracción y actualización canónica de grafos semánticos AST (Graphify) para Backend y Frontend.
 # Cumple estrictamente con la Regla Cero (ejecución en contenedor Docker efímero).
 
+LC_ALL=C
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

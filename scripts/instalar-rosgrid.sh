@@ -3,6 +3,7 @@
 # Copyright (C) 2026 RoSGrid Contributors
 # Script de Instalación No-Root para RoSGrid v1.0.0 (Soporte Local y Remoto vía curl)
 
+LC_ALL=C
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

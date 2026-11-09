@@ -3,6 +3,7 @@
 # Copyright (C) 2026 RoSGrid Contributors
 # Propósito: Apertura rápida en el navegador de los mapas interactivos AST de RoSGrid (Backend y Frontend).
 
+LC_ALL=C
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

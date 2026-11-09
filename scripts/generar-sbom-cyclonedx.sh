@@ -3,6 +3,7 @@
 # Copyright (C) 2026 RoSGrid Contributors
 # Generador automatizado de Software Bill of Materials (SBOM) CycloneDX 1.5 (OWASP DevGuide 5.3.4 / DISA STIG V-222658)
 
+LC_ALL=C
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

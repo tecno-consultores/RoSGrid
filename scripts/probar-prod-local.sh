@@ -46,7 +46,7 @@ Fases del Pipeline de Validación:
   [2/6] Despliegue en Aislamiento Sintético con docker-compose.prod.local.yml
   [3/6] Estabilización y Verificación de Healthchecks (PostgreSQL, KeyDB, FastAPI, Worker)
   [4/6] Pruebas Sintéticas HTTP, Hardening y Proxy Nginx (/health, /metrics, proxy, 404 docs, 401 unauth)
-  [5/6] Aprovisionamiento E2E, Token MCP, Invocación JSON-RPC y Suite Front-Back (26 Contratos)
+  [5/6] Aprovisionamiento E2E, Token MCP, Invocación JSON-RPC y Suite Front-Back (28 Contratos)
   [6/6] Inspección de Logs (API y Worker), Aislamiento de Red y Cierre Limpio
 
 Ejemplos:
@@ -258,10 +258,10 @@ else
     echo "$BOOTSTRAP_STATUS_AFTER" | grep -q '"is_bootstrapped":true'
     echo "✔ Verificado que el sistema transiciona a 'is_bootstrapped: true' tras ejecutar crear_admin.py."
 
-    # Prueba de Generación y Validación de Token Bearer MCP
+    # Prueba de Generación y Validación de Token Bearer MCP (SERVICE_ACCOUNT Zero-Trust)
     echo "Probando generación de Token MCP con generar_token_mcp.py..."
     TOKEN_MCP=$(docker exec rosgrid_api_local python3 /app/scripts/generar_token_mcp.py \
-        --username "admin_local" \
+        --username "mcp_local" \
         --tenant-slug "isp-local" \
         --raw-token)
 
@@ -274,7 +274,8 @@ else
     # Llamada autenticada con Bearer Token a /api/v1/auth/me
     ME_RESPONSE=$(curl -fsS -H "Authorization: Bearer ${TOKEN_MCP}" http://127.0.0.1:8000/api/v1/auth/me)
     echo "Respuesta de autenticación Bearer /api/v1/auth/me: $ME_RESPONSE"
-    echo "$ME_RESPONSE" | grep -q '"tslug":"isp-local"'
+    grep -q '"tslug":"isp-local"' <<< "$ME_RESPONSE"
+    grep -q '"rol":"SERVICE_ACCOUNT"' <<< "$ME_RESPONSE"
     echo "✔ Verificado que el Token Bearer MCP autentica exitosamente contra KeyDB y la API REST."
 
     # Invocación Real del Servidor MCP JSON-RPC 2.0 (POST /api/v1/mcp)
@@ -285,8 +286,8 @@ else
         -H "Authorization: Bearer ${TOKEN_MCP}" \
         -d "$MCP_RPC_PAYLOAD" \
         http://127.0.0.1:8000/api/v1/mcp)
-    echo "Respuesta MCP JSON-RPC 2.0: $(echo "$MCP_RESPONSE" | cut -c1-120)..."
-    echo "$MCP_RESPONSE" | grep -q '"tools"'
+    echo "Respuesta MCP JSON-RPC 2.0: ${MCP_RESPONSE:0:120}..."
+    grep -q '"tools"' <<< "$MCP_RESPONSE"
     echo "✔ Endpoint MCP (/api/v1/mcp) respondió JSON-RPC 2.0 con catálogo de Tools semánticas correctamente."
 
     # Ejecución de la Suite de 28 Contratos Front-Back (validar_comunicacion_front_back.py)

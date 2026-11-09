@@ -17,6 +17,7 @@ Todos los cambios relevantes de este proyecto se documentan en este archivo sigu
 
 ### Fixed
 - **Centrado Cartográfico en Sede Central para Técnico de Campo (`vue3/src/components/field/FieldTechMobileView.vue`, `RgResponsiveShell.vue`, `UnifiedNetworkMap.vue` — Spec 113):** Sincronización automática de `authStore.tenantHqCoordinates` al montar la consola y centrado reactivo del mapa del Técnico de Campo en las coordenadas de la Oficina Central del tenant.
+- **Aprovisionamiento Zero-Trust `SERVICE_ACCOUNT` en Pipeline de Validación y Generador CLI MCP (`fastapi/scripts/generar_token_mcp.py`, `scripts/probar-prod-local.sh`):** Resolución y aprovisionamiento automático de cuenta `SERVICE_ACCOUNT` con lista blanca CIDR (`allowed_cidr_list` incluyendo subredes locales y puente Docker) para garantizar cumplimiento con el aislamiento Zero-Trust de `POST /api/v1/mcp` durante `./scripts/build.sh`.
 
 ---
 
