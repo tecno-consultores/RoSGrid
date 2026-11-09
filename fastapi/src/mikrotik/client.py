@@ -45,7 +45,7 @@ class MikrotikApiError(MikrotikClientError):
 
 
 class MikrotikRestClient:
-    """Cliente HTTP asíncrono optimizado para RouterOS v7.1+ REST API (/rest/*)."""
+    """Cliente HTTP asíncrono optimizado para RouterOS v7.13+ REST API (/rest/*)."""
 
     def __init__(
         self,

@@ -163,10 +163,10 @@
           </ul>
         </section>
 
-        <!-- Notas Técnicas MikroTik RouterOS v7.1+ -->
+        <!-- Notas Técnicas MikroTik RouterOS v7.13+ -->
         <section class="help-section help-section--mikrotik" aria-labelledby="help-sec-ros">
           <h3 id="help-sec-ros" class="help-section-title">
-            🔧 Notas Técnicas MikroTik RouterOS v7.1+
+            🔧 Notas Técnicas MikroTik RouterOS v7.13+
           </h3>
           <ul class="help-bullet-list">
             <li

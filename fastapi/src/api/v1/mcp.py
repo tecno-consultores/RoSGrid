@@ -781,7 +781,7 @@ _CANONICAL_MIKROTIK_DOCS_INDEX: list[dict[str, str]] = [
         "summary": "Referencia oficial de endpoints HTTPS /rest/*, verbos GET/POST/PATCH/PUT/DELETE, menús singleton (/set) y .proplist/.query.",
         "content": (
             "# RouterOS v7 REST API Reference\n"
-            "- Requiere RouterOS v7.1+ (política `rest-api` separada a partir de v7.13+).\n"
+            "- Requiere RouterOS v7.13+ (política `rest-api` obligatoria).\n"
             "- Los menús singleton (ej. `/rest/ip/dns`, `/rest/system/identity`) se actualizan con `POST /rest/<menu>/set`.\n"
             "- Las colecciones admiten filtrado mediante `?.query` y proyección con `.proplist`.\n"
             "- Para exportar configuración `/rest/export` con `file=...`, el grupo de usuario requiere el permiso `ftp` además de `read,write,api,rest-api,test,reboot,policy,sensitive`."

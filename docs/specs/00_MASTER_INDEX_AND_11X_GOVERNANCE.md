@@ -7,7 +7,7 @@
 ## 1. Identidad del Proyecto y Licencia Legal
 
 * **Nombre Oficial del Sistema:** `RoSGrid`
-* **Propósito:** Consola web centralizada Multi-Tenant de alta seguridad que permite administrar, diagnosticar, auditar, respaldar y operar flotas de routers MikroTik con **RouterOS v7.1+** exclusivamente a través de su **REST API nativa sobre HTTPS (`/rest/*`)**, replicando la capacidad técnica de WebFig/WinBox sin almacenar métricas históricas en base de datos ni incluir módulos de facturación, e incorporando un conector **MCP Protegido (`/api/v1/mcp`)** para agentes IA (`Hermes Agent`, `Claude`).
+* **Propósito:** Consola web centralizada Multi-Tenant de alta seguridad que permite administrar, diagnosticar, auditar, respaldar y operar flotas de routers MikroTik con **RouterOS v7.13+** exclusivamente a través de su **REST API nativa sobre HTTPS (`/rest/*`)**, replicando la capacidad técnica de WebFig/WinBox sin almacenar métricas históricas en base de datos ni incluir módulos de facturación, e incorporando un conector **MCP Protegido (`/api/v1/mcp`)** para agentes IA (`Hermes Agent`, `Claude`).
 * **Licencia Obligatoria:** **GNU General Public License v3.0 (`GPL-3.0-only`)**.
   * Todo archivo de código fuente (`.py`, `.ts`, `.vue`, `.sh`, `Dockerfile`) DEBE incluir el encabezado SPDX estándar en sus primeras líneas:
 

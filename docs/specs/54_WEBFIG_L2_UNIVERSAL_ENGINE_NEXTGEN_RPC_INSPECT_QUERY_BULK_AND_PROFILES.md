@@ -3,7 +3,7 @@
 
 # 54 — EVOLUCIÓN NEXT-GEN DEL MOTOR DINÁMICO UNIVERSAL WEBFIG CAPA 2: ACCIONES RPC CONTEXTUALES, INTROSPECCIÓN `/console/inspect`, FILTRADO SERVER-SIDE (`.query`/`.proplist`), OPERACIONES POR LOTE (`BULK`), EXPORTACIÓN `.rsc` CON DIFF Y PERFILES/PRESETS (RoSGrid)
 
-> **[DIRECTIVA DE SISTEMA PARA ANTIGRAVITY]:** Este documento especifica la arquitectura del **Hito 27.16**, diseñado para evolucionar el **Motor Dinámico Universal WebFig de Capa 2** (`fastapi/src/api/v1/webfig_layer2.py`, `fastapi/src/schemas/webfig_layer2.py` y `vue3/src/views/DynamicLayer2ResourceView.vue`) desde un visor CRUD genérico (`GET`, `PUT`, `PATCH`, `DELETE`) hacia un motor de ingeniería NOC de segunda generación que aprovecha las capacidades avanzadas del motor C++ de **MikroTik RouterOS v7.1+** sobre `/rest/*`, preservando el 100% de las garantías Zero-Trust de RoSGrid (**RBAC `can_write_layer2`**, **Idempotencia en KeyDB**, **Pinning SSL TOFU**, **Intercepción Maker-Checker HTTP 202**, **Safe Mode de 60 segundos** y **Auditoría Forense Inmutable WORM**).
+> **[DIRECTIVA DE SISTEMA PARA ANTIGRAVITY]:** Este documento especifica la arquitectura del **Hito 27.16**, diseñado para evolucionar el **Motor Dinámico Universal WebFig de Capa 2** (`fastapi/src/api/v1/webfig_layer2.py`, `fastapi/src/schemas/webfig_layer2.py` y `vue3/src/views/DynamicLayer2ResourceView.vue`) desde un visor CRUD genérico (`GET`, `PUT`, `PATCH`, `DELETE`) hacia un motor de ingeniería NOC de segunda generación que aprovecha las capacidades avanzadas del motor C++ de **MikroTik RouterOS v7.13+** sobre `/rest/*`, preservando el 100% de las garantías Zero-Trust de RoSGrid (**RBAC `can_write_layer2`**, **Idempotencia en KeyDB**, **Pinning SSL TOFU**, **Intercepción Maker-Checker HTTP 202**, **Safe Mode de 60 segundos** y **Auditoría Forense Inmutable WORM**).
 
 ---
 
@@ -37,7 +37,7 @@ flowchart TB
         WormAudit["Bitácora Forense WORM (audit_logs)<br>• L2_RPC_COMMAND_EXECUTED<br>• L2_BULK_MUTATION_EXECUTED<br>• L2_SUBMENU_EXPORTED"]
     end
 
-    subgraph "MikroTik RouterOS v7.1+ (HTTPS /rest/*)"
+    subgraph "MikroTik RouterOS v7.13+ (HTTPS /rest/*)"
         RosInspect["POST /rest/console/inspect<br>(syntax & completion)"]
         RosPrint["POST /rest/<menu>/print<br>(.proplist & .query)"]
         RosRpc["POST /rest/<menu>/<acción><br>(sign, add-acme, make-static, run)"]

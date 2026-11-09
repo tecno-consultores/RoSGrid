@@ -1,6 +1,6 @@
 # 15 — ENDPOINTS BACKEND WEBFIG CAPA 2: MOTOR DINÁMICO UNIVERSAL PARA EL 100% DE ROUTEROS v7 (RoSGrid)
 
-**\[DIRECTIVA PARA ANTIGRAVITY\]:** Este documento especifica la arquitectura y contratos del **Motor Dinámico Universal WebFig (Capa 2)** en fastapi/src/api/v1/webfig\_dynamic\_l2.py y fastapi/src/services/webfig\_l2\_service.py. Mientras la Capa 1 ofrece vistas especializadas para los módulos de uso diario, la **Capa 2** permite operar el **100% restante de los menús de RouterOS v7.1+** (incluyendo MPLS, VXLAN, ZeroTier, Containers, IoT, CAPsMAN/WifiWave2 avanzado, User-Manager, RADIUS, BFD avanzado, IPv6 ND, Certificates, SNMP, etc.) pasando por el mismo tubo de seguridad de RoSGrid: **RBAC, Idempotencia en Redis, Pinning SSL TOFU, Intercepción Maker-Checker, Safe Mode Anti-Bloqueo y Auditoría Inmutable**.
+**\[DIRECTIVA PARA ANTIGRAVITY\]:** Este documento especifica la arquitectura y contratos del **Motor Dinámico Universal WebFig (Capa 2)** en fastapi/src/api/v1/webfig\_dynamic\_l2.py y fastapi/src/services/webfig\_l2\_service.py. Mientras la Capa 1 ofrece vistas especializadas para los módulos de uso diario, la **Capa 2** permite operar el **100% restante de los menús de RouterOS v7.13+** (incluyendo MPLS, VXLAN, ZeroTier, Containers, IoT, CAPsMAN/WifiWave2 avanzado, User-Manager, RADIUS, BFD avanzado, IPv6 ND, Certificates, SNMP, etc.) pasando por el mismo tubo de seguridad de RoSGrid: **RBAC, Idempotencia en Redis, Pinning SSL TOFU, Intercepción Maker-Checker, Safe Mode Anti-Bloqueo y Auditoría Inmutable**.
 
 
 

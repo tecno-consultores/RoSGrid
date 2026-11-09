@@ -9,7 +9,7 @@ license: "GPL-3.0-only"
 
 # 📘 Manual de Usuario y Operador NOC — RoSGrid
 
-**Consola Centralizada Multi-Tenant para Operación Técnica de Flotas MikroTik RouterOS v7.1+**  
+**Consola Centralizada Multi-Tenant para Operación Técnica de Flotas MikroTik RouterOS v7.13+**  
 **Sitio Oficial:** [https://rosgrid.net](https://rosgrid.net) • **Licencia:** GNU GPLv3 (`GPL-3.0-only`)
 
 ---

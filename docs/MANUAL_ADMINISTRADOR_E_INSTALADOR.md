@@ -9,7 +9,7 @@ license: "GPL-3.0-only"
 
 # 🛠️ Manual de Administrador e Instalador — RoSGrid
 
-**Plataforma Centralizada Multi-Tenant y Servidor MCP para Flotas MikroTik RouterOS v7.1+**  
+**Plataforma Centralizada Multi-Tenant y Servidor MCP para Flotas MikroTik RouterOS v7.13+**  
 **Sitio Oficial:** [https://rosgrid.net](https://rosgrid.net) • **Licencia:** GNU GPLv3 (`GPL-3.0-only`)
 
 ---
@@ -31,7 +31,7 @@ license: "GPL-3.0-only"
 
 ## 1. Visión General de la Arquitectura de Plataforma
 
-**RoSGrid** es una consola de gestión técnica, seguridad y automatización diseñada para administrar flotas de routers **MikroTik con RouterOS v7.1 o superior** exclusivamente a través de su **API REST nativa sobre HTTPS (`/rest/*`)**.
+**RoSGrid** es una consola de gestión técnica, seguridad y automatización diseñada para administrar flotas de routers **MikroTik con RouterOS v7.13 o superior** exclusivamente a través de su **API REST nativa sobre HTTPS (`/rest/*`)**.
 
 ### 1.1 Diagrama de Componentes y Flujo de Seguridad
 
@@ -189,7 +189,7 @@ sequenceDiagram
 
 ## 5. Preparación y Endurecimiento de Routers MikroTik RouterOS v7
 
-Para que RoSGrid gestione un equipo MikroTik (físico CCR, CRS, RB o virtual CHR) con **RouterOS v7.1+**, el equipo debe tener habilitado el servicio `www-ssl` (HTTPS) y un usuario con políticas `api` y `rest-api`.
+Para que RoSGrid gestione un equipo MikroTik (físico CCR, CRS, RB o virtual CHR) con **RouterOS v7.13+**, el equipo debe tener habilitado el servicio `www-ssl` (HTTPS) y un usuario con políticas `api` y `rest-api`.
 
 ### 5.1 Script CLI Canónico para el Router MikroTik
 

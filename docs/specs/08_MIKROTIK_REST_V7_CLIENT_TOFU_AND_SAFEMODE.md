@@ -1,6 +1,6 @@
 # 08 — CONECTOR REST ROUTEROS v7+, PINNING SSL AUTOFIRMADO (TOFU) Y MOTOR SAFE MODE ANTI-BLOQUEO (RoSGrid)
 
-**\[DIRECTIVA PARA ANTIGRAVITY\]:** Este documento especifica la arquitectura interna del paquete fastapi/src/mikrotik/, encargado de comunicarse con la **REST API nativa de RouterOS v7.1+ (\<api_base_url\>/rest/...)**. Incluye la verificación criptográfica de certificados SSL autofirmados mediante huella SHA-256 (**TOFU — Trust On First Use**) y el protocolo **Dead Man's Switch (Safe Mode)** usando /system/scheduler para revertir automáticamente cambios que dejen incomunicado al MikroTik.
+**\[DIRECTIVA PARA ANTIGRAVITY\]:** Este documento especifica la arquitectura interna del paquete fastapi/src/mikrotik/, encargado de comunicarse con la **REST API nativa de RouterOS v7.13+ (\<api_base_url\>/rest/...)**. Incluye la verificación criptográfica de certificados SSL autofirmados mediante huella SHA-256 (**TOFU — Trust On First Use**) y el protocolo **Dead Man's Switch (Safe Mode)** usando /system/scheduler para revertir automáticamente cambios que dejen incomunicado al MikroTik.
 
 ## **1. Arquitectura Modular del Paquete fastapi/src/mikrotik/ (Complejidad Grado A)**
 

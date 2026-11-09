@@ -12,7 +12,7 @@ Actualmente reciben parches de seguridad activos las siguientes ramas e imágene
 
 | Versión | Estado de Soporte | Requisitos de Infraestructura |
 | :--- | :--- | :--- |
-| **1.0.x (`latest`)** | ✅ Soporte Activo | RouterOS v7.1+, PostgreSQL 17, KeyDB Multi-Hilo (o DragonflyDB) |
+| **1.0.x (`latest`)** | ✅ Soporte Activo | RouterOS v7.13+, PostgreSQL 17, KeyDB Multi-Hilo (o DragonflyDB) |
 | **< 1.0.0** | ❌ No Soportado | N/A |
 
 ---
@@ -81,7 +81,7 @@ flowchart TD
 
 ### 3.4 Pinning TLS *Trust On First Use* (TOFU) sobre `/rest/*`
 
-- RoSGrid se comunica exclusivamente mediante HTTPS (`/ip/service/www-ssl`) contra la REST API de RouterOS v7.1+ reutilizando pools persistentes `Keep-Alive` TLS verificados.
+- RoSGrid se comunica exclusivamente mediante HTTPS (`/ip/service/www-ssl`) contra la REST API de RouterOS v7.13+ reutilizando pools persistentes `Keep-Alive` TLS verificados.
 - En el primer contacto verificado se fija la huella `SHA-256` del certificado X.509 del MikroTik (`TRUSTED_PINNED`). Si la huella cambia sin autorización previa (`FINGERPRINT_MISMATCH`), RoSGrid aborta la conexión y dispara una alerta crítica de posible ataque *Man-in-the-Middle (MitM)*.
 
 ### 3.5 *Safe Mode (Dead Man's Switch)* y Protección Anti-Suicidio

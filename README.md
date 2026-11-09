@@ -15,7 +15,7 @@
 
 ## 🎯 Propósito del Proyecto
 
-**RoSGrid** es una plataforma web centralizada de alta seguridad diseñada para que proveedores de internet (ISP), operadores de telecomunicaciones, centros de monitoreo (NOC) y departamentos de infraestructura administren, diagnostiquen, respalden y auditen flotas de equipos **MikroTik con RouterOS v7.1+** utilizando exclusivamente su **REST API nativa sobre TLS (`/rest/*`)**.
+**RoSGrid** es una plataforma web centralizada de alta seguridad diseñada para que proveedores de internet (ISP), operadores de telecomunicaciones, centros de monitoreo (NOC) y departamentos de infraestructura administren, diagnostiquen, respalden y auditen flotas de equipos **MikroTik con RouterOS v7.13+** utilizando exclusivamente su **REST API nativa sobre TLS (`/rest/*`)**.
 
 El sistema traslada la experiencia operativa y técnica de **WinBox / WebFig** a un entorno web centralizado **Multi-Tenant** (adaptativo para PC, Tablet y Móvil), con control de acceso granular de **11 roles**, protección automática contra pérdida de conectividad (**Safe Mode Anti-Bloqueo**), bóveda criptográfica AES-256-GCM y una bitácora de **Auditoría Inmutable (WORM)**.
 

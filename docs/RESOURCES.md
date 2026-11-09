@@ -9,7 +9,7 @@ Este documento centraliza las referencias técnicas, imágenes oficiales de Dock
 ### Manuales Operativos, de Despliegue y Referencia de API (`docs/`)
 
 - `docs/01_GUIA_DESPLIEGUE_Y_ENTORNO.md` — Variables `.env`, generación de llaves criptográficas, motor **KeyDB Multi-Hilo** predeterminado vs. perfil **DragonflyDB** de alta escala, despliegue Docker Compose, auto-migración con `pg_advisory_lock` y compilación con `./scripts/build.sh`.
-- `docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md` — Configuración paso a paso de RouterOS v7.1+ (`www-ssl`, certificados autofirmados para TOFU, permisos API y funcionamiento del *Safe Mode*).
+- `docs/02_PREPARACION_MIKROTIK_ROUTEROS_V7.md` — Configuración paso a paso de RouterOS v7.13+ (`www-ssl`, certificados autofirmados para TOFU, permisos API y funcionamiento del *Safe Mode*).
 - `docs/03_MANUAL_ADMIN_MULTITENANT_Y_SEGURIDAD.md` — Gestión de empresas (Tenants), los 11 roles RBAC, matriz de permisos por router, Bóveda *Step-Up Auth* (30s) y *Kill-Switch*.
 - `docs/04_MANUAL_OPERATIVO_WEBFIG_NOC_Y_BACKUPS.md` — Operación de Capa 1 y Capa 2, gráficas efímeras `RingBuffer` sobre `<canvas>` 2D, *Maker-Checker*, comparador Diff `.rsc` estilo Git, importador CSV y Wallboard NOC.
 - `docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md` — Guía del rol `AUDITOR`, verificación criptográfica WORM, ADR sobre la exclusión deliberada de terminal CLI/SSH libre y diagramas de arquitectura AST generados con Graphify.
@@ -72,7 +72,7 @@ Este documento centraliza las referencias técnicas, imágenes oficiales de Dock
 
 ## 5. Laboratorio Recomendado para Pruebas (EVE-NG + MikroTik CHR)
 
-Para validar RoSGrid en entornos de pre-producción se recomienda una topología en **EVE-NG** con al menos 3 nodos **MikroTik Cloud Hosted Router (CHR) v7.1+**:
+Para validar RoSGrid en entornos de pre-producción se recomienda una topología en **EVE-NG** con al menos 3 nodos **MikroTik Cloud Hosted Router (CHR) v7.13+**:
 
 1. **`R1-CORE-EVENG`:** Enrutador de borde con sesiones BGP e interfaces de subida ECMP.
 2. **`R2-BORDE-EVENG`:** Enrutador de distribución con adyacencias OSPF, VLANs 802.1Q y reglas de Firewall/Mangle.

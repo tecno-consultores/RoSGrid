@@ -18,7 +18,7 @@ Este documento detalla los requisitos técnicos y el procedimiento paso a paso p
 
 ### 1.2 Requisitos en los Equipos MikroTik
 
-- **Versión de Sistema Operativo:** **RouterOS v7.1 o superior** (arquitecturas `ARM`, `ARM64`, `TILE`, `x86` o `CHR`). *Nota: RouterOS v6 no es compatible por carecer de API REST nativa `/rest/*`.*
+- **Versión de Sistema Operativo:** **RouterOS v7.13 o superior** (arquitecturas `ARM`, `ARM64`, `TILE`, `x86` o `CHR`). *Nota: RouterOS v6 no es compatible por carecer de API REST nativa `/rest/*`.*
 - **Conectividad de Red:** El contenedor `rosgrid-api` y `rosgrid-worker` deben alcanzar la IP de gestión de cada MikroTik por el puerto **TCP `443`** (o el puerto personalizado asignado a `/ip/service/www-ssl`).
 - **Reloj Sincronizado (NTP):** Tanto el servidor host de RoSGrid como los operadores deben tener la hora sincronizada vía NTP para la validación de códigos **2FA TOTP (RFC 6238)**.
 
@@ -198,7 +198,7 @@ Si tu operación requiere el motor *Shared-Nothing* sobre `io_uring` de **Dragon
 
 ---
 
-## 5. Preparación Rápida de tus Equipos MikroTik (RouterOS v7.1+)
+## 5. Preparación Rápida de tus Equipos MikroTik (RouterOS v7.13+)
 
 Antes de registrar un router en el inventario de RoSGrid (individualmente o por lote CSV), ejecuta estos comandos en la terminal del MikroTik para habilitar `www-ssl` con un certificado TLS para fijación **TOFU (*Trust On First Use*)**. Para una explicación detallada de políticas de firewall, grupos de permisos y Safe Mode, consulta [02_PREPARACION_MIKROTIK_ROUTEROS_V7.md](./02_PREPARACION_MIKROTIK_ROUTEROS_V7.md):
 

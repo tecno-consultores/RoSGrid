@@ -6,9 +6,9 @@ Respuestas directas a las dudas técnicas, operativas y de diseño más comunes 
 
 ## 1. Compatibilidad con Equipos MikroTik
 
-### ¿Por qué RoSGrid exige RouterOS v7.1+ y no soporta RouterOS v6?
+### ¿Por qué RoSGrid exige RouterOS v7.13+ y no soporta RouterOS v6?
 
-RoSGrid se comunica exclusivamente a través de la **REST API nativa sobre HTTPS (`/rest/*`)**, la cual fue introducida por MikroTik a partir de **RouterOS v7.1**.
+RoSGrid se comunica exclusivamente a través de la **REST API nativa sobre HTTPS (`/rest/*`)** con la política dedicada `rest-api` y el subsistema unificado WiFi 6 (`interface/wifi`), estandarizados por MikroTik a partir de **RouterOS v7.13+**.
 
 - El protocolo API binario propietario de RouterOS v6 (puertos `8728`/`8729`) carece de semántica HTTP estándar, complica la inspección de esquemas dinámicos y presenta limitaciones en el manejo de flujos modernos.
 - Además, los esquemas de enrutamiento (`BGP`, `OSPF`, `Routing Filters`) y `WireGuard` en RoSGrid están diseñados específicamente sobre la arquitectura de kernel de RouterOS v7.

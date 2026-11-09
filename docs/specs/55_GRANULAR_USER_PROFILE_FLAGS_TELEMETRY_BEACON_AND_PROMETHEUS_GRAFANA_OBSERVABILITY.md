@@ -210,7 +210,7 @@ flowchart TB
         Nginx["Contenedor Frontend Nginx\n• GET /stub_status"]
     end
 
-    subgraph MikroTikFleet["Flota MikroTik RouterOS v7.1+ (/rest/*)"]
+    subgraph MikroTikFleet["Flota MikroTik RouterOS v7.13+ (/rest/*)"]
         R1["CCR2004 Core\n/rest/system/resource\n/rest/system/health"]
         R2["RB5009 Borde\n/rest/system/resource\n/rest/system/health"]
     end

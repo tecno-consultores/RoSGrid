@@ -47,7 +47,7 @@ export const CONTEXTUAL_HELP_CATALOG: Record<string, ContextualHelpEntry> = {
       'Arquitectura Zero-Metrics Storage: la telemetría de alta frecuencia vive en KeyDB RAM sin saturar el disco.',
     ],
     mikrotikV7Notes: [
-      'Los indicadores de salud se calculan mediante /rest/system/resource y /rest/system/health en RouterOS v7.1+.',
+      'Los indicadores de salud se calculan mediante /rest/system/resource y /rest/system/health en RouterOS v7.13+.',
     ],
     relatedRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'SUPERVISOR', 'SUPPORT_L3', 'SUPPORT_L2', 'SUPPORT_L1'],
   },
@@ -629,7 +629,7 @@ export const CONTEXTUAL_HELP_CATALOG: Record<string, ContextualHelpEntry> = {
       'Las llaves privadas nunca se exponen en texto plano salvo solicitud explícita autorizada.',
     ],
     mikrotikV7Notes: [
-      'Opera directamente sobre /rest/interface/wireguard y /rest/interface/wireguard/peers (nativo desde RouterOS v7.1+).',
+      'Opera directamente sobre /rest/interface/wireguard y /rest/interface/wireguard/peers (nativo en RouterOS v7.13+).',
     ],
     relatedRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'SUPERVISOR', 'SUPPORT_L3', 'SUPPORT_L2'],
   },
