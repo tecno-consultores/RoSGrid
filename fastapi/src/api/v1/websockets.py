@@ -8,6 +8,7 @@ import json
 import logging
 import uuid
 from typing import Any
+from urllib.parse import urlparse
 
 import jwt
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, WebSocketException
@@ -56,7 +57,12 @@ async def _verify_ws_origin(ws: WebSocket) -> None:
     if "*" in cors_origins:
         if settings.ROSGRID_ENV == "production":
             host_hdr = ws.headers.get("host", "") if hasattr(ws, "headers") and ws.headers else ""
-            if not host_hdr or origin not in (f"https://{host_hdr}", f"http://{host_hdr}"):
+            origin_host = urlparse(origin).hostname or ""
+            header_host = host_hdr.split(":")[0] if host_hdr else ""
+            if not host_hdr or (
+                origin not in (f"https://{host_hdr}", f"http://{host_hdr}")
+                and (not origin_host or origin_host != header_host)
+            ):
                 await ws.close(code=4403, reason="Origen comodín no permitido en producción (CSWSH)")
                 raise WebSocketDisconnect(code=4403)
         return
@@ -166,9 +172,12 @@ async def _handle_telemetry_msg(ws: WebSocket, channel: str, raw_data: str, sid:
 @router.websocket("/routers/{router_id}/live-telemetry")
 async def router_live_telemetry_ws(ws: WebSocket, router_id: uuid.UUID) -> None:
     """Canal WebSocket para telemetría efímera en vivo (estilo WinBox) con Cero Almacenamiento."""
-    await _verify_ws_origin(ws)
-    await ws.accept()
-    claims = await _extract_ws_claims(ws)
+    try:
+        await _verify_ws_origin(ws)
+        await ws.accept()
+        claims = await _extract_ws_claims(ws)
+    except WebSocketDisconnect:
+        return
     try:
         await _verify_ws_router_permission(claims, router_id)
     except (PermissionError, WebSocketException):
@@ -217,9 +226,12 @@ async def router_live_telemetry_ws(ws: WebSocket, router_id: uuid.UUID) -> None:
 @router.websocket("/tenant/events")
 async def tenant_events_ws(ws: WebSocket) -> None:
     """Canal WebSocket global para eventos NOC, progreso de tareas masivas y Kill-Switch."""
-    await _verify_ws_origin(ws)
-    await ws.accept()
-    claims = await _extract_ws_claims(ws)
+    try:
+        await _verify_ws_origin(ws)
+        await ws.accept()
+        claims = await _extract_ws_claims(ws)
+    except WebSocketDisconnect:
+        return
     if not claims.get("tid"):
         await ws.close(code=4403, reason="Tenant context required")
         return

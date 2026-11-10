@@ -447,6 +447,9 @@
   }): void {
     if (!data) return;
     if (data.is_bootstrapped === false) {
+      if (authStore.isAuthenticated) {
+        authStore.clearAuth();
+      }
       currentStep.value = 'BOOTSTRAP';
       isBootstrapped.value = false;
       return;

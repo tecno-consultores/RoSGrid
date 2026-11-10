@@ -255,6 +255,23 @@ describe('httpClient — Zero Trust & Interceptores', () => {
 
       await expect(fetchWithInterceptors('/api/v1/unknown')).rejects.toThrow(ApiError);
     });
+
+    it('no dispara rotación de refresh token en 401 sobre /api/v1/auth/2fa/confirm-enrollment y preserva el detail real', async () => {
+      const mockFetch = vi
+        .fn()
+        .mockResolvedValue(
+          createMockResponse({ detail: 'Código 2FA inválido' }, 401, 'Unauthorized'),
+        );
+      global.fetch = mockFetch;
+
+      await expect(
+        fetchWithInterceptors('/api/v1/auth/2fa/confirm-enrollment', { method: 'POST' }),
+      ).rejects.toMatchObject({
+        status: 401,
+        detail: 'Código 2FA inválido',
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('http convenience methods', () => {

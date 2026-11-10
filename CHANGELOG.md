@@ -6,6 +6,9 @@ Todos los cambios relevantes de este proyecto se documentan en este archivo sigu
 
 ## [Unreleased]
 
+### Fixed
+- **Corrección de Índice Redis `rg:preauth_idx` en Bootstrap Inicial, Exclusión de `/api/v1/auth/2fa/confirm-enrollment` en Middlewares/Refresh y Cabecera `Host` en Nginx (Hito `30.40`):** Almacenamiento de `str(tenant.id)` en `rg:preauth_idx:{challenge_id}` dentro de `bootstrap_initial_admin` y normalización defensiva en `_fetch_preauth_state` (`auth.py`), inclusión de `/api/v1/auth/2fa/confirm-enrollment` en `_EXCLUDED_PATHS` (`idempotency.py`, `csrf.py`) e `isAuthEndpoint` (`httpClient.ts`), omisión de reportes `ui-error` ante errores `401` (`useDiagnosticsCollector.ts`), purga de sesión residual cuando `is_bootstrapped === false` (`LoginView.vue`), tolerancia de puertos de proxy inverso en `_verify_ws_origin` (`websockets.py`) y uso de `proxy_set_header Host $http_host;` en `vue3/nginx/default.conf`.
+
 ---
 
 ## [1.2.0] - 2026-11-09

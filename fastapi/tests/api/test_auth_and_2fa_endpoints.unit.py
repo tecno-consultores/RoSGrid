@@ -65,6 +65,10 @@ class MockAsyncSession:
 
     def add(self, instance: Any) -> None:
         self.added.append(instance)
+        if isinstance(instance, Tenant):
+            self.tenant = instance
+        elif isinstance(instance, User):
+            self.user = instance
 
     async def flush(self) -> None:
         pass
@@ -603,6 +607,20 @@ async def test_bootstrap_init_success(async_client: AsyncClient) -> None:
         assert data["admin_username"] == "superadmin"
         assert len(data["totp_secret"]) > 0
         assert len(data["backup_codes"]) == 8
+        assert len(data["challenge_id"]) > 0
+
+        # 2.5. Confirmar enrolamiento 2FA inmediatamente con el challenge_id devuelto por bootstrap
+        valid_totp = pyotp.TOTP(data["totp_secret"]).now()
+        res_confirm = await async_client.post(
+            "/api/v1/auth/2fa/confirm-enrollment",
+            json={"challenge_id": data["challenge_id"], "totp_code": valid_totp},
+        )
+        assert res_confirm.status_code == 200
+        confirm_data = res_confirm.json()
+        assert confirm_data["user"]["username"] == "superadmin"
+        assert confirm_data["user"]["role"] == "SUPERADMIN_GLOBAL"
+        assert len(confirm_data["csrf_token"]) > 0
+        async_client.cookies.clear()
 
         # 3. Simular que ahora hay usuarios
         session.users_count = 1

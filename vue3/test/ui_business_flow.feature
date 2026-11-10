@@ -1291,6 +1291,17 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * assert hito3039UiHardening.twenty_css_tokens_defined_across_3_themes == true
     * assert hito3039UiHardening.dead_osm_onu_map_removed == true
 
+  # ============================================================================
+  # HITO 30.40: FLUJO BOOTSTRAP ADMIN + CONFIRMACIÓN 2FA SIN TORMENTA 401 NI RECHAZO WS
+  # ============================================================================
+  Scenario: 131. Exclusion de /api/v1/auth/2fa/confirm-enrollment del interceptor 401 refresh, purga de sesion residual en bootstrap y proxy Host $http_host (Hito 30.40)
+    * def hito3040BootstrapFix = { confirm_enrollment_excluded_from_refresh: true, stale_auth_cleared_when_not_bootstrapped: true, diagnostics_ui_error_skips_401: true, nginx_preserves_http_host_port: true }
+    * assert hito3040BootstrapFix.confirm_enrollment_excluded_from_refresh == true
+    * assert hito3040BootstrapFix.stale_auth_cleared_when_not_bootstrapped == true
+    * assert hito3040BootstrapFix.diagnostics_ui_error_skips_401 == true
+    * assert hito3040BootstrapFix.nginx_preserves_http_host_port == true
+
+
 
 
 

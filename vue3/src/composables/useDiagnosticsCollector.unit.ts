@@ -68,6 +68,22 @@ describe('useDiagnosticsCollector — Ring Buffer de Diagnóstico UI (Spec 72)',
     expect(uiDiagnosticBuffer.value.length).toBe(0);
   });
 
+  it('no envía POST /api/v1/system/diagnostics/ui-error ante errores 401 o de /api/v1/auth/ para evitar tormentas sin sesión', () => {
+    const { uiDiagnosticBuffer } = useDiagnosticsCollector();
+    window.dispatchEvent(
+      new CustomEvent('rosgrid:api-health-event', {
+        detail: {
+          ok: false,
+          status: 401,
+          latencyMs: 12,
+          url: '/api/v1/auth/2fa/confirm-enrollment',
+        },
+      }),
+    );
+    expect(uiDiagnosticBuffer.value.length).toBe(1);
+    expect(mockPost).not.toHaveBeenCalled();
+  });
+
   it('captura excepciones globales window error', () => {
     const { uiDiagnosticBuffer } = useDiagnosticsCollector();
     const errorEvent = new ErrorEvent('error', {

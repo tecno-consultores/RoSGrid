@@ -345,7 +345,11 @@ async def _fetch_preauth_state(redis: Any, challenge_id: str) -> tuple[str, dict
     idx_tid = await redis.get(f"rg:preauth_idx:{challenge_id}")
     if idx_tid:
         tid_str = idx_tid.decode("utf-8") if isinstance(idx_tid, bytes) else str(idx_tid)
-        key = f"rg:{tid_str}:preauth:{challenge_id}"
+        key = (
+            tid_str
+            if tid_str.startswith("rg:") and ":preauth:" in tid_str
+            else f"rg:{tid_str}:preauth:{challenge_id}"
+        )
     else:
         keys = await redis.keys(f"rg:*:preauth:{challenge_id}")
         if not keys:
@@ -1129,7 +1133,7 @@ async def bootstrap_initial_admin(
     }
     await redis.hset(preauth_key, mapping=mapping)
     await redis.expire(preauth_key, 300)
-    await redis.set(f"rg:preauth_idx:{challenge_id}", preauth_key, ex=300)
+    await redis.set(f"rg:preauth_idx:{challenge_id}", str(tenant.id), ex=300)
 
     return BootstrapInitResponse(
         status="success",

@@ -62,11 +62,8 @@ function attachGlobalDiagnosticListeners() {
       url?: string;
     }>;
     const detail = custom.detail;
-    if (
-      detail &&
-      !detail.ok &&
-      !String(detail.url || '').includes('/api/v1/system/diagnostics/ui-error')
-    ) {
+    const urlStr = String(detail?.url || '');
+    if (detail && !detail.ok && !urlStr.includes('/api/v1/system/diagnostics/ui-error')) {
       const entry = pushDiagnosticEvent({
         category: 'HTTP_ERROR',
         message: `HTTP ${detail.status ?? 0} en ${detail.url ?? '/api'}`,
@@ -74,7 +71,11 @@ function attachGlobalDiagnosticListeners() {
         url: detail.url ?? null,
         latency_ms: detail.latencyMs ?? null,
       });
-      http.post('/api/v1/system/diagnostics/ui-error', entry).catch(() => {});
+      if (!urlStr.includes('/api/v1/auth/') && detail.status !== 401) {
+        http
+          .post('/api/v1/system/diagnostics/ui-error', entry, { skipAuthRefresh: true })
+          .catch(() => {});
+      }
     }
   });
 
@@ -85,7 +86,9 @@ function attachGlobalDiagnosticListeners() {
         message: evt.message,
         url: evt.filename || null,
       });
-      http.post('/api/v1/system/diagnostics/ui-error', entry).catch(() => {});
+      http
+        .post('/api/v1/system/diagnostics/ui-error', entry, { skipAuthRefresh: true })
+        .catch(() => {});
     }
   });
 }

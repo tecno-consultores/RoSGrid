@@ -631,6 +631,22 @@ describe('LoginView.vue — Autenticación Multi-Tenant en 2 Etapas y 2FA TOTP',
   });
 
   it('alinea simétricamente los campos de contraseña en .form-row-2col con etiquetas compactas sin asterisco huérfano (Spec 112)', async () => {
+    const authStore = useAuthStore();
+    authStore.setAuth(
+      {
+        id: 'stale-id',
+        username: 'stale',
+        email: 'stale@test.com',
+        role: 'SUPERADMIN_GLOBAL',
+        tenant_id: 'tid-stale',
+        tenant_slug: 'stale',
+        totp_enabled: true,
+      },
+      'stale-csrf',
+      'stale-session',
+    );
+    expect(authStore.isAuthenticated).toBe(true);
+
     vi.spyOn(http, 'get').mockResolvedValueOnce({
       status: 200,
       data: { is_bootstrapped: false },
@@ -639,6 +655,9 @@ describe('LoginView.vue — Autenticación Multi-Tenant en 2 Etapas y 2FA TOTP',
 
     const wrapper = mount(LoginView);
     await flushPromises();
+
+    // Debe haber purgado la sesión residual de localStorage cuando is_bootstrapped === false
+    expect(authStore.isAuthenticated).toBe(false);
 
     const passLabel = wrapper.find('label[for="bootstrap-admin-pass"]');
     const confirmLabel = wrapper.find('label[for="bootstrap-admin-pass-confirm"]');

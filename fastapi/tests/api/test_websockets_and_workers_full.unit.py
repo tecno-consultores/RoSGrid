@@ -325,6 +325,29 @@ async def test_verify_ws_origin_security() -> None:
     ):
         await _verify_ws_origin(ws)
 
+    # 5. Prod with wildcard CORS behind Nginx port mapping (Host: localhost, Origin: http://localhost:8085) -> allowed
+    ws.headers = {"host": "localhost", "origin": "http://localhost:8085"}
+    with (
+        patch("src.api.v1.websockets.settings.ROSGRID_ENV", "production"),
+        patch("src.api.v1.websockets.settings.ROSGRID_CORS_ORIGINS", "*"),
+    ):
+        await _verify_ws_origin(ws)
+
+    # 6. Prod with wildcard CORS and mismatched host (CSWSH) -> rejected with 4403
+    ws.headers = {"host": "localhost", "origin": "http://attacker.example:8085"}
+    with (
+        patch("src.api.v1.websockets.settings.ROSGRID_ENV", "production"),
+        patch("src.api.v1.websockets.settings.ROSGRID_CORS_ORIGINS", "*"),
+    ):
+        with pytest.raises(WebSocketDisconnect) as exc_wildcard_bad:
+            await _verify_ws_origin(ws)
+        assert exc_wildcard_bad.value.code == 4403
+
+    # 7. Endpoints catch WebSocketDisconnect cleanly without unhandled traceback
+    with patch("src.api.v1.websockets._verify_ws_origin", side_effect=WebSocketDisconnect(code=4403)):
+        await router_live_telemetry_ws(ws, uuid.uuid4())
+        await tenant_events_ws(ws)
+
 
 # ============================================================================
 # 4. TELEMETRY MULTIPLEXER RESOLUTION & POLL LOOP

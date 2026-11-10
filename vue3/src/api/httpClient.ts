@@ -289,7 +289,11 @@ export async function request<T = unknown>(
   const isAuthEndpoint =
     url.includes('/api/v1/auth/login') ||
     url.includes('/api/v1/auth/2fa/verify') ||
-    url.includes('/api/v1/auth/refresh');
+    url.includes('/api/v1/auth/2fa/confirm-enrollment') ||
+    url.includes('/api/v1/auth/bootstrap') ||
+    url.includes('/api/v1/auth/register') ||
+    url.includes('/api/v1/auth/refresh') ||
+    url.includes('/api/v1/system/diagnostics/ui-error');
 
   if (response.status === 401 && !isAuthEndpoint && !options.skipAuthRefresh) {
     const refreshed = await requestTokenRefresh();

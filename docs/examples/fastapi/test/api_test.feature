@@ -1727,6 +1727,17 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     Then status 200
     And match response.version == '1.1.0'
 
+  # ============================================================================
+  # HITO 30.40: CORRECCIÓN ÍNDICE PREAUTH REDIS EN BOOTSTRAP INICIAL Y CONFIRMACIÓN 2FA
+  # ============================================================================
+  Scenario: 183. Rechazo limpio 401 con detail semantico en /api/v1/auth/2fa/confirm-enrollment ante challenge_id inexistente (Hito 30.40)
+    Given path '/api/v1/auth/2fa/confirm-enrollment'
+    And request { challenge_id: '00000000000000000000000000000000', totp_code: '123456' }
+    When method post
+    Then status 401
+    And match response == { detail: 'Desafío 2FA inválido o expirado' }
+
+
 
 
 
