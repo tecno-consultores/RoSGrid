@@ -63,7 +63,7 @@ def test_rls_after_begin_listener_reapplies_tenant_and_superadmin_context() -> N
     }
     mock_conn = MagicMock()
     _reapply_rls_context_after_begin(mock_session, MagicMock(), mock_conn)
-    assert mock_conn.execute.call_count == 1
+    assert mock_conn.execute.call_count == 2
 
 
 @pytest.mark.asyncio

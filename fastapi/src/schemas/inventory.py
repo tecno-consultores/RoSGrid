@@ -5,9 +5,11 @@
 
 import ipaddress
 import socket
+import unicodedata
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Any
 from urllib.parse import urlparse
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -33,6 +35,11 @@ class CustomNetworkRoleCreate(StrictBaseModel):
     model_config = ConfigDict(extra="forbid")
     role_name: str = Field(..., min_length=2, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
     description: str | None = Field(default=None, max_length=255)
+
+    @field_validator("role_name", "description", mode="before")
+    @classmethod
+    def _normalize_text_fields(cls, v: Any) -> Any:
+        return unicodedata.normalize("NFKC", v) if isinstance(v, str) else v
 
 
 class CustomNetworkRoleItem(StrictBaseModel):
@@ -109,6 +116,7 @@ def validate_router_target_url(v: str | None) -> str | None:
     """Valida la URL/IP destino del router bloqueando SSRF hacia loopback, metadatos e infra interna."""
     if not v or not v.strip():
         return v
+    v = unicodedata.normalize("NFKC", v)
     v_str = v.strip()
     parsed = urlparse(v_str if "://" in v_str else f"https://{v_str}")
     host = (parsed.hostname or v_str).strip()
@@ -138,6 +146,11 @@ class CreateRouterRequest(StrictBaseModel):
     rotation_interval_days: int = Field(default=30, ge=1, le=365)
     connect_and_discover_now: bool = True
 
+    @field_validator("display_name", "network_role", "physical_location", "serial_number", mode="before")
+    @classmethod
+    def _normalize_text_fields(cls, v: Any) -> Any:
+        return unicodedata.normalize("NFKC", v) if isinstance(v, str) else v
+
     @field_validator("api_base_url")
     @classmethod
     def check_api_base_url(cls, v: str) -> str:
@@ -158,6 +171,12 @@ class UpdateRouterRequest(StrictBaseModel):
     serial_number: str | None = Field(default=None, min_length=1, max_length=64)
     tags: list[str] | None = None
     operational_notes: str | None = None
+
+    @field_validator("display_name", "network_role", "physical_location", "serial_number", mode="before")
+    @classmethod
+    def _normalize_text_fields(cls, v: Any) -> Any:
+        return unicodedata.normalize("NFKC", v) if isinstance(v, str) else v
+
     site_contact_info: str | None = Field(default=None, max_length=255)
     auto_rotate_credentials: bool | None = None
     rotation_interval_days: int | None = Field(default=None, ge=1, le=365)

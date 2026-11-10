@@ -3,7 +3,7 @@
 
 <script setup lang="ts">
   /* eslint-disable sonarjs/cognitive-complexity */
-  import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
+  import { ref, computed, onMounted, onBeforeUnmount, onActivated, onDeactivated, watch } from 'vue';
   import { useRoute } from 'vue-router';
   import { useWebFigStore } from '@/stores/useWebFigStore';
   import { useLiveTelemetryStore } from '@/stores/useLiveTelemetryStore';
@@ -173,14 +173,26 @@
 
   onMounted(() => {
     isUnmounting = false;
-    connectTelemetryWebSocket();
+  });
+
+  onActivated(() => {
+    isUnmounting = false;
+    if (routerId.value) {
+      connectTelemetryWebSocket();
+    }
+  });
+
+  onDeactivated(() => {
+    disconnectTelemetryWebSocket();
   });
 
   onBeforeUnmount(() => {
     isUnmounting = true;
     disconnectTelemetryWebSocket();
     liveTelemetryStore.resetChartsBuffer();
-    webFigStore.clearRouterWorkspace();
+    if (!webFigStore.isSafeModeActive) {
+      webFigStore.clearRouterWorkspace();
+    }
   });
 </script>
 
@@ -225,10 +237,10 @@
             id="btn-webfig-module-help"
             type="button"
             class="btn-webfig-module-help"
-            aria-label="Abrir guía contextual de este módulo WebFig"
+            :aria-label="t('webfig.open_module_guide', 'Abrir guía contextual de este módulo WebFig')"
             @click="openHelp()"
           >
-            ❓ Guía del Módulo
+            ❓ {{ t('webfig.module_guide', 'Guía del Módulo') }}
           </button>
         </div>
 

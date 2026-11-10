@@ -201,6 +201,7 @@ async def generate_mcp_token(
     pipe = redis.pipeline()
     pipe.hset(sess_key, mapping=mapping)  # type: ignore[arg-type]
     pipe.expire(sess_key, ttl_seconds)
+    pipe.set(f"rg:sess_idx:{session_id}", str(user.tenant_id), ex=ttl_seconds)
     pipe.zadd(active_sess_key, {session_id: float(now)})
     pipe.sadd(user_sess_key, session_id)
     pipe.expire(user_sess_key, ttl_seconds)
@@ -213,6 +214,8 @@ async def generate_mcp_token(
         "tslug": tenant.slug,
         "sid": session_id,
         "rol": user.role.value,
+        "scope": "mcp_only",
+        "preferred_username": user.username,
         "all_r": user.has_all_routers_access,
         "iat": now,
         "exp": now + ttl_seconds,

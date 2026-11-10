@@ -118,6 +118,7 @@ async def kill_session(
 
     pipe = redis.pipeline()
     pipe.delete(sess_key)
+    pipe.delete(f"rg:sess_idx:{session_id}")
     if family_id:
         pipe.delete(f"rg:{tenant_id}:rt_family:{family_id}")
     if user_id:

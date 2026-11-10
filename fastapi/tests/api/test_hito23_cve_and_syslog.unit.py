@@ -102,14 +102,14 @@ def test_evaluate_router_cves():
     assert any(c.cve_id == "CVE-2023-32154" for c in res.vulnerabilities)
 
     # Version segura reciente
-    res_clean = evaluate_router_cves(uuid.uuid4(), "Edge-Router", "7.25")
+    res_clean = evaluate_router_cves(uuid.uuid4(), "Edge-Router", "7.26")
     assert res_clean.total_vulnerabilities == 0
 
 
 def test_evaluate_fleet_cves():
     fleet = [
         {"id": uuid.uuid4(), "display_name": "R1", "ros_version": "7.10"},
-        {"id": uuid.uuid4(), "display_name": "R2", "ros_version": "7.25"},
+        {"id": uuid.uuid4(), "display_name": "R2", "ros_version": "7.26"},
     ]
     summary = evaluate_fleet_cves(fleet)
     assert isinstance(summary, FleetCveSummary)

@@ -306,7 +306,9 @@ export async function request<T = unknown>(
 
   let data: T;
   const contentType = response.headers.get('content-type') || '';
-  if (contentType.includes('application/json')) {
+  if (response.status === 204 || response.headers.get('content-length') === '0') {
+    data = undefined as unknown as T;
+  } else if (contentType.includes('application/json')) {
     data = (await response.json()) as T;
   } else {
     data = (await response.text()) as unknown as T;

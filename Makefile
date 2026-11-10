@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 # Makefile canónico para desarrollo local, automatización y gobernanza Level-11X
 
-.PHONY: help audit test test-backend test-frontend smoke-fleet lint certify graphify map build build-local release clean
+.PHONY: help audit test test-backend test-frontend qa-integration smoke-fleet lint certify graphify map build build-local release clean
 
 help:
 	@echo "Comandos canónicos de desarrollo y gobernanza para RoSGrid:"
@@ -29,7 +29,11 @@ test-backend:
 
 test-frontend:
 	@echo "🧪 [Test Frontend] Ejecutando vitest en contenedor efímero..."
-	@docker run --rm -v $$(pwd)/vue3:/app -w /app sinfallas/base-node-ionic:26 npx vitest run
+	@docker run --rm -v $$(pwd)/vue3:/app -w /app sinfallas/base-node-ionic:26 sh -c "[ -d node_modules ] || npm ci --no-audit --no-fund; npx vitest run"
+
+qa-integration:
+	@echo "🧪 [QA Integration] Ejecutando pruebas de integración PostgreSQL RLS y Alembic en Docker..."
+	@docker run --rm --network host --entrypoint uv -e UV_PROJECT_ENVIRONMENT=/tmp/venv -e UV_CACHE_DIR=/tmp/uv-cache -e COVERAGE_FILE=/tmp/.coverage -e ROSGRID_DATABASE_URL="postgresql+asyncpg://rosgrid_user:cambiar_en_entorno_local@127.0.0.1:5432/rosgrid" -v $$(pwd)/fastapi:/app -w /app sinfallas/rosgrid-backend:local-test run --frozen --with pytest --with pytest-asyncio --with pytest-cov pytest -o addopts="" -o cache_dir=/tmp/pytest-cache -m "integration" --cov=src --cov-fail-under=95 tests/integration/
 
 smoke-fleet:
 	@echo "🔍 [Smoke Fleet] Ejecutando Smoke Test de Flota Real (Negative Invariants) en Docker..."
@@ -40,8 +44,9 @@ test: test-backend test-frontend
 lint:
 	@echo "🔍 [Lint] Ejecutando ruff, mypy, vue-tsc y eslint..."
 	@docker run --rm --entrypoint ruff -v $$(pwd)/fastapi:/app -w /app sinfallas/rosgrid-backend:local-test check --no-cache src/ tests/
+	@docker run --rm --entrypoint ruff -v $$(pwd)/fastapi:/app -w /app sinfallas/rosgrid-backend:local-test format --check --no-cache src/ tests/
 	@docker run --rm --entrypoint uv -e UV_PROJECT_ENVIRONMENT=/tmp/venv -e UV_CACHE_DIR=/tmp/uv-cache -v $$(pwd)/fastapi:/app -w /app sinfallas/rosgrid-backend:local-test run --frozen --with mypy mypy --cache-dir=/tmp/mypy src/
-	@docker run --rm -v $$(pwd)/vue3:/app -w /app sinfallas/base-node-ionic:26 sh -c "npx vue-tsc --noEmit && npx eslint src --ext .ts,.vue"
+	@docker run --rm -v $$(pwd)/vue3:/app -w /app sinfallas/base-node-ionic:26 sh -c "[ -d node_modules ] || npm ci --no-audit --no-fund; npx vue-tsc --noEmit && npx eslint src --ext .ts,.vue --max-warnings 0"
 
 certify:
 	@./.agents/scripts/certify_task_completion.sh

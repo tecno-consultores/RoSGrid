@@ -663,3 +663,302 @@ async def test_workers_runner() -> None:
     ):
         main()
         mock_exit.assert_called_once_with(0)
+
+
+@pytest.mark.asyncio
+async def test_vault_rotation_individual_commits_and_error_truncation() -> None:
+    """Verifica que la rotación haga commit individual y que el status de fallo no exceda 32 chars."""
+    from src.workers.vault_rotation_worker import _rotate_single_vault
+
+    mock_session = AsyncMock()
+
+    # Router 1: Rotación exitosa
+    vault1 = MagicMock()
+    vault1.api_username = "admin"
+    vault1.rotation_interval_days = 30
+    router1 = MagicMock()
+    router1.id = uuid.uuid4()
+    router1.tenant_id = uuid.uuid4()
+    router1.display_name = "Router-OK"
+
+    mock_client1 = AsyncMock()
+    with (
+        patch("src.workers.vault_rotation_worker._create_client_from_vault", return_value=mock_client1),
+        patch("src.workers.vault_rotation_worker.write_audit_log", new_callable=AsyncMock) as mock_audit,
+    ):
+        await _rotate_single_vault(mock_session, vault1, router1)
+        assert vault1.last_rotation_status == "SUCCESS"
+        assert mock_session.commit.call_count >= 1
+        mock_audit.assert_awaited_once()
+
+    # Router 2: Rotación con error > 100 caracteres
+    mock_session.reset_mock()
+    vault2 = MagicMock()
+    vault2.api_username = "admin"
+    router2 = MagicMock()
+    router2.id = uuid.uuid4()
+    router2.tenant_id = uuid.uuid4()
+    router2.display_name = "Router-Fail"
+
+    mock_client2 = AsyncMock()
+    mock_client2.patch.side_effect = RuntimeError("X" * 150)
+    with patch("src.workers.vault_rotation_worker._create_client_from_vault", return_value=mock_client2):
+        await _rotate_single_vault(mock_session, vault2, router2)
+        assert vault2.last_rotation_status == "FAILED"
+        assert len(vault2.last_rotation_status) <= 32
+        mock_session.rollback.assert_awaited()
+
+    # Router 3: Fallos en rollback y commit en bloque except
+    mock_session_failing = AsyncMock()
+    mock_session_failing.rollback.side_effect = RuntimeError("Rollback failed")
+    mock_session_failing.commit.side_effect = RuntimeError("Commit failed")
+    vault3 = MagicMock()
+    vault3.api_username = "admin"
+    router3 = MagicMock()
+    router3.display_name = "Router-Rollback-Fail"
+    mock_client3 = AsyncMock()
+    mock_client3.patch.side_effect = RuntimeError("Original error")
+    with patch("src.workers.vault_rotation_worker._create_client_from_vault", return_value=mock_client3):
+        await _rotate_single_vault(mock_session_failing, vault3, router3)
+        assert vault3.last_rotation_status == "FAILED"
+
+    # run_vault_rotation_cycle con mocks
+    mock_vault_entry = MagicMock()
+    mock_vault_entry.router = router1
+    mock_db_sess = AsyncMock()
+    mock_db_sess.execute.return_value = MockDbResult([mock_vault_entry])
+
+    class MockAsyncSessionMaker:
+        async def __aenter__(self):
+            return mock_db_sess
+
+        async def __aexit__(self, *args):
+            pass
+
+    with (
+        patch("src.workers.vault_rotation_worker.async_session_maker", return_value=MockAsyncSessionMaker()),
+        patch("src.workers.vault_rotation_worker._rotate_single_vault", new_callable=AsyncMock) as mock_rot_single,
+    ):
+        await run_vault_rotation_cycle()
+        mock_rot_single.assert_awaited_once()
+
+
+# ============================================================================
+# SESSION LIFECYCLE WORKER TESTS
+# ============================================================================
+
+
+@pytest.mark.asyncio
+async def test_session_lifecycle_worker_full() -> None:
+    """Verifica el barrido completo de sesiones efímeras con smembers, scan_iter, keys y loop."""
+    from src.workers.session_lifecycle_worker import (
+        session_lifecycle_worker_loop,
+        sweep_all_tenants_closing_sessions,
+    )
+
+    t1 = str(uuid.uuid4())
+    t2 = str(uuid.uuid4())
+
+    # 1. Caso smembers
+    mock_redis = AsyncMock()
+    mock_redis.smembers.return_value = {t1.encode(), t2}
+    with (
+        patch("src.workers.session_lifecycle_worker.get_redis_client", return_value=mock_redis),
+        patch(
+            "src.workers.session_lifecycle_worker.sweep_expired_closing_sessions", return_value=["s1", "s2"]
+        ) as mock_sweep,
+    ):
+        total = await sweep_all_tenants_closing_sessions()
+        assert total == 4
+        assert mock_sweep.call_count == 2
+
+    # 2. Caso scan_iter fallback
+    mock_redis_scan = AsyncMock()
+    del mock_redis_scan.smembers  # Sin smembers
+
+    async def fake_scan_iter(match: str, count: int):
+        yield f"rg:{t1}:closing_sessions_zset".encode()
+        yield f"rg:{t2}:closing_sessions_zset"
+
+    mock_redis_scan.scan_iter = fake_scan_iter
+    with (
+        patch("src.workers.session_lifecycle_worker.get_redis_client", return_value=mock_redis_scan),
+        patch("src.workers.session_lifecycle_worker.sweep_expired_closing_sessions", return_value=[]),
+    ):
+        total = await sweep_all_tenants_closing_sessions()
+        assert total == 0
+
+    # 3. Caso keys fallback
+    mock_redis_keys = AsyncMock()
+    del mock_redis_keys.smembers
+    del mock_redis_keys.scan_iter
+    mock_redis_keys.keys = AsyncMock(return_value=[f"rg:{t1}:closing_sessions_zset".encode()])
+    with (
+        patch("src.workers.session_lifecycle_worker.get_redis_client", return_value=mock_redis_keys),
+        patch("src.workers.session_lifecycle_worker.sweep_expired_closing_sessions", return_value=["s1"]),
+    ):
+        total = await sweep_all_tenants_closing_sessions()
+        assert total == 1
+
+    # 4. Excepción capturada
+    mock_redis_err = AsyncMock()
+    mock_redis_err.smembers.side_effect = RuntimeError("Redis error")
+    with patch("src.workers.session_lifecycle_worker.get_redis_client", return_value=mock_redis_err):
+        total = await sweep_all_tenants_closing_sessions()
+        assert total == 0
+
+    # 5. Worker loop
+    with (
+        patch(
+            "src.workers.session_lifecycle_worker.sweep_all_tenants_closing_sessions",
+            side_effect=[1, RuntimeError("fail"), asyncio.CancelledError],
+        ),
+        patch("asyncio.sleep", new_callable=AsyncMock),
+    ):
+        await session_lifecycle_worker_loop()
+
+
+# ============================================================================
+# TELEMETRY BEACON WORKER & RUNNER HEARTBEAT TESTS
+# ============================================================================
+
+
+@pytest.mark.asyncio
+async def test_telemetry_beacon_worker_full() -> None:
+    """Verifica loop, ticks y sleep interval del worker de telemetría."""
+    from src.workers.telemetry_beacon_worker import (
+        _beacon_sleep_interval,
+        _dispatch_beacon_http,
+        _execute_beacon_tick,
+        telemetry_beacon_worker_loop,
+    )
+
+    # 1. Worker disabled
+    with patch("src.workers.telemetry_beacon_worker.settings.ROSGRID_TELEMETRY_BEACON_ENABLED", False):
+        await telemetry_beacon_worker_loop()
+
+    # 2. Worker enabled y stop_event
+    stop_event = asyncio.Event()
+    with (
+        patch("src.workers.telemetry_beacon_worker.settings.ROSGRID_TELEMETRY_BEACON_ENABLED", True),
+        patch("src.workers.telemetry_beacon_worker.settings.ROSGRID_TELEMETRY_BEACON_INTERVAL_SECONDS", 1),
+        patch("asyncio.sleep", new_callable=AsyncMock),
+        patch("src.workers.telemetry_beacon_worker._execute_beacon_tick", new_callable=AsyncMock) as mock_tick,
+        patch("src.workers.telemetry_beacon_worker._beacon_sleep_interval", return_value=True),
+    ):
+        await telemetry_beacon_worker_loop(stop_event)
+        mock_tick.assert_awaited_once()
+
+    # 3. _execute_beacon_tick con excepción ordinaria y CancelledError
+    with patch("src.workers.telemetry_beacon_worker.send_telemetry_heartbeat_once", side_effect=RuntimeError("err")):
+        await _execute_beacon_tick()
+
+    with patch("src.workers.telemetry_beacon_worker.send_telemetry_heartbeat_once", side_effect=asyncio.CancelledError):
+        with pytest.raises(asyncio.CancelledError):
+            await _execute_beacon_tick()
+
+    # 4. _beacon_sleep_interval
+    ev = asyncio.Event()
+    # Sin stop_event
+    with patch("asyncio.sleep", new_callable=AsyncMock):
+        assert await _beacon_sleep_interval(None, 1) is False
+
+    # Con stop_event ya activado
+    ev.set()
+    assert await _beacon_sleep_interval(ev, 1) is True
+
+    # Timeout en wait_for
+    ev_to = asyncio.Event()
+    with patch("asyncio.wait_for", side_effect=TimeoutError):
+        assert await _beacon_sleep_interval(ev_to, 1) is False
+
+    # 5. _dispatch_beacon_http con fallback GET en 403/405
+    mock_post_resp = MagicMock()
+    mock_post_resp.status_code = 405
+    mock_get_resp = MagicMock()
+    mock_get_resp.status_code = 200
+
+    mock_client = AsyncMock()
+    mock_client.post.return_value = mock_post_resp
+    mock_client.get.return_value = mock_get_resp
+
+    class MockAsyncClientCtx:
+        async def __aenter__(self):
+            return mock_client
+
+        async def __aexit__(self, *args):
+            pass
+
+    with patch("httpx.AsyncClient", return_value=MockAsyncClientCtx()):
+        status = await _dispatch_beacon_http({"key": "val"})
+        assert status == 200
+        mock_client.post.assert_awaited_once()
+        mock_client.get.assert_awaited_once()
+
+    # 6. get_telemetry_beacon_status con fallo en KeyDB y send_telemetry_heartbeat_once sin router_count
+    from src.workers.telemetry_beacon_worker import (
+        get_telemetry_beacon_status,
+        send_telemetry_heartbeat_once,
+    )
+
+    mock_redis_err = AsyncMock()
+    mock_redis_err.hgetall.side_effect = RuntimeError("KeyDB unreachable")
+    with (
+        patch("src.workers.telemetry_beacon_worker.get_redis_client", return_value=mock_redis_err),
+        patch("src.workers.telemetry_beacon_worker._count_active_routers_safe", return_value=3),
+    ):
+        status_res = await get_telemetry_beacon_status()
+        assert status_res["router_count"] == 3
+
+    with (
+        patch("src.workers.telemetry_beacon_worker._count_active_routers_safe", return_value=2),
+        patch("src.workers.telemetry_beacon_worker.settings.ROSGRID_TELEMETRY_BEACON_ENABLED", False),
+    ):
+        once_res = await send_telemetry_heartbeat_once(router_count=None)
+        assert once_res["router_count"] == 2
+
+
+@pytest.mark.asyncio
+async def test_runner_worker_heartbeat_loop_monitoring() -> None:
+    """Verifica que el heartbeat del runner detecte tareas hermanas finalizadas."""
+    from pathlib import Path
+
+    from src.workers.runner import _worker_heartbeat_loop
+
+    mock_task_done = MagicMock()
+    mock_task_done.get_name.return_value = "failed_worker"
+    mock_task_done.done.return_value = True
+    mock_task_done.cancelled.return_value = False
+
+    mock_task_running = MagicMock()
+    mock_task_running.get_name.return_value = "healthy_worker"
+    mock_task_running.done.return_value = False
+    mock_task_running.cancelled.return_value = False
+
+    stop_event = asyncio.Event()
+    mock_path = MagicMock(spec=Path)
+
+    async def fake_wait_for_1(fut: Any, timeout: float) -> None:
+        stop_event.set()
+
+    with (
+        patch("src.workers.runner.WORKER_HEARTBEAT_PATH", mock_path),
+        patch("asyncio.wait_for", side_effect=fake_wait_for_1),
+    ):
+        # 1. Con tarea fallida: no debe escribir heartbeat
+        await _worker_heartbeat_loop(stop_event, [mock_task_done, mock_task_running])
+        mock_path.write_text.assert_not_called()
+
+    # 2. Con todas las tareas vivas: sí escribe heartbeat
+    mock_path.reset_mock()
+    stop_event_2 = asyncio.Event()
+
+    async def fake_wait_for_2(fut: Any, timeout: float) -> None:
+        stop_event_2.set()
+
+    with (
+        patch("src.workers.runner.WORKER_HEARTBEAT_PATH", mock_path),
+        patch("asyncio.wait_for", side_effect=fake_wait_for_2),
+    ):
+        await _worker_heartbeat_loop(stop_event_2, [mock_task_running])
+        mock_path.write_text.assert_called_once()

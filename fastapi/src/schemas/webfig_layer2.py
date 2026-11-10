@@ -3,10 +3,11 @@
 
 """Esquemas Pydantic v2 para WebFig Capa 2: Motor Dinámico Universal de RouterOS v7."""
 
+import unicodedata
 import uuid
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class StrictBaseModel(BaseModel):
@@ -24,6 +25,11 @@ class CatalogMenuItem(StrictBaseModel):
     label: str = Field(..., min_length=1, max_length=120)
     ros_path: str = Field(..., min_length=1, max_length=160)
     supports_safe_mode: bool = True
+
+    @field_validator("label", "ros_path", mode="before")
+    @classmethod
+    def _normalize_menu_strings(cls, v: Any) -> Any:
+        return unicodedata.normalize("NFKC", v) if isinstance(v, str) else v
 
 
 class CatalogMenuGroup(StrictBaseModel):
@@ -135,6 +141,11 @@ class Layer2QueryFilterItem(StrictBaseModel):
     field: str = Field(..., min_length=1, max_length=80, pattern=r"^[a-zA-Z0-9_.-]+$")
     operator: Literal["=", "!=", "<", ">"] = "="
     value: str = Field(..., max_length=200)
+
+    @field_validator("field", "value", mode="before")
+    @classmethod
+    def _normalize_filter_strings(cls, v: Any) -> Any:
+        return unicodedata.normalize("NFKC", v) if isinstance(v, str) else v
 
 
 class DynamicLayer2QueryRequest(StrictBaseModel):

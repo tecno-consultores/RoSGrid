@@ -47,7 +47,7 @@ Para dar cobertura al 100% del catálogo de RouterOS v7 sin escribir cientos de 
 
 ## 2. Pestañas en Memoria con `<KeepAlive :max="5">`
 
-El componente `RouterWorkspaceTabsBar.vue` permite mantener abiertas hasta 5 herramientas operativas por router de forma simultánea:
+El componente `RouterWebFigLayout.vue` (integrado en `RgResponsiveShell.vue`) permite mantener abiertas hasta 5 herramientas operativas por router de forma simultánea:
 
 - **Cero Pérdida de Estado:** Si un técnico está editando una regla de firewall y cambia a la pestaña de Ping para comprobar conectividad, la edición del firewall no se reinicia ni pierde los campos rellenados.
 - **Gestión de Memoria:** Al abrir una sexta pestaña, la menos utilizada en el historial se destruye limpiamente para conservar la memoria RAM del navegador.
@@ -60,7 +60,7 @@ Para optimizar el trabajo tanto en salas de control de escritorio como en campo 
 
 - **Modo WinBox PC (`32px` por fila):** Filas compactas de 32 píxeles de alto, fuentes monoespaciadas y controles de alta densidad que permiten visualizar más de 30 reglas o interfaces en pantalla simultáneamente.
 - **Modo Táctil / Campo (`44px` por fila):** Al detectar pantalla táctil o resolución móvil, los controles se expanden automáticamente a 44 píxeles para cumplir el estándar de accesibilidad **WCAG 2.1 AA** (objetivos de toque para dedos sin clics accidentales).
-- **Navegación Responsive Multi-Viewport (`375px` Móvil / `768px` Tablet / `1440px` Escritorio):** En resoluciones `<= 1024px`, la barra de pestañas de trabajo (`RouterWorkspaceTabsBar.vue`) expone el botón integrado `☰ Módulos` (`.btn-webfig-menu-inline`) para desplegar el catálogo completo de módulos RouterOS v7 (Capa 1 y Capa 2) como cajón lateral táctil con bloqueo de scroll (`overscroll-behavior: contain`), mientras que todas las tablas técnicas se encapsulan en regiones desplazables (`.table-wrapper`) con cero desbordamiento horizontal del viewport.
+- **Navegación Responsive Multi-Viewport (`375px` Móvil / `768px` Tablet / `1440px` Escritorio):** En resoluciones `<= 1024px`, la barra de navegación viva (`RgResponsiveShell.vue`) expone el botón integrado `☰ Módulos` (`.btn-webfig-menu-inline`) para desplegar el catálogo completo de módulos RouterOS v7 (Capa 1 y Capa 2) como cajón lateral táctil con bloqueo de scroll (`overscroll-behavior: contain`), mientras que todas las tablas técnicas se encapsulan en regiones desplazables (`.table-wrapper`) con cero desbordamiento horizontal del viewport.
 - **Virtual Scrolling Nativo:** Los componentes de tabla (`RgDataTable.vue`) renderizan únicamente los elementos visibles en el viewport más un buffer de seguridad, permitiendo desplazarse fluidamente sobre tablas con más de 5,000 clientes PPPoE o rutas BGP sin degradar el navegador.
 
 ---

@@ -132,7 +132,7 @@ El siguiente diagrama sintetiza los nodos centrales y dependencias descubiertas 
 flowchart TB
     subgraph "Frontend Layer (Vue 3 + TypeScript)"
         RouterLayout[RouterWebFigLayout.vue]
-        Tabs[RouterWorkspaceTabsBar.vue]
+        Tabs[RgResponsiveShell.vue]
         RingBuffer[TelemetryRingBuffer / useTelemetryRingBuffer]
         CanvasView[RouterLiveDashboardView.vue / Canvas 2D]
         DiffView[RscGitDiffViewer.vue]

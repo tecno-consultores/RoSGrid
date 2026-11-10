@@ -343,7 +343,7 @@ scrape_configs:
   - job_name: 'rosgrid-platform-api'
     metrics_path: '/metrics'
     static_configs:
-      - targets: ['rosgrid-backend:8000']
+      - targets: ['rosgrid-api:8000']
         labels:
           service: 'rosgrid-api'
 
@@ -353,7 +353,7 @@ scrape_configs:
       type: Bearer
       credentials: '<ROSGRID_PROMETHEUS_SCRAPE_TOKEN>'
     static_configs:
-      - targets: ['rosgrid-backend:8000']
+      - targets: ['rosgrid-api:8000']
         labels:
           collector: 'rosgrid-fleet-exporter'
 ```

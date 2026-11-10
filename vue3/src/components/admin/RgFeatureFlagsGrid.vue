@@ -520,10 +520,10 @@
 
     <!-- Modal de Radio de Impacto (Blast Radius Shield) -->
     <div v-if="isImpactModalOpen" class="impact-modal-backdrop" @click.self="cancelDisableCritical">
-      <div class="impact-modal-card" role="dialog" aria-modal="true">
+      <div class="impact-modal-card" role="dialog" aria-modal="true" aria-labelledby="impact-modal-title">
         <div class="impact-modal-header">
           <span class="impact-icon">⚠️</span>
-          <h4 class="impact-title">Advertencia de Radio de Impacto</h4>
+          <h4 id="impact-modal-title" class="impact-title">Advertencia de Radio de Impacto</h4>
         </div>
 
         <p class="impact-text">

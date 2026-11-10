@@ -2,7 +2,7 @@
 <!-- Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores) -->
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, onActivated, onDeactivated, nextTick } from 'vue';
 import { useRoute } from 'vue-router';
 import { http } from '@/api/httpClient';
 import type { RouterSyslogResponse, SyslogEvent, SyslogTemplateResponse } from '@/types';
@@ -115,19 +115,39 @@ function clearLocalBuffer(): void {
   }
 }
 
+function startPolling(): void {
+  if (refreshInterval === null) {
+    refreshInterval = window.setInterval(() => {
+      if (autoRefresh.value) {
+        loadSyslogEvents();
+      }
+    }, 3000);
+  }
+}
+
+function stopPolling(): void {
+  if (refreshInterval !== null) {
+    clearInterval(refreshInterval);
+    refreshInterval = null;
+  }
+}
+
 onMounted(() => {
   loadSyslogEvents();
-  refreshInterval = window.setInterval(() => {
-    if (autoRefresh.value) {
-      loadSyslogEvents();
-    }
-  }, 3000);
+  startPolling();
+});
+
+onActivated(() => {
+  loadSyslogEvents();
+  startPolling();
+});
+
+onDeactivated(() => {
+  stopPolling();
 });
 
 onBeforeUnmount(() => {
-  if (refreshInterval !== null) {
-    clearInterval(refreshInterval);
-  }
+  stopPolling();
 });
 </script>
 

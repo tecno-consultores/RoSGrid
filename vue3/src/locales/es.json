@@ -742,6 +742,8 @@
     "tab_ppp_short": "PPP",
     "tab_tools_short": "Herram.",
     "tab_menu_short": "Menú",
+    "module_guide": "Guía del Módulo",
+    "open_module_guide": "Abrir guía contextual de este módulo WebFig",
     "header_switch_router": "Cambiar de Router...",
     "header_select_another": "Seleccionar otro router para gestionar",
     "header_cpu": "CPU:",

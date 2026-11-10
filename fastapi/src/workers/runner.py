@@ -9,6 +9,7 @@ import signal
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 from src.redis_layer.client import close_redis_client
 from src.workers.alert_dispatcher_worker import alert_dispatcher_worker_loop
@@ -47,13 +48,22 @@ def _on_worker_task_done(task: asyncio.Task[None]) -> None:
 WORKER_HEARTBEAT_PATH = Path("/tmp/worker_heartbeat")
 
 
-async def _worker_heartbeat_loop(stop_event: asyncio.Event) -> None:
+async def _worker_heartbeat_loop(
+    stop_event: asyncio.Event, sibling_tasks: list[asyncio.Task[Any]] | None = None
+) -> None:
     """Actualiza periódicamente el archivo de latido para el healthcheck de Docker."""
     while not stop_event.is_set():
-        try:
-            WORKER_HEARTBEAT_PATH.write_text(f"{int(time.time())}\n", encoding="utf-8")
-        except OSError:
-            pass
+        any_failed = False
+        if sibling_tasks:
+            for t in sibling_tasks:
+                if t.done() and not t.cancelled() and t.get_name() != "WorkerHeartbeat":
+                    any_failed = True
+                    break
+        if not any_failed:
+            try:
+                WORKER_HEARTBEAT_PATH.write_text(f"{int(time.time())}\n", encoding="utf-8")
+            except OSError:
+                pass
         try:
             await asyncio.wait_for(stop_event.wait(), timeout=15.0)
         except TimeoutError:
@@ -66,17 +76,21 @@ async def main_workers_runner() -> None:
     stop_event = asyncio.Event()
     _setup_signal_handlers(stop_event)
 
-    tasks = [
-        asyncio.create_task(_worker_heartbeat_loop(stop_event), name="WorkerHeartbeat"),
-        asyncio.create_task(health_monitor_worker_loop(), name="HealthMonitorWorker"),
-        asyncio.create_task(alert_dispatcher_worker_loop(), name="AlertDispatcherWorker"),
-        asyncio.create_task(nightly_backup_worker_loop(), name="NightlyBackupWorker"),
-        asyncio.create_task(vault_rotation_worker_loop(), name="VaultRotationWorker"),
-        asyncio.create_task(syslog_collector_worker_loop(), name="SyslogCollectorWorker"),
-        asyncio.create_task(subscriber_status_poller_worker_loop(), name="SubscriberStatusPollerWorker"),
-        asyncio.create_task(session_lifecycle_worker_loop(), name="SessionLifecycleWorker"),
-        asyncio.create_task(telemetry_beacon_worker_loop(stop_event), name="TelemetryBeaconWorker"),
-    ]
+    tasks: list[asyncio.Task[Any]] = []
+    tasks.extend(
+        [
+            asyncio.create_task(health_monitor_worker_loop(), name="HealthMonitorWorker"),
+            asyncio.create_task(alert_dispatcher_worker_loop(), name="AlertDispatcherWorker"),
+            asyncio.create_task(nightly_backup_worker_loop(), name="NightlyBackupWorker"),
+            asyncio.create_task(vault_rotation_worker_loop(), name="VaultRotationWorker"),
+            asyncio.create_task(syslog_collector_worker_loop(), name="SyslogCollectorWorker"),
+            asyncio.create_task(subscriber_status_poller_worker_loop(), name="SubscriberStatusPollerWorker"),
+            asyncio.create_task(session_lifecycle_worker_loop(), name="SessionLifecycleWorker"),
+            asyncio.create_task(telemetry_beacon_worker_loop(stop_event), name="TelemetryBeaconWorker"),
+        ]
+    )
+    heartbeat_task = asyncio.create_task(_worker_heartbeat_loop(stop_event, tasks), name="WorkerHeartbeat")
+    tasks.insert(0, heartbeat_task)
     for t in tasks:
         t.add_done_callback(_on_worker_task_done)
 
@@ -88,6 +102,17 @@ async def main_workers_runner() -> None:
             t.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
         await close_redis_client()
+        from src.db.session import engine
+        from src.mikrotik.client import close_all_mikrotik_clients
+
+        try:
+            await close_all_mikrotik_clients()
+        except Exception as c_exc:
+            logger.debug("Error cerrando clientes MikroTik: %s", c_exc)
+        try:
+            await engine.dispose()
+        except Exception as e_exc:
+            logger.debug("Error liberando pool PostgreSQL: %s", e_exc)
         logger.info("=== Todos los workers finalizados ordenadamente ===")
 
 

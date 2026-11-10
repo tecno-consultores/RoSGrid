@@ -562,7 +562,7 @@
       0 8px 10px -6px rgba(0, 0, 0, 0.5);
     display: flex;
     flex-direction: column;
-    color: #f8fafc;
+    color: var(--rg-text-primary, #f8fafc);
     overflow: hidden;
   }
 
@@ -571,8 +571,8 @@
     justify-content: space-between;
     align-items: flex-start;
     padding: 1.25rem 1.5rem;
-    background: #1e293b;
-    border-bottom: 1px solid #334155;
+    background: var(--rg-bg-elevated, #1e293b);
+    border-bottom: 1px solid var(--rg-border, #334155);
   }
 
   .modal-title {
@@ -617,8 +617,8 @@
   }
 
   .target-account-card {
-    background: #090d16;
-    border: 1px solid #1e293b;
+    background: var(--rg-bg-input, #090d16);
+    border: 1px solid var(--rg-border, #1e293b);
     border-radius: 6px;
     padding: 0.85rem 1rem;
     display: flex;

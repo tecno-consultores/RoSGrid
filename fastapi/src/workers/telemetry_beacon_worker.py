@@ -148,7 +148,7 @@ async def send_telemetry_heartbeat_once(router_count: int | None = None) -> dict
     payload = {
         "schema_version": 1,
         "instance_id": instance_id,
-        "version": "1.0.0",
+        "version": settings.VERSION,
         "fleet_bucket": resolve_fleet_bucket(router_count),
         "timestamp": now_iso,
     }

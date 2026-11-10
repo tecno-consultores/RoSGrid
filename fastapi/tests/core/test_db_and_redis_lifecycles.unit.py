@@ -45,7 +45,7 @@ async def test_db_session_lifecycles() -> None:
     session_ctx = AsyncMock()
     tid = uuid.uuid4()
     await set_tenant_context(session_ctx, tid, is_superadmin=True)
-    session_ctx.execute.assert_awaited_once()
+    assert session_ctx.execute.await_count == 2
 
     # 3. get_tenant_db_session
     scope = {"type": "http", "state": {"tenant_id": tid, "is_superadmin_global": True}}
@@ -85,7 +85,7 @@ async def test_main_lifespan_and_health_checks() -> None:
 
     from src.main import _check_database_health, lifespan
 
-    app = FastAPI()
+    app = FastAPI(docs_url=None, openapi_url=None)
     with patch("src.main.close_redis_client", new_callable=AsyncMock) as mock_close:
         async with lifespan(app):
             pass

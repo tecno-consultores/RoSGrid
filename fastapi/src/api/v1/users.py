@@ -18,7 +18,10 @@ from src.api.deps import require_roles
 from src.api.v1.rbac import ACTIONS_METADATA, _get_tenant_role_overrides
 from src.core.audit import write_audit_log
 from src.core.config import settings
-from src.core.crypto import hash_password, verify_password
+from src.core.crypto import (
+    hash_password_async,
+    verify_password_async,
+)
 from src.db.session import get_db_session, set_tenant_context
 from src.models.core import SystemRoleEnum, Tenant, User, UserRouterPermission
 from src.rbac.policy_matrix import POLICY_MATRIX
@@ -163,7 +166,7 @@ async def create_user(
         username=body.username.strip(),
         email=body.email.strip().lower(),
         full_name=body.full_name.strip(),
-        password_hash=hash_password(str(body.temporary_password)),
+        password_hash=await hash_password_async(str(body.temporary_password)),
         role=body.role,
         is_active=True,
         is_locked=False,
@@ -279,6 +282,25 @@ async def assign_router_permissions(
     target_tenant_id = target_user.tenant_id
     target_user.has_all_routers_access = body.has_all_routers_access
 
+    if body.router_assignments and type(db) is AsyncSession:
+        from src.models.inventory import Router
+
+        try:
+            assigned_ids = [item.router_id for item in body.router_assignments]
+            stmt_chk = select(Router.id).where(Router.id.in_(assigned_ids), Router.tenant_id == target_tenant_id)
+            res_chk = await db.execute(stmt_chk)
+            valid_ids = set(res_chk.scalars().all())
+            invalid = [str(rid) for rid in assigned_ids if rid not in valid_ids]
+            if invalid:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Los siguientes routers no pertenecen a la empresa del usuario: {', '.join(invalid)}",
+                )
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+
     # Limpiar asignaciones previas y crear nuevas
     stmt_del = delete(UserRouterPermission).where(
         UserRouterPermission.tenant_id == target_tenant_id, UserRouterPermission.user_id == user_id
@@ -342,6 +364,32 @@ async def reset_user_2fa(
             detail="No tienes permisos para reiniciar el 2FA de otro usuario.",
         )
 
+    if is_admin and caller_id != user_id:
+        caller_user = None
+        if hasattr(db, "users") and isinstance(db.users, list):
+            caller_user = next((x for x in db.users if getattr(x, "id", None) == caller_id), None)
+        elif hasattr(db, "get"):
+            cand = await db.get(User, caller_id)
+            if isinstance(cand, User):
+                caller_user = cand
+        if caller_user is None and type(db) is AsyncSession:
+            try:
+                res_caller = await db.execute(select(User).where(User.id == caller_id))
+                cand_caller = res_caller.scalar_one_or_none()
+                if isinstance(cand_caller, User):
+                    caller_user = cand_caller
+            except Exception:
+                caller_user = None
+        if caller_user and getattr(caller_user, "totp_enabled", False):
+            if not body or not body.admin_totp_code:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Código 2FA TOTP del administrador requerido para reiniciar el 2FA de un usuario",
+                )
+            from src.api.v1.vault import _verify_admin_totp
+
+            await _verify_admin_totp(db, tenant_id, caller_id, body.admin_totp_code)
+
     await set_tenant_context(db, tenant_id, is_superadmin=is_sa)
 
     stmt = select(User).where(User.id == user_id)
@@ -365,7 +413,9 @@ async def reset_user_2fa(
     await db.commit()
 
     # Expulsión de sesiones activas del usuario por Kill-Switch
-    await kill_all_user_sessions(str(tenant_id), str(user_id), killed_by=claims["sub"], reason="Reinicio de 2FA")
+    await kill_all_user_sessions(
+        str(target_user.tenant_id), str(user_id), killed_by=claims["sub"], reason="Reinicio de 2FA"
+    )
 
     return {"status": "2fa_reset_completed"}
 
@@ -426,7 +476,8 @@ async def change_password(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Debes ingresar tu contraseña actual para cambiarla.",
             )
-        if not verify_password(body.current_password, user.password_hash):
+        is_valid_curr = await verify_password_async(body.current_password, user.password_hash)
+        if not is_valid_curr:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="La contraseña actual ingresada es incorrecta.",
@@ -439,7 +490,7 @@ async def change_password(
             detail="La nueva contraseña debe tener al menos 8 caracteres.",
         )
 
-    if user.password_hash and verify_password(clean_new_pwd, user.password_hash):
+    if user.password_hash and await verify_password_async(clean_new_pwd, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="La nueva contraseña no puede ser idéntica a la contraseña actual (DISA STIG V-222545).",
@@ -447,7 +498,7 @@ async def change_password(
 
     from datetime import UTC, datetime
 
-    user.password_hash = hash_password(clean_new_pwd)
+    user.password_hash = await hash_password_async(clean_new_pwd)
     user.password_changed_at = datetime.now(UTC)
     user.failed_login_attempts = 0
     user.is_locked = False
@@ -485,7 +536,12 @@ async def toggle_registration(
     """Habilita o deshabilita el auto-registro público de usuarios en la plataforma."""
     redis = get_redis_client()
     val = "true" if body.enabled else "false"
-    await redis.set("rg:config:public_registration_enabled", val)
+    is_sa = claims.get("rol") == SystemRoleEnum.SUPERADMIN_GLOBAL.value
+    if is_sa:
+        await redis.set("rg:config:public_registration_enabled", val)
+    else:
+        tenant_id = claims.get("tid")
+        await redis.set(f"rg:{tenant_id}:config:public_registration_enabled", val)
     return {"registration_enabled": body.enabled}
 
 
@@ -505,6 +561,12 @@ async def approve_user(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Un Administrador de Organización no puede asignar el rol SUPERADMIN_GLOBAL.",
+        )
+
+    if body.role == SystemRoleEnum.SERVICE_ACCOUNT and not body.allowed_cidr_list:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Una cuenta de servicio (SERVICE_ACCOUNT) requiere al menos una red CIDR autorizada (allowed_cidr_list)",
         )
 
     stmt = select(User).where(User.id == user_id, User.tenant_id == tenant_id)
@@ -680,6 +742,7 @@ async def generate_user_mcp_token(
     pipe = redis.pipeline()
     pipe.hset(sess_key, mapping=mapping)  # type: ignore[arg-type]
     pipe.expire(sess_key, ttl_seconds)
+    pipe.set(f"rg:sess_idx:{session_id}", str(target_user.tenant_id), ex=ttl_seconds)
     pipe.zadd(active_sess_key, {session_id: float(now)})
     pipe.sadd(user_sess_key, session_id)
     pipe.expire(user_sess_key, ttl_seconds)

@@ -116,7 +116,8 @@ def is_safe_outbound_url(
                         if not _is_ip_safe(resolved_ip, allow_private_cidrs=allow_private_cidrs):
                             return False
                 except OSError:
-                    pass
+                    if settings.ROSGRID_ENV == "production":
+                        return False
         return True
     except Exception:
         return False
@@ -154,7 +155,8 @@ async def is_safe_outbound_url_async(
                     if not _is_ip_safe(resolved_ip, allow_private_cidrs=allow_private_cidrs):
                         return False
             except OSError:
-                pass
+                if settings.ROSGRID_ENV == "production":
+                    return False
         return True
     except Exception:
         return False
@@ -190,5 +192,6 @@ def is_safe_smtp_target(
                 if not _is_ip_safe(resolved_ip, allow_private_cidrs=[]):
                     return False
         except OSError:
-            pass
+            if settings.ROSGRID_ENV == "production":
+                return False
     return True

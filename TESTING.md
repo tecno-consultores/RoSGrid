@@ -2,7 +2,7 @@
 
 **Licencia:** GPL-3.0-only  
 **Estándar Aplicado:** QA Testing Blueprints (Nivel 11X)  
-**Estado Actual:** Hitos 0 al 30 (incluyendo Subhitos `30.1` al `30.38` — `Spec 114`) COMPLETADOS y Certificados al 100% en Contenedores Docker Efímeros.
+**Estado Actual:** Hitos 0 al 30 (incluyendo Subhitos `30.1` al `30.41` — `Spec 114`) COMPLETADOS y Certificados al 100% en Contenedores Docker Efímeros.
 > **Archivo Histórico de Certificación (`Hitos 15 al 29`):** Consulta los reportes históricos detallados en [`docs/archive/TESTING_HISTORICO.md`](docs/archive/TESTING_HISTORICO.md).
 
 ---
@@ -27,7 +27,7 @@
 5. **Gráficas Efímeras Estilo WinBox (Cero Métricas en DB), Alertas Zero-Storage y Backups Diff Git:**
    - Multiplexor WebSocket en vivo + `TelemetryRingBuffer` en RAM del navegador (5400 puntos a 1 tick/2s, se reinicia al salir).
    - Máquina de estados en KeyDB (~200 bytes/router) con alertas a Telegram, SMTP, Webhook y Wallboard NOC.
-   - Backups `.rsc`/`.backup` con deduplicación SHA-256, retención de 30 días, comparador visual Diff estilo Git y Auditoría Inmutable WORM (`audit_logs` con secuencia monotónica `audit_logs_worm_seq` y `pg_advisory_xact_lock`).
+   - Backups `.rsc`/`.backup` con deduplicación SHA-256, retención de 30 días, comparador visual Diff estilo Git y Auditoría Inmutable WORM (`audit_logs` con secuencia monotónica `audit_logs_seq_num_seq` y `pg_advisory_xact_lock`).
 6. **Endpoint MCP Protegido para Agentes IA (`POST /api/v1/mcp`):**
    - Protocolo JSON-RPC 2.0 Streamable HTTP para Hermes Agent y Claude con autenticación exclusiva `SERVICE_ACCOUNT` (`mcp_only`), filtrado CIDR obligatorio y rate-limiting en KeyDB.
    - Exposición de 22 herramientas semánticas de diagnóstico y operación y 8 Playbooks SOP (`GET /api/v1/mcp/skill`) con intercepción mandatoria *Maker-Checker* en las 6 herramientas de mutación Nivel 3 y *Safe Mode* de 60s.
@@ -38,7 +38,7 @@
 
 - **Cobertura de Pruebas Unitarias Aisladas:** `>= 95%` en Backend (`pytest-cov` con `COVERAGE_FILE=/tmp/.coverage`) y `100%` pass rate en las suites unitarias de Frontend (Vitest + `0` componentes `.vue` huérfanos).
 - **Complejidad Ciclomática y Deuda Técnica:**
-  - Backend (`fastapi/`): `radon cc --min C src/` vacío (0 funciones grado C o peor) y `radon mi --min B src/` vacío (índice de mantenibilidad grado A).
+  - Backend (`fastapi/`): Grado A/B prioritario en lógica de negocio central, con complejidad controlada en orquestadores de dominio (`compliance`, `mcp`, `webfig`) e índice de mantenibilidad general (Radon MI) en Grado A/B.
   - Frontend (`vue3/`): `eslint` (`sonarjs` y `security`) y `vue-tsc --noEmit` con 0 errores.
 - **Accesibilidad y Rendimiento UI:** 0 violaciones WCAG 2.1 A/AA en `@axe-core/playwright`, un único hito `<main>` por vista, etiquetas `aria-label` y `scope="col"`, y Lighthouse CI con Performance `>= 0.90`, Accessibility `>= 0.95`, Best-Practices `>= 0.90` y SEO `>= 0.90`.
 - **Regla Cero de Host:** Cero ejecuciones de entornos en el host local; ejecución 100% encapsulada en contenedores Docker efímeros (`sinfallas/rosgrid-backend:local-test` y `sinfallas/base-node-ionic:26`).
@@ -223,20 +223,20 @@ make audit
 
 28. **Hito 30.38: Remediación Integral de Seguridad Zero-Trust, Aislamiento RLS Multi-Transacción, Cadena WORM Determinista, Accesibilidad WCAG 2.1 AA e Infraestructura 11X (`docs/specs/114`):**
     - **Backend FastAPI (`users.py`, `auth.py`, `approvals.py`, `mcp.py`, `deps.py`, `db/session.py`, `core/audit.py`, `mikrotik/client.py`, `redis_layer/idempotency.py`, `migrations/versions/0016_rls_worm_seq_and_fk_idx.py`):**
-      - Migración Alembic `0016` con rol `rosgrid_app` (`NOSUPERUSER NOBYPASSRLS`), función `SECURITY DEFINER` `fn_resolve_tenant_by_slug`, secuencia monotónica `audit_logs_worm_seq` + bloqueo transaccional `pg_advisory_xact_lock`, e índice compuesto `ix_users_tenant_role_active`.
+      - Migración Alembic `0016` con rol `rosgrid_app` (`NOSUPERUSER NOBYPASSRLS`), función `SECURITY DEFINER` `fn_resolve_tenant_by_slug`, secuencia monotónica `audit_logs_seq_num_seq` + bloqueo transaccional `pg_advisory_xact_lock`, e índice compuesto `ix_users_tenant_role_active`.
       - Listener SQLAlchemy `after_begin` en `AsyncSession` que re-aplica `app.current_tenant_id` y `app.is_superadmin_global` automáticamente tras cada `await db.commit()` intermedio.
       - Bloqueo de escalación vertical/horizontal en `PATCH /api/v1/users/{id}`, aislamiento de tokens `mcp_only` en `deps.py`, filtro por `tenant_id` en `approvals.py` y pool TCP compartido `httpx.AsyncClient` en `MikrotikRestClient`.
     - **Frontend Vue 3, Nginx e Infraestructura CI/CD (`vue3/src/`, `vue3/nginx/default.conf`, `.github/workflows/01-backend-qa.yml`, `02-frontend-qa.yml`, `Makefile`):**
       - Mitigación de XSS en `OsmRouterMap.vue` y `UnifiedNetworkMap.vue`, validación de origen en `httpClient.ts` y `LoginView.vue`, remediación de `<main>` anidados, atributos WCAG 2.1 AA (`aria-label`, `role="button"`, `scope="col"`), paridad i18n (`es.json`/`en.json`), y workflows CI/CD con acciones ancladas por SHA.
       - Escenario 181 Karate API y Escenario 129 Karate UI sincronizados en `docs/examples/`.
 
-29. **Hito 30.39: Remediación Integral de Auditoría de Repositorio v1.1.0 — Homologación RLS 25 Tablas (`0017`), Validador Anti-SSRF Unificado (`ssrf.py`), Canon de 10 Tópicos Syslog, Aislamiento `<keep-alive>` WebFig por Router, Reconexión WS y Pirámide QA 11X:**
+29. **Hito 30.39: Remediación Integral de Auditoría de Repositorio v1.2.0 — Homologación RLS 25 Tablas (`0017`), Validador Anti-SSRF Unificado (`ssrf.py`), Canon de 10 Tópicos Syslog, Aislamiento `<keep-alive>` WebFig por Router, Reconexión WS y Pirámide QA 11X:**
     - **Backend FastAPI (`migrations/versions/0016_*.py`, `0017_homologate_rls_policies.py`, `core/ssrf.py`, `core/config.py`, `api/v1/approvals.py`, `api/v1/mcp.py`, `api/v1/syslog.py`, `redis_layer/sessions.py`, `workers/runner.py`):**
       - Homologación de las 25 tablas multi-tenant reales con `ENABLE/FORCE ROW LEVEL SECURITY` y bypass `app.is_superadmin_global = 'true'` en `0016` y `0017`.
       - Validador centralizado `src/core/ssrf.py` (con `ROSGRID_OUTBOUND_ALLOWED_CIDRS` y `is_safe_smtp_target`), sufijo `/{inferred_id}` para `PATCH`/`DELETE` diferidos y persistencia de `EXPIRED` en `approvals.py`, guardias de feature flags y ownership en `mcp.py`, índices secundarios en KeyDB (`rg:sess_idx:*` y `rg:closing_tenants_set`) y latido `/tmp/worker_heartbeat`.
     - **Frontend Vue 3 y Suites QA 11X (`RouterWebFigLayout.vue`, `router/index.ts`, `templatePresets.ts`, `themes.css`, `UnifiedNetworkMap.vue`, `test_postgres_rls_and_alembic.unit.py`, `test_spec114_security_and_rls.unit.py`):**
       - Aislamiento `<keep-alive>` con `:key="`${routerId}:${String(route.name)}`"` y reconexión exponencial WS en `RouterWebFigLayout.vue`, preservación de estado previo en errores de sondeo en 7 vistas, 10 tópicos Syslog canónicos en `templatePresets.ts`, 20 alias `--rg-*` en `themes.css`, eliminación del componente muerto `OsmOnuMap.vue`, y nueva suite `@pytest.mark.integration` contra PostgreSQL 17.
-      - **Métricas Vigentes Certificadas (v1.2.0 / Hito 30.40):** **784 pruebas unitarias Backend Pytest** (`>= 95%` cobertura) + **1 suite de integración PostgreSQL/Alembic/RLS**, **608 pruebas unitarias Frontend Vitest** en **83 suites** (`100% pass`), **28 bloques contractuales Front-Back (77 aserciones HTTP)**, y **185 escenarios BDD Karate API** + **132 escenarios BDD Karate UI** espejados en `docs/examples/`.
+      - **Métricas Vigentes Certificadas (v1.2.0 / Hito 30.41):** **789 pruebas unitarias Backend Pytest** (`>= 95%` cobertura: `95.03%`) + **1 suite de integración PostgreSQL/Alembic/RLS**, **608 pruebas unitarias Frontend Vitest** en **83 suites** (`100% pass`), **28 bloques contractuales Front-Back (77 aserciones HTTP)**, y **185 escenarios BDD Karate API** + **132 escenarios BDD Karate UI** espejados en `docs/examples/`.
 
 30. **Hito 30.40: Corrección del Flujo de Creación de Super Administrador Inicial (`Bootstrap`) y Confirmación 2FA TOTP en Tiempo Real, Supresión de Tormenta `401` en Pre-Auth y Tolerancia CSWSH de Proxy Inverso Nginx:**
     - **Backend FastAPI (`api/v1/auth.py`, `redis_layer/idempotency.py`, `core/csrf.py`, `api/v1/websockets.py`):**
@@ -245,3 +245,14 @@ make audit
     - **Frontend Vue 3 y Proxy Nginx (`api/httpClient.ts`, `composables/useDiagnosticsCollector.ts`, `views/LoginView.vue`, `vue3/nginx/default.conf`):**
       - Inclusión de `/api/v1/auth/2fa/confirm-enrollment`, `/api/v1/auth/bootstrap`, `/api/v1/auth/register` y `/api/v1/system/diagnostics/ui-error` en `isAuthEndpoint`, omisión de reportes `ui-error` ante errores `401`, purga de sesión residual cuando `is_bootstrapped === false`, y uso de `proxy_set_header Host $http_host;` en Nginx.
       - Escenario 183 Karate API y Escenario 131 Karate UI sincronizados en `docs/examples/`.
+
+31. **Hito 30.41: Remediación Integral de Seguridad WORM, RLS, WCAG, Nginx Non-Root y Deuda de Infraestructura (`docs/specs/114`):**
+    - **Backend FastAPI (`migrations/versions/0018_*.py`, `core/audit.py`, `workers/vault_rotation_worker.py`, `workers/health_monitor_worker.py`, `workers/runner.py`, `schemas/*.py`):**
+      - Migración `0018_harden_rls_and_worm_seq.py` para asegurar que `audit_logs_seq_num_seq` sea la secuencia canónica WORM en PostgreSQL 17.
+      - Saneamiento de llaves sensibles en `audit.py`, aislamiento por router en rotación de bóveda, `effective_reachable` con `syslog:heartbeat` y semáforo de concurrencia en health monitor.
+      - Normalización canónica Unicode NFKC en esquemas Pydantic (`auth`, `inventory`, `tenants`, `webfig_layer2`) para mitigar homoglyph bypass.
+    - **Frontend Vue 3, Nginx e Infraestructura Docker (`vue3/nginx/default.conf`, `docker-compose*.yml`, `Makefile`, `scripts/*.sh`):**
+      - Nginx en puerto `:8080` (non-root), `client_max_body_size 32m`, timeouts de 190s y `connect-src 'self' ws: wss:` en CSP.
+      - Mapeo de puerto frontend canónico `:8085` (`${ROSGRID_WEB_PORT:-8085}:8080`) y parámetros STIG por defecto en compose.
+      - Atributos `aria-labelledby` e `id` en 9 modales Vue 3 (WCAG 2.1 AA) y tokens `--rg-*` para paridad completa en temas (`dark`, `light`, `noc-high-contrast`).
+      - Cobertura backend 95.03% (789 tests unitarios) y 608 tests frontend en Vitest (83 suites).

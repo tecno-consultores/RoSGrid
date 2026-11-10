@@ -185,17 +185,25 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  let inFlightFeaturesPromise: Promise<void> | null = null;
+
   async function fetchTenantFeatures(): Promise<void> {
     const tid = user.value?.tenant_id;
     if (!tid) return;
-    try {
-      const res = await http.get<TenantFeatureFlags>(`/api/v1/tenants/${tid}/features`);
-      if (res.data) {
-        updateTenantFeatures(res.data);
+    if (inFlightFeaturesPromise) return inFlightFeaturesPromise;
+    inFlightFeaturesPromise = (async () => {
+      try {
+        const res = await http.get<TenantFeatureFlags>(`/api/v1/tenants/${tid}/features`);
+        if (res.data) {
+          updateTenantFeatures(res.data);
+        }
+      } catch {
+        // Ignora errores si no hay conexión o no está autenticado aún
+      } finally {
+        inFlightFeaturesPromise = null;
       }
-    } catch {
-      // Ignora errores si no hay conexión o no está autenticado aún
-    }
+    })();
+    return inFlightFeaturesPromise;
   }
 
   function isFeatureEnabled(flagName: string): boolean {
@@ -219,16 +227,66 @@ export const useAuthStore = defineStore('auth', () => {
     SUPERVISOR: {
       TENANT_MANAGEMENT: 'DENY',
       USER_MANAGEMENT: 'READ_ONLY',
+      VIEW_ACTIVE_SESSIONS_KILLSWITCH: 'ALLOW',
+      ROUTER_INVENTORY_CSV: 'ALLOW',
       REVEAL_VAULT_KEYS: 'DENY',
+      TRIGGER_PASSWORD_ROTATION: 'ALLOW',
+      SCHEDULE_MAINTENANCE: 'ALLOW',
+      VIEW_OSM_MAP_NOC_CHARTS: 'ALLOW',
+      LIVE_DIAGNOSTICS: 'ALLOW',
+      L1_OPERATIONS: 'ALLOW',
+      CONFIG_STANDARD_L1: 'ALLOW',
+      CRITICAL_NETWORK_ACTIONS: 'ALLOW',
+      REBOOT_SHUTDOWN: 'ALLOW',
       WEBFIG_L2_UNIVERSAL: 'READ_ONLY',
       WEBFIG_L2_RPC_COMMANDS: 'MAKER_CHECKER',
+      WEBFIG_L2_BULK_OPS: 'ALLOW',
+      WEBFIG_L2_EXPORT_RSC: 'ALLOW',
+      MANUAL_BACKUP_DIFF_GIT: 'ALLOW',
+      RESTORE_BACKUP_CUSTOM_SCRIPT: 'ALLOW',
+      BULK_ACTIONS_UPGRADE_ROS: 'ALLOW',
+      APPROVE_MAKER_CHECKER: 'ALLOW',
+      AUDIT_LOGS_QUERY: 'ALLOW',
+      IPAM_VRFS_PREFIXES_MGMT: 'ALLOW',
+      SUBSCRIBERS_QOS_PROVISIONING: 'ALLOW',
+      FIELD_OPS_OPTICAL_NAP_MGMT: 'ALLOW',
+      BGP_LOOKING_GLASS_IPFIX: 'ALLOW',
+      ENTERPRISE_CIS_DRIFT_COMPLIANCE: 'ALLOW',
+      ENTERPRISE_SDWAN_SLA_ROGUEDHCP: 'ALLOW',
+      WIFI_CAPSMAN_PROVISIONING: 'ALLOW',
+      TOPOLOGY_L2_CVE_SYSLOG_MCP: 'ALLOW',
     },
     SUPPORT_L3: {
       TENANT_MANAGEMENT: 'DENY',
       USER_MANAGEMENT: 'DENY',
       VIEW_ACTIVE_SESSIONS_KILLSWITCH: 'DENY',
+      ROUTER_INVENTORY_CSV: 'ALLOW',
       REVEAL_VAULT_KEYS: 'DENY',
+      TRIGGER_PASSWORD_ROTATION: 'ALLOW',
+      SCHEDULE_MAINTENANCE: 'ALLOW',
+      VIEW_OSM_MAP_NOC_CHARTS: 'ALLOW',
+      LIVE_DIAGNOSTICS: 'ALLOW',
+      L1_OPERATIONS: 'ALLOW',
+      CONFIG_STANDARD_L1: 'ALLOW',
+      CRITICAL_NETWORK_ACTIONS: 'ALLOW',
+      REBOOT_SHUTDOWN: 'ALLOW',
+      WEBFIG_L2_UNIVERSAL: 'ALLOW',
+      WEBFIG_L2_RPC_COMMANDS: 'ALLOW',
+      WEBFIG_L2_BULK_OPS: 'ALLOW',
+      WEBFIG_L2_EXPORT_RSC: 'ALLOW',
+      MANUAL_BACKUP_DIFF_GIT: 'ALLOW',
+      RESTORE_BACKUP_CUSTOM_SCRIPT: 'ALLOW',
+      BULK_ACTIONS_UPGRADE_ROS: 'ALLOW',
+      APPROVE_MAKER_CHECKER: 'ALLOW',
       AUDIT_LOGS_QUERY: 'DENY',
+      IPAM_VRFS_PREFIXES_MGMT: 'ALLOW',
+      SUBSCRIBERS_QOS_PROVISIONING: 'ALLOW',
+      FIELD_OPS_OPTICAL_NAP_MGMT: 'ALLOW',
+      BGP_LOOKING_GLASS_IPFIX: 'ALLOW',
+      ENTERPRISE_CIS_DRIFT_COMPLIANCE: 'ALLOW',
+      ENTERPRISE_SDWAN_SLA_ROGUEDHCP: 'ALLOW',
+      WIFI_CAPSMAN_PROVISIONING: 'ALLOW',
+      TOPOLOGY_L2_CVE_SYSLOG_MCP: 'ALLOW',
     },
     SUPPORT_L2: {
       TENANT_MANAGEMENT: 'DENY',
@@ -238,17 +296,29 @@ export const useAuthStore = defineStore('auth', () => {
       REVEAL_VAULT_KEYS: 'DENY',
       TRIGGER_PASSWORD_ROTATION: 'DENY',
       SCHEDULE_MAINTENANCE: 'MAKER_CHECKER',
+      VIEW_OSM_MAP_NOC_CHARTS: 'ALLOW',
+      LIVE_DIAGNOSTICS: 'ALLOW',
+      L1_OPERATIONS: 'ALLOW',
+      CONFIG_STANDARD_L1: 'ALLOW',
       CRITICAL_NETWORK_ACTIONS: 'MAKER_CHECKER',
       REBOOT_SHUTDOWN: 'MAKER_CHECKER',
       WEBFIG_L2_UNIVERSAL: 'READ_ONLY',
       WEBFIG_L2_RPC_COMMANDS: 'MAKER_CHECKER',
       WEBFIG_L2_BULK_OPS: 'MAKER_CHECKER',
+      WEBFIG_L2_EXPORT_RSC: 'ALLOW',
+      MANUAL_BACKUP_DIFF_GIT: 'ALLOW',
       RESTORE_BACKUP_CUSTOM_SCRIPT: 'MAKER_CHECKER',
       BULK_ACTIONS_UPGRADE_ROS: 'MAKER_CHECKER',
       APPROVE_MAKER_CHECKER: 'DENY',
       AUDIT_LOGS_QUERY: 'DENY',
+      IPAM_VRFS_PREFIXES_MGMT: 'ALLOW',
+      SUBSCRIBERS_QOS_PROVISIONING: 'ALLOW',
+      FIELD_OPS_OPTICAL_NAP_MGMT: 'ALLOW',
+      BGP_LOOKING_GLASS_IPFIX: 'ALLOW',
       ENTERPRISE_CIS_DRIFT_COMPLIANCE: 'READ_ONLY',
       ENTERPRISE_SDWAN_SLA_ROGUEDHCP: 'MAKER_CHECKER',
+      WIFI_CAPSMAN_PROVISIONING: 'ALLOW',
+      TOPOLOGY_L2_CVE_SYSLOG_MCP: 'ALLOW',
     },
     SUPPORT_L1: {
       TENANT_MANAGEMENT: 'DENY',
@@ -410,6 +480,102 @@ export const useAuthStore = defineStore('auth', () => {
       WIFI_CAPSMAN_PROVISIONING: 'DENY',
       TOPOLOGY_L2_CVE_SYSLOG_MCP: 'READ_ONLY',
     },
+    SECURITY_OFFICER: {
+      TENANT_MANAGEMENT: 'DENY',
+      USER_MANAGEMENT: 'READ_ONLY',
+      VIEW_ACTIVE_SESSIONS_KILLSWITCH: 'ALLOW',
+      ROUTER_INVENTORY_CSV: 'ALLOW',
+      REVEAL_VAULT_KEYS: 'DENY',
+      TRIGGER_PASSWORD_ROTATION: 'DENY',
+      SCHEDULE_MAINTENANCE: 'DENY',
+      VIEW_OSM_MAP_NOC_CHARTS: 'ALLOW',
+      LIVE_DIAGNOSTICS: 'ALLOW',
+      L1_OPERATIONS: 'DENY',
+      CONFIG_STANDARD_L1: 'DENY',
+      CRITICAL_NETWORK_ACTIONS: 'DENY',
+      REBOOT_SHUTDOWN: 'DENY',
+      WEBFIG_L2_UNIVERSAL: 'READ_ONLY',
+      WEBFIG_L2_RPC_COMMANDS: 'DENY',
+      WEBFIG_L2_BULK_OPS: 'DENY',
+      WEBFIG_L2_EXPORT_RSC: 'ALLOW',
+      MANUAL_BACKUP_DIFF_GIT: 'READ_ONLY',
+      RESTORE_BACKUP_CUSTOM_SCRIPT: 'DENY',
+      BULK_ACTIONS_UPGRADE_ROS: 'DENY',
+      APPROVE_MAKER_CHECKER: 'DENY',
+      AUDIT_LOGS_QUERY: 'ALLOW',
+      IPAM_VRFS_PREFIXES_MGMT: 'READ_ONLY',
+      SUBSCRIBERS_QOS_PROVISIONING: 'READ_ONLY',
+      FIELD_OPS_OPTICAL_NAP_MGMT: 'DENY',
+      BGP_LOOKING_GLASS_IPFIX: 'READ_ONLY',
+      ENTERPRISE_CIS_DRIFT_COMPLIANCE: 'ALLOW',
+      ENTERPRISE_SDWAN_SLA_ROGUEDHCP: 'READ_ONLY',
+      WIFI_CAPSMAN_PROVISIONING: 'READ_ONLY',
+      TOPOLOGY_L2_CVE_SYSLOG_MCP: 'ALLOW',
+    },
+    BILLING_ADMIN: {
+      TENANT_MANAGEMENT: 'DENY',
+      USER_MANAGEMENT: 'READ_ONLY',
+      VIEW_ACTIVE_SESSIONS_KILLSWITCH: 'DENY',
+      ROUTER_INVENTORY_CSV: 'DENY',
+      REVEAL_VAULT_KEYS: 'DENY',
+      TRIGGER_PASSWORD_ROTATION: 'DENY',
+      SCHEDULE_MAINTENANCE: 'DENY',
+      VIEW_OSM_MAP_NOC_CHARTS: 'ALLOW',
+      LIVE_DIAGNOSTICS: 'DENY',
+      L1_OPERATIONS: 'DENY',
+      CONFIG_STANDARD_L1: 'DENY',
+      CRITICAL_NETWORK_ACTIONS: 'DENY',
+      REBOOT_SHUTDOWN: 'DENY',
+      WEBFIG_L2_UNIVERSAL: 'DENY',
+      WEBFIG_L2_RPC_COMMANDS: 'DENY',
+      WEBFIG_L2_BULK_OPS: 'DENY',
+      WEBFIG_L2_EXPORT_RSC: 'DENY',
+      MANUAL_BACKUP_DIFF_GIT: 'DENY',
+      RESTORE_BACKUP_CUSTOM_SCRIPT: 'DENY',
+      BULK_ACTIONS_UPGRADE_ROS: 'DENY',
+      APPROVE_MAKER_CHECKER: 'DENY',
+      AUDIT_LOGS_QUERY: 'READ_ONLY',
+      IPAM_VRFS_PREFIXES_MGMT: 'READ_ONLY',
+      SUBSCRIBERS_QOS_PROVISIONING: 'ALLOW',
+      FIELD_OPS_OPTICAL_NAP_MGMT: 'DENY',
+      BGP_LOOKING_GLASS_IPFIX: 'DENY',
+      ENTERPRISE_CIS_DRIFT_COMPLIANCE: 'DENY',
+      ENTERPRISE_SDWAN_SLA_ROGUEDHCP: 'DENY',
+      WIFI_CAPSMAN_PROVISIONING: 'DENY',
+      TOPOLOGY_L2_CVE_SYSLOG_MCP: 'DENY',
+    },
+    SERVICE_ACCOUNT: {
+      TENANT_MANAGEMENT: 'DENY',
+      USER_MANAGEMENT: 'DENY',
+      VIEW_ACTIVE_SESSIONS_KILLSWITCH: 'DENY',
+      ROUTER_INVENTORY_CSV: 'DENY',
+      REVEAL_VAULT_KEYS: 'DENY',
+      TRIGGER_PASSWORD_ROTATION: 'DENY',
+      SCHEDULE_MAINTENANCE: 'DENY',
+      VIEW_OSM_MAP_NOC_CHARTS: 'DENY',
+      LIVE_DIAGNOSTICS: 'DENY',
+      L1_OPERATIONS: 'DENY',
+      CONFIG_STANDARD_L1: 'DENY',
+      CRITICAL_NETWORK_ACTIONS: 'DENY',
+      REBOOT_SHUTDOWN: 'DENY',
+      WEBFIG_L2_UNIVERSAL: 'DENY',
+      WEBFIG_L2_RPC_COMMANDS: 'DENY',
+      WEBFIG_L2_BULK_OPS: 'DENY',
+      WEBFIG_L2_EXPORT_RSC: 'DENY',
+      MANUAL_BACKUP_DIFF_GIT: 'DENY',
+      RESTORE_BACKUP_CUSTOM_SCRIPT: 'DENY',
+      BULK_ACTIONS_UPGRADE_ROS: 'DENY',
+      APPROVE_MAKER_CHECKER: 'DENY',
+      AUDIT_LOGS_QUERY: 'DENY',
+      IPAM_VRFS_PREFIXES_MGMT: 'DENY',
+      SUBSCRIBERS_QOS_PROVISIONING: 'DENY',
+      FIELD_OPS_OPTICAL_NAP_MGMT: 'DENY',
+      BGP_LOOKING_GLASS_IPFIX: 'DENY',
+      ENTERPRISE_CIS_DRIFT_COMPLIANCE: 'DENY',
+      ENTERPRISE_SDWAN_SLA_ROGUEDHCP: 'DENY',
+      WIFI_CAPSMAN_PROVISIONING: 'DENY',
+      TOPOLOGY_L2_CVE_SYSLOG_MCP: 'DENY',
+    },
   };
 
   function canUseUserFeature(actionKey: string, requireWrite = false): boolean {
@@ -427,7 +593,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     const rolePolicies = ROLE_POLICY_MATRIX[role];
     if (rolePolicies) {
-      const policy = rolePolicies[actionKey] || 'ALLOW';
+      const policy = rolePolicies[actionKey] ?? (role === 'TENANT_ADMIN' ? 'ALLOW' : 'DENY');
       if (policy === 'DENY') return false;
       if (policy === 'READ_ONLY') return !requireWrite;
       return true;
@@ -439,7 +605,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (role === 'NOC_MONITOR') {
       return !requireWrite && (actionKey === 'VIEW_OSM_MAP_NOC_CHARTS' || actionKey.startsWith('VIEW_'));
     }
-    return true;
+    return false; // Fail-closed
   }
 
   function hasCapability(actionCode: string): boolean {

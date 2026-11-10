@@ -22,28 +22,28 @@ EXPECTED_RLS_TABLES: tuple[str, ...] = (
     "users",
     "user_router_permissions",
     "routers",
+    "router_tags",
     "router_credentials_vault",
     "maintenance_windows",
-    "router_backups",
+    "tenant_custom_roles",
     "approval_requests",
+    "router_backups",
     "config_templates",
     "bulk_jobs",
     "bulk_job_items",
     "notification_channels",
-    "immutable_audit_logs",
-    "ipam_pools",
-    "ipam_reservations",
+    "audit_logs",
+    "ipam_vrfs",
+    "ipam_prefixes",
+    "ipam_ip_addresses",
     "bandwidth_profiles",
+    "optical_boxes",
     "subscriber_devices",
-    "router_config_snapshots",
-    "router_compliance_reports",
-    "vpn_tunnels",
-    "bgp_sessions",
-    "netflow_top_talkers",
-    "tenant_sla_targets",
-    "router_sla_daily_rollups",
-    "network_incident_events",
-    "tenant_custom_roles",
+    "field_installation_orders",
+    "fiber_cut_incidents",
+    "golden_config_templates",
+    "sdwan_spoke_tunnels",
+    "sla_probe_metrics",
 )
 
 
@@ -102,5 +102,48 @@ async def test_postgres_alembic_head_and_rls_policies_enforced() -> None:
                 assert "app.is_superadmin_global" in qual_expr, (
                     f"Política en {rls_table} no incluye cláusula app.is_superadmin_global"
                 )
+    finally:
+        await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_postgres_rls_tenant_isolation_under_rosgrid_app_role() -> None:
+    """Verifica aislamiento estricto entre Tenant A y Tenant B bajo SET LOCAL ROLE rosgrid_app."""
+    db_url = os.environ.get(
+        "ROSGRID_DATABASE_URL",
+        "postgresql+asyncpg://rosgrid_user:cambiar_en_entorno_local@rosgrid_db:5432/rosgrid",
+    )
+    engine = create_async_engine(db_url, echo=False)
+    tenant_a = "11111111-1111-1111-1111-111111111111"
+    tenant_b = "22222222-2222-2222-2222-222222222222"
+    try:
+        async with engine.connect() as conn:
+            # Contexto Tenant A: consultas que intenten leer filas de Tenant B no devuelven nada
+            await conn.execute(text("SET LOCAL ROLE rosgrid_app"))
+            await conn.execute(
+                text(
+                    "SELECT set_config('app.current_tenant_id', :tid, true), set_config('app.is_superadmin_global', 'false', true)"
+                ),
+                {"tid": tenant_a},
+            )
+            res_a = await conn.execute(
+                text("SELECT count(*) FROM routers WHERE tenant_id = :tid_b"),
+                {"tid_b": tenant_b},
+            )
+            assert res_a.scalar() == 0
+
+            # Contexto Tenant B: consultas que intenten leer filas de Tenant A no devuelven nada
+            await conn.execute(text("SET LOCAL ROLE rosgrid_app"))
+            await conn.execute(
+                text(
+                    "SELECT set_config('app.current_tenant_id', :tid, true), set_config('app.is_superadmin_global', 'false', true)"
+                ),
+                {"tid": tenant_b},
+            )
+            res_b = await conn.execute(
+                text("SELECT count(*) FROM routers WHERE tenant_id = :tid_a"),
+                {"tid_a": tenant_a},
+            )
+            assert res_b.scalar() == 0
     finally:
         await engine.dispose()

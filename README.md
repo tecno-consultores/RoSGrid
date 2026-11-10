@@ -190,7 +190,7 @@ rosgrid/
 ├── CONTRIBUTING.md                 # Guía de contribución y umbrales del estándar QA 11X
 ├── CODE_OF_CONDUCT.md              # Código de conducta de la comunidad (Contributor Covenant v2.1)
 ├── CHANGELOG.md                    # Historial de versiones (Keep a Changelog / SemVer)
-├── ROADMAP.md                      # Control granular de ejecución por hitos (Hitos 0 al 30 — Lanzamiento v1.1.0)
+├── ROADMAP.md                      # Control granular de ejecución por hitos (Hitos 0 al 30 — Lanzamiento v1.2.0)
 ├── TESTING.md                      # Bitácora Viva de certificación QA 11X
 ├── docker-compose.yml              # Orquestador de entorno local / laboratorio EVE-NG (con KeyDB)
 ├── docker-compose.prod.yml         # Orquestador de producción (Imágenes oficiales en Docker Hub)

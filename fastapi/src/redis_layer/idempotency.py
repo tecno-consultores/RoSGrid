@@ -18,10 +18,11 @@ from src.redis_layer.client import get_redis_client
 _MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 _EXCLUDED_PATHS = {
     "/api/v1/auth/login",
+    "/api/v1/auth/logout",
+    "/api/v1/auth/register",
     "/api/v1/auth/2fa/verify",
     "/api/v1/auth/2fa/confirm-enrollment",
     "/api/v1/auth/refresh",
-    "/api/v1/auth/logout",
     "/api/v1/auth/session-closing",
     "/api/v1/auth/bootstrap",
     "/api/v1/mcp",
@@ -41,12 +42,54 @@ def is_valid_uuid(val: str) -> bool:
         return False
 
 
-def compute_request_hash(method: str, path: str, body: bytes) -> str:
-    raw = f"{method}:{path}:{body.decode('utf-8', errors='replace')}".encode()
+_LUA_ACQUIRE_IDEMPOTENCY = """
+local key = KEYS[1]
+local lock_key = KEYS[2]
+local req_hash = ARGV[1]
+
+local data = redis.call('HGETALL', key)
+if #data == 0 then
+    local lock_ok = redis.call('SET', lock_key, req_hash, 'NX', 'EX', 60)
+    if not lock_ok then
+        return {409, "LOCKED"}
+    end
+    redis.call('HSET', key, 'status', 'IN_PROGRESS', 'request_hash', req_hash)
+    redis.call('EXPIRE', key, 60)
+    return {0, "NEW"}
+end
+return {1, "EXISTS"}
+"""
+
+
+def compute_request_hash(method: str, path: str, body: bytes, query: str = "") -> str:
+    query_part = f"?{query}" if query else ""
+    raw = f"{method}:{path}{query_part}:{body.decode('utf-8', errors='replace')}".encode()
     return hashlib.sha256(raw).hexdigest()
 
 
 async def check_idempotency_state(redis_client: Any, key: str, req_hash: str) -> tuple[Response | None, bool]:
+    # 1. Intentar adquisición atómica vía Lua si el cliente lo soporta
+    if hasattr(redis_client, "eval"):
+        try:
+            redis_eval_fn = getattr(redis_client, "eval")  # noqa: B009
+            lua_res = await redis_eval_fn(_LUA_ACQUIRE_IDEMPOTENCY, 2, key, f"{key}:lock", req_hash)
+            if isinstance(lua_res, (list, tuple)) and len(lua_res) >= 2:
+                code = lua_res[0]
+                if code == 409:
+                    return (
+                        JSONResponse(
+                            status_code=409,
+                            content={
+                                "detail": "La operación con esta Idempotency-Key ya se encuentra en ejecución en el router"
+                            },
+                        ),
+                        False,
+                    )
+                if code == 0:
+                    return None, True
+        except Exception:
+            pass
+
     data = await redis_client.hgetall(key)
     if not data:
         if hasattr(redis_client, "setnx"):
@@ -115,6 +158,7 @@ async def _capture_response_body(response: Response) -> str:
 
 
 async def _cache_completed_idempotency(redis: Any, redis_key: str, response: Response) -> None:
+    lock_key = f"{redis_key}:lock"
     if 200 <= response.status_code < 300:
         body_str = await _capture_response_body(response)
         await redis.hset(
@@ -126,7 +170,13 @@ async def _cache_completed_idempotency(redis: Any, redis_key: str, response: Res
             },
         )
         await redis.expire(redis_key, 86400)
+        await redis.delete(lock_key)
     elif response.status_code >= 500:
+        await redis.delete(redis_key)
+        await redis.delete(lock_key)
+    else:
+        # Liberar lock y registro temporal en respuestas 4xx o 3xx
+        await redis.delete(lock_key)
         await redis.delete(redis_key)
 
 
@@ -196,16 +246,21 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         redis_key = f"rg:{tenant_id_str}:idemp:{user_id_str}:{idemp_key}"
 
         body = await request.body()
-        req_hash = compute_request_hash(request.method, request.url.path, body)
+        req_hash = compute_request_hash(request.method, request.url.path, body, str(request.url.query))
 
         redis = get_redis_client()
         conflict_or_replay, _is_new = await check_idempotency_state(redis, redis_key, req_hash)
         if conflict_or_replay is not None:
             return conflict_or_replay
 
-        response = await call_next(request)
-        await _cache_completed_idempotency(redis, redis_key, response)
-        return response
+        try:
+            response = await call_next(request)
+            await _cache_completed_idempotency(redis, redis_key, response)
+            return response
+        except Exception:
+            await redis.delete(redis_key)
+            await redis.delete(f"{redis_key}:lock")
+            raise
 
 
 async def _iterate_in_memory(chunks: list[bytes]) -> AsyncIterator[bytes]:

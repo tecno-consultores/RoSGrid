@@ -4,7 +4,7 @@ version = "1.2.0"
 description = "Backend Centralizado Multi-Tenant para Gestión de Flotas MikroTik RouterOS v7+ (GPL-3.0-only)"
 authors = [{ name = "Jesus Palencia (Creado en Tecno Consultores)", email = "sinfallas@gmail.com" }]
 license = { text = "GPL-3.0-only" }
-requires-python = ">=3.13"
+requires-python = ">=3.13" # Compatible Python 3.13-3.15 (ejecución canónica en Docker sinfallas/python3.15t:bookworm)
 dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.30.0",

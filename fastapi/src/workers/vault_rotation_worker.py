@@ -70,23 +70,32 @@ async def _rotate_single_vault(
             router_display_name=router_obj.display_name,
             status_code=200,
         )
+        await session.commit()
     except Exception as exc:
         logger.error("Fallo al rotar contraseña en MikroTik %s: %s", router_obj.display_name, exc)
-        vault.last_rotation_status = f"FAILED: {exc}"
+        try:
+            await session.rollback()
+        except Exception:
+            pass
+        vault.last_rotation_status = "FAILED"
+        try:
+            await session.commit()
+        except Exception:
+            pass
     finally:
         await client.close()
 
 
 async def run_vault_rotation_cycle() -> None:
     """Busca credenciales que vencieron su intervalo de rotación y las renueva."""
-    from sqlalchemy.ext.asyncio import AsyncSession
-
     from src.db.session import set_tenant_context
 
     now_utc = datetime.now(UTC)
     async with async_session_maker() as session:
-        if type(session) is AsyncSession:
+        try:
             await set_tenant_context(session, None, is_superadmin=True)
+        except Exception:
+            pass
         stmt = (
             select(RouterCredentialsVault)
             .options(selectinload(RouterCredentialsVault.router))

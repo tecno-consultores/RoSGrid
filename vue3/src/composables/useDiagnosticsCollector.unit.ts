@@ -12,6 +12,8 @@ vi.mock('@/api/httpClient', () => ({
   },
 }));
 
+const API_HEALTH_EVENT = 'rosgrid:api-health-event';
+
 describe('useDiagnosticsCollector — Ring Buffer de Diagnóstico UI (Spec 72)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -50,7 +52,7 @@ describe('useDiagnosticsCollector — Ring Buffer de Diagnóstico UI (Spec 72)',
   it('captura eventos globales rosgrid:api-health-event fallidos automáticamente', () => {
     const { uiDiagnosticBuffer } = useDiagnosticsCollector();
     window.dispatchEvent(
-      new CustomEvent('rosgrid:api-health-event', {
+      new CustomEvent(API_HEALTH_EVENT, {
         detail: { ok: false, status: 500, latencyMs: 88, url: '/api/v1/inventory/cves' },
       }),
     );
@@ -61,7 +63,7 @@ describe('useDiagnosticsCollector — Ring Buffer de Diagnóstico UI (Spec 72)',
   it('no captura eventos rosgrid:api-health-event de la propia ruta de reporte para evitar bucle', () => {
     const { uiDiagnosticBuffer } = useDiagnosticsCollector();
     window.dispatchEvent(
-      new CustomEvent('rosgrid:api-health-event', {
+      new CustomEvent(API_HEALTH_EVENT, {
         detail: { ok: false, status: 500, latencyMs: 50, url: '/api/v1/system/diagnostics/ui-error' },
       }),
     );
@@ -71,7 +73,7 @@ describe('useDiagnosticsCollector — Ring Buffer de Diagnóstico UI (Spec 72)',
   it('no envía POST /api/v1/system/diagnostics/ui-error ante errores 401 o de /api/v1/auth/ para evitar tormentas sin sesión', () => {
     const { uiDiagnosticBuffer } = useDiagnosticsCollector();
     window.dispatchEvent(
-      new CustomEvent('rosgrid:api-health-event', {
+      new CustomEvent(API_HEALTH_EVENT, {
         detail: {
           ok: false,
           status: 401,

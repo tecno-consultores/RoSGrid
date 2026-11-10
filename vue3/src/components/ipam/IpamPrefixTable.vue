@@ -417,10 +417,11 @@
       class="rg-modal-backdrop"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="next-avail-modal-title"
     >
       <div class="rg-modal rg-modal--sm">
         <header class="modal-header">
-          <h3>⚡ Recurso Libre Asignado</h3>
+          <h3 id="next-avail-modal-title">⚡ Recurso Libre Asignado</h3>
           <button type="button" class="btn-close" aria-label="Cerrar" @click="nextAvailableModalOpen = false">✕</button>
         </header>
         <div class="modal-body text-center">

@@ -31,12 +31,19 @@ async def sweep_all_tenants_closing_sessions() -> int:
                         tenant_ids.add(t_str)
         if not tenant_ids:
             # Fallback para conjuntos creados antes del índice o en pruebas unitarias
-            zset_keys = await redis.keys("rg:*:closing_sessions_zset")
-            for key_raw in zset_keys:
-                key_str = key_raw.decode("utf-8") if isinstance(key_raw, bytes) else str(key_raw)
-                parts = key_str.split(":")
-                if len(parts) >= 3:
-                    tenant_ids.add(parts[1])
+            if hasattr(redis, "scan_iter"):
+                async for key_raw in redis.scan_iter(match="rg:*:closing_sessions_zset", count=200):
+                    key_str = key_raw.decode("utf-8") if isinstance(key_raw, bytes) else str(key_raw)
+                    parts = key_str.split(":")
+                    if len(parts) >= 3:
+                        tenant_ids.add(parts[1])
+            elif hasattr(redis, "keys"):
+                zset_keys = await redis.keys("rg:*:closing_sessions_zset")
+                for key_raw in zset_keys:
+                    key_str = key_raw.decode("utf-8") if isinstance(key_raw, bytes) else str(key_raw)
+                    parts = key_str.split(":")
+                    if len(parts) >= 3:
+                        tenant_ids.add(parts[1])
         for tenant_id in sorted(tenant_ids):
             purged = await sweep_expired_closing_sessions(tenant_id)
             if purged:

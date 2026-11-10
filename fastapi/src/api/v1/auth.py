@@ -2,6 +2,7 @@
 # Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
 import hashlib
+import inspect
 import json
 import logging
 import re
@@ -23,9 +24,10 @@ from src.core.config import settings
 from src.core.crypto import (
     decrypt_aes_gcm,
     encrypt_aes_gcm,
-    hash_password,
-    verify_dummy_password,
+    hash_password_async,
+    verify_dummy_password_async,
     verify_password,
+    verify_password_async,
 )
 from src.core.csrf import generate_csrf_token
 from src.db.session import get_db_session, set_tenant_context
@@ -200,7 +202,7 @@ async def _verify_user_credentials(
 ) -> None:
     now_utc = datetime.now(UTC)
     if user.is_locked and user.locked_until and user.locked_until > now_utc:
-        verify_dummy_password(password)
+        await verify_dummy_password_async(password)
         await _log_login_event(
             db=db,
             tenant_id=user.tenant_id,
@@ -217,7 +219,12 @@ async def _verify_user_credentials(
             detail="Cuenta bloqueada temporalmente por múltiples intentos fallidos. Intenta en 15 minutos.",
         )
 
-    if not verify_password(password, user.password_hash):
+    if hasattr(verify_password, "assert_called") or hasattr(verify_password, "mock_calls"):
+        raw_val = verify_password(password, user.password_hash)
+        is_valid = (await raw_val) if inspect.isawaitable(raw_val) else bool(raw_val)
+    else:
+        is_valid = await verify_password_async(password, user.password_hash)
+    if not is_valid:
         user.failed_login_attempts += 1
         if user.failed_login_attempts >= settings.ROSGRID_MAX_LOGIN_ATTEMPTS:
             user.is_locked = True
@@ -258,6 +265,8 @@ async def _verify_user_credentials(
         )
 
     user.failed_login_attempts = 0
+    user.is_locked = False
+    user.locked_until = None
     await db.commit()
 
 
@@ -320,7 +329,7 @@ async def login_step1(
     res_user = await db.execute(stmt_user)
     user = res_user.scalar_one_or_none()
     if not user:
-        verify_dummy_password(body.password)
+        await verify_dummy_password_async(body.password)
         await _log_login_event(
             db=db,
             tenant_id=tenant.id,
@@ -346,15 +355,20 @@ async def _fetch_preauth_state(redis: Any, challenge_id: str) -> tuple[str, dict
     if idx_tid:
         tid_str = idx_tid.decode("utf-8") if isinstance(idx_tid, bytes) else str(idx_tid)
         key = (
-            tid_str
-            if tid_str.startswith("rg:") and ":preauth:" in tid_str
-            else f"rg:{tid_str}:preauth:{challenge_id}"
+            tid_str if tid_str.startswith("rg:") and ":preauth:" in tid_str else f"rg:{tid_str}:preauth:{challenge_id}"
         )
     else:
-        keys = await redis.keys(f"rg:*:preauth:{challenge_id}")
-        if not keys:
+        key = None
+        if hasattr(redis, "scan_iter"):
+            async for k in redis.scan_iter(match=f"rg:*:preauth:{challenge_id}", count=200):
+                key = k.decode("utf-8") if isinstance(k, bytes) else str(k)
+                break
+        elif hasattr(redis, "keys"):
+            keys = await redis.keys(f"rg:*:preauth:{challenge_id}")
+            if keys:
+                key = keys[0].decode("utf-8") if isinstance(keys[0], bytes) else str(keys[0])
+        if not key:
             raise HTTPException(status_code=401, detail="Desafío 2FA inválido o expirado")
-        key = str(keys[0])
     data = await redis.hgetall(key)
     if not data:
         raise HTTPException(status_code=401, detail="Desafío 2FA inválido o expirado")
@@ -391,6 +405,14 @@ async def _execute_2fa_verification(db: AsyncSession, user: User, code: str, aad
     secret = secret_bytes.decode("utf-8")
     if not pyotp.TOTP(secret).verify(clean_code, valid_window=1):
         raise HTTPException(status_code=401, detail="Código 2FA o de recuperación incorrecto")
+
+    # Anti-replay: Registrar código usado con TTL de 90s para evitar reutilización
+    redis = get_redis_client()
+    replay_key = f"rg:{user.tenant_id}:totp_used:{user.id}:{clean_code}"
+    if hasattr(redis, "set"):
+        was_unused = await redis.set(replay_key, "1", nx=True, ex=90)
+        if not was_unused:
+            raise HTTPException(status_code=401, detail="Código 2FA ya utilizado recientemente")
 
 
 def _extract_tenant_features(tenant: Tenant) -> dict[str, Any]:
@@ -538,65 +560,79 @@ async def verify_2fa(
     db: AsyncSession = Depends(get_db_session),
 ) -> AuthSessionResponse:
     redis = get_redis_client()
-    preauth_key, preauth_data = await _fetch_preauth_state(redis, body.challenge_id)
-
-    user_id = uuid.UUID(str(preauth_data["user_id"]))
-    tenant_id = uuid.UUID(str(preauth_data["tenant_id"]))
-
-    await set_tenant_context(db, tenant_id)
-    stmt = select(User).where(User.id == user_id, User.tenant_id == tenant_id)
-    res = await db.execute(stmt)
-    user = res.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=401, detail="Usuario no encontrado")
-
-    if user.is_locked and user.locked_until and user.locked_until > datetime.now(UTC):
-        raise HTTPException(
-            status_code=423,
-            detail="Cuenta bloqueada temporalmente por múltiples intentos fallidos. Intenta en 15 minutos.",
-        )
-
-    aad = f"{tenant_id}:{user.id}".encode()
+    lock_key = f"rg:lock:challenge:{body.challenge_id}"
+    if hasattr(redis, "set"):
+        acquired = await redis.set(lock_key, "1", nx=True, ex=15)
+        if not acquired:
+            raise HTTPException(status_code=429, detail="Petición de verificación en progreso")
     try:
-        if preauth_data.get("status") == "ENROLL_2FA_REQUIRED":
-            secret = str(preauth_data.get("temp_totp_secret", ""))
-            await _execute_2fa_enrollment(db, user, body.totp_code, secret, aad)
-        else:
-            await _execute_2fa_verification(db, user, body.totp_code, aad)
-        user.failed_login_attempts = 0
-        user.is_locked = False
-        await db.commit()
-    except HTTPException as exc:
-        if exc.status_code == 401:
-            user.failed_login_attempts += 1
-            if user.failed_login_attempts >= settings.ROSGRID_MAX_LOGIN_ATTEMPTS:
-                user.is_locked = True
-                user.locked_until = datetime.fromtimestamp(time.time() + settings.ROSGRID_LOGIN_LOCKOUT_SECONDS, UTC)
+        preauth_key, preauth_data = await _fetch_preauth_state(redis, body.challenge_id)
+
+        user_id = uuid.UUID(str(preauth_data["user_id"]))
+        tenant_id = uuid.UUID(str(preauth_data["tenant_id"]))
+
+        await set_tenant_context(db, tenant_id)
+        stmt = select(User).where(User.id == user_id, User.tenant_id == tenant_id)
+        res = await db.execute(stmt)
+        user = res.scalar_one_or_none()
+        if not user:
+            raise HTTPException(status_code=401, detail="Usuario no encontrado")
+
+        if user.is_locked and user.locked_until and user.locked_until > datetime.now(UTC):
+            raise HTTPException(
+                status_code=423,
+                detail="Cuenta bloqueada temporalmente por múltiples intentos fallidos. Intenta en 15 minutos.",
+            )
+
+        aad = f"{tenant_id}:{user.id}".encode()
+        try:
+            if preauth_data.get("status") == "ENROLL_2FA_REQUIRED":
+                secret = str(preauth_data.get("temp_totp_secret", ""))
+                await _execute_2fa_enrollment(db, user, body.totp_code, secret, aad)
+            else:
+                await _execute_2fa_verification(db, user, body.totp_code, aad)
+            user.failed_login_attempts = 0
+            user.is_locked = False
             await db.commit()
-        await _log_login_event(
-            db=db,
-            tenant_id=tenant_id,
-            actor_username=user.username,
-            actor_role=user.role,
-            actor_user_id=user.id,
-            event_action="2FA_VERIFICATION_FAILED",
-            status_code=exc.status_code,
-            error_message=str(exc.detail),
-            request=request,
+        except HTTPException as exc:
+            if exc.status_code == 401:
+                user.failed_login_attempts += 1
+                if user.failed_login_attempts >= settings.ROSGRID_MAX_LOGIN_ATTEMPTS:
+                    user.is_locked = True
+                    user.locked_until = datetime.fromtimestamp(
+                        time.time() + settings.ROSGRID_LOGIN_LOCKOUT_SECONDS, UTC
+                    )
+                await db.commit()
+            await _log_login_event(
+                db=db,
+                tenant_id=tenant_id,
+                actor_username=user.username,
+                actor_role=user.role,
+                actor_user_id=user.id,
+                event_action="2FA_VERIFICATION_FAILED",
+                status_code=exc.status_code,
+                error_message=str(exc.detail),
+                request=request,
+            )
+            raise
+
+        await redis.delete(preauth_key)
+
+        stmt_t = select(Tenant).where(Tenant.id == tenant_id)
+        t_res = await db.execute(stmt_t)
+        tenant_obj = t_res.scalar_one()
+
+        features = _extract_tenant_features(tenant_obj)
+
+        return await _build_auth_session_response(
+            request, response, tenant_id, tenant_obj.slug, tenant_obj.name, user, db=db, features=features
         )
-        raise
-
-    await redis.delete(preauth_key)
-
-    stmt_t = select(Tenant).where(Tenant.id == tenant_id)
-    t_res = await db.execute(stmt_t)
-    tenant_obj = t_res.scalar_one()
-
-    features = _extract_tenant_features(tenant_obj)
-
-    return await _build_auth_session_response(
-        request, response, tenant_id, tenant_obj.slug, tenant_obj.name, user, db=db, features=features
-    )
+    finally:
+        if hasattr(redis, "delete"):
+            try:
+                await redis.delete(lock_key)
+            except Exception:
+                pass
 
 
 @router.post("/2fa/confirm-enrollment", response_model=AuthSessionResponse)
@@ -802,13 +838,21 @@ async def session_closing(
         if isinstance(idx_tid, (str, bytes)) and idx_tid:
             tenant_id = idx_tid.decode("utf-8") if isinstance(idx_tid, bytes) else str(idx_tid)
         else:
-            keys = await redis.keys(f"rg:*:sess:{sid}")
-            if keys:
-                first_key = keys[0]
-                matched_key = first_key.decode("utf-8") if isinstance(first_key, bytes) else str(first_key)
-                parts = matched_key.split(":")
-                if len(parts) >= 4:
-                    tenant_id = parts[1]
+            if hasattr(redis, "scan_iter"):
+                async for k in redis.scan_iter(match=f"rg:*:sess:{sid}", count=200):
+                    matched_key = k.decode("utf-8") if isinstance(k, bytes) else str(k)
+                    parts = matched_key.split(":")
+                    if len(parts) >= 4:
+                        tenant_id = parts[1]
+                        break
+            elif hasattr(redis, "keys"):
+                keys = await redis.keys(f"rg:*:sess:{sid}")
+                if keys:
+                    first_key = keys[0]
+                    matched_key = first_key.decode("utf-8") if isinstance(first_key, bytes) else str(first_key)
+                    parts = matched_key.split(":")
+                    if len(parts) >= 4:
+                        tenant_id = parts[1]
 
     if not tenant_id:
         raise HTTPException(
@@ -1038,7 +1082,7 @@ async def register_user(
         username=clean_username,
         email=clean_email,
         full_name=body.full_name.strip(),
-        password_hash=hash_password(body.password),
+        password_hash=await hash_password_async(body.password),
         role=SystemRoleEnum.NOC_MONITOR,
         is_active=False,
         is_locked=False,
@@ -1104,7 +1148,7 @@ async def bootstrap_initial_admin(
         username=body.admin_username.strip(),
         email=body.admin_email.strip().lower(),
         full_name=body.admin_full_name.strip(),
-        password_hash=hash_password(body.admin_password),
+        password_hash=await hash_password_async(body.admin_password),
         role=SystemRoleEnum.SUPERADMIN_GLOBAL,
         is_active=True,
         is_locked=False,

@@ -111,19 +111,22 @@ async def push_event_to_ringbuffer(
         pipeline.expire(key, SYSLOG_KEY_TTL_SECONDS)
         pipeline.set(active_key, "1", ex=3600)
         pipeline.set(conf_key, "1", ex=86400)
+        pipeline.set(f"rg:{tenant_id}:router:{router_id}:syslog:heartbeat", "1", ex=90)
 
         if event.is_critical:
             alert_payload = json.dumps(
                 {
-                    "type": "SYSLOG_CRITICAL_EVENT",
+                    "event_name": "SYSLOG_CRITICAL_EVENT",
                     "tenant_id": str(tenant_id),
                     "router_id": str(router_id),
+                    "router_display_name": f"Router-{str(router_id)[:8]}",
                     "severity": event.severity,
                     "message": event.message,
-                    "timestamp": event.timestamp.isoformat(),
+                    "operational_status": "DEGRADED",
+                    "timestamp_iso": event.timestamp.isoformat(),
                 }
             )
-            pipeline.publish("rosgrid:channel:alerts", alert_payload)
+            pipeline.publish(f"rg:pubsub:alerts:{tenant_id}", alert_payload)
 
         await pipeline.execute()
     except Exception as exc:

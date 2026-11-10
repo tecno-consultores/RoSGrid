@@ -12,7 +12,8 @@ Actualmente reciben parches de seguridad activos las siguientes ramas e imágene
 
 | Versión | Estado de Soporte | Requisitos de Infraestructura |
 | :--- | :--- | :--- |
-| **1.1.x (`latest`)** | ✅ Soporte Activo | RouterOS v7.13+, PostgreSQL 17, KeyDB Multi-Hilo (o DragonflyDB) |
+| **1.2.x (`latest`)** | ✅ Soporte Activo | RouterOS v7.13+, PostgreSQL 17, KeyDB Multi-Hilo (o DragonflyDB) |
+| **1.1.x** | ✅ Parches Críticos | RouterOS v7.13+, PostgreSQL 17, KeyDB Multi-Hilo (o DragonflyDB) |
 | **1.0.x** | ✅ Parches Críticos | RouterOS v7.13+, PostgreSQL 17, KeyDB Multi-Hilo (o DragonflyDB) |
 | **< 1.0.0** | ❌ No Soportado | N/A |
 
@@ -142,7 +143,7 @@ La integración entre una SPA en Vue 3 y una API asíncrona en FastAPI introduce
 - **Desacoplamiento de Middleware Anti-CSRF y Protección Escopada:**
   - El middleware `CSRFProtectionMiddleware` extrae el JWT de sesión directamente desde las cookies del navegador (`__Host-rg_at` / `rg_at`) de forma autónoma respecto a `request.state`, previniendo omisiones (*bypasses*). Se alinea con OWASP CSRF Prevention eximiendo de validación CSRF a las peticiones basadas en cabecera `Authorization: Bearer` (usadas por agentes IA, automatizaciones y el endpoint MCP `/api/v1/mcp`).
 - **Sanitización Estricta Anti-XSS en Capa Cartográfica Leaflet / OpenStreetMap:**
-  - La utilidad `escapeHtml` (`vue3/src/utils/security.ts`) sanitiza obligatoriamente cualquier dato dinámico (`display_name`, `ros_identity`, `serial_number`, `physical_location`) antes de inyectarlo en `popupContent.innerHTML` de `OsmRouterMap.vue` y `OsmOnuMap.vue`, neutralizando cualquier vector de inyección de scripts HTML en nombres o identidades de equipos.
+  - La utilidad `escapeHtml` (`vue3/src/utils/security.ts`) sanitiza obligatoriamente cualquier dato dinámico (`display_name`, `ros_identity`, `serial_number`, `physical_location`) antes de inyectarlo en `popupContent.innerHTML` de `OsmRouterMap.vue` y `UnifiedNetworkMap.vue`, neutralizando cualquier vector de inyección de scripts HTML en nombres o identidades de equipos.
 - **Validación Anti-SSRF en Direccionamiento de Routers MikroTik:**
   - El validador `validate_router_target_url` en esquemas Pydantic y en el asistente CSV masivo descarta esquemas no seguros, loopback (`127.0.0.0/8`, `::1`), metadatos de nube y link-local (`169.254.0.0/16`, `fe80::/10`) y nombres de contenedor Docker internos (`localhost`, `rosgrid-db`, `rosgrid-redis`, `rosgrid-keydb`, `rosgrid-api`, `rosgrid-worker`).
 - **Tolerancia a Carreras Concurrentes (*Grace Period Leeway* de 5s) en Refresh Tokens:**

@@ -347,8 +347,8 @@
     align-items: center;
     gap: 1.25rem;
     padding: 1.5rem 2rem;
-    background: #050a14;
-    border-bottom: 1px solid #1a2a40;
+    background: var(--rg-bg-elevated, #050a14);
+    border-bottom: 1px solid var(--rg-border, #1a2a40);
   }
 
   .header-icon-wrap {

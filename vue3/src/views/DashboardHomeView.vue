@@ -20,7 +20,7 @@
     inventoryStore.fetchRouters(inventoryStore.routers.length === 0);
     inventoryStore.fetchNetworkRoles();
     nocStore.connectEventsWebSocket();
-    if (!authStore.user || authStore.canUseUserFeature('AUDIT_LOGS_QUERY', false)) {
+    if (authStore.user && authStore.canUseUserFeature('AUDIT_LOGS_QUERY', false)) {
       nocStore.fetchRecentAuditLogs();
     }
   });
@@ -245,10 +245,11 @@
   async function refreshFleetData() {
     isRefreshing.value = true;
     try {
-      await Promise.allSettled([
-        inventoryStore.fetchRouters(true),
-        nocStore.fetchRecentAuditLogs(true),
-      ]);
+      const promises: Promise<unknown>[] = [inventoryStore.fetchRouters(true)];
+      if (authStore.user && authStore.canUseUserFeature('AUDIT_LOGS_QUERY', false)) {
+        promises.push(nocStore.fetchRecentAuditLogs(true));
+      }
+      await Promise.allSettled(promises);
       isFleetUpdated.value = true;
       setTimeout(() => {
         isFleetUpdated.value = false;
@@ -511,7 +512,12 @@
             <span aria-hidden="true">📡</span>
             {{ t('dashboard.realtime_feed_title') }}
           </h2>
-          <button type="button" class="btn-link" @click="navigateTo('/audit-logs')">
+          <button
+            v-if="authStore.canUseUserFeature('AUDIT_LOGS_QUERY')"
+            type="button"
+            class="btn-link"
+            @click="navigateTo('/audit-logs')"
+          >
             {{ t('dashboard.forensic_audit_link') }}
           </button>
         </div>

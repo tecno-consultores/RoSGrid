@@ -138,10 +138,9 @@ async def _evaluate_single_router(session: Any, redis: Any, r: Router) -> None:
 
         await client.close()
 
-    # Detección y evaluación de telemetría y tráfico Syslog existente hacia RoSGrid
-    syslog_active_key = f"rg:{r.tenant_id}:router:{r.id}:syslog:active"
-    syslog_ring_key = f"rg:{r.tenant_id}:router:{r.id}:syslog:ring"
-    has_syslog_live = bool(await redis.exists(syslog_active_key) or (await redis.llen(syslog_ring_key) > 0))
+    # Detección y evaluación de telemetría y tráfico Syslog reciente hacia RoSGrid (heartbeat TTL 90s)
+    syslog_heartbeat_key = f"rg:{r.tenant_id}:router:{r.id}:syslog:heartbeat"
+    has_syslog_live = bool(await redis.exists(syslog_heartbeat_key))
     effective_reachable = is_reachable or has_syslog_live
 
     new_status, alert, updated_state = evaluate_router_monitoring_cycle(
@@ -178,11 +177,17 @@ async def run_health_monitor_cycle() -> None:
             .where(Router.admin_state == RouterAdminStateEnum.PRODUCTION)
         )
         routers = (await session.execute(stmt)).scalars().all()
-        for r in routers:
-            try:
-                await _evaluate_single_router(session, redis, r)
-            except Exception as exc:
-                logger.error("Error al monitorear router %s: %s", r.id, exc)
+        sem = asyncio.Semaphore(20)
+
+        async def _eval_with_sem(r_target: Router) -> None:
+            async with sem:
+                try:
+                    await _evaluate_single_router(session, redis, r_target)
+                except Exception as exc:
+                    logger.error("Error al monitorear router %s: %s", r_target.id, exc)
+
+        if routers:
+            await asyncio.gather(*[_eval_with_sem(r) for r in routers])
         try:
             await purge_expired_maintenance_windows(session)
         except Exception as m_exc:

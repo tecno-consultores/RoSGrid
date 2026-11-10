@@ -121,6 +121,9 @@
   --rg-font-size-md: var(--rg-text-md);
   --rg-font-size-lg: var(--rg-text-lg);
   --rg-font-size-xl: var(--rg-text-xl);
+  --rg-surface-hover: #1E293B;
+  --rg-accent-cyan-subtle: rgba(34, 211, 238, 0.15);
+  --rg-font-sm: 0.875rem;
 }
 
 [data-theme="light"] {
@@ -191,6 +194,9 @@
   --rg-accent-blue: var(--rg-brand-cyber-blue);
   --rg-status-success: var(--rg-status-online);
   --rg-status-success-bg: var(--rg-status-online-bg);
+  --rg-surface-hover: #E2E8F0;
+  --rg-accent-cyan-subtle: rgba(14, 116, 144, 0.12);
+  --rg-font-sm: 0.875rem;
 }
 
 [data-theme="noc-high-contrast"] {
@@ -258,6 +264,9 @@
   --rg-accent-blue: var(--rg-brand-cyber-blue);
   --rg-status-success: var(--rg-status-online);
   --rg-status-success-bg: var(--rg-status-online-bg);
+  --rg-surface-hover: #171717;
+  --rg-accent-cyan-subtle: rgba(56, 189, 248, 0.25);
+  --rg-font-sm: 0.875rem;
 }
 
 /* Global Reset & Box Sizing */

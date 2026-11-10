@@ -113,7 +113,7 @@ async def write_monitoring_state_pipeline(
     state_key = f"rg:{tenant_id}:mon_state:{router_id}"
     try:
         pipe = redis.pipeline(transaction=False)
-        if hasattr(pipe, "hset") and callable(getattr(pipe, "hset", None)):
+        if hasattr(pipe, "hset"):
             pipe.hset(state_key, mapping=updated_state)
             pipe.expire(state_key, ttl_seconds)
             await pipe.execute()

@@ -1,11 +1,12 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
+import unicodedata
 import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 from src.models.core import TenantStatusEnum
 
@@ -69,6 +70,11 @@ class CreateTenantRequest(BaseModel):
     admin_full_name: str | None = Field(None, max_length=150)
     admin_password: str = Field(..., min_length=8)
 
+    @field_validator("slug", "name", "tax_id", "admin_username", "admin_full_name", mode="before")
+    @classmethod
+    def _normalize_text_fields(cls, v: Any) -> Any:
+        return unicodedata.normalize("NFKC", v) if isinstance(v, str) else v
+
     @model_validator(mode="after")
     def _ensure_admin_full_name(self) -> "CreateTenantRequest":
         if not self.admin_full_name or len(self.admin_full_name.strip()) < 3:
@@ -119,6 +125,11 @@ class UpdateTenantRequest(UpdateTenantFeaturesRequest):
     max_users_quota: int | None = Field(None, gt=0)
     require_2fa_all_users: bool | None = None
     default_safemode_seconds: int | None = Field(None, ge=10, le=300)
+
+    @field_validator("slug", "name", "tax_id", mode="before")
+    @classmethod
+    def _normalize_text_fields(cls, v: Any) -> Any:
+        return unicodedata.normalize("NFKC", v) if isinstance(v, str) else v
 
 
 class TenantFeatureFlagsMixin(BaseModel):

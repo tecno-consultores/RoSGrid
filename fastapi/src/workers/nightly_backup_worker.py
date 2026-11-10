@@ -15,8 +15,10 @@ from sqlalchemy.orm import selectinload
 
 from src.api.v1.backups import export_router_rsc
 from src.api.v1.webfig_common import _create_client_from_vault
+from src.core.config import settings
 from src.core.crypto import encrypt_aes_gcm
 from src.db.session import async_session_maker
+from src.models.core import Tenant, TenantStatusEnum
 from src.models.inventory import Router, RouterAdminStateEnum
 from src.models.operations import RouterBackup
 
@@ -91,7 +93,7 @@ async def _backup_single_router(session: Any, r: Router) -> None:
             parent_backup_id=latest.id if latest else None,
             created_at=now_utc,
             last_verified_identical_at=now_utc,
-            expires_at=now_utc + timedelta(days=30),
+            expires_at=now_utc + timedelta(days=settings.ROSGRID_BACKUP_RETENTION_DAYS),
         )
         session.add(backup)
     finally:
@@ -111,7 +113,12 @@ async def run_nightly_backup_cycle() -> None:
         stmt = (
             select(Router)
             .options(selectinload(Router.vault))
-            .where(Router.admin_state == RouterAdminStateEnum.PRODUCTION)
+            .join(Tenant, Router.tenant_id == Tenant.id)
+            .where(
+                Tenant.nightly_backups_enabled.is_(True),
+                Tenant.status == TenantStatusEnum.ACTIVE,
+                Router.admin_state == RouterAdminStateEnum.PRODUCTION,
+            )
         )
         routers = (await session.execute(stmt)).scalars().all()
         for r in routers:

@@ -3,7 +3,7 @@
 
 <script setup lang="ts">
   /* eslint-disable security/detect-object-injection, sonarjs/no-duplicate-string */
-  import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
+  import { ref, onMounted, onBeforeUnmount, onActivated, onDeactivated, watch, computed } from 'vue';
   import { useLiveTelemetryStore } from '@/stores/useLiveTelemetryStore';
   import { useWebFigStore } from '@/stores/useWebFigStore';
   import { useInventoryStore } from '@/stores/useInventoryStore';
@@ -307,6 +307,19 @@
     }
     loadRealInterfaces();
     drawCanvasCharts();
+  });
+
+  onActivated(() => {
+    if (animationFrameId === null && !isDeterministic) {
+      animationFrameId = requestAnimationFrame(drawCanvasCharts);
+    }
+  });
+
+  onDeactivated(() => {
+    if (animationFrameId !== null) {
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = null;
+    }
   });
 
   onBeforeUnmount(() => {

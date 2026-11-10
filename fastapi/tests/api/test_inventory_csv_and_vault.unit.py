@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
-"""Pruebas unitarias para Inventario MikroTik, CSV Onboarding, Bóveda Criptográfica y Ventanas de Mantenimiento."""
+"""Pruebas unitarias para Inventario MikroTik, CSV Onboarding, Bóveda Criptográfica y Ventanas de Mantenimiento (NFKC)."""
 
 import uuid
 from datetime import UTC, date, datetime

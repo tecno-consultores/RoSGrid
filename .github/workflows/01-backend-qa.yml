@@ -22,6 +22,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: rosgrid_user
+          POSTGRES_PASSWORD: cambiar_en_entorno_local
+          POSTGRES_DB: rosgrid
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: 📥 Checkout del código de RoSGrid
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -38,6 +53,15 @@ jobs:
             -w /app \
             sinfallas/rosgrid-backend:local-test \
             -c "ruff check --no-cache src/ tests/ && ruff format --check --no-cache src/ tests/ && UV_PROJECT_ENVIRONMENT=/tmp/venv UV_CACHE_DIR=/tmp/uv-cache PYTHONPATH=/app/src uv run --frozen --with mypy --with pytest --with pytest-asyncio --with pytest-cov sh -c 'mypy --cache-dir=/tmp/mypy src/ && pytest -o addopts=\"\" -o cache_dir=/tmp/pytest-cache --import-mode=importlib -m \"not integration\" --cov=src --cov-fail-under=95 -q --tb=short tests/'"
+
+      - name: 🐘 Ejecutar Tests de Integración PostgreSQL RLS y Alembic
+        run: |
+          docker run --rm --network host --entrypoint sh \
+            -e ROSGRID_DATABASE_URL="postgresql+asyncpg://rosgrid_user:cambiar_en_entorno_local@127.0.0.1:5432/rosgrid" \
+            -v "${GITHUB_WORKSPACE}/fastapi:/app" \
+            -w /app \
+            sinfallas/rosgrid-backend:local-test \
+            -c "UV_PROJECT_ENVIRONMENT=/tmp/venv UV_CACHE_DIR=/tmp/uv-cache uv run --frozen --with pytest --with pytest-asyncio pytest -o addopts=\"\" -o cache_dir=/tmp/pytest-cache -m \"integration\" tests/integration/"
 
       - name: 🛡️ Verificar scripts de gobernanza 11X
         run: |

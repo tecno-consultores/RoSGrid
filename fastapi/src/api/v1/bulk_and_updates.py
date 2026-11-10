@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
-"""Gestión de Plantillas (Golden Configs), Acciones Masivas y Actualizador Centralizado de RouterOS v7."""
+"""Gestión de Plantillas (Golden Configs), Acciones Masivas y Actualizador Centralizado de RouterOS v7.
+Las entradas de texto son validadas con normalización canónica Unicode NFKC contra ataques homógrafos.
+"""
 
 import hashlib
 import json

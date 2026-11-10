@@ -742,6 +742,8 @@
     "tab_ppp_short": "PPP",
     "tab_tools_short": "Tools",
     "tab_menu_short": "Menu",
+    "module_guide": "Module Guide",
+    "open_module_guide": "Open contextual guide for this WebFig module",
     "header_switch_router": "Switch Router...",
     "header_select_another": "Select another router to manage",
     "header_cpu": "CPU:",

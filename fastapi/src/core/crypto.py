@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
+import asyncio
 import base64
 import os
 
@@ -77,6 +78,21 @@ def verify_password(password: str, hashed: str) -> bool:
 def verify_dummy_password(password: str) -> bool:
     """Ejecuta verificación Argon2id en tiempo constante cuando el usuario no existe (OWASP 4.3.7 A-20)."""
     return verify_password(password or "dummy", _DUMMY_ARGON2_HASH)
+
+
+async def hash_password_async(password: str) -> str:
+    """Calcula hash Argon2id en hilo separado para evitar bloquear el event loop."""
+    return await asyncio.to_thread(hash_password, password)
+
+
+async def verify_password_async(password: str, hashed: str) -> bool:
+    """Verifica hash Argon2id en hilo separado para evitar bloquear el event loop."""
+    return await asyncio.to_thread(verify_password, password, hashed)
+
+
+async def verify_dummy_password_async(password: str) -> bool:
+    """Verifica dummy Argon2id en hilo separado para evitar bloquear el event loop."""
+    return await asyncio.to_thread(verify_dummy_password, password)
 
 
 def validate_stig_password_complexity(password: str, min_length: int = 15) -> tuple[bool, str | None]:

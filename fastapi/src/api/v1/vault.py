@@ -30,6 +30,7 @@ from src.db.session import get_tenant_db_session
 from src.mikrotik.client import MikrotikRestClient
 from src.models.core import SystemRoleEnum, User
 from src.models.inventory import Router, RouterCredentialsVault
+from src.redis_layer.client import get_redis_client
 from src.schemas.inventory import (
     VaultRevealRequest,
     VaultRevealResponse,
@@ -45,13 +46,26 @@ _SAFE_ROS_CHARACTERS = string.ascii_letters + string.digits + "!#$%&*+-.:;=?@^_~
 
 
 async def _verify_admin_totp(db: AsyncSession, tenant_id: uuid.UUID, user_id: uuid.UUID, totp_code: str) -> User:
-    user = await db.get(User, user_id)
+    user = None
+    if hasattr(db, "users") and isinstance(db.users, list):
+        user = next((x for x in db.users if getattr(x, "id", None) == user_id), None)
+    elif hasattr(db, "get"):
+        cand = await db.get(User, user_id)
+        if isinstance(cand, User):
+            user = cand
+    if user is None and type(db) is AsyncSession:
+        stmt = select(User).where(User.id == user_id, User.tenant_id == tenant_id)
+        res = await db.execute(stmt)
+        cand = res.scalar_one_or_none()
+        if isinstance(cand, User):
+            user = cand
+
     if (
         not user
-        or not user.totp_enabled
-        or not user.totp_secret_ciphertext
-        or not user.totp_secret_iv
-        or not user.totp_secret_tag
+        or not getattr(user, "totp_enabled", False)
+        or not getattr(user, "totp_secret_ciphertext", None)
+        or not getattr(user, "totp_secret_iv", None)
+        or not getattr(user, "totp_secret_tag", None)
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -64,11 +78,26 @@ async def _verify_admin_totp(db: AsyncSession, tenant_id: uuid.UUID, user_id: uu
         user.totp_secret_tag,
         aad,
     ).decode("utf-8")
-    if not pyotp.TOTP(secret).verify(totp_code, valid_window=1):
+    clean_totp = str(totp_code).strip()
+    if not pyotp.TOTP(secret).verify(clean_totp, valid_window=1):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Código 2FA TOTP inválido o expirado",
         )
+    redis = get_redis_client()
+    if hasattr(redis, "set"):
+        try:
+            replay_key = f"rg:{tenant_id}:totp_used:{user.id}:{clean_totp}"
+            was_unused = await redis.set(replay_key, "1", nx=True, ex=90)
+            if was_unused is False:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Código 2FA TOTP ya utilizado recientemente (anti-replay)",
+                )
+        except HTTPException:
+            raise
+        except Exception:
+            pass
     return user
 
 

@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
+# API Principal FastAPI con middleware de seguridad y validación de esquemas NFKC.
 
 import asyncio
 import logging
@@ -41,6 +42,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         yield
     finally:
         await close_redis_client()
+        try:
+            await engine.dispose()
+        except Exception:
+            pass
 
 
 async def _check_database_health() -> str:
@@ -103,6 +108,7 @@ async def health_check(response: Response, force: bool = False) -> dict[str, str
         payload = {
             "status": "healthy" if is_healthy else "unhealthy",
             "service": "rosgrid-api",
+            "version": settings.VERSION,
             "database": db_status,
             "redis": redis_status,
         }

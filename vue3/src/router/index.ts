@@ -221,7 +221,7 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: true,
       title: 'Bandeja Maker-Checker — RoSGrid',
       titleKey: 'routes.approvals',
-      allowedRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'SUPERVISOR', 'SUPPORT_L3'],
+      allowedRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'SUPERVISOR', 'SUPPORT_L3', 'SUPPORT_L2', 'SUPPORT_L1', 'FIELD_TECH', 'AUDITOR'],
     },
   },
   {
@@ -265,7 +265,7 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: true,
       title: 'Consola Forense WORM — RoSGrid',
       titleKey: 'routes.audit_logs',
-      allowedRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'AUDITOR', 'SECURITY_OFFICER'],
+      allowedRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'SUPERVISOR', 'AUDITOR', 'SECURITY_OFFICER'],
     },
   },
   {
@@ -309,7 +309,7 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: true,
       title: 'Usuarios y Matriz RBAC — RoSGrid',
       titleKey: 'routes.users_rbac',
-      allowedRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN'],
+      allowedRoles: ['SUPERADMIN_GLOBAL', 'TENANT_ADMIN', 'SUPERVISOR', 'AUDITOR'],
     },
   },
   {

@@ -1636,14 +1636,18 @@ async def _verify_mcp_user_access(
     client_ip: str,
 ) -> None:
     user = (await db.execute(select(User).where(User.id == user_id, User.tenant_id == tenant_id))).scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuario no encontrado")
-    if not user.allowed_cidr_list:
+    if not user or (getattr(user, "is_active", True) is False) or (getattr(user, "is_locked", False) is True):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Cuenta de servicio inactiva, bloqueada o inexistente",
+        )
+    allowed_cidrs = getattr(user, "allowed_cidr_list", None)
+    if not allowed_cidrs:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="La cuenta SERVICE_ACCOUNT requiere una lista blanca CIDR configurada (allowed_cidr_list no vacía)",
         )
-    _verify_ip_in_cidrs(client_ip, user.allowed_cidr_list)
+    _verify_ip_in_cidrs(client_ip, allowed_cidrs)
 
 
 async def _check_mcp_rate_limit(tenant_id: uuid.UUID, user_id: uuid.UUID) -> None:

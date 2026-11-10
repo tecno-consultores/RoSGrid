@@ -292,9 +292,15 @@
     return items;
   });
 
-  function handleLogout(): void {
-    authStore.clearAuth();
-    router.push('/login');
+  async function handleLogout(): Promise<void> {
+    try {
+      await http.post('/api/v1/auth/logout', {});
+    } catch {
+      // Ignorar fallos de red en logout para garantizar limpieza de sesión local
+    } finally {
+      authStore.clearAuth();
+      await router.push('/login');
+    }
   }
 </script>
 
@@ -321,7 +327,7 @@
         <router-link to="/" class="brand" :aria-label="t('nav.dashboard', 'Ir al Centro de Mando')">
           <RgBrandLogo :size="28" img-class="brand-logo" />
           <span class="brand-name">RoSGrid</span>
-          <span class="brand-version">v1.0</span>
+          <span class="brand-version">v1.2.0</span>
         </router-link>
 
         <!-- Botón para Ocultar / Mostrar la Barra Lateral Izquierda -->
@@ -1032,8 +1038,8 @@
   }
 
   .toggle-btn:hover {
-    color: #fff;
-    background: rgba(255, 255, 255, 0.08);
+    color: var(--rg-text-primary);
+    background: var(--rg-surface-hover);
   }
 
   .toggle-btn--active {

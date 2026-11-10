@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
-"""Pruebas unitarias para conmutación rápida de tenants por Super Administrador Global (Hito 25)."""
+"""Pruebas unitarias para conmutación rápida de tenants por Super Administrador Global con validación NFKC (Hito 25)."""
 
 import uuid
 from typing import Any

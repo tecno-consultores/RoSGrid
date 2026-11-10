@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 
+import unicodedata
 import uuid
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 from src.models.core import SystemRoleEnum
 
@@ -16,6 +17,11 @@ class LoginStep1Request(BaseModel):
     email: str | None = None
     username_or_email: str | None = None
     password: str = Field(..., min_length=1)
+
+    @field_validator("tenant_slug", "username_or_email", "email", mode="before")
+    @classmethod
+    def _normalize_nfkc(cls, v: Any) -> Any:
+        return unicodedata.normalize("NFKC", v) if isinstance(v, str) else v
 
     @model_validator(mode="after")
     def check_identifier(self) -> "LoginStep1Request":
@@ -85,6 +91,11 @@ class BootstrapInitRequest(BaseModel):
     admin_password: str = Field(..., min_length=15)
     admin_full_name: str = Field(..., min_length=3, max_length=128)
 
+    @field_validator("tenant_name", "tenant_slug", "admin_username", "admin_full_name", mode="before")
+    @classmethod
+    def _normalize_nfkc(cls, v: Any) -> Any:
+        return unicodedata.normalize("NFKC", v) if isinstance(v, str) else v
+
 
 class BootstrapInitResponse(BaseModel):
     status: str
@@ -107,6 +118,11 @@ class RegisterUserRequest(BaseModel):
     email: EmailStr
     full_name: str = Field(..., min_length=3, max_length=128)
     password: str = Field(..., min_length=8)
+
+    @field_validator("tenant_slug", "username", "full_name", mode="before")
+    @classmethod
+    def _normalize_nfkc(cls, v: Any) -> Any:
+        return unicodedata.normalize("NFKC", v) if isinstance(v, str) else v
 
 
 class RegisterUserResponse(BaseModel):
@@ -135,6 +151,11 @@ class SwitchTenantRequest(BaseModel):
 
     target_tenant_id: uuid.UUID | None = None
     target_tenant_slug: str | None = None
+
+    @field_validator("target_tenant_slug", mode="before")
+    @classmethod
+    def _normalize_nfkc(cls, v: Any) -> Any:
+        return unicodedata.normalize("NFKC", v) if isinstance(v, str) else v
 
     @model_validator(mode="after")
     def check_target(self) -> "SwitchTenantRequest":

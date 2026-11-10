@@ -284,11 +284,7 @@ fi
 echo -e "\n=============================================================================="
 echo -e "\e[32m       🎉 ¡Instalación de RoSGrid completada exitosamente sin root!       \e[0m"
 echo "=============================================================================="
-if [[ "$option" == "2" ]]; then
-    PORT_DISPLAY="${ROSGRID_HTTP_PORT:-8085}"
-else
-    PORT_DISPLAY="${ROSGRID_HTTP_PORT:-8080}"
-fi
+PORT_DISPLAY="${ROSGRID_WEB_PORT:-${ROSGRID_HTTP_PORT:-8085}}"
 echo "Accede a la consola web en: http://localhost:${PORT_DISPLAY} (o la IP/puerto configurado)"
 echo "Para verificar el estado de los logs ejecuta:"
 echo "  docker logs -f $API_CONTAINER"

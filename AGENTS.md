@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
+
 # Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
+
 
 # 🤖 AI Agent Directives & Technical Governance — RoSGrid
 
@@ -13,30 +15,6 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
 
 ---
 
-## 1. Active Rules in `.agents/rules/`
-
-1. [mandatory_qa_pyramid_and_doc_sync.md](.agents/rules/mandatory_qa_pyramid_and_doc_sync.md):
-   - **Mandatory 11X Test Creation:** Any code addition or modification MUST include corresponding tests across the 11X quality pyramid (`docs/examples/fastapi/` and `docs/examples/vue3/`): backend unit tests (`fastapi/tests/**/*.unit.py`, `>= 95%` coverage), frontend unit tests (`vue3/src/**/*.unit.ts`, 100% Vitest pass, zero orphan `.vue` components), real PostgreSQL and Alembic schema verification, front-back integration contracts, and **Karate Labs BDD scenarios** for both API (`fastapi/test/api_test.feature`) and UI (`vue3/test/ui_business_flow.feature`), mirrored in `docs/examples/`.
-   - **Anti-Silo Cross-Module State Propagation, 3-Phase Temporal Lifecycle & Semantic Audit Invariant:** Secondary state (e.g. `MaintenanceWindow`) affecting primary entities (`Router.admin_state`) MUST be verified end-to-end across modules without intermediate mocks, across all 3 temporal phases (`Scheduled`, `Active`, `Expired`), and with human-readable actor/resource labels (zero raw UUIDs in UI/audit feeds).
-   - **Zero-Blindness Telemetry Invariant:** Auto-provision all 10 canonical Syslog topics (`system,info`, `account`, `firewall,info`, `pppoe,ppp,info,warning,error`, etc.) and parse RouterOS v7 BSD datagrams cleanly (`UDP 514/5514`).
-   - **Concise `CHANGELOG.md` & Documentation Sync:** Synchronize affected files in `docs/`, `docs/specs/`, `ROADMAP.md`, `TESTING.md`, `README.md`, and `CHANGELOG.md` (concise 1–2 line bullets under `## [Unreleased]`, zero duplicate version headers or verbose sub-milestone dumps). Keep `.agents/ACTIVE_TASK.md` strictly inside `.agents/`.
-
-2. [secure_development_and_testing_guidelines.md](.agents/rules/secure_development_and_testing_guidelines.md):
-   - **Anti-Mock Blindness, JSONB `Decimal` Serialization & `AsyncSession` `MissingGreenlet` Invariant:** ORM changes (`src/models/`) require immediate versioned Alembic migrations verified in PostgreSQL (`\d <table>`). `MockDbSession.commit()` and `make_asserting_audit_mock` enforce strict `json.dumps()` on `JSONB` columns (`Decimal` $\rightarrow$ `float`). Avoid accessing lazy-loaded relationships in `AsyncSession` (`self.__dict__.get("attr")`) and generate a fresh `Idempotency-Key` UUID per mutation test.
-   - **Anti-Regression & Blast-Radius Governance (CLI-First AST Invariant):** Inspect incoming dependency edges via `.agents/scripts/inspect_blast_radius.py` and layer boundaries via `.agents/scripts/verify_topological_health.py` before modifying shared modules. Shell-capable agents MUST run AST queries via CLI scripts (never spawn background Docker MCP daemons on host ports). Preserve canonical ports (`UDP 514/5514`, `:8000`, `:8085`), tolerate Docker NAT/bridge proxy IPs, and never clear frontend stores (`setRouters([])`) in catch blocks.
-   - **Security-by-Design, Zero-Trust MCP & Service-Layer RBAC (Specs 113–114):** Forced PostgreSQL RLS per tenant (`rosgrid_app` `NOSUPERUSER NOBYPASSRLS` + `after_begin` multi-transaction listener + deterministic WORM audit chain), anti-SSRF validation (`validate_router_target_url`), `AES-256-GCM` Vault with 30s Step-Up 2FA, HMAC-SHA256 CSRF protection, and SuperAdmin tenant fast-switching (`notify_ws=False`). `POST /api/v1/mcp` is exclusive to `SERVICE_ACCOUNT` with a mandatory non-empty `allowed_cidr_list`; all **6 Level-3 MCP mutation tools** require Maker-Checker approval (`status: "AWAITING_APPROVAL"`, 60s Safe Mode); mutating service functions validate `claims["rol"]` in Python to prevent `Depends(require_roles(...))` bypass; and `run_cis_audit` evaluates all **28 CIS Benchmark directives** live.
-   - **Feature Flags, RBAC UI Visibility & Opt-In Telemetry (Specs 55, 64 & 113):** 4-tier permission resolution (`Tenant Flag` $\rightarrow$ `User Override` $\rightarrow$ `Role Matrix 30×11` $\rightarrow$ `Router Permissions 10 Flags`), proactive UI hiding (`v-if="canUseUserFeature(...)"`) with 100% `_READ_ROLES` parity, `ROSGRID_TELEMETRY_BEACON_ENABLED=false` (`Opt-In` by default), and dual Prometheus endpoints (`GET /metrics` vs `GET /api/v1/metrics/fleet`).
-   - **Operational Separation & Explicit User Authorization:** Build `local-test` images (`sinfallas/rosgrid-backend:local-test` and `sinfallas/rosgrid-frontend:local-test`) for local testing (`docker-compose.prod.local.yml`); reserve `./scripts/build.sh` strictly for official Docker Hub releases. Never modify code without explicit user authorization in chat.
-
-3. [frontend_parity_and_closure.md](.agents/rules/frontend_parity_and_closure.md):
-   - **Terminal ↔ Frontend & Zero-Orphan API Parity (Spec 60):** Every backend endpoint in `fastapi/src/api/v1/` must pair with an actionable Vue 3 interface (`0` broken 404/405 calls, certified by `.agents/scripts/verify_no_orphan_api_endpoints.py`).
-   - **WebFig v7 Parity, Layer 2 Next-Gen Engine & Map Ergonomics (Specs 54, 104–113):** Tactical CRUD + 1-click wizards under 60s Safe Mode across all L1/L2 modules; L2 contextual RPC actions, `/rest/console/inspect` fallback, `.query`/`.proplist`, bulk ops, and `.rsc` export/diff; `<= 25m` multi-node map clustering (`rg-map-pin--multi`) and automatic `authStore.tenantHqCoordinates` centering in `FieldTechMobileView.vue` and `UnifiedNetworkMap.vue`.
-   - **Refactoring UI, Dynamic Themes, Stacking Context & Notification Center (Specs 53, 79–82, 107–114):** All `var(--rg-*)` tokens defined across all 3 themes (`dark`, `light`, `noc-high-contrast`, zero hardcoded `data-theme` on view roots); `.rg-header` (`z-index: 3000`) isolated above `.rg-main` (`z-index: 1`) and translucent Wallboard HUD (`.wallboard-events-overlay`); safe vertical scroll and baseline-aligned `.form-row-2col` in `LoginView.vue`; contextual help (`helpCatalog.ts`, zero PDF buttons in `RoSGrid`), `X-Robots-Tag: noindex`, 6 MCP client snippets in `RgMcpTokenModal.vue`, and `RgNotificationCenterBell.vue` (`Alt+N`) separating *Read* vs *Resolved* states.
-
-4. [ground_truth_fixtures_and_negative_invariants.md](.agents/rules/ground_truth_fixtures_and_negative_invariants.md):
-   - **Universal Trimodal Fixtures & Negative Invariants:** Validate all 8 RouterOS v7 domains (Syslog, CIS Hardening, L2 Topology, IPAM DHCP, PoE, Rogue DHCP, CAPsMAN WiFi, and Config Drift) against three raw JSON fixtures: Factory Default (asserting negative/unconfigured), Nominal RoSGrid (asserting active/online), and Degraded/Unsupported (asserting graceful handling without 500 errors), plus real-fleet smoke testing (`scripts/validar-flota-real.py`).
-
----
 
 ## 2. Rule Zero: Ephemeral Docker Execution
 
@@ -44,13 +22,16 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
 
 ---
 
+
 ## 3. Skills Catalog
+
 
 ### Project Domain Skills (`.agents/skills/`):
 1. [`rosgrid-noc-operator`](.agents/skills/rosgrid-noc-operator/SKILL.md): NOC Operator & Autonomous Diagnostics for MikroTik RouterOS v7.13+ via MCP (`/api/v1/mcp`) with 8 SOP Playbooks, 22 tools, and Maker-Checker governance across all 6 mutation tools.
 2. [`mikrotik-webfig-safemode`](.agents/skills/mikrotik-webfig-safemode/SKILL.md): RouterOS v7.13+ REST API domain rules (`policy=api,rest-api,read,write,ftp,test,reboot,policy,sensitive`), native flags, `<KeepAlive :max="5">`, 60s Safe Mode, and 30s Step-Up Auth Vault.
 3. [`vue3-wcag-tactical-ui`](.agents/skills/vue3-wcag-tactical-ui/SKILL.md): WinBox-style high-density Vue 3 + TypeScript architecture (Tactical NOC Cyan), `shallowRef`, virtual scrolling, and WCAG 2.1 AA compliance.
 4. [`graphify-docs-api-writer`](.agents/skills/graphify-docs-api-writer/SKILL.md): Technical authoring and maintenance for operations manuals, Mermaid architecture, REST/WebSockets API specs, and AI MCP integration guides grounded in `GRAPH_REPORT.md`.
+
 
 ### Global QA 11X & Infrastructure Skills (`~/.gemini/config/skills/`):
 - `qa-11x-architect` & `qa-11x-docker-certifier`: Master QA 11X & DevSecOps architecture, ephemeral Docker execution, coverage `>= 95%`, Karate Labs BDD, and STIG/OWASP compliance.
@@ -59,6 +40,7 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
 - `graphify-ast-navigator`: AST Knowledge Graph navigation, blast-radius pre-audit, and layer boundary compliance.
 
 ---
+
 
 ## 4. Automation Scripts in `.agents/scripts/`
 
@@ -73,6 +55,7 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
 - `certify_task_completion.sh`: End-to-end 9-step certification gate.
 
 ---
+
 
 ## 5. Official MikroTik RouterOS v7.13+ Grounding & Technical References
 

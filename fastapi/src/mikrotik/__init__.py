@@ -10,6 +10,7 @@ from src.mikrotik.client import (
     MikrotikConnectionError,
     MikrotikRestClient,
     MikrotikTimeoutError,
+    close_all_mikrotik_clients,
 )
 from src.mikrotik.normalizers import (
     clean_rsc_export_comments,
@@ -51,6 +52,7 @@ __all__ = [
     "evaluate_ssl_fingerprint",
     # Client
     "MikrotikRestClient",
+    "close_all_mikrotik_clients",
     "MikrotikClientError",
     "MikrotikConnectionError",
     "MikrotikTimeoutError",

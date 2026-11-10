@@ -929,7 +929,7 @@ async def test_users_permissions_and_management_success_flow() -> None:
         mock_rf.return_value = mock_redis
         toggle_res = await toggle_registration(ToggleRegistrationRequest(enabled=True), claims=claims)
         assert toggle_res["registration_enabled"] is True
-        mock_redis.set.assert_awaited_once_with("rg:config:public_registration_enabled", "true")
+        mock_redis.set.assert_awaited_once_with(f"rg:{t_id}:config:public_registration_enabled", "true")
 
 
 async def test_extended_coverage_helpers() -> None:

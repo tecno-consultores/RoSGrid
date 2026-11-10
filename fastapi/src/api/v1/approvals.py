@@ -370,9 +370,17 @@ async def approve_request(
     tenant_id = uuid.UUID(claims["tid"])
     checker_user_id = uuid.UUID(claims["sub"])
 
-    if payload.totp_code:
-        from src.api.v1.vault import _verify_admin_totp
+    from src.api.v1.vault import _verify_admin_totp
 
+    checker_user = await db.get(User, checker_user_id) if type(db) is AsyncSession else None
+    if isinstance(checker_user, User) and getattr(checker_user, "totp_enabled", False):
+        if not payload.totp_code:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Código 2FA TOTP requerido para aprobar cambios críticos en la red",
+            )
+        await _verify_admin_totp(db, tenant_id, checker_user_id, payload.totp_code)
+    elif payload.totp_code:
         await _verify_admin_totp(db, tenant_id, checker_user_id, payload.totp_code)
 
     if type(db) is AsyncSession:
@@ -510,9 +518,17 @@ async def reject_request(
     tenant_id = uuid.UUID(claims["tid"])
     checker_user_id = uuid.UUID(claims["sub"])
 
-    if payload.totp_code:
-        from src.api.v1.vault import _verify_admin_totp
+    from src.api.v1.vault import _verify_admin_totp
 
+    checker_user = await db.get(User, checker_user_id) if type(db) is AsyncSession else None
+    if isinstance(checker_user, User) and getattr(checker_user, "totp_enabled", False):
+        if not payload.totp_code:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Código 2FA TOTP requerido para aprobar cambios críticos en la red",
+            )
+        await _verify_admin_totp(db, tenant_id, checker_user_id, payload.totp_code)
+    elif payload.totp_code:
         await _verify_admin_totp(db, tenant_id, checker_user_id, payload.totp_code)
 
     if type(db) is AsyncSession:
@@ -526,6 +542,13 @@ async def reject_request(
         approval = await db.get(ApprovalRequest, approval_id)
     if not approval or approval.tenant_id != tenant_id:
         raise HTTPException(status_code=404, detail="Solicitud de aprobación no encontrada")
+
+    # Inquebrantable SoD: Quien solicita NUNCA puede dictaminar como Checker (salvo SUPERADMIN_GLOBAL)
+    if approval.requested_by == checker_user_id and claims.get("rol") != SystemRoleEnum.SUPERADMIN_GLOBAL.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Violación Maker-Checker: El solicitante no puede dictaminar el rechazo formal como Checker",
+        )
 
     if approval.status != ApprovalStatusEnum.PENDING:
         raise HTTPException(

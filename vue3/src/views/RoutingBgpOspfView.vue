@@ -1275,10 +1275,10 @@
     </div>
 
     <!-- Modal: Nueva Regla de Filtro de Ruteo -->
-    <div v-if="isFilterModalOpen" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div v-if="isFilterModalOpen" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-routing-filter-title">
       <div class="modal-box">
         <div class="modal-header">
-          <h3>🛡️ Nueva Regla de Filtro de Ruteo (/routing/filter/rule)</h3>
+          <h3 id="modal-routing-filter-title">🛡️ Nueva Regla de Filtro de Ruteo (/routing/filter/rule)</h3>
           <button type="button" class="btn-close" aria-label="Cerrar" @click="isFilterModalOpen = false">✕</button>
         </div>
         <form class="modal-body" @submit.prevent="handleCreateFilterRule">

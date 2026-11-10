@@ -6,6 +6,7 @@ import hmac
 import logging
 import os
 import time
+import uuid
 
 import jwt
 from fastapi import Request, Response
@@ -18,6 +19,8 @@ logger = logging.getLogger(__name__)
 
 _EXCLUDED_PATHS = {
     "/api/v1/auth/login",
+    "/api/v1/auth/logout",
+    "/api/v1/auth/register",
     "/api/v1/auth/2fa/verify",
     "/api/v1/auth/2fa/confirm-enrollment",
     "/api/v1/auth/refresh",
@@ -90,10 +93,17 @@ def _extract_cookie_session(request: Request) -> tuple[str | None, str | None]:
             tid = payload.get("tid")
             sub = payload.get("sub")
             if sid and tid:
+                try:
+                    request.state.tenant_id = uuid.UUID(str(tid))
+                except (ValueError, TypeError):
+                    request.state.tenant_id = str(tid)
                 request.state.session_id = str(sid)
-                request.state.tenant_id = str(tid)
                 if sub:
-                    request.state.user_id = str(sub)
+                    try:
+                        request.state.user_id = uuid.UUID(str(sub))
+                    except (ValueError, TypeError):
+                        request.state.user_id = str(sub)
+                request.state.is_superadmin_global = payload.get("rol") == "SUPERADMIN_GLOBAL"
                 return str(sid), str(tid)
         except Exception as exc:
             logger.debug("Error extrayendo cookie session: %s", exc)

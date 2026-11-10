@@ -1111,10 +1111,10 @@
     </div>
 
     <!-- Modal Registrar Abonado -->
-    <div v-if="newSubscriberModalOpen" class="rg-modal-backdrop" role="dialog" aria-modal="true">
+    <div v-if="newSubscriberModalOpen" class="rg-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-new-subscriber-title">
       <div class="rg-modal">
         <header class="modal-header">
-          <h3>Registrar Nuevo Servicio FTTH</h3>
+          <h3 id="modal-new-subscriber-title">Registrar Nuevo Servicio FTTH</h3>
           <button type="button" class="btn-close" aria-label="Cerrar" @click="newSubscriberModalOpen = false">✕</button>
         </header>
         <form class="modal-body" @submit.prevent="handleCreateSubscriber">
@@ -1252,10 +1252,10 @@
     </div>
 
     <!-- Modal Cambiar Ubicación de Cliente -->
-    <div v-if="locationModalOpen" class="rg-modal-backdrop" role="dialog" aria-modal="true">
+    <div v-if="locationModalOpen" class="rg-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-client-location-title">
       <div class="rg-modal rg-modal--sm">
         <header class="modal-header">
-          <h3>📍 Ubicación Geográfica de Cliente</h3>
+          <h3 id="modal-client-location-title">📍 Ubicación Geográfica de Cliente</h3>
           <button type="button" class="btn-close" aria-label="Cerrar" @click="locationModalOpen = false">✕</button>
         </header>
         <div class="modal-body">
@@ -1340,10 +1340,10 @@
     </div>
 
     <!-- Modal 1: Crear / Editar Perfil QoS -->
-    <div v-if="isBandwidthModalOpen" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div v-if="isBandwidthModalOpen" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-qos-profile-title">
       <div class="modal-card">
         <header class="modal-header">
-          <h3>{{ editingProfileId ? '✏️ Editar Perfil de Ancho de Banda' : '➕ Nuevo Perfil de Ancho de Banda QoS' }}</h3>
+          <h3 id="modal-qos-profile-title">{{ editingProfileId ? '✏️ Editar Perfil de Ancho de Banda' : '➕ Nuevo Perfil de Ancho de Banda QoS' }}</h3>
           <button type="button" class="btn-close" aria-label="Cerrar" @click="isBandwidthModalOpen = false">✕</button>
         </header>
         <div class="modal-body form-grid">
@@ -1392,10 +1392,10 @@
     </div>
 
     <!-- Modal 2: Visualizador de Script MikroTik -->
-    <div v-if="isScriptModalOpen" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div v-if="isScriptModalOpen" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-script-viewer-title">
       <div class="modal-card">
         <header class="modal-header">
-          <h3>{{ scriptTitle }}</h3>
+          <h3 id="modal-script-viewer-title">{{ scriptTitle }}</h3>
           <button type="button" class="btn-close" aria-label="Cerrar" @click="isScriptModalOpen = false">✕</button>
         </header>
         <div class="modal-body">
@@ -1416,10 +1416,10 @@
     </div>
 
     <!-- Modal 3: Cambiar Plan de Ancho de Banda (Rate Limit en Caliente) -->
-    <div v-if="isChangeRateLimitModalOpen" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div v-if="isChangeRateLimitModalOpen" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-change-rate-limit-title">
       <div class="modal-card">
         <header class="modal-header">
-          <h3>⚡ Modificar Plan de Ancho de Banda (En Caliente)</h3>
+          <h3 id="modal-change-rate-limit-title">⚡ Modificar Plan de Ancho de Banda (En Caliente)</h3>
           <button type="button" class="btn-close" aria-label="Cerrar" @click="isChangeRateLimitModalOpen = false">✕</button>
         </header>
         <div class="modal-body">

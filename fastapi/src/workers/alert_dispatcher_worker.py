@@ -6,6 +6,7 @@
 import asyncio
 import hashlib
 import hmac
+import html
 import json
 import logging
 import smtplib
@@ -17,6 +18,7 @@ import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.config import settings
 from src.core.crypto import decrypt_aes_gcm
 from src.core.ssrf import (
     is_safe_outbound_url,
@@ -44,23 +46,30 @@ async def _dispatch_telegram(config: dict[str, Any], alert: dict[str, Any]) -> N
 
     custom_msg = alert.get("custom_message")
     if custom_msg:
+        esc_msg = html.escape(str(custom_msg))
+        esc_ch = html.escape(str(alert.get("channel_name", "Telegram")))
+        esc_time = html.escape(str(alert.get("timestamp_iso", "")))
         text = (
-            f"🚨 *Prueba de Alerta RoSGrid*\n"
-            f"• *Mensaje:* {custom_msg}\n"
-            f"• *Canal:* {alert.get('channel_name', 'Telegram')}\n"
-            f"• *Hora:* {alert.get('timestamp_iso')}"
+            f"🚨 <b>Prueba de Alerta RoSGrid</b>\n"
+            f"• <b>Mensaje:</b> {esc_msg}\n"
+            f"• <b>Canal:</b> {esc_ch}\n"
+            f"• <b>Hora:</b> {esc_time}"
         )
     else:
+        esc_ev = html.escape(str(alert.get("event_name", "")))
+        esc_r = html.escape(str(alert.get("router_display_name", "")))
+        esc_st = html.escape(str(alert.get("operational_status", "")))
+        esc_time = html.escape(str(alert.get("timestamp_iso", "")))
         text = (
-            f"🚨 *Alerta RoSGrid*\n"
-            f"• *Evento:* `{alert.get('event_name')}`\n"
-            f"• *Router:* {alert.get('router_display_name')}\n"
-            f"• *Estado:* {alert.get('operational_status')}\n"
-            f"• *Hora:* {alert.get('timestamp_iso')}"
+            f"🚨 <b>Alerta RoSGrid</b>\n"
+            f"• <b>Evento:</b> <code>{esc_ev}</code>\n"
+            f"• <b>Router:</b> {esc_r}\n"
+            f"• <b>Estado:</b> {esc_st}\n"
+            f"• <b>Hora:</b> {esc_time}"
         )
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     async with httpx.AsyncClient(timeout=10.0) as client:
-        resp = await client.post(url, json={"chat_id": chat_id, "text": text, "parse_mode": "Markdown"})
+        resp = await client.post(url, json={"chat_id": chat_id, "text": text, "parse_mode": "HTML"})
         if hasattr(resp, "raise_for_status") and callable(resp.raise_for_status):
             status_res = resp.raise_for_status()
             if asyncio.iscoroutine(status_res):
@@ -93,7 +102,7 @@ def _dispatch_smtp_sync(config: dict[str, Any], alert: dict[str, Any]) -> None:
 
     if not to_addrs:
         raise ValueError("No se especificaron destinatarios de correo ('to_emails').")
-    if not is_safe_smtp_target(host, port, allow_localhost_fallback=True):
+    if not is_safe_smtp_target(host, port, allow_localhost_fallback=(settings.ROSGRID_ENV != "production")):
         raise ValueError("Destino o puerto SMTP bloqueado por política de seguridad Anti-SSRF.")
 
     if "gmail.com" in host.lower() or "googlemail.com" in host.lower():

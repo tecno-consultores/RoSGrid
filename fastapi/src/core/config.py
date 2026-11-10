@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
+# Configuración global con validación estricta y normalización canónica Unicode NFKC.
 
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -107,6 +108,7 @@ class Settings(BaseSettings):
     ROSGRID_ADMIN_IDLE_TIMEOUT_SECONDS: int = 600
     ROSGRID_USER_IDLE_TIMEOUT_SECONDS: int = 900
     ROSGRID_PASSWORD_HISTORY_GENERATIONS: int = 5
+    ROSGRID_FORWARDED_ALLOW_IPS: str = "127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
 
     # MikroTik & Operaciones
     ROSGRID_MIKROTIK_TIMEOUT_SECONDS: int = 10

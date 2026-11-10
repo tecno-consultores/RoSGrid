@@ -4,11 +4,12 @@
 """Endpoints WebSocket: Telemetría Efímera WinBox y Eventos Globales del Tenant con Kill-Switch."""
 
 import asyncio
+import inspect
 import json
 import logging
 import uuid
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import urlsplit
 
 import jwt
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, WebSocketException
@@ -45,8 +46,10 @@ async def _verify_ws_origin(ws: WebSocket) -> None:
         return
 
     origin: str | None = None
-    if hasattr(ws, "headers") and ws.headers:
-        origin = ws.headers.get("origin")
+    if hasattr(ws, "headers") and hasattr(ws.headers, "get"):
+        raw_o = ws.headers.get("origin")
+        if isinstance(raw_o, str):
+            origin = raw_o.strip()
 
     if not origin:
         if settings.ROSGRID_ENV == "production":
@@ -56,13 +59,17 @@ async def _verify_ws_origin(ws: WebSocket) -> None:
 
     if "*" in cors_origins:
         if settings.ROSGRID_ENV == "production":
-            host_hdr = ws.headers.get("host", "") if hasattr(ws, "headers") and ws.headers else ""
-            origin_host = urlparse(origin).hostname or ""
-            header_host = host_hdr.split(":")[0] if host_hdr else ""
-            if not host_hdr or (
-                origin not in (f"https://{host_hdr}", f"http://{host_hdr}")
-                and (not origin_host or origin_host != header_host)
-            ):
+            host_hdr = ""
+            if hasattr(ws, "headers") and hasattr(ws.headers, "get"):
+                raw_h = ws.headers.get("host")
+                if isinstance(raw_h, str):
+                    host_hdr = raw_h.strip()
+            if not host_hdr:
+                await ws.close(code=4403, reason="Cabecera Host requerida en producción (CSWSH)")
+                raise WebSocketDisconnect(code=4403)
+            parsed_origin = urlsplit(origin)
+            parsed_host = urlsplit(f"//{host_hdr}")
+            if parsed_origin.hostname != parsed_host.hostname:
                 await ws.close(code=4403, reason="Origen comodín no permitido en producción (CSWSH)")
                 raise WebSocketDisconnect(code=4403)
         return
@@ -87,6 +94,13 @@ async def _extract_ws_claims(ws: WebSocket) -> dict[str, Any]:
 
     tenant_id = payload.get("tid")
     session_id = payload.get("sid")
+    role = payload.get("rol")
+    scope = payload.get("scope")
+
+    if role == SystemRoleEnum.SERVICE_ACCOUNT.value or scope == "mcp_only":
+        await ws.close(code=1008, reason="Cuentas de servicio o tokens MCP no autorizados en WebSockets")
+        raise WebSocketDisconnect(code=1008)
+
     if not tenant_id or not session_id:
         await ws.close(code=4401, reason="Token malformado")
         raise WebSocketDisconnect(code=4401)
@@ -104,18 +118,49 @@ async def _extract_ws_claims(ws: WebSocket) -> dict[str, Any]:
 
 async def _verify_ws_router_permission(claims: dict[str, Any], router_id: uuid.UUID) -> None:
     role = claims.get("rol")
-    if role in _GLOBAL_ACCESS_ROLES or claims.get("all_r", False):
-        return
-
     raw_tid = claims.get("tid")
-    raw_sub = claims.get("sub")
-    if not raw_tid or not raw_sub:
+    if not raw_tid:
+        if role in _GLOBAL_ACCESS_ROLES or claims.get("all_r", False):
+            return
         allowed_r_ids = [str(r) for r in claims.get("r_ids", [])]
         if str(router_id) not in allowed_r_ids:
             raise PermissionError("Permiso insuficiente para monitorear este router")
         return
 
-    tenant_id = uuid.UUID(str(raw_tid))
+    tenant_uuid = uuid.UUID(str(raw_tid))
+
+    # Aislamiento multi-tenant estricto: Verificar que el router pertenezca al tenant del solicitante (salvo SUPERADMIN_GLOBAL)
+    if role != SystemRoleEnum.SUPERADMIN_GLOBAL.value:
+        from src.models.inventory import Router
+
+        try:
+            async with async_session_maker() as session:
+                from sqlalchemy.ext.asyncio import AsyncSession
+
+                from src.db.session import set_tenant_context
+
+                if type(session) is AsyncSession:
+                    await set_tenant_context(session, tenant_uuid, is_superadmin=False)
+                stmt_r = select(Router.id).where(Router.id == router_id, Router.tenant_id == tenant_uuid)
+                res_r = await session.execute(stmt_r)
+                r_exists = res_r.scalar_one_or_none()
+                if r_exists is None:
+                    raise PermissionError("Router no encontrado en el tenant actual")
+        except PermissionError:
+            raise
+        except Exception:
+            pass
+
+    if role in _GLOBAL_ACCESS_ROLES or claims.get("all_r", False):
+        return
+
+    raw_sub = claims.get("sub")
+    if not raw_sub:
+        allowed_r_ids = [str(r) for r in claims.get("r_ids", [])]
+        if str(router_id) not in allowed_r_ids:
+            raise PermissionError("Permiso insuficiente para monitorear este router")
+        return
+
     user_id = uuid.UUID(str(raw_sub))
     async with async_session_maker() as session:
         from sqlalchemy.ext.asyncio import AsyncSession
@@ -123,9 +168,9 @@ async def _verify_ws_router_permission(claims: dict[str, Any], router_id: uuid.U
         from src.db.session import set_tenant_context
 
         if type(session) is AsyncSession:
-            await set_tenant_context(session, tenant_id, is_superadmin=False)
+            await set_tenant_context(session, tenant_uuid, is_superadmin=False)
         stmt = select(UserRouterPermission).where(
-            UserRouterPermission.tenant_id == tenant_id,
+            UserRouterPermission.tenant_id == tenant_uuid,
             UserRouterPermission.user_id == user_id,
             UserRouterPermission.router_id == router_id,
             UserRouterPermission.can_read.is_(True),
@@ -197,6 +242,10 @@ async def router_live_telemetry_ws(ws: WebSocket, router_id: uuid.UUID) -> None:
 
     await redis.hset(sess_key, "current_router_id", str(router_id))
     await redis.sadd(subs_key, conn_id)
+    if hasattr(redis, "expire"):
+        exp_res = redis.expire(subs_key, 3600)
+        if inspect.isawaitable(exp_res):
+            await exp_res
     ensure_poller_active(tenant_id, router_id)
 
     pubsub = redis.pubsub()

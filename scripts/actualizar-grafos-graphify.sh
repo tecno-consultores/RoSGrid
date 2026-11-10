@@ -57,6 +57,10 @@ if [ -f "${REPO_ROOT}/vue3/graphify-out/graph.json" ]; then
   cp "${REPO_ROOT}/vue3/graphify-out/GRAPH_REPORT.md" "${REPO_ROOT}/graphify-out/GRAPH_REPORT_VUE3.md" 2>/dev/null || true
 fi
 
+# Limpiar caches efímeras de graphify y normalizar permisos de lectura/ejecución
+rm -rf "${REPO_ROOT}/fastapi/graphify-out/cache" "${REPO_ROOT}/vue3/graphify-out/cache" "${REPO_ROOT}/graphify-out/cache" 2>/dev/null || true
+chmod -R a+rX "${REPO_ROOT}/fastapi/graphify-out" "${REPO_ROOT}/vue3/graphify-out" "${REPO_ROOT}/graphify-out" 2>/dev/null || true
+
 # 6. Mostrar resumen
 echo -e "\n✅ Extracción completada exitosamente. Resumen de grafos generados:"
 if [ -f "${REPO_ROOT}/fastapi/graphify-out/GRAPH_REPORT.md" ]; then

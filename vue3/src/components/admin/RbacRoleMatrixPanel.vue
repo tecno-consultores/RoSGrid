@@ -517,7 +517,7 @@
     margin: 0;
   }
   .role-code-badge {
-    background: #0f172a;
+    background: var(--rg-bg-elevated, #0f172a);
     color: var(--rg-accent-cyan, #06b6d4);
     border: 1px solid var(--rg-border-grid, #334155);
     padding: 3px 8px;
@@ -715,7 +715,7 @@
   .permission-selector {
     display: flex;
     flex-wrap: wrap;
-    background: #090d16;
+    background: var(--rg-bg-input, #090d16);
     border: 1px solid var(--rg-border-grid, #334155);
     border-radius: 6px;
     padding: 2px;

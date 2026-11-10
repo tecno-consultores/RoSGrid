@@ -17,7 +17,13 @@ _SENSITIVE_FIELD_SUBSTRINGS = (
     "token",
     "jwt",
     "authorization",
-    "key",
+    "api_key",
+    "private_key",
+    "secret_key",
+    "encryption_key",
+    "master_key",
+    "preshared_key",
+    "wpa_key",
     "private",
 )
 

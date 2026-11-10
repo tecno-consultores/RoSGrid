@@ -53,8 +53,12 @@ rm -f fastapi/*.log 2>/dev/null || true
 rm -rf fastapi/prometheus_data 2>/dev/null || true
 
 # Purgar caché de Graphify preservando GRAPH_REPORT.md, graph.html y graph.json
-rm -rf fastapi/graphify-out/cache fastapi/graphify-out/2026-* 2>/dev/null || true
+rm -rf fastapi/graphify-out/cache fastapi/graphify-out/[0-9][0-9][0-9][0-9]-* 2>/dev/null || true
+rm -rf vue3/graphify-out/cache vue3/graphify-out/[0-9][0-9][0-9][0-9]-* 2>/dev/null || true
+rm -rf graphify-out/cache graphify-out/[0-9][0-9][0-9][0-9]-* 2>/dev/null || true
 rm -f fastapi/graphify-out/.graphify_* fastapi/graphify-out/.cloud-cta-shown 2>/dev/null || true
+rm -f vue3/graphify-out/.graphify_* vue3/graphify-out/.cloud-cta-shown 2>/dev/null || true
+rm -f graphify-out/.graphify_* graphify-out/.cloud-cta-shown 2>/dev/null || true
 
 # Eliminación de bytecode compilado y __pycache__ (con fallback Docker para carpetas creadas como root)
 find fastapi .agents/scripts -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true

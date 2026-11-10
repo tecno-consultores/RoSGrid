@@ -1469,18 +1469,18 @@
   }
 
   .nav-tab:hover {
-    color: #f1f5f9;
+    color: var(--rg-text-primary);
   }
 
   .nav-tab.active {
-    color: #00f3ff;
-    border-bottom-color: #00f3ff;
-    background: rgba(0, 243, 255, 0.05);
+    color: var(--rg-accent-cyan, #00d2ff);
+    border-bottom-color: var(--rg-accent-cyan, #00d2ff);
+    background: var(--rg-accent-cyan-subtle, rgba(0, 210, 255, 0.15));
   }
 
   .tab-badge {
-    background: #1e293b;
-    color: #00f3ff;
+    background: var(--rg-bg-elevated, #1e293b);
+    color: var(--rg-accent-cyan, #00d2ff);
     font-size: 0.75rem;
     padding: 0.15rem 0.45rem;
     border-radius: 10px;

@@ -3,7 +3,7 @@
 
 <script setup lang="ts">
   import type { WebFigDynamic } from '@/types';
-  import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+  import { ref, computed, watch, onMounted, onBeforeUnmount, onActivated, onDeactivated } from 'vue';
   import { useRoute } from 'vue-router';
   import { http } from '@/api/httpClient';
   import { useWebFigStore } from '@/stores/useWebFigStore';
@@ -517,23 +517,38 @@
     }
   }
 
+  let isViewActive = true;
+
   const handleWebFigRefresh = (ev: Event) => {
+    if (!isViewActive) return;
     const detail = (ev as CustomEvent)?.detail;
     loadResource(Boolean(detail?.forceRefresh ?? true));
   };
 
   onMounted(() => {
+    isViewActive = true;
     window.addEventListener('rosgrid:webfig-refresh', handleWebFigRefresh);
   });
 
+  onActivated(() => {
+    isViewActive = true;
+  });
+
+  onDeactivated(() => {
+    isViewActive = false;
+  });
+
   onBeforeUnmount(() => {
+    isViewActive = false;
     window.removeEventListener('rosgrid:webfig-refresh', handleWebFigRefresh);
   });
 
   watch(
     [routerId, rosPath],
     () => {
-      loadResource();
+      if (routerId.value && route.params.rosPath) {
+        loadResource();
+      }
     },
     { immediate: true },
   );
@@ -681,6 +696,7 @@
             v-if="isColumnPickerOpen"
             class="column-picker-popover"
             role="dialog"
+            aria-modal="true"
             aria-label="Selector de columnas"
           >
             <div class="column-picker-header">
@@ -904,9 +920,9 @@
 
     <!-- Modal CRUD para Colección (Enriquecido con Presets y Esquema /console/inspect) -->
     <div v-if="isModalOpen" class="rg-modal-backdrop" @click.self="isModalOpen = false">
-      <div class="rg-modal" role="dialog" aria-modal="true">
+      <div class="rg-modal" role="dialog" aria-modal="true" aria-labelledby="layer2-crud-modal-title">
         <header class="modal-header">
-          <h3 class="modal-title">
+          <h3 id="layer2-crud-modal-title" class="modal-title">
             {{ getRecordId(activeRecord) ? 'Editar' : 'Crear' }} {{ resourceData.title }}
           </h3>
           <button type="button" class="btn-close" aria-label="Cerrar" @click="isModalOpen = false">✕</button>

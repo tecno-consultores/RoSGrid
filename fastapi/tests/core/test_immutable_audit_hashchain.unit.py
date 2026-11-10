@@ -29,7 +29,7 @@ def test_sanitize_sensitive_data_keys() -> None:
             "normal_key_value": "hello",
         },
         "items": [
-            {"user_key": "abc", "status": "active"},
+            {"user_api_key": "abc", "status": "active"},
             "plain_string",
         ],
     }
@@ -46,9 +46,9 @@ def test_sanitize_sensitive_data_keys() -> None:
 
     assert sanitized["nested"]["secret_answer"] == "[REDACTED]"
     assert sanitized["nested"]["token_expiration"] == "[REDACTED]"
-    assert sanitized["nested"]["normal_key_value"] == "[REDACTED]"  # Contains 'key'
+    assert sanitized["nested"]["normal_key_value"] == "hello"  # Benign 'key' substring not redacted
 
-    assert sanitized["items"][0]["user_key"] == "[REDACTED]"
+    assert sanitized["items"][0]["user_api_key"] == "[REDACTED]"
     assert sanitized["items"][0]["status"] == "active"
     assert sanitized["items"][1] == "plain_string"
 

@@ -294,8 +294,8 @@
   }
 
   .btn-close:hover {
-    color: #fff;
-    background-color: rgba(255, 255, 255, 0.08);
+    color: var(--rg-text-primary);
+    background-color: var(--rg-surface-hover);
   }
 
   .modal-form {
@@ -393,8 +393,8 @@
   }
 
   .btn-cancel:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.05);
-    color: #fff;
+    background: var(--rg-surface-hover);
+    color: var(--rg-text-primary);
   }
 
   .btn-submit {
