@@ -8,7 +8,7 @@ import secrets
 import string
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 import pyotp
 from fastapi import (
@@ -46,9 +46,9 @@ _SAFE_ROS_CHARACTERS = string.ascii_letters + string.digits + "!#$%&*+-.:;=?@^_~
 
 
 async def _verify_admin_totp(db: AsyncSession, tenant_id: uuid.UUID, user_id: uuid.UUID, totp_code: str) -> User:
-    user = None
+    user: User | None = None
     if hasattr(db, "users") and isinstance(db.users, list):
-        user = next((x for x in db.users if getattr(x, "id", None) == user_id), None)
+        user = cast(User | None, next((x for x in db.users if getattr(x, "id", None) == user_id), None))
     elif hasattr(db, "get"):
         cand = await db.get(User, user_id)
         if isinstance(cand, User):
@@ -60,22 +60,19 @@ async def _verify_admin_totp(db: AsyncSession, tenant_id: uuid.UUID, user_id: uu
         if isinstance(cand, User):
             user = cand
 
-    if (
-        not user
-        or not getattr(user, "totp_enabled", False)
-        or not getattr(user, "totp_secret_ciphertext", None)
-        or not getattr(user, "totp_secret_iv", None)
-        or not getattr(user, "totp_secret_tag", None)
-    ):
+    totp_ct: bytes | None = getattr(user, "totp_secret_ciphertext", None) if user else None
+    totp_iv: bytes | None = getattr(user, "totp_secret_iv", None) if user else None
+    totp_tag: bytes | None = getattr(user, "totp_secret_tag", None) if user else None
+    if not user or not getattr(user, "totp_enabled", False) or not totp_ct or not totp_iv or not totp_tag:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="El usuario no tiene configurado 2FA TOTP para Step-Up Auth",
         )
     aad = f"{tenant_id}:{user.id}".encode()
     secret = decrypt_aes_gcm(
-        user.totp_secret_ciphertext,
-        user.totp_secret_iv,
-        user.totp_secret_tag,
+        totp_ct,
+        totp_iv,
+        totp_tag,
         aad,
     ).decode("utf-8")
     clean_totp = str(totp_code).strip()

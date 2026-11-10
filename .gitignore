@@ -142,6 +142,7 @@ rosgrid_support_bundle_*
 ACTIVE_TASK.md
 .agents/ACTIVE_TASK.md
 .agents/*.scratchpad.md
+.agents/proposals/
 .task_scratchpad.md
 *.swp
 *.swo

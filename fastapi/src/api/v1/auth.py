@@ -352,13 +352,13 @@ async def _fetch_preauth_state(redis: Any, challenge_id: str) -> tuple[str, dict
     if not challenge_id or not _SAFE_REDIS_ID_RE.match(challenge_id):
         raise HTTPException(status_code=401, detail="Desafío 2FA inválido o expirado")
     idx_tid = await redis.get(f"rg:preauth_idx:{challenge_id}")
+    key: str | None = None
     if idx_tid:
         tid_str = idx_tid.decode("utf-8") if isinstance(idx_tid, bytes) else str(idx_tid)
         key = (
             tid_str if tid_str.startswith("rg:") and ":preauth:" in tid_str else f"rg:{tid_str}:preauth:{challenge_id}"
         )
     else:
-        key = None
         if hasattr(redis, "scan_iter"):
             async for k in redis.scan_iter(match=f"rg:*:preauth:{challenge_id}", count=200):
                 key = k.decode("utf-8") if isinstance(k, bytes) else str(k)
@@ -367,8 +367,8 @@ async def _fetch_preauth_state(redis: Any, challenge_id: str) -> tuple[str, dict
             keys = await redis.keys(f"rg:*:preauth:{challenge_id}")
             if keys:
                 key = keys[0].decode("utf-8") if isinstance(keys[0], bytes) else str(keys[0])
-        if not key:
-            raise HTTPException(status_code=401, detail="Desafío 2FA inválido o expirado")
+    if not key:
+        raise HTTPException(status_code=401, detail="Desafío 2FA inválido o expirado")
     data = await redis.hgetall(key)
     if not data:
         raise HTTPException(status_code=401, detail="Desafío 2FA inválido o expirado")

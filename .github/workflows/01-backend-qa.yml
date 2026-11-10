@@ -61,7 +61,7 @@ jobs:
             -v "${GITHUB_WORKSPACE}/fastapi:/app" \
             -w /app \
             sinfallas/rosgrid-backend:local-test \
-            -c "UV_PROJECT_ENVIRONMENT=/tmp/venv UV_CACHE_DIR=/tmp/uv-cache uv run --frozen --with pytest --with pytest-asyncio pytest -o addopts=\"\" -o cache_dir=/tmp/pytest-cache -m \"integration\" tests/integration/"
+            -c "UV_PROJECT_ENVIRONMENT=/tmp/venv UV_CACHE_DIR=/tmp/uv-cache PYTHONPATH=/app/src uv run --frozen --with pytest --with pytest-asyncio pytest -o addopts=\"\" -o cache_dir=/tmp/pytest-cache --import-mode=importlib -m \"integration\" tests/integration/"
 
       - name: 🛡️ Verificar scripts de gobernanza 11X
         run: |

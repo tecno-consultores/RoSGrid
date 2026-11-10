@@ -33,7 +33,7 @@ test-frontend:
 
 qa-integration:
 	@echo "🧪 [QA Integration] Ejecutando pruebas de integración PostgreSQL RLS y Alembic en Docker..."
-	@docker run --rm --network host --entrypoint uv -e UV_PROJECT_ENVIRONMENT=/tmp/venv -e UV_CACHE_DIR=/tmp/uv-cache -e COVERAGE_FILE=/tmp/.coverage -e ROSGRID_DATABASE_URL="postgresql+asyncpg://rosgrid_user:cambiar_en_entorno_local@127.0.0.1:5432/rosgrid" -v $$(pwd)/fastapi:/app -w /app sinfallas/rosgrid-backend:local-test run --frozen --with pytest --with pytest-asyncio --with pytest-cov pytest -o addopts="" -o cache_dir=/tmp/pytest-cache -m "integration" --cov=src --cov-fail-under=95 tests/integration/
+	@docker run --rm --network host --entrypoint uv -e UV_PROJECT_ENVIRONMENT=/tmp/venv -e UV_CACHE_DIR=/tmp/uv-cache -e COVERAGE_FILE=/tmp/.coverage -e PYTHONPATH=/app/src -e ROSGRID_DATABASE_URL="postgresql+asyncpg://rosgrid_user:cambiar_en_entorno_local@127.0.0.1:5432/rosgrid" -v $$(pwd)/fastapi:/app -w /app sinfallas/rosgrid-backend:local-test run --frozen --with pytest --with pytest-asyncio --with pytest-cov pytest -o addopts="" -o cache_dir=/tmp/pytest-cache --import-mode=importlib -m "integration" --cov=src --cov-fail-under=95 tests/integration/
 
 smoke-fleet:
 	@echo "🔍 [Smoke Fleet] Ejecutando Smoke Test de Flota Real (Negative Invariants) en Docker..."

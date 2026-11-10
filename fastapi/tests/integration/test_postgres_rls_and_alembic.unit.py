@@ -65,7 +65,10 @@ async def test_postgres_alembic_head_and_rls_policies_enforced() -> None:
                 (
                     await conn.execute(
                         text(
-                            "SELECT tablename, rowsecurity, forcerowsecurity FROM pg_tables WHERE schemaname = 'public'"
+                            "SELECT c.relname AS tablename, c.relrowsecurity AS rowsecurity, "
+                            "c.relforcerowsecurity AS forcerowsecurity "
+                            "FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+                            "WHERE n.nspname = 'public' AND c.relkind = 'r'"
                         )
                     )
                 )
