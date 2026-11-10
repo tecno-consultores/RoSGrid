@@ -328,7 +328,7 @@ def _collect_sanitized_Artifacts(
     metadata_doc = {
         "product": settings.PROJECT_NAME,
         "version": settings.VERSION,
-        "environment": settings.ENVIRONMENT,
+        "environment": settings.ROSGRID_ENV,
         "generated_at": now_iso,
         "tenant_id": tenant_id,
         "requested_by_role": user_role,
@@ -528,7 +528,18 @@ async def _dispatch_siem_protocol(
 
     if proto in ("GELF_UDP", "GELF_HTTP"):
         return await _dispatch_gelf(
-            proto, host, port, scheme, path, stream_label, tenant_id, level, source_layer, clean_message, extra_fields, auth_token
+            proto,
+            host,
+            port,
+            scheme,
+            path,
+            stream_label,
+            tenant_id,
+            level,
+            source_layer,
+            clean_message,
+            extra_fields,
+            auth_token,
         )
     if proto == "LOKI_HTTP":
         return await _dispatch_loki(

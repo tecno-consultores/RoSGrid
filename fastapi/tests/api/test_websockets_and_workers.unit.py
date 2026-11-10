@@ -184,11 +184,16 @@ async def test_verify_ws_router_permission() -> None:
     router_id = uuid.uuid4()
     # Admin allowed
     claims_admin = {"rol": SystemRoleEnum.TENANT_ADMIN.value}
-    await _verify_ws_router_permission(claims_admin, router_id)
+    assert await _verify_ws_router_permission(claims_admin, router_id) is None
 
     # Support L3 with all_r allowed
     claims_l3 = {"rol": SystemRoleEnum.SUPPORT_L3.value, "all_r": True}
-    await _verify_ws_router_permission(claims_l3, router_id)
+    assert await _verify_ws_router_permission(claims_l3, router_id) is None
+
+    # Support L1 without router in r_ids -> raises PermissionError
+    claims_denied = {"rol": SystemRoleEnum.SUPPORT_L1.value, "all_r": False, "r_ids": []}
+    with pytest.raises(PermissionError):
+        await _verify_ws_router_permission(claims_denied, router_id)
 
 
 # ============================================================================
@@ -303,5 +308,7 @@ async def test_vault_rotation_worker_single(sample_router: Router) -> None:
 @pytest.mark.asyncio
 async def test_setup_signal_handlers() -> None:
     stop_event = asyncio.Event()
-    with patch("signal.signal"):
+    fake_loop = MagicMock()
+    with patch("asyncio.get_running_loop", return_value=fake_loop):
         _setup_signal_handlers(stop_event)
+        assert fake_loop.add_signal_handler.call_count == 2

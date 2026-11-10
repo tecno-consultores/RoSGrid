@@ -5,16 +5,15 @@
 
 import hashlib
 import hmac
-import ipaddress
 import json
 import logging
-import urllib.parse
 import uuid
 from datetime import UTC, datetime
 from typing import Any
 
 import httpx
 
+from src.core.ssrf import is_safe_outbound_url, is_safe_outbound_url_async
 from src.redis_layer.client import get_redis_client
 
 logger = logging.getLogger(__name__)
@@ -45,31 +44,13 @@ _BLOCKED_OUTBOUND_HOSTS = {
 }
 
 
-def is_safe_outbound_service_url(url: str) -> bool:
-    """Valida que un webhook o destino HTTP saliente no apunte a loopback, link-local o contenedores internos."""
-    try:
-        parsed = urllib.parse.urlparse(url)
-        if parsed.scheme not in ("http", "https"):
-            return False
-        hostname = (parsed.hostname or "").strip().lower().rstrip(".")
-        norm_host = hostname.replace("_", "-")
-        if (
-            not hostname
-            or hostname in _BLOCKED_OUTBOUND_HOSTS
-            or norm_host in _BLOCKED_OUTBOUND_HOSTS
-            or norm_host.startswith("rosgrid-")
-            or hostname.endswith((".localhost", ".internal", ".localtest.me", ".nip.io", ".sslip.io", ".xip.io"))
-        ):
-            return False
-        try:
-            ip = ipaddress.ip_address(hostname)
-            if ip.is_loopback or ip.is_link_local or ip.is_unspecified or ip.is_multicast:
-                return False
-        except ValueError:
-            pass
-        return True
-    except Exception:
-        return False
+def is_safe_outbound_service_url(
+    url: str,
+    *,
+    allow_private_cidrs: list[str] | None = None,
+) -> bool:
+    """Valida que un webhook o destino HTTP saliente no apunte a loopback, link-local, rangos privados o contenedores internos."""
+    return is_safe_outbound_url(url, allow_private_cidrs=allow_private_cidrs, resolve_dns=True)
 
 
 async def publish_network_service_event(
@@ -101,7 +82,7 @@ async def send_signed_webhook_payload(
     timeout: float = 10.0,
 ) -> bool:
     """Envía un webhook HTTP POST firmado con HMAC-SHA256 según estándar RoSGrid."""
-    if not is_safe_outbound_service_url(webhook_url):
+    if not await is_safe_outbound_url_async(webhook_url, allow_private_cidrs=[]):
         logger.warning("Webhook saliente rechazado por validación anti-SSRF: %s", webhook_url)
         return False
     body_data = {

@@ -144,20 +144,50 @@ def test_process_topology_graph_lldp_ring_filters_mndp_mesh():
             {"interface": "ether1", "identity": "2", "interface-name": "ether1", "discovered-by": "cdp,mndp"},
             {"interface": "ether1", "identity": "3", "interface-name": "ether1", "discovered-by": "cdp,mndp"},
             # Enlaces físicos directos de anillo con LLDP
-            {"interface": "ether3,bridge-anillo", "identity": "2", "interface-name": "bridge-anillo/ether2", "discovered-by": "cdp,lldp,mndp"},
-            {"interface": "ether2,bridge-anillo", "identity": "3", "interface-name": "bridge-anillo/ether3", "discovered-by": "cdp,lldp,mndp"},
+            {
+                "interface": "ether3,bridge-anillo",
+                "identity": "2",
+                "interface-name": "bridge-anillo/ether2",
+                "discovered-by": "cdp,lldp,mndp",
+            },
+            {
+                "interface": "ether2,bridge-anillo",
+                "identity": "3",
+                "interface-name": "bridge-anillo/ether3",
+                "discovered-by": "cdp,lldp,mndp",
+            },
         ],
         r2.id: [
             {"interface": "ether1", "identity": "1", "interface-name": "ether1", "discovered-by": "cdp,mndp"},
             {"interface": "ether1", "identity": "3", "interface-name": "ether1", "discovered-by": "cdp,mndp"},
-            {"interface": "ether2,bridge-anillo", "identity": "1", "interface-name": "bridge-anillo/ether3", "discovered-by": "cdp,lldp,mndp"},
-            {"interface": "ether3,bridge-anillo", "identity": "3", "interface-name": "bridge-anillo/ether2", "discovered-by": "cdp,lldp,mndp"},
+            {
+                "interface": "ether2,bridge-anillo",
+                "identity": "1",
+                "interface-name": "bridge-anillo/ether3",
+                "discovered-by": "cdp,lldp,mndp",
+            },
+            {
+                "interface": "ether3,bridge-anillo",
+                "identity": "3",
+                "interface-name": "bridge-anillo/ether2",
+                "discovered-by": "cdp,lldp,mndp",
+            },
         ],
         r3.id: [
             {"interface": "ether1", "identity": "1", "interface-name": "ether1", "discovered-by": "cdp,mndp"},
             {"interface": "ether1", "identity": "2", "interface-name": "ether1", "discovered-by": "cdp,mndp"},
-            {"interface": "ether3,bridge-anillo", "identity": "1", "interface-name": "bridge-anillo/ether2", "discovered-by": "cdp,lldp,mndp"},
-            {"interface": "ether2,bridge-anillo", "identity": "2", "interface-name": "bridge-anillo/ether3", "discovered-by": "cdp,lldp,mndp"},
+            {
+                "interface": "ether3,bridge-anillo",
+                "identity": "1",
+                "interface-name": "bridge-anillo/ether2",
+                "discovered-by": "cdp,lldp,mndp",
+            },
+            {
+                "interface": "ether2,bridge-anillo",
+                "identity": "2",
+                "interface-name": "bridge-anillo/ether3",
+                "discovered-by": "cdp,lldp,mndp",
+            },
         ],
     }
 

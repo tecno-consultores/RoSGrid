@@ -107,7 +107,7 @@ Para evitar la necesidad obligatoria de crear usuarios mediante terminal CLI en 
 RoSGrid implementa de forma nativa la especificación **Model Context Protocol (JSON-RPC 2.0 Streamable HTTP)** sobre el endpoint `POST /api/v1/mcp`:
 
 1. Habilita la funcionalidad en tu `.env` con `ROSGRID_MCP_ENABLED=true`.
-2. Crea un usuario con rol `SERVICE_ACCOUNT`, asígnale los routers permitidos en la matriz de permisos y declara la subred autorizada en `allowed_cidr`.
+2. Crea un usuario con rol `SERVICE_ACCOUNT`, asígnale los routers permitidos en la matriz de permisos y declara la subred autorizada en `allowed_cidr_list`.
 3. Configura el bloque de conexión HTTP en `mcp_config.json` (Hermes Agent) o en tu cliente MCP apuntando a `https://tu-dominio.com/api/v1/mcp` con la cabecera `Authorization: Bearer <token>`.
 4. El agente dispondrá inmediatamente de **22 herramientas semánticas** especializadas de diagnóstico 360°, salud, óptica SFP DDM, enrutamiento BGP, aislamiento técnico, remediación de Config Drift, auditoría CIS (28 directivas) y detección de cortes masivos. Consulta la guía detallada en [07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md](./07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md).
 

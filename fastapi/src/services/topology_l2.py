@@ -129,9 +129,7 @@ def process_topology_graph(
 
     # Detectar si hay presencia de vecinos descubiertos por LLDP (estándar IEEE 802.1AB punto a punto)
     has_lldp = any(
-        "lldp" in str(n.get("discovered-by", "")).lower()
-        for n_list in neighbors_by_router_id.values()
-        for n in n_list
+        "lldp" in str(n.get("discovered-by", "")).lower() for n_list in neighbors_by_router_id.values() for n in n_list
     )
 
     seen_edges: dict[str, TopologyEdge] = {}

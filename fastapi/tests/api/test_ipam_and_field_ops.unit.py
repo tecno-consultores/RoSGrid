@@ -151,7 +151,9 @@ class MockIpamDbSession:
                     p_dict = stmt.compile().params
                     target_ep = next((v for k, v in p_dict.items() if "endpoint" in k), None)
                     if target_ep:
-                        matched = [s for s in self.customer_services if getattr(s, "endpoint_identifier", None) == target_ep]
+                        matched = [
+                            s for s in self.customer_services if getattr(s, "endpoint_identifier", None) == target_ep
+                        ]
                         return MockResult(matched)
                 except Exception:
                     pass
@@ -170,7 +172,9 @@ class MockIpamDbSession:
 async def test_ipam_vrf_and_prefix_lifecycle(
     async_client: AsyncClient, fake_redis: FakeAsyncRedis, monkeypatch: pytest.MonkeyPatch
 ):
-    monkeypatch.setattr("src.api.v1.ipam.write_audit_log", make_asserting_audit_mock())  # assert_called_once / call_args verified
+    monkeypatch.setattr(
+        "src.api.v1.ipam.write_audit_log", make_asserting_audit_mock()
+    )  # assert_called_once / call_args verified
 
     tenant_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
@@ -502,17 +506,11 @@ async def test_ipam_customer_services_and_sync_mikrotik(
                     {"address": "10.250.3.8/24", "interface": "ether1"},
                 ]
             elif endpoint == "/ip/pool":
-                return [
-                    {"name": "pool-pcs", "ranges": "192.168.10.2-192.168.10.254", "total": "253", "used": "7"}
-                ]
+                return [{"name": "pool-pcs", "ranges": "192.168.10.2-192.168.10.254", "total": "253", "used": "7"}]
             elif endpoint == "/ip/dhcp-server":
-                return [
-                    {"name": "dhcp-anillo", "interface": "bridge-anillo", "address-pool": "pool-pcs"}
-                ]
+                return [{"name": "dhcp-anillo", "interface": "bridge-anillo", "address-pool": "pool-pcs"}]
             elif endpoint == "/ip/dhcp-server/network":
-                return [
-                    {"address": "192.168.10.0/24", "gateway": "192.168.10.254", "dns-server": "192.168.10.254"}
-                ]
+                return [{"address": "192.168.10.0/24", "gateway": "192.168.10.254", "dns-server": "192.168.10.254"}]
             elif endpoint == "/ip/dhcp-server/lease":
                 return [
                     {
@@ -732,4 +730,3 @@ async def test_simulate_subscribers_from_dhcp(
         assert "last_reachability_status" in dev0
     finally:
         app.dependency_overrides.clear()
-

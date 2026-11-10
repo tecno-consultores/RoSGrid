@@ -323,16 +323,20 @@ async def test_layer2_nextgen_endpoints_integration() -> None:
 
         write_req = DynamicLayer2WriteRequest.model_validate({"interface": "ether2", "enable_safemode": True})
         client.put.return_value = {".id": "*10"}
-        await create_resource(router_id, "mpls/interface", write_req, req, idempotency_key="ik-c", claims=claims, db=db)
+        await create_resource(
+            router_id, "mpls/interface", write_req, req, idempotency_key=str(uuid.uuid4()), claims=claims, db=db
+        )
 
         client.get.return_value = {".id": "*10", "interface": "ether2"}
         client.patch.return_value = {".id": "*10", "interface": "ether3"}
         await update_resource(
-            router_id, "mpls/interface", "*10", write_req, req, idempotency_key="ik-u", claims=claims, db=db
+            router_id, "mpls/interface", "*10", write_req, req, idempotency_key=str(uuid.uuid4()), claims=claims, db=db
         )
 
         client.delete.return_value = None
-        await delete_resource(router_id, "mpls/interface", "*10", req, idempotency_key="ik-d", claims=claims, db=db)
+        await delete_resource(
+            router_id, "mpls/interface", "*10", req, idempotency_key=str(uuid.uuid4()), claims=claims, db=db
+        )
 
         # 1. Catálogo RPC
         rpc_cat = await get_rpc_catalog(router_id, "certificate", claims=claims, db=db)
@@ -366,7 +370,7 @@ async def test_layer2_nextgen_endpoints_integration() -> None:
         # 5. POST /bulk (enable lote)
         bulk_req = DynamicLayer2BulkRequest(action="enable", item_ids=["*1", "*2"], enable_safemode=True)
         bulk_res = await execute_bulk_operation(
-            router_id, "mpls/interface", bulk_req, req, idempotency_key="ik-1", claims=claims, db=db
+            router_id, "mpls/interface", bulk_req, req, idempotency_key=str(uuid.uuid4()), claims=claims, db=db
         )
         assert bulk_res.succeeded_count == 2
         assert bulk_res.safemode_applied is True
@@ -395,13 +399,15 @@ async def test_layer2_nextgen_endpoints_integration() -> None:
 async def test_layer2_catalog_filters_disabled_packages_and_graceful_missing_package() -> None:
     """Spec 99: Filtra paquetes deshabilitados/no instalados en /system/package y degrada 'no such command or directory'."""
     assert (
-        _is_ros_package_active(
-            {"name": "routeros", "disabled": "false", "available": "false", "version": "7.21.5"}
-        )
+        _is_ros_package_active({"name": "routeros", "disabled": "false", "available": "false", "version": "7.21.5"})
         is True
     )
-    assert _is_ros_package_active({"name": "container", "disabled": "true", "available": "true", "version": ""}) is False
-    assert _is_ros_package_active({"name": "zerotier", "disabled": "false", "available": "true", "version": ""}) is False
+    assert (
+        _is_ros_package_active({"name": "container", "disabled": "true", "available": "true", "version": ""}) is False
+    )
+    assert (
+        _is_ros_package_active({"name": "zerotier", "disabled": "false", "available": "true", "version": ""}) is False
+    )
     assert _is_ros_package_active({"name": ""}) is False
 
     router_id = uuid.uuid4()

@@ -62,9 +62,7 @@ def mock_device(mock_tenant_id: uuid.UUID, mock_router: Router) -> SubscriberDev
 
 
 @pytest.mark.asyncio
-async def test_poller_skips_when_circuit_breaker_open(
-    mock_tenant_id: uuid.UUID, mock_router: Router
-) -> None:
+async def test_poller_skips_when_circuit_breaker_open(mock_tenant_id: uuid.UUID, mock_router: Router) -> None:
     """Verifica que si el Circuit Breaker del router está abierto, el poller no intenta conectar."""
     mock_redis = AsyncMock()
     mock_redis.get.return_value = "OPEN"
@@ -94,9 +92,7 @@ async def test_poller_zero_write_delta_filter_when_status_unchanged(
     mock_client = AsyncMock()
     mock_client.__aenter__.return_value = mock_client
     mock_client.__aexit__.return_value = None
-    mock_client.get.return_value = [
-        {"address": "192.168.10.50", "status": "bound", "mac-address": "48:8F:5A:11:22:33"}
-    ]
+    mock_client.get.return_value = [{"address": "192.168.10.50", "status": "bound", "mac-address": "48:8F:5A:11:22:33"}]
 
     with patch("src.workers.subscriber_status_poller.get_redis_client", return_value=mock_redis):
         with patch("src.workers.subscriber_status_poller._create_client_from_vault", return_value=mock_client):
@@ -155,9 +151,7 @@ async def test_poller_isp_mode_reads_ppp_active(
     mock_client = AsyncMock()
     mock_client.__aenter__.return_value = mock_client
     mock_client.__aexit__.return_value = None
-    mock_client.get.return_value = [
-        {"name": "user001", "address": "100.64.0.10", "uptime": "2h45m"}
-    ]
+    mock_client.get.return_value = [{"name": "user001", "address": "100.64.0.10", "uptime": "2h45m"}]
 
     with patch("src.workers.subscriber_status_poller.get_redis_client", return_value=mock_redis):
         with patch("src.workers.subscriber_status_poller._create_client_from_vault", return_value=mock_client):
@@ -217,9 +211,7 @@ async def test_poller_icmp_probe_marks_powered_off_dhcp_device_offline(
     mock_client = AsyncMock()
     mock_client.__aenter__.return_value = mock_client
     mock_client.__aexit__.return_value = None
-    mock_client.get.return_value = [
-        {"address": "192.168.10.50", "status": "bound", "mac-address": "48:8F:5A:11:22:33"}
-    ]
+    mock_client.get.return_value = [{"address": "192.168.10.50", "status": "bound", "mac-address": "48:8F:5A:11:22:33"}]
     mock_client.post.return_value = [{"sent": 1, "received": 0, "status": "timeout"}]
 
     with patch("src.workers.subscriber_status_poller.get_redis_client", return_value=mock_redis):
@@ -404,6 +396,7 @@ async def test_publish_device_status_change_handles_redis_error(
     await _publish_device_status_change(
         mock_redis, mock_tenant_id, mock_router.id, mock_device, "ONLINE", datetime.now(UTC)
     )
+    mock_redis.publish.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -425,15 +418,15 @@ async def test_poll_single_router_sessions_client_creation_failure(
     mock_session = AsyncMock()
 
     with patch("src.workers.subscriber_status_poller.get_redis_client", return_value=mock_redis):
-        with patch("src.workers.subscriber_status_poller._create_client_from_vault", side_effect=ValueError("No vault")):
+        with patch(
+            "src.workers.subscriber_status_poller._create_client_from_vault", side_effect=ValueError("No vault")
+        ):
             res = await _poll_single_router_sessions(mock_session, mock_tenant_id, mock_router, is_isp_mode=False)
             assert res == 0
 
 
 @pytest.mark.asyncio
-async def test_poll_single_router_sessions_no_devices(
-    mock_tenant_id: uuid.UUID, mock_router: Router
-) -> None:
+async def test_poll_single_router_sessions_no_devices(mock_tenant_id: uuid.UUID, mock_router: Router) -> None:
     mock_redis = AsyncMock()
     mock_redis.get.return_value = None
     mock_session = AsyncMock()
@@ -468,9 +461,7 @@ async def test_poll_single_router_sessions_client_error(
 
 
 @pytest.mark.asyncio
-async def test_poll_tenant_subscribers_cycle_execution(
-    mock_tenant_id: uuid.UUID, mock_router: Router
-) -> None:
+async def test_poll_tenant_subscribers_cycle_execution(mock_tenant_id: uuid.UUID, mock_router: Router) -> None:
     mock_session = AsyncMock()
     mock_session.__aenter__.return_value = mock_session
     mock_session.__aexit__.return_value = None

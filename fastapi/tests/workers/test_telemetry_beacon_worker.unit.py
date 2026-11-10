@@ -201,8 +201,12 @@ async def test_send_telemetry_heartbeat_once_network_error_fail_silent() -> None
 @pytest.mark.asyncio
 async def test_telemetry_beacon_worker_loop_disabled() -> None:
     """Certifica que el worker loop salga de inmediato si está deshabilitado."""
-    with patch.object(settings, "ROSGRID_TELEMETRY_BEACON_ENABLED", False):
+    with (
+        patch.object(settings, "ROSGRID_TELEMETRY_BEACON_ENABLED", False),
+        patch("src.workers.telemetry_beacon_worker.send_telemetry_heartbeat_once", new_callable=AsyncMock) as mock_send,
+    ):
         await telemetry_beacon_worker_loop()
+        mock_send.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -214,5 +218,8 @@ async def test_telemetry_beacon_worker_loop_clean_stop() -> None:
     with (
         patch.object(settings, "ROSGRID_TELEMETRY_BEACON_ENABLED", True),
         patch("asyncio.sleep", new_callable=AsyncMock),
+        patch("src.workers.telemetry_beacon_worker.send_telemetry_heartbeat_once", new_callable=AsyncMock) as mock_send,
     ):
         await telemetry_beacon_worker_loop(stop_event=stop_event)
+        assert stop_event.is_set() is True
+        mock_send.assert_not_awaited()

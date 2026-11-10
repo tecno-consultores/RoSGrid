@@ -596,7 +596,6 @@ CIS_CATALOG_BASE: list[dict[str, Any]] = [
         "reference_url": "https://manual.mikrotik.com/docs/firewall-and-quality-of-service/firewall/filter.md",
         "rationale": "FastTrack debe omitir paquetes sujetos a políticas de conformación de tráfico QoS para evitar degradación de la latencia.",
     },
-
     # --- DIRECTIVAS ESPECIALIZADAS ISP Y OPERADORES DE RED (8) ---
     {
         "code": "CIS-ISP-1",
@@ -702,7 +701,6 @@ CIS_CATALOG_BASE: list[dict[str, Any]] = [
         "reference_url": "https://manual.mikrotik.com/docs/network-management/proxy.md",
         "rationale": "Servidores proxy o SOCKS abiertos o mal configurados pueden ser abusados como pasarelas de anonimización o pivotes de ataque.",
     },
-
     # --- DIRECTIVAS ESPECIALIZADAS PARA EMPRESA Y CAMPUS (8) ---
     {
         "code": "CIS-CORP-1",
@@ -1063,8 +1061,7 @@ async def run_cis_audit(
             users = await client.get("/user")
             if isinstance(users, list):
                 admin_active = any(
-                    u.get("name") == "admin" and u.get("disabled") not in (True, "true", "yes")
-                    for u in users
+                    u.get("name") == "admin" and u.get("disabled") not in (True, "true", "yes") for u in users
                 )
                 admin_user_disabled = not admin_active
         except Exception as exc:
@@ -1101,7 +1098,12 @@ async def run_cis_audit(
                     dst_p = str(r.get("dst-port", ""))
                     limit_v = str(r.get("limit", ""))
 
-                    if "CIS-1.8" in comment or "bruteforce" in src_list or "ssh_blacklist" in src_list or "ssh_blacklist" in addr_list:
+                    if (
+                        "CIS-1.8" in comment
+                        or "bruteforce" in src_list
+                        or "ssh_blacklist" in src_list
+                        or "ssh_blacklist" in addr_list
+                    ):
                         bruteforce_defense_present = True
                     if "CIS-1.7" in comment or "bogon" in comment or "bogon" in src_list:
                         bogon_rules_present = True
@@ -1197,7 +1199,8 @@ async def run_cis_audit(
             logs = await client.get("/system/logging")
             if isinstance(logs, list):
                 syslog_audit_active = any(
-                    log_rule.get("action") == "rosgridsyslog" and any(t in str(log_rule.get("topics", "")) for t in ("account", "info"))
+                    log_rule.get("action") == "rosgridsyslog"
+                    and any(t in str(log_rule.get("topics", "")) for t in ("account", "info"))
                     for log_rule in logs
                 )
         except Exception as exc:
@@ -1244,9 +1247,7 @@ async def run_cis_audit(
         try:
             ospf_tpl = await client.get("/routing/ospf/interface-template")
             if isinstance(ospf_tpl, list) and ospf_tpl:
-                ospf_auth_present = any(
-                    str(t.get("auth", "")).lower() in ("sha256", "md5") for t in ospf_tpl
-                )
+                ospf_auth_present = any(str(t.get("auth", "")).lower() in ("sha256", "md5") for t in ospf_tpl)
         except Exception as exc:
             logger.debug("Sondeo /routing/ospf/interface-template en CIS audit: %s", exc)
 
@@ -1575,9 +1576,7 @@ async def auto_harden_router(
         target_codes = list(enabled_rules_map.keys())
 
     remediation_cmds: list[str] = [
-        enabled_rules_map[code].remediation_cmd
-        for code in target_codes
-        if code in enabled_rules_map
+        enabled_rules_map[code].remediation_cmd for code in target_codes if code in enabled_rules_map
     ]
     remediation_script = "\n".join(remediation_cmds)
     applied_weight = sum(enabled_rules_map[c].weight for c in target_codes if c in enabled_rules_map)
@@ -1596,7 +1595,11 @@ async def auto_harden_router(
                     if isinstance(srv_list, list):
                         for s in srv_list:
                             name = str(s.get("name", ""))
-                            if name in ("telnet", "ftp", "www", "api") and s.get("disabled") not in (True, "true", "yes"):
+                            if name in ("telnet", "ftp", "www", "api") and s.get("disabled") not in (
+                                True,
+                                "true",
+                                "yes",
+                            ):
                                 s_id = s.get(".id", name)
                                 await client.patch(f"/ip/service/{s_id}", json_data={"disabled": "true"})
                 except Exception as e:
@@ -1608,7 +1611,9 @@ async def auto_harden_router(
                     user_list = await client.get("/user")
                     if isinstance(user_list, list):
                         has_other_full = any(
-                            u.get("name") != "admin" and u.get("group") == "full" and u.get("disabled") not in (True, "true", "yes")
+                            u.get("name") != "admin"
+                            and u.get("group") == "full"
+                            and u.get("disabled") not in (True, "true", "yes")
                             for u in user_list
                         )
                         if has_other_full:
@@ -1626,7 +1631,10 @@ async def auto_harden_router(
                         for s in srv_list:
                             if s.get("name") in ("winbox", "ssh", "www-ssl"):
                                 s_id = s.get(".id", s.get("name"))
-                                await client.patch(f"/ip/service/{s_id}", json_data={"address": "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"})
+                                await client.patch(
+                                    f"/ip/service/{s_id}",
+                                    json_data={"address": "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"},
+                                )
                 except Exception as e:
                     logger.warning("Fallo al aplicar CIS-1.3 en router: %s", e)
 
@@ -1644,21 +1652,28 @@ async def auto_harden_router(
             if "CIS-1.5" in target_codes:
                 try:
                     try:
-                        await client.post("/ip/neighbor/discovery-settings/set", json_data={"discover-interface-list": "none"})
+                        await client.post(
+                            "/ip/neighbor/discovery-settings/set", json_data={"discover-interface-list": "none"}
+                        )
                     except Exception:
-                        await client.post("/ip/neighbor/discovery-settings", json_data={"discover-interface-list": "none"})
+                        await client.post(
+                            "/ip/neighbor/discovery-settings", json_data={"discover-interface-list": "none"}
+                        )
                 except Exception as e:
                     logger.warning("Fallo al aplicar CIS-1.5 en router: %s", e)
 
             # 7. CIS-1.7: Bogon filtering en RAW
             if "CIS-1.7" in target_codes:
                 try:
-                    await client.put("/ip/firewall/raw", json_data={
-                        "chain": "prerouting",
-                        "src-address-list": "bogons",
-                        "action": "drop",
-                        "comment": "CIS-1.7: Bogon filtering",
-                    })
+                    await client.put(
+                        "/ip/firewall/raw",
+                        json_data={
+                            "chain": "prerouting",
+                            "src-address-list": "bogons",
+                            "action": "drop",
+                            "comment": "CIS-1.7: Bogon filtering",
+                        },
+                    )
                 except Exception as e:
                     logger.warning("Fallo al aplicar CIS-1.7 en router: %s", e)
 
@@ -1671,58 +1686,73 @@ async def auto_harden_router(
                         already_has_cis18 = any("CIS-1.8" in str(r.get("comment", "")) for r in existing_fw)
 
                     if not already_has_cis18:
-                        await client.put("/ip/firewall/filter", json_data={
-                            "chain": "input",
-                            "protocol": "tcp",
-                            "dst-port": "22,8291",
-                            "connection-state": "new",
-                            "src-address-list": "ssh_blacklist",
-                            "action": "drop",
-                            "comment": "CIS-1.8: Drop Brute-Force Blacklist",
-                        })
-                        await client.put("/ip/firewall/filter", json_data={
-                            "chain": "input",
-                            "protocol": "tcp",
-                            "dst-port": "22,8291",
-                            "connection-state": "new",
-                            "src-address-list": "ssh_stage3",
-                            "action": "add-src-to-address-list",
-                            "address-list": "ssh_blacklist",
-                            "address-list-timeout": "1d",
-                            "comment": "CIS-1.8: Stage 3 to Blacklist",
-                        })
-                        await client.put("/ip/firewall/filter", json_data={
-                            "chain": "input",
-                            "protocol": "tcp",
-                            "dst-port": "22,8291",
-                            "connection-state": "new",
-                            "src-address-list": "ssh_stage2",
-                            "action": "add-src-to-address-list",
-                            "address-list": "ssh_stage3",
-                            "address-list-timeout": "1m",
-                            "comment": "CIS-1.8: Stage 2 to Stage 3",
-                        })
-                        await client.put("/ip/firewall/filter", json_data={
-                            "chain": "input",
-                            "protocol": "tcp",
-                            "dst-port": "22,8291",
-                            "connection-state": "new",
-                            "src-address-list": "ssh_stage1",
-                            "action": "add-src-to-address-list",
-                            "address-list": "ssh_stage2",
-                            "address-list-timeout": "1m",
-                            "comment": "CIS-1.8: Stage 1 to Stage 2",
-                        })
-                        await client.put("/ip/firewall/filter", json_data={
-                            "chain": "input",
-                            "protocol": "tcp",
-                            "dst-port": "22,8291",
-                            "connection-state": "new",
-                            "action": "add-src-to-address-list",
-                            "address-list": "ssh_stage1",
-                            "address-list-timeout": "1m",
-                            "comment": "CIS-1.8: Stage 1 Initial",
-                        })
+                        await client.put(
+                            "/ip/firewall/filter",
+                            json_data={
+                                "chain": "input",
+                                "protocol": "tcp",
+                                "dst-port": "22,8291",
+                                "connection-state": "new",
+                                "src-address-list": "ssh_blacklist",
+                                "action": "drop",
+                                "comment": "CIS-1.8: Drop Brute-Force Blacklist",
+                            },
+                        )
+                        await client.put(
+                            "/ip/firewall/filter",
+                            json_data={
+                                "chain": "input",
+                                "protocol": "tcp",
+                                "dst-port": "22,8291",
+                                "connection-state": "new",
+                                "src-address-list": "ssh_stage3",
+                                "action": "add-src-to-address-list",
+                                "address-list": "ssh_blacklist",
+                                "address-list-timeout": "1d",
+                                "comment": "CIS-1.8: Stage 3 to Blacklist",
+                            },
+                        )
+                        await client.put(
+                            "/ip/firewall/filter",
+                            json_data={
+                                "chain": "input",
+                                "protocol": "tcp",
+                                "dst-port": "22,8291",
+                                "connection-state": "new",
+                                "src-address-list": "ssh_stage2",
+                                "action": "add-src-to-address-list",
+                                "address-list": "ssh_stage3",
+                                "address-list-timeout": "1m",
+                                "comment": "CIS-1.8: Stage 2 to Stage 3",
+                            },
+                        )
+                        await client.put(
+                            "/ip/firewall/filter",
+                            json_data={
+                                "chain": "input",
+                                "protocol": "tcp",
+                                "dst-port": "22,8291",
+                                "connection-state": "new",
+                                "src-address-list": "ssh_stage1",
+                                "action": "add-src-to-address-list",
+                                "address-list": "ssh_stage2",
+                                "address-list-timeout": "1m",
+                                "comment": "CIS-1.8: Stage 1 to Stage 2",
+                            },
+                        )
+                        await client.put(
+                            "/ip/firewall/filter",
+                            json_data={
+                                "chain": "input",
+                                "protocol": "tcp",
+                                "dst-port": "22,8291",
+                                "connection-state": "new",
+                                "action": "add-src-to-address-list",
+                                "address-list": "ssh_stage1",
+                                "address-list-timeout": "1m",
+                                "comment": "CIS-1.8: Stage 1 Initial",
+                            },
+                        )
                 except Exception as e:
                     logger.warning("Fallo al aplicar CIS-1.8 en router: %s", e)
 
@@ -1731,7 +1761,11 @@ async def auto_harden_router(
                 try:
                     await client.post(
                         "/ip/ipsec/profile/set",
-                        json_data={"numbers": "default", "enc-algorithm": "aes-256,aes-128-gcm", "hash-algorithm": "sha256"},
+                        json_data={
+                            "numbers": "default",
+                            "enc-algorithm": "aes-256,aes-128-gcm",
+                            "hash-algorithm": "sha256",
+                        },
                     )
                 except Exception as e:
                     logger.warning("Fallo al aplicar CIS-1.9 en router: %s", e)
@@ -1741,7 +1775,12 @@ async def auto_harden_router(
                 try:
                     await client.put(
                         "/interface/vlan",
-                        json_data={"name": "vlan99-mgmt", "vlan-id": 99, "interface": "ether1", "comment": "CIS-1.10: Management VLAN"},
+                        json_data={
+                            "name": "vlan99-mgmt",
+                            "vlan-id": 99,
+                            "interface": "ether1",
+                            "comment": "CIS-1.10: Management VLAN",
+                        },
                     )
                 except Exception as e:
                     logger.warning("Fallo al aplicar CIS-1.10 en router: %s", e)
@@ -1777,26 +1816,32 @@ async def auto_harden_router(
             # --- REMEDIACIONES ESPECIALIZADAS ISP ---
             if "CIS-ISP-1" in target_codes:
                 try:
-                    await client.put("/ip/firewall/raw", json_data={
-                        "chain": "prerouting",
-                        "in-interface-list": "WAN",
-                        "src-address-list": "bogons",
-                        "action": "drop",
-                        "comment": "CIS-ISP-1: Drop Bogons",
-                    })
+                    await client.put(
+                        "/ip/firewall/raw",
+                        json_data={
+                            "chain": "prerouting",
+                            "in-interface-list": "WAN",
+                            "src-address-list": "bogons",
+                            "action": "drop",
+                            "comment": "CIS-ISP-1: Drop Bogons",
+                        },
+                    )
                 except Exception as e:
                     logger.warning("Fallo al aplicar CIS-ISP-1: %s", e)
 
             if "CIS-ISP-2" in target_codes:
                 try:
-                    await client.put("/ip/firewall/filter", json_data={
-                        "chain": "input",
-                        "in-interface-list": "WAN",
-                        "protocol": "udp",
-                        "dst-port": "53",
-                        "action": "drop",
-                        "comment": "CIS-ISP-2: Block WAN DNS",
-                    })
+                    await client.put(
+                        "/ip/firewall/filter",
+                        json_data={
+                            "chain": "input",
+                            "in-interface-list": "WAN",
+                            "protocol": "udp",
+                            "dst-port": "53",
+                            "action": "drop",
+                            "comment": "CIS-ISP-2: Block WAN DNS",
+                        },
+                    )
                 except Exception as e:
                     logger.warning("Fallo al aplicar CIS-ISP-2: %s", e)
 
@@ -1813,14 +1858,17 @@ async def auto_harden_router(
 
             if "CIS-ISP-4" in target_codes:
                 try:
-                    await client.put("/ip/firewall/filter", json_data={
-                        "chain": "input",
-                        "protocol": "tcp",
-                        "dst-port": "179",
-                        "limit": "100,50:packet",
-                        "action": "accept",
-                        "comment": "CIS-ISP-4: CoPP BGP Limit",
-                    })
+                    await client.put(
+                        "/ip/firewall/filter",
+                        json_data={
+                            "chain": "input",
+                            "protocol": "tcp",
+                            "dst-port": "179",
+                            "limit": "100,50:packet",
+                            "action": "accept",
+                            "comment": "CIS-ISP-4: CoPP BGP Limit",
+                        },
+                    )
                 except Exception as e:
                     logger.warning("Fallo al aplicar CIS-ISP-4: %s", e)
 
@@ -1842,7 +1890,10 @@ async def auto_harden_router(
                         for t in tpls:
                             t_id = t.get(".id")
                             if t_id:
-                                await client.patch(f"/routing/ospf/interface-template/{t_id}", json_data={"auth": "sha256", "auth-key": "SecretOspfKey123"})
+                                await client.patch(
+                                    f"/routing/ospf/interface-template/{t_id}",
+                                    json_data={"auth": "sha256", "auth-key": "SecretOspfKey123"},
+                                )
                 except Exception as e:
                     logger.warning("Fallo al aplicar CIS-ISP-6: %s", e)
 
@@ -1875,7 +1926,14 @@ async def auto_harden_router(
 
             if "CIS-CORP-3" in target_codes:
                 try:
-                    await client.post("/ip/ssh/set", json_data={"always-allow-password-login": "no", "host-key-type": "ed25519", "strong-crypto": "yes"})
+                    await client.post(
+                        "/ip/ssh/set",
+                        json_data={
+                            "always-allow-password-login": "no",
+                            "host-key-type": "ed25519",
+                            "strong-crypto": "yes",
+                        },
+                    )
                 except Exception as e:
                     logger.warning("Fallo al aplicar CIS-CORP-3: %s", e)
 
@@ -1886,7 +1944,10 @@ async def auto_harden_router(
                         for b in bridges:
                             b_id = b.get(".id")
                             if b_id:
-                                await client.patch(f"/interface/bridge/{b_id}", json_data={"dhcp-snooping": "yes", "add-dhcp-option82": "yes"})
+                                await client.patch(
+                                    f"/interface/bridge/{b_id}",
+                                    json_data={"dhcp-snooping": "yes", "add-dhcp-option82": "yes"},
+                                )
                 except Exception as e:
                     logger.warning("Fallo al aplicar CIS-CORP-4: %s", e)
 
@@ -1911,13 +1972,16 @@ async def auto_harden_router(
 
             if "CIS-CORP-8" in target_codes:
                 try:
-                    await client.put("/system/scheduler", json_data={
-                        "name": "nightly-encrypted-backup",
-                        "start-time": "03:00:00",
-                        "interval": "1d",
-                        "on-event": "/system backup save encryption=aes-sha256 name=nightly-rosgrid-backup password=ClaveRobustaCifradoRespaldo2026",
-                        "comment": "Nightly Encrypted Backup",
-                    })
+                    await client.put(
+                        "/system/scheduler",
+                        json_data={
+                            "name": "nightly-encrypted-backup",
+                            "start-time": "03:00:00",
+                            "interval": "1d",
+                            "on-event": "/system backup save encryption=aes-sha256 name=nightly-rosgrid-backup password=ClaveRobustaCifradoRespaldo2026",
+                            "comment": "Nightly Encrypted Backup",
+                        },
+                    )
                 except Exception as e:
                     logger.warning("Fallo al aplicar CIS-CORP-8: %s", e)
 

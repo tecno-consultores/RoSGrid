@@ -282,9 +282,7 @@ async def resolve_active_maintenance_router_ids(
         if hasattr(w, "starts_at")
     )
     direct_router_ids = {
-        w.router_id
-        for w in active_windows
-        if getattr(w, "router_id", None) is not None and hasattr(w, "starts_at")
+        w.router_id for w in active_windows if getattr(w, "router_id", None) is not None and hasattr(w, "starts_at")
     }
     active_tags = {
         str(w.target_tag).strip().lower()
@@ -312,9 +310,7 @@ def build_router_response(
     """Construye esquema de respuesta de Router combinando modelo, ventanas activas y métricas en vivo."""
     tag_names = [t.tag_name for t in r.tags] if r.tags else []
     is_effective_reachable = bool(
-        r.is_reachable
-        or telemetry.get("syslog_active")
-        or (telemetry.get("operational_status") == "ONLINE")
+        r.is_reachable or telemetry.get("syslog_active") or (telemetry.get("operational_status") == "ONLINE")
     )
     operational_status = telemetry.get("operational_status", "OFFLINE")
     if is_effective_reachable and operational_status == "OFFLINE":

@@ -56,12 +56,8 @@ echo "✔ Paridad bidireccional API certificada (0 llamadas 404/405)."
 
 # 7. Paridad ORM vs Alembic en Docker
 echo -e "\n🗄️ [7/9] Verificando paridad entre modelos ORM y migraciones Alembic..."
-if docker ps --format '{{.Names}}' | grep -q "^rosgrid_api_local$"; then
-    docker cp "${REPO_ROOT}/.agents/scripts/verify_alembic_orm_parity.py" rosgrid_api_local:/app/scripts/verify_alembic_orm_parity.py
-    docker exec -t rosgrid_api_local python scripts/verify_alembic_orm_parity.py
-else
-    echo "ℹ️ Contenedor rosgrid_api_local inactivo (stack apagado); omitiendo verificación en vivo de ORM."
-fi
+run_py_in_docker .agents/scripts/verify_alembic_orm_parity.py
+echo "✔ Paridad ORM vs Alembic certificada."
 
 # 8. Contratos de Integración Front-Back
 echo -e "\n🧪 [8/9] Ejecutando suite de Contratos Front-Back (28 contratos)..."
@@ -78,15 +74,20 @@ fi
 
 # 9. Verificación de Sincronización Documental
 echo -e "\n📚 [9/9] Verificando sincronización de documentación y pruebas obligatorias..."
+DIFF_BASE="HEAD"
 CODE_CHANGES=$(git -C "${REPO_ROOT}" diff --name-only HEAD 2>/dev/null | grep -E '^(fastapi/src|vue3/src)' || true)
+if [ -z "${CODE_CHANGES}" ]; then
+  DIFF_BASE="HEAD~1"
+  CODE_CHANGES=$(git -C "${REPO_ROOT}" diff --name-only HEAD~1..HEAD 2>/dev/null | grep -E '^(fastapi/src|vue3/src)' || true)
+fi
 
 if [ -n "${CODE_CHANGES}" ]; then
-  echo "Se detectaron cambios en código fuente:"
+  echo "Se detectaron cambios en código fuente (base=${DIFF_BASE}):"
   while IFS= read -r line; do
     [ -n "${line}" ] && echo "  - ${line}"
   done <<< "${CODE_CHANGES}"
 
-  TEST_CHANGES=$({ git -C "${REPO_ROOT}" diff --name-only HEAD 2>/dev/null; git -C "${REPO_ROOT}" ls-files --others --exclude-standard; } | grep -E '^(fastapi/tests/|vue3/src/.*\.unit\.ts)' | sort -u || true)
+  TEST_CHANGES=$({ git -C "${REPO_ROOT}" diff --name-only "${DIFF_BASE}" 2>/dev/null; git -C "${REPO_ROOT}" ls-files --others --exclude-standard; } | grep -E '^(fastapi/tests/|vue3/src/.*\.unit\.ts)' | sort -u || true)
   if [ -z "${TEST_CHANGES}" ]; then
     echo "⚠️ ADVERTENCIA: Se modificó código fuente pero NO se detectan pruebas unitarias nuevas o modificadas (fastapi/tests/ o vue3/src/)."
     [ "${STRICT_MODE}" = true ] && exit 1
@@ -97,7 +98,7 @@ if [ -n "${CODE_CHANGES}" ]; then
     done <<< "${TEST_CHANGES}"
   fi
 
-  KARATE_CHANGES=$(git -C "${REPO_ROOT}" diff --name-only HEAD 2>/dev/null | grep -E '^(fastapi/test/.*\.feature|vue3/test/.*\.feature|docs/examples/fastapi/test/|docs/examples/vue3/test/)' || true)
+  KARATE_CHANGES=$(git -C "${REPO_ROOT}" diff --name-only "${DIFF_BASE}" 2>/dev/null | grep -E '^(fastapi/test/.*\.feature|vue3/test/.*\.feature|docs/examples/fastapi/test/|docs/examples/vue3/test/)' || true)
   if [ -z "${KARATE_CHANGES}" ]; then
     echo "⚠️ ADVERTENCIA: Se modificó código fuente pero NO se detectan escenarios BDD Karate Labs (fastapi/test/ o vue3/test/)."
     echo "Recuerda la Invariante Karate Labs: cada cambio de API o UI DEBE incluir sus escenarios BDD correspondientes."
@@ -109,7 +110,7 @@ if [ -n "${CODE_CHANGES}" ]; then
     done <<< "${KARATE_CHANGES}"
   fi
 
-  DOC_CHANGES=$(git -C "${REPO_ROOT}" diff --name-only HEAD 2>/dev/null | grep -E '^(docs/|CHANGELOG\.md|ROADMAP\.md|TESTING\.md|README\.md)' || true)
+  DOC_CHANGES=$(git -C "${REPO_ROOT}" diff --name-only "${DIFF_BASE}" 2>/dev/null | grep -E '^(docs/|CHANGELOG\.md|ROADMAP\.md|TESTING\.md|README\.md)' || true)
   if [ -z "${DOC_CHANGES}" ]; then
     echo "⚠️ ADVERTENCIA: Se modificó código pero NO se han actualizado docs/, CHANGELOG.md, ROADMAP.md, TESTING.md o README.md."
     echo "Recuerda la Directiva Suprema: la documentación debe sincronizarse con cada cambio."

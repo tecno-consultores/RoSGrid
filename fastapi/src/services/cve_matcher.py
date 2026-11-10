@@ -276,9 +276,7 @@ def _build_mikrotik_rss_cve_item(cve_id: str, clean_desc: str, pub_date: str) ->
     )
 
 
-def _process_rss_item_element(
-    item_el: Any, existing_map: dict[str, CveItem]
-) -> None:
+def _process_rss_item_element(item_el: Any, existing_map: dict[str, CveItem]) -> None:
     title = (item_el.findtext("title") or "").strip()
     desc = (item_el.findtext("description") or "").strip()
     pub_date = (item_el.findtext("pubDate") or "").strip()
@@ -516,8 +514,7 @@ def _build_nvd_request_params(
     api_url: str | None, api_key: str | None, results_per_page: int | None
 ) -> tuple[str, dict[str, str], dict[str, Any]]:
     target_url = str(
-        api_url
-        or getattr(settings, "ROSGRID_CVE_NVD_API_URL", "https://services.nvd.nist.gov/rest/json/cves/2.0")
+        api_url or getattr(settings, "ROSGRID_CVE_NVD_API_URL", "https://services.nvd.nist.gov/rest/json/cves/2.0")
     )
     key = api_key or getattr(settings, "ROSGRID_CVE_NVD_API_KEY", None)
     raw_page_size = results_per_page or getattr(settings, "ROSGRID_CVE_NVD_RESULTS_PER_PAGE", 200)
@@ -601,9 +598,7 @@ async def _download_mikrotik_rss_safe(
     return items, False
 
 
-async def _download_nvd_safe(
-    client: httpx.AsyncClient, items: list[CveItem]
-) -> tuple[list[CveItem], bool]:
+async def _download_nvd_safe(client: httpx.AsyncClient, items: list[CveItem]) -> tuple[list[CveItem], bool]:
     nvd_data = await fetch_nvd_cves(client)
     if nvd_data:
         return _parse_nvd_response(nvd_data, items), True
@@ -652,7 +647,9 @@ async def sync_cve_catalog(feed_url: str | None = None, sync_nvd: bool = True) -
     primary_source = getattr(settings, "ROSGRID_CVE_PRIMARY_SOURCE", "https://mikrotik.com/supportsec")
     rss_source = getattr(settings, "ROSGRID_CVE_RSS_SOURCE", "https://cdn.mikrotik.com/web-assets/supportsec/rss.xml")
     nvd_search_source = getattr(
-        settings, "ROSGRID_CVE_NVD_SEARCH_SOURCE", "https://nvd.nist.gov/vuln/search?keyword=mikrotik&resultType=records"
+        settings,
+        "ROSGRID_CVE_NVD_SEARCH_SOURCE",
+        "https://nvd.nist.gov/vuln/search?keyword=mikrotik&resultType=records",
     )
     nvd_sync_enabled = getattr(settings, "ROSGRID_CVE_NVD_SYNC_ENABLED", True)
 

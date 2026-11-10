@@ -131,6 +131,7 @@ class UserResponse(BaseModel):
         if val is None or not isinstance(val, dict):
             return {}
         return val
+
     last_login_at: datetime | None
     created_at: datetime
     updated_at: datetime

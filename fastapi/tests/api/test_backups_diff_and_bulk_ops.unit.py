@@ -369,8 +369,14 @@ async def test_export_router_rsc_raises_detailed_502_when_group_lacks_ftp() -> N
         await export_router_rsc(client)
 
     assert exc_info.value.status_code == 502
-    assert "El grupo 'rosgrid-api-group' del usuario 'rosgrid_agent' en MikroTik no tiene la política 'ftp'" in exc_info.value.detail
-    assert "/user group set rosgrid-api-group policy=api,rest-api,read,write,ftp,test,reboot,policy,sensitive" in exc_info.value.detail
+    assert (
+        "El grupo 'rosgrid-api-group' del usuario 'rosgrid_agent' en MikroTik no tiene la política 'ftp'"
+        in exc_info.value.detail
+    )
+    assert (
+        "/user group set rosgrid-api-group policy=api,rest-api,read,write,ftp,test,reboot,policy,sensitive"
+        in exc_info.value.detail
+    )
 
 
 @pytest.mark.asyncio
@@ -463,4 +469,3 @@ async def test_export_router_rsc_self_heal_group_and_rest_synthesis_fallback() -
     res_r4 = await export_router_rsc(client)
     assert "/ip address" in res_r4
     assert 'address=10.250.3.15/24 interface=ether1 comment="wan r4"' in res_r4
-

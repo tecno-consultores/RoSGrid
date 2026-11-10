@@ -12,10 +12,15 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: backend-qa-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   backend-qa:
     name: 🧪 Certificación Efímera de Backend en Docker (Regla Cero)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: 📥 Checkout del código de RoSGrid
@@ -32,7 +37,7 @@ jobs:
             -v "${GITHUB_WORKSPACE}:/workspace:ro" \
             -w /app \
             sinfallas/rosgrid-backend:local-test \
-            -c "ruff check --no-cache src/ tests/ && UV_PROJECT_ENVIRONMENT=/tmp/venv UV_CACHE_DIR=/tmp/uv-cache PYTHONPATH=/app/src uv run --with mypy --with pytest --with pytest-asyncio --with pytest-cov sh -c 'mypy --cache-dir=/tmp/mypy src/ && pytest -o addopts=\"\" -o cache_dir=/tmp/pytest-cache --import-mode=importlib --cov=src --cov-fail-under=95 -q --tb=short tests/'"
+            -c "ruff check --no-cache src/ tests/ && ruff format --check --no-cache src/ tests/ && UV_PROJECT_ENVIRONMENT=/tmp/venv UV_CACHE_DIR=/tmp/uv-cache PYTHONPATH=/app/src uv run --frozen --with mypy --with pytest --with pytest-asyncio --with pytest-cov sh -c 'mypy --cache-dir=/tmp/mypy src/ && pytest -o addopts=\"\" -o cache_dir=/tmp/pytest-cache --import-mode=importlib -m \"not integration\" --cov=src --cov-fail-under=95 -q --tb=short tests/'"
 
       - name: 🛡️ Verificar scripts de gobernanza 11X
         run: |
@@ -41,4 +46,4 @@ jobs:
             -v "${GITHUB_WORKSPACE}:/workspace:ro" \
             -w /workspace \
             sinfallas/rosgrid-backend:local-test \
-            -c "python3 .agents/scripts/verify_json_no_duplicate_keys.py && python3 .agents/scripts/verify_zero_orphan_vue_components.py && python3 .agents/scripts/verify_anti_silo_test_quality.py && python3 .agents/scripts/verify_topological_health.py && python3 .agents/scripts/verify_no_orphan_api_endpoints.py && python3 .agents/scripts/verify_roadmap_consistency.py"
+            -c "python3 .agents/scripts/verify_alembic_orm_parity.py && python3 .agents/scripts/verify_json_no_duplicate_keys.py && python3 .agents/scripts/verify_zero_orphan_vue_components.py && python3 .agents/scripts/verify_anti_silo_test_quality.py && python3 .agents/scripts/verify_topological_health.py && python3 .agents/scripts/verify_no_orphan_api_endpoints.py && python3 .agents/scripts/verify_roadmap_consistency.py"

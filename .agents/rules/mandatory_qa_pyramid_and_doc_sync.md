@@ -31,7 +31,7 @@ Every `.vue` file located in `vue3/src/` (views, components, modals, widgets) **
 ### 1.2 Zero-Blindness Telemetry Invariant
 
 When interacting with RouterOS v7 telemetry or Syslog:
-- Verify and auto-provision all 9 canonical logging topics (`system,info`, `account`, `firewall,info`, etc.) to prevent administrative changes in WinBox/WebFig from going undetected.
+- Verify and auto-provision all 10 canonical logging topics (`system,info`, `account`, `firewall,info`, `pppoe,ppp,info,warning,error`, etc.) to prevent administrative changes in WinBox/WebFig from going undetected.
 - Parse legacy BSD datagrams cleanly in the UDP Syslog collector (`514`/`5514`), stripping duplicate identities and dynamically inferring topics when missing.
 
 ### 1.3 Anti-Silo Cross-Module State Propagation, 3-Phase Temporal Lifecycle & Semantic Audit Invariant

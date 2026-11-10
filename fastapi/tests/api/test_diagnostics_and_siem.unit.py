@@ -41,9 +41,7 @@ from src.services.diagnostics_and_siem import (
 from tests.conftest import FakeAsyncRedis
 
 
-async def _create_test_session(
-    fake_redis: FakeAsyncRedis, role: SystemRoleEnum
-) -> tuple[str, dict[str, str]]:
+async def _create_test_session(fake_redis: FakeAsyncRedis, role: SystemRoleEnum) -> tuple[str, dict[str, str]]:
     tenant_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     session_id = f"sess-diag-{role.value.lower()}"
@@ -59,9 +57,7 @@ async def _create_test_session(
         },
     )
 
-    token = create_jwt_access_token(
-        user_id, tenant_id, "default-tenant", session_id, role.value, True
-    )
+    token = create_jwt_access_token(user_id, tenant_id, "default-tenant", session_id, role.value, True)
     headers = {
         "Authorization": f"Bearer {token}",
         "X-CSRF-Token": "test-csrf-token",
@@ -73,9 +69,9 @@ async def _create_test_session(
 def test_redact_sensitive_diagnostic_text_patterns() -> None:
     """Verifica que el motor de sanitización expurge Bearer tokens, contraseñas y llaves maestras."""
     raw = (
-        'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.xyz\n'
+        "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.xyz\n"
         '{"password": "supersecretpassword123", "api_key": "secret-key-abc", "safe": "value"}\n'
-        'password=plain_pass_value; ROSGRID_MASTER_VAULT_KEY=vaultkey999\n'
+        "password=plain_pass_value; ROSGRID_MASTER_VAULT_KEY=vaultkey999\n"
     )
     clean, count = redact_sensitive_diagnostic_text(raw)
     assert count >= 4
@@ -101,20 +97,28 @@ def test_redact_sensitive_diagnostic_text_empty_and_literal() -> None:
 
 def test_in_memory_log_handler_emit() -> None:
     """Verifica el handler circular en memoria de logs de backend."""
+    import logging
+
+    from src.services.diagnostics_and_siem import _BACKEND_LOG_RING_BUFFER
+
     ensure_diagnostic_log_handler()
     append_diagnostic_log_line("WARNING", "test.diagnostic", "Advertencia de prueba para ring buffer")
+    assert any("Advertencia de prueba para ring buffer" in line for line in _BACKEND_LOG_RING_BUFFER)
+
     handler = _InMemoryDiagnosticLogHandler()
-    import logging
     record = logging.LogRecord("test", logging.INFO, "path", 10, "Mensaje de log record", (), None)
     handler.emit(record)
-    with patch.object(handler, "format", side_effect=Exception("Format error")):
+    assert any("Mensaje de log record" in line for line in _BACKEND_LOG_RING_BUFFER)
+    with patch.object(handler, "format", side_effect=Exception("Format error")) as mock_fmt:
         handler.emit(record)
+        mock_fmt.assert_called_once()
 
 
 @pytest.mark.asyncio
 async def test_build_support_bundle_empty_logs() -> None:
     """Verifica el comportamiento de fallback cuando el buffer de logs en memoria está vacío."""
     from src.services.diagnostics_and_siem import _BACKEND_LOG_RING_BUFFER
+
     req = DiagnosticBundleRequest(format="zip", log_lines_limit=50)
     saved_logs = list(_BACKEND_LOG_RING_BUFFER)
     try:
@@ -286,6 +290,7 @@ async def test_send_tcp_and_http_siem_helpers() -> None:
         _send_http_siem_payload,
         _send_tcp_syslog_frame,
     )
+
     with patch("socket.create_connection") as mock_conn:
         mock_sock = MagicMock()
         mock_conn.return_value.__enter__.return_value = mock_sock
@@ -402,17 +407,13 @@ async def test_api_create_diagnostic_bundle_rbac(
     # SUPPORT_L1 -> 403
     _, headers_l1 = await _create_test_session(fake_redis, SystemRoleEnum.SUPPORT_L1)
     headers_l1["Idempotency-Key"] = str(uuid.uuid4())
-    resp_l1 = await async_client.post(
-        "/api/v1/system/diagnostics/bundle", headers=headers_l1, json=payload
-    )
+    resp_l1 = await async_client.post("/api/v1/system/diagnostics/bundle", headers=headers_l1, json=payload)
     assert resp_l1.status_code == 403
 
     # TENANT_ADMIN -> 200
     _, headers_admin = await _create_test_session(fake_redis, SystemRoleEnum.TENANT_ADMIN)
     headers_admin["Idempotency-Key"] = str(uuid.uuid4())
-    resp_admin = await async_client.post(
-        "/api/v1/system/diagnostics/bundle", headers=headers_admin, json=payload
-    )
+    resp_admin = await async_client.post("/api/v1/system/diagnostics/bundle", headers=headers_admin, json=payload)
     assert resp_admin.status_code == 200
     data_admin = resp_admin.json()
     assert data_admin["format"] == "zip"

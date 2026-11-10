@@ -18,6 +18,19 @@ from src.workers.syslog_collector import get_router_syslog_events
 
 router = APIRouter(prefix="/routers", tags=["Router Syslog"])
 
+CANONICAL_SYSLOG_TOPICS: tuple[str, ...] = (
+    "interface,warning,critical",
+    "route,bgp,warning",
+    "route,ospf,warning",
+    "system,error,critical",
+    "dhcp,critical",
+    "firewall,warning",
+    "system,info",
+    "account",
+    "firewall,info",
+    "pppoe,ppp,info,warning,error",
+)
+
 ROUTEROS_SYSLOG_TEMPLATE = """# ==============================================================================
 # RoSGrid: Plantilla de Enrolamiento Syslog Remoto Efímero (RouterOS v7)
 # Variables requeridas: {{ROSGRID_SERVER_IP}}, {{ROSGRID_SYSLOG_PORT}}
@@ -38,6 +51,7 @@ add topics=firewall,warning action="rosgridsyslog"
 add topics=system,info action="rosgridsyslog"
 add topics=account action="rosgridsyslog"
 add topics=firewall,info action="rosgridsyslog"
+add topics=pppoe,ppp,info,warning,error action="rosgridsyslog"
 """
 
 
@@ -69,8 +83,7 @@ async def get_syslog_provisioning_template(
         default_port=getattr(settings, "ROSGRID_SYSLOG_PORT", 5514),
         protocol="UDP",
         instructions=(
-            "Copy and paste this script into RouterOS v7 terminal or apply it "
-            "using Bulk Operations under Safe Mode."
+            "Copy and paste this script into RouterOS v7 terminal or apply it using Bulk Operations under Safe Mode."
         ),
         instructions_es=(
             "Copie y ejecute este script en la terminal de RouterOS v7 o aplíquelo "

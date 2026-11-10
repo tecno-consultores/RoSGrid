@@ -106,8 +106,10 @@
       >;
       sessions.value = raw.map(parseSessionItem);
     } catch {
-      // Sin datos de demostración en producción
-      sessions.value = [];
+      if (sessions.value.length === 0) {
+        sessions.value = [];
+      }
+      errorMessage.value = 'Error al actualizar el listado de sesiones activas.';
     } finally {
       isLoading.value = false;
     }

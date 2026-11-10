@@ -132,8 +132,8 @@ async def list_prefixes(
     # Si el tenant no tiene ningún prefijo registrado, auto-descubrir desde la flota alcanzable
     if auto_sync and not vrf_id and not ip_family and not role:
         existing_pfxs = (
-            await db.execute(select(IPAMPrefix.id).where(IPAMPrefix.tenant_id == tenant_id))
-        ).scalars().all()
+            (await db.execute(select(IPAMPrefix.id).where(IPAMPrefix.tenant_id == tenant_id))).scalars().all()
+        )
         if not existing_pfxs:
             logger.info(f"Tenant {tenant_id} sin prefijos en IPAM. Iniciando auto-descubrimiento desde la flota...")
             try:
@@ -690,7 +690,9 @@ async def _sync_single_router_ipam(
                     iface_net = ipaddress.ip_interface(ip_str)
                     net_str = str(iface_net.network)
                     if net_str not in known_prefixes:
-                        role = IPPrefixRoleEnum.MGMT if item.get("interface") == "ether1" else IPPrefixRoleEnum.INFRA_P2P
+                        role = (
+                            IPPrefixRoleEnum.MGMT if item.get("interface") == "ether1" else IPPrefixRoleEnum.INFRA_P2P
+                        )
                         prefix = IPAMPrefix(
                             id=uuid.uuid4(),
                             tenant_id=tenant_id,
@@ -850,8 +852,6 @@ async def sync_all_mikrotik_ipam(
     }
 
 
-
-
 @router.post("/sync-mikrotik/{router_id}", status_code=status.HTTP_200_OK)
 async def sync_mikrotik_ipam(
     router_id: uuid.UUID,
@@ -861,9 +861,7 @@ async def sync_mikrotik_ipam(
     """Descubre subredes, pools y servidores DHCP configurados en el router MikroTik y las sincroniza con el IPAM."""
     tenant_id = get_tenant_id(claims)
     stmt = (
-        select(Router)
-        .where(Router.id == router_id, Router.tenant_id == tenant_id)
-        .options(selectinload(Router.vault))
+        select(Router).where(Router.id == router_id, Router.tenant_id == tenant_id).options(selectinload(Router.vault))
     )
     r = (await db.execute(stmt)).scalar_one_or_none()
     if not r:

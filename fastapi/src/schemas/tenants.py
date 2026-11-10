@@ -111,9 +111,7 @@ class UpdateTenantFeaturesRequest(BaseModel):
 class UpdateTenantRequest(UpdateTenantFeaturesRequest):
     model_config = ConfigDict(extra="forbid")
 
-    slug: str | None = Field(
-        None, min_length=2, max_length=64, pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$"
-    )
+    slug: str | None = Field(None, min_length=2, max_length=64, pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
     name: str | None = Field(None, min_length=2, max_length=150)
     tax_id: str | None = None
     status: TenantStatusEnum | None = None

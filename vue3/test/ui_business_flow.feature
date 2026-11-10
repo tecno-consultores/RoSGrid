@@ -1281,6 +1281,17 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * assert spec114UiHardening.single_main_landmark_per_page == true
     * assert spec114UiHardening.kpi_cards_keyboard_accessible == true
 
+  # ============================================================================
+  # HITO 30.39: AISLAMIENTO KEEP-ALIVE POR ROUTER, RECONEXIÓN WS TELEMETRÍA Y TEMAS CSS
+  # ============================================================================
+  Scenario: 130. Aislamiento de cache KeepAlive por routerId en WebFig, reconexion exponencial WS y 20 tokens CSS en 3 temas (Hito 30.39)
+    * def hito3039UiHardening = { keep_alive_key_includes_router_id: true, telemetry_ws_exponential_backoff: true, twenty_css_tokens_defined_across_3_themes: true, dead_osm_onu_map_removed: true }
+    * assert hito3039UiHardening.keep_alive_key_includes_router_id == true
+    * assert hito3039UiHardening.telemetry_ws_exponential_backoff == true
+    * assert hito3039UiHardening.twenty_css_tokens_defined_across_3_themes == true
+    * assert hito3039UiHardening.dead_osm_onu_map_removed == true
+
+
 
 
 

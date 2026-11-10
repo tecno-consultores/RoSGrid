@@ -216,7 +216,9 @@ async def telemetry_beacon_worker_loop(stop_event: asyncio.Event | None = None) 
         logger.info("TelemetryBeaconWorker desactivado por configuración (ROSGRID_TELEMETRY_BEACON_ENABLED=false).")
         return
 
-    logger.info("Iniciando TelemetryBeaconWorker (intervalo: %ds)...", settings.ROSGRID_TELEMETRY_BEACON_INTERVAL_SECONDS)
+    logger.info(
+        "Iniciando TelemetryBeaconWorker (intervalo: %ds)...", settings.ROSGRID_TELEMETRY_BEACON_INTERVAL_SECONDS
+    )
     await asyncio.sleep(5)
     interval = max(60, settings.ROSGRID_TELEMETRY_BEACON_INTERVAL_SECONDS)
 

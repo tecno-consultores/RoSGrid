@@ -100,9 +100,7 @@ def test_aggregate_connection_stats_excludes_unroutable_and_local() -> None:
 def test_analyze_connections_single_persistent_session_no_false_positive() -> None:
     """Verifica que una sesión persistente única con muchos paquetes acumulados no dispare HIGH_PPS_BURST."""
     # Una única conexión de SSH o BGP con 50,000 paquetes acumulados a lo largo de días
-    raw_conns = [
-        {"src-address": "192.168.1.50:22", "protocol": "tcp", "orig-packets": 50000}
-    ]
+    raw_conns = [{"src-address": "192.168.1.50:22", "protocol": "tcp", "orig-packets": 50000}]
     anomalies = _analyze_connections(raw_conns, threshold_pps=1000, threshold_conns=500)
     assert len(anomalies) == 0, "No debe disparar falso positivo de ráfaga PPS en una única sesión aislada"
 

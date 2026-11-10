@@ -240,9 +240,7 @@ class BandwidthProfile(Base):
 
 class OpticalBox(Base):
     __tablename__ = "optical_boxes"
-    __table_args__ = (
-        UniqueConstraint("tenant_id", "box_code", name="uq_optical_boxes_tenant_code"),
-    )
+    __table_args__ = (UniqueConstraint("tenant_id", "box_code", name="uq_optical_boxes_tenant_code"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(
@@ -268,9 +266,7 @@ class OpticalBox(Base):
         DateTime(timezone=True), server_default=text("now()"), onupdate=datetime.now
     )
 
-    subscribers: Mapped[list["SubscriberDevice"]] = relationship(
-        "SubscriberDevice", back_populates="optical_box_rel"
-    )
+    subscribers: Mapped[list["SubscriberDevice"]] = relationship("SubscriberDevice", back_populates="optical_box_rel")
 
 
 class SubscriberDevice(Base):

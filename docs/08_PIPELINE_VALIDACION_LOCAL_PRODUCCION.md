@@ -119,7 +119,7 @@ Para verificar exhaustivamente las imágenes con Trivy y levantar la UI en el pu
 
 ## 5. Integración con el Proceso de Publicación (`scripts/build.sh`)
 
-Para impedir que imágenes rotas o desincronizadas se publiquen en Docker Hub, el script [build.sh](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/scripts/build.sh) invoca automáticamente a `./scripts/probar-prod-local.sh` como **Paso 0**:
+Para impedir que imágenes rotas o desincronizadas se publiquen en Docker Hub, el script [build.sh](../scripts/build.sh) invoca automáticamente a `./scripts/probar-prod-local.sh` como **Paso 0**:
 
 ```mermaid
 sequenceDiagram
@@ -208,7 +208,7 @@ docker volume prune -f
 
 ## 7. Suite Automatizada de Validación Front-Back (`validar_comunicacion_front_back.py`)
 
-Para certificar que **todas** las rutas, formularios y vistas de la interfaz Vue 3 se comunican contractualmente sin errores con el backend FastAPI y con la flota MikroTik real, RoSGrid incluye una suite de 24 pruebas de integración en `fastapi/scripts/validar_comunicacion_front_back.py`.
+Para certificar que **todas** las rutas, formularios y vistas de la interfaz Vue 3 se comunican contractualmente sin errores con el backend FastAPI y con la flota MikroTik real, RoSGrid incluye una suite de **28 bloques contractuales (77 aserciones HTTP E2E)** de integración en `fastapi/scripts/validar_comunicacion_front_back.py`.
 
 ### 7.1 Ejecución en Contenedor (Regla Cero)
 
@@ -216,7 +216,7 @@ Para certificar que **todas** las rutas, formularios y vistas de la interfaz Vue
 docker exec -i rosgrid_api_local python3 /app/scripts/validar_comunicacion_front_back.py
 ```
 
-### 7.2 Catálogo de 24 Pruebas de Integración Cubiertas
+### 7.2 Catálogo de Bloques de Integración Cubiertos (28 Contratos / 77 Aserciones)
 
 1. **Infraestructura Base:** Liveness de Nginx (`/`), cabeceras CSP con soporte de mapas OpenStreetMap y `/health` de FastAPI.
 2. **Autenticación y Ciclo de Vida:** `/api/v1/auth/bootstrap-status`, login de Superadmin con TOTP 2FA y perfil `/api/v1/auth/me`.

@@ -169,18 +169,18 @@ flowchart TD
     
     ProdBuild --> NginxProd["5. Despliegue en Nginx 1.27 Alpine"]
     NginxProd --> AxeCore["6. @axe-core/playwright: 0 violaciones WCAG 2.1 AA"]
-    AxeCore --> Karate["7. Karate Labs: 16 escenarios BDD UI (100% PASSED)"]
+    AxeCore --> Karate["7. Karate Labs: 16 escenarios BDD UI en Hito histórico (131 actuales)"]
     Karate --> LocalProd["8. Pipeline ./scripts/probar-prod-local.sh"]
-    
+
     LocalProd --> SignOff["✅ Certificación QA 11X Aprobada para Producción"]
 ```
 
 ### Criterios de Aceptación Innegociables
 
 1. **Regla Cero:** Ningún comando de `pnpm` o `node` se ejecutará en la máquina host Ubuntu; todo el proceso se certificará dentro del contenedor Docker efímero.
-2. **Cero Regresiones en Pruebas Unitarias:** Las 38 suites y 262 pruebas de Vitest deben reportar `100% passing`.
+2. **Cero Regresiones en Pruebas Unitarias:** Las suites y pruebas de Vitest deben reportar `100% passing`.
 3. **Accesibilidad y Rendimiento:** Cero violaciones WCAG 2.1 AA reportadas por `@axe-core` y puntuación Lighthouse CI `>= 90` en rendimiento y `>= 95` en accesibilidad.
-4. **Pruebas BDD Karate Labs:** Los 16 escenarios integrales en `vue3/test/ui_business_flow.feature` deben ejecutarse y aprobarse exitosamente.
+4. **Pruebas BDD Karate Labs:** Los escenarios integrales en `vue3/test/ui_business_flow.feature` (16 al momento de este reporte histórico; 131 en la versión actual v1.1.0) deben ejecutarse y aprobarse exitosamente.
 
 ---
 

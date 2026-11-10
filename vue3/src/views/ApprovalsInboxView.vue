@@ -54,11 +54,11 @@
         ...item,
         id: String(item.id),
         requested_by: String(item.requested_by || ''),
-        requested_by_username: item.requested_by_username || 'operador_solicitante',
-        requested_by_role: item.requested_by_role || 'SUPPORT_L2',
+        requested_by_username: item.requested_by_username || '—',
+        requested_by_role: item.requested_by_role || '—',
         router_id: item.router_id ? String(item.router_id) : 'N/A',
-        router_name: item.router_name || item.summary || 'Router MikroTik',
-        justification: item.justification || item.requester_justification || item.summary || 'Operación técnica',
+        router_name: item.router_name || item.summary || '—',
+        justification: item.justification || item.requester_justification || item.summary || '—',
         status: item.status === 'PENDING' ? 'AWAITING_APPROVAL' : (item.status?.startsWith('APPROVED') ? 'APPROVED' : item.status),
       }));
       const pendingCount = requests.value.filter((r) => r.status === 'AWAITING_APPROVAL').length;
@@ -66,8 +66,10 @@
         nocStore.setPendingApprovalsCount(pendingCount);
       }
     } catch {
-      // Sin datos de demostración en producción
-      requests.value = [];
+      if (requests.value.length === 0) {
+        requests.value = [];
+      }
+      errorMessage.value = 'Error al sincronizar la bandeja de aprobaciones Maker-Checker.';
     } finally {
       isLoading.value = false;
       if (

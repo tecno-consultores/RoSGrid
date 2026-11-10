@@ -255,6 +255,43 @@ export const PREDEFINED_TEMPLATES: PredefinedTemplate[] = [
         },
         cli_command: '/system logging add topics=firewall,warning action="rosgridsyslog"',
       },
+      {
+        method: 'PUT',
+        endpoint: SYSTEM_LOGGING_ENDPOINT,
+        payload: {
+          topics: 'system,info',
+          action: ROSGRID_SYSLOG_ACTION,
+        },
+        cli_command: '/system logging add topics=system,info action="rosgridsyslog"',
+      },
+      {
+        method: 'PUT',
+        endpoint: SYSTEM_LOGGING_ENDPOINT,
+        payload: {
+          topics: 'account',
+          action: ROSGRID_SYSLOG_ACTION,
+        },
+        cli_command: '/system logging add topics=account action="rosgridsyslog"',
+      },
+      {
+        method: 'PUT',
+        endpoint: SYSTEM_LOGGING_ENDPOINT,
+        payload: {
+          topics: 'firewall,info',
+          action: ROSGRID_SYSLOG_ACTION,
+        },
+        cli_command: '/system logging add topics=firewall,info action="rosgridsyslog"',
+      },
+      {
+        method: 'PUT',
+        endpoint: SYSTEM_LOGGING_ENDPOINT,
+        payload: {
+          topics: 'pppoe,ppp,info,warning,error',
+          action: ROSGRID_SYSLOG_ACTION,
+        },
+        cli_command:
+          '/system logging add topics=pppoe,ppp,info,warning,error action="rosgridsyslog"',
+      },
     ],
   },
 ];

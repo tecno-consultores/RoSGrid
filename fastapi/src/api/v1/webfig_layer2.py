@@ -85,6 +85,7 @@ def _extract_attributes_and_safemode(payload: Any) -> tuple[dict[str, Any], bool
         return payload, True
     return {}, True
 
+
 # ============================================================================
 # CATÁLOGO CANÓNICO DE VERBOS RPC Y ESQUEMAS FALLBACK (/console/inspect)
 # ============================================================================
@@ -562,9 +563,7 @@ def _synthesize_rsc_from_items(clean_path: str, items: list[dict[str, Any]]) -> 
         if not isinstance(item, dict):
             continue
         pairs = [
-            f"{k}={v}"
-            for k, v in sorted(item.items())
-            if k not in (".id", "id", "dynamic") and v not in (None, "")
+            f"{k}={v}" for k, v in sorted(item.items()) if k not in (".id", "id", "dynamic") and v not in (None, "")
         ]
         if pairs:
             lines.append("add " + " ".join(pairs))

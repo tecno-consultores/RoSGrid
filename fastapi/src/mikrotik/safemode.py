@@ -99,9 +99,7 @@ def _extract_writable_pairs(
 ) -> list[str]:
     """Filtra atributos de solo lectura y restringe a mutated_keys si se definen."""
     allowed_norm = (
-        {_normalize_ros_key(k) for k in mutated_keys if k not in _READONLY_ROS_KEYS}
-        if mutated_keys
-        else None
+        {_normalize_ros_key(k) for k in mutated_keys if k not in _READONLY_ROS_KEYS} if mutated_keys else None
     )
     items: list[str] = []
     for raw_k, v in before_state.items():

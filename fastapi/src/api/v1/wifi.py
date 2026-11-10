@@ -88,7 +88,11 @@ async def _record_wifi_audit(
         actor_user_id = uuid.UUID(str(user_sub)) if user_sub else None
         actor_role = str(
             claims.get("rol")
-            or (claims.get("roles", [SystemRoleEnum.SUPPORT_L3.value])[0] if claims.get("roles") else SystemRoleEnum.SUPPORT_L3.value)
+            or (
+                claims.get("roles", [SystemRoleEnum.SUPPORT_L3.value])[0]
+                if claims.get("roles")
+                else SystemRoleEnum.SUPPORT_L3.value
+            )
         )
         await write_audit_log(
             session=db,
@@ -155,13 +159,19 @@ async def get_capsman_overview(
                 radios = await client.get("/interface/wifi/capsman/remote-cap")
                 if isinstance(radios, list):
                     managed_aps = len(radios)
-                    active_radios = sum(int(r.get("radios", 1)) for r in radios if isinstance(r, dict)) if managed_aps > 0 else 0
+                    active_radios = (
+                        sum(int(r.get("radios", 1)) for r in radios if isinstance(r, dict)) if managed_aps > 0 else 0
+                    )
             except Exception:
                 try:
                     radios = await client.get("/caps-man/remote-cap")
                     if isinstance(radios, list):
                         managed_aps = len(radios)
-                        active_radios = sum(int(r.get("radios", 1)) for r in radios if isinstance(r, dict)) if managed_aps > 0 else 0
+                        active_radios = (
+                            sum(int(r.get("radios", 1)) for r in radios if isinstance(r, dict))
+                            if managed_aps > 0
+                            else 0
+                        )
                 except Exception:
                     pass
 
@@ -563,9 +573,7 @@ async def update_capsman_configuration(
                 is_modern = False
 
             target_path = (
-                f"/interface/wifi/configuration/{cfg_id}"
-                if is_modern
-                else f"/caps-man/configuration/{cfg_id}"
+                f"/interface/wifi/configuration/{cfg_id}" if is_modern else f"/caps-man/configuration/{cfg_id}"
             )
             await execute_safe_mutation(
                 client=client,
@@ -648,9 +656,7 @@ async def delete_capsman_configuration(
                         continue
                     master_cfg = str(rule.get("master-configuration") or "").strip()
                     slave_cfgs = {
-                        s.strip()
-                        for s in str(rule.get("slave-configurations") or "").split(",")
-                        if s.strip()
+                        s.strip() for s in str(rule.get("slave-configurations") or "").split(",") if s.strip()
                     }
                     referenced = ({master_cfg} if master_cfg else set()) | slave_cfgs
                     if candidate_names & referenced:
@@ -664,9 +670,7 @@ async def delete_capsman_configuration(
                         )
 
             target_path = (
-                f"/interface/wifi/configuration/{cfg_id}"
-                if is_modern
-                else f"/caps-man/configuration/{cfg_id}"
+                f"/interface/wifi/configuration/{cfg_id}" if is_modern else f"/caps-man/configuration/{cfg_id}"
             )
             await execute_safe_mutation(
                 client=client,
@@ -893,11 +897,7 @@ async def delete_security_profile(
             except Exception:
                 is_modern = False
 
-            target = (
-                f"/interface/wifi/security/{sec_id}"
-                if is_modern
-                else f"/caps-man/security/{sec_id}"
-            )
+            target = f"/interface/wifi/security/{sec_id}" if is_modern else f"/caps-man/security/{sec_id}"
             await execute_safe_mutation(
                 client=client,
                 menu=target.rsplit("/", 1)[0],
@@ -1116,11 +1116,7 @@ async def delete_provisioning_rule(
             except Exception:
                 is_modern = False
 
-            target = (
-                f"/interface/wifi/provisioning/{prov_id}"
-                if is_modern
-                else f"/caps-man/provisioning/{prov_id}"
-            )
+            target = f"/interface/wifi/provisioning/{prov_id}" if is_modern else f"/caps-man/provisioning/{prov_id}"
             await execute_safe_mutation(
                 client=client,
                 menu=target.rsplit("/", 1)[0],

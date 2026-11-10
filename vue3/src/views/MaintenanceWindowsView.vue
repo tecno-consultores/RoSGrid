@@ -183,8 +183,10 @@
         return Number.isNaN(endMs) || endMs > nowMs;
       });
     } catch {
-      // Sin datos de demostración en producción
-      windowsList.value = [];
+      if (windowsList.value.length === 0) {
+        windowsList.value = [];
+      }
+      errorMessage.value = 'Error al cargar las ventanas de mantenimiento.';
     } finally {
       isLoading.value = false;
     }

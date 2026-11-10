@@ -98,6 +98,29 @@
 
   --rg-row-height-compact: 32px;
   --rg-row-height-comfortable: 44px;
+
+  /* Alias semánticos homologados para componentes tácticos */
+  --rg-bg: var(--rg-bg-canvas);
+  --rg-bg-card-secondary: var(--rg-bg-elevated);
+  --rg-border-subtle: var(--rg-border-grid);
+  --rg-text: var(--rg-text-primary);
+  --rg-cyan: var(--rg-accent-cyan);
+  --rg-accent-primary: var(--rg-accent-cyan);
+  --rg-accent-subtle: rgba(34, 211, 238, 0.14);
+  --rg-accent-orange: var(--rg-brand-electric-orange);
+  --rg-accent-blue: var(--rg-brand-cyber-blue);
+  --rg-status-success: var(--rg-status-online);
+  --rg-status-success-bg: var(--rg-status-online-bg);
+  --rg-space-sm: var(--rg-space-2);
+  --rg-space-md: var(--rg-space-4);
+  --rg-space-lg: var(--rg-space-6);
+  --rg-space-xl: var(--rg-space-8);
+  --rg-font-size-xs: var(--rg-text-xs);
+  --rg-font-size-sm: var(--rg-text-sm);
+  --rg-font-size-base: var(--rg-text-base);
+  --rg-font-size-md: var(--rg-text-md);
+  --rg-font-size-lg: var(--rg-text-lg);
+  --rg-font-size-xl: var(--rg-text-xl);
 }
 
 [data-theme="light"] {
@@ -156,6 +179,18 @@
   --rg-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.05);
   --rg-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.1), 0 2px 4px rgba(15, 23, 42, 0.06);
   --rg-shadow-lg: 0 16px 36px rgba(15, 23, 42, 0.16), 0 4px 10px rgba(15, 23, 42, 0.08);
+
+  --rg-bg: var(--rg-bg-canvas);
+  --rg-bg-card-secondary: var(--rg-bg-elevated);
+  --rg-border-subtle: var(--rg-border-grid);
+  --rg-text: var(--rg-text-primary);
+  --rg-cyan: var(--rg-accent-cyan);
+  --rg-accent-primary: var(--rg-accent-cyan);
+  --rg-accent-subtle: rgba(14, 116, 144, 0.12);
+  --rg-accent-orange: var(--rg-brand-electric-orange);
+  --rg-accent-blue: var(--rg-brand-cyber-blue);
+  --rg-status-success: var(--rg-status-online);
+  --rg-status-success-bg: var(--rg-status-online-bg);
 }
 
 [data-theme="noc-high-contrast"] {
@@ -211,6 +246,18 @@
 
   --rg-inset-highlight: none;
   --rg-inset-well: none;
+
+  --rg-bg: var(--rg-bg-canvas);
+  --rg-bg-card-secondary: var(--rg-bg-elevated);
+  --rg-border-subtle: var(--rg-border-grid);
+  --rg-text: var(--rg-text-primary);
+  --rg-cyan: var(--rg-accent-cyan);
+  --rg-accent-primary: var(--rg-accent-cyan);
+  --rg-accent-subtle: rgba(56, 189, 248, 0.2);
+  --rg-accent-orange: var(--rg-brand-electric-orange);
+  --rg-accent-blue: var(--rg-brand-cyber-blue);
+  --rg-status-success: var(--rg-status-online);
+  --rg-status-success-bg: var(--rg-status-online-bg);
 }
 
 /* Global Reset & Box Sizing */

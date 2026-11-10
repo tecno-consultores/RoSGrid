@@ -6,13 +6,22 @@ Todos los cambios relevantes de este proyecto se documentan en este archivo sigu
 
 ## [Unreleased]
 
+---
+
+## [1.2.0] - 2026-11-09
+
+### Added
+- **Homologación Integral RLS en Migración `0017`, Validador Anti-SSRF Unificado (`ssrf.py`), Canon de 10 Tópicos Syslog y Suite de Integración PostgreSQL 17 (Hito `30.39`):** Creación de `0017_homologate_rls_policies.py` homologando `ENABLE/FORCE ROW LEVEL SECURITY` y cláusula `app.is_superadmin_global = 'true'` en las 25 tablas multi-tenant; módulo centralizado `fastapi/src/core/ssrf.py` (con allowlist `ROSGRID_OUTBOUND_ALLOWED_CIDRS` y validación SMTP); unificación de los 10 tópicos Syslog (`CANONICAL_SYSLOG_TOPICS`); e incorporación de `test_postgres_rls_and_alembic.unit.py` (`@pytest.mark.integration`).
+
 ### Changed
 - **Unificación Global de Autoría y Copyright SPDX (`GPL-3.0-only`):** Estandarización de la cabecera legal `# Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)` en los 514 archivos del repositorio, metadatos OCI de `Dockerfile`, `pyproject.toml`, `package.json`, manuales y `README.md`, eliminando referencias residuales a `RoSGrid Contributors` y correos personales antiguos.
+- **Sincronización de Versión `1.2.0`, Índices Secundarios KeyDB y Paridad de Tokens CSS (Hito `30.39`):** Unificación de versión `1.2.0` en `config.py`, `pyproject.toml`, `package.json`, `main.py`, `mcp.py`, `build.sh` e `instalar-rosgrid.sh`; reemplazo de `KEYS rg:*` por índices `rg:sess_idx:{session_id}` y `rg:closing_tenants_set` en KeyDB; definición de los 20 alias `--rg-*` en `themes.css`; y eliminación del componente muerto `OsmOnuMap.vue`.
 
 ### Fixed
+- **Aislamiento de Caché `<keep-alive>` por Router en WebFig, Ejecución Diferida `PATCH`/`DELETE` en Maker-Checker y Gobernanza MCP (Hito `30.39`):** Clave compuesta `:key="`${routerId}:${String(route.name)}`"` y reconexión exponencial WebSocket en `RouterWebFigLayout.vue`; sufijo `/{inferred_id}` en `PATCH`/`DELETE` diferidos y persistencia de `EXPIRED` en `approvals.py`; validación de feature flags y pertenencia de recursos al tenant en `mcp.py`; preservación de estado previo ante fallos de sondeo en 7 vistas Vue 3; y healthcheck real por latido `/tmp/worker_heartbeat` en `rosgrid-worker`.
 - **Extracción Efímera de Grafos AST Graphify en CI y Mock Determinista UDP Syslog (`.github/workflows/01-backend-qa.yml`, `fastapi/tests/api/test_hito23_cve_and_syslog.unit.py`):** Ejecución previa de `./scripts/actualizar-grafos-graphify.sh` antes de `verify_topological_health.py` en GitHub Actions (dado que `graphify-out/` está excluido en `.gitignore`) y reemplazo del `patch` obsoleto a `load_ip_router_map` por `load_router_syslog_maps` en las pruebas del bucle UDP Syslog.
 - **Eliminación de Dependencia a `aquasecurity/setup-trivy@v0.2.2` en GitHub Actions (`.github/workflows/00-iac-audit.yml`):** Reemplazo de `aquasecurity/trivy-action` por la ejecución directa de `./scripts/verificar-secretos.sh` y `./scripts/auditar-infra.sh` en contenedor efímero Docker (`aquasec/trivy`), evitando el fallo de resolución del tag eliminado `setup-trivy@v0.2.2`.
-- **Paridad de Validación de Producción y Smoke Test `--no-dev` en `./scripts/build.sh` (`fastapi/scripts/test_production_boot_smoke.py`, `scripts/probar-prod-local.sh`, `docker-compose.prod.local.yml`, `scripts/build.sh`):** Sincronización de `settings.ROSGRID_ENV = "production"` antes de `create_app()`, aprovisionamiento de secretos efímeros de validación (`ROSGRID_ENV=production`, `ROSGRID_MCP_ENABLED=true`), propagación de `ROSGRID_ADMIN_PASSWORD` a `validar_comunicacion_front_back.py` y versión por defecto `1.1.0` en `scripts/build.sh`.
+- **Paridad de Validación de Producción y Smoke Test `--no-dev` en `./scripts/build.sh` (`fastapi/scripts/test_production_boot_smoke.py`, `scripts/probar-prod-local.sh`, `docker-compose.prod.local.yml`, `scripts/build.sh`):** Sincronización de `settings.ROSGRID_ENV = "production"` antes de `create_app()`, aprovisionamiento de secretos efímeros de validación (`ROSGRID_ENV=production`, `ROSGRID_MCP_ENABLED=true`), propagación de `ROSGRID_ADMIN_PASSWORD` a `validar_comunicacion_front_back.py` y versión por defecto `1.2.0` en `scripts/build.sh`.
 
 ---
 
@@ -42,7 +51,7 @@ Todos los cambios relevantes de este proyecto se documentan en este archivo sigu
 ## [1.0.0] - 2026-11-08
 
 ### Added
-- **Consola WebFig NOC Multi-Tenant para MikroTik RouterOS v7.13+:** Gestión integral de flotas RouterOS v7 mediante API REST (`/rest/*`) con aislamiento Row-Level Security (RLS) en PostgreSQL 18, sesiones y telemetría efímera en KeyDB, y bóveda criptográfica `AES-256-GCM` con desbloqueo Step-Up 2FA (`TOTP` / `WebAuthn`).
+- **Consola WebFig NOC Multi-Tenant para MikroTik RouterOS v7.13+:** Gestión integral de flotas RouterOS v7 mediante API REST (`/rest/*`) con aislamiento Row-Level Security (RLS) en PostgreSQL 17, sesiones y telemetría efímera en KeyDB, y bóveda criptográfica `AES-256-GCM` con desbloqueo Step-Up 2FA (`TOTP` / `WebAuthn`).
 - **Gobernanza Operativa Safe Mode 60s y Flujo Maker-Checker:** Protección transaccional contra desconexiones accidentales con reversión automática a los 60 segundos, auditoría forense inmutable WORM y bandeja de aprobaciones en tiempo real vía WebSockets.
 - **Motor Universal WebFig Capa 1 y Capa 2:** Operaciones tácticas sobre Interfaces, Bridges, VLANs, IP/IPv6, Firewall, NAT, Colas QoS, PPPoE, DHCP, BGP/OSPF, MPLS, VXLAN, WireGuard y ZeroTier, con exportación y comparador visual de configuraciones `.rsc` (Git-Diff).
 - **Operaciones ISP, FTTH GPON y Panel Móvil de Técnico de Campo:** Gestión de suscriptores PPPoE/DHCP, aprovisionamiento en vivo en el BNG, topología de Cajas Ópticas NAP, telemetría de potencia óptica ONU y aplicación móvil responsiva con firma digital y diagnóstico Ping 1-Clic.

@@ -257,14 +257,31 @@ async def test_channel(
     conf = _decrypt_channel_config(tenant_id, channel)
     ch_type = channel.channel_type.value if hasattr(channel.channel_type, "value") else str(channel.channel_type)
 
-    # Verificación de sintaxis de configuración según canal
+    # Verificación de sintaxis y Anti-SSRF de configuración según canal
     if ch_type == "TELEGRAM_BOT" and ("bot_token" not in conf or "chat_id" not in conf):
         return NotificationTestResponse(status="FAILED", detail="Faltan 'bot_token' o 'chat_id'")
-    if ch_type == "GENERIC_WEBHOOK" and "webhook_url" not in conf:
-        return NotificationTestResponse(status="FAILED", detail="Falta 'webhook_url'")
+    if ch_type == "GENERIC_WEBHOOK":
+        if "webhook_url" not in conf or not str(conf.get("webhook_url", "")).strip():
+            return NotificationTestResponse(status="FAILED", detail="Falta 'webhook_url'")
+        from src.core.ssrf import is_safe_outbound_url_async
+
+        if not await is_safe_outbound_url_async(str(conf["webhook_url"]), allow_private_cidrs=[]):
+            return NotificationTestResponse(
+                status="FAILED",
+                detail="Fallo al enviar prueba (GENERIC_WEBHOOK): URL bloqueada por política Anti-SSRF",
+            )
     if ch_type == "SMTP_EMAIL":
         if "smtp_host" not in conf or not str(conf.get("smtp_host", "")).strip():
             return NotificationTestResponse(status="FAILED", detail="Falta 'smtp_host'")
+        from src.core.ssrf import is_safe_smtp_target
+
+        smtp_host_val = str(conf.get("smtp_host", "")).strip()
+        smtp_port_val = int(conf.get("smtp_port") or 587)
+        if not is_safe_smtp_target(smtp_host_val, smtp_port_val, allow_localhost_fallback=False):
+            return NotificationTestResponse(
+                status="FAILED",
+                detail="Fallo al enviar prueba (SMTP_EMAIL): Servidor o puerto SMTP bloqueado por política Anti-SSRF",
+            )
         recipients = _resolve_smtp_recipients(conf)
         if not recipients:
             return NotificationTestResponse(
@@ -289,7 +306,12 @@ async def test_channel(
             await _dispatch_telegram(conf, alert_payload)
             detail_msg = f"Mensaje de prueba enviado con éxito a Telegram (chat {conf.get('chat_id')})"
         elif ch_type == "GENERIC_WEBHOOK":
-            await _dispatch_webhook(conf, alert_payload)
+            dispatched = await _dispatch_webhook(conf, alert_payload)
+            if dispatched is False:
+                return NotificationTestResponse(
+                    status="FAILED",
+                    detail="Fallo al enviar prueba (GENERIC_WEBHOOK): URL bloqueada por política Anti-SSRF",
+                )
             detail_msg = f"Webhook de prueba despachado con éxito a {conf.get('webhook_url')}"
         else:
             detail_msg = f"Configuración de canal {ch_type} validada con éxito"

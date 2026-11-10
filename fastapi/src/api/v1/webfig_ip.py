@@ -1209,7 +1209,6 @@ async def release_dhcp_client(
 # ============================================================================
 
 
-
 @router.get("/dns")
 async def get_dns_info(
     router_id: uuid.UUID,

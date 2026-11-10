@@ -74,9 +74,10 @@ chmod 600 .env
 | `ROSGRID_MCP_RATE_LIMIT_PER_MIN` | Entero | `30` | Límite de peticiones MCP por minuto por cuenta `SERVICE_ACCOUNT`. |
 | `ROSGRID_CORS_ORIGINS` | String | `*` | Lista de orígenes permitidos separados por comas para despliegues con Backend y Frontend en servidores separados (ej. `https://app.tuempresa.com,http://localhost:8080`). |
 | `ROSGRID_CROSS_ORIGIN_COOKIES` | Booleano | `false` | Si es `true`, emite cookies de sesión sin prefijo `__Host-` con `SameSite=None; Secure` para permitir autenticación cross-domain. |
-| `ROSGRID_TELEMETRY_BEACON_ENABLED` | Booleano | `true` | Habilita el beacon anónimo de latido de instancia activa (Spec 55 / Hito 27.18) con tolerancia air-gapped y zero-PII. |
-| `ROSGRID_TELEMETRY_BEACON_URL` | String | `https://rosgrid.net/api/telemetry/heartbeat` | Endpoint remoto oficial para el latido anónimo de telemetría de versiones. |
-| `ROSGRID_TELEMETRY_BEACON_INTERVAL_SECONDS` | Entero | `21600` | Frecuencia en segundos entre latidos de telemetría anónima (por defecto cada 6 horas). |
+| `ROSGRID_TELEMETRY_BEACON_ENABLED` | Booleano | `false` | Modelo **Opt-In** por defecto (Specs 55 y 113): si se habilita explícitamente (`true`), envía latido anónimo zero-PII con tolerancia air-gapped. |
+| `ROSGRID_TELEMETRY_BEACON_URL` | String | `https://telemetry.rosgrid.io/v1/beacon` | Endpoint remoto oficial para el latido anónimo de telemetría de versiones. |
+| `ROSGRID_TELEMETRY_BEACON_INTERVAL_SECONDS` | Entero | `86400` | Frecuencia en segundos entre latidos de telemetría anónima (por defecto cada 24 horas). |
+| `ROSGRID_OUTBOUND_ALLOWED_CIDRS` | String | `""` | Lista opcional de CIDRs RFC1918 separados por comas autorizados para colectores SIEM/Webhooks en LAN privada (ej. `10.10.0.0/24`). |
 | `ROSGRID_CVE_NVD_API_URL` | String | `https://services.nvd.nist.gov/rest/json/cves/2.0` | URL base del conector oficial NIST NVD REST API v2.0 (Spec 71 / Hito 29.1). |
 | `ROSGRID_CVE_NVD_API_KEY` | String | `None` | API Key opcional de NIST NVD para elevar el rate limit de 5 req/30s a 50 req/30s. |
 | `ROSGRID_CVE_NVD_SYNC_ENABLED` | Booleano | `true` | Conmutador global para activar/desactivar la ingesta cruzada desde NIST NVD v2.0. |
@@ -362,7 +363,7 @@ Este pipeline ejecuta 6 fases exhaustivas:
 6. **Inspección de Logs y Limpieza:** Auditoría de ausencia de tracebacks y purga de volúmenes (o entrega de enlaces si se usó `--keep-alive`).
 
 > [!NOTE]
-> Para la guía operativa paso a paso, arquitectura y solución de problemas, consulta el manual completo en [08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md](08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md). Además, el script de publicación [build.sh](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/scripts/build.sh) ejecuta automáticamente este pipeline como Paso 0 previo a cualquier `docker buildx build --push`.
+> Para la guía operativa paso a paso, arquitectura y solución de problemas, consulta el manual completo en [08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md](08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md). Además, el script de publicación [build.sh](../scripts/build.sh) ejecuta automáticamente este pipeline como Paso 0 previo a cualquier `docker buildx build --push`.
 
 ### 7.4 Dictamen de Arquitecturas de Hardware (AMD64, ARM64 y ARMv7)
 

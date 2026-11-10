@@ -84,6 +84,7 @@ async def create_session(
     pipe.sadd(user_sess_key, session_id)
     pipe.expire(user_sess_key, SESSION_TTL_SECONDS)
 
+    pipe.set(f"rg:sess_idx:{session_id}", tenant_id, ex=SESSION_TTL_SECONDS)
     pipe.zadd(active_sess_key, {session_id: float(now_epoch)})
     await pipe.execute()
 
@@ -260,6 +261,8 @@ async def mark_session_closing(
     pipe = redis.pipeline()
     pipe.set(closing_key, str(expires_at), ex=grace_seconds)
     pipe.zadd(zset_key, {session_id: float(expires_at)})
+    pipe.sadd("rg:closing_tenants_set", tenant_id)
+    pipe.expire("rg:closing_tenants_set", SESSION_TTL_SECONDS)
     await pipe.execute()
     return True
 
@@ -329,4 +332,3 @@ async def sweep_expired_closing_sessions(tenant_id: str) -> list[str]:
         await redis.zrem(zset_key, sid)
 
     return closed_sessions
-

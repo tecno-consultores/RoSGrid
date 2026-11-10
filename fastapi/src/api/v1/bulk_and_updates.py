@@ -528,7 +528,7 @@ _DEFAULT_STARTER_TEMPLATES = [
                 "cli_command": (
                     '/system logging action add name="rosgridsyslog" target=remote '
                     "remote={{ rosgrid_server_ip }} remote-port={{ rosgrid_syslog_port }} "
-                    'remote-log-format=syslog syslog-facility=daemon'
+                    "remote-log-format=syslog syslog-facility=daemon"
                 ),
             },
             {
@@ -616,7 +616,11 @@ _DEFAULT_STARTER_TEMPLATES = [
             {
                 "method": "PUT",
                 "endpoint": "routing/filter/rule",
-                "payload": {"chain": "RPKI_IN", "rule": "if (rpki-verify() == invalid) { reject }", "comment": "Drop BGP RPKI Invalid"},
+                "payload": {
+                    "chain": "RPKI_IN",
+                    "rule": "if (rpki-verify() == invalid) { reject }",
+                    "comment": "Drop BGP RPKI Invalid",
+                },
                 "cli_command": '/routing filter rule add chain=RPKI_IN rule="if (rpki-verify() == invalid) { reject }" comment="Drop BGP RPKI Invalid"',
             },
         ],
@@ -630,8 +634,18 @@ _DEFAULT_STARTER_TEMPLATES = [
             '/ip firewall nat add chain=srcnat src-address={{ cgnat_subnet }} out-interface={{ wan_interface }} action=src-nat to-addresses={{ public_ip_pool }} comment="CGNAT RFC 6598 Carrier Grade NAT"'
         ),
         "variables_schema": [
-            {"key": "cgnat_subnet", "label": "Subred de Clientes CGNAT", "default_val": "100.64.0.0/10", "var_type": "string"},
-            {"key": "public_ip_pool", "label": "Rango/IPs Públicas Pool NAT", "default_val": "203.0.113.1-203.0.113.8", "var_type": "string"},
+            {
+                "key": "cgnat_subnet",
+                "label": "Subred de Clientes CGNAT",
+                "default_val": "100.64.0.0/10",
+                "var_type": "string",
+            },
+            {
+                "key": "public_ip_pool",
+                "label": "Rango/IPs Públicas Pool NAT",
+                "default_val": "203.0.113.1-203.0.113.8",
+                "var_type": "string",
+            },
             {"key": "wan_interface", "label": "Interfaz de Salida WAN", "default_val": "ether1", "var_type": "string"},
         ],
         "rest_steps_template": [
@@ -662,7 +676,12 @@ _DEFAULT_STARTER_TEMPLATES = [
         "variables_schema": [
             {"key": "wan_interface", "label": "Interfaz WAN DHCPv6", "default_val": "ether1", "var_type": "string"},
             {"key": "lan_interface", "label": "Interfaz LAN para IPv6", "default_val": "bridge", "var_type": "string"},
-            {"key": "pool_name", "label": "Nombre del Pool Delegado", "default_val": "ipv6-pd-pool", "var_type": "string"},
+            {
+                "key": "pool_name",
+                "label": "Nombre del Pool Delegado",
+                "default_val": "ipv6-pd-pool",
+                "var_type": "string",
+            },
         ],
         "rest_steps_template": [
             {
@@ -702,7 +721,12 @@ _DEFAULT_STARTER_TEMPLATES = [
         ),
         "variables_schema": [
             {"key": "icmp_rate_limit", "label": "Límite paquetes ICMP/s", "default_val": "50", "var_type": "string"},
-            {"key": "ssh_syn_limit", "label": "Límite conexiones SSH/Winbox", "default_val": "10/min", "var_type": "string"},
+            {
+                "key": "ssh_syn_limit",
+                "label": "Límite conexiones SSH/Winbox",
+                "default_val": "10/min",
+                "var_type": "string",
+            },
         ],
         "rest_steps_template": [
             {
@@ -754,8 +778,18 @@ _DEFAULT_STARTER_TEMPLATES = [
             '/ip firewall filter add chain=forward in-interface={{ customer_interface }} action=drop comment="BCP 38: Drop spoofed customer traffic"'
         ),
         "variables_schema": [
-            {"key": "allowed_customer_prefixes", "label": "Prefijos Autorizados del Cliente", "default_val": "198.51.100.0/24,203.0.113.0/24", "var_type": "string"},
-            {"key": "customer_interface", "label": "Interfaz del Cliente / Enlace", "default_val": "ether2", "var_type": "string"},
+            {
+                "key": "allowed_customer_prefixes",
+                "label": "Prefijos Autorizados del Cliente",
+                "default_val": "198.51.100.0/24,203.0.113.0/24",
+                "var_type": "string",
+            },
+            {
+                "key": "customer_interface",
+                "label": "Interfaz del Cliente / Enlace",
+                "default_val": "ether2",
+                "var_type": "string",
+            },
         ],
         "rest_steps_template": [
             {
@@ -793,7 +827,12 @@ _DEFAULT_STARTER_TEMPLATES = [
             '/ip firewall mangle add chain=forward protocol=tcp tcp-flags=syn in-interface={{ wan_interface }} action=change-mss new-mss={{ tcp_mss_ipv4 }} passthrough=yes comment="Clamp TCP MSS WAN In"'
         ),
         "variables_schema": [
-            {"key": "wan_interface", "label": "Interfaz WAN / PPPoE / VPN", "default_val": "all-ppp", "var_type": "string"},
+            {
+                "key": "wan_interface",
+                "label": "Interfaz WAN / PPPoE / VPN",
+                "default_val": "all-ppp",
+                "var_type": "string",
+            },
             {"key": "tcp_mss_ipv4", "label": "Valor MSS TCP", "default_val": "1452", "var_type": "string"},
         ],
         "rest_steps_template": [
@@ -841,8 +880,18 @@ _DEFAULT_STARTER_TEMPLATES = [
         ),
         "variables_schema": [
             {"key": "bridge_name", "label": "Nombre del Bridge", "default_val": "bridge", "var_type": "string"},
-            {"key": "trunk_interface", "label": "Interfaz Trunk (Uplink)", "default_val": "sfp-sfpplus1", "var_type": "string"},
-            {"key": "access_interface", "label": "Puerto Access de Usuario", "default_val": "ether2", "var_type": "string"},
+            {
+                "key": "trunk_interface",
+                "label": "Interfaz Trunk (Uplink)",
+                "default_val": "sfp-sfpplus1",
+                "var_type": "string",
+            },
+            {
+                "key": "access_interface",
+                "label": "Puerto Access de Usuario",
+                "default_val": "ether2",
+                "var_type": "string",
+            },
             {"key": "access_vlan_id", "label": "VLAN ID Acceso", "default_val": "10", "var_type": "string"},
         ],
         "rest_steps_template": [
@@ -879,9 +928,24 @@ _DEFAULT_STARTER_TEMPLATES = [
             '/queue simple add name=cake-qos-traffic target={{ target_interface }} max-limit={{ upload_rate }}/{{ download_rate }} queue=cake-rosgrid/cake-rosgrid comment="CAKE Anti-Bufferbloat"'
         ),
         "variables_schema": [
-            {"key": "target_interface", "label": "Interfaz o Target Subred", "default_val": "ether1", "var_type": "string"},
-            {"key": "download_rate", "label": "Ancho de Banda Bajada (Download)", "default_val": "100M", "var_type": "string"},
-            {"key": "upload_rate", "label": "Ancho de Banda Subida (Upload)", "default_val": "50M", "var_type": "string"},
+            {
+                "key": "target_interface",
+                "label": "Interfaz o Target Subred",
+                "default_val": "ether1",
+                "var_type": "string",
+            },
+            {
+                "key": "download_rate",
+                "label": "Ancho de Banda Bajada (Download)",
+                "default_val": "100M",
+                "var_type": "string",
+            },
+            {
+                "key": "upload_rate",
+                "label": "Ancho de Banda Subida (Upload)",
+                "default_val": "50M",
+                "var_type": "string",
+            },
         ],
         "rest_steps_template": [
             {
@@ -919,12 +983,37 @@ _DEFAULT_STARTER_TEMPLATES = [
             "/interface wireguard peers add interface={{ wg_interface }} public-key={{ peer_public_key }} endpoint-address={{ peer_endpoint }} endpoint-port={{ peer_endpoint_port }} allowed-address={{ allowed_ips }} persistent-keepalive=25s"
         ),
         "variables_schema": [
-            {"key": "wg_interface", "label": "Nombre Interfaz WireGuard", "default_val": "wg-sdwan0", "var_type": "string"},
+            {
+                "key": "wg_interface",
+                "label": "Nombre Interfaz WireGuard",
+                "default_val": "wg-sdwan0",
+                "var_type": "string",
+            },
             {"key": "listen_port", "label": "Puerto de Escucha UDP", "default_val": "13231", "var_type": "string"},
-            {"key": "peer_public_key", "label": "Clave Pública del Peer Remoto", "default_val": "PEER_PUBLIC_KEY_BASE64_HERE", "var_type": "string"},
-            {"key": "peer_endpoint", "label": "IP o Hostname del Peer Remoto", "default_val": "198.51.100.1", "var_type": "string"},
-            {"key": "peer_endpoint_port", "label": "Puerto UDP del Peer Remoto", "default_val": "13231", "var_type": "string"},
-            {"key": "allowed_ips", "label": "Subredes Remotas Autorizadas (Allowed IPs)", "default_val": "10.100.0.0/24", "var_type": "string"},
+            {
+                "key": "peer_public_key",
+                "label": "Clave Pública del Peer Remoto",
+                "default_val": "PEER_PUBLIC_KEY_BASE64_HERE",
+                "var_type": "string",
+            },
+            {
+                "key": "peer_endpoint",
+                "label": "IP o Hostname del Peer Remoto",
+                "default_val": "198.51.100.1",
+                "var_type": "string",
+            },
+            {
+                "key": "peer_endpoint_port",
+                "label": "Puerto UDP del Peer Remoto",
+                "default_val": "13231",
+                "var_type": "string",
+            },
+            {
+                "key": "allowed_ips",
+                "label": "Subredes Remotas Autorizadas (Allowed IPs)",
+                "default_val": "10.100.0.0/24",
+                "var_type": "string",
+            },
         ],
         "rest_steps_template": [
             {
@@ -957,8 +1046,18 @@ _DEFAULT_STARTER_TEMPLATES = [
             '/system scheduler add name=nightly-encrypted-backup start-time={{ schedule_time }} interval=1d on-event="/system backup save encryption=aes-sha256 name=nightly-rosgrid-backup password={{ backup_password }}" comment="Nightly Encrypted Backup"'
         ),
         "variables_schema": [
-            {"key": "schedule_time", "label": "Hora de Ejecución Diaria", "default_val": "03:00:00", "var_type": "string"},
-            {"key": "backup_password", "label": "Contraseña de Cifrado AES", "default_val": "ClaveRobustaCifradoRespaldo2026", "var_type": "string"},
+            {
+                "key": "schedule_time",
+                "label": "Hora de Ejecución Diaria",
+                "default_val": "03:00:00",
+                "var_type": "string",
+            },
+            {
+                "key": "backup_password",
+                "label": "Contraseña de Cifrado AES",
+                "default_val": "ClaveRobustaCifradoRespaldo2026",
+                "var_type": "string",
+            },
         ],
         "rest_steps_template": [
             {
@@ -1101,8 +1200,7 @@ _DEFAULT_STARTER_TEMPLATES = [
             "para garantizar marcas de tiempo exactas en Syslog y auditoría WORM."
         ),
         "ros_command_template": (
-            "/system clock set time-zone-autodetect={{ time_zone_autodetect }} "
-            "time-zone-name={{ time_zone_name }}"
+            "/system clock set time-zone-autodetect={{ time_zone_autodetect }} time-zone-name={{ time_zone_name }}"
         ),
         "variables_schema": [
             {
@@ -1571,7 +1669,12 @@ async def _execute_single_step(
             if "duplicate address" in err_msg and endpoint == "system/ntp/client/servers":
                 logger.info("Servidor NTP ya registrado en router, ignorando duplicado: %s", payload.get("address"))
                 return []
-            if "already exists" in err_msg and endpoint in ("queue/type", "routing/rpki", "system/scheduler", "interface/wireguard"):
+            if "already exists" in err_msg and endpoint in (
+                "queue/type",
+                "routing/rpki",
+                "system/scheduler",
+                "interface/wireguard",
+            ):
                 logger.info("Recurso en %s ya existe en router, tratando como idempotente", endpoint)
                 return []
             raise
@@ -1705,14 +1808,12 @@ async def execute_bulk_job_on_fleet(
     rendered_steps = _render_template_steps(rest_steps_template, vars_dict) if rest_steps_template else []
 
     stmt_items = select(BulkJobItem).where(BulkJobItem.bulk_job_id == job.id)
-    items_map: dict[uuid.UUID, BulkJobItem] = {
-        i.router_id: i for i in (await db.execute(stmt_items)).scalars().all()
-    }
+    items_map: dict[uuid.UUID, BulkJobItem] = {i.router_id: i for i in (await db.execute(stmt_items)).scalars().all()}
 
     succeeded_count = 0
     failed_count = 0
 
-    for rid_str in (job.target_router_ids or []):
+    for rid_str in job.target_router_ids or []:
         try:
             rid = uuid.UUID(str(rid_str))
         except Exception:
@@ -2026,9 +2127,7 @@ async def _resolve_package_update_versions(
             latest_ver = fb_ver
             clean_inst = _clean_version_token(installed_ver)
             status_text = (
-                "New version is available (HTTP fallback)"
-                if fb_ver != clean_inst
-                else "System is already up to date"
+                "New version is available (HTTP fallback)" if fb_ver != clean_inst else "System is already up to date"
             )
     if installed_ver:
         r_obj.ros_version = installed_ver
@@ -2056,9 +2155,7 @@ async def _probe_single_router_update(
             installed_ver, latest_ver, status_text = await _resolve_package_update_versions(
                 client, r_obj, channel, installed_ver, latest_ver
             )
-            is_chr, cur_fw, upg_fw = await _probe_routerboard_safe(
-                client, r_obj, is_chr, cur_fw, upg_fw
-            )
+            is_chr, cur_fw, upg_fw = await _probe_routerboard_safe(client, r_obj, is_chr, cur_fw, upg_fw)
         except Exception as exc:
             logger.warning("Fallo al sondear canal %s en %s: %s", channel, r_obj.display_name, exc)
             status_text = f"Offline / Cache ({installed_ver or 'v7'})"

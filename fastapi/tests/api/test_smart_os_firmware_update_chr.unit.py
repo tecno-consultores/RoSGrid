@@ -35,7 +35,9 @@ def test_starter_template_15_exists_and_schema() -> None:
     tpl = next((t for t in _DEFAULT_STARTER_TEMPLATES if t["name"] == "ACTUALIZACION_ROUTEROS_Y_FIRMWARE"), None)
     assert tpl is not None, "Plantilla ACTUALIZACION_ROUTEROS_Y_FIRMWARE debe estar presente en el catálogo"
     assert tpl["category"] == "SYSTEM"
-    assert tpl["requires_safemode"] is False, "Las actualizaciones con reinicio de OS deben tener requires_safemode=False"
+    assert tpl["requires_safemode"] is False, (
+        "Las actualizaciones con reinicio de OS deben tener requires_safemode=False"
+    )
 
     var_keys = [v["key"] for v in tpl["variables_schema"]]
     assert "update_channel" in var_keys
@@ -261,8 +263,10 @@ async def test_execute_single_router_upgrade_chr_vs_routerboard() -> None:
     db = AsyncMock()
 
     # Ejecución sobre CHR
-    with patch("src.api.v1.bulk_and_updates.get_router_and_client", return_value=(r_chr, client_chr)), \
-         patch("src.api.v1.bulk_and_updates._perform_pre_upgrade_backup", return_value=True):
+    with (
+        patch("src.api.v1.bulk_and_updates.get_router_and_client", return_value=(r_chr, client_chr)),
+        patch("src.api.v1.bulk_and_updates._perform_pre_upgrade_backup", return_value=True),
+    ):
         res_chr, ok_chr = await _execute_single_router_upgrade(rid_chr, payload, claims, db, t_id, u_id, 0)
         assert ok_chr is True
         assert res_chr["mode"] == "CHR_OS_ONLY"
@@ -275,8 +279,10 @@ async def test_execute_single_router_upgrade_chr_vs_routerboard() -> None:
         assert "system/routerboard/upgrade" not in called_endpoints
 
     # Ejecución sobre RouterBOARD
-    with patch("src.api.v1.bulk_and_updates.get_router_and_client", return_value=(r_rb, client_rb)), \
-         patch("src.api.v1.bulk_and_updates._perform_pre_upgrade_backup", return_value=True):
+    with (
+        patch("src.api.v1.bulk_and_updates.get_router_and_client", return_value=(r_rb, client_rb)),
+        patch("src.api.v1.bulk_and_updates._perform_pre_upgrade_backup", return_value=True),
+    ):
         res_rb, ok_rb = await _execute_single_router_upgrade(rid_rb, payload, claims, db, t_id, u_id, 0)
         assert ok_rb is True
         assert res_rb["mode"] == "ROUTERBOARD_OS_AND_FIRMWARE"
@@ -406,8 +412,10 @@ async def test_routeros_725_bad_http_response_fallback_check_and_install() -> No
     claims: dict[str, Any] = {"tid": str(t_id), "sub": str(u_id), "role": "SUPERADMIN_GLOBAL"}
     db = AsyncMock()
 
-    with patch("src.api.v1.bulk_and_updates.get_router_and_client", return_value=(r_chr, client)), \
-         patch("src.api.v1.bulk_and_updates._perform_pre_upgrade_backup", return_value=True):
+    with (
+        patch("src.api.v1.bulk_and_updates.get_router_and_client", return_value=(r_chr, client)),
+        patch("src.api.v1.bulk_and_updates._perform_pre_upgrade_backup", return_value=True),
+    ):
         res_upg, ok_upg = await _execute_single_router_upgrade(rid_chr, payload, claims, db, t_id, u_id, 0)
         assert ok_upg is True
         assert res_upg["status"] == "UPGRADE_TRIGGERED"
@@ -506,4 +514,3 @@ async def test_perform_pre_upgrade_backup_uses_export_router_rsc_and_rejects_emp
         saved_bk = db.add.call_args[0][0]
         assert saved_bk.rsc_size_bytes > 2
         assert not saved_bk.rsc_sha256_hash.startswith("4f53cda18c2baa")
-

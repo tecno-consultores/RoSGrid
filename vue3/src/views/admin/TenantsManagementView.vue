@@ -172,7 +172,9 @@
       const res = await http.get<TenantItem[] | { items: TenantItem[] }>('/api/v1/tenants');
       tenants.value = Array.isArray(res.data) ? res.data : res.data?.items || [];
     } catch (err: unknown) {
-      tenants.value = [];
+      if (tenants.value.length === 0) {
+        tenants.value = [];
+      }
       const error = err as { message?: string; detail?: string };
       errorMessage.value = error.detail || error.message || 'Error al cargar organizaciones.';
     } finally {

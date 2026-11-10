@@ -60,11 +60,13 @@ _TRIGGER_ROLES = (
 )
 
 
-_EMPTY_EXPORT_HASHES = frozenset({
-    hashlib.sha256(b"[]").hexdigest(),
-    hashlib.sha256(b"{}").hexdigest(),
-    hashlib.sha256(b"").hexdigest(),
-})
+_EMPTY_EXPORT_HASHES = frozenset(
+    {
+        hashlib.sha256(b"[]").hexdigest(),
+        hashlib.sha256(b"{}").hexdigest(),
+        hashlib.sha256(b"").hexdigest(),
+    }
+)
 
 
 def clean_rsc_export_comments(raw_text: str) -> str:
@@ -78,11 +80,7 @@ def _extract_raw_rsc_text(export_res: Any) -> str:
     if isinstance(export_res, str):
         return "" if export_res.strip() in ("[]", "{}") else export_res
     if isinstance(export_res, list):
-        parts = [
-            str(item.get("data", item)) if isinstance(item, dict) else str(item)
-            for item in export_res
-            if item
-        ]
+        parts = [str(item.get("data", item)) if isinstance(item, dict) else str(item) for item in export_res if item]
         return "\n".join(p for p in parts if p.strip() not in ("[]", "{}"))
     if isinstance(export_res, dict):
         val = str(export_res.get("ret", export_res.get("detail", "")))
@@ -127,7 +125,9 @@ async def _read_large_rsc_file(
     return "".join(chunks)
 
 
-async def _list_router_files_metadata_safe(client: MikrotikRestClient, target_name: str | None = None) -> list[dict[str, Any]]:
+async def _list_router_files_metadata_safe(
+    client: MikrotikRestClient, target_name: str | None = None
+) -> list[dict[str, Any]]:
     """Obtiene metadatos de archivos en RouterOS evitando corromper el JSON con 'contents' binarios (.pcap)."""
     if target_name:
         try:
@@ -250,7 +250,18 @@ _REST_SYNTHESIS_SECTIONS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     (
         "ip/firewall/filter",
         "/ip firewall filter",
-        ("chain", "action", "protocol", "src-address", "dst-address", "dst-port", "in-interface", "out-interface", "comment", "disabled"),
+        (
+            "chain",
+            "action",
+            "protocol",
+            "src-address",
+            "dst-address",
+            "dst-port",
+            "in-interface",
+            "out-interface",
+            "comment",
+            "disabled",
+        ),
     ),
     (
         "ip/firewall/nat",
@@ -268,9 +279,7 @@ def _format_rsc_section_rows(header: str, rows: list[Any], keys: tuple[str, ...]
     out = [header]
     for row in valid_rows:
         pairs = [
-            f'{k}="{row[k]}"' if " " in str(row[k]) else f"{k}={row[k]}"
-            for k in keys
-            if row.get(k) not in (None, "")
+            f'{k}="{row[k]}"' if " " in str(row[k]) else f"{k}={row[k]}" for k in keys if row.get(k) not in (None, "")
         ]
         if pairs:
             out.append("add " + " ".join(pairs))
@@ -304,7 +313,12 @@ async def _export_via_fresh_ephemeral_session(
     try:
         created = await client.post(
             "user/add",
-            json_data={"name": tmp_user, "password": tmp_pass, "group": group_name, "comment": "RoSGrid Ephemeral Backup"},
+            json_data={
+                "name": tmp_user,
+                "password": tmp_pass,
+                "group": group_name,
+                "comment": "RoSGrid Ephemeral Backup",
+            },
         )
         uid = created.get("ret") if isinstance(created, dict) else None
         tmp_client = MikrotikRestClient(

@@ -59,7 +59,7 @@ describe('ConfigTemplateEditorModal.vue — Predefined Templates & Golden Config
     expect(ntpPreset?.rest_steps_template[1].method).toBe('PUT');
   });
 
-  it('contiene la plantilla predefinida SYSLOG_CENTRALIZADO_ROSGRID con IP de servidor y 7 pasos REST', () => {
+  it('contiene la plantilla predefinida SYSLOG_CENTRALIZADO_ROSGRID con IP de servidor y 11 pasos REST (10 tópicos canónicos)', () => {
     const syslogPreset = PREDEFINED_TEMPLATES.find((p) => p.name === 'SYSLOG_CENTRALIZADO_ROSGRID');
     expect(syslogPreset).toBeDefined();
     if (!syslogPreset) return;
@@ -67,7 +67,7 @@ describe('ConfigTemplateEditorModal.vue — Predefined Templates & Golden Config
     expect(syslogPreset.variables_schema.length).toBe(2);
     expect(syslogPreset.variables_schema[0].key).toBe('rosgrid_server_ip');
     expect(syslogPreset.variables_schema[1].key).toBe('rosgrid_syslog_port');
-    expect(syslogPreset.rest_steps_template.length).toBe(7);
+    expect(syslogPreset.rest_steps_template.length).toBe(11);
     const actStep = syslogPreset.rest_steps_template[0];
     const logStep = syslogPreset.rest_steps_template[1];
     expect(actStep?.endpoint).toBe('system/logging/action');

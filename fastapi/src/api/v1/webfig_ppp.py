@@ -84,9 +84,7 @@ async def list_active_sessions(
 async def disconnect_active_session(
     router_id: uuid.UUID,
     session_id: str,
-    claims: dict[str, Any] = Depends(
-        require_roles(*_PPP_WRITE_ROLES, SystemRoleEnum.SUPPORT_L1)
-    ),
+    claims: dict[str, Any] = Depends(require_roles(*_PPP_WRITE_ROLES, SystemRoleEnum.SUPPORT_L1)),
     db: AsyncSession = Depends(get_tenant_db_session),
 ) -> Any:
     """Reconexión Rápida L1: Desconecta una sesión PPP activa para forzar reconexión del CPE."""

@@ -6,12 +6,9 @@
 import asyncio
 import hashlib
 import hmac
-import ipaddress
 import json
 import logging
 import smtplib
-import socket
-import urllib.parse
 import uuid
 from email.message import EmailMessage
 from typing import Any, cast
@@ -21,6 +18,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.crypto import decrypt_aes_gcm
+from src.core.ssrf import (
+    is_safe_outbound_url,
+    is_safe_outbound_url_async,
+    is_safe_smtp_target,
+)
 from src.db.session import async_session_maker, set_tenant_context
 from src.models.operations import AlertChannelTypeEnum, NotificationChannel
 from src.redis_layer.client import get_redis_client
@@ -91,6 +93,8 @@ def _dispatch_smtp_sync(config: dict[str, Any], alert: dict[str, Any]) -> None:
 
     if not to_addrs:
         raise ValueError("No se especificaron destinatarios de correo ('to_emails').")
+    if not is_safe_smtp_target(host, port, allow_localhost_fallback=True):
+        raise ValueError("Destino o puerto SMTP bloqueado por política de seguridad Anti-SSRF.")
 
     if "gmail.com" in host.lower() or "googlemail.com" in host.lower():
         pwd_no_spaces = pwd.replace(" ", "")
@@ -153,60 +157,19 @@ _BLOCKED_WEBHOOK_HOSTS = {
 
 def is_safe_webhook_url(url: str) -> bool:
     """Verifica que la URL no apunte a esquemas no válidos o direcciones IP privadas / locales (Anti-SSRF)."""
-    try:
-        parsed = urllib.parse.urlparse(url)
-        if parsed.scheme not in ("http", "https"):
-            return False
-        hostname = (parsed.hostname or "").strip().lower().rstrip(".")
-        normalized_host = hostname.replace("_", "-")
-        if (
-            not hostname
-            or hostname in _BLOCKED_WEBHOOK_HOSTS
-            or normalized_host in _BLOCKED_WEBHOOK_HOSTS
-            or hostname.endswith((".localhost", ".internal", ".localtest.me", ".nip.io", ".sslip.io", ".xip.io"))
-        ):
-            return False
-        try:
-            ip = ipaddress.ip_address(hostname)
-            if (
-                ip.is_private
-                or ip.is_loopback
-                or ip.is_link_local
-                or ip.is_reserved
-                or ip.is_multicast
-                or ip.is_unspecified
-            ):
-                return False
-        except ValueError:
-            try:
-                infos = socket.getaddrinfo(hostname, None, proto=socket.IPPROTO_TCP)
-                for info in infos:
-                    resolved_str = str(info[4][0]).split("%")[0]
-                    resolved_ip = ipaddress.ip_address(resolved_str)
-                    if (
-                        resolved_ip.is_private
-                        or resolved_ip.is_loopback
-                        or resolved_ip.is_link_local
-                        or resolved_ip.is_reserved
-                        or resolved_ip.is_multicast
-                        or resolved_ip.is_unspecified
-                    ):
-                        return False
-            except OSError:
-                pass
-        return True
-    except Exception:
-        return False
+    return is_safe_outbound_url(url, allow_private_cidrs=[], resolve_dns=True)
 
 
-async def _dispatch_webhook(config: dict[str, Any], alert: dict[str, Any]) -> None:
+async def _dispatch_webhook(config: dict[str, Any], alert: dict[str, Any], *, raise_on_ssrf: bool = False) -> bool:
     webhook_url = config.get("webhook_url")
     secret = config.get("secret", "").encode("utf-8")
     if not webhook_url:
-        return
-    if not is_safe_webhook_url(webhook_url):
+        return False
+    if not await is_safe_outbound_url_async(str(webhook_url), allow_private_cidrs=[]):
         logger.warning("Despacho de webhook cancelado por validación de seguridad SSRF: %s", webhook_url)
-        return
+        if raise_on_ssrf:
+            raise ValueError("URL de webhook bloqueada por política Anti-SSRF")
+        return False
 
     body = json.dumps(alert).encode("utf-8")
     sig = hmac.new(secret, body, hashlib.sha256).hexdigest()
@@ -225,6 +188,7 @@ async def _dispatch_webhook(config: dict[str, Any], alert: dict[str, Any]) -> No
             status_res = resp.raise_for_status()
             if asyncio.iscoroutine(status_res):
                 await status_res
+    return True
 
 
 async def _dispatch_to_channel(tenant_id: uuid.UUID, ch: NotificationChannel, alert: dict[str, Any]) -> None:

@@ -405,7 +405,7 @@ Por defecto, RoSGrid utiliza **KeyDB Multi-Hilo**, que consume solo ~35 MB de RA
 | :--- | :--- | :--- |
 | Router aparece como **`OFFLINE`** al registrarlo | Servicio `www-ssl` apagado o firewall del MikroTik bloqueando el puerto `443`. | Verifique en el MikroTik `/ip service print` y permita la IP del servidor RoSGrid en `/ip firewall filter` (cadena `input`, puerto `443`). |
 | Alerta roja **`FINGERPRINT_MISMATCH`** | Se regeneró el certificado TLS en el MikroTik. | En **Inventario**, pulse el botón **`🛡️ Re-Pin TOFU`** en la fila del router y confirme con su código 2FA. |
-| Indicador Syslog muestra **`⚪ Sin Syslog`** | El router aún no tiene las reglas de envío hacia el puerto UDP `5514`. | Pulse el botón **`🔄 Sincronizar Syslog`** en la fila del router dentro de **Inventario** para inyectar las 9 directivas automáticamente. |
+| Indicador Syslog muestra **`⚪ Sin Syslog`** | El router aún no tiene las reglas de envío hacia el puerto UDP `5514`. | Pulse el botón **`🔄 Sincronizar Syslog`** en la fila del router dentro de **Inventario** para inyectar las 10 directivas canónicas automáticamente. |
 | Al reabrir el navegador pide iniciar sesión nuevamente | Por seguridad, al cerrar todas las pestañas se activa el período de gracia de 35s que revoca la sesión efímera en KeyDB. | Ingrese sus credenciales nuevamente; el sistema limpia automáticamente el estado previo evitando redirecciones en bucle. |
 
 ### 10.4 Conector Oficial NIST NVD REST API v2.0 para Matriz de Vulnerabilidades RouterOS v7 (`Spec 71`)

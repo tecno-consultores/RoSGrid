@@ -39,8 +39,7 @@ def _reapply_rls_context_after_begin(session: Any, _transaction: Any, connection
     sa_str = str(info.get("is_superadmin", "false"))
     connection.execute(
         text(
-            "SELECT set_config('app.current_tenant_id', :tid, true), "
-            "set_config('app.is_superadmin_global', :sa, true)"
+            "SELECT set_config('app.current_tenant_id', :tid, true), set_config('app.is_superadmin_global', :sa, true)"
         ),
         {"tid": tid_str, "sa": sa_str},
     )

@@ -188,7 +188,9 @@
       }));
     } catch (rawE: unknown) {
       const e = rawE as { detail?: string; message?: string; status?: number; response?: { status?: number; data?: { detail?: string; message?: string } } };
-      rulesList.value = [];
+      if (rulesList.value.length === 0) {
+        rulesList.value = [];
+      }
       errorMessage.value =
         e?.detail || e?.response?.data?.detail || e?.message || 'Error al cargar las reglas de firewall.';
     } finally {

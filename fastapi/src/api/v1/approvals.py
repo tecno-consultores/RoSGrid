@@ -99,24 +99,30 @@ async def _execute_deferred_operation(
         else {k: v for k, v in payload.items() if k != ".id"}
     )
 
-    async def _action() -> Any:
-        if method == "PUT":
-            return await client.put(f"/{path}", clean_payload)
-        elif method == "PATCH":
-            return await client.patch(f"/{path}", clean_payload)
-        elif method == "DELETE":
-            return await client.delete(f"/{path}")
-        elif method == "POST":
-            return await client.post(f"/{path}", clean_payload)
-        raise ValueError(f"Método REST no soportado: {method}")
-
     menu_path = path
-    inferred_id = payload.get(".id") if isinstance(payload, dict) else None
+    inferred_id = (
+        str(payload.get(".id")).strip()
+        if isinstance(payload, dict) and payload.get(".id") is not None and str(payload.get(".id")).strip()
+        else None
+    )
     if method in ("PATCH", "DELETE") and "/" in path:
         parts = path.rsplit("/", 1)
         if parts[1].startswith("*") or parts[1].isdigit():
             menu_path = parts[0]
             inferred_id = inferred_id or parts[1]
+
+    target_path = f"{menu_path}/{inferred_id}" if method in ("PATCH", "DELETE") and inferred_id else path
+
+    async def _action() -> Any:
+        if method == "PUT":
+            return await client.put(f"/{target_path}", clean_payload)
+        elif method == "PATCH":
+            return await client.patch(f"/{target_path}", clean_payload)
+        elif method == "DELETE":
+            return await client.delete(f"/{target_path}")
+        elif method == "POST":
+            return await client.post(f"/{target_path}", clean_payload)
+        raise ValueError(f"Método REST no soportado: {method}")
 
     action_name = "create" if method == "PUT" else ("delete" if method == "DELETE" else "set")
     return await execute_safe_mutation(
@@ -388,7 +394,12 @@ async def approve_request(
             detail="Violación Maker-Checker: El solicitante no puede aprobar su propio cambio",
         )
 
-    _verify_pending_and_not_expired(approval)
+    try:
+        _verify_pending_and_not_expired(approval)
+    except HTTPException:
+        if approval.status == ApprovalStatusEnum.EXPIRED:
+            await db.commit()
+        raise
 
     client: MikrotikRestClient | None = None
     router_name: str | None = None

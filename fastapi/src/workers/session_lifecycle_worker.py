@@ -21,22 +21,32 @@ async def sweep_all_tenants_closing_sessions() -> int:
     redis = get_redis_client()
     total_purged = 0
     try:
-        # Claves de sorted set: rg:{tenant_id}:closing_sessions_zset
-        zset_keys = await redis.keys("rg:*:closing_sessions_zset")
-        for key_raw in zset_keys:
-            key_str = key_raw.decode("utf-8") if isinstance(key_raw, bytes) else str(key_raw)
-            parts = key_str.split(":")
-            if len(parts) >= 3:
-                tenant_id = parts[1]
-                purged = await sweep_expired_closing_sessions(tenant_id)
-                if purged:
-                    total_purged += len(purged)
-                    logger.info(
-                        "Tenant %s: Purga de %d sesiones cerradas por navegador (sesiones: %s)",
-                        tenant_id,
-                        len(purged),
-                        purged,
-                    )
+        tenant_ids: set[str] = set()
+        if hasattr(redis, "smembers"):
+            indexed_tenants = await redis.smembers("rg:closing_tenants_set")
+            if isinstance(indexed_tenants, (set, list, tuple)):
+                for t_raw in indexed_tenants:
+                    t_str = t_raw.decode("utf-8") if isinstance(t_raw, bytes) else str(t_raw)
+                    if t_str:
+                        tenant_ids.add(t_str)
+        if not tenant_ids:
+            # Fallback para conjuntos creados antes del índice o en pruebas unitarias
+            zset_keys = await redis.keys("rg:*:closing_sessions_zset")
+            for key_raw in zset_keys:
+                key_str = key_raw.decode("utf-8") if isinstance(key_raw, bytes) else str(key_raw)
+                parts = key_str.split(":")
+                if len(parts) >= 3:
+                    tenant_ids.add(parts[1])
+        for tenant_id in sorted(tenant_ids):
+            purged = await sweep_expired_closing_sessions(tenant_id)
+            if purged:
+                total_purged += len(purged)
+                logger.info(
+                    "Tenant %s: Purga de %d sesiones cerradas por navegador (sesiones: %s)",
+                    tenant_id,
+                    len(purged),
+                    purged,
+                )
     except Exception as exc:
         logger.error("Error durante barrido de ciclo de vida de sesiones: %s", exc)
 

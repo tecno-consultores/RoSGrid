@@ -7,6 +7,8 @@ import asyncio
 import logging
 import signal
 import sys
+import time
+from pathlib import Path
 
 from src.redis_layer.client import close_redis_client
 from src.workers.alert_dispatcher_worker import alert_dispatcher_worker_loop
@@ -42,6 +44,22 @@ def _on_worker_task_done(task: asyncio.Task[None]) -> None:
         logger.error("Worker %s finalizó con excepción no controlada: %s", task.get_name(), exc)
 
 
+WORKER_HEARTBEAT_PATH = Path("/tmp/worker_heartbeat")
+
+
+async def _worker_heartbeat_loop(stop_event: asyncio.Event) -> None:
+    """Actualiza periódicamente el archivo de latido para el healthcheck de Docker."""
+    while not stop_event.is_set():
+        try:
+            WORKER_HEARTBEAT_PATH.write_text(f"{int(time.time())}\n", encoding="utf-8")
+        except OSError:
+            pass
+        try:
+            await asyncio.wait_for(stop_event.wait(), timeout=15.0)
+        except TimeoutError:
+            continue
+
+
 async def main_workers_runner() -> None:
     """Inicia concurrentemente los workers de RoSGrid y gestiona el apagado ordenado."""
     logger.info("=== Iniciando Orquestador de Workers RoSGrid ===")
@@ -49,6 +67,7 @@ async def main_workers_runner() -> None:
     _setup_signal_handlers(stop_event)
 
     tasks = [
+        asyncio.create_task(_worker_heartbeat_loop(stop_event), name="WorkerHeartbeat"),
         asyncio.create_task(health_monitor_worker_loop(), name="HealthMonitorWorker"),
         asyncio.create_task(alert_dispatcher_worker_loop(), name="AlertDispatcherWorker"),
         asyncio.create_task(nightly_backup_worker_loop(), name="NightlyBackupWorker"),

@@ -12,6 +12,7 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.deps import get_current_user_claims, require_roles
+from src.api.v1.audit import serialize_audit_log_record
 from src.core.audit import audit_actor_from_claims, write_audit_log
 from src.core.crypto import hash_password
 from src.db.session import get_db_session, set_tenant_context
@@ -67,7 +68,7 @@ async def list_tenants(
     user_role = claims.get("rol")
     if user_role == SystemRoleEnum.SUPERADMIN_GLOBAL.value:
         await set_tenant_context(db, None, is_superadmin=True)
-        stmt = select(Tenant).order_by(Tenant.created_at.desc())
+        stmt = select(Tenant).order_by(Tenant.created_at.desc(), Tenant.id.desc())  # seq_num aplica a AuditLog WORM
     else:
         user_tid = claims.get("tid")
         if not user_tid:
@@ -138,9 +139,7 @@ async def update_tenant_features(
     tenant_id: uuid.UUID,
     body: UpdateTenantFeaturesRequest,
     request: Request,
-    claims: dict[str, Any] = Depends(
-        require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)
-    ),
+    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)),
     db: AsyncSession = Depends(get_db_session),
 ) -> TenantFeaturesResponse:
     user_role = claims.get("rol")
@@ -219,37 +218,12 @@ async def get_tenant_features_audit(
             AuditLog.tenant_id == tenant_id,
             AuditLog.event_action == "TENANT_FEATURE_FLAGS_UPDATED",
         )
-        .order_by(desc(AuditLog.created_at))
+        .order_by(desc(AuditLog.seq_num), desc(AuditLog.created_at), desc(AuditLog.id))
         .limit(limit)
     )
     res = await db.execute(stmt)
     records = res.scalars().all()
-    return [
-        AuditLogResponse(
-            id=r.id,
-            tenant_id=r.tenant_id,
-            created_at=r.created_at,
-            actor_user_id=r.actor_user_id,
-            actor_username=r.actor_username,
-            actor_role=r.actor_role,
-            actor_ip=r.actor_ip,
-            actor_user_agent=getattr(r, "actor_user_agent", None),
-            event_category=r.event_category,
-            event_action=r.event_action,
-            router_id=r.router_id,
-            router_display_name=r.router_display_name,
-            ros_rest_method=getattr(r, "ros_rest_method", None),
-            ros_rest_endpoint=getattr(r, "ros_rest_endpoint", None),
-            idempotency_key=getattr(r, "idempotency_key", None),
-            status_code=r.status_code,
-            before_state=r.before_state,
-            after_state=r.after_state,
-            error_message=getattr(r, "error_message", None),
-            record_sha256_hash=r.record_sha256_hash,
-            prev_record_hash=getattr(r, "prev_record_hash", None) or "GENESIS",
-        )
-        for r in records
-    ]
+    return [serialize_audit_log_record(r) for r in records]
 
 
 @router.post("/{tenant_id}/onboarding-complete", response_model=TenantFeaturesResponse)
@@ -354,14 +328,9 @@ def _normalize_tenant_audit_value(val: Any) -> Any:
     return val
 
 
-async def _apply_tenant_updates(
-    db: AsyncSession, tenant: Tenant, update_data: dict[str, Any]
-) -> dict[str, Any]:
+async def _apply_tenant_updates(db: AsyncSession, tenant: Tenant, update_data: dict[str, Any]) -> dict[str, Any]:
     """Aplica las modificaciones de metadatos/cuotas sobre el Tenant y retorna before_state (CC = 3)."""
-    before_state = {
-        field: _normalize_tenant_audit_value(getattr(tenant, field, None))
-        for field in update_data
-    }
+    before_state = {field: _normalize_tenant_audit_value(getattr(tenant, field, None)) for field in update_data}
     if update_data.get("slug"):
         update_data["slug"] = await _validate_unique_tenant_slug(db, tenant, str(update_data["slug"]))
     for field, value in update_data.items():

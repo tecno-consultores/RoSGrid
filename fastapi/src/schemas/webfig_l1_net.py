@@ -465,4 +465,3 @@ class Ipv6PoolUpdateRequest(StrictBaseModel):
     prefix: str | None = Field(default=None, min_length=3, max_length=64)
     prefix_length: int | None = Field(default=None, ge=16, le=128)
     comment: str | None = None
-

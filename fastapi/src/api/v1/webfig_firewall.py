@@ -596,7 +596,9 @@ async def list_connections(
     _, client = await get_router_and_client(router_id, claims, db)
     ros_proto = "ipv6" if proto == "ipv6" else "ip"
     async with client:
-        return await cached_mikrotik_get(redis, tenant_id, router_id, f"/{ros_proto}/firewall/connection", client, refresh)
+        return await cached_mikrotik_get(
+            redis, tenant_id, router_id, f"/{ros_proto}/firewall/connection", client, refresh
+        )
 
 
 @router.delete("/connections/{conn_id}")
@@ -624,4 +626,3 @@ async def delete_connection(
 
 
 delete_firewall_connection = delete_connection
-

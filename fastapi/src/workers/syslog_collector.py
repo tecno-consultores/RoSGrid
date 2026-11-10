@@ -235,13 +235,7 @@ async def load_router_syslog_maps() -> tuple[
                 else:
                     continue
                 if base_url:
-                    clean = (
-                        base_url.replace("https://", "")
-                        .replace("http://", "")
-                        .split("/")[0]
-                        .split(":")[0]
-                        .strip()
-                    )
+                    clean = base_url.replace("https://", "").replace("http://", "").split("/")[0].split(":")[0].strip()
                     if clean:
                         ip_map[clean] = (t_id, r_id)
                 if d_name:

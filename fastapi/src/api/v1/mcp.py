@@ -3,6 +3,7 @@
 
 """Endpoint MCP Protegido (/api/v1/mcp JSON-RPC 2.0 Streamable HTTP) para agentes IA."""
 
+import inspect
 import ipaddress
 import json
 import logging
@@ -38,8 +39,9 @@ from src.api.v1.webfig_common import get_router_and_client
 from src.core.audit import write_audit_log
 from src.core.config import settings
 from src.db.session import get_tenant_db_session, set_tenant_context
-from src.models.core import SystemRoleEnum, User, UserRouterPermission
+from src.models.core import SystemRoleEnum, Tenant, User, UserRouterPermission
 from src.models.inventory import Router
+from src.models.ipam import BandwidthProfile, SubscriberDevice
 from src.models.operations import (
     ApprovalRequest,
     ApprovalStatusEnum,
@@ -462,9 +464,57 @@ async def _handle_reconnect_pppoe(
     )
 
 
-_RESERVED_MCP_PAYLOAD_KEYS = frozenset(
-    {"mcp_tool", "router_ids", "subscriber_device_id", "bandwidth_profile_id"}
-)
+_RESERVED_MCP_PAYLOAD_KEYS = frozenset({"mcp_tool", "router_ids", "subscriber_device_id", "bandwidth_profile_id"})
+
+_ALLOWED_MCP_PROPOSE_HTTP_METHODS = frozenset({"POST", "PATCH", "PUT", "DELETE"})
+
+_TOOL_REQUIRED_FEATURE: dict[str, str] = {
+    "rosgrid_check_config_drift": "config_drift_monitoring_enabled",
+    "rosgrid_run_cis_audit": "cis_audit_enabled",
+}
+
+
+async def _verify_tenant_resource_ownership(
+    db: AsyncSession,
+    model: type[Any],
+    resource_id: uuid.UUID,
+    tenant_id: uuid.UUID,
+    resource_label: str,
+) -> None:
+    stmt = select(model).where(model.id == resource_id, model.tenant_id == tenant_id)
+    res = await db.execute(stmt)
+    if inspect.isawaitable(res):
+        res = await res
+    found = res.scalar_one_or_none() if hasattr(res, "scalar_one_or_none") else res
+    if inspect.isawaitable(found):
+        found = await found
+    if found is None or (isinstance(found, model) and getattr(found, "tenant_id", tenant_id) != tenant_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"{resource_label} no encontrado en el tenant actual",
+        )
+
+
+async def _verify_mcp_tenant_feature(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    tool_name: str,
+) -> None:
+    feature_flag = _TOOL_REQUIRED_FEATURE.get(tool_name)
+    if not feature_flag:
+        return
+    stmt = select(Tenant).where(Tenant.id == tenant_id)
+    res = await db.execute(stmt)
+    if inspect.isawaitable(res):
+        res = await res
+    tenant_obj = res.scalar_one_or_none() if hasattr(res, "scalar_one_or_none") else None
+    if inspect.isawaitable(tenant_obj):
+        tenant_obj = await tenant_obj
+    if isinstance(tenant_obj, Tenant) and getattr(tenant_obj, feature_flag, True) is False:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"El módulo '{feature_flag}' no está habilitado para este tenant",
+        )
 
 
 async def _handle_propose_network_change(
@@ -475,19 +525,30 @@ async def _handle_propose_network_change(
     args: dict[str, Any],
 ) -> dict[str, Any]:
     router_id = uuid.UUID(str(args["router_id"]))
+    http_method = str(args.get("http_method", "POST")).upper()
+    if http_method not in _ALLOWED_MCP_PROPOSE_HTTP_METHODS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Método HTTP no permitido en propuesta MCP: {http_method}",
+        )
+    await _verify_tenant_resource_ownership(db, Router, router_id, tenant_id, "Router")
     act_type = _resolve_critical_action(args.get("category", "FIREWALL_INPUT_OR_SERVICE_PORT_CHANGE"))
     raw_payload = dict(args.get("payload") or {})
     sanitized_payload = {k: v for k, v in raw_payload.items() if k not in _RESERVED_MCP_PAYLOAD_KEYS}
+    ros_path = str(args.get("ros_path", "")).strip()
+    dot_id = str(raw_payload.get(".id", "")).strip()
+    if http_method in ("PATCH", "DELETE") and dot_id and not ros_path.rstrip("/").endswith(f"/{dot_id}"):
+        ros_path = f"{ros_path.rstrip('/')}/{dot_id}"
     return await _create_mcp_approval_request(
         db=db,
         tenant_id=tenant_id,
         user_id=user_id,
         router_id=router_id,
         action_type=act_type,
-        summary=f"MCP AI Propose: {args.get('ros_path', '')}",
+        summary=f"MCP AI Propose: {ros_path}",
         justification=str(args.get("justification", "MCP AI Agent proposal")),
-        ros_rest_method=str(args.get("http_method", "POST")).upper(),
-        ros_rest_path=str(args.get("ros_path", "")),
+        ros_rest_method=http_method,
+        ros_rest_path=ros_path,
         request_payload=sanitized_payload,
     )
 
@@ -518,6 +579,7 @@ async def _handle_isolate_subscriber(
     args: dict[str, Any],
 ) -> dict[str, Any]:
     service_id = uuid.UUID(str(args["subscriber_device_id"]))
+    await _verify_tenant_resource_ownership(db, SubscriberDevice, service_id, tenant_id, "Dispositivo de abonado")
     ik = str(args.get("idempotency_key") or uuid.uuid4())
     reason = str(args.get("reason") or "MCP AI Subscriber Isolation Proposal")
     return await _create_mcp_approval_request(
@@ -548,6 +610,7 @@ async def _handle_restore_subscriber(
     args: dict[str, Any],
 ) -> dict[str, Any]:
     service_id = uuid.UUID(str(args["subscriber_device_id"]))
+    await _verify_tenant_resource_ownership(db, SubscriberDevice, service_id, tenant_id, "Dispositivo de abonado")
     ik = str(args.get("idempotency_key") or uuid.uuid4())
     return await _create_mcp_approval_request(
         db=db,
@@ -577,6 +640,8 @@ async def _handle_change_rate_limit(
 ) -> dict[str, Any]:
     service_id = uuid.UUID(str(args["subscriber_device_id"]))
     profile_id = uuid.UUID(str(args["bandwidth_profile_id"]))
+    await _verify_tenant_resource_ownership(db, SubscriberDevice, service_id, tenant_id, "Dispositivo de abonado")
+    await _verify_tenant_resource_ownership(db, BandwidthProfile, profile_id, tenant_id, "Perfil de ancho de banda")
     ik = str(args.get("idempotency_key") or uuid.uuid4())
     return await _create_mcp_approval_request(
         db=db,
@@ -1520,9 +1585,20 @@ def _is_trusted_proxy_peer(peer_host: str | None) -> bool:
         return True
     try:
         ip_obj = ipaddress.ip_address(peer_host)
-        return bool(ip_obj.is_private or ip_obj.is_loopback)
     except ValueError:
-        return True
+        return False
+    trusted_cidrs = getattr(
+        settings,
+        "ROSGRID_TRUSTED_PROXIES",
+        ["127.0.0.0/8", "::1/128", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"],
+    )
+    for cidr in trusted_cidrs:
+        try:
+            if ip_obj in ipaddress.ip_network(str(cidr).strip(), strict=False):
+                return True
+        except ValueError:
+            continue
+    return False
 
 
 def _extract_client_ip(request: Request) -> str:
@@ -1576,6 +1652,10 @@ async def _check_mcp_rate_limit(tenant_id: uuid.UUID, user_id: uuid.UUID) -> Non
     req_count = await redis.incr(key)
     if req_count == 1:
         await redis.expire(key, 60)
+    elif hasattr(redis, "ttl"):
+        ttl_val = await redis.ttl(key)
+        if isinstance(ttl_val, int) and ttl_val < 0:
+            await redis.expire(key, 60)
     if req_count > settings.ROSGRID_MCP_RATE_LIMIT_PER_MIN:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -1590,7 +1670,7 @@ def _make_initialize_response(req_id: str | int | None) -> McpJsonRpcResponse:
         result={
             "protocolVersion": "2025-03-26",
             "capabilities": {"tools": {"listChanged": False}},
-            "serverInfo": {"name": "rosgrid-mcp-server", "version": "1.0.0"},
+            "serverInfo": {"name": "rosgrid-mcp-server", "version": settings.VERSION},
         },
     )
 
@@ -1644,7 +1724,13 @@ async def _execute_tool_call(
             id=body.id,
             error=McpJsonRpcError(code=-32601, message=f"Herramienta MCP no encontrada: {name}"),
         )
+    await _verify_mcp_tenant_feature(db, tenant_id, name)
     data = await handler(db, tenant_id, user_id, claims, args)
+    if name in MCP_MUTATION_TOOLS and (not isinstance(data, dict) or data.get("status") != "AWAITING_APPROVAL"):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Invariante Maker-Checker violado en herramienta de mutación MCP",
+        )
     await _record_mcp_audit(db, tenant_id, user_id, claims, client_ip, name, args)
     return McpJsonRpcResponse(
         jsonrpc="2.0",
@@ -1730,7 +1816,7 @@ async def get_mcp_skill(format: str | None = None) -> Response:
         return JSONResponse(
             content={
                 "name": "rosgrid-noc-operator",
-                "version": "1.0.0",
+                "version": settings.VERSION,
                 "content": skill_text,
             }
         )

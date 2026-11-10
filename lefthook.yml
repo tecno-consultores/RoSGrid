@@ -20,7 +20,7 @@ pre-commit:
     # --------------------------------------------------------------------------
     node-vue-react-lint:
       glob: "vue3/**/*.{js,ts,vue,tsx}"
-      run: docker compose -f vue3/docker-compose.qa.yml run --rm -v "$(pwd):/workspace" -w /workspace/vue3 qa-frontend bash -c "npx eslint --max-warnings=0 src --ext .ts,.vue"
+      run: docker compose -f vue3/docker-compose.qa.yml run --rm -v "$(pwd):/workspace" -w /workspace/vue3 qa-vue3 bash -c "npx eslint --max-warnings=0 src --ext .ts,.vue"
 
     # --------------------------------------------------------------------------
     # ECOSISTEMA BASH (DEVOPS)

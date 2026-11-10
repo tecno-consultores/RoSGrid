@@ -27,14 +27,25 @@ module.exports = {
       2,
       'always',
       [
-        'python',   // Cambios en la carpeta python/
-        'fastapi',  // Cambios en la carpeta fastapi/
-        'node',     // Cambios en la carpeta node-backend/
-        'vue3',     // Cambios en la carpeta vue3/
-        'bash',     // Cambios en la carpeta bash-scripts/
-        'docs',     // Cambios en la carpeta docs/ o archivos .md globales
-        'ci',       // Cambios en configuración de integración continua
-        'global'    // Cambios que afectan a todo el repositorio
+        'python',     // Ecosistema Python / utilidades
+        'fastapi',    // Backend FastAPI (fastapi/)
+        'node',       // Herramientas Node/TS
+        'vue3',       // Frontend Vue 3 (vue3/)
+        'bash',       // Scripts de automatización (scripts/)
+        'docs',       // Documentación técnica (docs/, *.md)
+        'specs',      // Especificaciones arquitectónicas (docs/specs/)
+        'ci',         // Integración continua (.github/workflows/)
+        'global',     // Cambios transversales en el repositorio
+        'webfig',     // Motor WebFig v7 (L1/L2)
+        'governance', // Gobernanza y scripts .agents/
+        'ui',         // Interfaz táctica y temas CSS
+        'security',   // Endurecimiento, RLS, SSRF y bóveda AES-GCM
+        'tenants',    // Gestión multi-tenant y RBAC
+        'qa',         // Pirámide de pruebas 11X y Karate Labs
+        'agents',     // Directivas y skills de agentes IA
+        'mcp',        // Servidor Model Context Protocol (/api/v1/mcp)
+        'api',        // Contratos REST/WebSockets v1
+        'infra'       // Docker, Compose, Nginx y despliegue
       ]
     ],
     

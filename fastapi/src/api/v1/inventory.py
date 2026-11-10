@@ -145,14 +145,8 @@ async def list_network_roles(
 
     # Sincronizar cualquier network_role presente en routers del tenant que aún no esté en tenant_custom_roles
     try:
-        router_roles_res = await db.execute(
-            select(Router.network_role).where(Router.tenant_id == tenant_id).distinct()
-        )
-        router_roles = {
-            str(r).strip().upper()
-            for r in router_roles_res.scalars().all()
-            if r and isinstance(r, str)
-        }
+        router_roles_res = await db.execute(select(Router.network_role).where(Router.tenant_id == tenant_id).distinct())
+        router_roles = {str(r).strip().upper() for r in router_roles_res.scalars().all() if r and isinstance(r, str)}
         known_custom = {cr.role_name for cr in custom_records}
         missing_roles = router_roles - set(DEFAULT_NETWORK_ROLES) - known_custom
         if missing_roles:
@@ -372,12 +366,14 @@ async def list_routers(
     active_mw_router_ids = await resolve_active_maintenance_router_ids(db, tenant_id, routers)
 
     if refresh and routers:
+
         async def _probe_router(r: Router) -> None:
             if not r.vault:
                 return
             try:
                 from src.api.v1.inventory_helpers import discover_and_persist_syslog_status
                 from src.api.v1.webfig_common import _create_client_from_vault
+
                 client = _create_client_from_vault(r, tenant_id)
                 client.timeout = 2.0
                 try:
@@ -422,8 +418,10 @@ async def sync_router_syslog(
     """Verifica y sincroniza activamente la presencia y configuración de Syslog en el router."""
     tenant_id = uuid.UUID(claims["tid"])
     redis = get_redis_client()
-    query = select(Router).options(selectinload(Router.vault), selectinload(Router.tags)).where(
-        Router.id == router_id, Router.tenant_id == tenant_id
+    query = (
+        select(Router)
+        .options(selectinload(Router.vault), selectinload(Router.tags))
+        .where(Router.id == router_id, Router.tenant_id == tenant_id)
     )
     result = await db.execute(query)
     r = result.scalar_one_or_none()
@@ -438,6 +436,7 @@ async def sync_router_syslog(
         try:
             from src.api.v1.inventory_helpers import discover_and_persist_syslog_status
             from src.api.v1.webfig_common import _create_client_from_vault
+
             client = _create_client_from_vault(r, tenant_id)
             client.timeout = 2.5
             try:
@@ -798,7 +797,6 @@ async def repin_ssl(
 repin_ssl_legacy_alias = repin_ssl
 
 
-
 # ============================================================================
 # IMPORTACIÓN MASIVA CSV
 # ============================================================================
@@ -807,9 +805,13 @@ repin_ssl_legacy_alias = repin_ssl
 @router.get("/template-csv")
 async def download_inventory_csv_template() -> Response:
     """Descarga la plantilla CSV oficial RFC 4180 para importación masiva de routers."""
-    headers = "display_name,ip_address,api_port,ros_username,ros_password,network_role,serial_number,latitude,longitude,tags"
+    headers = (
+        "display_name,ip_address,api_port,ros_username,ros_password,network_role,serial_number,latitude,longitude,tags"
+    )
     sample1 = 'CCR2004-Edge-Norte,192.168.10.1,8728,api_admin,ClaveSegura123!,EDGE_BGP,HE4011ABC123,10.4806,-66.9036,"core;zona-norte"'
-    sample2 = 'RB5009-Tower-Sur,192.168.20.1,8728,api_admin,SuperClave987!,TOWER_AP,RB5009XYZ789,10.4850,-66.9100,"torre;sur"'
+    sample2 = (
+        'RB5009-Tower-Sur,192.168.20.1,8728,api_admin,SuperClave987!,TOWER_AP,RB5009XYZ789,10.4850,-66.9100,"torre;sur"'
+    )
     content = f"\ufeff{headers}\r\n{sample1}\r\n{sample2}\r\n"
     return Response(
         content=content.encode("utf-8"),

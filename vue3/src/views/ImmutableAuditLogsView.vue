@@ -55,7 +55,10 @@
         created_at: item.created_at || new Date().toISOString(),
       }));
     } catch {
-      auditLogs.value = [];
+      if (auditLogs.value.length === 0) {
+        auditLogs.value = [];
+      }
+      error.value = 'Error al consultar la bitácora de auditoría.';
     } finally {
       loading.value = false;
     }

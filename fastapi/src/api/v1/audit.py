@@ -130,6 +130,33 @@ def _build_export_csv(records: list[AuditLog]) -> str:
 # ============================================================================
 
 
+def serialize_audit_log_record(r: AuditLog) -> AuditLogResponse:
+    """Serializa un registro ORM AuditLog hacia el esquema AuditLogResponse."""
+    return AuditLogResponse(
+        id=r.id,
+        tenant_id=r.tenant_id,
+        actor_user_id=r.actor_user_id,
+        actor_username=r.actor_username,
+        actor_role=r.actor_role.value if hasattr(r.actor_role, "value") else str(r.actor_role),
+        actor_ip=str(r.actor_ip) if r.actor_ip is not None else "",
+        actor_user_agent=getattr(r, "actor_user_agent", None),
+        event_category=r.event_category,
+        event_action=r.event_action,
+        router_id=r.router_id,
+        router_display_name=r.router_display_name,
+        ros_rest_method=getattr(r, "ros_rest_method", None),
+        ros_rest_endpoint=getattr(r, "ros_rest_endpoint", None),
+        idempotency_key=getattr(r, "idempotency_key", None),
+        before_state=r.before_state,
+        after_state=r.after_state,
+        status_code=r.status_code,
+        error_message=getattr(r, "error_message", None),
+        prev_record_hash=getattr(r, "prev_record_hash", None) or "GENESIS",
+        record_sha256_hash=r.record_sha256_hash,
+        created_at=r.created_at,
+    )
+
+
 @router.get("", response_model=AuditLogListResponse)
 async def list_audit_logs(
     actor_user_id: uuid.UUID | None = Query(default=None),
@@ -153,35 +180,12 @@ async def list_audit_logs(
     count_stmt = select(func.count()).select_from(stmt.subquery())
     total = (await db.execute(count_stmt)).scalar() or 0
 
-    stmt = stmt.order_by(desc(AuditLog.created_at), desc(AuditLog.id)).limit(limit).offset(offset)
+    stmt = (
+        stmt.order_by(desc(AuditLog.seq_num), desc(AuditLog.created_at), desc(AuditLog.id)).limit(limit).offset(offset)
+    )
     records = (await db.execute(stmt)).scalars().all()
 
-    items = [
-        AuditLogResponse(
-            id=r.id,
-            tenant_id=r.tenant_id,
-            actor_user_id=r.actor_user_id,
-            actor_username=r.actor_username,
-            actor_role=r.actor_role.value if hasattr(r.actor_role, "value") else str(r.actor_role),
-            actor_ip=str(r.actor_ip) if r.actor_ip is not None else "",
-            actor_user_agent=r.actor_user_agent,
-            event_category=r.event_category,
-            event_action=r.event_action,
-            router_id=r.router_id,
-            router_display_name=r.router_display_name,
-            ros_rest_method=r.ros_rest_method,
-            ros_rest_endpoint=r.ros_rest_endpoint,
-            idempotency_key=r.idempotency_key,
-            before_state=r.before_state,
-            after_state=r.after_state,
-            status_code=r.status_code,
-            error_message=r.error_message,
-            prev_record_hash=r.prev_record_hash,
-            record_sha256_hash=r.record_sha256_hash,
-            created_at=r.created_at,
-        )
-        for r in records
-    ]
+    items = [serialize_audit_log_record(r) for r in records]
     return AuditLogListResponse(total=total, limit=limit, offset=offset, items=items)
 
 
@@ -240,7 +244,7 @@ async def export_audit_logs(
     stmt = select(AuditLog).where(AuditLog.tenant_id == tenant_id)
     stmt = _apply_audit_filters(stmt, actor_user_id, router_id, category, action)
     stmt = _apply_date_filters(stmt, date_from, date_to, status_code)
-    stmt = stmt.order_by(desc(AuditLog.created_at), desc(AuditLog.id)).limit(5000)
+    stmt = stmt.order_by(desc(AuditLog.seq_num), desc(AuditLog.created_at), desc(AuditLog.id)).limit(5000)
     records = list((await db.execute(stmt)).scalars().all())
 
     if export_format.lower() == "csv":

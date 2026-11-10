@@ -221,9 +221,7 @@ async def _verify_user_credentials(
         user.failed_login_attempts += 1
         if user.failed_login_attempts >= settings.ROSGRID_MAX_LOGIN_ATTEMPTS:
             user.is_locked = True
-            user.locked_until = datetime.fromtimestamp(
-                time.time() + settings.ROSGRID_LOGIN_LOCKOUT_SECONDS, UTC
-            )
+            user.locked_until = datetime.fromtimestamp(time.time() + settings.ROSGRID_LOGIN_LOCKOUT_SECONDS, UTC)
         await db.commit()
         await _log_login_event(
             db=db,
@@ -569,9 +567,7 @@ async def verify_2fa(
             user.failed_login_attempts += 1
             if user.failed_login_attempts >= settings.ROSGRID_MAX_LOGIN_ATTEMPTS:
                 user.is_locked = True
-                user.locked_until = datetime.fromtimestamp(
-                    time.time() + settings.ROSGRID_LOGIN_LOCKOUT_SECONDS, UTC
-                )
+                user.locked_until = datetime.fromtimestamp(time.time() + settings.ROSGRID_LOGIN_LOCKOUT_SECONDS, UTC)
             await db.commit()
         await _log_login_event(
             db=db,
@@ -611,11 +607,7 @@ async def confirm_2fa_enrollment(
 
 
 def _extract_refresh_cookies(request: Request) -> tuple[str, str]:
-    rt = (
-        request.cookies.get("__Secure-rg_rt")
-        or request.cookies.get("__Host-rg_rt")
-        or request.cookies.get("rg_rt")
-    )
+    rt = request.cookies.get("__Secure-rg_rt") or request.cookies.get("__Host-rg_rt") or request.cookies.get("rg_rt")
     if not rt:
         raise HTTPException(status_code=401, detail="Cookie de Refresh Token ausente")
     token = request.cookies.get("__Host-rg_at") or request.cookies.get("rg_at")
@@ -626,11 +618,15 @@ def _extract_refresh_cookies(request: Request) -> tuple[str, str]:
 
 def _decode_refresh_claims(token: str) -> dict[str, Any]:
     try:
-        return dict(
+        claims = dict(
             jwt.decode(token, settings.ROSGRID_JWT_SECRET_KEY, algorithms=["HS256"], options={"verify_exp": False})
         )
     except jwt.PyJWTError as exc:
         raise HTTPException(status_code=401, detail="Token inválido") from exc
+    iat_val = claims.get("iat")
+    if isinstance(iat_val, (int, float)) and (datetime.now(UTC).timestamp() - float(iat_val)) > 86400:
+        raise HTTPException(status_code=401, detail="Token expirado por antigüedad máxima de sesión")
+    return claims
 
 
 @router.post("/refresh")
@@ -798,13 +794,17 @@ async def session_closing(
 
     redis = get_redis_client()
     if not tenant_id:
-        keys = await redis.keys(f"rg:*:sess:{sid}")
-        if keys:
-            first_key = keys[0]
-            matched_key = first_key.decode("utf-8") if isinstance(first_key, bytes) else str(first_key)
-            parts = matched_key.split(":")
-            if len(parts) >= 4:
-                tenant_id = parts[1]
+        idx_tid = await redis.get(f"rg:sess_idx:{sid}") if hasattr(redis, "get") else None
+        if isinstance(idx_tid, (str, bytes)) and idx_tid:
+            tenant_id = idx_tid.decode("utf-8") if isinstance(idx_tid, bytes) else str(idx_tid)
+        else:
+            keys = await redis.keys(f"rg:*:sess:{sid}")
+            if keys:
+                first_key = keys[0]
+                matched_key = first_key.decode("utf-8") if isinstance(first_key, bytes) else str(first_key)
+                parts = matched_key.split(":")
+                if len(parts) >= 4:
+                    tenant_id = parts[1]
 
     if not tenant_id:
         raise HTTPException(

@@ -19,29 +19,32 @@ down_revision: str | None = "0015_tenant_hq_coordinates"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
-_TENANT_TABLES_WITH_RLS = (
-    "routers",
-    "router_credentials_vault",
-    "tags",
-    "user_router_permissions",
-    "approval_requests",
-    "bulk_jobs",
-    "router_backups",
-    "maintenance_windows",
-    "notification_channels",
-    "audit_logs",
-    "ipam_vlans",
-    "ipam_vrfs",
-    "ipam_prefixes",
-    "ipam_ip_addresses",
-    "bandwidth_profiles",
-    "nap_splitter_boxes",
-    "subscriber_devices",
-    "customer_services",
-    "field_installation_orders",
-    "golden_config_templates",
-    "sdwan_spoke_tunnels",
-    "sla_probe_metrics",
+_TENANT_TABLES_WITH_RLS: tuple[tuple[str, str], ...] = (
+    ("users", "tenant_isolation_users"),
+    ("user_router_permissions", "tenant_isolation_urp"),
+    ("routers", "tenant_isolation_routers"),
+    ("router_tags", "tenant_isolation_router_tags"),
+    ("router_credentials_vault", "tenant_isolation_vault"),
+    ("maintenance_windows", "tenant_isolation_maint"),
+    ("tenant_custom_roles", "tenant_isolation_custom_roles"),
+    ("approval_requests", "tenant_isolation_approval_requests"),
+    ("router_backups", "tenant_isolation_router_backups"),
+    ("config_templates", "tenant_isolation_config_templates"),
+    ("bulk_jobs", "tenant_isolation_bulk_jobs"),
+    ("bulk_job_items", "tenant_isolation_bulk_job_items"),
+    ("notification_channels", "tenant_isolation_notification_channels"),
+    ("audit_logs", "tenant_isolation_audit"),
+    ("ipam_vrfs", "tenant_isolation_ipam_vrfs"),
+    ("ipam_prefixes", "tenant_isolation_ipam_prefixes"),
+    ("ipam_ip_addresses", "tenant_isolation_ipam_addresses"),
+    ("bandwidth_profiles", "tenant_isolation_bandwidth_profiles"),
+    ("optical_boxes", "tenant_isolation_optical_boxes"),
+    ("subscriber_devices", "tenant_isolation_subscriber_devices"),
+    ("field_installation_orders", "tenant_isolation_field_orders"),
+    ("fiber_cut_incidents", "tenant_isolation_fiber_cuts"),
+    ("golden_config_templates", "tenant_isolation_golden_config_templates"),
+    ("sdwan_spoke_tunnels", "tenant_isolation_sdwan_spoke_tunnels"),
+    ("sla_probe_metrics", "tenant_isolation_sla_probe_metrics"),
 )
 
 
@@ -101,8 +104,7 @@ def upgrade() -> None:
     )
 
     # 4. Homologar políticas RLS con cláusula app.is_superadmin_global en todas las tablas multi-tenant
-    for table_name in _TENANT_TABLES_WITH_RLS:
-        policy_name = f"tenant_isolation_{table_name}"
+    for table_name, policy_name in _TENANT_TABLES_WITH_RLS:
         op.execute(
             sa.text(
                 f"""

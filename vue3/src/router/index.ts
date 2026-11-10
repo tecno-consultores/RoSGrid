@@ -196,6 +196,7 @@ const routes: RouteRecordRaw[] = [
           title: 'Respaldos y Comparador Diff — RoSGrid',
           tabLabel: 'Respaldos',
           tabIcon: '💾',
+          requiredFeature: 'nightly_backups_enabled',
         },
       },
       {
@@ -482,7 +483,7 @@ router.beforeEach((to, _from, next) => {
 
   // 4. Verificación de allowedRoles declarados en la ruta
   const allowed = to.meta.allowedRoles as SystemRole[] | undefined;
-  if (allowed && role && !allowed.includes(role)) {
+  if (allowed && (!role || !allowed.includes(role))) {
     return next({ path: '/inventory' });
   }
 

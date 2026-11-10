@@ -427,13 +427,15 @@ async def sync_dhcp_clients(
                     )
                     db_ips = list((await db.execute(stmt_ips)).scalars().all())
                     for idx, ip_row in enumerate(db_ips):
-                        leases.append({
-                            "address": str(ip_row.address).split("/")[0],
-                            "mac-address": ip_row.mac_address or f"00:50:79:66:68:{idx+1:02X}",
-                            "host-name": f"PC-OFICINA-{idx+1:02d}",
-                            "status": "bound",
-                            "_ip_id": ip_row.id,
-                        })
+                        leases.append(
+                            {
+                                "address": str(ip_row.address).split("/")[0],
+                                "mac-address": ip_row.mac_address or f"00:50:79:66:68:{idx + 1:02X}",
+                                "host-name": f"PC-OFICINA-{idx + 1:02d}",
+                                "status": "bound",
+                                "_ip_id": ip_row.id,
+                            }
+                        )
 
             for idx, lease in enumerate(leases):
                 ip_addr = str(lease.get("address", "")).strip()
@@ -443,7 +445,7 @@ async def sync_dhcp_clients(
 
                 hostname = lease.get("host-name") or f"Dispositivo-{ip_addr.split('.')[-1]}"
                 ep_id = f"{hostname} ({ip_addr})"
-                mac_clean = mac_addr.replace(":", "").replace("-", "").upper() if mac_addr else f"DEV{idx+1:04d}"
+                mac_clean = mac_addr.replace(":", "").replace("-", "").upper() if mac_addr else f"DEV{idx + 1:04d}"
                 serial = f"DEV-{mac_clean}"
                 is_bound = lease.get("status") in ("bound", "active")
                 reachability = "ONLINE" if is_bound else "OFFLINE"
@@ -546,15 +548,21 @@ async def simulate_subscribers_from_dhcp(
 
     target_router = next((r for r in routers if r.display_name == "r1"), routers[0])
 
-    stmt_ips = select(IPAMAddress).where(
-        IPAMAddress.tenant_id == tenant_id,
-        IPAMAddress.router_id.isnot(None),
-    ).order_by(IPAMAddress.address.asc())
+    stmt_ips = (
+        select(IPAMAddress)
+        .where(
+            IPAMAddress.tenant_id == tenant_id,
+            IPAMAddress.router_id.isnot(None),
+        )
+        .order_by(IPAMAddress.address.asc())
+    )
     all_ips = list((await db.execute(stmt_ips)).scalars().all())
 
     client_ips = [
-        ip for ip in all_ips
-        if ip.mac_address and (
+        ip
+        for ip in all_ips
+        if ip.mac_address
+        and (
             ip.status in [IPAddressStatusEnum.DHCP_DYNAMIC, IPAddressStatusEnum.DHCP_STATIC]
             or "DHCP" in (ip.description or "")
         )
@@ -574,30 +582,34 @@ async def simulate_subscribers_from_dhcp(
             addr_str = str(ip_row.address).split("/")[0]
             mac_str = ip_row.mac_address or f"00:50:79:66:68:{idx:02X}"
             desc = ip_row.description or ""
-            host_name = f"PC-{idx+1:02d}"
+            host_name = f"PC-{idx + 1:02d}"
             if "VPCS" in desc:
-                host_name = f"VPCS-{idx+1:02d}"
-            records_to_process.append({
-                "address_id": ip_row.id,
-                "ip": addr_str,
-                "mac": mac_str,
-                "name": host_name,
-                "router_id": ip_row.router_id or target_router.id,
-                "interface": ip_row.interface_name or "ether2",
-            })
+                host_name = f"VPCS-{idx + 1:02d}"
+            records_to_process.append(
+                {
+                    "address_id": ip_row.id,
+                    "ip": addr_str,
+                    "mac": mac_str,
+                    "name": host_name,
+                    "router_id": ip_row.router_id or target_router.id,
+                    "interface": ip_row.interface_name or "ether2",
+                }
+            )
     else:
         from src.core.config import settings as _cfg
 
         if _cfg.ROSGRID_ENV != "production":
             for idx in range(10):
-                records_to_process.append({
-                    "address_id": None,
-                    "ip": f"192.168.10.{100 + idx}",
-                    "mac": f"00:50:79:66:68:{idx+1:02X}",
-                    "name": f"PC-LAB-{idx+1:02d}",
-                    "router_id": target_router.id,
-                    "interface": "ether2",
-                })
+                records_to_process.append(
+                    {
+                        "address_id": None,
+                        "ip": f"192.168.10.{100 + idx}",
+                        "mac": f"00:50:79:66:68:{idx + 1:02X}",
+                        "name": f"PC-LAB-{idx + 1:02d}",
+                        "router_id": target_router.id,
+                        "interface": "ether2",
+                    }
+                )
 
     created_count = 0
     updated_count = 0
@@ -897,10 +909,13 @@ async def create_subscriber_device(
         optical_box_port=payload.optical_box_port,
         rx_optical_power_dbm=payload.rx_optical_power_dbm,
         drop_cable_meters=payload.drop_cable_meters,
-        is_custom_coordinates=payload.is_custom_coordinates or (payload.latitude is not None and payload.longitude is not None),
+        is_custom_coordinates=payload.is_custom_coordinates
+        or (payload.latitude is not None and payload.longitude is not None),
         latitude=resolved_lat,
         longitude=resolved_lng,
-        status=CustomerServiceStatusEnum.ACTIVE if payload.optical_box_id else CustomerServiceStatusEnum.PENDING_INSTALL,
+        status=CustomerServiceStatusEnum.ACTIVE
+        if payload.optical_box_id
+        else CustomerServiceStatusEnum.PENDING_INSTALL,
         last_reachability_status="ONLINE",
     )
     if payload.assigned_ipv4:
@@ -1124,7 +1139,9 @@ async def _provision_subscriber_on_mikrotik(
                         secret_payload["password"] = endpoint_identifier
                     await client.post("/ppp/secret", secret_payload)
     except Exception as exc:
-        logger.warning(f"Aprovisionamiento MikroTik en {r.display_name} para {endpoint_identifier} omitido/aviso: {exc}")
+        logger.warning(
+            f"Aprovisionamiento MikroTik en {r.display_name} para {endpoint_identifier} omitido/aviso: {exc}"
+        )
 
 
 _MAC_CSV_REGEX = re.compile(r"^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$")
@@ -1192,9 +1209,7 @@ def _validate_subscriber_csv_row(
         except ValueError:
             errors.append(f"Puerto de caja NAP inválido '{raw_port}'")
 
-    will_auto_create = bool(
-        box_name and (boxes_by_code is None or box_name.strip().lower() not in boxes_by_code)
-    )
+    will_auto_create = bool(box_name and (boxes_by_code is None or box_name.strip().lower() not in boxes_by_code))
 
     raw_lat = str(row.get("latitude") or "").strip()
     raw_lng = str(row.get("longitude") or "").strip()
@@ -1233,9 +1248,7 @@ def _validate_subscriber_csv_row(
 
 @subscribers_router.get("/template-csv")
 async def download_subscribers_csv_template(
-    claims: dict[str, Any] = Depends(
-        require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)
-    ),
+    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)),
 ) -> Response:
     """Descarga la plantilla CSV oficial RFC 4180 para importación masiva de clientes/abonados."""
     headers = (
@@ -1288,9 +1301,7 @@ async def _load_subscriber_csv_context(
 async def import_subscribers_csv_dry_run(
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_tenant_db_session),
-    claims: dict[str, Any] = Depends(
-        require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)
-    ),
+    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)),
 ) -> SubscriberCsvDryRunResponse:
     """Paso 1: Validación en seco de archivo CSV para carga masiva de clientes (máximo 500 filas)."""
     tenant_id = get_tenant_id(claims)
@@ -1302,7 +1313,9 @@ async def import_subscribers_csv_dry_run(
     except UnicodeDecodeError as exc:
         raise HTTPException(status_code=400, detail="El archivo debe tener codificación UTF-8 válida") from exc
 
-    routers_by_key, boxes_by_code, existing_endpoints, existing_serials = await _load_subscriber_csv_context(db, tenant_id)
+    routers_by_key, boxes_by_code, existing_endpoints, existing_serials = await _load_subscriber_csv_context(
+        db, tenant_id
+    )
     reader = csv.DictReader(io.StringIO(decoded))
     previews: list[SubscriberCsvRowPreview] = []
     seen_endpoints: set[tuple[uuid.UUID, str]] = set()
@@ -1340,9 +1353,7 @@ async def import_subscribers_csv_dry_run(
 async def import_subscribers_csv_commit(
     request: Request,
     db: AsyncSession = Depends(get_tenant_db_session),
-    claims: dict[str, Any] = Depends(
-        require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)
-    ),
+    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)),
 ) -> SubscriberCsvCommitResponse:
     """Paso 2: Confirmación e inserción transaccional de clientes validados por CSV con auditoría WORM."""
     tenant_id = get_tenant_id(claims)
@@ -1392,9 +1403,7 @@ async def import_subscribers_csv_commit(
         matched_router = routers_by_key.get(item.router_name.strip().lower())
         if not matched_router:
             continue
-        matched_box = (
-            boxes_by_code.get(item.optical_box_name.strip().lower()) if item.optical_box_name else None
-        )
+        matched_box = boxes_by_code.get(item.optical_box_name.strip().lower()) if item.optical_box_name else None
         if item.optical_box_name and not matched_box:
             box_lat = (
                 Decimal(str(item.latitude))
@@ -1530,7 +1539,9 @@ async def get_subscriber_live_pairing_candidates(
             .order_by(Router.created_at.asc())
         )
         other_routers = list((await db.execute(stmt_others)).scalars().all())
-        fallback_bng: Optional[tuple[Router, list[SubscriberLiveCandidateDhcpLease], list[SubscriberLiveCandidatePppoe]]] = None
+        fallback_bng: Optional[
+            tuple[Router, list[SubscriberLiveCandidateDhcpLease], list[SubscriberLiveCandidatePppoe]]
+        ] = None
 
         for candidate_r in other_routers:
             cand_dhcp, cand_pppoe = await _collect_router_live_candidates(candidate_r, tenant_id)
@@ -1551,10 +1562,7 @@ async def get_subscriber_live_pairing_candidates(
             auto_switched_bng = True
 
     stmt_ips = (
-        select(IPAMAddress)
-        .where(IPAMAddress.tenant_id == tenant_id)
-        .order_by(IPAMAddress.created_at.desc())
-        .limit(100)
+        select(IPAMAddress).where(IPAMAddress.tenant_id == tenant_id).order_by(IPAMAddress.created_at.desc()).limit(100)
     )
     ipam_rows = list((await db.execute(stmt_ips)).scalars().all())
 
@@ -1829,7 +1837,9 @@ async def _discover_and_pair_live_ip_from_router(
 async def ping_subscriber_device_live(
     device_id: uuid.UUID,
     force: bool = Query(False, description="Forzar nueva prueba e invalidar caché previa (orden de NOC)"),
-    extended: bool = Query(False, description="Ejecutar diagnóstico integral 360 (Gateway, Internet 1.1.1.1, DNS, MTU)"),
+    extended: bool = Query(
+        False, description="Ejecutar diagnóstico integral 360 (Gateway, Internet 1.1.1.1, DNS, MTU)"
+    ),
     db: AsyncSession = Depends(get_tenant_db_session),
     claims: dict[str, Any] = Depends(get_current_user_claims),
 ) -> Any:
@@ -2014,7 +2024,9 @@ async def ping_subscriber_device_live(
             "detail": "MTU 1500 DF pass sin fragmentación",
         }
 
-    msg = f"Ping exitoso: {latency_ms}ms (pérdida: {loss_pct}%)" if ping_ok else "Dispositivo inaccesible (100% pérdida)"
+    msg = (
+        f"Ping exitoso: {latency_ms}ms (pérdida: {loss_pct}%)" if ping_ok else "Dispositivo inaccesible (100% pérdida)"
+    )
     resp = SubscriberDevicePingResponse(
         device_id=dev.id,
         assigned_ipv4=target_ip,
@@ -2091,7 +2103,6 @@ async def get_device_operational_status(
         message=lock_info.get("message"),
         root_cause=root_cause,
     )
-
 
 
 @subscribers_router.delete("/{device_id}", status_code=status.HTTP_204_NO_CONTENT)

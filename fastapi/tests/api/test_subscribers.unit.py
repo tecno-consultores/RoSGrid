@@ -167,7 +167,10 @@ class MockSubscribersDbSession:
 
                 if p_box_id is not None and p_port is not None:
                     for d in self.devices:
-                        if getattr(d, "optical_box_id", None) == p_box_id and getattr(d, "optical_box_port", None) == p_port:
+                        if (
+                            getattr(d, "optical_box_id", None) == p_box_id
+                            and getattr(d, "optical_box_port", None) == p_port
+                        ):
                             return MockSubscribersDbResult(d, [d])
                     return MockSubscribersDbResult(None, [])
 
@@ -1038,4 +1041,3 @@ async def test_optical_boxes_bulk_csv_template_dry_run_and_upsert_commit(
         assert res_commit_noc.status_code == 403
     finally:
         app.dependency_overrides.clear()
-

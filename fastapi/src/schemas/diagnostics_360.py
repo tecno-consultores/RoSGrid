@@ -17,6 +17,7 @@ class StrictBaseModel(BaseModel):
 
 class Endpoint360Request(StrictBaseModel):
     """Solicitud de diagnóstico exhaustivo de abonado o enlace."""
+
     model_config = ConfigDict(extra="forbid")
 
     router_id: uuid.UUID = Field(..., description="ID del router MikroTik de acceso")

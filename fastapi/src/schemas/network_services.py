@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class ChangeRateLimitRequest(BaseModel):
     """Solicitud de modificación de perfil de ancho de banda / QoS en caliente."""
+
     model_config = ConfigDict(extra="forbid")
 
     bandwidth_profile_id: uuid.UUID = Field(

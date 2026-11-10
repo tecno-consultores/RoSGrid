@@ -1223,5 +1223,3 @@ def test_extract_tenant_features_includes_hq_coordinates_and_converts_decimal():
     assert isinstance(features_none["hq_latitude"], float)
     assert features_none["hq_longitude"] == -66.9036
     assert isinstance(features_none["hq_longitude"], float)
-
-

@@ -317,7 +317,6 @@ def test_tenant_custom_role_model_metadata() -> None:
     assert isinstance(routers_table.c.network_role.type, String)
 
 
-
 # ============================================================================
 # VAULT ENDPOINTS AND LOGIC
 # ============================================================================

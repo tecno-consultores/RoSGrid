@@ -46,9 +46,14 @@ def test_edge_cases_empty_or_invalid_inputs() -> None:
     """Verifica la robustez de inspect_router_syslog_config ante entradas nulas, vacías o malformadas."""
     assert inspect_router_syslog_config([], []) is False
     assert inspect_router_syslog_config(None, None) is False
-    assert inspect_router_syslog_config([{"name": "rosgridsyslog", "target": "remote", "remote": "0.0.0.0"}], []) is False
+    assert (
+        inspect_router_syslog_config([{"name": "rosgridsyslog", "target": "remote", "remote": "0.0.0.0"}], []) is False
+    )
     assert inspect_router_syslog_config([{"name": "rosgridsyslog", "target": "remote", "remote": ""}], []) is False
-    assert inspect_router_syslog_config(
-        [{"name": "rosgridsyslog", "target": "remote", "remote": "10.0.0.1"}],
-        [{"action": "rosgridsyslog", "disabled": "true"}],
-    ) is False
+    assert (
+        inspect_router_syslog_config(
+            [{"name": "rosgridsyslog", "target": "remote", "remote": "10.0.0.1"}],
+            [{"action": "rosgridsyslog", "disabled": "true"}],
+        )
+        is False
+    )

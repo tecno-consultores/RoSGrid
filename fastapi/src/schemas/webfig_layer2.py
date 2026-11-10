@@ -113,11 +113,7 @@ class DynamicLayer2WriteRequest(StrictBaseModel):
     def _wrap_flat_attributes(cls, data: Any) -> Any:
         if isinstance(data, dict) and "attributes" not in data:
             enable_sm = bool(data.get("enable_safemode", True))
-            attrs = {
-                k: v
-                for k, v in data.items()
-                if k not in ("enable_safemode", ".id", "id")
-            }
+            attrs = {k: v for k, v in data.items() if k not in ("enable_safemode", ".id", "id")}
             return {"attributes": attrs, "enable_safemode": enable_sm}
         return data
 

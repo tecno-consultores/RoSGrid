@@ -492,7 +492,12 @@ async def test_subscribers_provisioning_csv_live_candidates_and_ping() -> None:
         side_effect=[
             ["not-a-dict", {"address": ""}, {"address": "100.64.1.2", "mac-address": "aabb.ccdd.ee01"}],
             ["not-a-dict", {"name": ""}, {"name": "ppp1", "address": "100.64.2.2", "caller-id": "aabb.ccdd.ee02"}],
-            ["not-a-dict", {"name": ""}, {"name": "ppp1"}, {"name": "ppp2", "remote-address": "100.64.2.3", "caller-id": "aabb.ccdd.ee03"}],
+            [
+                "not-a-dict",
+                {"name": ""},
+                {"name": "ppp1"},
+                {"name": "ppp2", "remote-address": "100.64.2.3", "caller-id": "aabb.ccdd.ee03"},
+            ],
         ]
     )
     with patch("src.api.v1.subscribers._get_router_client", return_value=cand_cli):
@@ -513,7 +518,10 @@ async def test_subscribers_provisioning_csv_live_candidates_and_ping() -> None:
     prov_cli.__aenter__ = AsyncMock(return_value=prov_cli)
     prov_cli.__aexit__ = AsyncMock(return_value=None)
     prov_cli.get = AsyncMock(
-        return_value=["raw", {".id": "*L1", "address": "100.64.1.10", "mac-address": "AA:BB:CC:DD:EE:10", "dynamic": "true"}]
+        return_value=[
+            "raw",
+            {".id": "*L1", "address": "100.64.1.10", "mac-address": "AA:BB:CC:DD:EE:10", "dynamic": "true"},
+        ]
     )
     prov_cli.post = AsyncMock()
     prov_cli.patch = AsyncMock()
@@ -536,9 +544,7 @@ async def test_subscribers_provisioning_csv_live_candidates_and_ping() -> None:
             r_obj, tid, CustomerServiceTypeEnum.PPPOE, "ppp-user-2", None, None, None
         )
     with patch("src.api.v1.subscribers._get_router_client", return_value=err_cand_cli):
-        await _provision_subscriber_on_mikrotik(
-            r_obj, tid, CustomerServiceTypeEnum.PPPOE, "ppp-err", None, None, None
-        )
+        await _provision_subscriber_on_mikrotik(r_obj, tid, CustomerServiceTypeEnum.PPPOE, "ppp-err", None, None, None)
 
     # 4. _validate_subscriber_csv_row y endpoints CSV dry-run / commit (líneas 1146-1394)
     p_err1 = _validate_subscriber_csv_row(
@@ -660,7 +666,14 @@ async def test_subscribers_provisioning_csv_live_candidates_and_ping() -> None:
         AsyncMock(
             side_effect=[
                 ([], []),
-                ([SubscriberLiveCandidateDhcpLease(address="100.64.5.5", mac_address="11:22:33:44:55:66", status="bound")], []),
+                (
+                    [
+                        SubscriberLiveCandidateDhcpLease(
+                            address="100.64.5.5", mac_address="11:22:33:44:55:66", status="bound"
+                        )
+                    ],
+                    [],
+                ),
             ]
         ),
     ):
@@ -712,7 +725,11 @@ async def test_subscribers_provisioning_csv_live_candidates_and_ping() -> None:
     disc_cli.get = AsyncMock(
         side_effect=[
             ["not-a-dict"],
-            ["not-a-dict", {"address": ""}, {"address": "100.64.8.8", "mac-address": "AA:BB:CC:DD:EE:88", "host-name": "host-match"}],
+            [
+                "not-a-dict",
+                {"address": ""},
+                {"address": "100.64.8.8", "mac-address": "AA:BB:CC:DD:EE:88", "host-name": "host-match"},
+            ],
         ]
     )
     with (
@@ -855,7 +872,11 @@ async def test_wifi_capsman_fallbacks_errors_and_quick_setup() -> None:
         if ep == "/caps-man/remote-cap":
             return [{"radios": 2}]
         if ep == "/caps-man/registration-table":
-            return ["raw", {"mac-address": ""}, {"mac-address": "AA:BB:CC:11:22:33", "signal": "bad", "snr": "bad", "tx-rate": "bad", "rx-rate": "bad"}]
+            return [
+                "raw",
+                {"mac-address": ""},
+                {"mac-address": "AA:BB:CC:11:22:33", "signal": "bad", "snr": "bad", "tx-rate": "bad", "rx-rate": "bad"},
+            ]
         if ep == "/caps-man/configuration":
             return ["raw", {"name": "c1", "ssid": "s1"}]
         if ep == "/caps-man/security":
@@ -912,7 +933,10 @@ async def test_wifi_capsman_fallbacks_errors_and_quick_setup() -> None:
         await list_wifi_clients(r_obj.id, db=db, claims=claims)
 
     # 4. Re-raise HTTPException en mutaciones y ramas de delete_capsman_configuration / reprovision / delete_wifi_client
-    with patch("src.api.v1.wifi.get_router_and_client", AsyncMock(side_effect=HTTPException(status_code=409, detail="conflict"))):
+    with patch(
+        "src.api.v1.wifi.get_router_and_client",
+        AsyncMock(side_effect=HTTPException(status_code=409, detail="conflict")),
+    ):
         for coro_mut in (
             create_capsman_configuration(r_obj.id, WifiConfigurationCreate(name="c", ssid="s"), db=db, claims=claims),
             update_capsman_configuration(r_obj.id, "*1", WifiConfigurationUpdate(ssid="s"), db=db, claims=claims),
@@ -1151,7 +1175,9 @@ async def test_ipam_endpoints_and_mikrotik_sync_branches() -> None:
 
     # 5. list_customer_services y create_customer_service 409 (líneas 402, 404, 430)
     db.execute.return_value = _MockResult(items=[])
-    await list_customer_services(router_id=r_obj.id, status_filter=CustomerServiceStatusEnum.ACTIVE, db=db, claims=claims)
+    await list_customer_services(
+        router_id=r_obj.id, status_filter=CustomerServiceStatusEnum.ACTIVE, db=db, claims=claims
+    )
 
     db.execute.return_value = _MockResult(single=CustomerService(id=uuid.uuid4()))
     with pytest.raises(HTTPException) as exc_cs409:
@@ -1214,9 +1240,15 @@ async def test_ipam_endpoints_and_mikrotik_sync_branches() -> None:
         return []
 
     rich_cli.get = AsyncMock(side_effect=_rich_get)
-    existing_pfx = IPAMPrefix(id=uuid.uuid4(), tenant_id=tid, vrf_id=vrf_id, prefix="10.30.0.0/24", ip_family=IPFamilyEnum.IPv4)
-    existing_addr = IPAMAddress(id=uuid.uuid4(), tenant_id=tid, prefix_id=existing_pfx.id, address="10.30.0.1", ip_family=IPFamilyEnum.IPv4)
-    existing_lease = IPAMAddress(id=uuid.uuid4(), tenant_id=tid, prefix_id=existing_pfx.id, address="10.20.0.15", ip_family=IPFamilyEnum.IPv4)
+    existing_pfx = IPAMPrefix(
+        id=uuid.uuid4(), tenant_id=tid, vrf_id=vrf_id, prefix="10.30.0.0/24", ip_family=IPFamilyEnum.IPv4
+    )
+    existing_addr = IPAMAddress(
+        id=uuid.uuid4(), tenant_id=tid, prefix_id=existing_pfx.id, address="10.30.0.1", ip_family=IPFamilyEnum.IPv4
+    )
+    existing_lease = IPAMAddress(
+        id=uuid.uuid4(), tenant_id=tid, prefix_id=existing_pfx.id, address="10.20.0.15", ip_family=IPFamilyEnum.IPv4
+    )
     db.execute.side_effect = [
         _MockResult(items=[existing_pfx]),
         _MockResult(single=None),
@@ -1291,7 +1323,10 @@ async def test_inventory_missing_branches() -> None:
     mock_redis = AsyncMock()
     with (
         patch("src.api.v1.inventory.get_redis_client", return_value=mock_redis),
-        patch("src.api.v1.inventory_helpers.discover_and_persist_syslog_status", AsyncMock(side_effect=RuntimeError("err"))),
+        patch(
+            "src.api.v1.inventory_helpers.discover_and_persist_syslog_status",
+            AsyncMock(side_effect=RuntimeError("err")),
+        ),
         patch("src.api.v1.inventory.enrich_router_telemetry", AsyncMock(return_value={})),
     ):
         await sync_router_syslog(r_obj.id, claims=claims, db=db)
@@ -1413,7 +1448,9 @@ async def test_webfig_layer2_missing_branches() -> None:
     bad_redis.setex = AsyncMock(side_effect=RuntimeError("r err"))
     assert await _get_cached_l2_schema(bad_redis, "k") is None
     await _set_cached_l2_schema(None, "k", [])
-    await _set_cached_l2_schema(bad_redis, "k", [ColumnSchemaItem(key=".id", label="ID", type="string", editable=False)])
+    await _set_cached_l2_schema(
+        bad_redis, "k", [ColumnSchemaItem(key=".id", label="ID", type="string", editable=False)]
+    )
 
     client.post = AsyncMock(side_effect=RuntimeError("inspect failed"))
     cols, src = await _resolve_schema_via_inspect(bad_redis, tid, "7.16", "mpls/interface", client)
@@ -1422,7 +1459,10 @@ async def test_webfig_layer2_missing_branches() -> None:
     assert _build_ros_query_stack([]) == []
     filtered = _filter_items_locally(
         [{".id": "*1", "name": "a"}, {".id": "*2", "name": "b"}],
-        [Layer2QueryFilterItem(field="name", operator="=", value="a"), Layer2QueryFilterItem(field="name", operator="!=", value="b")],
+        [
+            Layer2QueryFilterItem(field="name", operator="=", value="a"),
+            Layer2QueryFilterItem(field="name", operator="!=", value="b"),
+        ],
         [".id", "name"],
     )
     assert len(filtered) == 1
@@ -1435,7 +1475,10 @@ async def test_webfig_layer2_missing_branches() -> None:
     with (
         patch("src.api.v1.webfig_layer2.from_deps_redis", return_value=bad_redis),
         patch("src.api.v1.webfig_layer2.get_router_and_client", AsyncMock(return_value=(r_obj, client))),
-        patch("src.api.v1.webfig_layer2.cached_mikrotik_get", AsyncMock(side_effect=HTTPException(status_code=502, detail="timeout"))),
+        patch(
+            "src.api.v1.webfig_layer2.cached_mikrotik_get",
+            AsyncMock(side_effect=HTTPException(status_code=502, detail="timeout")),
+        ),
         pytest.raises(HTTPException) as exc502,
     ):
         await get_resource(r_obj.id, "mpls/interface", claims=claims, db=db)
@@ -1570,7 +1613,10 @@ async def test_webfig_layer2_missing_branches() -> None:
     )
     with (
         patch("src.api.v1.webfig_layer2._resolve_rpc_target_and_args", return_value=("certificate/sign", {}, mc_desc)),
-        patch("src.api.v1.webfig_layer2.intercept_maker_checker_if_needed", AsyncMock(return_value={"status": "AWAITING_APPROVAL"})),
+        patch(
+            "src.api.v1.webfig_layer2.intercept_maker_checker_if_needed",
+            AsyncMock(return_value={"status": "AWAITING_APPROVAL"}),
+        ),
     ):
         mc_res = await execute_command(
             r_obj.id,
@@ -1640,7 +1686,10 @@ async def test_auth_governor_and_syslog_collector_missing_branches() -> None:
     # verify_2fa: usuario no encontrado (401) y usuario bloqueado (423)
     with (
         patch("src.api.v1.auth.get_redis_client", return_value=mock_redis),
-        patch("src.api.v1.auth._fetch_preauth_state", AsyncMock(return_value=("k", {"user_id": str(uid), "tenant_id": str(tid)}))),
+        patch(
+            "src.api.v1.auth._fetch_preauth_state",
+            AsyncMock(return_value=("k", {"user_id": str(uid), "tenant_id": str(tid)})),
+        ),
     ):
         db.execute.return_value = _MockResult(single=None)
         with pytest.raises(HTTPException) as exc_u401:
@@ -1828,7 +1877,10 @@ async def test_auth_governor_and_syslog_collector_missing_branches() -> None:
     fake_proto = SyslogUdpProtocol({}, {})
     fake_loop.create_datagram_endpoint = AsyncMock(return_value=(fake_transport, fake_proto))
     with (
-        patch("src.workers.syslog_collector.load_router_syslog_maps", AsyncMock(return_value=({"1.1.1.1": (tid, uid)}, {"r1": (tid, uid)}))),
+        patch(
+            "src.workers.syslog_collector.load_router_syslog_maps",
+            AsyncMock(return_value=({"1.1.1.1": (tid, uid)}, {"r1": (tid, uid)})),
+        ),
         patch("asyncio.get_running_loop", return_value=fake_loop),
         patch("asyncio.sleep", AsyncMock(side_effect=[None, asyncio.CancelledError()])),
     ):

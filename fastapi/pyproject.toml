@@ -1,10 +1,10 @@
 [project]
 name = "rosgrid-backend"
-version = "1.0.0"
+version = "1.2.0"
 description = "Backend Centralizado Multi-Tenant para Gestión de Flotas MikroTik RouterOS v7+ (GPL-3.0-only)"
 authors = [{ name = "Jesus Palencia (Creado en Tecno Consultores)", email = "sinfallas@gmail.com" }]
 license = { text = "GPL-3.0-only" }
-requires-python = ">=3.15"
+requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.30.0",
@@ -65,6 +65,10 @@ addopts = "--strict-markers --cov=src/ --cov-report=html --cov-report=term-missi
 markers = [
     "integration: Pruebas internas que requieren servicios reales (deseleccionar en unitarias con '-m \"not integration\"')",
 ]
+
+[tool.coverage.report]
+fail_under = 95
+show_missing = true
 
 [tool.ruff]
 line-length = 120

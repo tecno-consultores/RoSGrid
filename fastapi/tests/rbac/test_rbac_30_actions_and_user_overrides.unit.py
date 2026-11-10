@@ -237,7 +237,7 @@ async def test_patch_user_feature_flags_endpoint(
             json=payload,
             headers={
                 "Authorization": f"Bearer {token}",
-                "Idempotency-Key": "01928900-0000-7000-8000-000000000240",
+                "Idempotency-Key": str(uuid.uuid4()),
             },
         )
         assert resp.status_code == 200
@@ -255,7 +255,7 @@ async def test_patch_user_feature_flags_endpoint(
             json=del_payload,
             headers={
                 "Authorization": f"Bearer {token}",
-                "Idempotency-Key": "01928900-0000-7000-8000-000000000255",
+                "Idempotency-Key": str(uuid.uuid4()),
             },
         )
         assert resp_del.status_code == 200
@@ -267,7 +267,7 @@ async def test_patch_user_feature_flags_endpoint(
             json={"feature_flags_override": {"INVALID_FLAG_KEY": "ALLOW"}},
             headers={
                 "Authorization": f"Bearer {token}",
-                "Idempotency-Key": "01928900-0000-7000-8000-000000000265",
+                "Idempotency-Key": str(uuid.uuid4()),
             },
         )
         assert resp_bad.status_code == 400

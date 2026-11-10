@@ -151,7 +151,8 @@ async def _poll_loop(tenant_id: uuid.UUID, router_id: uuid.UUID) -> None:
     client = await _resolve_router_client(tenant_id, router_id)
     if not client:
         logger.warning("No se pudo obtener cliente MikroTik para telemetría: %s", router_id)
-        _ACTIVE_POLLERS.pop(poller_key, None)
+        if _ACTIVE_POLLERS.get(poller_key) is asyncio.current_task():
+            _ACTIVE_POLLERS.pop(poller_key, None)
         return
 
     try:
@@ -172,12 +173,14 @@ async def _poll_loop(tenant_id: uuid.UUID, router_id: uuid.UUID) -> None:
             await redis.publish(channel, json.dumps(frame))
             await asyncio.sleep(2.0)
     except asyncio.CancelledError:
-        pass
+        raise
     except Exception as exc:
         logger.error("Error en bucle de telemetría para router %s: %s", router_id, exc)
     finally:
-        _ACTIVE_POLLERS.pop(poller_key, None)
-        _LAST_SNAPSHOTS.pop(poller_key, None)
+        current_task = asyncio.current_task()
+        if _ACTIVE_POLLERS.get(poller_key) in (None, current_task):
+            _ACTIVE_POLLERS.pop(poller_key, None)
+            _LAST_SNAPSHOTS.pop(poller_key, None)
         await client.close()
 
 

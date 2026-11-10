@@ -705,4 +705,3 @@ async def test_delete_configuration_conflict_when_used_in_provisioning(
             )
         assert exc_conflict.value.status_code == 409
         assert "prov-global" in exc_conflict.value.detail
-

@@ -137,7 +137,6 @@
     massOutageAlert.value.active = false;
   }
 
-  let eventSimulationTimer: ReturnType<typeof setInterval> | null = null;
   let autoRefreshTimer: ReturnType<typeof setInterval> | null = null;
   const isRefreshing = ref(false);
 
@@ -383,9 +382,6 @@
     document.removeEventListener('fullscreenchange', handleFullscreenChange);
     if (autoRefreshTimer) {
       clearInterval(autoRefreshTimer);
-    }
-    if (eventSimulationTimer) {
-      clearInterval(eventSimulationTimer);
     }
   });
 </script>

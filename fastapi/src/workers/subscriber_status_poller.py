@@ -236,9 +236,7 @@ async def _apply_device_status_deltas(
 
     if changed_count > 0:
         await session.commit()
-        logger.info(
-            f"[Poller Delta] Router {router.display_name}: {changed_count} dispositivos cambiaron de estado."
-        )
+        logger.info(f"[Poller Delta] Router {router.display_name}: {changed_count} dispositivos cambiaron de estado.")
     return changed_count
 
 

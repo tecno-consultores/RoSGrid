@@ -2,7 +2,7 @@
 
 > **Nota de Seguridad de Producción y Certificación QA:**  
 > En cumplimiento del estándar de endurecimiento de RoSGrid, la documentación interactiva Swagger UI (`/docs`), ReDoc (`/redoc`) y la especificación abierta OpenAPI (`/openapi.json`) están **deshabilitadas de forma estricta e inmutable en entornos productivos** (`ROSGRID_ENV=production`). Este documento constituye la especificación formal y exhaustiva de todas las interfaces REST y WebSockets del sistema.  
-> El 100% de los endpoints y contratos aquí descritos están certificados con la suite de pruebas BDD de caja negra de **Karate Labs** (`fastapi/test/api_test.feature`, 76 escenarios BDD integrales).
+> El 100% de los endpoints y contratos aquí descritos están certificados con la suite de pruebas BDD de caja negra de **Karate Labs** (`fastapi/test/api_test.feature`, 184 escenarios BDD integrales).
 
 ---
 
@@ -161,7 +161,7 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
 - **Salida (200 con Desafío 2FA):** `{"next_step": "VERIFY_2FA_TOTP", "challenge_id": "uuid", "expires_in_seconds": 180}`.
 - **Salida (403 Forbidden para Cuenta Pendiente):** `{"detail": "Tu cuenta está pendiente de aprobación por el Administrador. No puedes ingresar hasta que sea autorizada y se te asigne un rol."}`.
 
-#### `POST /api/v1/auth/verify-2fa`
+#### `POST /api/v1/auth/2fa/verify`
 
 - **Roles:** Público (con `challenge_id` válido).
 - **Entrada:** `{"challenge_id": "uuid", "totp_code": "123456"}`
@@ -640,31 +640,39 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
 ### 2.6 Endpoint MCP Protegido para Agentes IA (`POST /api/v1/mcp`)
 
 - **Protocolo:** JSON-RPC 2.0 *Streamable HTTP*.
-- **Roles Exclusivos:** `SERVICE_ACCOUNT` (o `TENANT_ADMIN` / `SUPERADMIN_GLOBAL` en auditoría).
-- **Seguridad:** Requiere `ROSGRID_MCP_ENABLED=true` y verificación de origen contra la lista blanca CIDR.
+- **Roles Exclusivos:** Exclusivo para `SERVICE_ACCOUNT` (con `scope: "mcp_only"` y `allowed_cidr_list` no vacío). Cualquier otro rol recibe `HTTP 403 Forbidden`.
+- **Seguridad:** Requiere `ROSGRID_MCP_ENABLED=true` y verificación de origen contra `allowed_cidr_list`.
 - **Rate-Limiting:** Máximo 30 peticiones por minuto por cuenta en KeyDB.
 - **Métodos Soportados:** `initialize`, `ping`, `notifications/initialized`, `tools/list`, `tools/call`.
 
-#### Catálogo de las 16 Herramientas Semánticas MCP
+#### Catálogo de las 22 Herramientas Semánticas MCP
+
+> **Gobernanza Maker-Checker en Nivel 3:** Las **6 herramientas de mutación** (#7, #8, #10, #11, #12 —incluyendo el alias de compatibilidad `rosgrid_change_subscriber_rate_limit`— y #20) **nunca modifican el router directamente**; crean una solicitud en la bandeja Maker-Checker con estado `AWAITING_APPROVAL` y `safe_mode_timeout_seconds: 60`.
 
 | # | Nombre de la Tool | Categoría | Descripción Técnica |
 | :--- | :--- | :--- | :--- |
-| **1** | `rosgrid_list_inventory` | Inventario | Lista routers MikroTik autorizados con estado en KeyDB y TOFU SSL. |
-| **2** | `rosgrid_get_router_health` | Telemetría | Consulta CPU%, RAM, Uptime, Temperatura láser y Voltaje. |
-| **3** | `rosgrid_check_sfp_optical_ddm` | Diagnóstico Óptico | Diagnóstico DDM (`rx/tx power` en dBm, clasificación óptica). |
-| **4** | `rosgrid_inspect_routing_bgp_ospf` | Enrutamiento | Resumen de sesiones BGP v7 y adyacencias OSPF. |
-| **5** | `rosgrid_run_live_diagnostic` | Diagnóstico Activo | Ejecuta ping o traceroute acotado (1 a 5 paquetes) hacia un destino. |
-| **6** | `rosgrid_compare_config_diff` | Forense | Diff estilo Git (`unified_diff`) entre respaldos `.rsc` o contra `LIVE`. |
-| **7** | `rosgrid_reconnect_pppoe_client` | Soporte N1 | Reinicia sesión PPPoE en `/ppp/active` con auditoría WORM. |
-| **8** | `rosgrid_propose_network_change` | **Maker-Checker (202)** | Encola propuesta de cambio para revisión humana (Safe Mode 60s). |
-| **9** | `rosgrid_run_360_diagnostics` | Diagnóstico 360° | Ping Multi-MTU (64B/512B/1472B DF), logs de desconexión y Torch. |
-| **10** | `rosgrid_isolate_subscriber` | QoS / Seguridad | Aislamiento idempotente en lista de firewall `AISLADOS_TECNICO` o cola 64k. |
-| **11** | `rosgrid_restore_subscriber` | QoS / Aprovisionamiento | Restauración idempotente y normalización de colas de abonado. |
-| **12** | `rosgrid_change_rate_limit` | QoS Dinámico | Modificación en caliente de perfil Simple Queue / PCQ sin desconexión física. |
-| **13** | `rosgrid_query_bgp_looking_glass` | Looking Glass BGP | Consulta de tabla de rutas y prefijos anunciados a peers BGP. |
-| **14** | `rosgrid_check_config_drift` | Cumplimiento | Detección de desviación de configuración contra la Golden Template. |
-| **15** | `rosgrid_run_cis_audit` | Ciberseguridad | Auditoría CIS Benchmark (10 directivas críticas y Security Score 0-100). |
-| **16** | `rosgrid_detect_mass_outage` | NOC / Incidentes | Correlación de cortes de fibra óptica y caídas masivas en ramas PON/cajas. |
+| **1** | `rosgrid_list_inventory` | Inventario (L1) | Lista routers MikroTik autorizados con estado en KeyDB y TOFU SSL. |
+| **2** | `rosgrid_get_router_health` | Telemetría (L1) | Consulta CPU%, RAM, Uptime, Temperatura láser y Voltaje. |
+| **3** | `rosgrid_check_sfp_optical_ddm` | Diagnóstico Óptico (L1) | Diagnóstico DDM (`rx/tx power` en dBm, clasificación óptica). |
+| **4** | `rosgrid_inspect_routing_bgp_ospf` | Enrutamiento (L1) | Resumen de sesiones BGP v7 y adyacencias OSPF. |
+| **5** | `rosgrid_run_live_diagnostic` | Diagnóstico Activo (L2) | Ejecuta ping o traceroute acotado (1 a 5 paquetes) hacia un destino. |
+| **6** | `rosgrid_compare_config_diff` | Forense (L2) | Diff estilo Git (`unified_diff`) entre respaldos `.rsc` o contra `LIVE`. |
+| **7** | `rosgrid_reconnect_pppoe_client` | **Maker-Checker (`AWAITING_APPROVAL`)** | Solicita reinicio de sesión PPPoE en `/ppp/active` bajo Safe Mode 60s y auditoría WORM. |
+| **8** | `rosgrid_propose_network_change` | **Maker-Checker (`AWAITING_APPROVAL`)** | Encola propuesta de cambio (`POST`/`PATCH`/`PUT`/`DELETE`) para revisión humana (Safe Mode 60s). |
+| **9** | `rosgrid_run_360_diagnostics` | Diagnóstico 360° (L2) | Ping Multi-MTU (64B/512B/1472B DF), logs de desconexión y Torch. |
+| **10** | `rosgrid_isolate_subscriber` | **Maker-Checker (`AWAITING_APPROVAL`)** | Solicita aislamiento idempotente en lista de firewall `AISLADOS_TECNICO` o cola 64k. |
+| **11** | `rosgrid_restore_subscriber` | **Maker-Checker (`AWAITING_APPROVAL`)** | Solicita restauración idempotente y normalización de colas de abonado. |
+| **12** | `rosgrid_change_rate_limit` | **Maker-Checker (`AWAITING_APPROVAL`)** | Solicita modificación de perfil Simple Queue / PCQ (alias soportado: `rosgrid_change_subscriber_rate_limit`). |
+| **13** | `rosgrid_query_bgp_looking_glass` | Looking Glass BGP (L2) | Consulta de tabla de rutas y prefijos anunciados a peers BGP. |
+| **14** | `rosgrid_check_config_drift` | Cumplimiento (L2) | Detección de desviación de configuración contra la Golden Template. |
+| **15** | `rosgrid_run_cis_audit` | Ciberseguridad (L2) | Auditoría CIS Benchmark en vivo (**28 directivas**: 12 Base, 8 ISP, 8 Corporativas y Security Score 0-100). |
+| **16** | `rosgrid_detect_mass_outage` | NOC / Incidentes (L2) | Correlación de cortes de fibra óptica y caídas masivas en ramas PON/cajas. |
+| **17** | `rosgrid_get_l2_topology` | Topología L2 (L1) | Grafo de vecindad física MNDP/LLDP/CDP y telemetría PoE-Out por puerto. |
+| **18** | `rosgrid_check_fleet_cves` | Seguridad / CVEs (L1) | Cruce de versiones RouterOS v7 de la flota contra el catálogo híbrido MikroTik + NIST NVD v2.0. |
+| **19** | `rosgrid_get_recent_syslog` | Telemetría Syslog (L1) | Consulta los eventos recientes del RingBuffer efímero UDP 514/5514 en KeyDB. |
+| **20** | `rosgrid_execute_poe_aware_upgrade` | **Maker-Checker (`AWAITING_APPROVAL`)** | Solicita actualización de RouterOS en orden topológico inverso PoE-Aware con Safety Stop. |
+| **21** | `rosgrid_search_mikrotik_docs` | Documentación Oficial (L1) | Búsqueda semántica en el índice oficial de MikroTik RouterOS v7 (`llms.txt`). |
+| **22** | `rosgrid_get_mikrotik_doc_topic` | Documentación Oficial (L1) | Recupera el contenido técnico de un tópico oficial en `https://manual.mikrotik.com/docs/`. |
 
 *(La especificación detallada, esquemas JSON y ejemplos de integración se detallan en el manual `docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md`).*
 
@@ -1339,7 +1347,7 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
 
 #### 4.5.6 Wi-Fi Corporativo CAPsMAN / WiFiWave2 (`/api/v1/wifi`)
 
-> **Especificación Detallada:** Véase [Spec 51: Consola Táctica Interactiva CAPsMAN v7](file:///home/sinfallas/Dropbox/git/tecno-consultores/RoSGrid/docs/specs/51_INTERACTIVE_CAPSMAN_WIFI_V7_CONFIGURATION_AND_FLEET_PROVISIONING.md) para la matriz completa de mapeo REST, compatibilidad bimodal RouterOS v7.13+ moderno (`/interface/wifi/`) vs legado (`/caps-man/`), y Safe Mode de 60 segundos.
+> **Especificación Detallada:** Véase [Spec 51: Consola Táctica Interactiva CAPsMAN v7](./specs/51_INTERACTIVE_CAPSMAN_WIFI_V7_CONFIGURATION_AND_FLEET_PROVISIONING.md) para la matriz completa de mapeo REST, compatibilidad bimodal RouterOS v7.13+ moderno (`/interface/wifi/`) vs legado (`/caps-man/`), y Safe Mode de 60 segundos.
 
 ##### `GET /api/v1/wifi/capsman/{router_id}/overview`
 
@@ -1725,10 +1733,10 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
 
 | Prefijo / Router | Módulo (`fastapi/src/api/v1/`) | Endpoints Principales |
 | :--- | :--- | :--- |
-| `/api/v1/ipam` | `ipam.py` | `GET/POST/DELETE /blocks`, `GET/POST /subnets`, `GET/POST/PATCH/DELETE /addresses`, `POST /subnets/{id}/sync-dhcp`, `POST /addresses/{id}/pair-subscriber` |
+| `/api/v1/ipam` | `ipam.py` | `GET/POST /vrfs`, `GET/POST /prefixes`, `GET /prefixes/{prefix_id}/next-available`, `GET/POST /addresses`, `GET/POST /customer-services`, `POST /sync-all`, `POST /sync-mikrotik/{router_id}` |
 | `/api/v1/subscriber-devices` | `subscribers.py` | `GET/POST/PATCH/DELETE /subscriber-devices`, `POST /{id}/ping`, `GET /{id}/live-candidates`, `POST /sync-dhcp`, `GET /template-csv`, `POST /import-csv/dry-run`, `POST /import-csv/commit` |
 | `/api/v1/optical-boxes` | `optical_boxes.py` | `GET/POST/PATCH/DELETE /optical-boxes`, `GET /{id}`, `GET /template-csv`, `POST /import-csv/dry-run`, `POST /import-csv/commit` |
-| `/api/v1/field-ops` | `field_ops.py` | `POST /activate-device`, `POST /certify-installation`, `GET /nearby-boxes`, `POST /detect-fiber-cuts` |
+| `/api/v1/field-ops` | `field_ops.py` | `GET/POST /orders`, `POST /verify/{customer_service_id}`, `POST /certify`, `POST /detect-fiber-cuts` |
 | `/api/v1/network-services` | `network_services.py` | `GET/POST/DELETE /bandwidth-profiles`, `POST /{id}/isolate`, `POST /{id}/restore`, `POST /{id}/change-profile` |
 | `/api/v1/diagnostics-360` | `diagnostics_360.py` | `POST /run`, `POST /torch-sample`, `GET /routers/{router_id}/sfp-ddm` |
 | `/api/v1/bgp-looking-glass` | `bgp_looking_glass.py` | `POST /query`, `GET /routers/{router_id}/peers` |
@@ -1737,12 +1745,18 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
 | `/api/v1/cves` | `cve.py` | `GET /fleet-matrix`, `POST /sync-catalog`, `GET /catalog` |
 | `/api/v1/routers/{id}/syslog` | `syslog.py` | `GET /recent`, `GET /enrollment-script` |
 | `/api/v1/compliance` | `compliance.py` | `GET/POST/DELETE /golden-templates`, `POST /drift/check/{router_id}`, `POST /drift/remediate/{router_id}`, `POST /cis/audit/{router_id}`, `POST /cis/harden/{router_id}`, `GET /cis/policies`, `PUT /cis/policies` |
-| `/api/v1/sdwan` | `sdwan.py` | `GET /topology`, `POST /provision-spoke`, `DELETE /tunnels/{tunnel_id}` |
+| `/api/v1/sdwan` | `sdwan.py` | `GET /topology`, `POST /provision-spoke`, `POST /multi-wan-failover`, `DELETE /tunnels/{tunnel_id}` |
 | `/api/v1/switching` | `switching.py` | `GET /routers/{router_id}/vlans`, `GET /rogue-dhcp-alerts`, `POST /dhcp-snooping/enable` |
-| `/api/v1/sla` | `sla.py` | `GET /metrics`, `GET /targets/{router_id}`, `POST /probe/{router_id}`, `GET /report` |
-| `/api/v1/wifi` | `wifi.py` | `GET /overview/{router_id}`, `POST /capsman/toggle/{router_id}`, `GET/POST/PATCH/DELETE /security-profiles/{router_id}`, `GET/POST/PATCH/DELETE /configurations/{router_id}`, `GET/POST/DELETE /provisioning/{router_id}`, `POST /reprovision/{router_id}`, `POST /clients/kick/{router_id}`, `POST /quick-setup/{router_id}` |
+| `/api/v1/sla` | `sla.py` | `GET /metrics/{router_id}`, `GET/PUT /targets/{router_id}`, `POST /probes/run`, `GET /reports/export` |
+| `/api/v1/wifi` | `wifi.py` | `GET /capsman/{router_id}/overview`, `POST /capsman/{router_id}/manager/toggle`, `GET/POST/PATCH/DELETE /capsman/{router_id}/security-profiles`, `GET/POST/PATCH/DELETE /capsman/{router_id}/configurations`, `GET/POST/DELETE /capsman/{router_id}/provisioning`, `POST /capsman/{router_id}/reprovision`, `POST /capsman/{router_id}/clients/kick`, `POST /capsman/{router_id}/quick-setup` |
 | `/api/v1/notification-channels` | `notification_channels.py` | `GET/POST/PATCH/DELETE /notification-channels`, `POST /{id}/test` |
 | `/api/v1/routers/{id}/webfig/ipv6` | `webfig_ipv6.py` | `GET/POST/PATCH/DELETE /addresses`, `GET/POST/PATCH/DELETE /routes`, `GET /neighbors` |
+| `/api/v1/maintenance` | `maintenance.py` | `GET/POST /windows` (canónico; alias raíz `GET/POST ""`), `DELETE /windows/{window_id}` (alias `DELETE /{window_id}`), `POST /windows/{window_id}/cancel` |
+| `/api/v1/rbac` | `rbac.py` | `GET /roles`, `GET /actions`, `PUT /roles/{role_name}/permissions`, `POST /roles/{role_name}/reset` |
+| `/api/v1/audit` | `audit.py` | `GET /logs`, `GET /logs/export`, `POST /logs/verify-integrity` |
+| `/api/v1/sessions` | `sessions.py` | `GET /active`, `DELETE /{session_id}`, `DELETE /user/{user_id}/all` |
+| `/api/v1/operations/approvals` | `approvals.py` | `GET /pending`, `POST /{approval_id}/approve`, `POST /{approval_id}/reject` |
+| `/api/v1/tenants` | `tenants.py` | `GET/POST/PATCH /tenants`, `GET/PUT /{id}/features`, `GET /{id}/features/audit`, `POST /{id}/onboarding-complete`, `POST /switch-context` |
 | `/api/v1/mcp` | `mcp.py` | `POST /api/v1/mcp` (Exclusivo `SERVICE_ACCOUNT` con `scope: "mcp_only"` y `allowed_cidr_list` no vacío; 22 tools semánticas, 6 tools de mutación bajo Maker-Checker `AWAITING_APPROVAL`), `GET /api/v1/mcp/skill` (`SKILL.md` con 8 SOP Playbooks) |
 
 

@@ -34,9 +34,7 @@ router = APIRouter(
     dependencies=[Depends(require_feature("sla_tracker_enabled"))],
 )
 
-_ROS7_TIME_RE = re.compile(
-    r"^(?:(?P<s>\d+(?:\.\d+)?)s)?(?:(?P<ms>\d+(?:\.\d+)?)ms)?(?:(?P<us>\d+(?:\.\d+)?)us)?$"
-)
+_ROS7_TIME_RE = re.compile(r"^(?:(?P<s>\d+(?:\.\d+)?)s)?(?:(?P<ms>\d+(?:\.\d+)?)ms)?(?:(?P<us>\d+(?:\.\d+)?)us)?$")
 
 _PUBLIC_SLA_REFERENCE_TARGETS: list[SlaDiscoveredTargetItem] = [
     SlaDiscoveredTargetItem(
@@ -132,9 +130,7 @@ def _parse_route_gateways(
             continue
         seen_hosts.add(gw_ip)
         comment = str(r.get("comment", "")).strip()
-        label = comment or (
-            f"Carrier WAN Gateway ({iface})" if iface else "Carrier WAN Default Gateway"
-        )
+        label = comment or (f"Carrier WAN Gateway ({iface})" if iface else "Carrier WAN Default Gateway")
         discovered.append(
             SlaDiscoveredTargetItem(
                 target_host=gw_ip,

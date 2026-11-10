@@ -14,9 +14,7 @@ from src.models.core import SystemRoleEnum
 from tests.conftest import FakeAsyncRedis
 
 
-async def _create_test_session(
-    fake_redis: FakeAsyncRedis, role: SystemRoleEnum
-) -> tuple[str, dict[str, str]]:
+async def _create_test_session(fake_redis: FakeAsyncRedis, role: SystemRoleEnum) -> tuple[str, dict[str, str]]:
     tenant_id = str(uuid.uuid4())
     user_id = str(uuid.uuid4())
     session_id = f"sess-beacon-{role.value.lower()}"
@@ -32,9 +30,7 @@ async def _create_test_session(
         },
     )
 
-    token = create_jwt_access_token(
-        user_id, tenant_id, "default-tenant", session_id, role.value, True
-    )
+    token = create_jwt_access_token(user_id, tenant_id, "default-tenant", session_id, role.value, True)
     headers = {
         "Authorization": f"Bearer {token}",
         "X-CSRF-Token": "test-csrf-token",
@@ -153,4 +149,3 @@ def test_create_tenant_request_auto_populates_admin_full_name() -> None:
         default_safemode_seconds=60,
     )
     assert req.admin_full_name == "pedro"
-

@@ -871,7 +871,10 @@ async def test_notification_channels_crud(fake_op_context: dict[str, Any]) -> No
         updated_at=now_utc,
     )
     db.get.return_value = smtp_channel
-    with patch("src.api.v1.notification_channels._decrypt_channel_config", return_value={"smtp_host": "smtp.mail.com", "to_emails": ["admin@mail.com"]}):
+    with patch(
+        "src.api.v1.notification_channels._decrypt_channel_config",
+        return_value={"smtp_host": "smtp.mail.com", "to_emails": ["admin@mail.com"]},
+    ):
         with patch("src.api.v1.notification_channels._dispatch_smtp_sync") as mock_smtp_sync:
             test_smtp_ok = await api_channels.test_channel(smtp_ch_id, NotificationTestRequest(), claims=claims, db=db)
             assert test_smtp_ok.status == "SUCCESS"
@@ -880,7 +883,9 @@ async def test_notification_channels_crud(fake_op_context: dict[str, Any]) -> No
 
         # SMTP dispatch failure
         with patch("src.api.v1.notification_channels._dispatch_smtp_sync", side_effect=Exception("SMTP Auth Failed")):
-            test_smtp_fail = await api_channels.test_channel(smtp_ch_id, NotificationTestRequest(), claims=claims, db=db)
+            test_smtp_fail = await api_channels.test_channel(
+                smtp_ch_id, NotificationTestRequest(), claims=claims, db=db
+            )
             assert test_smtp_fail.status == "FAILED"
             assert "SMTP Auth Failed" in test_smtp_fail.detail
 
@@ -900,7 +905,10 @@ async def test_notification_channels_crud(fake_op_context: dict[str, Any]) -> No
         updated_at=now_utc,
     )
     db.get.return_value = webhook_channel
-    with patch("src.api.v1.notification_channels._decrypt_channel_config", return_value={"webhook_url": "https://hooks.example.com"}):
+    with patch(
+        "src.api.v1.notification_channels._decrypt_channel_config",
+        return_value={"webhook_url": "https://hooks.example.com"},
+    ):
         with patch("src.api.v1.notification_channels._dispatch_webhook", new_callable=AsyncMock) as mock_wh:
             test_wh_ok = await api_channels.test_channel(webhook_ch_id, NotificationTestRequest(), claims=claims, db=db)
             assert test_wh_ok.status == "SUCCESS"
@@ -931,14 +939,18 @@ async def test_notification_channels_crud(fake_op_context: dict[str, Any]) -> No
         assert fail_webhook.status == "FAILED"
 
         bad_channel.channel_type = AlertChannelTypeEnum.SMTP_EMAIL
-        fail_smtp_no_host = await api_channels.test_channel(bad_channel.id, NotificationTestRequest(), claims=claims, db=db)
+        fail_smtp_no_host = await api_channels.test_channel(
+            bad_channel.id, NotificationTestRequest(), claims=claims, db=db
+        )
         assert fail_smtp_no_host.status == "FAILED"
 
     # SMTP channel with host but no recipients
     with patch("src.api.v1.notification_channels._decrypt_channel_config", return_value={"smtp_host": "smtp.test.com"}):
         db.get.return_value = bad_channel
         bad_channel.channel_type = AlertChannelTypeEnum.SMTP_EMAIL
-        fail_smtp_no_recip = await api_channels.test_channel(bad_channel.id, NotificationTestRequest(), claims=claims, db=db)
+        fail_smtp_no_recip = await api_channels.test_channel(
+            bad_channel.id, NotificationTestRequest(), claims=claims, db=db
+        )
         assert fail_smtp_no_recip.status == "FAILED"
 
     db.get.return_value = channel

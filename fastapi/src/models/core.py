@@ -172,7 +172,9 @@ class UserRouterPermission(Base):
     can_read: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     can_write_layer1: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     can_write_layer2: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    can_execute_l2_rpc: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
+    can_execute_l2_rpc: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
     can_bulk_edit_l2: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
     can_export_l2_rsc: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("true"))
     can_execute_diagnostics: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)

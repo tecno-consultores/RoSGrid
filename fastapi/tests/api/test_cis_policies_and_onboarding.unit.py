@@ -208,9 +208,7 @@ async def test_run_cis_audit_with_custom_tenant_policy(
 
 
 @pytest.mark.asyncio
-async def test_tenant_onboarding_lifecycle(
-    sample_tenant_id: uuid.UUID, sample_claims: dict[str, Any]
-) -> None:
+async def test_tenant_onboarding_lifecycle(sample_tenant_id: uuid.UUID, sample_claims: dict[str, Any]) -> None:
     """Verifica persistencia y lectura de onboarding_completed en KeyDB y actualización de flags."""
     db = AsyncMock()
     mock_redis = AsyncMock()
@@ -233,9 +231,7 @@ async def test_tenant_onboarding_lifecycle(
         assert features.onboarding_completed is False
 
         # 2. Completar onboarding explícito
-        complete_res = await complete_tenant_onboarding(
-            tenant_id=sample_tenant_id, db=db, claims=sample_claims
-        )
+        complete_res = await complete_tenant_onboarding(tenant_id=sample_tenant_id, db=db, claims=sample_claims)
         assert complete_res.onboarding_completed is True
         mock_redis.set.assert_called_with(f"rg:{sample_tenant_id}:onboarding_completed", "true")
 
@@ -260,7 +256,5 @@ async def test_tenant_onboarding_lifecycle(
 
         # 4. Simular reinicio de contenedores Docker (KeyDB vacío, PostgreSQL preserva mock_tenant.onboarding_completed=True)
         mock_redis.get.return_value = None
-        after_restart = await get_tenant_features(
-            tenant_id=sample_tenant_id, db=db, claims=sample_claims
-        )
+        after_restart = await get_tenant_features(tenant_id=sample_tenant_id, db=db, claims=sample_claims)
         assert after_restart.onboarding_completed is True

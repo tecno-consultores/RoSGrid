@@ -91,7 +91,6 @@ class IPAMPrefixResponse(BaseModel):
         return str(v) if v is not None else ""
 
 
-
 class IPAMPrefixNextAvailableResponse(BaseModel):
     prefix_id: uuid.UUID
     next_available: str
@@ -145,7 +144,6 @@ class IPAMAddressResponse(BaseModel):
     @classmethod
     def _coerce_address_to_str(cls, v: Any) -> str:
         return str(v) if v is not None else ""
-
 
 
 class BandwidthProfileCreate(BaseModel):
@@ -574,8 +572,3 @@ class OpticalBoxCsvCommitResponse(BaseModel):
     updated_count: int = 0
     box_ids: list[uuid.UUID] = Field(default_factory=list)
     message: str
-
-
-
-
-

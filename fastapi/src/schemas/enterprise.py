@@ -26,6 +26,7 @@ class StrictBaseModel(BaseModel):
 
 class GoldenTemplateCreateRequest(StrictBaseModel):
     """Solicitud para dar de alta una plantilla de configuración homologada."""
+
     model_config = ConfigDict(extra="forbid")
 
     name: str = Field(..., min_length=2, max_length=120)
@@ -66,6 +67,7 @@ class ConfigDriftCheckResponse(BaseModel):
 
 class ConfigDriftRevertRequest(StrictBaseModel):
     """Solicitud de reversión en 1 clic hacia la configuración homologada."""
+
     model_config = ConfigDict(extra="forbid")
 
     router_id: uuid.UUID
@@ -90,6 +92,7 @@ class ConfigDriftRevertResponse(BaseModel):
 
 class SdwanProvisionSpokeRequest(StrictBaseModel):
     """Parámetros de aprovisionamiento Zero-Touch de sucursal Spoke."""
+
     model_config = ConfigDict(extra="forbid")
 
     hub_router_id: uuid.UUID
@@ -135,6 +138,7 @@ class SdwanTopologyResponse(BaseModel):
 
 class SdwanMultiWanFailoverRequest(StrictBaseModel):
     """Configuración de failover inteligente multi-WAN con PBR y Netwatch."""
+
     model_config = ConfigDict(extra="forbid")
 
     router_id: uuid.UUID
@@ -193,6 +197,7 @@ class CisAuditResponse(BaseModel):
 
 class CisAutoHardenRequest(StrictBaseModel):
     """Solicitud de endurecimiento automático (Auto-Hardening)."""
+
     model_config = ConfigDict(extra="forbid")
 
     router_id: uuid.UUID
@@ -229,6 +234,7 @@ class CisPolicyRule(BaseModel):
 
 class CisPoliciesConfigRequest(StrictBaseModel):
     """Solicitud para actualizar las directivas y el perfil de endurecimiento CIS de la empresa."""
+
     model_config = ConfigDict(extra="forbid")
 
     profile: str = Field("CORPORATE", max_length=32)
@@ -261,6 +267,7 @@ class DhcpSnoopingState(BaseModel):
 
 class DhcpSnoopingEnableRequest(StrictBaseModel):
     """Solicitud para habilitar/configurar DHCP Snooping y marcar puertos troncales/acceso."""
+
     model_config = ConfigDict(extra="forbid")
 
     router_id: uuid.UUID
@@ -286,6 +293,7 @@ class RogueDhcpAlertItem(BaseModel):
 
 class RogueDhcpIsolatePortRequest(StrictBaseModel):
     """Deshabilitación preventiva de puerto afectado por Rogue DHCP."""
+
     model_config = ConfigDict(extra="forbid")
 
     router_id: uuid.UUID
@@ -341,6 +349,7 @@ class SlaMetricItem(BaseModel):
 
 class SlaProbeRunRequest(StrictBaseModel):
     """Ejecución de ciclo de sondeo de prueba SLA."""
+
     model_config = ConfigDict(extra="forbid")
 
     router_id: uuid.UUID
@@ -413,6 +422,7 @@ class WifiClientItem(BaseModel):
 
 class CapsmanToggleRequest(BaseModel):
     """Petición para activar o desactivar el servicio CAPsMAN."""
+
     model_config = ConfigDict(extra="forbid")
 
     enabled: bool = True
@@ -431,6 +441,7 @@ class CapsmanToggleResponse(BaseModel):
 
 class WifiSecurityProfileCreate(BaseModel):
     """Creación de perfil de seguridad inalámbrico WPA2/WPA3."""
+
     model_config = ConfigDict(extra="forbid")
 
     name: str
@@ -455,6 +466,7 @@ class WifiSecurityProfileItem(BaseModel):
 
 class WifiConfigurationCreate(BaseModel):
     """Creación de nueva configuración de SSID inalámbrico."""
+
     model_config = ConfigDict(extra="forbid")
 
     name: str
@@ -469,6 +481,7 @@ class WifiConfigurationCreate(BaseModel):
 
 class WifiConfigurationUpdate(BaseModel):
     """Actualización de configuración de SSID inalámbrico."""
+
     model_config = ConfigDict(extra="forbid")
 
     ssid: str | None = None
@@ -482,6 +495,7 @@ class WifiConfigurationUpdate(BaseModel):
 
 class WifiProvisioningRuleCreate(BaseModel):
     """Creación de regla de aprovisionamiento por radiofrecuencia."""
+
     model_config = ConfigDict(extra="forbid")
 
     name: str
@@ -509,6 +523,7 @@ class WifiProvisioningRuleItem(BaseModel):
 
 class WifiQuickSetupRequest(BaseModel):
     """Asistente rápido de despliegue Wi-Fi en 1 Clic."""
+
     model_config = ConfigDict(extra="forbid")
 
     corporate_ssid: str

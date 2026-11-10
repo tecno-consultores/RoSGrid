@@ -275,12 +275,14 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
 
     class MockWebSocket {
       url: string;
+      onopen: (() => void) | null = null;
       onmessage: ((ev: MessageEvent | { data: string }) => void) | null = null;
       onerror: ((ev: Event) => void) | null = null;
       onclose: (() => void) | null = null;
       constructor(url: string) {
         this.url = url;
         setTimeout(() => {
+          if (this.onopen) this.onopen();
           if (this.onmessage) {
             this.onmessage({ data: JSON.stringify({ type: 'TELEMETRY_TICK', cpuLoadPct: 22 }) });
             this.onmessage({ data: JSON.stringify({ cpuLoadPct: 35 }) });
@@ -289,6 +291,9 @@ describe('WebFig Components and Views Unit Tests (Hito 13)', () => {
           }
           if (this.onerror) {
             this.onerror(new Event('error'));
+          }
+          if (this.onclose) {
+            this.onclose();
           }
         }, 10);
       }

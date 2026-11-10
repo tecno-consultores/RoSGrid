@@ -26,6 +26,10 @@
   const routerId = computed(() => String(route.params.routerId || ''));
 
   let wsInstance: WebSocket | null = null;
+  let wsReconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let wsReconnectAttempts = 0;
+  let isUnmounting = false;
+  const isTelemetryWsConnected = ref(false);
 
   const currentRouter = computed<RouterItem | null>(() => {
     if (webFigStore.currentRouter && webFigStore.currentRouter.id === routerId.value) {
@@ -104,12 +108,26 @@
           }
         };
 
+        wsInstance.onopen = () => {
+          wsReconnectAttempts = 0;
+          isTelemetryWsConnected.value = true;
+        };
+
         wsInstance.onerror = () => {
-          // Error de conexión WS
+          isTelemetryWsConnected.value = false;
         };
 
         wsInstance.onclose = () => {
-          // Desconexión limpia
+          isTelemetryWsConnected.value = false;
+          wsInstance = null;
+          if (!isUnmounting && routerId.value && wsReconnectAttempts < 10) {
+            const baseDelay = Math.min(30000, 1000 * Math.pow(2, wsReconnectAttempts));
+            const jitter = Math.floor(Math.random() * 400);
+            wsReconnectAttempts += 1;
+            wsReconnectTimer = setTimeout(() => {
+              connectTelemetryWebSocket();
+            }, baseDelay + jitter);
+          }
         };
       } catch {
         // Excepción de constructor WebSocket
@@ -118,12 +136,18 @@
   }
 
   function disconnectTelemetryWebSocket() {
+    if (wsReconnectTimer) {
+      clearTimeout(wsReconnectTimer);
+      wsReconnectTimer = null;
+    }
     if (wsInstance) {
+      wsInstance.onclose = null;
       if (typeof wsInstance.close === 'function') {
         wsInstance.close();
       }
       wsInstance = null;
     }
+    isTelemetryWsConnected.value = false;
   }
 
   function handleToggleSafeMode() {
@@ -148,10 +172,12 @@
   );
 
   onMounted(() => {
+    isUnmounting = false;
     connectTelemetryWebSocket();
   });
 
   onBeforeUnmount(() => {
+    isUnmounting = true;
     disconnectTelemetryWebSocket();
     liveTelemetryStore.resetChartsBuffer();
     webFigStore.clearRouterWorkspace();
@@ -208,7 +234,7 @@
 
         <router-view v-slot="{ Component }">
           <keep-alive :max="5">
-            <component :is="Component" :key="route.name" />
+            <component :is="Component" :key="`${routerId}:${String(route.name)}`" />
           </keep-alive>
         </router-view>
       </div>

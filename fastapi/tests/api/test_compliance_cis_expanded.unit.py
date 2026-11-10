@@ -68,12 +68,34 @@ def test_cis_catalog_completeness_and_official_links() -> None:
     assert len(CIS_CATALOG_BASE) == 28, f"Se esperaban 28 directivas CIS, encontradas: {len(CIS_CATALOG_BASE)}"
 
     expected_codes = {
-        "CIS-1.1", "CIS-1.2", "CIS-1.3", "CIS-1.4", "CIS-1.5", "CIS-1.6",
-        "CIS-1.7", "CIS-1.8", "CIS-1.9", "CIS-1.10", "CIS-2.1", "CIS-2.2",
-        "CIS-ISP-1", "CIS-ISP-2", "CIS-ISP-3", "CIS-ISP-4",
-        "CIS-ISP-5", "CIS-ISP-6", "CIS-ISP-7", "CIS-ISP-8",
-        "CIS-CORP-1", "CIS-CORP-2", "CIS-CORP-3", "CIS-CORP-4",
-        "CIS-CORP-5", "CIS-CORP-6", "CIS-CORP-7", "CIS-CORP-8",
+        "CIS-1.1",
+        "CIS-1.2",
+        "CIS-1.3",
+        "CIS-1.4",
+        "CIS-1.5",
+        "CIS-1.6",
+        "CIS-1.7",
+        "CIS-1.8",
+        "CIS-1.9",
+        "CIS-1.10",
+        "CIS-2.1",
+        "CIS-2.2",
+        "CIS-ISP-1",
+        "CIS-ISP-2",
+        "CIS-ISP-3",
+        "CIS-ISP-4",
+        "CIS-ISP-5",
+        "CIS-ISP-6",
+        "CIS-ISP-7",
+        "CIS-ISP-8",
+        "CIS-CORP-1",
+        "CIS-CORP-2",
+        "CIS-CORP-3",
+        "CIS-CORP-4",
+        "CIS-CORP-5",
+        "CIS-CORP-6",
+        "CIS-CORP-7",
+        "CIS-CORP-8",
     }
     actual_codes = {item["code"] for item in CIS_CATALOG_BASE}
     assert actual_codes == expected_codes, f"Discrepancia en códigos de directivas: {actual_codes ^ expected_codes}"
@@ -87,7 +109,9 @@ def test_cis_catalog_completeness_and_official_links() -> None:
         assert d.get("remediation_cmd"), f"Directiva {code} carece de comando de remediación"
         assert d.get("standard_ref"), f"Directiva {code} carece de standard_ref normativo"
         assert d.get("standard_url", "").startswith("http"), f"Directiva {code} carece de standard_url HTTP válida"
-        assert "manual.mikrotik.com" in d.get("reference_url", ""), f"Directiva {code} no apunta al manual oficial de MikroTik"
+        assert "manual.mikrotik.com" in d.get("reference_url", ""), (
+            f"Directiva {code} no apunta al manual oficial de MikroTik"
+        )
         assert d.get("rationale"), f"Directiva {code} carece de rationale de riesgo"
 
 

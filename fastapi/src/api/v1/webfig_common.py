@@ -265,7 +265,9 @@ async def intercept_maker_checker_if_needed(
             UserRouterPermission.router_id == router_id,
         )
         perm_res = await db.execute(perm_stmt)
-        perm = perm_res.scalar_one_or_none() if perm_res is not None and hasattr(perm_res, "scalar_one_or_none") else None
+        perm = (
+            perm_res.scalar_one_or_none() if perm_res is not None and hasattr(perm_res, "scalar_one_or_none") else None
+        )
         if isinstance(perm, UserRouterPermission) and perm.bypass_maker_checker is True:
             return None
 
@@ -464,7 +466,8 @@ async def execute_safe_mutation(
         "before_state": before_state or {},
         "mutated_keys": list(mutated_keys) if mutated_keys else [],
         "rollback_cli": rollback_cmd,
-        "summary": summary or f"{action.upper()} /{menu.strip('/')}" + (f" ({effective_item_id})" if effective_item_id else ""),
+        "summary": summary
+        or f"{action.upper()} /{menu.strip('/')}" + (f" ({effective_item_id})" if effective_item_id else ""),
         "created_at": now_utc.isoformat(),
         "expires_at": (now_utc + timedelta(seconds=60)).isoformat(),
     }

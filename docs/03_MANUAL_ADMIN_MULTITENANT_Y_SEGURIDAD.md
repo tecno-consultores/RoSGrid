@@ -350,7 +350,7 @@ flowchart TD
 
 ### 8.7 Sanitización Anti-XSS en Mapas Leaflet / OpenStreetMap (`escapeHtml`)
 
-- Dado que Leaflet inyecta contenido HTML directo en el DOM a través de `popupContent.innerHTML`, los componentes cartográficos (`OsmRouterMap.vue` y `OsmOnuMap.vue`) filtran todos los valores interpolados dinámicamente (`display_name`, `ros_identity`, `serial_number`, `physical_location`, etc.) utilizando la función de escape estricta `escapeHtml()` en `vue3/src/utils/security.ts`.
+- Dado que Leaflet inyecta contenido HTML directo en el DOM a través de `popupContent.innerHTML`, los componentes cartográficos (`OsmRouterMap.vue` y `UnifiedNetworkMap.vue`) filtran todos los valores interpolados dinámicamente (`display_name`, `ros_identity`, `serial_number`, `physical_location`, `last_reachability_status`, etc.) utilizando la función de escape estricta `escapeHtml()` en `vue3/src/utils/security.ts`.
 - Esto neutraliza cualquier vector de inyección de código JavaScript o atributos maliciosos (ej. `<img src=x onerror=...>`, `<script>`) incrustados en nombres de routers, identidades de MikroTik o números de serie.
 
 ### 8.8 Validación Anti-SSRF en Direccionamiento de Routers MikroTik

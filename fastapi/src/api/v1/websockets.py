@@ -10,7 +10,7 @@ import uuid
 from typing import Any
 
 import jwt
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, WebSocketException
 from sqlalchemy import select
 
 from src.core.config import settings
@@ -75,7 +75,8 @@ async def _extract_ws_claims(ws: WebSocket) -> dict[str, Any]:
     try:
         payload = jwt.decode(token, settings.ROSGRID_JWT_SECRET_KEY, algorithms=["HS256"])
     except Exception as exc:
-        await ws.close(code=4401, reason=f"Token inválido: {exc}")
+        logger.debug("Fallo al decodificar JWT en WebSocket: %s", exc)
+        await ws.close(code=4401, reason="Token inválido o expirado")
         raise WebSocketDisconnect(code=4401) from exc
 
     tenant_id = payload.get("tid")
@@ -100,8 +101,16 @@ async def _verify_ws_router_permission(claims: dict[str, Any], router_id: uuid.U
     if role in _GLOBAL_ACCESS_ROLES or claims.get("all_r", False):
         return
 
-    tenant_id = uuid.UUID(claims["tid"])
-    user_id = uuid.UUID(claims["sub"])
+    raw_tid = claims.get("tid")
+    raw_sub = claims.get("sub")
+    if not raw_tid or not raw_sub:
+        allowed_r_ids = [str(r) for r in claims.get("r_ids", [])]
+        if str(router_id) not in allowed_r_ids:
+            raise PermissionError("Permiso insuficiente para monitorear este router")
+        return
+
+    tenant_id = uuid.UUID(str(raw_tid))
+    user_id = uuid.UUID(str(raw_sub))
     async with async_session_maker() as session:
         from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -162,7 +171,7 @@ async def router_live_telemetry_ws(ws: WebSocket, router_id: uuid.UUID) -> None:
     claims = await _extract_ws_claims(ws)
     try:
         await _verify_ws_router_permission(claims, router_id)
-    except PermissionError:
+    except (PermissionError, WebSocketException):
         await ws.close(code=4403, reason="Sin permiso de lectura sobre este router")
         return
 

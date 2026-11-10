@@ -1718,6 +1718,16 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     And match response.content contains 'rosgrid_search_mikrotik_docs'
     And match response.content contains 'rosgrid_get_mikrotik_doc_topic'
 
+  # ============================================================================
+  # HITO 30.39: HOMOLOGACIÓN RLS 0017, ANTI-SSRF UNIFICADO, CANON SYSLOG 10 TOPICS Y VERSIÓN 1.1.0
+  # ============================================================================
+  Scenario: 182. Homologacion RLS de 25 tablas en migracion 0017, canon de 10 topics Syslog y version 1.1.0 en /health (Hito 30.39)
+    Given path '/health'
+    When method get
+    Then status 200
+    And match response.version == '1.1.0'
+
+
 
 
 

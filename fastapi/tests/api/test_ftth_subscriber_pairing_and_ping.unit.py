@@ -242,32 +242,44 @@ class MockMikrotikClient:
         ppp_secrets: list[dict[str, Any]] | None = None,
         ping_res: list[dict[str, Any]] | None = None,
     ):
-        self.dhcp_leases = dhcp_leases if dhcp_leases is not None else [
-            {
-                "address": "10.250.3.55",
-                "mac-address": "AA:BB:CC:11:22:33",
-                "host-name": "FTTH-CLI-151515",
-                "server": "dhcp-wan",
-                "status": "bound",
-            }
-        ]
-        self.ppp_active = ppp_active if ppp_active is not None else [
-            {
-                "name": "cliente_pppoe_15",
-                "address": "10.250.3.77",
-                "caller-id": "AA:BB:CC:44:55:66",
-                "service": "pppoe",
-                "uptime": "2d14h",
-            }
-        ]
-        self.ppp_secrets = ppp_secrets if ppp_secrets is not None else [
-            {
-                "name": "cliente_secret_99",
-                "remote-address": "10.250.3.99",
-                "caller-id": "AA:BB:CC:77:88:99",
-                "service": "pppoe",
-            }
-        ]
+        self.dhcp_leases = (
+            dhcp_leases
+            if dhcp_leases is not None
+            else [
+                {
+                    "address": "10.250.3.55",
+                    "mac-address": "AA:BB:CC:11:22:33",
+                    "host-name": "FTTH-CLI-151515",
+                    "server": "dhcp-wan",
+                    "status": "bound",
+                }
+            ]
+        )
+        self.ppp_active = (
+            ppp_active
+            if ppp_active is not None
+            else [
+                {
+                    "name": "cliente_pppoe_15",
+                    "address": "10.250.3.77",
+                    "caller-id": "AA:BB:CC:44:55:66",
+                    "service": "pppoe",
+                    "uptime": "2d14h",
+                }
+            ]
+        )
+        self.ppp_secrets = (
+            ppp_secrets
+            if ppp_secrets is not None
+            else [
+                {
+                    "name": "cliente_secret_99",
+                    "remote-address": "10.250.3.99",
+                    "caller-id": "AA:BB:CC:77:88:99",
+                    "service": "pppoe",
+                }
+            ]
+        )
         self.ping_res = ping_res or [
             {"host": "10.250.3.55", "status": "ok", "time": "2ms", "packet-loss": 0},
             {"host": "10.250.3.55", "status": "ok", "time": "3ms", "packet-loss": 0},
@@ -856,7 +868,9 @@ async def test_subscriber_device_patch_provisions_dhcp_lease_on_mikrotik(
 
         # Verificar que se invocó POST a /ip/dhcp-server/lease con datos normalizados
         assert any(
-            ep == "/ip/dhcp-server/lease" and payload.get("address") == "10.250.3.60" and payload.get("mac-address") == "AA:BB:CC:22:33:44"
+            ep == "/ip/dhcp-server/lease"
+            and payload.get("address") == "10.250.3.60"
+            and payload.get("mac-address") == "AA:BB:CC:22:33:44"
             for ep, payload in mock_client.posted
         )
     finally:
@@ -997,4 +1011,3 @@ async def test_subscriber_device_ping_auto_discovers_on_bng_when_initial_is_l2_b
         assert dev.router_id == r111_bng.id
     finally:
         app.dependency_overrides.clear()
-

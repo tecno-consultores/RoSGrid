@@ -12,7 +12,8 @@ Actualmente reciben parches de seguridad activos las siguientes ramas e imágene
 
 | Versión | Estado de Soporte | Requisitos de Infraestructura |
 | :--- | :--- | :--- |
-| **1.0.x (`latest`)** | ✅ Soporte Activo | RouterOS v7.13+, PostgreSQL 17, KeyDB Multi-Hilo (o DragonflyDB) |
+| **1.1.x (`latest`)** | ✅ Soporte Activo | RouterOS v7.13+, PostgreSQL 17, KeyDB Multi-Hilo (o DragonflyDB) |
+| **1.0.x** | ✅ Parches Críticos | RouterOS v7.13+, PostgreSQL 17, KeyDB Multi-Hilo (o DragonflyDB) |
 | **< 1.0.0** | ❌ No Soportado | N/A |
 
 ---
@@ -172,5 +173,5 @@ Para una inspección profunda de los controles y auditorías de RoSGrid:
 - [docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md](./docs/05_AUDITORIA_FORENSE_Y_ARQUITECTURA.md) — Cadena WORM SHA-256, índice BRIN y ADR sobre la exclusión de terminales libres.
 - [docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md](./docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md) — Especificación exhaustiva de endpoints protegidos y WebSocket multiplexor.
 - [docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md](./docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md) — Arquitectura de seguridad del servidor Model Context Protocol.
-- [docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md](./docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md) — Pipeline de validación local y suite de 24 pruebas de integración UI-API.
+- [docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md](./docs/08_PIPELINE_VALIDACION_LOCAL_PRODUCCION.md) — Pipeline de validación local y suite de 28 bloques contractuales (77 aserciones HTTP) de integración UI-API.
 - [docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md](./docs/09_PLAN_MAESTRO_PRUEBAS_MANUALES_UAT.md) — Plan maestro de pruebas de aceptación UAT 11X (28 casos E2E).

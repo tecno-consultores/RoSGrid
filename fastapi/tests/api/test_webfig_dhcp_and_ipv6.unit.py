@@ -361,9 +361,7 @@ async def test_webfig_dhcp_idempotent_creation_on_duplicate(
 
         res_net = await api_wf_ip.create_dhcp_network(
             r.id,
-            DhcpNetworkCreateRequest(
-                address="192.168.88.0/24", gateway="192.168.88.1", dns_server="8.8.8.8"
-            ),
+            DhcpNetworkCreateRequest(address="192.168.88.0/24", gateway="192.168.88.1", dns_server="8.8.8.8"),
             claims=claims,
             db=db,
         )

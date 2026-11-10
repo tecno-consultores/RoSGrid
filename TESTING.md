@@ -208,7 +208,9 @@ make audit
       - Internacionalización de DHCP Snooping, Option 82, modal `#modal-dhcp-snooping-config`, grupos de servidores SLA y anomalías FastDrop.
       - Reactividad bilingüe con `computed` en `availableEvents` y `getEventLabel`, insignias traducidas de canal y soporte bilingüe en paquete de diagnóstico y SIEM.
       - Cobertura: `enterpriseComplianceView.unit.ts`, `NotificationChannelsPanel.unit.ts` y `DiagnosticsAndSiemPanel.unit.ts` ampliados con pruebas de conmutación `setLocale('en')` (575 pruebas frontend Vitest en 83 suites aprobadas al 100%).
-      - Escenario 107 Karate UI sincronizado en `docs/examples/`.
+      - Escenario 107 Karate UI sincronizados en `docs/examples/`.
+
+    > **Nota de Trazabilidad (Hitos 30.17 al 30.36):** Los detalles granulares de aseguramiento de calidad de los sub-hitos `30.17` a `30.36` (Specs `94` a `112`: motor WebFig Layer 2 Next-Gen, caché `<KeepAlive>`, agrupación cartográfica `<= 25m`, ayuda contextual, centro de notificaciones `Alt+N`, temas dinámicos `var(--rg-*)`, alineación `.form-row-2col` y auditoría STIG/OWASP de cierre `v1.0.0`) se encuentran documentados en `ROADMAP.md` (sección Hito 30) y en `docs/archive/TESTING_HISTORICO.md`.
 
 27. **Hito 30.37: Gobernanza Zero-Trust MCP (Maker-Checker en las 6 Herramientas de Mutación), Defensa RBAC en Capa de Servicio, Catálogo de 22 Tools, Auditoría CIS Viva de 28 Directivas, Telemetría Opt-In y Centrado Cartográfico de Técnico de Campo (`docs/specs/113`):**
     - **Backend FastAPI (`mcp.py`, `approvals.py`, `network_services.py`, `bulk_and_updates.py`, `compliance.py`, `config.py`):**
@@ -225,5 +227,13 @@ make audit
       - Listener SQLAlchemy `after_begin` en `AsyncSession` que re-aplica `app.current_tenant_id` y `app.is_superadmin_global` automáticamente tras cada `await db.commit()` intermedio.
       - Bloqueo de escalación vertical/horizontal en `PATCH /api/v1/users/{id}`, aislamiento de tokens `mcp_only` en `deps.py`, filtro por `tenant_id` en `approvals.py` y pool TCP compartido `httpx.AsyncClient` en `MikrotikRestClient`.
     - **Frontend Vue 3, Nginx e Infraestructura CI/CD (`vue3/src/`, `vue3/nginx/default.conf`, `.github/workflows/01-backend-qa.yml`, `02-frontend-qa.yml`, `Makefile`):**
-      - Mitigación de XSS en `OsmRouterMap.vue` y `OsmOnuMap.vue`, validación de origen en `httpClient.ts` y `LoginView.vue`, remediación de `<main>` anidados, atributos WCAG 2.1 AA (`aria-label`, `role="button"`, `scope="col"`), paridad i18n (`es.json`/`en.json`), y workflows CI/CD con acciones ancladas por SHA.
+      - Mitigación de XSS en `OsmRouterMap.vue` y `UnifiedNetworkMap.vue`, validación de origen en `httpClient.ts` y `LoginView.vue`, remediación de `<main>` anidados, atributos WCAG 2.1 AA (`aria-label`, `role="button"`, `scope="col"`), paridad i18n (`es.json`/`en.json`), y workflows CI/CD con acciones ancladas por SHA.
       - Escenario 181 Karate API y Escenario 129 Karate UI sincronizados en `docs/examples/`.
+
+29. **Hito 30.39: Remediación Integral de Auditoría de Repositorio v1.1.0 — Homologación RLS 25 Tablas (`0017`), Validador Anti-SSRF Unificado (`ssrf.py`), Canon de 10 Tópicos Syslog, Aislamiento `<keep-alive>` WebFig por Router, Reconexión WS y Pirámide QA 11X:**
+    - **Backend FastAPI (`migrations/versions/0016_*.py`, `0017_homologate_rls_policies.py`, `core/ssrf.py`, `core/config.py`, `api/v1/approvals.py`, `api/v1/mcp.py`, `api/v1/syslog.py`, `redis_layer/sessions.py`, `workers/runner.py`):**
+      - Homologación de las 25 tablas multi-tenant reales con `ENABLE/FORCE ROW LEVEL SECURITY` y bypass `app.is_superadmin_global = 'true'` en `0016` y `0017`.
+      - Validador centralizado `src/core/ssrf.py` (con `ROSGRID_OUTBOUND_ALLOWED_CIDRS` y `is_safe_smtp_target`), sufijo `/{inferred_id}` para `PATCH`/`DELETE` diferidos y persistencia de `EXPIRED` en `approvals.py`, guardias de feature flags y ownership en `mcp.py`, índices secundarios en KeyDB (`rg:sess_idx:*` y `rg:closing_tenants_set`) y latido `/tmp/worker_heartbeat`.
+    - **Frontend Vue 3 y Suites QA 11X (`RouterWebFigLayout.vue`, `router/index.ts`, `templatePresets.ts`, `themes.css`, `UnifiedNetworkMap.vue`, `test_postgres_rls_and_alembic.unit.py`, `test_spec114_security_and_rls.unit.py`):**
+      - Aislamiento `<keep-alive>` con `:key="`${routerId}:${String(route.name)}`"` y reconexión exponencial WS en `RouterWebFigLayout.vue`, preservación de estado previo en errores de sondeo en 7 vistas, 10 tópicos Syslog canónicos en `templatePresets.ts`, 20 alias `--rg-*` en `themes.css`, eliminación del componente muerto `OsmOnuMap.vue`, y nueva suite `@pytest.mark.integration` contra PostgreSQL 17.
+      - **Métricas Vigentes Certificadas (v1.1.0):** **784 pruebas unitarias Backend Pytest** (`>= 95%` cobertura) + **1 suite de integración PostgreSQL/Alembic/RLS**, **606 pruebas unitarias Frontend Vitest** en **83 suites** (`100% pass`), **28 bloques contractuales Front-Back (77 aserciones HTTP)**, y **184 escenarios BDD Karate API** + **131 escenarios BDD Karate UI** espejados en `docs/examples/`.

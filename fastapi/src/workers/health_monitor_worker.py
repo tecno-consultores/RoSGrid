@@ -103,7 +103,9 @@ async def _evaluate_single_router(session: Any, redis: Any, r: Router) -> None:
                     try:
                         fp = await client.ensure_ssl_verified()
                     except Exception as ssl_err:
-                        logger.debug("Error extrayendo huella SSL en health monitor para %s: %s", r.display_name, ssl_err)
+                        logger.debug(
+                            "Error extrayendo huella SSL en health monitor para %s: %s", r.display_name, ssl_err
+                        )
                 if fp:
                     r.ssl_sha256_fingerprint = fp
                     r.ssl_trust_status = SSLTrustStatusEnum.TRUSTED_PINNED
@@ -114,7 +116,9 @@ async def _evaluate_single_router(session: Any, redis: Any, r: Router) -> None:
                     await discover_hardware(client, r)
                     r.last_discovery_sync_at = datetime.now(UTC)
                 except Exception as d_exc:
-                    logger.debug("Fallo en autodescubrimiento durante monitor de salud para %s: %s", r.display_name, d_exc)
+                    logger.debug(
+                        "Fallo en autodescubrimiento durante monitor de salud para %s: %s", r.display_name, d_exc
+                    )
 
             # Detección de presencia y configuración de Syslog hacia RoSGrid
             try:
@@ -137,10 +141,7 @@ async def _evaluate_single_router(session: Any, redis: Any, r: Router) -> None:
     # Detección y evaluación de telemetría y tráfico Syslog existente hacia RoSGrid
     syslog_active_key = f"rg:{r.tenant_id}:router:{r.id}:syslog:active"
     syslog_ring_key = f"rg:{r.tenant_id}:router:{r.id}:syslog:ring"
-    has_syslog_live = bool(
-        await redis.exists(syslog_active_key)
-        or (await redis.llen(syslog_ring_key) > 0)
-    )
+    has_syslog_live = bool(await redis.exists(syslog_active_key) or (await redis.llen(syslog_ring_key) > 0))
     effective_reachable = is_reachable or has_syslog_live
 
     new_status, alert, updated_state = evaluate_router_monitoring_cycle(

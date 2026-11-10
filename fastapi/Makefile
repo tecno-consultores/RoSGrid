@@ -1,4 +1,4 @@
-.PHONY: qa-lint qa-unit qa-mutation qa-contracts qa-bdd qa-dast qa-chaos qa-all clean-cache
+.PHONY: qa-lint qa-unit qa-integration qa-mutation qa-bdd qa-all clean-cache
 
 COMPOSE_FILE = docker-compose.qa.yml
 SERVICE_NAME = qa-backend
@@ -21,6 +21,16 @@ qa-unit:
 		uv sync --all-extras && \
 		uv run pytest -m 'not integration' --cov=src --cov-fail-under=95 --cov-report=term-missing --cov-report=html"
 
+qa-integration:
+	@echo "🗄️ Ejecutando Pruebas de Integración Real PostgreSQL 17 / Alembic / RLS..."
+	docker compose -f $(COMPOSE_FILE) run --rm $(SERVICE_NAME) bash -c "\
+		uv sync --all-extras && \
+		uv run pytest -m 'integration' --no-cov --import-mode=importlib tests/integration/"
+
+qa-bdd:
+	@echo "📚 Ejecutando Pruebas de Aceptación BDD (Karate API)..."
+	docker compose -f $(COMPOSE_FILE) run --rm karatelabs mvn clean test
+
 qa-mutation:
 	@echo "👽 Ejecutando Pruebas de Mutación (Mutmut)..."
 	docker compose -f $(COMPOSE_FILE) run --rm $(SERVICE_NAME) bash -c "\
@@ -28,7 +38,7 @@ qa-mutation:
 		uv run mutmut run && \
 		uv run mutmut results"
 
-qa-all: qa-lint qa-unit qa-mutation
+qa-all: qa-lint qa-unit qa-integration qa-bdd qa-mutation
 	@echo "✅ Pipeline QA Backend (FastAPI RoSGrid) completado exitosamente."
 
 clean-cache:

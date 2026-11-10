@@ -419,7 +419,9 @@ async def test_ipv6_firewall_rules_and_connections_crud(mock_claims: dict) -> No
         patch("src.api.v1.webfig_firewall.invalidate_webfig_cache", new_callable=AsyncMock),
     ):
         mock_cached.return_value = [{".id": "*v6_1", "chain": "input", "protocol": "icmpv6", "action": "accept"}]
-        rules = await list_rules(router_id=router_id, proto="ipv6", table_type="filter", refresh=True, claims=mock_claims, db=mock_db)
+        rules = await list_rules(
+            router_id=router_id, proto="ipv6", table_type="filter", refresh=True, claims=mock_claims, db=mock_db
+        )
         assert len(rules) == 1
         assert mock_cached.await_args.args[3] == "/ipv6/firewall/filter"
 
@@ -428,7 +430,9 @@ async def test_ipv6_firewall_rules_and_connections_crud(mock_claims: dict) -> No
             router_id=router_id,
             proto="ipv6",
             table_type="filter",
-            payload=FirewallRuleCreateRequest(chain="input", action="accept", protocol="icmpv6", comment="Allow ICMPv6"),
+            payload=FirewallRuleCreateRequest(
+                chain="input", action="accept", protocol="icmpv6", comment="Allow ICMPv6"
+            ),
             claims=mock_claims,
             db=mock_db,
         )
@@ -459,5 +463,3 @@ async def test_ipv6_firewall_rules_and_connections_crud(mock_claims: dict) -> No
 
         await list_connections(router_id=router_id, proto="ipv6", refresh=True, claims=mock_claims, db=mock_db)
         assert mock_cached.await_args.args[3] == "/ipv6/firewall/connection"
-
-

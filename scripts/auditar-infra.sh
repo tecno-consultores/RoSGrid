@@ -15,7 +15,7 @@ echo "🛡️ Iniciando Auditoría de Seguridad de Infraestructura (Trivy IaC)..
 # Usamos ":ro" (Read-Only) para garantizar que Trivy no pueda alterar el código fuente.
 TRIVY_IMAGE="${TRIVY_IMAGE:-aquasec/trivy:0.58.2}"
 if ! docker image inspect "${TRIVY_IMAGE}" >/dev/null 2>&1; then
-  TRIVY_IMAGE="aquasec/trivy:latest"
+  docker pull "${TRIVY_IMAGE}" >/dev/null 2>&1 || TRIVY_IMAGE="aquasec/trivy:latest"
 fi
 
 docker run --rm \

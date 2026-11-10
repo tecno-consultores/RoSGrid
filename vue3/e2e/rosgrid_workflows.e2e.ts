@@ -17,7 +17,10 @@ test.describe('Flujos de Negocio E2E Críticos de RoSGrid (docs/specs/28)', () =
             tenant_slug: 'isp-norte',
           }),
         });
-      } else if (route.request().url().includes('/verify-2fa')) {
+      } else if (
+        route.request().url().includes('/2fa/verify') ||
+        route.request().url().includes('/verify-2fa')
+      ) {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',

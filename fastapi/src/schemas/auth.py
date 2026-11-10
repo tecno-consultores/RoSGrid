@@ -141,4 +141,3 @@ class SwitchTenantRequest(BaseModel):
         if not self.target_tenant_id and not self.target_tenant_slug:
             raise ValueError("Debe proporcionar 'target_tenant_id' o 'target_tenant_slug'")
         return self
-

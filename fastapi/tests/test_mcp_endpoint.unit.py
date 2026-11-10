@@ -1183,7 +1183,7 @@ async def test_get_mcp_skill_json() -> None:
     assert resp.status_code == 200
     data = json.loads(resp.body.decode("utf-8"))
     assert data["name"] == "rosgrid-noc-operator"
-    assert data["version"] == "1.0.0"
+    assert data["version"] == "1.2.0"
     assert "rosgrid-noc-operator" in data["content"]
 
 
@@ -1465,4 +1465,3 @@ async def test_approvals_execute_mcp_deferred_tools() -> None:
         assert out_upg is not None
         assert out_upg["status"] == "COMPLETED"
         assert out_upg["processed_count"] == 1
-

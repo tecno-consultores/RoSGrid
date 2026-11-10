@@ -17,9 +17,8 @@ class Settings(BaseSettings):
     )
 
     ROSGRID_ENV: str = "development"
-    ENVIRONMENT: str = "development"
     PROJECT_NAME: str = "RoSGrid"
-    VERSION: str = "1.0.0"
+    VERSION: str = "1.2.0"
     ROSGRID_HTTP_PORT: int = 8080
 
     # PostgreSQL
@@ -35,10 +34,19 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _compute_default_urls(self) -> "Settings":
+        self.ROSGRID_ENV = self.ROSGRID_ENV.strip().lower()
         self._ensure_database_urls()
         self._ensure_redis_url()
         self._validate_production_secrets()
         return self
+
+    @property
+    def is_production(self) -> bool:
+        return self.ROSGRID_ENV.strip().lower() == "production"
+
+    @property
+    def ENVIRONMENT(self) -> str:
+        return self.ROSGRID_ENV
 
     def _validate_production_secrets(self) -> None:
         if self.ROSGRID_ENV.strip().lower() != "production":
@@ -90,9 +98,9 @@ class Settings(BaseSettings):
             self.ROSGRID_REDIS_URL = f"redis://{auth}rosgrid_redis:6379/0"
 
     # Criptografía y Políticas DISA ASD STIG V6R5 / OWASP DevGuide (Spec 68)
-    ROSGRID_MASTER_VAULT_KEY: str = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
-    ROSGRID_JWT_SECRET_KEY: str = "qa_jwt_secret_key_for_ephemeral_testing_only"
-    ROSGRID_CSRF_HMAC_SECRET: str = "qa_csrf_hmac_secret_for_ephemeral_testing_only"
+    ROSGRID_MASTER_VAULT_KEY: str = _DEFAULT_QA_VAULT_KEY
+    ROSGRID_JWT_SECRET_KEY: str = _DEFAULT_QA_JWT_SECRET
+    ROSGRID_CSRF_HMAC_SECRET: str = _DEFAULT_QA_CSRF_SECRET
     ROSGRID_REFRESH_TOKEN_GRACE_PERIOD_SECONDS: int = 5
     ROSGRID_MAX_LOGIN_ATTEMPTS: int = 3
     ROSGRID_LOGIN_LOCKOUT_SECONDS: int = 900
@@ -136,6 +144,20 @@ class Settings(BaseSettings):
     # Configuración de Orígenes Cruzados (CORS) y Despliegue Separado
     ROSGRID_CORS_ORIGINS: str = "*"
     ROSGRID_CROSS_ORIGIN_COOKIES: bool = False
+    ROSGRID_OUTBOUND_ALLOWED_CIDRS: str = ""
+    ROSGRID_TRUSTED_PROXIES: list[str] = [
+        "127.0.0.0/8",
+        "::1/128",
+        "10.0.0.0/8",
+        "172.16.0.0/12",
+        "192.168.0.0/16",
+    ]
+
+    @property
+    def outbound_allowed_cidrs_list(self) -> list[str]:
+        if not self.ROSGRID_OUTBOUND_ALLOWED_CIDRS:
+            return []
+        return [c.strip() for c in self.ROSGRID_OUTBOUND_ALLOWED_CIDRS.split(",") if c.strip()]
 
     @property
     def cors_origins_list(self) -> list[str]:

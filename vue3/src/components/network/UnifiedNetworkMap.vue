@@ -703,7 +703,7 @@
         const icon = L.divIcon({
           className: 'rg-sub-marker-container',
           html: `
-            <div class="rg-sub-marker ${isDownByRouter ? 'sub-rca-pulse' : ''}" style="--sub-color: ${color};" role="button" tabindex="0" title="Cliente: ${escapeHtml(labelText)} (${s.last_reachability_status || 'ONLINE'})">
+            <div class="rg-sub-marker ${isDownByRouter ? 'sub-rca-pulse' : ''}" style="--sub-color: ${color};" role="button" tabindex="0" title="Cliente: ${escapeHtml(labelText)} (${escapeHtml(s.last_reachability_status || 'ONLINE')})">
               <svg class="sub-triangle-svg" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
                 <polygon points="10,2 19,18 1,18" fill="${color}" stroke="#0B0F19" stroke-width="2.2" stroke-linejoin="round" />
               </svg>
@@ -986,7 +986,7 @@
         <div v-if="activeL2Edge" class="drawer-card l2-edge-detail-card">
           <div class="card-header">
             <h3>🔗 Enlace Físico Capa 2 ({{ activeL2Edge.protocol }})</h3>
-            <button type="button" class="btn-close-card" @click="activeL2Edge = null">✖</button>
+            <button type="button" class="btn-close-card" aria-label="Cerrar" title="Cerrar" @click="activeL2Edge = null">✖</button>
           </div>
           <div class="card-body">
             <p><strong>Interfaz Origen:</strong> <code>{{ activeL2Edge.source_interface }}</code></p>
@@ -1004,7 +1004,7 @@
         <div v-if="activeLocationGroup" class="drawer-card location-group-card">
           <div class="card-header">
             <h3>🏢 Sitio Compartido ({{ activeLocationGroup.routers.length }} Equipos)</h3>
-            <button type="button" class="btn-close-card" @click="activeLocationGroup = null; clearSpiderLayer()">✖</button>
+            <button type="button" class="btn-close-card" aria-label="Cerrar" title="Cerrar" @click="activeLocationGroup = null; clearSpiderLayer()">✖</button>
           </div>
           <div class="card-body">
             <p class="site-location-meta">
@@ -1050,7 +1050,7 @@
         <div v-if="activeRouter" class="drawer-card router-detail-card">
           <div class="card-header">
             <h3>🏢 {{ activeRouter.display_name }}</h3>
-            <button type="button" class="btn-close-card" @click="activeRouter = null">✖</button>
+            <button type="button" class="btn-close-card" aria-label="Cerrar" title="Cerrar" @click="activeRouter = null">✖</button>
           </div>
           <div class="card-body">
             <p><strong>IP / Endpoint:</strong> {{ activeRouter.ip_address || activeRouter.api_base_url || '--' }}</p>
@@ -1088,7 +1088,7 @@
         <div v-if="activeBox" class="drawer-card box-detail-card">
           <div class="card-header">
             <h3>📦 Caja NAP: {{ activeBox.box_code }}</h3>
-            <button type="button" class="btn-close-card" @click="activeBox = null">✖</button>
+            <button type="button" class="btn-close-card" aria-label="Cerrar" title="Cerrar" @click="activeBox = null">✖</button>
           </div>
           <div class="card-body">
             <p><strong>Capacidad:</strong> {{ activeBox.occupied_ports_count || 0 }} / {{ activeBox.capacity_ports || 16 }} Puertos</p>
@@ -1102,7 +1102,7 @@
         <div v-if="activeSubscriber" class="drawer-card subscriber-detail-card">
           <div class="card-header">
             <h3>💻 {{ activeSubscriber.endpoint_identifier }}</h3>
-            <button type="button" class="btn-close-card" @click="activeSubscriber = null">✖</button>
+            <button type="button" class="btn-close-card" aria-label="Cerrar" title="Cerrar" @click="activeSubscriber = null">✖</button>
           </div>
           <div class="card-body">
             <!-- Aviso de Prevención de Colisiones (Lock de otro técnico) -->

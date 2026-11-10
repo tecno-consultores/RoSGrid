@@ -374,11 +374,19 @@ async def test_run_cis_audit_all_28_directives_pass_fail_and_exceptions() -> Non
                 {"name": "api", "disabled": "true"},
                 {"name": "winbox", "disabled": "false", "address": "10.0.0.0/8", "vrf": "mgmt-vrf"},
             ],
-            "/user": [{"name": "admin", "disabled": "true"}, {"name": "secadmin", "disabled": "false", "group": "full"}],
+            "/user": [
+                {"name": "admin", "disabled": "true"},
+                {"name": "secadmin", "disabled": "false", "group": "full"},
+            ],
             "/ip/dns": {"allow-remote-requests": "no"},
             "/ip/neighbor/discovery-settings": {"discover-interface-list": "lan"},
             "/ip/firewall/filter": [
-                {"comment": "CIS-1.8 bruteforce", "src-address-list": "ssh_blacklist", "action": "drop", "chain": "input"},
+                {
+                    "comment": "CIS-1.8 bruteforce",
+                    "src-address-list": "ssh_blacklist",
+                    "action": "drop",
+                    "chain": "input",
+                },
                 {"comment": "CIS-1.7 bogon", "src-address-list": "bogons", "action": "drop", "chain": "input"},
                 {"action": "fasttrack-connection", "packet-mark": "!qos-shaped", "comment": "CIS-2.2"},
                 {"chain": "input", "dst-port": "53", "action": "drop", "comment": "CIS-ISP-2"},
@@ -582,7 +590,9 @@ async def test_auto_harden_router_all_28_directives_success_and_error_branches()
     ):
         res_partial = await auto_harden_router(
             r_obj.id,
-            CisAutoHardenRequest(router_id=r_obj.id, directive_codes_to_apply=[r.code for r in datacenter_policy.rules]),
+            CisAutoHardenRequest(
+                router_id=r_obj.id, directive_codes_to_apply=[r.code for r in datacenter_policy.rules]
+            ),
             request=req,
             db=db,
             claims=claims,
@@ -776,7 +786,11 @@ async def test_execute_single_step_and_fleet_upgrade_branches() -> None:
     client.get = AsyncMock(return_value=[{"action": "rosgridsyslog", "topics": "account,info"}])
     res_log = await _execute_single_step(
         client,
-        {"method": "PUT", "endpoint": "system/logging", "payload": {"action": "rosgridsyslog", "topics": "info,account"}},
+        {
+            "method": "PUT",
+            "endpoint": "system/logging",
+            "payload": {"action": "rosgridsyslog", "topics": "info,account"},
+        },
     )
     assert res_log["action"] == "rosgridsyslog"
 
@@ -913,7 +927,9 @@ async def test_execute_single_step_and_fleet_upgrade_branches() -> None:
     assert is_chr_det is True
 
     client.post = AsyncMock(return_value={})
-    client.get = AsyncMock(return_value={"installed-version": "7.15", "latest-version": "7.15", "status": "ERROR: connection timed out"})
+    client.get = AsyncMock(
+        return_value={"installed-version": "7.15", "latest-version": "7.15", "status": "ERROR: connection timed out"}
+    )
     with patch("src.api.v1.bulk_and_updates._fetch_latest_version_via_http_fallback", AsyncMock(return_value="7.16.2")):
         inst_v, lat_v, st_txt = await _resolve_package_update_versions(client, r_obj, "stable", "7.15", "7.15")
     assert lat_v == "7.16.2"
@@ -1027,7 +1043,10 @@ async def test_backups_and_approvals_missing_branches() -> None:
     client.delete = AsyncMock(side_effect=RuntimeError("cleanup user err"))
     with (
         patch("src.api.v1.backups.asyncio.sleep", AsyncMock()),
-        patch("src.api.v1.backups._read_and_cleanup_rsc_file", AsyncMock(return_value="/ip address add address=1.1.1.1/32")),
+        patch(
+            "src.api.v1.backups._read_and_cleanup_rsc_file",
+            AsyncMock(return_value="/ip address add address=1.1.1.1/32"),
+        ),
         patch("src.api.v1.backups.MikrotikRestClient") as mock_tmp_cls,
     ):
         tmp_inst = AsyncMock()
@@ -1041,7 +1060,16 @@ async def test_backups_and_approvals_missing_branches() -> None:
     with patch("src.api.v1.backups._resolve_user_group_ftp_status", AsyncMock(side_effect=RuntimeError("err"))):
         assert await _try_fallback_rsc_export(client, "f") == ("", None)
 
-    hunks = _build_side_by_side_hunks(["--- base.rsc", "+++ target.rsc", "@@ -1,2 +1,2 @@", "/ip service", "+set telnet disabled=yes", "-set telnet disabled=no"])
+    hunks = _build_side_by_side_hunks(
+        [
+            "--- base.rsc",
+            "+++ target.rsc",
+            "@@ -1,2 +1,2 @@",
+            "/ip service",
+            "+set telnet disabled=yes",
+            "-set telnet disabled=no",
+        ]
+    )
     assert len(hunks) == 2
     assert hunks[0].section_header == "/ip service"
 
@@ -1065,13 +1093,17 @@ async def test_backups_and_approvals_missing_branches() -> None:
         patch("src.api.v1.backups.export_router_rsc", AsyncMock(return_value="/ip service set telnet disabled=yes")),
         patch("src.api.v1.backups.write_audit_log", make_asserting_audit_mock()),
     ):
-        _, trig_res = await _execute_router_backup_core(r_obj.id, tid, uid, "admin", "TENANT_ADMIN", "127.0.0.1", claims, db)
+        _, trig_res = await _execute_router_backup_core(
+            r_obj.id, tid, uid, "admin", "TENANT_ADMIN", "127.0.0.1", claims, db
+        )
     assert trig_res.status == "CREATED"
 
     req = MagicMock()
     req.client.host = "127.0.0.1"
     with patch("src.api.v1.backups._execute_router_backup_core", AsyncMock(side_effect=RuntimeError("Conn reset"))):
-        batch_res = await trigger_batch_backups(BatchBackupTriggerRequest(router_ids=[r_obj.id]), request=req, claims=claims, db=db)
+        batch_res = await trigger_batch_backups(
+            BatchBackupTriggerRequest(router_ids=[r_obj.id]), request=req, claims=claims, db=db
+        )
     assert batch_res.failed_count == 1
 
     # get_backup_diff con LIVE y excepción en export (líneas 684-689)
@@ -1080,7 +1112,9 @@ async def test_backups_and_approvals_missing_branches() -> None:
         patch("src.api.v1.backups.get_router_and_client", AsyncMock(return_value=(r_obj, client))),
         patch("src.api.v1.backups.export_router_rsc", AsyncMock(side_effect=RuntimeError("Live export err"))),
     ):
-        diff_live = await get_backup_diff(r_obj.id, base_backup_id=prev_backup.id, target_backup_id="LIVE", claims=claims, db=db)
+        diff_live = await get_backup_diff(
+            r_obj.id, base_backup_id=prev_backup.id, target_backup_id="LIVE", claims=claims, db=db
+        )
     assert diff_live.lines_removed >= 1
 
     # Approvals: _execute_deferred_operation con prefijo rest/ (línea 93)
@@ -1115,7 +1149,15 @@ async def test_backups_and_approvals_missing_branches() -> None:
     assert list_res.total == 1
 
     real_like_db = AsyncSession.__new__(AsyncSession)
-    u_mock = User(id=app_req.requested_by, tenant_id=tid, username="maker_u", email="m@x.com", full_name="M", password_hash="x", role=SystemRoleEnum.SUPPORT_L2)
+    u_mock = User(
+        id=app_req.requested_by,
+        tenant_id=tid,
+        username="maker_u",
+        email="m@x.com",
+        full_name="M",
+        password_hash="x",
+        role=SystemRoleEnum.SUPPORT_L2,
+    )
     real_like_db.execute = AsyncMock(  # type: ignore[method-assign]
         side_effect=[
             _MockResult(single=1),

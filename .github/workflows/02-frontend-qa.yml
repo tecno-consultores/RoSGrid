@@ -12,10 +12,15 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: frontend-qa-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   frontend-qa:
     name: 🎨 Certificación Efímera de Frontend Vue 3 en Docker (Regla Cero)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: 📥 Checkout del código de RoSGrid

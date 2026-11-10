@@ -164,7 +164,7 @@ def create_app() -> FastAPI:
 
     app = FastAPI(
         title="RoSGrid API",
-        version="1.0.0",
+        version=settings.VERSION,
         description="Plataforma Centralizada Multi-Tenant para Flotas MikroTik RouterOS v7+ (GPL-3.0-only)",
         default_response_class=ORJSONResponse,
         docs_url=docs_url,
@@ -220,18 +220,20 @@ def create_app() -> FastAPI:
         )
         is_prod = settings.ROSGRID_ENV == "production"
         if isinstance(exc, MikrotikApiError):
-            http_status = (
-                exc.status_code
-                if exc.status_code in (400, 404, 409, 422)
-                else status.HTTP_400_BAD_REQUEST
+            http_status = exc.status_code if exc.status_code in (400, 404, 409, 422) else status.HTTP_400_BAD_REQUEST
+            error_detail = (
+                "Operación rechazada por RouterOS REST API." if is_prod else (exc.message or exc.detail or str(exc))
             )
-            error_detail = "Operación rechazada por RouterOS REST API." if is_prod else (exc.message or exc.detail or str(exc))
             return JSONResponse(
                 status_code=http_status,
                 content={"detail": f"Error en RouterOS REST API: {error_detail}"},
             )
         if isinstance(exc, MikrotikAuthFailedError):
-            msg = "Fallo de autenticación con el router MikroTik." if is_prod else f"Fallo de autenticación con el router: {exc}"
+            msg = (
+                "Fallo de autenticación con el router MikroTik."
+                if is_prod
+                else f"Fallo de autenticación con el router: {exc}"
+            )
             return JSONResponse(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 content={"detail": msg},

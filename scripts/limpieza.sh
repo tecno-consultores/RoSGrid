@@ -24,7 +24,7 @@ docker compose -f vue3/docker-compose.qa.yml --profile graphify down --remove-or
 if [[ "${1:-}" == "--deep" || "${1:-}" == "--all" ]]; then
   echo "  -> Deteniendo stack local de producción (--deep/--all)..."
   docker compose -f docker-compose.prod.local.yml down --remove-orphans -v 2>/dev/null || true
-  docker ps -q --filter "name=rosgrid" | xargs -r docker stop 2>/dev/null || true
+  docker ps -q --filter "name=rosgrid_.*_local" | xargs -r docker stop 2>/dev/null || true
 fi
 
 echo "[2/4] Eliminando artefactos temporales y residuos del Backend (fastapi)..."

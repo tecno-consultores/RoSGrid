@@ -355,9 +355,20 @@ class FakeAsyncRedis:
 
 @pytest.fixture(autouse=True)
 def configure_test_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    import socket as _socket
+
     from src.core.config import settings
 
     monkeypatch.setattr(settings, "ROSGRID_ENV", "qa_unit")
+    _orig_getaddrinfo = _socket.getaddrinfo
+
+    def _safe_test_getaddrinfo(host: Any, port: Any, *args: Any, **kwargs: Any) -> Any:
+        h = str(host or "").strip().lower().rstrip(".")
+        if h.endswith((".example.com", ".local")):
+            return [(_socket.AF_INET, _socket.SOCK_STREAM, _socket.IPPROTO_TCP, "", ("93.184.215.14", int(port or 0)))]
+        return _orig_getaddrinfo(host, port, *args, **kwargs)
+
+    monkeypatch.setattr(_socket, "getaddrinfo", _safe_test_getaddrinfo)
 
 
 @pytest.fixture(autouse=True)

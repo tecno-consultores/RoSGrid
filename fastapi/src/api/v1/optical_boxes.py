@@ -278,9 +278,7 @@ def _validate_optical_box_csv_row(
 
 @optical_boxes_router.get("/template-csv")
 async def download_optical_boxes_csv_template(
-    claims: dict[str, Any] = Depends(
-        require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)
-    ),
+    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)),
 ) -> Response:
     """Descarga la plantilla CSV oficial RFC 4180 para importación masiva / Upsert de Cajas NAP."""
     headers = (
@@ -304,9 +302,7 @@ async def download_optical_boxes_csv_template(
 async def import_optical_boxes_csv_dry_run(
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_tenant_db_session),
-    claims: dict[str, Any] = Depends(
-        require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)
-    ),
+    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)),
 ) -> OpticalBoxCsvDryRunResponse:
     """Paso 1: Validación en seco de archivo CSV para carga masiva / Upsert de Cajas NAP (máximo 500 filas)."""
     tenant_id = get_tenant_id(claims)
@@ -346,9 +342,7 @@ async def import_optical_boxes_csv_dry_run(
 async def import_optical_boxes_csv_commit(
     request: Request,
     db: AsyncSession = Depends(get_tenant_db_session),
-    claims: dict[str, Any] = Depends(
-        require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)
-    ),
+    claims: dict[str, Any] = Depends(require_roles(SystemRoleEnum.SUPERADMIN_GLOBAL, SystemRoleEnum.TENANT_ADMIN)),
 ) -> OpticalBoxCsvCommitResponse:
     """Paso 2: Confirmación e inserción/actualización (Upsert) transaccional de Cajas NAP con auditoría WORM."""
     tenant_id = get_tenant_id(claims)

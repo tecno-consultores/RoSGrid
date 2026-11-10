@@ -35,6 +35,7 @@ def _load_text_fixture(subpath: str) -> str:
 # 1. DOMINIO CIS HARDENING (Invariantes Negativas de Fábrica)
 # ============================================================================
 
+
 def test_cis_hardening_factory_default_negative_invariant():
     """Un router recién sacado de la caja (de fábrica) DEBE reprobar las directivas críticas."""
     data = _load_json_fixture("cis/factory_default_cis.json")
@@ -89,6 +90,7 @@ def test_cis_hardening_nominal_rosgrid_positive_invariant():
 # 2. DOMINIO TOPOLOGÍA L2 MNDP (Invariante Negativa ante Tabla Vacía)
 # ============================================================================
 
+
 def test_topology_l2_factory_default_negative_invariant():
     """Ante router de fábrica aislado (tabla de vecinos vacía), no debe alucinar enlaces."""
     empty_neighbors = _load_json_fixture("topology/factory_default_neighbors.json")
@@ -139,6 +141,7 @@ def test_topology_l2_thirdparty_neighbors_negative_invariant():
 # 3. DOMINIO IPAM & POOLS DHCP
 # ============================================================================
 
+
 def test_ipam_factory_default_negative_invariant():
     """El router de fábrica no debe reportar leases si la lista de leases está vacía."""
     data = _load_json_fixture("ipam/factory_default_dhcp.json")
@@ -160,6 +163,7 @@ def test_ipam_configured_pools_nominal_invariant():
 # 4. DOMINIO POE & HARDWARE NO COMPATIBLE
 # ============================================================================
 
+
 def test_poe_unsupported_hardware_negative_invariant():
     """Routers sin chip PoE (CHR, hEX, routers core) deben retornar lista vacía."""
     poe_data = _load_json_fixture("poe/factory_default_no_poe.json")
@@ -178,6 +182,7 @@ def test_poe_active_netpower_nominal_invariant():
 # 5. DOMINIO ROGUE DHCP SNOOPING
 # ============================================================================
 
+
 def test_rogue_dhcp_factory_default_negative_invariant():
     """En configuración de fábrica no deben existir falsas alertas de servidores rogue."""
     alerts = _load_json_fixture("rogue_dhcp/factory_default_bridge.json")
@@ -194,6 +199,7 @@ def test_rogue_dhcp_detected_alert_invariant():
 # ============================================================================
 # 6. DOMINIO CAPsMAN & WIFI 6 (Erradicación de Falsos Positivos)
 # ============================================================================
+
 
 def test_capsman_factory_default_negative_invariant():
     """Un router de fábrica sin wireless ni CAPsMAN DEBE retornar 0 APs, 0 radios y 0 clientes."""
@@ -226,6 +232,7 @@ def test_capsman_nominal_positive_invariant():
 # ============================================================================
 # 7. DOMINIO CONFIG DRIFT (Invariante Negativa de Desviación de Fábrica)
 # ============================================================================
+
 
 def test_config_drift_factory_default_negative_invariant():
     """Un router con configuración de fábrica contra la Golden Baseline DEBE reportar 100% drift."""

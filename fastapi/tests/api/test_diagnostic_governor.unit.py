@@ -240,9 +240,7 @@ async def test_router_concurrency_governor_429(
 
 
 @pytest.mark.asyncio
-async def test_router_circuit_breaker_tripped_direct_slot_503(
-    fake_redis: FakeAsyncRedis
-) -> None:
+async def test_router_circuit_breaker_tripped_direct_slot_503(fake_redis: FakeAsyncRedis) -> None:
     tid = uuid.uuid4()
     rid = uuid.uuid4()
 
@@ -329,7 +327,9 @@ async def test_device_operational_lock_and_collision_avoidance(
                 "role": SystemRoleEnum.FIELD_TECH.value,
             },
         )
-        other_token = create_jwt_access_token(str(other_uid), str(tid), "gov-tenant", other_sid, SystemRoleEnum.FIELD_TECH.value, True)
+        other_token = create_jwt_access_token(
+            str(other_uid), str(tid), "gov-tenant", other_sid, SystemRoleEnum.FIELD_TECH.value, True
+        )
         other_headers = {
             "Authorization": f"Bearer {other_token}",
             "Cookie": f"rosgrid_access_token={other_token}",
@@ -365,4 +365,3 @@ async def test_router_circuit_breaker_recovery(fake_redis: FakeAsyncRedis) -> No
     await DiagnosticGovernor.record_router_success(tid, rid)
     cb_after = await fake_redis.get(f"rg:{tid}:diag:cb:{rid}")
     assert cb_after is None
-

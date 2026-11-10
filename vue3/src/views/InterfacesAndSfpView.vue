@@ -102,7 +102,10 @@
         ),
       }));
     } catch {
-      interfacesList.value = [];
+      if (interfacesList.value.length === 0) {
+        interfacesList.value = [];
+      }
+      errorMessage.value = 'Error al consultar el inventario de interfaces.';
     } finally {
       isLoading.value = false;
       if (activeTab.value === 'wifi') {

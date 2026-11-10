@@ -37,9 +37,7 @@ class DiagnosticGovernor:
     CIRCUIT_BREAKER_COOLDOWN_SECONDS: int = 30
 
     @classmethod
-    async def get_cached_ping(
-        cls, tenant_id: uuid.UUID, device_id: uuid.UUID
-    ) -> Optional[dict[str, Any]]:
+    async def get_cached_ping(cls, tenant_id: uuid.UUID, device_id: uuid.UUID) -> Optional[dict[str, Any]]:
         """Recupera el resultado de un diagnóstico reciente desde la caché de KeyDB si existe."""
         try:
             redis = get_redis_client()
@@ -61,7 +59,6 @@ class DiagnosticGovernor:
             logger.debug(f"Aviso al consultar caché diagnóstica para {device_id}: {e}")
             return None
 
-
     @classmethod
     async def set_cached_ping(
         cls,
@@ -78,8 +75,12 @@ class DiagnosticGovernor:
                 "device_id": str(data.get("device_id")),
                 "assigned_ipv4": data.get("assigned_ipv4"),
                 "last_reachability_status": data.get("last_reachability_status"),
-                "ping_latency_ms": str(data.get("ping_latency_ms")) if data.get("ping_latency_ms") is not None else None,
-                "packet_loss_pct": str(data.get("packet_loss_pct")) if data.get("packet_loss_pct") is not None else None,
+                "ping_latency_ms": str(data.get("ping_latency_ms"))
+                if data.get("ping_latency_ms") is not None
+                else None,
+                "packet_loss_pct": str(data.get("packet_loss_pct"))
+                if data.get("packet_loss_pct") is not None
+                else None,
                 "message": data.get("message"),
             }
             await redis.set(cache_key, json.dumps(payload), ex=ttl_seconds)
@@ -87,9 +88,7 @@ class DiagnosticGovernor:
             logger.debug(f"Aviso al almacenar en caché diagnóstica para {device_id}: {e}")
 
     @classmethod
-    async def invalidate_cached_ping(
-        cls, tenant_id: uuid.UUID, device_id: uuid.UUID
-    ) -> None:
+    async def invalidate_cached_ping(cls, tenant_id: uuid.UUID, device_id: uuid.UUID) -> None:
         """Invalida la caché de diagnóstico previo para forzar una prueba inmediata (orden de NOC)."""
         try:
             redis = get_redis_client()
@@ -99,9 +98,7 @@ class DiagnosticGovernor:
             logger.debug(f"Aviso al invalidar caché diagnóstica para {device_id}: {e}")
 
     @classmethod
-    async def check_user_rate_limit(
-        cls, tenant_id: uuid.UUID, user_id: uuid.UUID
-    ) -> None:
+    async def check_user_rate_limit(cls, tenant_id: uuid.UUID, user_id: uuid.UUID) -> None:
         """Verifica que el usuario no exceda la tasa de diagnósticos permitida por minuto."""
         try:
             redis = get_redis_client()
@@ -121,9 +118,7 @@ class DiagnosticGovernor:
 
     @classmethod
     @asynccontextmanager
-    async def acquire_router_slot(
-        cls, tenant_id: uuid.UUID, router_id: uuid.UUID
-    ) -> AsyncGenerator[None, None]:
+    async def acquire_router_slot(cls, tenant_id: uuid.UUID, router_id: uuid.UUID) -> AsyncGenerator[None, None]:
         """Adquiere un slot de concurrencia para el router MikroTik asegurando que no se sature.
         Verifica el Circuit Breaker, el límite por minuto y el semáforo concurrente in-flight.
         """
@@ -188,9 +183,7 @@ class DiagnosticGovernor:
                     logger.debug(f"Error liberando slot in-flight: {e}")
 
     @classmethod
-    async def record_router_failure(
-        cls, tenant_id: uuid.UUID, router_id: uuid.UUID
-    ) -> None:
+    async def record_router_failure(cls, tenant_id: uuid.UUID, router_id: uuid.UUID) -> None:
         """Registra un fallo o timeout contra el router y activa el Circuit Breaker si se supera el umbral."""
         try:
             redis = get_redis_client()
@@ -201,16 +194,12 @@ class DiagnosticGovernor:
             if fails >= cls.CIRCUIT_BREAKER_FAILURES_THRESHOLD:
                 cb_key = f"rg:{tenant_id}:diag:cb:{router_id}"
                 await redis.set(cb_key, "OPEN", ex=cls.CIRCUIT_BREAKER_COOLDOWN_SECONDS)
-                logger.warning(
-                    f"Circuit Breaker ACTIVADO para router {router_id} tras {fails} fallas consecutivas."
-                )
+                logger.warning(f"Circuit Breaker ACTIVADO para router {router_id} tras {fails} fallas consecutivas.")
         except Exception as e:
             logger.debug(f"Error registrando falla de router: {e}")
 
     @classmethod
-    async def record_router_success(
-        cls, tenant_id: uuid.UUID, router_id: uuid.UUID
-    ) -> None:
+    async def record_router_success(cls, tenant_id: uuid.UUID, router_id: uuid.UUID) -> None:
         """Limpia el contador de fallas ante una ejecución exitosa."""
         try:
             redis = get_redis_client()
@@ -263,6 +252,7 @@ class DiagnosticGovernor:
             redis = get_redis_client()
             lock_key = f"rg:{tenant_id}:device:lock:{device_id}"
             from datetime import datetime, timezone
+
             now_iso = datetime.now(timezone.utc).isoformat()
             payload = {
                 "technician_id": str(technician_id),
@@ -299,6 +289,7 @@ class DiagnosticGovernor:
             if locked_at_str:
                 try:
                     from datetime import datetime, timezone
+
                     dt = datetime.fromisoformat(locked_at_str)
                     minutes_ago = max(0, int((datetime.now(timezone.utc) - dt).total_seconds() // 60))
                 except Exception:
@@ -317,4 +308,3 @@ class DiagnosticGovernor:
         except Exception as e:
             logger.debug(f"Aviso consultando operational lock para {device_id}: {e}")
             return {"is_locked": False}
-

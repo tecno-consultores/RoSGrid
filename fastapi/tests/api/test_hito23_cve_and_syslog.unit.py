@@ -138,7 +138,9 @@ def test_parse_syslog_routeros_v7_winbox_and_rest_samples():
     assert "filter rule added" in ev_winbox.message
     assert "Oct 27" not in ev_winbox.message
 
-    raw_api_del = "<30>Oct 27 14:32:18 1 filter rule removed by api:rosgrid_agent@::/action:0 (/ip firewall filter remove *5)"
+    raw_api_del = (
+        "<30>Oct 27 14:32:18 1 filter rule removed by api:rosgrid_agent@::/action:0 (/ip firewall filter remove *5)"
+    )
     ev_api = parse_syslog_message(raw_api_del)
     assert ev_api.severity == "info"
     assert ev_api.topics == "system,info"
@@ -208,8 +210,10 @@ async def test_cve_autosync_first_time_of_day_and_24h_cache(sample_tenant, sampl
         message="Synced successfully",
     )
 
-    with patch("src.api.v1.cve.get_redis_client", return_value=fake_redis), \
-         patch("src.api.v1.cve.sync_cve_catalog", AsyncMock(return_value=fake_sync)) as mock_sync:
+    with (
+        patch("src.api.v1.cve.get_redis_client", return_value=fake_redis),
+        patch("src.api.v1.cve.sync_cve_catalog", AsyncMock(return_value=fake_sync)) as mock_sync,
+    ):
         res = await get_fleet_cves_summary(claims=sample_claims, db=db)
         assert res.auto_synced is True
         assert res.is_cache_fresh is True
@@ -232,21 +236,24 @@ async def test_cve_cache_fresh_does_not_call_remote_sync(sample_tenant, sample_c
     fake_redis = AsyncMock()
     now_iso = datetime.now(timezone.utc).isoformat()
     # Caché existente y vigente con 72000s restantes
-    fake_redis.get.return_value = json.dumps({
-        "last_sync": now_iso,
-        "total_cves": 25,
-        "source_url": "https://mikrotik.com/supportsec",
-    })
+    fake_redis.get.return_value = json.dumps(
+        {
+            "last_sync": now_iso,
+            "total_cves": 25,
+            "source_url": "https://mikrotik.com/supportsec",
+        }
+    )
     fake_redis.ttl.return_value = 72000
 
-    with patch("src.api.v1.cve.get_redis_client", return_value=fake_redis), \
-         patch("src.api.v1.cve.sync_cve_catalog", AsyncMock()) as mock_sync:
+    with (
+        patch("src.api.v1.cve.get_redis_client", return_value=fake_redis),
+        patch("src.api.v1.cve.sync_cve_catalog", AsyncMock()) as mock_sync,
+    ):
         res = await get_fleet_cves_summary(claims=sample_claims, db=db)
         assert res.auto_synced is False
         assert res.is_cache_fresh is True
         assert res.cache_ttl_seconds == 72000
         mock_sync.assert_not_called()  # NO se llama a la sincronización remota porque el caché está vigente
-
 
 
 @pytest.mark.asyncio
@@ -266,8 +273,10 @@ async def test_sync_cve_catalog_mikrotik_rss_success(tmp_path):
     mock_resp.status_code = 200
     mock_resp.text = sample_rss
 
-    with patch("httpx.AsyncClient.get", AsyncMock(return_value=mock_resp)), \
-         patch("src.services.cve_matcher._CATALOG_PATH", tmp_path / "catalog.json"):
+    with (
+        patch("httpx.AsyncClient.get", AsyncMock(return_value=mock_resp)),
+        patch("src.services.cve_matcher._CATALOG_PATH", tmp_path / "catalog.json"),
+    ):
         res = await sync_cve_catalog(sync_nvd=False)
         assert res.success is True
         assert res.source_url == "https://mikrotik.com/supportsec"
@@ -294,9 +303,24 @@ async def test_parse_nvd_response_ros7_and_legacy_filtering():
                 # CVE exclusivo de RouterOS v6 (debe ser descartado)
                 "cve": {
                     "id": "CVE-2018-14847",
-                    "descriptions": [{"lang": "en", "value": "Directory traversal in RouterOS version 6 before 6.42.1."}],
+                    "descriptions": [
+                        {"lang": "en", "value": "Directory traversal in RouterOS version 6 before 6.42.1."}
+                    ],
                     "metrics": {"cvssMetricV31": [{"cvssData": {"baseScore": 9.8, "baseSeverity": "CRITICAL"}}]},
-                    "configurations": [{"nodes": [{"cpeMatch": [{"criteria": "cpe:2.3:o:mikrotik:routeros:*:*:*:*:*:*:*:*", "versionEndExcluding": "6.42.1"}]}]}],
+                    "configurations": [
+                        {
+                            "nodes": [
+                                {
+                                    "cpeMatch": [
+                                        {
+                                            "criteria": "cpe:2.3:o:mikrotik:routeros:*:*:*:*:*:*:*:*",
+                                            "versionEndExcluding": "6.42.1",
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
                 }
             },
             {
@@ -308,7 +332,21 @@ async def test_parse_nvd_response_ros7_and_legacy_filtering():
                         {"lang": "en", "value": "Vulnerability in RouterOS v7 BGP module fixed in 7.18."},
                     ],
                     "metrics": {"cvssMetricV31": [{"cvssData": {"baseScore": 8.1, "baseSeverity": "HIGH"}}]},
-                    "configurations": [{"nodes": [{"cpeMatch": [{"criteria": "cpe:2.3:o:mikrotik:routeros:*:*:*:*:*:*:*:*", "versionStartIncluding": "7.0", "versionEndExcluding": "7.18"}]}]}],
+                    "configurations": [
+                        {
+                            "nodes": [
+                                {
+                                    "cpeMatch": [
+                                        {
+                                            "criteria": "cpe:2.3:o:mikrotik:routeros:*:*:*:*:*:*:*:*",
+                                            "versionStartIncluding": "7.0",
+                                            "versionEndExcluding": "7.18",
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
                     "published": "2025-06-15T12:00:00.000",
                 }
             },
@@ -318,7 +356,21 @@ async def test_parse_nvd_response_ros7_and_legacy_filtering():
                     "id": "CVE-2024-54772",
                     "descriptions": [{"lang": "es", "value": "Descripción enriquecida por NIST NVD"}],
                     "metrics": {"cvssMetricV31": [{"cvssData": {"baseScore": 5.3, "baseSeverity": "MEDIUM"}}]},
-                    "configurations": [{"nodes": [{"cpeMatch": [{"criteria": "cpe:2.3:o:mikrotik:routeros:*:*:*:*:*:*:*:*", "versionStartIncluding": "7.1", "versionEndExcluding": "7.18.0"}]}]}],
+                    "configurations": [
+                        {
+                            "nodes": [
+                                {
+                                    "cpeMatch": [
+                                        {
+                                            "criteria": "cpe:2.3:o:mikrotik:routeros:*:*:*:*:*:*:*:*",
+                                            "versionStartIncluding": "7.1",
+                                            "versionEndExcluding": "7.18.0",
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
                     "published": "2025-05-06T00:00:00.000",
                 }
             },
@@ -375,7 +427,21 @@ async def test_sync_cve_catalog_multi_source_mikrotik_and_nvd(tmp_path):
                     "id": "CVE-2025-99902",
                     "descriptions": [{"lang": "es", "value": "Falla en RouterOS v7"}],
                     "metrics": {"cvssMetricV31": [{"cvssData": {"baseScore": 7.5, "baseSeverity": "HIGH"}}]},
-                    "configurations": [{"nodes": [{"cpeMatch": [{"criteria": "cpe:2.3:o:mikrotik:routeros:*:*:*:*:*:*:*:*", "versionStartIncluding": "7.0", "versionEndExcluding": "7.16"}]}]}],
+                    "configurations": [
+                        {
+                            "nodes": [
+                                {
+                                    "cpeMatch": [
+                                        {
+                                            "criteria": "cpe:2.3:o:mikrotik:routeros:*:*:*:*:*:*:*:*",
+                                            "versionStartIncluding": "7.0",
+                                            "versionEndExcluding": "7.16",
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
                     "published": "2025-08-01T00:00:00.000",
                 }
             }
@@ -391,8 +457,10 @@ async def test_sync_cve_catalog_multi_source_mikrotik_and_nvd(tmp_path):
             resp.json.return_value = nvd_json
         return resp
 
-    with patch("httpx.AsyncClient.get", side_effect=mock_get), \
-         patch("src.services.cve_matcher._CATALOG_PATH", tmp_path / "catalog.json"):
+    with (
+        patch("httpx.AsyncClient.get", side_effect=mock_get),
+        patch("src.services.cve_matcher._CATALOG_PATH", tmp_path / "catalog.json"),
+    ):
         res = await sync_cve_catalog(sync_nvd=True)
         assert res.success is True
         assert res.mikrotik_cves_count > 0
@@ -488,9 +556,10 @@ def test_parse_syslog_local_facility():
 @pytest.mark.asyncio
 async def test_push_event_to_ringbuffer_handles_redis_error():
     ev = parse_syslog_message("<11> critical down")
-    with patch("src.workers.syslog_collector.get_redis_client", side_effect=Exception("Redis down")):
+    with patch("src.workers.syslog_collector.get_redis_client", side_effect=Exception("Redis down")) as mock_get_redis:
         # Should not raise exception
         await push_event_to_ringbuffer(uuid.uuid4(), uuid.uuid4(), ev)
+        mock_get_redis.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -501,21 +570,37 @@ async def test_get_router_syslog_events_handles_redis_error():
 
 
 def test_syslog_udp_protocol():
+    from src.api.v1.syslog import CANONICAL_SYSLOG_TOPICS
+
+    assert len(CANONICAL_SYSLOG_TOPICS) == 10
+    assert "pppoe,ppp,info,warning,error" in CANONICAL_SYSLOG_TOPICS
+
     tid = uuid.uuid4()
     rid = uuid.uuid4()
     ip_map = {"192.168.1.1": (tid, rid)}
     proto = SyslogUdpProtocol(ip_map)
 
     # Unknown IP dropped
-    proto.datagram_received(b"<14>test", ("10.0.0.99", 5514))
+    with patch("src.workers.syslog_collector.parse_syslog_message") as mock_parse_unknown:
+        proto.datagram_received(b"<14>test", ("10.0.0.99", 5514))
+        mock_parse_unknown.assert_not_called()
 
     # Known IP processed
-    with patch("src.workers.syslog_collector.push_event_to_ringbuffer", AsyncMock()):
+    with (
+        patch("src.workers.syslog_collector.push_event_to_ringbuffer", new_callable=AsyncMock) as mock_push,
+        patch("asyncio.create_task") as mock_task,
+    ):
         proto.datagram_received(b"<14>test known", ("192.168.1.1", 5514))
+        mock_push.assert_called_once()
+        mock_task.assert_called_once()
+        coro = mock_task.call_args[0][0]
+        if hasattr(coro, "close"):
+            coro.close()
 
     # Error handling during decode / parse
-    with patch("src.workers.syslog_collector.parse_syslog_message", side_effect=Exception("parse error")):
+    with patch("src.workers.syslog_collector.parse_syslog_message", side_effect=Exception("parse error")) as mock_err:
         proto.datagram_received(b"broken", ("192.168.1.1", 5514))
+        mock_err.assert_called_once()
 
 
 def test_cve_catalog_loading_missing_and_corrupt(tmp_path):
@@ -714,6 +799,7 @@ async def test_syslog_collector_worker_loop_bind_error():
 
         # Should log and return cleanly without crashing
         await syslog_collector_worker_loop()
+        mock_loop.create_datagram_endpoint.assert_awaited_once()
 
 
 def test_syslog_udp_protocol_connection_made():
@@ -731,12 +817,14 @@ async def test_enrich_router_telemetry_with_syslog():
     rid = uuid.uuid4()
     mock_redis = MagicMock()
     mock_pipe = MagicMock()
-    mock_pipe.execute = AsyncMock(return_value=[
-        {"operational_status": "ONLINE", "last_cpu_load_pct": "12", "last_free_memory_pct": "60"},
-        1,  # exists -> True
-        5,  # llen -> 5
-        0,  # configured -> 0
-    ])
+    mock_pipe.execute = AsyncMock(
+        return_value=[
+            {"operational_status": "ONLINE", "last_cpu_load_pct": "12", "last_free_memory_pct": "60"},
+            1,  # exists -> True
+            5,  # llen -> 5
+            0,  # configured -> 0
+        ]
+    )
     mock_redis.pipeline.return_value = mock_pipe
 
     res = await enrich_router_telemetry(mock_redis, tid, rid)
@@ -755,17 +843,17 @@ async def test_enrich_router_telemetry_configured_without_traffic():
     rid = uuid.uuid4()
     mock_redis = MagicMock()
     mock_pipe = MagicMock()
-    mock_pipe.execute = AsyncMock(return_value=[
-        {"operational_status": "ONLINE", "last_cpu_load_pct": "5", "last_free_memory_pct": "80"},
-        0,  # traffic -> False
-        0,  # llen -> 0
-        1,  # configured -> True
-    ])
+    mock_pipe.execute = AsyncMock(
+        return_value=[
+            {"operational_status": "ONLINE", "last_cpu_load_pct": "5", "last_free_memory_pct": "80"},
+            0,  # traffic -> False
+            0,  # llen -> 0
+            1,  # configured -> True
+        ]
+    )
     mock_redis.pipeline.return_value = mock_pipe
 
     res = await enrich_router_telemetry(mock_redis, tid, rid)
     assert res["operational_status"] == "ONLINE"
     assert res["syslog_active"] is True
     assert res["syslog_event_count"] == 0
-
-

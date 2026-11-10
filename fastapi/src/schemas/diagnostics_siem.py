@@ -38,6 +38,7 @@ class UiErrorTelemetryRecordResponse(BaseModel):
 
 class DiagnosticBundleRequest(BaseModel):
     """Solicitud para generar y descargar el paquete de soporte y diagnóstico sanitizado."""
+
     model_config = ConfigDict(extra="forbid")
 
     format: BundleArchiveFormat = Field(
@@ -77,6 +78,7 @@ class DiagnosticBundleResponse(BaseModel):
 
 class SiemForwarderConfigUpdateRequest(BaseModel):
     """Solicitud para configurar el reenvío de logs hacia el servidor SIEM del ISP."""
+
     model_config = ConfigDict(extra="forbid")
 
     enabled: bool = Field(default=False, description="Activa o desactiva el reenvío hacia el SIEM del ISP.")
