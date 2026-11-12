@@ -149,3 +149,17 @@ class SiemTestDeliveryResponse(BaseModel):
     target: str
     latency_ms: float
     detail: str
+
+
+class VersionCheckStatusResponse(BaseModel):
+    """Estado del comprobador pasivo de nuevas versiones en GitHub Releases (Zero Auto-Update)."""
+
+    enabled: bool
+    current_version: str
+    latest_version: str | None = None
+    update_available: bool = False
+    release_url: str
+    release_name: str | None = None
+    published_at: str | None = None
+    last_checked_at: str | None = None
+    last_status: str = "pending"

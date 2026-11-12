@@ -20,6 +20,7 @@ from src.workers.subscriber_status_poller import subscriber_status_poller_worker
 from src.workers.syslog_collector import syslog_collector_worker_loop
 from src.workers.telemetry_beacon_worker import telemetry_beacon_worker_loop
 from src.workers.vault_rotation_worker import vault_rotation_worker_loop
+from src.workers.version_check_worker import version_check_worker_loop
 
 logging.basicConfig(
     level=logging.INFO,
@@ -87,6 +88,7 @@ async def main_workers_runner() -> None:
             asyncio.create_task(subscriber_status_poller_worker_loop(), name="SubscriberStatusPollerWorker"),
             asyncio.create_task(session_lifecycle_worker_loop(), name="SessionLifecycleWorker"),
             asyncio.create_task(telemetry_beacon_worker_loop(stop_event), name="TelemetryBeaconWorker"),
+            asyncio.create_task(version_check_worker_loop(stop_event), name="VersionCheckWorker"),
         ]
     )
     heartbeat_task = asyncio.create_task(_worker_heartbeat_loop(stop_event, tasks), name="WorkerHeartbeat")

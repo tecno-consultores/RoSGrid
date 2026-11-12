@@ -19,6 +19,7 @@ import time
 import zipfile
 from collections import deque
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -611,3 +612,113 @@ async def send_siem_test_event(tenant_id: str) -> SiemTestDeliveryResponse:
             latency_ms=elapsed_ms,
             detail=f"Error al conectar con el colector SIEM ({proto}): {exc}",
         )
+
+
+def _check_worker_heartbeat_status() -> dict[str, Any]:
+    """Inspecciona la marca de tiempo de latido de los workers (CC <= 4)."""
+    hb_path = Path("/tmp/worker_heartbeat")
+    try:
+        if not hb_path.exists():
+            return {"status": "external_or_unmounted", "healthy": None, "age_seconds": None}
+        content = hb_path.read_text(encoding="utf-8").strip()
+        age_seconds = max(0, int(time.time()) - int(content))
+        return {
+            "status": "healthy" if age_seconds <= 60 else "stale",
+            "healthy": age_seconds <= 60,
+            "age_seconds": age_seconds,
+        }
+    except Exception as exc:
+        logger.debug("Error leyendo heartbeat de worker: %s", exc)
+        return {"status": "read_error", "healthy": False, "age_seconds": None}
+
+
+def _extract_log_line_weight(line: str) -> tuple[int, bool, bool]:
+    """Determina peso de severidad y flags warning/error para la línea (CC <= 4)."""
+    if "[WARNING]" in line:
+        return _LEVEL_WEIGHTS["WARNING"], True, False
+    if "[ERROR]" in line:
+        return _LEVEL_WEIGHTS["ERROR"], False, True
+    if "[CRITICAL]" in line:
+        return _LEVEL_WEIGHTS["CRITICAL"], False, True
+    if "[INFO]" in line:
+        return _LEVEL_WEIGHTS["INFO"], False, False
+    return 0, False, False
+
+
+def _filter_tenant_backend_logs(
+    tenant_id: str,
+    min_weight: int,
+    max_events: int,
+) -> tuple[list[str], int, int]:
+    """Filtra logs de backend aislados por tenant y totaliza contadores globales anónimos (CC <= 5)."""
+    warn_cnt = 0
+    err_cnt = 0
+    tenant_matches: list[str] = []
+    tid_str = str(tenant_id)
+
+    for line in list(_BACKEND_LOG_RING_BUFFER):
+        weight, is_warn, is_err = _extract_log_line_weight(line)
+        if is_warn:
+            warn_cnt += 1
+        elif is_err:
+            err_cnt += 1
+
+        if weight >= min_weight and tid_str in line:
+            clean_line, _ = redact_sensitive_diagnostic_text(line)
+            tenant_matches.append(clean_line)
+
+    return tenant_matches[-max_events:], warn_cnt, err_cnt
+
+
+async def get_tenant_platform_diagnostics_summary(
+    tenant_id: str,
+    max_events: int = 25,
+    min_level: str = "WARNING",
+) -> dict[str, Any]:
+    """Genera un resumen estructurado y sanitizado de salud de plataforma aislado por tenant (CC <= 5)."""
+    ensure_diagnostic_log_handler()
+    min_weight = _LEVEL_WEIGHTS.get(min_level.upper(), 30)
+
+    redis_status = "disconnected"
+    try:
+        r = get_redis_client()
+        await r.ping()
+        redis_status = "connected"
+    except Exception as r_exc:
+        logger.debug("Ping a KeyDB falló en platform diagnostics: %s", r_exc)
+
+    workers_info = _check_worker_heartbeat_status()
+    raw_ui_errors = await _fetch_buffered_ui_errors(tenant_id)
+    sanitized_ui_errors = [redact_sensitive_diagnostic_text(json.dumps(err))[0] for err in raw_ui_errors[:max_events]]
+    siem_cfg = await get_siem_forwarder_config(tenant_id)
+    tenant_logs, warn_cnt, err_cnt = _filter_tenant_backend_logs(tenant_id, min_weight, max_events)
+
+    if redis_status == "disconnected":
+        overall_status = "CRITICAL"
+    elif err_cnt > 0 or len(tenant_logs) > 0 or len(raw_ui_errors) > 0:
+        overall_status = "DEGRADED"
+    else:
+        overall_status = "HEALTHY"
+
+    return {
+        "overall_status": overall_status,
+        "version": settings.VERSION,
+        "generated_at": datetime.now(UTC).isoformat(),
+        "tenant_id": str(tenant_id),
+        "infrastructure": {
+            "redis": redis_status,
+            "workers": workers_info,
+        },
+        "siem_forwarder": {
+            "enabled": siem_cfg.enabled,
+            "protocol": siem_cfg.protocol,
+            "min_level": siem_cfg.min_level,
+        },
+        "process_error_counters": {
+            "warnings_in_ring": warn_cnt,
+            "errors_in_ring": err_cnt,
+        },
+        "tenant_ui_errors_total": len(raw_ui_errors),
+        "recent_tenant_ui_errors": sanitized_ui_errors,
+        "recent_tenant_backend_alerts": tenant_logs,
+    }

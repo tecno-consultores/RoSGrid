@@ -227,7 +227,9 @@ describe('RgMcpTokenModal.vue — Emisión de Tokens MCP para Agentes IA', () =>
     expect(copiedLlms).toContain('# Agent Instructions');
     expect(copiedLlms).toContain('- **ask**:');
     expect(copiedLlms).toContain('- **goal**:');
-    expect(copiedLlms).toContain('rosgrid_list_routers');
+    expect(copiedLlms).toContain('rosgrid_list_inventory');
+    expect(copiedLlms).toContain('rosgrid_get_platform_diagnostics');
+    expect(copiedLlms).toContain('## 23 Registered MCP Tools');
 
     // Generar token y probar los 6 conectores de clientes MCP
     await wrapper.find('form').trigger('submit.prevent');

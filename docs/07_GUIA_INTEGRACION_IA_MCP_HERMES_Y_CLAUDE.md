@@ -26,13 +26,13 @@ flowchart TB
 
     subgraph "Servidor MCP RoSGrid (FastAPI)"
         RateLimit --> Dispatcher[Dispatcher JSON-RPC 2.0]
-        Dispatcher --> ToolsList["tools/list (22 Tools Semánticas)"]
+        Dispatcher --> ToolsList["tools/list (23 Tools Semánticas)"]
         Dispatcher --> ToolExec["tools/call (Ejecutor Aislado)"]
         ToolExec --> AuditWORM[(Bitácora WORM: MCP_AI_TOOL_CALL)]
     end
 
     subgraph "Freno de Seguridad y Enlace a MikroTik"
-        ToolExec --> ReadTools["1-6, 9, 13-19 & 21-22: Diagnóstico, Topología L2, CVE, Syslog y Grounding"]
+        ToolExec --> ReadTools["1-6, 9, 13-19 & 21-23: Diagnóstico, Topología L2, CVE, Syslog, Grounding y Salud Interna"]
         ToolExec --> MutationTools["7, 8, 10-12 & 20: 6 Mutaciones Nivel 3 (Maker-Checker AWAITING_APPROVAL y Safe Mode 60s)"]
         
         ReadTools -->|Pool TLS Keep-Alive| MikroTik[MikroTik RouterOS v7]
@@ -49,7 +49,11 @@ flowchart TB
 2. **Rol Exclusivo `SERVICE_ACCOUNT` y Lista Blanca CIDR Obligatoria:** Solo tokens Bearer pertenecientes exclusivamente al rol `SERVICE_ACCOUNT` pueden interactuar con el endpoint. Cada cuenta debe tener configurada una lista no vacía `allowed_cidr_list` (ej. `["10.0.10.0/24", "192.168.1.50/32"]`); una lista vacía `[]` o una IP fuera de rango es rechazada inmediatamente con HTTP `403 Forbidden`.
 3. **Protección contra Ruido Vecino (*Rate-Limiting* en KeyDB):** Cada petición incrementa un contador atómico con ventana móvil de 60 segundos (`mcp:ratelimit:{tenant_id}:{user_id}`). Si supera `ROSGRID_MCP_RATE_LIMIT_PER_MIN` (30 req/min), responde con HTTP `429 Too Many Requests`.
 4. **Aislamiento *Split-Credential* (Cero Acceso a la Bóveda):** Ninguna herramienta MCP permite a la IA leer contraseñas de routers. La IA opera invocando las herramientas mediante el `router_id`; el backend resuelve internamente las credenciales y maneja la sesión HTTPS.
-5. **Freno Obligatorio *Maker-Checker* en las 6 Herramientas de Mutación Nivel 3:** Los agentes IA **jamás pueden modificar directamente** el router MikroTik. Las 6 herramientas de mutación (`rosgrid_reconnect_pppoe_client`, `rosgrid_propose_network_change`, `rosgrid_isolate_subscriber`, `rosgrid_restore_subscriber`, `rosgrid_change_rate_limit` y `rosgrid_execute_poe_aware_upgrade`) insertan la propuesta forzosamente en `approval_requests` con estado `PENDING` (`status: "AWAITING_APPROVAL"`) para que un operador humano (`Checker`) la apruebe y ejecute bajo Safe Mode (60s).
+5. **Freno Obligatorio *Maker-Checker* en las 6 Herramientas de Mutación Nivel 3:** Los agentes IA **jamás pueden modificar directamente** el router MikroTik. Las 6 herramientas de mutación (`rosgrid_reconnect_pppoe_client`, `rosgrid_propose_network_change`, `rosgrid_isolate_subscriber`, `rosgrid_restore_subscriber`, `rosgrid_change_rate_limit` y `rosgrid_execute_poe_aware_upgrade`) insertan la propuesta forzosamente en `approval_requests` con estado `PENDING` (`status: "AWAITING_APPROVAL"`) para que un operador humano (`Checker`) la apruebe y ejecute:
+   - `rosgrid_propose_network_change` ejecuta bajo **Safe Mode (*Dead Man's Switch* 60s)**.
+   - `rosgrid_reconnect_pppoe_client` resuelve dinámicamente el `.id` activo de `pppoe_username` en `/ppp/active` al instante de aprobar.
+   - `rosgrid_isolate_subscriber`, `rosgrid_restore_subscriber` y `rosgrid_change_rate_limit` ejecutan aprovisionamiento técnico idempotente (`Idempotency-Key`) sobre `AISLADOS_TECNICO` y `Simple Queues`.
+   - `rosgrid_execute_poe_aware_upgrade` ejecuta por etapas DAG PoE-aware con *Safety Stop* automático.
 6. **Trazabilidad Forense WORM:** Toda invocación a `tools/call` queda sellada criptográficamente en `audit_logs` con `action_category = "MCP_AI_TOOL_CALL"`.
 
 ### 1.2 ¿De Dónde Sale el Token Bearer y Cómo se Genera?
@@ -144,11 +148,11 @@ Verificación de latencia y confirmación de sesión:
 
 ### 2.3 Método `tools/list`
 
-Devuelve el catálogo de las 22 herramientas semánticas con sus esquemas JSON de entrada (`inputSchema`).
+Devuelve el catálogo de las 23 herramientas semánticas con sus esquemas JSON de entrada (`inputSchema`).
 
 ---
 
-## 3. Catálogo Detallado de las 22 Herramientas Semánticas MCP
+## 3. Catálogo Detallado de las 23 Herramientas Semánticas MCP
 
 ### Herramienta 1: `rosgrid_list_inventory`
 
@@ -408,10 +412,12 @@ Devuelve el catálogo de las 22 herramientas semánticas con sus esquemas JSON d
 - **Descripción:** Orquesta la actualización masiva de RouterOS respetando la jerarquía de alimentación eléctrica PoE (hojas PD primero, switches PSE intermedios después, core final) con Safety Stop automático del 1%.
 - **Argumentos:**
   - `router_ids` (lista de UUIDs requerida).
-  - `channel` (cadena: `"stable"`, `"testing"` o `"long-term"`).
+  - `channel` (cadena opcional: `"stable"`, `"long-term"`, `"testing"` o `"development"`, por defecto `"stable"`).
   - `target_version` (cadena opcional, ej. `"7.19"`).
+  - `auto_upgrade_firmware` (booleano opcional, por defecto `true`).
   - `poe_aware` (booleano opcional, por defecto `true`).
-  - `safety_stop_threshold_pct` (flotante opcional, por defecto `1.0`).
+  - `safety_stop_threshold_percent` (flotante opcional entre 0.1 y 100.0, por defecto `1.0`, con alias aceptado `safety_stop_threshold_pct`).
+  - `justification` (cadena opcional para justificación técnica de la propuesta).
 
 ---
 
@@ -435,6 +441,17 @@ Devuelve el catálogo de las 22 herramientas semánticas con sus esquemas JSON d
   - `doc_path_or_url` (cadena requerida: URL completa o ruta relativa de la página `.md`, ej. `"/docs/cli-reference/routing/bgp/template.md"`).
   - `max_characters` (entero opcional, por defecto 8000 caracteres para preservar la ventana de contexto).
 - **Caché y Seguridad:** Almacenado en KeyDB (`TTL 7d`) con límite de tamaño estricto de 1 MB y validación anti-SSRF.
+
+---
+
+### Herramienta 23: `rosgrid_get_platform_diagnostics`
+
+- **Nivel de Riesgo:** Solo Lectura / Diagnóstico de Plataforma (Read-Only).
+- **Descripción:** Obtiene un resumen estructurado, acotado estrictamente al tenant de la cuenta de servicio y sanitizado (`[REDACTED]`) sobre la salud interna de la propia plataforma RoSGrid. Permite al agente IA detectar de forma temprana fallos en KeyDB, degradación de workers, errores HTTP/JS reportados por el frontend del tenant, estado del conector SIEM y alertas críticas del backend sin capacidad alguna de modificar configuraciones ni routers.
+- **Argumentos:**
+  - `max_events` (entero opcional entre 1 y 50, por defecto 25): cantidad máxima de eventos recientes de error o alerta.
+  - `min_level` (cadena opcional: `"WARNING"`, `"ERROR"` o `"CRITICAL"`, por defecto `"WARNING"`).
+- **Aislamiento Multi-Tenant y Seguridad:** El buffer circular global de logs se filtra estrictamente reteniendo únicamente las líneas que contengan el `tenant_id` autenticado. Todo texto pasa por `redact_sensitive_diagnostic_text()` expurgando claves, tokens Bearer y contraseñas.
 
 ---
 

@@ -9,6 +9,7 @@
   import { useNocEventsStore } from '@/stores/useNocEventsStore';
   import { useThemeAndLayoutStore } from '@/stores/useThemeAndLayoutStore';
   import { useApiHeartbeatStore } from '@/stores/useApiHeartbeatStore';
+  import { useVersionCheckStore } from '@/stores/useVersionCheckStore';
   import { useI18n } from '@/composables/useI18n';
   import { useContextualHelp } from '@/composables/useContextualHelp';
   import { useDiagnosticsCollector } from '@/composables/useDiagnosticsCollector';
@@ -30,6 +31,7 @@
   const themeStore = useThemeAndLayoutStore();
   const nocStore = useNocEventsStore();
   const heartbeatStore = useApiHeartbeatStore();
+  const versionStore = useVersionCheckStore();
   const { t, locale, toggleLocale } = useI18n();
   const { isHelpOpen, toggleHelp } = useContextualHelp();
   useDiagnosticsCollector();
@@ -132,8 +134,15 @@
     }
   }
 
+  async function handleManualVersionCheck(): Promise<void> {
+    await versionStore.refreshVersionCheck();
+  }
+
   onMounted(() => {
     void authStore.fetchTenantFeatures();
+    if (authStore.user) {
+      void versionStore.fetchVersionStatus();
+    }
     heartbeatStore.startMonitoring();
     nocStore.connectEventsWebSocket();
     headerClockTimer = setInterval(updateHeaderClock, 1000);
@@ -327,8 +336,21 @@
         <router-link to="/" class="brand" :aria-label="t('nav.dashboard', 'Ir al Centro de Mando')">
           <RgBrandLogo :size="28" img-class="brand-logo" />
           <span class="brand-name">RoSGrid</span>
-          <span class="brand-version">v1.2.0</span>
+          <span class="brand-version">v{{ versionStore.currentVersion }}</span>
         </router-link>
+
+        <a
+          v-if="versionStore.canSeeUpdateNotice && versionStore.latestVersion"
+          :href="versionStore.releaseUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="rg-version-update-pill font-mono"
+          :title="t('version_check.new_release_tooltip', 'Nueva versión disponible en GitHub Releases (solo notificación)')"
+          :aria-label="`${t('version_check.new_release_aria', 'Nueva versión disponible')}: v${versionStore.latestVersion}`"
+        >
+          <span aria-hidden="true">⬆</span>
+          <span>v{{ versionStore.latestVersion }}</span>
+        </a>
 
         <!-- Botón para Ocultar / Mostrar la Barra Lateral Izquierda -->
         <button
@@ -534,6 +556,18 @@
             >
               <span class="dropdown-item-icon" aria-hidden="true">⚡</span>
               <span>{{ t('user_menu.mcp_token') }}</span>
+            </button>
+
+            <button
+              v-if="versionStore.canTriggerManualCheck"
+              type="button"
+              class="dropdown-item btn-check-updates-menu"
+              role="menuitem"
+              :disabled="versionStore.isRefreshing"
+              @click="handleManualVersionCheck"
+            >
+              <span class="dropdown-item-icon" aria-hidden="true">🔄</span>
+              <span>{{ t('user_menu.check_updates', 'Comprobar nueva versión') }}</span>
             </button>
 
             <div class="dropdown-divider"></div>
@@ -811,6 +845,28 @@
     background: var(--rg-status-info-bg);
     padding: 1px 4px;
     border-radius: 2px;
+  }
+
+  .rg-version-update-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--rg-space-1);
+    background: var(--rg-status-info-bg);
+    color: var(--rg-status-info-text);
+    border: 1px solid var(--rg-status-info);
+    border-radius: 999px;
+    padding: 2px var(--rg-space-2);
+    font-size: 0.72rem;
+    font-variant-numeric: tabular-nums;
+    text-decoration: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+
+  .rg-version-update-pill:hover,
+  .rg-version-update-pill:focus-visible {
+    opacity: 0.85;
+    outline: 2px solid var(--rg-status-info);
+    outline-offset: 1px;
   }
 
   .btn-sidebar-toggle {

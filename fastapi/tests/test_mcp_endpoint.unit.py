@@ -226,9 +226,10 @@ async def test_mcp_tools_list(mcp_context: dict[str, Any]) -> None:
         assert resp.id == 2
         assert resp.result is not None
         tools = resp.result.get("tools", [])
-        assert len(tools) == 22
+        assert len(tools) == 23
         names = {t["name"] for t in tools}
         assert "rosgrid_list_inventory" in names
+        assert "rosgrid_get_platform_diagnostics" in names
         assert "rosgrid_get_router_health" in names
         assert "rosgrid_check_sfp_optical_ddm" in names
         assert "rosgrid_inspect_routing_bgp_ospf" in names
@@ -1465,3 +1466,218 @@ async def test_approvals_execute_mcp_deferred_tools() -> None:
         assert out_upg is not None
         assert out_upg["status"] == "COMPLETED"
         assert out_upg["processed_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_poe_upgrade_rejects_foreign_or_missing_router_and_invalid_channel(mcp_context: dict[str, Any]) -> None:
+    t_id = mcp_context["t_id"]
+    u_id = mcp_context["u_id"]
+    r_id = mcp_context["r_id"]
+    claims = mcp_context["claims"]
+
+    # Caso A: router no encontrado / foráneo -> 404
+    db_missing = AsyncMock()
+    res_none = MagicMock()
+    res_none.scalar_one_or_none.return_value = None
+    db_missing.execute.return_value = res_none
+
+    with pytest.raises(HTTPException) as exc_missing:
+        await api_mcp._handle_execute_poe_aware_upgrade(
+            db_missing, t_id, u_id, claims, {"router_ids": [str(r_id)], "channel": "stable"}
+        )
+    assert exc_missing.value.status_code == 404
+
+    # Caso B: canal inválido -> 422
+    db_valid = AsyncMock()
+    res_router = MagicMock()
+    res_router.scalar_one_or_none.return_value = mcp_context["router"]
+    db_valid.execute.return_value = res_router
+
+    with pytest.raises(HTTPException) as exc_chan:
+        await api_mcp._handle_execute_poe_aware_upgrade(
+            db_valid, t_id, u_id, claims, {"router_ids": [str(r_id)], "channel": "invalid-chan"}
+        )
+    assert exc_chan.value.status_code == 422
+
+    # Caso C: canal válido y alias de threshold -> persiste en request_payload
+    with (
+        patch("src.api.v1.mcp._resolve_upgrade_stages", AsyncMock(return_value=[[r_id]])),
+        patch("src.api.v1.mcp.write_audit_log", make_asserting_audit_mock()),
+    ):
+        db_valid.add = MagicMock()
+        res = await api_mcp._handle_execute_poe_aware_upgrade(
+            db_valid,
+            t_id,
+            u_id,
+            claims,
+            {
+                "router_ids": [str(r_id)],
+                "channel": "long-term",
+                "target_version": "7.16.2",
+                "safety_stop_threshold_pct": 2.5,
+            },
+        )
+        assert res["status"] == "AWAITING_APPROVAL"
+        assert db_valid.add.call_count == 1
+        persisted_req = db_valid.add.call_args[0][0]
+        payload = persisted_req.request_payload
+        assert payload["channel"] == "long-term"
+        assert payload["target_version"] == "7.16.2"
+        assert payload["safety_stop_threshold_percent"] == 2.5
+
+
+@pytest.mark.asyncio
+async def test_approvals_deferred_pppoe_reconnect_resolves_live_id_and_handles_disconnected() -> None:
+    from src.api.v1.approvals import _execute_mcp_deferred_tool
+    from src.models.operations import ApprovalRequest, ApprovalStatusEnum
+
+    t_id = uuid.uuid4()
+    checker_id = uuid.uuid4()
+    r_id = uuid.uuid4()
+    checker_claims = {"tid": str(t_id), "sub": str(checker_id), "rol": SystemRoleEnum.SUPERVISOR.value}
+    db = AsyncMock()
+
+    app_req = ApprovalRequest(
+        id=uuid.uuid4(),
+        tenant_id=t_id,
+        router_id=r_id,
+        action_type=CriticalActionTypeEnum.FIREWALL_INPUT_OR_SERVICE_PORT_CHANGE,
+        status=ApprovalStatusEnum.PENDING,
+        summary="PPPoE Reconnect",
+        requester_justification="Test Reconnect",
+        ros_rest_method="POST",
+        ros_rest_path="/ppp/active/remove",
+        request_payload={
+            "mcp_tool": "rosgrid_reconnect_pppoe_client",
+            "pppoe_username": "cliente1",
+            ".id": "*OLD",
+        },
+        requested_by=uuid.uuid4(),
+    )
+
+    # Caso A: sesion activa encontrada con live id -> remove llamado y RECONNECTED
+    client_mock_a = AsyncMock()
+    client_mock_a.get.return_value = [{"name": "cliente1", ".id": "*NEW99"}]
+    client_mock_a.post.return_value = {}
+
+    res_a = await _execute_mcp_deferred_tool(app_req, checker_claims, db, t_id, checker_id, client=client_mock_a)
+    assert res_a is not None
+    assert res_a["status"] == "RECONNECTED"
+    assert res_a["removed_session_id"] == "*NEW99"
+    client_mock_a.post.assert_awaited_once_with("/ppp/active/remove", {".id": "*NEW99"})
+
+    # Caso B: sesion ya desconectada -> SESSION_ALREADY_DISCONNECTED y no llama a post
+    client_mock_b = AsyncMock()
+    client_mock_b.get.return_value = []
+
+    res_b = await _execute_mcp_deferred_tool(app_req, checker_claims, db, t_id, checker_id, client=client_mock_b)
+    assert res_b is not None
+    assert res_b["status"] == "SESSION_ALREADY_DISCONNECTED"
+    client_mock_b.post.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_approvals_deferred_poe_upgrade_forwards_channel_and_target_version() -> None:
+    from src.api.v1.approvals import _execute_mcp_deferred_tool
+    from src.models.operations import ApprovalRequest, ApprovalStatusEnum
+
+    t_id = uuid.uuid4()
+    checker_id = uuid.uuid4()
+    r_id = uuid.uuid4()
+    checker_claims = {"tid": str(t_id), "sub": str(checker_id), "rol": SystemRoleEnum.SUPERVISOR.value}
+    db = AsyncMock()
+
+    app_upg = ApprovalRequest(
+        id=uuid.uuid4(),
+        tenant_id=t_id,
+        router_id=r_id,
+        action_type=CriticalActionTypeEnum.BULK_MULTI_ROUTER_EXECUTION,
+        status=ApprovalStatusEnum.PENDING,
+        summary="Upgrade",
+        requester_justification="Upgrade Test",
+        ros_rest_method="POST",
+        ros_rest_path="/system/package/update/install",
+        request_payload={
+            "mcp_tool": "rosgrid_execute_poe_aware_upgrade",
+            "router_ids": [str(r_id)],
+            "channel": "testing",
+            "target_version": "7.19.1",
+            "safety_stop_threshold_pct": 3.5,
+            "poe_aware": True,
+        },
+        requested_by=uuid.uuid4(),
+    )
+
+    captured_req = []
+
+    async def mock_process(stages, upg_req, claims, db, tenant_id, checker_user_id):
+        captured_req.append(upg_req)
+        return [{"router_id": str(r_id), "status": "UPGRADE_TRIGGERED"}], False
+
+    with (
+        patch("src.api.v1.bulk_and_updates._resolve_upgrade_stages", AsyncMock(return_value=[[r_id]])),
+        patch("src.api.v1.bulk_and_updates._process_upgrade_stages", side_effect=mock_process),
+    ):
+        out = await _execute_mcp_deferred_tool(app_upg, checker_claims, db, t_id, checker_id)
+        assert out is not None
+        assert out["status"] == "COMPLETED"
+        assert len(captured_req) == 1
+        req = captured_req[0]
+        assert req.channel == "testing"
+        assert req.target_version == "7.19.1"
+        assert req.safety_stop_threshold_percent == 3.5
+
+
+@pytest.mark.asyncio
+async def test_mcp_platform_diagnostics_tenant_isolation_and_redaction(mcp_context: dict[str, Any]) -> None:
+    from src.services.diagnostics_and_siem import (
+        _BACKEND_LOG_RING_BUFFER,
+        ensure_diagnostic_log_handler,
+    )
+
+    ensure_diagnostic_log_handler()
+    t_id = mcp_context["t_id"]
+    u_id = mcp_context["u_id"]
+    claims = mcp_context["claims"]
+    other_tenant_id = uuid.uuid4()
+    db = AsyncMock()
+
+    # Inyectar logs en el ring buffer
+    _BACKEND_LOG_RING_BUFFER.append(
+        f"2026-11-11 12:00:00 [ERROR] app: Tenant {other_tenant_id} failure with Bearer secret_tok_123"
+    )
+    _BACKEND_LOG_RING_BUFFER.append(
+        f"2026-11-11 12:01:00 [ERROR] app: Tenant {t_id} error occurred with password=ClaveSecreta99"
+    )
+
+    fake_redis = AsyncMock()
+    fake_redis.ping.return_value = True
+    fake_redis.lrange.return_value = []
+    fake_redis.get.return_value = None
+
+    with patch("src.services.diagnostics_and_siem.get_redis_client", return_value=fake_redis):
+        # 1. Validación de min_level inválido -> 422
+        with pytest.raises(HTTPException) as exc_level:
+            await api_mcp._handle_get_platform_diagnostics(db, t_id, u_id, claims, {"min_level": "DEBUG"})
+        assert exc_level.value.status_code == 422
+
+        # 2. Ejecución válida con aislamiento por tenant y sanitización
+        summary = await api_mcp._handle_get_platform_diagnostics(
+            db, t_id, u_id, claims, {"max_events": 20, "min_level": "WARNING"}
+        )
+
+        assert summary["tenant_id"] == str(t_id)
+        assert summary["overall_status"] in ("HEALTHY", "DEGRADED", "CRITICAL")
+        backend_alerts = summary["recent_tenant_backend_alerts"]
+
+        # Ninguna línea de otro tenant debe aparecer
+        for alert in backend_alerts:
+            assert str(other_tenant_id) not in alert
+            assert "secret_tok_123" not in alert
+
+        # La línea del tenant propio sí debe aparecer y sus secretos deben estar expurgados [REDACTED]
+        own_alerts = [a for a in backend_alerts if str(t_id) in a]
+        assert len(own_alerts) >= 1
+        for a in own_alerts:
+            assert "ClaveSecreta99" not in a
+            assert "[REDACTED]" in a

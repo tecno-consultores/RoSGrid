@@ -27,7 +27,7 @@ Welcome to the **RoSGrid** repository. All AI coding assistants (Google Antigrav
 
 
 ### Project Domain Skills (`.agents/skills/`):
-1. [`rosgrid-noc-operator`](.agents/skills/rosgrid-noc-operator/SKILL.md): NOC Operator & Autonomous Diagnostics for MikroTik RouterOS v7.13+ via MCP (`/api/v1/mcp`) with 8 SOP Playbooks, 22 tools, and Maker-Checker governance across all 6 mutation tools.
+1. [`rosgrid-noc-operator`](.agents/skills/rosgrid-noc-operator/SKILL.md): NOC Operator & Autonomous Diagnostics for MikroTik RouterOS v7.13+ via MCP (`/api/v1/mcp`) with 8 SOP Playbooks, 23 tools, and Maker-Checker governance across all 6 mutation tools.
 2. [`mikrotik-webfig-safemode`](.agents/skills/mikrotik-webfig-safemode/SKILL.md): RouterOS v7.13+ REST API domain rules (`policy=api,rest-api,read,write,ftp,test,reboot,policy,sensitive`), native flags, `<KeepAlive :max="5">`, 60s Safe Mode, and 30s Step-Up Auth Vault.
 3. [`vue3-wcag-tactical-ui`](.agents/skills/vue3-wcag-tactical-ui/SKILL.md): WinBox-style high-density Vue 3 + TypeScript architecture (Tactical NOC Cyan), `shallowRef`, virtual scrolling, and WCAG 2.1 AA compliance.
 4. [`graphify-docs-api-writer`](.agents/skills/graphify-docs-api-writer/SKILL.md): Technical authoring and maintenance for operations manuals, Mermaid architecture, REST/WebSockets API specs, and AI MCP integration guides grounded in `GRAPH_REPORT.md`.

@@ -941,8 +941,9 @@
     bottom: 1.25rem;
     left: 1.25rem;
     right: 1.25rem;
-    background: color-mix(in srgb, var(--rg-bg-surface) 90%, transparent);
-    backdrop-filter: blur(8px);
+    background: var(--rg-hud-glass-header-bg);
+    backdrop-filter: blur(5px) saturate(130%);
+    -webkit-backdrop-filter: blur(5px) saturate(130%);
     border: 1px solid var(--rg-accent-cyan-border);
     border-radius: 8px;
     padding: 0.75rem 1.25rem;
@@ -1097,10 +1098,10 @@
     max-width: calc(100vw - 32px);
     display: flex;
     flex-direction: column;
-    background: color-mix(in srgb, var(--rg-bg-surface) 76%, transparent);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid var(--rg-border-panel);
+    background: var(--rg-hud-glass-bg);
+    backdrop-filter: blur(5px) saturate(130%);
+    -webkit-backdrop-filter: blur(5px) saturate(130%);
+    border: 1px solid var(--rg-hud-glass-border);
     border-radius: 12px;
     box-shadow: var(--rg-shadow-lg);
     overflow: hidden;
@@ -1112,8 +1113,9 @@
     top: 62px;
     right: 16px;
     z-index: 850;
-    background: color-mix(in srgb, var(--rg-bg-surface) 86%, transparent);
-    backdrop-filter: blur(8px);
+    background: var(--rg-hud-glass-header-bg);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
     border: 1px solid var(--rg-accent-cyan-border);
     color: var(--rg-accent-cyan);
     padding: 0.45rem 0.9rem;
@@ -1136,7 +1138,9 @@
     justify-content: space-between;
     align-items: center;
     padding: 0.65rem 0.9rem;
-    background: color-mix(in srgb, var(--rg-bg-elevated) 84%, transparent);
+    background: var(--rg-hud-glass-header-bg);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
     border-bottom: 1px solid var(--rg-border-panel);
   }
 
@@ -1159,6 +1163,7 @@
     font-weight: 700;
     color: var(--rg-text-primary);
     margin: 0;
+    text-shadow: var(--rg-hud-text-shadow);
   }
 
   .events-count-pill {
@@ -1211,29 +1216,34 @@
   }
 
   .event-item {
-    background: color-mix(in srgb, var(--rg-bg-elevated) 82%, transparent);
-    border: 1px solid var(--rg-border-grid);
+    background: var(--rg-hud-glass-card-bg);
+    border: 1px solid color-mix(in srgb, var(--rg-border-panel) 55%, transparent);
     border-left: 4px solid var(--rg-accent-cyan);
     padding: 0.5rem 0.7rem;
     border-radius: 6px;
     display: flex;
     flex-direction: column;
     gap: 0.22rem;
+    transition: background-color 0.15s ease;
+  }
+
+  .event-item:hover {
+    background: var(--rg-hud-glass-card-hover-bg);
   }
 
   .event-item--critical {
     border-left-color: var(--rg-status-critical);
-    background: color-mix(in srgb, var(--rg-status-critical-bg) 78%, transparent);
+    background: color-mix(in srgb, var(--rg-status-critical-bg) 52%, transparent);
   }
 
   .event-item--warning {
     border-left-color: var(--rg-status-warning);
-    background: color-mix(in srgb, var(--rg-status-warning-bg) 78%, transparent);
+    background: color-mix(in srgb, var(--rg-status-warning-bg) 52%, transparent);
   }
 
   .event-item--info {
     border-left-color: var(--rg-accent-cyan);
-    background: color-mix(in srgb, var(--rg-bg-elevated) 82%, transparent);
+    background: var(--rg-hud-glass-card-bg);
   }
 
   .event-meta {
@@ -1244,11 +1254,13 @@
   }
 
   .event-time {
-    color: var(--rg-text-muted);
+    color: var(--rg-text-secondary);
+    font-weight: 600;
+    text-shadow: var(--rg-hud-text-shadow);
   }
 
   .event-type-badge {
-    background: var(--rg-bg-canvas);
+    background: color-mix(in srgb, var(--rg-bg-canvas) 62%, transparent);
     color: var(--rg-text-primary);
     padding: 0.1rem 0.4rem;
     border-radius: 4px;
@@ -1265,12 +1277,14 @@
   .event-router {
     font-size: 0.84rem;
     color: var(--rg-text-primary);
+    text-shadow: var(--rg-hud-text-shadow);
   }
 
   .event-msg {
     margin: 0;
     font-size: 0.78rem;
     color: var(--rg-text-secondary);
+    text-shadow: var(--rg-hud-text-shadow);
   }
 
   .font-mono {

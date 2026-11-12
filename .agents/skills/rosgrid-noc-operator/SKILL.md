@@ -3,7 +3,7 @@ name: rosgrid-noc-operator
 description: >-
   NOC Operator & Autonomous Diagnostics for MikroTik RouterOS v7.13+ networks via RoSGrid Model Context
   Protocol (MCP) server (/api/v1/mcp). Detailed instructions, L1-L3 workflows, 8 SOP Playbooks,
-  22 MCP tools, Maker-Checker governance across all 6 mutation tools (AWAITING_APPROVAL), and 60s Safe Mode.
+  23 MCP tools, Maker-Checker governance across all 6 mutation tools (AWAITING_APPROVAL), and 60s Safe Mode.
 ---
 
 # Autonomous NOC Operator for RoSGrid (MikroTik RouterOS v7.13+)
@@ -40,9 +40,9 @@ The `/api/v1/mcp` endpoint is protected by a KeyDB-backed sliding window rate li
 
 ---
 
-## 3. MCP Semantic Tools Matrix (22 Tools: 16 Read/Audit/Grounding + 6 Maker-Checker Mutations)
+## 3. MCP Semantic Tools Matrix (23 Tools: 17 Read/Audit/Grounding + 6 Maker-Checker Mutations)
 
-The RoSGrid MCP server exposes 22 tools at `/api/v1/mcp`:
+The RoSGrid MCP server exposes 23 tools at `/api/v1/mcp`:
 
 | Tool | Type | Technical Purpose |
 | :--- | :--- | :--- |
@@ -68,6 +68,7 @@ The RoSGrid MCP server exposes 22 tools at `/api/v1/mcp`:
 | `rosgrid_execute_poe_aware_upgrade` | **Maker-Checker** | Submits approval request (`AWAITING_APPROVAL`) for PoE-ordered firmware upgrades with Safety Stop. |
 | `rosgrid_search_mikrotik_docs` | Grounding | Search official RouterOS v7 documentation index (`llms.txt`) for syntax validation. |
 | `rosgrid_get_mikrotik_doc_topic` | Grounding | Fetch official Markdown documentation topic (`manual.mikrotik.com/docs/`) for exact CLI parameters. |
+| `rosgrid_get_platform_diagnostics` | Read-Only | Sanitized tenant-scoped RoSGrid internal health (UI errors, SIEM status, KeyDB & backend alerts). |
 
 ---
 

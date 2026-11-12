@@ -2,7 +2,7 @@
 
 **Licencia:** GPL-3.0-only  
 **Estándar Aplicado:** QA Testing Blueprints (Nivel 11X)  
-**Estado Actual:** Hitos 0 al 30 (incluyendo Subhitos `30.1` al `30.41` — `Spec 114`) COMPLETADOS y Certificados al 100% en Contenedores Docker Efímeros.
+**Estado Actual:** Hitos 0 al 30 (incluyendo Subhitos `30.1` al `30.42` — `Spec 114`) COMPLETADOS y Certificados al 100% en Contenedores Docker Efímeros.
 > **Archivo Histórico de Certificación (`Hitos 15 al 29`):** Consulta los reportes históricos detallados en [`docs/archive/TESTING_HISTORICO.md`](docs/archive/TESTING_HISTORICO.md).
 
 ---
@@ -30,7 +30,7 @@
    - Backups `.rsc`/`.backup` con deduplicación SHA-256, retención de 30 días, comparador visual Diff estilo Git y Auditoría Inmutable WORM (`audit_logs` con secuencia monotónica `audit_logs_seq_num_seq` y `pg_advisory_xact_lock`).
 6. **Endpoint MCP Protegido para Agentes IA (`POST /api/v1/mcp`):**
    - Protocolo JSON-RPC 2.0 Streamable HTTP para Hermes Agent y Claude con autenticación exclusiva `SERVICE_ACCOUNT` (`mcp_only`), filtrado CIDR obligatorio y rate-limiting en KeyDB.
-   - Exposición de 22 herramientas semánticas de diagnóstico y operación y 8 Playbooks SOP (`GET /api/v1/mcp/skill`) con intercepción mandatoria *Maker-Checker* en las 6 herramientas de mutación Nivel 3 y *Safe Mode* de 60s.
+   - Exposición de 23 herramientas semánticas de diagnóstico y operación y 8 Playbooks SOP (`GET /api/v1/mcp/skill`) con intercepción mandatoria *Maker-Checker* en las 6 herramientas de mutación Nivel 3 y *Safe Mode* de 60s.
 
 ---
 
@@ -256,3 +256,19 @@ make audit
       - Mapeo de puerto frontend canónico `:8085` (`${ROSGRID_WEB_PORT:-8085}:8080`) y parámetros STIG por defecto en compose.
       - Atributos `aria-labelledby` e `id` en 9 modales Vue 3 (WCAG 2.1 AA) y tokens `--rg-*` para paridad completa en temas (`dark`, `light`, `noc-high-contrast`).
       - Cobertura backend 95.03% (789 tests unitarios) y 608 tests frontend en Vitest (83 suites).
+
+32. **Hito 30.42: Plan Maestro Quirúrgico Flash-Ready QA 11X — Endurecimiento MCP, Comprobador Pasivo de Versiones, Glass HUD y Tool #23 (`rosgrid_get_platform_diagnostics`):**
+    - **Backend FastAPI (`mcp.py`, `approvals.py`, `system.py`, `core/config.py`, `workers/version_check_worker.py`, `services/diagnostics_and_siem.py`):**
+      - Validación de propiedad multi-tenant, permisos y canal/versión en `_handle_execute_poe_aware_upgrade` (`mcp.py`).
+      - Resolución en vivo del `.id` efímero PPPoE en `/ppp/active` por username en `_execute_deferred_pppoe_reconnect` y propagación íntegra de `channel`/`target_version` en `_execute_deferred_upgrade` (`approvals.py`).
+      - Worker pasivo `VersionCheckWorker` con lectura canónica SSOT de versión vía `tomllib`, verificación fail-silent y cooldown en KeyDB de 60s (`rg:system:version_check:manual_cooldown`). Endpoints `GET /version-check` y `POST /version-check/refresh`.
+      - Herramienta MCP #23 (`rosgrid_get_platform_diagnostics`): Resumen de salud global del tenant, CPU/RAM, KeyDB, heartbeat y logs en RAM filtrados por `tenant_id` con sanitización forzosa.
+    - **Frontend Vue 3 y Wallboard NOC (`themes.css`, `NocWallboardView.vue`, `useVersionCheckStore.ts`, `RgResponsiveShell.vue`, `RgNotificationCenterBell.vue`, `RgMcpTokenModal.vue`):**
+      - Restauración de semitransparencia táctica real (Glass HUD) en la cinta de eventos críticos del Wallboard NOC (`backdrop-filter: blur(5px) saturate(130%)`, tokens semánticos `--rg-hud-glass-*` y `text-shadow` protector de contraste).
+      - Store Pinia reactivo `useVersionCheckStore.ts` con control de visibilidad RBAC (`canSeeUpdateNotice`, `canTriggerManualCheck`), píldora táctica en cabecera global y soporte en centro de notificaciones.
+      - Catálogo de token MCP actualizado a 23 herramientas en `RgMcpTokenModal.vue`.
+    - **Métricas Vigentes Certificadas (v1.2.0 / Hito 30.42):**
+      - **807 pruebas unitarias Backend Pytest** con cobertura `>= 95%` (`95.05%` verificado en Docker efímero).
+      - **616 pruebas unitarias Frontend Vitest** en **84 suites** (`100% pass` verificado en Docker efímero).
+      - **185 escenarios BDD Karate API** + **132 escenarios BDD Karate UI** espejados en `docs/examples/`.
+      - **23 herramientas MCP** registradas y verificadas con paridad idéntica byte a byte en `SKILL.md`.

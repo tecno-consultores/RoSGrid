@@ -645,7 +645,7 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
 - **Rate-Limiting:** Máximo 30 peticiones por minuto por cuenta en KeyDB.
 - **Métodos Soportados:** `initialize`, `ping`, `notifications/initialized`, `tools/list`, `tools/call`.
 
-#### Catálogo de las 22 Herramientas Semánticas MCP
+#### Catálogo de las 23 Herramientas Semánticas MCP
 
 > **Gobernanza Maker-Checker en Nivel 3:** Las **6 herramientas de mutación** (#7, #8, #10, #11, #12 —incluyendo el alias de compatibilidad `rosgrid_change_subscriber_rate_limit`— y #20) **nunca modifican el router directamente**; crean una solicitud en la bandeja Maker-Checker con estado `AWAITING_APPROVAL` y `safe_mode_timeout_seconds: 60`.
 
@@ -673,6 +673,7 @@ RoSGrid almacena la respuesta en KeyDB durante 120 segundos. Las peticiones idé
 | **20** | `rosgrid_execute_poe_aware_upgrade` | **Maker-Checker (`AWAITING_APPROVAL`)** | Solicita actualización de RouterOS en orden topológico inverso PoE-Aware con Safety Stop. |
 | **21** | `rosgrid_search_mikrotik_docs` | Documentación Oficial (L1) | Búsqueda semántica en el índice oficial de MikroTik RouterOS v7 (`llms.txt`). |
 | **22** | `rosgrid_get_mikrotik_doc_topic` | Documentación Oficial (L1) | Recupera el contenido técnico de un tópico oficial en `https://manual.mikrotik.com/docs/`. |
+| **23** | `rosgrid_get_platform_diagnostics` | Diagnóstico de Plataforma (L1) | Resumen estructurado y sanitizado [REDACTED] de salud interna de RoSGrid aislado por tenant. |
 
 *(La especificación detallada, esquemas JSON y ejemplos de integración se detallan en el manual `docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md`).*
 
@@ -1727,6 +1728,16 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
 - **`POST /api/v1/system/siem-config/test`:**
   - **Propósito:** Dispara un evento de prueba hacia el colector Graylog, Grafana Loki o Syslog configurado por el ISP y retorna el estado de entrega y la latencia medida en milisegundos (`latency_ms`).
 
+### 8.5 Comprobador Pasivo de Nuevas Versiones contra GitHub Releases (Zero Auto-Update)
+
+- **`GET /api/v1/system/version-check`:**
+  - **Propósito:** Retorna el estado en caché de la versión instalada frente a la última release de GitHub (`rg:system:version_check` en KeyDB).
+  - **Autenticación:** Requiere sesión activa de cualquier usuario autenticado del tenant.
+  - **Respuesta (200 OK):** Detalle de `current_version`, `latest_version`, `update_available`, `release_url`, `published_at` y `last_status`.
+- **`POST /api/v1/system/version-check/refresh`:**
+  - **Propósito:** Fuerza la comprobación inmediata en GitHub Releases respetando cooldown de 60s en KeyDB (`SUPERADMIN_GLOBAL` y `TENANT_ADMIN`).
+  - **Autenticación:** Requiere rol administrativo.
+
 ---
 
 ## 9. Catálogo de Módulos Especializados ISP, Cumplimiento Corporativo y MCP Zero-Trust
@@ -1757,7 +1768,8 @@ RoSGrid despacha peticiones `POST` firmadas criptográficamente con `X-RoSGrid-S
 | `/api/v1/sessions` | `sessions.py` | `GET /active`, `DELETE /{session_id}`, `DELETE /user/{user_id}/all` |
 | `/api/v1/operations/approvals` | `approvals.py` | `GET /pending`, `POST /{approval_id}/approve`, `POST /{approval_id}/reject` |
 | `/api/v1/tenants` | `tenants.py` | `GET/POST/PATCH /tenants`, `GET/PUT /{id}/features`, `GET /{id}/features/audit`, `POST /{id}/onboarding-complete`, `POST /switch-context` |
-| `/api/v1/mcp` | `mcp.py` | `POST /api/v1/mcp` (Exclusivo `SERVICE_ACCOUNT` con `scope: "mcp_only"` y `allowed_cidr_list` no vacío; 22 tools semánticas, 6 tools de mutación bajo Maker-Checker `AWAITING_APPROVAL`), `GET /api/v1/mcp/skill` (`SKILL.md` con 8 SOP Playbooks) |
+| `/api/v1/system` | `system.py` | `POST /diagnostics/ui-error`, `POST /diagnostics/bundle`, `GET/PUT /siem-config`, `POST /siem-config/test`, `GET /telemetry-beacon/status`, `POST /telemetry-beacon/trigger`, `GET /version-check`, `POST /version-check/refresh` |
+| `/api/v1/mcp` | `mcp.py` | `POST /api/v1/mcp` (Exclusivo `SERVICE_ACCOUNT` con `scope: "mcp_only"` y `allowed_cidr_list` no vacío; 23 tools semánticas, 6 tools de mutación bajo Maker-Checker `AWAITING_APPROVAL`), `GET /api/v1/mcp/skill` (`SKILL.md` con 8 SOP Playbooks) |
 
 
 

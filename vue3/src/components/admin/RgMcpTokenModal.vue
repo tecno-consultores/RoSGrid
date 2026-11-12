@@ -94,9 +94,9 @@
       `- Streamable HTTP JSON-RPC 2.0: ${origin}/api/v1/mcp`,
       `- Dynamic System Prompt / Skill (SKILL.md): ${origin}/api/v1/mcp/skill`,
       '',
-      '## 22 Registered MCP Tools (rosgrid_*)',
-      '- Telemetry & Inventory (Read-Only): `rosgrid_list_routers`, `rosgrid_get_router_health`, `rosgrid_get_sfp_optical_ddm`, `rosgrid_get_routing_bgp_ospf`, `rosgrid_list_wireguard_peers`, `rosgrid_list_firewall_rules`, `rosgrid_get_dhcp_leases_and_arp`, `rosgrid_get_ppp_active_and_queues`, `rosgrid_search_syslog_events`, `rosgrid_get_cve_compliance_matrix`, `rosgrid_get_rsc_backup_diff`, `rosgrid_list_ipam_prefixes`, `rosgrid_get_l2_topology_neighbors`',
-      '- Diagnostics & Governed Mutations (Safe Mode 60s + Maker-Checker HTTP 202): `rosgrid_run_diagnostic_tool`, `rosgrid_query_routeros_rest`, `rosgrid_toggle_interface_state`, `rosgrid_manage_firewall_address_list`, `rosgrid_reorder_firewall_rule`, `rosgrid_reset_ppp_or_dhcp_session`, `rosgrid_create_wireguard_peer`, `rosgrid_trigger_rsc_backup`, `rosgrid_execute_bulk_fleet_playbook`',
+      '## 23 Registered MCP Tools (rosgrid_*)',
+      '- Read-Only / Diagnostics / Audit / Grounding (17 tools): `rosgrid_list_inventory`, `rosgrid_get_router_health`, `rosgrid_check_sfp_optical_ddm`, `rosgrid_inspect_routing_bgp_ospf`, `rosgrid_run_live_diagnostic`, `rosgrid_compare_config_diff`, `rosgrid_run_360_diagnostics`, `rosgrid_query_bgp_looking_glass`, `rosgrid_check_config_drift`, `rosgrid_run_cis_audit`, `rosgrid_detect_mass_outage`, `rosgrid_get_l2_topology`, `rosgrid_check_fleet_cves`, `rosgrid_get_recent_syslog`, `rosgrid_search_mikrotik_docs`, `rosgrid_get_mikrotik_doc_topic`, `rosgrid_get_platform_diagnostics`',
+      '- Maker-Checker Mutations (Safe Mode 60s / HTTP 202 - 6 tools): `rosgrid_reconnect_pppoe_client`, `rosgrid_propose_network_change`, `rosgrid_isolate_subscriber`, `rosgrid_restore_subscriber`, `rosgrid_change_rate_limit`, `rosgrid_execute_poe_aware_upgrade`',
       '',
       '## 8 Autonomous NOC SOP Playbooks',
       '1. SOP-01: Diagnóstico 360° de nodo degradado (CPU, RAM, SFP DDM, BGP/OSPF).',
@@ -109,7 +109,7 @@
       '8. SOP-08: Aprovisionamiento gobernado de túneles WireGuard y pares remotos.',
       '',
       '# Agent Instructions',
-      '- **ask**: "Always query the live RoSGrid MCP tools (`rosgrid_list_routers`, `rosgrid_get_router_health`, `rosgrid_run_diagnostic_tool`) and read `/api/v1/mcp/skill` before proposing RouterOS v7 mutations."',
+      '- **ask**: "Always query the live RoSGrid MCP tools (`rosgrid_list_inventory`, `rosgrid_get_router_health`, `rosgrid_run_live_diagnostic`, `rosgrid_get_platform_diagnostics`) and read `/api/v1/mcp/skill` before proposing RouterOS v7 mutations."',
       '- **goal**: "Ensure zero-lockout network operations by enforcing 60-second Safe Mode, Maker-Checker HTTP 202 governance for L1/L2 operators, and UUID v4 `Idempotency-Key` headers on every state-modifying action."',
     ].join('\n');
   }

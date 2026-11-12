@@ -1301,6 +1301,18 @@ Feature: Cobertura Funcional y Flujos BDD de la Interfaz Web Vue 3 de RoSGrid
     * assert hito3040BootstrapFix.diagnostics_ui_error_skips_401 == true
     * assert hito3040BootstrapFix.nginx_preserves_http_host_port == true
 
+  # ============================================================================
+  # HITO 30.42: CRISTAL TÁCTICO (GLASS HUD) SEMITRANSPARENTE EN WALLBOARD NOC
+  # ============================================================================
+  Scenario: 132. Semitransparencia tactica real Glass HUD en cinta de eventos de Wallboard NOC (Hito 30.42)
+    * def wallboardGlassHudContract = { events_overlay: '.wallboard-events-overlay', toggle_btn: '#btn-wallboard-toggle-events-hud', expand_pill: '#btn-wallboard-expand-events-hud', glass_token_bg: '--rg-hud-glass-bg', glass_token_card: '--rg-hud-glass-card-bg' }
+    * assert wallboardGlassHudContract.events_overlay == '.wallboard-events-overlay'
+    * assert wallboardGlassHudContract.toggle_btn == '#btn-wallboard-toggle-events-hud'
+    * assert wallboardGlassHudContract.expand_pill == '#btn-wallboard-expand-events-hud'
+    * assert wallboardGlassHudContract.glass_token_bg == '--rg-hud-glass-bg'
+    * assert wallboardGlassHudContract.glass_token_card == '--rg-hud-glass-card-bg'
+
+
 
 
 

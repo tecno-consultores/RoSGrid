@@ -484,3 +484,69 @@ async def test_api_siem_config_endpoints_rbac(
     resp_test = await async_client.post("/api/v1/system/siem-config/test", headers=headers_admin_test)
     assert resp_test.status_code == 200
     assert resp_test.json()["protocol"] == "LOKI_HTTP"
+
+
+@pytest.mark.asyncio
+async def test_platform_diagnostics_summary_overall_status_and_heartbeat() -> None:
+    """Verifica las ramas de overall_status (CRITICAL, DEGRADED, HEALTHY) y worker heartbeat."""
+    import time
+
+    from src.services.diagnostics_and_siem import (
+        _check_worker_heartbeat_status,
+        get_tenant_platform_diagnostics_summary,
+    )
+
+    # 1. Heartbeat missing
+    with patch("src.services.diagnostics_and_siem.Path") as mock_path:
+        mock_hb = MagicMock()
+        mock_hb.exists.return_value = False
+        mock_path.return_value = mock_hb
+        hb_missing = _check_worker_heartbeat_status()
+        assert hb_missing["status"] == "external_or_unmounted"
+
+    # 2. Heartbeat healthy vs stale
+    with patch("src.services.diagnostics_and_siem.Path") as mock_path:
+        mock_hb = MagicMock()
+        mock_hb.exists.return_value = True
+        mock_hb.read_text.return_value = str(int(time.time()))
+        mock_path.return_value = mock_hb
+        hb_healthy = _check_worker_heartbeat_status()
+        assert hb_healthy["status"] == "healthy"
+        assert hb_healthy["healthy"] is True
+
+        mock_hb.read_text.return_value = str(int(time.time()) - 120)
+        hb_stale = _check_worker_heartbeat_status()
+        assert hb_stale["status"] == "stale"
+        assert hb_stale["healthy"] is False
+
+    # 3. Overall status: CRITICAL cuando redis falla
+    fake_redis_fail = AsyncMock()
+    fake_redis_fail.ping.side_effect = ConnectionError("Redis down")
+    fake_redis_fail.lrange.return_value = []
+    fake_redis_fail.get.return_value = None
+
+    with patch("src.services.diagnostics_and_siem.get_redis_client", return_value=fake_redis_fail):
+        res_crit = await get_tenant_platform_diagnostics_summary("t-crit")
+        assert res_crit["overall_status"] == "CRITICAL"
+        assert res_crit["infrastructure"]["redis"] == "disconnected"
+
+    # 4. Overall status: HEALTHY cuando redis está ok y no hay errores
+    fake_redis_ok = AsyncMock()
+    fake_redis_ok.ping.return_value = True
+    fake_redis_ok.lrange.return_value = []
+    fake_redis_ok.get.return_value = None
+
+    with (
+        patch("src.services.diagnostics_and_siem.get_redis_client", return_value=fake_redis_ok),
+        patch("src.services.diagnostics_and_siem._filter_tenant_backend_logs", return_value=([], 0, 0)),
+    ):
+        res_health = await get_tenant_platform_diagnostics_summary("t-health")
+        assert res_health["overall_status"] == "HEALTHY"
+
+    # 5. Overall status: DEGRADED cuando hay errores de backend o UI
+    with (
+        patch("src.services.diagnostics_and_siem.get_redis_client", return_value=fake_redis_ok),
+        patch("src.services.diagnostics_and_siem._filter_tenant_backend_logs", return_value=(["alert 1"], 0, 1)),
+    ):
+        res_deg = await get_tenant_platform_diagnostics_summary("t-deg")
+        assert res_deg["overall_status"] == "DEGRADED"

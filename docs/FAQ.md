@@ -109,13 +109,13 @@ RoSGrid implementa de forma nativa la especificación **Model Context Protocol (
 1. Habilita la funcionalidad en tu `.env` con `ROSGRID_MCP_ENABLED=true`.
 2. Crea un usuario con rol `SERVICE_ACCOUNT`, asígnale los routers permitidos en la matriz de permisos y declara la subred autorizada en `allowed_cidr_list`.
 3. Configura el bloque de conexión HTTP en `mcp_config.json` (Hermes Agent) o en tu cliente MCP apuntando a `https://tu-dominio.com/api/v1/mcp` con la cabecera `Authorization: Bearer <token>`.
-4. El agente dispondrá inmediatamente de **22 herramientas semánticas** especializadas de diagnóstico 360°, salud, óptica SFP DDM, enrutamiento BGP, aislamiento técnico, remediación de Config Drift, auditoría CIS (28 directivas) y detección de cortes masivos. Consulta la guía detallada en [07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md](./07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md).
+4. El agente dispondrá inmediatamente de **23 herramientas semánticas** especializadas de diagnóstico 360°, salud, óptica SFP DDM, enrutamiento BGP, aislamiento técnico, remediación de Config Drift, auditoría CIS (28 directivas), detección de cortes masivos y diagnóstico interno de plataforma. Consulta la guía detallada en [07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md](./07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md).
 
 ### ¿Puede un agente de IA causar una interrupción masiva de red a través del endpoint MCP?
 
 **No.** RoSGrid aplica el principio de contención estricta Zero-Trust (Spec 113 y Spec 114):
 
-- Las **16 herramientas de lectura e inspección técnica** solo consultan el estado sin alterar la configuración del router.
+- Las **17 herramientas de lectura e inspección técnica** solo consultan el estado sin alterar la configuración del router ni de la plataforma.
 - Las **6 herramientas de mutación de Nivel 3** (`rosgrid_propose_network_change`, `rosgrid_isolate_subscriber`, `rosgrid_restore_subscriber`, `rosgrid_change_rate_limit`, `rosgrid_reconnect_pppoe_client` y `rosgrid_execute_poe_aware_upgrade`) **no aplican ningún cambio directamente**: interceptan la solicitud hacia la bandeja **Maker-Checker** con estado `AWAITING_APPROVAL`. Un supervisor humano debe validar el cambio antes de que se ejecute bajo protección de **Safe Mode (60s)**.
 - Cada interacción del LLM queda registrada de forma inalterable en la bitácora WORM con el evento `MCP_AI_TOOL_CALL`.
 

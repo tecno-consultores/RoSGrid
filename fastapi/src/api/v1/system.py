@@ -18,6 +18,7 @@ from src.schemas.diagnostics_siem import (
     SiemTestDeliveryResponse,
     UiErrorTelemetryItem,
     UiErrorTelemetryRecordResponse,
+    VersionCheckStatusResponse,
 )
 from src.services.diagnostics_and_siem import (
     build_support_bundle_archive,
@@ -29,6 +30,10 @@ from src.services.diagnostics_and_siem import (
 from src.workers.telemetry_beacon_worker import (
     get_telemetry_beacon_status,
     send_telemetry_heartbeat_once,
+)
+from src.workers.version_check_worker import (
+    check_github_release_once,
+    get_version_check_status,
 )
 
 logger = logging.getLogger(__name__)
@@ -146,3 +151,29 @@ async def test_isp_siem_delivery(
 ) -> SiemTestDeliveryResponse:
     """Ejecuta la prueba de entrega hacia el colector SIEM del ISP (CC = 1)."""
     return await send_siem_test_event(_resolve_tenant_key(claims))
+
+
+@router.get(
+    "/version-check",
+    response_model=VersionCheckStatusResponse,
+    summary="Consultar Estado del Comprobador de Versiones",
+    description="Retorna el estado de la versión actual instalada frente a GitHub Releases (notificación pasiva).",
+    dependencies=[Depends(get_current_user_claims)],
+)
+async def read_version_check_status() -> VersionCheckStatusResponse:
+    """Retorna el estado en caché del comprobador pasivo de nuevas versiones (CC = 1)."""
+    status_data = await get_version_check_status()
+    return VersionCheckStatusResponse(**status_data)
+
+
+@router.post(
+    "/version-check/refresh",
+    response_model=VersionCheckStatusResponse,
+    summary="Forzar Comprobación de Nuevas Versiones en GitHub",
+    description="Consulta GitHub Releases bajo rate limit y actualiza el caché en KeyDB (solo administradores).",
+    dependencies=[Depends(require_roles(*_SYSTEM_ADMIN_ROLES))],
+)
+async def trigger_version_check_refresh() -> VersionCheckStatusResponse:
+    """Fuerza la comprobación inmediata en GitHub Releases respetando cooldown (CC = 1)."""
+    status_data = await check_github_release_once(force=True)
+    return VersionCheckStatusResponse(**status_data)

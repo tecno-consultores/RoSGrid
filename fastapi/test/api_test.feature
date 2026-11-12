@@ -1707,16 +1707,17 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
   # ============================================================================
   # SPEC 114: REMEDIACIÓN INTEGRAL ZERO-TRUST, RLS MULTI-TRANSACCIÓN Y WORM
   # ============================================================================
-  Scenario: 181. Paridad del catalogo publico SKILL.md en /api/v1/mcp/skill con 22 herramientas y 8 Playbooks SOP (Spec 114)
+  Scenario: 181. Paridad del catalogo publico SKILL.md en /api/v1/mcp/skill con 23 herramientas y 8 Playbooks SOP (Spec 114)
     Given path '/api/v1/mcp/skill'
     And param format = 'json'
     When method get
     Then status 200
     And match response.name == 'rosgrid-noc-operator'
-    And match response.content contains '22 herramientas'
-    And match response.content contains 'Playbook 8'
+    And match response.content contains '23 Tools'
+    And match response.content contains 'SOP-8'
     And match response.content contains 'rosgrid_search_mikrotik_docs'
     And match response.content contains 'rosgrid_get_mikrotik_doc_topic'
+    And match response.content contains 'rosgrid_get_platform_diagnostics'
 
   # ============================================================================
   # HITO 30.39: HOMOLOGACIÓN RLS 0017, ANTI-SSRF UNIFICADO, CANON SYSLOG 10 TOPICS Y VERSIÓN 1.1.0
@@ -1736,6 +1737,26 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     When method post
     Then status 401
     And match response == { detail: 'Desafío 2FA inválido o expirado' }
+
+  # ============================================================================
+  # HITO 30.42: ENDURECIMIENTO RESIDUAL MCP Y GOBIERNO MAKER-CHECKER (PLAN MAESTRO)
+  # ============================================================================
+  Scenario: 184. Rechazo determinista 401 o 404 en /api/v1/mcp sin token bearer de servicio (Hito 30.42)
+    Given path '/api/v1/mcp'
+    And request { jsonrpc: '2.0', method: 'tools/list', id: 1 }
+    When method post
+    Then assert responseStatus == 401 || responseStatus == 404
+
+  # ============================================================================
+  # HITO 30.42: COMPROBADOR PASIVO DE NUEVAS VERSIONES CONTRA GITHUB RELEASES
+  # ============================================================================
+  Scenario: 185. Comprobador pasivo de versiones en /api/v1/system/version-check con 401 sin sesion (Hito 30.42)
+    Given path '/api/v1/system/version-check'
+    When method get
+    Then status 401
+    And match response == { detail: 'No autenticado (falta token o cookie de sesión)' }
+
+
 
 
 

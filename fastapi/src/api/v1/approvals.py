@@ -229,59 +229,122 @@ async def list_approvals(
     return ApprovalListResponse(total=total, items=items)
 
 
+async def _execute_deferred_pppoe_reconnect(
+    approval: ApprovalRequest,
+    payload: dict[str, Any],
+    claims: dict[str, Any],
+    db: AsyncSession,
+    client: MikrotikRestClient | None = None,
+) -> dict[str, Any]:
+    from src.api.v1.mcp import _find_pppoe_item_id
+
+    username = str(payload.get("pppoe_username") or "").strip()
+    if not approval.router_id or not username:
+        raise HTTPException(status_code=400, detail="Solicitud de reconexión PPPoE incompleta")
+    owns_client = client is None
+    active_client = client
+    if active_client is None:
+        _, active_client = await get_router_and_client(approval.router_id, claims, db)
+    try:
+        active_rows = await active_client.get("ppp/active") or []
+        live_id = _find_pppoe_item_id(active_rows, username)
+        if not live_id:
+            return {
+                "status": "SESSION_ALREADY_DISCONNECTED",
+                "pppoe_username": username,
+                "message": "La sesión PPPoE ya no se encontraba activa al momento de ejecutar",
+            }
+        await active_client.post("/ppp/active/remove", {".id": live_id})
+        return {"status": "RECONNECTED", "pppoe_username": username, "removed_session_id": live_id}
+    finally:
+        if owns_client and active_client is not None:
+            await active_client.close()
+
+
+async def _execute_deferred_upgrade(
+    payload: dict[str, Any],
+    claims: dict[str, Any],
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    checker_user_id: uuid.UUID,
+) -> dict[str, Any]:
+    from src.api.v1.bulk_and_updates import _process_upgrade_stages, _resolve_upgrade_stages
+    from src.schemas.bulk_and_updates import RosUpdateExecuteRequest
+
+    rids = [uuid.UUID(str(x)) for x in payload.get("router_ids", [])]
+    raw_thresh = payload.get("safety_stop_threshold_percent", payload.get("safety_stop_threshold_pct", 1.0))
+    upg_req = RosUpdateExecuteRequest(
+        router_ids=rids,
+        channel=str(payload.get("channel") or "stable"),
+        target_version=payload.get("target_version"),
+        auto_upgrade_firmware=bool(payload.get("auto_upgrade_firmware", True)),
+        poe_aware=bool(payload.get("poe_aware", True)),
+        safety_stop_threshold_percent=float(raw_thresh),
+    )
+    stages = await _resolve_upgrade_stages(tenant_id, upg_req.router_ids, upg_req.poe_aware)
+    results, stopped = await _process_upgrade_stages(stages, upg_req, claims, db, tenant_id, checker_user_id)
+    return {
+        "status": "SAFETY_STOPPED" if stopped else "COMPLETED",
+        "safety_stop_triggered": stopped,
+        "processed_count": len(results),
+        "results": results,
+    }
+
+
+async def _execute_deferred_subscriber_mutation(
+    mcp_tool: str,
+    payload: dict[str, Any],
+    claims: dict[str, Any],
+    db: AsyncSession,
+) -> dict[str, Any] | None:
+    if mcp_tool not in (
+        "rosgrid_isolate_subscriber",
+        "rosgrid_restore_subscriber",
+        "rosgrid_change_rate_limit",
+        "rosgrid_change_subscriber_rate_limit",
+    ):
+        return None
+    raw_sub_id = payload.get("subscriber_device_id")
+    if not raw_sub_id:
+        return None
+    ik = str(payload.get("idempotency_key") or uuid.uuid4())
+    sub_id = uuid.UUID(str(raw_sub_id))
+    if mcp_tool == "rosgrid_isolate_subscriber":
+        from src.api.v1.network_services import isolate_network_service
+
+        res = await isolate_network_service(sub_id, ik, db, claims)
+        return res.model_dump()
+    if mcp_tool == "rosgrid_restore_subscriber":
+        from src.api.v1.network_services import restore_network_service
+
+        res = await restore_network_service(sub_id, ik, db, claims)
+        return res.model_dump()
+    from src.api.v1.network_services import change_network_service_rate_limit
+    from src.schemas.network_services import ChangeRateLimitRequest
+
+    prof_id = uuid.UUID(str(payload["bandwidth_profile_id"]))
+    req = ChangeRateLimitRequest(bandwidth_profile_id=prof_id)
+    res_limit = await change_network_service_rate_limit(sub_id, req, ik, db, claims)
+    return res_limit.model_dump()
+
+
 async def _execute_mcp_deferred_tool(
     approval: ApprovalRequest,
     claims: dict[str, Any],
     db: AsyncSession,
     tenant_id: uuid.UUID,
     checker_user_id: uuid.UUID,
+    client: MikrotikRestClient | None = None,
 ) -> dict[str, Any] | None:
     payload = approval.request_payload if isinstance(approval.request_payload, dict) else {}
     mcp_tool = payload.get("mcp_tool")
     if not mcp_tool:
         return None
-    ik = str(payload.get("idempotency_key") or uuid.uuid4())
-    if mcp_tool == "rosgrid_isolate_subscriber":
-        from src.api.v1.network_services import isolate_network_service
-
-        sub_id = uuid.UUID(str(payload["subscriber_device_id"]))
-        res = await isolate_network_service(sub_id, ik, db, claims)
-        return res.model_dump()
-    if mcp_tool == "rosgrid_restore_subscriber":
-        from src.api.v1.network_services import restore_network_service
-
-        sub_id = uuid.UUID(str(payload["subscriber_device_id"]))
-        res = await restore_network_service(sub_id, ik, db, claims)
-        return res.model_dump()
-    if mcp_tool in ("rosgrid_change_rate_limit", "rosgrid_change_subscriber_rate_limit"):
-        from src.api.v1.network_services import change_network_service_rate_limit
-        from src.schemas.network_services import ChangeRateLimitRequest
-
-        sub_id = uuid.UUID(str(payload["subscriber_device_id"]))
-        prof_id = uuid.UUID(str(payload["bandwidth_profile_id"]))
-        req = ChangeRateLimitRequest(bandwidth_profile_id=prof_id)
-        res = await change_network_service_rate_limit(sub_id, req, ik, db, claims)
-        return res.model_dump()
+    if mcp_tool == "rosgrid_reconnect_pppoe_client":
+        return await _execute_deferred_pppoe_reconnect(approval, payload, claims, db, client=client)
     if mcp_tool == "rosgrid_execute_poe_aware_upgrade":
-        from src.api.v1.bulk_and_updates import _process_upgrade_stages, _resolve_upgrade_stages
-        from src.schemas.bulk_and_updates import RosUpdateExecuteRequest
-
-        rids = [uuid.UUID(str(x)) for x in payload.get("router_ids", [])]
-        upg_req = RosUpdateExecuteRequest(
-            router_ids=rids,
-            auto_upgrade_firmware=bool(payload.get("auto_upgrade_firmware", True)),
-            poe_aware=bool(payload.get("poe_aware", True)),
-            safety_stop_threshold_percent=float(payload.get("safety_stop_threshold_percent", 1.0)),
-        )
-        stages = await _resolve_upgrade_stages(tenant_id, upg_req.router_ids, upg_req.poe_aware)
-        results, stopped = await _process_upgrade_stages(stages, upg_req, claims, db, tenant_id, checker_user_id)
-        return {
-            "status": "SAFETY_STOPPED" if stopped else "COMPLETED",
-            "safety_stop_triggered": stopped,
-            "processed_count": len(results),
-            "results": results,
-        }
-    return None
+        return await _execute_deferred_upgrade(payload, claims, db, tenant_id, checker_user_id)
+    return await _execute_deferred_subscriber_mutation(mcp_tool, payload, claims, db)
 
 
 async def _execute_approval_lifecycle(
@@ -295,7 +358,7 @@ async def _execute_approval_lifecycle(
 ) -> tuple[str, int]:
     try:
         if claims and db and tenant_id and checker_user_id:
-            mcp_res = await _execute_mcp_deferred_tool(approval, claims, db, tenant_id, checker_user_id)
+            mcp_res = await _execute_mcp_deferred_tool(approval, claims, db, tenant_id, checker_user_id, client=client)
             if mcp_res is not None:
                 approval.execution_result = mcp_res
                 approval.status = ApprovalStatusEnum.APPROVED_AND_EXECUTED

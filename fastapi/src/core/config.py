@@ -2,12 +2,24 @@
 # Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
 # Configuración global con validación estricta y normalización canónica Unicode NFKC.
 
+import tomllib
+from pathlib import Path
+
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _DEFAULT_QA_VAULT_KEY = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
 _DEFAULT_QA_JWT_SECRET = "qa_jwt_secret_key_for_ephemeral_testing_only"
 _DEFAULT_QA_CSRF_SECRET = "qa_csrf_hmac_secret_for_ephemeral_testing_only"
+
+
+def _read_canonical_version() -> str:
+    pyproject_path = Path(__file__).resolve().parents[2] / "pyproject.toml"
+    try:
+        with pyproject_path.open("rb") as f:
+            return str(tomllib.load(f).get("project", {}).get("version") or "1.2.0")
+    except OSError:
+        return "1.2.0"
 
 
 class Settings(BaseSettings):
@@ -19,7 +31,7 @@ class Settings(BaseSettings):
 
     ROSGRID_ENV: str = "development"
     PROJECT_NAME: str = "RoSGrid"
-    VERSION: str = "1.2.0"
+    VERSION: str = Field(default_factory=_read_canonical_version)
     ROSGRID_HTTP_PORT: int = 8080
 
     # PostgreSQL
@@ -138,6 +150,11 @@ class Settings(BaseSettings):
     ROSGRID_TELEMETRY_BEACON_ENABLED: bool = False
     ROSGRID_TELEMETRY_BEACON_URL: str = "https://rosgrid.net/api/telemetry/heartbeat"
     ROSGRID_TELEMETRY_BEACON_INTERVAL_SECONDS: int = 21600
+
+    # Comprobación Pasiva de Nuevas Versiones en GitHub Releases (Solo Notificación — Cero Auto-Update)
+    ROSGRID_VERSION_CHECK_ENABLED: bool = True
+    ROSGRID_GITHUB_RELEASES_API_URL: str = "https://api.github.com/repos/tecno-consultores/RoSGrid/releases/latest"
+    ROSGRID_VERSION_CHECK_INTERVAL_SECONDS: int = 21600
 
     # Diagnóstico Unificado y Conector SIEM Multi-Protocolo del ISP (Spec 72 / Hito 29)
     ROSGRID_DIAGNOSTIC_LOG_RING_SIZE: int = 1000

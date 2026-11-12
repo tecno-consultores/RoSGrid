@@ -199,4 +199,33 @@ describe('NocWallboardView.vue — Conmutador de Mapa Geográfico y Grafo L2/PoE
     expect(root.exists()).toBe(true);
     expect(root.attributes('data-theme')).toBeUndefined();
   });
+
+  it('certifica la semitransparencia táctica real (Glass HUD) en NocWallboardView y tokens de themes.css (Hito 30.42)', async () => {
+    const fs = await import('fs');
+    const path = await import('path');
+
+    const themesPath = path.resolve(__dirname, '../assets/themes.css');
+    const viewPath = path.resolve(__dirname, './NocWallboardView.vue');
+
+    const themesCss = fs.readFileSync(themesPath, 'utf-8');
+    const viewVue = fs.readFileSync(viewPath, 'utf-8');
+
+    // Verifica que los tokens de cristal están definidos en themes.css
+    expect(themesCss).toContain('--rg-hud-glass-bg:');
+    expect(themesCss).toContain('--rg-hud-glass-card-bg:');
+    expect(themesCss).toContain('--rg-hud-glass-border:');
+
+    // Valida que el canal alfa de --rg-hud-glass-bg es < 0.60
+    const glassBgMatches = themesCss.match(/--rg-hud-glass-bg:\s*rgba\([^)]+,\s*([\d.]+)\);/g) || [];
+    expect(glassBgMatches.length).toBeGreaterThanOrEqual(3);
+    for (const match of glassBgMatches) {
+      const alphaVal = parseFloat(match.replace(/.*,\s*([\d.]+)\);/, '$1'));
+      expect(alphaVal).toBeLessThan(0.60);
+    }
+
+    // Verifica que NocWallboardView usa los tokens de cristal en lugar de opacidades >= 75%
+    expect(viewVue).toContain('background: var(--rg-hud-glass-bg);');
+    expect(viewVue).toContain('background: var(--rg-hud-glass-card-bg);');
+    expect(viewVue).toContain('backdrop-filter: blur(5px)');
+  });
 });

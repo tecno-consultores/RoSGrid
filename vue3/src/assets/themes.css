@@ -124,6 +124,14 @@
   --rg-surface-hover: #1E293B;
   --rg-accent-cyan-subtle: rgba(34, 211, 238, 0.15);
   --rg-font-sm: 0.875rem;
+
+  /* HUD Glass Semitransparente (Wallboard NOC) */
+  --rg-hud-glass-bg: rgba(11, 15, 25, 0.38);
+  --rg-hud-glass-header-bg: rgba(17, 24, 39, 0.48);
+  --rg-hud-glass-card-bg: rgba(17, 24, 39, 0.44);
+  --rg-hud-glass-card-hover-bg: rgba(30, 41, 59, 0.72);
+  --rg-hud-glass-border: rgba(34, 211, 238, 0.28);
+  --rg-hud-text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
 }
 
 [data-theme="light"] {
@@ -197,6 +205,14 @@
   --rg-surface-hover: #E2E8F0;
   --rg-accent-cyan-subtle: rgba(14, 116, 144, 0.12);
   --rg-font-sm: 0.875rem;
+
+  /* HUD Glass Semitransparente (Wallboard NOC) */
+  --rg-hud-glass-bg: rgba(248, 250, 252, 0.46);
+  --rg-hud-glass-header-bg: rgba(255, 255, 255, 0.56);
+  --rg-hud-glass-card-bg: rgba(255, 255, 255, 0.52);
+  --rg-hud-glass-card-hover-bg: rgba(255, 255, 255, 0.82);
+  --rg-hud-glass-border: rgba(14, 116, 144, 0.32);
+  --rg-hud-text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9);
 }
 
 [data-theme="noc-high-contrast"] {
@@ -267,6 +283,14 @@
   --rg-surface-hover: #171717;
   --rg-accent-cyan-subtle: rgba(56, 189, 248, 0.25);
   --rg-font-sm: 0.875rem;
+
+  /* HUD Glass Semitransparente (Wallboard NOC) */
+  --rg-hud-glass-bg: rgba(0, 0, 0, 0.52);
+  --rg-hud-glass-header-bg: rgba(0, 0, 0, 0.65);
+  --rg-hud-glass-card-bg: rgba(0, 0, 0, 0.58);
+  --rg-hud-glass-card-hover-bg: rgba(15, 23, 42, 0.85);
+  --rg-hud-glass-border: rgba(34, 211, 238, 0.65);
+  --rg-hud-text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95);
 }
 
 /* Global Reset & Box Sizing */

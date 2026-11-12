@@ -125,7 +125,18 @@
     "change_password": "Cambiar Mi Clave",
     "reset_2fa": "Resetear Mi 2FA",
     "mcp_token": "Token de Acceso MCP",
+    "check_updates": "Comprobar Nueva Versión",
     "logout": "Cerrar Sesión"
+  },
+  "version_check": {
+    "new_release_tooltip": "Nueva versión disponible en GitHub Releases (solo notificación)",
+    "new_release_aria": "Nueva versión disponible",
+    "notification_title": "Nueva versión de RoSGrid disponible",
+    "notification_subtitle": "Versión v{latest} disponible (actual: v{current}). Notificación informativa hacia GitHub Releases.",
+    "checking": "Comprobando nuevas versiones...",
+    "up_to_date": "RoSGrid está actualizado a la última versión disponible.",
+    "update_found": "Se ha publicado la versión v{version} en GitHub Releases.",
+    "open_releases": "Ver Lanzamientos en GitHub"
   },
   "tenant_switcher": {
     "title": "Conmutar Organización",

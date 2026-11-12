@@ -8,6 +8,7 @@
   import { useAuthStore } from '@/stores/useAuthStore';
   import { useInventoryStore } from '@/stores/useInventoryStore';
   import { useNocEventsStore } from '@/stores/useNocEventsStore';
+  import { useVersionCheckStore } from '@/stores/useVersionCheckStore';
   import { useI18n } from '@/composables/useI18n';
   import { formatEventMessage, parseRawAuditString } from '@/utils/eventFormatter';
 
@@ -27,12 +28,14 @@
     requestedByUserId?: string;
     routerId?: string;
     isRead?: boolean;
+    externalUrl?: string;
   }
 
   const router = useRouter();
   const authStore = useAuthStore();
   const inventoryStore = useInventoryStore();
   const nocStore = useNocEventsStore();
+  const versionStore = useVersionCheckStore();
   const { t, locale } = useI18n();
 
   const isOpen = ref(false);
@@ -438,11 +441,39 @@
     return b.timestamp.localeCompare(a.timestamp);
   }
 
+  function populateReleaseUpdateNotification(itemsMap: Map<string, TacticalNotificationItem>): void {
+    if (!versionStore.canSeeUpdateNotice || !versionStore.latestVersion) {
+      return;
+    }
+    const dedupKey = `release:${versionStore.latestVersion}`;
+    const timestamp = versionStore.publishedAt || versionStore.lastCheckedAt || new Date().toISOString();
+    itemsMap.set(dedupKey, {
+      id: dedupKey,
+      dedupKey,
+      category: 'ops',
+      priority: 'P3',
+      icon: '🚀',
+      title: t('version_check.notification_title', 'Nueva versión de RoSGrid disponible'),
+      subtitle: t(
+        'version_check.notification_subtitle',
+        `Versión v${versionStore.latestVersion} disponible (actual: v${versionStore.currentVersion}). Notificación informativa hacia GitHub Releases.`,
+        { latest: versionStore.latestVersion, current: versionStore.currentVersion },
+      ),
+      timestamp,
+      repeatCount: 1,
+      targetPath: '/',
+      externalUrl: versionStore.releaseUrl,
+      requiresAction: false,
+      isRead: isItemRead(dedupKey, timestamp),
+    });
+  }
+
   const allNotifications = computed<TacticalNotificationItem[]>(() => {
     const itemsMap = new Map<string, TacticalNotificationItem>();
     populateApprovalNotifications(itemsMap);
     populateInventoryNotifications(itemsMap);
     populateNocEventNotifications(itemsMap);
+    populateReleaseUpdateNotification(itemsMap);
     return Array.from(itemsMap.values()).sort(compareNotificationItems);
   });
 
@@ -561,6 +592,12 @@
     savePersistedPrefs();
     broadcastStateSync();
     isOpen.value = false;
+    if (item.externalUrl && item.externalUrl.startsWith('https://github.com/tecno-consultores/RoSGrid/')) {
+      if (typeof window !== 'undefined') {
+        window.open(item.externalUrl, '_blank', 'noopener,noreferrer');
+      }
+      return;
+    }
     router.push(item.targetPath);
   }
 

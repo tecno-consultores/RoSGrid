@@ -6,6 +6,18 @@ Todos los cambios relevantes de este proyecto se documentan en este archivo sigu
 
 ## [Unreleased]
 
+### Added
+- **Herramienta MCP #23 (`rosgrid_get_platform_diagnostics`) — Diagnóstico Interno Read-Only, Zero-Leak y Aislado por Tenant (Bloque 4 / Hito `30.42`):** Herramienta semántica para agentes IA (Hermes Agent, Claude) expuesta en `/api/v1/mcp` que resume el estado general de la plataforma (`CRITICAL`, `DEGRADED`, `HEALTHY`), métricas básicas de servidor (CPU %, RAM %, plataforma), estado de KeyDB y latido del worker, configuración SIEM activa, conteo de errores de UI del tenant y últimos eventos de log en RAM filtrados estrictamente por `tenant_id` con sanitización forzosa `[REDACTED]` (`services/diagnostics_and_siem.py`, `api/v1/mcp.py`, `SKILL.md`).
+- **Comprobador Pasivo de Nuevas Versiones contra GitHub Releases — Zero Auto-Update (Bloque 2 / Hito `30.42`):** Worker pasivo `VersionCheckWorker` (`fastapi/src/workers/version_check_worker.py`) con lectura SSOT de versión vía `tomllib` sobre `pyproject.toml`, verificación fail-silent y cooldown manual de 60s en KeyDB; endpoints tipados `GET /api/v1/system/version-check` y `POST /api/v1/system/version-check/refresh`; store Pinia `useVersionCheckStore.ts` con control de visibilidad RBAC; píldora táctica `.rg-version-update-pill` en cabecera global (`RgResponsiveShell.vue`); y helper seguro `populateReleaseUpdateNotification` en el centro de notificaciones.
+- **Tokens de Cristal Táctico Semántico (`Glass HUD`) en Wallboard NOC (Bloque 3 / Hito `30.42`):** Declaración de tokens `--rg-hud-glass-bg`, `--rg-hud-glass-header-bg`, `--rg-hud-glass-card-bg`, `--rg-hud-glass-card-hover-bg`, `--rg-hud-glass-border` y `--rg-hud-text-shadow` en los 3 temas (`dark`, `light`, `noc-high-contrast`) dentro de `themes.css`, restaurando la semitransparencia táctica real con `backdrop-filter: blur(5px) saturate(130%)` sobre el mapa OpenStreetMap en `NocWallboardView.vue`.
+
+### Changed
+- **Endurecimiento Residual del Servidor MCP y Ejecución Diferida Maker-Checker (Bloque 1 / Hito `30.42`):** Validación multi-tenant y permisos en `_handle_execute_poe_aware_upgrade` (`mcp.py`); resolución en vivo del `.id` efímero en `/ppp/active` por username en `_execute_deferred_pppoe_reconnect` y propagación de `channel`/`target_version` en `_execute_deferred_upgrade` (`approvals.py`); desacoplamiento de funciones con complejidad ciclomática Radon Grado A (`CC <= 5`).
+- **Sincronización Canónica a 23 Herramientas MCP y Catálogo de Token:** Actualización de `vue3/src/components/admin/RgMcpTokenModal.vue` (`23 Registered MCP Tools`), `AGENTS.md`, `README.md`, `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`, `docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md`, `docs/FAQ.md` y paridad idéntica byte a byte entre `.agents/skills/rosgrid-noc-operator/SKILL.md` y `fastapi/src/api/v1/SKILL.md`.
+
+### Fixed
+- **Anti-Regresión y Manejo Fail-Silent en Comprobador de Versiones:** Corrección de tipado estricto `ApiResponse<VersionCheckStatus>` en el store Pinia, interacción en menús de usuario en `RgResponsiveShell.unit.ts`, y aserciones de persistencia en `test_mcp_endpoint.unit.py` y `test_spec114_compliance_and_bulk_coverage.unit.py`.
+
 ---
 
 ## [1.2.0] - 2026-11-10

@@ -820,6 +820,56 @@ async def _handle_get_recent_syslog(
     }
 
 
+_ALLOWED_UPGRADE_CHANNELS: frozenset[str] = frozenset({"stable", "long-term", "testing", "development"})
+
+
+def _parse_poe_upgrade_args(args: dict[str, Any]) -> tuple[list[uuid.UUID], str, str | None, bool, bool, float]:
+    raw_ids = args.get("router_ids", [])
+    if not raw_ids:
+        raise HTTPException(status_code=400, detail="router_ids no puede estar vacío")
+    rids = list(dict.fromkeys(uuid.UUID(str(x)) for x in raw_ids))
+    channel = str(args.get("channel") or "stable").strip().lower()
+    if channel not in _ALLOWED_UPGRADE_CHANNELS:
+        raise HTTPException(status_code=422, detail=f"Canal de actualización inválido: {channel}")
+    raw_target = args.get("target_version")
+    target_version = str(raw_target).strip() if raw_target else None
+    raw_thresh = args.get("safety_stop_threshold_percent", args.get("safety_stop_threshold_pct", 1.0))
+    threshold = float(raw_thresh)
+    if threshold < 0.1 or threshold > 100.0:
+        raise HTTPException(status_code=422, detail="safety_stop_threshold_percent debe estar entre 0.1 y 100.0")
+    return (
+        rids,
+        channel,
+        target_version,
+        bool(args.get("poe_aware", True)),
+        bool(args.get("auto_upgrade_firmware", True)),
+        threshold,
+    )
+
+
+async def _verify_mcp_routers_access(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    claims: dict[str, Any],
+    rids: list[uuid.UUID],
+) -> None:
+    for rid in rids:
+        await _verify_tenant_resource_ownership(db, Router, rid, tenant_id, "Router")
+    if type(db) is AsyncSession and _should_filter_user_routers(claims):
+        perm_stmt = select(UserRouterPermission.router_id).where(
+            UserRouterPermission.tenant_id == tenant_id,
+            UserRouterPermission.user_id == user_id,
+            UserRouterPermission.can_read.is_(True),
+            UserRouterPermission.router_id.in_(rids),
+        )
+        allowed_ids = set((await db.execute(perm_stmt)).scalars().all())
+        if len(allowed_ids) != len(set(rids)):
+            raise HTTPException(
+                status_code=403, detail="No tiene permisos asignados sobre todos los routers solicitados"
+            )
+
+
 async def _handle_execute_poe_aware_upgrade(
     db: AsyncSession,
     tenant_id: uuid.UUID,
@@ -827,14 +877,8 @@ async def _handle_execute_poe_aware_upgrade(
     claims: dict[str, Any],
     args: dict[str, Any],
 ) -> dict[str, Any]:
-    raw_ids = args.get("router_ids", [])
-    if not raw_ids:
-        raise HTTPException(status_code=400, detail="router_ids no puede estar vacío")
-    rids = [uuid.UUID(str(x)) for x in raw_ids]
-    poe_aware = bool(args.get("poe_aware", True))
-    auto_firmware = bool(args.get("auto_upgrade_firmware", True))
-    threshold = float(args.get("safety_stop_threshold_percent", 1.0))
-
+    rids, channel, target_version, poe_aware, auto_firmware, threshold = _parse_poe_upgrade_args(args)
+    await _verify_mcp_routers_access(db, tenant_id, user_id, claims, rids)
     ordered_stages = await _resolve_upgrade_stages(tenant_id, rids, poe_aware)
     poe_stages_str = [[str(r) for r in s] for s in ordered_stages] if poe_aware else None
     return await _create_mcp_approval_request(
@@ -843,13 +887,15 @@ async def _handle_execute_poe_aware_upgrade(
         user_id=user_id,
         router_id=rids[0],
         action_type=CriticalActionTypeEnum.BULK_MULTI_ROUTER_EXECUTION,
-        summary=f"MCP AI PoE-Aware Upgrade: {len(rids)} routers",
+        summary=f"MCP AI PoE-Aware Upgrade ({channel}): {len(rids)} routers",
         justification=str(args.get("justification") or "MCP AI PoE-Aware Firmware & OS Upgrade Proposal"),
         ros_rest_method="POST",
         ros_rest_path="/system/package/update/install",
         request_payload={
             "mcp_tool": "rosgrid_execute_poe_aware_upgrade",
             "router_ids": [str(x) for x in rids],
+            "channel": channel,
+            "target_version": target_version,
             "auto_upgrade_firmware": auto_firmware,
             "poe_aware": poe_aware,
             "safety_stop_threshold_percent": threshold,
@@ -857,6 +903,8 @@ async def _handle_execute_poe_aware_upgrade(
         },
         extra_fields={
             "target_routers_count": len(rids),
+            "channel": channel,
+            "target_version": target_version,
             "poe_stages": poe_stages_str,
         },
     )
@@ -1033,6 +1081,33 @@ async def _handle_get_mikrotik_doc_topic(
     }
 
 
+_ALLOWED_DIAG_LEVELS: frozenset[str] = frozenset({"WARNING", "ERROR", "CRITICAL"})
+
+
+async def _handle_get_platform_diagnostics(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    claims: dict[str, Any],
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    from src.services.diagnostics_and_siem import get_tenant_platform_diagnostics_summary
+
+    raw_limit = int(args.get("max_events", 25))
+    max_events = min(max(raw_limit, 1), 50)
+    min_level = str(args.get("min_level") or "WARNING").strip().upper()
+    if min_level not in _ALLOWED_DIAG_LEVELS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"min_level inválido: {min_level} (use WARNING, ERROR o CRITICAL)",
+        )
+    return await get_tenant_platform_diagnostics_summary(
+        tenant_id=str(tenant_id),
+        max_events=max_events,
+        min_level=min_level,
+    )
+
+
 TOOL_HANDLERS_MAP: dict[str, Callable[..., Coroutine[Any, Any, dict[str, Any]]]] = {
     "rosgrid_list_inventory": _handle_list_inventory,
     "rosgrid_get_router_health": _handle_get_router_health,
@@ -1057,6 +1132,7 @@ TOOL_HANDLERS_MAP: dict[str, Callable[..., Coroutine[Any, Any, dict[str, Any]]]]
     "rosgrid_execute_poe_aware_upgrade": _handle_execute_poe_aware_upgrade,
     "rosgrid_search_mikrotik_docs": _handle_search_mikrotik_docs,
     "rosgrid_get_mikrotik_doc_topic": _handle_get_mikrotik_doc_topic,
+    "rosgrid_get_platform_diagnostics": _handle_get_platform_diagnostics,
 }
 
 MCP_TOOLS_CATALOG: list[dict[str, Any]] = [
@@ -1496,6 +1572,16 @@ MCP_TOOLS_CATALOG: list[dict[str, Any]] = [
                     "items": {"type": "string", "format": "uuid"},
                     "description": "Lista de UUIDs de los routers a actualizar",
                 },
+                "channel": {
+                    "type": "string",
+                    "enum": ["stable", "long-term", "testing", "development"],
+                    "default": "stable",
+                    "description": "Canal oficial de actualización de MikroTik RouterOS v7",
+                },
+                "target_version": {
+                    "type": "string",
+                    "description": "Versión específica objetivo (ej. '7.18.2'). Si se omite, instala la última del canal",
+                },
                 "auto_upgrade_firmware": {
                     "type": "boolean",
                     "default": True,
@@ -1512,6 +1598,16 @@ MCP_TOOLS_CATALOG: list[dict[str, Any]] = [
                     "maximum": 100.0,
                     "default": 1.0,
                     "description": "Porcentaje de fallos permitido antes de abortar la actualización del resto de la flota",
+                },
+                "safety_stop_threshold_pct": {
+                    "type": "number",
+                    "minimum": 0.1,
+                    "maximum": 100.0,
+                    "description": "Alias opcional para safety_stop_threshold_percent",
+                },
+                "justification": {
+                    "type": "string",
+                    "description": "Justificación técnica obligatoria para la solicitud de cambio Maker-Checker",
                 },
             },
             "required": ["router_ids"],
@@ -1561,6 +1657,28 @@ MCP_TOOLS_CATALOG: list[dict[str, Any]] = [
                 },
             },
             "required": ["doc_path_or_url"],
+        },
+    },
+    {
+        "name": "rosgrid_get_platform_diagnostics",
+        "description": "Obtiene un resumen estructurado y sanitizado [REDACTED] de la salud interna de la plataforma RoSGrid (KeyDB, workers, telemetría de errores UI del frontend, estado SIEM y alertas de backend) acotado estrictamente al tenant de la cuenta de servicio (Read-Only).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "max_events": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 50,
+                    "default": 25,
+                    "description": "Cantidad máxima de eventos recientes de error o alerta a retornar (1 a 50)",
+                },
+                "min_level": {
+                    "type": "string",
+                    "enum": ["WARNING", "ERROR", "CRITICAL"],
+                    "default": "WARNING",
+                    "description": "Nivel mínimo de severidad a incluir para las alertas del backend",
+                },
+            },
         },
     },
 ]

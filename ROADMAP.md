@@ -2,7 +2,7 @@
 
 ## 📍 Punto de Control Actual (Checkpoint)
 
-- **Hito Actual en Curso:** Hitos 0 al 30 COMPLETADOS (100% — incluyendo Subhitos `30.1` al `30.41` / `Spec 114` Certificados en Docker Efímero).
+- **Hito Actual en Curso:** Hitos 0 al 30 COMPLETADOS (100% — incluyendo Subhitos `30.1` al `30.42` / `Spec 114` Certificados en Docker Efímero).
 - **Fase Siguiente en Planificación:** Proceso de Cierre y Publicación Final (`./scripts/build.sh` en Docker Hub).
 - **Archivo Histórico de Hitos Cerrados (`0` al `29`):** Consulta el desglose granular histórico en [`docs/archive/ROADMAP_HITOS_00-29.md`](docs/archive/ROADMAP_HITOS_00-29.md).
 
@@ -238,6 +238,12 @@
 - [x] **30.41** **Remediación Integral de Seguridad WORM, RLS, WCAG, Nginx Non-Root y Deuda de Infraestructura (`docs/specs/114_COMPREHENSIVE_SECURITY_WORM_RLS_WCAG_AND_INFRA_REMEDIATION.md`):**
   - [x] **30.41.1 Endurecimiento de Migración RLS 25 Tablas (`0018`), Secuencia WORM Monotónica (`audit_logs_seq_num_seq`) y Workers Resilientes:** Migración `0018_harden_rls_and_worm_seq.py`, saneamiento de claves sensibles en `audit.py`, aislamiento por router en rotación de bóveda, `effective_reachable` con `syslog:heartbeat` y semáforo de concurrencia en health monitor.
   - [x] **30.41.2 Nginx Non-Root (:8080), STIG Defaults, CSP WebSocket, WCAG 2.1 AA en Modales y Normalización NFKC:** Nginx en `:8080` con `client_max_body_size 32m`, timeouts de 190s y `connect-src 'self' ws: wss:`; parámetros STIG por defecto en compose; `aria-labelledby` y `aria-modal` en 9 modales Vue 3; y normalización canónica Unicode NFKC en esquemas Pydantic (`auth`, `inventory`, `tenants`, `webfig_layer2`).
+
+- [x] **30.42** **Plan Maestro Quirúrgico Flash-Ready QA 11X: Endurecimiento Residual Servidor MCP y Ejecución Diferida Maker-Checker, Comprobador Pasivo de Versiones GitHub (Zero Auto-Update), Restauración Glass HUD Wallboard y Herramienta MCP #23 (`rosgrid_get_platform_diagnostics`):**
+  - [x] **30.42.1 Bloque 1: Endurecimiento Residual Servidor MCP y Ejecución Diferida Maker-Checker:** Validación multi-tenant y permisos en `_handle_execute_poe_aware_upgrade` (`mcp.py`), resolución en vivo de `.id` efímero en `/ppp/active` por username en `_execute_deferred_pppoe_reconnect` y propagación de `channel`/`target_version` en `_execute_deferred_upgrade` (`approvals.py`), Escenario Karate BDD 184 y suites unitarias.
+  - [x] **30.42.2 Bloque 2: Comprobador Pasivo de Nuevas Versiones GitHub (Zero Auto-Update):** Lectura canónica `pyproject.toml` vía `tomllib`, worker pasivo en segundo plano `VersionCheckWorker` con caché KeyDB y cooldown 60s, endpoints `/version-check` y `/refresh`, store Pinia `useVersionCheckStore`, píldora táctica en `RgResponsiveShell.vue`, enlace a releases en notificación y Escenario Karate BDD 185.
+  - [x] **30.42.3 Bloque 3: Restauración de Semitransparencia Real (Glass HUD) en Wallboard NOC:** Tokens `--rg-hud-glass-*` en 3 temas (`dark`, `light`, `noc-high-contrast`), desenfoque táctico `blur(5px) saturate(130%)` sin eclipsar mapa OSM, Escenario Karate BDD 132 y pruebas unitarias anti-regresión.
+  - [x] **30.42.4 Bloque 4: Herramienta MCP #23 (`rosgrid_get_platform_diagnostics`):** Herramienta de solo lectura para agentes IA que resume estado operativo, CPU/RAM, Redis, workers y últimos logs filtrados por tenant con sanitización de secretos obligatoria, sincronización del catálogo a 23 herramientas en frontend, `SKILL.md` (ambos) y docs.
 
 ---
 

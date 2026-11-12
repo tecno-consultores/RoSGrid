@@ -739,6 +739,63 @@ describe('RgResponsiveShell.vue — Doble Contexto & Menú de Usuario 11X', () =
 
     expect(wrapper.find('#mock-notif-bell').exists()).toBe(true);
   });
+
+  it('muestra la píldora táctica de actualización cuando hay nueva versión para admin y ejecuta refresh desde el menú', async () => {
+    const { useVersionCheckStore } = await import('@/stores/useVersionCheckStore');
+    const versionStore = useVersionCheckStore();
+    const authStore = useAuthStore();
+
+    authStore.setAuth({
+      id: 'admin-1',
+      username: 'admin',
+      email: 'admin@rosgrid.local',
+      role: 'SUPERADMIN_GLOBAL',
+      tenant_id: 't-1',
+      tenant_slug: 'demo',
+      totp_enabled: false,
+    });
+
+    versionStore.applyStatus({
+      enabled: true,
+      current_version: '1.2.0',
+      latest_version: '1.3.0',
+      update_available: true,
+      release_url: 'https://github.com/tecno-consultores/RoSGrid/releases/tag/v1.3.0',
+      release_name: 'v1.3.0',
+      published_at: '2026-11-20T00:00:00Z',
+      last_checked_at: '2026-11-20T01:00:00Z',
+      last_status: 'ok',
+    });
+
+    const refreshSpy = vi.spyOn(versionStore, 'refreshVersionCheck').mockResolvedValue();
+
+    const wrapper = mount(RgResponsiveShell, {
+      global: {
+        stubs: {
+          RouterView: true,
+          RgCommandPalette: true,
+          RgSafeModeBanner: true,
+          ChangePasswordModal: true,
+          RgStepUp2FAModal: true,
+          RgMcpTokenModal: true,
+          RgNotificationCenterBell: true,
+        },
+      },
+    });
+
+    const pill = wrapper.find('.rg-version-update-pill');
+    expect(pill.exists()).toBe(true);
+    expect(pill.attributes('target')).toBe('_blank');
+    expect(pill.attributes('rel')).toContain('noopener');
+    expect(pill.text()).toContain('v1.3.0');
+
+    // Abrir menú de usuario para acceder a la acción de comprobación de versión
+    await wrapper.find('.user-profile-btn').trigger('click');
+    const checkBtn = wrapper.find('.btn-check-updates-menu');
+    expect(checkBtn.exists()).toBe(true);
+    await checkBtn.trigger('click');
+    expect(refreshSpy).toHaveBeenCalled();
+  });
 });
 
 
