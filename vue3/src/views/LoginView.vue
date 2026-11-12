@@ -1080,7 +1080,7 @@
           </a>
         </span>
         <span class="footer-divider" aria-hidden="true">•</span>
-        <span class="footer-version">v1.2.0</span>
+        <span class="footer-version">v1.3.0</span>
         <span class="footer-divider" aria-hidden="true">•</span>
         <a
           href="https://www.gnu.org/licenses/gpl-3.0.html"

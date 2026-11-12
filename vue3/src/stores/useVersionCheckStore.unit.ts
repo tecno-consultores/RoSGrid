@@ -22,7 +22,7 @@ describe('useVersionCheckStore — Comprobador Pasivo de Versiones (Hito 30.42)'
 
   it('inicializa con valores por defecto seguros', () => {
     const store = useVersionCheckStore();
-    expect(store.currentVersion).toBe('1.2.0');
+    expect(store.currentVersion).toBe('1.3.0');
     expect(store.latestVersion).toBeNull();
     expect(store.updateAvailable).toBe(false);
     expect(store.canSeeUpdateNotice).toBe(false);
@@ -78,20 +78,20 @@ describe('useVersionCheckStore — Comprobador Pasivo de Versiones (Hito 30.42)'
     const store = useVersionCheckStore();
     store.applyStatus({
       enabled: true,
-      current_version: '1.2.0',
-      latest_version: '1.3.0',
+      current_version: '1.3.0',
+      latest_version: '1.4.0',
       update_available: true,
-      release_url: 'https://github.com/tecno-consultores/RoSGrid/releases/tag/v1.3.0',
-      release_name: 'v1.3.0 Release',
+      release_url: 'https://github.com/tecno-consultores/RoSGrid/releases/tag/v1.4.0',
+      release_name: 'v1.4.0 Release',
       published_at: '2026-11-20T00:00:00Z',
       last_checked_at: '2026-11-20T01:00:00Z',
       last_status: 'ok',
     });
 
-    expect(store.currentVersion).toBe('1.2.0');
-    expect(store.latestVersion).toBe('1.3.0');
+    expect(store.currentVersion).toBe('1.3.0');
+    expect(store.latestVersion).toBe('1.4.0');
     expect(store.updateAvailable).toBe(true);
-    expect(store.releaseName).toBe('v1.3.0 Release');
+    expect(store.releaseName).toBe('v1.4.0 Release');
   });
 
   it('fetchVersionStatus llama al endpoint GET de forma fail-silent', async () => {
@@ -100,7 +100,7 @@ describe('useVersionCheckStore — Comprobador Pasivo de Versiones (Hito 30.42)'
     (http.get as WebFigDynamic).mockResolvedValueOnce({
       data: {
         enabled: true,
-        current_version: '1.2.0',
+        current_version: '1.3.0',
         latest_version: '1.4.0',
         update_available: true,
         release_url: 'https://github.com/tecno-consultores/RoSGrid/releases',
@@ -122,7 +122,7 @@ describe('useVersionCheckStore — Comprobador Pasivo de Versiones (Hito 30.42)'
     (http.post as WebFigDynamic).mockResolvedValueOnce({
       data: {
         enabled: true,
-        current_version: '1.2.0',
+        current_version: '1.3.0',
         latest_version: '1.5.0',
         update_available: true,
         release_url: 'https://github.com/tecno-consultores/RoSGrid/releases',

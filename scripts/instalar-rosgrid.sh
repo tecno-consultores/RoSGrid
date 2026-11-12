@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)
-# Script de Instalación No-Root para RoSGrid v1.2.0 (Soporte Local y Remoto vía curl)
+# Script de Instalación No-Root para RoSGrid v1.3.0 (Soporte Local y Remoto vía curl)
 
 LC_ALL=C
 set -euo pipefail
@@ -48,7 +48,7 @@ leer_entrada() {
 
 clear 2>/dev/null || true
 echo "=============================================================================="
-echo "          🚀 Asistente de Instalación No-Root de RoSGrid v1.2.0              "
+echo "          🚀 Asistente de Instalación No-Root de RoSGrid v1.3.0              "
 echo "=============================================================================="
 
 # 2. Verificación de herramientas prerrequisito

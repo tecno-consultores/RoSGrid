@@ -1,6 +1,6 @@
 {
   "name": "rosgrid-frontend",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "author": "Jesus Palencia <sinfallas@gmail.com> (Creado en Tecno Consultores)",
   "license": "GPL-3.0-only",
   "description": "Consola Web Centralizada Multi-Tenant para Flotas MikroTik RouterOS v7+ (Vue 3 + TS + Pinia)",

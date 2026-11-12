@@ -130,7 +130,7 @@ sequenceDiagram
     participant Stack as docker-compose.prod.local.yml
     participant Hub as Docker Hub (sinfallas/*)
 
-    Dev->>Build: ./scripts/build.sh 1.2.0
+    Dev->>Build: ./scripts/build.sh 1.3.0
     Build->>Pipeline: Paso 0: Ejecutar compuerta local obligatoria
     Pipeline->>Stack: Despliegue sintético de PostgreSQL + KeyDB + API + Nginx
     Stack->>Pipeline: Healthchecks Healthy (4/4 servicios)
@@ -142,16 +142,16 @@ sequenceDiagram
         Pipeline->>Stack: Purga de stack y volúmenes temporales
         Pipeline-->>Build: Salida con código 0 (Compuerta aprobada)
         Build->>Hub: docker buildx bake (linux/amd64, linux/arm64) -> Push oficial
-        Build-->>Dev: ✅ Versión 1.2.0 publicada exitosamente
+        Build-->>Dev: ✅ Versión 1.3.0 publicada exitosamente
     end
 ```
 
 ```bash
 # Publicación normal (valida en local antes de compilar multi-arch y publicar)
-./scripts/build.sh 1.2.0
+./scripts/build.sh 1.3.0
 
 # Publicación forzada (omitiendo la validación previa solo si es estrictamente necesario)
-./scripts/build.sh 1.2.0 --skip-validation
+./scripts/build.sh 1.3.0 --skip-validation
 ```
 
 Si `./scripts/probar-prod-local.sh` detecta cualquier fallo en healthchecks, migraciones, endpoints o tokens, el proceso de compilación `buildx` multi-plataforma (`linux/amd64`, `linux/arm64`) se aborta inmediatamente con código de error `1`, protegiendo el registro público.

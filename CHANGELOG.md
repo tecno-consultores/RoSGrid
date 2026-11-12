@@ -6,6 +6,10 @@ Todos los cambios relevantes de este proyecto se documentan en este archivo sigu
 
 ## [Unreleased]
 
+---
+
+## [1.3.0] - 2026-11-11
+
 ### Added
 - **Herramienta MCP #23 (`rosgrid_get_platform_diagnostics`) — Diagnóstico Interno Read-Only, Zero-Leak y Aislado por Tenant (Bloque 4 / Hito `30.42`):** Herramienta semántica para agentes IA (Hermes Agent, Claude) expuesta en `/api/v1/mcp` que resume el estado general de la plataforma (`CRITICAL`, `DEGRADED`, `HEALTHY`), métricas básicas de servidor (CPU %, RAM %, plataforma), estado de KeyDB y latido del worker, configuración SIEM activa, conteo de errores de UI del tenant y últimos eventos de log en RAM filtrados estrictamente por `tenant_id` con sanitización forzosa `[REDACTED]` (`services/diagnostics_and_siem.py`, `api/v1/mcp.py`, `SKILL.md`).
 - **Comprobador Pasivo de Nuevas Versiones contra GitHub Releases — Zero Auto-Update (Bloque 2 / Hito `30.42`):** Worker pasivo `VersionCheckWorker` (`fastapi/src/workers/version_check_worker.py`) con lectura SSOT de versión vía `tomllib` sobre `pyproject.toml`, verificación fail-silent y cooldown manual de 60s en KeyDB; endpoints tipados `GET /api/v1/system/version-check` y `POST /api/v1/system/version-check/refresh`; store Pinia `useVersionCheckStore.ts` con control de visibilidad RBAC; píldora táctica `.rg-version-update-pill` en cabecera global (`RgResponsiveShell.vue`); y helper seguro `populateReleaseUpdateNotification` en el centro de notificaciones.
@@ -80,3 +84,9 @@ Todos los cambios relevantes de este proyecto se documentan en este archivo sigu
 - **Operaciones ISP, FTTH GPON y Panel Móvil de Técnico de Campo:** Gestión de suscriptores PPPoE/DHCP, aprovisionamiento en vivo en el BNG, topología de Cajas Ópticas NAP, telemetría de potencia óptica ONU y aplicación móvil responsiva con firma digital y diagnóstico Ping 1-Clic.
 - **Cumplimiento CIS Benchmark RouterOS v7 (28 Directivas) y Observabilidad:** Escáner de endurecimiento CIS (`12 Base + 8 ISP + 8 CORP`) con remediación asistida, detector de deriva de configuración (Config Drift), Looking Glass BGP/Traceroute, receptor Syslog UDP (`514`/`5514`) y exportador dual de métricas OpenMetrics/Prometheus (`GET /metrics` y `GET /api/v1/metrics/fleet`).
 - **Servidor Model Context Protocol (MCP) Integrado (`/api/v1/mcp`):** Punto de enlace JSON-RPC 2.0 nativo para agentes de IA (Claude Desktop, Hermes Agent, Cursor) con 22 herramientas de diagnóstico, auditoría y operación gobernada.
+
+[Unreleased]: https://github.com/tecno-consultores/RoSGrid/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/tecno-consultores/RoSGrid/compare/v1.2.0...v1.3.0
+[1.2.0]: https://github.com/tecno-consultores/RoSGrid/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/tecno-consultores/RoSGrid/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/tecno-consultores/RoSGrid/releases/tag/v1.0.0

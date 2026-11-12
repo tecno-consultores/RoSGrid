@@ -17,9 +17,9 @@ def _read_canonical_version() -> str:
     pyproject_path = Path(__file__).resolve().parents[2] / "pyproject.toml"
     try:
         with pyproject_path.open("rb") as f:
-            return str(tomllib.load(f).get("project", {}).get("version") or "1.2.0")
+            return str(tomllib.load(f).get("project", {}).get("version") or "1.3.0")
     except OSError:
-        return "1.2.0"
+        return "1.3.0"
 
 
 class Settings(BaseSettings):

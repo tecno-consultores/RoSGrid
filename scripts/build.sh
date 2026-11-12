@@ -11,7 +11,7 @@ if [[ "${EUID}" -eq 0 ]]; then
 	exit 1
 fi
 
-VERSION="1.2.0"
+VERSION="1.3.0"
 SKIP_VALIDATION=false
 
 # Procesar argumentos
@@ -22,7 +22,7 @@ for arg in "$@"; do
 			;;
 		-h|--help)
 			echo "Uso: ./scripts/build.sh [VERSION] [--skip-validation]"
-			echo "Ejemplo: ./scripts/build.sh 1.2.0"
+			echo "Ejemplo: ./scripts/build.sh 1.3.0"
 			exit 0
 			;;
 		*)

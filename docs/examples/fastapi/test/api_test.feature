@@ -1691,7 +1691,7 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
     When method get
     Then status 200
     And match response.name == 'rosgrid-noc-operator'
-    And match response.version == '1.2.0'
+    And match response.version == '1.3.0'
     And match response.content contains 'rosgrid-noc-operator'
 
   # ============================================================================
@@ -1722,11 +1722,11 @@ Feature: Validación BDD Caja Negra de la API REST FastAPI de RoSGrid y Segurida
   # ============================================================================
   # HITO 30.39: HOMOLOGACIÓN RLS 0017, ANTI-SSRF UNIFICADO, CANON SYSLOG 10 TOPICS Y VERSIÓN 1.1.0
   # ============================================================================
-  Scenario: 182. Homologacion RLS de 25 tablas en migracion 0017, canon de 10 topics Syslog y version 1.2.0 en /health (Hito 30.39)
+  Scenario: 182. Homologacion RLS de 25 tablas en migracion 0017, canon de 10 topics Syslog y version 1.3.0 en /health (Hito 30.39)
     Given path '/health'
     When method get
     Then status 200
-    And match response.version == '1.2.0'
+    And match response.version == '1.3.0'
 
   # ============================================================================
   # HITO 30.40: CORRECCIÓN ÍNDICE PREAUTH REDIS EN BOOTSTRAP INICIAL Y CONFIRMACIÓN 2FA

@@ -2,7 +2,7 @@
 
 ## 📍 Punto de Control Actual (Checkpoint)
 
-- **Hito Actual en Curso:** Hitos 0 al 30 COMPLETADOS (100% — incluyendo Subhitos `30.1` al `30.42` / `Spec 114` Certificados en Docker Efímero).
+- **Hito Actual en Curso:** Hitos 0 al 30 COMPLETADOS (100% — incluyendo Subhitos `30.1` al `30.42` / `Spec 114` Certificados en Docker Efímero para v1.3.0).
 - **Fase Siguiente en Planificación:** Proceso de Cierre y Publicación Final (`./scripts/build.sh` en Docker Hub).
 - **Archivo Histórico de Hitos Cerrados (`0` al `29`):** Consulta el desglose granular histórico en [`docs/archive/ROADMAP_HITOS_00-29.md`](docs/archive/ROADMAP_HITOS_00-29.md).
 
@@ -251,5 +251,5 @@
 
 > **Archivo Guía:** `docs/specs/01_DOCKER_INFRASTRUCTURE_AND_IMMUTABLE_IMAGES.md`
 
-- [x] **Cierre Documental de Versión (`[1.2.0]`):** Actualizar `CHANGELOG.md` consolidando los cambios de `[1.0.0]`, `[1.1.0]` y `[1.2.0]` con las métricas certificadas en `TESTING.md`.
-- [ ] **Construcción y Publicación Inmutable en Docker Hub (`./scripts/build.sh`):** Ejecutar `./scripts/build.sh` (como usuario no-root) con `docker buildx` (`container-builder` + `tonistiigi/binfmt`) para construir y publicar `sinfallas/rosgrid-backend:latest` (`:1.2.0`) y `sinfallas/rosgrid-frontend:latest` (`:1.2.0`) en Docker Hub y limpiar cachés con `prune -af`.
+- [x] **Cierre Documental de Versión (`[1.3.0]`):** Actualizar `CHANGELOG.md` consolidando los cambios de `[1.0.0]`, `[1.1.0]`, `[1.2.0]` y `[1.3.0]` con las métricas certificadas en `TESTING.md`.
+- [ ] **Construcción y Publicación Inmutable en Docker Hub (`./scripts/build.sh`):** Ejecutar `./scripts/build.sh` (como usuario no-root) con `docker buildx` (`container-builder` + `tonistiigi/binfmt`) para construir y publicar `sinfallas/rosgrid-backend:latest` (`:1.3.0`) y `sinfallas/rosgrid-frontend:latest` (`:1.3.0`) en Docker Hub y limpiar cachés con `prune -af`.

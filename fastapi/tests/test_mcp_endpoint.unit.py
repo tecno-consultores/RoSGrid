@@ -1184,7 +1184,7 @@ async def test_get_mcp_skill_json() -> None:
     assert resp.status_code == 200
     data = json.loads(resp.body.decode("utf-8"))
     assert data["name"] == "rosgrid-noc-operator"
-    assert data["version"] == "1.2.0"
+    assert data["version"] == "1.3.0"
     assert "rosgrid-noc-operator" in data["content"]
 
 

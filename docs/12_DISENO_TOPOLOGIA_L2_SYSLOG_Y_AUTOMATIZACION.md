@@ -366,9 +366,9 @@ La totalidad de los contratos REST y flujos de usuario del Hito 23 cuentan con p
 ### 11.1 Pruebas de Contratos REST API (`fastapi/test/api_test.feature`)
 
 * **Escenarios 55-61:** Cobertura de las rutas `/api/v1/inventory/cves`, `/api/v1/inventory/cves/sync`, `/api/v1/topology/l2`, `/api/v1/routers/syslog/template`, `/api/v1/routers/{id}/syslog`, `/api/v1/metrics/fleet` y `/api/v1/operations/ros-updates/execute`.
-* **Resultado (al cierre del Hito 23):** 61 de 61 escenarios aprobados (100%; la suite actual cuenta con 185 escenarios en v1.2.0).
+* **Resultado (al cierre del Hito 23):** 61 de 61 escenarios aprobados (100%; la suite actual cuenta con 185 escenarios en v1.3.0).
 
 ### 11.2 Pruebas de Interfaz de Usuario UI (`vue3/test/ui_business_flow.feature`)
 
 * **Escenarios 17-20:** Cobertura integral de la Topología L2, Matriz de Vulnerabilidades CVE, Consola Syslog Terminal y el Asistente de Actualización Masiva PoE-Aware con Safety Stop.
-* **Resultado (al cierre del Hito 23):** 20 de 20 escenarios aprobados (100%; la suite actual cuenta con 132 escenarios en v1.2.0).
+* **Resultado (al cierre del Hito 23):** 20 de 20 escenarios aprobados (100%; la suite actual cuenta con 132 escenarios en v1.3.0).

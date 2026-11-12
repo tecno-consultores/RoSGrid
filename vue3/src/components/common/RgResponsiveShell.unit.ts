@@ -757,11 +757,11 @@ describe('RgResponsiveShell.vue — Doble Contexto & Menú de Usuario 11X', () =
 
     versionStore.applyStatus({
       enabled: true,
-      current_version: '1.2.0',
-      latest_version: '1.3.0',
+      current_version: '1.3.0',
+      latest_version: '1.4.0',
       update_available: true,
-      release_url: 'https://github.com/tecno-consultores/RoSGrid/releases/tag/v1.3.0',
-      release_name: 'v1.3.0',
+      release_url: 'https://github.com/tecno-consultores/RoSGrid/releases/tag/v1.4.0',
+      release_name: 'v1.4.0',
       published_at: '2026-11-20T00:00:00Z',
       last_checked_at: '2026-11-20T01:00:00Z',
       last_status: 'ok',
@@ -787,7 +787,7 @@ describe('RgResponsiveShell.vue — Doble Contexto & Menú de Usuario 11X', () =
     expect(pill.exists()).toBe(true);
     expect(pill.attributes('target')).toBe('_blank');
     expect(pill.attributes('rel')).toContain('noopener');
-    expect(pill.text()).toContain('v1.3.0');
+    expect(pill.text()).toContain('v1.4.0');
 
     // Abrir menú de usuario para acceder a la acción de comprobación de versión
     await wrapper.find('.user-profile-btn').trigger('click');

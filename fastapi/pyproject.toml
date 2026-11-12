@@ -1,6 +1,6 @@
 [project]
 name = "rosgrid-backend"
-version = "1.2.0"
+version = "1.3.0"
 description = "Backend Centralizado Multi-Tenant para Gestión de Flotas MikroTik RouterOS v7+ (GPL-3.0-only)"
 authors = [{ name = "Jesus Palencia (Creado en Tecno Consultores)", email = "sinfallas@gmail.com" }]
 license = { text = "GPL-3.0-only" }

@@ -566,7 +566,7 @@ describe('LoginView.vue — Autenticación Multi-Tenant en 2 Etapas y 2FA TOTP',
     expect(footer.exists()).toBe(true);
     expect(footer.text()).toContain('Elaborado por');
     expect(footer.text()).toContain('Tecno Consultores 2023 C.A.');
-    expect(footer.text()).toContain('v1.2.0');
+    expect(footer.text()).toContain('v1.3.0');
     expect(footer.text()).toContain('Licencia GNU GPLv3');
 
     const tecnoLink = footer.find('a[href="https://www.tecnoconsultores.net/"]');

@@ -86,9 +86,9 @@ async def test_get_version_check_status_caching() -> None:
     """Verifica la lectura estructurada de KeyDB y recálculo en caliente."""
     fake_redis = AsyncMock()
     fake_redis.hgetall.return_value = {
-        b"latest_version": b"1.3.0",
-        b"release_url": b"https://github.com/tecno-consultores/RoSGrid/releases/tag/v1.3.0",
-        b"release_name": b"RoSGrid 1.3.0",
+        b"latest_version": b"1.4.0",
+        b"release_url": b"https://github.com/tecno-consultores/RoSGrid/releases/tag/v1.4.0",
+        b"release_name": b"RoSGrid 1.4.0",
         b"published_at": b"2026-11-15T00:00:00Z",
         b"last_checked_at": b"2026-11-15T01:00:00Z",
         b"last_status": b"ok",
@@ -97,7 +97,7 @@ async def test_get_version_check_status_caching() -> None:
     with patch("src.workers.version_check_worker.get_redis_client", return_value=fake_redis):
         status = await get_version_check_status()
         assert status["enabled"] is True
-        assert status["latest_version"] == "1.3.0"
+        assert status["latest_version"] == "1.4.0"
         assert status["update_available"] is True
         assert status["last_status"] == "ok"
 
@@ -196,11 +196,11 @@ async def test_system_version_check_api_endpoints() -> None:
     """Verifica los endpoints FastAPI en /api/v1/system."""
     fake_status = {
         "enabled": True,
-        "current_version": "1.2.0",
-        "latest_version": "1.3.0",
+        "current_version": "1.3.0",
+        "latest_version": "1.4.0",
         "update_available": True,
         "release_url": "https://github.com/tecno-consultores/RoSGrid/releases",
-        "release_name": "RoSGrid v1.3.0",
+        "release_name": "RoSGrid v1.4.0",
         "published_at": "2026-11-20T10:00:00Z",
         "last_checked_at": "2026-11-20T11:00:00Z",
         "last_status": "ok",
@@ -210,12 +210,12 @@ async def test_system_version_check_api_endpoints() -> None:
         resp_get = await read_version_check_status()
         assert isinstance(resp_get, VersionCheckStatusResponse)
         assert resp_get.update_available is True
-        assert resp_get.current_version == "1.2.0"
+        assert resp_get.current_version == "1.3.0"
 
     with patch("src.api.v1.system.check_github_release_once", AsyncMock(return_value=fake_status)):
         resp_post = await trigger_version_check_refresh()
         assert isinstance(resp_post, VersionCheckStatusResponse)
-        assert resp_post.latest_version == "1.3.0"
+        assert resp_post.latest_version == "1.4.0"
 
 
 @pytest.mark.asyncio

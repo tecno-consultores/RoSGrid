@@ -267,7 +267,7 @@ make audit
       - Restauración de semitransparencia táctica real (Glass HUD) en la cinta de eventos críticos del Wallboard NOC (`backdrop-filter: blur(5px) saturate(130%)`, tokens semánticos `--rg-hud-glass-*` y `text-shadow` protector de contraste).
       - Store Pinia reactivo `useVersionCheckStore.ts` con control de visibilidad RBAC (`canSeeUpdateNotice`, `canTriggerManualCheck`), píldora táctica en cabecera global y soporte en centro de notificaciones.
       - Catálogo de token MCP actualizado a 23 herramientas en `RgMcpTokenModal.vue`.
-    - **Métricas Vigentes Certificadas (v1.2.0 / Hito 30.42):**
+    - **Métricas Vigentes Certificadas (v1.3.0 / Hito 30.42):**
       - **807 pruebas unitarias Backend Pytest** con cobertura `>= 95%` (`95.05%` verificado en Docker efímero).
       - **616 pruebas unitarias Frontend Vitest** en **84 suites** (`100% pass` verificado en Docker efímero).
       - **185 escenarios BDD Karate API** + **132 escenarios BDD Karate UI** espejados en `docs/examples/`.

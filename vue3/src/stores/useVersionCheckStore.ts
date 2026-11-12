@@ -20,7 +20,7 @@ export interface VersionCheckStatus {
 export const useVersionCheckStore = defineStore('versionCheck', () => {
   const authStore = useAuthStore();
 
-  const currentVersion = ref('1.2.0');
+  const currentVersion = ref('1.3.0');
   const latestVersion = ref<string | null>(null);
   const updateAvailable = ref(false);
   const releaseUrl = ref('https://github.com/tecno-consultores/RoSGrid/releases');
