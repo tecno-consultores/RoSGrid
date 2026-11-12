@@ -920,15 +920,48 @@ async def test_telemetry_beacon_worker_full() -> None:
 
 @pytest.mark.asyncio
 async def test_runner_worker_heartbeat_loop_monitoring() -> None:
-    """Verifica que el heartbeat del runner detecte tareas hermanas finalizadas."""
+    """Verifica que el heartbeat distinga workers opcionales desactivados de fallos reales."""
     from pathlib import Path
 
-    from src.workers.runner import _worker_heartbeat_loop
+    from src.workers.runner import (
+        _has_failed_sibling,
+        _is_sibling_worker_failed,
+        _worker_heartbeat_loop,
+        _write_heartbeat_tick,
+    )
 
-    mock_task_done = MagicMock()
-    mock_task_done.get_name.return_value = "failed_worker"
-    mock_task_done.done.return_value = True
-    mock_task_done.cancelled.return_value = False
+    assert _has_failed_sibling(None) is False
+    assert _has_failed_sibling([]) is False
+
+    # Worker obligatorio terminado sin excepción -> sigue siendo fallo inesperado
+    mock_mandatory_exited = MagicMock()
+    mock_mandatory_exited.get_name.return_value = "HealthMonitorWorker"
+    mock_mandatory_exited.done.return_value = True
+    mock_mandatory_exited.cancelled.return_value = False
+    mock_mandatory_exited.exception.return_value = None
+    assert _is_sibling_worker_failed(mock_mandatory_exited) is True
+
+    # Worker opcional desactivado por flag (return limpio, exception is None) -> NO es fallo
+    mock_optional_disabled = MagicMock()
+    mock_optional_disabled.get_name.return_value = "TelemetryBeaconWorker"
+    mock_optional_disabled.done.return_value = True
+    mock_optional_disabled.cancelled.return_value = False
+    mock_optional_disabled.exception.return_value = None
+    assert _is_sibling_worker_failed(mock_optional_disabled) is False
+
+    # Worker opcional que crashea con excepción -> SÍ es fallo
+    mock_optional_crashed = MagicMock()
+    mock_optional_crashed.get_name.return_value = "TelemetryBeaconWorker"
+    mock_optional_crashed.done.return_value = True
+    mock_optional_crashed.cancelled.return_value = False
+    mock_optional_crashed.exception.return_value = RuntimeError("Crash")
+    assert _is_sibling_worker_failed(mock_optional_crashed) is True
+
+    # Worker cancelado durante apagado ordenado -> NO es fallo
+    mock_cancelled = MagicMock()
+    mock_cancelled.done.return_value = True
+    mock_cancelled.cancelled.return_value = True
+    assert _is_sibling_worker_failed(mock_cancelled) is False
 
     mock_task_running = MagicMock()
     mock_task_running.get_name.return_value = "healthy_worker"
@@ -939,26 +972,80 @@ async def test_runner_worker_heartbeat_loop_monitoring() -> None:
     mock_path = MagicMock(spec=Path)
 
     async def fake_wait_for_1(fut: Any, timeout: float) -> None:
+        fut.close()
         stop_event.set()
 
     with (
         patch("src.workers.runner.WORKER_HEARTBEAT_PATH", mock_path),
         patch("asyncio.wait_for", side_effect=fake_wait_for_1),
     ):
-        # 1. Con tarea fallida: no debe escribir heartbeat
-        await _worker_heartbeat_loop(stop_event, [mock_task_done, mock_task_running])
+        # 1. Con tarea obligatoria caída: no debe escribir heartbeat
+        await _worker_heartbeat_loop(stop_event, [mock_mandatory_exited, mock_task_running])
         mock_path.write_text.assert_not_called()
 
-    # 2. Con todas las tareas vivas: sí escribe heartbeat
+    # 2. Con worker opcional desactivado + workers vivos: SÍ escribe heartbeat (incluso tras TimeoutError)
     mock_path.reset_mock()
     stop_event_2 = asyncio.Event()
+    calls_2 = 0
 
     async def fake_wait_for_2(fut: Any, timeout: float) -> None:
+        nonlocal calls_2
+        fut.close()
+        calls_2 += 1
+        if calls_2 == 1:
+            raise TimeoutError
         stop_event_2.set()
 
     with (
         patch("src.workers.runner.WORKER_HEARTBEAT_PATH", mock_path),
         patch("asyncio.wait_for", side_effect=fake_wait_for_2),
     ):
-        await _worker_heartbeat_loop(stop_event_2, [mock_task_running])
-        mock_path.write_text.assert_called_once()
+        await _worker_heartbeat_loop(stop_event_2, [mock_optional_disabled, mock_task_running])
+        assert mock_path.write_text.call_count == 2
+
+    # 3. Resiliencia ante OSError en escritura de disco
+    mock_path_err = MagicMock(spec=Path)
+    mock_path_err.write_text.side_effect = OSError("Read-only fs")
+    with patch("src.workers.runner.WORKER_HEARTBEAT_PATH", mock_path_err):
+        _write_heartbeat_tick()
+
+
+@pytest.mark.asyncio
+async def test_main_workers_runner_writes_real_heartbeat_with_production_defaults(
+    tmp_path: Any,
+) -> None:
+    """Prueba Anti-Silo: arranca main_workers_runner con loops opcionales reales desactivados y verifica el archivo de healthcheck."""
+    heartbeat_file = tmp_path / "worker_heartbeat"
+
+    async def _blocking_forever_worker(*_args: Any, **_kwargs: Any) -> None:
+        await asyncio.Event().wait()
+
+    with (
+        patch("src.workers.runner.WORKER_HEARTBEAT_PATH", heartbeat_file),
+        patch("src.workers.runner.health_monitor_worker_loop", side_effect=_blocking_forever_worker),
+        patch("src.workers.runner.alert_dispatcher_worker_loop", side_effect=_blocking_forever_worker),
+        patch("src.workers.runner.nightly_backup_worker_loop", side_effect=_blocking_forever_worker),
+        patch("src.workers.runner.vault_rotation_worker_loop", side_effect=_blocking_forever_worker),
+        patch("src.workers.runner.syslog_collector_worker_loop", side_effect=_blocking_forever_worker),
+        patch("src.workers.runner.subscriber_status_poller_worker_loop", side_effect=_blocking_forever_worker),
+        patch("src.workers.runner.session_lifecycle_worker_loop", side_effect=_blocking_forever_worker),
+        # Loops opcionales REALES sin AsyncMock bajo defaults de producción (opt-in false):
+        patch("src.workers.telemetry_beacon_worker.settings.ROSGRID_TELEMETRY_BEACON_ENABLED", False),
+        patch("src.workers.version_check_worker.settings.ROSGRID_VERSION_CHECK_ENABLED", False),
+        patch("src.workers.runner.close_redis_client", new_callable=AsyncMock),
+    ):
+        runner_task = asyncio.create_task(main_workers_runner())
+        # Cede múltiples ticks al event loop para que los workers opcionales retornen ANTES/DURANTE el heartbeat
+        await asyncio.sleep(0.05)
+
+        assert heartbeat_file.exists(), (
+            "El archivo /tmp/worker_heartbeat debe crearse en el arranque con los defaults de producción"
+        )
+        content = heartbeat_file.read_text(encoding="utf-8").strip()
+        assert content.isdigit() and int(content) > 0
+
+        runner_task.cancel()
+        try:
+            await runner_task
+        except asyncio.CancelledError:
+            pass

@@ -20,6 +20,7 @@ Todos los cambios relevantes de este proyecto se documentan en este archivo sigu
 - **Sincronización Canónica a 23 Herramientas MCP y Catálogo de Token:** Actualización de `vue3/src/components/admin/RgMcpTokenModal.vue` (`23 Registered MCP Tools`), `AGENTS.md`, `README.md`, `docs/06_REFERENCIA_COMPLETA_API_REST_Y_WEBSOCKETS.md`, `docs/07_GUIA_INTEGRACION_IA_MCP_HERMES_Y_CLAUDE.md`, `docs/FAQ.md` y paridad idéntica byte a byte entre `.agents/skills/rosgrid-noc-operator/SKILL.md` y `fastapi/src/api/v1/SKILL.md`.
 
 ### Fixed
+- **Healthcheck Resiliente en Orquestador de Workers (`runner.py`) y Prueba Anti-Silo de Arranque:** Distinción explícita en `_is_sibling_worker_failed` entre salidas limpias (`exception() is None`) de workers opcionales desactivados por flag (`TelemetryBeaconWorker` / `VersionCheckWorker`) frente a excepciones no controladas o caída de workers obligatorios, garantizando la creación inmediata de `/tmp/worker_heartbeat` en contenedores de producción, respaldado por prueba de integración sin mocks sobre los loops opcionales (`test_workers_full.unit.py`).
 - **Anti-Regresión y Manejo Fail-Silent en Comprobador de Versiones:** Corrección de tipado estricto `ApiResponse<VersionCheckStatus>` en el store Pinia, interacción en menús de usuario en `RgResponsiveShell.unit.ts`, y aserciones de persistencia en `test_mcp_endpoint.unit.py` y `test_spec114_compliance_and_bulk_coverage.unit.py`.
 
 ---

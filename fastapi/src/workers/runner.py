@@ -47,24 +47,40 @@ def _on_worker_task_done(task: asyncio.Task[None]) -> None:
 
 
 WORKER_HEARTBEAT_PATH = Path("/tmp/worker_heartbeat")
+OPTIONAL_WORKERS: frozenset[str] = frozenset({"WorkerHeartbeat", "TelemetryBeaconWorker", "VersionCheckWorker"})
+
+
+def _is_sibling_worker_failed(task: asyncio.Task[Any]) -> bool:
+    """Determina si una tarea hermana cayó inesperadamente o falló con excepción (CC <= 4)."""
+    if not task.done() or task.cancelled():
+        return False
+    if task.exception() is not None:
+        return True
+    return task.get_name() not in OPTIONAL_WORKERS
+
+
+def _has_failed_sibling(sibling_tasks: list[asyncio.Task[Any]] | None) -> bool:
+    """Evalúa si alguna tarea hermana reporta estado fallido (CC <= 3)."""
+    if not sibling_tasks:
+        return False
+    return any(_is_sibling_worker_failed(t) for t in sibling_tasks)
+
+
+def _write_heartbeat_tick() -> None:
+    """Escribe la marca de tiempo actual en el archivo de healthcheck de Docker."""
+    try:
+        WORKER_HEARTBEAT_PATH.write_text(f"{int(time.time())}\n", encoding="utf-8")
+    except OSError:
+        pass
 
 
 async def _worker_heartbeat_loop(
     stop_event: asyncio.Event, sibling_tasks: list[asyncio.Task[Any]] | None = None
 ) -> None:
-    """Actualiza periódicamente el archivo de latido para el healthcheck de Docker."""
+    """Actualiza periódicamente el archivo de latido para el healthcheck de Docker (CC <= 4)."""
     while not stop_event.is_set():
-        any_failed = False
-        if sibling_tasks:
-            for t in sibling_tasks:
-                if t.done() and not t.cancelled() and t.get_name() != "WorkerHeartbeat":
-                    any_failed = True
-                    break
-        if not any_failed:
-            try:
-                WORKER_HEARTBEAT_PATH.write_text(f"{int(time.time())}\n", encoding="utf-8")
-            except OSError:
-                pass
+        if not _has_failed_sibling(sibling_tasks):
+            _write_heartbeat_tick()
         try:
             await asyncio.wait_for(stop_event.wait(), timeout=15.0)
         except TimeoutError:
